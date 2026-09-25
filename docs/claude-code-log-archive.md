@@ -306,6 +306,228 @@ imprecise. It is recorded here and the paragraph is left as written.
 Rotazione del 2026-09-01 (P9, oltre le 40 entry): le 4 entry qui sotto, tutte del
 2026-08-30, sono state spostate dall'attivo senza modifiche. L'attivo torna a 40.
 
+## 2026-09-18 — chore: CLAUDE.md split, Phase 0 measurements (P-2026-09-18-1930)
+**Prompt**: GO for Phase 0 only of the CLAUDE.md split — measure whether the 40k-char limit
+truncates or only reports, and whether a nested CLAUDE.md under `editor-v2/` actually loads for
+work under that directory. Hard stop after reporting; Phases 1-3 not started.
+**Files touched**: `frontend/src/components/editor-v2/CLAUDE.md` (new probe), `frontend/src/components/editor-v2/AGENTS.md` (generated sibling)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: M1 inconclusive via debug log (no truncation string in 4 `--debug` runs,
+positive-controlled); settled directly — this session's own CLAUDE.md matches disk byte-for-byte,
+untruncated. M2 conclusive: token auto-injected (no explicit Read) for editor-v2 work, absent
+elsewhere. Full account: `docs/discovery/discovery_2026-09-18_claude_md_split_phase0_nested_load.md`.
+**Prompt document name**: 2026-09-18 19:30
+
+---
+
+
+## 2026-09-18 — docs: CLAUDE.md split Phase 2 — §5 compression, §6.4-6.6 to PROTOCOL.md
+**Prompt**: `claude_2026-09-18_1930_prompt_claude_md_split_oltre_limite.md` Phase 2 — compress
+the 4 named §5 worked examples (ugrep 2026-08-11, typecheck window 2026-08-13, tree glyph
+2026-08-12, symbolRecognition mutation bench 2026-09-16) to one sentence + pointer each, creating
+the two missing discovery docs; move §6.4/6.5/6.6 verbatim to `docs/PROTOCOL.md` as P13/P14/P15,
+leaving pointers in §6; update RC-13 in `docs/decisions.md` to cite P13.
+**Files touched**: `AGENTS.md`, `CLAUDE.md`, `docs/PROTOCOL.md`, `docs/decisions.md`,
+`docs/discovery/discovery_2026-08-11_ugrep_wrapper_ignore_files.md` (new),
+`docs/discovery/discovery_2026-09-16_symbolrecognition_scalarof_mutation_bench.md` (new).
+Commit `da07e3169`.
+**Outcome**: ✅ completed — root CLAUDE.md 50910 -> 44726 bytes. All three gates green; Check A
+(§21.2/P9 byte-identity) re-confirmed passing after the edit.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no.
+**Out-of-scope changes**: yes, minor — the `docs/PROTOCOL.md` header line ("clausole P1..P12
+applicabili") was left unupdated after adding P13-P15; a stale self-count, not corrected in this
+lane (not named in Phase 2's instructions). Flagged to Alfonso in the Step 4 hard-stop report.
+**Layer Impact Report**: not-required — docs-only.
+**Smoke visivo**: non applicabile.
+**Notes**: other lane's concurrent WIP in `frontend/src/components/editor-v2/viewpoint/ir/*` and
+two new IR-related discovery/probe files was present in the shared tree throughout; left
+untouched per §6.4/P13 (RC-13).
+**Prompt document name**: 2026-09-18 19:30
+
+## 2026-09-18 — docs: split critical-zone D-L/M1-M2 rules into nested CLAUDE.md modules
+**Prompt**: `claude_2026-09-18_1930_prompt_claude_md_split_oltre_limite.md` Phase 1 — move §3
+(sync layer / D-L proxy critical zone) out of root CLAUDE.md into three nested, directory-scoped
+CLAUDE.md modules (`frontend/src/redux/`, `frontend/src/model/`, `frontend/src/components/editor-v2/`),
+verbatim, leaving one-line pointers in root §3. Run on the trunk (`alfonso-frontend-jjtl`,
+`/Users/alfonso/jjodel-release`) per §6.6/P15.
+**Files touched**: `AGENTS.md`, `CLAUDE.md`, `docs/PROTOCOL.md`, `frontend/src/redux/CLAUDE.md` +
+`AGENTS.md`, `frontend/src/model/CLAUDE.md` + `AGENTS.md`, `frontend/src/components/editor-v2/CLAUDE.md`
++ `AGENTS.md`. Commit `4355a148c`.
+**Outcome**: ✅ completed — root CLAUDE.md 63444 -> 50910 bytes. All three gates green
+(`gen:agents`, `check:agents`, `check:docs`).
+**Corregge**: —
+**Causa**: —
+**Regressions**: no.
+**Out-of-scope changes**: yes — `frontend/src/redux/CLAUDE.md` carries one paragraph noting a
+DV.tsx-runtime gap that is new prose, not a verbatim move of §3.9. Flagged to Alfonso in the
+Step 4 hard-stop report, not yet ratified.
+**Layer Impact Report**: not-required — docs-only, no D-L/sync code touched.
+**Smoke visivo**: non applicabile.
+**Notes**: see also Step 1 (`32dbe1ef8`, probe removal + §9.3 transport) and the individual
+normative commits under this Phase (`686a13712`, `74d0f81db`, `43e598404`, `7bc6c7365`,
+`00b32f5e7`, `8f6122427`, `cccabe385`, `4db186124`) already present on trunk before Phase 1 proper.
+**Prompt document name**: 2026-09-18 19:30
+
+## 2026-09-18 — docs: trasporto normativo, passo 2 di P-2026-09-18-2110
+**Prompt**: passo 2 di P-2026-09-18-2110 (emenda P-2026-09-18-1930): portare sul tronco tre dei
+quattro delta normativi misurati a `fbcbcb820` contro questo tronco (`7bc6c7365`) — §9.3 di
+CLAUDE.md, le due righe `P1..P9`→`P1..P12`, il trailer `Model:` di PROTOCOL.md P6 con la versione
+1.1→1.2. La frase di rotazione di P9 (`npm run log:rotate`) non viaggia: lo script non esiste su
+questo tronco (RC-10).
+**Files touched**: `CLAUDE.md`, `docs/PROTOCOL.md`, `AGENTS.md` (rigenerato, regola 1c).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo CLAUDE.md/PROTOCOL.md e la loro proiezione, nessun sorgente toccato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Conteggi: CLAUDE.md 63444 char (era 60208, +3236, atteso ~3200), PROTOCOL.md 14258
+char. Tre gate, tutti exit 0: `gen:agents` (2 scritti, 0 skippati), `check:agents` PASS (2/2
+allineati), `check:docs` PASS (3/3, 2 warning preesistenti non correlati, `Corregge` del
+2026-09-02). Worktree gia' su `alfonso-frontend-jjtl`: la premessa "prunable" del prompt era
+superata, non ricreato. Commit `32dbe1ef8`.
+**Prompt document name**: 2026-09-18 21:10
+
+## 2026-09-18 — chore: fold and rotate the prompt log by script, gate red above 40 (P-2026-09-18-2015)
+**Prompt**: `claude_2026-09-18_2015_prompt_log_rotate_fold_gate.md`. Replace hand-folding of
+`docs/log-inbox/*.md` and hand-rotation into `docs/claude-code-log-archive.md` with `log-tools.ts`
++ `rotate-log.ts` (`--fold`, `--rotate`, `--keep=40`, `--write`); `check:docs` gains Check D
+(active entries > 40 fails, non-empty inbox warns). Ran the tool for real: fold (101 → 118, three
+inboxes emptied), then rotate (118 → 40, 78 moved verbatim to the archive).
+**Files touched**: code — `frontend/scripts/gates/log-tools.ts`, `rotate-log.ts`,
+`__tests__/log-tools.test.ts`, `check-docs.ts`, `frontend/package.json`, `vitest.config.ts`
+(`920b84895`). Docs — `docs/PROTOCOL.md` (`3de7bef90`); `docs/claude-code-log.md` +
+`docs/log-inbox/{harness,symbol-editor,views}.md` (`095f27cd1`); `docs/claude-code-log.md` +
+`docs/claude-code-log-archive.md` (`9378e405e`); `docs/claude-code-log.md` (`eab6eb23f`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: docs/log-inbox/harness.md predates this lane's discovery (9a9f7952b, before 5c9e88d16); the report's sentence missed it, amended not rewritten. 5642a7d80, 5c9e88d16, 920b84895 predate the Model trailer in this lane (RC-11). 3de7bef90's P9 sentence is owed to the trunk (§6.6). Ticket: fold should lint inbox entries against the Notes cap in dry-run. This entry makes the log 41; Check D red by design until the next batch.
+**Prompt document name**: 2026-09-18 20:15
+
+## 2026-09-18 — feat(views): editor reference in una sezione + drill-in nel rail canvas (#142)
+**Prompt**: Fase B della #142 (Views/canvas). La discovery ha smentito l'ipotesi critical-zone: il rail è il pannello classico `Info.tsx`, e `useM1ReferenceEdges` rende già l'edge per uno slot-write. Scelto B1 (drill-in), poi pivot a «opzione Y» (una sola sezione reference) su feedback utente («learners due volte», «× non funziona»).
+**Files touched**: `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editors/info-improvements.scss`. Aggiornamento discovery report e questa entry a parte (commit docs separato, §6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` output COMPLETO **14** errori pre-esistenti, 0 nei file toccati; `npm run build` exit **0** col solo avviso chunk-size. Smoke confermato dall'utente via screenshot.
+**Out-of-scope changes**: no — 2 file, entrambi del rail toccato per B1/opzione Y.
+**Layer Impact Report**: produced — in chat prima del diff (rail/view; sync NON toccato: l'edge lo rende `useM1ReferenceEdges` add-only, §3.5).
+**Smoke visivo**: passato — canvas rail: sezione unica REFERENCES con select (cambia/aggiungi), drill-in (il rail segue il target con la sua customization), × che fa sparire la riga (filtro buchi). Confermato dall'utente.
+**Notes**: Rail = `Info.object` (classico), non `IRForm` (solo Data Manager). Opzione Y: reference non-containment fuori dagli SLOTS, in `Info.references`; scritture via `setValueAtPosition` (no core). «× non funziona» era pre-esistente (clear→buco «-----», `keepempties`); la sezione filtra i buchi. Aperto: create containment dal rail (New Assessment). Referto: discovery_2026-09-18_142_inherited_customization.md §6.
+**Prompt document name**: 2026-09-18 18:20
+
+## 2026-09-18 — feat(data-manager): editing inline + crea-e-collega per le reference (#142)
+**Prompt**: creare un branch per la #142, poi pianificare e implementare (inherited customization per Views e Data Manager). Scelto perimetro **Fase A** (solo Data Manager); UX drill-in omogenea col containment. La Fase B (canvas) resta separata.
+**Files touched**: `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`, `frontend/src/components/abstract/tabs/instanceManagerTab.scss`. Discovery report e questa entry di log a parte (commit docs separato, §6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` area toccata (instanceManager*, createAdapter/multiDraw, jjform nav/create) **519/519**; `npm run typecheck` output COMPLETO **14** errori pre-esistenti, 0 nei file toccati; `npm run build` exit **0** col solo avviso chunk-size.
+**Out-of-scope changes**: no — 2 soli file, entrambi previsti dal piano (Fase A).
+**Layer Impact Report**: not-required — nessun file di §3.1; scrittura via `formWrite.appendValue`/`applyCreate` esistenti, nessun edge di canvas, nessun TRANSACTION attorno ai creator (§3.3/§3.4 fuori portata).
+**Smoke visivo**: passato (rendering) — sezione References confermata dall'utente via screenshot: A1 link+cardinalità+gating «Slot full [1/1]», A2 bottone «New … & link». Interazioni drill-in e create-and-link non ri-verificate a runtime in questa sessione.
+**Notes**: Estende il drill-in del containment da `shape.children` a `shape.refs`: nuovo `refSlots` (memo su `formSubjectId`), sezione «Referenced elements» (link via `drillTo`/`NavState`) e crea-e-collega `openCreateAndLink`→`openCreate(...,null,null)` + `appendValue(...,isPtr)` post-commit (stato `linkBack`). Customization ereditata da `useIRFormView`. I test del tab hanno colto l'invariante «una sola porta del draft». Referto: discovery_2026-09-18_142_inherited_customization.md.
+**Prompt document name**: 2026-09-18 17:35
+
+## 2026-09-18 — fix: guard the Escape close binding when no popup is open (item A)
+**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item A: the Escape
+binding at `ContextMenu.tsx:669` calls the module-level `closefunc`, `null as any` until the
+classic popup renders, so Escape with no popup throws `closefunc is not a function` (measured,
+discovery_2026-09-16_rotta_archi_righe.md §3). Fix: guard the call with `closefunc?.()`, nothing
+else.
+**Files touched**: `1f3caab09`, 1 file: `components/contextMenu/ContextMenu.tsx` (line 669 only,
+`()=>closefunc()` → `()=>closefunc?.()`). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the touched file; control `Measurable` → 6. `npx vitest run`: **3816 passed, 0 failed**, the same
+9 files red at import as before the change (the +4 tests vs the last active-log entry are lane L3's
+untracked `summaryLines.test.ts`, not this lane's). `npm run build` exit 0, pre-existing
+chunk-size warning only.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file, no D-layer write, the binding only calls a
+popup-close callback.
+**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-18: Escape on the open v2
+canvas with no popup, console clean after a hard refresh (the error had been reproduced on the
+stale tab first). The classic popup path is not reachable today (same discovery §1), so the console
+is the whole check.
+**Notes**: Defect found, not caused, by the previous prompts — item A of a four-defect batch left
+open by the 15-16 September round. No test executable for this module under vitest (imports
+through `joiner`, `window is not defined`); stated here, no source-text test per the §5 sub-rule.
+**Prompt document name**: 2026-09-18 16:50
+
+## 2026-09-18 — fix: stop hiding every dialog header from the alert stylesheet (item B)
+**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item B: the global
+`.alert-header, .dialog-header { display: none }` in `alert/style.scss:112-114` removed the header
+of every dialog in the app; `.alert-header` has zero tsx consumers (re-measured with
+`command grep`), `.dialog-header` five. Fix: drop `.dialog-header` from the selector only.
+**Files touched**: `0214f29d4`, 1 file: `components/alert/style.scss` (one line, the selector loses
+`, .dialog-header`). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the touched file; control `Measurable` → 6. `npx vitest run` from `frontend/`: **3816 passed,
+0 failed**, the same 9 files red at import as before the change. `npm run build` exit 0. A first
+vitest+build round ran from the repo root by mistake (no `package.json` there, vitest with a
+different root): discarded, both re-run from `frontend/`.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — style only, no §3.1 file, no behaviour read by sync or D-L.
+**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-18: the five dialogs (New
+View, New Viewpoint, New Transformation, Execute Transformation, Create Project) show their header
+once, titles not duplicated, alert toasts unchanged; no finding on any dialog's own scss.
+**Notes**: Defect found, not caused, by the previous prompts — item B of a four-defect batch left
+open by the 15-16 September round. No test: style only.
+**Prompt document name**: 2026-09-18 16:50
+
+## 2026-09-18 — fix: an empty metaclass list is a draft, never a commit (item C)
+**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item C: switching the
+wildcard off writes `metaclasses: []`, which passes `validateIR` (probe G1), so the debounced
+commit stored it and the view matched nothing, blanking a viewpoint whose only IR view is this one
+(probe G2). Decision (chat, do not reopen): an empty list is an unfinished edit — never committed,
+the stored ir keeps its previous `metaclasses`; the section says so.
+**Files touched**: `3f5fe347b`, 6 files: `viewpoint/authoring/committableMatching.ts` (new, pure,
+no imports: `isCommittableMatching`), `viewpoint/authoring/__tests__/committableMatching.test.ts`
+(new, 5 tests), `viewpoint/authoring/MatchingSection.tsx` (the empty-list hint line, one text),
+`viewpoint/authoring/VertexAuthoringPanel.tsx` (commit gate after `dirtyRef` before `validateIR`,
+same gate on the unmount flush, import), `viewpoint/authoring/EdgeAuthoringPanel.tsx` (commit
+gate + import, no flush exists), `viewpoint/authoring/RowAuthoringPanel.tsx` (same). Rule-19
+listing shown and approved in chat before writing. This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the six touched files; control `Measurable` → 6. `npx vitest run` from `frontend/`: **3821
+passed, 0 failed** (+5 = the new test file), the same 9 files red at import as before. `npm run
+build` exit 0.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file; the gate only skips the panel's own
+`set_ir` write on a draft shape, no sync or D-layer path touched.
+**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-18: neutral canvas
+reproduced on the stale tab first; after hard refresh the four checks hold (wildcard off on a
+vertex view and an edge view: no neutral canvas, hint shown; metaclass picked: hint gone, canvas
+narrows within the debounce; wildcard back on with empty list: nothing neutral). Extra check by
+Alfonso: closing and reopening the view tab with an empty list brings the wildcard back on
+(stored ir kept, draft dropped, as decided).
+**Notes**: Defect found, not caused, by the previous prompts — item C of a four-defect batch (`claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`). The replaced hint (MatchingSection `:170-172`) stated the behaviour this fix removes. An uncommitted empty list does not survive a tab change (draft dropped, stored ir keeps the wildcard) — a persisted draft is a separate decision, not this lane's. Rest: `docs/sessioni/sessione_2026-09-18.md`. Mutation bench: 5/5 red.
+**Prompt document name**: 2026-09-18 16:50
+
 ## 2026-09-18 — fix: focus the inline rename input when it mounts (item D)
 **Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item D: the rename
 `<input>` shown right after a view is created never receives focus, on both creation paths.
