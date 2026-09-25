@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1445
 Chat: C-2026-09-25-1353
 Lane: full (changed exported interface)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane simulation · 1c7a9be76
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, the same session that wrote the Phase 1 report `ec68ddb9b`. Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file and R-SIM-38..45 (subject `docs: ratify R-SIM-38..45 and add the wave B1 prompt (P-2026-09-25-1445)`), `git status` empty. Otherwise stop.
 

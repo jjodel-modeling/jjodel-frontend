@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1445
 Chat: C-2026-09-25-1353
 Lane: full (changed exported interface)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane simulation · ec68ddb9b
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`. Setup, in this order, each a hard stop if it fails: `pwd` is `/Users/alfonso/jjodel-sim`; `git branch --show-current` is `simulation-engine`; `git status` empty; `git merge --ff-only alfonso-frontend-jjtl` (the branch is at `7e06d5839`, an ancestor of the trunk, so this is a fast-forward; a refusal is a stop, never a non-ff merge; afterwards `git log -1` reads `docs: add prompts P-2026-09-25-1440 and P-2026-09-25-1445`, otherwise stop). Every commit of this lane goes on `simulation-engine`.
 
