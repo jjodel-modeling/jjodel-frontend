@@ -389,7 +389,7 @@ attributes[attributes.size - 1]  -- last attribute
 
 ### 5.10 State Access `.[x]` and Actions
 
-Ratified in `docs/decisions.md` R-SIM-18, R-SIM-30 and R-SIM-38..42.
+Ratified in `docs/decisions.md` R-SIM-18, R-SIM-30 and R-SIM-39..43.
 
 **Syntax:**
 ```
