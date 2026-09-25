@@ -131,13 +131,14 @@ function boundOf(raw: unknown): number {
 /**
  * The «Custom» profile of a bag without `simProfile`. The shape is Petri when
  * `simArc` is set, control flow otherwise. The closure roles of the shape are
- * `edit`; every other role whose key is set is `edit`; the rest is `off`. As in
- * the system profiles of the shape: in control flow Bound and Initial marking
- * are derived, and Event is derived from Trigger when Trigger is bound; in Petri
- * Initial is off. A set key the profile does not read is listed in
- * `ignoredKeys`: a key of the other shape's group, Bound and Initial marking in
- * control flow, Initial in Petri, and a role whose dependency ended up off.
- * The result always validates.
+ * `edit`; every other role whose key is set is `edit`; the rest is `off`. In
+ * control flow Bound and Initial marking are `edit` when their key is set, and
+ * derived as in the system profiles otherwise: the genre is not the shape
+ * (R-SIM-56). As in the system profiles, Event is derived from Trigger when
+ * Trigger is bound, and in Petri Initial is off. A set key the profile does
+ * not read is listed in `ignoredKeys`: a key of the other shape's group,
+ * Initial in Petri, and a role whose dependency ended up off. The result
+ * always validates.
  */
 export function inferCustomProfile(bag: Readonly<Record<string, unknown>>): InferredProfile {
     const shape: ProfileShape = isSet(bag, 'simArc') ? 'petri' : 'controlFlow';
@@ -149,11 +150,10 @@ export function inferCustomProfile(bag: Readonly<Record<string, unknown>>): Infe
     for (const d of ROLE_CATALOG) {
         const set = isSet(bag, d.key);
         const derived = shape === 'controlFlow' ? CONTROL_FLOW_DERIVED[d.id] : undefined;
-        if (closure.has(d.id)) {
+        if (derived) {
+            modes[d.id] = set ? EDIT : derived;
+        } else if (closure.has(d.id)) {
             modes[d.id] = EDIT;
-        } else if (derived) {
-            modes[d.id] = derived;
-            if (set) ignored.add(d.id);
         } else if (!set) {
             modes[d.id] = NOT_BOUND;
         } else if (d.group === other) {
@@ -187,7 +187,7 @@ export function inferCustomProfile(bag: Readonly<Record<string, unknown>>): Infe
         system: false,
         shape,
         modes,
-        params: { bound: shape === 'petri' && modes.bound.mode === 'edit' ? boundOf(bag.simBound) : 1, selector: 'list' },
+        params: { bound: modes.bound.mode === 'edit' ? boundOf(bag.simBound) : 1, selector: 'list' },
         constraints: [],
         addedRequired: [],
     };

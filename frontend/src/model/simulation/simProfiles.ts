@@ -51,16 +51,20 @@ export interface SimProfile {
     readonly addedRequired: readonly RoleId[];
 }
 
-/** A requirement met by any one of its roles: the control-flow source (R-SIM-10). */
+/** A requirement met by any one of its roles: the control-flow source (R-SIM-10) and initial tokens (R-SIM-56). */
 export interface EitherRequirement {
     readonly anyOf: readonly RoleId[];
 }
 
 export type RequiredItem = RoleId | EitherRequirement;
 
-/** The runnability closure of each shape (R-SIM-48): not negotiable. */
+/**
+ * The runnability closure of each shape (R-SIM-48): not negotiable. The shape
+ * is not the genre (R-SIM-56): control flow starts from Initial or from
+ * Initial marking.
+ */
 const CLOSURE: { readonly [S in ProfileShape]: readonly RequiredItem[] } = {
-    controlFlow: ['node', 'transition', 'nextState', 'initial', { anyOf: ['source', 'ownedTransitions'] }],
+    controlFlow: ['node', 'transition', 'nextState', { anyOf: ['initial', 'initialMarking'] }, { anyOf: ['source', 'ownedTransitions'] }],
     petri: ['node', 'transition', 'arc', 'arcSource', 'arcTarget', 'initialMarking'],
 };
 
@@ -85,10 +89,14 @@ export function closureRoles(shape: ProfileShape): RoleId[] {
 
 const EDIT: RoleMode = { mode: 'edit' };
 
-/** k = 1 and one token on each Initial, the control-flow values (R-SIM-28). */
+/**
+ * k = 1 and one token on each Initial, the control-flow values of the system
+ * profiles (R-SIM-28, R-SIM-56). Initial marking is derived from Initial, not
+ * a fixed value: it binds only when Initial does.
+ */
 export const CONTROL_FLOW_DERIVED: Readonly<Partial<Record<RoleId, RoleMode>>> = {
     bound: { mode: 'derived', value: 1, note: 'k = 1' },
-    initialMarking: { mode: 'derived', value: 1, note: '1 on Initial' },
+    initialMarking: { mode: 'derived', from: 'initial', note: '1 on Initial' },
 };
 
 /** The event metaclass is the declared type of Trigger, never copied (R-SIM-38). */
@@ -107,8 +115,8 @@ function systemProfileOf(row: SystemRow): SimProfile {
     const on = new Set<RoleId>([...closureRoles(row.shape), ...row.active]);
     const modes = {} as Record<RoleId, RoleMode>;
     for (const r of ROLE_IDS) {
-        if (on.has(r)) modes[r] = EDIT;
-        else if (row.shape === 'controlFlow' && CONTROL_FLOW_DERIVED[r]) modes[r] = CONTROL_FLOW_DERIVED[r] as RoleMode;
+        if (row.shape === 'controlFlow' && CONTROL_FLOW_DERIVED[r]) modes[r] = CONTROL_FLOW_DERIVED[r] as RoleMode;
+        else if (on.has(r)) modes[r] = EDIT;
         else if (r === 'event' && on.has('trigger')) modes[r] = EVENT_FROM_TRIGGER;
         else if (row.shape === 'controlFlow' && roleDescriptor(r).group === 'petri') modes[r] = { mode: 'off', reason: 'Compiled from control flow' };
         else if (row.shape === 'petri' && r === 'initial') modes[r] = { mode: 'off', reason: 'Petri shape uses Initial marking' };
@@ -255,13 +263,23 @@ export interface Checkability {
 }
 
 /**
- * Whether the role is bound in the bag. A `derived` role is; an `off` role is
- * not, even with its key set (the bridge does not read it, R-SIM-55); an `edit`
- * role is when its key holds a non-empty string, the filter of stcFromRoles.ts.
+ * Whether the role is bound in the bag. A `derived` role is when it has no
+ * source, and when its source (`from`) is bound otherwise (R-SIM-56); a cycle
+ * of sources binds nothing. An `off` role is not, even with its key set (the
+ * bridge does not read it, R-SIM-55); an `edit` role is when its key holds a
+ * non-empty string, the filter of stcFromRoles.ts.
  */
-function isBound(profile: SimProfile, role: RoleId, bag: Readonly<Record<string, unknown>>): boolean {
+function isBound(
+    profile: SimProfile,
+    role: RoleId,
+    bag: Readonly<Record<string, unknown>>,
+    seen: ReadonlySet<RoleId> = new Set(),
+): boolean {
     const mode = profile.modes[role];
-    if (mode.mode === 'derived') return true;
+    if (mode.mode === 'derived') {
+        if (mode.from === undefined) return true;
+        return !seen.has(mode.from) && isBound(profile, mode.from, bag, new Set([...seen, role]));
+    }
     if (mode.mode === 'off') return false;
     const key = roleDescriptor(role).key;
     if (key === null) return false;
