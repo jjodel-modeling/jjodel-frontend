@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1247
 Chat: C-2026-09-25-1030
 Lane: full (more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane merge · f10352a7b · verifica visiva passata 2026-09-25
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop and say so. The only other tree this lane touches is `~/jjodel-sim`, in step 8, for a fast-forward this prompt authorizes (P14). Do not touch `~/jjodel`, `~/jjodel-open`, `~/jjodel-gate` (the closed `harness-bypass` lane, not merged), or `~/jjodel-harness`.
 
 Single phase, with hard stops. This is a merge, not a feature: no source file is edited by hand.
