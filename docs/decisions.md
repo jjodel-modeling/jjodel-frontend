@@ -106,6 +106,36 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   chiede sulle forme dell'albero intero dietro un wrapper, come per lo stash; sono accettate l'esenzione
   durante un merge, un cherry-pick o un revert e la lettura dei percorsi di scrittura del D-layer di §3.2
   (un creator in un sorgente non di test sotto `frontend/src`, `SetFieldAction` in `sync/`).
+  Emendata il 2026-09-25: la decisione (1) da RC-16, la (8) da RC-17, la (3) e la (7) da RC-19.
+- **RC-16** (2026-09-25): **Il pin dell'implementer è `claude-opus-5-5`.** `.claude/settings.json` fissa
+  `claude-opus-5-5`; sostituisce l'ID della decisione (1) di RC-15, il resto della decisione resta (un solo
+  luogo, ID intero, `CLAUDE.md` §0 vi rimanda). Le deroghe passano dal `settings.local.json` del worktree e si
+  dichiarano nel prompt; nessuna catena di ripiego. Misura (memo del 2026-09-25 §2): Opus 5.5 gira nelle
+  sessioni Claude Code dal 2026-09-23 16:05 (nella chat di progetto dal 2026-09-22), sempre via `/model`
+  contro un pin che diceva Opus 5; la sola sessione senza il rito (2026-09-25 09:25) ha girato Opus 5.
+  Il trailer resta quello di P6 (`Anthropic Claude Opus 5.5`); le 6 forme a ID nudo sono una deroga notata.
+  Fonte: `docs/ratifiche/claude_2026-09-25_1015_memo_harness_recalibration.md`, ratificato in chat il 2026-09-25.
+- **RC-17** (2026-09-25): **Una corsia chiude con un solo commit di docs.** Dopo il commit di codice la
+  corsia scrive Status, voce di log (o inbox) e riga di verifica visiva nel proprio worktree senza
+  committarle; dopo il GO visivo un solo commit le porta insieme con l'esito reale. Le correzioni di ACK
+  prima del GO sono modifiche, non commit. Le corsie senza verifica visiva chiudono con lo stesso commit
+  subito dopo il codice. Il commit del prompt resta. Emenda RC-15 (8): un solo flip dello Status, e la
+  clausola Status di P13. La corsia veloce di RC-3 è il default dichiarato: l'intestazione del prompt porta
+  `Lane: fast` oppure `Lane: full (<trigger di RC-3>)`, e una corsia completa senza trigger è un difetto del
+  prompt. Scritta in `docs/PROTOCOL.md` P13.
+- **RC-18** (2026-09-25): **L'harness ha un budget misurato, non un gate.** Su una settimana mobile, al
+  più una corsia su quattro i cui commit di codice toccano solo `frontend/scripts/`, `.claude/` o `docs/`.
+  La chat lo misura una volta a settimana con lo script del costo per feature e lo riporta nel checkpoint,
+  insieme a una tabella di attrito calcolata dai transcript locali di Claude Code (turni per corsia, tempo
+  dal primo turno al commit di chiusura); nessun campo nuovo nella voce di log. A budget superato, sono
+  ammesse solo corsie di harness che riparano un enforcement che si è mostrato non tenere.
+- **RC-19** (2026-09-25): **Le sessioni girano in `bypassPermissions`; i gate umani non si appoggiano ad
+  `ask`.** Misura (memo del 2026-09-25 §3): 22 sessioni su 22 dal 2026-09-21; la deny list e i `deny` degli
+  hook tengono; `ask` sotto bypass non è verificato alla ratifica (i transcript non registrano i prompt), e
+  l'esito del probe interattivo del memo §3 si aggiunge qui quando c'è: la decisione vale in entrambi i casi.
+  Gli hook leggono `permission_mode`: in bypass `critical-zone` nega (la corsia di critical zone si rilancia
+  senza il flag) e `bash-guard` nega `git push`; negli altri modi resta `ask`. Il `git commit` non è più un
+  gate umano: restano il GO visivo e il push. Emenda RC-15 (3) e (7).
 
 ## Arco A — barra a tab e capi degli edge
 

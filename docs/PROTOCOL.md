@@ -249,15 +249,24 @@ incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/deci
   GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
   message carried a scope change that nobody had written.
 
-- **Every prompt file carries a Status line, flipped twice, never automatically.** The header of a
-  prompt in `docs/prompts/` holds `Status: da eseguire`. The closing docs commit of the lane flips it
-  to `Status: eseguito <YYYY-MM-DD> · lane <name> · <sha>`, the sha being the last code commit of the
-  lane (the report commit for a docs-only lane). After the human visual check, Alfonso in the chat, or
-  the session on an ACK from the chat, appends ` · verifica visiva passata <YYYY-MM-DD>` or
-  ` · verifica visiva fallita <YYYY-MM-DD>`. Both flips are edits to the prompt file, recorded in a
-  commit of their own or in the closing docs commit; no hook and no skill performs either unasked.
-  Measured 2026-09-21: 9 of 66 September prompts carry the line, in two forms, and no normative file
-  stated the practice.
+- **Every prompt declares its lane.** The header of a prompt in `docs/prompts/` carries `Lane: fast`
+  or `Lane: full (<trigger>)`, the trigger being one of RC-3's four: critical zone, migration, more than
+  3 files, a changed exported interface. The fast lane is the default; a full lane without a named
+  trigger is a defect of the prompt, and the session says so before starting (RC-17).
+- **Every prompt file carries a Status line, flipped once, in the lane's closure commit.** The header
+  of a prompt in `docs/prompts/` holds `Status: da eseguire`. After its code commit, the lane writes the
+  Status flip, its log or inbox entry and the visual-check line into its worktree and does not commit
+  them. One docs commit, the closure commit, carries all three. For a lane with a human visual check it
+  follows Alfonso's GO, and the line reads
+  `Status: eseguito <YYYY-MM-DD> · lane <name> · <sha> · verifica visiva passata <YYYY-MM-DD>` (or
+  `fallita`). For a lane without one (harness, docs) it follows the code commit at once, and the line ends
+  at the sha. The sha is the last code commit of the lane (the report commit for a docs-only lane). A
+  correction before the closure is an edit, not a commit. If another lane shares the tree and a file of
+  the closure commit already holds that lane's uncommitted change, stop and ask. No hook and no skill
+  flips the line unasked. Measured 2026-09-21: 9 of 66 September prompts carried the line, in two forms,
+  and no normative file stated the practice. Measured 2026-09-25: the two-flip form cost up to five docs
+  commits after a single code commit (RC-17, memo
+  `docs/ratifiche/claude_2026-09-25_1015_memo_harness_recalibration.md`).
 
 ## P14 — Worktrees and cherry-picks
 

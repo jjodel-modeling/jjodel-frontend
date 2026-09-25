@@ -1,7 +1,7 @@
 # Memo: harness recalibration (cost per feature, model pin, permission mode)
 
 - **Author**: project chat (claude.ai, Cowork), 2026-09-25 10:15. No Prompt-ID: the memo was asked in chat and no lane executes it.
-- **Status**: proposal, to be ratified by Alfonso. Section 6 holds the rows for `docs/decisions.md`; they enter the file only after ratification.
+- **Status**: ratified by Alfonso in chat on 2026-09-25 ("ratifico tutto"). The rows of section 6 are in `docs/decisions.md` as RC-16 to RC-19; RC-19 waits for the outcome of the probe of section 3, and holds either way.
 - **Inputs**: `docs/discovery/discovery_2026-09-25_cost_per_feature.md` (c5d1bcfcc), `docs/discovery/discovery_2026-09-24_harness_gate.md` §4 and Q6, `docs/decisions.md` RC-3 and RC-15, `.claude/settings.json` on the trunk.
 
 Tags: **[M]** measured for this memo, **[R]** read, **[D]** deduced.
