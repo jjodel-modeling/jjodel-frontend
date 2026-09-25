@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-0935 (Phase 2 of `claude_2026-09-25_0935_prompt_sim_step3_discovery.md`)
 Chat: C-2026-09-25-1030
 Lane: full (more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane sim-step3a · 79ee9fba3
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, HEAD `e4506e78f` or later (the ratification commit on top of the report commit `de21a2c93`).
 Report this phase answers: `docs/discovery/discovery_2026-09-25_sim_step3_petri_core.md` (`de21a2c93`).
 Protocollo: docs/PROTOCOL.md, clausole P1..P15 applicabili.
