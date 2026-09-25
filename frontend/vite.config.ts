@@ -60,7 +60,23 @@ export default defineConfig(({ mode }) => ({
     }
   },
   optimizeDeps: {
-    include: ['svgpath']
+    // The shims come from nodePolyfills' dev banner and util from its alias: the
+    // scan sees neither, so they were found at runtime and forced a page reload.
+    include: [
+      'svgpath', 'util',
+      'vite-plugin-node-polyfills/shims/buffer',
+      'vite-plugin-node-polyfills/shims/global',
+      'vite-plugin-node-polyfills/shims/process',
+    ],
+    // The dependency scan bundles src/ with plain esbuild (no Babel). With the
+    // tsconfig's experimentalDecorators, esbuild 0.27 emits `export { _Nearley }`
+    // without the alias for a decorated class that names itself next to a direct
+    // eval() (DSL/nearley/nearley.tsx), and the whole scan fails. The scan only
+    // collects imports, so it reads decorators as standard ones. jsx restates the
+    // tsconfig value, which a tsconfigRaw replaces.
+    esbuildOptions: {
+      tsconfigRaw: { compilerOptions: { experimentalDecorators: false, jsx: 'react-jsx' } }
+    }
   },
   define: {
     'global': 'globalThis',
