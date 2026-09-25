@@ -23,8 +23,17 @@ const OCL_METHOD_MESSAGES: Record<string, string> = {
 };
 const OCL_COLLECTION_CONSTRUCTORS = new Set<string>(['Set', 'Sequence', 'Bag', 'OrderedSet']);
 
+/**
+ * `actionMode` lexes `:=` as `ASSIGN`, for `parseAction` (R-SIM-40). Off by
+ * default: in an expression `:=` stays an error.
+ */
+export interface JjelLexerOptions {
+    actionMode?: boolean;
+}
+
 export class JjelLexer {
     private source: string;
+    private actionMode: boolean;
     private tokens: JjelToken[] = [];
     private errors: JjelLexerError[] = [];
     private start: number = 0;
@@ -33,8 +42,9 @@ export class JjelLexer {
     private column: number = 1;
     private lineStart: number = 0;
 
-    constructor(source: string) {
+    constructor(source: string, options?: JjelLexerOptions) {
         this.source = source;
+        this.actionMode = options?.actionMode === true;
     }
 
     /**
@@ -72,7 +82,18 @@ export class JjelLexer {
             case ']': this.addToken(JjelTokenType.RBRACKET); break;
             case '{': this.addToken(JjelTokenType.LBRACE); break;
             case '}': this.addToken(JjelTokenType.RBRACE); break;
-            case ':': this.addToken(JjelTokenType.COLON); break;
+            case ':':
+                if (this.peek() === '=') {
+                    this.advance();
+                    if (this.actionMode) {
+                        this.addToken(JjelTokenType.ASSIGN);
+                    } else {
+                        this.error("':=' assigns, and only an action can assign: an expression cannot contain it. An action is written '<target>.[attribute] := <expression>'.");
+                    }
+                } else {
+                    this.addToken(JjelTokenType.COLON);
+                }
+                break;
             case ',': this.addToken(JjelTokenType.COMMA); break;
             case '+': this.addToken(JjelTokenType.PLUS); break;
             case '*': this.addToken(JjelTokenType.STAR); break;
@@ -102,6 +123,10 @@ export class JjelLexer {
                     this.current--; // Back up
                     this.column--;
                     this.number();
+                } else if (this.peek() === '[') {
+                    // `.[` is one token, state access (R-SIM-18, R-SIM-40); `. [` is not.
+                    this.advance();
+                    this.addToken(JjelTokenType.DOT_LBRACKET);
                 } else {
                     this.addToken(JjelTokenType.DOT);
                 }
@@ -109,7 +134,12 @@ export class JjelLexer {
 
             case '?':
                 if (this.match('.')) {
-                    this.addToken(JjelTokenType.QUESTION_DOT);
+                    if (this.peek() === '[') {
+                        this.advance();
+                        this.error("'?.[' is not JjEL: in JavaScript it is a computed access. State is read with 'x.[a]', which has no null-safe form.");
+                    } else {
+                        this.addToken(JjelTokenType.QUESTION_DOT);
+                    }
                 } else if (this.match('?')) {
                     this.addToken(JjelTokenType.NULL_COALESCE);
                 } else {
@@ -495,7 +525,7 @@ export class JjelLexer {
 /**
  * Convenience function to tokenize a source string
  */
-export function tokenize(source: string): JjelLexerResult {
-    const lexer = new JjelLexer(source);
+export function tokenize(source: string, options?: JjelLexerOptions): JjelLexerResult {
+    const lexer = new JjelLexer(source, options);
     return lexer.tokenize();
 }

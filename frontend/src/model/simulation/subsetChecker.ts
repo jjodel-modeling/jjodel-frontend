@@ -37,6 +37,7 @@
  */
 
 import type { ASTLocation, BinaryExpr, JjelExpression } from '../../jjel/types/ast';
+import { STATE_RESERVED } from '../../jjel/stateReserved';
 
 export type SubsetSeverity = 'error' | 'warning' | 'not-verifiable';
 
@@ -52,8 +53,8 @@ export interface SubsetDiagnostic {
     readonly location?: ASTLocation;
 }
 
-/** The four roots of R-SIM-18. Reserved: no local binding may take their names (ruling 5). */
-export const GUARD_ROOTS: readonly string[] = ['self', 'event', 'model', 'node'];
+/** The four roots of R-SIM-18, from the single list (R-SIM-42). Reserved: no local binding may take their names (ruling 5). */
+export const GUARD_ROOTS: readonly string[] = STATE_RESERVED.roots;
 
 /**
  * Builtin methods with no translation to nuXmv (discovery 2026-09-13 §7.2):
@@ -200,6 +201,7 @@ function children(e: JjelExpression): Array<[JjelExpression, readonly string[]]>
         case 'WithDo': return [[e.context, []]];
         case 'IndexAccess': return [[e.object, []], [e.index, []]];
         case 'ObjectLiteral': return e.entries.map(x => [x.value, []] as [JjelExpression, string[]]);
+        case 'StateAccess': return [[e.object, []]];
         default: {
             const never: never = e;
             return never;
@@ -267,7 +269,7 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             return;
         case 'Identifier':
             if (bound.has(e.name)) return;
-            if (e.name === 'node') report(w, 'E-NODE', '`node` is presentation state: a guard cannot depend on it (R-SIM-18).', e);
+            if (e.name === STATE_RESERVED.presentationRoot) report(w, 'E-NODE', '`node` is presentation state: a guard cannot depend on it (R-SIM-18).', e);
             else if (e.name === 'data') report(w, 'E-DATA', '`data` is not a root of guards: use `self`.', e);
             return;
         case 'Binary': {
@@ -366,6 +368,10 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
         case 'ObjectLiteral':
             report(w, 'E-VALUE', 'An object literal is never a verdict.', e);
             for (const entry of e.entries) plain(entry.value);
+            return;
+        case 'StateAccess':
+            // Reading state is exportable (R-SIM-30); `node.[x]` is E-NODE through its object.
+            plain(e.object);
             return;
         default: {
             const never: never = e;

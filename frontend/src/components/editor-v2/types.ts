@@ -32,7 +32,9 @@ export type EDataType =
     | 'EDate'
     | 'EChar'
     | 'ELong'
-    | 'EDouble';
+    | 'EDouble'
+    | 'Expression'
+    | 'Action';
 
 // Single source of truth: canonical Ecore primitive name <-> Editor-v2 display label.
 // Order here defines the dropdown order. Only EBoolean is abbreviated; the rest are identity.
@@ -47,6 +49,9 @@ export const PRIMITIVE_TYPE_LABELS: ReadonlyArray<{ canonical: string; display: 
     { canonical: 'EChar',    display: 'EChar'   },
     { canonical: 'ELong',    display: 'ELong'   },
     { canonical: 'EDouble',  display: 'EDouble' },
+    // Jjodel's own primitives (R-SIM-44), after the Ecore ones as in ShortAttribETypes.
+    { canonical: 'Expression', display: 'Expression' },
+    { canonical: 'Action',   display: 'Action'  },
 ];
 
 export const E_DATA_TYPES: EDataType[] = PRIMITIVE_TYPE_LABELS.map(t => t.display);

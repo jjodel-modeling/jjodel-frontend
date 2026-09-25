@@ -15,7 +15,7 @@
  * 9. + -
  * 10. * / %
  * 11. not - (unary)
- * 12. . ?. [] (postfix)
+ * 12. . ?. .[ [] (postfix)
  */
 
 import {
@@ -47,10 +47,13 @@ import {
     WithDoExpr,
     IndexAccessExpr,
     ObjectLiteralExpr,
+    StateAccessExpr,
+    JjelActionParserResult,
     ASTLocation,
     BinaryOperator,
 } from '../types';
 import { JjelLexer } from '../lexer';
+import { STATE_RESERVED } from '../stateReserved';
 
 export class JjelParser {
     private tokens: JjelToken[] = [];
@@ -73,6 +76,51 @@ export class JjelParser {
             return { expression, errors: this.errors };
         } catch (error) {
             return { expression: null, errors: this.errors };
+        }
+    }
+
+    /**
+     * `parse`, and the input must end with the expression (R-SIM-41): `a b` is
+     * an error here, where `parse` returns `a` and drops `b`.
+     */
+    parseStrict(): JjelParserResult {
+        const result = this.parse();
+        if (result.expression && result.errors.length === 0 && !this.isAtEnd()) {
+            this.error(this.peek(), `Unexpected '${this.peek().value}' after the end of the expression`);
+            return { expression: null, errors: this.errors };
+        }
+        return result;
+    }
+
+    /**
+     * An action, `<target> := <expression>` (R-SIM-17, R-SIM-40): the target
+     * ends in `.[attribute]`, never a read-only one, and the input ends with
+     * the expression. Expects the tokens of an action-mode lexer (`ASSIGN`).
+     */
+    parseAction(): JjelActionParserResult {
+        try {
+            if (this.isAtEnd()) {
+                throw this.error(this.peek(), "Expected an action: '<target>.[attribute] := <expression>'");
+            }
+            const startToken = this.peek();
+            const target = this.postfix();
+            if (target.type !== 'StateAccess') {
+                throw this.error(this.peek(), "The target of an action must end in '.[attribute]'");
+            }
+            if (STATE_RESERVED.readOnlyAttributes.includes(target.attribute)) {
+                throw this.error(this.peek(), `'${target.attribute}' is read-only: an action cannot assign it`);
+            }
+            this.consume(JjelTokenType.ASSIGN, "Expected ':=' after the target of the action");
+            const value = this.expression();
+            if (!this.isAtEnd()) {
+                throw this.error(this.peek(), `Unexpected '${this.peek().value}' after the end of the action`);
+            }
+            return {
+                action: { target, value, location: this.makeLocation(startToken, this.previous()) },
+                errors: this.errors,
+            };
+        } catch (error) {
+            return { action: null, errors: this.errors };
         }
     }
 
@@ -332,6 +380,8 @@ export class JjelParser {
      * postfix = primary (
      *     . IDENTIFIER (( argList ))?
      *   | ?. IDENTIFIER (( argList ))?
+     *   | .[ IDENTIFIER ]
+     *   | [ expression ]
      * )*
      */
     private postfix(): JjelExpression {
@@ -384,6 +434,16 @@ export class JjelParser {
                         location: this.makeLocation(this.getStartToken(expr), propToken),
                     } as NullSafeMemberAccessExpr;
                 }
+            } else if (this.match(JjelTokenType.DOT_LBRACKET)) {
+                // State access: expr.[attribute] (R-SIM-18). Keywords are not attributes.
+                const attrToken = this.consume(JjelTokenType.IDENTIFIER, "Expected a state attribute name after '.['");
+                this.consume(JjelTokenType.RBRACKET, "Expected ']' after the state attribute");
+                expr = {
+                    type: 'StateAccess',
+                    object: expr,
+                    attribute: attrToken.value,
+                    location: this.makeLocation(this.getStartToken(expr), this.previous()),
+                } as StateAccessExpr;
             } else if (this.match(JjelTokenType.LBRACKET)) {
                 // Index access: expr[index]
                 const index = this.expression();
@@ -859,4 +919,50 @@ export function parseExpression(source: string): JjelParserResult {
 
     const parser = new JjelParser(tokens);
     return parser.parse();
+}
+
+/**
+ * `parseExpression` that requires the end of the input (R-SIM-41): the parse
+ * of the `Expression` type, guards and actions. `parseExpression` itself keeps
+ * dropping trailing tokens for its other callers (ticket of R-SIM-41).
+ */
+export function parseExpressionStrict(source: string): JjelParserResult {
+    const lexer = new JjelLexer(source);
+    const { tokens, errors: lexerErrors } = lexer.tokenize();
+
+    if (lexerErrors.length > 0) {
+        return {
+            expression: null,
+            errors: lexerErrors.map((e: JjelLexerError) => ({
+                message: e.message,
+                line: e.line,
+                column: e.column,
+            })),
+        };
+    }
+
+    const parser = new JjelParser(tokens);
+    return parser.parseStrict();
+}
+
+/**
+ * Parse an action, `<target>.[attribute] := <expression>` (R-SIM-17, R-SIM-40).
+ */
+export function parseAction(source: string): JjelActionParserResult {
+    const lexer = new JjelLexer(source, { actionMode: true });
+    const { tokens, errors: lexerErrors } = lexer.tokenize();
+
+    if (lexerErrors.length > 0) {
+        return {
+            action: null,
+            errors: lexerErrors.map((e: JjelLexerError) => ({
+                message: e.message,
+                line: e.line,
+                column: e.column,
+            })),
+        };
+    }
+
+    const parser = new JjelParser(tokens);
+    return parser.parseAction();
 }

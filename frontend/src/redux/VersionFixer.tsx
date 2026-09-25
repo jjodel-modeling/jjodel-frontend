@@ -1190,7 +1190,8 @@ everytime you put hands into a D-Object shape or valid values, you should docume
      *  alone it would keep the toolbar selector off «Abstract syntax» on every old project.
      *
      *  Only system viewpoints are rewritten — a user viewpoint id stays exactly as it is
-     *  (R-IRN-20). No purge of the default records: that is 2.229 (R-IRN-19).
+     *  (R-IRN-20). No purge of the default records: that is the first free number after 2.229
+     *  (R-IRN-19, amended by R-SIM-46: 2.229 is the step of the Expression and Action types).
      *
      *  Pure `DState -> DState`, no Redux actions and no L-proxies, and idempotent by
      *  construction: `isSystemViewpoint(null)` is false, so a second pass writes nothing.
@@ -1214,6 +1215,52 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             console.log(`[VersionFixer 2.227 -> 2.228] activeViewpoint: ${normalized} progetto/i `
                 + `riportato/i a null (era un viewpoint di sistema).`);
         }
+        return s;
+    }
+
+    /** The primitive types `Expression` and `Action` (R-SIM-17, R-SIM-44, R-SIM-46): the first step
+     *  that adds built-in types. A new project seeds them from `ShortAttribETypes`
+     *  (redux/store.tsx); a saved one keeps its own primitive records and never reseeds, so without
+     *  this step it lacks them, and the Ecore import throws on the missing primitive (api/data.ts).
+     *
+     *  The record is the one a new project seeds, field by field: captured from the store of a new
+     *  project on 3002 (P-2026-09-25-1445), `pointedBy` included, in the seed's order. It is not a
+     *  copy of the project's own `Pointer_EDOUBLE`: measured on the seven saved examples taken to
+     *  2.228, that copy differs from the seed in `pointedBy`, `extendedBy`, `isCrossReference`,
+     *  `__childrenToSort`, `_state` and `allowCrossReference`. The ids go at the END of
+     *  `primitiveTypes` and `classs`, after EDouble: the enum order, and `api/data.ts` reads index 1
+     *  of the primitives as EString. Literal ids, not `Defaults`: a migration writes the state of
+     *  its own version.
+     *
+     *  Only a state that has primitive types gets them: `{idlookup:{}}` is returned as it is.
+     *  Pure `DState -> DState`, idempotent: a present record or id is left alone. */
+    private ['2.228 -> 2.229'](s: DState): DState {
+        const idlookup: any = s.idlookup;
+        const root: any = s;
+        if (!idlookup || typeof idlookup !== 'object') return s;
+        if (!Array.isArray(root.primitiveTypes) || root.primitiveTypes.length === 0) return s;
+
+        let added = 0;
+        for (const [id, name] of [['Pointer_EXPRESSION', 'Expression'], ['Pointer_ACTION', 'Action']]) {
+            if (!idlookup[id]) {
+                idlookup[id] = {
+                    className: 'DClass', id,
+                    pointedBy: [{ source: 'classs' }, { source: 'primitiveTypes' }, { source: 'classs' }],
+                    _state: {}, name, parent: [], annotations: [], abstract: false, interface: false,
+                    instances: [], operations: [], features: [], references: [], attributes: [],
+                    referencedBy: [], extends: [], isPrimitive: true, implements: [], implementedBy: [],
+                    partial: false, partialdefaultname: '', isSingleton: false, sealed: [], final: false,
+                    allowCrossReference: false,
+                };
+                added++;
+            }
+            for (const key of ['primitiveTypes', 'classs']) {
+                const list: any[] = Array.isArray(root[key]) ? root[key] : [];
+                if (!list.includes(id)) root[key] = [...list, id];
+            }
+        }
+
+        if (added) console.log(`[VersionFixer 2.228 -> 2.229] ${added} tipo/i primitivo/i aggiunto/i (Expression, Action).`);
         return s;
     }
 

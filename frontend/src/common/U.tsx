@@ -3331,6 +3331,11 @@ export enum ShortAttribETypes {
     ELong  = 'ELong',
     EFloat  = 'EFloat',
     EDouble  = 'EDouble',
+    // Jjodel's own (R-SIM-17, R-SIM-44): after EDouble, the seed order is the enum order and
+    // `api/data.ts` reads index 1 of the primitives as EString. Ecore sees them as EString
+    // with a `jjodel`/`type` annotation (R-SIM-45).
+    Expression = 'Expression',
+    Action = 'Action',
     // EDiagnosticChain = "EDiagnosticChain", // present in uml.ecore, without definition. i guess it's a custom installed package which is commonly used
     /*
   ECharObj  = 'ECharObj',
@@ -3359,7 +3364,9 @@ export const ShortAttribSuperTypes: Dictionary<ShortAttribETypes, ShortAttribETy
     "EInt"     : [ShortAttribETypes.ELong, ShortAttribETypes.EFloat, ShortAttribETypes.EDouble],
     "ELong"    : [ShortAttribETypes.EFloat, ShortAttribETypes.EDouble],
     "EFloat"   : [ShortAttribETypes.EDouble],
-    "EDouble"  : []
+    "EDouble"  : [],
+    "Expression": [],
+    "Action"   : []
 };
 let ecoreprefix = "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//";
 let ecoreclasprefix = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//";
@@ -3624,6 +3631,10 @@ export enum AttribETypes {
     EShort = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EShort',
     EInt = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt',
     ELong = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong',
+    // Never written to an .ecore: they export as EString with an annotation (R-SIM-45). The
+    // prefix is the Ecore one only so that `toShortEType` reads them back like the others.
+    Expression = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//Expression',
+    Action = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//Action',
     // present in uml.ecore, without definition. i guess it's a custom installed package which is commonly used
     // EDiagnosticChain = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDiagnosticChain',
     /*

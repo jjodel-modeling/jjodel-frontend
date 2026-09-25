@@ -37,6 +37,8 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ELONG",
         "Pointer_EFLOAT",
         "Pointer_EDOUBLE",
+        "Pointer_EXPRESSION",
+        "Pointer_ACTION",
         "Pointer_EOBJECT"];
 
     //static Pointer_ViewDefaultPackage' = 'Pointer_ViewDefaultPackage';
@@ -81,6 +83,8 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ELONG: Pointer<DClass> = 'Pointer_ELONG';
     static Pointer_EFLOAT: Pointer<DClass> = 'Pointer_EFLOAT';
     static Pointer_EDOUBLE: Pointer<DClass> = 'Pointer_EDOUBLE';
+    static Pointer_EXPRESSION: Pointer<DClass> = 'Pointer_EXPRESSION';
+    static Pointer_ACTION: Pointer<DClass> = 'Pointer_ACTION';
     static Pointer_EOBJECT: Pointer<DClass> = 'Pointer_EOBJECT';
 
     // @ts-ignore reduce is not well-typed in ts
@@ -89,6 +93,11 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static defaultViewPointsMap: Dictionary<Pointer, DViewPoint> = Defaults.viewpoints.reduce((acc, val) => { acc[val] = true; return acc; }, {});
     // @ts-ignore reduce is not well-typed in ts
     static defaultTypesMap: Dictionary<Pointer, boolean> = Defaults.types.reduce((acc, val) => { acc[val] = true; return acc; }, {});
+    /** The built-in type ids: the primitives, EVoid and EObject, i.e. what the `Pointer_E` prefix used to
+     *  match before `Pointer_ACTION` (R-SIM-44). The one set read by `Constructors.DTypedElement`,
+     *  `EcoreService.mapToEcoreType` and `JsonModelService.buildTypeRef`. A `Set`, not the map above:
+     *  `defaultTypesMap['constructor']` is truthy. */
+    static primitiveTypeIds: ReadonlySet<string> = new Set<string>(Defaults.types);
 
     // Fresh views cache - stores the original fresh views created at startup, NOT from loaded projects
     // This is used by updateDefaultView to ensure old project views get updated with fresh code

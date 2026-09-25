@@ -896,7 +896,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // trust it and assign directly. `getByName2` does by-name lookup and would fail
         // for these Pointer IDs, falling through to the hardcoded ESTRING fallback below
         // — silently downgrading every non-EString input.
-        if (typeof type === 'string' && /^Pointer_E[A-Z]+$/.test(type)) {
+        if (typeof type === 'string' && Defaults.primitiveTypeIds.has(type)) {
             this.setPtr("type", type);
             return this;
         }
