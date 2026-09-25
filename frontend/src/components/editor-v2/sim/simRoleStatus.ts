@@ -63,11 +63,14 @@ export const ROLE_SPECS: RoleSpec[] = [
     { key: 'simArcTarget', label: 'Arc target', kind: 'reference', placeholder: 'Select a reference' },
     { key: 'simArcWeight', label: 'Arc weight', kind: 'attribute', placeholder: 'Select an attribute' },
     { key: 'simInhibitorArc', label: 'Inhibitor arc', kind: 'class', placeholder: 'Select a metaclass' },
-    // The event role (step 1, R-SIM-16): optional, and it exists only when Event
-    // and Trigger are both set (netStcFromRoles). The identifier only labels the buttons.
+    // The event role (step 1, R-SIM-16), configured by Trigger alone (R-SIM-38):
+    // simEvent is the Trigger's declared type, derived at every read of the bag
+    // (withDerivedEventRole, netCompile.ts) and never written. It stays here so
+    // mapStateToProps copies the derived value into the roles; the panel does not
+    // show it (ROLE_GROUPS). The identifier only labels the buttons, default `name`.
     { key: 'simEvent', label: 'Event', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simTrigger', label: 'Trigger', kind: 'reference', placeholder: 'Select a reference' },
-    { key: 'simEventIdentifier', label: 'Event identifier', kind: 'attribute', placeholder: 'Select an attribute' },
+    { key: 'simEventIdentifier', label: 'Event identifier', kind: 'attribute', placeholder: 'name (default)' },
 ];
 
 /**
@@ -127,19 +130,6 @@ export function invalidEngineRoles(roles: Roles): string[] {
     return ok ? [] : [`${labelOf('simBound')} (a whole number ≥ 1)`];
 }
 
-/**
- * The missing half of a half-set event role: `['Trigger']` when only Event is
- * set, `['Event']` when only Trigger is set, `[]` when both or neither are. A
- * half-set role is no event role at all (`netStcFromRoles`): the run starts with
- * the ε step only (R-SIM-16), and the panel says why there are no events.
- */
-export function missingEventRoles(roles: Roles): string[] {
-    const event = !!roles.simEvent;
-    const trigger = !!roles.simTrigger;
-    if (event === trigger) return [];
-    return [labelOf(event ? 'simTrigger' : 'simEvent')];
-}
-
 /** Where the missing roles are to be set: the metamodel by name, or a generic fallback. */
 function onMetamodel(metamodelName: string): string {
     return ` on ${metamodelName || 'the metamodel'}`;
@@ -150,6 +140,7 @@ export function incompleteConfigurationMessage(metamodelName: string, missing: r
     return `Simulation not configured. Missing${onMetamodel(metamodelName)}: ${missing.join(', ')}.`;
 }
 
+// TODO: cleanup -- no caller since R-SIM-38 (P-2026-09-25-1500): the half-set event role is gone.
 /**
  * The warning line of a half-set event role. The model face names the
  * metamodel; the metamodel face (`metamodelName` null) is the metamodel itself.

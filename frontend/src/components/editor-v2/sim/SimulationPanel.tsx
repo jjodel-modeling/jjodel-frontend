@@ -32,14 +32,14 @@ import { DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
 import { getSimRun, simClear, simReset } from './simRunState';
 import {
-    ROLE_SPECS, eventRoleWarning, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles, missingEventRoles,
+    ROLE_SPECS, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
 } from './simRoleStatus';
 import {
     candidateLabel, collectModelObjectIds, defectsLine, haltMessage, makeNetModelView, panelInputs, pressInput, runSignature, startRun,
 } from './simBridge';
-import { eventAlphabet, netStcFromRoles } from '../../../model/simulation/netCompile';
+import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
-import { overlapVerdict, roleWriteVerdict } from '../../../model/simulation/stcFromRoles';
+import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import type { Candidate, NetRunStatus } from '../../../model/simulation/netTypes';
 import type { SimEventInfo } from '../../../model/simulation/types';
@@ -144,7 +144,8 @@ const ROLE_GROUPS: ReadonlyArray<{ id: string; title: string; keys: readonly Rol
     { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simBound', 'simTransition', 'simGuard'] },
     { id: 'control-flow', title: 'Control flow', keys: ['simOwnedTransitions', 'simSource', 'simNextState', 'simFork', 'simJoin'] },
     { id: 'petri', title: 'Petri net', keys: ['simArc', 'simArcSource', 'simArcTarget', 'simArcWeight', 'simInhibitorArc'] },
-    { id: 'events', title: 'Events', keys: ['simEvent', 'simTrigger', 'simEventIdentifier'] },
+    // No Event select: the event class is the Trigger's type (R-SIM-38), shown read-only after Trigger.
+    { id: 'events', title: 'Events', keys: ['simTrigger', 'simEventIdentifier'] },
 ];
 
 /** The project of the current user, as validation reads it (validationContext.ts); '' when none. */
@@ -166,7 +167,7 @@ interface PendingChoice {
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
-    const { modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig } = props;
+    const { modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
     // and the warning of a run started despite an overlap (no event role, R-SIM-16 parity).
@@ -209,9 +210,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const missingRoles = missingEngineRoles(roles);
     const invalidRoles = invalidEngineRoles(roles);
     const rolesComplete = missingRoles.length === 0 && invalidRoles.length === 0;
-    /** The missing half of a half-set event role: the run starts without events (R-SIM-16). */
-    const eventGap = missingEventRoles(roles);
-    /** The event role is declared: the rule of netStcFromRoles, both keys set. */
+    /**
+     * The event role is declared: the rule of netStcFromRoles, both keys set, on
+     * the derived roles, so a Trigger typed to a class (R-SIM-38).
+     */
     const eventRole = !!(roles.simEvent && roles.simTrigger);
     /** The Petri shape, recognised by the arc role (R-SIM-31). */
     const petriShape = !!roles.simArc;
@@ -222,9 +224,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!lmm) return;
         // R-SIM-16, the same verdict as the run start, on the roles as they will
         // stand after this save: with the event role or the Petri shape an overlap
-        // refuses the save; otherwise the save goes through with a warning.
+        // refuses the save; otherwise the save goes through with a warning. The
+        // event class is derived after the write, so a new Trigger is judged with
+        // its own type (R-SIM-38).
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const verdict = roleWriteVerdict(lookup, roles, key, value, options.classes.map(c => c.id));
+        const after = withDerivedEventRole({ ...roles, [key]: value === '' ? undefined : value }, lookup);
+        const verdict = overlapVerdict(lookup, after, options.classes.map(c => c.id));
         if (verdict?.refuse) {
             setRoleWarning(null);
             setRoleError(overlapMessage(lookup, verdict.overlap));
@@ -352,7 +357,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (openGroups[id] !== undefined) return openGroups[id];
         if (id === 'control-flow') return !petriShape;
         if (id === 'petri') return petriShape;
-        if (id === 'events') return eventRole || eventGap.length > 0 || !!roles.simEventIdentifier;
+        if (id === 'events') return !!(roles.simTrigger || roles.simEventIdentifier);
         return true;
     };
 
@@ -382,6 +387,18 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 </select>
             )}
         </label>
+    );
+
+    /** The derived event class, read-only (R-SIM-38): its name, or why there is none. */
+    const renderEventClass = (): ReactElement => (
+        <div className="sim-panel__row" key="eventClass">
+            <span className="sim-panel__label">Event class</span>
+            <span className="sim-panel__hint">
+                {!roles.simTrigger
+                    ? 'Set Trigger to enable events.'
+                    : roles.simEvent ? eventClassName : 'The Trigger reference has no class type.'}
+            </span>
+        </div>
     );
 
     const status: NetRunStatus | null = view?.status ?? null;
@@ -446,7 +463,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                                 <i className={`bi bi-chevron-${isOpen ? 'down' : 'right'}`} />
                                                 <span>{group.title}</span>
                                             </button>
-                                            {isOpen && ROLE_SPECS.filter(spec => group.keys.includes(spec.key)).map(renderRole)}
+                                            {isOpen && ROLE_SPECS.filter(spec => group.keys.includes(spec.key)).flatMap(spec => (
+                                                spec.key === 'simTrigger' ? [renderRole(spec), renderEventClass()] : [renderRole(spec)]
+                                            ))}
                                         </div>
                                     );
                                 })}
@@ -454,9 +473,6 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         )}
                         {invalidRoles.length > 0 && (
                             <div className="sim-panel__hint sim-panel__hint--error">{`Invalid: ${invalidRoles.join(', ')}.`}</div>
-                        )}
-                        {eventGap.length > 0 && (
-                            <div className="sim-panel__hint sim-panel__hint--warning">{eventRoleWarning(eventGap, null)}</div>
                         )}
                         {roleError && <div className="sim-panel__hint sim-panel__hint--error">{roleError}</div>}
                         {roleWarning && <div className="sim-panel__hint sim-panel__hint--warning">{roleWarning}</div>}
@@ -486,9 +502,6 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 <i className="bi bi-stop-fill" />
                             </button>
                         </div>
-                        {eventGap.length > 0 && (
-                            <div className="sim-panel__hint sim-panel__hint--warning">{eventRoleWarning(eventGap, configModelName)}</div>
-                        )}
                         {eventRole && (
                             <>
                                 <div className="sim-panel__section">Events</div>
@@ -571,7 +584,10 @@ interface StateProps {
     configModelId: string | null;
     /** Name of that model, for the messages that say where a role is missing; '' when unknown. */
     configModelName: string;
-    /** JSON of the role values (the twenty `sim*` keys of ROLE_SPECS) — a primitive, so shallow compare works. */
+    /**
+     * JSON of the role values (the twenty `sim*` keys of ROLE_SPECS, `simEvent`
+     * derived from the Trigger, R-SIM-38) — a primitive, so shallow compare works.
+     */
     roleSig: string;
     /** JSON of the option lists; empty on the M1 face, which does not need them. */
     optionSig: string;
@@ -580,6 +596,8 @@ interface StateProps {
      * sorted; empty on the M2 face and without the event role.
      */
     eventSig: string;
+    /** Name of the derived event class, for the read-only row of the M2 face; '' without one. */
+    eventClassName: string;
 }
 
 interface DispatchProps { }
@@ -591,7 +609,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         ? (typeof dModel?.instanceof === 'string' ? dModel.instanceof : null)
         : (dModel ? ownProps.modelid : null);
 
-    const bag: any = (configModelId ? lookup[configModelId]?._state : null) ?? {};
+    // The derived bag (R-SIM-38): simEvent is the Trigger's type, a stale value in the bag ignored.
+    const bag: any = withDerivedEventRole((configModelId ? lookup[configModelId]?._state : null) ?? {}, lookup);
     const roles: Roles = {};
     for (const key of ROLE_KEYS) {
         const value = bag[key];
@@ -606,6 +625,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             ? JSON.stringify(collectMetaOptions(lookup, configModelId))
             : '',
         eventSig: ownProps.isModelMode ? eventSigOf(lookup, ownProps.modelid, roles) : '',
+        eventClassName: roles.simEvent ? (lookup[roles.simEvent]?.name || roles.simEvent) : '',
     };
 }
 
