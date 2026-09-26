@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import path from 'path'
 import { execSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, realpathSync } from 'node:fs'
 
 const __dirname = import.meta.dirname
 
@@ -19,6 +19,16 @@ function gitSafe(cmd: string, fallback: string): string {
 
 const BUILD_COUNT = gitSafe('git rev-list --count HEAD', '0')
 const BUILD_SHA = gitSafe('git rev-parse --short HEAD', 'unknown')
+
+function realpathSafe(p: string): string | undefined {
+  try {
+    return realpathSync(p)
+  } catch {
+    return undefined
+  }
+}
+
+const NODE_MODULES_REAL = realpathSafe(path.resolve(__dirname, 'node_modules'))
 
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -40,7 +50,11 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   server: {
-    port: 3000
+    port: 3000,
+    // In a worktree node_modules is the P14 symlink: Vite serves its real path, outside this root.
+    fs: {
+      allow: [searchForWorkspaceRoot(__dirname), ...(NODE_MODULES_REAL ? [NODE_MODULES_REAL] : [])]
+    }
   },
   // One Vite cache per worktree: node_modules is a symlink shared by every tree.
   cacheDir: path.resolve(__dirname, '.vite-cache'),
