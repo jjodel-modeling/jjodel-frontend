@@ -520,19 +520,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     </div>
                 ) : (
                     <>
-                        {/* The lines that appear and disappear sit above the buttons: the panel is anchored at the
-                            bottom and grows upward, so they never move the buttons (R-SIM-65). One row each, the
-                            full text in the title (R-SIM-63). */}
-                        {runError && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={runError}>{runError}</div>}
+                        {/* The lines that add to the others sit above the buttons: the panel is anchored at the
+                            bottom and grows upward, so they never move the buttons (R-SIM-65, R-SIM-66). One row
+                            each, the full text in the title (R-SIM-63). */}
                         {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
-                        {interrupted && (
-                            <div
-                                className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line"
-                                title="Run interrupted: the model changed. Reset to run again."
-                            >
-                                Run interrupted: the model changed. Reset to run again.
-                            </div>
-                        )}
                         {defects && (
                             <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
                         )}
@@ -600,6 +591,17 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                     </button>
                                 </div>
                             </>
+                        )}
+                        {/* One slot for the outcome of the last action (R-SIM-66): a refused Reset, the
+                            interruption or «Last step», one at a time, replacing each other in place. */}
+                        {runError && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={runError}>{runError}</div>}
+                        {interrupted && (
+                            <div
+                                className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line"
+                                title="Run interrupted: the model changed. Reset to run again."
+                            >
+                                Run interrupted: the model changed. Reset to run again.
+                            </div>
                         )}
                         {lastStep && (
                             <div className="sim-panel__hint sim-panel__hint--line" title={`Last step: ${lastStep}`}>{`Last step: ${lastStep}`}</div>
