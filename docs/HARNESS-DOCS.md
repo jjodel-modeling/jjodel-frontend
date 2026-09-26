@@ -1,7 +1,7 @@
 # HARNESS-DOCS — organizzazione documentale dell'harness Jjodel
 
 Posizione: `docs/HARNESS-DOCS.md` nel repo `jjodel-frontend`.
-Versione: 1.5 (2026-09-26).
+Versione: 1.6 (2026-09-27).
 Copia nel Project Knowledge: sì, integrale. Sostituisce `INDICE_ARCHIVIO.md`.
 
 Questo file dice, per ogni tipo di documento che l'harness produce, chi lo scrive, chi lo legge, dove
@@ -444,6 +444,16 @@ chat reports it and does not resume it on its own. A question is a hard stop at 
 **Corsia veloce**: cadono discovery report, memo e ratifica; il prompt sta sotto le 80 righe, la
 verifica preventiva sta in dieci righe dentro l'entry di log, la verifica visiva si raggruppa in un
 solo hard stop di fine sessione. Restano obbligatori: prompt archiviato, entry di log, commit.
+
+**Figure** (`docs/harness/lane-lifecycle-bpmn.svg`, regenerated 2026-09-27 from
+`docs/harness/lane-lifecycle-bpmn.gen.py`, PDF alongside): the diagram now draws the orchestrated lane
+as run since RC-20. The chat launches and resumes the session (`lane-run start` / `resume`, RC-19
+bypass, RC-30 flag for a pre-authorised critical zone); the fast lane is the executor's shortcut from
+the guards straight to the baseline gates, because a fast prompt carries the GO; the chat decides its
+own design questions as recommended (RC-25) and only the RC-26 list reaches Alfonso; the visual
+checklist runs in the chat's built-in browser (RC-23) and Alfonso's GO follows it (every lane until
+2026-10-03, sampled after); the lane closes with the RC-17 single docs commit, the merge, and the
+digest of the unattended decisions with his veto right (RC-25, RC-28).
 
 **Eccezione documentata**: dal 13 al 15 agosto 2026 quattro sessioni hanno implementato direttamente
 in chat Cowork col bridge, saltando Claude Code. Resta l'eccezione, non la norma, ed è dichiarata nei
