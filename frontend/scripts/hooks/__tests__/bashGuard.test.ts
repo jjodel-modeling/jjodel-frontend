@@ -458,3 +458,61 @@ describe('bash-guard: git stash (RC-13-bis, P13)', () => {
         expect(r.decision).toBe('deny');
     });
 });
+
+// ── git push under bypassPermissions (RC-19) ─────────────────────────────────
+
+/** The event of bash() with permission_mode set to `mode`, or removed when `mode` is undefined. */
+function guardIn(mode: unknown, command: string) {
+    const event: Record<string, unknown> = { ...bash(command) };
+    if (mode === undefined) delete event.permission_mode;
+    else event.permission_mode = mode;
+    return runScript('bash-guard.mjs', event);
+}
+
+const PUSH_REASON = "git push is Alfonso's act under bypassPermissions (RC-19)";
+
+describe('bash-guard: git push under bypassPermissions (RC-19)', () => {
+    test.each([
+        ['the plain form', 'git push'],
+        ['git -C', 'git -C x push'],
+        ['env and an assignment', 'env A=1 git push'],
+        ['bash -c', 'bash -c "git push"'],
+        ['an absolute git path', '/usr/bin/git push origin topic'],
+        ['after &&', 'git status && git push'],
+    ])('kills "push form not found": %s is a deny that cites RC-19', (_name, command) => {
+        const r = guardIn('bypassPermissions', command);
+        expect(r.decision).toBe('deny');
+        expect(r.status).toBe(0);
+        expect(r.reason).toContain(PUSH_REASON);
+    });
+
+    test.each([
+        ['default', 'default'],
+        ['acceptEdits', 'acceptEdits'],
+        ['bubble (a subagent mode, not bypass)', 'bubble'],
+        ['another case of the name', 'BypassPermissions'],
+        ['absent', undefined],
+        ['a number', 7],
+        ['an array holding the name', ['bypassPermissions']],
+    ])('kills "push denied outside bypass": %s and git push gives no finding', (_name, mode) => {
+        const r = guardIn(mode, 'git push');
+        expect(r.status).toBe(0);
+        expect(r.stdout).toBe('');
+    });
+
+    test.each(['git status', 'git log --grep=push -1', "echo 'git push'", 'git commit-tree HEAD^{tree} -m push'])(
+        'kills "bypass denies every git call": %s under bypass passes',
+        (command) => {
+            const r = guardIn('bypassPermissions', command);
+            expect(r.status).toBe(0);
+            expect(r.stdout).toBe('');
+        },
+    );
+
+    test('kills "push replaces the other rules under bypass": a commit with no pathspec is still denied for it', () => {
+        const r = guardIn('bypassPermissions', 'git commit -m "x"');
+        expect(r.decision).toBe('deny');
+        expect(r.reason).toContain('6.1');
+        expect(r.reason).not.toContain('RC-19');
+    });
+});
