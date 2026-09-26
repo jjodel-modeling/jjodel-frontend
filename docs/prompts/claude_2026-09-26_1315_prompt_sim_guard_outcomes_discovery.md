@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-1315
 Chat: C-2026-09-26-1100
 Lane: full (Phase 1 discovery, read-only)
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane simulation · 7abb57eaa
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, a fresh session (`/clear`). Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file (subject `docs: add prompt P-2026-09-26-1315, guard outcomes discovery`), its parent is `6aeda5de4` (the Status flip of the merge `4b70b5634`), `git status` empty apart from the three untracked, gitignored `frontend/scripts/smoke/_tmp_b2_*` files. Otherwise stop.
 
