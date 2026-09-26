@@ -184,6 +184,37 @@ Source: `docs/ratifiche/claude_ratifiche_2026-09-26_orchestrated_lanes.md`, rati
   sessions on the shared tree on disjoint files" was written for one worktree; it is replaced by one worktree
   and one branch per lane, merges one at a time, and the three checks of RC-22 at launch. Emenda P13.
 
+### Ratifiche 2026-09-26: ratification by invariants (RC-25..28)
+
+Source: `docs/ratifiche/claude_ratifiche_2026-09-26_ratification_by_invariants.md`, ratified by Alfonso in chat
+`C-2026-09-26-1702` on 2026-09-26 («procedi»).
+
+- **RC-25** (2026-09-26): **Decisions proceed; ratification is asynchronous and revocable.** The project chat
+  answers its own design questions as RC-21 answers Claude Code's: it adopts the recommended option, writes the
+  R- row at once with the marker `provisional, unattended`, and proceeds. Alfonso receives a digest at the close
+  of every lane, in the chat, decisions ordered by consequence, the three most consequential first, and may veto
+  any of them: a veto before merge is a revert on the lane's branch, after merge a lane of its own. Silence does
+  not block; the marker becomes `ratified by digest <date>` when Alfonso acknowledges, or the row is reverted on
+  veto. The five-adoption cap of RC-21 is removed. Amends RC-21.
+- **RC-26** (2026-09-26): **The pre-approval list is closed and short.** Only these wait for Alfonso: a
+  critical-zone edit (Layer Impact Report); an exported-interface change that breaks a consumer outside the
+  lane; the amendment of an R- row Alfonso already ratified (not of a provisional one); the deletion of a file
+  or of persisted data; anything that changes what the MODELS demo shows or leaves out; model, effort and cost
+  of the sessions; the push. Discovery reports end with «Decisions taken (unattended)» and «Decisions awaiting
+  Alfonso» (items of this list only) instead of «Questions for Alfonso». The Phase 1 hard stop stays a session
+  boundary, not a human gate: the chat writes Phase 2 as soon as the report is in the repo. Amends P13 and the
+  Phase 2 hand-off of the prompt template.
+- **RC-27** (2026-09-26): **Verification replaces ratification where a second opinion is needed.** A
+  recommendation that touches more than one exported interface, or chooses between design options with
+  different data models (bag, persistence, migration), is checked by a second agent before adoption, with the
+  report and the proposed decision as input and one line `Verified: <what was checked, what would falsify it>`
+  as output, recorded in the R- row. Alfonso is not the second opinion.
+- **RC-28** (2026-09-26): **The gate is measured.** Every request that waits for Alfonso records the time to
+  the answer; every checkpoint reports, for its lanes, decisions taken unattended, decisions that waited, the
+  median wait, and the vetoes the digests produced. On these data the RC-26 list is shortened (no veto in two
+  weeks) or lengthened (a veto on a decision that did not wait, with its class named), and the visual GO moves
+  to sampling (RC-23, RC-15).
+
 ## Arco A — barra a tab e capi degli edge
 
 - **R-A** (2026-08-05) — Strada B per la barra: tutti i tab montati, gli inattivi nascosti con
