@@ -54,6 +54,7 @@ import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import { getSideFromHandle } from './utils/edgeUtils';
+import { isMetamodelConnectionValid } from './utils/connectionValidity';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme, CustomColorScheme, ActiveColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
@@ -620,7 +621,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
     const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
-    const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    const { screenToFlowPosition, getNodes, getNode, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
@@ -1569,6 +1570,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
         return applyIRPaletteFilter(candidates, irInteractionPlan);
     }, [modeInfo.rootableClasses, modeInfo.allClasses, modeInfo.mode, irInteractionPlan]);
+
+    // R-EDGE-1: in a metamodel both ends must be class nodes, else xyflow refuses the
+    // connection (no snap, no onConnect, no popup). Runs on every pointer move of a
+    // connect or reconnect gesture: getNode is a lookup, the mode comes from the editor.
+    const isValidConnection = useCallback(
+        (connection: Edge | Connection) => isMetamodelConnectionValid(
+            modeInfoRef.current.mode,
+            getNode(connection.source)?.type,
+            getNode(connection.target)?.type,
+        ),
+        [getNode]
+    );
 
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
@@ -4140,6 +4153,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onConnectEnd={onConnectEnd}
+                isValidConnection={isValidConnection}
                 onReconnect={handleReconnect}
                 onReconnectStart={handleReconnectStart}
                 edgesReconnectable={true}
