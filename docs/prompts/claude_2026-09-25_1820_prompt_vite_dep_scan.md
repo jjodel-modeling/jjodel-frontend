@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1820
 Chat: C-2026-09-25-1500
 Lane: fast (dev tooling, one config file expected)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane vite-dep-scan · 8a4335402 · verifica visiva passata 2026-09-25
 
 Worktree: `~/jjodel-vite`, branch `vite-dep-scan`, created by the project chat from the trunk at the commit that adds this file. Setup, each a hard stop if it fails: `pwd` is `/Users/alfonso/jjodel-vite`; `git branch --show-current` is `vite-dep-scan`; `git status` empty; `git log -1` reads `docs: add prompt P-2026-09-25-1820, Vite dependency scan`. Every commit of this lane goes on `vite-dep-scan`. The merge into the trunk is a separate step.
 
