@@ -180,7 +180,7 @@ si confronta punto per punto, si aggiunge in coda un addendum con le sole cose n
 esplicitamente path e naming, così l'esecutore non può ometterli.
 
 **Sottocartelle**: `docs/discovery/harness/` contiene gli harness eseguibili di misura usati da una
-discovery (`.mjs`, `.html`); `docs/discovery/emse-dataset/` è materiale di ricerca, non harness.
+discovery (`.mjs`, `.html`); il materiale di ricerca non sta nell'albero: resta in locale, fuori dal repo.
 
 ### 4.3 Memo di ratifica
 

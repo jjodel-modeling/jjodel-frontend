@@ -1,4 +1,5 @@
 # Discovery: public-repo cleanup after opening the harness, Phase 1
+Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, content otherwise unchanged.
 
 **Prompt-ID**: P-2026-09-27-0214. **Prompt**: `docs/prompts/claude_2026-09-27_0214_prompt_public_harness_cleanup.md`.
 **Session**: `916693ee-2013-46ea-ba02-79b3c6952342` (launched by `lane-run`, `-p`). **Tree**: `~/jjodel-release`,
@@ -116,10 +117,10 @@ Two findings:
 
 | File | Matching lines | Classes of address (domain only) | Scope |
 |---|---|---|---|
-| `docs/discovery/emse-dataset/git/commits.csv` | 2073 | univaq.it, student.univaq.it, live.it, gmail.com ×4, users.noreply.github.com | **dataset, in scope** |
+| `<local research folder>/dataset/git/commits.csv` | 2073 | univaq.it, student.univaq.it, live.it, gmail.com ×4, users.noreply.github.com | **dataset, in scope** |
 | `docs/analysis/harness-attribution-commits.csv` | 1357 | univaq.it, live.it, gmail.com ×4, fbk.eu, `noreply@anthropic.com` | **dataset, in scope** |
-| `docs/discovery/emse-dataset/git/authors_commits.txt` | 11 | the same eight addresses as `commits.csv` | **dataset, in scope** |
-| `docs/discovery/emse-dataset/git/churn_raw.txt` | 4 | none: false positive, `frontend/node_modules/tinycolor2/deno_asserts@0.168.0.mjs` (`churn_raw.txt:78101`) | no email |
+| `<local research folder>/dataset/git/authors_commits.txt` | 11 | the same eight addresses as `commits.csv` | **dataset, in scope** |
+| `<local research folder>/dataset/git/churn_raw.txt` | 4 | none: false positive, `frontend/node_modules/tinycolor2/deno_asserts@0.168.0.mjs` (`churn_raw.txt:78101`) | no email |
 | `docs/analysis/harness-attribution.md` | 1 | `noreply@anthropic.com` only (line 73) | exempt class |
 | `docs/claude-code-log-archive.md`, `docs/redesign/COMPLETED-phase-1-tokens.md`, `docs/sessioni/claude_sessione_2026-08-15_{2,3,6}.md`, `docs/prompts/claude_2026-08-15_2230_prompt_anteprima_realistica_d8.md` | 1 each | `noreply@anthropic.com` only | exempt class |
 | `docs/prompts/claude_2026-09-27_0214_prompt_public_harness_cleanup.md` | 1 | `noreply@anthropic.com`, `permissions@acm.org`, `info@jjodel.io` | exempt class |
@@ -132,9 +133,9 @@ Two findings:
 
 No dataset-like file outside the prompt's list carries an email: `churn_raw.txt` is the only other dataset
 file with a match, and its four matches are one `node_modules` path [M]. The other `harness-attribution-*.csv`
-files and every other file under `docs/discovery/emse-dataset/` have no match (they are absent from the 20) [M].
+files and every other file under `<local research folder>/dataset/` have no match (they are absent from the 20) [M].
 
-**F4.1** `docs/discovery/emse-dataset/git/authors_commitcount.txt` holds no email. It is `git shortlog -sn`
+**F4.1** `<local research folder>/dataset/git/authors_commitcount.txt` holds no email. It is `git shortlog -sn`
 output, name and count only: line 1 ` 892 Damiano Di Vincenzo`, nine lines [M]. The prompt, line 35:
 «and `authors_commitcount.txt` (`Name <email>` lines)» [R]. Phase 2 has nothing to replace there.
 
@@ -158,7 +159,7 @@ gmail.com and one fbk.eu. Three addresses carry two author-name spellings each, 
 with two addresses each across `commits.csv` and the attribution CSV (the rule of COSA 5 keeps two ids for them).
 
 Generators: `git grep -l 'commits.csv' -- frontend/scripts docs` → only `docs/analysis/harness-attribution.md`,
-`docs/discovery/emse-dataset/SUMMARY.md` and this prompt, exit 0 [M]. `git grep -l 'harness-attribution-commits'`
+`<local research folder>/dataset/SUMMARY.md` and this prompt, exit 0 [M]. `git grep -l 'harness-attribution-commits'`
 (whole repo) → the `.md` and this prompt; `git grep -l -E 'authors_commits|authors_commitcount'` → `SUMMARY.md`
 and this prompt [M]. Positive control through the same tool: `git grep -l 'lane-run' -- frontend/scripts` →
 `frontend/scripts/lane-run.mjs` and its test [M]. `SUMMARY.md:3` reads «Generated 2026-06-09 by a read-only
@@ -170,9 +171,9 @@ prodotti da sessioni» [R]: the analysis names that address as its marker.
 
 ## 6. The mapping file (question 5)
 
-`ls -la ~/.jjodel-lanes/emse/author-map.csv` → `No such file or directory`, exit 1; positive control:
+`ls -la <local research folder>/author-map/author-map.csv` → `No such file or directory`, exit 1; positive control:
 `ls -la ~/.jjodel-lanes/` lists `P-2026-09-26-2340` ... `P-2026-09-27-0214`, `_probe`, exit 0 [M]. The directory
-`~/.jjodel-lanes/emse/` does not exist either. Phase 2 creates the file; nothing to extend.
+`<local research folder>/author-map/` does not exist either. Phase 2 creates the file; nothing to extend.
 
 ## 7. `check:docs` baseline (question 6)
 
@@ -184,10 +185,10 @@ unresolved `Corregge` of `P-2026-09-26-1335` (`docs/claude-code-log.md:163`) and
 ## 8. The Phase 2 controls as written
 
 - **F8.1 (P12) The positive control does not discriminate.** Prompt line 62: «the positive control
-  `git grep -c 'a01' docs/discovery/emse-dataset/git/commits.csv` must be greater than zero». On the untouched
-  file it already prints `docs/discovery/emse-dataset/git/commits.csv:16`, exit 0 [M]: `a01` occurs inside
+  `git grep -c 'a01' <local research folder>/dataset/git/commits.csv` must be greater than zero». On the untouched
+  file it already prints `<local research folder>/dataset/git/commits.csv:16`, exit 0 [M]: `a01` occurs inside
   hex hashes. It passes whether the replacement ran or not. A field-delimited control, `git grep -c -E '\|a01\|'
-  docs/discovery/emse-dataset/git/commits.csv`, reads no line, exit 1, on the same file [M], and must read 723
+  <local research folder>/dataset/git/commits.csv`, reads no line, exit 1, on the same file [M], and must read 723
   after the replacement (the rows of a01).
 - **F8.2 The negative control misses two classes.** `git grep -I -E '[A-Za-z0-9._%+-]+@(gmail|live|univaq|student\.univaq)\.'`
   matches today 2072 lines of `commits.csv`, 1284 of `harness-attribution-commits.csv`, 9 of
@@ -225,8 +226,8 @@ unresolved `Corregge` of `P-2026-09-26-1335` (`docs/claude-code-log.md:163`) and
 
 `CLAUDE.md`; `docs/PROTOCOL.md`; `docs/decisions.md` (RC-16..RC-29); `docs/claude-code-log.md` (top entry);
 `docs/log-inbox/harness.md`; `docs/prompts/claude_2026-09-27_0214_prompt_public_harness_cleanup.md`; `.gitignore`;
-`.claude/scheduled_tasks.lock`; `docs/discovery/emse-dataset/SUMMARY.md` (lines 1-40 and a grep);
-`docs/discovery/emse-dataset/git/commits.csv`, `authors_commits.txt`, `authors_commitcount.txt`,
+`.claude/scheduled_tasks.lock`; `<local research folder>/dataset/SUMMARY.md` (lines 1-40 and a grep);
+`<local research folder>/dataset/git/commits.csv`, `authors_commits.txt`, `authors_commitcount.txt`,
 `churn_raw.txt` (head and matches), `commits_per_day_author.txt`, `file_hotspots_top100.txt`, `totals.txt`,
 `commit_types.txt`, `branch_divergence.txt` (heads); `docs/analysis/harness-attribution.md` (lines 1-25 and a
 grep); `docs/analysis/harness-attribution-commits.csv`; the matching lines of the 20 files of §4;
@@ -246,7 +247,7 @@ grep); `docs/analysis/harness-attribution-commits.csv`; the matching lines of th
 5. Three addresses of the dataset files are not in `commits.csv` (one gmail.com and one fbk.eu, plus `noreply@anthropic.com`): which ids?
    Recommended: a09 and a10 for the two personal ones, in order of first appearance in `harness-attribution-commits.csv`; the GitHub noreply address of `commits.csv` gets its id (a07) like any other.
 6. The positive control `git grep -c 'a01'` passes on the untouched file (F8.1): replace it?
-   Recommended: use `git grep -c -E '\|a01\|' docs/discovery/emse-dataset/git/commits.csv`, 0 before, 723 expected after, both in the commit 3 body.
+   Recommended: use `git grep -c -E '\|a01\|' <local research folder>/dataset/git/commits.csv`, 0 before, 723 expected after, both in the commit 3 body.
 7. The negative control misses fbk.eu and `users.noreply.github.com` (F8.2): widen it?
    Recommended: run the prompt's grep as written and, beside it, `git grep -I -E '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}'` on the three changed files filtered of `noreply@anthropic.com`, which must be empty.
 8. `git diff --stat f6ad47d..HEAD` already lists 26 files of other lanes (F8.3): which base?
