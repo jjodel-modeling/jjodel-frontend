@@ -231,6 +231,19 @@ their first commit.
   `git commit` of 2026-09-21; RC-19 and RC-25 already carried the rest. Applied to the trunk at once, to
   `simulation-engine` with the next merge; a lane already running keeps the settings it loaded.
 
+### Decisione 2026-09-27: the go-ahead of a critical-zone lane under bypass (RC-30)
+
+- **RC-30** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: trunk):
+  **A critical-zone lane runs orchestrated with an explicit go-ahead.** Alfonso, in chat (2026-09-27 00:58,
+  on the enum edge guard lane): «se per la decisione serve useJjomSync.ts o canvasToJjom.ts, procedi anche lì
+  in automatico». Mechanism: `lane-run start … --critical-zone-goahead <Prompt-ID>` (the lane's own id,
+  refused otherwise) sets `JJODEL_CRITICAL_ZONE_GOAHEAD` in the session and records it in `goahead.txt`, so
+  a resume carries it; `critical-zone.mjs` under `bypassPermissions` lets the edit through only when the
+  variable holds a Prompt-ID, and keeps the deny otherwise (default mode keeps the `ask`). The Layer Impact
+  Report stays mandatory: the Phase 2 prompt of such a lane writes it as its first step, in
+  `docs/lir/`, before the diff, and names the go-ahead in its header. Hook tests 255 (five new). Amends
+  RC-19 (relaunch without the flag is no longer the only way).
+
 ## Arco A — barra a tab e capi degli edge
 
 - **R-A** (2026-08-05) — Strada B per la barra: tutti i tab montati, gli inattivi nascosti con
