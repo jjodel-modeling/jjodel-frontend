@@ -1,9 +1,10 @@
-# Prompt: public-repo cleanup after opening the harness (PDF, gitignore, local Claude Code state, LaTeX build files, EMSE dataset pseudonymization)
+# Prompt: public-repo cleanup after opening the harness (PDF, gitignore, local Claude Code state, LaTeX build files, research dataset pseudonymization)
+Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, content otherwise unchanged.
 
 Prompt-ID: P-2026-09-27-0214
 Chat: C-2026-09-27-0150
 Lane: harness (docs, `.gitignore`, index-only removals; no code file is touched)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane harness · 869f204eb
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, launched by the chat with `lane-run start`
 (a new session, so `/clear` is implicit). Before anything else: `pwd` is `/Users/alfonso/jjodel-release`,
@@ -30,8 +31,8 @@ key, token or password, but five things that should not be public, or should not
 4. LaTeX build files tracked under `docs/`: `docs/jjtl-jjel-paper.{aux,dvi,fdb_latexmk,fls,log,out,toc}`
    and `docs/mde-intelligence-2026/paper/_build/main.{aux,bbl,blg,fdb_latexmk,fls,log,out,synctex.gz}`.
    The `.tex` and `.pdf` of both papers stay.
-5. The EMSE dataset carries the personal email addresses of contributors and students, thousands of times:
-   `docs/discovery/emse-dataset/git/commits.csv` (column `email`), `docs/discovery/emse-dataset/git/authors_commits.txt`
+5. The research dataset carries the personal email addresses of contributors and students, thousands of times:
+   `<local research folder>/dataset/git/commits.csv` (column `email`), `<local research folder>/dataset/git/authors_commits.txt`
    and `authors_commitcount.txt` (`Name <email>` lines), `docs/analysis/harness-attribution-commits.csv`
    (column `email`). Git author emails are recoverable from the history anyway; collected in a dataset of an
    empirical study they are personal data and must be pseudonymized in the repository, not only in the paper.
@@ -53,13 +54,13 @@ key, token or password, but five things that should not be public, or should not
    (`a01`, `a02`, ... in order of first appearance in `commits.csv`), one id per distinct email; two emails
    of the same person keep two ids (the dataset must not assert identities it did not measure; the mapping
    file can). Author names stay: they are the public authorship of the commits. The mapping
-   `email,author_id,name` is written to `~/.jjodel-lanes/emse/author-map.csv`, outside every tree, and is
+   `email,author_id,name` is written to `<local research folder>/author-map/author-map.csv`, outside every tree, and is
    reused by every later lane that regenerates the dataset: if the file already exists, extend it, never
-   renumber. A note at the top of `docs/discovery/emse-dataset/SUMMARY.md` and of
+   renumber. A note at the top of `<local research folder>/dataset/SUMMARY.md` and of
    `docs/analysis/harness-attribution.md` says that emails are pseudonymized and where the mapping lives
    (path only, no content). Do the replacement with a small script run once from the shell, not committed,
-   and not by hand: after it, `git grep -I -E '[A-Za-z0-9._%+-]+@(gmail|live|univaq|student\.univaq)\.' -- docs/discovery/emse-dataset docs/analysis`
-   must be empty, and the positive control `git grep -c 'a01' docs/discovery/emse-dataset/git/commits.csv`
+   and not by hand: after it, `git grep -I -E '[A-Za-z0-9._%+-]+@(gmail|live|univaq|student\.univaq)\.' -- <local research folder>/dataset docs/analysis`
+   must be empty, and the positive control `git grep -c 'a01' <local research folder>/dataset/git/commits.csv`
    must be greater than zero.
 6. Log entry (P9) in `docs/log-inbox/harness.md`, plus a ticket paragraph for the items below that this lane
    does not touch, so they are not lost: the three `harness_FTG_PM*.xmi` and `background_spec_driven_development.md`
@@ -75,9 +76,9 @@ the skills, the content of any prompt, discovery or session file, the git histor
 
 `978-3-030-43946-0_9.pdf` (removed), `.gitignore`, the index entries of `.claude/projects/**` and
 `.claude/scheduled_tasks.lock` (removed from the index only), the fifteen LaTeX build files (removed from the
-index only), `docs/discovery/emse-dataset/git/commits.csv`, `docs/discovery/emse-dataset/git/authors_commits.txt`,
-`docs/discovery/emse-dataset/git/authors_commitcount.txt`, `docs/analysis/harness-attribution-commits.csv`,
-`docs/discovery/emse-dataset/SUMMARY.md`, `docs/analysis/harness-attribution.md`, `docs/log-inbox/harness.md`,
+index only), `<local research folder>/dataset/git/commits.csv`, `<local research folder>/dataset/git/authors_commits.txt`,
+`<local research folder>/dataset/git/authors_commitcount.txt`, `docs/analysis/harness-attribution-commits.csv`,
+`<local research folder>/dataset/SUMMARY.md`, `docs/analysis/harness-attribution.md`, `docs/log-inbox/harness.md`,
 the Status line of this file. Nothing else.
 
 ## COME
@@ -98,11 +99,11 @@ answers:
    is missed. Files whose only emails are `noreply@anthropic.com`, `permissions@acm.org`, `info@jjodel.io`
    or `@users.noreply.github.com` are out of scope: list them, do not touch them.
 4. Which columns of `commits.csv` and `harness-attribution-commits.csv` carry an email, and whether any
-   other file under `docs/analysis` or `docs/discovery/emse-dataset` is derived from them by a script in
+   other file under `docs/analysis` or `<local research folder>/dataset` is derived from them by a script in
    the repo (`git grep -l 'commits.csv' -- frontend/scripts docs`): if a script regenerates the dataset,
    name it, because the pseudonymization must also be applied there (a question, with a Recommended line),
    not only to the output.
-5. Whether `~/.jjodel-lanes/emse/author-map.csv` already exists.
+5. Whether `<local research folder>/author-map/author-map.csv` already exists.
 6. What `check:docs` says on the clean tree (the 4/4 line and the warnings count), as the baseline.
 
 Stop and ask (with a `Recommended:` line) if: a dataset file is regenerated by a tracked script; the email
@@ -116,7 +117,7 @@ outside the fifteen.
    COSA. Message body lists the removed paths.
 3. Commit 2 (`chore: stop tracking LaTeX build files under docs`): item 4. Message body lists the fifteen
    paths and the `git check-ignore -v` lines of the two controls.
-4. Commit 3 (`docs(emse): pseudonymize contributor emails in the dataset`): item 5. Message body gives the
+4. Commit 3 (`docs(<scope>): pseudonymize contributor emails in the dataset`): item 5. Message body gives the
    number of distinct emails mapped, the two grep controls with their output, and the mapping path. Never
    put an email or the mapping content in a commit message.
 5. Gates on the tree after commit 3: `check:docs` at least the baseline, `git ls-files | grep -c 978-3-030`
@@ -135,6 +136,6 @@ only change this lane makes under `.claude/`, and it is declared here.
 
 ## RIFERIMENTI
 
-`docs/PROTOCOL.md` P9, P13, P16; `docs/HARNESS-DOCS.md` §7; `docs/discovery/emse-dataset/SUMMARY.md`;
+`docs/PROTOCOL.md` P9, P13, P16; `docs/HARNESS-DOCS.md` §7; `<local research folder>/dataset/SUMMARY.md`;
 `docs/analysis/harness-attribution.md`; the chat audit of 2026-09-27 (clone of `f6ad47d`, read-only,
 counts in Context).
