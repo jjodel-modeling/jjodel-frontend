@@ -20,6 +20,8 @@
  *   interrupts the run (R-SIM-34).
  * - the texts of the panel: `haltMessage`, `candidateLabel`, `defectsLine`, and
  *   `panelInputs`, the inputs a status leaves enabled (R-SIM-29).
+ * - why an input has no candidate: `inputReason` and `stopReason`, recomputed
+ *   from the run and explained guard site by guard site (R-SIM-57..62).
  *
  * Actions return no assignment until lane C (R-SIM-39).
  */
@@ -27,15 +29,16 @@
 import type { ExecutionContext } from '../../../jjscript/types';
 import type { JjelValue } from '../../../jjel/evaluator';
 import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
-import { candidates, step } from '../../../model/simulation/netStep';
+import { candidates, stateAccess, step } from '../../../model/simulation/netStep';
 import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess } from '../../../model/simulation/guardContext';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import { compileGuard, evaluateGuard } from '../../../model/simulation/guardEvaluator';
-import type { CompiledGuard } from '../../../model/simulation/guardEvaluator';
+import type { CompiledGuard, GuardDefectReason } from '../../../model/simulation/guardEvaluator';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../../../model/simulation/objectSlots';
 import type {
-    ActionOracle, Arc, Candidate, CompiledNet, GuardOracle, HaltReason, NetModelView, NetRunStatus, NetStc, StepOutcome,
+    ActionOracle, Arc, Candidate, CandidateSet, CompiledNet, GuardOracle, HaltReason, NetModelView, NetRunStatus, NetStc,
+    SimStateAccess, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import { getSimRun, simCommit } from './simRunState';
 import type { SimRun } from './simRunState';
@@ -153,9 +156,31 @@ function makeGuardOracle(snapshot: SimSnapshot, guards: ReadonlyMap<string, Comp
 /** No assignment until lane C (R-SIM-39): a step moves the marking only. */
 export const NO_SIM_ACTIONS: ActionOracle = () => ({ kind: 'ok', assignments: [] });
 
+/**
+ * What never runs, found at Reset (R-SIM-61): today a guard that does not parse
+ * or that the subset checker rejects. Lane C adds actions and declarations.
+ * Never a run-time outcome: those depend on σ and are explained by `stopReason`.
+ */
+export interface CompileDefect {
+    readonly element: string;
+    readonly role: 'guard';
+    readonly reason: 'parse-error' | 'subset';
+    readonly detail: string;
+    readonly source: string;
+}
+
 export type RunStart =
-    | { readonly kind: 'started'; readonly run: SimRun }
+    | { readonly kind: 'started'; readonly run: SimRun; readonly compileDefects?: readonly CompileDefect[] }
     | { readonly kind: 'refused'; readonly reason: string };
+
+/** The guards of the map that never run, in compile order. */
+function guardDefectsOf(guards: ReadonlyMap<string, CompiledGuard>): CompileDefect[] {
+    const out: CompileDefect[] = [];
+    for (const [element, g] of guards) {
+        if (g.defect) out.push({ element, role: 'guard', reason: g.defect.reason, detail: g.defect.detail, source: g.source });
+    }
+    return out;
+}
 
 /**
  * The run of an M1 model at Reset. `configModelId` is the metamodel whose bag
@@ -181,17 +206,19 @@ export function startRun(
         if (e instanceof SimSnapshotError) return { kind: 'refused', reason: `The model cannot be frozen: ${e.message}.` };
         throw e;
     }
+    const guards = compileGuards(net, stc, lookup);
     return {
         kind: 'started',
         run: {
             net,
             config: { state: net.initial, event: null },
             halt: null,
-            guards: makeGuardOracle(snapshot, compileGuards(net, stc, lookup), net.places),
+            guards: makeGuardOracle(snapshot, guards, net.places),
             actions: NO_SIM_ACTIONS,
             alphabet: eventAlphabet(stc, view, ids).map(e => e.id),
             signature: runSignature(lookup, modelId, configModelId),
         },
+        compileDefects: guardDefectsOf(guards),
     };
 }
 
@@ -287,13 +314,51 @@ export function candidateLabel(net: CompiledNet, transitionId: string, lookup: L
     return `${own} (${arcsText(t.preset, lookup)} → ${arcsText(t.postset, lookup)})`;
 }
 
-/** The compile defects of a run in one line, the first three then a count (R-SIM-37); `null` when none. */
-export function defectsLine(net: CompiledNet, lookup: Lookup): string | null {
-    const defects = net.defects;
-    if (defects.length === 0) return null;
-    const shown = defects.slice(0, 3).map(d => `${elementName(lookup, d.element)} (${d.message})`);
-    const more = defects.length > 3 ? `, and ${defects.length - 3} more` : '';
-    return `${defects.length} element${defects.length === 1 ? '' : 's'} not compiled: ${shown.join('; ')}${more}.`;
+/**
+ * The short form of a guard defect (R-SIM-62): the parse position and message,
+ * the subset code, the evaluation message without the error class, the type a
+ * non-boolean guard returned.
+ */
+function defectShort(reason: GuardDefectReason, detail: string): string {
+    switch (reason) {
+        case 'parse-error':
+            return `parse error ${detail}`;
+        case 'subset':
+            return detail.split(':')[0];
+        case 'exception':
+            return detail.replace(/^JjelEvaluationError: /, '');
+        case 'non-boolean': {
+            const m = /^the guard returned (.+), not a boolean$/.exec(detail);
+            return m ? `returns ${m[1]}` : detail;
+        }
+        default:
+            return detail;
+    }
+}
+
+/**
+ * The defects of a run at Reset in one line, the first three then a count
+ * (R-SIM-37, R-SIM-61): the net's (an element the compiler left out) and the
+ * guards' (a transition compiled but never a candidate), in the one wording
+ * true for both. `null` when none.
+ */
+export function defectsLine(net: CompiledNet, lookup: Lookup, compileDefects: readonly CompileDefect[] = []): string | null {
+    const items = [
+        ...net.defects.map(d => `${elementName(lookup, d.element)} (${d.message})`),
+        ...compileDefects.map(d => `${elementName(lookup, d.element)} ${d.role} (${defectShort(d.reason, d.detail)})`),
+    ];
+    if (items.length === 0) return null;
+    const more = items.length > 3 ? `, and ${items.length - 3} more` : '';
+    return `${items.length} defect${items.length === 1 ? '' : 's'}: ${items.slice(0, 3).join('; ')}${more}.`;
+}
+
+/** The `title` of the defects line: every defect in full, one per line, a guard with its source (R-SIM-62). */
+export function defectsTitle(net: CompiledNet, lookup: Lookup, compileDefects: readonly CompileDefect[] = []): string | null {
+    const lines = [
+        ...net.defects.map(d => `${elementName(lookup, d.element)}: ${d.message}`),
+        ...compileDefects.map(d => `${elementName(lookup, d.element)} ${d.role}: ${d.detail} [${d.source}]`),
+    ];
+    return lines.length === 0 ? null : lines.join('\n');
 }
 
 export interface PanelInputs {
@@ -317,6 +382,144 @@ export function panelInputs(status: NetRunStatus, structural: PanelInputs | null
 }
 
 // ---------------------------------------------------------------------------
+// Why an input has no candidate (R-SIM-57..62)
+// ---------------------------------------------------------------------------
+
+/** The label of an input: `ε` for `null`, the event's identifier otherwise; the panel's. */
+export type InputLabel = (event: string | null) => string;
+
+/** Why one input has no candidate, in the configuration of the run. */
+export interface InputReason {
+    /** The event instance id, `null` for ε. */
+    readonly event: string | null;
+    /** One line: `ε: t1 false`, `Coin: nothing enabled`; the guard's element is named. */
+    readonly short: string;
+    /** For the list: transitions as `name (S → D)`, never a guard's source (R-SIM-62). */
+    readonly detail: string;
+    /** For the `title`: the detail with the guard sources in brackets. */
+    readonly full: string;
+}
+
+/** Why a run in Deadlock has no candidate for any input (R-SIM-58). */
+export interface StopReason {
+    /** After the status in the status row: the inputs that say why, the first three then a count. */
+    readonly line: string;
+    /** Every input in full, one per line. */
+    readonly title: string;
+    /** ε, then the alphabet, in order. */
+    readonly inputs: readonly InputReason[];
+}
+
+/** The text of a guard, read by the `simGuard` pointer; a model edit interrupts the run (R-SIM-34), so it is the compiled one. */
+function guardText(lookup: Lookup, site: string, guardFeature: string | undefined): string | null {
+    if (!guardFeature) return null;
+    const value = objectSlotValues(lookup, site, guardFeature)[0];
+    return value === undefined ? null : String(value);
+}
+
+/** The first guard site among the siblings of an `else` whose outcome is a defect. */
+function defectiveSibling(run: SimRun, siblings: readonly string[], event: string | null, access: SimStateAccess): string | null {
+    for (const id of siblings) {
+        const sibling = run.net.transitions.find(x => x.id === id);
+        for (const site of sibling?.guardSites ?? []) if (run.guards(site, event, access).kind === 'defect') return site;
+    }
+    return null;
+}
+
+/**
+ * One evaluated transition that is not a candidate, or `null` for one that is.
+ * The guard is explained site by site (R-SIM-59): a fused fork/join names the
+ * edge whose guard failed, a defect first, as the core's conjunction decides.
+ */
+function blocked(
+    run: SimRun, e: CandidateSet['evaluated'][number], event: string | null, access: SimStateAccess, lookup: Lookup,
+    guardFeature: string | undefined,
+): { short: string; detail: string; full: string } | null {
+    const t = run.net.transitions.find(x => x.id === e.transition);
+    const own = elementName(lookup, e.transition.split('#')[0]);
+    const label = candidateLabel(run.net, e.transition, lookup);
+    const out = e.outcome;
+    if (out.kind === 'inhibited') {
+        const v = `inhibited by ${elementName(lookup, out.place)}`;
+        return { short: `${own} ${v}`, detail: `${label} ${v}`, full: `${label} ${v}` };
+    }
+    if (out.kind === 'else') {
+        if (out.outcome.kind === 'true') return null;
+        const sibling = out.outcome.kind === 'defect' ? defectiveSibling(run, t?.elseOf ?? [], event, access) : null;
+        const v = out.outcome.kind === 'defect'
+            ? `else, ${sibling === null ? 'a sibling' : elementName(lookup, sibling)} is defective`
+            : 'else, a sibling is true';
+        return { short: `${own} ${v}`, detail: `${label} ${v}`, full: `${label} ${v}` };
+    }
+    if (out.kind === 'true') return null;
+    const sites = (t?.guardSites ?? []).map(site => ({ site, g: run.guards(site, event, access) }));
+    const defect = sites.find(s => s.g.kind === 'defect');
+    const failing = defect ? [defect] : sites.filter(s => s.g.kind === 'false');
+    if (failing.length === 0) return { short: `${own} ${out.kind}`, detail: `${label} ${out.kind}`, full: `${label} ${out.kind}` };
+    const g = failing[0].g;
+    const names = failing.map(s => elementName(lookup, s.site)).join(', ');
+    const short = g.kind === 'defect' ? `defect, ${defectShort(g.reason, g.detail)}` : 'false';
+    const full = g.kind === 'defect' ? `defect, ${g.reason === 'exception' ? defectShort(g.reason, g.detail) : g.detail}` : 'false';
+    const sources = failing.map(s => guardText(lookup, s.site, guardFeature)).filter((x): x is string => x !== null);
+    const src = sources.map(x => ` [${x}]`).join('');
+    const plain = failing.length === 1 && failing[0].site === e.transition;
+    const detail = plain ? `${label} ${full}` : `${label}: ${names} ${full}`;
+    return { short: `${names} ${short}`, detail, full: `${detail}${src}` };
+}
+
+/** The reason of one input, and whether any transition said why; `null` when the input has a candidate or the run cannot move. */
+function explain(
+    run: SimRun, event: string | null, lookup: Lookup, label: InputLabel, guardFeature: string | undefined,
+): { reason: InputReason; explained: boolean } | null {
+    if (run.halt !== null) return null;
+    const cs = candidates(run.net, { state: run.config.state, event }, run.guards);
+    if (cs.terminated || cs.candidates.length > 0) return null;
+    const access = stateAccess(run.config.state);
+    const entries = cs.evaluated.map(e => blocked(run, e, event, access, lookup, guardFeature)).filter((b): b is { short: string; detail: string; full: string } => b !== null);
+    const name = label(event);
+    if (entries.length === 0) {
+        const nothing = `${name}: nothing enabled`;
+        return { reason: { event, short: nothing, detail: nothing, full: nothing }, explained: false };
+    }
+    const form = (key: 'short' | 'detail' | 'full') => `${name}: ${entries.map(b => b[key]).join('; ')}`;
+    return { reason: { event, short: form('short'), detail: form('detail'), full: form('full') }, explained: true };
+}
+
+/**
+ * Why an input has no candidate in the run's configuration (R-SIM-60: the
+ * `title` of a button that is on in `Running`); `null` when it has one, or
+ * without a run, or when the run is terminated or halted.
+ */
+export function inputReason(
+    run: SimRun | undefined, event: string | null, lookup: Lookup, label: InputLabel, guardFeature?: string,
+): InputReason | null {
+    return run ? explain(run, event, lookup, label, guardFeature)?.reason ?? null : null;
+}
+
+/**
+ * The reason of a run in Deadlock, for ε and every event (R-SIM-58, R-SIM-59):
+ * the candidate sets recomputed from the run, as `netRunStatus` computes them,
+ * so it is non-null exactly when that says `Deadlock`. The caller computes it
+ * once per panel action, never per render (report §3.4).
+ */
+export function stopReason(run: SimRun | undefined, lookup: Lookup, label: InputLabel, guardFeature?: string): StopReason | null {
+    if (!run) return null;
+    const all: Array<{ reason: InputReason; explained: boolean }> = [];
+    for (const event of [null, ...run.alphabet]) {
+        const r = explain(run, event, lookup, label, guardFeature);
+        if (r === null) return null;
+        all.push(r);
+    }
+    const said = all.filter(r => r.explained).map(r => r.reason.short);
+    const more = said.length > 3 ? ` · and ${said.length - 3} more` : '';
+    return {
+        line: said.length === 0 ? 'nothing enabled' : `${said.slice(0, 3).join(' · ')}${more}`,
+        title: all.map(r => r.reason.full).join('\n'),
+        inputs: all.map(r => r.reason),
+    };
+}
+
+// ---------------------------------------------------------------------------
 // One input
 // ---------------------------------------------------------------------------
 
@@ -328,7 +531,22 @@ export interface InputPress {
     readonly outcome: StepOutcome | null;
 }
 
-function lastStepText(outcome: StepOutcome, net: CompiledNet, lookup: Lookup, input: string): string {
+/**
+ * The first transition the label shows blocked, in its short form (R-SIM-57):
+ * what a discard or a quiescence names instead of claiming that nothing
+ * accepted the input. The configuration is the run's before the commit, which
+ * a discard and a quiescence leave as it was.
+ */
+function firstBlocked(run: SimRun, outcome: StepOutcome, lookup: Lookup): string | null {
+    const access = stateAccess(run.config.state);
+    for (const e of outcome.label.evaluated) {
+        const b = blocked(run, e, outcome.label.event, access, lookup, undefined);
+        if (b) return b.short;
+    }
+    return null;
+}
+
+function lastStepText(outcome: StepOutcome, net: CompiledNet, lookup: Lookup, input: string, why: string | null = null): string {
     const chosen = outcome.label.selector;
     switch (outcome.kind) {
         case 'fired':
@@ -336,9 +554,9 @@ function lastStepText(outcome: StepOutcome, net: CompiledNet, lookup: Lookup, in
         case 'halted':
             return `${input}: ${candidateLabel(net, chosen ?? '', lookup)} halted the run`;
         case 'discard':
-            return `${input}: discarded, no transition accepted it`;
+            return why === null ? `${input}: discarded, no transition accepted it` : `${input}: discarded, ${why}`;
         case 'quiescence':
-            return `${input}: nothing to fire`;
+            return why === null ? `${input}: nothing to fire` : `${input}: nothing to fire, ${why}`;
         case 'inadmissible':
             return `${input}: refused, ${chosen ?? 'none'} is not a candidate`;
     }
@@ -369,5 +587,6 @@ export function pressInput(
     }
     const outcome = step(run.net, cfg, chosen, run.guards, run.actions);
     simCommit(modelId, outcome);
-    return { pending: null, lastStep: lastStepText(outcome, run.net, lookup, input), outcome };
+    const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(run, outcome, lookup) : null;
+    return { pending: null, lastStep: lastStepText(outcome, run.net, lookup, input, why), outcome };
 }

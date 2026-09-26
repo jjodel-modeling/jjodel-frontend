@@ -476,6 +476,14 @@
         color: var(--color-warning-text);
     }
 
+    // One row whatever the text, the full text in the `title` (R-SIM-63): the panel is
+    // anchored at the bottom, so a line that wrapped pushed the buttons 17px up.
+    &__hint--line {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     &__status {
         display: flex;
         align-items: center;
@@ -487,6 +495,51 @@
     &__status-text {
         font-size: 11px;
         color: var(--color-text-secondary);
+    }
+
+    // Deadlock: the row says why and opens the list of reasons (R-SIM-58).
+    &__status--clickable {
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        // The toggle glyph: declared on the icon, as every icon of the panel.
+        .bi,
+        .bi:hover {
+            font-size: 10px;
+            line-height: 1;
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    // The reason after the status, on the row's one line; the full text is the row's `title`.
+    &__status-reason {
+        flex: 1;
+        min-width: 0;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // One reason per input, opened by the user: the only text of the panel that
+    // may change its height (R-SIM-63).
+    &__reasons {
+        margin: 4px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__reason {
+        padding: 2px 0;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-text-secondary);
+        overflow-wrap: anywhere;
     }
 
     // Status dot — an indicator, so cyan is allowed here (design system §7.1:

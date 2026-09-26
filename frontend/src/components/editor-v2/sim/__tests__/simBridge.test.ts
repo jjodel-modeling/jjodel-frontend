@@ -13,8 +13,8 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, evalContextFor, haltMessage, NO_SIM_ACTIONS, panelInputs, pressInput, runSignature,
-    startRun,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, inputReason, NO_SIM_ACTIONS, panelInputs,
+    pressInput, runSignature, startRun, stopReason,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
@@ -354,7 +354,7 @@ describe('the panel\'s texts and gates', () => {
         expect(defectsLine(run.net, lookup)).toBeNull();
         const defects = ['a', 'b', 'c', 'd'].map(e => ({ element: e, code: 'no-target' as const, message: 'the edge has no target' }));
         expect(defectsLine({ ...run.net, defects } as CompiledNet, {}))
-            .toBe('4 elements not compiled: a (the edge has no target); b (the edge has no target); c (the edge has no target), and 1 more.');
+            .toBe('4 defects: a (the edge has no target); b (the edge has no target); c (the edge has no target), and 1 more.');
     });
 });
 
@@ -427,5 +427,234 @@ describe('guards read σ in the run (wave B2, P-2026-09-26-1105, R-SIM-30, R-SIM
 
     it('the action oracle of the run is still NO_SIM_ACTIONS until lane C (R-SIM-39)', () => {
         expect(started(petriLookup('true'), spyBuilder(petriRecord).build).actions).toBe(NO_SIM_ACTIONS);
+    });
+});
+
+describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () => {
+    /** Petri roles with an inhibitor class, k = 3. */
+    const PETRI = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simInhibitorArc: 'C_Inh', simArcSource: 'R_src',
+        simArcTarget: 'R_tgt', simInitialMarking: 'A_tokens', simBound: '3', simGuard: 'A_guard',
+    };
+
+    function petri(objects: Record<string, Obj>): Lookup {
+        const lookup = buildLookup(PETRI, objects);
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc', 'C_Inh']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        return lookup;
+    }
+
+    /** b2net: p1 (3 tokens) -a1-> t1 -a2-> p2, the guard of t1 given. */
+    const b2net = (guard: string) => petri({
+        p1: { cls: 'C_Place', slots: { A_tokens: [3] } },
+        p2: { cls: 'C_Place' },
+        t1: { cls: 'C_PTr', slots: { A_guard: [guard] } },
+        a1: { cls: 'C_Arc', slots: { R_src: ['p1'], R_tgt: ['t1'] } },
+        a2: { cls: 'C_Arc', slots: { R_src: ['t1'], R_tgt: ['p2'] } },
+    });
+
+    /** The record of `buildEvalContext`: one handle per object of the model, instance names bound at the top. */
+    const recordOf = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: id };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup, record: () => Record<string, any> = recordOf(lookup)) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const LABELS: Record<string, string> = { coin: 'Coin', push: 'Push' };
+    const label = (e: string | null) => (e === null ? 'ε' : LABELS[e] ?? e);
+    const eps = (lookup: Lookup) => pressInput('M', null, undefined, lookup, 'ε');
+    const why = (lookup: Lookup) => stopReason(getSimRun('M'), lookup, label, 'A_guard');
+
+    /** R-SIM-59: a reason for every input exactly when `netRunStatus` says Deadlock. */
+    function agrees(lookup: Lookup): void {
+        const run = getSimRun('M')!;
+        const status = netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+        const r = why(lookup);
+        expect([status, r !== null]).toEqual([status, status === 'Deadlock']);
+        if (r) expect(r.inputs.map(i => i.event)).toEqual([null, ...run.alphabet]);
+    }
+
+    it('b2net `p2.[tokens] < 2`: no reason while t1 fires; after two firings the reason is t1 false on the current marking (mutant: the configuration of the last label)', () => {
+        const lookup = b2net('p2.[tokens] < 2');
+        reset(lookup);
+        agrees(lookup);
+        expect(why(lookup)).toBeNull();
+        eps(lookup);
+        agrees(lookup);
+        eps(lookup);
+        agrees(lookup);
+        const r = why(lookup)!;
+        expect(r.line).toBe('ε: t1 false');
+        expect(r.inputs.map(i => i.short)).toEqual(['ε: t1 false']);
+        expect(r.title).toBe('ε: t1 (p1 → p2) false [p2.[tokens] < 2]');
+        expect(r.inputs[0].detail).toBe('ε: t1 (p1 → p2) false');
+    });
+
+    it('b2net after Reset, the three defects of the ticket: parse error, E-NODE, an undeclared attribute, each named by its short form', () => {
+        const cases: Array<[string, string, string]> = [
+            ['a b', "ε: t1 defect, parse error 1:3 Unexpected 'b' after the end of the expression", "[a b]"],
+            ['node.[x] > 0', 'ε: t1 defect, E-NODE', 'E-NODE: `node` is presentation state'],
+            ['p2.[visits] > 0', "ε: t1 defect, 'visits' is not a state attribute of p2", "'visits' is not a state attribute of p2 [p2.[visits] > 0]"],
+        ];
+        for (const [guard, line, inTitle] of cases) {
+            const lookup = b2net(guard);
+            reset(lookup);
+            agrees(lookup);
+            const r = why(lookup)!;
+            expect([guard, r.line]).toEqual([guard, line]);
+            expect([guard, r.title.includes(inTitle), r.title.includes('JjelEvaluationError')]).toEqual([guard, true, false]);
+        }
+    });
+
+    it('a fused fork whose second outgoing edge has a false guard names that edge, not the fork (mutant: the transition outcome, not the sites)', () => {
+        const lookup = buildLookup({ ...ROLES, simFork: 'C_Fork', simGuard: 'A_guard' }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e0'] } },
+            F: { cls: 'C_Fork', slots: { R_out: ['e1', 'e2'] } },
+            A: { cls: 'C_State' },
+            B: { cls: 'C_State' },
+            e0: { cls: 'C_Trans', slots: { R_next: ['F'], A_guard: ['true'] } },
+            e1: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: ['true'] } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: ['false'] } },
+        });
+        lookup.C_Fork = { className: 'DClass', id: 'C_Fork', name: 'Fork', extends: [] };
+        reset(lookup);
+        agrees(lookup);
+        const r = why(lookup)!;
+        expect(r.line).toBe('ε: e2 false');
+        expect(r.title).toBe('ε: F (S → A, B): e2 false [false]');
+    });
+
+    it('else: a true sibling leaves no reason; a defective sibling is named by the else, its detail said once (mutant: the else repeats it)', () => {
+        const flow = (g: string) => buildLookup({ ...ROLES, simGuard: 'A_guard', simTerminal: 'C_Final' }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+            D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+            A: { cls: 'C_Final' },
+            B: { cls: 'C_Final' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['D'] } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: [g] } },
+            e3: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: ['else'] } },
+        });
+        const good = flow('true');
+        reset(good);
+        eps(good);
+        agrees(good);
+        expect(why(good)).toBeNull();
+        expect(inputReason(getSimRun('M'), null, good, label)).toBeNull();
+
+        const bad = flow('model.nope > 0');
+        reset(bad);
+        eps(bad);
+        agrees(bad);
+        const r = why(bad)!;
+        expect(r.line).toBe("ε: e2 defect, 'nope' does not exist; e3 else, e2 is defective");
+        expect(r.title.split("'nope' does not exist").length - 1).toBe(1);
+    });
+
+    it('an inhibitor names its place by name, never by id (mutant: the id printed)', () => {
+        const lookup = petri({
+            pa: { cls: 'C_Place', slots: { A_tokens: [1] } },
+            pb: { cls: 'C_Place', slots: { A_tokens: [1] } },
+            pc: { cls: 'C_Place' },
+            tq: { cls: 'C_PTr' },
+            x1: { cls: 'C_Arc', slots: { R_src: ['pb'], R_tgt: ['tq'] } },
+            x2: { cls: 'C_Arc', slots: { R_src: ['tq'], R_tgt: ['pc'] } },
+            h1: { cls: 'C_Inh', slots: { R_src: ['pa'], R_tgt: ['tq'] } },
+        });
+        lookup.pa.name = 'Alpha';
+        reset(lookup);
+        agrees(lookup);
+        const r = why(lookup)!;
+        expect(r.line).toBe('ε: tq inhibited by Alpha');
+        expect(r.title).toBe('ε: tq (pb → pc) inhibited by Alpha');
+    });
+
+    it('turnstile in Running: Push has no candidate and says why; Coin has one and says nothing; pressing Push names the false guard (mutants: a reason for an input with a candidate; the old discard wording)', () => {
+        const lookup = buildLookup({ ...ROLES, simGuard: 'A_guard' }, TURNSTILE);
+        reset(lookup, turnstileRecord);
+        agrees(lookup);
+        const run = getSimRun('M');
+        expect(inputReason(run, 'coin', lookup, label)).toBeNull();
+        expect(inputReason(run, 'push', lookup, label, 'A_guard')).toEqual({
+            event: 'push', short: 'Push: tPushL false', detail: 'Push: tPushL (Locked → Locked) false',
+            full: 'Push: tPushL (Locked → Locked) false [false]',
+        });
+        expect(why(lookup)).toBeNull();
+        const pressed = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect(pressed.outcome?.kind).toBe('discard');
+        expect(pressed.lastStep).toBe('Push: discarded, tPushL false');
+    });
+
+    it('turnstile in Deadlock: an input with nothing enabled says so, never a defect; the defective one comes first in the line (mutant: an empty list reported as a defect)', () => {
+        const objects = { ...TURNSTILE, tPushU: { ...TURNSTILE.tPushU, slots: { ...TURNSTILE.tPushU.slots, A_guard: ['self.[visits] > 0'] } } };
+        const lookup = buildLookup({ ...ROLES, simGuard: 'A_guard' }, objects);
+        reset(lookup, turnstileRecord);
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        agrees(lookup);
+        const r = why(lookup)!;
+        expect(r.inputs.map(i => i.short)).toEqual([
+            'ε: nothing enabled', 'Coin: nothing enabled', "Push: tPushU defect, 'visits' is not a state attribute of tPushU",
+        ]);
+        expect(r.line).toBe("Push: tPushU defect, 'visits' is not a state attribute of tPushU");
+    });
+
+    it('no reason in Terminated, Halted and Not started (mutant: a reason in Terminated)', () => {
+        expect(stopReason(undefined, {}, label)).toBeNull();
+
+        const flow = buildLookup({ ...ROLES, simTerminal: 'C_Final' }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+            F: { cls: 'C_Final' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['F'] } },
+        });
+        reset(flow);
+        eps(flow);
+        const done = getSimRun('M')!;
+        expect(netRunStatus(done.net, done.config, done.alphabet, done.guards, done.halt)).toBe('Terminated');
+        agrees(flow);
+        expect(why(flow)).toBeNull();
+
+        const MERGE: Record<string, Obj> = {
+            A: { cls: 'C_Init', slots: { R_out: ['ta'] } },
+            B: { cls: 'C_Init', slots: { R_out: ['tb'] } },
+            C: { cls: 'C_State' },
+            ta: { cls: 'C_Trans', slots: { R_next: ['C'] } },
+            tb: { cls: 'C_Trans', slots: { R_next: ['C'] } },
+        };
+        const merge = buildLookup(ROLES, MERGE);
+        reset(merge);
+        pressInput('M', null, 'ta', merge, 'ε');
+        eps(merge);
+        expect(getSimRun('M')!.halt?.kind).toBe('unsafe');
+        agrees(merge);
+        expect(why(merge)).toBeNull();
+    });
+
+    it('compileDefects: parse-error and E-NODE, never false, an exception or a non-boolean (mutants: run-time defects listed; always empty)', () => {
+        const defectsOf = (guard: string) => {
+            const lookup = b2net(guard);
+            const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(recordOf(lookup)).build);
+            if (r.kind !== 'started') throw new Error(r.reason);
+            return (r.compileDefects ?? []).map(d => [d.element, d.role, d.reason, d.source]);
+        };
+        expect(defectsOf('a b')).toEqual([['t1', 'guard', 'parse-error', 'a b']]);
+        expect(defectsOf('node.[x] > 0')).toEqual([['t1', 'guard', 'subset', 'node.[x] > 0']]);
+        for (const guard of ['false', 'p2.[visits] > 0', '1 + 1', 'p2.[tokens] < 2']) expect([guard, defectsOf(guard)]).toEqual([guard, []]);
+    });
+
+    it('the defects line says «defect» for net and guard defects alike, never «not compiled» (mutant: the old wording for a guard)', () => {
+        const lookup = b2net('node.[x] > 0');
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(recordOf(lookup)).build);
+        if (r.kind !== 'started') throw new Error(r.reason);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: t1 guard (E-NODE).');
+        const net = { ...r.run.net, defects: [{ element: 'f1', code: 'no-target' as const, message: 'the edge has no target' }] } as CompiledNet;
+        expect(defectsLine(net, lookup, r.compileDefects)).toBe('2 defects: f1 (the edge has no target); t1 guard (E-NODE).');
+        expect(defectsTitle(net, lookup, r.compileDefects)).toBe(
+            'f1: the edge has no target\nt1 guard: E-NODE: `node` is presentation state: a guard cannot depend on it (R-SIM-18). [node.[x] > 0]');
+        expect(defectsLine(r.run.net, lookup, [])).toBeNull();
     });
 });
