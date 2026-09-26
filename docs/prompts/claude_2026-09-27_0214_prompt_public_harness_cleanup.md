@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0214
 Chat: C-2026-09-27-0150
 Lane: harness (docs, `.gitignore`, index-only removals; no code file is touched)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane harness · 869f204eb
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, launched by the chat with `lane-run start`
 (a new session, so `/clear` is implicit). Before anything else: `pwd` is `/Users/alfonso/jjodel-release`,
