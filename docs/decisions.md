@@ -137,6 +137,53 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   senza il flag) e `bash-guard` nega `git push`; negli altri modi resta `ask`. Il `git commit` non è più un
   gate umano: restano il GO visivo e il push. Emenda RC-15 (3) e (7).
 
+### Ratifiche 2026-09-26: orchestrated lanes (RC-20..24)
+
+Source: `docs/ratifiche/claude_ratifiche_2026-09-26_orchestrated_lanes.md`, ratified by Alfonso in chat on
+2026-09-26 ("si ratifichiamo tutto") with one addition to RC-21.
+
+- **RC-20** (2026-09-26): **The project chat launches and resumes Claude Code sessions.** `claude -p` in the
+  lane's worktree with the committed prompt file as input, in the background with the transcript on a log
+  file, session id captured; GO and every later message reach the same session through `--resume`. A session
+  without `--resume` is new by construction. Every final message ends with `Outcome: done | hard-stop |
+  question | blocked`, required by the lane discipline section of every prompt; the chat reads that line and
+  never interprets prose. A question is a hard stop: written, the session terminates, the chat answers within
+  its remit or brings it to Alfonso, then resumes. A rework after a failed visual GO resumes the same session
+  with a new Phase 2 prompt that `Corregge` the old one; a rework whose cause is the analysis opens a new
+  discovery, declared. In non-interactive mode an `ask` is a refusal with its reason; a critical-zone lane
+  needs the Layer Impact Report and the explicit go-ahead in the resumed text, or is opened by Alfonso by
+  hand. No exit within 90 minutes (a prompt may declare another limit) is `blocked`: reported, never resumed
+  unattended. `done` with the Status line not flipped is reported before any merge.
+- **RC-21** (2026-09-26): **Recommended answers are adopted unattended.** A question carrying one
+  unconditional `Recommended: <one line>` is answered with it when the choice stays inside the lane's
+  perimeter; a binary "proceed?" question, and a numbered list whose first option is the default, count as a
+  recommendation for yes, respectively option 1. Alfonso answers when the recommendation touches a
+  critical-zone file, changes an exported interface, amends a ratified R- decision, deletes a file, adds a
+  file outside the DOVE list, or when there is no single recommendation. Every unattended adoption is
+  recorded in `decisions.md` and in the memo with the marker `ratified as recommended, unattended`, and the
+  closing report lists them first; above five in one lane the chat stops and submits them together.
+- **RC-22** (2026-09-26): **Parallel by default.** Two lanes start together when three mechanical checks
+  pass: DOVE lists (tests included) disjoint; neither depends on an exported interface the other changes and
+  the trunk does not yet have; each has its own worktree and branch. When they pass, parallel launch is the
+  default; when one fails the chat says which and queues the lane with its merge position fixed. Shape: one
+  lane with a visual check plus as many without (pure modules with a mutation bench, read-only discoveries,
+  textual oracles) as there are worktrees. Simulator lanes in parallel branch from `simulation-engine` as
+  `sim-<slug>` and merge back into it, one at a time in the order fixed at launch, semantic conflicts
+  resolved on the branch first (RC-14).
+- **RC-23** (2026-09-26): **The visual checklist runs in the built-in browser, by the chat.** The numbered
+  visual steps of a prompt are executed by the chat in the desktop app's built-in browser against the lane's
+  dev server on the Mac; every item is read from the DOM or the console, never from a screenshot; screenshots
+  in light and dark are attached as a record. The browser profile is empty and separate from Alfonso's:
+  fixtures are built with the console script the prompt names or imported from an exported file. The log
+  entry records `Smoke visivo: passato — chat, unattended, <n>/<n>`. Alfonso's GO stays mandatory on
+  critical-zone lanes, on items marked as perceptual judgements, and on items the chat could not close for a
+  technical reason, which count as failed. Until 2026-10-03 every unattended check is followed by Alfonso's
+  GO on every lane with screenshots and measures in hand; the sampled GO starts after that, with the data
+  (RC-15). Emenda P8.
+- **RC-24** (2026-09-26): **One branch per lane replaces the two-sessions limit.** The P13 limit "at most two
+  sessions on the shared tree on disjoint files" was written for one worktree; it is replaced by one worktree
+  and one branch per lane, merges one at a time, and the three checks of RC-22 at launch. Emenda P13.
+
 ## Arco A — barra a tab e capi degli edge
 
 - **R-A** (2026-08-05) — Strada B per la barra: tutti i tab montati, gli inattivi nascosti con

@@ -3,8 +3,8 @@
 **Date**: 2026-09-26. **Branch**: `alfonso-frontend-jjtl`. **Reference commit**: `9290c17be`.
 **Source**: observer chat `C-2026-09-25-1353`, afternoon session of 2026-09-26, over the BPMN of one
 lane (`docs/harness/lane-lifecycle-bpmn.pdf`, to be added by the implementation lane).
-**Rows**: `docs/decisions.md`, «Ratifiche 2026-09-26: orchestrated lanes», written after Alfonso's
-ratification. **Status**: proposed, awaiting ratification.
+**Rows**: `docs/decisions.md`, «Ratifiche 2026-09-26: orchestrated lanes».
+**Status**: ratified by Alfonso in chat on 2026-09-26, with one addition to RC-21 (a binary "proceed?" or option 1 counts as recommended).
 
 ## Decision
 
