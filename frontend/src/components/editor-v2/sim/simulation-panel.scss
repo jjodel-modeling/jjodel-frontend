@@ -574,6 +574,16 @@
         min-width: 0;
     }
 
+    // The global text-input rule (styles/components/_form-system.scss, `input[type="text"]`,
+    // specificity 0,1,1) outranks `__input` (0,1,0) and makes it 36px with a 14px font,
+    // measured 2026-09-27: inside a row the box is restated at (0,2,0), so a line keeps 24px.
+    &__decl &__input {
+        height: 24px;
+        padding: 0 4px;
+        font-size: 11px;
+        line-height: normal;
+    }
+
     &__decl-name,
     &__decl-owner {
         flex: 1 1 0;
@@ -584,7 +594,7 @@
     }
 
     &__decl-space {
-        flex: 0 0 88px;
+        flex: 0 0 96px;
     }
 
     &__decl-kind {
