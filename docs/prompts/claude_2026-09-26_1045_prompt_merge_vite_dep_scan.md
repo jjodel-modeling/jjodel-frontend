@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-1045
 Chat: C-2026-09-25-1500
 Lane: full (merge with one expected conflict, trunk code moved)
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane merge · 98ff75a27 · verifica visiva passata 2026-09-26
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop. `~/jjodel-vite` is read-only here. Do not touch `~/jjodel`, `~/jjodel-open`, `~/jjodel-sim`, `~/jjodel-gate`, `~/jjodel-harness`, nor the servers on 3000 and 3002.
 
