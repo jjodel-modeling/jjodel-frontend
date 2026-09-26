@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-1340
 Chat: C-2026-09-26-1335
 Lane: fast (merge, no code moved on the trunk side of `vite.config.ts` expected)
-Status: da eseguire
+Status: superato 2026-09-26 · fuso da P-2026-09-26-1550 (chat C-2026-09-25-1353) · ef6fb6da0 · questo prompt non è stato eseguito
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop. `~/jjodel-icons` is read-only here. Do not touch `~/jjodel`, `~/jjodel-open`, `~/jjodel-sim`, `~/jjodel-gate`, `~/jjodel-harness`, nor the servers on 3000, 3002 and 3003.
 
