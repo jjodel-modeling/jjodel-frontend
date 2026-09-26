@@ -78,6 +78,7 @@ function laneFiles(id) {
         pid: join(dir, 'pid.txt'),
         started: join(dir, 'started.txt'),
         exit: join(dir, 'exit.txt'),
+        goahead: join(dir, 'goahead.txt'),
     };
 }
 
@@ -133,9 +134,11 @@ function isRunning(f) {
     return !existsSync(f.exit) && isAlive(Number(readTrim(f.pid)));
 }
 
-function launch(f, claude, cwd, input, args) {
+function launch(f, claude, cwd, input, args, goAhead = null) {
     if (existsSync(f.exit)) unlinkSync(f.exit);
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
+    if (goAhead) env.JJODEL_CRITICAL_ZONE_GOAHEAD = goAhead;
+    else delete env.JJODEL_CRITICAL_ZONE_GOAHEAD;
     const child = spawn('/bin/sh', ['-c', WRAPPER, 'lane-run', input, f.log, f.err, f.exit, claude, ...args], {
         cwd,
         env,
@@ -172,8 +175,18 @@ function firstSessionId(path, from) {
     return null;
 }
 
-async function start(worktreeArg, promptArg) {
-    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file>');
+/** `--critical-zone-goahead <Prompt-ID>` (RC-30): the lane may edit the critical zone; the value must be the lane's own Prompt-ID. */
+function goAheadOption(rest, id) {
+    const at = rest.indexOf('--critical-zone-goahead');
+    if (at === -1) return null;
+    const v = rest[at + 1];
+    if (!v || !PROMPT_ID.test(v)) refuse('--critical-zone-goahead needs the Prompt-ID of this lane');
+    if (id && v !== id) refuse('--critical-zone-goahead ' + v + ' is not the Prompt-ID of this lane (' + id + ')');
+    return v;
+}
+
+async function start(worktreeArg, promptArg, rest = []) {
+    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>]');
     const worktree = resolve(worktreeArg);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
     const promptFile = resolve(worktree, promptArg);
@@ -190,7 +203,9 @@ async function start(worktreeArg, promptArg) {
     closeSync(openSync(f.log, 'a'));
     const from = statSync(f.log).size;
 
-    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS]);
+    const goAhead = goAheadOption(rest, id);
+    if (goAhead) writeFileSync(f.goahead, goAhead + '\n');
+    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS], goAhead);
     console.log('log: ' + f.log);
 
     const end = Date.now() + START_WAIT_MS;
@@ -232,7 +247,8 @@ function resume(idArg, messageArg) {
     if (!existsSync(message)) refuse('no message file: ' + message);
     const claude = findClaude();
 
-    launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS]);
+    const goAhead = existsSync(f.goahead) ? readTrim(f.goahead) : null;
+    launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS], goAhead || null);
     console.log('log: ' + f.log);
     console.log('session: ' + session);
     return 0;
@@ -283,7 +299,7 @@ function status(idArg, rest) {
 
 async function main(argv) {
     const [command, ...rest] = argv;
-    if (command === 'start') return start(rest[0], rest[1]);
+    if (command === 'start') return start(rest[0], rest[1], rest.slice(2));
     if (command === 'resume') return resume(rest[0], rest[1]);
     if (command === 'status') return status(rest[0], rest.slice(1));
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file> | status <Prompt-ID> [--limit <minutes>]');

@@ -9,8 +9,10 @@
  * marker file. It FAILS OPEN like every hook here.
  *
  * Under permission_mode bypassPermissions it denies instead, since that mode
- * may not honor an `ask`: a critical-zone lane is relaunched without the flag
- * (RC-19). Any other mode, or a missing or non-string field, keeps the `ask`.
+ * does not honor an `ask` (RC-29): a critical-zone lane runs with the go-ahead
+ * of RC-30 (JJODEL_CRITICAL_ZONE_GOAHEAD set by lane-run to the Prompt-ID, on
+ * Alfonso's word) or is relaunched without the flag (RC-19). Any other mode, or
+ * a missing or non-string field, keeps the `ask`.
  *
  * The matcher is the 3.2 trigger, not the 3.1 table: 3.1 also lists authoring/,
  * ir/, problems/, DV.tsx and defaultViewTemplate.ts, which fired on the S6 lane
@@ -81,12 +83,25 @@ export function evaluate(toolInput) {
     return null;
 }
 
+/**
+ * The go-ahead of a critical-zone lane (RC-30): lane-run sets
+ * JJODEL_CRITICAL_ZONE_GOAHEAD to the Prompt-ID when the chat launches the lane
+ * with --critical-zone-goahead, on Alfonso's explicit word recorded in the
+ * Phase 2 prompt beside the Layer Impact Report. Under bypassPermissions the
+ * hook then lets the edit through; anything else, or an empty value, denies.
+ */
+export function goAhead(env = process.env) {
+    const v = env.JJODEL_CRITICAL_ZONE_GOAHEAD;
+    return typeof v === 'string' && /^P-\d{4}-\d{2}-\d{2}-\d{4}$/.test(v.trim());
+}
+
 function main() {
     const input = readInput();
     if (!input || !input.tool_input) return;
     const what = evaluate(input.tool_input);
     if (what === null) return;
     if (input.permission_mode === 'bypassPermissions') {
+        if (goAhead()) return;
         decide(
             'deny',
             'critical-zone: ' + what + ' is a Layer Impact Report trigger (CLAUDE.md 3.2, docs/PROTOCOL.md P5). ' +
