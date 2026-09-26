@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-2350
 Chat: C-2026-09-25-1759
 Lane: fast (docs and one normative number; no visual check; exclusive on the tree for the fold, RC-12)
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane harness · c5a669c2e
 
 Written by the simulator chat `C-2026-09-26-1702` at Alfonso's request and handed to the harness chat, which launches it with `lane-run start ~/jjodel-release docs/prompts/claude_2026-09-26_2350_prompt_log_fold_rotate.md` and follows it.
 
