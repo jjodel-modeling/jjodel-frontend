@@ -26,7 +26,7 @@ const TABLE: Record<SystemProfileId, {
     name: string; shape: 'controlFlow' | 'petri'; active: RoleId[]; added: RoleId[]; constraints: string[];
 }> = {
     petri: { name: 'Petri net (P/T)', shape: 'petri', active: ['arcWeight', 'inhibitorArc', 'bound', 'terminal'], added: [], constraints: [] },
-    flowchart: { name: 'Flowchart / Activity', shape: 'controlFlow', active: ['guard', 'terminal', 'activityFinal', 'fork', 'join', 'action', 'entry'], added: [], constraints: [] },
+    flowchart: { name: 'Flowchart / Activity', shape: 'controlFlow', active: ['guard', 'terminal', 'activityFinal', 'fork', 'join', 'action', 'entry', 'stateAttributes'], added: [], constraints: [] },
     stateMachine: { name: 'State machine', shape: 'controlFlow', active: ['trigger', 'eventIdentifier', 'guard', 'terminal'], added: [], constraints: ['singleToken'] },
     extendedStateMachine: { name: 'Extended state machine', shape: 'controlFlow', active: ['trigger', 'eventIdentifier', 'guard', 'terminal', 'action', 'entry', 'exit', 'stateAttributes'], added: [], constraints: ['singleToken'] },
     dfa: { name: 'DFA', shape: 'controlFlow', active: ['trigger', 'eventIdentifier', 'accepting'], added: ['trigger', 'accepting'], constraints: ['singleToken', 'noEpsilon', 'deterministic'] },

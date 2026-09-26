@@ -18,7 +18,7 @@ import { buildGuardContext, freezeSnapshot, toJjelStateAccess } from '../guardCo
 import type { SimSnapshot } from '../guardContext';
 import { compileGuard, evaluateGuard } from '../guardEvaluator';
 import type { CompiledGuard } from '../guardEvaluator';
-import { actionSiteKey, compileAction, compileActions, makeActionOracle } from '../actionEvaluator';
+import { actionSiteKey, compileAction, compileActions, foldActionTarget, makeActionOracle } from '../actionEvaluator';
 import type { CompiledAction } from '../actionEvaluator';
 import { candidates, netRunStatus, stateAccess, step } from '../netStep';
 import { compileNet, netStcFromRoles } from '../netCompile';
@@ -118,6 +118,35 @@ describe('compile: one compiled action per text, blank is no action (R-SIM-17)',
         const list = compileActions(['model.[a] := 1', '', 'model.[b] := 2', null]);
         expect(list.map(c => c.source)).toEqual(['model.[a] := 1', 'model.[b] := 2']);
     });
+
+    it('E-NODE on the right-hand side of a semantic assignment is a compile defect; the action stays parsed (report §7.7, mutant 11)', () => {
+        for (const src of ['p2.[visits] := node.[x]', 'self.[visits] := node.[x] + 1', 'model.[f] := if node.[x] > 0 then true else false']) {
+            const c = compileAction(src)!;
+            expect([src, c.action !== null, c.defect?.startsWith('E-NODE: ')]).toEqual([src, true, true]);
+        }
+        // control: a presentation assignment reads its own presentation, and a semantic one reads σ
+        expect(compileAction('node.[x] := node.[x] + 1')!.defect).toBeNull();
+        expect(compileAction('p2.[visits] := p2.[visits] + 1')!.defect).toBeNull();
+    });
+});
+
+describe('foldActionTarget: the target known before the run (report H4)', () => {
+    const fold = (text: string, site: ActionSite = TRANSITION_E) => foldActionTarget(compileAction(text)!, site, snapshot());
+
+    it('a path over the frozen M from self, model or an instance folds to its element; node folds to the site', () => {
+        expect(fold('Q.[n] := 1')).toEqual({ element: 'Q', attr: 'n', onNode: false });
+        expect(fold('self.next.[n] := 1')).toEqual({ element: 'Q', attr: 'n', onNode: false });
+        expect(fold('model.[x] := 1')).toEqual({ element: 'M', attr: 'x', onNode: false });
+        expect(fold('self.[n] := 1', { element: 'P', role: 'exit' })).toEqual({ element: 'P', attr: 'n', onNode: false });
+        expect(fold('node.[color] := 1')).toEqual({ element: 'e', attr: 'color', onNode: true });
+    });
+
+    it('a target that reads σ or the event does not fold; nor one that does not resolve to an element', () => {
+        for (const text of ['(if model.[f] then P else Q).[n] := 1', 'event.[n] := 1', 'nope.[n] := 1', 'self.items.[n] := 1', 'self.weight.[n] := 1']) {
+            expect([text, fold(text)]).toEqual([text, null]);
+        }
+        expect(foldActionTarget(compileAction('model.[x] :=')!, TRANSITION_E, snapshot())).toBeNull();
+    });
 });
 
 describe('actionSiteKey: element and role (mutant 12)', () => {
@@ -156,8 +185,14 @@ describe('the oracle on one site', () => {
             .toEqual({ kind: 'ok', assignments: [{ element: 'e', attr: 'n', value: 2 }] });
     });
 
-    it('`node.[a]` on the right-hand side reads the site\'s presentation', () => {
-        expect(ask(['self.[n] := node.[size]'])).toEqual({ kind: 'ok', assignments: [{ element: 'e', attr: 'n', value: 3 }] });
+    it('`node.[a]` on the right-hand side of a presentation assignment reads the site\'s presentation', () => {
+        expect(ask(['node.[color] := node.[size]'])).toEqual({ kind: 'ok', assignments: [{ element: 'e', attr: 'color', value: 3 }] });
+    });
+
+    it('a semantic assignment reading `node` is a defect when its site runs (R-SIM-70): E-NODE, never a presentation value in σ', () => {
+        const out = ask(['self.[n] := node.[size]']);
+        expect(out.kind).toBe('defect');
+        expect(out.kind === 'defect' && out.detail).toContain('E-NODE');
     });
 
     it('a site element with no handle in the snapshot is a defect', () => {

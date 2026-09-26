@@ -13,7 +13,7 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, inputReason, NO_SIM_ACTIONS, panelInputs,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputReason, NO_SIM_ACTIONS, panelInputs,
     pressInput, runSignature, startRun, stopReason,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs } from '../simBridge';
@@ -425,8 +425,12 @@ describe('guards read σ in the run (wave B2, P-2026-09-26-1105, R-SIM-30, R-SIM
         }
     });
 
-    it('the action oracle of the run is still NO_SIM_ACTIONS until lane C (R-SIM-39)', () => {
+    it('the action oracle of the run is NO_SIM_ACTIONS when no action role is bound (R-SIM-69, mutant 10)', () => {
         expect(started(petriLookup('true'), spyBuilder(petriRecord).build).actions).toBe(NO_SIM_ACTIONS);
+        // control: with an action role bound the run has an oracle of its own
+        const bound = petriLookup('true');
+        bound.MM._state.simAction = 'A_guard';
+        expect(started(bound, spyBuilder(petriRecord).build).actions).not.toBe(NO_SIM_ACTIONS);
     });
 });
 
@@ -656,5 +660,231 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         expect(defectsTitle(net, lookup, r.compileDefects)).toBe(
             'f1: the edge has no target\nt1 guard: E-NODE: `node` is presentation state: a guard cannot depend on it (R-SIM-18). [node.[x] > 0]');
         expect(defectsLine(r.run.net, lookup, [])).toBeNull();
+    });
+});
+
+describe('lane C1: declared state attributes and the action keys in the run (P-2026-09-26-2340, R-SIM-67..71)', () => {
+    /** Petri roles of cnet with the three action roles: `Action [0..*]` features of PTrans and of Place. */
+    const C_ROLES = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+        simInitialMarking: 'A_tokens', simBound: '3', simAction: 'A_actions', simEntry: 'A_entry', simExit: 'A_exit',
+    };
+    const VISITS = { name: 'visits', metaclass: 'C_Place', space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' };
+    const COLOR = { name: 'color', metaclass: 'C_PTr', space: 'presentation', domain: null, initial: "'grey'" };
+    const F = { name: 'f', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' };
+
+    interface Cnet {
+        t1?: unknown[];
+        p1Exit?: unknown[];
+        p2Entry?: unknown[];
+        /** The records of `simStateAttributes`, or the raw value of the key. */
+        decls?: unknown[] | string;
+        roles?: Record<string, unknown>;
+    }
+
+    /**
+     * cnet: p1 (3 tokens) -a1-> t1 -a2-> p2, the ids unlike the names (`P1x`,
+     * `T1x`, `P2x`), so a pointer printed in a line shows.
+     */
+    function cnet(c: Cnet = {}): Lookup {
+        const bag: Record<string, unknown> = { ...C_ROLES, ...(c.roles ?? {}) };
+        if (c.decls !== undefined) bag.simStateAttributes = typeof c.decls === 'string' ? c.decls : JSON.stringify({ v: 1, attrs: c.decls });
+        const lookup = buildLookup(bag, {
+            P1x: { cls: 'C_Place', slots: { A_tokens: [3], ...(c.p1Exit ? { A_exit: c.p1Exit } : {}) } },
+            P2x: { cls: 'C_Place', slots: c.p2Entry ? { A_entry: c.p2Entry } : {} },
+            T1x: { cls: 'C_PTr', slots: c.t1 ? { A_actions: c.t1 } : {} },
+            a1: { cls: 'C_Arc', slots: { R_src: ['P1x'], R_tgt: ['T1x'] } },
+            a2: { cls: 'C_Arc', slots: { R_src: ['T1x'], R_tgt: ['P2x'] } },
+        });
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        lookup.P1x.name = 'p1';
+        lookup.P2x.name = 'p2';
+        lookup.T1x.name = 't1';
+        lookup.M.name = 'cnet';
+        return lookup;
+    }
+
+    /** The record of `buildEvalContext`: one handle per object, instance names bound at the top. */
+    const record = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        const byName = Object.fromEntries(Object.values(h).map(x => [x.name, x]));
+        return { instances: Object.values(h), classes: [], ...byName };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record(lookup)).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const eps = (lookup: Lookup) => pressInput('M', null, undefined, lookup, 'ε');
+    const status = () => {
+        const run = getSimRun('M')!;
+        return netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+    };
+    const FEATURES = { action: 'A_actions', entry: 'A_entry', exit: 'A_exit' };
+
+    it('the Petri sites are exit of the preset, the transition, entry of the postset; never an arc (mutant 9)', () => {
+        const lookup = cnet({ decls: [VISITS, F] });
+        // an arc carrying a value of the action feature is not a site: it never runs
+        lookup.a1.features.push('v_a1_A_actions');
+        lookup.v_a1_A_actions = { className: 'DValue', id: 'v_a1_A_actions', instanceof: 'A_actions', values: ['model.[f] := true'], father: 'a1' };
+        const r = reset(lookup);
+        expect(r.run.net.transitions.map(t => t.actionSites)).toEqual([[
+            { element: 'P1x', role: 'exit' }, { element: 'T1x', role: 'transition' }, { element: 'P2x', role: 'entry' },
+        ]]);
+        const out = eps(lookup).outcome;
+        expect(out?.kind).toBe('fired');
+        expect(out?.label.assignments).toEqual([]);
+    });
+
+    it('the table reads every value of the slot by role, in order, blanks skipped (mutant 8: the first value only)', () => {
+        const lookup = cnet({
+            decls: [VISITS, F], t1: ['p2.[visits] := 1', '', '  ', 'model.[f] := true'], p1Exit: ['p1.[visits] := 2'],
+        });
+        reset(lookup);
+        const out = eps(lookup);
+        expect(out.outcome?.kind).toBe('fired');
+        expect(out.outcome?.label.assignments).toEqual([
+            { element: 'P1x', attr: 'visits', value: 2 }, { element: 'P2x', attr: 'visits', value: 1 }, { element: 'M', attr: 'f', value: true },
+        ]);
+    });
+
+    it('declared only: fired, the line unchanged, its title lists the assignments by name', () => {
+        const lookup = cnet({ decls: [VISITS, F], t1: ['p2.[visits] := p2.[visits] + 1', 'model.[f] := true'] });
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        const out = eps(lookup);
+        expect(out.lastStep).toBe('ε: t1 (p1 → p2) fired');
+        expect(out.lastStepTitle).toBe('ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1, cnet.f = true');
+        expect(getSimRun('M')!.config.state.attrs.get('P2x')?.get('visits')).toBe(1);
+        // control: a step that assigns nothing has no assignments in its title
+        const plain = cnet({ decls: [VISITS] });
+        reset(plain);
+        expect(eps(plain).lastStepTitle).toBe('ε: t1 (p1 → p2) fired');
+    });
+
+    it('an undeclared target: a defect at Reset naming the element, the transition stays a candidate, Step halts with the name, never the pointer (mutants 4, 5)', () => {
+        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := p2.[visits] + 1', 'p1.[count] := 1'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['T1x', 'action', 'undeclared']]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe("1 defect: t1 action (undeclared 'count' on p1).");
+        expect(defectsTitle(r.run.net, lookup, r.compileDefects)).toBe("t1 action: 'count' is not declared on p1 [p1.[count] := 1]");
+        expect(status()).toBe('Running');
+        const out = eps(lookup);
+        expect(out.outcome?.kind).toBe('halted');
+        const halt = getSimRun('M')!.halt!;
+        expect(halt).toEqual({ kind: 'undeclared', site: { element: 'T1x', role: 'transition' }, element: 'P1x', attr: 'count' });
+        const line = haltMessage(halt, lookup, FEATURES);
+        expect(line).toBe("Halted: the transition action of t1 failed: 'count' is not declared on p1.");
+        expect(line).not.toMatch(/P1x|T1x/);
+        expect(haltTitle(halt, lookup, FEATURES)).toBe(`${line} [p1.[count] := 1]`);
+        expect(out.lastStep).toBe('ε: t1 (p1 → p2) halted the run');
+    });
+
+    it('a compile-time action defect keeps the transition a candidate: a parse error at Reset, then the halt when it fires (mutant 4)', () => {
+        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] :='] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['T1x', 'action', 'parse-error', 'p2.[visits] :=']]);
+        expect(r.run.net.transitions.map(t => t.id)).toEqual(['T1x']);
+        expect(status()).toBe('Running');
+        expect(eps(lookup).outcome?.kind).toBe('halted');
+        expect(getSimRun('M')!.halt?.kind).toBe('action-defect');
+    });
+
+    it('E-NODE on a semantic right-hand side is a defect at Reset, and halts when it fires (mutant 11)', () => {
+        const lookup = cnet({ decls: [VISITS, COLOR], t1: ['p2.[visits] := node.[color]'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['T1x', 'action', 'subset']]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: t1 action (E-NODE).');
+        expect(eps(lookup).outcome?.kind).toBe('halted');
+        // control: the presentation assignment reads its own presentation, no defect
+        const ok = cnet({ decls: [VISITS, COLOR], t1: ["node.[color] := 'red'"] });
+        expect(reset(ok).compileDefects).toEqual([]);
+        expect(eps(ok).outcome?.kind).toBe('fired');
+    });
+
+    it('a double target across sites: a defect at Reset for the transition, then the halt «assigned twice»', () => {
+        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := p2.[visits] + 1'], p2Entry: ['p2.[visits] := 1'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['T1x', 'action', 'double-assignment']]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: t1 action (visits of p2 assigned twice).');
+        eps(lookup);
+        expect(haltMessage(getSimRun('M')!.halt!, lookup, FEATURES)).toBe('Halted: visits of p2 is assigned twice in one step.');
+        // control: distinct targets on the same sites fire
+        const distinct = cnet({ decls: [VISITS], t1: ['p2.[visits] := 2'], p2Entry: ['p1.[visits] := 1'] });
+        expect(reset(distinct).compileDefects).toEqual([]);
+        expect(eps(distinct).outcome?.kind).toBe('fired');
+    });
+
+    it('locality: a defect at Reset; the halt line carries no action source, the title does (R-SIM-62, R-SIM-70)', () => {
+        const lookup = cnet({ decls: [VISITS, COLOR], t1: ["t1.[color] := 'red'"] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['T1x', 'action', 'locality']]);
+        eps(lookup);
+        const halt = getSimRun('M')!.halt!;
+        expect(halt.kind).toBe('action-defect');
+        const line = haltMessage(halt, lookup, FEATURES);
+        expect(line).toBe("Halted: the transition action of t1 failed: 'color' is a presentation attribute: only node.[color] assigns it.");
+        expect(haltTitle(halt, lookup, FEATURES)).toBe(`${line} [t1.[color] := 'red']`);
+    });
+
+    it('a value outside its domain is a run-time halt only: no defect at Reset', () => {
+        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := 9'] });
+        expect(reset(lookup).compileDefects).toEqual([]);
+        eps(lookup);
+        expect(haltMessage(getSimRun('M')!.halt!, lookup, FEATURES)).toBe('Halted: visits of p2 would be 9, outside its domain.');
+    });
+
+    it('a target that reads σ is not judged at Reset; the run halts on it (report H4)', () => {
+        const lookup = cnet({ decls: [VISITS, F], t1: ['(if model.[f] then p1 else p2).[count] := 1'] });
+        expect(reset(lookup).compileDefects).toEqual([]);
+        eps(lookup);
+        expect(getSimRun('M')!.halt).toMatchObject({ kind: 'undeclared', element: 'P2x', attr: 'count' });
+    });
+
+    it('declaration defects at Reset, in the one line: a record, the key, the compiler\'s (mutant 6 through the bridge)', () => {
+        const over = cnet({ decls: [{ ...VISITS, initial: '7' }], t1: ['p2.[visits] := 1'] });
+        const r = reset(over);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['visits', 'declaration', 'declaration']]);
+        expect(defectsLine(r.run.net, over, r.compileDefects)).toBe('1 defect: visits (initial 7 outside 0..3).');
+        expect(defectsTitle(r.run.net, over, r.compileDefects)).toBe('visits: initial 7 outside 0..3');
+
+        const key = cnet({ decls: '{"v":1,"attrs":[' });
+        const k = reset(key);
+        expect(defectsLine(k.run.net, key, k.compileDefects)).toBe('1 defect: state attributes (not JSON).');
+
+        const rec = cnet({ decls: [VISITS, { ...F, space: 'visual' }, { name: 3 }] });
+        const d = reset(rec);
+        expect(defectsLine(d.run.net, rec, d.compileDefects)).toBe('2 defects: f (bad space); record 3 (no name).');
+
+        const noDomain = cnet({ decls: [VISITS, { ...VISITS, metaclass: null, name: 'x', domain: null }] });
+        const n = reset(noDomain);
+        expect(defectsLine(n.run.net, noDomain, n.compileDefects)).toBe('1 defect: x (semantic without a domain).');
+    });
+
+    it('the three sources in the one line, in the order guard, action, declaration', () => {
+        const lookup = cnet({ decls: [{ ...VISITS, initial: '7' }], t1: ['p1.[count] := 1'], roles: { simGuard: 'A_guard' } });
+        lookup.T1x.features.push('v_T1x_A_guard');
+        lookup.v_T1x_A_guard = { className: 'DValue', id: 'v_T1x_A_guard', instanceof: 'A_guard', values: ['a b'], father: 'T1x' };
+        const r = reset(lookup);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe(
+            "3 defects: t1 guard (parse error 1:3 Unexpected 'b' after the end of the expression); t1 action (undeclared 'count' on p1); visits (initial 7 outside 0..3).");
+    });
+
+    it('the entry of a place is named as its site in the line', () => {
+        const lookup = cnet({ decls: [VISITS], p2Entry: ['p2.[count] := 1'] });
+        const r = reset(lookup);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe("1 defect: p2 entry (undeclared 'count' on p2).");
+    });
+
+    it('runSignature reads simStateAttributes: a declaration edited interrupts the run (mutant 12)', () => {
+        const a = cnet({ decls: [VISITS] });
+        const b = cnet({ decls: [{ ...VISITS, initial: '1' }] });
+        expect(runSignature(a, 'M', 'MM')).not.toBe(runSignature(b, 'M', 'MM'));
+        // control: the same declarations, the same signature
+        expect(runSignature(a, 'M', 'MM')).toBe(runSignature(cnet({ decls: [VISITS] }), 'M', 'MM'));
     });
 });

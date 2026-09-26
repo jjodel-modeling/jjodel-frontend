@@ -11,8 +11,12 @@ import path from 'path';
 import { ROLE_CATALOG, ROLE_IDS, dependentsOf, roleDescriptor, roleOfKey } from '../roleCatalog';
 import type { RoleId } from '../roleCatalog';
 
-/** The keys R-SIM-50..53 introduce: provisional, nothing reads or writes them yet. */
-const NEW_KEYS = ['simAccepting', 'simActivityFinal', 'simAction', 'simEntry', 'simExit', 'simStateOutput', 'simTransitionOutput'];
+/**
+ * The keys R-SIM-50..53 introduce: provisional, nothing reads or writes them yet.
+ * `simAction`, `simEntry`, `simExit` and `simStateAttributes` left the list with the
+ * commit that wires them (lane C1, R-SIM-68, R-SIM-69).
+ */
+const NEW_KEYS = ['simAccepting', 'simActivityFinal', 'simStateOutput', 'simTransitionOutput'];
 
 /** The files of this lane: they name every key, so they are not evidence that the code does. */
 const OWN_FILES = new Set(['roleCatalog.ts', 'simProfiles.ts', 'profileCodec.ts']);
@@ -50,7 +54,7 @@ describe('roleCatalog: shape of the catalog', () => {
         const keys = ROLE_CATALOG.map(d => d.key).filter((k): k is string => k !== null);
         expect(new Set(keys).size).toBe(keys.length);
         expect(keys).not.toContain('simEvent');
-        expect(ROLE_CATALOG.filter(d => d.key === null).map(d => d.id)).toEqual(['event', 'stateAttributes']);
+        expect(ROLE_CATALOG.filter(d => d.key === null).map(d => d.id)).toEqual(['event']);
     });
 
     it('points every dependsOn to an existing id', () => {
@@ -86,9 +90,11 @@ describe('roleCatalog: shape of the catalog', () => {
         expect(roleDescriptor('ownedTransitions')).toMatchObject({ group: 'controlFlow', key: 'simOwnedTransitions', kind: 'reference', dependsOn: ['node', 'transition'] });
         expect(roleDescriptor('arcWeight')).toMatchObject({ group: 'petri', key: 'simArcWeight', kind: 'intAttribute', dependsOn: ['arc'] });
         expect(roleDescriptor('bound')).toMatchObject({ group: 'general', key: 'simBound', kind: 'int', dependsOn: [] });
-        expect(roleDescriptor('stateAttributes')).toMatchObject({ group: 'data', key: null, kind: 'declarations', dependsOn: [] });
+        expect(roleDescriptor('stateAttributes')).toMatchObject({ group: 'data', key: 'simStateAttributes', kind: 'declarations', dependsOn: [] });
         expect(roleDescriptor('guard')).toMatchObject({ group: 'data', key: 'simGuard', kind: 'expressionAttribute', dependsOn: ['transition'] });
-        expect(roleDescriptor('entry')).toMatchObject({ group: 'data', key: 'simEntry', kind: 'actionListAttribute', dependsOn: ['node'] });
+        expect(roleDescriptor('entry')).toMatchObject({ group: 'data', key: 'simEntry', kind: 'actionListAttribute', dependsOn: ['node', 'stateAttributes'] });
+        expect(roleDescriptor('action').dependsOn).toEqual(['transition', 'stateAttributes']);
+        expect(roleDescriptor('exit').dependsOn).toEqual(['node', 'stateAttributes']);
         expect(roleDescriptor('transitionOutput')).toMatchObject({ group: 'output', key: 'simTransitionOutput', kind: 'attribute', dependsOn: ['transition'] });
     });
 });
@@ -118,7 +124,7 @@ describe('roleCatalog: the keys against the code', () => {
 
     it('finds every existing key of the catalog as a string literal in the code', () => {
         const existing = ROLE_CATALOG.map(d => d.key).filter((k): k is string => k !== null && !NEW_KEYS.includes(k));
-        expect(existing).toHaveLength(19);
+        expect(existing).toHaveLength(23);
         for (const key of existing) {
             expect([...sources.values()].some(s => quoted(s, key)), key).toBe(true);
         }

@@ -44,6 +44,26 @@ export interface StateAttributeDecl {
     readonly initial: SimValue;
 }
 
+/**
+ * What makes a declaration wrong (R-SIM-68, R-SIM-71): the key or a record as
+ * stored (`key`, `record`, from the codec), or what the compiler finds.
+ */
+export type DeclarationDefectCode =
+    | 'key' | 'record' | 'initial' | 'no-domain' | 'bounds' | 'reserved' | 'metaclass' | 'two-spaces' | 'twice';
+
+/** A defect of the declarations, reported at Reset; never an element of the net. */
+export interface DeclarationDefect {
+    /** The position of the record (codec) or of the declaration (compiler); `null` for the key. */
+    readonly index: number | null;
+    /** The declared name, when readable. */
+    readonly name: string | null;
+    readonly code: DeclarationDefectCode;
+    /** Short, with no id in it: `initial 7 outside 0..3`, `not JSON`. */
+    readonly message: string;
+    /** For `two-spaces` and `twice`: the element where the two declarations meet. */
+    readonly element?: string;
+}
+
 /** σ, owned by the engine. The marking maps a place to 1..k; an absent place holds 0. */
 export interface SimState {
     readonly marking: ReadonlyMap<string, number>;
@@ -87,6 +107,10 @@ export interface NetStc {
     readonly fork?: string;
     readonly join?: string;
     readonly guard?: string;
+    /** The `Action [0..*]` features by site role (R-SIM-52, R-SIM-69): the transition's own, a place's entry, its exit. */
+    readonly action?: string;
+    readonly entry?: string;
+    readonly exit?: string;
     readonly arc?: string;
     readonly arcSource?: string;
     readonly arcTarget?: string;
@@ -176,6 +200,8 @@ export interface CompiledNet {
     readonly declared: ReadonlyMap<string, ReadonlyMap<string, StateAttributeDecl>>;
     readonly initial: SimState;
     readonly defects: readonly NetDefect[];
+    /** The declarations that are wrong (R-SIM-71); each still applies where it can, the first of a name winning. */
+    readonly declarationDefects?: readonly DeclarationDefect[];
 }
 
 // ── the step's oracles: the core stays pure (R-SIM-14) ──────────────────────
@@ -234,7 +260,9 @@ export type HaltReason =
     | { readonly kind: 'unsafe'; readonly place: string; readonly value: number; readonly bound: number }
     | { readonly kind: 'domain'; readonly element: string; readonly attr: string; readonly value: SimValue }
     | { readonly kind: 'double-assignment'; readonly element: string; readonly attr: string }
-    | { readonly kind: 'action-defect'; readonly site: ActionSite; readonly detail: string };
+    | { readonly kind: 'action-defect'; readonly site: ActionSite; readonly detail: string }
+    /** An action of `site` assigned an attribute `element` does not declare (R-SIM-70): ids, for the caller to name. */
+    | { readonly kind: 'undeclared'; readonly site: ActionSite; readonly element: string; readonly attr: string };
 
 /**
  * The outcome of a step. `halted` leaves σ as it was and consumes the event;

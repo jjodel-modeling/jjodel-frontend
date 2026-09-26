@@ -140,7 +140,7 @@ const SYSTEM_ROWS: readonly SystemRow[] = [
     { id: 'petri', name: 'Petri net (P/T)', shape: 'petri', active: ['arcWeight', 'inhibitorArc', 'bound', 'terminal'] },
     {
         id: 'flowchart', name: 'Flowchart / Activity', shape: 'controlFlow',
-        active: ['guard', 'terminal', 'activityFinal', 'fork', 'join', 'action', 'entry'],
+        active: ['guard', 'terminal', 'activityFinal', 'fork', 'join', 'action', 'entry', 'stateAttributes'],
     },
     {
         id: 'stateMachine', name: 'State machine', shape: 'controlFlow',

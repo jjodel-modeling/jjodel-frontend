@@ -6,9 +6,10 @@
  * binds and the roles it depends on (memo table «Catalogo e dipendenze»). A
  * profile (simProfiles.ts) picks a mode for each role; it adds no semantics.
  *
- * `simAccepting`, `simActivityFinal`, `simAction`, `simEntry`, `simExit`,
- * `simStateOutput` and `simTransitionOutput` are new and provisional (R-SIM-52):
- * nothing reads or writes them yet. `simEvent` is not here: the event metaclass
+ * `simAccepting`, `simActivityFinal`, `simStateOutput` and `simTransitionOutput`
+ * are new and provisional (R-SIM-52): nothing reads or writes them yet.
+ * `simAction`, `simEntry`, `simExit` and `simStateAttributes` are read by the run
+ * since lane C1 (R-SIM-68, R-SIM-69). `simEvent` is not here: the event metaclass
  * is the declared type of Trigger, derived on every read (R-SIM-38).
  *
  * Pure data: no React, no store.
@@ -144,19 +145,19 @@ const DESCRIPTORS: { readonly [K in RoleId]: Omit<RoleDescriptor, 'id'> } = {
         description: 'The Expression attribute of a transition that must hold for it to fire.',
     },
     action: {
-        group: 'data', key: 'simAction', kind: 'actionListAttribute', dependsOn: ['transition'], label: 'Action',
+        group: 'data', key: 'simAction', kind: 'actionListAttribute', dependsOn: ['transition', 'stateAttributes'], label: 'Action',
         description: 'The Action attribute of a transition, run when it fires.',
     },
     entry: {
-        group: 'data', key: 'simEntry', kind: 'actionListAttribute', dependsOn: ['node'], label: 'Entry',
+        group: 'data', key: 'simEntry', kind: 'actionListAttribute', dependsOn: ['node', 'stateAttributes'], label: 'Entry',
         description: 'The Action attribute of a node, run when a token enters it.',
     },
     exit: {
-        group: 'data', key: 'simExit', kind: 'actionListAttribute', dependsOn: ['node'], label: 'Exit',
+        group: 'data', key: 'simExit', kind: 'actionListAttribute', dependsOn: ['node', 'stateAttributes'], label: 'Exit',
         description: 'The Action attribute of a node, run when a token leaves it.',
     },
     stateAttributes: {
-        group: 'data', key: null, kind: 'declarations', dependsOn: [], label: 'State attributes',
+        group: 'data', key: 'simStateAttributes', kind: 'declarations', dependsOn: [], label: 'State attributes',
         description: 'The state attributes declared per metaclass, with their domain and initial value.',
     },
     stateOutput: {
