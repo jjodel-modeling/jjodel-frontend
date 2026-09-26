@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-2340
 Chat: C-2026-09-26-1702
 Lane: full (more than 5 files, two changed exported interfaces, visual check)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane simulation · 3ec3405d5, f507d166d, b62141aba · verifica visiva passata 2026-09-27 (chat, 6/6, e Alfonso)
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, a fresh session started by `lane-run` (RC-20; the Phase 1 report `06d911dd9` is read from the repo). Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file (subject `docs: add Phase 2 of lane C1, state declarations and action keys (P-2026-09-26-2340)`), its parent is `17a3d308c` (the merge of the trunk with the bypass gates into `simulation-engine`, P-2026-09-26-2245), below which sit `320d4afcf` (R-SIM-67..72) and `06d911dd9`; `.claude/settings.json` pins `claude-opus-5-5`; `git status` empty apart from the untracked, gitignored `frontend/scripts/smoke/_tmp_*` files. Otherwise stop with `Outcome: blocked`.
 

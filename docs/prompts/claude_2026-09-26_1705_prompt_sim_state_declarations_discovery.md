@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-1705
 Chat: C-2026-09-26-1702
 Lane: full (Phase 1 discovery, read-only; Phase 2 will touch the M2 bag, the compiler and the panel)
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane simulation · 06d911dd9
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, a fresh session (`/clear`). Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file (subject `docs: add prompt P-2026-09-26-1705, state declarations discovery`), its parent is `7e1c9e8cc` (the session checkpoint of the simulator chat, above the Status flip `df9d7a5e0` of the merge `cc388d5dd`), `git status` empty apart from the untracked, gitignored `frontend/scripts/smoke/_tmp_*` files. Otherwise stop.
 
