@@ -21,10 +21,12 @@ every later message reach the same session through `--resume` on that id. A sess
 one line `Outcome: done | hard-stop | question | blocked`, written in the lane discipline section of
 every prompt; the chat reads that line and never interprets prose. A question is a hard stop: the
 session writes it, terminates, the chat answers within its remit or brings the question to Alfonso,
-then resumes. In non-interactive mode an `ask` cannot be answered and is a refusal with its reason;
+then resumes. A rework after a failed visual GO resumes the same session with a new Phase 2 prompt
+that `Corregge` the old one; a rework whose cause is the analysis opens a new discovery, declared. In non-interactive mode an `ask` cannot be answered and is a refusal with its reason;
 the critical-zone hook keeps that behaviour, and a critical-zone lane needs the Layer Impact Report
 and the explicit go-ahead in the resumed text, or is opened by Alfonso by hand as today. A session
-that does not exit within the time limit declared in the prompt is `blocked`: the chat reports it and
+that does not exit within the time limit (90 minutes by default, a prompt may declare another) is
+`blocked`: the chat reports it and
 does not resume on its own. A session that reports `done` with the Status line not flipped is an
 inconsistency the chat reports before any merge.
 
@@ -56,8 +58,8 @@ built with the console script the prompt names or imported from an exported file
 exist. The log entry records the source: `Smoke visivo: passato — chat, unattended, <n>/<n>`. Alfonso's
 GO stays mandatory on critical-zone lanes, on items that are perceptual judgements (the prompt marks
 them as such), and on any item the chat could not close for a technical reason, which counts as
-failed, not skipped. For a first period every unattended check is paired with a sampled human GO, to
-measure whether the human eye catches what the DOM does not (RC-15).
+failed, not skipped. Until 2026-10-03 every unattended check is followed by Alfonso's GO on every lane, with the
+screenshots and measures in hand; the sampled GO starts after that, with the data (RC-15).
 
 **RC-24, concurrency limit.** The limit of P13, «at most two sessions on the shared tree on disjoint
 files», was written for sessions on one worktree. With one worktree and one branch per lane it is
@@ -91,12 +93,16 @@ aside on 2026-09-26, the goal is fewer human hand-offs, not more bookkeeping. A 
 the chat: unnecessary while the chat launches the session itself and sees the process exit. Relaying
 messages between sessions: still forbidden (P13).
 
-## Open
+## Settled on 2026-09-26 (Alfonso, four answers)
 
-Whether the rework loop re-enters at the discovery prompt or at the Phase 2 prompt (the BPMN draws
-the former). The time limit per lane (a default of 90 minutes is proposed). The exact wording of the
-`Outcome` and `Recommended` lines in the prompt template. Which lane runs the pipe first: proposed,
-lane C of the simulator or the one after it, never a lane already open.
+The rework loop re-enters at the Phase 2 prompt, in the same session: the chat resumes the session
+with a new prompt that `Corregge` the old one; the discovery is not redone. If the cause of the rework
+is one of analysis, the chat says so and opens a new discovery as the declared exception. The time
+limit per lane is 90 minutes by default; a prompt may declare a different one. The first lane to run
+the orchestrated pipe is lane C of the simulator. During a first period, until 2026-10-03, the chat
+runs the checklist and Alfonso confirms on every lane with the screenshots and measures in hand; the
+sampled GO starts after that, with the data. The wording of the `Outcome` and `Recommended` lines is
+the one written in RC-20 and RC-21.
 
 ## Next step
 
