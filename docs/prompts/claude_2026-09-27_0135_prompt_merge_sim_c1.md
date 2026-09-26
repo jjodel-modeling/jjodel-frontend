@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0135
 Chat: C-2026-09-26-1702
 Lane: full (merge; one inbox conflict to resolve by rule)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane merge · 24d8537fd · verifica visiva passata 2026-09-27 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. The only other tree this lane may touch is `~/jjodel-sim`, in step 9, for a fast-forward. Do not touch any other tree. Every reply opens with `[P-2026-09-27-0135 · session <id>]` and ends with an `Outcome:` line (P16).
 
