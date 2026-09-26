@@ -1805,6 +1805,18 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   del pannello si limitano a una riga con il testo intero nel `title`: oggi una riga che va a capo
   sposta i pulsanti di 17 px (misurato). Entra nella stessa corsia, come aggiunta dichiarata allo
   scope.
+- **R-SIM-64** (2026-09-26). **`else` anche nella forma Petri. Completa R-SIM-31.** Una transizione
+  di Petri la cui guardia è il testo `else` è il complemento dei suoi fratelli, come un arco del
+  controllo di flusso: i fratelli sono le transizioni con lo stesso preset (posti e pesi) e gli stessi
+  trigger, la stessa chiave `siblingKey` di `netCompile.ts`; due `else` fra fratelli sono il difetto
+  `else-twice`. Misurato il 2026-09-26 (chiusura `5a398eaee`): oggi quella guardia va al parse come
+  espressione ordinaria, diventa un difetto e il run va in `Deadlock` dove `te` dovrebbe scattare.
+- **R-SIM-65** (2026-09-26). **Le righe che compaiono stanno sopra i pulsanti. Completa R-SIM-63.** Il
+  pannello è ancorato in basso e cresce verso l'alto: le righe che compaiono e scompaiono (difetti al
+  Reset, halt, errore del run, avviso del run, interruzione) si mettono sopra la fila dei pulsanti,
+  così crescono verso l'alto senza spostarli. Restano sotto la riga di stato e «Last step», che ci sono
+  per tutta la durata di un run. Misurato il 2026-09-26: la riga dei difetti al Reset spostava Step di
+  24,5 px.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
