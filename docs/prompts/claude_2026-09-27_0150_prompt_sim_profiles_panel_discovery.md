@@ -1,0 +1,38 @@
+# Prompt: discovery, the simulation profiles reach the panel (R-SIM-47..56, R-SIM-55 modal)
+
+Prompt-ID: P-2026-09-27-0150
+Chat: C-2026-09-26-1702
+Lane: full (Phase 1 discovery, read-only)
+Status: da eseguire
+
+Worktree: `~/jjodel-gate`, branch `sim-profiles` (from `simulation-engine` at `8b5871f29`, the closure of lane C1), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-gate`, branch `sim-profiles`, `git log -1` is the commit that adds this file (subject `docs: add prompt P-2026-09-27-0150, profiles panel discovery`), its parent is `8b5871f29`, `git status` empty; `frontend/node_modules` is the P14 symlink created by the chat. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0150 · session <id>]` and ends with an `Outcome:` line (P16).
+
+**Phase 1 only: read-only.** No source file is edited, no commit except the report (step 6). A dev server from this tree on a free port is allowed (3001, 3002, 3003 and any port another tree holds are never touched: check with `lsof`); probe files under `frontend/scripts/smoke/_tmp_prof_*` (gitignored); stop the server at the end.
+
+## COSA
+
+The pure profile modules exist since `P-2026-09-25-1805` (`roleCatalog.ts`, `simProfiles.ts`, `profileCodec.ts`: the catalogue, the eight system profiles, `required(profile)`, `validateProfile`, `inferCustomProfile`, the `simProfile` key encoding) and the discovery of lane C (`06d911dd9`, §2(e), H5) measured that no production code imports them: the panel still renders the role groups inline, `simProfile` is never written or read. R-SIM-55 wants, on a metamodel, a summary plus «Configure…» opening the modal of the design input `docs/design/claude_2026-09-25_simulation_roles_modal_design.md` (presets DFA, NFA, Moore, Mealy, State machine, Extended state machine, Petri net, Flowchart/Activity; roles required, optional, derived; «Save as…»; the SMV preview as an inert placeholder), with `simProfile` written only on Apply and «Custom» rebuilt from the keys when the key is absent. For MODELS (2026-10-04) the demo needs a metamodel to become simulable in a few clicks, from a preset, not role by role. Map the shortest path from the pure modules to that, and cost it.
+
+## DOVE (read)
+
+- `frontend/src/model/simulation/roleCatalog.ts`, `simProfiles.ts`, `profileCodec.ts` (and tests): the API a UI would call (`SYSTEM_PROFILES`, `required`, `validateProfile`, `inferCustomProfile`, encode/decode), the modes `edit | derived | off`, the parameters (`simBound`, selector policy) and constraints of R-SIM-49, the ticket «`validateProfile` accepts a derived role whose `from` is off» (closure of `P-2026-09-25-1840`, `docs/log-inbox/simulation.md` on the trunk's log after the fold).
+- `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `simRoleStatus.ts`, `simulation-panel.scss`: the M2 side after C1 (groups, `ROLE_SPECS`, the writes `lmm.state = {...}`, the Data group and the declarations table), what a preset application would have to write (one `state` write with all keys, or several), and what the panel shows when a profile is checkable, with warnings, or incomplete.
+- The modal pattern of the codebase (CLAUDE.md design system: «modal per fullscreen editing», progressive disclosure): the existing modal components under `frontend/src/components/` (search for the modal used by the transformation editor or the properties panel), their SCSS tokens, how they are opened from a panel.
+- `docs/design/claude_2026-09-25_simulation_roles_modal_design.md`; `docs/ratifiche/claude_2026-09-25_1759_memo_simulation_roles_profiles.md`; `docs/decisions.md` R-SIM-37, R-SIM-47..56, R-SIM-67..72; `docs/prompts/claude_2026-09-25_1805_prompt_sim_role_catalog_profiles.md`.
+
+## COME
+
+1. **What exists [R].** The API surface of the three modules and what is missing for a UI (for example: does applying a system profile produce the concrete `sim*` key set, or only the modes? how does a preset bind a role to a concrete metaclass or feature: by name heuristics, by the single candidate, or by asking?); how the panel writes the bag today and whether one write of many keys goes through `set_state` as one action (undo granularity); how «Custom» is inferred from a bag that C1 filled.
+2. **Binding a preset to a real metamodel.** The hard part of the demo: a preset says «Node, Transition, Initial, Guard…» but the metamodel has `State`, `Transition`, `isInitial`, `guard`. Map what can be resolved automatically (a single class with a boolean feature named like the role, a single reference between the node class and itself, the `Expression`-typed attribute for Guard, `Action [0..*]` for Action/Entry/Exit) and what needs a choice; cost a resolver in a pure module (`profileBinder.ts`) that returns, per role, `bound | candidates[] | none`, with the Custom fallback.
+3. **Options.** M1: the full modal of R-SIM-55 (presets list, four groups plus Data inside the modal, Save as…, modified state, Apply). M2: a preset select at the top of the inline panel («Profile: State machine ▾», Apply) that binds what it can, leaves the rest to the groups, writes `simProfile`; the modal later. M3: M2 plus the summary line and a «Configure…» that only scrolls or expands the groups. For each: files, exported interfaces, `VersionFixer` (zero expected, R-SIM-55), tests (pure binder on fixtures: a PEST state machine, the b2net Petri net, an Extended state machine with declarations), the visual checklist, and an honest estimate of lane size. Recommend one for the demo build (freeze proposed 2026-10-01 evening) and say what the modal lane would add after MODELS.
+4. **Risks.** A preset that overwrites bindings the user made (R-SIM-55: changing profile does not delete bindings; Apply only writes); Flowchart requiring `stateAttributes` after R-SIM-68 (a preset applied to a metamodel without declarations shows «with warnings», not incomplete: verify with `validateProfile`); the `validateProfile` ticket; the run interruption when the bag changes (R-SIM-13) while a run is live; the panel height (no layout shift) with one more row.
+5. **Measure [M].** On the pure modules with a probe: apply each of the eight system profiles' modes to the C1 bag shape and to the PEST state machine shape (build them as raw bags in the probe), run `validateProfile` and `inferCustomProfile`, and record the verdicts (checkable, with warnings, incomplete) and `ignoredKeys`. On the dev server: what the panel shows for such bags today.
+6. **Report, mandatory.** `docs/discovery/discovery_2026-09-27_sim_profiles_panel.md` (objective, files read, [R]/[M] findings, binder design, options, risks, «Decisions taken (unattended)» with a recommendation per point, «Decisions awaiting Alfonso» with RC-26 items only: note that «what the demo shows» is one of them, so the choice between M1 and M2 for the demo build goes in that section with the chat's recommendation). Commit it alone, pathspec after `--`, subject `docs: discovery of the simulation profiles in the panel (P-2026-09-27-0150)`, `Model:` trailer. No log entry, no Status flip.
+7. **Hard stop.** Closing report `[P-2026-09-27-0150 · session <id>]`: the report sha, the recommended option in two lines, the items awaiting Alfonso. Stop the dev server. `Outcome: hard-stop`.
+
+Never: an edit to a source file, `git add .`, `-A`, `-u`, `git stash`, `git reset --hard`, `git checkout -- .`, `git clean`, `--no-verify`, a critical-zone edit, push, any tree or server you did not start.
+
+## RIFERIMENTI
+
+- `P-2026-09-25-1805` (`c1847aed5`, closure `0834329e4`), R-SIM-56 closure `a14c7dfa8`; lane C discovery `06d911dd9` §2(e), §7.8; lane C1 closure `8b5871f29`.
+- `docs/PROTOCOL.md` P13, P16; RC-25..30.
