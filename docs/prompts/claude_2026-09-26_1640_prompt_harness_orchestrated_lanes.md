@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-1640
 Chat: C-2026-09-25-1353
 Lane: full (more than 3 files, a normative file)
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane harness · e00392612
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session (`/clear`). Before anything
 else: `pwd` is `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, `git log -1` is the commit

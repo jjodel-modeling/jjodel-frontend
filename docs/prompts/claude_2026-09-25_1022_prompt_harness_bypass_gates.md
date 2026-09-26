@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1022
 Chat: C-2026-09-25-1022
 Lane: full (more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane harness · cd5eb9eb5
 
 Worktree: `~/jjodel-gate`. First run `pwd` and `git branch --show-current`. Expected: `/Users/alfonso/jjodel-gate` on `harness-gate` with a clean tree. Then `git switch -c harness-bypass alfonso-frontend-jjtl` and work only there. If the tree is not clean or the path differs, stop and say so. Do not touch `~/jjodel`, `~/jjodel-release`, `~/jjodel-sim`, `~/jjodel-open`, `~/jjodel-harness`.
 

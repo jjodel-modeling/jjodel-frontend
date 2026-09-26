@@ -1,14 +1,14 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.5 (2026-09-21) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
+Versione: 1.6 (2026-09-26) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
 Riga da mettere in testa a ogni prompt Claude Code:
 
 ```
-Protocollo: docs/PROTOCOL.md — clausole P1..P15 applicabili (tutte salvo deroga esplicita nel prompt).
+Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 ```
 
 Le deroghe si scrivono così: `Deroga: P4 non si applica (motivo: ...)`.
@@ -87,6 +87,18 @@ I gate asserzionano **relazioni fra misure, non valori assoluti**. Un gate che d
 Se uno smoke fallisce, il commit resta ma l'hard stop riporta il fallimento in cima. Non tentare di aggiustare a occhio: segnala.
 
 Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerarchia visiva e comportamento percepito.
+
+**The visual checklist, amended 2026-09-26 by RC-23.** The numbered visual steps of a prompt (its §11.5) are a
+checklist that the project chat runs in the built-in browser of the desktop app, against the lane's dev server on
+the Mac. Each item is read from the DOM or the console: positions, presence, texts, button states. A screenshot
+is never the evidence. Screenshots in light and dark are attached for Alfonso as a record. The browser profile is
+empty and separate from Alfonso's, so the prompt names the console script or the exported file that builds each
+fixture; a fixture is never assumed to exist. The log entry names the source in `Smoke visivo`, in the form
+`passato — chat, unattended, <n>/<n>`. Alfonso's GO stays mandatory on critical-zone lanes, on the items a prompt
+marks as perceptual judgements, and on every item the chat could not close for a technical reason, which counts
+as failed, not skipped. Measurement period: until 2026-10-03 every unattended checklist is followed by Alfonso's
+GO on every lane, with the screenshots and measures in hand. The sampled GO starts after that date, on the data
+(RC-15).
 
 ## P9 — Prompt log
 
@@ -211,6 +223,12 @@ Piu' sessioni lavorano sullo **stesso working tree** nello stesso momento. Non e
 limite: e' la condizione normale di questo repo, e ogni regola qui sotto nasce da un
 incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/decisions.md`.
 
+**Amended 2026-09-26 by RC-24.** For lanes launched under P16 the concurrency limit is one worktree and one
+branch per lane, merges one at a time in the order fixed at launch, and the three checks of RC-22 before the
+launch. It replaces the limit RC-24 quotes, «at most two sessions on the shared tree on disjoint files», which
+this clause never wrote down; its nearest written source is `docs/sessioni/claude_sessione_2026-08-05_5.md:50`.
+The rules below still bind every tree that hosts more than one session.
+
 - **Una corsia per giro.** Un giro chiude il perimetro che il suo prompt dichiara e nient'altro.
   Il lavoro di un'altra corsia che compare in albero a meta' sessione non e' un invito ad
   assorbirlo: si constata e si lascia dov'e'.
@@ -247,7 +265,11 @@ incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/deci
   Prompt-ID, or with none, does not act on it: it replies with its own ID and the one it received,
   and stops. A session does not relay messages to another session. Measured 2026-09-17: a Phase 2
   GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
-  message carried a scope change that nobody had written.
+  message carried a scope change that nobody had written. Amended 2026-09-26 by RC-20 and RC-21: every final
+  message of a session (hard stop, question, closing report) ends with one line
+  `Outcome: done | hard-stop | question | blocked`, and every question that has a recommendation carries it in
+  one line of the form `Recommended: <one line>`. The chat reads those two lines, not the prose around them
+  (P16).
 
 - **Every prompt declares its lane.** The header of a prompt in `docs/prompts/` carries `Lane: fast`
   or `Lane: full (<trigger>)`, the trigger being one of RC-3's four: critical zone, migration, more than
@@ -342,6 +364,42 @@ simulator today is following a different set of rules from this branch's.
 - **`master` has no `CLAUDE.md`, and that is measured, not decided.** It is an open question for
   Alfonso. Do not create one there, and do not treat `master` as inside the development flow on
   your own authority.
+
+## P16 — Orchestrated lanes
+
+Written 2026-09-26 from RC-20, RC-21 and RC-22 (`docs/decisions.md`, memo
+`docs/ratifiche/claude_ratifiche_2026-09-26_orchestrated_lanes.md`). Three message flows of a lane cross between
+the project chat and Claude Code: the prompt to the session, the hard stop back to the chat, the GO to the
+session. Until this clause each was a paste by Alfonso; from here each is an operation of the chat. Two human
+gates stay: the ratification of a decision, and the visual GO, on every lane until 2026-10-03 and by sampling
+after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequence is in `docs/HARNESS-DOCS.md` §7.
+
+- **Launch and resume (RC-20).** The chat starts a lane from its committed prompt file with
+  `frontend/scripts/lane-run.mjs start <worktree> <prompt-file>`, run by an absolute node
+  (`~/.local/bin/node`), and sends the GO and every later message to the same session with
+  `lane-run resume <Prompt-ID> <message-file>`. A session started without a resume is new, so the `/clear` of a
+  prompt is implicit. `lane-run` runs `claude -p` in bypass mode (RC-19) and in the worktree recorded at start: a
+  resume runs in the caller's directory, not the session's (measured 2026-09-26,
+  `docs/discovery/discovery_2026-09-26_orchestrated_lanes_harness.md` §5). Its logs live in
+  `~/.jjodel-lanes/<Prompt-ID>/`, outside every tree.
+- **The chat reads one line.** The final message of a session ends with the `Outcome` line of P13, and the chat
+  acts on that line through `lane-run status <Prompt-ID>`, never on the prose. A `question` is a hard stop: the
+  session writes it and exits, the chat answers it or takes it to Alfonso, then resumes the session.
+- **Recommended answers (RC-21).** A question carrying one unconditional `Recommended:` line is answered with it
+  by the chat, within the limits of RC-21 and with the record it requires. The lane's closing report lists those
+  adoptions first.
+- **Refusals.** In a `-p` session an `ask` cannot be answered and is a refusal with its reason (measured
+  2026-09-26 for a hook `ask`, same report §7). A critical-zone lane is resumed only with the Layer Impact Report
+  and the explicit go-ahead in the resumed text, or is opened by Alfonso by hand.
+- **Time limit.** A session still running after 90 minutes, or after the limit its prompt declares, is `blocked`:
+  the chat reports it and does not resume it on its own.
+- **Rework.** After a failed visual GO the chat resumes the same session with a new Phase 2 prompt that
+  `Corregge` the old one. When the cause is in the analysis, the chat says so and opens a new discovery, declared.
+- **Before a merge.** A session that reports `done` while the Status line of its prompt is not flipped is an
+  inconsistency the chat reports before any merge.
+- **Parallel by default (RC-22).** Two lanes start together when the three checks of RC-22 pass. When one fails,
+  the chat names it and queues the lane with its merge position fixed. Semantic conflicts are resolved on the
+  branch first (RC-14).
 
 ---
 

@@ -6,7 +6,11 @@
  * proves the report exists (the transcript lags: discovery report P-2026-09-21-1620,
  * H2, probe 7), so the hook does not try: it answers `ask` with the 3.2 reason
  * and the human confirms that the report was written in chat. No state, no
- * marker file. It FAILS OPEN like every hook here; it never denies.
+ * marker file. It FAILS OPEN like every hook here.
+ *
+ * Under permission_mode bypassPermissions it denies instead, since that mode
+ * may not honor an `ask`: a critical-zone lane is relaunched without the flag
+ * (RC-19). Any other mode, or a missing or non-string field, keeps the `ask`.
  *
  * The matcher is the 3.2 trigger, not the 3.1 table: 3.1 also lists authoring/,
  * ir/, problems/, DV.tsx and defaultViewTemplate.ts, which fired on the S6 lane
@@ -82,6 +86,14 @@ function main() {
     if (!input || !input.tool_input) return;
     const what = evaluate(input.tool_input);
     if (what === null) return;
+    if (input.permission_mode === 'bypassPermissions') {
+        decide(
+            'deny',
+            'critical-zone: ' + what + ' is a Layer Impact Report trigger (CLAUDE.md 3.2, docs/PROTOCOL.md P5). ' +
+                'critical-zone lane: relaunch this session without --dangerously-skip-permissions (RC-19).',
+        );
+        return;
+    }
     decide(
         'ask',
         'critical-zone: ' + what + ' is a Layer Impact Report trigger (CLAUDE.md 3.2, docs/PROTOCOL.md P5). ' +
