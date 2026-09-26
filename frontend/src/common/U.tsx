@@ -49,6 +49,7 @@ import React, {isValidElement} from "react";
 import IoT from "../iot/IoT";
 import Collaborative from "../components/collaborative/Collaborative";
 import {Await, NavigateFunction} from "react-router-dom";
+import {hashReload, type ReloadWindow} from "./navigateReload";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -135,9 +136,9 @@ export class R {
                 console.error('R.navigate() called twice');
                 // return;
             }
-            U.navigating = true;
-            window.location.hash = hash;
-            window.location.reload();
+            // "Stay on page" at the unsaved-changes prompt cancels the reload: then hashReload puts back the URL the
+            // page still shows and lowers the flag again (P-2026-09-25-1905).
+            hashReload(window as unknown as ReloadWindow, hash, (v) => { U.navigating = v; });
             // let counter = +(U.getSearchParam('p') as string) || 0;
             // U.setSearchParam('p', counter+1);
             //window.location.href = window.location.origin + '/'+hash;
