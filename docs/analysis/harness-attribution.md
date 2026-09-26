@@ -1,5 +1,11 @@
 # Attribuzione harness: cosa dice la storia git dal 2026-01-01
 
+**Email pseudonimizzate** il 2026-09-27 (P-2026-09-27-0214): nella colonna `email` di
+`harness-attribution-commits.csv` ogni indirizzo personale e' sostituito da un identificativo opaco di autore
+(`a01`, `a02`, ...), uno per indirizzo distinto; i nomi degli autori restano. `noreply@anthropic.com` resta com'e':
+e' il marcatore dei commit cloud descritto in §1. La tabella di corrispondenza sta fuori dal repository, in
+`~/.jjodel-lanes/emse/author-map.csv`.
+
 **Data**: 2026-08-28. Branch `alfonso-frontend-jjtl`. HEAD `758aded1b` (2026-08-28 19:16:13 +0200).
 **Perimetro**: i 1357 commit raggiungibili da HEAD con author date >= 2026-01-01 (55 merge, 1302 non-merge).
 **Dati grezzi**: `harness-attribution-commits.csv`, `harness-attribution-monthly.csv`,

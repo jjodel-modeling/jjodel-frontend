@@ -1,11 +1,11 @@
-   723	Alfonso Pierantonio <alfonso.pierantonio@univaq.it>
-   520	Damiano Di Vincenzo <naraku7686@live.it>
-   372	Damiano Di Vincenzo <damianodivincenzo7@gmail.com>
-   273	GiordanoT <giordanotinella@gmail.com>
-    96	Juri Di Rocco <juri.di.rocco@gmail.com>
-    64	AndreaPerelli <andreaperelli.95@gmail.com>
-    22	Andrea_Perelli <andreaperelli.95@gmail.com>
-     2	Giordano Tinella <64309942+GiordanoT@users.noreply.github.com>
-     1	GiordanoT <64309942+GiordanoT@users.noreply.github.com>
-     1	jdirocco <juri.di.rocco@gmail.com>
-     1	samfeidon <samuele.sturba@student.univaq.it>
+   723	Alfonso Pierantonio <a01>
+   520	Damiano Di Vincenzo <a03>
+   372	Damiano Di Vincenzo <a05>
+   273	GiordanoT <a06>
+    96	Juri Di Rocco <a02>
+    64	AndreaPerelli <a04>
+    22	Andrea_Perelli <a04>
+     2	Giordano Tinella <a07>
+     1	GiordanoT <a07>
+     1	jdirocco <a02>
+     1	samfeidon <a08>

@@ -1,5 +1,10 @@
 # EMSE dataset — raw, uninterpreted headline figures
 
+> **Emails pseudonymized** on 2026-09-27 (P-2026-09-27-0214). In `git/commits.csv` and `git/authors_commits.txt`
+> every contributor email is replaced by an opaque author id (`a01`, `a02`, ...), one id per distinct address;
+> two addresses of the same person keep two ids. Author names are kept. The mapping lives outside the repository,
+> at `~/.jjodel-lanes/emse/author-map.csv`; a lane that regenerates the dataset extends it and never renumbers.
+
 > Generated 2026-06-09 by a read-only extraction pass on branch `alfonso-frontend-jjtl`.
 > **These numbers are raw and uninterpreted.** No analysis, coding, or conclusions are included here.
 > Each line points to the raw file under this directory that produced it. Counting-method caveats are
