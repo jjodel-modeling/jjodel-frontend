@@ -1872,6 +1872,65 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   comparire la riga una volta, come risposta al clic. Misurato il 2026-09-26: l'interruzione sopra i
   pulsanti, con «Last step» cancellato sotto, spostava Step di 24,5 px verso il basso.
 
+### Decisioni 2026-09-26: corsia C, dichiarazioni degli attributi di stato e chiavi delle azioni (R-SIM-67..72)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-26_sim_state_declarations.md` (`06d911dd9`), diciotto
+domande del suo §9. Decise dalla chat `C-2026-09-26-1702` sotto RC-25 (`provisional, unattended`), con la
+verifica avversariale di RC-27 sulle due scelte strutturali (R-SIM-67 e R-SIM-71); Alfonso riceve il digest
+alla chiusura della corsia C1 e può porre il veto. Le domande 3, 4, 6, 9, 10, 12, 13, 14, 15, 16, 18 sono
+adottate come raccomandate e restano nel report; qui stanno le sei che fissano un formato, un'interfaccia
+o una corsia.
+
+- **R-SIM-67** (2026-09-26, provisional, unattended). **Le dichiarazioni vivono in una chiave additiva del
+  bag, `simStateAttributes`.** Il valore è una stringa JSON, come `simProfile` (R-SIM-55): un oggetto
+  `{ "v": 1, "attrs": [record...] }`, con record dalla forma di `StateAttributeDecl` (`name`, `metaclass`
+  puntatore o `null`, `space`, `domain`, `initial`, più `equation` dalla C2), serializzato con ordine dei
+  campi fisso. R-SIM-2 resta intatta (chiave piatta, valore primitivo), nessun passo di VersionFixer,
+  `runSignature` la copre già. Scartate D2 (elementi del metamodello: contro spec §3 e R-SIM-18, e un tipo
+  primitivo nuovo passa per la critical zone) e D3 (dentro il profilo: contro R-SIM-47, persa con Custom).
+  `Verified: la stringa non ha copie shallow che scappano e runSignature confronta la stringa grezza; sarebbe
+  falsa se la serializzazione non fosse deterministica nell'ordine dei campi, da cui la regola dell'ordine
+  fisso.`
+- **R-SIM-68** (2026-09-26, provisional, unattended). **Decodifica tollerante, difetti per record.** Un record
+  malformato è un difetto di quel record e gli altri compilano; una stringa che non è JSON, o non ha `v` e
+  `attrs`, è un difetto di compilazione sulla chiave, mai un insieme vuoto silenzioso; i campi sconosciuti
+  si ignorano, così la C2 aggiunge `equation` senza cambiare formato; l'insieme vuoto si scrive `'[]'` dentro
+  `attrs`, mai `undefined` sulla chiave (ticket sul mancato `set_state` a `undefined`, §7.6 del report). Nel
+  catalogo `stateAttributes.key` diventa `'simStateAttributes'`; `action`, `entry`, `exit` dipendono da
+  `stateAttributes`. Emenda la decodifica tutto-o-niente di `decodeProfile` solo per questa chiave.
+- **R-SIM-69** (2026-09-26, provisional, unattended). **Le tre chiavi delle azioni entrano in `NetStc`.**
+  `action`, `entry`, `exit` campi opzionali di `NetStc` e tre coppie in `ROLE_KEYS`; i valori `Action [0..*]`
+  si leggono per ruolo con `objectSlotValues` dal lookup, in ordine, in una tabella costruita al Reset accanto
+  a `compileGuards`; i siti sono quelli del core (in Petri gli archi non sono siti: exit del preset,
+  transizione, entry del postset). `NO_SIM_ACTIONS` resta l'oracolo quando nessun ruolo di azione è legato,
+  non un flag per run; l'asserzione di `simBridge.test.ts:428-429` si riscrive.
+- **R-SIM-70** (2026-09-26, provisional, unattended). **Difetti di compilazione delle azioni al Reset, halt a
+  run time come rete di sicurezza.** Al Reset si segnalano: azione che non parsa, dichiarazione malformata,
+  bersaglio non dichiarato e località quando il bersaglio si riduce senza σ ed evento, doppio bersaglio per
+  transizione sui suoi siti quando i bersagli si riducono, `E-NODE` sul lato destro di un assegnamento
+  semantico. Un difetto di compilazione di un'azione non esclude la transizione dai candidati (a differenza
+  di una guardia difettosa): la transizione resta candidata e ferma il run se scatta. `CompileDefect.role` e
+  `reason` si allargano (Rule 11 autorizzata: unione di letterali, additiva); `HaltReason` riceve un genere
+  proprio per il bersaglio non dichiarato con elemento e attributo, così la riga dice il nome e non il
+  puntatore; la riga dell'halt non porta il testo sorgente dell'azione, che va nel `title` (R-SIM-62).
+- **R-SIM-71** (2026-09-26, provisional, unattended). **Due corsie: C1 memorizzati e azioni, C2 derivati.**
+  C1: codec, catalogo, `NetStc`, `compileNet` con i difetti delle dichiarazioni (iniziale fuori dominio,
+  dominio mancante su semantico, `min > max`, nome riservato, metaclasse inesistente, stesso nome su due spazi
+  o due volte su un elemento), tabella delle azioni e `compileDefects` nel bridge, testi dell'halt; poi il
+  gruppo Data nel pannello (quinto gruppo inline, `simGuard` vi si sposta da General, liste filtrate per tipo,
+  tabella delle dichiarazioni con valori iniziali scritti come letterali JjEL, letterali di enumerazione come
+  identificatori liberi, assegnamenti dell'ultimo passo solo nel `title` di «Last step»). Il modale di
+  R-SIM-55 resta una corsia propria. C2: `equation`, grafo delle dipendenze e ciclo, risolutore in lettura in
+  `guardContext.ts`, bersaglio di sola lettura. `Verified: guardContext legge σ (state.attrs), che compileNet
+  popola dai valori iniziali, quindi C1 non lo tocca; sarebbe falso se l'accessore dovesse consultare
+  CompiledNet.declared, e non lo fa (§2(c) del report).`
+- **R-SIM-72** (2026-09-26, provisional, unattended). **Forma del record per i derivati, decisa ora per la
+  C2.** Un record ha esattamente uno fra `initial` e `equation`; `initial` diventa opzionale in
+  `StateAttributeDecl` con la C2 (Rule 11 in quella corsia), e un derivato con `initial`, o un memorizzato
+  con `equation`, è un difetto del record. Respinta la proposta del report di tenere `initial` obbligatorio e
+  ignorato: l'esportatore emetterebbe `VAR` con init e `DEFINE` per lo stesso nome, e il pannello mostrerebbe
+  un campo senza senso. La C1 non ne risente: i suoi record hanno sempre `initial`.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
