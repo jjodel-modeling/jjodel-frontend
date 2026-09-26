@@ -11,9 +11,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../netCompile';
+import { candidates } from '../netStep';
 import { isKindOf } from '../isKindOf';
 import { objectReferences, objectSlotValues } from '../objectSlots';
-import type { NetModelView, NetStc, NetTransition, StateAttributeDecl } from '../netTypes';
+import type { GuardOutcome } from '../guardEvaluator';
+import type { GuardOracle, NetModelView, NetStc, NetTransition, StateAttributeDecl } from '../netTypes';
 
 interface Spec {
     classes: Record<string, string[]>;
@@ -368,6 +370,75 @@ describe('compileNet, Petri shape (R-SIM-21, R-SIM-23, R-SIM-30)', () => {
         expect(net.defects.map(d => [d.element, d.code])).toEqual([
             ['pp', 'bad-arc'], ['ti', 'bad-arc'], ['w0', 'bad-weight'], ['w15', 'bad-weight'], ['ws', 'bad-weight'],
         ]);
+    });
+
+    // R-SIM-64 (P-2026-09-26-1535): `else` on a Petri transition, as on a control-flow edge.
+    const PG: NetStc = { ...PN, guard: 'A_g' };
+    const tr = (guard: string, trig?: string) => ({ cls: 'C_T', slots: { A_g: [guard], ...(trig ? { R_trig: [trig] } : {}) } });
+    /** The guard oracle of the probe: an outcome per site, `true` for any other. */
+    const oracle = (by: Record<string, GuardOutcome>): GuardOracle => site => by[site] ?? { kind: 'true' };
+    /** The probe of the 1315 closure: p (1 token) feeds tf [false] and te [else]. */
+    const probe = () => compile(PG, {
+        classes,
+        objects: {
+            p: { cls: 'C_P', slots: { A_m: [1] } }, a: { cls: 'C_P' }, b: { cls: 'C_P' },
+            tf: tr('false'), te: tr('else'),
+            x1: arc('p', 'tf'), x2: arc('tf', 'a'), x3: arc('p', 'te'), x4: arc('te', 'b'),
+        },
+    });
+
+    it('R-SIM-64: a Petri transition whose guard is else is the complement of its siblings, with no guard site of its own (mutants: parsed as a guard; the else keeps its site)', () => {
+        const net = probe();
+        const t = byId(net.transitions);
+        expect([t.te.elseOf, t.te.guardSites]).toEqual([['tf'], []]);
+        expect([t.tf.elseOf, t.tf.guardSites]).toEqual([null, ['tf']]);
+        expect(net.defects).toEqual([]);
+    });
+
+    it('R-SIM-64 end to end: tf false gives te; tf true makes te else(false); a defective tf makes te a defect (R-SIM-31)', () => {
+        const net = probe();
+        const cfg = { state: net.initial, event: null };
+        const run = (g: GuardOutcome) => candidates(net, cfg, oracle({ tf: g }));
+        const off = run({ kind: 'false' });
+        expect(off.candidates.map(c => c.transition)).toEqual(['te']);
+        expect(off.evaluated).toEqual([
+            { transition: 'tf', outcome: { kind: 'false' } },
+            { transition: 'te', outcome: { kind: 'else', outcome: { kind: 'true' } } },
+        ]);
+        const on = run({ kind: 'true' });
+        expect(on.candidates.map(c => c.transition)).toEqual(['tf']);
+        expect(on.evaluated[1]).toEqual({ transition: 'te', outcome: { kind: 'else', outcome: { kind: 'false' } } });
+        const bad: GuardOutcome = { kind: 'defect', reason: 'exception', detail: 'boom' };
+        const broken = run(bad);
+        expect(broken.candidates).toEqual([]);
+        expect(broken.evaluated[1]).toEqual({ transition: 'te', outcome: { kind: 'else', outcome: bad } });
+    });
+
+    it('R-SIM-64: two else on the same preset are else-twice and neither compiles; control: the guarded sibling does (mutant: else-twice not reported in Petri)', () => {
+        const net = compile(PG, {
+            classes,
+            objects: {
+                p: { cls: 'C_P', slots: { A_m: [1] } }, a: { cls: 'C_P' },
+                tg: tr('true'), e1: tr('else'), e2: tr(' else '),
+                x1: arc('p', 'tg'), x2: arc('p', 'e1'), x3: arc('p', 'e2'), x4: arc('tg', 'a'), x5: arc('e1', 'a'), x6: arc('e2', 'a'),
+            },
+        });
+        expect(net.transitions.map(t => t.id)).toEqual(['tg']);
+        expect(net.defects.map(d => [d.element, d.code])).toEqual([['e1', 'else-twice'], ['e2', 'else-twice']]);
+    });
+
+    it('R-SIM-64: siblings share preset places, weights and triggers; another place, another weight or another trigger is not a sibling (mutants: weights ignored; triggers ignored)', () => {
+        const net = compile({ ...PG, event: 'C_Ev', trigger: 'R_trig' }, {
+            classes: { ...classes, C_Ev: [] },
+            objects: {
+                p: { cls: 'C_P', slots: { A_m: [2] } }, q: { cls: 'C_P' }, a: { cls: 'C_P' }, coin: { cls: 'C_Ev' }, push: { cls: 'C_Ev' },
+                same: tr('true', 'coin'), place: tr('true', 'coin'), weight: tr('true', 'coin'), trigger: tr('true', 'push'), te: tr('else', 'coin'),
+                x1: arc('p', 'same'), x2: arc('q', 'place'), x3: arc('p', 'weight', 2), x4: arc('p', 'trigger'), x5: arc('p', 'te'),
+                y1: arc('same', 'a'), y2: arc('place', 'a'), y3: arc('weight', 'a'), y4: arc('trigger', 'a'), y5: arc('te', 'a'),
+            },
+        });
+        expect(net.defects).toEqual([]);
+        expect(byId(net.transitions).te.elseOf).toEqual(['same']);
     });
 });
 

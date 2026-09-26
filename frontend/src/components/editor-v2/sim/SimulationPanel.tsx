@@ -35,8 +35,10 @@ import {
     ROLE_SPECS, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
 } from './simRoleStatus';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, haltMessage, makeNetModelView, panelInputs, pressInput, runSignature, startRun,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, inputReason, makeNetModelView, panelInputs, pressInput,
+    runSignature, startRun, stopReason,
 } from './simBridge';
+import type { InputLabel, StopReason } from './simBridge';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
@@ -181,8 +183,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const [tick, setTick] = useState(0);
     const [pending, setPending] = useState<PendingChoice | null>(null);
     const [lastStep, setLastStep] = useState<string | null>(null);
-    const [defects, setDefects] = useState<string | null>(null);
+    const [defects, setDefects] = useState<{ line: string; title: string } | null>(null);
     const [interrupted, setInterrupted] = useState(false);
+    // The list of reasons under the status row, opened by the user only (R-SIM-58, R-SIM-63).
+    const [reasonsOpen, setReasonsOpen] = useState(false);
     // M2 face: the groups the user opened or closed; the others follow their default.
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
@@ -262,23 +266,43 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setRunError(null);
         setRunWarning(null);
         setInterrupted(true);
+        setReasonsOpen(false);
         setTick(t => t + 1);
     }, [liveSignature, modelid]);
 
-    // Status, enabled inputs and halt line from the Petri core (R-SIM-29).
+    // Status, enabled inputs and halt line from the Petri core (R-SIM-29), and why
+    // an input has no candidate (R-SIM-58..60): computed here, once per panel
+    // action, never in the render body and never on the version (report §3.4).
     const view = useMemo(() => {
         if (!isModelMode || !rolesComplete) return null;
         const r = getSimRun(modelid);
-        if (!r) return { status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as string | null };
+        if (!r) {
+            return {
+                status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as string | null,
+                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(),
+            };
+        }
         const status = netRunStatus(r.net, r.config, r.alphabet, r.guards, r.halt);
         const lookup: any = (store.getState() as any).idlookup ?? {};
+        const inputs = panelInputs(status, structuralInputs(r.net, r.config.state));
+        const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
+        // R-SIM-60: a button that is on while its input has no candidate says why in its title.
+        const noCandidate = new Map<string | null, string>();
+        if (status === 'Running') {
+            for (const e of [...(inputs.epsilon ? [null] : []), ...inputs.events]) {
+                const why = inputReason(r, e, lookup, label, roles.simGuard);
+                if (why) noCandidate.set(e, why.full);
+            }
+        }
         return {
             status,
-            inputs: panelInputs(status, structuralInputs(r.net, r.config.state)),
+            inputs,
             halt: r.halt ? haltMessage(r.halt, lookup) : null,
+            reason: status === 'Deadlock' ? stopReason(r, lookup, label, roles.simGuard) : null,
+            noCandidate,
         };
         // tick is the real input of this memo: the run changes only through this panel.
-    }, [isModelMode, rolesComplete, modelid, tick]);
+    }, [isModelMode, rolesComplete, modelid, tick, events, roles.simGuard]);
 
     const onReset = useCallback((): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
@@ -286,6 +310,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setLastStep(null);
         setDefects(null);
         setInterrupted(false);
+        setReasonsOpen(false);
         // R-SIM-16: the roles are checked again at run start, since the
         // metamodel can have changed after they were saved. With the event role
         // or the Petri shape an overlap refuses the run, and a run already under
@@ -313,7 +338,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setRunError(null);
         setRunWarning(verdict ? overlapMessage(lookup, verdict.overlap) : null);
         simReset(modelid, started.run);
-        setDefects(defectsLine(started.run.net, lookup));
+        // One line for the net's defects and the guards' (R-SIM-61), every defect in full in its title.
+        const line = defectsLine(started.run.net, lookup, started.compileDefects);
+        setDefects(line === null ? null : { line, title: defectsTitle(started.run.net, lookup, started.compileDefects) ?? line });
         setLastStep('Reset');
         setTick(t => t + 1);
     }, [modelid, roles, configModelId]);
@@ -325,6 +352,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setLastStep(null);
         setDefects(null);
         setInterrupted(false);
+        setReasonsOpen(false);
         simClear(modelid);
         setTick(t => t + 1);
     }, [modelid]);
@@ -340,6 +368,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const pressed = pressInput(modelid, event, selector, lookup, input);
         setPending(pressed.pending ? { event, input, candidates: pressed.pending } : null);
         if (pressed.lastStep !== null) setLastStep(pressed.lastStep);
+        setReasonsOpen(false);
         setTick(t => t + 1);
     }, [modelid, events]);
 
@@ -402,6 +431,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     );
 
     const status: NetRunStatus | null = view?.status ?? null;
+    const reason: StopReason | null = view?.reason ?? null;
+    /** A button's title, and why its input has no candidate when it is on without one (R-SIM-60). */
+    const inputTitle = (base: string, event: string | null): string => {
+        const why = view?.noCandidate.get(event);
+        return why ? `${base}\nNo candidate. ${why}` : base;
+    };
 
     if (!open) {
         return (
@@ -485,6 +520,14 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     </div>
                 ) : (
                     <>
+                        {/* The lines that add to the others sit above the buttons: the panel is anchored at the
+                            bottom and grows upward, so they never move the buttons (R-SIM-65, R-SIM-66). One row
+                            each, the full text in the title (R-SIM-63). */}
+                        {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
+                        {defects && (
+                            <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
+                        )}
+                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={view.halt}>{view.halt}</div>}
                         <div className="sim-panel__actions">
                             <button type="button" className="sim-panel__btn" title="Reset" onClick={onReset}>
                                 <i className="bi bi-skip-backward-fill" />
@@ -492,7 +535,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             <button
                                 type="button"
                                 className="sim-panel__btn"
-                                title={eventRole ? 'Step (ε)' : 'Step'}
+                                title={inputTitle(eventRole ? 'Step (ε)' : 'Step', null)}
                                 onClick={onStep}
                                 disabled={!view?.inputs.epsilon}
                             >
@@ -514,7 +557,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                                 type="button"
                                                 className="sim-panel__event"
                                                 key={e.id}
-                                                title={`Fire ${e.label}`}
+                                                title={inputTitle(`Fire ${e.label}`, e.id)}
                                                 onClick={() => fire(e.id)}
                                                 disabled={!view?.inputs.events.has(e.id)}
                                             >
@@ -549,20 +592,44 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 </div>
                             </>
                         )}
-                        {runError && <div className="sim-panel__hint sim-panel__hint--error">{runError}</div>}
-                        {runWarning && <div className="sim-panel__hint sim-panel__hint--warning">{runWarning}</div>}
+                        {/* One slot for the outcome of the last action (R-SIM-66): a refused Reset, the
+                            interruption or «Last step», one at a time, replacing each other in place. */}
+                        {runError && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={runError}>{runError}</div>}
                         {interrupted && (
-                            <div className="sim-panel__hint sim-panel__hint--warning">
+                            <div
+                                className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line"
+                                title="Run interrupted: the model changed. Reset to run again."
+                            >
                                 Run interrupted: the model changed. Reset to run again.
                             </div>
                         )}
-                        {defects && <div className="sim-panel__hint sim-panel__hint--warning">{defects}</div>}
-                        {lastStep && <div className="sim-panel__hint">{`Last step: ${lastStep}`}</div>}
-                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error">{view.halt}</div>}
-                        <div className="sim-panel__status">
+                        {lastStep && (
+                            <div className="sim-panel__hint sim-panel__hint--line" title={`Last step: ${lastStep}`}>{`Last step: ${lastStep}`}</div>
+                        )}
+                        {/* In Deadlock the row says why, on its one line, and opens the list per input (R-SIM-58). */}
+                        <div
+                            className={`sim-panel__status${reason ? ' sim-panel__status--clickable' : ''}`}
+                            role={reason ? 'button' : undefined}
+                            tabIndex={reason ? 0 : undefined}
+                            aria-expanded={reason ? reasonsOpen : undefined}
+                            title={reason?.title}
+                            onClick={reason ? () => setReasonsOpen(o => !o) : undefined}
+                            onKeyDown={reason ? (ev => {
+                                if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setReasonsOpen(o => !o); }
+                            }) : undefined}
+                        >
                             <span className={`sim-panel__dot sim-panel__dot--${(status ?? 'not started').toLowerCase().replace(' ', '-')}`} />
                             <span className="sim-panel__status-text">{status}</span>
+                            {reason && <span className="sim-panel__status-reason">{`· ${reason.line}`}</span>}
+                            {reason && <i className={`bi bi-chevron-${reasonsOpen ? 'down' : 'up'} sim-panel__status-toggle`} />}
                         </div>
+                        {reason && reasonsOpen && (
+                            <ul className="sim-panel__reasons">
+                                {reason.inputs.map(i => (
+                                    <li className="sim-panel__reason" key={i.event ?? 'ε'} title={i.full}>{i.detail}</li>
+                                ))}
+                            </ul>
+                        )}
                     </>
                 )}
             </div>

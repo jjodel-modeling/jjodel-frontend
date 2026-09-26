@@ -131,6 +131,36 @@ function siblingKey(t: NetTransition): string {
     return `${pre}|${trig}`;
 }
 
+/**
+ * The `else` among `transitions` (R-SIM-31, R-SIM-64), for both shapes: an
+ * `else` loses its guard site and becomes the complement of its siblings; two
+ * `else` among siblings are `else-twice` and neither is compiled. `what` ends
+ * the defect message. Order is kept.
+ */
+function resolveElse(transitions: readonly NetTransition[], isElse: ReadonlySet<string>, defects: NetDefect[], what: string): NetTransition[] {
+    const groups = new Map<string, NetTransition[]>();
+    for (const t of transitions) {
+        const key = siblingKey(t);
+        const g = groups.get(key);
+        if (g) g.push(t); else groups.set(key, [t]);
+    }
+    const out: NetTransition[] = [];
+    for (const t of transitions) {
+        if (!isElse.has(t.id)) {
+            out.push(t);
+            continue;
+        }
+        const group = groups.get(siblingKey(t)) ?? [];
+        const elses = group.filter(s => isElse.has(s.id));
+        if (elses.length > 1) {
+            defects.push({ element: t.id, code: 'else-twice', message: `two else ${what}: ${elses.map(s => s.id).join(', ')}` });
+            continue;
+        }
+        out.push({ ...t, guardSites: [], elseOf: group.filter(s => s !== t).map(s => s.id) });
+    }
+    return out;
+}
+
 interface Edge {
     readonly id: string;
     readonly sources: readonly string[];
@@ -229,26 +259,7 @@ function compileControlFlow(
         if (typeof text === 'string' && text.trim() === 'else') isElse.add(e.id);
         transitions.push(make(e.id, [e.id], e.sources, e.targets, triggersOf(e.id), [e.id]));
     }
-    const groups = new Map<string, NetTransition[]>();
-    for (const t of transitions) {
-        const key = siblingKey(t);
-        const g = groups.get(key);
-        if (g) g.push(t); else groups.set(key, [t]);
-    }
-    const dropped = new Set<string>();
-    for (const t of transitions) {
-        if (!isElse.has(t.id)) continue;
-        const group = groups.get(siblingKey(t)) ?? [];
-        const elses = group.filter(s => isElse.has(s.id));
-        if (elses.length > 1) {
-            dropped.add(t.id);
-            defects.push({ element: t.id, code: 'else-twice', message: `two else edges share a source: ${elses.map(s => s.id).join(', ')}` });
-            continue;
-        }
-        const i = transitions.indexOf(t);
-        transitions[i] = { ...t, guardSites: [], elseOf: group.filter(s => s !== t).map(s => s.id) };
-    }
-    const kept = transitions.filter(t => !dropped.has(t.id));
+    const kept = resolveElse(transitions, isElse, defects, 'edges share a source');
 
     // Fork and join nodes: not places, their edges fuse (R-SIM-22, R-SIM-31).
     const pseudoNodes: string[] = [];
@@ -321,15 +332,19 @@ function compilePetri(
         }
     }
 
+    // The literal `else`, as on a control-flow edge (R-SIM-64).
+    const isElse = new Set<string>();
     const transitions = trs.map((t): NetTransition => {
         const preset = merge(pre.get(t)!);
         const postset = merge(post.get(t)!);
+        const text = stc.guard ? view.values(t, stc.guard)[0] : undefined;
+        if (typeof text === 'string' && text.trim() === 'else') isElse.add(t);
         return {
             id: t, origin: [t], preset, postset, inhibitors: merge(inh.get(t)!), triggers: triggersOf(t),
             guardSites: stc.guard ? [t] : [], elseOf: null, actionSites: actionSites(preset, [t], postset),
         };
     });
-    return { places, transitions };
+    return { places, transitions: resolveElse(transitions, isElse, defects, 'transitions share a preset') };
 }
 
 /**

@@ -1820,6 +1820,57 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   `singleToken` vale per State machine, Extended state machine, DFA, NFA, Moore e Mealy, e
   `eventIdentifier` è `edit` dovunque Trigger è attivo (serve a R-SIM-38, che lo presenta come
   override).
+- **R-SIM-57** (2026-09-26). **Perché una guardia non lascia passare: combinazione.** Dalla discovery
+  `discovery_2026-09-26_sim_guard_outcomes.md` (`7abb57eaa`): il pannello mostra il motivo per input
+  nello stato fermo (opzione C1) e i difetti di compilazione dopo Reset (opzione A), e corregge il
+  testo del discard, che oggi dice «no transition accepted it» anche quando una transizione accettava
+  l'input e la sua guardia era falsa. Gli esiti delle guardie sotto «Last step» (opzione B) non si
+  fanno: descrivono la configurazione prima del passo e non spiegano un blocco; la storia delle label
+  appartiene alla traccia (R-SIM-25).
+- **R-SIM-58** (2026-09-26). **Dove sta il motivo.** Nella riga di stato, una sola riga con ellissi e
+  il testo intero nel `title` (per esempio `Deadlock · ε: t1 false`); la lista per input si apre con
+  un clic sulla riga. Il pannello Simulation non ha oggi la distinzione Basic/Advanced e questa corsia
+  non la introduce: la lista dietro il clic è la sua forma di disclosure.
+- **R-SIM-59** (2026-09-26). **Il motivo si ricalcola nel bridge, sito per sito.** Nessuna modifica a
+  `netStep.ts`: il bridge ricalcola i candidati per ε e per ogni evento dal `SimRun`, dentro il memo
+  del pannello (mai a ogni render), e per spiegare un esito chiama l'oracolo su ogni `guardSite` della
+  transizione, così una transizione fusa (fork/join) nomina l'arco la cui guardia è falsa o in
+  difetto. Un test tiene il ricalcolo allineato a `netRunStatus`: `Deadlock` se e solo se nessun input
+  ha un candidato.
+- **R-SIM-60** (2026-09-26). **In `Running` solo il `title`.** Un pulsante acceso il cui input non ha
+  candidati riceve il motivo nel `title`; R-SIM-16 resta invariata (i pulsanti sono strutturali).
+- **R-SIM-61** (2026-09-26). **Difetti di compilazione dopo Reset.** `startRun` restituisce i difetti
+  delle guardie in un campo facoltativo di `RunStart` dal nome generale `compileDefects`, che la
+  corsia C userà per le azioni e le dichiarazioni. Si mostrano nella riga dei difetti esistente, che
+  cambia testo perché copra entrambi i casi (una guardia in difetto non è un elemento «not compiled»:
+  la transizione è compilata ma non diventa mai candidata). Solo difetti: gli avvisi del checker di
+  sottoinsieme non si elencano.
+- **R-SIM-62** (2026-09-26). **Testi e nomi.** Il testo sorgente di una guardia sta solo nel `title`,
+  mai nella riga. Nei dettagli e nel `title` le transizioni si nominano `name (S → D)` come in
+  `candidateLabel`; un id di posto (un inibitore) si risolve sempre in un nome.
+- **R-SIM-63** (2026-09-26). **Nessuno scatto di layout.** Le righe «Last step», di halt e d'errore
+  del pannello si limitano a una riga con il testo intero nel `title`: oggi una riga che va a capo
+  sposta i pulsanti di 17 px (misurato). Entra nella stessa corsia, come aggiunta dichiarata allo
+  scope.
+- **R-SIM-64** (2026-09-26). **`else` anche nella forma Petri. Completa R-SIM-31.** Una transizione
+  di Petri la cui guardia è il testo `else` è il complemento dei suoi fratelli, come un arco del
+  controllo di flusso: i fratelli sono le transizioni con lo stesso preset (posti e pesi) e gli stessi
+  trigger, la stessa chiave `siblingKey` di `netCompile.ts`; due `else` fra fratelli sono il difetto
+  `else-twice`. Misurato il 2026-09-26 (chiusura `5a398eaee`): oggi quella guardia va al parse come
+  espressione ordinaria, diventa un difetto e il run va in `Deadlock` dove `te` dovrebbe scattare.
+- **R-SIM-65** (2026-09-26). **Le righe che compaiono stanno sopra i pulsanti. Completa R-SIM-63.** Il
+  pannello è ancorato in basso e cresce verso l'alto: le righe che compaiono e scompaiono (difetti al
+  Reset, halt, errore del run, avviso del run, interruzione) si mettono sopra la fila dei pulsanti,
+  così crescono verso l'alto senza spostarli. Restano sotto la riga di stato e «Last step», che ci sono
+  per tutta la durata di un run. Misurato il 2026-09-26: la riga dei difetti al Reset spostava Step di
+  24,5 px.
+- **R-SIM-66** (2026-09-26). **Un solo posto per l'esito dell'ultima azione. Emenda R-SIM-65.** Sotto
+  i pulsanti c'è una sola riga, l'esito dell'ultima azione sul pannello: «Last step», l'interruzione del
+  run per una modifica del modello, oppure il rifiuto di un Reset. Si sostituiscono a vicenda nella
+  stessa riga e non spostano i pulsanti. Sopra i pulsanti restano le righe che si aggiungono senza
+  sostituirne un'altra: i difetti al Reset, l'halt, l'avviso del run. La prima azione di un run fa
+  comparire la riga una volta, come risposta al clic. Misurato il 2026-09-26: l'interruzione sopra i
+  pulsanti, con «Last step» cancellato sotto, spostava Step di 24,5 px verso il basso.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
