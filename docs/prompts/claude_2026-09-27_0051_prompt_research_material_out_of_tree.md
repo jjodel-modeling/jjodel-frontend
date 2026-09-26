@@ -4,7 +4,7 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 Prompt-ID: P-2026-09-27-0051
 Chat: C-2026-09-27-0150
 Lane: harness (docs, `.gitignore`, removals from the tree; no code file is touched)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane harness · d47f3cbb1
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, launched by the chat with `lane-run start`
 (a new session, so `/clear` is implicit). Before anything else: `pwd` is `/Users/alfonso/jjodel-release`,
