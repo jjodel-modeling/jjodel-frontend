@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-1535
 Chat: C-2026-09-26-1100
 Lane: full (more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane simulation · b76d75cc9, f58456c63 · verifica visiva passata 2026-09-26 (passo 5 verificato dalla sessione)
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, a fresh session (`/clear`). Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file and R-SIM-64..65 (subject `docs: ratify R-SIM-64..65 and add the Petri else and panel lines prompt (P-2026-09-26-1535)`), its parent is `5a398eaee` (closure of `P-2026-09-26-1315`), `git status` empty apart from the three untracked, gitignored `frontend/scripts/smoke/_tmp_b2_*` files. Otherwise stop.
 

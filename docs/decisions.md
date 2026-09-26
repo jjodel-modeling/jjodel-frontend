@@ -1817,6 +1817,13 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   così crescono verso l'alto senza spostarli. Restano sotto la riga di stato e «Last step», che ci sono
   per tutta la durata di un run. Misurato il 2026-09-26: la riga dei difetti al Reset spostava Step di
   24,5 px.
+- **R-SIM-66** (2026-09-26). **Un solo posto per l'esito dell'ultima azione. Emenda R-SIM-65.** Sotto
+  i pulsanti c'è una sola riga, l'esito dell'ultima azione sul pannello: «Last step», l'interruzione del
+  run per una modifica del modello, oppure il rifiuto di un Reset. Si sostituiscono a vicenda nella
+  stessa riga e non spostano i pulsanti. Sopra i pulsanti restano le righe che si aggiungono senza
+  sostituirne un'altra: i difetti al Reset, l'halt, l'avviso del run. La prima azione di un run fa
+  comparire la riga una volta, come risposta al clic. Misurato il 2026-09-26: l'interruzione sopra i
+  pulsanti, con «Last step» cancellato sotto, spostava Step di 24,5 px verso il basso.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
