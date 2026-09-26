@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0110
 Chat: C-2026-09-27-0110
 Lane: fast (one code file, one docs closure; visual check by the chat on 3001)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane properties-rail · cc2550779
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, launched by the chat with `lane-run start`
 (a new session, so `/clear` is implicit). Before anything else: `pwd` is `/Users/alfonso/jjodel-release`,
