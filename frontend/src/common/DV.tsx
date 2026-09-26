@@ -592,6 +592,7 @@ end:`
     public static fallbackView(): string { return beautify(DefaultView.void()); }
     public static operationView(): string { return beautify(DefaultView.operation()); }
     public static parameterView(): string { return beautify(DefaultView.parameter()); }
+    public static annotationView(): string { return beautify(DefaultView.annotation()); }
 
     // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
     // it is still work in progress.
@@ -1256,6 +1257,7 @@ export class DefaultView {
         `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 <View className={"root model"}>
+{data.annotations}
 <Grid node={node}/>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
@@ -1356,6 +1358,7 @@ export class DefaultView {
 
 
 <View className={'root package'} version={'2.0'}>
+{data.annotations}
 <Grid node={node} />
 <div className={'drag-handle'} />
 {
@@ -1453,6 +1456,7 @@ public static typeDeclaration(): string {
         }
     }}
 >
+    {data.annotations}
     {/* HEADER */}
     <div className={'header'} style={{
         display: 'flex',
@@ -1726,6 +1730,28 @@ public static typeDeclaration(): string {
     <span className={"modifier"}>{data.upperBound > 1 || data.upperBound === -1 ? '[]' : ''}</span>
     {decorators}
 </View>`
+    );}
+    /* ANNOTAITON */
+    public static annotation(): string { return (
+        `
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<span className={'root annotation'}>
+    <span className={'annotation-source'}>
+        @{data.source}{data.name ? "/" : null}
+    </span>
+    <span className={'annotation-name'}>
+        {data.name}
+    </span>
+    {details.length ? <span className={"details"}>({details.map(([k, v]) => (
+        <span className={"detail"}>
+            <span className={"det-key"}>{k}</span> = "<span className={"det-val"}>{v}</span>"
+        </span>)).separator(<span>, </span>)})</span> : null}
+    
+    <span className={"modifier"}>{data.upperBound > 1 || data.upperBound === -1 ? '[]' : ''}</span>
+    {decorators}
+</span>`
     );}
 
     // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements

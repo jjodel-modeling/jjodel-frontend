@@ -564,6 +564,39 @@ border-radius: 6px;
         return view;
     }
 
+    static annotation(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Annotation', DV.annotationView(), vp, (view)=>{
+            view.appliableToClasses = ["DAnnotation"];
+            view.appliableTo = 'Field';
+            view.isExclusiveView = true;
+        }, false, Defaults.Pointer_ViewAnnotation);
+        view.css =  `
+& { display: inline; }
+.annotation{
+    display: inline-flex;
+    padding-left: 1em;
+    width: auto;
+    .annotation-source { display: none; }
+    .modifier{
+        width: 1ic;
+        text-align: center;
+    }
+}`
+        view.usageDeclarations = `(ret) => {
+    // ** preparations and default behaviour here ** //
+    ret.data = data
+    ret.node = node
+    ret.view = view
+    // custom preparations:
+    // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
+    // add preparation code here (like for loops to count something), then list the dependencies below.
+    // ¡ The element will update only if one of the Observed Properties has changed !
+    // ** declarations here ** //
+    ret.details = Object.entries(data?.details || {});
+}`;
+        return view;
+    }
+
     /* LITERAL */
 
     static literal(vp: DViewElement): DViewElement {

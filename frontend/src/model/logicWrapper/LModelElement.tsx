@@ -161,15 +161,6 @@ let comment_uid = 1;
 
 
 
-function fixComments(arr: GObject[], prefix: string = "Annotation_"): GObject[] {
-    return Uarr.asArray(arr).map(c=> {
-        if (!c) return null;
-        if (typeof c !== "object") c = {type: "#comment", details: {comment: c+""}, source: prefix+(comment_uid++)};
-        delete c.type;
-        return c;
-    }).filter(c=>!!c);
-
-}
 
 @Abstract
 @RuntimeAccessible('LModelElement')
@@ -372,7 +363,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     // used in Dummy.t2m()
-    protected _convertEcoreToJom_m2(ecore: GObject, c: LogicContext, thiss: LModelElement): GObject{
+    // NB: rootContext is not the context of the JOM counterpart but can be from any of the ancestors.
+    // An ecore's classifier fragment can have a context from: LClass, LPackage, LModel because of nested calls.
+    // nested calls are required because subelements are recursively converted to JOM if they are in an ambiguous collection
+    // like (children, structuralFeatures...) because this helps assigning their type and collection.
+    // so only use the context to retrieve ancestor elements (model) and never classname or such
+    /* protected */ _convertEcoreToJom_m2(ecore: GObject, model: LModel, rootContextDebugOnly: LogicContext<any>): GObject{
         let ogKeys = Object.keys(ecore || {});
         // console.log('pre convert ecore', JSON.parse(JSON.stringify(ecore||{})));
         // remove xmi inline prefixs (@)
@@ -383,6 +379,71 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let k0: string;
         let v0: any;
         let transformV: (v: any) => any;
+
+        function isEcoreAnnotation(o: GObject<Json>): boolean {
+            let isAnnotation: boolean | null = null;
+            let cn = o.className;
+            if (cn && typeof cn === "string") {
+                if (cn.includes("Annotation")) isAnnotation = true;
+                if (cn.includes("Reference")) isAnnotation = false;
+            }
+            let id = o.id;
+            if (id && typeof id === "string") {
+                let d = D.from(id);
+                if (d.className.includes("Annotation")) isAnnotation = true;
+                if (d.className.includes("Reference")) isAnnotation = false;
+            }
+            if (null === isAnnotation) {
+                const lkEcore = Uobj.lowercaseKeys(o);
+                if (("source" in lkEcore || "@source" in lkEcore || "details" in lkEcore || "@details" in lkEcore)) isAnnotation = true;
+                if (null === isAnnotation && ("type" in lkEcore || "@type" in lkEcore)) isAnnotation = false;
+            }
+            if (null === isAnnotation) {
+                Log.eDevv("could not determine if xmi fragment is eAnnotation or eReference", {o});
+                return false;
+            }
+            return isAnnotation;
+        }
+
+        function fixComments(arr: GObject[], prefix: string = "Annotation_"): GObject[] {
+            arr = collectionsFix(arr) as any;
+            if (!arr) return [];
+            let ret = Uarr.asArray(arr).map(c=> {
+                if (!c) return null;
+                if (typeof c !== "object") {
+                    c = {type: "#comment", details: {comment: c+""}, source: prefix+(comment_uid++)};
+                    delete c.type; // type doesn't come just from the literal above, other sources might add it and i want it removed anyway.
+                    return c;
+                }
+                return c;
+                /*const ret: GObject = {};
+                for (let k in c) {
+                    let lk = k.toLowerCase();
+                    if (lk[0] === EcoreParser.XMLinlineMarker) lk = lk.substring(1);
+                    const v = c[k];
+                    delete c[k];
+                    switch (lk) {
+                        case "source": if (typeof v === "string") ret.source = v; break;
+                        case "details":
+                            ret.details = collectionsFix(v);
+                            break;
+                        default: Log.eDevv("t2m found unsupported annotation key", {k, c, v}); break;
+                        case "references":
+                            ret.references = v;
+                            Log.eDevv("t2m annotation.references not fully supported yet.", {k, c, v});
+                            //ret.references = collectionsFix(v);
+                            break;
+                        case "contents":
+                            ret.contents = v;
+                            Log.eDevv("t2m annotation.contents not fully supported yet.", {k, c, v});
+                            break;
+                    }
+                }
+                return ret;*/
+            }).filter(c=>!!c);
+            console.log("fix comments", U.jsonCopy({arr, ret, prefix}));
+            return ret;
+        }
         function collectionsFix(v: any, skipEmpty = false): null | any[] {
             if (!v) return v;
             if (Array.isArray(v)) return (skipEmpty && !v.length) ? null : v;
@@ -444,6 +505,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             let lk = typeof k === "string" ? (k[0] === EcoreParser.XMLinlineMarker ? k.substring(1) : k) : '';
             lk = lk.toLowerCase();
 
+            console.log("adapting m2", U.jsonCopy({lk, k0, v, ecore, d:rootContextDebugOnly.data}));
             // fix casing inconsistencies and matches ecore names to jom names
             switch (lk) {
                 default:
@@ -493,20 +555,62 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     }
                     ecore.className = 'D' +v;
                     break;
-                // annotation
+                // annotation stuff
                 case "source":                  string("source"); break;
-                case "annotations":             delete ecore[k]; if (v.length) ecore.annotations = fixComments(v, "Comment_");      break;
-                case "eannotations":            delete ecore[k]; if (v.length) ecore.annotations = U.arrayMergeInPlace(fixComments(ecore.annotations), fixComments(v));      break;
-                // classifier
-                case "references":              delete ecore[k]; v = collectionsFix(v); if (v.length) ecore.references = v; break; // class instead have eStructuralFeatures
+                case "annotations":             delete ecore[k]; ecore.annotations = fixComments(v);      break;
+                case "eannotations":            delete ecore[k]; ecore.annotations = U.arrayMergeInPlace(fixComments(ecore.annotations), fixComments(v));      break;
 
+                case "source":
+                    delete ecore[k];
+                    if (v && typeof v === "string") ecore.source = v;
+                    break;
+                case "details":
+                    delete ecore[k];
+                    // problem: this should be a map. but ecore assigns array.
+                    // so i just take [@key: key, @value:value] and put into a map
+                    // but ecore puts array of size 1 as single objects, which is ambiguous with jjodel api which could pass an already well-formed map.
+                    // so a single {@key, @value} object is ambiguous, it can be:
+                    // case 1) [ {"@key": actualkey, "@value":actualval} ] -> {"actualkey": actualval} (1 entry)
+                    // case 2)  {"@key": key, "@value": value} directly (2 entries).
+                    // i decided to treat @key, @value specially only in t2m transform and not in normal setter.
+                    if ("@key" in v && "@value" in v) v = [v];
+                    ecore.details = v;
+                    break;
+                case "contents":
+                    delete ecore[k]; ecore.contents = v;
+                    Log.eDevv("t2m annotation.contents not fully supported yet.", {k, d:rootContextDebugOnly.data, v});
+                    break;
+                // classifier | annotation
+                case "references":
+                    delete ecore[k];
+                    // if annotation references
+                    let isAnnotation : boolean = isEcoreAnnotation(ecore);
+                    if (isAnnotation) {
+                        // refs are inline attributes, a single string sepaated by a whitespace.
+                        let v2 = v;
+                        if (Array.isArray(v)) v2 = v.map(e=> {
+                            if (typeof e == "string") return U.replaceAll(e, " ", "%20");
+                            const ptr = Pointers.from(e);
+                            return ptr || null;
+                        }
+                        ).filter(e=>!!e).join(" ").trim();
+                        if (v2) ecore.references = v2; // collectionsFix(v);
+                        Log.eDevv("t2m annotation.references not fully supported yet.", {k, d:rootContextDebugOnly.data, v, v2, ecore});
+                        break;
+                    }
+                    // else is class references.
+                    // ecore classes can have only eStructuralFeatures, but i want a wider and less ambiguous api tolerance.
+                    Log.eDevv("t2m class.references.", {k, d: rootContextDebugOnly.data, v, ecore});
+                    v = collectionsFix(v);
+                    if (v.length) ecore.references = v; break;
+
+                // classifier stuff
                 case "typeparameters":
                 case "etypeparameters": {
                     if ((v as any)?.alreadyFixed) break;
                     delete ecore[k];
                     if (!v) break;
                     const arr = collectionsFix(v) || [];
-                    const model = thiss.get_model(c);
                     const classes = model.classes;
                     const enums = model.enums;
                     const typedecls = model.allTypeDeclarations;
@@ -527,7 +631,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     delete ecore[k];
                     if (!v) break;
                     const arr = collectionsFix(v) || [];
-                    const model = thiss.get_model(c);
                     const classes = model.classes;
                     const enums = model.enums;
                     const typedecls = model.allTypeDeclarations;
@@ -617,12 +720,13 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
 
             }
-            if ("1" in ecore) { console.error("found array index in xmi post", U.jsonCopy({lk, k, v, ogKeys, ecore})); }
+            // if (!("eAnnotations" in ecore) && !("annotations" in ecore)) { console.error("annotations removed in xmi post", U.jsonCopy({lk, k, v, ogKeys, ecore})); }
             // if (k[0] !== '@') continue;
             // ecore[k.substring(1)] = ecore[k];
             // delete ecore[k];
         }
 
+        if (!ecore.annotations?.length) delete ecore.annotations;
         // both are valid, as a refinement of each other (instanceTypeName is more detailed and allows generic typings) but i won't set both.
         // if (ecore.instanceClassName && ecore.instanceTypeName) delete ecore.instanceClassName;
 
@@ -821,7 +925,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
         // if (loopDetectionObj[c.data.id]) return; checked in parent function
 
-        const annotations = o.annotations = (o.annotations || []);
+        const annotations = o.eAnnotations = (o.eAnnotations || []);
         if (metadata) {
             const singleton_a = (window as any).LAnnotation.singleton;
             const l: LModelElement = c.proxyObject as LModelElement;
@@ -841,6 +945,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 a.generateEcoreJson(loopDetectionObj)
             );
         }
+        if (!annotations?.length) delete o.eAnnotations;
     }
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj?: Dictionary<Pointer, DModelElement>,
@@ -864,6 +969,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     protected get_addAnnotation(context: Context): this["addAnnotation"] {
         return (source?: DAnnotation["source"], details?: DAnnotation["details"]) => DAnnotation.new(source, details, context.data.id, true);
+
     }
 
     protected set_containers(): boolean {
@@ -1365,14 +1471,26 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
     references!: Pointer<LModelElement>[];
 
     public static new(source?: DAnnotation["source"], details?: DAnnotation["details"], father?: Pointer, persist: boolean = true): DAnnotation {
-        // if (!name) name = this.defaultname("annotation ", father);
-        return new Constructors(new DAnnotation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
-            .DAnnotation(source, '', details).end();
+        let name: string = "";
+        source =  source || "app.jjodel.io";
+        console.error("new annotation3", {arguments});
+        let lparent = father && L.fromPointer(father);
+        if (!name) {
+            if (lparent) {
+                name = this.defaultname("annotation_", lparent, undefined,
+                    (l: L) => (l as LModelElement).annotations.map(a=> a.name)
+                );
+            } else name = "annotation_jj";
+        }
+        return new Constructors(new DAnnotation('dwc'), father, persist, undefined).DPointerTargetable()
+            .DModelElement().DNamedElement(name)
+            .DAnnotation(source, details).end();
     }
 
     public static new3(a:Partial<AnnotationPointers>, then?:((d:DAnnotation, c: Constructors)=>void), persist: boolean = true): DAnnotation{
         let name: string = a.name as any;
-        let source: string = a.source as any || "https://app.jjodel.io/2006/";
+        let source: string = a.source as any || "app.jjodel.io"; // "https://app.jjodel.io/2026/";
+        console.error("new annotation3", {arguments});
         if (!name) {
             name = this.defaultname("annotation_", a.father, undefined,
                 (l: L) => (l as LModelElement).annotations.map(a=> a.name)
@@ -1380,8 +1498,8 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
         }
 
         return new Constructors(new DAnnotation('dwc'), a.father, persist, undefined, a.id)
-            .DPointerTargetable().DModelElement()
-            .DAnnotation(source, name)
+            .DPointerTargetable().DModelElement().DNamedElement(name)
+            .DAnnotation(source)
             .end(then);
     }
 }
@@ -1409,13 +1527,28 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
     source!: string;
     details!: Dictionary<string, string>; //  LAnnotationDetail[];//
 
-
     __info_of__name: Info = Info.name_forAnnotations;
 
     __info_of__references: Info = {type:"LModelElement", txt: "Same as this.contents, but targets are only referenced and not contained."};
     references!: LModelElement[];
-    get_references(c: Context): this["references"] { return c.data.references.map(r => L.fromPointer(r) || LValue.resolveReferenceTODO(r, c.proxyObject)); }
+    get_references(c: Context): this["references"] {
+        Log.eDevv("get Annotation.references, this feature is not fully developed yet.\n" +
+            "It will reply with the exact input passed on set, the content cannot be navigated.\n" +
+            "The current implementation is aimed only at lossless ecore import/export, not for usage in jJodel.");
+        return c.data.references as any;
+        // return c.data.references.map(r => L.fromPointer(r) || LValue.resolveReferenceTODO(r, c.proxyObject));
+    }
     set_references(v: Pack<LModelElement>, c: Context): boolean {
+        console.error("annotation set_references", {v,c});
+        const skipImplementation = true;
+        if (skipImplementation) {
+            Log.eDevv("set Annotation.references, this feature is not fully developed yet.\n" +
+                "It will reply with the exact input passed on set, the content cannot be navigated.\n" +
+                "The current implementation is aimed only at lossless ecore import/export, not for usage in jJodel.");
+            TRANSACTION("Annotation.references", ()=> { SetFieldAction.new(c.data, "references", v as any, "=", false)});
+            return true;
+        }
+        console.error("annotation set_references 2", {v,c});
         if (!Array.isArray(v)) { v = [v]; }
         let ptrs = Pointers.fromArr(v).filter(e=>!!e);
         let old = c.data.references;
@@ -1442,8 +1575,23 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
 
     __info_of__contents: Info = {type:"LModelElement", txt: "Objects (in a wide sense) contained inside the annotation for additional context which cannot be easily expressed with strings in \"details\"."};
     contents!: LModelElement[];
-    get_contents(c: Context): this["contents"] { return c.data.contents.map(r => L.fromPointer(r) || LValue.resolveReferenceTODO(r, c.proxyObject)); }
+    get_contents(c: Context): this["contents"] {
+        Log.eDevv("get Annotation.contents, this feature is not fully developed yet.\n" +
+            "It will reply with the exact input passed on set, the content cannot be navigated.\n" +
+            "The current implementation is aimed only at lossless ecore import/export, not for usage in jJodel.");
+        return c.data.contents as any;
+        // return c.data.contents.map(r => L.fromPointer(r) || LValue.resolveReferenceTODO(r, c.proxyObject));
+    }
     set_contents(v: Pack<LModelElement>, c: Context): boolean {
+        const skipImplementation = true;
+        if (skipImplementation) {
+            Log.eDevv("get Annotation.contents, this feature is not fully developed yet.\n" +
+                "It will reply with the exact input passed on set, the content cannot be navigated.\n" +
+                "The current implementation is aimed only at lossless ecore import/export, not for usage in jJodel.");
+            TRANSACTION("Annotation.contents", ()=> { SetFieldAction.new(c.data, "contents", v as any, "=", false)});
+            return true;
+        }
+        // actual implementation: untested and missing export compatibility (in generateEcoreJson_impl), disabled until tests and export fix.
         if (!Array.isArray(v)) { v = [v]; }
         let ptrs = Pointers.fromArr(v).filter(e=>!!e);
         let old = c.data.contents;
@@ -1493,10 +1641,26 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const json: Json = {};
+
         EcoreParser.write(json, ECoreAnnotation.source, c.data.source);
-        // EcoreParser.write(json, ECoreAnnotation.references, context.proxyObject.referencesStr); todo
+        // NB: both references and contents are taken from XMI and spit out without any processing,
+        // they are not jodel structures and not implemented (they are but untested & disabled).
+        const references = c.data.references;
+        const references_str = Array.isArray(references) ? references.map(e=> {
+                if (typeof e == "string") return U.replaceAll(e, " ", "%20");
+                const ptr = Pointers.from(e);
+                // todo instead: L.from(ptr).referencesStr // or this.getreferencesStr()
+                return ptr || null;
+            }
+        ).filter(e=>!!e).join(" ").trim() : references + "";
+
+        if (c.data.references) EcoreParser.write(json, ECoreAnnotation.references, references_str);
         // keep sub-elements last
-        if (c.data.details) EcoreParser.write(json, ECoreAnnotation.details, c.data.details);
+        const details = Object.keys(c.data.details).map(k=> ({"@key":k, "@value": c.data.details[k]}));
+        if (c.data.details) EcoreParser.write(json, ECoreAnnotation.details, details);
+        if (c.data.contents) EcoreParser.write(json, ECoreAnnotation.contents, c.data.contents);
+        if (deep && c.data.annotations) { EcoreParser.write(json, ECorePackage.eAnnotations,
+            this.get_annotations(c).map(a=> (a as any).ecore))}
         return json;
     }
 
@@ -1548,7 +1712,25 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
     __info_of__details: Info = {type:"Dictionary<strng, string>", txt: "A key-value map containing additional data for the annotation.\nIt follows the same updating rules as this.state (patch-based)."};
     protected set_details(val: this["details"], c: Context): boolean {
         if (val as any === c.data.details) return true;
-        return LPointerTargetable.set_patching(val, c, "details", "details", this);
+        const v = val;
+        let map: DAnnotation["details"] = {};
+        if (!v || typeof v !== "object") return true;
+        if (Array.isArray(v)) {
+            let i = 0;
+            for (let vv of v) {
+                if (!vv) continue;
+                if (typeof vv !== "object") vv = {key: "__jj_Key"+(i++), value: vv+""};
+                const lowercased = Uobj.lowercaseKeys(vv);
+                const key = lowercased.key || lowercased["@key"] || lowercased.k || lowercased["@k"] ||
+                    lowercased.entry || lowercased.name || lowercased.field || lowercased.property || lowercased.attribute;
+                const value = lowercased.value || lowercased["@value"] || lowercased.val || lowercased["@val"] ||
+                    lowercased.v ||  lowercased["@v"] || lowercased.detail || lowercased["@detail"] ||
+                    lowercased.content || lowercased.record || lowercased.payload || lowercased.entry || lowercased.content;
+                if (!map[key]) map[key] = value;
+            }
+        } else map = v;
+        if (!Object.keys(map).length) return true;
+        return LPointerTargetable.set_patching(map, c, "details", "details", this);
     }
     protected get_details(c: Context): this["details"] { return LPointerTargetable.get_patching(c, "details"); }
     protected get_clearDetails(c: Context){ return LPointerTargetable.clearPatching(c, "details", "details", this); }
@@ -2395,7 +2577,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         model[ECorePackage.xmlnsxsi] = 'http://www.w3.org/2001/XMLSchema-instance';
         model[ECorePackage.xmlnsecore] = 'http://www.eclipse.org/emf/2002/Ecore';
         model[ECorePackage.namee] = d.name;
-        model[ECorePackage.nsURI] = d.uri;
+        model[ECorePackage.nsURI] = [d.uri, d.name].filter(e=>!!e).join("/");
         model[ECorePackage.nsPrefix] = d.prefix; //getModelRoot().namespace();
         // keep sub-elements last
         if (classifiers.length) model[ECorePackage.eClassifiers] = classifiers;
@@ -4116,6 +4298,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         }).filter(e=>!!e) as any;
     }
     protected set_references(val: PackArr<this["references"]>, context: Context): boolean {
+        console.error("class set_references", {val, context});
         const list = Pointers.fromArr(val, true);
         const oldList = context.data.references;
         const diff = U.arrayDifference(oldList, list);

@@ -3,7 +3,7 @@ import {connect} from 'react-redux';
 import {
     Debug,
     Dictionary,
-    GObject, Input,
+    GObject, Input, MyProxyHandler,
     Pointer, RuntimeAccessible, Select, SetRootFieldAction, TextArea,
 } from '../../joiner';
 import {
@@ -39,9 +39,9 @@ class ConfigEntry<T>{
 }
 type CacheModes = "dependency" | "global" | "both" | "none"
 const cacheLabels: Dictionary<CacheModes, string> = {
+    both: "Both cache levels (recommended)",
     global: "Global-change only",
     dependency: "Dependency-based only",
-    both: "Both cache levels (recommended)",
     none: "Disabled completely",
 }
 
@@ -57,6 +57,7 @@ export class Config extends Component{
     potatoMode = new ConfigEntry(false);
     exportMetaData = new ConfigEntry(true);
     exportNodeData = new ConfigEntry(true);
+    proxyAutoUpdate = new ConfigEntry(true);
     cache = new ConfigEntry("both" as CacheModes);
 
     static get(): Config {
@@ -90,12 +91,13 @@ export class Config extends Component{
                             case "none":       ProxyCache.globalEnabled = false; ProxyCache.dependencyEnabled = false; ProxyCache.enabled = false; break;
                         }
                         break;
-                    case "potatoMode": Debug.lightMode = true; break;
+                    case "potatoMode": Debug.lightMode = v; break;
                     case "synchDelay": U.UpdatingTimer = v; break;
                     case "debugMode": SetRootFieldAction.new("debug", v); U.debug = v; break;
                     case "advancedMode": SetRootFieldAction.new("advanced", v); setInterfaceMode(v ? "advanced" : "basic"); break;
                     case "exportMetaData": U.storeMetadata = v; break;
                     case "exportNodeData": U.storeNodeData = v; break;
+                    case "proxyAutoUpdate": MyProxyHandler.autoUpdateObjects = v; break;
                     // case "placeholder": U.placeholder = v; break;
                 }
             }
@@ -260,7 +262,7 @@ function ConfigComponent(props: AllProps) {
         new Desc("potatoMode", "switch", <span>Potato mode</span>, <div>Disables some features and nested views to drastically improve performances.
              <br/>Useful in very large models or old pc's.</div>),
 
-        new Desc("cache", <optgroup label = "cache status">{
+        new Desc("cache", <optgroup label = "Cache modes">{
             (Object.keys(cacheLabels) as CacheModes[]).map((k)=> <option value={k}>{cacheLabels[k]}</option>)}
         </optgroup>,
             <span>Cache levels</span>, <div>jJodel has 2 level of caches:
@@ -268,7 +270,10 @@ function ConfigComponent(props: AllProps) {
             <br/>The second ("global") is faster, but invalidated at every edit in the project.</div>),
         new Desc("exportMetaData", "switch", <span>Export metadata in annotations</span>, <div>When exporting to ecore, include jJodel-only properties of the model in annotations.</div>),
         new Desc("exportNodeData", "switch", <span>Export layout data in annotations</span>, <div>When exporting to ecore, include graph layout properties in annotations.</div>),
-        // new Desc("placeholder", "placeholder", <span>name_placeholder</span>, <div>tooltip_placeholder</div>),
+        new Desc("proxyAutoUpdate", "switch", <span>Auto-update L-Objects in JOM API</span>, <div>Advanced feature, recommended on.
+            <br/>Every time you query a JOM L-object, it ensures the latest version of the object is queried.
+            <br/>Disabling this feature allows saving, referencing and comparing old states.</div>),
+            // <br/>Some API used on past versions (nested links/queries) might still incorrectly refer the newest target/result versions resulting in possible inconsistencies.</div>),
         // new Desc("placeholder", "placeholder", <span>name_placeholder</span>, <div>tooltip_placeholder</div>),
         // new Desc("placeholder", "placeholder", <span>name_placeholder</span>, <div>tooltip_placeholder</div>),
     ];

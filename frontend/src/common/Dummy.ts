@@ -248,7 +248,7 @@ export class Dummy {
             if (!json || typeof json !== 'object') return c.proxyObject as THIS;
             let old = {...json};
             TRANSACTION(thiss.get_name(c) + '.t2m()', () => {
-                json = thiss._convertEcoreToJom_m2(json, c, thiss);
+                json = (thiss as LModelElement)._convertEcoreToJom_m2(json,thiss.get_model(c), c);
                 console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: JSON.parse(JSON.stringify(json)), jj: json, old});
                 let childrenToUpdateByID: Dictionary<Pointer,  {json:GObject, l: LModelElement, id: Pointer, k: string}> = {};
                 let childrenToUpdateByName: Dictionary<string, {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}> = {};
@@ -274,7 +274,7 @@ export class Dummy {
                     switch (k) { // model.t2m only collections available in models
                         case 'classes': case 'enumerators': case 'subpackages': case 'annotations':
                             lparent = thiss.get_package(c);
-                            if (gv.isPrimitive) return [null, null] as any;
+                            // if (gv.isPrimitive) return [null, null] as any;
                             if (lparent) { dparent = lparent.__raw; }
                             else {
                                 dparent = DPackage.new3({father: c.data.id as Pointer<DModel>}, () => {}, DModel, true);
@@ -413,7 +413,8 @@ export class Dummy {
                 const registerChildren = (k: string) => {
                     let type = !json ? 'null' : typeof json;
                     if (type !== 'object' && !Pointers.isPointer(json)) {
-                        Log.ee('invalid T2M transformation, attempted to store a ' + type + ' inside ' + k, {k, json, type});
+                        if (k !== "reference" && c.data.className === "DAnnotation") { Log.ee("mis-registered references"); return; }
+                        else Log.ee('invalid T2M transformation, attempted to store a ' + type + ' inside ' + k, {k, json, type});
                         // childrenToUpdateInvalidMismatches.push({k, i:-1, json});
                         return;
                     }
@@ -427,7 +428,7 @@ export class Dummy {
                             childrenToUpdateInvalidMismatches.push({k, i, json:v, reason: 'nullish element'});
                             continue;
                         }
-                        (v as GObject) = arr[i] = thiss._convertEcoreToJom_m2(v, c, thiss);
+                        (v as GObject) = arr[i] = (thiss as any as LModelElement)._convertEcoreToJom_m2(v, thiss.get_model(c), c) as any;
                         let type = v === null ? 'null' : (Array.isArray(v) ? 'subarray' : typeof v);
                         let isPointer = Pointers.isPointer(v);
                         if (type !== 'object' && !isPointer) {
@@ -617,6 +618,7 @@ export class Dummy {
 
                 // calls [registerChildren, registerByCollection, doChildrenUpdate]
                 // uses __childrenToSort
+                const cname = c.data.className;
 
                 // do non-children properties first
                 for (let k in json) {
@@ -624,18 +626,32 @@ export class Dummy {
                     let oldV = (c.data as any)[k];
                     // ignore some unsettable keys / skip non-changes.
                     if (Dummy.t2mIgnoreKeys.includes(k) || EcoreXmiTags.includes(k) || U.isShallowEqual(v, oldV)) continue;
-                    // do childs last
-                    if (DPointerTargetable.childKeys.includes(k)) continue;
+
+                    // do childs last, but one key "references" is containment in classes and non-containment in annotations, so they need to be treated differently.
+                    if (DPointerTargetable.childKeys.includes(k) && !(cname === "DAnnotation" && k === "references")) continue;
 
 
+
+                    let doDefaultAssignment = false;
                     // do assignment
                     switch (k) {
-                        case '_state': thiss.set_state(v, c); continue;
-                        default:
-                            if (k[0] === "@" || k.toLowerCase().includes("annota")) console.error("setting wrong stuff", {d:c.data, k, v, json, old});
-                            // @ts-ignore
-                            c.proxyObject[k] = v;
-                            continue;
+                        case '_state': thiss.set_state(v, c); break;
+                        case "name":
+                            // if i'm changing model name in t2m, and there is only 1 package
+                            // then the root is actually the pkg and not the model, he needs to be renamed as well.
+                            doDefaultAssignment = true;
+                            if (cname !== "DModel") break;
+                            let pkgs = (c.proxyObject as LModel).packages.filter(e=>!!e);
+                            if (pkgs.length !== 1) break;
+                            pkgs[0].name = v;
+                            break;
+                        default: doDefaultAssignment = true; break;
+                    }
+                    if (doDefaultAssignment) {
+                        // if (k[0] === "@" || k.toLowerCase().includes("annota")) console.error("setting wrong stuff", {d:c.data, k, v, json, old}); todo remove other debug comments like this
+                        console.log("t2m default set", {k, v,json, oldV, d:c.data});
+                        // @ts-ignore
+                        c.proxyObject[k] = v;
                     }
                 }
 
@@ -645,9 +661,8 @@ export class Dummy {
                         if (Array.isArray(json[k])) for (let i = 0; i < json[k].length; i++) {
                             let child = json[k][i];
                             if (!child) continue;
-                            json[k][i] = child = thiss._convertEcoreToJom_m2(child, c, thiss);
+                            json[k][i] = child = (thiss as LModelElement)._convertEcoreToJom_m2(child,thiss.get_model(c), c)
                             let collection = getChildrenCollection(k, child, child, json[k], i);
-
                             //console.log('getChildrenCollection post', {collection, k, child, json, old, i});
                         }
                         break;
@@ -658,6 +673,8 @@ export class Dummy {
                     case '__childrenToSort': // if they got id or name they can be registered right away. not ambiguous.
                     case 'packages': case 'subpackages': case 'classes': case 'enumerators':
                     case 'attributes': case 'references': case 'operations': case 'parameters': case 'literals':
+                    // case "contains": (annotation contains todo)
+                        if (cname === "DAnnotation" && k === "references") break;
                         registerChildren(k);
                         break;
                 }}
@@ -708,6 +725,9 @@ export class Dummy {
                 }
                 registerPhase();
 
+                console.log("t2m register children", {n: json.name, json, d: c.data, childrenToUpdateByNew,
+                    childrenToUpdateByID, childrenToUpdateByName, childrenToUpdateBySource,
+                    childrenToUpdateByIndex, childrenToUpdateInvalidMismatches});
                 // uses [doChildrenUpdate]
                 // final: actually handle childrens
                 for (let id in childrenToUpdateByID) {

@@ -21,6 +21,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ViewReference",
         "Pointer_ViewOperation",
         "Pointer_ViewParameter",
+        "Pointer_ViewAnnotation",
         "Pointer_ViewLiteral",
         "Pointer_ViewObject",
         "Pointer_ViewValue",
@@ -65,6 +66,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewReference: Pointer<DViewElement> = 'Pointer_ViewReference';
     static Pointer_ViewOperation: Pointer<DViewElement> = 'Pointer_ViewOperation';
     static Pointer_ViewParameter: Pointer<DViewElement> = 'Pointer_ViewParameter';
+    static Pointer_ViewAnnotation: Pointer<DViewElement> = 'Pointer_ViewAnnotation';
     static Pointer_ViewLiteral: Pointer<DViewElement> = 'Pointer_ViewLiteral';
     static Pointer_ViewObject: Pointer<DViewElement> = 'Pointer_ViewObject';
     static Pointer_ViewValue: Pointer<DViewElement> = 'Pointer_ViewValue';

@@ -635,7 +635,7 @@ export class SetFieldAction extends SetRootFieldAction {
         this.me = me;
         this.me_field = field;
         this.className = SetFieldAction.cname;
-        if (field === "typeParameters") (this as any).debug = true;
+        if (field === "details") (this as any).debug = true;
         if (fire) this.fire();
     }
 

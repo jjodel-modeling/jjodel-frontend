@@ -618,6 +618,7 @@ ret.parentView = L.from(component?.props?.parentviewid);
     let ref = DefaultViews.reference(classs);
     let op = DefaultViews.operation(classs);
     let par = DefaultViews.parameter(op);
+    let ann = DefaultViews.annotation(model);
     let lit = DefaultViews.literal(enumm);
     let obj = DefaultViews.object(model);
     let typedecl = DefaultViews.typeDeclaration(classs);
@@ -654,7 +655,7 @@ ret.parentView = L.from(component?.props?.parentviewid);
 
 
     let dv_subviews = [model, packagee, classs, enumm, attr, ref, op, par,
-        lit, obj, val, typedecl, single, voidView,
+        lit, obj, val, typedecl, ann, single, voidView,
         ...edgeViews,
         DefaultViews.edgepoint(model),
         anchorView, collaborativeView];

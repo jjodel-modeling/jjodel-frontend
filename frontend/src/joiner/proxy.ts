@@ -113,6 +113,11 @@ RuntimeAccessibleClass.set_extend(LogicContext, MapLogicContext);
 
 @RuntimeAccessible('MyProxyHandler')
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
+    // NB: if false, and cache is on, it will have a mix of updated and not update properties,
+    // according to the version of the object that was interrogated before caching, making a total mess
+    // so i'm forcing on always, which is also likely desirable in most occasions without to resort to ".r"
+    static autoUpdateObjects = true;
+
     s: string = 'set_';
     g: string = 'get_';
     /*get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean {
@@ -232,10 +237,6 @@ export let lang_hiddenkeys = [
     'id',
 ];
 
-const updateTargets: boolean = true;
-// NB: if false, and cache is on, it will have a mix of updated and not update properties,
-// according to the version of the object that was interrogated before caching, making a total mess
-// so i'm forcing on always, which is also likely desirable in most occasions without to resort to .r
 
 @RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
@@ -310,7 +311,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         let canThrowErrors = true;
 
         // refresh target object by default with most recent version if livechanges are on
-        if (updateTargets) {
+        if (TargetableProxyHandler.autoUpdateObjects) {
             const d = DPointerTargetable.from(targetObj.id);
             if (d) { targetObj = this.d = d as any; }
             if (targetObj && !d) {
@@ -342,7 +343,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case '__d': return this.d;
             case '__t': return this;
             case 'inspect': // node.js util
-            case "r": // reload methods became obsolete because they are now always reloading due to updateTargets constant
+            case "r": // reload methods became obsolete because they are now always reloading due to autoUpdateObjects constant
             case "_refresh":
             case "_reload": return LPointerTargetable.wrap(targetObj.id);
             case '__Raw':
@@ -510,7 +511,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)] || (this.l as GObject)[(propKey as string)]) {
 
         // refresh target object by default with most recent version if liveChanges are on
-        if (updateTargets) {
+        if (TargetableProxyHandler.autoUpdateObjects) {
             targetObj = this.d = DPointerTargetable.from(targetObj.id);
             proxyitself = LPointerTargetable.fromD(targetObj as any);
         }
@@ -578,7 +579,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     public deleteProperty(targetObj: ME, key: string | symbol, proxyItself?: Proxyfied<any>): boolean {
         if (typeof key === "symbol") return false;
         // refresh target object by default with most recent version if liveChanges are on
-        /*if (updateTargets) {
+        /*if (TargetableProxyHandler.autoUpdateObjects) {
             targetObj = this.d = DPointerTargetable.from(targetObj.id);
             proxyItself = LPointerTargetable.fromD(targetObj as any);
         }*/
@@ -599,7 +600,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }
     ownKeys(targetObj: ME): ArrayLike<string | symbol> {
         // refresh target object by default with most recent version if liveChanges are on
-        if (updateTargets) {
+        if (TargetableProxyHandler.autoUpdateObjects) {
             targetObj = this.d = DPointerTargetable.from(targetObj.id);
             // proxyitself = LPointerTargetable.fromD(targetObj as any);
         }
@@ -611,7 +612,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
     has(targetObj: ME, p: string | symbol): boolean {
         // refresh target object by default with most recent version if liveChanges are on
-        if (updateTargets) {
+        if (TargetableProxyHandler.autoUpdateObjects) {
             targetObj = this.d = DPointerTargetable.from(targetObj.id);
             // proxyitself = LPointerTargetable.fromD(targetObj as any);
         }

@@ -7,6 +7,19 @@ import stringify from 'json-stable-stringify';
 export class Uobj {
     static cname: string = 'Uobj';
 
+
+    static lowercaseKeys(obj: GObject, deep: boolean = false): GObject {
+        if (Array.isArray(obj)) {
+            if (deep) return obj.map(o=>Uobj.lowercaseKeys(obj, deep));
+            return obj;
+        }
+        const result: GObject= {};
+        for (const key of Object.keys(obj)) {
+            result[key.toLowerCase()] = deep ? Uobj.lowercaseKeys(obj[key], deep) : obj[key];
+        }
+        return result;
+    }
+
     static deepEdit(
         obj: any,
         key: (k: string | number | symbol) => string | number | symbol | undefined,

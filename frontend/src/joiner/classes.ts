@@ -837,11 +837,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         this.setExternalPtr(thiss.father, "features", "+=");
         return this; }
 
-    DAnnotation(source?: DAnnotation["source"], name?: string, details?: DAnnotation["details"], references?: DAnnotation["references"], contents?: DAnnotation["contents"]): this {
+    DAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"], references?: DAnnotation["references"], contents?: DAnnotation["contents"]): this {
         const thiss: DAnnotation = this.thiss as any;
-        thiss.source = source || '';
+        thiss.source = source || 'jjAnnotation';
         thiss.details = details || {};
-        thiss.name = name;
 
         let s = DState.getState();
         this.setPtr("references", references || [], s);
@@ -896,6 +895,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DNamedElement(name?: DNamedElement["name"]): this {
         const thiss: DNamedElement = this.thiss as any;
         thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
+        let lParent: LModelElement | undefined = L.fromPointer(this.fatherPtr);
+        if (lParent) U.increaseEndingNumber(thiss.name, false, false, s => !!lParent.children?.[s]);
         return this; }
 
     DTypedElement(type?: DTypedElement["type"]): this {
@@ -1445,6 +1446,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     parent?: any;
     zoom!: GraphPoint;
 
+    // todo: move in Constructors maybe? there is another smaller implementation there, should be joined.
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string),
                                                                 father?: Pointer | DPointerTargetable | ((a:string)=>boolean),
                                                                 metaptr?: Pointer | null,
@@ -1737,7 +1739,9 @@ export class Pointers{
             if (data.indexOf(Pointers.prefix) === 0) return data as PTR;
             // else return (RuntimeAccessibleClass.get("LValue") as typeof LValue).resolveReferenceTODO(data)?.id as PTR;
         }
-        return (data as any)?.id;
+        const id = (data as any)?.id;
+        if (id && id.indexOf(Pointers.prefix) === 0) return id;
+        return null;
     }
 
     static isPointer(val: any, state?: DState, doArrayCheck: boolean = false): val is Pointer {
@@ -1939,10 +1943,10 @@ export class PointedBy {
         }
         if (!pointed_val) return state;
 
-        // todo: if can't be done because newtarget doesn't exist, build an action from this and set it pending.
+        // if can't be done because newtarget doesn't exist, build an action from this and set it pending.
         let newtarget: DPointerTargetable = state.idlookup[pointed_val];
         if (!newtarget) {
-            PendingPointedByPaths.new(action,state,pointed_val, casee).saveForLater(); // {from: action.path, field: action.field, to: target});
+            PendingPointedByPaths.new(action,state,pointed_val, casee).saveForLater();
             return state;
         }
         /* simpler version but does unnecessary shallow copies
@@ -2065,8 +2069,8 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return true;
     }
 
-    /*protected derivedMap!: Dictionary<DocString<"propertyName">, DerivedL>;*/
-    /*protected*/ __info_of__derivedMap: Info = {type: 'Dictionary<propertyName, {read: function, write: function}>', txt:'todo'}
+    /*protected derivedMap!: Dictionary<DocString<"propertyName">, DerivedL>;
+    /*protected __info_of__derivedMap: Info = {type: 'Dictionary<propertyName, {read: function, write: function}>', txt:'todo'}*/
 
     get_derivedMap(c: Context): LPointerTargetable["derivedMap"] {
         let map: Dictionary<DocString<"propertyName">, DerivedL> = (c.data.derivedMap ? {...c.data.derivedMap} : {}) as GObject;
@@ -2280,16 +2284,24 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         let oldState = c.data[key] ? {...c.data[key]} : {};
         let changed: boolean = false;
         if (!thiss) thiss = LPointerTargetable.singleton;
+        const isArr = Array.isArray(val);
+        const wasArr = Array.isArray(oldState);
         if (val === undefined) {
             if (!oldState || !Object.keys(oldState).length) return true;
-            newState = {};
+            newState = {}; // wasArr ? [] : {};
             changed = false;
         }
         else if (typeof val !== "object") { Log.ee("state can only be assigned with an object or undefined"); return true; }
         else {
             val = thiss.__sanitizeValue(val || {}); // ||{} to handle null which is typed as object in js
-            newState = {}; // {...oldState};
+            newState = isArr ? [] : {}; // {...oldState};
             for (let k in val) {
+                if (isArr) switch (k) { // skip array prototype changes
+                    case "contains":
+                    case "first":
+                    case "last":
+                    case "separator": continue;
+                }
                 if (val[k] === undefined) {
                     if (!(k in oldState)) {
                         // newState[k] = undefined; reducer is ignoring undefined anyway, so i would need to set the whole obj instead of a delta or changing reducer.
@@ -2309,7 +2321,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
         if (!changed) return true;
 
-        TRANSACTION(thiss.get_name(c)+'.'+displayKey, ()=>{
+        TRANSACTION(thiss.get_name(c)+'.'+displayKey, ()=> {
             if (Object.keys(newState)) SetFieldAction.new(c.data, key, newState, '+=', false);
             if (Object.keys(removedState)) SetFieldAction.new(c.data, key, removedState as any, '-=', false);
         })
@@ -3971,10 +3983,9 @@ export type getWParams<L extends LPointerTargetable, D extends Object> ={
 
 
 export enum EGraphElements {
-    "GraphElement"=  "GraphElement",
-    "Field" ="GraphElement", // just an alias for now.
-    "Vertex"= "Vertex",
-    "todo" = "todo"
+    "GraphElement" = "GraphElement",
+    "Field" = "GraphElement", // just an alias for now.
+    "Vertex" = "Vertex"
 }
 export enum EModelElements{
     // concrete m2

@@ -604,6 +604,7 @@ export class EcoreParser{
                 default: Log.exx('unexpected field in EAnnotation:  ' + key + ' => |' + value + '|', {key, value, json}); break;
                 // case ECoreAnnotation.annotations: break; // todo: enable, yes annotations can have annotations
                 case ECoreAnnotation.details: break;
+                case ECoreAnnotation.contents: break;
                 case ECoreAnnotation.references: break;
                 case ECoreAnnotation.source: break;
             }
@@ -932,6 +933,11 @@ export class EcoreParser{
         if (!ret || U.isEmptyObject(ret)) { return []; }
         if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
 
+    private static getContents(thiss: Json): Json[] {
+        const ret: any = thiss[ECoreAnnotation.contents];
+        if (!ret || U.isEmptyObject(ret)) { return []; }
+        if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
+
     private static getChildren(thiss: Json, throwError: boolean = false, functions: boolean = false): Json[] {
         if (!thiss && !throwError) { return []; }
         const mod = thiss[ECoreRoot.ecoreEPackage];
@@ -961,16 +967,25 @@ export class EcoreParser{
             return valueIfNotFound; }
         return ret; }
 
-    static write<T extends string | any[] | GObject>(json: Json, field: string, val: T, defaultValue?: string | any[]): T {
+    static write<T extends string | any[] | GObject>(json: Json, field: string, val: T, defaultValue?: string | any[], noEmptyArrays = true): T {
         if (defaultValue !== undefined && defaultValue === val) return val;
+        if (val === undefined) return val;
         let type = typeof val;
+        if (type === "function" || type === "symbol") {
+            Log.exx('invalid type in xml:', {field, val, type});
+        }
 
         if (val !== null && field.indexOf(EcoreParser.XMLinlineMarker) !== -1) {
             Log.ex(type !== "string", 'inline value |' + field + '| must be a string.', val);
             val = U.multiReplaceAll(val as string, ['&', '\'', '"'], ['&amp;', '&#38;', '&quot;']) as T;
         }
-        else Log.ex(type === "string" || !U.isObject(val, true), 'primitive values should be inserted only inline in the xml:', field, val);
-        json[field] = val;
+        else if (type === "string" || val && type !== "object"/*!U.isObject(val, true, false, true)*/) {
+            Log.exx('primitive values should be inserted only inline in the xml:', {field, val});
+            return val;
+        }
+        if (noEmptyArrays && val && type === "object" && Object.keys(val).length === 0) { return val; }
+        if (Array.isArray(val) && val.length === 1) json[field] = val[0];
+        else json[field] = val;
         return val;
     }
 
@@ -1003,6 +1018,7 @@ export class ECoreAnnotation {
     static source: string;
     static references: string;
     static details: string;
+    static contents: string;
 }
 
 @RuntimeAccessible('EcoreTypeDeclaration')
@@ -1187,6 +1203,7 @@ ECorePackage.eAnnotations = ECoreSubPackage.eAnnotations = ECoreClass.eAnnotatio
 ECoreAnnotation.source = EcoreParser.XMLinlineMarker + 'source';
 ECoreAnnotation.references = EcoreParser.XMLinlineMarker + 'references'; // "#/" for target = package.
 ECoreAnnotation.details = 'details'; // arr
+ECoreAnnotation.contents = 'contents'; // arr
 ECoreDetail.key = EcoreParser.XMLinlineMarker + 'key'; // can have spaces
 ECoreDetail.value = EcoreParser.XMLinlineMarker + 'value';
 
@@ -1330,56 +1347,6 @@ for (let k0 in allEcoreKeys) {
     allLkKeys[lk] = v;
 }
 
-switch(null as any) {
-    case "ecore": break;
-    case "source": break;
-    case "references": break;
-    case "details": break;
-    case "namee": break;
-    case "key": break;
-    case "value": break;
-    case "eannotations": break;
-    case "eclassifiers": break;
-    case "nsuri": break;
-    case "nsprefix": break;
-    case "esubpackages": break;
-    case "xmlns:xmi": break;
-    case "xmlns:xsi": break;
-    case "xmi:version": break;
-    case "xmlns:ecore": break;
-    case "estructuralfeatures": break;
-    case "xsi:type": break;
-    case "eoperations": break;
-    case "instancetypename": break;
-    case "esupertypes": break;
-    case "abstract": break;
-    case "interface": break;
-    case "instanceclassname": break;
-    case "serializable": break;
-    case "eliterals": break;
-    case "defaultvalueliteral": break;
-    case "literal": break;
-    case "etype": break;
-    case "unique": break;
-    case "ordered": break;
-    case "upperbound": break;
-    case "lowerbound": break;
-    case "containment": break;
-    case "container": break;
-    case "changeable": break;
-    case "derived": break;
-    case "transient": break;
-    case "volatile": break;
-    case "unsettable": break;
-    case "eopposite": break;
-    case "resolveproxies": break;
-    case "id": break;
-    case "eexceptions": break;
-    case "eparameters": break;
-    case "xmlns:xmi": break;
-    case "xmi:version": break;
-    case "type": break;
-}
 
 
 let allEKeys = {
@@ -1387,6 +1354,7 @@ let allEKeys = {
     "source": "@source",
     "references": "@references",
     "details": "details",
+    "contents": "contents",
     "namee": "@name",
     "key": "@key",
     "value": "value",
