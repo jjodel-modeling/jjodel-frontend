@@ -38,6 +38,9 @@
 
 import { EvaluationContext, isJjelFunction } from '../../jjel/evaluator';
 import type { JjelValue } from '../../jjel/evaluator';
+import type { JjelStateAccess } from '../../jjel/evaluator/context';
+import { STATE_RESERVED } from '../../jjel/stateReserved';
+import type { SimStateAccess } from './netTypes';
 
 /** M, frozen once per run (R-SIM-14). */
 export interface SimSnapshot {
@@ -146,6 +149,10 @@ export function freezeSnapshot(
  * `event` or `model` is hidden by them. Features are not flattened into bare
  * names: a guard reaches them through `self.f` only.
  *
+ * `state`, when given, is what `x.[a]` reads (R-SIM-43): set on this scope,
+ * so the scopes of `forall` and of lambdas inherit it and the base never has
+ * it. Without it `.[a]` throws, as it does outside the simulator.
+ *
  * `null` when the transition, or the current event, has no handle in the
  * snapshot; the guard evaluator reports it as a defect.
  */
@@ -153,6 +160,7 @@ export function buildGuardContext(
     snapshot: SimSnapshot,
     site: { transitionId: string },
     step: { event: string | null },
+    state?: JjelStateAccess,
 ): EvaluationContext | null {
     const self = snapshot.handleById.get(site.transitionId);
     if (self === undefined) return null;
@@ -162,5 +170,29 @@ export function buildGuardContext(
         if (handle === undefined) return null;
         event = handle;
     }
-    return snapshot.base.child({ self, event, model: snapshot.model });
+    const ctx = snapshot.base.child({ self, event, model: snapshot.model });
+    if (state) ctx.stateAccess = state;
+    return ctx;
+}
+
+/** The two read-only attributes, from the one reserved list (R-SIM-42): `marked`, then `tokens`. */
+const [MARKED, TOKENS] = STATE_RESERVED.readOnlyAttributes;
+
+/**
+ * σ as JjEL reads it (R-SIM-30, R-SIM-43). `marked` and `tokens` are answered
+ * from the marking, and only on a place of the compiled net: on any other
+ * element they are `undefined`, so `t.[tokens]` on a transition throws and the
+ * guard is a defect. Every other attribute is `read`, whose `undefined` for an
+ * undeclared one throws the same way; the presentation is the accessor's own,
+ * local to its site.
+ */
+export function toJjelStateAccess(access: SimStateAccess, places: ReadonlySet<string>): JjelStateAccess {
+    return {
+        read: (elementId, attr) => {
+            if (attr === MARKED) return places.has(elementId) ? access.isMarked(elementId) : undefined;
+            if (attr === TOKENS) return places.has(elementId) ? access.tokens(elementId) : undefined;
+            return access.read(elementId, attr);
+        },
+        readPresentation: attr => access.readPresentation(attr),
+    };
 }

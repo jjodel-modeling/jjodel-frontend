@@ -13,7 +13,8 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, evalContextFor, haltMessage, panelInputs, pressInput, runSignature, startRun,
+    candidateLabel, collectModelObjectIds, defectsLine, evalContextFor, haltMessage, NO_SIM_ACTIONS, panelInputs, pressInput, runSignature,
+    startRun,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
@@ -354,5 +355,77 @@ describe('the panel\'s texts and gates', () => {
         const defects = ['a', 'b', 'c', 'd'].map(e => ({ element: e, code: 'no-target' as const, message: 'the edge has no target' }));
         expect(defectsLine({ ...run.net, defects } as CompiledNet, {}))
             .toBe('4 elements not compiled: a (the edge has no target); b (the edge has no target); c (the edge has no target), and 1 more.');
+    });
+});
+
+describe('guards read σ in the run (wave B2, P-2026-09-26-1105, R-SIM-30, R-SIM-43)', () => {
+    /** Petri roles: places, transitions, arcs, the initial marking as an integer feature, k = 3. */
+    const PETRI_ROLES = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+        simInitialMarking: 'A_tokens', simBound: '3', simGuard: 'A_guard',
+    };
+
+    /** p1 (3 tokens) -a1-> t1 -a2-> p2, the guard of t1 given. */
+    function petriLookup(guard: string): Lookup {
+        const lookup = buildLookup(PETRI_ROLES, {
+            p1: { cls: 'C_Place', slots: { A_tokens: [3] } },
+            p2: { cls: 'C_Place' },
+            t1: { cls: 'C_PTr', slots: { A_guard: [guard] } },
+            a1: { cls: 'C_Arc', slots: { R_src: ['p1'], R_tgt: ['t1'] } },
+            a2: { cls: 'C_Arc', slots: { R_src: ['t1'], R_tgt: ['p2'] } },
+        });
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        return lookup;
+    }
+
+    /** The record of `buildEvalContext` for the net: pool handles, instance names bound at the top. */
+    function petriRecord(): Record<string, any> {
+        const h: Record<string, any> = {};
+        for (const id of ['p1', 'p2', 't1', 'a1', 'a2']) h[id] = { id, __type: 'Object', name: id };
+        return { instances: Object.values(h), classes: [], ...h };
+    }
+
+    const press = (lookup: Lookup) => pressInput('M', null, undefined, lookup, 'ε');
+    const tokensOf = () => Object.fromEntries([...getSimRun('M')!.config.state.marking].sort());
+
+    it('`p2.[tokens] < 2` on t1: after two firings t1 leaves the candidates, the label says false, the run is in Deadlock', () => {
+        const lookup = petriLookup('p2.[tokens] < 2');
+        const run = started(lookup, spyBuilder(petriRecord).build);
+        simReset('M', run);
+        const first = press(lookup);
+        expect(first.outcome?.kind).toBe('fired');
+        expect(first.outcome?.label.evaluated).toEqual([{ transition: 't1', outcome: { kind: 'true' } }]);
+        expect(press(lookup).outcome?.kind).toBe('fired');
+        expect(tokensOf()).toEqual({ p1: 1, p2: 2 });
+        const third = press(lookup);
+        expect(third.outcome?.kind).toBe('quiescence');
+        expect(third.outcome?.label.candidates).toEqual([]);
+        expect(third.outcome?.label.evaluated).toEqual([{ transition: 't1', outcome: { kind: 'false' } }]);
+        const now = getSimRun('M')!;
+        expect(netRunStatus(now.net, now.config, now.alphabet, now.guards, now.halt)).toBe('Deadlock');
+    });
+
+    it('`p2.[marked]` on t1: t1 waits for a token on p2, so the run is in Deadlock at once', () => {
+        const lookup = petriLookup('p2.[marked]');
+        const run = started(lookup, spyBuilder(petriRecord).build);
+        expect(netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt)).toBe('Deadlock');
+        simReset('M', run);
+        expect(press(lookup).outcome?.label.evaluated).toEqual([{ transition: 't1', outcome: { kind: 'false' } }]);
+        expect(tokensOf()).toEqual({ p1: 3 });
+    });
+
+    it('an undeclared attribute and node are defects in the label, never a candidate', () => {
+        for (const guard of ['p2.[visits] > 0', 'node.[x] > 0', 't1.[tokens] == 0']) {
+            const lookup = petriLookup(guard);
+            simReset('M', started(lookup, spyBuilder(petriRecord).build));
+            const r = press(lookup);
+            expect([guard, r.outcome?.kind, r.outcome?.label.evaluated[0]?.outcome.kind]).toEqual([guard, 'quiescence', 'defect']);
+        }
+    });
+
+    it('the action oracle of the run is still NO_SIM_ACTIONS until lane C (R-SIM-39)', () => {
+        expect(started(petriLookup('true'), spyBuilder(petriRecord).build).actions).toBe(NO_SIM_ACTIONS);
     });
 });

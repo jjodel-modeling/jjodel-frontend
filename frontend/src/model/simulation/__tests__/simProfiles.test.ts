@@ -1,8 +1,9 @@
 /**
  * simProfiles — the simulation profiles (P-2026-09-25-1805, R-SIM-47..49,
  * R-SIM-54): the eight system profiles, the computed required set with the
- * either-item of the control-flow source (R-SIM-10), the defects of a profile
- * and the checkability verdict on a role bag.
+ * either-items of the control-flow source (R-SIM-10) and initial tokens
+ * (R-SIM-56, P-2026-09-25-1840), the defects of a profile and the checkability
+ * verdict on a role bag.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -14,9 +15,10 @@ import {
 import type { RequiredItem, RoleMode, SimProfile, SystemProfileId } from '../simProfiles';
 
 const EITHER_SOURCE: RequiredItem = { anyOf: ['source', 'ownedTransitions'] };
-const CF_CLOSURE: RequiredItem[] = ['node', 'transition', 'nextState', 'initial', EITHER_SOURCE];
+const EITHER_INITIAL: RequiredItem = { anyOf: ['initial', 'initialMarking'] };
+const CF_CLOSURE: RequiredItem[] = ['node', 'transition', 'nextState', EITHER_INITIAL, EITHER_SOURCE];
 const PETRI_CLOSURE: RequiredItem[] = ['node', 'transition', 'arc', 'arcSource', 'arcTarget', 'initialMarking'];
-const CF_CLOSURE_ROLES: RoleId[] = ['node', 'transition', 'nextState', 'initial', 'source', 'ownedTransitions'];
+const CF_CLOSURE_ROLES: RoleId[] = ['node', 'transition', 'nextState', 'initial', 'initialMarking', 'source', 'ownedTransitions'];
 const PETRI_GROUP: RoleId[] = ['arc', 'arcSource', 'arcTarget', 'arcWeight', 'inhibitorArc'];
 
 /** The prompt's table: roles active beyond the closure, added requirements, constraints. */
@@ -70,21 +72,24 @@ describe('system profiles: complete and valid', () => {
         for (const p of SYSTEM_PROFILES) expect(validateProfile(p), p.id).toEqual([]);
     });
 
-    it('put in edit exactly the closure roles plus the table row', () => {
+    it('put in edit exactly the closure roles plus the table row, the derived Initial marking aside', () => {
         for (const p of SYSTEM_PROFILES) {
             const row = TABLE[p.id as SystemProfileId];
-            const closure: RoleId[] = row.shape === 'petri' ? ['node', 'transition', 'arc', 'arcSource', 'arcTarget', 'initialMarking'] : CF_CLOSURE_ROLES;
+            const closure: RoleId[] = row.shape === 'petri'
+                ? ['node', 'transition', 'arc', 'arcSource', 'arcTarget', 'initialMarking']
+                : CF_CLOSURE_ROLES.filter(r => r !== 'initialMarking');
             const edit = ROLE_IDS.filter(r => p.modes[r].mode === 'edit');
             expect(edit.sort(), p.id).toEqual([...new Set([...closure, ...row.active])].sort());
         }
     });
 
-    it('derive bound (1) and initial marking (1 on Initial) in control flow, and event from trigger where trigger is active', () => {
+    it('derive bound (1) and initial marking (from Initial, 1 on Initial) in control flow, and event from trigger where trigger is active', () => {
         for (const p of SYSTEM_PROFILES) {
             const row = TABLE[p.id as SystemProfileId];
             if (row.shape === 'controlFlow') {
+                expect(p.modes.initial, p.id).toEqual({ mode: 'edit' });
                 expect(p.modes.bound, p.id).toMatchObject({ mode: 'derived', value: 1 });
-                expect(p.modes.initialMarking, p.id).toMatchObject({ mode: 'derived', value: 1, note: '1 on Initial' });
+                expect(p.modes.initialMarking, p.id).toEqual({ mode: 'derived', from: 'initial', note: '1 on Initial' });
                 expect(p.params.bound, p.id).toBe(1);
             }
             if (row.active.includes('trigger')) expect(p.modes.event, p.id).toMatchObject({ mode: 'derived', from: 'trigger' });
@@ -160,6 +165,13 @@ describe('validateProfile: one failing profile per defect', () => {
         const defects = validateProfile(userCopy('flowchart', { source: OFF, ownedTransitions: OFF }));
         expect(defects.map(d => d.code)).toEqual(['closureRoleOff']);
         expect(defects[0].roles).toEqual(['source', 'ownedTransitions']);
+    });
+
+    it('the Initial either-item: Initial off with Initial marking in edit is fine, both off is one defect naming both', () => {
+        expect(validateProfile(userCopy('flowchart', { initial: OFF, initialMarking: EDIT }))).toEqual([]);
+        const defects = validateProfile(userCopy('flowchart', { initial: OFF, initialMarking: OFF }));
+        expect(defects.map(d => d.code)).toEqual(['closureRoleOff']);
+        expect(defects[0].roles).toEqual(['initial', 'initialMarking']);
     });
 
     it('a closure role derived is not a defect', () => {
@@ -239,6 +251,27 @@ describe('checkability', () => {
         expect(checkability(p, { ...CF_BAG, simTrigger: 'f_trig' })).toEqual({ status: 'checkable', missing: [] });
     });
 
+    it('counts a derived role with from as unbound while its source is unbound (event without trigger)', () => {
+        const p: SimProfile = { ...userCopy('stateMachine'), addedRequired: ['event', 'bound'] };
+        expect(checkability(p, CF_BAG)).toEqual({ status: 'notCheckable', missing: ['event'] });
+    });
+
+    it('a control-flow system profile without simInitial misses the Initial item: the derived Initial marking does not bind alone', () => {
+        const { simInitial: _i, ...noInitial } = CF_BAG;
+        for (const id of ['flowchart', 'stateMachine'] as SystemProfileId[]) {
+            expect(checkability(sys(id), noInitial), id).toEqual({ status: 'notCheckable', missing: [EITHER_INITIAL] });
+            expect(checkability(sys(id), { ...noInitial, simInitialMarking: 'f_m0' }), id).toEqual({ status: 'notCheckable', missing: [EITHER_INITIAL] });
+        }
+    });
+
+    it('a derived cycle binds nothing and does not throw', () => {
+        const p = userCopy('flowchart', {
+            initial: { mode: 'derived', from: 'initialMarking', note: 'x' },
+            initialMarking: { mode: 'derived', from: 'initial', note: 'y' },
+        });
+        expect(checkability(p, CF_BAG)).toEqual({ status: 'notCheckable', missing: [EITHER_INITIAL] });
+    });
+
     it('does not bind a role that is off, even with its key set', () => {
         const p = userCopy('flowchart', { source: OFF });
         expect(checkability(p, CF_BAG)).toEqual({ status: 'notCheckable', missing: [EITHER_SOURCE] });
@@ -255,7 +288,7 @@ describe('checkability', () => {
         expect(checkability(sys('flowchart'), CF_BAG, { guard: 'warn', nextState: 'incompatible' }).status).toBe('notCheckable');
         expect(checkability(sys('flowchart'), CF_BAG, { guard: 'ok', nextState: 'ok' }).status).toBe('checkable');
         const { simInitial: _i, ...noInitial } = CF_BAG;
-        expect(checkability(sys('flowchart'), noInitial, { guard: 'warn' })).toEqual({ status: 'notCheckable', missing: ['initial'] });
+        expect(checkability(sys('flowchart'), noInitial, { guard: 'warn' })).toEqual({ status: 'notCheckable', missing: [EITHER_INITIAL] });
     });
 });
 

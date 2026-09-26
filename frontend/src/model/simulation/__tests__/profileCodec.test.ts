@@ -1,12 +1,13 @@
 /**
  * profileCodec — the `simProfile` bag key and the «Custom» profile of a bag
- * without it (P-2026-09-25-1805, R-SIM-55, R-SIM-31(4)).
+ * without it (P-2026-09-25-1805, R-SIM-55, R-SIM-31(4)); in control flow Bound
+ * and Initial marking in edit when set (R-SIM-56, P-2026-09-25-1840).
  */
 
 import { describe, it, expect } from 'vitest';
 import { ROLE_IDS } from '../roleCatalog';
 import type { RoleId } from '../roleCatalog';
-import { systemProfile, validateProfile } from '../simProfiles';
+import { checkability, systemProfile, validateProfile } from '../simProfiles';
 import type { SimProfile } from '../simProfiles';
 import { decodeProfile, encodeProfile, inferCustomProfile } from '../profileCodec';
 
@@ -113,7 +114,7 @@ describe('inferCustomProfile', () => {
         expect(profile.params).toEqual({ bound: 1, selector: 'list' });
         expect(editRoles(profile).sort()).toEqual(['initial', 'nextState', 'node', 'ownedTransitions', 'source', 'transition']);
         expect(profile.modes.bound).toMatchObject({ mode: 'derived', value: 1 });
-        expect(profile.modes.initialMarking).toMatchObject({ mode: 'derived', value: 1, note: '1 on Initial' });
+        expect(profile.modes.initialMarking).toEqual({ mode: 'derived', from: 'initial', note: '1 on Initial' });
         expect(profile.modes.guard).toEqual({ mode: 'off', reason: 'Not bound' });
         expect(profile.modes.event).toEqual({ mode: 'off', reason: 'Not bound' });
         expect(ignoredKeys).toEqual([]);
@@ -132,8 +133,24 @@ describe('inferCustomProfile', () => {
             'accepting', 'eventIdentifier', 'fork', 'guard', 'initial', 'nextState', 'node', 'ownedTransitions', 'source', 'terminal', 'transition', 'trigger',
         ]);
         expect(profile.modes.event).toMatchObject({ mode: 'derived', from: 'trigger' });
+        expect(profile.modes.bound).toMatchObject({ mode: 'derived', value: 1 });
+        expect(profile.modes.initialMarking).toEqual({ mode: 'derived', from: 'initial', note: '1 on Initial' });
+        expect(profile.params.bound).toBe(1);
         expect(ignoredKeys).toEqual([]);
         expect(validateProfile(profile)).toEqual([]);
+    });
+
+    it('a control-flow bag of the naturals genre: Bound and Initial marking in edit, k from the bag, complete without simInitial', () => {
+        const bag = { simNode: 'c_s', simTransition: 'c_t', simNextState: 'f_n', simSource: 'f_s', simInitialMarking: 'f_m0', simBound: '3' };
+        const { profile, ignoredKeys } = inferCustomProfile(bag);
+        expect(profile.shape).toBe('controlFlow');
+        expect(profile.modes.bound).toEqual({ mode: 'edit' });
+        expect(profile.modes.initialMarking).toEqual({ mode: 'edit' });
+        expect(profile.modes.initial).toEqual({ mode: 'edit' });
+        expect(profile.params.bound).toBe(3);
+        expect(ignoredKeys).toEqual([]);
+        expect(validateProfile(profile)).toEqual([]);
+        expect(checkability(profile, bag)).toEqual({ status: 'checkable', missing: [] });
     });
 
     it('a Petri bag: shape from simArc, bound in edit with its k', () => {
@@ -182,13 +199,13 @@ describe('inferCustomProfile', () => {
         expect(validateProfile(profile)).toEqual([]);
     });
 
-    it('ignores the keys the shape derives or does not read, and a role left without its dependency', () => {
+    it('ignores the keys the shape does not read, and a role left without its dependency; reads Bound and Initial marking in control flow', () => {
         const cf = inferCustomProfile({ simNode: 'c', simBound: '2', simInitialMarking: 'f_m0', simEventIdentifier: 'f_id' });
-        expect(cf.profile.modes.bound).toMatchObject({ mode: 'derived', value: 1 });
-        expect(cf.profile.modes.initialMarking).toMatchObject({ mode: 'derived', value: 1 });
+        expect(cf.profile.modes.bound).toEqual({ mode: 'edit' });
+        expect(cf.profile.modes.initialMarking).toEqual({ mode: 'edit' });
         expect(cf.profile.modes.eventIdentifier.mode).toBe('off');
-        expect(cf.profile.params.bound).toBe(1);
-        expect(cf.ignoredKeys).toEqual(['simInitialMarking', 'simBound', 'simEventIdentifier']);
+        expect(cf.profile.params.bound).toBe(2);
+        expect(cf.ignoredKeys).toEqual(['simEventIdentifier']);
         expect(validateProfile(cf.profile)).toEqual([]);
 
         const petri = inferCustomProfile({ simArc: 'c_a', simInitial: 'c_i' });
