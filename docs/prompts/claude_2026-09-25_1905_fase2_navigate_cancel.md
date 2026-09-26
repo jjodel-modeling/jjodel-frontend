@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1905 (Phase 2 of `claude_2026-09-25_1905_prompt_navigate_cancel_discovery.md`)
 Chat: C-2026-09-25-1353
 Lane: fast
-Status: eseguito 2026-09-26 · lane navigate-cancel · 982581260
+Status: eseguito 2026-09-26 · lane navigate-cancel · 982581260 · verifica visiva passata 2026-09-26 (tab alive after "Stay", second edit taken, Cmd+S saves; the reload oracle is spoiled by F6)
 
 Worktree: `~/jjodel-open`, branch `navigate-cancel`, the same session that wrote the Phase 1 report. The branch was rebased from chat on 2026-09-26 onto the trunk tip `5433451fd`; the report is now `8d6febf5f` (same content as `bd2b39bfe`, which no longer exists as a ref). Before anything else: `pwd` is `/Users/alfonso/jjodel-open`, branch `navigate-cancel`, `git log -1` is the commit that adds this file, `git log -2` shows the report `8d6febf5f` below it, `git status` empty. Otherwise stop.
 
