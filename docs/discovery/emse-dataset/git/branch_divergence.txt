@@ -1,4 +1,0 @@
-fetch ok
-base=origin/master
-ahead_of_origin/master=791
-behind_origin/master=0
