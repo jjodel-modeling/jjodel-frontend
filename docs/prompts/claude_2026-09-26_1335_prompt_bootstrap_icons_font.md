@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-1335
 Chat: C-2026-09-26-1335
 Lane: fast (dev tooling, one config file expected)
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane icons-font · b1ba29157 · verifica visiva passata 2026-09-26
 
 Worktree: `~/jjodel-icons`, branch `icons-font`, created by the project chat from the trunk at the commit that adds this file. Setup, each a hard stop if it fails: `pwd` is `/Users/alfonso/jjodel-icons`; `git branch --show-current` is `icons-font`; `git status` empty; `git log -1` reads `docs: add prompt P-2026-09-26-1335, Bootstrap Icons font 403`. Every commit of this lane goes on `icons-font`. The merge into the trunk is a separate prompt.
 
