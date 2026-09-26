@@ -21,14 +21,14 @@
  * - the texts of the panel: `haltMessage`, `candidateLabel`, `defectsLine`, and
  *   `panelInputs`, the inputs a status leaves enabled (R-SIM-29).
  *
- * Actions return no assignment until the Action lane (R-SIM-17).
+ * Actions return no assignment until lane C (R-SIM-39).
  */
 
 import type { ExecutionContext } from '../../../jjscript/types';
 import type { JjelValue } from '../../../jjel/evaluator';
 import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { candidates, step } from '../../../model/simulation/netStep';
-import { buildGuardContext, freezeSnapshot, SimSnapshotError } from '../../../model/simulation/guardContext';
+import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess } from '../../../model/simulation/guardContext';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import { compileGuard, evaluateGuard } from '../../../model/simulation/guardEvaluator';
 import type { CompiledGuard } from '../../../model/simulation/guardEvaluator';
@@ -138,14 +138,19 @@ function compileGuards(net: CompiledNet, stc: NetStc, lookup: Lookup): Map<strin
     return out;
 }
 
-/** The guard oracle of the core over the frozen snapshot: `self` is the site, `event` the input. */
-function makeGuardOracle(snapshot: SimSnapshot, guards: ReadonlyMap<string, CompiledGuard>): GuardOracle {
+/**
+ * The guard oracle of the core over the frozen snapshot: `self` is the site,
+ * `event` the input, and σ the state the core hands the oracle, read through
+ * the adapter over the net's places (R-SIM-30, R-SIM-43).
+ */
+function makeGuardOracle(snapshot: SimSnapshot, guards: ReadonlyMap<string, CompiledGuard>, places: ReadonlySet<string>): GuardOracle {
     const absent = compileGuard(undefined);
-    return (site, event) =>
-        evaluateGuard(guards.get(site) ?? absent, buildGuardContext(snapshot, { transitionId: site }, { event }));
+    return (site, event, state) =>
+        evaluateGuard(guards.get(site) ?? absent,
+            buildGuardContext(snapshot, { transitionId: site }, { event }, toJjelStateAccess(state, places)));
 }
 
-/** No assignment until the Action lane (R-SIM-17): a step moves the marking only. */
+/** No assignment until lane C (R-SIM-39): a step moves the marking only. */
 export const NO_SIM_ACTIONS: ActionOracle = () => ({ kind: 'ok', assignments: [] });
 
 export type RunStart =
@@ -182,7 +187,7 @@ export function startRun(
             net,
             config: { state: net.initial, event: null },
             halt: null,
-            guards: makeGuardOracle(snapshot, compileGuards(net, stc, lookup)),
+            guards: makeGuardOracle(snapshot, compileGuards(net, stc, lookup), net.places),
             actions: NO_SIM_ACTIONS,
             alphabet: eventAlphabet(stc, view, ids).map(e => e.id),
             signature: runSignature(lookup, modelId, configModelId),

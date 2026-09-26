@@ -23,7 +23,7 @@
  * Pure: JjEL, the shared tri-state and the subset checker.
  */
 
-import { parseExpression } from '../../jjel/parser';
+import { parseExpressionStrict } from '../../jjel/parser';
 import { JjelEvaluator } from '../../jjel/evaluator';
 import type { EvaluationContext } from '../../jjel/evaluator';
 import type { JjelExpression } from '../../jjel/types/ast';
@@ -61,7 +61,7 @@ export function compileGuard(source: string | null | undefined): CompiledGuard {
     const text = source ?? '';
     if (text.trim() === '') return { source: text, expr: null, diagnostics: [], defect: null };
 
-    const parsed = parseExpression(text);
+    const parsed = parseExpressionStrict(text);
     if (parsed.errors.length > 0 || !parsed.expression) {
         const e = parsed.errors[0];
         return {

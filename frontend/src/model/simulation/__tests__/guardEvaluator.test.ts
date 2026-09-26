@@ -17,10 +17,12 @@ import { describe, it, expect } from 'vitest';
 import { EvaluationContext, JjelEvaluator } from '../../../jjel/evaluator';
 import { parseExpression } from '../../../jjel/parser';
 import { evaluateValidation } from '../../validation/validationEvaluator';
-import { buildGuardContext, freezeSnapshot } from '../guardContext';
+import { buildGuardContext, freezeSnapshot, toJjelStateAccess } from '../guardContext';
 import type { SimSnapshot } from '../guardContext';
 import { compileGuard, evaluateGuard } from '../guardEvaluator';
-import type { GuardOutcome } from '../guardEvaluator';
+import type { CompiledGuard, GuardOutcome } from '../guardEvaluator';
+import { candidates, step } from '../netStep';
+import type { ActionOracle, CompiledNet, GuardOracle, NetConfiguration, NetTransition } from '../netTypes';
 
 const MODEL = { id: 'm1', name: 'Machine' };
 
@@ -234,5 +236,104 @@ describe('the rewrites the checker suggests for the eager idiom (ruling 1)', () 
         expect(compileGuard(rewrite).diagnostics).toEqual([]);
         expect(run(rewrite, 'o_t1')).toEqual({ kind: 'true' });
         expect(run(rewrite, 'o_t2')).toEqual({ kind: 'true' });
+    });
+});
+
+// ── wave B2 (P-2026-09-26-1105): guards read σ, parsed strictly (R-SIM-30, R-SIM-41, R-SIM-43) ──
+
+describe('the strict parse (R-SIM-41): trailing tokens are a parse error', () => {
+    it('`a b` is a parse-error defect, not the absent identifier `a`', () => {
+        expect(compileGuard('a b').defect?.reason).toBe('parse-error');
+        expect(run('a b')).toMatchObject({ kind: 'defect', reason: 'parse-error' });
+    });
+
+    it('a true guard followed by a stray token is a parse-error defect, never true', () => {
+        expect(run('self.count == 2 junk')).toMatchObject({ kind: 'defect', reason: 'parse-error' });
+        // control: without the stray token it is true
+        expect(run('self.count == 2')).toEqual({ kind: 'true' });
+    });
+
+    it('without the hook, a state read in a guard is an exception defect (the guard context of step 2)', () => {
+        const out = run('self.[n] > 0');
+        expect(out).toMatchObject({ kind: 'defect', reason: 'exception' });
+        expect(out.kind === 'defect' && out.detail).toMatch(/only in the simulator/);
+    });
+
+    it('`node.[x] > 0` is an E-NODE defect at compile time (R-SIM-18)', () => {
+        expect(compileGuard('node.[x] > 0').defect).toMatchObject({ reason: 'subset' });
+        expect(compileGuard('node.[x] > 0').defect?.detail).toMatch(/^E-NODE: /);
+    });
+});
+
+describe('guards read σ through the adapter, on the Petri core', () => {
+    // p -t-> q ; r -u-> r (a self-loop, always structurally enabled). k = 3, M0 = {p: 3, r: 1}.
+    const tr = (id: string, pre: Record<string, number>, post: Record<string, number>): NetTransition => ({
+        id, origin: [id], inhibitors: [], triggers: [], guardSites: [id], elseOf: null, actionSites: [],
+        preset: Object.entries(pre).map(([place, weight]) => ({ place, weight })),
+        postset: Object.entries(post).map(([place, weight]) => ({ place, weight })),
+    });
+    const net: CompiledNet = {
+        modelId: 'm1', places: new Set(['p', 'q', 'r']), transitions: [tr('t', { p: 1 }, { q: 1 }), tr('u', { r: 1 }, { r: 1 })],
+        bound: 3, final: null, hasEventRole: false, attributes: [], declared: new Map(),
+        initial: { marking: new Map([['p', 3], ['r', 1]]), attrs: new Map(), presentation: new Map() }, defects: [],
+    };
+    const NO_ACTIONS: ActionOracle = () => ({ kind: 'ok', assignments: [] });
+
+    /** A snapshot where p, q, r, t and u are pool handles bound by name, as `buildEvalContext` binds instance names. */
+    function petriSnapshot(): SimSnapshot {
+        const h: Record<string, any> = {};
+        for (const id of ['p', 'q', 'r', 't', 'u']) h[id] = { id, __type: 'Object', name: id };
+        return freezeSnapshot({ instances: Object.values(h), classes: [], ...h }, MODEL);
+    }
+
+    /** The oracle the bridge builds: the compiled guard on the site, with σ through the adapter. */
+    function oracle(texts: Record<string, string>): GuardOracle {
+        const snap = petriSnapshot();
+        const compiled = new Map<string, CompiledGuard>(Object.entries(texts).map(([k, v]) => [k, compileGuard(v)]));
+        return (site, event, state) => evaluateGuard(compiled.get(site) ?? compileGuard(undefined),
+            buildGuardContext(snap, { transitionId: site }, { event }, toJjelStateAccess(state, net.places)));
+    }
+
+    const ids = (c: NetConfiguration, g: GuardOracle) => candidates(net, c, g).candidates.map(x => x.transition);
+    const fire = (c: NetConfiguration, sel: string, g: GuardOracle): NetConfiguration => {
+        const out = step(net, c, sel, g, NO_ACTIONS);
+        if (out.kind !== 'fired') throw new Error(`${sel}: ${out.kind}`);
+        return out.next;
+    };
+    const start: NetConfiguration = { state: net.initial, event: null };
+
+    it('`q.[tokens] > 0` follows the marking: u is a candidate only once t has put a token on q', () => {
+        const g = oracle({ u: 'q.[tokens] > 0' });
+        expect(ids(start, g)).toEqual(['t']);
+        expect(ids(fire(start, 't', g), g)).toEqual(['t', 'u']);
+    });
+
+    it('`q.[marked]` follows the marking the same way', () => {
+        const g = oracle({ u: 'q.[marked]' });
+        expect(ids(start, g)).toEqual(['t']);
+        expect(candidates(net, start, g).evaluated).toContainEqual({ transition: 'u', outcome: { kind: 'false' } });
+        expect(ids(fire(start, 't', g), g)).toEqual(['t', 'u']);
+    });
+
+    it('`q.[tokens] < 2` on t: after two firings t leaves the candidates though p still holds a token', () => {
+        const g = oracle({ t: 'q.[tokens] < 2' });
+        const c2 = fire(fire(start, 't', g), 't', g);
+        expect([c2.state.marking.get('p'), c2.state.marking.get('q')]).toEqual([1, 2]);
+        const cs = candidates(net, c2, g);
+        expect(cs.candidates.map(x => x.transition)).toEqual(['u']);
+        expect(cs.evaluated).toContainEqual({ transition: 't', outcome: { kind: 'false' } });
+    });
+
+    it('`u.[tokens]` on a transition is a defect, never 0; on a place the same guard is true', () => {
+        const out = candidates(net, start, oracle({ u: 'u.[tokens] == 0' })).evaluated.find(e => e.transition === 'u')!.outcome;
+        expect(out).toMatchObject({ kind: 'defect', reason: 'exception' });
+        expect(ids(start, oracle({ u: 'q.[tokens] == 0' }))).toEqual(['t', 'u']);
+    });
+
+    it('an undeclared `p.[visits]` is an exception defect, never false and never null', () => {
+        for (const text of ['p.[visits] > 0', 'p.[visits] == null']) {
+            const out = candidates(net, start, oracle({ u: text })).evaluated.find(e => e.transition === 'u')!.outcome;
+            expect([text, out.kind, out.kind === 'defect' && out.reason]).toEqual([text, 'defect', 'exception']);
+        }
     });
 });

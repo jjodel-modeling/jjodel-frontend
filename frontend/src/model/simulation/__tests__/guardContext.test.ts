@@ -16,8 +16,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createFunction } from '../../../jjel/evaluator';
-import { buildGuardContext, freezeSnapshot, SimSnapshotError } from '../guardContext';
+import { createFunction, JjelEvaluator } from '../../../jjel/evaluator';
+import { parseExpressionStrict } from '../../../jjel/parser';
+import { STATE_RESERVED } from '../../../jjel/stateReserved';
+import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess } from '../guardContext';
+import { stateAccess } from '../netStep';
+import type { SimState } from '../netTypes';
 
 const MODEL = { id: 'm1', name: 'Machine' };
 
@@ -190,5 +194,82 @@ describe('buildGuardContext', () => {
         expect(buildGuardContext(snap, { transitionId: 'o_missing' }, { event: null })).toBeNull();
         expect(buildGuardContext(snap, { transitionId: 'o_t1' }, { event: 'o_missing' })).toBeNull();
         expect(buildGuardContext(snap, { transitionId: 'o_t1' }, { event: 'o_go' })).not.toBeNull();
+    });
+});
+
+// ── wave B2 (P-2026-09-26-1105): the state hook and the adapter (R-SIM-30, R-SIM-43) ──
+
+/** σ over the fixture: T1 carries `n = 2`, T2 `n = 5`; o_door is a place with 2 tokens; T1 has a presentation `color`. */
+function sigma(): SimState {
+    return {
+        marking: new Map([['o_door', 2]]),
+        attrs: new Map([['o_t1', new Map([['n', 2]])], ['o_t2', new Map([['n', 5]])], ['m1', new Map([['x', 1]])]]),
+        presentation: new Map([['o_t1', new Map([['color', 'red']])]]),
+    };
+}
+
+/** The places of the fixture: the door, and `o_empty`, a place with no token. */
+const PLACES: ReadonlySet<string> = new Set(['o_door', 'o_empty']);
+
+const EVAL = new JjelEvaluator();
+const evalOn = (src: string, ctx: any) => EVAL.evaluate(parseExpressionStrict(src).expression!, ctx);
+
+describe('buildGuardContext with the state hook (R-SIM-43)', () => {
+    it('without the fourth argument there is no hook, as before: `.[a]` throws', () => {
+        const snap = freezeSnapshot(makeGlobals(), MODEL);
+        const ctx = buildGuardContext(snap, { transitionId: 'o_t1' }, { event: null })!;
+        expect(ctx.stateAccess).toBeUndefined();
+        expect(() => evalOn('self.[n]', ctx)).toThrow(/only in the simulator/);
+        // control: the same read with the hook answers
+        const hooked = buildGuardContext(snap, { transitionId: 'o_t1' }, { event: null }, toJjelStateAccess(stateAccess(sigma()), PLACES))!;
+        expect(evalOn('self.[n]', hooked)).toBe(2);
+    });
+
+    it('with it, the child scopes of forall and of a lambda see the hook', () => {
+        const snap = freezeSnapshot(makeGlobals(), MODEL);
+        const ctx = buildGuardContext(snap, { transitionId: 'o_t1' }, { event: null }, toJjelStateAccess(stateAccess(sigma()), PLACES))!;
+        expect(evalOn('forall t in Transition.instances : t.[n]', ctx)).toEqual([2, 5]);
+        expect(evalOn('Transition.instances.all(t => t.[n] > 1)', ctx)).toBe(true);
+        expect(evalOn('Transition.instances.all(t => t.[n] > 2)', ctx)).toBe(false);
+    });
+
+    it('the hook is set on the guard\'s own scope: the snapshot base never gets one', () => {
+        const snap = freezeSnapshot(makeGlobals(), MODEL);
+        buildGuardContext(snap, { transitionId: 'o_t1' }, { event: null }, toJjelStateAccess(stateAccess(sigma()), PLACES));
+        expect(snap.base.stateAccess).toBeUndefined();
+        expect(buildGuardContext(snap, { transitionId: 'o_t2' }, { event: null })!.stateAccess).toBeUndefined();
+    });
+});
+
+describe('toJjelStateAccess: marked and tokens on places, the rest delegated (R-SIM-30)', () => {
+    const [MARKED, TOKENS] = STATE_RESERVED.readOnlyAttributes;
+    const adapter = () => toJjelStateAccess(stateAccess(sigma(), 'o_t1'), PLACES);
+
+    it('on a place, marked and tokens come from the marking, not from read()', () => {
+        const a = adapter();
+        expect([a.read('o_door', TOKENS), a.read('o_door', MARKED)]).toEqual([2, true]);
+        expect([a.read('o_empty', TOKENS), a.read('o_empty', MARKED)]).toEqual([0, false]);
+        // control: σ holds no attribute called marked or tokens, so read() alone answers undefined
+        expect(stateAccess(sigma()).read('o_door', MARKED)).toBeUndefined();
+    });
+
+    it('on an element that is not a place both are undefined, so `.[tokens]` throws', () => {
+        const a = adapter();
+        expect([a.read('o_t1', TOKENS), a.read('o_t1', MARKED), a.read('m1', TOKENS)]).toEqual([undefined, undefined, undefined]);
+        const snap = freezeSnapshot(makeGlobals(), MODEL);
+        const ctx = buildGuardContext(snap, { transitionId: 'o_t1' }, { event: null }, a)!;
+        expect(() => evalOn('self.[tokens] == 0', ctx)).toThrow(/not a state attribute/);
+        expect(evalOn('d1.[tokens] == 2', ctx)).toBe(true);
+    });
+
+    it('any other attribute is delegated to read(): declared answers, undeclared stays undefined', () => {
+        const a = adapter();
+        expect([a.read('o_t2', 'n'), a.read('m1', 'x')]).toEqual([5, 1]);
+        expect(a.read('o_door', 'visits')).toBeUndefined();
+    });
+
+    it('readPresentation is delegated: the site\'s presentation only', () => {
+        expect(adapter().readPresentation('color')).toBe('red');
+        expect(toJjelStateAccess(stateAccess(sigma(), 'o_t2'), PLACES).readPresentation('color')).toBeUndefined();
     });
 });
