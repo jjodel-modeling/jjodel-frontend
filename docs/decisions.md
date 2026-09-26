@@ -215,6 +215,22 @@ Source: `docs/ratifiche/claude_ratifiche_2026-09-26_ratification_by_invariants.m
   weeks) or lengthened (a veto on a decision that did not wait, with its class named), and the visual GO moves
   to sampling (RC-23, RC-15).
 
+### Ratifica 2026-09-27: the commit gate of a launched lane (RC-29)
+
+Source: `docs/ratifiche/claude_ratifiche_2026-09-27_commit_ask_under_bypass.md`, decided by chat
+`C-2026-09-26-1702` under RC-25 on Alfonso's request, after both first orchestrated launches stopped at
+their first commit.
+
+- **RC-29** (2026-09-27, provisional, unattended): **The commit gate of a lane is the hook layer, not an
+  `ask`.** Measured on the real tree at `651f10543`: under `-p` and `bypassPermissions` the `ask` on
+  `Bash(git commit*)` holds and refuses the commit; `--allowedTools` does not override it; with the rule removed
+  the commit passes and `bash-guard` keeps every rule of its own (pathspec, `Model:` trailer, push deny). The
+  1640 probe repository (§7 of its report) is not a valid oracle for permission rules. `Bash(git commit*)`
+  leaves `permissions.ask`; `Bash(git push*)` stays. A commit is gated by `bash-guard` and by the lane's gates
+  before it, and reviewed through the digest and the veto of RC-25. Withdraws the interactive human gate on
+  `git commit` of 2026-09-21; RC-19 and RC-25 already carried the rest. Applied to the trunk at once, to
+  `simulation-engine` with the next merge; a lane already running keeps the settings it loaded.
+
 ## Arco A — barra a tab e capi degli edge
 
 - **R-A** (2026-08-05) — Strada B per la barra: tutti i tab montati, gli inattivi nascosti con
