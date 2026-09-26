@@ -255,10 +255,12 @@ describe('actions: one parallel assignment read on σ (spec §4.4, R-SIM-17)', (
         expect(lit.kind === 'fired' && lit.next.state.presentation.get('M')?.get('glow')).toBe(99);
     });
 
-    it('an undeclared target and an action defect halt as action defects', () => {
+    it('an undeclared target halts with its own kind, naming the element and the attribute (R-SIM-70); an action defect halts as one', () => {
         const net = mkNet([tr('t', { p: 1 }, { q: 1 })], { declared: decls });
-        const undeclared = step(net, cfg({ p: 1 }), 't', NO_GUARDS, actionsBy({ 'transition:t': () => [{ element: 'M', attr: 'zz', value: 1 }] }));
-        expect(undeclared.kind === 'halted' && undeclared.reason.kind).toBe('action-defect');
+        const c = cfg({ p: 1 });
+        const undeclared = step(net, c, 't', NO_GUARDS, actionsBy({ 'transition:t': () => [{ element: 'M', attr: 'zz', value: 1 }] }));
+        expect(undeclared.kind === 'halted' && undeclared.reason).toEqual({ kind: 'undeclared', site: { element: 't', role: 'transition' }, element: 'M', attr: 'zz' });
+        expect(undeclared.kind === 'halted' && undeclared.next.state).toBe(c.state);
         const broken = step(net, cfg({ p: 1 }), 't', NO_GUARDS, actionsBy({ 'entry:q': () => 'boom' }));
         expect(broken.kind === 'halted' && broken.reason).toEqual({ kind: 'action-defect', site: { element: 'q', role: 'entry' }, detail: 'boom' });
     });

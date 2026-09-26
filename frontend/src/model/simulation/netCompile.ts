@@ -23,9 +23,12 @@
  */
 
 import type {
-    ActionSite, Arc, CompiledNet, NetDefect, NetModelView, NetStc, NetTransition, SimValue, StateAttributeDecl,
+    ActionSite, Arc, CompiledNet, DeclarationDefect, Domain, NetDefect, NetModelView, NetStc, NetTransition, SimValue,
+    StateAttributeDecl,
 } from './netTypes';
 import type { SimEventInfo, SimModelView } from './types';
+import { STATE_RESERVED } from '../../jjel/stateReserved';
+import { inDomain } from './netStep';
 
 /** A role value: a non-empty string, as the M2 face writes it (R-SIM-2). */
 function pointer(bag: Record<string, unknown>, key: string): string | undefined {
@@ -45,6 +48,7 @@ const ROLE_KEYS: ReadonlyArray<[Exclude<keyof NetStc, 'shape' | 'bound'>, string
     ['initialMarking', 'simInitialMarking'], ['terminal', 'simTerminal'],
     ['ownedTransitions', 'simOwnedTransitions'], ['source', 'simSource'], ['nextState', 'simNextState'],
     ['fork', 'simFork'], ['join', 'simJoin'], ['guard', 'simGuard'],
+    ['action', 'simAction'], ['entry', 'simEntry'], ['exit', 'simExit'],
     ['arc', 'simArc'], ['arcSource', 'simArcSource'], ['arcTarget', 'simArcTarget'],
     ['arcWeight', 'simArcWeight'], ['inhibitorArc', 'simInhibitorArc'],
     ['event', 'simEvent'], ['trigger', 'simTrigger'], ['eventIdentifier', 'simEventIdentifier'],
@@ -347,17 +351,57 @@ function compilePetri(
     return { places, transitions: resolveElse(transitions, isElse, defects, 'transitions share a preset') };
 }
 
+/** A domain as the defects print it: `0..3`, `{A, B}`, `{true, false}`. */
+function domainText(domain: Domain): string {
+    switch (domain.kind) {
+        case 'boolean': return '{true, false}';
+        case 'range': return `${domain.min}..${domain.max}`;
+        case 'enum': return `{${domain.literals.join(', ')}}`;
+    }
+}
+
+/**
+ * What is wrong with one declaration on its own (R-SIM-71): a reserved name,
+ * a metaclass the model does not have, a semantic attribute without a domain,
+ * range bounds that are not integers or are reversed, an initial value outside
+ * the domain or of another type. The initial is checked only on a sound domain.
+ */
+function declarationDefects(decl: StateAttributeDecl, index: number, view: NetModelView): DeclarationDefect[] {
+    const out: DeclarationDefect[] = [];
+    const defect = (code: DeclarationDefect['code'], message: string) => out.push({ index, name: decl.name, code, message });
+    if (STATE_RESERVED.readOnlyAttributes.includes(decl.name)) defect('reserved', 'reserved name');
+    if (decl.metaclass !== null && !view.exists(decl.metaclass)) defect('metaclass', 'unknown metaclass');
+    const domain = decl.domain;
+    if (decl.space !== 'semantic') return out;
+    if (domain === null) {
+        defect('no-domain', 'semantic without a domain');
+        return out;
+    }
+    if (domain.kind === 'range' && !(Number.isInteger(domain.min) && Number.isInteger(domain.max))) {
+        defect('bounds', `bounds ${domain.min}..${domain.max} are not integers`);
+    } else if (domain.kind === 'range' && domain.min > domain.max) {
+        defect('bounds', `min ${domain.min} > max ${domain.max}`);
+    } else if (!inDomain(decl.initial, domain)) {
+        defect('initial', `initial ${String(decl.initial)} outside ${domainText(domain)}`);
+    }
+    return out;
+}
+
 /**
  * The net of one M1 model. `ids` are the model's DObject ids; which ids
  * belong to the model is the caller's reading of the store
- * (`collectModelObjectIds` in the bridge). `decls` are the declared state attributes (R-SIM-19):
- * in 3a they come from the caller, the STC authoring of them is later.
+ * (`collectModelObjectIds` in the bridge). `decls` are the declared state
+ * attributes (R-SIM-19), decoded by the caller from `simStateAttributes`
+ * (`stateAttributesCodec.ts`, R-SIM-67).
  *
  * The initial σ: one token on each place that is a kind of `simInitial`, or,
  * when `simInitialMarking` is set, its value on each place; a value that is not
  * an integer in 0..k is the defect `initial-over-bound` and the place starts
  * empty. Attributes start at their declared initial value; when two
- * declarations give an element the same name, the first one holds.
+ * declarations give an element the same name, the first one holds, and the
+ * second is a declaration defect (`two-spaces` or `twice`, R-SIM-71) reported
+ * once, at the first element where they meet. A defective declaration still
+ * applies where it can: the defects are reported, not enforced.
  */
 export function compileNet(
     stc: NetStc, view: NetModelView, modelId: string, ids: readonly string[],
@@ -391,14 +435,28 @@ export function compileNet(
     const declared = new Map<string, Map<string, StateAttributeDecl>>();
     const attrs = new Map<string, Map<string, SimValue>>();
     const presentation = new Map<string, Map<string, SimValue>>();
-    for (const decl of decls) {
+    const declarationDefectList: DeclarationDefect[] = [];
+    for (const [index, decl] of decls.entries()) {
+        declarationDefectList.push(...declarationDefects(decl, index, view));
         const owners = decl.metaclass === null
             ? [modelId]
             : ids.filter(id => view.exists(id) && view.isInstanceOf(id, decl.metaclass as string));
+        let met = false;
         for (const e of owners) {
             let byName = declared.get(e);
             if (!byName) { byName = new Map(); declared.set(e, byName); }
-            if (byName.has(decl.name)) continue;
+            const first = byName.get(decl.name);
+            if (first) {
+                if (!met) {
+                    met = true;
+                    const twoSpaces = first.space !== decl.space;
+                    declarationDefectList.push({
+                        index, name: decl.name, code: twoSpaces ? 'two-spaces' : 'twice',
+                        message: twoSpaces ? `${first.space} and ${decl.space}` : 'declared twice', element: e,
+                    });
+                }
+                continue;
+            }
             byName.set(decl.name, decl);
             const space = decl.space === 'semantic' ? attrs : presentation;
             let values = space.get(e);
@@ -419,6 +477,7 @@ export function compileNet(
         declared,
         initial: { marking, attrs, presentation },
         defects,
+        declarationDefects: declarationDefectList,
     };
 }
 

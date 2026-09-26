@@ -23,7 +23,11 @@
  * - why an input has no candidate: `inputReason` and `stopReason`, recomputed
  *   from the run and explained guard site by guard site (R-SIM-57..62).
  *
- * Actions return no assignment until lane C (R-SIM-39).
+ * Actions (lane C1, R-SIM-67..71): the declarations are decoded from
+ * `simStateAttributes` at Reset, the `Action` values read by site role into a
+ * table beside the guards, and what never runs is listed with the guards'
+ * defects; the run-time halts stay the backstop. No action role bound: the run
+ * keeps `NO_SIM_ACTIONS`.
  */
 
 import type { ExecutionContext } from '../../../jjscript/types';
@@ -34,11 +38,14 @@ import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess 
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import { compileGuard, evaluateGuard } from '../../../model/simulation/guardEvaluator';
 import type { CompiledGuard, GuardDefectReason } from '../../../model/simulation/guardEvaluator';
+import { actionSiteKey, compileAction, compileActions, foldActionTarget, makeActionOracle } from '../../../model/simulation/actionEvaluator';
+import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
+import { decodeStateAttributes, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../../../model/simulation/objectSlots';
 import type {
-    ActionOracle, Arc, Candidate, CandidateSet, CompiledNet, GuardOracle, HaltReason, NetModelView, NetRunStatus, NetStc,
-    SimStateAccess, StepOutcome,
+    ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, GuardOracle, HaltReason, NetModelView,
+    NetRunStatus, NetStc, SimStateAccess, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import { getSimRun, simCommit } from './simRunState';
 import type { SimRun } from './simRunState';
@@ -153,20 +160,59 @@ function makeGuardOracle(snapshot: SimSnapshot, guards: ReadonlyMap<string, Comp
             buildGuardContext(snapshot, { transitionId: site }, { event }, toJjelStateAccess(state, places)));
 }
 
-/** No assignment until lane C (R-SIM-39): a step moves the marking only. */
+/** The oracle of a run with no action role bound (R-SIM-69): a step moves the marking only. */
 export const NO_SIM_ACTIONS: ActionOracle = () => ({ kind: 'ok', assignments: [] });
 
+/** The `Action` feature of a site's role (R-SIM-69): the transition's own, a place's entry, its exit. */
+export type ActionFeatures = Pick<NetStc, 'action' | 'entry' | 'exit'>;
+
+function actionFeature(features: ActionFeatures, role: ActionSite['role']): string | undefined {
+    return role === 'transition' ? features.action : role === 'entry' ? features.entry : features.exit;
+}
+
 /**
- * What never runs, found at Reset (R-SIM-61): today a guard that does not parse
- * or that the subset checker rejects. Lane C adds actions and declarations.
- * Never a run-time outcome: those depend on σ and are explained by `stopReason`.
+ * Every action of the net, compiled once per run and keyed by `actionSiteKey`
+ * (R-SIM-69): the `0..*` values of the role's feature on the site element, in
+ * order, blanks dropped, read from the raw lookup as the guards are. The sites
+ * are the core's: in Petri an arc is never one.
+ */
+function compileActionTable(net: CompiledNet, features: ActionFeatures, lookup: Lookup): Map<string, CompiledAction[]> {
+    const out = new Map<string, CompiledAction[]>();
+    for (const t of net.transitions) {
+        for (const site of t.actionSites) {
+            const key = actionSiteKey(site);
+            const feature = actionFeature(features, site.role);
+            if (out.has(key) || !feature) continue;
+            // A value that is not a string is still an action: its text makes it a defect.
+            const texts = objectSlotValues(lookup, site.element, feature).map(v => (v === undefined || v === null ? undefined : String(v)));
+            const list = compileActions(texts);
+            if (list.length > 0) out.set(key, list);
+        }
+    }
+    return out;
+}
+
+/**
+ * What never runs, found at Reset (R-SIM-61, R-SIM-70): a guard that does not
+ * parse or that the subset checker rejects; an action that does not parse, that
+ * reads `node` into σ, or whose target, known before the run, is undeclared,
+ * breaks locality or is assigned twice by one transition; a declaration that is
+ * wrong. Never a run-time outcome: those depend on σ and are explained by
+ * `stopReason` or halt the run. A defective guard takes its transition out of
+ * the candidates; a defective action does not: the transition halts if it fires.
  */
 export interface CompileDefect {
+    /** A guard's or an action's element; for a declaration, its name, `record N`, or `state attributes` for the key. */
     readonly element: string;
-    readonly role: 'guard';
-    readonly reason: 'parse-error' | 'subset';
+    readonly role: 'guard' | 'action' | 'declaration';
+    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration';
     readonly detail: string;
+    /** The guard's or the action's text; `''` for a declaration. */
     readonly source: string;
+    /** The site of an action defect; absent for a double target, which is the transition's. */
+    readonly site?: ActionSite;
+    /** The form of the one line, when it is not derived from the detail. */
+    readonly short?: string;
 }
 
 export type RunStart =
@@ -180,6 +226,69 @@ function guardDefectsOf(guards: ReadonlyMap<string, CompiledGuard>): CompileDefe
         if (g.defect) out.push({ element, role: 'guard', reason: g.defect.reason, detail: g.defect.detail, source: g.source });
     }
     return out;
+}
+
+/**
+ * The actions that never run, or that will halt the run whenever they fire,
+ * judged before it (R-SIM-70): a compile defect; a folded target undeclared or
+ * breaking locality, once per site; one folded target twice among the sites of
+ * one transition. A target that reads σ or the event is left to the run.
+ */
+function actionDefectsOf(
+    net: CompiledNet, table: ReadonlyMap<string, readonly CompiledAction[]>, snapshot: SimSnapshot, lookup: Lookup,
+): CompileDefect[] {
+    const out: CompileDefect[] = [];
+    const judged = new Set<string>();
+    for (const t of net.transitions) {
+        const targets = new Set<string>();
+        for (const site of t.actionSites) {
+            const key = actionSiteKey(site);
+            const first = !judged.has(key);
+            judged.add(key);
+            for (const c of table.get(key) ?? []) {
+                const report = (reason: CompileDefect['reason'], detail: string, short?: string) => {
+                    if (first) out.push({ element: site.element, role: 'action', reason, detail, source: c.source, site, ...(short ? { short } : {}) });
+                };
+                if (c.defect !== null) {
+                    report(c.action === null ? 'parse-error' : 'subset', c.defect);
+                    continue;
+                }
+                const target = foldActionTarget(c, site, snapshot);
+                if (target === null) continue;
+                const where = elementName(lookup, target.element);
+                const decl = net.declared.get(target.element)?.get(target.attr);
+                if (!decl) {
+                    report('undeclared', `'${target.attr}' is not declared on ${where}`, `undeclared '${target.attr}' on ${where}`);
+                    continue;
+                }
+                if ((decl.space === 'semantic') === target.onNode) {
+                    report('locality', decl.space === 'semantic'
+                        ? `'${target.attr}' is a semantic attribute: node.[${target.attr}] assigns presentation only`
+                        : `'${target.attr}' is a presentation attribute: only node.[${target.attr}] assigns it`,
+                    `locality, '${target.attr}' is ${decl.space}`);
+                    continue;
+                }
+                const written = `${target.element}\u0000${target.attr}`;
+                if (targets.has(written)) {
+                    out.push({
+                        element: t.id, role: 'action', reason: 'double-assignment', source: c.source,
+                        detail: `${target.attr} of ${where} is assigned twice in one step`, short: `${target.attr} of ${where} assigned twice`,
+                    });
+                }
+                targets.add(written);
+            }
+        }
+    }
+    return out;
+}
+
+/** The declarations' defects as the defects line lists them (R-SIM-70): named by the declaration, the key as `state attributes`. */
+function declarationDefectsOf(defects: readonly DeclarationDefect[], lookup: Lookup): CompileDefect[] {
+    return defects.map(d => {
+        const detail = d.element === undefined ? d.message : `${d.message} on ${elementName(lookup, d.element)}`;
+        const element = d.code === 'key' ? 'state attributes' : d.name ?? `record ${(d.index ?? 0) + 1}`;
+        return { element, role: 'declaration', reason: 'declaration', detail, source: '' };
+    });
 }
 
 /**
@@ -197,7 +306,10 @@ export function startRun(
     if (!stc) return { kind: 'refused', reason: 'The simulation roles are incomplete.' };
     const ids = collectModelObjectIds(lookup, modelId);
     const view = makeNetModelView(lookup, stc.eventIdentifier);
-    const net = compileNet(stc, view, modelId, ids);
+    // The declarations (R-SIM-67, R-SIM-68): an absent key is the empty set, any other value is decoded.
+    const stored = bag?.[STATE_ATTRIBUTES_KEY];
+    const declarations = decodeStateAttributes(stored === undefined || stored === null ? undefined : String(stored));
+    const net = compileNet(stc, view, modelId, ids, declarations.decls);
     const globals = build(evalContextFor(lookup, modelId, projectId), { extentModelId: modelId });
     let snapshot: SimSnapshot;
     try {
@@ -207,6 +319,8 @@ export function startRun(
         throw e;
     }
     const guards = compileGuards(net, stc, lookup);
+    const actionRoles = !!(stc.action || stc.entry || stc.exit);
+    const actions = actionRoles ? compileActionTable(net, stc, lookup) : new Map<string, CompiledAction[]>();
     return {
         kind: 'started',
         run: {
@@ -214,11 +328,15 @@ export function startRun(
             config: { state: net.initial, event: null },
             halt: null,
             guards: makeGuardOracle(snapshot, guards, net.places),
-            actions: NO_SIM_ACTIONS,
+            actions: actionRoles ? makeActionOracle(snapshot, net, actions) : NO_SIM_ACTIONS,
             alphabet: eventAlphabet(stc, view, ids).map(e => e.id),
             signature: runSignature(lookup, modelId, configModelId),
         },
-        compileDefects: guardDefectsOf(guards),
+        compileDefects: [
+            ...guardDefectsOf(guards),
+            ...actionDefectsOf(net, actions, snapshot, lookup),
+            ...declarationDefectsOf([...declarations.defects, ...(net.declarationDefects ?? [])], lookup),
+        ],
     };
 }
 
@@ -284,8 +402,44 @@ export function runSignature(lookup: Lookup, modelId: string, configModelId: str
 // The panel's texts and gates
 // ---------------------------------------------------------------------------
 
-/** The halt line, by reason (R-SIM-29); cleared by Reset. */
-export function haltMessage(reason: HaltReason, lookup: Lookup): string {
+/**
+ * The texts of the actions of a halt's site, read by the role's feature; a
+ * model edit interrupts the run (R-SIM-34), so they are the compiled ones.
+ */
+function siteSources(site: ActionSite, lookup: Lookup, features: ActionFeatures | undefined): string[] {
+    const feature = features ? actionFeature(features, site.role) : undefined;
+    if (!feature) return [];
+    return compileActions(objectSlotValues(lookup, site.element, feature).map(v => (v === undefined || v === null ? undefined : String(v))))
+        .map(c => c.source);
+}
+
+/**
+ * The action a halt names, and the detail without its text (R-SIM-62, R-SIM-70):
+ * an action defect's detail opens with `'<source>': `, a text of the site; an
+ * undeclared target is any action of the site assigning that attribute.
+ */
+function haltSource(reason: HaltReason, lookup: Lookup, features: ActionFeatures | undefined): { sources: string[]; detail: string | null } {
+    if (reason.kind === 'action-defect') {
+        const source = siteSources(reason.site, lookup, features)
+            .filter(x => reason.detail.startsWith(`'${x}': `))
+            .sort((a, b) => b.length - a.length)[0];
+        return source === undefined
+            ? { sources: [], detail: reason.detail }
+            : { sources: [source], detail: reason.detail.slice(source.length + 4) };
+    }
+    if (reason.kind === 'undeclared') {
+        const sources = siteSources(reason.site, lookup, features).filter(x => compileAction(x)?.action?.target.attribute === reason.attr);
+        return { sources, detail: null };
+    }
+    return { sources: [], detail: null };
+}
+
+/**
+ * The halt line, by reason (R-SIM-29); cleared by Reset. Elements by name,
+ * never by id; the text of the action that stopped the run is not in the line
+ * but in its title (`haltTitle`), when the action features are given.
+ */
+export function haltMessage(reason: HaltReason, lookup: Lookup, features?: ActionFeatures): string {
     switch (reason.kind) {
         case 'unsafe':
             return `Halted: unsafe. ${elementName(lookup, reason.place)} would hold ${reason.value} tokens; the bound is ${reason.bound}.`;
@@ -294,8 +448,16 @@ export function haltMessage(reason: HaltReason, lookup: Lookup): string {
         case 'double-assignment':
             return `Halted: ${reason.attr} of ${elementName(lookup, reason.element)} is assigned twice in one step.`;
         case 'action-defect':
-            return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: ${reason.detail}.`;
+            return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: ${haltSource(reason, lookup, features).detail}.`;
+        case 'undeclared':
+            return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: '${reason.attr}' is not declared on ${elementName(lookup, reason.element)}.`;
     }
+}
+
+/** The `title` of the halt line: the line, then the text of the action that stopped the run in brackets (R-SIM-62). */
+export function haltTitle(reason: HaltReason, lookup: Lookup, features?: ActionFeatures): string {
+    const line = haltMessage(reason, lookup, features);
+    return [line, ...haltSource(reason, lookup, features).sources.map(x => `[${x}]`)].join(' ');
 }
 
 function arcsText(arcs: readonly Arc[], lookup: Lookup): string {
@@ -319,7 +481,7 @@ export function candidateLabel(net: CompiledNet, transitionId: string, lookup: L
  * the subset code, the evaluation message without the error class, the type a
  * non-boolean guard returned.
  */
-function defectShort(reason: GuardDefectReason, detail: string): string {
+function defectShort(reason: GuardDefectReason | CompileDefect['reason'], detail: string): string {
     switch (reason) {
         case 'parse-error':
             return `parse error ${detail}`;
@@ -337,26 +499,38 @@ function defectShort(reason: GuardDefectReason, detail: string): string {
 }
 
 /**
+ * Who a compile defect is about, as the line and the title name it: a guard's
+ * or an action's element by name with its role (`t1 guard`, `t1 action`,
+ * `p2 entry`), a declaration by its own name.
+ */
+function defectSubject(d: CompileDefect, lookup: Lookup): string {
+    if (d.role === 'declaration') return d.element;
+    const element = d.site?.element ?? d.element;
+    const role = d.role === 'action' && d.site && d.site.role !== 'transition' ? d.site.role : d.role;
+    return `${elementName(lookup, element.split('#')[0])} ${role}`;
+}
+
+/**
  * The defects of a run at Reset in one line, the first three then a count
- * (R-SIM-37, R-SIM-61): the net's (an element the compiler left out) and the
- * guards' (a transition compiled but never a candidate), in the one wording
- * true for both. `null` when none.
+ * (R-SIM-37, R-SIM-61, R-SIM-70): the net's (an element the compiler left out),
+ * then the guards', the actions' and the declarations', in the one wording true
+ * for all: a defect. `null` when none.
  */
 export function defectsLine(net: CompiledNet, lookup: Lookup, compileDefects: readonly CompileDefect[] = []): string | null {
     const items = [
         ...net.defects.map(d => `${elementName(lookup, d.element)} (${d.message})`),
-        ...compileDefects.map(d => `${elementName(lookup, d.element)} ${d.role} (${defectShort(d.reason, d.detail)})`),
+        ...compileDefects.map(d => `${defectSubject(d, lookup)} (${d.short ?? defectShort(d.reason, d.detail)})`),
     ];
     if (items.length === 0) return null;
     const more = items.length > 3 ? `, and ${items.length - 3} more` : '';
     return `${items.length} defect${items.length === 1 ? '' : 's'}: ${items.slice(0, 3).join('; ')}${more}.`;
 }
 
-/** The `title` of the defects line: every defect in full, one per line, a guard with its source (R-SIM-62). */
+/** The `title` of the defects line: every defect in full, one per line, a guard or an action with its source (R-SIM-62). */
 export function defectsTitle(net: CompiledNet, lookup: Lookup, compileDefects: readonly CompileDefect[] = []): string | null {
     const lines = [
         ...net.defects.map(d => `${elementName(lookup, d.element)}: ${d.message}`),
-        ...compileDefects.map(d => `${elementName(lookup, d.element)} ${d.role}: ${d.detail} [${d.source}]`),
+        ...compileDefects.map(d => `${defectSubject(d, lookup)}: ${d.detail}${d.source === '' ? '' : ` [${d.source}]`}`),
     ];
     return lines.length === 0 ? null : lines.join('\n');
 }
@@ -528,6 +702,8 @@ export interface InputPress {
     readonly pending: readonly Candidate[] | null;
     /** The «Last step» line of the committed step, `null` when nothing was committed. */
     readonly lastStep: string | null;
+    /** Its `title`: the line, then the assignments of the step when it made any (R-SIM-71). */
+    readonly lastStepTitle?: string;
     readonly outcome: StepOutcome | null;
 }
 
@@ -588,5 +764,8 @@ export function pressInput(
     const outcome = step(run.net, cfg, chosen, run.guards, run.actions);
     simCommit(modelId, outcome);
     const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(run, outcome, lookup) : null;
-    return { pending: null, lastStep: lastStepText(outcome, run.net, lookup, input, why), outcome };
+    const lastStep = lastStepText(outcome, run.net, lookup, input, why);
+    const assigned = outcome.label.assignments.map(a => `${elementName(lookup, a.element)}.${a.attr} = ${String(a.value)}`);
+    const lastStepTitle = assigned.length === 0 ? lastStep : `${lastStep}\nassignments: ${assigned.join(', ')}`;
+    return { pending: null, lastStep, lastStepTitle, outcome };
 }

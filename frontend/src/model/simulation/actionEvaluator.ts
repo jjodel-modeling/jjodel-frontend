@@ -4,8 +4,15 @@
  *
  * `compileAction` runs once per `Action` text per run: blank is no action; a
  * text `parseAction` rejects is a compile defect, reported when its site is
- * evaluated, so the core halts the step with `action-defect`. No subset check:
- * the static check of actions arrives with the typed checker of lane C.
+ * evaluated, so the core halts the step with `action-defect`. So is a semantic
+ * assignment whose right-hand side reads `node` (E-NODE of the subset checker,
+ * R-SIM-18, R-SIM-70): presentation never flows into σ. The bridge lists both
+ * at Reset (lane C1), and the transition stays a candidate.
+ *
+ * `foldActionTarget` resolves a target before the run when it depends on
+ * neither σ nor the event (report H4 of lane C): the bridge judges those
+ * statically (undeclared, locality, a double target), and the core's run-time
+ * halts stay for the rest.
  *
  * `makeActionOracle` is the core's `ActionOracle`. For one site it evaluates
  * every action of the site, in order, on the σ the core hands it — the state
@@ -22,10 +29,11 @@
  * `transition`. `node.[a]` reads the presentation of that element only,
  * through the accessor the core built for the site.
  *
- * Not wired: the bridge keeps `NO_SIM_ACTIONS` until lane C brings the action
- * roles and the declarations (R-SIM-39, R-SIM-52).
+ * Wired by the bridge since lane C1 (R-SIM-69); `NO_SIM_ACTIONS` stays the
+ * oracle of a run with no action role bound.
  *
- * Pure: JjEL, the shared diagnostics of `jjelTriState.ts` and the guard context.
+ * Pure: JjEL, the shared diagnostics of `jjelTriState.ts`, the subset checker
+ * and the guard context.
  */
 
 import { parseAction } from '../../jjel/parser';
@@ -36,14 +44,24 @@ import { STATE_RESERVED } from '../../jjel/stateReserved';
 import { describeType, firstAbsence } from '../jjelTriState';
 import { buildGuardContext, toJjelStateAccess } from './guardContext';
 import type { SimSnapshot } from './guardContext';
+import { checkGuardSubset } from './subsetChecker';
 import type { ActionOracle, ActionOutcome, ActionSite, CompiledNet, SimAssignment, SimValue } from './netTypes';
 
 export interface CompiledAction {
     readonly source: string;
     /** `null` when the text does not parse. */
     readonly action: JjelAction | null;
-    /** The parse error, `line:column message`; `null` when the action parsed. */
+    /**
+     * Why the action never runs: the parse error, `line:column message`, or,
+     * with `action` set, the subset error `E-NODE: …`; `null` otherwise.
+     */
     readonly defect: string | null;
+}
+
+/** `node.[a]`: the target is the site's presentation, recognized by syntax (R-SIM-42). */
+function onNode(action: JjelAction): boolean {
+    const object = action.target.object;
+    return object.type === 'Identifier' && object.name === STATE_RESERVED.presentationRoot;
 }
 
 /** Path B, as for guards (`guardEvaluator.ts`): no context at construction, so no builtins. */
@@ -57,6 +75,13 @@ export function compileAction(source: string | null | undefined): CompiledAction
     if (parsed.errors.length > 0 || !parsed.action) {
         const e = parsed.errors[0];
         return { source: text, action: null, defect: e ? `${e.line}:${e.column} ${e.message}` : 'no action produced' };
+    }
+    // A semantic assignment reads σ and M, never presentation (R-SIM-18, report §7.7).
+    if (!onNode(parsed.action) && checkGuardSubset(parsed.action.value, text).some(d => d.code === 'E-NODE')) {
+        return {
+            source: text, action: parsed.action,
+            defect: 'E-NODE: `node` is presentation state: a semantic assignment cannot read it (R-SIM-18).',
+        };
     }
     return { source: text, action: parsed.action, defect: null };
 }
@@ -77,6 +102,13 @@ export function actionSiteKey(site: ActionSite): string {
 }
 
 type Evaluated = { readonly ok: true; readonly value: JjelValue } | { readonly ok: false; readonly why: string };
+
+/** A target resolved before the run: the element, the attribute, and whether it is `node.[a]`. */
+export interface FoldedTarget {
+    readonly element: string;
+    readonly attr: string;
+    readonly onNode: boolean;
+}
 
 /** One expression with diagnostics, as `evaluateTriState` reads them: an exception, then an absence. */
 function evaluate(expr: JjelExpression, ctx: EvaluationContext): Evaluated {
@@ -103,18 +135,47 @@ function isSimValue(value: JjelValue): value is SimValue {
     return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string';
 }
 
+/** Whether an expression reads σ (`.[x]`) or names `event`: then its value is known only in the step. */
+function dependsOnStep(node: unknown): boolean {
+    if (node === null || typeof node !== 'object') return false;
+    if (Array.isArray(node)) return node.some(dependsOnStep);
+    const e = node as { type?: unknown; name?: unknown };
+    if (e.type === 'StateAccess') return true;
+    if (e.type === 'Identifier' && e.name === 'event') return true;
+    return Object.entries(node).some(([key, child]) => key !== 'location' && dependsOnStep(child));
+}
+
+/**
+ * The target of `c` at `site` when it depends on neither σ nor the event
+ * (report H4): `node.[a]` is the site; any other path is evaluated once over
+ * the frozen M, with `self` the site. `null` when it depends on them, when the
+ * action does not parse, or when the path does not resolve to an element: the
+ * run decides then.
+ */
+export function foldActionTarget(c: CompiledAction, site: ActionSite, snapshot: SimSnapshot): FoldedTarget | null {
+    if (c.action === null) return null;
+    const { target } = c.action;
+    if (onNode(c.action)) return { element: site.element, attr: target.attribute, onNode: true };
+    if (dependsOnStep(target.object)) return null;
+    const ctx = buildGuardContext(snapshot, { transitionId: site.element }, { event: null });
+    if (ctx === null) return null;
+    const object = evaluate(target.object, ctx);
+    const id = object.ok && isJjelObject(object.value) ? (object.value as any).id : undefined;
+    return typeof id === 'string' && id !== '' ? { element: id, attr: target.attribute, onNode: false } : null;
+}
+
 /** One action at one site: its assignment, or why there is none. */
 function evaluateAction(
     c: CompiledAction, site: ActionSite, ctx: EvaluationContext, declared: CompiledNet['declared'],
 ): SimAssignment | string {
-    if (c.action === null) return c.defect ?? 'no action produced';
+    if (c.action === null || c.defect !== null) return c.defect ?? 'no action produced';
     const { target, value } = c.action;
     const attr = target.attribute;
 
     // The element: the site for `node`, recognized by syntax (R-SIM-42); otherwise the path over the frozen M.
-    const onNode = target.object.type === 'Identifier' && target.object.name === STATE_RESERVED.presentationRoot;
+    const isNode = onNode(c.action);
     let element = site.element;
-    if (!onNode) {
+    if (!isNode) {
         const object = evaluate(target.object, ctx);
         if (!object.ok) return `the target: ${object.why}`;
         const id = isJjelObject(object.value) ? (object.value as any).id : undefined;
@@ -124,8 +185,8 @@ function evaluateAction(
 
     // Locality (R-SIM-18): an undeclared target is the core's to refuse.
     const decl = declared.get(element)?.get(attr);
-    if (decl?.space === 'semantic' && onNode) return `'${attr}' is a semantic attribute: node.[${attr}] assigns presentation only`;
-    if (decl?.space === 'presentation' && !onNode) return `'${attr}' is a presentation attribute: only node.[${attr}] assigns it`;
+    if (decl?.space === 'semantic' && isNode) return `'${attr}' is a semantic attribute: node.[${attr}] assigns presentation only`;
+    if (decl?.space === 'presentation' && !isNode) return `'${attr}' is a presentation attribute: only node.[${attr}] assigns it`;
 
     const rhs = evaluate(value, ctx);
     if (!rhs.ok) return rhs.why;

@@ -173,7 +173,8 @@ export function admissible(cs: CandidateSet, selector: string | null): boolean {
     return selector === null ? cs.candidates.length === 0 : cs.candidates.some(c => c.transition === selector);
 }
 
-function inDomain(value: SimValue, domain: Domain | null): boolean {
+/** A value of a semantic attribute's domain; `null` (presentation) admits any. The compiler checks initial values with it. */
+export function inDomain(value: SimValue, domain: Domain | null): boolean {
     if (domain === null) return true;
     switch (domain.kind) {
         case 'boolean': return typeof value === 'boolean';
@@ -235,7 +236,7 @@ export function step(
         if (out.kind === 'defect') return halted({ kind: 'action-defect', site, detail: out.detail });
         for (const a of out.assignments) {
             const decl = net.declared.get(a.element)?.get(a.attr);
-            if (!decl) return halted({ kind: 'action-defect', site, detail: `'${a.attr}' is not a declared attribute of ${a.element}` });
+            if (!decl) return halted({ kind: 'undeclared', site, element: a.element, attr: a.attr });
             const key = `${a.element}\u0000${a.attr}`;
             if (written.has(key)) return halted({ kind: 'double-assignment', element: a.element, attr: a.attr });
             written.add(key);

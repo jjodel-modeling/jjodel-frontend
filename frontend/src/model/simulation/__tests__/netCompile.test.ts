@@ -83,6 +83,17 @@ describe('netStcFromRoles (R-SIM-28, R-SIM-31, R-SIM-32)', () => {
         expect(netStcFromRoles(undefined)).toBeNull();
     });
 
+    it('the action keys reach the STC (R-SIM-69): simAction, simEntry, simExit, and the run needs none of them', () => {
+        const stc = netStcFromRoles({ ...petri, simAction: 'A_act', simEntry: 'A_in', simExit: 'A_out' });
+        expect([stc?.action, stc?.entry, stc?.exit]).toEqual(['A_act', 'A_in', 'A_out']);
+        expect(netStcFromRoles({ ...cf, simEntry: 'A_in' })).toEqual({
+            shape: 'control-flow', bound: 1, initial: 'C_Init', ownedTransitions: 'R_out', nextState: 'R_next', entry: 'A_in',
+        });
+        // control: without them the STC has no action field, and it still runs
+        expect(netStcFromRoles(petri)).not.toHaveProperty('action');
+        expect(netStcFromRoles({ ...cf, simAction: '' })).not.toHaveProperty('action');
+    });
+
     it('the Petri shape is recognised by simArc, and needs its six keys', () => {
         expect(netStcFromRoles(petri)?.shape).toBe('petri');
         expect(netStcFromRoles(cf)?.shape).toBe('control-flow');
@@ -482,6 +493,74 @@ describe('the initial state, F and the attributes (R-SIM-19, R-SIM-27, R-SIM-28)
         expect(net.initial.presentation.get('N')?.get('glow')).toBe(false);
         expect(net.initial.attrs.get('N')?.has('glow')).toBe(false);
         expect(net.declared.get('A')?.get('visits')).toBe(decls[0]);
+    });
+});
+
+describe('declaration defects at compile (lane C1, P-2026-09-26-2340, R-SIM-71)', () => {
+    const range = (min: number, max: number) => ({ kind: 'range' as const, min, max });
+    const sem = (name: string, metaclass: string | null, domain: StateAttributeDecl['domain'], initial: StateAttributeDecl['initial']): StateAttributeDecl =>
+        ({ name, metaclass, space: 'semantic', domain, initial });
+    const pres = (name: string, metaclass: string | null, initial: StateAttributeDecl['initial']): StateAttributeDecl =>
+        ({ name, metaclass, space: 'presentation', domain: null, initial });
+    /** Places A (C_Init, a kind of C_Node) and N (C_Node), and the transition T. */
+    const SPEC: Spec = { classes: CLASSES, objects: { A: { cls: 'C_Init' }, N: { cls: 'C_Node' }, T: { cls: 'C_Tr' } } };
+    const defectsOf = (decls: StateAttributeDecl[]) => (compile(CF, SPEC, decls).declarationDefects ?? []).map(d => [d.index, d.name, d.code, d.message]);
+
+    it('well-formed declarations compile with no defect (the control of every case below)', () => {
+        const net = compile(CF, SPEC, [
+            sem('visits', 'C_Node', range(0, 3), 0), sem('f', null, { kind: 'boolean' }, false),
+            sem('mode', null, { kind: 'enum', literals: ['A', 'B'] }, 'B'), pres('color', 'C_Tr', 'grey'), sem('neg', null, range(-2, 2), -1),
+        ]);
+        expect(net.declarationDefects).toEqual([]);
+    });
+
+    it('an initial value outside its domain or of the wrong type (mutant 6: 7 in 0..3 accepted)', () => {
+        expect(defectsOf([sem('visits', 'C_Node', range(0, 3), 7)])).toEqual([[0, 'visits', 'initial', 'initial 7 outside 0..3']]);
+        expect(defectsOf([sem('f', null, { kind: 'boolean' }, 'x')])).toEqual([[0, 'f', 'initial', 'initial x outside {true, false}']]);
+        expect(defectsOf([sem('mode', null, { kind: 'enum', literals: ['A', 'B'] }, 'C')])).toEqual([[0, 'mode', 'initial', 'initial C outside {A, B}']]);
+        expect(defectsOf([sem('visits', 'C_Node', range(0, 3), 1.5)])).toEqual([[0, 'visits', 'initial', 'initial 1.5 outside 0..3']]);
+        // presentation has no domain: any value is its initial
+        expect(defectsOf([pres('glow', 'C_Node', 99)])).toEqual([]);
+    });
+
+    it('a semantic attribute without a domain', () => {
+        expect(defectsOf([sem('visits', 'C_Node', null, 0)])).toEqual([[0, 'visits', 'no-domain', 'semantic without a domain']]);
+    });
+
+    it('min above max, and bounds that are not integers', () => {
+        expect(defectsOf([sem('inv', null, range(5, 1), 5)])).toEqual([[0, 'inv', 'bounds', 'min 5 > max 1']]);
+        expect(defectsOf([sem('half', null, range(0, 2.5), 0)])).toEqual([[0, 'half', 'bounds', 'bounds 0..2.5 are not integers']]);
+    });
+
+    it('a reserved name: marked and tokens are the marking\'s (R-SIM-30)', () => {
+        expect(defectsOf([sem('tokens', 'C_Node', range(0, 3), 0), pres('marked', 'C_Node', true)]).map(d => d.slice(0, 3)))
+            .toEqual([[0, 'tokens', 'reserved'], [1, 'marked', 'reserved']]);
+    });
+
+    it('a metaclass that is not in the model any more: the declaration reaches nothing, and says so', () => {
+        const net = compile(CF, SPEC, [sem('ghost', 'NoSuchClass', range(0, 3), 0)]);
+        expect((net.declarationDefects ?? []).map(d => [d.name, d.code, d.message])).toEqual([['ghost', 'metaclass', 'unknown metaclass']]);
+        expect(net.declared.size).toBe(0);
+    });
+
+    it('the same name in two spaces on one element (mutant 7): semantic on the places, presentation on their superclass', () => {
+        const net = compile(CF, SPEC, [sem('visits', 'C_Init', range(0, 3), 0), pres('visits', 'C_Node', 'x')]);
+        expect((net.declarationDefects ?? []).map(d => [d.index, d.name, d.code, d.element])).toEqual([[1, 'visits', 'two-spaces', 'A']]);
+        // first wins stays the effect: A semantic, N presentation
+        expect(net.declared.get('A')?.get('visits')?.space).toBe('semantic');
+        expect(net.declared.get('N')?.get('visits')?.space).toBe('presentation');
+        // control: the same pair on disjoint metaclasses meets on no element
+        expect(defectsOf([sem('visits', 'C_Init', range(0, 3), 0), pres('visits', 'C_Tr', 'x')])).toEqual([]);
+    });
+
+    it('the same name twice on one element through a subclass, in one space: one defect, first wins', () => {
+        const decls = [sem('visits', 'C_Node', range(0, 3), 0), sem('visits', 'C_Init', range(0, 9), 5)];
+        const net = compile(CF, SPEC, decls);
+        expect((net.declarationDefects ?? []).map(d => [d.index, d.name, d.code, d.element])).toEqual([[1, 'visits', 'twice', 'A']]);
+        expect(net.declared.get('A')?.get('visits')).toBe(decls[0]);
+        expect(net.initial.attrs.get('A')?.get('visits')).toBe(0);
+        // two globals of one name meet on the model
+        expect(defectsOf([sem('x', null, range(0, 1), 0), sem('x', null, range(0, 1), 1)]).map(d => d.slice(0, 3))).toEqual([[1, 'x', 'twice']]);
     });
 });
 
