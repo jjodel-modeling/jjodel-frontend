@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0020
 Chat: C-2026-09-26-1702
 Lane: fast (docs only, one commit, no visual check)
-Status: eseguito 2026-09-27 · lane harness · single commit
+Status: eseguito 2026-09-27 · lane harness · a11224cdb
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, `git log -1` is the commit that adds this file (subject `docs: add prompt P-2026-09-27-0020, probe oracle ticket`), its parent is `620e3d5cd` (RC-29), `git status` empty. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0020 · session <id>]` and ends with an `Outcome:` line (P16).
 
