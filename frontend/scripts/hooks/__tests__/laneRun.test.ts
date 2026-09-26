@@ -24,6 +24,7 @@ const FAKE_CLAUDE = `#!/bin/sh
   echo "--- call"
   echo "cwd=$(pwd -P)"
   echo "path=$PATH"
+  echo "goahead=\${JJODEL_CRITICAL_ZONE_GOAHEAD-unset}"
   for a in "$@"; do echo "arg=$a"; done
   echo "stdin=$(cat | tr '\\n' ' ')"
 } >> "$FAKE_STATE/calls.txt"
@@ -103,6 +104,7 @@ function calls(l: Lab) {
                 path: one('path'),
                 args: lines.filter((x) => x.startsWith('arg=')).map((x) => x.slice(4)),
                 stdin: one('stdin'),
+                goahead: one('goahead'),
             };
         });
 }
@@ -148,6 +150,28 @@ describe('lane-run start', () => {
         expect(c.cwd).toBe(l.worktree);
         expect(c.stdin).toContain(`Prompt-ID: ${ID}`);
         expect(c.path.split(':')[0]).toBe(dirname(process.execPath));
+    });
+
+    test('kills "go-ahead not passed", "go-ahead passed by default": without the flag the child has no JJODEL_CRITICAL_ZONE_GOAHEAD, with it the variable is the Prompt-ID and goahead.txt records it', () => {
+        const l = lab();
+        const r0 = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r0.status, r0.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(calls(l)[0].goahead).toBe('unset');
+        const l2 = lab();
+        const r = laneRun(l2, ['start', l2.worktree, 'prompt.md', '--critical-zone-goahead', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l2), 'exit.txt'))).toBe(true);
+        expect(calls(l2)[0].goahead).toBe(ID);
+        expect(readFileSync(join(laneDir(l2), 'goahead.txt'), 'utf8').trim()).toBe(ID);
+    });
+
+    test('kills "any Prompt-ID accepted as go-ahead": the flag with another lane\'s Prompt-ID is refused before anything runs', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md', '--critical-zone-goahead', 'P-2026-09-27-0035']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('not the Prompt-ID of this lane');
+        expect(calls(l)).toEqual([]);
     });
 
     test('kills "the Prompt-ID guard", "a Prompt-ID in the body counts": a header with no Prompt-ID is refused before anything runs, the exact line in the body notwithstanding', () => {

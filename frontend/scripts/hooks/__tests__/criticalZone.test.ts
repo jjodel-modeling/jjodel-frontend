@@ -168,6 +168,32 @@ function inMode(mode: unknown, tool: 'Edit' | 'Write', toolInput: Record<string,
     return runScript('critical-zone.mjs', event);
 }
 
+describe('critical-zone: the go-ahead of RC-30 under bypass', () => {
+    const six = ROOTS[0] + SIX[0];
+    const withEnv = (mode: string, env: Record<string, string>) => {
+        const event: Record<string, unknown> = { ...file('Edit', { file_path: six, old_string: 'a', new_string: 'b' }) };
+        event.permission_mode = mode;
+        return runScript('critical-zone.mjs', event, env);
+    };
+
+    test('kills "go-ahead ignored": bypass with JJODEL_CRITICAL_ZONE_GOAHEAD set to a Prompt-ID lets the edit through', () => {
+        const r = withEnv('bypassPermissions', { JJODEL_CRITICAL_ZONE_GOAHEAD: 'P-2026-09-27-0035' });
+        expect(r.status).toBe(0);
+        expect(r.decision).toBeNull();
+    });
+
+    test('kills "any value is a go-ahead": bypass with a value that is not a Prompt-ID still denies', () => {
+        const r = withEnv('bypassPermissions', { JJODEL_CRITICAL_ZONE_GOAHEAD: 'yes' });
+        expect(r.decision).toBe('deny');
+        expect(r.reason).toContain(RELAUNCH);
+    });
+
+    test('kills "go-ahead read in default mode": default mode with the variable set still asks', () => {
+        const r = withEnv('default', { JJODEL_CRITICAL_ZONE_GOAHEAD: 'P-2026-09-27-0035' });
+        expect(r.decision).toBe('ask');
+    });
+});
+
 const RELAUNCH = 'critical-zone lane: relaunch this session without --dangerously-skip-permissions (RC-19)';
 const TODAY_REASON =
     'critical-zone: VersionFixer.tsx is a Layer Impact Report trigger (CLAUDE.md 3.2, docs/PROTOCOL.md P5). ' +

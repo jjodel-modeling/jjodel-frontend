@@ -30,30 +30,13 @@ import { markCanvasUpdatedBatch } from '../sync/syncState';
 import { JjodelEvents } from '../../../events/registry';
 
 /**
- * Find a model element (DClass or DPackage) inside the given model.
- * Used to set `_lastSelected.modelElement` so that `Selectors.getActiveModel()`
- * can resolve the correct parent DModel via the `.model` getter chain.
+ * The element `_lastSelected.modelElement` points to when the editor has no
+ * selection (tab open, pane click, deselectAll): the model itself, so the
+ * Properties rail shows the metamodel or model and not its root package or
+ * first class. DModel extends DModelElement and `.model` resolves a DModel
+ * to itself, so `Selectors.getActiveModel()` still finds this model.
  */
 function findModelElement(modelid: string): string {
-    try {
-        const state: DState = store.getState();
-        const rawModel = state.idlookup?.[modelid] as any;
-        if (!rawModel) return modelid; // model not in store yet — use model ID directly
-
-        for (const pkgId of (rawModel.packages ?? [])) {
-            const pkg = state.idlookup?.[pkgId] as any;
-            if (!pkg) continue;
-            // Prefer a class (most common model element)
-            for (const classId of (pkg.classes ?? [])) {
-                if (classId) return classId;
-            }
-            // Fallback to the package itself (DPackage is a DModelElement)
-            return pkgId;
-        }
-    } catch { /* ignore */ }
-    // Last resort: use the model ID itself.
-    // DModel extends DModelElement, so Selectors.getActiveModel()
-    // resolves me.model → self for a DModel.
     return modelid;
 }
 

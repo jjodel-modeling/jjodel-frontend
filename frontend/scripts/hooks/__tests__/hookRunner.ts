@@ -25,9 +25,9 @@ export interface HookResult {
     reason: string;
 }
 
-export function runScript(script: string, payload: unknown): HookResult {
+export function runScript(script: string, payload: unknown, env: Record<string, string> = {}): HookResult {
     const input = typeof payload === 'string' ? payload : JSON.stringify(payload);
-    const r = spawnSync(NODE, [resolve(HOOKS_DIR, script)], { input, encoding: 'utf8', timeout: 20000 });
+    const r = spawnSync(NODE, [resolve(HOOKS_DIR, script)], { input, encoding: 'utf8', timeout: 20000, env: { ...process.env, ...env } });
     let decision: string | null = null;
     let reason = '';
     if (r.stdout.trim() !== '') {

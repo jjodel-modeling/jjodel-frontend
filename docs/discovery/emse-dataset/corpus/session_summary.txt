@@ -1,3 +1,0 @@
-session_files_in_repo=1
-discovery_docs=75
-spec_docs=0
