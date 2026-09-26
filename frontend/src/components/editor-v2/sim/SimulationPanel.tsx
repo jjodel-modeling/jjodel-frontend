@@ -6,10 +6,11 @@
  *
  * Two faces, one component:
  *
- * - M2 face (metamodel): the simulation ROLES in four groups (step 3b, R-SIM-37),
- *   written into the `data.state` bag of the M2 model with flat `sim*` keys and
- *   pointer values (R-SIM-2), the bound as a digit string. Persisted, undoable,
- *   shared in collaborative — it is authoring.
+ * - M2 face (metamodel): the simulation ROLES in five groups (step 3b, R-SIM-37;
+ *   Data, lane C1, R-SIM-71), written into the `data.state` bag of the M2 model
+ *   with flat `sim*` keys and pointer values (R-SIM-2), the bound as a digit
+ *   string, the declared state attributes as one JSON string (R-SIM-67).
+ *   Persisted, undoable, shared in collaborative — it is authoring.
  * - M1 face (model): Reset / Step / Stop and the event buttons over a run of the
  *   Petri core (model/simulation/net*.ts), built and stepped by the bridge
  *   (simBridge.ts) and kept in the `simRunState` singleton, outside Redux
@@ -28,20 +29,22 @@
 
 import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { connect, useSelector } from 'react-redux';
-import { DState, DUser, LPointerTargetable, store } from '../../../joiner';
+import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
 import { getSimRun, simClear, simReset } from './simRunState';
 import {
-    ROLE_SPECS, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
+    ROLE_SPECS, STATE_ATTRIBUTES_SPEC, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
 } from './simRoleStatus';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, inputReason, makeNetModelView, panelInputs, pressInput,
-    runSignature, startRun, stopReason,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputReason, makeNetModelView, panelInputs,
+    pressInput, runSignature, startRun, stopReason,
 } from './simBridge';
 import type { InputLabel, StopReason } from './simBridge';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
+import { encodeStateAttributes, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import type { Candidate, NetRunStatus } from '../../../model/simulation/netTypes';
 import type { SimEventInfo } from '../../../model/simulation/types';
@@ -52,9 +55,19 @@ import './simulation-panel.scss';
 const ROLE_KEYS: RoleKey[] = ROLE_SPECS.map(r => r.key);
 
 interface MetaOption { id: string; name: string }
-interface MetaOptions { classes: MetaOption[]; compositions: MetaOption[]; references: MetaOption[]; attributes: MetaOption[] }
+interface MetaOptions {
+    classes: MetaOption[]; compositions: MetaOption[]; references: MetaOption[]; attributes: MetaOption[];
+    /** The Data group (R-SIM-71): attributes typed `Expression` or EString, `Action` or EString; classes abstract included. */
+    expressionAttributes: MetaOption[]; actionAttributes: MetaOption[]; allClasses: MetaOption[];
+}
 
-const EMPTY_OPTIONS: MetaOptions = { classes: [], compositions: [], references: [], attributes: [] };
+const EMPTY_OPTIONS: MetaOptions = {
+    classes: [], compositions: [], references: [], attributes: [], expressionAttributes: [], actionAttributes: [], allClasses: [],
+};
+
+/** The types a guard feature may have, and an action feature (R-SIM-44): the lane-A type, or EString. */
+const EXPRESSION_TYPES: ReadonlySet<string> = new Set([Defaults.Pointer_EXPRESSION, Defaults.Pointer_ESTRING]);
+const ACTION_TYPES: ReadonlySet<string> = new Set([Defaults.Pointer_ACTION, Defaults.Pointer_ESTRING]);
 
 // ---------------------------------------------------------------------------
 // D-layer readers — raw idlookup, no L proxies: mapStateToProps runs on every
@@ -72,6 +85,9 @@ function collectMetaOptions(lookup: any, modelId: string): MetaOptions {
     const compositions: MetaOption[] = [];
     const references: MetaOption[] = [];
     const attributes: MetaOption[] = [];
+    const expressionAttributes: MetaOption[] = [];
+    const actionAttributes: MetaOption[] = [];
+    const allClasses: MetaOption[] = [];
     const seenContainers = new Set<string>();
 
     const visit = (containerId: string, depth: number): void => {
@@ -88,6 +104,8 @@ function collectMetaOptions(lookup: any, modelId: string): MetaOptions {
                 if (!dClass) continue;
                 const className: string = dClass.name ?? cid;
                 if (!dClass.abstract) classes.push({ id: cid, name: className });
+                // A state attribute may be declared on an abstract class: its instances are its subclasses'.
+                allClasses.push({ id: cid, name: className });
                 // Attributes of every class, abstract ones included: an identifier
                 // declared on a superclass is inherited by the event metaclass.
                 const attrIds = dClass.attributes ?? [];
@@ -95,7 +113,11 @@ function collectMetaOptions(lookup: any, modelId: string): MetaOptions {
                     for (const aid of attrIds) {
                         if (typeof aid !== 'string') continue;
                         const dAttr = lookup[aid];
-                        if (dAttr) attributes.push({ id: aid, name: `${className}.${dAttr.name ?? aid}` });
+                        if (!dAttr) continue;
+                        const option: MetaOption = { id: aid, name: `${className}.${dAttr.name ?? aid}` };
+                        attributes.push(option);
+                        if (EXPRESSION_TYPES.has(dAttr.type)) expressionAttributes.push(option);
+                        if (ACTION_TYPES.has(dAttr.type)) actionAttributes.push(option);
                     }
                 }
                 const refIds = dClass.references ?? [];
@@ -127,7 +149,8 @@ function collectMetaOptions(lookup: any, modelId: string): MetaOptions {
     const byName = (a: MetaOption, b: MetaOption) => a.name.localeCompare(b.name);
     return {
         classes: classes.sort(byName), compositions: compositions.sort(byName), references: references.sort(byName),
-        attributes: attributes.sort(byName),
+        attributes: attributes.sort(byName), expressionAttributes: expressionAttributes.sort(byName),
+        actionAttributes: actionAttributes.sort(byName), allClasses: allClasses.sort(byName),
     };
 }
 
@@ -141,13 +164,15 @@ function overlapMessage(lookup: any, overlap: RoleOverlap): string {
 // Component
 // ---------------------------------------------------------------------------
 
-/** The groups of the M2 face (R-SIM-37), in ROLE_SPECS order within each. */
+/** The groups of the M2 face (R-SIM-37, R-SIM-71), in ROLE_SPECS order within each. */
 const ROLE_GROUPS: ReadonlyArray<{ id: string; title: string; keys: readonly RoleKey[] }> = [
-    { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simBound', 'simTransition', 'simGuard'] },
+    { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simBound', 'simTransition'] },
     { id: 'control-flow', title: 'Control flow', keys: ['simOwnedTransitions', 'simSource', 'simNextState', 'simFork', 'simJoin'] },
     { id: 'petri', title: 'Petri net', keys: ['simArc', 'simArcSource', 'simArcTarget', 'simArcWeight', 'simInhibitorArc'] },
     // No Event select: the event class is the Trigger's type (R-SIM-38), shown read-only after Trigger.
     { id: 'events', title: 'Events', keys: ['simTrigger', 'simEventIdentifier'] },
+    // The guard moved here from General (R-SIM-71); the declarations table follows the four roles.
+    { id: 'data', title: 'Data', keys: ['simGuard', 'simAction', 'simEntry', 'simExit'] },
 ];
 
 /** The project of the current user, as validation reads it (validationContext.ts); '' when none. */
@@ -157,6 +182,203 @@ function projectIdOfUser(): string {
     } catch {
         return '';
     }
+}
+
+// ---------------------------------------------------------------------------
+// The declared state attributes of the Data group (R-SIM-19, R-SIM-67, R-SIM-71)
+// ---------------------------------------------------------------------------
+
+/** An editable cell of a declaration row. */
+type DeclField = 'name' | 'metaclass' | 'initial' | 'space' | 'kind' | 'min' | 'max' | 'literals';
+
+interface StateAttributesTableProps {
+    /** The raw string of `simStateAttributes`, `null` when unset. */
+    raw: string | null;
+    /** Every class of the metamodel, abstract ones included. */
+    classes: MetaOption[];
+    onCommit: (value: string) => void;
+}
+
+/** The first name `x1`, `x2`, … no row uses: a new declaration is never nameless. */
+function freshName(rows: readonly StateAttributeRecord[]): string {
+    for (let n = 1; ; n++) if (!rows.some(r => r.name === `x${n}`)) return `x${n}`;
+}
+
+/**
+ * The declarations as a table: one row of two fixed lines per declaration
+ * (name, metaclass or global, initial value as a JjEL literal; space, domain
+ * kind and its fields). A text cell commits on blur or Enter, a select on
+ * change: one write of the whole string per edit, never one per keystroke
+ * (report risk 2); Escape drops the edit. What was typed stays shown until the
+ * store gives the string back, so a deferred commit does not flicker.
+ */
+function StateAttributesTable({ raw, classes, onCommit }: StateAttributesTableProps): ReactElement {
+    const { rows, readable } = useMemo(() => stateAttributeRows(raw ?? undefined), [raw]);
+    const [drafts, setDrafts] = useState<Record<string, string>>({});
+    useEffect(() => { setDrafts({}); }, [raw]);
+
+    const keyOf = (index: number, field: DeclField) => `${index}:${field}`;
+    const drop = (key: string) => setDrafts(d => {
+        const rest = { ...d };
+        delete rest[key];
+        return rest;
+    });
+
+    /** Writes the rows unless they give back the string already stored; `true` when it wrote. */
+    const commit = (next: StateAttributeRecord[]): boolean => {
+        const value = encodeStateAttributes(next);
+        if (readable && raw !== null && value === encodeStateAttributes(rows)) return false;
+        onCommit(value);
+        return true;
+    };
+
+    const patchOf = (row: StateAttributeRecord, field: DeclField, typed: string): Partial<StateAttributeRecord> | null => {
+        switch (field) {
+            case 'name': return { name: typed.trim() };
+            case 'initial': return { initial: typed.trim() };
+            case 'metaclass': return { metaclass: typed === '' ? null : typed };
+            case 'space':
+                // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed.
+                return typed === 'presentation'
+                    ? { space: 'presentation', domain: null }
+                    : { space: 'semantic', domain: row.domain ?? { kind: 'boolean' } };
+            case 'kind':
+                return {
+                    domain: typed === 'range' ? { kind: 'range', min: 0, max: 1 }
+                        : typed === 'enum' ? { kind: 'enum', literals: [] } : { kind: 'boolean' },
+                };
+            case 'literals':
+                return { domain: { kind: 'enum', literals: typed.split(',').map(x => x.trim()).filter(x => x !== '') } };
+            case 'min':
+            case 'max': {
+                const n = Number(typed);
+                if (typed.trim() === '' || !Number.isFinite(n) || row.domain?.kind !== 'range') return null;
+                return { domain: { kind: 'range', min: field === 'min' ? n : row.domain.min, max: field === 'max' ? n : row.domain.max } };
+            }
+        }
+    };
+
+    /** One cell into its row, and the rows into the key; a draft with no write is dropped at once. */
+    const commitCell = (index: number, field: DeclField, typed: string | undefined): void => {
+        const key = keyOf(index, field);
+        const row = rows[index];
+        const patch = row && typed !== undefined ? patchOf(row, field, typed) : null;
+        if (!patch || !commit(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)))) drop(key);
+    };
+
+    const shown = (index: number, field: DeclField, stored: string) => drafts[keyOf(index, field)] ?? stored;
+
+    const textCell = (index: number, field: DeclField, stored: string, label: string, placeholder: string, extra: string) => (
+        <input
+            type="text"
+            className={`sim-panel__input ${extra}`}
+            aria-label={label}
+            placeholder={placeholder}
+            value={shown(index, field, stored)}
+            onChange={e => { const v = e.target.value; setDrafts(d => ({ ...d, [keyOf(index, field)]: v })); }}
+            onBlur={() => commitCell(index, field, drafts[keyOf(index, field)])}
+            onKeyDown={e => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+                if (e.key === 'Escape') drop(keyOf(index, field));
+            }}
+        />
+    );
+
+    /** A select commits at once; its draft holds the choice until the store answers. */
+    const choose = (index: number, field: DeclField, value: string): void => {
+        setDrafts(d => ({ ...d, [keyOf(index, field)]: value }));
+        commitCell(index, field, value);
+    };
+
+    const add = (): void => {
+        commit([...rows, { name: freshName(rows), metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' }]);
+    };
+
+    return (
+        <div className="sim-panel__decls">
+            <div className="sim-panel__decls-title">{STATE_ATTRIBUTES_SPEC.label}</div>
+            {!readable && (
+                <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line"
+                    title="The stored declarations are not readable. Adding an attribute replaces them.">
+                    The stored declarations are not readable. Adding an attribute replaces them.
+                </div>
+            )}
+            {rows.map((r, i) => {
+                const n = i + 1;
+                const semantic = shown(i, 'space', r.space) !== 'presentation';
+                const kind = shown(i, 'kind', r.domain?.kind ?? '');
+                return (
+                    <div className="sim-panel__decl" key={i}>
+                        <div className="sim-panel__decl-line">
+                            {textCell(i, 'name', r.name, `Name of state attribute ${n}`, 'name', 'sim-panel__decl-name')}
+                            <select
+                                className="sim-panel__select sim-panel__decl-owner"
+                                aria-label={`Metaclass of state attribute ${n}`}
+                                value={shown(i, 'metaclass', r.metaclass ?? '')}
+                                onChange={e => choose(i, 'metaclass', e.target.value)}
+                            >
+                                <option value="">Global</option>
+                                {r.metaclass && !classes.some(c => c.id === r.metaclass) && (
+                                    <option value={r.metaclass}>Unknown metaclass</option>
+                                )}
+                                {classes.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}
+                            </select>
+                            {textCell(i, 'initial', r.initial, `Initial value of state attribute ${n}, a JjEL literal`, 'initial', 'sim-panel__decl-initial')}
+                            <button
+                                type="button"
+                                className="sim-panel__decl-remove"
+                                title="Remove"
+                                aria-label={`Remove state attribute ${n}`}
+                                onClick={() => commit(rows.filter((_, j) => j !== i))}
+                            >
+                                <i className="bi bi-x" />
+                            </button>
+                        </div>
+                        <div className="sim-panel__decl-line">
+                            <select
+                                className="sim-panel__select sim-panel__decl-space"
+                                aria-label={`Space of state attribute ${n}`}
+                                value={semantic ? 'semantic' : 'presentation'}
+                                onChange={e => choose(i, 'space', e.target.value)}
+                            >
+                                <option value="semantic">semantic</option>
+                                <option value="presentation">presentation</option>
+                            </select>
+                            {/* Presentation has no domain: the cells stay, hidden, so the row keeps its layout. */}
+                            <select
+                                className={`sim-panel__select sim-panel__decl-kind${semantic ? '' : ' sim-panel__decl-hidden'}`}
+                                aria-label={`Domain of state attribute ${n}`}
+                                aria-hidden={!semantic}
+                                tabIndex={semantic ? undefined : -1}
+                                value={kind}
+                                onChange={e => choose(i, 'kind', e.target.value)}
+                            >
+                                {kind === '' && <option value="" disabled>domain</option>}
+                                <option value="boolean">boolean</option>
+                                <option value="range">range</option>
+                                <option value="enum">enum</option>
+                            </select>
+                            <span className={`sim-panel__decl-domain${semantic ? '' : ' sim-panel__decl-hidden'}`}>
+                                {semantic && r.domain?.kind === 'range' && kind === 'range' && (
+                                    <>
+                                        {textCell(i, 'min', String(r.domain.min), `Minimum of state attribute ${n}`, 'min', 'sim-panel__decl-bound')}
+                                        {textCell(i, 'max', String(r.domain.max), `Maximum of state attribute ${n}`, 'max', 'sim-panel__decl-bound')}
+                                    </>
+                                )}
+                                {semantic && r.domain?.kind === 'enum' && kind === 'enum' && (
+                                    textCell(i, 'literals', r.domain.literals.join(', '), `Literals of state attribute ${n}`, 'A, B', 'sim-panel__decl-literals')
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                );
+            })}
+            <button type="button" className="sim-panel__decl-add" onClick={add}>
+                <i className="bi bi-plus" />
+                <span>Add attribute</span>
+            </button>
+        </div>
+    );
 }
 
 /** A choice waiting for the user (R-SIM-35): the input and its candidates. */
@@ -169,7 +391,7 @@ interface PendingChoice {
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
-    const { modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName } = props;
+    const { modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, stateAttributesRaw } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
     // and the warning of a run started despite an overlap (no event role, R-SIM-16 parity).
@@ -182,7 +404,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // version of the 'mark' channel does not follow. `tick` re-reads the run.
     const [tick, setTick] = useState(0);
     const [pending, setPending] = useState<PendingChoice | null>(null);
-    const [lastStep, setLastStep] = useState<string | null>(null);
+    // «Last step» and its title, which lists the assignments of the step (R-SIM-71).
+    const [lastStep, setLastStep] = useState<{ text: string; title: string } | null>(null);
     const [defects, setDefects] = useState<{ line: string; title: string } | null>(null);
     const [interrupted, setInterrupted] = useState(false);
     // The list of reasons under the status row, opened by the user only (R-SIM-58, R-SIM-63).
@@ -247,6 +470,14 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         lmm.state = { [key]: value === '' ? undefined : value };
     }, [configModelId, roles, options]);
 
+    /** The declarations (R-SIM-67): the whole string in one write, `attrs: []` for none, never `undefined`. */
+    const writeStateAttributes = useCallback((value: string): void => {
+        if (!configModelId) return;
+        const lmm: any = LPointerTargetable.fromPointer(configModelId);
+        if (!lmm) return;
+        lmm.state = { [STATE_ATTRIBUTES_SPEC.key]: value };
+    }, [configModelId]);
+
     // The run of this model, read on the panel's renders: the ones its own state
     // triggers (tick) and the ones connect triggers; never on the version.
     const run = isModelMode ? getSimRun(modelid) : undefined;
@@ -278,7 +509,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const r = getSimRun(modelid);
         if (!r) {
             return {
-                status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as string | null,
+                status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as { line: string; title: string } | null,
                 reason: null as StopReason | null, noCandidate: new Map<string | null, string>(),
             };
         }
@@ -294,15 +525,17 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 if (why) noCandidate.set(e, why.full);
             }
         }
+        // The halt names elements, never ids; the action that stopped the run is in its title only (R-SIM-62, R-SIM-70).
+        const features = { action: roles.simAction, entry: roles.simEntry, exit: roles.simExit };
         return {
             status,
             inputs,
-            halt: r.halt ? haltMessage(r.halt, lookup) : null,
+            halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features) } : null,
             reason: status === 'Deadlock' ? stopReason(r, lookup, label, roles.simGuard) : null,
             noCandidate,
         };
         // tick is the real input of this memo: the run changes only through this panel.
-    }, [isModelMode, rolesComplete, modelid, tick, events, roles.simGuard]);
+    }, [isModelMode, rolesComplete, modelid, tick, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit]);
 
     const onReset = useCallback((): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
@@ -341,7 +574,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         // One line for the net's defects and the guards' (R-SIM-61), every defect in full in its title.
         const line = defectsLine(started.run.net, lookup, started.compileDefects);
         setDefects(line === null ? null : { line, title: defectsTitle(started.run.net, lookup, started.compileDefects) ?? line });
-        setLastStep('Reset');
+        setLastStep({ text: 'Reset', title: 'Reset' });
         setTick(t => t + 1);
     }, [modelid, roles, configModelId]);
 
@@ -367,7 +600,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
         const pressed = pressInput(modelid, event, selector, lookup, input);
         setPending(pressed.pending ? { event, input, candidates: pressed.pending } : null);
-        if (pressed.lastStep !== null) setLastStep(pressed.lastStep);
+        if (pressed.lastStep !== null) setLastStep({ text: pressed.lastStep, title: pressed.lastStepTitle ?? pressed.lastStep });
         setReasonsOpen(false);
         setTick(t => t + 1);
     }, [modelid, events]);
@@ -378,7 +611,22 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (kind === 'class') return options.classes;
         if (kind === 'composition') return options.compositions;
         if (kind === 'attribute') return options.attributes;
+        if (kind === 'expression') return options.expressionAttributes;
+        if (kind === 'action') return options.actionAttributes;
         return options.references;
+    };
+
+    /**
+     * The options of a role's select. A Data role bound to an attribute its
+     * type filter leaves out (bound before the filter existed) keeps its option,
+     * so the select never shows the placeholder over a set key.
+     */
+    const selectOptions = (spec: RoleSpec): MetaOption[] => {
+        const list = optionsFor(spec.kind);
+        const bound = roles[spec.key];
+        if (!bound || (spec.kind !== 'expression' && spec.kind !== 'action') || list.some(o => o.id === bound)) return list;
+        const kept = options.attributes.find(o => o.id === bound);
+        return kept ? [kept, ...list] : list;
     };
 
     /** Groups open by default: the ones the shape uses, and Events when any of its keys is set. */
@@ -387,6 +635,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (id === 'control-flow') return !petriShape;
         if (id === 'petri') return petriShape;
         if (id === 'events') return !!(roles.simTrigger || roles.simEventIdentifier);
+        if (id === 'data') return !!(roles.simGuard || roles.simAction || roles.simEntry || roles.simExit || stateAttributesRaw);
         return true;
     };
 
@@ -410,7 +659,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     onChange={e => writeRole(spec.key, e.target.value)}
                 >
                     <option value="">{spec.placeholder}</option>
-                    {optionsFor(spec.kind).map(o => (
+                    {selectOptions(spec).map(o => (
                         <option value={o.id} key={o.id}>{o.name}</option>
                     ))}
                 </select>
@@ -501,6 +750,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                             {isOpen && ROLE_SPECS.filter(spec => group.keys.includes(spec.key)).flatMap(spec => (
                                                 spec.key === 'simTrigger' ? [renderRole(spec), renderEventClass()] : [renderRole(spec)]
                                             ))}
+                                            {isOpen && group.id === 'data' && (
+                                                <StateAttributesTable raw={stateAttributesRaw} classes={options.allClasses} onCommit={writeStateAttributes} />
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -527,7 +779,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {defects && (
                             <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
                         )}
-                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={view.halt}>{view.halt}</div>}
+                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={view.halt.title}>{view.halt.line}</div>}
                         <div className="sim-panel__actions">
                             <button type="button" className="sim-panel__btn" title="Reset" onClick={onReset}>
                                 <i className="bi bi-skip-backward-fill" />
@@ -604,7 +856,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             </div>
                         )}
                         {lastStep && (
-                            <div className="sim-panel__hint sim-panel__hint--line" title={`Last step: ${lastStep}`}>{`Last step: ${lastStep}`}</div>
+                            <div className="sim-panel__hint sim-panel__hint--line" title={`Last step: ${lastStep.title}`}>{`Last step: ${lastStep.text}`}</div>
                         )}
                         {/* In Deadlock the row says why, on its one line, and opens the list per input (R-SIM-58). */}
                         <div
@@ -665,6 +917,12 @@ interface StateProps {
     eventSig: string;
     /** Name of the derived event class, for the read-only row of the M2 face; '' without one. */
     eventClassName: string;
+    /**
+     * The raw `simStateAttributes` string of the M2 face, `null` when unset or on
+     * the M1 face: a primitive of its own, parsed in the table's memo, never
+     * folded into roleSig (report risk 1).
+     */
+    stateAttributesRaw: string | null;
 }
 
 interface DispatchProps { }
@@ -693,6 +951,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             : '',
         eventSig: ownProps.isModelMode ? eventSigOf(lookup, ownProps.modelid, roles) : '',
         eventClassName: roles.simEvent ? (lookup[roles.simEvent]?.name || roles.simEvent) : '',
+        stateAttributesRaw: !ownProps.isModelMode && typeof bag[STATE_ATTRIBUTES_SPEC.key] === 'string' ? bag[STATE_ATTRIBUTES_SPEC.key] : null,
     };
 }
 

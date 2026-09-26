@@ -542,6 +542,132 @@
         overflow-wrap: anywhere;
     }
 
+    // -- M2 face: the declared state attributes of the Data group (lane C1, R-SIM-71) --
+    // One row of two fixed lines per declaration: a domain kind that shows other
+    // cells, or a space that hides them, never changes the height of a row. The
+    // controls keep the box of `__input` and `__select`; these rules only size them.
+    &__decls {
+        margin-top: 8px;
+    }
+
+    &__decls-title {
+        margin-bottom: 4px;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__decl {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        height: 60px;
+        box-sizing: border-box;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__decl-line {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        min-width: 0;
+    }
+
+    &__decl-name,
+    &__decl-owner {
+        flex: 1 1 0;
+    }
+
+    &__decl-initial {
+        flex: 0 0 52px;
+    }
+
+    &__decl-space {
+        flex: 0 0 88px;
+    }
+
+    &__decl-kind {
+        flex: 0 0 68px;
+    }
+
+    &__decl-domain {
+        display: flex;
+        flex: 1 1 0;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    &__decl-bound,
+    &__decl-literals {
+        flex: 1 1 0;
+    }
+
+    &__decl-hidden {
+        visibility: hidden;
+    }
+
+    &__decl-remove {
+        display: inline-flex;
+        flex: 0 0 20px;
+        align-items: center;
+        justify-content: center;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 1px;
+        }
+
+        // Follows the button's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+    }
+
+    // In the vocabulary of `__cancel`: a text action, not a primary button.
+    &__decl-add {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        border-top: 1px solid var(--color-border-secondary);
+        width: 100%;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+    }
+
     // Status dot — an indicator, so cyan is allowed here (design system §7.1:
     // cyan never as a button background).
     &__dot {

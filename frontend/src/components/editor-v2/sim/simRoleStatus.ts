@@ -7,6 +7,8 @@
  * SimulationPanel.tsx, which imports them (P-2026-09-24-1005).
  */
 
+import { STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
+
 // ---------------------------------------------------------------------------
 // Roles — flat keys in the M2 bag (R-SIM-2). No nested `sim: {...}` object: the
 // bag copy is shallow, a nested mutation would escape actions/undo/re-render.
@@ -20,6 +22,9 @@ export type RoleKey =
     | 'simBound'
     | 'simTransition'
     | 'simGuard'
+    | 'simAction'
+    | 'simEntry'
+    | 'simExit'
     | 'simOwnedTransitions'
     | 'simSource'
     | 'simNextState'
@@ -34,8 +39,12 @@ export type RoleKey =
     | 'simTrigger'
     | 'simEventIdentifier';
 
-/** `number`: a value, not a pointer; written as a digit string (`simBound`, R-SIM-37). */
-export type RoleKind = 'class' | 'composition' | 'reference' | 'attribute' | 'number';
+/**
+ * `number`: a value, not a pointer; written as a digit string (`simBound`, R-SIM-37).
+ * `expression` and `action`: an attribute typed `Expression` or `Action`, or
+ * EString, the lists of the Data group (R-SIM-44, R-SIM-71).
+ */
+export type RoleKind = 'class' | 'composition' | 'reference' | 'attribute' | 'number' | 'expression' | 'action';
 
 export interface RoleSpec {
     key: RoleKey;
@@ -52,7 +61,11 @@ export const ROLE_SPECS: RoleSpec[] = [
     { key: 'simTerminal', label: 'Terminal', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simBound', label: 'Bound', kind: 'number', placeholder: '1' },
     { key: 'simTransition', label: 'Transition', kind: 'class', placeholder: 'Select a metaclass' },
-    { key: 'simGuard', label: 'Guard', kind: 'attribute', placeholder: 'Select an attribute' },
+    // The Data group (R-SIM-52, R-SIM-69): the guard, and the `Action [0..*]` features by site role.
+    { key: 'simGuard', label: 'Guard', kind: 'expression', placeholder: 'Select an attribute' },
+    { key: 'simAction', label: 'Action', kind: 'action', placeholder: 'Select an attribute' },
+    { key: 'simEntry', label: 'Entry', kind: 'action', placeholder: 'Select an attribute' },
+    { key: 'simExit', label: 'Exit', kind: 'action', placeholder: 'Select an attribute' },
     { key: 'simOwnedTransitions', label: 'Owned transitions', kind: 'composition', placeholder: 'Select a composition' },
     { key: 'simSource', label: 'Source', kind: 'reference', placeholder: 'Select a reference' },
     { key: 'simNextState', label: 'Next state', kind: 'reference', placeholder: 'Select a reference' },
@@ -91,6 +104,13 @@ export const ENGINE_ROLE_KEYS: RoleKey[] = [
 ];
 
 export type Roles = Partial<Record<RoleKey, string>>;
+
+/**
+ * The declarations of the Data group (R-SIM-67): not a role of ROLE_SPECS but a
+ * JSON string of its own, read by the panel as its own prop and never folded
+ * into the role signature (report risk 1).
+ */
+export const STATE_ATTRIBUTES_SPEC = { key: STATE_ATTRIBUTES_KEY, label: 'State attributes' } as const;
 
 // ---------------------------------------------------------------------------
 // What is missing
