@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1905
 Chat: C-2026-09-25-1353
 Lane: fast
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane navigate-cancel · 8d6febf5f
 
 Worktree: `~/jjodel-open`. Its branch `open-hash` is merged into the trunk (`46a67b3c4`) and closed. Setup, each a hard stop if it fails: `pwd` is `/Users/alfonso/jjodel-open`; `git status` empty; `git switch -c navigate-cancel alfonso-frontend-jjtl`, then `git log -1` reads `docs: add prompt P-2026-09-25-1905, cancelled navigation discovery` (if the trunk moved past it, stop and say so). Every commit of this lane goes on `navigate-cancel`. Never work by absolute path on another worktree.
 
