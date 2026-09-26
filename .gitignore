@@ -86,3 +86,7 @@ docs/**/*.out
 docs/jjtl-jjel-paper.log
 docs/mde-intelligence-2026/paper/_build/*
 !docs/mde-intelligence-2026/paper/_build/main.pdf
+
+# research material, kept out of the tree (2026-09-27)
+docs/discovery/*-dataset/
+docs/analysis/harness-attribution*
