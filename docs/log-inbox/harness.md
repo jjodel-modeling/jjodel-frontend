@@ -6,6 +6,12 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-26 — ticket: bash-guard reads the merge state from the payload cwd only
+**Ticket**: `bash-guard.mjs` takes the merge state (`MERGE_HEAD`) and the pathspec root only from the hook payload's `cwd` (lines 87 and 335 at `5c542b039`), never from a `cd` or `git -C` target, so a `git commit` that concludes a merge in another worktree from the chat's session is always denied. Measured in P-2026-09-26-2245 step 9, where the sim merge had to be redone with `-F` in one command.
+**Priority**: low
+**Found in**: P-2026-09-26-2245
+**Detail**: frontend/scripts/hooks/bash-guard.mjs (at `5c542b039`: `gitCall` skips `-C` and its value at 87; `makeContext` at 335 feeds `operationInProgress`, 166, and `--show-toplevel` from the payload `cwd`)
+
 ## 2026-09-25 — chore(dev): let the Vite dependency scan parse decorators (P-2026-09-25-1820)
 **Prompt**: `claude_2026-09-25_1820_prompt_vite_dep_scan.md`, fast lane, single phase on `vite-dep-scan` in `~/jjodel-vite`, one hard stop (Alfonso's check on 3005). The ticket of P-2026-09-25-1500: on a cold start the dependency scan fails on `MTM.tsx:27` importing `Nearley`, nothing is pre-bundled and the first page load reloads once.
 **Files touched**: report `59701d5f0`: `docs/discovery/discovery_2026-09-25_vite_dep_scan.md` (new). Code `8a4335402`: `frontend/vite.config.ts` (`optimizeDeps.esbuildOptions.tsconfigRaw`; `optimizeDeps.include` + `util` and three nodePolyfills shims). Docs, this commit: this entry, two tickets, the prompt's Status line.
