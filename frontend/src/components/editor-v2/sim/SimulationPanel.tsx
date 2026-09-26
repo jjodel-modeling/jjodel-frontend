@@ -520,6 +520,23 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     </div>
                 ) : (
                     <>
+                        {/* The lines that appear and disappear sit above the buttons: the panel is anchored at the
+                            bottom and grows upward, so they never move the buttons (R-SIM-65). One row each, the
+                            full text in the title (R-SIM-63). */}
+                        {runError && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={runError}>{runError}</div>}
+                        {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
+                        {interrupted && (
+                            <div
+                                className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line"
+                                title="Run interrupted: the model changed. Reset to run again."
+                            >
+                                Run interrupted: the model changed. Reset to run again.
+                            </div>
+                        )}
+                        {defects && (
+                            <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
+                        )}
+                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={view.halt}>{view.halt}</div>}
                         <div className="sim-panel__actions">
                             <button type="button" className="sim-panel__btn" title="Reset" onClick={onReset}>
                                 <i className="bi bi-skip-backward-fill" />
@@ -584,24 +601,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 </div>
                             </>
                         )}
-                        {/* One row each, the full text in the title (R-SIM-63). */}
-                        {runError && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={runError}>{runError}</div>}
-                        {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
-                        {interrupted && (
-                            <div
-                                className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line"
-                                title="Run interrupted: the model changed. Reset to run again."
-                            >
-                                Run interrupted: the model changed. Reset to run again.
-                            </div>
-                        )}
-                        {defects && (
-                            <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
-                        )}
                         {lastStep && (
                             <div className="sim-panel__hint sim-panel__hint--line" title={`Last step: ${lastStep}`}>{`Last step: ${lastStep}`}</div>
                         )}
-                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={view.halt}>{view.halt}</div>}
                         {/* In Deadlock the row says why, on its one line, and opens the list per input (R-SIM-58). */}
                         <div
                             className={`sim-panel__status${reason ? ' sim-panel__status--clickable' : ''}`}
