@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-26-1105
 Chat: C-2026-09-26-1100
 Lane: full (changed exported interface, more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-26 · lane simulation · 81373fab0 · verifica visiva passata 2026-09-26
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, a fresh session (`/clear`). Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file (subject `docs: add the wave B2 prompt of the state operator (P-2026-09-26-1105)`), its parent is `89faeef25` (closure of `P-2026-09-25-1840`), `git status` empty. Otherwise stop.
 
