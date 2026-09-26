@@ -1991,6 +1991,51 @@ o una corsia.
   ignorato: l'esportatore emetterebbe `VAR` con init e `DEFINE` per lo stesso nome, e il pannello mostrerebbe
   un campo senza senso. La C1 non ne risente: i suoi record hanno sempre `initial`.
 
+### Decisioni 2026-09-27: corsia C2, attributi derivati (R-SIM-73..76)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_derived_attributes.md` (`655706bab`), undici
+decisioni del suo §10. Decise dalla chat `C-2026-09-26-1702` sotto RC-25 nella notte del 2026-09-27, su mandato
+esplicito di Alfonso («esegui la C2»), con la verifica avversariale di RC-27 su E1 (tre vincoli accolti). Le
+decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; qui le quattro strutturali.
+
+- **R-SIM-73** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Valutazione eager dei derivati (E1).** Al Reset e dopo ogni scatto, assemblata σ′, un `DerivedOracle`
+  opzionale di `step` valuta ogni attributo derivato su σ′ in ordine di dipendenza in una mappa `derived` di
+  sola lettura di `SimState`, ricostruita ogni volta e mai copiata in avanti; l'accessore ripiega su `derived`,
+  così guardie e azioni leggono un derivato come un memorizzato e `toJjelStateAccess` non cambia. Coincide con
+  il `DEFINE` di nuXmv (funzione pura dello stato corrente; `next(v)` legge lo stato corrente, derivati
+  compresi). Un fallimento, un risultato che non è un `SimValue` (la divisione per zero dà `null`) o un valore
+  fuori dominio: difetto di dichiarazione al Reset (valore assente, il run parte), halt `derived` o `domain`
+  dopo uno scatto con σ invariata. Un derivato che nessuno legge viene comunque valutato e può fermare il run:
+  rigore accettato, dichiarato. Ogni σ ricostruita da fuori (snapshot, traccia, modello modificato) ricalcola
+  `derived`, mai una copia salvata. Emenda la R-SIM-71 provvisoria sul risolutore in lettura. `Verified: la
+  semantica del parallelo regge (le azioni leggono i derivati di σ, il ricalcolo è su σ′); sarebbe falsa se
+  un'espressione potesse raggiungere un attributo senza nominarlo nel nodo StateAccess, e la grammatica di
+  R-SIM-40 lo esclude (l'attributo è un IDENTIFIER letterale).`
+- **R-SIM-74** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Grafo delle dipendenze per nome, ciclo come difetto.** Gli archi vengono dai nodi `StateAccess` di ogni
+  equazione, chiave il nome dell'attributo (G1): conservativo, completo perché ogni accesso nomina l'attributo;
+  un ciclo tra istanze proietta su un ciclo tra nomi. Un ciclo è un difetto di dichiarazione su ogni membro, con
+  il ciclo nominato nel messaggio; l'ordine di valutazione è il topologico per nome. Limite dichiarato: una
+  ricorsione ben fondata sul contenimento (`total := own + sum(children.[total])`) è un self-loop per nome e
+  viene rifiutata; nuXmv, che controlla dopo l'appiattimento, la accetterebbe. Rinviato un raffinamento per
+  (metaclasse, nome). Un arco da un'equazione semantica a un derivato di presentazione è vietato (`E-NODE`
+  transitivo); un fallimento di presentazione non ferma la semantica.
+- **R-SIM-75** (2026-09-27, provisional, unattended, evidence: read, verified: agent, reversible: branch).
+  **Radici e record.** In un'equazione: `self` è il proprietario, la radice del modello per un globale, `model`
+  ammesso, `event` vietato (difetto di dichiarazione: un DEFINE non dipende dall'input), `node` `E-NODE` su
+  un'equazione semantica e ammesso su una di presentazione. Record: esattamente uno fra `initial` ed `equation`
+  (R-SIM-72), esclusività come difetto del record nel codec; `StateAttributeDecl.initial?` ed `equation?`;
+  `StateAttributeRecord.equation?`; un'azione su un bersaglio derivato è difetto `read-only` al Reset quando il
+  bersaglio si riduce e halt `read-only` nel core. Chiude la perdita di dati misurata (§4.5: la tabella C1
+  riscrive ogni record senza `equation` al primo edit).
+- **R-SIM-76** (2026-09-27, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Output di Moore e Mealy fuori dalla C2.** `simStateOutput` e `simTransitionOutput` non hanno lettori; gli
+  output legati a un ruolo sono un percorso sul modello congelato, quelli calcolati sono derivati sulla via E1;
+  corsia propria dopo la C2 (R-SIM-51). Il pannello riceve un selettore «stored | derived» e una cella
+  dell'equazione per le righe derivate, con il layout fissato alla visiva: se la demo di MODELS mostra il
+  pannello, questa modifica alla tabella è un punto di RC-26 e va nel digest.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
