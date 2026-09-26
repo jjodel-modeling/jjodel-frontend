@@ -59,9 +59,10 @@ frontend/build.rar
 frontend/src/todo_others
 /cloudflare-worker/node_modules
 /frontend/dist
-/CLAUDE.md
 _to_delete/
 .claude/settings.local.json
+.claude/projects/
+.claude/*.lock
 
 # Sonde temporanee dello smoke: restano su disco, fuori da git
 frontend/scripts/smoke/_tmp_*
