@@ -294,3 +294,30 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Prompt document name**: 2026-09-27 18:05
 **Ticket** (priority low, opened here). `NodeProblemOverlay` stays light with `data-theme="dark"` on the canvas (crop `3_tp_enode_overlay_dark.png`); not changed here, not investigated.
 **Ticket** (priority low, opened here, LIR §5). The producer's selector walks the whole lookup through `runSignature` on every dispatch of a simulation-bound M1: 9.7 ms at 2000 objects, 30 ms at 5000. Above about 2000 objects, the report's fallback applies.
+
+## 2026-09-27 — discovery: well-founded recursion in derived attributes, S3 (P-2026-09-27-1727)
+**Prompt**: `claude_2026-09-27_1727_prompt_discovery_sim_derived_recursion.md`, full lane, Phase 1 read-only on `sim-derived-recursion` in `~/jjodel-w-recursion` at `21394e437`, wave 1 of the backlog report (S3, ratification C): where R-SIM-74 refuses a well-founded recursion, the per-(element, attr) graph over frozen M with cycle detection, its cost on the demo presets, the collection form against R-SIM-43, the amendment texts and the Phase 2 lanes.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_derived_recursion.md` (new), this entry, the Status of the prompt file. Probe `frontend/scripts/smoke/_tmp_recur_probe/recur.test.ts` and its vitest config, gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no file under `frontend/src` written, `git status` empty after every probe run; probe exit 0, 9 tests, 37 `[RECUR]` lines on the last run. No dev server: port 3021 not opened.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The refusal is the name graph alone: tree size, depth via `parent`, list length pass the parser and the subset checker. The lambda form `self.children.sum(c => c.[size])` evaluates today, so R-SIM-43 needs no amendment; only the literal `children.[x]` is refused. G3 prototype: 5.8 ms at Reset for 1023 nodes, same plan on the ESM demo equation. Amending R-SIM-74 awaits Alfonso (RC-26). One docs commit per the prompt, not the skill's inbox-alone commit.
+**Prompt document name**: 2026-09-27 17:27
+**Ticket** (priority low, opened here, report §8.5). S2's planned message for a derived attribute with no value, «its equation failed», is wrong for a node absent because it sits on a cycle once G3 lands; `sim-derived-diagnostics` should say «has no value» and leave the cause to the defect line.
+
+## 2026-09-27 — feat: derived attributes ordered per element over frozen M, S3 (P-2026-09-27-1727)
+**Prompt**: Phase 2 of `claude_2026-09-27_1727_prompt_discovery_sim_derived_recursion.md`, full lane on `sim-derived-recursion` in `~/jjodel-w-recursion`, GO of 2026-09-27 17:53 in cascade after Phase 1 (report `4868359c9`, Alfonso's answers `8baee76b6`: A yes, B no). The two slices of report §8: the graph per (element, attribute) in `derivedEvaluator.ts`, then the bridge line. Merge after MODELS.
+**Files touched**: code `805c8ecdd`: `frontend/src/model/simulation/derivedEvaluator.ts`, `__tests__/derivedEvaluator.test.ts`; code `d2a19ccab`: `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-74 amended), this entry, the Status of the prompt file. Probes `_tmp_recur_*`, gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Baseline at `8baee76b6`: typecheck exit 2, 14 errors; vitest on `model/simulation` and `editor-v2/sim` 568 passed, 20 files. On `d2a19ccab`: typecheck exit 2, 14, set identical; 581 passed (568 + 13, the existing 16 derived tests and the bridge's cycle test unchanged); `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` 4/4. Red first: 12, then 1. Mutation bench 13/13 killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no visual checklist in the prompt). Live probe on 3021, vite of this tree, stopped after: Reset shows `Marking: p1 · p1.len = 3, p2.len = 2, p3.len = 1`; a step keeps the values; `next` closed on p1 gives `1 defect: len (equation cycle: p1.len → p2.len → p3.len → p1.len).`; one console error, the known `failed to get project`. Crops light and dark in `~/.jjodel-lanes/shots_derived_recursion/`.
+**Notes**: Report questions decided unattended: a fixed cap of 10000 bindings per folded object (Q1); no rewrite hint in the cycle title (Q2); the S2 wording stays the ticket of the Phase 1 entry (Q3). Demo presets untouched by construction: three have no equation, the ESM equation keeps its plan (tested). `CompiledDerived.plan` is an optional field (Rule 11). The branch is not merged before 2026-10-04.
+**Prompt document name**: 2026-09-27 17:27

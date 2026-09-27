@@ -1018,6 +1018,28 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             expect(status()).toBe('Deadlock');
         });
 
+        it('a recursion along a reference of the frozen M runs per element, at Reset and after a step; a loop names its elements (R-SIM-74 as amended; mutant: the bridge without the frozen M)', () => {
+            const LEN = { name: 'len', metaclass: 'C_Place', space: 'semantic', domain: { kind: 'range', min: 0, max: 9 }, equation: 'if self.next == null then 1 else self.next.[len] + 1' };
+            const lookup = cnet({ decls: [VISITS, LEN], t1: [BUMP] });
+            // `next` is a reference of the snapshot only: p1 -> p2 -> null, p1 first among the ids
+            const chain = (loop: boolean) => () => {
+                const r = record(lookup)();
+                r.p1.next = r.p2;
+                r.p2.next = loop ? r.p1 : null;
+                return r;
+            };
+            const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(chain(false)).build);
+            if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+            expect(r.compileDefects).toEqual([]);
+            expect([r.run.config.state.derived?.attrs.get('P1x')?.get('len'), r.run.config.state.derived?.attrs.get('P2x')?.get('len')]).toEqual([2, 1]);
+            simReset('M', r.run);
+            expect(eps(lookup).outcome?.kind).toBe('fired');
+            expect(getSimRun('M')!.config.state.derived?.attrs.get('P1x')?.get('len')).toBe(2);
+            const loop = startRun(lookup, 'M', 'MM', 'P', spyBuilder(chain(true)).build);
+            if (loop.kind !== 'started') throw new Error(`refused: ${loop.reason}`);
+            expect(defectsLine(loop.run.net, lookup, loop.compileDefects)).toBe('1 defect: len (equation cycle: p1.len → p2.len → p1.len).');
+        });
+
         it('the equation defects at Reset, by the declaration\'s name; the source only in the title (R-SIM-62)', () => {
             const cycle = cnet({ decls: [VISITS, derived('a', 'model.[b] + 1'), derived('b', 'model.[a]')] });
             const c = reset(cycle);
