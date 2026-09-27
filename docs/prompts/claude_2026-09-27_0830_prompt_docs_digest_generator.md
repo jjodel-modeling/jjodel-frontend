@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0830
 Chat: C-2026-09-26-1702
 Lane: fast (one new gate script, one npm script, one generated file, one folder; no `src/` file, no critical zone; no visual check)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane fast · 7b7ad1123
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, `git log -1` is the commit that adds this file (its parent `d78f1981b`, or a later docs-only commit: say so and continue), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0830 · session <id>]` and ends with a bare `Outcome:` line (P16: `Outcome: done`, nothing after it; the shas go in the line above). Run gates in the foreground.
 

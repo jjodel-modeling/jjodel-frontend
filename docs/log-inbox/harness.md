@@ -68,3 +68,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: The ticket's 25 errors did not reproduce: the chat's `_tmp_*` left in `scripts/smoke/` are `.md` only, so the probe stood in for them, then was removed. The child `exclude` replaces the one inherited from `frontend/tsconfig.json`, whose entries lie outside the child's `include`. Code subject is the prompt's fallback: the first one is 83 characters. Session `c9dbaa08`.
 **Prompt document name**: 2026-09-27 04:05
+
+## 2026-09-27 — feat: docs:digest, the decisions digest with a confidence label (P-2026-09-27-0830)
+**Prompt**: `claude_2026-09-27_0830_prompt_docs_digest_generator.md`, fast lane, launched by `lane-run` on the trunk in `~/jjodel-release` at `05e89c80a`. A read-only generator renders the rows of one date of `docs/decisions.md` into `docs/digest/<date>.md`, with a confidence label from the RC-25 header fields, the RC-28 counts and a hand-written section kept across regenerations; the first digest, 2026-09-27, committed.
+**Files touched**: `7b7ad1123`: `frontend/scripts/gates/docs-digest.ts` (new), `frontend/scripts/gates/__tests__/docsDigest.test.ts` (new, 41 tests), `frontend/package.json` (`docs:digest`). This commit: `docs/digest/README.md` (new), `docs/digest/2026-09-27.md` (generated), this entry, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. From `frontend/`, before and after: `typecheck:scripts` exit 0 both; `check:scripts` PASS 27 then 29 files; `vitest run scripts/gates` 195 then 236 (+41); `check:docs` 4/4, 5 warnings both. Mutation bench 8/8 killed. Dry runs: 2026-09-27 12 rows, 2026-09-26 25, `--all` exit 0, 23 dates, 215 rows = 215 grammar rows by grep. `--write` twice: `unchanged`, same shasum. No build: no `src/` file.
+**Out-of-scope changes**: no. Seven files, above five (rule 19), all in DOVE; `docs/decisions.md` read only.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The register over the prompt: R-EDGE-2, R-SIM-75, R-SIM-79 medium and R-SIM-76 low, not high. Deviations, in the `7b7ad1123` body: `at <sha>` is the last commit of the register, not HEAD; ` —` separator and free-text fields of ratified rows read; 11 IDs outside the grammar skipped and named. Status flipped by direct edit, the `status-flip` skill refuses model invocation; one closure commit (P13). Session `07f3b8cd`.
+**Prompt document name**: 2026-09-27 08:30
