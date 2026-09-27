@@ -1289,3 +1289,66 @@ describe('lane-run start, the model tier (RC-32)', () => {
         expect(r.stdout).toContain('tier: heavy (settings pin): a merge that falls back to a session');
     });
 });
+
+// ── the brief of a discovery report (P16) ────────────────────────────────────
+
+const REPORT_REL = 'docs/discovery/discovery_2026-09-28_brief.md';
+const report = (brief: number | null, first = true) => {
+    const lead = '# Discovery: a report\n\nPrompt-ID: ' + ID + '\n\n';
+    const b = brief === null ? '' : '## 0. Answer in brief\n\n' + Array.from({ length: brief - 1 }, (_, i) => '- line ' + (i + 1)).join('\n') + '\n\n';
+    const rest = '## 1. Objective\n\nText.\n';
+    return lead + (first ? b + rest : rest + b);
+};
+
+/** An exited lane in l.worktree whose log wrote the report through the Write tool (or through a shell, with no tool call named). */
+function reportLane(l: Lab, text: string, viaWrite = true) {
+    mkdirSync(join(l.worktree, 'docs', 'discovery'), { recursive: true });
+    writeFileSync(join(l.worktree, REPORT_REL), text);
+    const dir = laneDir(l);
+    mkdirSync(dir, { recursive: true });
+    const tool = { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: viaWrite ? 'Write' : 'Bash', input: viaWrite ? { file_path: join(l.worktree, REPORT_REL), content: text } : { command: 'cat > report' } }] } };
+    const other = { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Read', input: { file_path: join(l.worktree, 'docs/discovery/discovery_2026-09-27_other.md') } }] } };
+    writeFileSync(join(dir, 'log.jsonl'), [other, tool].map((e) => JSON.stringify(e)).join('\n') + '\n' + assistant('Outcome: hard-stop') + '\n');
+    writeFileSync(join(dir, 'worktree.txt'), l.worktree + '\n');
+    writeFileSync(join(dir, 'started.txt'), String(Date.now() - 60000) + '\n');
+    writeFileSync(join(dir, 'pid.txt'), '999999\n');
+    writeFileSync(join(dir, 'exit.txt'), '0\n');
+}
+
+describe('lane-run status, the brief of the report', () => {
+    test('kills "a long brief not flagged", "the cap off by one", "a missing brief not flagged", "a brief that is not first accepted": status warns above 40 lines, without the heading, or when it is not the first section', () => {
+        for (const [text, warn] of [
+            [report(41), `warning: ${REPORT_REL}: the brief runs 41 lines, above 40 (P16)`],
+            [report(40), null],
+            [report(null), `warning: ${REPORT_REL}: no "## 0. Answer in brief" (P16)`],
+            [report(10, false), `warning: ${REPORT_REL}: "## 0. Answer in brief" is not the first section (P16)`],
+        ] as const) {
+            const l = lab();
+            reportLane(l, text);
+            const r = laneRun(l, ['status', ID]);
+            expect(r.status, r.stderr).toBe(0);
+            const lines = r.stdout.split('\n').filter((x) => x.startsWith('warning:'));
+            expect(lines).toEqual(warn === null ? [] : [warn]);
+        }
+    });
+
+    test('kills "the report read from the prompt", "a report read by the lane taken for its own": only the report the lane wrote is judged', () => {
+        const l = lab();
+        reportLane(l, report(41));
+        mkdirSync(join(l.worktree, 'docs', 'discovery'), { recursive: true });
+        writeFileSync(join(l.worktree, 'docs/discovery/discovery_2026-09-27_other.md'), report(null));
+        const r = laneRun(l, ['status', ID]);
+        expect(r.stdout.split('\n').filter((x) => x.startsWith('warning:'))).toEqual([`warning: ${REPORT_REL}: the brief runs 41 lines, above 40 (P16)`]);
+    });
+
+    test('kills "no git fallback": a report written through a shell is found in the commits that carry the Prompt-ID', () => {
+        const l = lab();
+        const env = { ...l.env, GIT_AUTHOR_NAME: 'T', GIT_AUTHOR_EMAIL: 't@t.invalid', GIT_COMMITTER_NAME: 'T', GIT_COMMITTER_EMAIL: 't@t.invalid' };
+        spawnSync('git', ['init', '-q', '-b', 'b'], { cwd: l.worktree, env });
+        reportLane(l, report(null), false);
+        spawnSync('git', ['add', '--', REPORT_REL], { cwd: l.worktree, env });
+        spawnSync('git', ['commit', '-q', '-m', `docs: the report (${ID})`, '--', REPORT_REL], { cwd: l.worktree, env });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.stdout).toContain(`warning: ${REPORT_REL}: no "## 0. Answer in brief" (P16)`);
+    });
+});

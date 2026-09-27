@@ -42,7 +42,11 @@
  *                assistant text in the log, a suffix after the word tolerated,
  *                `unparsed: <line>` when that line names no outcome, `none` while
  *                the lane runs (the line belongs to an earlier turn); the elapsed
- *                time of the last run.
+ *                time of the last run. Once the lane has exited, a warning line
+ *                for each discovery report it wrote (its log's Write and Edit
+ *                calls, else the commits carrying its Prompt-ID) whose brief, `## 0.
+ *                Answer in brief`, is missing, not the first section, or above 40
+ *                lines (P16).
  *   status --all [--limit <minutes>]
  *                every lane folder of ~/.jjodel-lanes in one table (id, state,
  *                outcome, elapsed), newest Prompt-ID first; a chain is one row,
@@ -563,7 +567,52 @@ function status(idArg, rest) {
     console.log('elapsed: ' + s.minutes + ' min, limit ' + limit + ' min');
     console.log('session: ' + (readTrim(f.session) || '-'));
     console.log('log: ' + f.log);
+    if (s.state !== 'exited') return 0;
+    const tree = readTrim(f.worktree);
+    for (const path of laneReports(f, id)) {
+        const w = briefWarning(path);
+        if (w) console.log('warning: ' + (tree ? relative(tree, path) : path) + ': ' + w + ' (P16)');
+    }
     return 0;
+}
+
+// The brief of a discovery report (P16, rule 5 of P-2026-09-27-2330): it opens the report, at most 40 lines.
+const BRIEF_MAX = 40;
+const BRIEF = /^## 0\. Answer in brief\s*$/;
+const REPORT_FILE = /(^|\/)docs\/discovery\/discovery_[^/]+\.md$/;
+
+/**
+ * The discovery reports a lane wrote: the Write and Edit calls of its log (the
+ * prompt text also names the reports it reads, so it is not the source); else
+ * the files under docs/discovery/ that commits carrying its Prompt-ID add.
+ */
+function laneReports(f, id) {
+    const tree = readTrim(f.worktree);
+    const written = [];
+    for (const e of events(f.log)) {
+        if (!e || e.type !== 'assistant' || !e.message || !Array.isArray(e.message.content)) continue;
+        for (const b of e.message.content) {
+            const p = b && b.type === 'tool_use' && (b.name === 'Write' || b.name === 'Edit') && b.input ? b.input.file_path : null;
+            if (typeof p === 'string' && REPORT_FILE.test(p)) written.push(p.startsWith('/') ? p : join(tree, p));
+        }
+    }
+    if (written.length || !tree || !existsSync(tree)) return [...new Set(written)];
+    const r = spawnSync('git', ['log', '--format=', '--name-only', '--diff-filter=A', '--fixed-strings', '--grep=' + id, '--', 'docs/discovery/'], { cwd: tree, encoding: 'utf8' });
+    if (r.status !== 0) return [];
+    return [...new Set(nonEmpty(r.stdout).filter((p) => REPORT_FILE.test(p)).map((p) => join(tree, p)))];
+}
+
+/** What is wrong with a report's brief, or null: absent, not the first section, or above BRIEF_MAX lines (trailing blank lines dropped). */
+function briefWarning(path) {
+    if (!existsSync(path)) return null;
+    const lines = readFileSync(path, 'utf8').split('\n');
+    const at = lines.findIndex((l) => BRIEF.test(l));
+    if (at === -1) return 'no "## 0. Answer in brief"';
+    if (lines.findIndex((l) => l.startsWith('## ')) !== at) return '"## 0. Answer in brief" is not the first section';
+    const end = lines.findIndex((l, i) => i > at && l.startsWith('## '));
+    const body = lines.slice(at + 1, end === -1 ? lines.length : end);
+    while (body.length && body[body.length - 1].trim() === '') body.pop();
+    return body.length > BRIEF_MAX ? 'the brief runs ' + body.length + ' lines, above ' + BRIEF_MAX : null;
 }
 
 /** Every lane folder of ~/.jjodel-lanes in one table, newest Prompt-ID first; other folders and files are not lanes. */
