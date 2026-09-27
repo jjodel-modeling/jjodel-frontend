@@ -263,3 +263,19 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: The rule table (report risk 10) is in the body of `3d44abce0`: sort, concrete (R-SIM-81 exception), proper subclass of Node or Arc, owner lineage, reference type, containment, attribute type (R-SIM-44); the worst failed rule decides. Not judged: multiplicity, and the overlap of the sorts beyond Trigger's type (`overlapVerdict`). `BindingVerdict` sufficed: no question stop, no exported type changed, no R- row.
 **Prompt document name**: 2026-09-27 16:46
 **Ticket** (priority low, opened here). `MetamodelSketch` carries no upper bound (report §3.1 of the profiles report lists one; `profileBinder.ts` and `metamodelSketch.ts` do not), so the compatibility check cannot judge multiplicity, the third check of the modal lane's «type, owner, multiplicity». An optional bound on `SketchAttribute` and `SketchReference` (Rule 11, additive) and its read in `metamodelSketch.ts` are owed to S11c or the modal lane.
+
+## 2026-09-27 — discovery: guard and action checks in the problems list, S16 (P-2026-09-27-1726)
+**Prompt**: `claude_2026-09-27_1726_prompt_discovery_sim_checker_gap.md`, Phase 1 read-only on `sim-checker-gap` in `~/jjodel-w-checker` at `d1d45b9d3`, wave 1 of the backlog report (S16): map the problems registry, measure which STC guard and action errors are caught today and where, design the producer, its kind and tests, with C2's probe (4) as the reference; draft the Layer Impact Report of Phase 2.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_checker_gap.md` (new), this entry, the Status of the prompt file. Probes gitignored `frontend/scripts/smoke/_tmp_checker_*`, vite on 3020, logs in `/tmp/checker_scratch/`, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no file under `frontend/src` written; `git status` empty after every probe; three probes exit 0; the 3020 server stopped by pid, no listener after. `check:docs` 4/4.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (Phase 1 read-only; the draft for Phase 2a is in the report §14)
+**Smoke visivo**: non applicabile
+**Notes**: 35 cases on the demo presets (report §5.2): the registry sees only parse errors on Expression/Action slots (conformance); 11 classes pass Reset and show only when fired, C2's probe (4) among them. Recommended: P2a a producer over startRun, kind 'simulation' (critical zone), then P2b the new rules in the bridge. startRun median 1.6 ms on demoESM. Probe 1's A9-A12, E1, E2 inherited a leftover slot value and were rerun (probe 2).
+**Prompt document name**: 2026-09-27 17:26
+**Ticket** (priority medium, opened here, report F6). An `else` guard with no sibling is always true, silently: `tp.guard = else` fires on `push`, `t2.guard = else` compiles with no defect (measured on `d1d45b9d3`). A defect would amend the ratified R-SIM-31(1): decision 1 of the report §12, for Alfonso.
+**Ticket** (priority low, opened here, report decision 5). The declarations' compile defects (`role: 'declaration'`) have no M1 element, so a registry producer cannot anchor them; an M2 anchor (the metaclass node, or the metamodel) is a lane of its own.
+**Ticket** (priority low, opened here, report risk 7). Building the four demo presets in one page logs 216 `Cannot serialize in ecore, found loop` console errors (with their stacks); one preset per page logs none. Not investigated.

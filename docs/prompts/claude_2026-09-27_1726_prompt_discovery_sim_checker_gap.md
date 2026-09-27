@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1726
 Chat: C-2026-09-27-1437
 Lane: full (Phase 1, read-only; hard stop at the report; Phase 2 after MODELS per Alfonso's ratification of 2026-09-27 17:07)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-checker-gap · measured on d1d45b9d3; the report is in the commit that carries this line (a commit cannot name its own sha)
 
 Worktree: `~/jjodel-w-checker`, branch `sim-checker-gap` (a new worktree created by the chat from `alfonso-frontend-jjtl` at `93e964141`, with `frontend/node_modules` symlinked to `/Users/alfonso/jjodel/frontend/node_modules` as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-checker`, branch `sim-checker-gap`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
