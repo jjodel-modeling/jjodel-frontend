@@ -362,3 +362,19 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non eseguito in questa corsia: la chat ha chiesto Outcome: done dopo i gate; il suo smoke su 3001 segue (3001 su, PID 61660, non riavviato)
 **Notes**: The first run stopped before the commit on P-2026-09-27-1740's not-before-2026-10-04 line (Outcome: question) and ran `git merge --abort`; the resume re-merged to the same tree `2c5a67a2d`. `frontend/` at `5eccdd4d2` equals `78afc0378`'s. The demo script is stale on §2.2 step 3, §2.3 and §2.4 until the chat's re-walk docs lane. Rollback tag `pre-sim-modal` at `d9e88f792`.
 **Prompt document name**: 2026-09-27 20:49
+
+## 2026-09-27 — docs: demo script walks the Simulation roles dialog (P-2026-09-27-2105)
+**Prompt**: `claude_2026-09-27_2105_prompt_sim_demo_script_modal.md`, fast lane, docs only, on `sim-demo-script-modal` in `~/jjodel-w-demo-modal` (cut at `22aa888de`, the sim-modal merge in): the four scenes of the demo script re-walked through the Simulation roles dialog (R-SIM-85), every gesture and reading measured by a probe on 3024, clicks and keystrokes counted per scene.
+**Files touched**: this commit: `docs/demo/models_2026_simulator_demo.md` (§2.1 to §2.4 the Apply and declaration steps, one count line per scene, the ESM clamp lines, a not-measured note on the Flow variants; §3 the Petri bullet; §4 the two declaration risks), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_demomodal_*` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 17:38 (`claude_2026-09-27_1738_prompt_sim_demo_script_after_e1_e2.md`: its §2 walked the inline groups the dialog replaced)
+**Causa**: (f)
+**Regressions**: no. Docs only, no source file changed. Probes on 3024, one fresh page per scene, `EXIT=0` each (sm ×3, petri ×3, esm ×3, flowB ×1), one known console error per run, re-runs identical line for line; `grep -c '—'` on the script 0 (exit 1, control `Marking` 44); `check:docs` on this commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — crops for the chat (RC-23), light, 1600x1000, in `~/.jjodel-lanes/shots_demo_modal/`
+**Notes**: The four 1740 readings hold: SM 7 of 10, Terminated at 10; Petri Bound 4 with the engine's reason, Deadlock · ε: t2 false at 4; ESM coins and paid declared, the halt line at 10; Flow B count declared, Terminated at 6. Counts: configuration 4 clicks each; ESM declarations 9 interactions (was 10), 34 keys, 2 scrolls (was 3), no double-click (was 4); Flow B 6, 10 keys, 1 scroll. Logs in `~/.jjodel-lanes/P-2026-09-27-2105/`.
+**Prompt document name**: 2026-09-27 21:05
+**Ticket** (priority medium, opened here, outside DOVE). The script's §5 still lists «The modal lane» as out of the demo, which R-SIM-85 reversed; §1 and the header are unchanged and still true. Left for the chat.
+**Ticket** (priority medium, opened here). On ESM at 1600x1000 the panel cuts the final halt line (302 px of text in 262) and `Last step:` (264 in 262); the optional Reset's defects and halt lines too (513, 430). The titles hold the whole text; the script says so.
+**Ticket** (priority low, opened here). The dialog's Bound cell is a number input with no select-on-focus: a click and `5` over `4` reads `45`, so the §3 fallback needs Cmd+A. The declaration cells select on focus.
