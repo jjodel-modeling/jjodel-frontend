@@ -1942,6 +1942,12 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   del pannello si limitano a una riga con il testo intero nel `title`: oggi una riga che va a capo
   sposta i pulsanti di 17 px (misurato). Entra nella stessa corsia, come aggiunta dichiarata allo
   scope.
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat, 22:20, punto 3 delle risposte della sera, memo
+  `docs/ratifiche/claude_ratifiche_2026-09-27_evening_answers.md`): nello stato Halted la riga di halt va a capo
+  in uno slot riservato di due righe, un'ellissi oltre la seconda. Lo slot sta sopra i pulsanti e ha altezza
+  fissa, quindi il pannello cresce verso l'alto di 16,5 px e i pulsanti non si muovono (misurato a 1600x1000 e
+  1280x800, P-2026-09-27-2225, `e0e6ee5e4`). «Last step», i difetti, l'errore e ogni altra riga restano a una
+  riga: «Last step» sta sotto i pulsanti, e una seconda riga li alzava di 16,5 px (misurato).
 - **R-SIM-64** (2026-09-26). **`else` anche nella forma Petri. Completa R-SIM-31.** Una transizione
   di Petri la cui guardia è il testo `else` è il complemento dei suoi fratelli, come un arco del
   controllo di flusso: i fratelli sono le transizioni con lo stesso preset (posti e pesi) e gli stessi

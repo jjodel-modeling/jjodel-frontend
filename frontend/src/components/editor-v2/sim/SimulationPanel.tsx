@@ -659,7 +659,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {defects && (
                             <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
                         )}
-                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={view.halt.title}>{view.halt.line}</div>}
+                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line sim-panel__hint--halt" title={view.halt.title}>{view.halt.line}</div>}
                         {view?.marking && (
                             <div className="sim-panel__hint sim-panel__hint--line sim-panel__hint--marking" title={view.marking.title}>{view.marking.line}</div>
                         )}
