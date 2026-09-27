@@ -33,7 +33,7 @@ import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useState } fro
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
-import { getSimRun, simClear, simReset } from './simRunState';
+import { getSimRun, simClear, simReset, simSetPending } from './simRunState';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
     profilePatch, profileSummary, profileSummaryText, storedProfile,
@@ -291,7 +291,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // unmount keeps the flags from surviving into another model of the session.
     // R-SIM-13: the cleanup captures the modelid of its own render, so it clears
     // that model's run only.
-    useEffect(() => () => { simClear(modelid); }, [modelid]);
+    // The open choice list goes with it from the canvas (S15 slice A2).
+    useEffect(() => () => { simSetPending(modelid, null); simClear(modelid); }, [modelid]);
 
     /** Labels of the engine roles the shape lacks, and of the invalid ones (simRoleStatus.ts). */
     const missingRoles = missingEngineRoles(roles);
@@ -339,6 +340,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!current || liveSignature === '' || liveSignature === current.signature) return;
         simClear(modelid);
         setPending(null);
+        simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
         setRunError(null);
@@ -390,6 +392,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const onReset = useCallback((): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
         setPending(null);
+        simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
         setInterrupted(false);
@@ -432,6 +435,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setRunError(null);
         setRunWarning(null);
         setPending(null);
+        simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
         setInterrupted(false);
@@ -450,6 +454,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
         const pressed = pressInput(modelid, event, selector, lookup, input);
         setPending(pressed.pending ? { event, input, candidates: pressed.pending } : null);
+        // The canvas marks the list's candidates while it is open (S15 slice A2); a step that opens none closes it.
+        simSetPending(modelid, pressed.pending ? pressed.pending.map(c => c.transition) : null);
         if (pressed.lastStep !== null) setLastStep({ text: pressed.lastStep, title: pressed.lastStepTitle ?? pressed.lastStep });
         setReasonsOpen(false);
         setTick(t => t + 1);
@@ -649,7 +655,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                             )}
                                         </button>
                                     ))}
-                                    <button type="button" className="sim-panel__cancel" onClick={() => setPending(null)}>
+                                    <button type="button" className="sim-panel__cancel" onClick={() => { setPending(null); simSetPending(modelid, null); }}>
                                         Cancel
                                     </button>
                                 </div>

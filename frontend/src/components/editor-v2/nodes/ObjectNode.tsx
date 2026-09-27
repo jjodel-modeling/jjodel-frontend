@@ -37,7 +37,9 @@ import type { VertexViewIR } from '../viewpoint/ir/irTypes';
 import IRNodeContent from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
-import { isSimActive, useSimVersion } from '../sim/simRunState';
+import { getSimNodeState, isSimActive, useSimVersion } from '../sim/simRunState';
+import { initialMarkingFeature, isInitialMarkingRow } from '../sim/simCanvasState';
+import SimNodeRunState from '../sim/SimNodeRunState';
 import { entityLetter } from '../../../common/entityMeta';
 import { store, LPointerTargetable } from '../../../joiner';
 import {
@@ -270,6 +272,14 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // must first verify that the M1b channel covers this path.
     useSimVersion();
     const isSimActiveNode = typeof simObjectId === 'string' && isSimActive(simObjectId);
+    // Run state per node (S15, slice A1): SimNodeRunState paints the count, the
+    // enabled ring and σ. Here only the native initial-marking row reads it: on a
+    // place of a running net that row is the model's M0, muted during the run.
+    const simNode = typeof simObjectId === 'string' ? getSimNodeState(simObjectId) : null;
+    const simLookup = simNode && simNode.tokens !== null
+        ? (store.getState() as { idlookup?: Record<string, any> }).idlookup ?? {}
+        : null;
+    const simInitialFeature = simLookup && simNode ? initialMarkingFeature(simLookup, simNode.modelId) : null;
 
     // Header editing
     const [editing, setEditing] = useState(false);
@@ -904,6 +914,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         const resolvedResizable = (irResolution.compiled.ir as VertexViewIR).resizable;
         const canResize = resolvedResizable ?? hasGeometricShape;
         return (
+            <>
             <div
                 className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}${hasExplicitSize ? ' ir-sized' : ''}${isSimActiveNode ? ' sim-active' : ''}`}
                 data-viewid={irResolution.compiled.viewId}
@@ -955,6 +966,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     transform. */}
                 {inspectorEl}
             </div>
+            <SimNodeRunState objectId={simObjectId} />
+            </>
         );
     }
 
@@ -1144,6 +1157,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // `.mm-object--pill` strips: the pill inside is the only thing that paints.
     if (isPill) {
         return (
+            <>
             <div
                 className={`mm-node mm-object mm-object--pill ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}
                 onDoubleClick={handleDoubleClick}
@@ -1190,10 +1204,13 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     />
                 )}
             </div>
+            <SimNodeRunState objectId={simObjectId} />
+            </>
         );
     }
 
     return (
+        <>
         <div
             className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${notRendered ? ' mm-object--not-rendered' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}
             data-type-display={style.typeDisplay}
@@ -1294,11 +1311,16 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     <div className="mm-object__compartment">
                         {visibleRows.map((row) => {
                             const editable = isRowEditable(row);
+                            // The place's M0 during a run (S15): muted, the badge is the count.
+                            const simInitial = simLookup !== null
+                                && isInitialMarkingRow(simLookup, row.placeholder?.id ?? row.feature?.id ?? '', simInitialFeature);
                             return (
                                 <Fragment key={row.key}>
                                     <span
-                                        className="mm-object__slot-label"
-                                        title={`${row.name} — Alt+click the value: why this renderer`}
+                                        className={`mm-object__slot-label${simInitial ? ' sim-initial-marking' : ''}`}
+                                        title={simInitial
+                                            ? `${row.name}: the initial marking. The badge shows the count in the run.`
+                                            : `${row.name} — Alt+click the value: why this renderer`}
                                     >
                                         <span className="mm-object__feature-name">{row.name}</span>
                                         {row.cardinality && (
@@ -1306,7 +1328,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                         )}
                                     </span>
                                     <span
-                                        className={`mm-object__slot-value${editable ? ' mm-object__slot-value--editable' : ''}`}
+                                        className={`mm-object__slot-value${editable ? ' mm-object__slot-value--editable' : ''}${simInitial ? ' sim-initial-marking' : ''}`}
                                         onDoubleClick={editable ? () => startRowEdit(row) : undefined}
                                         // Alt+click, and NOT right-click: the canvas already
                                         // binds the context menu on every node
@@ -1381,6 +1403,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
             {inspectorEl}
         </div>
+        <SimNodeRunState objectId={simObjectId} />
+        </>
     );
 }
 
