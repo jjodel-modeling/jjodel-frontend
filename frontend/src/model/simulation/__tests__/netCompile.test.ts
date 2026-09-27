@@ -10,12 +10,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../netCompile';
+import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../netCompile';
 import { candidates } from '../netStep';
 import { isKindOf } from '../isKindOf';
 import { objectReferences, objectSlotValues } from '../objectSlots';
 import type { GuardOutcome } from '../guardEvaluator';
-import type { GuardOracle, NetModelView, NetStc, NetTransition, StateAttributeDecl } from '../netTypes';
+import type { DeclarationDefect, DerivedOracle, GuardOracle, NetModelView, NetStc, NetTransition, SimValue, StateAttributeDecl } from '../netTypes';
 
 interface Spec {
     classes: Record<string, string[]>;
@@ -627,5 +627,74 @@ describe('withDerivedEventRole: the event class is the Trigger\'s declared type 
         // control: the outputs did change, so an unmutated input is not a no-op
         expect(outStale).not.toEqual(stale);
         expect(outTyped).not.toEqual(typed);
+    });
+});
+
+describe('lane C2: derived declarations at compile and the initial σ (P-2026-09-27-0200, R-SIM-72, R-SIM-73, R-SIM-75)', () => {
+    const range = (min: number, max: number) => ({ kind: 'range' as const, min, max });
+    const SPEC: Spec = { classes: CLASSES, objects: { A: { cls: 'C_Init' }, N: { cls: 'C_Node' }, T: { cls: 'C_Tr' } } };
+    const VISITS: StateAttributeDecl = { name: 'visits', metaclass: 'C_Node', space: 'semantic', domain: range(0, 3), initial: 0 };
+    const TOTAL: StateAttributeDecl = { name: 'total', metaclass: null, space: 'semantic', domain: range(0, 6), equation: 'A.[visits] + N.[visits]' };
+    const BUSY: StateAttributeDecl = { name: 'busy', metaclass: 'C_Node', space: 'semantic', domain: { kind: 'boolean' }, equation: 'self.[visits] > 0' };
+    const GLOW: StateAttributeDecl = { name: 'glow', metaclass: 'C_Node', space: 'presentation', domain: null, equation: 'self.[visits] > 1' };
+    const values = (m: ReadonlyMap<string, ReadonlyMap<string, SimValue>> | undefined) =>
+        Object.fromEntries([...(m ?? new Map())].map(([e, v]) => [e, Object.fromEntries(v)]));
+    /** An oracle answering fixed values and failures, whatever σ. */
+    const fixed = (attrs: Record<string, Record<string, SimValue>>, failures: ReturnType<DerivedOracle>['failures'] = []): DerivedOracle => () => ({
+        derived: {
+            attrs: new Map(Object.entries(attrs).map(([e, v]) => [e, new Map(Object.entries(v))])),
+            presentation: new Map(),
+        },
+        failures,
+    });
+
+    it('a derived declaration is declared, with its equation, and puts no stored value in σ; its domain is not checked against an initial', () => {
+        const net = compile(CF, SPEC, [VISITS, TOTAL, BUSY, GLOW]);
+        expect(net.declarationDefects).toEqual([]);
+        expect(net.declared.get('M')?.get('total')).toBe(TOTAL);
+        expect(net.declared.get('N')?.get('busy')).toBe(BUSY);
+        expect(net.declared.get('A')?.get('glow')).toBe(GLOW);
+        expect(values(net.initial.attrs)).toEqual({ A: { visits: 0 }, N: { visits: 0 } });
+        expect(net.initial.presentation.size).toBe(0);
+        expect(net.initial).not.toHaveProperty('derived');
+    });
+
+    it('exclusivity at compile: initial and equation, or neither, is a defect of the declaration, and no stored value', () => {
+        const both: StateAttributeDecl = { ...TOTAL, name: 'both', initial: 0 };
+        const none: StateAttributeDecl = { name: 'none', metaclass: null, space: 'semantic', domain: range(0, 1) };
+        const net = compile(CF, SPEC, [both, none]);
+        expect((net.declarationDefects ?? []).map(d => [d.index, d.name, d.code, d.message])).toEqual([
+            [0, 'both', 'exclusive', 'initial and equation'], [1, 'none', 'exclusive', 'no initial or equation'],
+        ]);
+        expect(net.initial.attrs.get('M')).toBeUndefined();
+    });
+
+    it('withDerivedInitial: the initial σ carries the oracle\'s values; the equation defects go before the values\' own; the input net is left as it was', () => {
+        const net = compile(CF, SPEC, [VISITS, { ...VISITS, name: 'tokens' }, TOTAL]);
+        const equation: DeclarationDefect = { index: 2, name: 'total', code: 'parse', message: 'parse error 1:1 x' };
+        const out = withDerivedInitial(net, fixed({ M: { total: 2 } }), [equation]);
+        expect(values(out.initial.derived?.attrs)).toEqual({ M: { total: 2 } });
+        expect(out.initial.attrs).toBe(net.initial.attrs);
+        expect(out.initial.marking).toBe(net.initial.marking);
+        expect((out.declarationDefects ?? []).map(d => [d.name, d.code])).toEqual([['tokens', 'reserved'], ['total', 'parse']]);
+        expect(net.initial).not.toHaveProperty('derived');
+        expect((net.declarationDefects ?? []).map(d => d.code)).toEqual(['reserved']);
+    });
+
+    it('at Reset a failure is a defect once per declaration, its value absent; a value outside its domain is a defect with the value kept', () => {
+        const net = compile(CF, SPEC, [VISITS, TOTAL, BUSY, GLOW]);
+        const out = withDerivedInitial(net, fixed({ M: { total: 7 } }, [
+            { element: 'A', attr: 'busy', space: 'semantic', detail: 'JjelEvaluationError: boom' },
+            { element: 'N', attr: 'busy', space: 'semantic', detail: 'JjelEvaluationError: boom' },
+            { element: 'A', attr: 'glow', space: 'presentation', detail: 'the value is null, not a boolean, a number or a string' },
+        ]));
+        expect((out.declarationDefects ?? []).map(d => [d.index, d.name, d.code, d.message, d.element])).toEqual([
+            [2, 'busy', 'derived', 'failed: JjelEvaluationError: boom', 'A'],
+            [3, 'glow', 'derived', 'failed: the value is null, not a boolean, a number or a string', 'A'],
+            [1, 'total', 'derived', '= 7 outside 0..6', 'M'],
+        ]);
+        expect(values(out.initial.derived?.attrs)).toEqual({ M: { total: 7 } });
+        // control: a value inside the domain is no defect
+        expect(withDerivedInitial(net, fixed({ M: { total: 6 } })).declarationDefects).toEqual([]);
     });
 });

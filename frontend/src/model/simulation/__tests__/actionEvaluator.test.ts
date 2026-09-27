@@ -69,7 +69,7 @@ function handNet(decls: Record<string, StateAttributeDecl[]>): CompiledNet {
         for (const d of ds) {
             const space = d.space === 'semantic' ? attrs : pres;
             if (!space.has(el)) space.set(el, new Map());
-            space.get(el)!.set(d.name, d.initial);
+            if (d.initial !== undefined) space.get(el)!.set(d.name, d.initial);
         }
     }
     return {

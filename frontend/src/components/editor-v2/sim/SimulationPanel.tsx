@@ -207,8 +207,8 @@ function projectIdOfUser(): string {
 // The declared state attributes of the Data group (R-SIM-19, R-SIM-67, R-SIM-71)
 // ---------------------------------------------------------------------------
 
-/** An editable cell of a declaration row. */
-type DeclField = 'name' | 'metaclass' | 'initial' | 'space' | 'kind' | 'min' | 'max' | 'literals';
+/** An editable cell of a declaration row; `form` is «stored | derived» (lane C2, R-SIM-76). */
+type DeclField = 'name' | 'metaclass' | 'initial' | 'space' | 'kind' | 'min' | 'max' | 'literals' | 'form' | 'equation';
 
 interface StateAttributesTableProps {
     /** The raw string of `simStateAttributes`, `null` when unset. */
@@ -224,12 +224,15 @@ function freshName(rows: readonly StateAttributeRecord[]): string {
 }
 
 /**
- * The declarations as a table: one row of two fixed lines per declaration
- * (name, metaclass or global, initial value as a JjEL literal; space, domain
- * kind and its fields). A text cell commits on blur or Enter, a select on
- * change: one write of the whole string per edit, never one per keystroke
- * (report risk 2); Escape drops the edit. What was typed stays shown until the
- * store gives the string back, so a deferred commit does not flicker.
+ * The declarations as a table: one row of three fixed lines per declaration
+ * (name, metaclass or global; stored or derived, then the initial value as a
+ * JjEL literal or the equation as a JjEL expression; space, domain kind and its
+ * fields). Every row has the same height, stored or derived (lane C2, R-SIM-76);
+ * switching the form clears the value of the other. A text cell commits on blur
+ * or Enter, a select on change: one write of the whole string per edit, never
+ * one per keystroke (report risk 2); Escape drops the edit. What was typed stays
+ * shown until the store gives the string back, so a deferred commit does not
+ * flicker.
  */
 function StateAttributesTable({ raw, classes, onCommit }: StateAttributesTableProps): ReactElement {
     const { rows, readable } = useMemo(() => stateAttributeRows(raw ?? undefined), [raw]);
@@ -255,6 +258,10 @@ function StateAttributesTable({ raw, classes, onCommit }: StateAttributesTablePr
         switch (field) {
             case 'name': return { name: typed.trim() };
             case 'initial': return { initial: typed.trim() };
+            case 'equation': return { equation: typed.trim() };
+            // A derived row has no initial (R-SIM-72); back to stored, the equation goes.
+            case 'form':
+                return typed === 'derived' ? { initial: '', equation: row.equation ?? '' } : { equation: undefined };
             case 'metaclass': return { metaclass: typed === '' ? null : typed };
             case 'space':
                 // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed.
@@ -287,12 +294,13 @@ function StateAttributesTable({ raw, classes, onCommit }: StateAttributesTablePr
 
     const shown = (index: number, field: DeclField, stored: string) => drafts[keyOf(index, field)] ?? stored;
 
-    const textCell = (index: number, field: DeclField, stored: string, label: string, placeholder: string, extra: string) => (
+    const textCell = (index: number, field: DeclField, stored: string, label: string, placeholder: string, extra: string, title?: string) => (
         <input
             type="text"
             className={`sim-panel__input ${extra}`}
             aria-label={label}
             placeholder={placeholder}
+            title={title}
             value={shown(index, field, stored)}
             onChange={e => { const v = e.target.value; setDrafts(d => ({ ...d, [keyOf(index, field)]: v })); }}
             onBlur={() => commitCell(index, field, drafts[keyOf(index, field)])}
@@ -326,6 +334,8 @@ function StateAttributesTable({ raw, classes, onCommit }: StateAttributesTablePr
                 const n = i + 1;
                 const semantic = shown(i, 'space', r.space) !== 'presentation';
                 const kind = shown(i, 'kind', r.domain?.kind ?? '');
+                const derived = shown(i, 'form', r.equation !== undefined ? 'derived' : 'stored') === 'derived';
+                const equation = shown(i, 'equation', r.equation ?? '');
                 return (
                     <div className="sim-panel__decl" key={i}>
                         <div className="sim-panel__decl-line">
@@ -342,7 +352,6 @@ function StateAttributesTable({ raw, classes, onCommit }: StateAttributesTablePr
                                 )}
                                 {classes.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}
                             </select>
-                            {textCell(i, 'initial', r.initial, `Initial value of state attribute ${n}, a JjEL literal`, 'initial', 'sim-panel__decl-initial')}
                             <button
                                 type="button"
                                 className="sim-panel__decl-remove"
@@ -352,6 +361,21 @@ function StateAttributesTable({ raw, classes, onCommit }: StateAttributesTablePr
                             >
                                 <i className="bi bi-x" />
                             </button>
+                        </div>
+                        <div className="sim-panel__decl-line">
+                            <select
+                                className="sim-panel__select sim-panel__decl-form"
+                                aria-label={`Stored or derived, state attribute ${n}`}
+                                value={derived ? 'derived' : 'stored'}
+                                onChange={e => choose(i, 'form', e.target.value)}
+                            >
+                                <option value="stored">stored</option>
+                                <option value="derived">derived</option>
+                            </select>
+                            {/* The equation takes the place of the initial value, in the same cell box (R-SIM-76). */}
+                            {derived
+                                ? textCell(i, 'equation', r.equation ?? '', `Equation of state attribute ${n}, a JjEL expression`, 'equation', 'sim-panel__decl-equation', equation || undefined)
+                                : textCell(i, 'initial', r.initial, `Initial value of state attribute ${n}, a JjEL literal`, 'initial', 'sim-panel__decl-initial')}
                         </div>
                         <div className="sim-panel__decl-line">
                             <select
@@ -601,7 +625,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         return {
             status,
             inputs,
-            halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features) } : null,
+            halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features, r.net) } : null,
             reason: status === 'Deadlock' ? stopReason(r, lookup, label, roles.simGuard) : null,
             noCandidate,
         };
