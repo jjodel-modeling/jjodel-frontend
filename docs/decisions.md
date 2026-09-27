@@ -244,6 +244,35 @@ their first commit.
   `docs/lir/`, before the diff, and names the go-ahead in its header. Hook tests 255 (five new). Amends
   RC-19 (relaunch without the flag is no longer the only way).
 
+## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_enum_edge_guard.md` (`4e5dff7ad`), otto ipotesi
+misurate su 3004. Decise dalla chat `C-2026-09-26-1702` sotto RC-25, con la verifica avversariale di RC-27
+(due obiezioni accolte come vincoli: la località dell'handle per la C1, i percorsi di caricamento e replay
+per la C2). Alfonso riceve il digest alla chiusura della corsia.
+
+- **R-EDGE-1** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **In un metamodello una connessione del canvas è valida solo se entrambi gli estremi sono nodi classe.**
+  Predicato puro `isMetamodelConnectionValid(mode, sourceType, targetType)`, simmetrico, `true` in modalità
+  modello, cablato in `isValidConnection` di `EditorV2.tsx`; rifiuta classe→enum, enum→classe, enum→enum e
+  classe→package (§6b del report: la regola è positiva, non "non un enum"). Feedback: lo stato invalido di
+  xyflow più una regola SCSS, niente toast. Vincolo dalla verifica: se un handle di un metamodello non sta su
+  un nodo classe, il predicato deve risolvere il classificatore proprietario dell'handle, non il nodo.
+- **R-EDGE-2** (2026-09-27, provisional, unattended, evidence: read, verified: agent, reversible: branch).
+  **L'invariante del modello arriva in una corsia C2 separata.** `set_type` di un `DReference` rifiuta un
+  non-`DClass`, `_canExtend` rifiuta con un motivo invece di morire su `.map`, i tipi di dato ricevono un
+  `set_extends` che rifiuta, e il linker dell'import Ecore ritipa a `EObject` con avviso un `EReference`
+  tipato da un `EEnum` invece di fallire. Modifica del core (Rule 5). Prima della sua Fase 2 va misurato che
+  il caricamento, undo/redo e il replay di VersionFixer non passino per i setter guardati, altrimenti i
+  progetti salvati smetterebbero di aprirsi (obiezione della verifica, accolta come precondizione).
+- **R-EDGE-3** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: trunk).
+  **Nessuna migrazione dei progetti salvati ora.** Gli stati S1, S5b e S6 caricano, si disegnano e (S1)
+  fanno il giro dell'export; un ticket registra le tre forme e le due opzioni (regola di buona formazione M2
+  nel registro dei problemi, oppure migrazione VersionFixer che ritipa e cancella gli edge orfani: cancellazione
+  di dati persistiti, quindi RC-26), con la decisione sulla regola M2 fissata alla chiusura della C2. L'opzione
+  D (la caduta classe→enum crea un attributo di quel tipo) è rinviata: comodità a bassa scopribilità che tocca
+  l'unione esportata `EdgeTypeChoice`.
+
 ## Arco A — barra a tab e capi degli edge
 
 - **R-A** (2026-08-05) — Strada B per la barra: tutti i tab montati, gli inattivi nascosti con

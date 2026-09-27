@@ -2943,6 +2943,12 @@
     stroke-dasharray: 5 5;
 }
 
+// Refused connection (isValidConnection false, R-EDGE-1): xyflow marks the
+// connection group `invalid` and does not snap the line to the handle.
+.react-flow__connection.invalid .react-flow__connection-path {
+    stroke: var(--color-error);
+}
+
 // ============================================
 // EDGE WAYPOINT HANDLES (segment drag handles)
 // ============================================
