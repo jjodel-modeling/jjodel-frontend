@@ -1,0 +1,51 @@
+# Prompt: merge {{branch}} into {{trunk}}
+
+Prompt-ID: {{promptId}}
+Chat: {{chat}}
+Lane: full (merge; {{laneNote}})
+Status: da eseguire
+
+Worktree: `{{trunkWorktree}}`, branch `{{trunk}}`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `{{trunkWorktree}}` on `{{trunk}}`, stop with `Outcome: blocked`. Every reply opens with `[{{promptId}} · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
+
+**Other chats.** Two merges never run at once in this tree: if the tree is dirty, a merge is in progress (`MERGE_HEAD`), or the trunk tip is not the commit that adds this file (its parent `{{trunkTip}}`), stop and say what you see. If the tip moved because another chat added a docs-only commit on top, say so, accept it as part of the trunk, and continue: only a dirty tree or a running merge is a stop.
+
+## COSA
+
+Bring `{{branch}}` into the trunk with one merge commit, `--no-ff`, of the explicit sha `{{branchTip}}`, {{precedent}}. Merge base `{{base}}`. The branch carries, on top of the base, {{branchCommitCount}}:
+
+{{branchCommits}}
+
+The trunk carries, since the base, {{trunkCommitCount}}:
+
+{{trunkCommits}}
+
+Measured by `lane-run merge` at {{measuredAt}}, trunk at `{{trunkTip}}`:
+
+- `git merge-tree --write-tree --name-only {{trunk}} {{branchTip}}`: {{conflicts}}.
+- Files changed since the base: {{branchFileCount}} on the branch side, {{trunkFileCount}} on the trunk side; on both sides: {{bothSides}}.
+- `git diff --name-only {{base}} {{branchTip}} -- CLAUDE.md AGENTS.md docs/PROTOCOL.md .claude/settings.json`: {{governance}}.
+- Prompt files the branch adds under `docs/prompts/`: {{branchPrompts}}.
+- `git worktree list`: {{worktrees}}.
+
+{{findings}}
+
+**Behaviour brought into force on 3001:** the one the branch's prompts above declare; the chat's smoke on 3001 checks it before the GO.
+
+## COME
+
+1. Preconditions, each a stop if false: `git status` empty; `MERGE_HEAD` absent; `{{branchTip}}` is the tip of `{{branch}}`; the prompt files of the branch read `Status: eseguito` at `{{branchTip}}`; `git worktree list` shows `{{branch}}` only in {{branchWorktree}}.
+2. Measure again. `git merge-tree --write-tree --name-only {{trunk}} {{branchTip}}` (measured above: {{conflicts}}). `git diff --name-only {{base}} {{branchTip}} -- CLAUDE.md AGENTS.md docs/PROTOCOL.md .claude/settings.json` must be empty. No code file may have changed on both sides since the base: compare `git diff --name-only {{base}} {{trunk}}` with `git diff --name-only {{base}} {{branchTip}}` (measured above: {{bothSides}}). A conflict outside `docs/decisions.md` and `docs/log-inbox/*.md`, or a code file changed on both sides: **stop** and report before merging (RC-14: the branch takes the trunk first).
+3. Semantic probes on the merge-tree result, each counted with `git show <tree>:<path> | grep -c -F`:
+{{probes}}
+4. `git merge --no-ff --no-commit {{branchTip}}`. A conflict in `docs/decisions.md` or in a `docs/log-inbox/*.md` file is resolved by union: both blocks kept whole and verbatim, the trunk's first, then the branch's, no conflict markers, no edit inside any decision block or log entry, each heading once. Any other conflict: stop.
+5. Commit the merge. Subject within 72 characters, counted once the Prompt-ID is dropped: `{{mergeSubject}}`. Body in the shape of the precedent named in COSA: the branch's shas above; the trunk's commits since the base (this prompt's commit and any docs commit that moved the tip); the measurement of step 2; the probes; the union resolutions, if any; `Model:` and `Co-Authored-By` trailers.
+6. Gates on the merge commit, from `frontend/`: typecheck 14, §17 set; `typecheck:scripts` exit 0; vitest: measure the trunk tip before step 4 and state the expected total first, the trunk tip plus the branch's new tests (measure them on `{{branchTip}}` in {{branchWorktree}}, read-only, `npx vitest run --reporter=dot` there is allowed; do not write in that tree), 0 failed, the same files red at import; hook tests (`npx vitest run scripts/hooks`) the trunk tip's count plus the branch's new ones; build exit 0; `check:docs` 4/4; `check:agents` green; `check:scripts` PASS.
+7. `Outcome: hard-stop`: 3001 runs from `{{trunkWorktree}}` (do not restart it; say whether it is up with `lsof -nP -iTCP:3001 -sTCP:LISTEN`). The chat runs the smoke on 3001 and gives the GO.
+8. After the GO (a resume), one docs commit: this prompt's Status flipped to `eseguito <YYYY-MM-DD> · lane merge · <merge sha> · verifica visiva passata <YYYY-MM-DD> (chat, unattended; Alfonso in the morning digest)`, pathspec after `--`, subject `docs: Status flip for the {{branch}} merge ({{promptId}})`. No log entry for the merge. Then `Outcome: done`.
+
+Never: `git add .`, `-A`, `-u`, `git stash`, `git reset --hard`, `git checkout -- .`, `git clean`, `--no-verify`, `git branch -f`, merging the branch name, squash, rebase, push, editing any line inside a decision block or a log entry, any other tree except the read-only vitest count in {{branchWorktree}}.
+
+## RIFERIMENTI
+
+- `docs/PROTOCOL.md` P13, P14, P16; `docs/decisions.md` RC-13, RC-14, RC-17, RC-29.
+- Rendered by `lane-run merge` from `frontend/scripts/lane-templates/merge-into-trunk.md`, in the shape of `claude_2026-09-27_0345_prompt_merge_sim_profiles.md` and `claude_2026-09-27_0300_prompt_merge_sim_derived.md`.

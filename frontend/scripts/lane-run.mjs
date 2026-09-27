@@ -1,28 +1,56 @@
 /**
  * lane-run.mjs: the chat's launcher for Claude Code lanes (P16, RC-20).
  *
- * Starts a lane from its committed prompt file, resumes it with a message file,
- * and reports its state. It never commits, never pushes and never writes in a
- * repo: everything it keeps lives in ~/.jjodel-lanes/<Prompt-ID>/.
+ * Starts a lane from its committed prompt file, resumes it with a message, and
+ * reports its state. It never pushes. What it keeps lives in
+ * ~/.jjodel-lanes/<Prompt-ID>/; it writes in a repo only where a command below
+ * says so (merge renders a prompt file and, with --launch, commits it alone).
  *
  *   start <worktree> <prompt-file>
  *                runs `claude -p` in <worktree> with the prompt file on stdin
  *                (a relative prompt path is read from the worktree), detached,
  *                the stream-json on log.jsonl; prints the log path, then the
  *                session id of the first event that carries one, which it also
- *                writes to session.txt. Refused, before anything runs, when the
- *                prompt header has no `Prompt-ID: P-YYYY-MM-DD-HHmm`, and when
- *                the lane already has a session.
- *   resume <Prompt-ID> <message-file>
- *                `claude -p --resume <session id>` with the message file on
- *                stdin, in the worktree recorded at start: a resume runs in the
- *                caller's directory otherwise (discovery report of
- *                P-2026-09-26-1640, section 5). Appends to the same log. Refused
- *                without session.txt or worktree.txt, and while a run is live.
+ *                writes to session.txt; the prompt path goes to prompt.txt.
+ *                Refused, before anything runs, when the prompt header has no
+ *                `Prompt-ID: P-YYYY-MM-DD-HHmm`, and when the lane already has a
+ *                session.
+ *   resume <Prompt-ID> <message-file> | --text "<message>" | -
+ *                `claude -p --resume <session id>` with the message on stdin, in
+ *                the worktree recorded at start: a resume runs in the caller's
+ *                directory otherwise (discovery report of P-2026-09-26-1640,
+ *                section 5). An inline message (--text, or - for stdin) is first
+ *                written to msg-<n>.md in the lane folder, so the log stays
+ *                reproducible. Appends to the same log. Refused without
+ *                session.txt or worktree.txt, and while a run is live.
+ *   go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>]
+ *                resumes with the standard GO: `[<Prompt-ID>] GO.`, the smoke
+ *                sentence, and step <n> of the prompt's COME (of its `### Steps`
+ *                when it has one), or the closure commit when --step is absent.
  *   status <Prompt-ID> [--limit <minutes>]
  *                running, exited or blocked (running past the limit, 90 minutes
  *                by default); the exit code; the last `Outcome:` line of the
  *                assistant text in the log; the elapsed time of the last run.
+ *   merge <branch> --into <trunk> [--at <rev>] [--chat <id>] [--launch]
+ *   merge --trunk-into <branch> [--from <trunk>] [--at <rev>] [--chat <id>] [--launch]
+ *                run from the worktree of the side that receives the merge (the
+ *                trunk; the branch for --trunk-into, RC-14). Measures the merge
+ *                base, `git merge-tree` conflicts, the files changed on each side
+ *                and on both, the governance files changed on the branch, the
+ *                commits of each side, the prompt files the branch adds and their
+ *                Status, the worktrees of the two branches, and the decision rows
+ *                and inbox headings each side adds (the probes). Renders
+ *                lane-templates/merge-into-trunk.md (trunk-into-branch.md) with a
+ *                fresh Prompt-ID, P-<today>-<HHmm>, into docs/prompts/, refused
+ *                when a prompt of that minute exists. --at measures the trunk at
+ *                <rev> instead of its tip; --from names the trunk of the mirror
+ *                (default alfonso-frontend-jjtl). --launch commits the prompt alone
+ *                (`Model:` trailer from JJODEL_MODEL_TRAILER, else
+ *                `Model: chat via lane-run`) and starts it; it is refused, the
+ *                prompt still rendered with the findings in its COSA, on a
+ *                conflict outside docs/decisions.md and docs/log-inbox/*.md, on a
+ *                governance file changed on the branch and, into the trunk, on a
+ *                code file changed on both sides or a branch prompt not flipped.
  *
  * Every run passes `--output-format stream-json --verbose` (stream-json under -p
  * requires --verbose) and `--permission-mode bypassPermissions` (RC-19: a -p
@@ -30,6 +58,7 @@
  * .claude/settings.json only (RC-16). `claude` is looked up on the PATH, then in
  * ~/.local/bin; the child's PATH starts with the directory of the node running
  * this script, so the lane's own gates do not meet the node 16 of a bare shell.
+ * LANE_RUN_NOW=YYYY-MM-DDTHH:mm stands in for the clock (the tests).
  *
  * Plain ES module, nothing outside node:*, like the hooks beside it.
  * Exit codes: 0 done, 1 the launched session failed to start, 2 refused.
@@ -37,12 +66,14 @@
  * Run by: ~/.local/bin/node <tree>/frontend/scripts/lane-run.mjs <command> ...
  */
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
-    accessSync, closeSync, constants, existsSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeFileSync,
+    accessSync, closeSync, constants, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, unlinkSync,
+    writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { basename, delimiter, dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const DEFAULT_LIMIT_MINUTES = 90;
 const START_WAIT_MS = 120000;
@@ -51,6 +82,11 @@ const PROMPT_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
 const HEADER_PROMPT_ID = /^Prompt-ID: (P-\d{4}-\d{2}-\d{2}-\d{4})\s*$/;
 const OUTCOME = /^Outcome: (done|hard-stop|question|blocked)\s*$/;
 const FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions'];
+const TEMPLATES = join(dirname(fileURLToPath(import.meta.url)), 'lane-templates');
+const DEFAULT_TRUNK = 'alfonso-frontend-jjtl';
+const GOVERNANCE = ['CLAUDE.md', 'AGENTS.md', 'docs/PROTOCOL.md', '.claude/settings.json'];
+const LISTED_MAX = 40;
+const SUBJECT_MAX = 72;
 
 // The detached run: claude with the input file on stdin, stdout appended to the
 // log, then its exit code written atomically, so status never reads half a file.
@@ -79,6 +115,7 @@ function laneFiles(id) {
         started: join(dir, 'started.txt'),
         exit: join(dir, 'exit.txt'),
         goahead: join(dir, 'goahead.txt'),
+        prompt: join(dir, 'prompt.txt'),
     };
 }
 
@@ -200,6 +237,7 @@ async function start(worktreeArg, promptArg, rest = []) {
     if (isRunning(f)) refuse(id + ' is running');
     mkdirSync(f.dir, { recursive: true });
     writeFileSync(f.worktree, worktree + '\n');
+    writeFileSync(f.prompt, promptFile + '\n');
     closeSync(openSync(f.log, 'a'));
     const from = statSync(f.log).size;
 
@@ -234,18 +272,41 @@ async function start(worktreeArg, promptArg, rest = []) {
     return 1;
 }
 
-function resume(idArg, messageArg) {
+/** The next msg-<n>.md of the lane folder, holding the text: an inline message is kept before it runs. */
+function writeMessage(f, text) {
+    let n = 0;
+    for (const name of readdirSync(f.dir)) {
+        const m = /^msg-(\d+)\.md$/.exec(name);
+        if (m) n = Math.max(n, Number(m[1]));
+    }
+    const path = join(f.dir, 'msg-' + (n + 1) + '.md');
+    writeFileSync(path, text.endsWith('\n') ? text : text + '\n');
+    return path;
+}
+
+function resume(idArg, rest) {
     const id = checkId(idArg);
-    if (!messageArg) refuse('usage: lane-run resume <Prompt-ID> <message-file>');
+    const [messageArg] = rest;
+    if (!messageArg) refuse('usage: lane-run resume <Prompt-ID> <message-file> | --text "<message>" | -');
+    let text = null;
+    if (messageArg === '--text') text = rest[1] ?? '';
+    else if (messageArg === '-') text = readFileSync(0, 'utf8');
+    if (text !== null && text.trim() === '') refuse('the message is empty');
     const f = laneFiles(id);
     const session = readTrim(f.session);
     if (!session) refuse(id + ' has no session.txt: start the lane first');
     const worktree = readTrim(f.worktree);
     if (!worktree) refuse(id + ' has no worktree.txt: the lane directory is incomplete');
     if (isRunning(f)) refuse(id + ' is still running: wait for its exit before resuming');
-    const message = resolve(messageArg);
-    if (!existsSync(message)) refuse('no message file: ' + message);
+    if (text === null && !existsSync(resolve(messageArg))) refuse('no message file: ' + resolve(messageArg));
     const claude = findClaude();
+    let message;
+    if (text !== null) {
+        message = writeMessage(f, text);
+        console.log('message: ' + message);
+    } else {
+        message = resolve(messageArg);
+    }
 
     const goAhead = existsSync(f.goahead) ? readTrim(f.goahead) : null;
     launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS], goAhead || null);
@@ -297,12 +358,384 @@ function status(idArg, rest) {
     return 0;
 }
 
+/** The value after a flag; null when the flag is absent, refused when its value is. */
+function option(rest, name) {
+    const at = rest.indexOf(name);
+    if (at === -1) return null;
+    const v = rest[at + 1];
+    if (v === undefined || v.startsWith('--')) refuse(name + ' needs a value');
+    return v;
+}
+
+// ── go ───────────────────────────────────────────────────────────────────────
+
+/** The lane's prompt: prompt.txt, or for a lane started before it, the docs/prompts file whose header holds the id. */
+function lanePrompt(f, id) {
+    const recorded = readTrim(f.prompt);
+    if (recorded && existsSync(recorded)) return recorded;
+    const dir = join(readTrim(f.worktree), 'docs', 'prompts');
+    if (existsSync(dir)) {
+        for (const name of readdirSync(dir).sort()) {
+            const path = join(dir, name);
+            if (name.endsWith('.md') && headerPromptId(readFileSync(path, 'utf8')) === id) return path;
+        }
+    }
+    refuse('no prompt file for ' + id + ': neither prompt.txt nor a header in ' + dir);
+}
+
+/** Step n of the COME section (of its `### Steps` when it has one), continuation lines kept. */
+function comeStep(text, n) {
+    const all = text.split('\n');
+    const s = all.findIndex((l) => /^## COME\b/.test(l));
+    if (s === -1) return null;
+    let e = all.findIndex((l, i) => i > s && l.startsWith('## '));
+    let body = all.slice(s + 1, e === -1 ? all.length : e);
+    const steps = body.findIndex((l) => /^### Steps\b/.test(l));
+    if (steps !== -1) {
+        e = body.findIndex((l, i) => i > steps && l.startsWith('### '));
+        body = body.slice(steps + 1, e === -1 ? body.length : e);
+    }
+    const at = body.findIndex((l) => l.startsWith(n + '. '));
+    if (at === -1) return null;
+    const out = [body[at].slice(String(n).length + 2)];
+    for (let i = at + 1; i < body.length; i++) {
+        const l = body[i];
+        if (l.trim() === '' || /^\d+\.\s/.test(l) || l.startsWith('#')) break;
+        out.push(l);
+    }
+    return out.join('\n');
+}
+
+function go(idArg, rest) {
+    const id = checkId(idArg);
+    const smoke = option(rest, '--smoke');
+    if (!smoke || smoke.trim() === '') refuse('usage: lane-run go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>]');
+    const stepArg = option(rest, '--step');
+    let next = 'Now the closure commit as the prompt says.';
+    if (stepArg !== null) {
+        if (!/^[1-9]\d*$/.test(stepArg)) refuse('--step takes a step number: ' + stepArg);
+        const f = laneFiles(id);
+        if (!existsSync(f.dir)) refuse('no lane ' + id + ' in ' + lanesRoot());
+        const promptFile = lanePrompt(f, id);
+        const step = comeStep(readFileSync(promptFile, 'utf8'), Number(stepArg));
+        if (step === null) refuse('no step ' + stepArg + ' in the COME of ' + promptFile);
+        next = 'Now step ' + stepArg + ': ' + step;
+    }
+    return resume(id, ['--text', '[' + id + '] GO.\n\n' + smoke.trim() + '\n\n' + next + '\n']);
+}
+
+// ── merge ────────────────────────────────────────────────────────────────────
+
+const isUnion = (p) => p === 'docs/decisions.md' || /^docs\/log-inbox\/[^/]+\.md$/.test(p);
+const isCode = (p) => !p.startsWith('docs/') && !p.endsWith('.md');
+const nonEmpty = (text) => text.split('\n').filter((x) => x !== '');
+const quote = (xs) => xs.map((x) => '`' + x + '`').join(', ');
+const pad2 = (n) => String(n).padStart(2, '0');
+
+function git(cwd, args, ok = [0]) {
+    const r = spawnSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+    if (r.error) throw new Error('git ' + args[0] + ': ' + r.error.message);
+    if (!ok.includes(r.status)) throw new Error('git ' + args.join(' ') + ' exited ' + r.status + ': ' + r.stderr.trim());
+    return { status: r.status, out: r.stdout };
+}
+
+function commitOf(cwd, rev) {
+    const r = git(cwd, ['rev-parse', '--verify', '--quiet', rev + '^{commit}'], [0, 1, 128]);
+    if (r.status !== 0) refuse('not a commit: ' + rev);
+    return r.out.trim();
+}
+
+const shortSha = (cwd, sha) => git(cwd, ['rev-parse', '--short=9', sha]).out.trim();
+
+/** The local clock, or LANE_RUN_NOW=YYYY-MM-DDTHH:mm. */
+function clock() {
+    const v = process.env.LANE_RUN_NOW;
+    if (!v) return new Date();
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(v);
+    if (!m) refuse('LANE_RUN_NOW is not YYYY-MM-DDTHH:mm: ' + v);
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+}
+
+function stamp(d) {
+    return { date: d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()), hhmm: pad2(d.getHours()) + pad2(d.getMinutes()) };
+}
+
+function headerStatus(text) {
+    for (const line of text.split('\n')) {
+        if (line.startsWith('## ')) break;
+        const m = /^Status:\s*(.*)$/.exec(line);
+        if (m) return m[1].trim();
+    }
+    return '';
+}
+
+function worktrees(cwd) {
+    const out = [];
+    for (const line of git(cwd, ['worktree', 'list', '--porcelain']).out.split('\n')) {
+        if (line.startsWith('worktree ')) out.push({ path: line.slice('worktree '.length), branch: null });
+        else if (line.startsWith('branch refs/heads/') && out.length) out[out.length - 1].branch = line.slice('branch refs/heads/'.length);
+    }
+    return out;
+}
+
+/** Lines a side adds since the base, with the file each belongs to. */
+function addedLines(cwd, base, tip, paths) {
+    const out = [];
+    let file = null;
+    for (const l of git(cwd, ['diff', '-U0', '--no-color', '--no-ext-diff', base, tip, '--', ...paths]).out.split('\n')) {
+        if (l.startsWith('+++ ')) file = l.startsWith('+++ b/') ? l.slice(6) : null;
+        else if (l.startsWith('+') && file) out.push({ file, text: l.slice(1) });
+    }
+    return out;
+}
+
+/** The decision rows and inbox headings each side adds, each to be found once after the merge; the next row id of the series is the control. */
+function mergeProbes(cwd, base, sides) {
+    const rows = new Map();
+    const headings = new Map();
+    for (const [side, tip] of sides) {
+        for (const a of addedLines(cwd, base, tip, ['docs/decisions.md', 'docs/log-inbox/'])) {
+            const row = a.file === 'docs/decisions.md' ? /^- \*\*((?:R|RC)(?:-[A-Z]+)*-\d+)\*\*/.exec(a.text) : null;
+            const map = row ? rows : /^##/.test(a.text) ? headings : null;
+            if (!map) continue;
+            const key = row ? row[1] : a.file + '\n' + a.text;
+            map.set(key, map.has(key) && map.get(key).side !== side ? { ...map.get(key), side: 'both sides' } : { file: a.file, text: a.text, side });
+        }
+    }
+    const out = [];
+    if (rows.size) {
+        const ids = [...rows.keys()];
+        const series = ids[ids.length - 1].replace(/-\d+$/, '');
+        const re = new RegExp('^- \\*\\*' + series + '-(\\d+)\\*\\*', 'gm');
+        let max = 0;
+        for (const [, tip] of sides) {
+            const r = git(cwd, ['show', tip + ':docs/decisions.md'], [0, 128]);
+            for (const m of r.status === 0 ? r.out.matchAll(re) : []) max = Math.max(max, Number(m[1]));
+        }
+        out.push('`docs/decisions.md`, each row once, counted on `- **<id>**`: ' +
+            ids.map((id) => '`' + id + '` (' + rows.get(id).side + ')').join(', ') +
+            '; control: `- **' + series + '-' + (max + 1) + '**` none.');
+    }
+    for (const h of headings.values()) out.push('`' + h.file + '`: the heading `' + h.text + '` once (' + h.side + ').');
+    return out;
+}
+
+function measureMerge(cwd, o) {
+    const trunkTip = commitOf(cwd, o.at || o.trunk);
+    const branchTip = commitOf(cwd, o.branch);
+    const mb = git(cwd, ['merge-base', trunkTip, branchTip], [0, 1]);
+    if (mb.status !== 0) refuse(o.branch + ' and ' + o.trunk + ' have no merge base');
+    const base = mb.out.trim();
+    const pair = o.mode === 'into' ? [trunkTip, branchTip] : [branchTip, trunkTip];
+    const mt = git(cwd, ['merge-tree', '--write-tree', '--name-only', '--no-messages', ...pair], [0, 1]);
+    const conflicts = mt.status === 0 ? [] : [...new Set(nonEmpty(mt.out).slice(1))];
+    const branchFiles = nonEmpty(git(cwd, ['diff', '--name-only', base, branchTip]).out);
+    const trunkFiles = nonEmpty(git(cwd, ['diff', '--name-only', base, trunkTip]).out);
+    const log = (tip) => nonEmpty(git(cwd, ['log', '--format=%h %s', '--abbrev=9', base + '..' + tip]).out);
+    const prompts = nonEmpty(git(cwd, ['diff', '--name-only', '--diff-filter=A', base, branchTip, '--', 'docs/prompts/']).out).map((path) => {
+        const status = headerStatus(git(cwd, ['show', branchTip + ':' + path]).out);
+        return { name: basename(path), status, done: /^eseguito\b/.test(status) };
+    });
+    const lastMerge = (tip) => git(cwd, ['log', '--merges', '-1', '--format=%h', '--abbrev=9', tip]).out.trim();
+    let precedent = { sha: lastMerge(o.mode === 'into' ? trunkTip : branchTip), on: o.mode === 'into' ? o.trunk : o.branch };
+    if (!precedent.sha && o.mode !== 'into') precedent = { sha: lastMerge(trunkTip), on: o.trunk };
+    return {
+        trunkTip, branchTip, base, conflicts, branchFiles, trunkFiles,
+        both: branchFiles.filter((p) => trunkFiles.includes(p)),
+        governance: nonEmpty(git(cwd, ['diff', '--name-only', base, branchTip, '--', ...GOVERNANCE]).out),
+        branchCommits: log(branchTip),
+        trunkCommits: log(trunkTip),
+        prompts,
+        precedent,
+        worktrees: worktrees(cwd),
+        probes: mergeProbes(cwd, base, [['branch', branchTip], ['trunk', trunkTip]]),
+        short: { trunk: shortSha(cwd, trunkTip), branch: shortSha(cwd, branchTip), base: shortSha(cwd, base) },
+    };
+}
+
+/** What refuses --launch, measured: stated in the prompt's COSA as well. */
+function mergeFindings(m, o) {
+    const out = [];
+    const hard = m.conflicts.filter((p) => !isUnion(p));
+    if (hard.length) out.push('a conflict the union rule does not cover: ' + quote(hard));
+    if (m.governance.length) out.push('governance files changed on the branch: ' + quote(m.governance));
+    if (o.mode === 'into') {
+        const code = m.both.filter(isCode);
+        if (code.length) {
+            out.push('code files changed on both sides since the base; RC-14, the branch takes the trunk first (`lane-run merge --trunk-into ' +
+                o.branch + '`): ' + quote(code));
+        }
+        const open = m.prompts.filter((p) => !p.done);
+        if (open.length) out.push('branch prompts whose Status is not eseguito: ' + open.map((p) => '`' + p.name + '` (' + (p.status || 'no Status line') + ')').join(', '));
+    }
+    return out;
+}
+
+function render(name, values) {
+    const text = readFileSync(join(TEMPLATES, name), 'utf8').replace(/\{\{(\w+)\}\}/g, (all, key) => {
+        if (!(key in values)) throw new Error('template ' + name + ' has no value for ' + all);
+        return values[key];
+    });
+    if (text.includes('{{')) throw new Error('template ' + name + ' holds a malformed placeholder');
+    return text.replace(/\n{3,}/g, '\n\n');
+}
+
+function mergeValues(m, o, id, when, findings) {
+    const into = o.mode === 'into';
+    const where = (b) => {
+        const paths = m.worktrees.filter((w) => w.branch === b).map((w) => '`' + w.path + '`');
+        return paths.length ? paths.join(' and ') : 'no worktree';
+    };
+    const commits = (xs, tip) => {
+        if (!xs.length) return '- none';
+        const shown = xs.slice(0, LISTED_MAX).map((l) => '- `' + l.slice(0, l.indexOf(' ')) + '` ' + l.slice(l.indexOf(' ') + 1));
+        if (xs.length > LISTED_MAX) shown.push('- and ' + (xs.length - LISTED_MAX) + ' more: `git log --oneline ' + m.short.base + '..' + tip + '`');
+        return shown.join('\n');
+    };
+    const count = (n) => n + (n === 1 ? ' commit' : ' commits');
+    const conflicts = m.conflicts.length ? m.conflicts.length + (m.conflicts.length === 1 ? ' conflict: ' : ' conflicts: ') + quote(m.conflicts) : 'zero conflicts';
+    const head = into ? 'merge: ' + o.branch + ' into ' + o.trunk : 'merge: ' + o.branch + ' takes ' + o.trunk;
+    const subject = (head.length <= SUBJECT_MAX ? head : into ? 'merge: ' + o.branch : 'merge: ' + o.branch + ' takes the trunk') + ' (' + id + ')';
+    return {
+        promptId: id,
+        chat: o.chat || '—',
+        branch: o.branch,
+        trunk: o.trunk,
+        laneNote: m.conflicts.length ? conflicts + ' measured' : 'zero conflicts measured',
+        trunkWorktree: into ? o.top : where(o.trunk),
+        branchWorktree: into ? where(o.branch) : o.top,
+        trunkTip: m.short.trunk,
+        branchTip: m.short.branch,
+        base: m.short.base,
+        precedent: m.precedent.sha
+            ? 'in the shape of `' + m.precedent.sha + '` (the last merge commit on `' + m.precedent.on + '`; read its body first)'
+            : 'in the shape of the prompts named in RIFERIMENTI (no merge commit on `' + m.precedent.on + '` to copy)',
+        branchCommitCount: count(m.branchCommits.length),
+        trunkCommitCount: count(m.trunkCommits.length),
+        branchCommits: commits(m.branchCommits, m.short.branch),
+        trunkCommits: commits(m.trunkCommits, m.short.trunk),
+        measuredAt: when,
+        conflicts,
+        branchFileCount: String(m.branchFiles.length),
+        trunkFileCount: String(m.trunkFiles.length),
+        bothSides: m.both.length ? quote(m.both) : 'none',
+        governance: m.governance.length ? quote(m.governance) : 'empty',
+        branchPrompts: m.prompts.length ? m.prompts.map((p) => '`' + p.name + '` (' + (p.status || 'no Status line') + ')').join(', ') : 'none',
+        worktrees: '`' + o.branch + '` in ' + where(o.branch) + '; `' + o.trunk + '` in ' + where(o.trunk),
+        findings: findings.length
+            ? '**Findings.** `lane-run merge` refuses `--launch` on this measurement:\n\n' + findings.map((x) => '- ' + x).join('\n')
+            : '',
+        probes: (m.probes.length ? m.probes : ['none: neither side adds a decision row or an inbox heading since the base.']).map((x) => '   - ' + x).join('\n'),
+        mergeSubject: subject,
+    };
+}
+
+function parseMerge(rest) {
+    const o = { launch: false };
+    const positional = [];
+    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat' };
+    for (let i = 0; i < rest.length; i++) {
+        const a = rest[i];
+        if (a === '--launch') o.launch = true;
+        else if (a in valued) {
+            o[valued[a]] = option(rest.slice(i), a);
+            i++;
+        } else if (a.startsWith('--')) refuse('unknown option for merge: ' + a);
+        else positional.push(a);
+    }
+    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id>] [--launch]';
+    if (o.trunkInto) {
+        if (positional.length || o.into) refuse(usage);
+        return { ...o, mode: 'trunk-into', branch: o.trunkInto, trunk: o.from || DEFAULT_TRUNK };
+    }
+    if (positional.length !== 1 || !o.into || o.from) refuse(usage);
+    return { ...o, mode: 'into', branch: positional[0], trunk: o.into };
+}
+
+function modelTrailer() {
+    const v = (process.env.JJODEL_MODEL_TRAILER || '').trim();
+    if (!v) return 'Model: chat via lane-run';
+    return v.startsWith('Model:') ? v : 'Model: ' + v;
+}
+
+async function merge(rest) {
+    const o = parseMerge(rest);
+    const here = process.cwd();
+    const top = git(here, ['rev-parse', '--show-toplevel'], [0, 128]);
+    if (top.status !== 0) refuse('not inside a git worktree: ' + here);
+    o.top = top.out.trim();
+    for (const b of [o.branch, o.trunk]) {
+        if (git(o.top, ['rev-parse', '--verify', '--quiet', 'refs/heads/' + b], [0, 1, 128]).status !== 0) refuse('no local branch ' + b);
+    }
+    const receiver = o.mode === 'into' ? o.trunk : o.branch;
+    const current = git(o.top, ['branch', '--show-current']).out.trim();
+    if (current !== receiver) {
+        refuse('run ' + (o.mode === 'into' ? 'merge --into' : 'merge --trunk-into') + ' from the worktree of ' + receiver + ' (RC-14); ' + o.top + ' is on ' + (current || 'a detached HEAD'));
+    }
+
+    const d = clock();
+    const { date, hhmm } = stamp(d);
+    const id = 'P-' + date + '-' + hhmm;
+    const dir = join(o.top, 'docs', 'prompts');
+    const taken = existsSync(dir) ? readdirSync(dir).filter((n) => n.startsWith('claude_' + date + '_' + hhmm + '_')) : [];
+    if (taken.length) refuse(id + ' is taken by ' + taken.join(', ') + ': run again in the next minute');
+    if (existsSync(laneFiles(id).dir)) refuse(id + ' already has a lane folder in ' + lanesRoot());
+
+    const m = measureMerge(o.top, o);
+    const findings = mergeFindings(m, o);
+    const slug = o.branch.replace(/[^A-Za-z0-9._-]+/g, '-');
+    const file = join(dir, 'claude_' + date + '_' + hhmm + (o.mode === 'into' ? '_prompt_merge_' + slug : '_prompt_' + slug + '_take_trunk') + '.md');
+    const values = mergeValues(m, o, id, date + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()), findings);
+    const text = render(o.mode === 'into' ? 'merge-into-trunk.md' : 'trunk-into-branch.md', values);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(file, text);
+
+    const plain = (xs) => (xs.length ? xs.join(', ') : 'none');
+    const where = (b) => b + ' in ' + plain(m.worktrees.filter((w) => w.branch === b).map((w) => w.path));
+    console.log('mode: ' + (o.mode === 'into' ? o.branch + ' into ' + o.trunk : o.trunk + ' into ' + o.branch));
+    console.log('trunk: ' + o.trunk + ' at ' + m.short.trunk);
+    console.log('branch: ' + o.branch + ' at ' + m.short.branch);
+    console.log('base: ' + m.short.base);
+    console.log('conflicts: ' + (m.conflicts.length ? m.conflicts.length + ': ' + m.conflicts.join(', ') : 'none'));
+    console.log('files: ' + m.branchFiles.length + ' on the branch side, ' + m.trunkFiles.length + ' on the trunk side; both sides: ' + plain(m.both));
+    console.log('governance: ' + (m.governance.length ? 'changed on the branch: ' + m.governance.join(', ') : 'unchanged on the branch'));
+    console.log('branch commits: ' + m.branchCommits.length);
+    console.log('trunk commits: ' + m.trunkCommits.length);
+    console.log('branch prompts: ' + plain(m.prompts.map((p) => p.name + ' ' + (p.done ? 'eseguito' : p.status || 'no Status line'))).replace(/, /g, '; '));
+    console.log('worktrees: ' + where(o.branch) + '; ' + where(o.trunk));
+    console.log('probes: ' + m.probes.length);
+    console.log('Prompt-ID: ' + id);
+    console.log('prompt: ' + file);
+
+    const refusals = findings.map((x) => x.replace(/`/g, ''));
+    if (o.at && o.mode === 'into' && commitOf(o.top, o.trunk) !== m.trunkTip) {
+        refusals.push('--at ' + o.at + ' is not the tip of ' + o.trunk + ': a launched merge starts from the trunk tip');
+    }
+    if (!o.launch) {
+        console.log('launch: not requested' + (refusals.length ? '; it would be refused: ' + refusals.join('; ') : ''));
+        return 0;
+    }
+    if (refusals.length) {
+        console.log('launch: refused');
+        refuse('launch refused: ' + refusals.join('; '));
+    }
+    const rel = relative(o.top, file);
+    git(o.top, ['add', '--', rel]);
+    git(o.top, ['commit', '-q', '-m', 'docs: add prompt ' + id + ', merge ' + (o.mode === 'into' ? o.branch + ' into ' + o.trunk : o.trunk + ' into ' + o.branch), '-m', modelTrailer(), '--', rel]);
+    console.log('launch: committed ' + shortSha(o.top, 'HEAD'));
+    return start(o.top, file);
+}
+
 async function main(argv) {
     const [command, ...rest] = argv;
     if (command === 'start') return start(rest[0], rest[1], rest.slice(2));
-    if (command === 'resume') return resume(rest[0], rest[1]);
+    if (command === 'resume') return resume(rest[0], rest.slice(1));
+    if (command === 'go') return go(rest[0], rest.slice(1));
     if (command === 'status') return status(rest[0], rest.slice(1));
-    refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file> | status <Prompt-ID> [--limit <minutes>]');
+    if (command === 'merge') return merge(rest);
+    refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
+        'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | ' +
+        'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>]');
 }
 
 main(process.argv.slice(2)).then(
