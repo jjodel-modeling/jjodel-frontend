@@ -2134,6 +2134,34 @@ come raccomandato», quindi le righe qui sotto non sono provvisorie.
   demo con `FinalNode` e complemento esplicito; R-SIM-53 e `else` verso Fork/Join dopo MODELS) è un vincolo di script,
   registrato nel report §8, senza corsia.
 
+### Decisioni 2026-09-27: corsia E1, il motore dopo MODELS (R-SIM-83..84)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md` (`948fdad8a`, P-2026-09-27-1545),
+§2 e §3; risposte di Alfonso del 2026-09-27 16:05 (A sì, B no, `f60a0f0b2`). Attuate dalla corsia E1
+(P-2026-09-27-1610, codice `45a796050` e `bce34aee1`) sotto RC-25. Nessuna riga ratificata da Alfonso cambia:
+R-SIM-53 e R-SIM-31(1) sono attuate come scritte.
+
+- **R-SIM-83** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Il motore legge l'activity final (G6).** R-SIM-53 attuata come scritta: `simActivityFinal` entra nella STC
+  (`NetStc.activityFinal`), la rete compilata ne porta i posti per kind-of (`CompiledNet.activityFinal`, `null`
+  senza il ruolo), e `terminated` è vero quando uno di essi è marcato, qualunque altro token sia vivo. L'insieme
+  non si fonde in F: «ogni posto marcato in F» resta com'era, l'activity final è un disgiunto a parte. Con il
+  commit `45a796050` la chiave esce dalle provvisorie di R-SIM-52. Il punto (2) dei «Punti aperti chiusi» del
+  2026-09-25 (attuazione con la corsia di Accepting e degli output) è sciolto dalla chat: G6 va da sola. La riga
+  del pannello per la chiave arriva con la corsia E2; fino ad allora la chiave si vede solo nelle proposte di
+  Apply (report §5.1 rischio 1). Sui quattro preset della demo nulla cambia (report §2.6; Flow B identico).
+- **R-SIM-84** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **`else` sulle transizioni fuse, e il difetto `else-position` (G7).** R-SIM-31(1) attuata come scritta anche
+  dopo la fusione di fork e join: l'`else` si riconosce sull'arco di scelta della transizione fusa (l'arco
+  entrante in un fork, un arco uscente da un join), i fratelli restano «stesso preset, stessi trigger», e si
+  risolve una volta sola su transizioni semplici e fuse insieme, quindi anche l'`else` di un arco semplice vede
+  il fratello che entra in un fork. Perde il proprio sito di guardia solo l'arco `else`: le guardie degli altri
+  archi della transizione fusa restano e si congiungono dopo il complemento (R-SIM-17); quando falliscono, la
+  voce di valutazione è il loro esito e la spiegazione nomina l'arco. Un `else` su un arco entrante in un join o
+  uscente da un fork non ha fratelli sotto R-SIM-31(1): è il difetto di compilazione `else-position` (letterale
+  nuovo di `NetDefectCode`, additivo per la regola 11 come in R-SIM-70) e quel nodo non compila. L'emendamento B
+  (fratelli letti sull'arco) è respinto da Alfonso il 2026-09-27. R-SIM-64 (Petri) invariata.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`

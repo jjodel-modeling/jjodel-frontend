@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1610
 Chat: C-2026-09-27-1437
 Lane: full (Phase 2 of P-2026-09-27-1545; more than 3 files; no critical zone, no visual check: the readiness Flow probes replace it)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-e1-engine · 45a796050, bce34aee1
 
 Worktree: `~/jjodel-icons`, branch `sim-e1-engine` (cut by the chat from `sim-post-models-engine` at `f60a0f0b2`, which carries the discovery report and Alfonso's answers), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `sim-e1-engine`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
