@@ -195,6 +195,33 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Closes C1's doubled-chevron ticket. Not a second chevron but a row: `[data-theme="dark"] select` (`_form-system.scss:760`, 0,1,1) outranks `.sim-panel__select` (0,1,0), and its SVG tiles (the dark shorthand at `:735` resets repeat) beside the native arrow. It hits every panel select since panel v1 (`1b67b65fa`), so the rule covers all 21. Dark background colour unchanged (report §5). Probes `_tmp_chevron_*` gitignored; logs in `~/.jjodel-lanes/P-2026-09-27-1501/`.
 **Prompt document name**: 2026-09-27 15:01
 
+## 2026-09-27 — probe: the demo script's Add attribute hint path on the trunk (P-2026-09-27-1500)
+**Prompt**: `claude_2026-09-27_1500_prompt_sim_demo_hint_path_probe_trunk.md`, fast probe lane on `sim-hint-path-probe` in `~/jjodel-icons` (trunk code `86520a8f3`). Measure the ESM declarations path of `docs/demo/models_2026_simulator_demo.md` (`6fd1da38f`, lines 194-201) on the trunk: hint click, groups and focus, the two rows as typed, Apply, the marking line; four crops; confirm or amend each step.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-27_sim_demo_hint_path_trunk.md` (new), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_hint_*` gitignored; no source file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no source file touched; four probe runs on 3013, `EXIT=0` each, port free before and after.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — probe lane; five crops per variant for the chat in `~/.jjodel-lanes/shots_hint/{script,direct,prompt}/`
+**Notes**: Step 1 confirmed (focus on the table's add, 926-950 vs 950, R2's numbers); step 4 and the run confirmed. Steps 2 and 3 diverge in gestures only: cells prefilled `x1`/`false`/max `1`, a click leaves the caret after the text; row 1 line 3 at 945-969, second add 954-978, row 2 line 2 at 946-970, all past the 950 fold. Declarations byte-identical to the Configure path. Trunk moved to `2e7f966de` (validateProfile only, no panel caller). Report §6 has the script wording.
+**Prompt document name**: 2026-09-27 15:00
+**Ticket** (priority low, opened here, report §8 Q2). The table's own `Add attribute` scrolls nothing (`SimulationPanel.tsx:420`; only the hint scrolls, `:474-475`), so each new row starts at the body's bottom edge with its lower lines below the fold, and every new cell is prefilled (`:322`, `:274`) with the caret left after the text on click. After MODELS: scroll the new row into view, select a prefilled cell on focus.
+
+## 2026-09-27 — docs: demo script names the ESM hint path gestures (P-2026-09-27-1540)
+**Prompt**: `claude_2026-09-27_1540_prompt_sim_demo_script_hint_gestures.md`, fast lane, docs only, on `sim-demo-script-hint` in `~/jjodel-open`: §6 of `discovery_2026-09-27_sim_demo_hint_path_trunk.md` (`6acdb7080`, branch `sim-hint-path-probe`) applied step by step to §2.3 of the demo script, the three scrolls and the double-clicks named, the R2-only claim of §4 replaced by the trunk measurement.
+**Files touched**: this commit: `docs/demo/models_2026_simulator_demo.md` (§2.3 declarations steps 1 to 4 and the count sentence, §4 the summary-button risk), this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 14:30 (`claude_2026-09-27_1430_prompt_sim_demo_script.md`: its §2.3 steps 2 and 3 did not name the scrolls and the prefilled cells the trunk measured)
+**Causa**: (c)
+**Regressions**: no. Docs only, no source file changed. `grep -c '—'` on the script 0 (exit 1, control `Marking` 43); `check:docs` 4/4.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: No value of §6 contradicts the script: min 0, max 3, initial 0, the 10 interactions (1 hint, 2 add, 7 cells) hold. Measured code `86520a8f3`; since then `frontend/src/components/editor-v2/sim/` differs by `50c198da5` only, a dark-only select rule (light computes `none`): read, not re-run. §2.4 line 274 types into the same prefilled cells and names no double-click; out of scope, left as is. The table-add ticket stays open (chat, RC-25).
+**Prompt document name**: 2026-09-27 15:40
+
 ## 2026-09-27 — discovery: post-MODELS engine batch, G6, G7, G12 (P-2026-09-27-1545)
 **Prompt**: `claude_2026-09-27_1545_prompt_discovery_sim_post_models_engine.md`, read-only discovery on `sim-post-models-engine` in `~/jjodel-icons` at `f18d976d5`: for G6 (the activity final is never read), G7 (`else` in fused transitions) and G12 (the Bound proposal is a lower bound), the code path, the minimal change, the tests, the R- rows and the effect on the four demo presets; two options for G12.
 **Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md` (new), this entry, the Status of the prompt file. Probes in `/tmp/p1545/`, outside every tree, not committed.
@@ -208,6 +235,20 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: New: `else` on a plain edge whose sibling enters a fork is always true, a silent choice list (G7 mirror). The G7 sketch covers the fork in-edge, the join out-edge and the mirror; `else` into a join becomes `else-position` (B, Alfonso). G12: (a) wrong on a merge (2 for 4) and a chain (3 for 9); (b) exact on the demo net, recommended, amends R-SIM-81 (A, Alfonso). The prompt's `Lane: full` names no RC-3 trigger (RC-17). A /tmp mirror with symlinks was refused, not retried.
 **Prompt document name**: 2026-09-27 15:45
 **Ticket** (priority medium, opened here, G7 of the report §3.2). An `else` on a plain edge whose sibling enters a fork or a join is always true: the siblings are drawn from the plain edges only (`netCompile.ts:266`), so the decision offers both branches and no defect says why. Measured on `f18d976d5`; lane E1 of the report closes it.
+
+## 2026-09-27 — feat: the engine reads the activity final and resolves else over fused transitions, lane E1 (P-2026-09-27-1610)
+**Prompt**: `claude_2026-09-27_1610_prompt_sim_e1_engine_g6_g7.md`, Phase 2 of P-2026-09-27-1545 on `sim-e1-engine` in `~/jjodel-icons`, full lane (more than 3 files), unattended. G6: the engine reads `simActivityFinal`, and a marked activity final terminates the run with other tokens alive (R-SIM-53). G7: `else` resolved over plain and fused transitions with R-SIM-31(1)'s siblings as written; an `else` into a join or out of a fork is the defect `else-position` (Alfonso's B no).
+**Files touched**: code `45a796050` (G6): `frontend/src/model/simulation/netTypes.ts`, `netCompile.ts`, `netStep.ts`, `roleCatalog.ts` (header comment), tests `netCompile.test.ts`, `netStep.test.ts`, `roleCatalog.test.ts`; code `bce34aee1` (G7): `netTypes.ts`, `netCompile.ts`, `netStep.ts`, tests `netCompile.test.ts`, `netStep.test.ts`, `components/editor-v2/sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-83, R-SIM-84), this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Baseline at `5260df11f`: `npm run typecheck` exit 2, 14 errors; vitest on `model/simulation` and `editor-v2/sim` 533 passed, 19 files; full `npx vitest run` 5175 passed, the 9 known files red at import. On `bce34aee1`: typecheck exit 2, 14 errors, set identical; sim 543 passed (533 + 10); full 5185 passed, the same 9 files; `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` 4/4. Red first: G6 5 (the 4 new tests and the moved roleCatalog assertion), G7 6. Mutation bench on the ten mutants of report §9: 10/10 killed, each only by the new tests.
+**Out-of-scope changes**: no — eight code paths, all in DOVE (`simBridge.test.ts` the optional one), above the Rule 19 five; the list is the prompt's DOVE, not restated in chat before the first edit. No file of E2's DOVE, no critical-zone file.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no visual check in the prompt). The readiness Flow probes replace it, copied read-only as `_tmp_e1_*`, vite on 3015: Flow B trace identical line by line (11 of 11: the M1 reset and STEP 1..10); Flow C `Terminated` at step 6, `Marking: fin · count = 2` (was `Deadlock`); Flow A no defect at Reset, `Terminated` at step 6. Each exit 0, one console error of the known kind.
+**Notes**: The Flow B comparison drops one reader key, `choiceSectionPaint` (null): the readiness common file gained it at 13:01, after its Flow B ran at 12:51. The G7 subject is shortened from the prompt's, 74 characters, over the 72 of §6.2. R-SIM-83 and 84 are numbered while E2 runs in parallel; a clash is the later merge's to renumber. The G6 commit message was amended once, pathspec only, before the G7 commit.
+**Prompt document name**: 2026-09-27 16:10
+**Ticket** (closed here). The G7 mirror ticket of the P-2026-09-27-1545 entry (an `else` on a plain edge whose sibling enters a fork was always true) is closed by `bce34aee1`: the test «mirror» in `netCompile.test.ts` and mutant M7 of the bench.
 
 ## 2026-09-27 — feat: E2, Bound from a bounded exploration and the activity-final row (P-2026-09-27-1611)
 **Prompt**: `claude_2026-09-27_1611_prompt_sim_e2_panel_row_bound.md`, lane E2 on `sim-e2-panel-bound` in `~/jjodel-open`, full lane, Phase 2 of P-2026-09-27-1545. G12(b): Apply proposes `simBound` from the reachable markings of the models, guards aside, inhibitors and termination kept, capped at 2000 (R-SIM-81(1) amended, Alfonso's answer A); the G6 panel row: Activity final in Configure… General.
