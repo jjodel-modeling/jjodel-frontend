@@ -8,7 +8,9 @@
  *
  *   start <worktree> <prompt-file>
  *                runs `claude -p` in <worktree> with the prompt file on stdin
- *                (a relative prompt path is read from the worktree), detached,
+ *                (the path as given, absolute or relative to the caller's
+ *                directory, then relative to the worktree; refused, naming both,
+ *                when neither exists), detached,
  *                the stream-json on log.jsonl; prints the log path, then the
  *                session id of the first event that carries one, which it also
  *                writes to session.txt; the prompt path goes to prompt.txt.
@@ -30,7 +32,28 @@
  *   status <Prompt-ID> [--limit <minutes>]
  *                running, exited or blocked (running past the limit, 90 minutes
  *                by default); the exit code; the last `Outcome:` line of the
- *                assistant text in the log; the elapsed time of the last run.
+ *                assistant text in the log, a suffix after the word tolerated,
+ *                `unparsed: <line>` when that line names no outcome; the elapsed
+ *                time of the last run.
+ *   status --all [--limit <minutes>]
+ *                every lane folder of ~/.jjodel-lanes in one table (id, state,
+ *                outcome, elapsed), newest Prompt-ID first.
+ *   wait <Prompt-ID> | --any <id,id,...> [--max <seconds>]
+ *                polls every 2 s until the lane, or any of the lanes, no longer
+ *                runs (exit 0, its status printed) or the deadline passes (exit
+ *                3). --max defaults to 170 and is refused above it: the chat's
+ *                shell call ends near 180 s.
+ *   probe <worktree> <probe.ts> --port <n> [--config <vite config>] [--id <Prompt-ID>]
+ *                refused on port 3001 and on a port in use (lsof). Starts
+ *                `npx vite --config <cfg> --port <n> --strictPort` in
+ *                <worktree>/frontend, detached, waits up to 60 s for a 200 on /,
+ *                runs `npx tsx <probe.ts>` there (PROBE_URL and PROBE_PORT in its
+ *                environment) with both streams on probe-<name>.log in the lane
+ *                folder (probe-<date> without --id), then EXIT=<code> and
+ *                end=<time>; stops the process group it started, and only that,
+ *                and exits with the probe's code. The default config is
+ *                frontend/scripts/smoke/_tmp_lane_vite_<port>.config.ts, written
+ *                when absent in the shape of the chat's _tmp_chat_vite configs.
  *   merge <branch> --into <trunk> [--at <rev>] [--chat <id>] [--launch]
  *   merge --trunk-into <branch> [--from <trunk>] [--at <rev>] [--chat <id>] [--launch]
  *                run from the worktree of the side that receives the merge (the
@@ -61,7 +84,9 @@
  * LANE_RUN_NOW=YYYY-MM-DDTHH:mm stands in for the clock (the tests).
  *
  * Plain ES module, nothing outside node:*, like the hooks beside it.
- * Exit codes: 0 done, 1 the launched session failed to start, 2 refused.
+ * Exit codes: 0 done, 1 the launched session failed to start (a probe's
+ * server failed to serve), 2 refused, 3 wait timed out; probe exits with the
+ * probe's own code.
  *
  * Run by: ~/.local/bin/node <tree>/frontend/scripts/lane-run.mjs <command> ...
  */
@@ -71,8 +96,9 @@ import {
     accessSync, closeSync, constants, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, unlinkSync,
     writeFileSync,
 } from 'node:fs';
+import { get as httpGet } from 'node:http';
 import { homedir } from 'node:os';
-import { basename, delimiter, dirname, join, relative, resolve } from 'node:path';
+import { basename, delimiter, dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DEFAULT_LIMIT_MINUTES = 90;
@@ -80,13 +106,18 @@ const START_WAIT_MS = 120000;
 const POLL_MS = 100;
 const PROMPT_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
 const HEADER_PROMPT_ID = /^Prompt-ID: (P-\d{4}-\d{2}-\d{2}-\d{4})\s*$/;
-const OUTCOME = /^Outcome: (done|hard-stop|question|blocked)\s*$/;
+const OUTCOME = /^Outcome:\s*(done|hard-stop|question|blocked)\b/;
 const FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions'];
 const TEMPLATES = join(dirname(fileURLToPath(import.meta.url)), 'lane-templates');
 const DEFAULT_TRUNK = 'alfonso-frontend-jjtl';
 const GOVERNANCE = ['CLAUDE.md', 'AGENTS.md', 'docs/PROTOCOL.md', '.claude/settings.json'];
 const LISTED_MAX = 40;
 const SUBJECT_MAX = 72;
+const WAIT_MAX_S = 170;
+const WAIT_POLL_MS = 2000;
+const PROBE_SERVE_MS = 60000;
+const PROBE_STOP_MS = 5000;
+const PROBE_POLL_MS = 250;
 
 // The detached run: claude with the input file on stdin, stdout appended to the
 // log, then its exit code written atomically, so status never reads half a file.
@@ -226,8 +257,10 @@ async function start(worktreeArg, promptArg, rest = []) {
     if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>]');
     const worktree = resolve(worktreeArg);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
-    const promptFile = resolve(worktree, promptArg);
-    if (!existsSync(promptFile)) refuse('no prompt file: ' + promptFile);
+    // As given (absolute, or relative to the caller's directory), then relative to the worktree.
+    const tried = [...new Set([resolve(promptArg), resolve(worktree, promptArg)])];
+    const promptFile = tried.find((p) => existsSync(p) && statSync(p).isFile());
+    if (!promptFile) refuse('no prompt file: tried ' + tried.join(' and '));
     const id = headerPromptId(readFileSync(promptFile, 'utf8'));
     if (!id) refuse('the prompt header has no "Prompt-ID: P-YYYY-MM-DD-HHmm" line: ' + promptFile);
 
@@ -244,6 +277,7 @@ async function start(worktreeArg, promptArg, rest = []) {
     const goAhead = goAheadOption(rest, id);
     if (goAhead) writeFileSync(f.goahead, goAhead + '\n');
     launch(f, claude, worktree, promptFile, ['-p', ...FLAGS], goAhead);
+    console.log('prompt: ' + promptFile);
     console.log('log: ' + f.log);
 
     const end = Date.now() + START_WAIT_MS;
@@ -315,6 +349,7 @@ function resume(idArg, rest) {
     return 0;
 }
 
+/** The last line of the assistant text that starts with `Outcome:`, parsed or not. */
 function lastOutcome(path) {
     let last = null;
     for (const e of events(path)) {
@@ -322,24 +357,22 @@ function lastOutcome(path) {
         for (const block of e.message.content) {
             if (!block || block.type !== 'text' || typeof block.text !== 'string') continue;
             for (const line of block.text.split('\n')) {
-                if (OUTCOME.test(line.trim())) last = line.trim();
+                if (line.trim().startsWith('Outcome:')) last = line.trim();
             }
         }
     }
     return last;
 }
 
-function status(idArg, rest) {
-    const id = checkId(idArg);
-    let limit = DEFAULT_LIMIT_MINUTES;
+function limitOption(rest) {
     const at = rest.indexOf('--limit');
-    if (at !== -1) {
-        limit = Number(rest[at + 1]);
-        if (!Number.isFinite(limit) || limit < 0) refuse('--limit takes a number of minutes');
-    }
-    const f = laneFiles(id);
-    if (!existsSync(f.dir)) refuse('no lane ' + id + ' in ' + lanesRoot());
+    if (at === -1) return DEFAULT_LIMIT_MINUTES;
+    const limit = Number(rest[at + 1]);
+    if (!Number.isFinite(limit) || limit < 0) refuse('--limit takes a number of minutes');
+    return limit;
+}
 
+function laneState(f, limit) {
     const exited = existsSync(f.exit);
     const running = !exited && isAlive(Number(readTrim(f.pid)));
     const started = Number(readTrim(f.started));
@@ -347,15 +380,221 @@ function status(idArg, rest) {
     const elapsedMs = Number.isFinite(started) && started > 0 ? stopped - started : 0;
     let state = running ? 'running' : 'exited';
     if (running && elapsedMs > limit * 60000) state = 'blocked';
+    return { state, exited, outcome: lastOutcome(f.log), minutes: Math.floor(elapsedMs / 60000) };
+}
 
+function status(idArg, rest) {
+    if (idArg === '--all') return statusAll(rest);
+    const id = checkId(idArg);
+    const limit = limitOption(rest);
+    const f = laneFiles(id);
+    if (!existsSync(f.dir)) refuse('no lane ' + id + ' in ' + lanesRoot());
+
+    const s = laneState(f, limit);
     console.log('lane: ' + id);
-    console.log('state: ' + state);
-    console.log('exit: ' + (exited ? readTrim(f.exit) : '-'));
-    console.log('outcome: ' + (lastOutcome(f.log) || 'none'));
-    console.log('elapsed: ' + Math.floor(elapsedMs / 60000) + ' min, limit ' + limit + ' min');
+    console.log('state: ' + s.state);
+    console.log('exit: ' + (s.exited ? readTrim(f.exit) : '-'));
+    console.log('outcome: ' + (s.outcome === null ? 'none' : OUTCOME.test(s.outcome) ? s.outcome : 'unparsed: ' + s.outcome));
+    console.log('elapsed: ' + s.minutes + ' min, limit ' + limit + ' min');
     console.log('session: ' + (readTrim(f.session) || '-'));
     console.log('log: ' + f.log);
     return 0;
+}
+
+/** Every lane folder of ~/.jjodel-lanes in one table, newest Prompt-ID first; other folders and files are not lanes. */
+function statusAll(rest) {
+    const limit = limitOption(rest);
+    const root = lanesRoot();
+    const ids = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && statSync(join(root, n)).isDirectory()) : [];
+    const rows = [['id', 'state', 'outcome', 'elapsed']];
+    for (const id of ids.sort().reverse()) {
+        const s = laneState(laneFiles(id), limit);
+        const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
+        rows.push([id, s.state, s.outcome === null ? 'none' : m ? m[1] : 'unparsed', s.minutes + ' min']);
+    }
+    const widths = rows[0].map((_, c) => Math.max(...rows.map((r) => r[c].length)));
+    for (const r of rows) console.log(r.map((x, c) => (c === r.length - 1 ? x : x.padEnd(widths[c]))).join('  '));
+    return 0;
+}
+
+// ── wait ─────────────────────────────────────────────────────────────────────
+
+async function waitLanes(rest) {
+    const any = option(rest, '--any');
+    const ids = any !== null ? any.split(',').map((x) => x.trim()).filter((x) => x !== '') : [rest[0]];
+    if (ids.length === 0 || (any === null && (!rest[0] || rest[0].startsWith('--')))) {
+        refuse('usage: lane-run wait <Prompt-ID> | --any <id,id,...> [--max <seconds>]');
+    }
+    // An unknown lane never runs: status, below, refuses it at the first poll.
+    ids.forEach(checkId);
+    const maxArg = option(rest, '--max');
+    const max = maxArg === null ? WAIT_MAX_S : Number(maxArg);
+    if (!Number.isFinite(max) || max < 0) refuse('--max takes a number of seconds');
+    if (max > WAIT_MAX_S) {
+        refuse('--max ' + max + ' is above ' + WAIT_MAX_S + ' s: the chat\'s shell call ends near 180 s and the wait would be lost with it; call wait again');
+    }
+    const end = Date.now() + max * 1000;
+    for (;;) {
+        const ended = ids.filter((id) => !isRunning(laneFiles(id)));
+        if (ended.length) {
+            ended.forEach((id, i) => {
+                if (i) console.log('');
+                status(id, []);
+            });
+            return 0;
+        }
+        const left = end - Date.now();
+        if (left <= 0) {
+            console.log('timeout: ' + ids.join(', ') + ' still running after ' + max + ' s');
+            return 3;
+        }
+        await sleep(Math.min(WAIT_POLL_MS, left));
+    }
+}
+
+// ── probe ────────────────────────────────────────────────────────────────────
+
+/** An executable on the PATH, else the first fallback that is one; null when none is. */
+function onPath(name, fallbacks = []) {
+    for (const d of (process.env.PATH || '').split(delimiter)) {
+        if (d && isExecutable(join(d, name))) return join(d, name);
+    }
+    return fallbacks.find(isExecutable) ?? null;
+}
+
+function portInUse(port) {
+    const lsof = onPath('lsof', ['/usr/sbin/lsof']);
+    if (!lsof) refuse('lsof is neither on the PATH nor in /usr/sbin: the port cannot be checked');
+    const r = spawnSync(lsof, ['-nP', '-iTCP:' + port, '-sTCP:LISTEN'], { encoding: 'utf8' });
+    return r.status === 0 && r.stdout.trim() !== '';
+}
+
+/** The status code of GET / on localhost:<port>, 0 when nothing answers. */
+function httpStatus(port) {
+    return new Promise((res) => {
+        const req = httpGet({ host: 'localhost', port, path: '/', timeout: 2000 }, (r) => {
+            r.resume();
+            res(r.statusCode || 0);
+        });
+        req.on('timeout', () => req.destroy());
+        req.on('error', () => res(0));
+    });
+}
+
+/** As given (absolute, or relative to the caller's directory), then relative to the base directory. */
+function existingPath(arg, base, what) {
+    const tried = [...new Set([resolve(arg), resolve(base, arg)])];
+    const found = tried.find((p) => existsSync(p) && statSync(p).isFile());
+    if (!found) refuse('no ' + what + ': tried ' + tried.join(' and '));
+    return found;
+}
+
+// The shape of the chat's _tmp_chat_vite_3005.config.ts: the base config, the
+// port strict, and a cacheDir outside the tree so the tree's own server keeps its cache (P14).
+const probeConfig = (port) => `// Scratch dev-server config written by lane-run probe (gitignored, _tmp_).
+// Reuses vite.config.ts; port ${port}, and a cacheDir outside the tree so another
+// server on the same tree keeps its .vite-cache untouched (P14).
+import { defineConfig } from 'vite';
+import base from '../../vite.config';
+
+export default defineConfig((env) => {
+    const b: any = typeof base === 'function' ? (base as any)(env) : base;
+    return {
+        ...b,
+        cacheDir: '/tmp/lane-vite-cache-${port}',
+        server: { ...b.server, port: ${port}, strictPort: true },
+    };
+});
+`;
+
+async function probe(rest) {
+    const [worktreeArg, probeArg] = rest;
+    const usage = 'usage: lane-run probe <worktree> <probe.ts> --port <n> [--config <vite config>] [--id <Prompt-ID>]';
+    if (!worktreeArg || !probeArg || worktreeArg.startsWith('--') || probeArg.startsWith('--')) refuse(usage);
+    const portArg = option(rest, '--port');
+    if (portArg === null || !/^\d+$/.test(portArg) || Number(portArg) < 1 || Number(portArg) > 65535) refuse(usage);
+    const port = Number(portArg);
+    if (port === 3001) refuse('port 3001 is the trunk\'s dev server: pick another');
+    const frontend = join(resolve(worktreeArg), 'frontend');
+    if (!existsSync(frontend) || !statSync(frontend).isDirectory()) refuse('not a directory: ' + frontend);
+    const probeFile = existingPath(probeArg, frontend, 'probe file');
+    const idArg = option(rest, '--id');
+    const folder = join(lanesRoot(), idArg !== null ? checkId(idArg) : 'probe-' + stamp(clock()).date);
+    const configArg = option(rest, '--config');
+    const config = configArg !== null ? existingPath(configArg, frontend, 'vite config') : join(frontend, 'scripts', 'smoke', '_tmp_lane_vite_' + port + '.config.ts');
+    if (portInUse(port)) refuse('port ' + port + ' is in use (lsof): pick another');
+    const npx = onPath('npx', [join(dirname(process.execPath), 'npx')]);
+    if (!npx) refuse('npx is neither on the PATH nor beside ' + process.execPath);
+
+    if (!existsSync(config)) writeFileSync(config, probeConfig(port));
+    mkdirSync(folder, { recursive: true });
+    const log = join(folder, 'probe-' + basename(probeFile, extname(probeFile)) + '.log');
+    const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
+    const viteOut = openSync(join(folder, 'vite-' + port + '.log'), 'a');
+    const vite = spawn(npx, ['vite', '--config', config, '--port', String(port), '--strictPort'], {
+        cwd: frontend, env, detached: true, stdio: ['ignore', viteOut, viteOut],
+    });
+    closeSync(viteOut);
+    let viteExited = false;
+    vite.on('exit', () => {
+        viteExited = true;
+    });
+    // Only the process group this command started: vite and what npx spawned under it.
+    const stopVite = () => {
+        try {
+            process.kill(-vite.pid, 'SIGTERM');
+        } catch {
+            // already gone
+        }
+    };
+    let child = null;
+    for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+        process.on(sig, () => {
+            if (child) child.kill(sig);
+            stopVite();
+            process.exit(1);
+        });
+    }
+
+    const end = Date.now() + PROBE_SERVE_MS;
+    let served = 0;
+    while (!viteExited && Date.now() < end) {
+        served = await httpStatus(port);
+        if (served === 200) break;
+        await sleep(PROBE_POLL_MS);
+    }
+    if (served !== 200) {
+        stopVite();
+        console.error('lane-run: vite ' + (viteExited ? 'exited' : 'did not answer 200 on /') + ' before serving on ' + port + '; see ' + join(folder, 'vite-' + port + '.log'));
+        return 1;
+    }
+
+    writeFileSync(log, 'probe=' + probeFile + '\nCFG=' + config + '\nurl=http://localhost:' + port + '/\nserver=200\n', { flag: 'a' });
+    const out = openSync(log, 'a');
+    child = spawn(npx, ['tsx', probeFile], {
+        cwd: frontend,
+        env: { ...env, PROBE_URL: 'http://localhost:' + port + '/', PROBE_PORT: String(port) },
+        stdio: ['ignore', out, out],
+    });
+    const code = await new Promise((res) => {
+        child.on('error', () => res(1));
+        child.on('exit', (c) => res(c === null ? 1 : c));
+    });
+    closeSync(out);
+    writeFileSync(log, 'EXIT=' + code + '\nend=' + new Date().toISOString() + '\n', { flag: 'a' });
+    stopVite();
+    const freeBy = Date.now() + PROBE_STOP_MS;
+    while (portInUse(port) && Date.now() < freeBy) await sleep(PROBE_POLL_MS);
+    if (portInUse(port)) {
+        try {
+            process.kill(-vite.pid, 'SIGKILL');
+        } catch {
+            // already gone
+        }
+    }
+    console.log('log: ' + log);
+    console.log('exit: ' + code);
+    return code;
 }
 
 /** The value after a flag; null when the flag is absent, refused when its value is. */
@@ -733,9 +972,12 @@ async function main(argv) {
     if (command === 'go') return go(rest[0], rest.slice(1));
     if (command === 'status') return status(rest[0], rest.slice(1));
     if (command === 'merge') return merge(rest);
+    if (command === 'wait') return waitLanes(rest);
+    if (command === 'probe') return probe(rest);
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
         'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | ' +
-        'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>]');
+        'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>] | ' +
+        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n>');
 }
 
 main(process.argv.slice(2)).then(

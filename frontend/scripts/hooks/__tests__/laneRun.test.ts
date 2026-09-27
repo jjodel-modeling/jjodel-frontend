@@ -1,6 +1,7 @@
 import { describe, test, expect, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -767,5 +768,269 @@ describe('lane-run merge', () => {
         expect(readFileSync(join(wt, TAKE_FILE), 'utf8')).toMatch(/\*\*Findings\.\*\*[\s\S]*src\/a\.ts[\s\S]*## COME/);
         expect(gitIn(l, wt, ['rev-parse', 'HEAD'])).toBe(before);
         expect(calls(l)).toEqual([]);
+    });
+});
+
+// ── the prompt path ──────────────────────────────────────────────────────────
+
+describe('lane-run start, the prompt path', () => {
+    test('kills "the caller\'s cwd not tried first": a relative path that exists from the caller\'s directory is read there, the worktree copy notwithstanding', () => {
+        const l = lab();
+        writeFileSync(join(l.home, 'prompt.md'), PROMPT.replace('Do the thing.', 'The copy in the caller\'s directory.'));
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md'], { cwd: l.home });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(calls(l)[0].stdin).toContain('The copy in the caller\'s directory.');
+        expect(readFileSync(join(laneDir(l), 'prompt.txt'), 'utf8').trim()).toBe(join(l.home, 'prompt.md'));
+    });
+
+    test('kills "the worktree fallback dropped": a relative path absent from the caller\'s directory is read from the worktree', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md'], { cwd: l.state });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(calls(l)[0].stdin).toContain('Do the thing.');
+        expect(readFileSync(join(laneDir(l), 'prompt.txt'), 'utf8').trim()).toBe(join(l.worktree, 'prompt.md'));
+    });
+
+    test('kills "a refusal naming one path": a path found in neither place is refused, naming both', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'docs/prompts/none.md'], { cwd: l.state });
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain(join(l.state, 'docs/prompts/none.md'));
+        expect(r.stderr).toContain(join(l.worktree, 'docs/prompts/none.md'));
+        expect(calls(l)).toEqual([]);
+    });
+});
+
+// ── the Outcome line and status --all ────────────────────────────────────────
+
+/** A lane folder written by hand: exited with an exit code, or running on a live pid; its log holds the given assistant texts. */
+function fakeLane(l: Lab, id: string, o: { texts?: string[]; running?: boolean; startedMsAgo?: number }) {
+    const dir = laneDir(l, id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'log.jsonl'), (o.texts ?? []).map(assistant).join('\n') + '\n');
+    writeFileSync(join(dir, 'started.txt'), String(Date.now() - (o.startedMsAgo ?? 60000)) + '\n');
+    writeFileSync(join(dir, 'pid.txt'), String(o.running ? process.pid : 999999) + '\n');
+    if (!o.running) writeFileSync(join(dir, 'exit.txt'), '0\n');
+}
+
+describe('lane-run status, the Outcome line', () => {
+    test('kills "a suffix after the word not parsed": `Outcome: done · <shas>` is the outcome', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Closing report.\nOutcome: done · fbd9064c9, d78f1981b'] });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('outcome: Outcome: done · fbd9064c9, d78f1981b');
+    });
+
+    test('kills "an unmatched line reported as none", "an earlier line wins", "a word prefix accepted": the last Outcome line, unmatched, is printed as unparsed', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Phase 1.\nOutcome: done', 'Phase 2.\nOutcome: doneish'] });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('outcome: unparsed: Outcome: doneish');
+    });
+});
+
+describe('lane-run status --all', () => {
+    test('kills "a lane missing", "not newest first", "non-lane folders listed", "the outcome word not parsed": one table of every lane', () => {
+        const l = lab();
+        fakeLane(l, 'P-2026-09-26-1640', { texts: ['Outcome: done · abc123'], startedMsAgo: 5 * 60000 });
+        fakeLane(l, 'P-2026-09-27-0405', { texts: ['Outcome: finished'] });
+        fakeLane(l, 'P-2026-09-27-1015', { running: true, startedMsAgo: 12 * 60000 });
+        mkdirSync(join(l.lanes, '_msgs'));
+        mkdirSync(join(l.lanes, 'probe-2026-09-27'));
+        writeFileSync(join(l.lanes, 'start_0345.sh'), '');
+        const r = laneRun(l, ['status', '--all']);
+        expect(r.status, r.stderr).toBe(0);
+        const rows = r.stdout.trimEnd().split('\n');
+        expect(rows).toHaveLength(4);
+        expect(rows[0].split(/\s+/)).toEqual(['id', 'state', 'outcome', 'elapsed']);
+        expect(rows[1].split(/\s+/)).toEqual(['P-2026-09-27-1015', 'running', 'none', '12', 'min']);
+        expect(rows[2].split(/\s+/)).toEqual(['P-2026-09-27-0405', 'exited', 'unparsed', '1', 'min']);
+        expect(rows[3].split(/\s+/)).toEqual(['P-2026-09-26-1640', 'exited', 'done', '5', 'min']);
+    });
+});
+
+// ── wait ─────────────────────────────────────────────────────────────────────
+
+const ID2 = 'P-2026-09-26-1641';
+
+/** Writes the file after ms, from a detached shell: the release of a FAKE_HOLD while spawnSync blocks. */
+function releaseLater(file: string, ms: number) {
+    spawn('/bin/sh', ['-c', `sleep ${ms / 1000}; : > "${file}"`], { detached: true, stdio: 'ignore' }).unref();
+}
+
+describe('lane-run wait', () => {
+    test('kills "wait returns while the lane runs", "the status not printed": wait exits 0 once the session ends, with its status', () => {
+        const l = lab();
+        const hold = join(l.state, 'release');
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_HOLD: hold } }).status).toBe(0);
+        releaseLater(hold, 1000);
+        const r = laneRun(l, ['wait', ID, '--max', '15']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain(`lane: ${ID}`);
+        expect(r.stdout).toContain('state: exited');
+        expect(r.stdout).toContain('exit: 0');
+    });
+
+    test('kills "no timeout", "timeout reported as done": a lane still running at the deadline exits 3', () => {
+        const l = lab();
+        const hold = join(l.state, 'release');
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_HOLD: hold } }).status).toBe(0);
+        const t0 = Date.now();
+        const r = laneRun(l, ['wait', ID, '--max', '1']);
+        writeFileSync(hold, '');
+        expect(r.status).toBe(3);
+        expect(r.stdout).toContain('timeout');
+        expect(Date.now() - t0).toBeGreaterThanOrEqual(900);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "the 170 s cap ignored": --max 500 is refused with the reason', () => {
+        const l = lab();
+        fakeLane(l, ID, {});
+        const r = laneRun(l, ['wait', ID, '--max', '500']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('170');
+    });
+
+    test('kills "--any watches the first id only": wait --any exits 0 when the second lane ends, the first still running', () => {
+        const l = lab();
+        const holdA = join(l.state, 'releaseA');
+        const holdB = join(l.state, 'releaseB');
+        writeFileSync(join(l.worktree, 'prompt2.md'), PROMPT.replace(ID, ID2));
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_HOLD: holdA } }).status).toBe(0);
+        expect(laneRun(l, ['start', l.worktree, 'prompt2.md'], { env: { FAKE_HOLD: holdB } }).status).toBe(0);
+        releaseLater(holdB, 1000);
+        const r = laneRun(l, ['wait', '--any', `${ID},${ID2}`, '--max', '15']);
+        writeFileSync(holdA, '');
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain(`lane: ${ID2}`);
+        expect(r.stdout).not.toContain(`lane: ${ID}\n`);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "an unknown lane waited on": a Prompt-ID with no lane folder exits 2', () => {
+        const l = lab();
+        const r = laneRun(l, ['wait', ID, '--max', '1']);
+        expect(r.status).toBe(2);
+    });
+});
+
+// ── probe ────────────────────────────────────────────────────────────────────
+
+// A fake npx: `npx vite ... --port <n>` serves 200 on that port with the node
+// that runs the suite (the child PATH starts with its directory), or exits at
+// once with FAKE_VITE=dead; `npx tsx <file>` prints to both streams and exits
+// with FAKE_PROBE_EXIT. Every call is recorded in npx.txt.
+const FAKE_NPX = `#!/bin/sh
+echo "npx $*" >> "$FAKE_STATE/npx.txt"
+if [ "$1" = "vite" ]; then
+  [ "$FAKE_VITE" = "dead" ] && exit 1
+  port=""; prev=""
+  for a in "$@"; do [ "$prev" = "--port" ] && port="$a"; prev="$a"; done
+  exec node -e "require('http').createServer((q, s) => { s.writeHead(200); s.end('ok'); }).listen(Number(process.argv[1]), 'localhost')" "$port"
+fi
+if [ "$1" = "tsx" ]; then
+  echo "probe ran: $2 url=$PROBE_URL"
+  echo "a line on stderr" >&2
+  exit \${FAKE_PROBE_EXIT:-0}
+fi
+exit 99
+`;
+
+function probeLab(): Lab & { probe: string } {
+    const l = lab();
+    writeFileSync(join(l.bin, 'npx'), FAKE_NPX);
+    chmodSync(join(l.bin, 'npx'), 0o755);
+    const probe = 'scripts/smoke/_tmp_probe_x.ts';
+    mkdirSync(join(l.worktree, 'frontend', 'scripts', 'smoke'), { recursive: true });
+    writeFileSync(join(l.worktree, 'frontend', probe), '// a probe\n');
+    return { ...l, probe };
+}
+
+function freePort(): Promise<number> {
+    return new Promise((res, rej) => {
+        const s = createServer();
+        s.once('error', rej);
+        s.listen(0, 'localhost', () => {
+            const a = s.address();
+            s.close(() => res(typeof a === 'object' && a ? a.port : 0));
+        });
+    });
+}
+
+function listening(port: number): boolean {
+    return spawnSync('/usr/sbin/lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN']).status === 0;
+}
+
+const npxCalls = (l: Lab) => (existsSync(join(l.state, 'npx.txt')) ? readFileSync(join(l.state, 'npx.txt'), 'utf8').trim().split('\n') : []);
+
+describe('lane-run probe', () => {
+    test('kills "the probe log not written", "the exit code lost", "no EXIT line", "no PROBE_URL", "vite left running": the probe runs against the served port and its code is lane-run\'s', async () => {
+        const l = probeLab();
+        const port = await freePort();
+        const cfg = join(l.worktree, 'frontend', 'vite.probe.config.ts');
+        writeFileSync(cfg, '// config\n');
+        const r = laneRun(l, ['probe', l.worktree, l.probe, '--port', String(port), '--config', cfg, '--id', ID], { env: { FAKE_PROBE_EXIT: '5' } });
+        expect(r.status, r.stderr).toBe(5);
+        const log = readFileSync(join(laneDir(l), 'probe-_tmp_probe_x.log'), 'utf8');
+        expect(log).toContain('server=200');
+        expect(log).toContain(`probe ran: ${join(l.worktree, 'frontend', l.probe)} url=http://localhost:${port}/`);
+        expect(log).toContain('a line on stderr');
+        expect(log).toMatch(/\nEXIT=5\nend=\d{4}-\d{2}-\d{2}T/);
+        expect(npxCalls(l)[0]).toBe(`npx vite --config ${cfg} --port ${port} --strictPort`);
+        expect(listening(port)).toBe(false);
+    });
+
+    test('kills "the default config not generated", "no dated folder without --id": the config is written from the chat\'s shape and the log goes to probe-<date>', async () => {
+        const l = probeLab();
+        const port = await freePort();
+        const r = laneRun(l, ['probe', l.worktree, l.probe, '--port', String(port)], { env: { LANE_RUN_NOW: NOW } });
+        expect(r.status, r.stderr).toBe(0);
+        const cfg = join(l.worktree, 'frontend', 'scripts', 'smoke', `_tmp_lane_vite_${port}.config.ts`);
+        const text = readFileSync(cfg, 'utf8');
+        expect(text).toContain("import base from '../../vite.config';");
+        expect(text).toContain(`cacheDir: '/tmp/lane-vite-cache-${port}'`);
+        expect(text).toContain(`server: { ...b.server, port: ${port}, strictPort: true }`);
+        expect(npxCalls(l)[0]).toBe(`npx vite --config ${cfg} --port ${port} --strictPort`);
+        expect(readFileSync(join(l.lanes, 'probe-2026-09-27', 'probe-_tmp_probe_x.log'), 'utf8')).toContain('EXIT=0');
+        expect(listening(port)).toBe(false);
+    });
+
+    test('kills "3001 accepted": the port of the trunk\'s server is refused before anything runs', () => {
+        const l = probeLab();
+        const r = laneRun(l, ['probe', l.worktree, l.probe, '--port', '3001']);
+        expect(r.status).toBe(2);
+        // Not the busy-port refusal: 3001 may well be listening on this machine.
+        expect(r.stderr).toContain('3001 is the trunk\'s dev server');
+        expect(npxCalls(l)).toEqual([]);
+    });
+
+    test('kills "a busy port accepted": a port someone listens on is refused before anything runs', async () => {
+        const l = probeLab();
+        const port = await freePort();
+        const busy: Server = createServer();
+        await new Promise<void>((res) => busy.listen(port, 'localhost', () => res()));
+        try {
+            const r = laneRun(l, ['probe', l.worktree, l.probe, '--port', String(port)]);
+            expect(r.status).toBe(2);
+            expect(r.stderr).toContain('in use');
+            expect(npxCalls(l)).toEqual([]);
+        } finally {
+            await new Promise<void>((res) => busy.close(() => res()));
+        }
+    });
+
+    test('kills "a dead server waited on", "the probe run without a server": vite exiting before any 200 fails the probe at once', () => {
+        const l = probeLab();
+        const t0 = Date.now();
+        const r = laneRun(l, ['probe', l.worktree, l.probe, '--port', '45999', '--id', ID], { env: { FAKE_VITE: 'dead' } });
+        expect(r.status).toBe(1);
+        expect(r.stderr).toContain('vite');
+        expect(Date.now() - t0).toBeLessThan(10000);
+        expect(npxCalls(l).some((c) => c.startsWith('npx tsx'))).toBe(false);
     });
 });
