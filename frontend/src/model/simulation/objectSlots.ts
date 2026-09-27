@@ -52,7 +52,9 @@ function shortId(id: string): string {
  * The label of an element in the event list: the value of the identifier
  * feature (`simEventIdentifier`) when set; else the value of the element's
  * `name` feature when it has one, found by the name of the declaring feature
- * since no role points to it; else a shortened id.
+ * since no role points to it; else the instance name in the lookup, the one the
+ * canvas shows, when an Event class declares no `name` (R-SIM-80); else a
+ * shortened id.
  */
 export function objectLabel(lookup: Record<string, any>, objectId: string, identifierFeatureId?: string): string {
     if (identifierFeatureId) {
@@ -69,5 +71,7 @@ export function objectLabel(lookup: Record<string, any>, objectId: string, ident
             break;
         }
     }
+    const name = lookup[objectId]?.name;
+    if (typeof name === 'string' && name.trim()) return name.trim();
     return shortId(objectId);
 }

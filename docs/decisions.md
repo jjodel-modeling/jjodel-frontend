@@ -2104,6 +2104,36 @@ raccomandazione per A1, A2 e A4, e non emenda R-SIM-54 (A3 resta nel digest).
   binder su sette fixture, collettore su un lookup finto, `profileSummary`, banco di mutanti sulla regola del
   pareggio, sulla regola «solo chiavi vuote» e sulla restrizione di lignaggio del Trigger (D9).
 
+### Decisioni 2026-09-27: prontezza demo, le tre corsie prima del freeze (R-SIM-80..82)
+
+Dal report `docs/discovery/discovery_2026-09-27_sim_demo_readiness.md` (`567dc25da`, P-2026-09-27-1015): quattro
+scenari misurati end-to-end sui quattro preset visibili, undici gap, tre demo-critical aperti (G1, G2, G3; G4 chiuso da
+`7455d0075`). Alfonso ha ratificato in chat (C-2026-09-26-1702, 2026-09-27 11:00) le sei decisioni A..F del §10 «tutte
+come raccomandato», quindi le righe qui sotto non sono provvisorie.
+
+- **R-SIM-80** (2026-09-27, evidence: measured, verified: none, reversible: branch). **Etichette degli eventi dal nome
+  dell'istanza (G1, decisione A).** `objectLabel` in `objectSlots.ts` ripiega su `lookup[id].name` prima di `shortId`,
+  così i pulsanti degli eventi e la riga «Last step» leggono `coin` e non `…_136` quando la classe Event non ha un
+  attributo `name` proprio. Corsia R1, fast, nessun file del motore di C2. Alternativa scartata: aggiungere `name` a
+  Event nel metamodello della demo (vincolo di script invece di codice).
+- **R-SIM-81** (2026-09-27, evidence: measured, verified: none, reversible: branch). **L'Apply completa le forme
+  naturali (G2, G5, G9; decisioni B e C).** (1) Bound: se il preset è Petri e il valore non è impostato, Apply propone
+  `simBound` = massimo marking iniziale sui modelli M1 del metamodello quando supera 1, con un aiuto puro sul lookup;
+  la proposta è elencata prima di Apply come le altre (R-SIM-77). (2) Node e Transition possono legarsi a una classe
+  astratta nei profili a controllo di flusso: il binder la accetta e il select la elenca; emenda la decisione interna a
+  M3 «un ruolo di classe lega solo una classe concreta», che resta per gli altri ruoli. (3) Quando Action, Entry o Exit
+  è legata e `simStateAttributes` è vuota, il riepilogo mostra una riga che invita a dichiarare gli attributi, con
+  «Add attribute» raggiungibile senza aprire Configure…. Corsia R2, fast; nessun file del motore.
+- **R-SIM-82** (2026-09-27, evidence: measured, verified: none, reversible: branch). **La faccia M1 per il pubblico
+  (G3, G8, G10, G11; decisioni D ed F).** Una riga della faccia M1 mostra per tutto il run il marking con i conteggi e
+  poi σ (`Marking: p2 ×2, p3 · coins = 2, paid = true`), aggiornata a ogni scatto, clampata (R-SIM-63, R-SIM-66); la
+  lista delle scelte sale sopra i pulsanti, completando R-SIM-65 (Step non si muove: misurato 854.5 → 751.9 oggi);
+  `haltSource` toglie il prefisso `JjelEvaluationError:` come già per `derived`; un lato vuoto di una transizione si
+  scrive `∅`. Corsia R3, piena con verifica visiva, dopo R2 (entrambe toccano `SimulationPanel.tsx`); tocca
+  `simBridge.ts`, file di C2, quindi dopo il rientro del tronco in `simulation-engine`. Decisione E (flowchart della
+  demo con `FinalNode` e complemento esplicito; R-SIM-53 e `else` verso Fork/Join dopo MODELS) è un vincolo di script,
+  registrato nel report §8, senza corsia.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
