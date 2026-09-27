@@ -39,7 +39,7 @@ import {
     profilePatch, profileSummary, profileSummaryText, storedProfile,
 } from './simRoleStatus';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputReason, makeNetModelView, panelInputs,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputReason, makeNetModelView, markingLine, panelInputs,
     pressInput, runSignature, startRun, stopReason,
 } from './simBridge';
 import type { InputLabel, StopReason } from './simBridge';
@@ -629,6 +629,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             return {
                 status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as { line: string; title: string } | null,
                 reason: null as StopReason | null, noCandidate: new Map<string | null, string>(),
+                marking: null as { line: string; title: string } | null,
             };
         }
         const status = netRunStatus(r.net, r.config, r.alphabet, r.guards, r.halt);
@@ -651,6 +652,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features, r.net) } : null,
             reason: status === 'Deadlock' ? stopReason(r, lookup, label, roles.simGuard) : null,
             noCandidate,
+            // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3).
+            marking: markingLine(r.config.state, r.net, lookup),
         };
         // tick is the real input of this memo: the run changes only through this panel.
     }, [isModelMode, rolesComplete, modelid, tick, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit]);
@@ -981,12 +984,39 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     <>
                         {/* The lines that add to the others sit above the buttons: the panel is anchored at the
                             bottom and grows upward, so they never move the buttons (R-SIM-65, R-SIM-66). One row
-                            each, the full text in the title (R-SIM-63). */}
+                            each, the full text in the title (R-SIM-63). The choice list opens above them too, so Step
+                            stays where it is (R-SIM-82, G8); the marking line sits last, for the run's whole lifetime. */}
+                        {pending && run && (
+                            <>
+                                <div className="sim-panel__section">{`Choose a transition (${pending.input})`}</div>
+                                <div className="sim-panel__choices">
+                                    {pending.candidates.map(c => (
+                                        <button
+                                            type="button"
+                                            className="sim-panel__choice"
+                                            key={c.transition}
+                                            onClick={() => fire(pending.event, c.transition)}
+                                        >
+                                            <span>{candidateLabel(run.net, c.transition, lookupNow)}</span>
+                                            {c.unsafe && (
+                                                <span className="sim-panel__choice-note">{`exceeds bound ${run.net.bound}`}</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                    <button type="button" className="sim-panel__cancel" onClick={() => setPending(null)}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </>
+                        )}
                         {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
                         {defects && (
                             <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
                         )}
                         {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={view.halt.title}>{view.halt.line}</div>}
+                        {view?.marking && (
+                            <div className="sim-panel__hint sim-panel__hint--line sim-panel__hint--marking" title={view.marking.title}>{view.marking.line}</div>
+                        )}
                         <div className="sim-panel__actions">
                             <button type="button" className="sim-panel__btn" title="Reset" onClick={onReset}>
                                 <i className="bi bi-skip-backward-fill" />
@@ -1026,29 +1056,6 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                         ))}
                                     </div>
                                 )}
-                            </>
-                        )}
-                        {pending && run && (
-                            <>
-                                <div className="sim-panel__section">{`Choose a transition (${pending.input})`}</div>
-                                <div className="sim-panel__choices">
-                                    {pending.candidates.map(c => (
-                                        <button
-                                            type="button"
-                                            className="sim-panel__choice"
-                                            key={c.transition}
-                                            onClick={() => fire(pending.event, c.transition)}
-                                        >
-                                            <span>{candidateLabel(run.net, c.transition, lookupNow)}</span>
-                                            {c.unsafe && (
-                                                <span className="sim-panel__choice-note">{`exceeds bound ${run.net.bound}`}</span>
-                                            )}
-                                        </button>
-                                    ))}
-                                    <button type="button" className="sim-panel__cancel" onClick={() => setPending(null)}>
-                                        Cancel
-                                    </button>
-                                </div>
                             </>
                         )}
                         {/* One slot for the outcome of the last action (R-SIM-66): a refused Reset, the

@@ -459,9 +459,10 @@ function haltSource(
         const source = siteSources(reason.site, lookup, features)
             .filter(x => reason.detail.startsWith(`'${x}': `))
             .sort((a, b) => b.length - a.length)[0];
+        // The error class stays out of the line, as for a derived value (R-SIM-82, G10).
         return source === undefined
-            ? { sources: [], detail: reason.detail }
-            : { sources: [source], detail: reason.detail.slice(source.length + 4) };
+            ? { sources: [], detail: reason.detail.replace(/^JjelEvaluationError: /, '') }
+            : { sources: [source], detail: reason.detail.slice(source.length + 4).replace(/^JjelEvaluationError: /, '') };
     }
     if (reason.kind === 'undeclared' || reason.kind === 'read-only') {
         const sources = siteSources(reason.site, lookup, features).filter(x => compileAction(x)?.action?.target.attribute === reason.attr);
@@ -508,6 +509,8 @@ export function haltTitle(reason: HaltReason, lookup: Lookup, features?: ActionF
 }
 
 function arcsText(arcs: readonly Arc[], lookup: Lookup): string {
+    // An empty side is said, never left blank: `t3 (lock → ∅)` (R-SIM-82, G11).
+    if (arcs.length === 0) return '∅';
     return arcs.map(a => (a.weight === 1 ? elementName(lookup, a.place) : `${elementName(lookup, a.place)} ×${a.weight}`)).join(', ');
 }
 
@@ -521,6 +524,34 @@ export function candidateLabel(net: CompiledNet, transitionId: string, lookup: L
     const own = elementName(lookup, transitionId.split('#')[0]);
     if (!t) return own;
     return `${own} (${arcsText(t.preset, lookup)} → ${arcsText(t.postset, lookup)})`;
+}
+
+/**
+ * The run's σ in one line of the M1 face, for the whole run (R-SIM-82, G3): the
+ * marking, places by name with `×n` above one and none at 0, `∅` when empty;
+ * then, after ` · `, the stored semantic attributes and the derived semantic
+ * ones, each group by element then attribute, a global (the model's own) as
+ * `attr = value` and so first. The presentation stays out. The line is clamped
+ * by the panel, the title holds it in full (R-SIM-63):
+ * `Marking: p2 ×2, p3 · coins = 2, paid = true`.
+ */
+export function markingLine(state: SimState, net: Pick<CompiledNet, 'modelId'>, lookup: Lookup): { line: string; title: string } {
+    const places = [...state.marking]
+        .filter(([, n]) => n > 0)
+        .map(([place, n]) => ({ name: elementName(lookup, place), n }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(p => (p.n === 1 ? p.name : `${p.name} ×${p.n}`));
+    const values = (space: SimState['attrs'] | undefined): string[] => {
+        const out: Array<{ element: string; attr: string; text: string }> = [];
+        for (const [element, attrs] of space ?? []) {
+            const name = element === net.modelId ? '' : elementName(lookup, element);
+            for (const [attr, value] of attrs) out.push({ element: name, attr, text: `${name === '' ? '' : `${name}.`}${attr} = ${String(value)}` });
+        }
+        return out.sort((a, b) => a.element.localeCompare(b.element) || a.attr.localeCompare(b.attr)).map(x => x.text);
+    };
+    const sigma = [...values(state.attrs), ...values(state.derived?.attrs)];
+    const line = `Marking: ${places.length === 0 ? '∅' : places.join(', ')}${sigma.length === 0 ? '' : ` · ${sigma.join(', ')}`}`;
+    return { line, title: line };
 }
 
 /**

@@ -13,13 +13,13 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputReason, NO_SIM_ACTIONS, panelInputs,
-    pressInput, runSignature, startRun, stopReason,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputReason, markingLine, NO_SIM_ACTIONS,
+    panelInputs, pressInput, runSignature, startRun, stopReason,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
 import { netRunStatus } from '../../../../model/simulation/netStep';
-import type { CompiledNet, NetRunStatus, NetTransition } from '../../../../model/simulation/netTypes';
+import type { CompiledNet, NetRunStatus, NetTransition, SimState, SimValue } from '../../../../model/simulation/netTypes';
 
 type Lookup = Record<string, any>;
 
@@ -347,6 +347,57 @@ describe('the panel\'s texts and gates', () => {
         const names: Lookup = { F: { name: 'F' }, p0: { name: 'p0' }, a1: { name: 'a1' }, b1: { name: 'b1' } };
         const net = { ...run.net, transitions: [t('F#e0', { p0: 2 }, { a1: 1, b1: 1 })] } as CompiledNet;
         expect(candidateLabel(net, 'F#e0', names)).toBe('F (p0 ×2 → a1, b1)');
+    });
+
+    it('candidateLabel: an empty side reads ∅, one or both (R-SIM-82, G11; mutant 6: an empty side printed blank)', () => {
+        const run = started(lookup);
+        const t = (id: string, pre: string[], post: string[]): NetTransition => ({
+            id, origin: [id], preset: pre.map(place => ({ place, weight: 1 })), postset: post.map(place => ({ place, weight: 1 })),
+            inhibitors: [], triggers: [], guardSites: [], elseOf: null, actionSites: [],
+        });
+        const names: Lookup = { t3: { name: 't3' }, t4: { name: 't4' }, t: { name: 't' }, L: { name: 'lock' } };
+        const net = { ...run.net, transitions: [t('t3', ['L'], []), t('t4', [], ['L']), t('t', [], [])] } as CompiledNet;
+        expect(candidateLabel(net, 't3', names)).toBe('t3 (lock → ∅)');
+        expect(candidateLabel(net, 't4', names)).toBe('t4 (∅ → lock)');
+        expect(candidateLabel(net, 't', names)).toBe('t (∅ → ∅)');
+    });
+
+    describe('markingLine (R-SIM-82, G3): the marking, then the stored σ, then the derived σ', () => {
+        type Values = Record<string, Record<string, SimValue>>;
+        const byElement = (v: Values) => new Map(Object.entries(v).map(([e, a]) => [e, new Map(Object.entries(a))]));
+        const sigma = (marking: Record<string, number>, attrs: Values = {}, presentation: Values = {}, derived?: { attrs?: Values; presentation?: Values }): SimState => ({
+            marking: new Map(Object.entries(marking)), attrs: byElement(attrs), presentation: byElement(presentation),
+            ...(derived ? { derived: { attrs: byElement(derived.attrs ?? {}), presentation: byElement(derived.presentation ?? {}) } } : {}),
+        });
+        const names: Lookup = { M: { name: 'demo' }, P1x: { name: 'p1' }, P2x: { name: 'p2' }, P3x: { name: 'p3' }, T1x: { name: 't1' } };
+        const net = { modelId: 'M' };
+
+        it('places by name, ×n above one only; a global stored then a global derived (mutant 2: ×1 printed)', () => {
+            const got = markingLine(sigma({ P3x: 1, P2x: 2 }, { M: { coins: 2 } }, {}, { attrs: { M: { paid: true } } }), net, names);
+            expect(got.line).toBe('Marking: p2 ×2, p3 · coins = 2, paid = true');
+            expect(got.title).toBe(got.line);
+        });
+
+        it('a place with 0 tokens is not listed (mutant 1)', () => {
+            expect(markingLine(sigma({ P1x: 0, P2x: 1 }), net, names).line).toBe('Marking: p2');
+        });
+
+        it('an empty marking reads ∅; no attribute, no « · » (mutant 3)', () => {
+            expect(markingLine(sigma({}), net, names).line).toBe('Marking: ∅');
+            expect(markingLine(sigma({}, { P2x: {} }, {}, { attrs: {} }), net, names).line).toBe('Marking: ∅');
+        });
+
+        it('an element attribute by element.attr, globals first, each group by element then attribute; derived after stored', () => {
+            const got = markingLine(
+                sigma({}, { P2x: { seen: true }, M: { coins: 0 }, P1x: { z: 1, a: 2 } }, {}, { attrs: { M: { alarm: false } } }), net, names);
+            expect(got.line).toBe('Marking: ∅ · coins = 0, p1.a = 2, p1.z = 1, p2.seen = true, alarm = false');
+        });
+
+        it('presentation values stay out, stored and derived alike (mutant 4)', () => {
+            const got = markingLine(
+                sigma({ P2x: 1 }, {}, { T1x: { color: 'red' } }, { presentation: { T1x: { shade: 'dark' } } }), net, names);
+            expect(got.line).toBe('Marking: p2');
+        });
     });
 
     it('defectsLine: null without defects; the first three and a count', () => {
@@ -831,6 +882,20 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
         expect(haltTitle(halt, lookup, FEATURES)).toBe(`${line} [t1.[color] := 'red']`);
     });
 
+    it('an action that fails to evaluate: the halt line without the error class, the source in the title (R-SIM-82, G10; mutant 5)', () => {
+        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := p2.[nosuch]'] });
+        expect(reset(lookup).compileDefects).toEqual([]);
+        eps(lookup);
+        const halt = getSimRun('M')!.halt!;
+        expect(halt.kind).toBe('action-defect');
+        const line = haltMessage(halt, lookup, FEATURES);
+        expect(line).toBe("Halted: the transition action of t1 failed: 'nosuch' is not a state attribute of p2.");
+        expect(haltTitle(halt, lookup, FEATURES)).toBe(`${line} [p2.[visits] := p2.[nosuch]]`);
+        // without the features the source is not found: the detail as given, the class still out of it
+        expect(haltMessage({ kind: 'action-defect', site: { element: 'T1x', role: 'transition' }, detail: "JjelEvaluationError: 'x' is not a state attribute of p2" }, lookup))
+            .toBe("Halted: the transition action of t1 failed: 'x' is not a state attribute of p2.");
+    });
+
     it('a value outside its domain is a run-time halt only: no defect at Reset', () => {
         const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := 9'] });
         expect(reset(lookup).compileDefects).toEqual([]);
@@ -993,6 +1058,20 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             expect(line).toBe('Halted: total of cnet would be 1, outside its domain.');
             expect(haltTitle(halt, tight, FEATURES, t.run.net)).toBe(`${line} [p1.[visits] + p2.[visits]]`);
             expect(getSimRun('M')!.config.state.attrs.get('P2x')?.get('visits')).toBe(0);
+        });
+
+        it('markingLine on the run: Reset, a fired step, and a halt that keeps the σ it halted on (R-SIM-82, G3)', () => {
+            const lookup = cnet({ decls: [VISITS, F, TOTAL], t1: [BUMP] });
+            const r = reset(lookup);
+            const line = () => markingLine(getSimRun('M')!.config.state, r.run.net, lookup).line;
+            expect(line()).toBe('Marking: p1 ×3 · f = false, p1.visits = 0, p2.visits = 0, total = 0');
+            expect(eps(lookup).outcome?.kind).toBe('fired');
+            expect(line()).toBe('Marking: p1 ×2, p2 · f = false, p1.visits = 0, p2.visits = 1, total = 1');
+
+            const tight = cnet({ decls: [VISITS, { ...TOTAL, domain: { kind: 'range', min: 0, max: 0 } }], t1: [BUMP] });
+            const t = reset(tight);
+            expect(eps(tight).outcome?.kind).toBe('halted');
+            expect(markingLine(getSimRun('M')!.config.state, t.run.net, tight).line).toBe('Marking: p1 ×3 · p1.visits = 0, p2.visits = 0, total = 0');
         });
     });
 });
