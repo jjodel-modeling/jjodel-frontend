@@ -109,3 +109,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: The single-lane tests sit in `lane-run status, the Outcome line`, beside `fakeLane`; the dead-process case removes `exit.txt` by hand, no new helper. The header's exit-code list also drops `3 wait timed out`. `/lane` and the chat's lane skill do not read exit 3. Bench copies left in `/tmp/lanerun-bench-D9kd` (`rm -rf` denied). Inbox, P16 and Status flip in one docs commit, as the prompt asks. Session `8c06b07f`.
 **Prompt document name**: 2026-09-27 12:25
+
+## 2026-09-27 — fix: lane-run merge renders to pending, --governance-goahead (P-2026-09-27-1440)
+**Prompt**: `claude_2026-09-27_1440_prompt_harness_merge_pending_and_governance_goahead.md`, fast lane, launched by `lane-run` in `~/jjodel-gate` on `harness-merge-pending` at `b96195cc5` (parent `86520a8f3`). Two tickets of the afternoon: the unlaunched merge prompt left untracked in `docs/prompts/` blocked the next merge lane (P-2026-09-27-1409 on the prompt of P-2026-09-27-1242), and a governance change on the branch needed a launch by hand after Alfonso's yes (P-2026-09-27-1428).
+**Files touched**: `41e85a32e`: `frontend/scripts/lane-run.mjs` (`merge`, `parseMerge`, `mergeFindings`, `mergeValues`, usage header), `frontend/scripts/hooks/__tests__/laneRun.test.ts`. This commit: `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 10:35 (`claude_2026-09-27_1035_prompt_lane_run_v2.md`: `merge` rendered into `docs/prompts/` before knowing whether it would launch)
+**Causa**: (a)
+**Regressions**: no. From `frontend/`: `laneRun.test.ts` 56/56 before, 12 red of 64 with the tests alone, 64/64 after; `check:scripts` PASS 62 files before and after; `typecheck:scripts` exit 0; `check:docs` 4/4 at this commit. Mutation bench 4/4 killed, each by the test that names it (table in `41e85a32e`). No build: no `src/` file.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Readings of the prompt, stated: the by-hand commit also carries `-m <Model trailer>`, so it is the commit --launch makes (P6); with the flag and no --launch the Findings stay as measured and the go-ahead reaches only the by-hand commit; the minute check reads pending/ too, or a parked prompt no longer refused its Prompt-ID. `lane-run` in the by-hand line is the chat's name, not on the PATH, as the prompt's shape. Bench copies in `/tmp/lanerun-mut-1440`.
+**Prompt document name**: 2026-09-27 14:40

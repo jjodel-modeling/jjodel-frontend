@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1440
 Chat: C-2026-09-27-1428
 Lane: fast (one script and its test, the script's usage header; no frontend code, no critical zone, no governance file; no visual check)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane harness-merge-pending · 41e85a32e
 
 Worktree: `~/jjodel-gate`, branch `harness-merge-pending` (cut by the chat from `alfonso-frontend-jjtl` at `86520a8f3`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-gate`, branch `harness-merge-pending`, `git log -1` is the commit that adds this file (its parent `86520a8f3`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-1440 · session <id>]` and ends with a bare `Outcome:` line, the shas on the line above. Run gates in the foreground.
 
