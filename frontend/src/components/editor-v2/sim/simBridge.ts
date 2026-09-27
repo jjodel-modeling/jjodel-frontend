@@ -28,11 +28,17 @@
  * table beside the guards, and what never runs is listed with the guards'
  * defects; the run-time halts stay the backstop. No action role bound: the run
  * keeps `NO_SIM_ACTIONS`.
+ *
+ * Derived attributes (lane C2, R-SIM-73..75): their equations are compiled at
+ * Reset and, when one is declared, the run gets a `DerivedOracle` that gives
+ * the initial σ its derived values and every step its σ′'s; with none the run
+ * has no oracle. What the equations or their first values say wrong is listed
+ * with the declarations; an action on a derived target is `read-only`.
  */
 
 import type { ExecutionContext } from '../../../jjscript/types';
 import type { JjelValue } from '../../../jjel/evaluator';
-import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
+import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../../../model/simulation/netCompile';
 import { candidates, stateAccess, step } from '../../../model/simulation/netStep';
 import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess } from '../../../model/simulation/guardContext';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
@@ -40,12 +46,13 @@ import { compileGuard, evaluateGuard } from '../../../model/simulation/guardEval
 import type { CompiledGuard, GuardDefectReason } from '../../../model/simulation/guardEvaluator';
 import { actionSiteKey, compileAction, compileActions, foldActionTarget, makeActionOracle } from '../../../model/simulation/actionEvaluator';
 import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
+import { compileDerived, makeDerivedOracle } from '../../../model/simulation/derivedEvaluator';
 import { decodeStateAttributes, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../../../model/simulation/objectSlots';
 import type {
-    ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, GuardOracle, HaltReason, NetModelView,
-    NetRunStatus, NetStc, SimStateAccess, StepOutcome,
+    ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, GuardOracle, HaltReason,
+    NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import { getSimRun, simCommit } from './simRunState';
 import type { SimRun } from './simRunState';
@@ -196,8 +203,9 @@ function compileActionTable(net: CompiledNet, features: ActionFeatures, lookup: 
  * What never runs, found at Reset (R-SIM-61, R-SIM-70): a guard that does not
  * parse or that the subset checker rejects; an action that does not parse, that
  * reads `node` into σ, or whose target, known before the run, is undeclared,
- * breaks locality or is assigned twice by one transition; a declaration that is
- * wrong. Never a run-time outcome: those depend on σ and are explained by
+ * breaks locality, is derived (`read-only`) or is assigned twice by one
+ * transition; a declaration that is wrong, its equation included. Never a
+ * run-time outcome: those depend on σ and are explained by
  * `stopReason` or halt the run. A defective guard takes its transition out of
  * the candidates; a defective action does not: the transition halts if it fires.
  */
@@ -205,9 +213,9 @@ export interface CompileDefect {
     /** A guard's or an action's element; for a declaration, its name, `record N`, or `state attributes` for the key. */
     readonly element: string;
     readonly role: 'guard' | 'action' | 'declaration';
-    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration';
+    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration' | 'read-only';
     readonly detail: string;
-    /** The guard's or the action's text; `''` for a declaration. */
+    /** The guard's, the action's or the equation's text; `''` for any other declaration defect. */
     readonly source: string;
     /** The site of an action defect; absent for a double target, which is the transition's. */
     readonly site?: ActionSite;
@@ -230,9 +238,10 @@ function guardDefectsOf(guards: ReadonlyMap<string, CompiledGuard>): CompileDefe
 
 /**
  * The actions that never run, or that will halt the run whenever they fire,
- * judged before it (R-SIM-70): a compile defect; a folded target undeclared or
- * breaking locality, once per site; one folded target twice among the sites of
- * one transition. A target that reads σ or the event is left to the run.
+ * judged before it (R-SIM-70, R-SIM-75): a compile defect; a folded target
+ * undeclared, derived or breaking locality, once per site; one folded target
+ * twice among the sites of one transition. A target that reads σ or the event
+ * is left to the run.
  */
 function actionDefectsOf(
     net: CompiledNet, table: ReadonlyMap<string, readonly CompiledAction[]>, snapshot: SimSnapshot, lookup: Lookup,
@@ -261,6 +270,10 @@ function actionDefectsOf(
                     report('undeclared', `'${target.attr}' is not declared on ${where}`, `undeclared '${target.attr}' on ${where}`);
                     continue;
                 }
+                if (decl.equation !== undefined) {
+                    report('read-only', `'${target.attr}' is derived and cannot be assigned`, `assigns derived '${target.attr}'`);
+                    continue;
+                }
                 if ((decl.space === 'semantic') === target.onNode) {
                     report('locality', decl.space === 'semantic'
                         ? `'${target.attr}' is a semantic attribute: node.[${target.attr}] assigns presentation only`
@@ -282,12 +295,26 @@ function actionDefectsOf(
     return out;
 }
 
-/** The declarations' defects as the defects line lists them (R-SIM-70): named by the declaration, the key as `state attributes`. */
-function declarationDefectsOf(defects: readonly DeclarationDefect[], lookup: Lookup): CompileDefect[] {
-    return defects.map(d => {
-        const detail = d.element === undefined ? d.message : `${d.message} on ${elementName(lookup, d.element)}`;
+/** The codes of a defect of an equation, whose index is its declaration's in the compiled net. */
+const EQUATION_CODES: ReadonlySet<DeclarationDefectCode> = new Set<DeclarationDefectCode>(['parse', 'subset', 'event', 'cycle', 'derived']);
+
+/**
+ * The declarations' defects as the defects line lists them (R-SIM-70): named by
+ * the declaration, the key as `state attributes`. An equation's defect carries
+ * its text for the title only (R-SIM-62); a subset defect is its code in the
+ * line; a value at Reset names its element, `cnet.total`, never the id.
+ */
+function declarationDefectsOf(defects: readonly DeclarationDefect[], lookup: Lookup, attributes: readonly StateAttributeDecl[] = []): CompileDefect[] {
+    return defects.map((d): CompileDefect => {
         const element = d.code === 'key' ? 'state attributes' : d.name ?? `record ${(d.index ?? 0) + 1}`;
-        return { element, role: 'declaration', reason: 'declaration', detail, source: '' };
+        const source = EQUATION_CODES.has(d.code) && d.index !== null ? attributes[d.index]?.equation ?? '' : '';
+        if (d.code === 'derived') {
+            const where = d.element === undefined ? element : `${elementName(lookup, d.element)}.${element}`;
+            return { element, role: 'declaration', reason: 'declaration', detail: `${where} ${d.message.replace(/^failed: JjelEvaluationError: /, 'failed: ')}`, source };
+        }
+        const detail = d.element === undefined ? d.message : `${d.message} on ${elementName(lookup, d.element)}`;
+        const short = d.code === 'subset' ? d.message.split(':')[0] : undefined;
+        return { element, role: 'declaration', reason: 'declaration', detail, source, ...(short ? { short } : {}) };
     });
 }
 
@@ -309,7 +336,7 @@ export function startRun(
     // The declarations (R-SIM-67, R-SIM-68): an absent key is the empty set, any other value is decoded.
     const stored = bag?.[STATE_ATTRIBUTES_KEY];
     const declarations = decodeStateAttributes(stored === undefined || stored === null ? undefined : String(stored));
-    const net = compileNet(stc, view, modelId, ids, declarations.decls);
+    const plain = compileNet(stc, view, modelId, ids, declarations.decls);
     const globals = build(evalContextFor(lookup, modelId, projectId), { extentModelId: modelId });
     let snapshot: SimSnapshot;
     try {
@@ -318,6 +345,10 @@ export function startRun(
         if (e instanceof SimSnapshotError) return { kind: 'refused', reason: `The model cannot be frozen: ${e.message}.` };
         throw e;
     }
+    // Derived attributes (R-SIM-73): an oracle only when one is declared, as NO_SIM_ACTIONS for the actions.
+    const equations = compileDerived(plain.attributes);
+    const derived = plain.attributes.some(d => d.equation !== undefined) ? makeDerivedOracle(snapshot, plain, equations) : undefined;
+    const net = derived ? withDerivedInitial(plain, derived, equations.defects) : plain;
     const guards = compileGuards(net, stc, lookup);
     const actionRoles = !!(stc.action || stc.entry || stc.exit);
     const actions = actionRoles ? compileActionTable(net, stc, lookup) : new Map<string, CompiledAction[]>();
@@ -329,13 +360,14 @@ export function startRun(
             halt: null,
             guards: makeGuardOracle(snapshot, guards, net.places),
             actions: actionRoles ? makeActionOracle(snapshot, net, actions) : NO_SIM_ACTIONS,
+            derived,
             alphabet: eventAlphabet(stc, view, ids).map(e => e.id),
             signature: runSignature(lookup, modelId, configModelId),
         },
         compileDefects: [
             ...guardDefectsOf(guards),
             ...actionDefectsOf(net, actions, snapshot, lookup),
-            ...declarationDefectsOf([...declarations.defects, ...(net.declarationDefects ?? [])], lookup),
+            ...declarationDefectsOf([...declarations.defects, ...(net.declarationDefects ?? [])], lookup, net.attributes),
         ],
     };
 }
@@ -416,9 +448,13 @@ function siteSources(site: ActionSite, lookup: Lookup, features: ActionFeatures 
 /**
  * The action a halt names, and the detail without its text (R-SIM-62, R-SIM-70):
  * an action defect's detail opens with `'<source>': `, a text of the site; an
- * undeclared target is any action of the site assigning that attribute.
+ * undeclared or derived target is any action of the site assigning that
+ * attribute. A derived value that failed or left its domain names its
+ * equation, read from the net's declarations when given.
  */
-function haltSource(reason: HaltReason, lookup: Lookup, features: ActionFeatures | undefined): { sources: string[]; detail: string | null } {
+function haltSource(
+    reason: HaltReason, lookup: Lookup, features: ActionFeatures | undefined, net?: Pick<CompiledNet, 'declared'>,
+): { sources: string[]; detail: string | null } {
     if (reason.kind === 'action-defect') {
         const source = siteSources(reason.site, lookup, features)
             .filter(x => reason.detail.startsWith(`'${x}': `))
@@ -427,9 +463,13 @@ function haltSource(reason: HaltReason, lookup: Lookup, features: ActionFeatures
             ? { sources: [], detail: reason.detail }
             : { sources: [source], detail: reason.detail.slice(source.length + 4) };
     }
-    if (reason.kind === 'undeclared') {
+    if (reason.kind === 'undeclared' || reason.kind === 'read-only') {
         const sources = siteSources(reason.site, lookup, features).filter(x => compileAction(x)?.action?.target.attribute === reason.attr);
         return { sources, detail: null };
+    }
+    if (reason.kind === 'derived' || reason.kind === 'domain') {
+        const equation = net?.declared.get(reason.element)?.get(reason.attr)?.equation;
+        return { sources: equation === undefined ? [] : [equation], detail: null };
     }
     return { sources: [], detail: null };
 }
@@ -451,13 +491,20 @@ export function haltMessage(reason: HaltReason, lookup: Lookup, features?: Actio
             return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: ${haltSource(reason, lookup, features).detail}.`;
         case 'undeclared':
             return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: '${reason.attr}' is not declared on ${elementName(lookup, reason.element)}.`;
+        case 'read-only':
+            return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: '${reason.attr}' is derived and cannot be assigned.`;
+        case 'derived':
+            return `Halted: derived '${reason.attr}' of ${elementName(lookup, reason.element)} failed: ${reason.detail.replace(/^JjelEvaluationError: /, '')}.`;
     }
 }
 
-/** The `title` of the halt line: the line, then the text of the action that stopped the run in brackets (R-SIM-62). */
-export function haltTitle(reason: HaltReason, lookup: Lookup, features?: ActionFeatures): string {
+/**
+ * The `title` of the halt line: the line, then the text of the action or of the
+ * equation that stopped the run in brackets (R-SIM-62); the equation needs `net`.
+ */
+export function haltTitle(reason: HaltReason, lookup: Lookup, features?: ActionFeatures, net?: Pick<CompiledNet, 'declared'>): string {
     const line = haltMessage(reason, lookup, features);
-    return [line, ...haltSource(reason, lookup, features).sources.map(x => `[${x}]`)].join(' ');
+    return [line, ...haltSource(reason, lookup, features, net).sources.map(x => `[${x}]`)].join(' ');
 }
 
 function arcsText(arcs: readonly Arc[], lookup: Lookup): string {
@@ -702,7 +749,7 @@ export interface InputPress {
     readonly pending: readonly Candidate[] | null;
     /** The «Last step» line of the committed step, `null` when nothing was committed. */
     readonly lastStep: string | null;
-    /** Its `title`: the line, then the assignments of the step when it made any (R-SIM-71). */
+    /** Its `title`: the line, then the assignments of the step when it made any (R-SIM-71), then the derived values of σ′ (R-SIM-73). */
     readonly lastStepTitle?: string;
     readonly outcome: StepOutcome | null;
 }
@@ -720,6 +767,17 @@ function firstBlocked(run: SimRun, outcome: StepOutcome, lookup: Lookup): string
         if (b) return b.short;
     }
     return null;
+}
+
+/** The derived values of a σ as the title of «Last step» lists them: `cnet.total = 2`, the semantic ones first. */
+function derivedText(state: SimState, lookup: Lookup): string[] {
+    const out: string[] = [];
+    for (const space of [state.derived?.attrs, state.derived?.presentation]) {
+        for (const [element, values] of space ?? []) {
+            for (const [attr, value] of values) out.push(`${elementName(lookup, element)}.${attr} = ${String(value)}`);
+        }
+    }
+    return out;
 }
 
 function lastStepText(outcome: StepOutcome, net: CompiledNet, lookup: Lookup, input: string, why: string | null = null): string {
@@ -761,11 +819,16 @@ export function pressInput(
     } else {
         chosen = selector;
     }
-    const outcome = step(run.net, cfg, chosen, run.guards, run.actions);
+    const outcome = step(run.net, cfg, chosen, run.guards, run.actions, run.derived);
     simCommit(modelId, outcome);
     const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(run, outcome, lookup) : null;
     const lastStep = lastStepText(outcome, run.net, lookup, input, why);
     const assigned = outcome.label.assignments.map(a => `${elementName(lookup, a.element)}.${a.attr} = ${String(a.value)}`);
-    const lastStepTitle = assigned.length === 0 ? lastStep : `${lastStep}\nassignments: ${assigned.join(', ')}`;
+    const derivedValues = outcome.kind === 'fired' ? derivedText(outcome.next.state, lookup) : [];
+    const lastStepTitle = [
+        lastStep,
+        ...(assigned.length === 0 ? [] : [`assignments: ${assigned.join(', ')}`]),
+        ...(derivedValues.length === 0 ? [] : [`derived: ${derivedValues.join(', ')}`]),
+    ].join('\n');
     return { pending: null, lastStep, lastStepTitle, outcome };
 }

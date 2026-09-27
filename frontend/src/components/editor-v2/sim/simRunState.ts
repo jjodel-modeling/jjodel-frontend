@@ -26,7 +26,7 @@
 import { useSyncExternalStore } from 'react';
 import { isMarked } from '../../../model/simulation/netStep';
 import type {
-    ActionOracle, CompiledNet, GuardOracle, HaltReason, NetConfiguration, StepOutcome,
+    ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, NetConfiguration, StepOutcome,
 } from '../../../model/simulation/netTypes';
 
 /** One started run of one model. */
@@ -39,6 +39,8 @@ export interface SimRun {
     /** Closes over the snapshot of M frozen at Reset (R-SIM-14). */
     readonly guards: GuardOracle;
     readonly actions: ActionOracle;
+    /** The derived attributes of every σ′ (lane C2, R-SIM-73); absent when none is declared. */
+    readonly derived?: DerivedOracle;
     /** The event instance ids of the model at Reset. */
     readonly alphabet: readonly string[];
     /** The R-SIM-13 baseline: `runSignature` on the lookup the net was compiled from. */

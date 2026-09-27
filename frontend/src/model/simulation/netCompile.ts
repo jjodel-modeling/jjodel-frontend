@@ -23,8 +23,8 @@
  */
 
 import type {
-    ActionSite, Arc, CompiledNet, DeclarationDefect, Domain, NetDefect, NetModelView, NetStc, NetTransition, SimValue,
-    StateAttributeDecl,
+    ActionSite, Arc, CompiledNet, DeclarationDefect, DerivedOracle, Domain, NetDefect, NetModelView, NetStc, NetTransition,
+    SimValue, StateAttributeDecl,
 } from './netTypes';
 import type { SimEventInfo, SimModelView } from './types';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
@@ -365,10 +365,15 @@ function domainText(domain: Domain): string {
  * a metaclass the model does not have, a semantic attribute without a domain,
  * range bounds that are not integers or are reversed, an initial value outside
  * the domain or of another type. The initial is checked only on a sound domain.
+ * A derived declaration has no initial (R-SIM-72): both or neither is `exclusive`;
+ * its equation is compiled at Reset (`derivedEvaluator.ts`).
  */
 function declarationDefects(decl: StateAttributeDecl, index: number, view: NetModelView): DeclarationDefect[] {
     const out: DeclarationDefect[] = [];
     const defect = (code: DeclarationDefect['code'], message: string) => out.push({ index, name: decl.name, code, message });
+    if ((decl.initial === undefined) === (decl.equation === undefined)) {
+        defect('exclusive', decl.equation === undefined ? 'no initial or equation' : 'initial and equation');
+    }
     if (STATE_RESERVED.readOnlyAttributes.includes(decl.name)) defect('reserved', 'reserved name');
     if (decl.metaclass !== null && !view.exists(decl.metaclass)) defect('metaclass', 'unknown metaclass');
     const domain = decl.domain;
@@ -381,7 +386,7 @@ function declarationDefects(decl: StateAttributeDecl, index: number, view: NetMo
         defect('bounds', `bounds ${domain.min}..${domain.max} are not integers`);
     } else if (domain.kind === 'range' && domain.min > domain.max) {
         defect('bounds', `min ${domain.min} > max ${domain.max}`);
-    } else if (!inDomain(decl.initial, domain)) {
+    } else if (decl.equation === undefined && decl.initial !== undefined && !inDomain(decl.initial, domain)) {
         defect('initial', `initial ${String(decl.initial)} outside ${domainText(domain)}`);
     }
     return out;
@@ -401,7 +406,9 @@ function declarationDefects(decl: StateAttributeDecl, index: number, view: NetMo
  * declarations give an element the same name, the first one holds, and the
  * second is a declaration defect (`two-spaces` or `twice`, R-SIM-71) reported
  * once, at the first element where they meet. A defective declaration still
- * applies where it can: the defects are reported, not enforced.
+ * applies where it can: the defects are reported, not enforced. A derived
+ * attribute is declared but has no stored value: its values come at Reset from
+ * `withDerivedInitial` (lane C2, R-SIM-73).
  */
 export function compileNet(
     stc: NetStc, view: NetModelView, modelId: string, ids: readonly string[],
@@ -458,6 +465,7 @@ export function compileNet(
                 continue;
             }
             byName.set(decl.name, decl);
+            if (decl.equation !== undefined || decl.initial === undefined) continue;
             const space = decl.space === 'semantic' ? attrs : presentation;
             let values = space.get(e);
             if (!values) { values = new Map(); space.set(e, values); }
@@ -479,6 +487,37 @@ export function compileNet(
         defects,
         declarationDefects: declarationDefectList,
     };
+}
+
+/**
+ * The net with the derived values of its initial σ (lane C2, R-SIM-73), at
+ * Reset: the oracle's fresh map goes on `initial`, and what it says wrong is a
+ * declaration defect, once per declaration, at the first element: a failure
+ * leaves the value out, a semantic value outside its domain stays, as an
+ * initial value outside it does (report §5, decision 5). `equationDefects`,
+ * those of `compileDerived`, go between the compiler's defects and the values'
+ * own. The input net is not changed.
+ */
+export function withDerivedInitial(
+    net: CompiledNet, oracle: DerivedOracle, equationDefects: readonly DeclarationDefect[] = [],
+): CompiledNet {
+    const { derived, failures } = oracle(net.initial);
+    const defects: DeclarationDefect[] = [...(net.declarationDefects ?? []), ...equationDefects];
+    const reported = new Set<StateAttributeDecl>();
+    const report = (element: string, attr: string, message: string) => {
+        const decl = net.declared.get(element)?.get(attr);
+        if (!decl || reported.has(decl)) return;
+        reported.add(decl);
+        defects.push({ index: net.attributes.indexOf(decl), name: attr, code: 'derived', message, element });
+    };
+    for (const f of failures) report(f.element, f.attr, `failed: ${f.detail}`);
+    for (const [element, values] of derived.attrs) {
+        for (const [attr, value] of values) {
+            const domain = net.declared.get(element)?.get(attr)?.domain ?? null;
+            if (domain !== null && !inDomain(value, domain)) report(element, attr, `= ${String(value)} outside ${domainText(domain)}`);
+        }
+    }
+    return { ...net, initial: { ...net.initial, derived }, declarationDefects: defects };
 }
 
 /**

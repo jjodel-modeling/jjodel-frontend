@@ -19,8 +19,8 @@ import { buildGuardContext, freezeSnapshot } from '../guardContext';
 import { compileGuard, evaluateGuard } from '../guardEvaluator';
 import type { GuardOutcome } from '../guardEvaluator';
 import type {
-    ActionOracle, ActionSite, CompiledNet, GuardOracle, NetConfiguration, NetModelView, NetStc, NetTransition, SimAssignment,
-    SimState, SimStateAccess, SimValue, StateAttributeDecl,
+    ActionOracle, ActionSite, CompiledNet, DerivedFailure, DerivedOracle, GuardOracle, NetConfiguration, NetModelView, NetStc, NetTransition,
+    SimAssignment, SimState, SimStateAccess, SimValue, StateAttributeDecl,
 } from '../netTypes';
 
 // ── hand-built nets ─────────────────────────────────────────────────────────
@@ -591,5 +591,82 @@ describe('Ex3: parallel fork, AND-join and inhibitor', () => {
         expect(netRunStatus(net, c, [], NO_GUARDS, null)).toBe('Terminated');
         // before the join both branches must be done: with only a2 marked, J is no candidate
         expect(ids(net, { state: st({ a2: 1, b1: 1 }), event: null })).toEqual(['eb']);
+    });
+});
+
+describe('lane C2: derived attributes in the step (P-2026-09-27-0200, R-SIM-73)', () => {
+    const TOTAL: StateAttributeDecl = { name: 'total', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 2 }, equation: 'model.[n]' };
+    const net = mkNet([tr('t', { a: 1 }, { b: 1 })], { declared: { M: [range('n', 9), TOTAL] } });
+    const bump = actionsBy({ 'transition:t': s => [{ element: 'M', attr: 'n', value: (s.read('M', 'n') as number) + 1 }] });
+    const derivedMap = (values: Record<string, Record<string, SimValue>>) => new Map(Object.entries(values).map(([e, v]) => [e, new Map(Object.entries(v))]));
+    /** total := n, read from the σ it is given; the failures given are added. */
+    const echo = (failures: DerivedFailure[] = []): DerivedOracle => s => ({
+        derived: { attrs: derivedMap({ M: { total: s.attrs.get('M')?.get('n') as number } }), presentation: new Map() },
+        failures,
+    });
+    const at = (n: number, derived?: Record<string, Record<string, SimValue>>): NetConfiguration => ({
+        state: { ...st({ a: 1 }, { M: { n } }), ...(derived ? { derived: { attrs: derivedMap(derived), presentation: new Map() } } : {}) },
+        event: null,
+    });
+    const plain = (m: ReadonlyMap<string, ReadonlyMap<string, SimValue>> | undefined) =>
+        Object.fromEntries([...(m ?? new Map())].map(([e, v]) => [e, Object.fromEntries(v)]));
+
+    it('the oracle runs on σ′, after the parallel write: total follows the n the action wrote (mutant 1: the oracle on σ)', () => {
+        const out = step(net, at(0, { M: { total: 0 } }), 't', NO_GUARDS, bump, echo());
+        expect(out.kind).toBe('fired');
+        if (out.kind !== 'fired') return;
+        expect(out.next.state.attrs.get('M')?.get('n')).toBe(1);
+        expect(plain(out.next.state.derived?.attrs)).toEqual({ M: { total: 1 } });
+    });
+
+    it('the derived part is never copied forward: only the oracle\'s fresh values on σ′, none without an oracle (mutant 2)', () => {
+        const out = step(net, at(0, { M: { total: 0, stale: 5 } }), 't', NO_GUARDS, bump, echo());
+        expect(out.kind === 'fired' && plain(out.next.state.derived?.attrs)).toEqual({ M: { total: 1 } });
+        const bare = step(net, at(0, { M: { total: 0 } }), 't', NO_GUARDS, bump);
+        expect(bare.kind === 'fired' && bare.next.state).not.toHaveProperty('derived');
+    });
+
+    it('a guard reads a derived value as it reads a stored one', () => {
+        const guard: GuardOracle = (_site, _e, s) => ({ kind: s.read('M', 'total') === 1 ? 'true' : 'false' });
+        const guarded = mkNet([tr('t', { a: 1 }, { b: 1 }, { guardSites: ['t'] })], { declared: { M: [range('n', 9), TOTAL] } });
+        expect(ids(guarded, at(1, { M: { total: 1 } }), guard)).toEqual(['t']);
+        expect(ids(guarded, at(1, { M: { total: 0 } }), guard)).toEqual([]);
+    });
+
+    it('an action on a derived target halts read-only before any write, σ unchanged (mutant 7)', () => {
+        const c = at(0, { M: { total: 0 } });
+        const out = step(net, c, 't', NO_GUARDS, actionsBy({ 'transition:t': () => [{ element: 'M', attr: 'total', value: 1 }] }), echo());
+        expect(out.kind === 'halted' && out.reason).toEqual({ kind: 'read-only', site: { element: 't', role: 'transition' }, element: 'M', attr: 'total' });
+        expect(out.kind === 'halted' && out.next.state).toBe(c.state);
+    });
+
+    it('a derived value outside its domain halts domain, σ unchanged; inside, it lands', () => {
+        const c = at(2, { M: { total: 2 } });
+        const out = step(net, c, 't', NO_GUARDS, bump, echo());
+        expect(out.kind === 'halted' && out.reason).toEqual({ kind: 'domain', element: 'M', attr: 'total', value: 3 });
+        expect(out.kind === 'halted' && out.next.state).toBe(c.state);
+        expect(step(net, at(1, { M: { total: 1 } }), 't', NO_GUARDS, bump, echo()).kind).toBe('fired');
+    });
+
+    it('a semantic failure halts derived with the element, the attribute and the detail; a presentation failure does not halt', () => {
+        const c = at(0, { M: { total: 0 } });
+        const semantic = step(net, c, 't', NO_GUARDS, bump, echo([{ element: 'M', attr: 'q', space: 'semantic', detail: 'boom' }]));
+        expect(semantic.kind === 'halted' && semantic.reason).toEqual({ kind: 'derived', element: 'M', attr: 'q', detail: 'boom' });
+        expect(semantic.kind === 'halted' && semantic.next.state).toBe(c.state);
+        const shade = step(net, c, 't', NO_GUARDS, bump, echo([{ element: 't', attr: 'shade', space: 'presentation', detail: 'boom' }]));
+        expect(shade.kind).toBe('fired');
+        expect(shade.kind === 'fired' && shade.next.state.derived?.presentation.get('t')).toBeUndefined();
+    });
+
+    it('the accessor: a stored value before a derived one of the same name (mutant 10); the presentation falls back to the site\'s derived part only', () => {
+        const state: SimState = {
+            ...st({}, { e: { x: 1 } }),
+            derived: { attrs: derivedMap({ e: { x: 2, y: 3 } }), presentation: derivedMap({ e: { glow: true }, f: { glow: false } }) },
+        };
+        expect([stateAccess(state).read('e', 'x'), stateAccess(state).read('e', 'y')]).toEqual([1, 3]);
+        expect(stateAccess(state, 'e').readPresentation('glow')).toBe(true);
+        expect(stateAccess(state).readPresentation('glow')).toBeUndefined();
+        // the presentation part is never a semantic read
+        expect(stateAccess(state).read('e', 'glow')).toBeUndefined();
     });
 });
