@@ -33,7 +33,8 @@
  *                running, exited or blocked (running past the limit, 90 minutes
  *                by default); the exit code; the last `Outcome:` line of the
  *                assistant text in the log, a suffix after the word tolerated,
- *                `unparsed: <line>` when that line names no outcome; the elapsed
+ *                `unparsed: <line>` when that line names no outcome, `none` while
+ *                the lane runs (the line belongs to an earlier turn); the elapsed
  *                time of the last run.
  *   status --all [--limit <minutes>]
  *                every lane folder of ~/.jjodel-lanes in one table (id, state,
@@ -41,7 +42,9 @@
  *   wait <Prompt-ID> | --any <id,id,...> [--max <seconds>]
  *                polls every 2 s until the lane, or any of the lanes, no longer
  *                runs (exit 0, its status printed) or the deadline passes (exit
- *                3). --max defaults to 170 and is refused above it: the chat's
+ *                0, the line `timeout: <ids> still running after <max> s`: an
+ *                osascript `do shell script` drops the output of a non-zero
+ *                exit). --max defaults to 170 and is refused above it: the chat's
  *                shell call ends near 180 s.
  *   probe <worktree> <probe.ts> --port <n> [--config <vite config>] [--id <Prompt-ID>]
  *                refused on port 3001 and on a port in use (lsof). Starts
@@ -85,8 +88,7 @@
  *
  * Plain ES module, nothing outside node:*, like the hooks beside it.
  * Exit codes: 0 done, 1 the launched session failed to start (a probe's
- * server failed to serve), 2 refused, 3 wait timed out; probe exits with the
- * probe's own code.
+ * server failed to serve), 2 refused; probe exits with the probe's own code.
  *
  * Run by: ~/.local/bin/node <tree>/frontend/scripts/lane-run.mjs <command> ...
  */
@@ -380,7 +382,8 @@ function laneState(f, limit) {
     const elapsedMs = Number.isFinite(started) && started > 0 ? stopped - started : 0;
     let state = running ? 'running' : 'exited';
     if (running && elapsedMs > limit * 60000) state = 'blocked';
-    return { state, exited, outcome: lastOutcome(f.log), minutes: Math.floor(elapsedMs / 60000) };
+    // An Outcome line is the result of a turn: while a turn runs, the last one belongs to an earlier turn.
+    return { state, exited, outcome: running ? null : lastOutcome(f.log), minutes: Math.floor(elapsedMs / 60000) };
 }
 
 function status(idArg, rest) {
@@ -445,8 +448,9 @@ async function waitLanes(rest) {
         }
         const left = end - Date.now();
         if (left <= 0) {
+            // A deadline ends a poll, it is not a failure: osascript would drop the output of a non-zero exit.
             console.log('timeout: ' + ids.join(', ') + ' still running after ' + max + ' s');
-            return 3;
+            return 0;
         }
         await sleep(Math.min(WAIT_POLL_MS, left));
     }
