@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1235
 Chat: C-2026-09-27-1140
 Lane: discovery (read-only probes and one report; no code change; the screenshots are the chat's and Alfonso's visual check of the demo path)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane readiness-2 · measured on e1cefcfbc; the report is in the commit that carries this line (a commit cannot name its own sha)
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, fast-forwarded by the chat to the trunk after the R3 merge (`git log -1` is the commit that adds this file; its parent is the merge of `sim-r3-face` or its Status flip), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, and `git log --oneline -30` contains `766b9643c` (R3), `86401f845` (R2) and `cda1fdb4e` (R1). Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-1235 · session <id>]` and ends with a bare `Outcome:` line, the shas on the line above. Run gates in the foreground.
 
