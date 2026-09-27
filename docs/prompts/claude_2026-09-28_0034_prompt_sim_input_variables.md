@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-0034
 Chat: C-2026-09-27-1437
 Lane: discovery (read-only on the code; the report is the only file written; implementation waits for Alfonso's yes on the design)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane sim-input-variables · measured on ac7f5db80 (discovery only; implementation waits for Alfonso's yes on the design); the report is in the commit that carries this line (a commit cannot name its own sha)
 
 Worktree: `~/jjodel-w-input`, branch `sim-input-variables`, cut by the chat from `alfonso-frontend-jjtl` at `b452d9e5c` (checker rules merged); `frontend/node_modules` symlinked (P14); a fresh session started by `lane-run`. Before anything else: `pwd` is that worktree, the branch is `sim-input-variables`, `git log -1` is the commit that adds this file, `git status` is empty; otherwise `Outcome: blocked`.
 
