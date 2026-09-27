@@ -249,3 +249,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: The Flow B comparison drops one reader key, `choiceSectionPaint` (null): the readiness common file gained it at 13:01, after its Flow B ran at 12:51. The G7 subject is shortened from the prompt's, 74 characters, over the 72 of §6.2. R-SIM-83 and 84 are numbered while E2 runs in parallel; a clash is the later merge's to renumber. The G6 commit message was amended once, pathspec only, before the G7 commit.
 **Prompt document name**: 2026-09-27 16:10
 **Ticket** (closed here). The G7 mirror ticket of the P-2026-09-27-1545 entry (an `else` on a plain edge whose sibling enters a fork was always true) is closed by `bce34aee1`: the test «mirror» in `netCompile.test.ts` and mutant M7 of the bench.
+
+## 2026-09-27 — feat: binding compatibility verdicts as a pure module, S11a (P-2026-09-27-1646)
+**Prompt**: `claude_2026-09-27_1646_prompt_sim_binding_compat.md`, fast lane on `sim-binding-compat` in `~/jjodel-sim`, wave 1 of the backlog report (P-2026-09-27-1625, §4.2 S11a). `bindingVerdicts(profile, bag, sketch)`: for every `edit` role that binds an element, each sketch element of its sort and the bag's value judged `ok`, `warn` or `incompatible`; `currentVerdicts` gives the bag's verdicts to `checkability`. Unwired.
+**Files touched**: code `3d44abce0`: `frontend/src/model/simulation/bindingCompat.ts` (new), `frontend/src/model/simulation/__tests__/bindingCompat.test.ts` (new). Docs, this commit: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `3d44abce0`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; `npx vitest run src/model/simulation` 443 passed in 15 files (418 + 25, the baseline taken before the first edit); `npm run build` exit 0, the chunk-size warning; `check:docs` 4/4; `check:scripts` the known `_tmp_sim1_verify.ts:186`. Red first: the test file at collection, module absent. Mutation bench 24/24 killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The rule table (report risk 10) is in the body of `3d44abce0`: sort, concrete (R-SIM-81 exception), proper subclass of Node or Arc, owner lineage, reference type, containment, attribute type (R-SIM-44); the worst failed rule decides. Not judged: multiplicity, and the overlap of the sorts beyond Trigger's type (`overlapVerdict`). `BindingVerdict` sufficed: no question stop, no exported type changed, no R- row.
+**Prompt document name**: 2026-09-27 16:46
+**Ticket** (priority low, opened here). `MetamodelSketch` carries no upper bound (report §3.1 of the profiles report lists one; `profileBinder.ts` and `metamodelSketch.ts` do not), so the compatibility check cannot judge multiplicity, the third check of the modal lane's «type, owner, multiplicity». An optional bound on `SketchAttribute` and `SketchReference` (Rule 11, additive) and its read in `metamodelSketch.ts` are owed to S11c or the modal lane.
