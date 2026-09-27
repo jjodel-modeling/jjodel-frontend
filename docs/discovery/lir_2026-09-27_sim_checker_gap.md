@@ -94,3 +94,29 @@ Smoke-test scenarios potentially affected:
 - An R-SIM row for the producer in `docs/decisions.md` (report §14), written by the merge or a docs lane that owns
   the file: `problems/` gains kind `'simulation'`, producer `SimCheckProblemSync` over `startRun`, the decisions of
   §3 above.
+
+## 5. Closure (P2a done, P2b not started)
+
+- Code: `0412501ef`, the five files of §1. Tests 19 new, red first (18 at collection); mutation bench 22/22 killed
+  (list in the commit body).
+- Selector cost (`simCheckSignature`, node, synthetic lookups, median of 30): unbound 0.00 ms at every size; bound
+  0.05 ms at 17 objects, 1.2 ms at 500, 9.7 ms at 2000, 30 ms at 5000 (27k lookup entries). Threshold named: under one
+  16 ms frame per dispatch up to about 2000 objects of a simulation-bound M1. Above it, the report's fallback (key the
+  effect on `useConformance`'s result plus the bag's `sim*` string) applies.
+- Probe on 3020, ESM preset alone in its page (`_tmp_checker_p2a.ts`, gitignored), exit 0:
+  1. after Apply, before the declarations: 4 entries (`tc`, `tp`, each on the DObject and the vertex), title
+     `Action: undeclared 'coins' on demoESM`, 2 dots `--error`; the Reset line says the same 2 defects;
+  2. after the two declarations: 0 entries, 0 dots;
+  3. `tp.guard = node.[x] > 0`: 2 entries `Guard: E-NODE`, 1 dot on `tp`, overlay title `Guard: E-NODE` with the
+     detail and `[node.[x] > 0]`; Reset: `1 defect: tp guard (E-NODE).`;
+  4. guard restored: the dot turns `--resolved`, then leaves after the TTL, 0 entries;
+  5. console: 1 error, the known `failed to get project {project: null}`.
+  The rail item of report §9 is not closable on this preset: with `tp` selected (`_lastSelected.modelElement`), the
+  page holds no `.ir-form`, so the rail that shows the residue is not the one rendered here (`_tmp_checker_p2a_rail.ts`).
+  Crops, light and dark: `~/.jjodel-lanes/shots_sim-checker-gap/` (`1_`, `3_`, `4_`, `5_`). In `3_…_overlay_dark` the
+  overlay stays light on a dark canvas: `NodeProblemOverlay` styling, not changed here, not investigated.
+- P2b (`stcChecks.ts`, rules R1-R5) was not started. Its wiring is `guardDefectsOf` and `actionDefectsOf` in
+  `simBridge.ts` with `simBridge.test.ts`, and R3 splits `foldActionTarget` (`actionEvaluator.ts`); all three belong
+  to lane `sim-derived-recursion` in the ownership map, whose unmerged `d2a19ccab` already changes `simBridge.ts`. The
+  report's decision 7 queues P2b behind the `simBridge.ts` lanes. Question to the chat, with its recommendation, in
+  the session's final message.
