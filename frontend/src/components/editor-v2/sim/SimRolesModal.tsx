@@ -677,7 +677,8 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
             </div>
             <div className="sim-roles-modal__footer">
                 <span className="sim-roles-modal__note">{picked ? 'You can change it later in the header.' : 'Pick a model kind to continue.'}</span>
-                <div className="sim-roles-modal__actions">
+                {/* The roles footer's right slot: on the right edge, whatever the length of the hint. */}
+                <div className="sim-roles-modal__actions sim-roles-modal__actions--end">
                     <button type="button" className="sim-roles-modal__btn sim-roles-modal__btn--secondary" onClick={onClose}>Cancel</button>
                     <button type="button" className="sim-roles-modal__btn sim-roles-modal__btn--primary" disabled={!picked} onClick={() => setPreset(picked)}>
                         Continue
