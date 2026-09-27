@@ -195,6 +195,7 @@ describe('validateProfile: one failing profile per defect', () => {
         const defects = validateProfile(userCopy('stateMachine', { trigger: OFF }));
         expect(defects.map(d => [d.code, ...d.roles])).toEqual([
             ['dependencyOff', 'event', 'trigger'],
+            ['derivedFromOff', 'event', 'trigger'],
             ['dependencyOff', 'eventIdentifier', 'trigger'],
         ]);
     });
@@ -202,6 +203,20 @@ describe('validateProfile: one failing profile per defect', () => {
     it('a derived role with neither value nor from', () => {
         const defects = validateProfile(userCopy('flowchart', { bound: { mode: 'derived', note: 'k' } }));
         expect(defects.map(d => [d.code, ...d.roles])).toEqual([['derivedWithoutSource', 'bound']]);
+    });
+
+    it('a derived role whose source is off (Initial off, Initial marking derived from Initial)', () => {
+        const defects = validateProfile(userCopy('flowchart', { initial: OFF }));
+        const fromOff = defects.filter(d => d.code === 'derivedFromOff');
+        expect(fromOff.map(d => [d.code, ...d.roles])).toEqual([['derivedFromOff', 'initialMarking', 'initial']]);
+        expect(fromOff[0].message).toBe('Initial marking is derived from Initial, which is off');
+        expect(defects.some(d => d.code === 'derivedWithoutSource')).toBe(false);
+    });
+
+    it('a derived role whose source is active raises no derivedFromOff', () => {
+        const p = userCopy('flowchart', { initial: EDIT });
+        expect(p.modes.initialMarking).toEqual({ mode: 'derived', from: 'initial', note: '1 on Initial' });
+        expect(validateProfile(p).some(d => d.code === 'derivedFromOff')).toBe(false);
     });
 
     it('an empty or blank name', () => {
