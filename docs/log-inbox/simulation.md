@@ -263,3 +263,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: The rule table (report risk 10) is in the body of `3d44abce0`: sort, concrete (R-SIM-81 exception), proper subclass of Node or Arc, owner lineage, reference type, containment, attribute type (R-SIM-44); the worst failed rule decides. Not judged: multiplicity, and the overlap of the sorts beyond Trigger's type (`overlapVerdict`). `BindingVerdict` sufficed: no question stop, no exported type changed, no R- row.
 **Prompt document name**: 2026-09-27 16:46
 **Ticket** (priority low, opened here). `MetamodelSketch` carries no upper bound (report §3.1 of the profiles report lists one; `profileBinder.ts` and `metamodelSketch.ts` do not), so the compatibility check cannot judge multiplicity, the third check of the modal lane's «type, owner, multiplicity». An optional bound on `SketchAttribute` and `SketchReference` (Rule 11, additive) and its read in `metamodelSketch.ts` are owed to S11c or the modal lane.
+
+## 2026-09-27 — discovery: Moore/Mealy outputs and Accepting, S4 (P-2026-09-27-1725)
+**Prompt**: `claude_2026-09-27_1725_prompt_discovery_sim_outputs_accepting.md`, read-only discovery on `sim-outputs-accepting` in `~/jjodel-w-outputs` at `6f83971cd`, wave 1 of the backlog report (S4): where R-SIM-50/51 and R-SIM-76 enter the configuration, the step and the marking line; what the four hidden presets need; the engine-first Phase 2 and the face slices; when the presets show (decision H).
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_outputs_accepting.md` (new), this entry, the Status of the prompt file. Probe `frontend/scripts/smoke/_tmp_outacc_probe.ts` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no file under `frontend/src` written, `git status` empty after every probe run; probe `npx tsx`, `EXIT=0`, no dev server, port 3019 unused.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: DFA, NFA, Moore, Mealy run today as state machines, Checkable after Apply; the engine reads none of the three keys. Showing them needs the engine, the M2 rows (DFA without a Final class: Missing: Accepting, no row to set it) and S5 (SM then DFA: the kept Terminal ends the run). Two Phase 2 lanes: sim-outputs-engine (9 files), sim-outputs-faces (6, after S5). One RC-26 item: R-SIM-51 computed outputs. One docs commit, as the prompt asks.
+**Prompt document name**: 2026-09-27 17:25
+**Ticket** (priority medium, opened here, report §5.4). The `off`-key resolver (S5, `sim-off-resolver`) is a precondition of showing DFA, NFA, Moore and Mealy: `netStcFromRoles` reads every key regardless of the profile, so a metamodel switched from State machine to DFA keeps `simTerminal` live and the run ends `Terminated` on its accepting state, all inputs off (measured on `6f83971cd`).
