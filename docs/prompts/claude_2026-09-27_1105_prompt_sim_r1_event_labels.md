@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1105
 Chat: C-2026-09-26-1702
 Lane: fast (one pure helper and its tests; no panel change, no critical zone; a probe re-run replaces the visual check)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-r1-labels · cda1fdb4e
 
 Worktree: `~/jjodel-icons`, branch `sim-r1-labels` (cut by the chat from `simulation-engine` at `54999f9ae`, which holds the trunk with 0935 and the rows R-SIM-80..82), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `sim-r1-labels`, `git log -1` is the commit that adds this file (its parent `54999f9ae`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*` and the untracked `frontend/c2p_*.png` screenshots of an earlier lane (leave them). Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-1105 · session <id>]` and ends with a bare `Outcome:` line, the sha on the line above. Run gates in the foreground.
 
