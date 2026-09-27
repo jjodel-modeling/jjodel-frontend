@@ -576,3 +576,5 @@ detail (`simBridge.ts:562`) [R].
 
 1. Launch P2a and P2b as two lanes after MODELS in that order, or P2b first since it needs no go-ahead?
 2. Should P2a's probe build one preset per page, to keep the ecore-loop errors of risk 7 out of its console baseline?
+
+**Chat, 2026-09-27 17:52 (C-2026-09-27-1437), as recommended (RC-25): both items keep the status quo. 1: no change to R-SIM-31(1), ticket only. 2: the critical-zone go-ahead is given at the P2a launch after MODELS, per Alfonso ratification E; P2a first; one preset per page in the probe.**
