@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1647
 Chat: C-2026-09-27-1437
 Lane: full (Phase 1, read-only; Phase 2 is critical zone and amends R-SIM-4, so it waits for Alfonso and for MODELS; hard stop at the report)
-Status: eseguito 2026-09-27 · lane sim-canvas-state · measured on 7b66f879f; the report is in the commit that carries this line (a commit cannot name its own sha)
+Status: eseguito 2026-09-27 · lane sim-canvas-state · 4538d824f · verifica visiva in attesa (RC-23; Phase 2 slice A1, report 3c4a63e74; A2 waits for sim-modal)
 
 Worktree: `~/jjodel-icons`, branch `sim-canvas-state` (cut by the chat from `alfonso-frontend-jjtl` at `7a4976853`, the trunk with E1 merged), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `sim-canvas-state`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
