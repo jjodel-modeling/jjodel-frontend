@@ -192,16 +192,20 @@ locked) halted the run` [M].
 
 **Declarations** (tab `DemoESM`).
 1. Click `Add attribute` in the summary line. The groups unfold with Data open, and the focus is on the table's own
-   `Add attribute`, in view [M, lane R2 on its branch `86401f845`; not re-run on the trunk, report §7 risk 4].
-2. `Add attribute`. Row 1: name `coins`, Enter; domain `range`; maximum `3`, Enter (the minimum stays 0 [M]);
-   initial value `0`, Enter.
-3. `Add attribute`. Row 2: name `paid`, Enter; stored or derived: `derived`; equation `model.[coins] >= 2`, Enter.
-   <!-- not measured: the position of the second Add attribute on the hint path. Through Configure… it sat below
-   the fold (addTop 992 > bodyBottom 950): scroll the panel body. -->
-4. The declarations line is gone [M].
+   `Add attribute`, in view [M, on the trunk by P-2026-09-27-1500: 926-950, body bottom 950].
+2. `Add attribute`. Scroll the panel body to its end: the new row's third line is below the fold [M 945-969, body
+   bottom 950]. The row reads `x1` and `false`; double-click a cell before typing, since a click leaves the caret
+   after the text [M]. Row 1: name `coins`, Enter; domain `range`, then the maximum reads `1`; double-click it, `3`,
+   Enter (the minimum stays 0 [M]); double-click the initial value, `0`, Enter.
+3. Scroll the panel body to its end: the second `Add attribute` is below the fold [M 954-978 > 950]. `Add
+   attribute`, then scroll again: `stored` is below the fold [M 946-970 > 950]. Row 2: double-click the name, `paid`,
+   Enter; `derived`; equation `model.[coins] >= 2`, Enter.
+4. The declarations line is gone from the first `Add attribute` on [M].
 
-Steps 2 and 3 are the measured table path (through Configure…, 10 interactions in all) [M]. The labels `range`,
-`derived`, `stored` are the options of the table's selects [R].
+Steps 1 to 3 are 10 interactions, clicks and entries: 1 hint, 2 `Add attribute`, 7 cells; on the hint path plus
+three scrolls, and each of the four prefilled cells (name 1, maximum 1, initial 1, name 2) is entered by a
+double-click instead of a click [M, P-2026-09-27-1500]. The labels `range`, `derived`, `stored` are the options of
+the table's selects [R].
 **Say** "coins is stored, with the domain 0 to 3. paid is derived from coins."
 
 **Run** (tab `demoESM`). After the optional Reset above, the M1 face reads `Run interrupted: the model changed.
@@ -324,8 +328,11 @@ After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover ti
 - **`∅` reads like `ø` at 11-12 px** in `t3 (lock → ∅)` [M]. **Say** "t3 has an empty postset."
 - **The declarations table below the fold via Configure…** on ESM: `addTop 992 > bodyBottom 950` [M]. Use the
   summary line's `Add attribute`, which brings the table's button into view.
-- **The summary button's path is not re-measured on the trunk** (report §7, risk 4). Rehearse §2.3 and §2.4 on
-  3001 before the freeze. If the table's button is out of view, scroll the panel body.
+- **The summary button's path on ESM is measured on the trunk** by P-2026-09-27-1500
+  (`discovery_2026-09-27_sim_demo_hint_path_trunk.md`, `6acdb7080`, headless, 1600×1000): every value of §2.3
+  holds, and three targets sit 19 to 28 px below the fold, named in §2.3 steps 2 and 3 [M]. The RC-23 browser check
+  re-reads the three below-the-fold positions before the freeze. The summary button on Flow (§2.4) is not measured.
+  Rehearse §2.3 and §2.4 on 3001 before the freeze. If a target is out of view, scroll the panel body.
 
 ---
 
