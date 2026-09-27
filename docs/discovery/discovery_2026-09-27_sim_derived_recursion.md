@@ -517,3 +517,5 @@ Appended to the row, in the style of R-SIM-73's amendment:
 1. Should the cap of risk 2 be a fixed number of combinations per equation (e.g. 10 000), or the extent size?
 2. Should the cycle defect's title (R-SIM-62) suggest the lambda rewrite when the cycle comes from the fallback?
 3. Does S2 (`sim-derived-diagnostics`) take the «no value» wording of §8.5, or does Phase 2 adjust it after?
+
+**Answered by Alfonso, 2026-09-27 17:47 (in chat, C-2026-09-27-1437): ok to the recommendations.** A yes: amend R-SIM-74 as in 9.1, merged after MODELS. B no: no collection on the left of .[x].
