@@ -195,8 +195,8 @@ keystrokes; the run, 11 clicks [M, P-2026-09-27-2105].
 **Optional: Reset before declaring** (tab `demoESM`). Reset shows `2 defects: tc action (undeclared 'coins' on
 demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M]. `coin` then shows `Halted: the
 transition action of tc failed: 'coins' is not a state attribute of demoESM.` and `Last step: coin: tc (locked →
-locked) halted the run` [M]. The defects line and the halt line are cut on screen; their titles hold the whole
-text [M, P-2026-09-27-2105].
+locked) halted the run` [M]. The halt line reads whole on two lines [M, P-2026-09-27-2225]; the defects line is
+cut on screen, its title holds the whole text [M, P-2026-09-27-2105].
 **Say** "Without the declarations the run names the missing attribute and stops at the first action."
 
 **Declarations** (tab `DemoESM`).
@@ -236,8 +236,8 @@ Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M].
 
 - After step 5 only `push` is on: `coin(off)`, `stop(off)` [M].
 - After step 10 the halt line reads `Halted: coins of demoESM would be 4, outside its domain.` and every event is
-  off [M]. On screen the panel cuts it at `outside it…`, and `Last step:` at `halted the r…`; the halt line's title
-  is the whole line [M, P-2026-09-27-2105: 302 and 264 px of text in 262].
+  off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; `Last step:` is cut at `halted the r…`,
+  its title is the whole line [M, P-2026-09-27-2105: 264 px of text in 262].
 - The hover title of `Last step:` adds the writes, e.g. after step 4 `assignments: demoESM.coins = 2` and
   `derived: demoESM.paid = true` [M].
 
