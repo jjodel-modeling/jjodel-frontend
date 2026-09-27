@@ -2052,6 +2052,24 @@ decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; q
   viene rifiutata; nuXmv, che controlla dopo l'appiattimento, la accetterebbe. Rinviato un raffinamento per
   (metaclasse, nome). Un arco da un'equazione semantica a un derivato di presentazione è vietato (`E-NODE`
   transitivo); un fallimento di presentazione non ferma la semantica.
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat `C-2026-09-27-1437`, 17:47, risposta A al report
+  `docs/discovery/discovery_2026-09-27_sim_derived_recursion.md` §9.1; codice `805c8ecdd`, `d2a19ccab`): il grafo
+  delle dipendenze di un run è per (elemento, attributo) su M congelato (G3). Per ogni proprietario di
+  un'equazione, l'oggetto di ogni nodo `StateAccess` che non legge σ si valuta su M congelato con `self` il
+  proprietario; una variabile legata da una lambda argomento di un metodo di collezione, o da `forall`/`exists`,
+  prende gli elementi della collezione su cui itera quando questa non legge σ; `node` è il proprietario. Dove
+  l'oggetto non si riduce così, o chiede più di 10 000 legami delle sue variabili, l'arco va a ogni proprietario
+  dell'attributo derivato per nome (il G1 di prima, ristretto a quel nodo). Un ciclo è un difetto di
+  dichiarazione, uno per dichiarazione: con il testo di prima se il ciclo resta su un elemento, con gli elementi
+  nominati (`equation cycle: c1.len → c2.len → c1.len`) se li attraversa; restano senza valore solo gli elementi
+  sul ciclo, e chi li legge viene valutato e fallisce, come prima per chi leggeva un nome ciclico. L'ordine è il
+  topologico per (elemento, attributo), a parità il rango del nome nell'ordine per nome e poi l'ordine degli
+  elementi, così ogni modello accettato da G1 conserva il piano di oggi. Una ricorsione ben fondata sul
+  contenimento o su un riferimento (`size := self.[own] + self.children.sum(c => c.[size])`,
+  `len := if self.next == null then 1 else self.next.[len] + 1`) è accettata; su un M ciclico lungo quel percorso
+  resta un difetto, come in nuXmv dopo l'appiattimento. Il raffinamento «per (metaclasse, nome)» cade: non avrebbe
+  tolto il limite. R-SIM-43 e R-SIM-18 restano come sono (risposta B): la forma su collezione si scrive con una
+  lambda o con `forall`, mai con una collezione a sinistra di `.[x]`.
 - **R-SIM-75** (2026-09-27, provisional, unattended, evidence: read, verified: agent, reversible: branch).
   **Radici e record.** In un'equazione: `self` è il proprietario, la radice del modello per un globale, `model`
   ammesso, `event` vietato (difetto di dichiarazione: un DEFINE non dipende dall'input), `node` `E-NODE` su
