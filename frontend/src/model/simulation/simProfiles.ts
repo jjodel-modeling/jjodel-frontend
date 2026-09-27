@@ -195,6 +195,7 @@ export type ProfileDefectCode =
     | 'otherShapeActive'
     | 'dependencyOff'
     | 'derivedWithoutSource'
+    | 'derivedFromOff'
     | 'blankName'
     | 'systemName';
 
@@ -237,6 +238,9 @@ export function validateProfile(profile: SimProfile): ProfileDefect[] {
         }
         if (mode.mode === 'derived' && mode.value === undefined && mode.from === undefined) {
             defects.push({ code: 'derivedWithoutSource', roles: [r], message: `${label(r)} is derived from nothing` });
+        }
+        if (mode.mode === 'derived' && mode.from !== undefined && !active(mode.from)) {
+            defects.push({ code: 'derivedFromOff', roles: [r, mode.from], message: `${label(r)} is derived from ${label(mode.from)}, which is off` });
         }
     }
     const name = profile.name.trim();
