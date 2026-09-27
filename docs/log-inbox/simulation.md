@@ -394,3 +394,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Ticket** (priority medium, opened here, outside DOVE, for the chat). Once merged, the demo script goes stale on two readings: §2.3 at lines 196-198 and 238-240 says the halt line is cut and read in its title; it now reads whole on two lines. «Last step» and the defects line are still cut, as the script says.
 **Ticket** (priority medium, opened here, outside DOVE, for the chat). Answer 3 narrows R-SIM-63 for the halt line; the row in `docs/decisions.md` is not written.
 **Ticket** (priority low, probe artifact). The dark probe's init script throws one `pageerror` (`document.documentElement` is null that early); the theme still applies through `localStorage.theme`.
+
+## 2026-09-28 — fix: demo polish, the theme switch reaches the open editor; toolbar labels accepted for MODELS (P-2026-09-28-0014)
+**Prompt**: `claude_2026-09-28_0014_prompt_demo_polish.md`, full lane on `demo-polish` in `~/jjodel-w-polish` (cut at `e87df1ff6`): the freeze readiness findings (`c6933dded`) F2 (Settings theme switch with a project open), F3 (toolbar labels cut at 1600 and 1280) and a Setup step in the demo script for F1 (Cmd+S, reload, check).
+**Files touched**: code `813a73ff5`: `frontend/src/pages/settings/AppearanceSettings.tsx` (a user's choice goes through `ThemeService.set`, whose `THEME_CHANGED` the editor's `useTheme` listens to). Docs, this commit: `docs/demo/models_2026_simulator_demo.md` §1 (one bullet, Save check), this entry, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest on `src/components/editor-v2`, `src/services`, `src/pages` 83 files, 1881 passed, as before; `npm run build` exit 0, 51 warning lines. Theme probe (3030, DemoPEST open, avatar > Settings > Appearance): before 5/6 from light and from dark at 1600 (the editor kept its theme); after 6/6 from light and from dark, at 1600x1000 and 1280x800.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, RC-23, F2 on `shots_polish/1600x1000/theme_after_from_light_1_after_dark.png`: canvas, sidebars and panels all dark
+**Notes**: F3 not done, stopped as the prompt asks: whole labels do not fit at 1280 without a redesign. Canvas zone 544 px at 1280, 824 at 1600; whole content 845 (M2) and 958 (M1), 761 and 874 with the icon buttons at their declared 28 px. The 28 px candidate, injected, still cuts `LAYO…` and `Abstract synt…` at 1600 on demoSM (41.1 of 41.8, 80.6 of 81.4: the freeze reader's +1 px tolerance hides it; the crop shows it).
+**Prompt document name**: 2026-09-28 00:14
+**Ticket** (priority low, opened here, after MODELS). The chat adopted the recommendation (RC-21, ratified as recommended, unattended): the cut labels are accepted for MODELS, no CSS change. Editor toolbar labels: `VIEW` renders 0 px wide at every size on both tabs, even with room (the VIEW group's intrinsic width sums the dropdowns' content widths, 84.8 and 109.7, while their flex basis is 120, so the label, shrink 200, absorbs the difference); icon buttons are 40 px, not the declared 28, from unscoped `.toolbar-btn` rules in `components/editors/Console/console-tab.scss:105` and `pages/components/catalog/catalog.scss:763`; whole labels at 1280 need a redesign of the bar (deficit 301 px on M2, 414 on M1).

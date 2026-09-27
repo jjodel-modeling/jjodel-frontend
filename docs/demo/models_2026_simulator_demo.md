@@ -34,6 +34,9 @@
 - The builder writes the metamodels and models through the store. No probe drew them on the canvas. Drawing a preset
   live must end in the same names, types, abstract flags and references as §2.
   <!-- not measured: a preset drawn live on the canvas -->
+- **Save check.** After preparing each project: Cmd+S, reload the page once, check that the metamodel, the model and
+  its objects are intact. Without Cmd+S, model edits may be lost on reload although the bar reads `Saved just now`
+  (freeze readiness F1, `c6933dded`) [M].
 - **Empty bag.** Set no simulation role before Apply. Every measured path starts from an empty bag. On every preset
   the M2 face then reads `Custom · Not checkable` and `Missing: Node, Transition, Next state, Initial or Initial
   marking, Source or Owned transitions.` [M].

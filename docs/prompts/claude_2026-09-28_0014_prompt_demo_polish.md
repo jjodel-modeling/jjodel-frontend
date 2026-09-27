@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-0014
 Chat: C-2026-09-27-1437
 Lane: full (two small fixes outside the simulator, one demo-script change; visual check by the chat on the lane's crops, RC-23)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane demo-polish · 813a73ff5 · verifica visiva OK (chat, RC-23) · F3 accepted for MODELS, ticket after MODELS
 
 Worktree: `~/jjodel-w-polish`, branch `demo-polish`, cut by the chat from `alfonso-frontend-jjtl` at `e87df1ff6`; `frontend/node_modules` symlinked (P14); a fresh session started by `lane-run`. Before anything else: `pwd` is that worktree, the branch is `demo-polish`, `git log -1` is the commit that adds this file, `git status` is empty; otherwise stop with `Outcome: blocked` and say which.
 
