@@ -189,6 +189,11 @@
         color: var(--color-text-tertiary);
     }
 
+    // The input of the choice header keeps its own case: uppercased, ε paints Ε, a Latin E to the reader (G13).
+    &__section-input {
+        text-transform: none;
+    }
+
     &__hint {
         padding: 4px 0;
         font-size: 11px;
@@ -559,8 +564,10 @@
 
     // -- M2 face: the profile row, its summary and «Configure…» (R-SIM-77..79) --
     // The row holds Apply too: a narrower label leaves the select room for «Extended state machine».
+    // Measured 2026-09-27 (G14): at 48px the select painted 116 of the option's 124px, the native
+    // arrow takes the rest; «Profile» is 33.4px, so 36px gives the select 12px.
     &__profile &__label {
-        flex-basis: 48px;
+        flex-basis: 36px;
     }
 
     // Apply is the row's one primary action: the slate gradient and white text of `__btn`.
