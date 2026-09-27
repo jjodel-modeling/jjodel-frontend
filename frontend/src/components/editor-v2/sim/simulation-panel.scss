@@ -543,9 +543,11 @@
     }
 
     // -- M2 face: the declared state attributes of the Data group (lane C1, R-SIM-71) --
-    // One row of two fixed lines per declaration: a domain kind that shows other
-    // cells, or a space that hides them, never changes the height of a row. The
-    // controls keep the box of `__input` and `__select`; these rules only size them.
+    // One row of three fixed lines per declaration: a domain kind that shows other
+    // cells, a space that hides them, or a derived form that puts the equation in
+    // the place of the initial value (lane C2, R-SIM-76), never changes the height
+    // of a row. The controls keep the box of `__input` and `__select`; these rules
+    // only size them.
     &__decls {
         margin-top: 8px;
     }
@@ -561,7 +563,7 @@
         flex-direction: column;
         justify-content: center;
         gap: 4px;
-        height: 60px;
+        height: 88px;
         box-sizing: border-box;
         border-top: 1px solid var(--color-border-secondary);
     }
@@ -589,8 +591,15 @@
         flex: 1 1 0;
     }
 
-    &__decl-initial {
-        flex: 0 0 52px;
+    // The initial value and the equation share one cell box on the second line.
+    &__decl-initial,
+    &__decl-equation {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    &__decl-form {
+        flex: 0 0 76px;
     }
 
     &__decl-space {
