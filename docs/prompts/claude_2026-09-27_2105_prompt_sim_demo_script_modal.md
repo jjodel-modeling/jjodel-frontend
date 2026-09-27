@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-2105
 Chat: C-2026-09-27-1437
 Lane: fast (docs only: the demo script and one log entry; every gesture and reading measured by a probe on this tree, not by reading code)
-Status: eseguito 2026-09-27 · lane sim-demo-script-modal · the commit of this line · crops for the chat (RC-23) in ~/.jjodel-lanes/shots_demo_modal/
+Status: eseguito 2026-09-27 · lane sim-demo-script-modal · 0224e7df4 and the commit of this line (§5 after R-SIM-85) · verifica visiva OK (chat, RC-23, shots_demo_modal)
 
 Worktree: `~/jjodel-w-demo-modal`, branch `sim-demo-script-modal` (a new worktree cut by the chat from `alfonso-frontend-jjtl` at `22aa888de`, the sim-modal merge P-2026-09-27-2049 included, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-demo-modal`, branch `sim-demo-script-modal`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 

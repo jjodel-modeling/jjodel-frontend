@@ -360,5 +360,5 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
 
 - The canvas side of G3: token counts and σ on the nodes (the R-SIM-4 view lane).
 - The `.smv` exporter.
-- The modal lane.
+- The modal lane is no longer out: the demo walks the Simulation roles dialog (R-SIM-85).
 - The outputs profiles (Moore, Mealy).
