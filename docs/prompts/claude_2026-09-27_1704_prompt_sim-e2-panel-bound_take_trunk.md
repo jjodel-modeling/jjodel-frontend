@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1704
 Chat: C-2026-09-27-1437
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/log-inbox/simulation.md` measured)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-e2-panel-bound · 99d7bfff8 · verifica visiva passata 2026-09-27 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-open`, branch `sim-e2-panel-bound`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-open`, branch `sim-e2-panel-bound`, `git log -1` is the commit that adds this file (its parent `799ee13d5`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-1704 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
