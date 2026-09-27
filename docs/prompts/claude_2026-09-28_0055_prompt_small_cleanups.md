@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-0055
 Chat: C-2026-09-27-1437
 Lane: fast (three independent small fixes, no simulator file, no critical zone)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane small-cleanups · dbcc9f2e9
 
 Worktree: `~/jjodel-w-cleanups`, branch `small-cleanups`, cut by the chat from `alfonso-frontend-jjtl` at `b452d9e5c`; `frontend/node_modules` symlinked (P14); a fresh session started by `lane-run`. Before anything else: `pwd` is that worktree, the branch is `small-cleanups`, `git log -1` is the commit that adds this file, `git status` is empty; otherwise `Outcome: blocked`.
 

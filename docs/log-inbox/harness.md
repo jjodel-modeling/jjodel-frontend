@@ -135,3 +135,18 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: Text read from the code, two points where it is narrower than the prompt: a launch moves the prompt into `docs/prompts/` (copy, then the pending copy removed), not just copies it; `--governance-goahead` without `--launch` lifts nothing and reaches only the commit of the `by hand:` line. The v2 `merge` line is left as it is: still true. Alfonso's yes (16:15, in chat) is the go-ahead of this governance change.
 **Prompt document name**: 2026-09-27 16:20
+
+## 2026-09-28 — fix: bordr line, probe theme helper, R-SIM-85 header (P-2026-09-28-0055)
+**Prompt**: `claude_2026-09-28_0055_prompt_small_cleanups.md`, fast lane, launched by `lane-run` in `~/jjodel-w-cleanups` on `small-cleanups` at `ba74632df` (cut from `alfonso-frontend-jjtl` at `b452d9e5c`). Three tickets of 2026-09-27: the `bordr` build warning (P-2026-09-27-2248), probes whose dark crops keep canvas and tree light (P-2026-09-27-1647, 1806, 2324, P-2026-09-28-0023), `docs:digest` exit 2 on the R-SIM-85 header.
+**Files touched**: `ce3531f99`: `docs/decisions.md` (R-SIM-85 header, two lines reflowed). `935d054f0`: `frontend/scripts/smoke/states.ts` (`setTheme`, `ThemeResult`). `dbcc9f2e9`: `frontend/src/components/editors/properties-with-tree-view.scss` (one line removed). This commit: `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 20:49 (merge lane of `sim-modal`: it wrote the R-SIM-85 header wrapped, item 3 only)
+**Causa**: (c)
+**Regressions**: no. From `frontend/`: `typecheck` exit 2, 14 errors, the baseline set; `build` exit 0, esbuild warnings 1 to 0 (`bordr`), Sass deprecations 43 and rollup notices 5 unchanged; `typecheck:scripts` exit 0; `check:scripts` PASS 31 files (29 before the gitignored probe and the scratch vite config existed); `docs:digest` exit 2 to 0, the reflow empty under a whitespace-normalised diff. Probe `_tmp_p0055_theme.ts` on 3032: 16/16, zero page errors (numbers in `935d054f0`). No vitest: no test covers the touched files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no human visual check in the prompt); probe crops light, attribute-only dark and `setTheme` dark in `~/.jjodel-lanes/P-2026-09-28-0055/shots_theme/`
+**Notes**: One stop with `Outcome: question` on `bordr`: renaming it to `border` would arm a red debug border on `.tree-node__header`, which no TSX emits; the chat adopted the Recommended answer (RC-21) and the line is deleted. `setTheme` calls `ThemeService.set` in the page; on this tree Settings > Appearance still writes the attribute only (`813a73ff5` is on `demo-polish`).
+**Prompt document name**: 2026-09-28 00:55
+
+**Ticket** (priority low, opened here). In the `setTheme` dark crop (`A3_dark_app.png`) the status bar stays light: `.app-statusbar` hard-codes `background: #f8fafc` (`frontend/src/components/StatusBar.scss:17`) with no dark rule, so no way of switching reaches it. The Name input of the properties panel paints white in the same crop. Neither changed here, the second not investigated.
