@@ -568,3 +568,179 @@ describe('lane-run go on a direct merge', { timeout: 60000 }, () => {
         expect(t2).toMatch(/one docs commit: this prompt's Status flipped to [^\n]* and the P9 entry of this merge appended at the end of `docs\/log-inbox\/lane\.md`, both in that commit/);
     });
 });
+
+// ── chain ────────────────────────────────────────────────────────────────────
+
+const A = 'P-2026-09-27-0301';
+const B = 'P-2026-09-27-0302';
+const CHAIN = 'chain-' + A;
+const chainDir = (l: Lab) => join(l.lanes, CHAIN);
+const chainJson = (l: Lab) => JSON.parse(readFileSync(join(chainDir(l), 'chain.json'), 'utf8'));
+const outcomeEvents = (word: string) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Closing report.\nOutcome: ' + word }] } }) + '\n';
+
+/** Two prompts parked in pending/, for the branch feat; each lane flips its own Status and commits it, then reports `done` unless told otherwise. */
+function chainLab(o: RepoOpts = {}, outcomes: Record<string, string> = {}) {
+    const r = repoLab(o);
+    const pending = join(r.l.lanes, 'pending');
+    mkdirSync(pending, { recursive: true });
+    const files: Record<string, string> = {};
+    for (const id of [A, B]) {
+        const name = `claude_2026-09-27_${id.slice(-4)}_prompt_chain_${id.slice(-1)}.md`;
+        writeFileSync(join(pending, name), lanePrompt(id, 'da eseguire', 'chained lane ' + id.slice(-1)));
+        files[id] = join(pending, name);
+        writeFileSync(join(r.l.fake, id + '.sh'),
+            `sed -i '' 's/^Status: da eseguire$/Status: eseguito 2026-09-27 · lane feat · 1234567/' docs/prompts/${name} && ` +
+            `git add -- docs/prompts/${name} && git commit -q -m 'docs: close ${id}' -m 'Model: fake' -- docs/prompts/${name}\n`);
+        writeFileSync(join(r.l.fake, id + '.jsonl'), outcomeEvents(outcomes[id] ?? 'done'));
+    }
+    return { ...r, files };
+}
+
+function chainEnd(l: Lab, ms = 30000): boolean {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+        if (existsSync(join(chainDir(l), 'chain.json')) && chainJson(l).state !== 'running') return true;
+        spawnSync('/bin/sleep', ['0.1']);
+    }
+    return false;
+}
+
+describe('lane-run chain', { timeout: 60000 }, () => {
+    test('kills "the second prompt started before the first is done", "the parked prompt not committed", "prompts run out of order", "the parked copy left in pending/": two prompts run in order, each committed at its launch', () => {
+        const c = chainLab();
+        writeFileSync(join(c.l.fake, A + '.hold'), '');
+        const out = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B]]);
+        expect(out.status, out.stderr).toBe(0);
+        expect(out.stdout).toContain(`chain: ${CHAIN}`);
+        expect(waitFor(join(c.l.lanes, A, 'session.txt'))).toBe(true);
+        spawnSync('/bin/sleep', ['1']);
+        expect(existsSync(join(c.l.lanes, B))).toBe(false);
+        expect(chainJson(c.l).position).toBe(1);
+        writeFileSync(join(c.l.fake, A + '.release'), '');
+        expect(chainEnd(c.l)).toBe(true);
+        const ch = chainJson(c.l);
+        expect(ch.state).toBe('done');
+        expect(ch.lanes.map((x: { id: string; state: string }) => x.id + ' ' + x.state)).toEqual([A + ' done', B + ' done']);
+        const k = calls(c.l);
+        expect(k).toHaveLength(2);
+        expect(k[0].stdin).toContain(`Prompt-ID: ${A}`);
+        expect(k[1].stdin).toContain(`Prompt-ID: ${B}`);
+        expect(k[0].cwd).toBe(c.wt);
+        const subjects = gitIn(c.l, c.wt, ['log', '--format=%s', `${c.branchTip}..HEAD`]).split('\n').reverse();
+        expect(subjects).toEqual([`docs: add prompt ${A}, lane 1/2 of ${CHAIN}`, `docs: close ${A}`, `docs: add prompt ${B}, lane 2/2 of ${CHAIN}`, `docs: close ${B}`]);
+        expect(existsSync(c.files[A])).toBe(false);
+        expect(existsSync(c.files[B])).toBe(false);
+    });
+
+    test('kills "a hard-stop continues the chain", "a non-zero exit continues the chain", "no stoppedAt": the first lane\'s hard-stop, or its exit 1, stops the chain and leaves the rest queued and parked', () => {
+        for (const [outcome, env, reason] of [['hard-stop', {}, 'Outcome: hard-stop'], ['done', { FAKE_EXIT: '1' }, 'exit 1']] as const) {
+            const c = chainLab({}, { [A]: outcome });
+            const out = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B]], { env });
+            expect(out.status, out.stderr).toBe(0);
+            expect(chainEnd(c.l)).toBe(true);
+            const ch = chainJson(c.l);
+            expect(ch.state).toBe('stopped');
+            expect(ch.stoppedAt).toEqual({ id: A, reason });
+            expect(ch.lanes[1].state).toBe('queued');
+            expect(existsSync(join(c.l.lanes, B))).toBe(false);
+            expect(existsSync(c.files[B])).toBe(true);
+            expect(calls(c.l)).toHaveLength(1);
+        }
+    });
+
+    test('kills "--stop ignored", "--stop kills the running lane": the chain stops after the running lane and starts nothing else', () => {
+        const c = chainLab();
+        writeFileSync(join(c.l.fake, A + '.hold'), '');
+        expect(laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B]]).status).toBe(0);
+        expect(waitFor(join(c.l.lanes, A, 'session.txt'))).toBe(true);
+        const s = laneRun(c.l, ['chain', '--stop', CHAIN]);
+        expect(s.status, s.stderr).toBe(0);
+        spawnSync('/bin/sleep', ['1']);
+        expect(existsSync(join(c.l.lanes, A, 'exit.txt'))).toBe(false);
+        writeFileSync(join(c.l.fake, A + '.release'), '');
+        expect(chainEnd(c.l)).toBe(true);
+        const ch = chainJson(c.l);
+        expect(ch.state).toBe('stopped');
+        expect(ch.stoppedAt).toEqual({ id: B, reason: '--stop' });
+        expect(ch.lanes[0].state).toBe('done');
+        expect(existsSync(join(c.l.lanes, B))).toBe(false);
+    });
+
+    test('kills "the limit ignored": a lane past --limit stops the chain as blocked, the lane left running', () => {
+        const c = chainLab();
+        writeFileSync(join(c.l.fake, A + '.hold'), '');
+        expect(laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B], '--limit', '0']).status).toBe(0);
+        expect(chainEnd(c.l)).toBe(true);
+        const ch = chainJson(c.l);
+        expect(ch.state).toBe('stopped');
+        expect(ch.stoppedAt).toEqual({ id: A, reason: 'limit 0 min' });
+        expect(existsSync(join(c.l.lanes, A, 'exit.txt'))).toBe(false);
+        writeFileSync(join(c.l.fake, A + '.release'), '');
+        expect(waitFor(join(c.l.lanes, A, 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "a chain shown as its lanes", "no position", "wait blind to a chain": status --all folds a running chain into one row with its position, wait returns when it ends', () => {
+        const c = chainLab();
+        writeFileSync(join(c.l.fake, A + '.hold'), '');
+        expect(laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B]]).status).toBe(0);
+        expect(waitFor(join(c.l.lanes, A, 'session.txt'))).toBe(true);
+        const all = laneRun(c.l, ['status', '--all']).stdout.trimEnd().split('\n');
+        expect(all.map((x) => x.split(/\s+/)[0])).toEqual(['id', CHAIN]);
+        expect(all[1].split(/\s+/).slice(0, 4)).toEqual([CHAIN, 'running', '1/2', A]);
+        const one = laneRun(c.l, ['status', CHAIN]);
+        expect(one.stdout).toContain('position: 1/2 ' + A);
+        const t = laneRun(c.l, ['wait', CHAIN, '--max', '1']);
+        expect(t.stdout).toBe(`timeout: ${CHAIN} still running after 1 s\n`);
+        writeFileSync(join(c.l.fake, A + '.release'), '');
+        const w = laneRun(c.l, ['wait', CHAIN, '--max', '30']);
+        expect(w.status, w.stderr).toBe(0);
+        expect(w.stdout).toContain('state: done');
+    });
+
+    test('kills "--merge-after ignored": a finished chain ends with a direct merge into the trunk from its worktree', () => {
+        const c = chainLab();
+        const out = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B], '--merge-after', '--into', 'trunk']);
+        expect(out.status, out.stderr).toBe(0);
+        expect(chainEnd(c.l)).toBe(true);
+        const ch = chainJson(c.l);
+        expect(ch.state).toBe('done');
+        expect(ch.mergeAfter.state).toBe('direct');
+        expect(ch.mergeAfter.promptId).toBe(NEW_ID);
+        expect(waitFor(join(laneDir(c.l), 'exit.txt'))).toBe(true);
+        expect(result(c.l).outcome).toBe('hard-stop');
+        expect(gitIn(c.l, c.repo, ['log', '-1', '--format=%s'])).toBe(`merge: feat into trunk (${NEW_ID})`);
+        expect(gitIn(c.l, c.repo, ['rev-parse', 'HEAD^2'])).toBe(gitIn(c.l, c.wt, ['rev-parse', 'HEAD']));
+        expect(calls(c.l)).toHaveLength(2);
+    });
+
+    test('kills "a fallback launched at the end of a chain": --merge-after on a merge that cannot go direct parks it and says why', () => {
+        // A fallback that --launch would start: an edit hunk in the inbox, no launch refusal.
+        const c = chainLab({ unionEdit: true });
+        expect(laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B], '--merge-after', '--into', 'trunk']).status).toBe(0);
+        expect(chainEnd(c.l)).toBe(true);
+        const ch = chainJson(c.l);
+        expect(ch.state).toBe('stopped');
+        expect(ch.mergeAfter.state).toBe('fallback');
+        expect(ch.mergeAfter.reason).toContain('a union hunk edits docs/log-inbox/lane.md');
+        expect(existsSync(join(c.l.lanes, 'pending', basename(MERGE_FILE)))).toBe(true);
+        expect(existsSync(laneDir(c.l))).toBe(false);
+        expect(calls(c.l)).toHaveLength(2);
+    });
+
+    test('kills "a prompt without Prompt-ID chained", "the same Prompt-ID twice", "a started lane chained again": each is refused before anything runs', () => {
+        const c = chainLab();
+        writeFileSync(join(c.l.lanes, 'pending', 'bare.md'), '# Prompt: no id\n');
+        const a = laneRun(c.l, ['chain', c.wt, c.files[A], join(c.l.lanes, 'pending', 'bare.md')]);
+        expect(a.status).toBe(2);
+        expect(a.stderr).toContain('Prompt-ID');
+        const b = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[A]]);
+        expect(b.status).toBe(2);
+        expect(b.stderr).toContain('chained twice');
+        mkdirSync(join(c.l.lanes, B), { recursive: true });
+        const d = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B]]);
+        expect(d.status).toBe(2);
+        expect(d.stderr).toContain(B);
+        expect(existsSync(chainDir(c.l))).toBe(false);
+        expect(calls(c.l)).toEqual([]);
+    });
+});

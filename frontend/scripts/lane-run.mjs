@@ -45,10 +45,15 @@
  *                time of the last run.
  *   status --all [--limit <minutes>]
  *                every lane folder of ~/.jjodel-lanes in one table (id, state,
- *                outcome, elapsed), newest Prompt-ID first.
+ *                outcome, elapsed), newest Prompt-ID first; a chain is one row,
+ *                its position in the outcome column, its lanes not listed apart.
+ *   status <chain-id>
+ *                a chain: state (running, done, stopped, lost when its
+ *                supervisor died), position, lanes, the merge after, where it
+ *                stopped and why.
  *   wait <Prompt-ID> | --any <id,id,...> [--max <seconds>]
- *                polls every 2 s until the lane, or any of the lanes, no longer
- *                runs (exit 0, its status printed) or the deadline passes (exit
+ *                (a chain id waits for the chain) polls every 2 s until the lane,
+ *                or any of the lanes, no longer runs (exit 0, its status printed) or the deadline passes (exit
  *                0, the line `timeout: <ids> still running after <max> s`: an
  *                osascript `do shell script` drops the output of a non-zero
  *                exit). --max defaults to 170 and is refused above it: the chat's
@@ -111,6 +116,24 @@
  *                place) in log.jsonl and exit.txt, so status and wait read it as
  *                a lane. A failed precondition falls back, saying why: the
  *                rendered prompt is launched with --launch, parked without.
+ *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>]
+ *                validates every prompt (a header Prompt-ID, no id twice, no lane
+ *                folder yet; one in the tree committed, one outside it not yet in
+ *                docs/prompts/), writes ~/.jjodel-lanes/chain-<first Prompt-ID>/
+ *                chain.json and starts a detached supervisor (chain-run, nohup)
+ *                that runs the lanes one after the other in <worktree>: a prompt
+ *                outside the tree is committed alone at its launch (its copy in
+ *                pending/ removed), and the next lane starts only on `Outcome:
+ *                done` with exit 0. Any other outcome, a non-zero exit, a lane
+ *                past the limit (90 minutes by default, the lane left running),
+ *                tracked changes before the next commit, or a stop request stops
+ *                the chain, chain.json naming the lane and the reason, the rest
+ *                left queued and parked. --merge-after ends a finished chain with
+ *                `merge <branch> --into <trunk> --direct` run in the trunk's
+ *                worktree (default alfonso-frontend-jjtl); a fallback is parked,
+ *                never launched.
+ *   chain --stop <chain-id>
+ *                the chain stops after its running lane, which runs to its end.
  *
  * Every run passes `--output-format stream-json --verbose` (stream-json under -p
  * requires --verbose) and `--permission-mode bypassPermissions` (RC-19: a -p
@@ -424,6 +447,7 @@ function laneState(f, limit) {
 
 function status(idArg, rest) {
     if (idArg === '--all') return statusAll(rest);
+    if (typeof idArg === 'string' && CHAIN_ID.test(idArg)) return chainStatus(idArg);
     const id = checkId(idArg);
     const limit = limitOption(rest);
     const f = laneFiles(id);
@@ -444,12 +468,18 @@ function status(idArg, rest) {
 function statusAll(rest) {
     const limit = limitOption(rest);
     const root = lanesRoot();
-    const ids = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && statSync(join(root, n)).isDirectory()) : [];
+    const chains = existsSync(root) ? readdirSync(root).filter((n) => CHAIN_ID.test(n) && existsSync(chainFiles(n).json)).map((n) => readChain(n)) : [];
+    // A chain is one row with its position; its lanes are not listed on their own.
+    const chained = new Set(chains.flatMap((c) => c.lanes.map((l) => l.id)));
+    const ids = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && !chained.has(n) && statSync(join(root, n)).isDirectory()) : [];
     const rows = [['id', 'state', 'outcome', 'elapsed']];
     for (const id of ids.sort().reverse()) {
         const s = laneState(laneFiles(id), limit);
         const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
         rows.push([id, s.state, s.outcome === null ? 'none' : m ? m[1] : 'unparsed', s.minutes + ' min']);
+    }
+    for (const c of chains.sort((a, b) => (a.id < b.id ? 1 : -1))) {
+        rows.push([c.id, chainState(c), chainPosition(c), Math.floor((Date.now() - c.created) / 60000) + ' min']);
     }
     const widths = rows[0].map((_, c) => Math.max(...rows.map((r) => r[c].length)));
     for (const r of rows) console.log(r.map((x, c) => (c === r.length - 1 ? x : x.padEnd(widths[c]))).join('  '));
@@ -464,8 +494,9 @@ async function waitLanes(rest) {
     if (ids.length === 0 || (any === null && (!rest[0] || rest[0].startsWith('--')))) {
         refuse('usage: lane-run wait <Prompt-ID> | --any <id,id,...> [--max <seconds>]');
     }
-    // An unknown lane never runs: status, below, refuses it at the first poll.
-    ids.forEach(checkId);
+    // An unknown lane never runs: status, below, refuses it at the first poll. A chain waits until it stops.
+    ids.forEach((id) => (CHAIN_ID.test(id) ? readChain(id) : checkId(id)));
+    const live = (id) => (CHAIN_ID.test(id) ? chainRunning(readChain(id)) : isRunning(laneFiles(id)));
     const maxArg = option(rest, '--max');
     const max = maxArg === null ? WAIT_MAX_S : Number(maxArg);
     if (!Number.isFinite(max) || max < 0) refuse('--max takes a number of seconds');
@@ -474,7 +505,7 @@ async function waitLanes(rest) {
     }
     const end = Date.now() + max * 1000;
     for (;;) {
-        const ended = ids.filter((id) => !isRunning(laneFiles(id)));
+        const ended = ids.filter((id) => !live(id));
         if (ended.length) {
             ended.forEach((id, i) => {
                 if (i) console.log('');
@@ -1444,6 +1475,216 @@ async function directRun(idArg) {
     return res.outcome === 'hard-stop' ? 0 : 1;
 }
 
+// ── chain ────────────────────────────────────────────────────────────────────
+
+const CHAIN_ID = /^chain-P-\d{4}-\d{2}-\d{2}-\d{4}$/;
+const CHAIN_POLL_MS = 500;
+
+function chainFiles(id) {
+    const dir = join(lanesRoot(), id);
+    return { dir, json: join(dir, 'chain.json'), stop: join(dir, 'stop'), log: join(dir, 'chain.log') };
+}
+
+function readChain(id) {
+    const cf = chainFiles(id);
+    if (!existsSync(cf.json)) refuse('no chain ' + id + ' in ' + lanesRoot());
+    return JSON.parse(readFileSync(cf.json, 'utf8'));
+}
+
+/** Running while its state says so and its supervisor lives (not yet known right after the launch). */
+const chainRunning = (c) => c.state === 'running' && (!c.supervisor || isAlive(c.supervisor.pid));
+const chainState = (c) => (c.state === 'running' && c.supervisor && !isAlive(c.supervisor.pid) ? 'lost' : c.state);
+const chainPosition = (c) => c.position + '/' + c.lanes.length + ' ' + (c.lanes[Math.max(0, c.position - 1)] || { id: '-' }).id;
+
+function chainStatus(id) {
+    const c = readChain(id);
+    console.log('chain: ' + c.id);
+    console.log('state: ' + chainState(c));
+    console.log('position: ' + chainPosition(c));
+    console.log('lanes: ' + c.lanes.map((l) => l.id + ' ' + l.state + (l.outcome ? ' (' + l.outcome + ')' : '')).join('; '));
+    console.log('merge after: ' + (c.mergeAfter ? 'into ' + c.mergeAfter.into + ', ' + c.mergeAfter.state + (c.mergeAfter.promptId ? ' ' + c.mergeAfter.promptId : '') +
+        (c.mergeAfter.reason ? ': ' + c.mergeAfter.reason : '') : 'none'));
+    console.log('stopped at: ' + (c.stoppedAt ? (c.stoppedAt.id || '-') + ': ' + c.stoppedAt.reason : '-'));
+    console.log('elapsed: ' + Math.floor((Date.now() - c.created) / 60000) + ' min');
+    console.log('log: ' + chainFiles(id).log);
+    return 0;
+}
+
+/**
+ * chain <worktree> <prompt>...: the lanes run one after the other in one
+ * worktree, the next only on `Outcome: done` with exit 0, under a detached
+ * supervisor that outlives the chat's call (nohup, its own session, as start's
+ * wrapper). A prompt outside the tree (parked in pending/) is committed alone
+ * at its launch, as merge --launch does.
+ */
+function chain(rest) {
+    if (rest[0] === '--stop') return chainStop(rest[1]);
+    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] | chain --stop <chain-id>';
+    const positional = [];
+    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null };
+    for (let i = 0; i < rest.length; i++) {
+        const a = rest[i];
+        if (a === '--merge-after') o.mergeAfter = true;
+        else if (a === '--into' || a === '--chat') {
+            o[a.slice(2)] = option(rest.slice(i), a);
+            i++;
+        } else if (a === '--limit') {
+            o.limit = limitOption(rest.slice(i));
+            i++;
+        } else if (a.startsWith('--')) refuse('unknown option for chain: ' + a + '; ' + usage);
+        else positional.push(a);
+    }
+    if (positional.length < 2) refuse(usage);
+    if (o.into && !o.mergeAfter) refuse('--into goes with --merge-after; ' + usage);
+    const worktree = resolve(positional[0]);
+    if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
+    const t = git(worktree, ['rev-parse', '--show-toplevel'], [0, 128]);
+    if (t.status !== 0) refuse('not inside a git worktree: ' + worktree);
+    const top = t.out.trim();
+    const branch = git(top, ['branch', '--show-current']).out.trim();
+    if (!branch) refuse(top + ' is on a detached HEAD: a chain runs on a branch');
+
+    const lanes = [];
+    for (const p of positional.slice(1)) {
+        const tried = [...new Set([resolve(p), resolve(top, p)])];
+        const file = tried.find((x) => existsSync(x) && statSync(x).isFile());
+        if (!file) refuse('no prompt file: tried ' + tried.join(' and '));
+        const id = headerPromptId(readFileSync(file, 'utf8'));
+        if (!id) refuse('the prompt header has no "Prompt-ID: P-YYYY-MM-DD-HHmm" line: ' + file);
+        if (lanes.some((l) => l.id === id)) refuse(id + ' is chained twice');
+        if (existsSync(laneFiles(id).dir)) refuse(id + ' already has a lane folder in ' + lanesRoot());
+        const inTree = !relative(top, file).startsWith('..');
+        if (inTree) {
+            const rel = relative(top, file);
+            if (git(top, ['ls-files', '--error-unmatch', '--', rel], [0, 1]).status !== 0 || git(top, ['status', '--porcelain', '--', rel]).out.trim() !== '') {
+                refuse(rel + ' is in the tree but not committed: park it in ' + join(lanesRoot(), 'pending') + ' or commit it');
+            }
+        } else if (existsSync(join(top, 'docs', 'prompts', basename(file))) || lanes.some((l) => !l.inTree && basename(l.prompt) === basename(file))) {
+            refuse('docs/prompts/' + basename(file) + ' would be written twice');
+        }
+        lanes.push({ id, prompt: file, inTree, state: 'queued' });
+    }
+    let into = null;
+    if (o.mergeAfter) {
+        into = o.into || DEFAULT_TRUNK;
+        if (!worktrees(top).some((w) => w.branch === into)) refuse('--merge-after: ' + into + ' has no worktree to merge in');
+    }
+    const id = 'chain-' + lanes[0].id;
+    const cf = chainFiles(id);
+    if (existsSync(cf.dir)) refuse(id + ' already exists in ' + lanesRoot());
+    mkdirSync(cf.dir, { recursive: true });
+    writeJson(cf.json, {
+        id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat,
+        lanes, mergeAfter: into ? { into, state: 'queued' } : null, stoppedAt: null, supervisor: null,
+    });
+    const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
+    const child = spawn('/bin/sh', ['-c', 'nohup "$@" >> "$0" 2>&1', cf.log, process.execPath, SELF, 'chain-run', id], {
+        cwd: top, env, detached: true, stdio: 'ignore',
+    });
+    child.unref();
+    console.log('chain: ' + id);
+    console.log('lanes: ' + lanes.map((l) => l.id).join(', '));
+    console.log('merge after: ' + (into ? 'into ' + into + ' --direct' : 'none'));
+    console.log('log: ' + cf.log);
+    return 0;
+}
+
+function chainStop(idArg) {
+    if (typeof idArg !== 'string' || !CHAIN_ID.test(idArg)) refuse('usage: lane-run chain --stop <chain-id>');
+    const c = readChain(idArg);
+    if (!chainRunning(c)) refuse(idArg + ' is not running (' + chainState(c) + ')');
+    writeFileSync(chainFiles(idArg).stop, new Date().toISOString() + '\n');
+    console.log('stop: requested; ' + idArg + ' stops after the running lane, which is not interrupted');
+    return 0;
+}
+
+/** The supervisor of a chain; its output goes to chain.log. */
+async function chainRun(id) {
+    const cf = chainFiles(id);
+    const c = readChain(id);
+    const save = () => writeJson(cf.json, c);
+    const stop = (laneId, reason) => {
+        c.state = 'stopped';
+        c.stoppedAt = { id: laneId, reason };
+        save();
+        return 1;
+    };
+    c.supervisor = { pid: process.pid, started: Date.now() };
+    save();
+    const pending = join(lanesRoot(), 'pending');
+    for (let k = 0; k < c.lanes.length; k++) {
+        const lane = c.lanes[k];
+        c.position = k + 1;
+        save();
+        if (existsSync(cf.stop)) return stop(lane.id, '--stop');
+        let promptFile = lane.prompt;
+        if (!lane.inTree) {
+            if (git(c.worktree, ['status', '--porcelain', '--untracked-files=no']).out.trim() !== '') return stop(lane.id, 'tree dirty');
+            const target = join(c.worktree, 'docs', 'prompts', basename(lane.prompt));
+            if (existsSync(target)) return stop(lane.id, 'docs/prompts/' + basename(target) + ' exists');
+            mkdirSync(dirname(target), { recursive: true });
+            copyFileSync(lane.prompt, target);
+            const rel = relative(c.worktree, target);
+            git(c.worktree, ['add', '--', rel]);
+            git(c.worktree, ['commit', '-q', '-m', 'docs: add prompt ' + lane.id + ', lane ' + (k + 1) + '/' + c.lanes.length + ' of ' + c.id, '-m', modelTrailer(), '--', rel]);
+            lane.committed = git(c.worktree, ['rev-parse', 'HEAD']).out.trim();
+            if (dirname(lane.prompt) === pending) unlinkSync(lane.prompt);
+            promptFile = target;
+        }
+        lane.state = 'running';
+        save();
+        let code;
+        try {
+            code = await start(c.worktree, promptFile, []);
+        } catch (err) {
+            return stop(lane.id, 'start refused: ' + (err && err.message ? err.message : String(err)));
+        }
+        if (code !== 0) return stop(lane.id, 'start failed, exit ' + code);
+        const f = laneFiles(lane.id);
+        while (isRunning(f)) {
+            if (Date.now() - Number(readTrim(f.started)) > c.limit * 60000) return stop(lane.id, 'limit ' + c.limit + ' min');
+            await sleep(CHAIN_POLL_MS);
+        }
+        const line = lastOutcome(f.log);
+        const m = line === null ? null : OUTCOME.exec(line);
+        lane.exit = readTrim(f.exit) || '-';
+        lane.outcome = line === null ? 'none' : m ? m[1] : 'unparsed';
+        if (lane.outcome !== 'done') {
+            lane.state = 'ended';
+            return stop(lane.id, 'Outcome: ' + lane.outcome);
+        }
+        if (lane.exit !== '0') {
+            lane.state = 'ended';
+            return stop(lane.id, 'exit ' + lane.exit);
+        }
+        lane.state = 'done';
+        save();
+    }
+    if (c.mergeAfter) {
+        if (existsSync(cf.stop)) return stop(null, '--stop');
+        const tree = worktrees(c.worktree).find((w) => w.branch === c.mergeAfter.into);
+        if (!tree) return stop(null, 'merge after: ' + c.mergeAfter.into + ' has no worktree');
+        // Parked on a fallback, never launched: the chat decides (question 11 of the report).
+        const r = spawnSync(process.execPath, [SELF, 'merge', c.branch, '--into', c.mergeAfter.into, '--direct', ...(c.chat ? ['--chat', c.chat] : [])], {
+            cwd: tree.path, encoding: 'utf8',
+        });
+        const out = (r.stdout || '') + (r.stderr || '');
+        const pid = /^Prompt-ID: (P-\S+)$/m.exec(out);
+        const falls = /^direct: falls back: (.*)$/m.exec(out);
+        const byHand = /^by hand: .*$/m.exec(out);
+        c.mergeAfter.promptId = pid ? pid[1] : null;
+        c.mergeAfter.exit = r.status;
+        c.mergeAfter.state = /^direct: worker started/m.test(out) ? 'direct' : falls ? 'fallback' : 'refused';
+        if (falls) c.mergeAfter.reason = falls[1];
+        else if (c.mergeAfter.state === 'refused') c.mergeAfter.reason = out.trim().split('\n').pop() || 'exit ' + r.status;
+        if (byHand) c.mergeAfter.byHand = byHand[0].slice('by hand: '.length);
+        if (c.mergeAfter.state !== 'direct') return stop(null, 'merge after: ' + c.mergeAfter.state);
+    }
+    c.state = 'done';
+    save();
+    return 0;
+}
+
 // ── go on a direct merge: the one closure commit ─────────────────────────────
 
 const NOTES_MAX = 500;
@@ -1559,6 +1800,8 @@ async function main(argv) {
     if (command === 'wait') return waitLanes(rest);
     if (command === 'probe') return probe(rest);
     if (command === 'direct-run') return directRun(rest[0]);
+    if (command === 'chain') return chain(rest);
+    if (command === 'chain-run') return chainRun(rest[0]);
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
         'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | ' +
         'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>] | ' +
