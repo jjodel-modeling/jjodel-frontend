@@ -494,6 +494,11 @@
         text-overflow: ellipsis;
     }
 
+    // The run's marking and σ (R-SIM-82): the line the audience reads, in the primary text token.
+    &__hint--marking {
+        color: var(--color-text-primary);
+    }
+
     &__status {
         display: flex;
         align-items: center;
