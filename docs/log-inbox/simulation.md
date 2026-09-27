@@ -394,3 +394,77 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Ticket** (priority medium, opened here, outside DOVE, for the chat). Once merged, the demo script goes stale on two readings: §2.3 at lines 196-198 and 238-240 says the halt line is cut and read in its title; it now reads whole on two lines. «Last step» and the defects line are still cut, as the script says.
 **Ticket** (priority medium, opened here, outside DOVE, for the chat). Answer 3 narrows R-SIM-63 for the halt line; the row in `docs/decisions.md` is not written.
 **Ticket** (priority low, probe artifact). The dark probe's init script throws one `pageerror` (`document.documentElement` is null that early); the theme still applies through `localStorage.theme`.
+
+## 2026-09-27 — discovery: guard and action checks in the problems list, S16 (P-2026-09-27-1726)
+**Prompt**: `claude_2026-09-27_1726_prompt_discovery_sim_checker_gap.md`, Phase 1 read-only on `sim-checker-gap` in `~/jjodel-w-checker` at `d1d45b9d3`, wave 1 of the backlog report (S16): map the problems registry, measure which STC guard and action errors are caught today and where, design the producer, its kind and tests, with C2's probe (4) as the reference; draft the Layer Impact Report of Phase 2.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_checker_gap.md` (new), this entry, the Status of the prompt file. Probes gitignored `frontend/scripts/smoke/_tmp_checker_*`, vite on 3020, logs in `/tmp/checker_scratch/`, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no file under `frontend/src` written; `git status` empty after every probe; three probes exit 0; the 3020 server stopped by pid, no listener after. `check:docs` 4/4.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (Phase 1 read-only; the draft for Phase 2a is in the report §14)
+**Smoke visivo**: non applicabile
+**Notes**: 35 cases on the demo presets (report §5.2): the registry sees only parse errors on Expression/Action slots (conformance); 11 classes pass Reset and show only when fired, C2's probe (4) among them. Recommended: P2a a producer over startRun, kind 'simulation' (critical zone), then P2b the new rules in the bridge. startRun median 1.6 ms on demoESM. Probe 1's A9-A12, E1, E2 inherited a leftover slot value and were rerun (probe 2).
+**Prompt document name**: 2026-09-27 17:26
+**Ticket** (priority medium, opened here, report F6). An `else` guard with no sibling is always true, silently: `tp.guard = else` fires on `push`, `t2.guard = else` compiles with no defect (measured on `d1d45b9d3`). A defect would amend the ratified R-SIM-31(1): decision 1 of the report §12, for Alfonso.
+**Ticket** (priority low, opened here, report decision 5). The declarations' compile defects (`role: 'declaration'`) have no M1 element, so a registry producer cannot anchor them; an M2 anchor (the metaclass node, or the metamodel) is a lane of its own.
+**Ticket** (priority low, opened here, report risk 7). Building the four demo presets in one page logs 216 `Cannot serialize in ecore, found loop` console errors (with their stacks); one preset per page logs none. Not investigated.
+
+## 2026-09-27 — feat: guard and action checks in the problems registry, P2a (P-2026-09-27-1805)
+**Prompt**: `claude_2026-09-27_1805_prompt_sim_checker_gap_phase2.md`, Phase 2 of `P-2026-09-27-1726` on `sim-checker-gap` in `~/jjodel-w-checker`, full lane (critical zone: the problems registry), go-ahead by `lane-run --critical-zone-goahead` (RC-30). Implement the report's slices in order: P2a (a producer of kind `'simulation'` over the bridge's `startRun`), then P2b (`stcChecks.ts`, rules R1-R5).
+**Files touched**: docs `4bbe3790a`: `docs/discovery/lir_2026-09-27_sim_checker_gap.md` (new, the Layer Impact Report, before any edit). Code `0412501ef`: `frontend/src/components/editor-v2/problems/registry.ts`, `simCheckToProblems.ts` (new), `SimCheckProblemSync.tsx` (new), `__tests__/simCheckToProblems.test.ts` (new), `components/editor-v2/EditorV2.tsx` (import and mount). This commit: this entry, the LIR's closure section, the Status of the prompt.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. On `0412501ef`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest `problems/` + `sim/` 214 passed (195 + 19), 11 files; `npm run build` exit 0, the chunk-size warning (10m34s, load ~30). Full suite: 5087 passed; red the 9 known import files and 6 `scripts/` files (30 timeouts and pool-start failures under load, `criticalZone` under this session's go-ahead env); no `scripts/` file changed. Red first: 18 at collection. Mutation bench 22/22 killed.
+**Out-of-scope changes**: no: five code paths, the Rule 19 five, listed in the LIR before the first edit; all in the lane's ownership.
+**Layer Impact Report**: produced
+**Smoke visivo**: fallito (lane probe on 3020, ESM alone: registry, dots, overlay, resolved and TTL as the Reset line, 4/5; the rail item not closable, no `.ir-form` on this preset; chat RC-23 run and Alfonso's GO pending)
+**Notes**: P2b not started: its wiring (`simBridge.ts`, its test) and R3 (`actionEvaluator.ts`) belong to `sim-derived-recursion`, whose unmerged `d2a19ccab` changes `simBridge.ts`; question to the chat. `node#edge` anchored on the node, as the defects line names it (report §9 said the edge). Selector cost 9.7 ms at 2000 objects, 30 ms at 5000. The R-SIM row is owed: `decisions.md` is not in the ownership map. Session past 90 minutes (build and full suite under load). Detail: the LIR §3 and §5.
+**Prompt document name**: 2026-09-27 18:05
+**Ticket** (priority low, opened here). `NodeProblemOverlay` stays light with `data-theme="dark"` on the canvas (crop `3_tp_enode_overlay_dark.png`); not changed here, not investigated.
+**Ticket** (priority low, opened here, LIR §5). The producer's selector walks the whole lookup through `runSignature` on every dispatch of a simulation-bound M1: 9.7 ms at 2000 objects, 30 ms at 5000. Above about 2000 objects, the report's fallback applies.
+
+## 2026-09-27 — discovery: well-founded recursion in derived attributes, S3 (P-2026-09-27-1727)
+**Prompt**: `claude_2026-09-27_1727_prompt_discovery_sim_derived_recursion.md`, full lane, Phase 1 read-only on `sim-derived-recursion` in `~/jjodel-w-recursion` at `21394e437`, wave 1 of the backlog report (S3, ratification C): where R-SIM-74 refuses a well-founded recursion, the per-(element, attr) graph over frozen M with cycle detection, its cost on the demo presets, the collection form against R-SIM-43, the amendment texts and the Phase 2 lanes.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_derived_recursion.md` (new), this entry, the Status of the prompt file. Probe `frontend/scripts/smoke/_tmp_recur_probe/recur.test.ts` and its vitest config, gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no file under `frontend/src` written, `git status` empty after every probe run; probe exit 0, 9 tests, 37 `[RECUR]` lines on the last run. No dev server: port 3021 not opened.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The refusal is the name graph alone: tree size, depth via `parent`, list length pass the parser and the subset checker. The lambda form `self.children.sum(c => c.[size])` evaluates today, so R-SIM-43 needs no amendment; only the literal `children.[x]` is refused. G3 prototype: 5.8 ms at Reset for 1023 nodes, same plan on the ESM demo equation. Amending R-SIM-74 awaits Alfonso (RC-26). One docs commit per the prompt, not the skill's inbox-alone commit.
+**Prompt document name**: 2026-09-27 17:27
+**Ticket** (priority low, opened here, report §8.5). S2's planned message for a derived attribute with no value, «its equation failed», is wrong for a node absent because it sits on a cycle once G3 lands; `sim-derived-diagnostics` should say «has no value» and leave the cause to the defect line.
+
+## 2026-09-27 — feat: derived attributes ordered per element over frozen M, S3 (P-2026-09-27-1727)
+**Prompt**: Phase 2 of `claude_2026-09-27_1727_prompt_discovery_sim_derived_recursion.md`, full lane on `sim-derived-recursion` in `~/jjodel-w-recursion`, GO of 2026-09-27 17:53 in cascade after Phase 1 (report `4868359c9`, Alfonso's answers `8baee76b6`: A yes, B no). The two slices of report §8: the graph per (element, attribute) in `derivedEvaluator.ts`, then the bridge line. Merge after MODELS.
+**Files touched**: code `805c8ecdd`: `frontend/src/model/simulation/derivedEvaluator.ts`, `__tests__/derivedEvaluator.test.ts`; code `d2a19ccab`: `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-74 amended), this entry, the Status of the prompt file. Probes `_tmp_recur_*`, gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Baseline at `8baee76b6`: typecheck exit 2, 14 errors; vitest on `model/simulation` and `editor-v2/sim` 568 passed, 20 files. On `d2a19ccab`: typecheck exit 2, 14, set identical; 581 passed (568 + 13, the existing 16 derived tests and the bridge's cycle test unchanged); `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` 4/4. Red first: 12, then 1. Mutation bench 13/13 killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no visual checklist in the prompt). Live probe on 3021, vite of this tree, stopped after: Reset shows `Marking: p1 · p1.len = 3, p2.len = 2, p3.len = 1`; a step keeps the values; `next` closed on p1 gives `1 defect: len (equation cycle: p1.len → p2.len → p3.len → p1.len).`; one console error, the known `failed to get project`. Crops light and dark in `~/.jjodel-lanes/shots_derived_recursion/`.
+**Notes**: Report questions decided unattended: a fixed cap of 10000 bindings per folded object (Q1); no rewrite hint in the cycle title (Q2); the S2 wording stays the ticket of the Phase 1 entry (Q3). Demo presets untouched by construction: three have no equation, the ESM equation keeps its plan (tested). `CompiledDerived.plan` is an optional field (Rule 11). The branch is not merged before 2026-10-04.
+**Prompt document name**: 2026-09-27 17:27
+
+## 2026-09-27 — feat: the checker rules R1-R5 at Reset, P2b (P-2026-09-27-2235)
+**Prompt**: `claude_2026-09-27_2235_prompt_sim_checker_rules.md`, full lane on `sim-checker-rules` in `~/jjodel-w-rules`: merge `sim-derived-recursion`, then slice P2b of `discovery_2026-09-27_sim_checker_gap.md` (§8, §9, §14): `stcChecks.ts` with R1-R5 (R6 if cheap), called by `guardDefectsOf` and `actionDefectsOf`, `CompileDefect.reason` plus `'unresolved'` and `'value'`. Merges after MODELS, not before 2026-10-04.
+**Files touched**: merge `6d8129aae` (from `sim-derived-recursion` at `e6d25ef5d`: `derivedEvaluator.ts` and its test, `simBridge.ts` and its test, `docs/decisions.md`, the S3 report and prompt, this inbox; the one conflict, this inbox, resolved by union). Code `8beb4b28e`: `frontend/src/model/simulation/stcChecks.ts` (new), `__tests__/stcChecks.test.ts` (new), `actionEvaluator.ts`, `components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-70 extended), this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Baseline at `6d8129aae`: typecheck exit 2, 14 errors; vitest on `model/simulation` and `editor-v2/sim` 581 passed, 20 files. On `8beb4b28e`: typecheck 14, set identical; 602 passed, 21 files (+21); full suite 5263 passed, red only the 9 known `window is not defined` files; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: 6 bridge tests and `stcChecks.test.ts` at collection (17). Four bridge assertions changed by design (R1, R5, the H4 fixture). Mutation bench 12/12 killed.
+**Out-of-scope changes**: no — five code paths, the Rule 19 five, and three docs, all in DOVE; the merge's files come from `sim-derived-recursion` as the prompt orders.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no visual check, report §14 P2b)
+**Notes**: Question stop (a preset gains a defect), answered A in chat: before Data, ESM Reset gains `tp guard (undeclared 'paid')`, Flow B `f3` and `f4 guard (undeclared 'count')`; SM, Petri, ESM and Flow B with Data: none. Node probe `_tmp_p2235_presets`, its before equal to report §5.3. R6 included. The P2b tests are report §9, not the prompt's §10. One docs commit per the prompt, not the skill's inbox-alone one. Bench in the body of 8beb4b28e.
+**Prompt document name**: 2026-09-27 22:35
+**Ticket** (priority low, for the post-MODELS merge of this branch). The optional «Reset before declaring» lines of `docs/demo/models_2026_simulator_demo.md` §2.3 and §2.4 go stale with the merge: ESM will read `3 defects: tp guard (undeclared 'paid'); tc action (undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).`, Flow B `3 defects: f3 guard (undeclared 'count'); f4 guard (undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` (node probe, not a browser). The P2a registry shows the guard entries too (by construction, not measured). Update the script at that merge.
+**Ticket** (priority low, opened here, declared gap). R4 is at Reset only: `compileAction` is unchanged, so an action whose right side has `E-EAGER`, `E-NOELSE`, `E-SHADOW` or `E-WITH` is listed as a defect at Reset while the run evaluates it and halts only if the evaluation fails. Making those codes a compile defect of the action touches `compileAction`, outside P2b.
+**Ticket** (priority low, opened here, declared gap). R2 is static: a guard read whose object folds is judged even inside a branch the run never evaluates (`if false then t1.[tokens] < 1 else true` is listed while the guard is true). By construction, not measured.

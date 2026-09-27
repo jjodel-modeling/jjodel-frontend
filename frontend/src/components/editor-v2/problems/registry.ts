@@ -39,8 +39,16 @@ export type NodeProblemSeverity = 'warning' | 'error';
  * before the canvas and model guards may hold a reference typed by a non-class, a data type
  * with a supertype, or a class with a non-class supertype. Written by the M2 half of
  * `UniquenessProblemSync`, reactive like it; shows, repairs nothing.
+ *
+ * `'simulation'` (P-2026-09-27-1805) is the fifth: the simulator's guard and action checks,
+ * the defects the panel's Reset lists, published by `SimCheckProblemSync` through the bridge's
+ * own `startRun` (R-SIM-17: the contextual check of a guard or an action belongs to the STC,
+ * and its malformed value enters this registry). Named for the concern, not the channel, so a
+ * later producer of the same concern shares it. The same price as `'validation'`: not an
+ * optional property under Rule 11, authorized by the Phase 2 prompt. No consumer switches on
+ * `kind` exhaustively (discovery_2026-09-27_sim_checker_gap.md §4.3), so none breaks.
  */
-export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind';
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation';
 
 export interface NodeProblemAction {
     label: string;

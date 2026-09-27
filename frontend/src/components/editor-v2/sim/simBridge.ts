@@ -44,10 +44,12 @@ import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess 
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import { compileGuard, evaluateGuard } from '../../../model/simulation/guardEvaluator';
 import type { CompiledGuard, GuardDefectReason } from '../../../model/simulation/guardEvaluator';
-import { actionSiteKey, compileAction, compileActions, foldActionTarget, makeActionOracle } from '../../../model/simulation/actionEvaluator';
+import { actionSiteKey, compileAction, compileActions, judgeActionTarget, makeActionOracle } from '../../../model/simulation/actionEvaluator';
 import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
 import { compileDerived, makeDerivedOracle } from '../../../model/simulation/derivedEvaluator';
 import { decodeStateAttributes, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
+import { checkActionSubset, checkActionValue, checkGuard, checkTargetName } from '../../../model/simulation/stcChecks';
+import type { StcDefect, StcScope } from '../../../model/simulation/stcChecks';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../../../model/simulation/objectSlots';
 import type {
@@ -204,8 +206,13 @@ function compileActionTable(net: CompiledNet, features: ActionFeatures, lookup: 
  * parse or that the subset checker rejects; an action that does not parse, that
  * reads `node` into σ, or whose target, known before the run, is undeclared,
  * breaks locality, is derived (`read-only`) or is assigned twice by one
- * transition; a declaration that is wrong, its equation included. Never a
- * run-time outcome: those depend on σ and are explained by
+ * transition; a declaration that is wrong, its equation included. Since P2b
+ * (`stcChecks.ts`, R-SIM-70 as extended) also a read or a target whose name no
+ * declaration has, a guard read or a target known before the run that names no
+ * element (`unresolved`) or reads what that element does not have, a subset
+ * error on an action's right side, a right side that folds to a non-scalar or
+ * outside the target's domain, and a guard that is one non-boolean read
+ * (`value`). Never a run-time outcome: those depend on σ and are explained by
  * `stopReason` or halt the run. A defective guard takes its transition out of
  * the candidates; a defective action does not: the transition halts if it fires.
  */
@@ -213,7 +220,7 @@ export interface CompileDefect {
     /** A guard's or an action's element; for a declaration, its name, `record N`, or `state attributes` for the key. */
     readonly element: string;
     readonly role: 'guard' | 'action' | 'declaration';
-    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration' | 'read-only';
+    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration' | 'read-only' | 'unresolved' | 'value';
     readonly detail: string;
     /** The guard's, the action's or the equation's text; `''` for any other declaration defect. */
     readonly source: string;
@@ -227,24 +234,33 @@ export type RunStart =
     | { readonly kind: 'started'; readonly run: SimRun; readonly compileDefects?: readonly CompileDefect[] }
     | { readonly kind: 'refused'; readonly reason: string };
 
-/** The guards of the map that never run, in compile order. */
-function guardDefectsOf(guards: ReadonlyMap<string, CompiledGuard>): CompileDefect[] {
+/**
+ * The guards of the map that never run, in compile order: a compile defect,
+ * else the first rule of `checkGuard` that applies (P2b: R1, R2, R6).
+ */
+function guardDefectsOf(guards: ReadonlyMap<string, CompiledGuard>, scope: StcScope): CompileDefect[] {
     const out: CompileDefect[] = [];
     for (const [element, g] of guards) {
-        if (g.defect) out.push({ element, role: 'guard', reason: g.defect.reason, detail: g.defect.detail, source: g.source });
+        if (g.defect) {
+            out.push({ element, role: 'guard', reason: g.defect.reason, detail: g.defect.detail, source: g.source });
+            continue;
+        }
+        const rule = g.expr === null ? null : checkGuard(g.expr, element, scope);
+        if (rule) out.push({ element, role: 'guard', reason: rule.reason, detail: rule.detail, source: g.source, ...(rule.short ? { short: rule.short } : {}) });
     }
     return out;
 }
 
 /**
  * The actions that never run, or that will halt the run whenever they fire,
- * judged before it (R-SIM-70, R-SIM-75): a compile defect; a folded target
- * undeclared, derived or breaking locality, once per site; one folded target
- * twice among the sites of one transition. A target that reads σ or the event
- * is left to the run.
+ * judged before it (R-SIM-70, R-SIM-75): a compile defect; a subset error on
+ * the right side (P2b, R4); a folded target unresolved (R3), undeclared,
+ * derived or breaking locality, once per site; one folded target twice among
+ * the sites of one transition; then the right side (R1, R5). A target that
+ * reads σ or the event is left to the run, its name aside (R1).
  */
 function actionDefectsOf(
-    net: CompiledNet, table: ReadonlyMap<string, readonly CompiledAction[]>, snapshot: SimSnapshot, lookup: Lookup,
+    net: CompiledNet, table: ReadonlyMap<string, readonly CompiledAction[]>, snapshot: SimSnapshot, lookup: Lookup, scope: StcScope,
 ): CompileDefect[] {
     const out: CompileDefect[] = [];
     const judged = new Set<string>();
@@ -258,12 +274,32 @@ function actionDefectsOf(
                 const report = (reason: CompileDefect['reason'], detail: string, short?: string) => {
                     if (first) out.push({ element: site.element, role: 'action', reason, detail, source: c.source, site, ...(short ? { short } : {}) });
                 };
+                const rule = (d: StcDefect) => report(d.reason, d.detail, d.short);
                 if (c.defect !== null) {
                     report(c.action === null ? 'parse-error' : 'subset', c.defect);
                     continue;
                 }
-                const target = foldActionTarget(c, site, snapshot);
-                if (target === null) continue;
+                const subset = checkActionSubset(c);
+                if (subset) {
+                    rule(subset);
+                    continue;
+                }
+                const verdict = judgeActionTarget(c, site, snapshot);
+                if (verdict.kind === 'unresolved') {
+                    report('unresolved', verdict.detail, `unresolved .[${c.action?.target.attribute}]`);
+                    continue;
+                }
+                const target = verdict.kind === 'folded' ? verdict.target : null;
+                const value = () => {
+                    const v = checkActionValue(c, site, target, scope);
+                    if (v) rule(v);
+                };
+                if (target === null) {
+                    const unknown = checkTargetName(c, scope);
+                    if (unknown) rule(unknown);
+                    else value();
+                    continue;
+                }
                 const where = elementName(lookup, target.element);
                 const decl = net.declared.get(target.element)?.get(target.attr);
                 if (!decl) {
@@ -289,6 +325,7 @@ function actionDefectsOf(
                     });
                 }
                 targets.add(written);
+                value();
             }
         }
     }
@@ -346,12 +383,15 @@ export function startRun(
         throw e;
     }
     // Derived attributes (R-SIM-73): an oracle only when one is declared, as NO_SIM_ACTIONS for the actions.
-    const equations = compileDerived(plain.attributes);
+    // The dependencies per element over the frozen M (R-SIM-74 as amended): a recursion on M is ordered.
+    const equations = compileDerived(plain.attributes, { snapshot, net: plain });
     const derived = plain.attributes.some(d => d.equation !== undefined) ? makeDerivedOracle(snapshot, plain, equations) : undefined;
     const net = derived ? withDerivedInitial(plain, derived, equations.defects) : plain;
     const guards = compileGuards(net, stc, lookup);
     const actionRoles = !!(stc.action || stc.entry || stc.exit);
     const actions = actionRoles ? compileActionTable(net, stc, lookup) : new Map<string, CompiledAction[]>();
+    // The rules of P2b read M frozen and the declarations of the net (stcChecks.ts).
+    const scope: StcScope = { snapshot, net, nameOf: id => elementName(lookup, id) };
     return {
         kind: 'started',
         run: {
@@ -365,8 +405,8 @@ export function startRun(
             signature: runSignature(lookup, modelId, configModelId),
         },
         compileDefects: [
-            ...guardDefectsOf(guards),
-            ...actionDefectsOf(net, actions, snapshot, lookup),
+            ...guardDefectsOf(guards, scope),
+            ...actionDefectsOf(net, actions, snapshot, lookup, scope),
             ...declarationDefectsOf([...declarations.defects, ...(net.declarationDefects ?? [])], lookup, net.attributes),
         ],
     };
