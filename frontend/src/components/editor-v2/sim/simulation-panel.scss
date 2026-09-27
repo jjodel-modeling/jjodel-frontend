@@ -220,6 +220,7 @@
         color: var(--color-text-tertiary);
     }
 
+    // TODO: cleanup — unused since the roles moved into SimRolesModal (P-2026-09-27-1740).
     // M2 face: a collapsible group of roles (step 3b, R-SIM-37), styled as a section title.
     &__group {
         display: flex;
@@ -259,6 +260,7 @@
         }
     }
 
+    // TODO: cleanup — unused since the roles moved into SimRolesModal (P-2026-09-27-1740).
     // The bound (k): the one role that is a value, not a pointer. Same box as the select.
     &__input {
         flex: 1 1 auto;
@@ -732,6 +734,7 @@
         }
     }
 
+    // TODO: cleanup — `__decls` to `__decl-add`: unused since the declarations moved into SimRolesModal (P-2026-09-27-1740).
     // -- M2 face: the declared state attributes of the Data group (lane C1, R-SIM-71) --
     // One row of three fixed lines per declaration: a domain kind that shows other
     // cells, a space that hides them, or a derived form that puts the equation in
