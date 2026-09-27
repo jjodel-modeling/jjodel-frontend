@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1740
 Chat: C-2026-09-27-1437
 Lane: full (two-phase; Phase 1 read-only with a hard stop at the report, then Phase 2 in the same session after the chat's GO; visual checks by the chat on probe crops, RC-23)
-Status: eseguito 2026-09-27 · lane sim-modal · 30c28f817 (Phase 1), 645703645, b582ca7d4, e34323517 · verifica visiva in attesa (chat, RC-23; crops ~/.jjodel-lanes/shots_modal/)
+Status: eseguito 2026-09-27 · lane sim-modal · 30c28f817 (Phase 1), 645703645, b582ca7d4, e34323517, ebe2054f8 · verifica visiva OK (chat, RC-23; crops ~/.jjodel-lanes/shots_modal/)
 
 Worktree: `~/jjodel-w-modal`, branch `sim-modal` (a new worktree cut by the chat from `alfonso-frontend-jjtl` at the tip after E2's merge, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-modal`, branch `sim-modal`, `git log -1` is the docs commit that added this prompt and the design folder; if any of the three differs, stop with `Outcome: blocked` and say which.
 
