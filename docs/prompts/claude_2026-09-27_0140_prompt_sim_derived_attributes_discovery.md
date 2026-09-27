@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0140
 Chat: C-2026-09-26-1702
 Lane: full (Phase 1 discovery, read-only)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-derived · 655706bab
 
 Worktree: `~/jjodel-icons`, branch `sim-derived` (from `simulation-engine` at `8b5871f29`, the closure of lane C1), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `sim-derived`, `git log -1` is the commit that adds this file (subject `docs: add prompt P-2026-09-27-0140, derived attributes discovery`), its parent is `8b5871f29`, `git status` empty. `frontend/node_modules` is the P14 symlink to `~/jjodel/frontend/node_modules`, created by the chat. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0140 · session <id>]` and ends with an `Outcome:` line (P16).
 

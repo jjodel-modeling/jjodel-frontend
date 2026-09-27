@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0200
 Chat: C-2026-09-26-1702
 Lane: full (more than 5 files, additive exported interfaces, visual check; no critical zone)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-derived · 5060657c5, 53c24b1fc
 
 Worktree: `~/jjodel-icons`, branch `sim-derived`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `sim-derived`, `git log -1` is the commit that adds this file (subject `docs: add Phase 2 of lane C2, derived state attributes (P-2026-09-27-0200)`), below it the R-SIM-73..76 rows commit, the merge of the trunk `ca9880700` and the discovery `655706bab`; `.claude/settings.json` has no `Bash(git commit*)` in `permissions.ask`; `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0200 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task: a background wait does not survive the end of a turn.
 
