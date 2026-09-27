@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-2225
 Chat: C-2026-09-27-1437
 Lane: fast (one visible defect in a demo scene; `SimulationPanel.tsx` and `simulation-panel.scss` only; visual check by the chat on the lane's crops, RC-23)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-halt-line · e0e6ee5e4
 
 Worktree: `~/jjodel-w-haltline`, branch `sim-halt-line` (cut by the chat from `alfonso-frontend-jjtl` at `d88e70e0e`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-haltline`, branch `sim-halt-line`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 

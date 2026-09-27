@@ -378,3 +378,19 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Ticket** (priority medium, opened here, outside DOVE). The script's §5 still lists «The modal lane» as out of the demo, which R-SIM-85 reversed; §1 and the header are unchanged and still true. Left for the chat.
 **Ticket** (priority medium, opened here). On ESM at 1600x1000 the panel cuts the final halt line (302 px of text in 262) and `Last step:` (264 in 262); the optional Reset's defects and halt lines too (513, 430). The titles hold the whole text; the script says so.
 **Ticket** (priority low, opened here). The dialog's Bound cell is a number input with no select-on-focus: a click and `5` over `4` reads `45`, so the §3 fallback needs Cmd+A. The declaration cells select on focus.
+
+## 2026-09-27 — fix: the halt line reads whole in the halted state (P-2026-09-27-2225)
+**Prompt**: `claude_2026-09-27_2225_prompt_sim_halt_line.md`, fast lane on `sim-halt-line` in `~/jjodel-w-haltline` (cut at `d88e70e0e`): in the halted state only, the halt line wraps into a slot reserved for two lines, nothing below it moving (Alfonso, 2026-09-27 22:20, item 3); «Last step» follows only if the slot fits it without moving the controls; the memo of the four 22:20 answers.
+**Files touched**: code `e0e6ee5e4`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (the halt line carries `sim-panel__hint--halt`, a free name: grep exit 1, control exit 0), `simulation-panel.scss` (`__hint--halt`: line-clamp 2, a 3em content box). Docs: memo `docs/ratifiche/claude_ratifiche_2026-09-27_evening_answers.md` `1ec1e8138`; this commit: this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_halt_*` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-26 13:15 (`claude_2026-09-26_1315_fase2_sim_guard_outcomes.md`: its one-row rule, R-SIM-63, cut the ESM halt line the demo exists to show)
+**Causa**: (f)
+**Regressions**: no. `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest on `src/components/editor-v2/sim` and `src/model/simulation` 22 files, 623 passed, as before; `npm run build` exit 0; every non-halted state measured identical before and after (Notes); Petri and SM crops byte-identical (cmp).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the lane read its crops; the chat's RC-23 check on `~/.jjodel-lanes/shots_halt/` is pending
+**Notes**: Halted, 1600x1000: controls at 794.5/858.5/915 before and after; panel 251.5 to 268 (declared halt), 276 to 292.5 (undeclared); halt line 24.5px cut to 41px, two lines, whole, both texts. Running, Terminated, Deadlock, Not started, Reset from Halted: identical. Same at 1280x800, light and dark. «Last step» stays cut: wrapping it lifted the controls 16.5px. Logs in `~/.jjodel-lanes/P-2026-09-27-2225/`.
+**Prompt document name**: 2026-09-27 22:25
+**Ticket** (priority medium, opened here, outside DOVE, for the chat). Once merged, the demo script goes stale on two readings: §2.3 at lines 196-198 and 238-240 says the halt line is cut and read in its title; it now reads whole on two lines. «Last step» and the defects line are still cut, as the script says.
+**Ticket** (priority medium, opened here, outside DOVE, for the chat). Answer 3 narrows R-SIM-63 for the halt line; the row in `docs/decisions.md` is not written.
+**Ticket** (priority low, probe artifact). The dark probe's init script throws one `pageerror` (`document.documentElement` is null that early); the theme still applies through `localStorage.theme`.
