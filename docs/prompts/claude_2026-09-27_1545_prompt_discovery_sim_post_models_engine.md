@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1545
 Chat: C-2026-09-27-1437
 Lane: full (Phase 1 discovery, read-only; hard stop at the report; nothing of this lane reaches the trunk before 2026-10-04)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-post-models-engine · measured on f18d976d5; the report is in the commit that carries this line (a commit cannot name its own sha)
 
 Worktree: `~/jjodel-icons`, branch `sim-post-models-engine` (cut by the chat from `alfonso-frontend-jjtl` at `d7fe8871f`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `sim-post-models-engine`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
