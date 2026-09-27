@@ -10,7 +10,9 @@
  *   Data, lane C1, R-SIM-71), written into the `data.state` bag of the M2 model
  *   with flat `sim*` keys and pointer values (R-SIM-2), the bound as a digit
  *   string, the declared state attributes as one JSON string (R-SIM-67).
- *   Persisted, undoable, shared in collaborative — it is authoring.
+ *   Persisted, undoable, shared in collaborative — it is authoring. Above the
+ *   groups, the profile row (R-SIM-77..79): a preset, its summary, Apply, and
+ *   «Configure…» that folds the groups away.
  * - M1 face (model): Reset / Step / Stop and the event buttons over a run of the
  *   Petri core (model/simulation/net*.ts), built and stepped by the bridge
  *   (simBridge.ts) and kept in the `simRunState` singleton, outside Redux
@@ -33,17 +35,24 @@ import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joi
 import { buildEvalContext } from '../../../jjscript';
 import { getSimRun, simClear, simReset } from './simRunState';
 import {
-    ROLE_SPECS, STATE_ATTRIBUTES_SPEC, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
+    PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
+    profilePatch, profileSummary, profileSummaryText, storedProfile,
 } from './simRoleStatus';
 import {
     candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputReason, makeNetModelView, panelInputs,
     pressInput, runSignature, startRun, stopReason,
 } from './simBridge';
 import type { InputLabel, StopReason } from './simBridge';
+import { sketchOfMetamodel } from './metamodelSketch';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import { encodeStateAttributes, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import { bindProfile } from '../../../model/simulation/profileBinder';
+import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
+import { checkability, systemProfile } from '../../../model/simulation/simProfiles';
+import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
+import type { SimProfile } from '../../../model/simulation/simProfiles';
 import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import type { Candidate, NetRunStatus } from '../../../model/simulation/netTypes';
@@ -53,6 +62,16 @@ import './simulation-panel.scss';
 
 // Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
 const ROLE_KEYS: RoleKey[] = ROLE_SPECS.map(r => r.key);
+
+/** The keys the profile row reads from the raw bag: every role of the catalog, and `simProfile` (R-SIM-55). */
+const PROFILE_BAG_KEYS: string[] = [...ROLE_CATALOG.flatMap(d => (d.key === null ? [] : [d.key])), PROFILE_KEY];
+
+/** The presets of the select (R-SIM-79, A2). */
+const PANEL_PROFILES: SimProfile[] = PANEL_PROFILE_IDS.map(id => systemProfile(id) as SimProfile);
+
+/** The title of the summary while Apply has something to write (R-SIM-78, R-SIM-34). */
+const APPLY_NOTE = 'Apply writes the proposed bindings and the profile in one step; one undo reverts it. '
+    + 'A run on a model of this metamodel is interrupted.';
 
 interface MetaOption { id: string; name: string }
 interface MetaOptions {
@@ -391,7 +410,9 @@ interface PendingChoice {
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
-    const { modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, stateAttributesRaw } = props;
+    const {
+        modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, stateAttributesRaw, profileBagSig, sketchSig,
+    } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
     // and the warning of a run started despite an overlap (no event role, R-SIM-16 parity).
@@ -412,6 +433,11 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const [reasonsOpen, setReasonsOpen] = useState(false);
     // M2 face: the groups the user opened or closed; the others follow their default.
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+    // M2 face: the preset picked in the select and not applied yet (R-SIM-79); null shows the stored profile.
+    const [chosen, setChosen] = useState<string | null>(null);
+    // «Configure…»: null follows the verdict (the groups show only when not checkable), a boolean is the user's.
+    const [configureOpen, setConfigureOpen] = useState<boolean | null>(null);
+    useEffect(() => { setChosen(null); setConfigureOpen(null); }, [configModelId]);
 
     const roles: Roles = useMemo(() => {
         try { return JSON.parse(roleSig) as Roles; } catch { return {}; }
@@ -426,6 +452,28 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!eventSig) return [];
         try { return JSON.parse(eventSig) as SimEventInfo[]; } catch { return []; }
     }, [eventSig]);
+
+    // The profile row (M2 face): the raw bag it reads, the sketch the binder reads.
+    const profileBag: Record<string, unknown> = useMemo(() => {
+        if (!profileBagSig) return {};
+        try { return JSON.parse(profileBagSig) as Record<string, unknown>; } catch { return {}; }
+    }, [profileBagSig]);
+    const sketch: MetamodelSketch | null = useMemo(() => {
+        if (!sketchSig) return null;
+        try { return JSON.parse(sketchSig) as MetamodelSketch; } catch { return null; }
+    }, [sketchSig]);
+    const stored = useMemo(() => storedProfile(profileBag), [profileBag]);
+    /** The stored profile is one of the select's presets; otherwise the select shows it as the current state. */
+    const storedPreset = !stored.custom && stored.profile.system && PANEL_PROFILE_IDS.some(id => id === stored.profile.id);
+    const selected: SimProfile = (chosen ? systemProfile(chosen) : undefined) ?? stored.profile;
+    // «Custom» is bound against nothing: no proposals, no Apply (D7).
+    const bindings: ProfileBindings | null = useMemo(
+        () => (selected.system && sketch ? bindProfile(selected, sketch) : null),
+        [selected, sketch],
+    );
+    const summary = useMemo(() => profileSummary(selected, profileBag, bindings), [selected, profileBag, bindings]);
+    /** The groups show when the user unfolded them, or by default when the stored profile is not checkable. */
+    const groupsShown = configureOpen ?? checkability(stored.profile, profileBag).status === 'notCheckable';
 
     // R-SIM-5: the run-state is per model. Clearing on modelid change and on
     // unmount keeps the flags from surviving into another model of the session.
@@ -469,6 +517,29 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         // The value is a pointer (the option id), never a proxy; the bound, a digit string.
         lmm.state = { [key]: value === '' ? undefined : value };
     }, [configModelId, roles, options]);
+
+    /**
+     * Apply (R-SIM-78): one assignment of the proposed values of the unset keys
+     * and `simProfile`, so one transaction and one undo step (report §6.3). The
+     * overlap check of writeRole runs first; a refusal writes nothing and says why.
+     */
+    const applyProfile = useCallback((): void => {
+        if (!configModelId || !bindings) return;
+        const lmm: any = LPointerTargetable.fromPointer(configModelId);
+        if (!lmm) return;
+        const lookup: any = (store.getState() as any).idlookup ?? {};
+        const result = profilePatch(selected, profileBag, bindings, lookup, options.classes.map(c => c.id));
+        if (result.kind === 'refused') {
+            setRoleWarning(null);
+            setRoleError(overlapMessage(lookup, result.overlap));
+            return;
+        }
+        setRoleError(null);
+        setRoleWarning(result.overlap ? overlapMessage(lookup, result.overlap) : null);
+        lmm.state = result.patch;
+        setChosen(null);
+        setConfigureOpen(null);
+    }, [configModelId, bindings, selected, profileBag, options]);
 
     /** The declarations (R-SIM-67): the whole string in one write, `attrs: []` for none, never `undefined`. */
     const writeStateAttributes = useCallback((value: string): void => {
@@ -667,6 +738,47 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         </label>
     );
 
+    /** A class or feature by id, with the labels of the selects: `Class.feature` for a feature. */
+    const nameOf = (id: string): string => {
+        for (const list of [options.allClasses, options.references, options.compositions, options.attributes]) {
+            const hit = list.find(o => o.id === id);
+            if (hit) return hit.name;
+        }
+        return ((store.getState() as any).idlookup ?? {})[id]?.name ?? id;
+    };
+
+    /** The summary under the profile row (R-SIM-77, R-SIM-79): verdict, missing, choices, proposals, kept, set but off. */
+    const renderSummary = (): ReactElement => {
+        const text = profileSummaryText(summary, nameOf);
+        return (
+            <div className="sim-panel__summary">
+                <div className="sim-panel__summary-status" title={summary.pending ? `${text.status}. ${APPLY_NOTE}` : text.status}>
+                    <span className="sim-panel__summary-name">{`${summary.name} · `}</span>
+                    <span className={`sim-panel__badge sim-panel__badge--${summary.status === 'checkable' ? 'checkable' : 'not-checkable'}`}>
+                        {text.badge}
+                    </span>
+                    {summary.pending && <span className="sim-panel__summary-after"> after Apply</span>}
+                </div>
+                {text.missing && <div className="sim-panel__hint">{text.missing}</div>}
+                {text.choose && <div className="sim-panel__hint">{text.choose}</div>}
+                {text.proposals.length > 0 && (
+                    <ul className="sim-panel__proposals" aria-label="Apply sets">
+                        {summary.proposals.map((p, i) => (
+                            <li className="sim-panel__proposal" key={p.key} title={`${text.proposals[i]}. ${bindings?.[p.role]?.why ?? ''}`}>
+                                {text.proposals[i]}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+                {text.kept && <div className="sim-panel__hint">{text.kept}</div>}
+                {text.setButOff && <div className="sim-panel__hint">{text.setButOff}</div>}
+                {!stored.readable && (
+                    <div className="sim-panel__hint sim-panel__hint--warning">The stored profile is not readable.</div>
+                )}
+            </div>
+        );
+    };
+
     /** The derived event class, read-only (R-SIM-38): its name, or why there is none. */
     const renderEventClass = (): ReactElement => (
         <div className="sim-panel__row" key="eventClass">
@@ -731,10 +843,44 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             <div className="sim-panel__hint">No metamodel to configure.</div>
                         ) : (
                             <>
-                                <div className="sim-panel__hint">
-                                    {petriShape ? 'Shape: Petri net.' : 'Shape: control flow. Set Arc for a Petri net.'}
+                                {/* The profile row (R-SIM-79): the presets, «Custom» a state and not an option (D7). */}
+                                <div className="sim-panel__row sim-panel__profile">
+                                    <span className="sim-panel__label">Profile</span>
+                                    <select
+                                        className="sim-panel__select"
+                                        aria-label="Simulation profile"
+                                        value={chosen ?? (storedPreset ? stored.profile.id : '')}
+                                        onChange={e => setChosen(storedPreset && e.target.value === stored.profile.id ? null : e.target.value)}
+                                    >
+                                        {!chosen && !storedPreset && <option value="" disabled hidden>{stored.profile.name}</option>}
+                                        {PANEL_PROFILES.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        className="sim-panel__apply"
+                                        title={`Apply ${selected.name}`}
+                                        disabled={!summary.pending}
+                                        onClick={applyProfile}
+                                    >
+                                        Apply
+                                    </button>
                                 </div>
-                                {ROLE_GROUPS.map(group => {
+                                {renderSummary()}
+                                <button
+                                    type="button"
+                                    className="sim-panel__configure"
+                                    aria-expanded={groupsShown}
+                                    onClick={() => setConfigureOpen(!groupsShown)}
+                                >
+                                    <i className={`bi bi-chevron-${groupsShown ? 'down' : 'right'}`} />
+                                    <span>Configure…</span>
+                                </button>
+                                {groupsShown && (
+                                    <div className="sim-panel__hint">
+                                        {petriShape ? 'Shape: Petri net.' : 'Shape: control flow. Set Arc for a Petri net.'}
+                                    </div>
+                                )}
+                                {groupsShown && ROLE_GROUPS.map(group => {
                                     const isOpen = groupOpen(group.id);
                                     return (
                                         <div key={group.id}>
@@ -923,6 +1069,13 @@ interface StateProps {
      * folded into roleSig (report risk 1).
      */
     stateAttributesRaw: string | null;
+    /**
+     * JSON of the catalog keys set in the raw bag of the M2 face, `simProfile`
+     * included: what the profile row reads (R-SIM-77..79); '' on the M1 face.
+     */
+    profileBagSig: string;
+    /** JSON of the metamodel sketch the profile binder reads (R-SIM-77); '' on the M1 face. */
+    sketchSig: string;
 }
 
 interface DispatchProps { }
@@ -952,7 +1105,23 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         eventSig: ownProps.isModelMode ? eventSigOf(lookup, ownProps.modelid, roles) : '',
         eventClassName: roles.simEvent ? (lookup[roles.simEvent]?.name || roles.simEvent) : '',
         stateAttributesRaw: !ownProps.isModelMode && typeof bag[STATE_ATTRIBUTES_SPEC.key] === 'string' ? bag[STATE_ATTRIBUTES_SPEC.key] : null,
+        profileBagSig: !ownProps.isModelMode && configModelId ? profileBagSigOf(lookup[configModelId]?._state ?? {}) : '',
+        sketchSig: !ownProps.isModelMode && configModelId ? JSON.stringify(sketchOfMetamodel(lookup, configModelId)) : '',
     };
+}
+
+/**
+ * The set keys the profile row reads, from the raw bag (the event class is
+ * derived, not a catalog key). A role key counts as a non-empty string; any
+ * `simProfile` counts, so that one which is not a string reads as unreadable (D6).
+ */
+function profileBagSigOf(raw: any): string {
+    const out: Record<string, unknown> = {};
+    for (const key of PROFILE_BAG_KEYS) {
+        const value = raw?.[key];
+        if (key === PROFILE_KEY ? value !== undefined && value !== null && value !== '' : typeof value === 'string' && value) out[key] = value;
+    }
+    return JSON.stringify(out);
 }
 
 /**
