@@ -122,3 +122,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: Readings of the prompt, stated: the by-hand commit also carries `-m <Model trailer>`, so it is the commit --launch makes (P6); with the flag and no --launch the Findings stay as measured and the go-ahead reaches only the by-hand commit; the minute check reads pending/ too, or a parked prompt no longer refused its Prompt-ID. `lane-run` in the by-hand line is the chat's name, not on the PATH, as the prompt's shape. Bench copies in `/tmp/lanerun-mut-1440`.
 **Prompt document name**: 2026-09-27 14:40
+
+## 2026-09-27 — docs: P16 describes the pending render and --governance-goahead (P-2026-09-27-1620)
+**Prompt**: `claude_2026-09-27_1620_prompt_harness_p16_merge_rules.md`, fast lane, launched by `lane-run` in `~/jjodel-gate` on `harness-p16-merge-rules` at `03c2ebb3b` (cut from `alfonso-frontend-jjtl` at `2b1b346da`). P16 gains the two `lane-run merge` rules merged in `964597641` (lane P-2026-09-27-1440, code `41e85a32e`): the prompt rendered into `~/.jjodel-lanes/pending/`, and `--governance-goahead`.
+**Files touched**: this commit: `docs/PROTOCOL.md` (P16, one bullet after the lane-run v2 block), `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs only. From `frontend/`: `check:docs` 4/4, 5 warnings (inboxes waiting to be folded), exit 0; `check:agents` PASS, exit 0; `check:scripts` PASS 62 files, exit 0. No em dash in the added lines: 0, positive control 36 on the whole file.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Text read from the code, two points where it is narrower than the prompt: a launch moves the prompt into `docs/prompts/` (copy, then the pending copy removed), not just copies it; `--governance-goahead` without `--launch` lifts nothing and reaches only the commit of the `by hand:` line. The v2 `merge` line is left as it is: still true. Alfonso's yes (16:15, in chat) is the go-ahead of this governance change.
+**Prompt document name**: 2026-09-27 16:20

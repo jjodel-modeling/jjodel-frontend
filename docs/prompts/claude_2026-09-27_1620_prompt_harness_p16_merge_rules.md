@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1620
 Chat: C-2026-09-27-1437
 Lane: fast (one governance file, docs only; Alfonso's yes given in chat on 2026-09-27 16:15, so the merge runs with --governance-goahead)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane harness-p16-merge-rules · the commit of this line
 
 Worktree: `~/jjodel-gate`, branch `harness-p16-merge-rules` (cut by the chat from `alfonso-frontend-jjtl` at `2b1b346da`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-gate`, branch `harness-p16-merge-rules`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
