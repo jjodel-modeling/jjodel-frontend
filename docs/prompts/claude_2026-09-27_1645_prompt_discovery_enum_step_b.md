@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1645
 Chat: C-2026-09-27-1437
 Lane: full (Phase 1 of a core change, read-only; hard stop at the report)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane enum-step-b · the commit that carries this line (docs-only discovery; its sha is in the hard stop)
 
 Worktree: `~/jjodel-gate`, branch `enum-step-b` (cut by the chat from `alfonso-frontend-jjtl` at `bbd9b7142`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-gate`, branch `enum-step-b`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
