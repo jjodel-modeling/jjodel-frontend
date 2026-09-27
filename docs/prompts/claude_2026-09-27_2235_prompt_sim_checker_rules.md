@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-2235
 Chat: C-2026-09-27-1437
 Lane: full (more than 3 files; an exported union extended; no critical zone; no visual check, report §14 P2b)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-checker-rules · 8beb4b28e
 
 Worktree: `~/jjodel-w-rules`, branch `sim-checker-rules` (cut by the chat from `sim-checker-gap` at `811cb4ee5`, P2a closed; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-rules`, branch `sim-checker-rules`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
