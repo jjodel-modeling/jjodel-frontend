@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0935
 Chat: C-2026-09-26-1702
 Lane: fast (one pure module and its tests; two amendments in the register and the digest's hand-written section, both ratified by Alfonso this morning; no panel change, no critical zone; no visual check)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane fast · 7455d0075
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, `git log -1` is the commit that adds this file (its parent `cf58f1d98`, or a later docs-only commit: say so and continue), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0935 · session <id>]` and ends with a bare `Outcome:` line (shas on the line above it). Run gates in the foreground.
 
