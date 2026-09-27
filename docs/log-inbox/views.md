@@ -73,3 +73,17 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: pending — chat, RC-23; lane probe 24/24, crops of the Person tree row with the error triangle in `~/.jjodel-lanes/shots_enum-step-b/` (light, dark, hover)
 **Notes**: First turn passed the 90-minute limit: one build took 71 min at load average ~199. Unattended: `LClass.set_extends` filtered on the reason objects and never dropped a refused pointer, fixed with `invalidPtrs` (B2 holds only with it); a missing type is detected as its own verdict and not published; entries anchored on the element and on the class row (the tree lists classes only). Not done: B4, `api/data.ts` is outside the ownership map. Dark crop: tree background stays light, pre-existing.
 **Prompt document name**: 2026-09-27 18:06
+
+## 2026-09-27 — merge: enum-step-b into alfonso-frontend-jjtl (P-2026-09-27-2327)
+**Prompt**: `claude_2026-09-27_2327_prompt_merge_enum-step-b.md`, merge lane on `alfonso-frontend-jjtl` in `~/jjodel-release`: `--no-ff` of `038ddee4b` (`enum-step-b`, P-2026-09-27-1806), zero conflicts. Resumed on the chat's GO with two additions: the four demo scenes re-run on the merged tree (3029), and the row of Alfonso's 23:26 decision (RC-31).
+**Files touched**: merge `c030871ff` (the branch's 11 files, no union resolution); docs, this commit: `docs/decisions.md` (RC-31), the Status of the prompt file, this entry. Probes `frontend/scripts/smoke/_tmp_m2327_*` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gates on `c030871ff`: typecheck exit 2, 14 errors, set identical; vitest 5292 passed across 216 files (5265 + 27, stated before the merge), the nine known red at import; hooks 300; build exit 0; `typecheck:scripts` exit 0; `check:agents`, `check:scripts` PASS; `check:docs` 4/4. The four demo scenes on script.
+**Out-of-scope changes**: no — the merge's files are the branch's, declared by the prompt; `docs/decisions.md`, the scenes and this entry were asked by the chat's GO.
+**Layer Impact Report**: not-required — the merge adds no change of its own; the branch's 14 lines in `canvasToJjom.ts` are covered by its report `2f4ae0e66`.
+**Smoke visivo**: passato — the chat on 3001 (GO, unattended; Alfonso in the morning digest); the four demo scenes on 3029 through the Simulation roles dialog, on script
+**Notes**: Probe copied read-only from P-2026-09-27-2105, one fresh page per scene, EXIT=0, one known console error each. SM 10 steps, Terminated. Petri Bound 4 (proposed, stored), 4 steps, Deadlock · ε: t2 false. ESM 10 steps, Halted, `Halted: coins of demoESM would be 4, outside its domain.` whole on 2 rows (41px slot, scroll = client). Flow B 6 steps, Terminated. 3029 stopped, 3001 not restarted. Logs in `~/.jjodel-lanes/P-2026-09-27-2327/`.
+**Prompt document name**: 2026-09-27 23:27
+**Ticket** (priority low, opened here). `npm run docs:digest -- --date 2026-09-27` exits 2 on R-SIM-85's header: its parenthesis does not close on the header line (pre-existing, not edited here). RC-31 parses.

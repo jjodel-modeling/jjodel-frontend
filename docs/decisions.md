@@ -244,6 +244,20 @@ their first commit.
   `docs/lir/`, before the diff, and names the go-ahead in its header. Hook tests 255 (five new). Amends
   RC-19 (relaunch without the flag is no longer the only way).
 
+### Decisione 2026-09-27: merges before the freeze (RC-31)
+
+Decided by Alfonso in the project chat `C-2026-09-27-1437`, 2026-09-27 23:26, and reported by the chat in the GO
+of P-2026-09-27-2327. It is his decision, not an inference of the chat: it is not provisional. Recorded by the
+merge lane P-2026-09-27-2327.
+
+- **RC-31** (2026-09-27, ratified by Alfonso 2026-09-27 23:26, evidence: read, verified: none, reversible: trunk):
+  **No branch waits for 2026-10-04 to merge; the freeze of 2026-10-01 evening stays.** The rule that no branch
+  merges on the trunk before 2026-10-04 (P-2026-09-27-1545, P-2026-09-27-1740, P-2026-09-27-1806; already lifted
+  for `sim-modal` by R-SIM-85) is abolished. Each merge on the trunk before the freeze carries a rollback tag
+  `pre-<branch>`, the full gates, and the four demo scenes of `docs/demo/models_2026_simulator_demo.md` (SM,
+  Petri, ESM, Flow B) re-run on the merged tree. First applied to `enum-step-b`: merge `c030871ff`, tag
+  `pre-enum-step-b` on `e529b6c7f`, the four scenes on script on 3029.
+
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-27_enum_edge_guard.md` (`4e5dff7ad`), otto ipotesi
