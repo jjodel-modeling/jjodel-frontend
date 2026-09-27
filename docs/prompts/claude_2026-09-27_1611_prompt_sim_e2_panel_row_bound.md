@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1611
 Chat: C-2026-09-27-1437
 Lane: full (Phase 2 of P-2026-09-27-1545; more than 3 files; visual checklist run by the chat on the lane's crops, RC-23)
-Status: eseguito 2026-09-27 · lane sim-e2-panel-bound · babbc161c
+Status: eseguito 2026-09-27 · lane sim-e2-panel-bound · babbc161c · verifica visiva passata 2026-09-27 (GO chat 2026-09-27 16:58, crops shots_e2)
 
 Worktree: `~/jjodel-open`, branch `sim-e2-panel-bound` (cut by the chat from `sim-post-models-engine` at `f60a0f0b2`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-open`, branch `sim-e2-panel-bound`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
