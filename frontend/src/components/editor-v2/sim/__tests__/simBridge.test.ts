@@ -724,7 +724,10 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         };
         expect(defectsOf('a b')).toEqual([['t1', 'guard', 'parse-error', 'a b']]);
         expect(defectsOf('node.[x] > 0')).toEqual([['t1', 'guard', 'subset', 'node.[x] > 0']]);
-        for (const guard of ['false', 'p2.[visits] > 0', '1 + 1', 'p2.[tokens] < 2']) expect([guard, defectsOf(guard)]).toEqual([guard, []]);
+        // P2b (R1): an undeclared name is known at Reset; an exception that depends on σ is still the run's
+        expect(defectsOf('p2.[visits] > 0')).toEqual([['t1', 'guard', 'undeclared', 'p2.[visits] > 0']]);
+        expect(defectsOf('t1.[tokens] == 0')).toEqual([['t1', 'guard', 'undeclared', 't1.[tokens] == 0']]);
+        for (const guard of ['false', '(if p2.[marked] then p2 else null).[tokens] > 0', '1 + 1', 'p2.[tokens] < 2']) expect([guard, defectsOf(guard)]).toEqual([guard, []]);
     });
 
     it('the defects line says «defect» for net and guard defects alike, never «not compiled» (mutant: the old wording for a guard)', () => {
@@ -910,7 +913,8 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
 
     it('an action that fails to evaluate: the halt line without the error class, the source in the title (R-SIM-82, G10; mutant 5)', () => {
         const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := p2.[nosuch]'] });
-        expect(reset(lookup).compileDefects).toEqual([]);
+        // P2b (R1): the undeclared read is a defect at Reset too, and the transition stays a candidate
+        expect(reset(lookup).compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['T1x', 'action', 'undeclared']]);
         eps(lookup);
         const halt = getSimRun('M')!.halt!;
         expect(halt.kind).toBe('action-defect');
@@ -922,18 +926,23 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             .toBe("Halted: the transition action of t1 failed: 'x' is not a state attribute of p2.");
     });
 
-    it('a value outside its domain is a run-time halt only: no defect at Reset', () => {
-        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := 9'] });
+    it('a value outside its domain that reads σ is a run-time halt only: no defect at Reset; a folded one is a defect too (P2b, R5)', () => {
+        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := p2.[visits] + 9'] });
         expect(reset(lookup).compileDefects).toEqual([]);
         eps(lookup);
         expect(haltMessage(getSimRun('M')!.halt!, lookup, FEATURES)).toBe('Halted: visits of p2 would be 9, outside its domain.');
+        const folded = cnet({ decls: [VISITS], t1: ['p2.[visits] := 9'] });
+        const f = reset(folded);
+        expect(defectsLine(f.run.net, folded, f.compileDefects)).toBe('1 defect: t1 action (visits = 9, outside its domain).');
+        eps(folded);
+        expect(haltMessage(getSimRun('M')!.halt!, folded, FEATURES)).toBe('Halted: visits of p2 would be 9, outside its domain.');
     });
 
     it('a target that reads σ is not judged at Reset; the run halts on it (report H4)', () => {
-        const lookup = cnet({ decls: [VISITS, F], t1: ['(if model.[f] then p1 else p2).[count] := 1'] });
+        const lookup = cnet({ decls: [VISITS, F], t1: ['(if model.[f] then p1 else t1).[visits] := 1'] });
         expect(reset(lookup).compileDefects).toEqual([]);
         eps(lookup);
-        expect(getSimRun('M')!.halt).toMatchObject({ kind: 'undeclared', element: 'P2x', attr: 'count' });
+        expect(getSimRun('M')!.halt).toMatchObject({ kind: 'undeclared', element: 'T1x', attr: 'visits' });
     });
 
     it('declaration defects at Reset, in the one line: a record, the key, the compiler\'s (mutant 6 through the bridge)', () => {
@@ -1121,5 +1130,107 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             expect(eps(tight).outcome?.kind).toBe('halted');
             expect(markingLine(getSimRun('M')!.config.state, t.run.net, tight).line).toBe('Marking: p1 ×3 · p1.visits = 0, p2.visits = 0, total = 0');
         });
+    });
+});
+
+describe('P2b: the checker rules at Reset, on the rows of the checker gap report §5.2 (P-2026-09-27-2235)', () => {
+    const DECLS = [
+        { name: 'coins', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' },
+        { name: 'paid', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, equation: 'model.[coins] >= 2' },
+    ];
+
+    /**
+     * The ESM demo preset (docs/demo/models_2026_simulator_demo.md §2.3) with its declarations: tc (locked → locked,
+     * coin) carries `effect`, tp (locked → unlocked, push) `guard`; the ids unlike the names, so a pointer shows.
+     */
+    function esm(tpGuard: string, tcEffect: string): Lookup {
+        const lookup = buildLookup({ ...ROLES, simGuard: 'A_guard', simAction: 'A_effect', simStateAttributes: JSON.stringify({ v: 1, attrs: DECLS }) }, {
+            Lx: { cls: 'C_Init', slots: { R_out: ['TCx', 'TPx'] } },
+            Ux: { cls: 'C_State' },
+            coin: { cls: 'C_Event', slots: { A_label: ['Coin'] } },
+            push: { cls: 'C_Event', slots: { A_label: ['Push'] } },
+            TCx: { cls: 'C_Trans', slots: { R_next: ['Lx'], R_trigger: ['coin'], A_effect: [tcEffect] } },
+            TPx: { cls: 'C_Trans', slots: { R_next: ['Ux'], R_trigger: ['push'], A_guard: [tpGuard], A_effect: ['model.[coins] := 0'] } },
+        });
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        Object.assign(lookup.Lx, { name: 'locked' });
+        Object.assign(lookup.Ux, { name: 'unlocked' });
+        Object.assign(lookup.TCx, { name: 'tc' });
+        Object.assign(lookup.TPx, { name: 'tp' });
+        lookup.M.name = 'demoESM';
+        return lookup;
+    }
+
+    /** buildEvalContext's record: handles by id, `next` and `trigger` resolved to handles, names bound. */
+    const record = () => {
+        const h: Record<string, any> = {};
+        for (const [id, name] of [['Lx', 'locked'], ['Ux', 'unlocked'], ['coin', 'coin'], ['push', 'push'], ['TCx', 'tc'], ['TPx', 'tp']]) {
+            h[id] = { id, __type: 'Object', name };
+        }
+        h.coin.label = 'Coin'; h.push.label = 'Push';
+        h.TCx.next = h.Lx; h.TCx.trigger = h.coin;
+        h.TPx.next = h.Ux; h.TPx.trigger = h.push;
+        return { instances: Object.values(h), classes: [], ...Object.fromEntries(Object.values(h).map(x => [x.name, x])) };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const A0 = 'model.[coins] := model.[coins] + 1';
+    const G0 = 'model.[paid]';
+
+    it('each rule on its rows, in the one line: R1 G3 A10, R2 G4 G10, R3 A4 A14, R4 A12, R5 A9 A13, R6 G5 (mutants: one per rule)', () => {
+        const rows: Array<[string, string, string, string]> = [
+            ['G3', 'self.[visits] > 0', A0, "1 defect: tp guard (undeclared 'visits')."],
+            ['G4', 'demoESM.[paid]', A0, '1 defect: tp guard (unresolved .[paid]).'],
+            ['G5', 'model.[coins]', A0, '1 defect: tp guard (returns number).'],
+            ['G10', 'self.next.[coins] > 0', A0, "1 defect: tp guard (undeclared 'coins' on unlocked)."],
+            ['A4', G0, 'demoESM.[coins] := 1', '1 defect: tc action (unresolved .[coins]).'],
+            ['A9', G0, "model.[coins] := 'a'", '1 defect: tc action (coins = a, outside its domain).'],
+            ['A10', G0, 'model.[coins] := self.[visits]', "1 defect: tc action (undeclared 'visits')."],
+            ['A12', G0, 'model.[coins] := now()', '1 defect: tc action (E-CALL).'],
+            ['A13', G0, 'model.[coins] := self', '1 defect: tc action (value is object).'],
+            ['A14', G0, 'self.name.[coins] := 1', '1 defect: tc action (unresolved .[coins]).'],
+        ];
+        for (const [row, guard, effect, line] of rows) {
+            const lookup = esm(guard, effect);
+            const r = reset(lookup);
+            const got = defectsLine(r.run.net, lookup, r.compileDefects);
+            expect([row, got]).toEqual([row, line]);
+            expect([row, /Lx|Ux|TCx|TPx/.test(defectsTitle(r.run.net, lookup, r.compileDefects) ?? '')]).toEqual([row, false]);
+        }
+    });
+
+    it('the reasons widen by two literals only: unresolved (R3, R2) and value (R5, R6)', () => {
+        const reasons = (guard: string, effect: string) => {
+            const lookup = esm(guard, effect);
+            return reset(lookup).compileDefects?.map(d => [d.role, d.reason]);
+        };
+        expect(reasons(G0, 'demoESM.[coins] := 1')).toEqual([['action', 'unresolved']]);
+        expect(reasons('demoESM.[paid]', A0)).toEqual([['guard', 'unresolved']]);
+        expect(reasons(G0, 'model.[coins] := self')).toEqual([['action', 'value']]);
+        expect(reasons('model.[coins]', A0)).toEqual([['guard', 'value']]);
+    });
+
+    it('A4, C2 probe (4): the Reset detail is the halt\'s, and the transition stays a candidate until it fires', () => {
+        const lookup = esm(G0, 'demoESM.[coins] := 1');
+        const r = reset(lookup);
+        expect(defectsTitle(r.run.net, lookup, r.compileDefects)).toBe("tc action: the target: 'demoESM' does not exist [demoESM.[coins] := 1]");
+        expect(pressInput('M', 'coin', undefined, lookup, 'Coin').outcome?.kind).toBe('halted');
+        expect(haltMessage(getSimRun('M')!.halt!, lookup, { action: 'A_effect' })).toBe("Halted: the transition action of tc failed: the target: 'demoESM' does not exist.");
+    });
+
+    it('A11 stays silent at Reset, the run halts on it; A0 and G0 are clean and the run fires (negative controls)', () => {
+        const a11 = esm(G0, 'event.[coins] := 1');
+        expect(reset(a11).compileDefects).toEqual([]);
+        expect(pressInput('M', 'coin', undefined, a11, 'Coin').outcome?.kind).toBe('halted');
+        expect(getSimRun('M')!.halt).toMatchObject({ kind: 'undeclared', element: 'coin', attr: 'coins' });
+
+        const clean = esm(G0, A0);
+        expect(reset(clean).compileDefects).toEqual([]);
+        expect(pressInput('M', 'coin', undefined, clean, 'Coin').outcome?.kind).toBe('fired');
+        expect(pressInput('M', 'push', undefined, clean, 'Push').outcome?.kind).toBe('discard');
     });
 });

@@ -12,7 +12,8 @@
  * `foldActionTarget` resolves a target before the run when it depends on
  * neither σ nor the event (report H4 of lane C): the bridge judges those
  * statically (undeclared, locality, a double target), and the core's run-time
- * halts stay for the rest.
+ * halts stay for the rest. `judgeActionTarget` splits its `null` (P2b, R3): a
+ * path known over the frozen M that names no element is `unresolved` at Reset.
  *
  * `makeActionOracle` is the core's `ActionOracle`. For one site it evaluates
  * every action of the site, in order, on the σ the core hands it — the state
@@ -146,22 +147,45 @@ function dependsOnStep(node: unknown): boolean {
 }
 
 /**
+ * A target judged before the run (P2b, R3, report F3): `folded` to its element;
+ * `run` when it reads σ or the event, or the action or the site cannot be
+ * judged, so the run decides; `unresolved` when the path is known over the
+ * frozen M and names no element, with the detail the run would halt with.
+ */
+export type TargetJudgement =
+    | { readonly kind: 'folded'; readonly target: FoldedTarget }
+    | { readonly kind: 'run' }
+    | { readonly kind: 'unresolved'; readonly detail: string };
+
+/**
+ * The target of `c` at `site`, judged as the run's `evaluateAction` would
+ * resolve it: `node.[a]` is the site; a path that reads neither σ nor the
+ * event is evaluated once over the frozen M, with `self` the site.
+ */
+export function judgeActionTarget(c: CompiledAction, site: ActionSite, snapshot: SimSnapshot): TargetJudgement {
+    if (c.action === null) return { kind: 'run' };
+    const { target } = c.action;
+    if (onNode(c.action)) return { kind: 'folded', target: { element: site.element, attr: target.attribute, onNode: true } };
+    if (dependsOnStep(target.object)) return { kind: 'run' };
+    const ctx = buildGuardContext(snapshot, { transitionId: site.element }, { event: null });
+    if (ctx === null) return { kind: 'run' };
+    const object = evaluate(target.object, ctx);
+    if (!object.ok) return { kind: 'unresolved', detail: `the target: ${object.why}` };
+    const id = isJjelObject(object.value) ? (object.value as any).id : undefined;
+    if (typeof id !== 'string' || id === '') return { kind: 'unresolved', detail: `the target is ${describeType(object.value)}, not a model element` };
+    return { kind: 'folded', target: { element: id, attr: target.attribute, onNode: false } };
+}
+
+/**
  * The target of `c` at `site` when it depends on neither σ nor the event
  * (report H4): `node.[a]` is the site; any other path is evaluated once over
  * the frozen M, with `self` the site. `null` when it depends on them, when the
  * action does not parse, or when the path does not resolve to an element: the
- * run decides then.
+ * run decides then. `judgeActionTarget` tells the last case from the others.
  */
 export function foldActionTarget(c: CompiledAction, site: ActionSite, snapshot: SimSnapshot): FoldedTarget | null {
-    if (c.action === null) return null;
-    const { target } = c.action;
-    if (onNode(c.action)) return { element: site.element, attr: target.attribute, onNode: true };
-    if (dependsOnStep(target.object)) return null;
-    const ctx = buildGuardContext(snapshot, { transitionId: site.element }, { event: null });
-    if (ctx === null) return null;
-    const object = evaluate(target.object, ctx);
-    const id = object.ok && isJjelObject(object.value) ? (object.value as any).id : undefined;
-    return typeof id === 'string' && id !== '' ? { element: id, attr: target.attribute, onNode: false } : null;
+    const judged = judgeActionTarget(c, site, snapshot);
+    return judged.kind === 'folded' ? judged.target : null;
 }
 
 /** One action at one site: its assignment, or why there is none. */
