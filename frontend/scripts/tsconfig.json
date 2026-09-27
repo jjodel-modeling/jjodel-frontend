@@ -18,5 +18,7 @@
   "include": [
     "smoke/**/*.ts",
     "gates/**/*.ts"
-  ]
+  ],
+  // Gitignored chat and session probes are not part of the gate.
+  "exclude": ["**/_tmp_*"]
 }

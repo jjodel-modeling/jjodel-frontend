@@ -6,9 +6,9 @@
  * forms live in permissions.deny of .claude/settings.json; this hook is the
  * layer above it and it FAILS OPEN: a crash, a timeout or a missing node lets
  * the call through (hooks.md, Exit code output). It only ever adds refusals and
- * asks; the `ask` rules on `git commit*` and `git push*` in settings stay. The
- * commit is not a human gate (RC-19): the push is, and under bypassPermissions,
- * which may not honor an `ask`, this hook denies it.
+ * asks; `Bash(git push*)` is the only `ask` rule left in settings (RC-29 removed
+ * `git commit*`). The commit is not a human gate (RC-19, RC-29): the push is, and
+ * under bypassPermissions, which may not honor an `ask`, this hook denies it.
  *
  *   git commit   deny unless: a pathspec follows `--` (CLAUDE.md 6.1, P13);
  *                the message, when it is in the string or in a readable -F
