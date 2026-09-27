@@ -244,6 +244,18 @@ their first commit.
   `docs/lir/`, before the diff, and names the go-ahead in its header. Hook tests 255 (five new). Amends
   RC-19 (relaunch without the flag is no longer the only way).
 
+### Decisione 2026-09-28: the model follows the activity (RC-32)
+
+- **RC-32** (2026-09-28, principle ratified by Alfonso 2026-09-27 23:52, evidence: measured, verified: none, reversible: trunk):
+  **`lane-run` picks the model of each lane from its activity.** Amends RC-16: the pin of `.claude/settings.json`
+  stays the heavy tier and the one place that names it; the light tier runs `LIGHT_MODEL` of
+  `frontend/scripts/lane-run.mjs`, passed as `--model`. The rule, deterministic and heavy when in doubt, is in P16
+  and in `tierRule` of that file. Alfonso ratified the principle in the owner chat `C-2026-09-27-1437` (2026-09-27
+  23:52: «lane-run sceglie il modello più conveniente per l'attività che deve svolgere»). The id `claude-sonnet-5`
+  was set by that chat at the GO of `P-2026-09-27-2330`, under that ratification, and is to be confirmed in the
+  morning digest (RC-25). Measure: `docs/discovery/discovery_2026-09-27_lane_efficiency.md` §7, where `--model` coexists
+  with the pin and wins and a resume keeps the session's model.
+
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-27_enum_edge_guard.md` (`4e5dff7ad`), otto ipotesi
