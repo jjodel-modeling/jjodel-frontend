@@ -27,7 +27,7 @@
 | Preset | Metamodel / model | Prepared before the talk | Live |
 |---|---|---|---|
 | State machine (PEST) | `DemoPEST` / `demoSM` | metamodel and model, as §2.1 | profile, Apply, the run |
-| Petri net (P/T) | `DemoPetri` / `demoNet` | metamodel and model, as §2.2 | profile, Apply, Bound, the run |
+| Petri net (P/T) | `DemoPetri` / `demoNet` | metamodel and model, as §2.2 | profile, Apply, the run |
 | Extended state machine | `DemoESM` / `demoESM` | metamodel and model, as §2.3 | profile, Apply, the declarations, the run |
 | Flowchart B | `DemoFlowB` / `demoFlowB` | metamodel and model, as §2.4 | profile, Apply, the declaration, the run |
 
@@ -124,20 +124,18 @@ Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
 
 **Apply** (tab `DemoPetri`).
 1. Profile: `Petri net (P/T)`. The summary reads `Petri net (P/T) · Checkable after Apply` and ten proposals [M]:
-   `Node → Place`, `Initial marking → Place.tokens`, `Bound → 2`, `Transition → Transition`, `Arc → Arc`,
+   `Node → Place`, `Initial marking → Place.tokens`, `Bound → 4`, `Transition → Transition`, `Arc → Arc`,
    `Arc source → Arc.src`, `Arc target → Arc.tgt`, `Arc weight → Arc.weight`, `Inhibitor arc → InhibitorArc`,
-   `Guard → Transition.guard`. The title of Bound: `Bound → 2. The largest initial marking on the models of this
-   metamodel` [M].
+   `Guard → Transition.guard`. The title of Bound: `Bound → 4. The most tokens a place holds over the 9 reachable
+   markings of the models, guards aside` [M, P-2026-09-27-1738].
    **Say** "The binder recognises the net from the shape of the metamodel, the inhibitor and the guard included."
 2. Apply. The summary reads `Petri net (P/T) · Checkable` [M]. The groups fold: 157.5 px at 793.5 [M]. The bag holds
-   Bound `2` [M].
-3. **Bound = 4 on screen (decision H).** Configure…, then in the Bound field replace 2 with 4: two interactions [M].
-   The groups unfold with no scroll, and the summary shows no line [M].
-   **Say** "Apply proposes 2, the largest initial marking. The ×2 arcs need 4. The bound is a parameter I set here."
+   Bound `4` [M, P-2026-09-27-1738].
+3. **Apply proposes Bound 4 (largest reachable marking, 9 markings explored).** No Configure… step: the run below
+   uses the bound as Apply wrote it [M, P-2026-09-27-1738].
+   **Say** "Apply finds the bound by exploring the net."
 
-**Run** (tab `demoNet`). <!-- not measured: the M1 face before Reset with Bound set before any run. Run A's open,
-before any run, read `Not started` with the buttons only; run B's open, after run A, read `Run interrupted: the
-model changed. Reset to run again.` -->
+**Run** (tab `demoNet`). Before Reset: `Not started`, ▶ disabled, no line [M, P-2026-09-27-1738].
 
 Reset: `Marking: lock, p1 ×2`, `Last step: Reset`, `Running` [M].
 **Say** "Two tokens on p1, one on lock. The panel shows the marking of the run."
@@ -154,7 +152,8 @@ the buttons do not move (Step's top 854.5) [M].
 | 4 | ▶ | none | `Marking: p2 ×2, p3` | `Last step: ε: t1 (p1 → p2 ×2) fired` | "t1 is the only enabled transition. t2 has its tokens, but its guard is false." |
 
 After step 4 the status reads `Deadlock · ε: t2 false`, with the title `ε: t2 (p2 ×2 → p3) false [p3.[tokens] <
-1]` [M]. ▶ is disabled [M].
+1]` [M]. ▶ is disabled [M]. The table and this status read the same line for line after Apply alone, with no
+Configure… step [M, P-2026-09-27-1738].
 **Say** "Deadlock. The panel names the transition and the guard that stops it."
 
 Optional: click the status row. The reasons list reads `ε: t2 (p2 ×2 → p3) false` and moves Step's top from 854.5
@@ -295,28 +294,34 @@ run [M].
 After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover title of `Last step:` after step 2 adds
 `assignments: demoFlowB.count = 1` [M].
 
+**Two variants run the same** [M, P-2026-09-27-1738]. With the final class named `ActivityFinal` (G6, closed by E1),
+Apply proposes `Activity final → ActivityFinal` in place of `Terminal → FinalNode`. With `f4` guarded `else` in place
+of `model.[count] >= 2` (G7, closed by E1), Reset lists only the `count` defect before the declaration and none after
+it. Each variant alone gives the six steps above line for line and `Terminated` at step 6. The script keeps
+`FinalNode` and the explicit complement.
+
 ---
 
 ## 3. Script constraints
 
-- **Petri: Bound = 4 on screen after Apply** (Configure…, Bound: two interactions, as run B does). Decision H, taken
-  by Alfonso on 2026-09-27 14:27. No code change. From G12: Apply proposes the largest initial marking (2), a lower
-  bound, and under k = 2 run A halts `unsafe` at step 2 [M].[^h]
-- **Flowchart: the flow final is named `FinalNode` (or `Final`), never `ActivityFinal`.** Decision E, from G6:
-  `ActivityFinal` ends in `Deadlock`, `· nothing enabled` (Flow C) [M].
-- **Flowchart: an explicit complement (`model.[count] >= 2`) instead of `[else]` into a Fork or a Join.** Decision
-  E, from G7: `[else]` gives `1 defect: f4 guard (parse error 1:1 Expected expression).` and a deadlock at step 4
-  (Flow A) [M].
+- **Petri: read `Bound → 4` in the proposals before Apply.** Apply explores every model of `DemoPetri` (R-SIM-81(1),
+  amended by E2), and one model that does not close sends the proposal back to the largest initial marking, with a
+  title that says so. The project holds `demoNet` alone, as the builder makes it. If the proposal reads 2, set Bound
+  4 after Apply through Configure…, the path of decision H (two interactions, measured on `e1cefcfbc`, not re-run
+  here). With `Bound → 4`, taking `t1` twice before `t2` reads `Marking: lock, p2 ×4` at step 2 and the run goes on
+  to `Deadlock` at step 4, no `unsafe` halt [M, P-2026-09-27-1738]; under Bound 2 the readiness run halted `unsafe`
+  at step 2.
+- **Flowchart: `FinalNode` and the explicit complement are the script's model, no longer a constraint.** E1 lifted
+  decision E: the engine reads the activity final (G6, R-SIM-83) and resolves `[else]` on the edge into a Fork or out
+  of a Join (G7, R-SIM-84). `ActivityFinal` and `[else]` into the Fork each run the scene of §2.4 to `Terminated`
+  [M, P-2026-09-27-1738]. `[else]` into a Join or out of a Fork is the compile defect `else-position`
+  (R-SIM-84). <!-- not measured: [else] out of a Join; else-position in the panel -->
 - **Initial and Final as classes.** A4, ratified: a boolean flag binds as `none`, with its reason.
 - **Undo right after Apply, with the focus in the editor: click the empty canvas first, never a node.** From the
   first report's risk 4: with the focus on the page body Control+z does nothing, and after a node click it reverts
   the selection first [M].
 - **Reset starts the run: before Reset every input is off.** From the first report's risk 6 [M].
 - **Each preset as the builder draws it (§2), from an empty bag.** Every other shape or order is unmeasured.
-
-[^h]: Fallback only: with Bound left at 2, fire `t1`, `t3`, `t2`, `t1`, the order of §2.2. `p2` never holds more
-    than 2 tokens by arithmetic; not measured under k = 2. Never take `t1` twice before `t2`: the list marks it
-    `exceeds bound 2`, and the run halts with `Halted: unsafe. p2 would hold 4 tokens; the bound is 2.` [M].
 
 ---
 
@@ -339,9 +344,6 @@ After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover ti
 ## 5. Out of the demo
 
 - The canvas side of G3: token counts and σ on the nodes (the R-SIM-4 view lane).
-- G6: `ActivityFinal` as a flow final (R-SIM-53 in the engine).
-- G7: `[else]` into a Fork or a Join.
-- G12, engine side: a reachability bound at Apply.
 - The `.smv` exporter.
 - The modal lane.
 - The outputs profiles (Moore, Mealy).

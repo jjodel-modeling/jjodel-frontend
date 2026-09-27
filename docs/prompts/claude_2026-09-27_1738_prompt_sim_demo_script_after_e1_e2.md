@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1738
 Chat: C-2026-09-27-1437
 Lane: fast (docs only: the demo script and one log entry; the constraints it lifts are verified by a probe, not by reading)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-demo-script-e1e2 · the commit of this line
 
 Worktree: `~/jjodel-w-script`, branch `sim-demo-script-e1e2` (a new worktree cut by the chat from `alfonso-frontend-jjtl` at `d9e88f792`, E1 and E2 merged, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-script`, branch `sim-demo-script-e1e2`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
