@@ -25,6 +25,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { isMarked } from '../../../model/simulation/netStep';
+import { nodeStateOf, type SimNodeState } from './simCanvasState';
 import type {
     ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, NetConfiguration, StepOutcome,
 } from '../../../model/simulation/netTypes';
@@ -90,6 +91,21 @@ export function getSimActiveIds(modelId?: string): string[] {
 /** The run of a model, or `undefined` when none was started (`Not started`). */
 export function getSimRun(modelId: string): SimRun | undefined {
     return runs.get(modelId);
+}
+
+/**
+ * What the node of an object shows of the run that knows it (S15, slice A1):
+ * its tokens, its σ, whether a candidate was compiled from it. `null` when no
+ * run knows the object. An object id belongs to one model, so the first run
+ * that knows it is the only one (R-SIM-13). Read on the `'mark'` version: the
+ * enabled set is cached per run record, which every commit replaces.
+ */
+export function getSimNodeState(objectId: string): SimNodeState | null {
+    for (const r of runs.values()) {
+        const s = nodeStateOf(r, objectId);
+        if (s) return s;
+    }
+    return null;
 }
 
 /**
