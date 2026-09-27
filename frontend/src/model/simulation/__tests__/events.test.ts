@@ -288,6 +288,30 @@ describe('raw slot readers, by the feature pointer', () => {
         expect(objectLabel(lookup, 'Pointer1790195771751_USER_128', 'A_count')).toBe('0');
     });
 
+    it('objectLabel: the instance name after the name feature, before the short id (R-SIM-80)', () => {
+        // The PEST shape of the demo readiness report (§4.3, G1): an Event class with no attribute,
+        // whose buttons read `…_136` while the canvas shows `coin : Event`.
+        const named: Record<string, any> = {
+            ...lookup,
+            coin: { ...lookup.coin, name: 'coinInstance' },
+            Pointer1790195771751_USER_136: { className: 'DObject', name: 'coin', features: [] },
+            Pointer1790195771751_USER_137: { className: 'DObject', name: '  ', features: [] },
+            Pointer1790195771751_USER_138: { className: 'DObject', name: '', features: [] },
+            Pointer1790195771751_USER_139: { className: 'DObject', name: ' stop ', features: ['v_bare_label'] },
+        };
+        // the name feature keeps its place ahead of the instance name
+        expect(objectLabel(named, 'coin')).toBe('coinName');
+        expect(objectLabel(named, 'coin', 'A_label')).toBe('Coin');
+        // no name feature: the instance name, trimmed, also behind an identifier left blank
+        expect(objectLabel(named, 'Pointer1790195771751_USER_136')).toBe('coin');
+        expect(objectLabel(named, 'Pointer1790195771751_USER_136', 'A_label')).toBe('coin');
+        expect(objectLabel(named, 'Pointer1790195771751_USER_139', 'A_label')).toBe('stop');
+        // a blank or empty instance name, or none: the short id
+        expect(objectLabel(named, 'Pointer1790195771751_USER_137')).toBe('…_137');
+        expect(objectLabel(named, 'Pointer1790195771751_USER_138')).toBe('…_138');
+        expect(objectLabel(named, 'Pointer1790195771751_USER_128', 'A_label')).toBe('…_128');
+    });
+
     it('end to end over the raw lookup, with a view built as the panel adapter builds it', () => {
         const raw: Record<string, any> = {
             ...lookup,
