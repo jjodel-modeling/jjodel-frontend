@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<script src="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/_ds_bundle.js"></script>
+<style>body{margin:0;background:#f8fafc;font-family:var(--font-sans);font-feature-settings:"liga" 0;color:#0f172a}a{color:#0ea5e9}a:hover{color:#0284c7}</style>
+</helmet>
+<section id="t1" style="padding:40px 48px 64px;display:flex;flex-direction:column;gap:32px">
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="#t1" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:#334155;color:#fff;font-size:12px;font-weight:600;text-decoration:none">1</a>
+    <span style="font-size:15px;font-weight:600">Simulation roles, revised: engine shapes, data, errors. Replaces 3g and 3h.</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+
+    <div id="4a" style="width:704px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px"><a href="#4a" style="padding:2px 8px;border-radius:4px;background:#e2e8f0;color:#334155;font-family:var(--font-mono);font-size:12px;font-weight:600;text-decoration:none">4a</a><span style="font-size:13px;font-weight:600">3g · First open</span></div>
+      <span style="font-size:13px;line-height:1.5;color:#475569;text-wrap:pretty">Decides the model kind. 2 clicks: a preset chip, then Continue. Nothing is preselected.</span>
+      <div style="padding:32px;background:#e9eff6;border-radius:12px">
+        <div style="width:640px;box-sizing:border-box;background:#fff;border-radius:16px;box-shadow:0 12px 32px rgba(15,23,42,.12),0 1px 3px rgba(15,23,42,.06);display:flex;flex-direction:column">
+          <div style="display:flex;flex-direction:column;gap:4px;padding:24px 24px 16px">
+            <div style="height:32px;display:flex;align-items:center">
+              <span style="font-size:15px;font-weight:600">Simulation roles</span>
+              <button title="Close" style="margin-left:auto;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;border-radius:8px;background:transparent;color:#475569;cursor:pointer" style-hover="background:#e9eff6"><i class="bi bi-x-lg" style="font-size:14px"></i></button>
+            </div>
+            <span style="font-size:13px;color:#334155">What kind of model is this?</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 24px 24px">
+            <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="2">
+              <div style="height:192px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid {{ k.bd }};border-radius:12px;box-shadow:{{ k.ring }}">
+                <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#f1f5f9;color:#334155"><i class="bi {{ k.icon }}" style="font-size:16px"></i></div>
+                <span style="font-size:15px;font-weight:600">{{ k.title }}</span>
+                <span style="font-size:11px;line-height:16px;color:#475569">{{ k.desc }}</span>
+                <div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ k.chips }}" as="c" hint-placeholder-count="2">
+                    <button onClick="{{ c.pick }}" style="height:32px;box-sizing:border-box;padding:0 12px;border:1px solid {{ c.bd }};border-radius:4px;background:{{ c.bg }};color:{{ c.fg }};font-family:inherit;font-size:13px;font-weight:500;cursor:pointer" style-focus="outline:none;box-shadow:0 0 0 3px rgba(51,65,85,.2)">{{ c.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="height:64px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 24px;border-top:1px solid #e2e8f0">
+            <span style="font-size:11px;color:#475569">{{ pickNote }}</span>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Button" variant="secondary" size="sm" on-click="{{ clearPick }}" hint-size="72px,28px">Cancel</x-import>
+              <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Button" variant="primary" size="sm" disabled="{{ noPick }}" hint-size="88px,28px">Continue</x-import>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="4b" style="width:704px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px"><a href="#4b" style="padding:2px 8px;border-radius:4px;background:#e2e8f0;color:#334155;font-family:var(--font-mono);font-size:12px;font-weight:600;text-decoration:none">4b</a><span style="font-size:13px;font-weight:600">3h · State machine</span></div>
+      <span style="font-size:13px;line-height:1.5;color:#475569;text-wrap:pretty">Confirms the bindings matched by name. 1 click here (Apply); 3 from first open.</span>
+      <div style="padding:32px;background:#e9eff6;border-radius:12px">
+        <dc-import name="Roles Modal" preset="sm" hint-size="640px,600px"></dc-import>
+      </div>
+    </div>
+
+    <div id="4c" style="width:704px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px"><a href="#4c" style="padding:2px 8px;border-radius:4px;background:#e2e8f0;color:#334155;font-family:var(--font-mono);font-size:12px;font-weight:600;text-decoration:none">4c</a><span style="font-size:13px;font-weight:600">3h · Petri net (P/T)</span>
+        <div style="margin-left:auto;display:flex;gap:2px;padding:2px;background:#e2e8f0;border-radius:6px">
+          <button onClick="{{ setProposed }}" style="height:24px;padding:0 8px;border:none;border-radius:4px;background:{{ bpBg }};color:#334155;font-family:inherit;font-size:11px;font-weight:500;cursor:pointer">Bound proposed</button>
+          <button onClick="{{ setFallback }}" style="height:24px;padding:0 8px;border:none;border-radius:4px;background:{{ bfBg }};color:#334155;font-family:inherit;font-size:11px;font-weight:500;cursor:pointer">Bound fallback</button>
+        </div>
+      </div>
+      <span style="font-size:13px;line-height:1.5;color:#475569;text-wrap:pretty">Checks the proposed Bound; binds Inhibitor arc only if the language has one. 3 clicks from first open (Petri net chip, Continue, Apply).</span>
+      <div style="padding:32px;background:#e9eff6;border-radius:12px">
+        <dc-import name="Roles Modal" preset="pn" bound="{{ boundPN }}" hint-size="640px,600px"></dc-import>
+      </div>
+    </div>
+
+    <div id="4d" style="width:704px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px"><a href="#4d" style="padding:2px 8px;border-radius:4px;background:#e2e8f0;color:#334155;font-family:var(--font-mono);font-size:12px;font-weight:600;text-decoration:none">4d</a><span style="font-size:13px;font-weight:600">3h · Data open</span></div>
+      <span style="font-size:13px;line-height:1.5;color:#475569;text-wrap:pretty">Declares the model data. For coins and paid: 12 clicks from first open, plus typing. Add attribute sits in the sticky Data header, so it stays in view; try it.</span>
+      <div style="padding:32px;background:#e9eff6;border-radius:12px">
+        <dc-import name="Roles Modal" preset="sm" data-open="{{ true }}" hint-size="640px,600px"></dc-import>
+      </div>
+    </div>
+
+    <div id="4e" style="width:704px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px"><a href="#4e" style="padding:2px 8px;border-radius:4px;background:#e2e8f0;color:#334155;font-family:var(--font-mono);font-size:12px;font-weight:600;text-decoration:none">4e</a><span style="font-size:13px;font-weight:600">3h · Error</span></div>
+      <span style="font-size:13px;line-height:1.5;color:#475569;text-wrap:pretty">A saved profile turned Initial off, so Initial marking has no source. Fixes it: Turn Initial on, then Apply. 2 clicks from this state.</span>
+      <div style="padding:32px;background:#e9eff6;border-radius:12px">
+        <dc-import name="Roles Modal" preset="sm" error="{{ true }}" hint-size="640px,600px"></dc-import>
+      </div>
+    </div>
+
+    <div id="4f" style="width:704px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px"><a href="#4f" style="padding:2px 8px;border-radius:4px;background:#e2e8f0;color:#334155;font-family:var(--font-mono);font-size:12px;font-weight:600;text-decoration:none">4f</a><span style="font-size:13px;font-weight:600">3h · Dark</span></div>
+      <span style="font-size:13px;line-height:1.5;color:#475569;text-wrap:pretty">Same decisions as <a href="#4b">4b</a>; 3 clicks from first open.</span>
+      <div ref="{{ darkRef }}" style="padding:32px;background:#0f172a;border-radius:12px">
+        <dc-import name="Roles Modal" preset="sm" hint-size="640px,600px"></dc-import>
+      </div>
+    </div>
+  </div>
+
+  <div id="map" style="max-width:1456px;display:flex;flex-direction:column;gap:16px;padding:24px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+    <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#475569">Visible elements and what the engine needs</span>
+    <span style="font-size:13px;color:#475569">Bag key names below are placeholders to confirm against the engine; marked "to confirm".</span>
+    <div style="display:grid;grid-template-columns:240px minmax(0,1fr) 200px;gap:8px 24px;font-size:13px;line-height:1.5">
+      <span style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em">Element</span><span style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em">Maps to</span><span style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em">Status</span>
+      <sc-for list="{{ mapRows }}" as="m" hint-placeholder-count="12">
+        <span style="color:#0f172a">{{ m.el }}</span><span style="color:#334155">{{ m.to }}</span><span style="color:#475569;font-size:11px">{{ m.st }}</span>
+      </sc-for>
+    </div>
+    <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#475569">Icons (Bootstrap Icons 1.13)</span>
+    <span style="font-family:var(--font-mono);font-size:12px;line-height:1.7;color:#334155">bi-diagram-2 Control flow · bi-bezier2 Petri net · bi-x-lg close · bi-chevron-down preset, selects · bi-pencil profile name · bi-check-circle-fill Checkable · bi-x-circle Not checkable · bi-check2-all match line · bi-chevron-right / bi-chevron-down folds · bi-lock derived · bi-database Data · bi-plus-lg Add attribute · bi-exclamation-circle-fill error · bi-arrow-counterclockwise Reset · bi-magic Match by name</span>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const DARK = {
+  '--color-bg-secondary': '#1e293b', '--color-bg-tertiary': '#0f172a', '--color-bg-hover': '#334155', '--color-bg-active': '#475569',
+  '--color-border-primary': '#475569', '--color-border-secondary': '#334155', '--color-border-hover': '#64748b',
+  '--color-text-primary': '#f1f5f9', '--color-text-secondary': '#e2e8f0', '--color-text-tertiary': '#94a3b8', '--color-text-placeholder': '#64748b',
+  '--color-link': '#38bdf8', '--m-ref-bg': 'rgba(14,165,233,.16)', '--m-ref-bd': 'rgba(14,165,233,.4)', '--m-ref-fg': '#7dd3fc',
+  '--m-err': '#f87171', '--m-edge': '#334155', '--m-shadow': '0 12px 32px rgba(0,0,0,.5)'
+};
+const MAP = [
+  ['Model kind cards', 'Engine shape: control flow or Petri net', 'shape exists today'],
+  ['Preset chips and header preset', 'Preset id: sm, esm, flowchart, pt', 'bag key to confirm'],
+  ['Profile name field', 'Saved profile name', 'bag key to confirm'],
+  ['Checkable pill', 'Checkable status', 'exists today'],
+  ['Role rows (20 labels)', 'Roles: Node, Initial, Initial marking, Terminal, Bound, Transition, Guard, Owned transitions, Source, Next state, Fork, Join, Arc, Arc source, Arc target, Arc weight, Inhibitor arc, Event, Trigger, Event identifier', 'roles exist today'],
+  ['Binding value', 'Metaclass or feature path bound to the role', 'exists today'],
+  ['Kind badge', 'Role kind: class, reference, attribute, value', 'exists today (placeholders)'],
+  ['Required / Optional / derived / not used', 'Per-role mode in the preset: required, optional, derived, off', 'bag key to confirm'],
+  ['Derived value text', 'Preset derivation rule', 'presentation only'],
+  ['Bound helper text', 'Exploration result: proposed value, markings explored, closed or not', 'engine output to confirm'],
+  ['Data table', 'Declarations: name, domain, min, max, initial, stored or derived, equation', 'bag key to confirm'],
+  ['Error line, problem count', 'Validation: derived role needs its source role', 'rule to confirm'],
+  ['Match line, Undo, Match by name', 'Client action on bindings', 'presentation only'],
+  ['Folds, Reset, Cancel, Apply, close', 'Dialog actions', 'presentation only']
+];
+class Component extends DCLogic {
+  state = { pick: null, boundPN: 'proposed' };
+  darkRef = React.createRef();
+  componentDidMount() { const el = this.darkRef.current; if (el) Object.entries(DARK).forEach(([k, v]) => el.style.setProperty(k, v)); }
+  renderVals() {
+    const st = this.state, p = st.pick;
+    const chip = (id, label) => { const on = p === id; return { id, label, pick: () => this.setState({ pick: id }), bg: on ? '#334155' : '#fff', fg: on ? '#fff' : '#334155', bd: on ? '#334155' : '#cbd5e1' }; };
+    const kinds = [
+      { id: 'cf', title: 'Control flow', icon: 'bi-diagram-2', desc: 'States or activities, transitions, guards, fork and join.', chips: [chip('sm', 'State machine'), chip('esm', 'Extended state machine'), chip('flow', 'Flowchart')] },
+      { id: 'pn', title: 'Petri net', icon: 'bi-bezier2', desc: 'Tokens on places, weighted arcs.', chips: [chip('pt', 'Petri net (P/T)')] }
+    ].map(k => { const on = k.chips.some(c => c.id === p); return { ...k, bd: on ? '#334155' : '#e2e8f0', ring: on ? '0 0 0 3px rgba(51,65,85,.12)' : 'none' }; });
+    return {
+      kinds, noPick: !p, clearPick: () => this.setState({ pick: null }),
+      pickNote: p ? 'You can change this later in the header.' : 'Pick a preset to continue.',
+      boundPN: st.boundPN,
+      setProposed: () => this.setState({ boundPN: 'proposed' }), setFallback: () => this.setState({ boundPN: 'fallback' }),
+      bpBg: st.boundPN === 'proposed' ? '#fff' : 'transparent', bfBg: st.boundPN === 'fallback' ? '#fff' : 'transparent',
+      darkRef: this.darkRef,
+      mapRows: MAP.map(([el, to, s]) => ({ el, to, st: s }))
+    };
+  }
+}
+</script>
+</body>
+</html>

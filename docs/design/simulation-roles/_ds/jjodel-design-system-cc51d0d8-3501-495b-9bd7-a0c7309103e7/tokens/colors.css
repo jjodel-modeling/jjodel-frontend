@@ -1,0 +1,107 @@
+/* ============================================================
+   JJODEL DESIGN TOKENS — COLORS
+   Slate-only color system for an ultra-minimal, professional,
+   enterprise modeling tool. Functional hues (red/green/amber/blue)
+   are reserved strictly for semantic states. A small categorical
+   palette identifies modeling artifact types (metamodel/model/etc).
+
+   Mirrors frontend/src/styles/tokens/_colors-light.scss
+   ============================================================ */
+
+:root,
+:root[data-theme="light"] {
+  /* ---- Slate scale (the whole neutral system) ---- */
+  --slate-50:  #f8fafc;   /* main background */
+  --slate-100: #f1f5f9;   /* cards, panels */
+  --slate-150: #e9eff6;   /* hover on light */
+  --slate-200: #e2e8f0;   /* hover, secondary surfaces */
+  --slate-250: #d1d9e3;   /* subtle borders */
+  --slate-300: #cbd5e1;   /* primary borders */
+  --slate-400: #94a3b8;   /* disabled text, muted */
+  --slate-500: #64748b;   /* placeholder text */
+  --slate-600: #475569;   /* tertiary text */
+  --slate-700: #334155;   /* secondary text, accent */
+  --slate-800: #1e293b;   /* hover on dark */
+  --slate-900: #0f172a;   /* primary text */
+
+  /* ---- Backgrounds & surfaces ---- */
+  --color-bg-primary: var(--slate-50);    /* main app background */
+  --color-bg-secondary: #ffffff;          /* cards, panels, elevated */
+  --color-bg-tertiary: var(--slate-100);  /* subtle backgrounds */
+  --color-bg-elevated: #ffffff;           /* floating panels, dropdowns */
+  --color-bg-hover: var(--slate-150);     /* hover state background */
+  --color-bg-active: var(--slate-200);    /* active / pressed */
+
+  /* ---- Borders ---- */
+  --color-border-primary: var(--slate-300);
+  --color-border-secondary: var(--slate-250);
+  --color-border-hover: var(--slate-400);
+  --color-border-focus: var(--slate-500);
+
+  /* ---- Text ---- */
+  --color-text-primary: var(--slate-900);     /* headings, primary */
+  --color-text-secondary: var(--slate-700);   /* body */
+  --color-text-tertiary: var(--slate-600);    /* labels, captions */
+  --color-text-placeholder: var(--slate-500);
+  --color-text-disabled: var(--slate-400);
+  --color-text-inverse: #ffffff;              /* text on dark */
+
+  /* ---- Brand (dark navy surfaces, the auth panel, branding) ---- */
+  --color-brand: var(--slate-700);
+  --color-brand-hover: var(--slate-800);
+  --color-brand-active: var(--slate-900);
+
+  /* ---- Accent (interactive: buttons, toggles, focus). Monochrome slate. ---- */
+  --color-accent: var(--slate-700);
+  --color-accent-hover: var(--slate-800);
+  --color-accent-active: var(--slate-900);
+  --color-accent-light: rgba(51, 65, 85, 0.10);
+  --color-accent-lighter: rgba(51, 65, 85, 0.05);
+  --color-accent-muted: rgba(51, 65, 85, 0.12);
+  --color-accent-subtle: rgba(51, 65, 85, 0.06);
+
+  --color-secondary: var(--slate-600);
+  --color-secondary-hover: var(--slate-700);
+
+  /* ---- Semantic — Error (red) ---- */
+  --color-error: #ef4444;
+  --color-error-hover: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-error-muted: rgba(239, 68, 68, 0.12);
+  --color-error-subtle: rgba(239, 68, 68, 0.06);
+
+  /* ---- Semantic — Success (green) ---- */
+  --color-success: #22c55e;
+  --color-success-hover: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-success-muted: rgba(34, 197, 94, 0.12);
+  --color-success-subtle: rgba(34, 197, 94, 0.06);
+
+  /* ---- Semantic — Warning (amber) ---- */
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-warning-muted: rgba(245, 158, 11, 0.12);
+  --color-warning-subtle: rgba(245, 158, 11, 0.06);
+
+  /* ---- Semantic — Info / links (blue, not cyan) ---- */
+  --color-info: #3b82f6;
+  --color-info-hover: #2563eb;
+  --color-info-bg: #eff6ff;
+  --color-info-muted: rgba(59, 130, 246, 0.12);
+  --color-info-subtle: rgba(59, 130, 246, 0.06);
+
+  /* Sky-blue link tone seen in auth ("Register", "Forgot password") */
+  --color-link: #0ea5e9;
+  --color-link-hover: #0284c7;
+
+  /* ---- Canvas accent (cyan — selection/focus inside the modeling canvas) ---- */
+  --color-canvas-accent: #06b6d4;
+  --color-canvas-accent-hover: #22d3ee;
+  --color-canvas-bg: var(--slate-100);
+  --color-canvas-grid: var(--slate-300);
+
+  /* ---- Selection (cyan family, distinct from informational blue) ---- */
+  --color-selection-bg: #e0f7fa;
+  --color-selection-bar: #0891b2;
+}
