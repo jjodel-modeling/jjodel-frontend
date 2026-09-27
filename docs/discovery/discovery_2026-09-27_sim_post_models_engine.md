@@ -551,6 +551,8 @@ exploration compiles nets with E1's engine.
 
 ---
 
+**Answered by Alfonso, 2026-09-27 16:05 (in chat, C-2026-09-27-1437):** A yes (R-SIM-81(1) is amended to option (b), applied in lane E2 after MODELS; decision H stands for the demo); B no (R-SIM-31(1) unchanged, `else-position` names the case in E1).
+
 ## 8. Files read
 
 Full paths under `/Users/alfonso/jjodel-icons/`.
