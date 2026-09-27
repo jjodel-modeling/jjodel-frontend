@@ -34,8 +34,13 @@ export type NodeProblemSeverity = 'warning' | 'error';
  *
  * A differenza degli altri due, questo produttore **non e' reattivo**: scrive solo
  * quando l'utente lancia il comando (nessun debounce, nessun `AFTER_TRANSACTION`).
+ *
+ * `'classifier-kind'` (enum step B, S24, P-2026-09-27-1806) is the fourth: a metamodel saved
+ * before the canvas and model guards may hold a reference typed by a non-class, a data type
+ * with a supertype, or a class with a non-class supertype. Written by the M2 half of
+ * `UniquenessProblemSync`, reactive like it; shows, repairs nothing.
  */
-export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation';
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind';
 
 export interface NodeProblemAction {
     label: string;
