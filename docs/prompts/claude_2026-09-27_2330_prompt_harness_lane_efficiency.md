@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-2330
 Chat: C-2026-09-27-1437
 Lane: full (Phase 1 read-only, hard stop; Phase 2 in five slices, one commit each; touches `docs/PROTOCOL.md` P16, so the merge needs `--governance-goahead`)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane harness-lane-efficiency · 00c414397, 3a11565df, 1986cdf46, 142b3eddf, c9b506d9f
 
 Drafted by the observer chat C-2026-09-25-1353 at Alfonso's request (2026-09-27 23:25, «scrivi un prompt che implementa le cose che mi hai detto per la chat dell'harness»). The owner chat C-2026-09-27-1437 reviews it, commits it and launches it with `lane-run start`; it answers the session's questions and gives the GO.
 
