@@ -307,6 +307,14 @@
         }
     }
 
+    // The dark-theme select rule (styles/components/_form-system.scss, `[data-theme="dark"] select`,
+    // specificity 0,1,1) outranks `__select` (0,1,0) and adds an SVG arrow, which the dark `background`
+    // shorthand of the same file leaves on repeat at 0 0: a row of arrows beside the native one,
+    // measured 2026-09-27. Light computes `none`, so restating it at (0,2,0) changes dark only.
+    & &__select {
+        background-image: none;
+    }
+
     // -- open: run controls (M1) --------------------------------------------
     &__actions {
         display: flex;

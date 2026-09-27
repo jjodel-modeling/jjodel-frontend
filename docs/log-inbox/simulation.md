@@ -181,3 +181,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Decision H (Alfonso, 2026-09-27 14:27): Petri Bound = 4 on screen after Apply is the script's rule. G12's script side is closed; the engine side (a reachability bound) stays after MODELS. Report §10 H: decided. No probe re-run: every quoted line is in the report, its logs, or the polish lane (`5739b950f`, header `(ε)`). Five unmeasured paths carry `<!-- not measured -->`. Builder and report §4 agree on all four presets.
 **Prompt document name**: 2026-09-27 14:30
 **Ticket** (priority medium, seen here, not fixed: out of this lane's scope). The merge `4edc8bed5` committed unresolved conflict markers into this file: `<<<<<<< HEAD`, `=======`, `>>>>>>> alfonso-frontend-jjtl` around the readiness-2 and polish entries. `check:docs` passes with them in; a fold would carry them into the active log. Resolution: delete the three marker lines, keep both entries.
+
+## 2026-09-27 — fix: one chevron on the panel's selects in dark (P-2026-09-27-1501)
+**Prompt**: `claude_2026-09-27_1501_prompt_sim_dark_select_chevron.md`, lane fast on `sim-dark-select-chevron` in `~/jjodel-open`. The C1 ticket: with `data-theme="dark"` every select of the declarations table paints a doubled chevron. A short discovery, then one rule in `simulation-panel.scss`, light unchanged by a pixel, probe crops in both themes for the chat.
+**Files touched**: code `50c198da5`: `frontend/src/components/editor-v2/sim/simulation-panel.scss` (`& &__select`, `background-image: none`). Docs, this commit: `docs/discovery/discovery_2026-09-27_sim_dark_select_chevron.md` (new), this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Baseline at `2f42f2704`: `npm run typecheck` exit 2, 14 errors; vitest sim 124 passed, 5 files. On `50c198da5`: typecheck exit 2, 14 errors, set identical; vitest sim 124 passed, 5 files; `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` on this commit. Probe on 3014, `EXIT=0` before and after.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: probe readings and 2x crops for the chat (dark: an SVG `background-image` on the 4 table selects before, `none` on 21 of 21 panel selects after, one chevron; light: `none` before and after, the 4 crops byte-identical by `cmp`; shots in `~/.jjodel-lanes/shots_chevron/`)
+**Notes**: Closes C1's doubled-chevron ticket. Not a second chevron but a row: `[data-theme="dark"] select` (`_form-system.scss:760`, 0,1,1) outranks `.sim-panel__select` (0,1,0), and its SVG tiles (the dark shorthand at `:735` resets repeat) beside the native arrow. It hits every panel select since panel v1 (`1b67b65fa`), so the rule covers all 21. Dark background colour unchanged (report §5). Probes `_tmp_chevron_*` gitignored; logs in `~/.jjodel-lanes/P-2026-09-27-1501/`.
+**Prompt document name**: 2026-09-27 15:01
