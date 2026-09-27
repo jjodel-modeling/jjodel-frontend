@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-0005
 Chat: C-2026-09-27-1437
 Lane: full (merge of the trunk into the branch; 2 conflicts: `docs/log-inbox/simulation.md`, `frontend/src/components/editor-v2/problems/registry.ts` measured)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane sim-checker-rules · 5dd16be7e · verifica visiva non eseguita: la chat ha dato il GO senza l'hard-stop del passo 8, 2026-09-28 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-rules`, branch `sim-checker-rules`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-rules`, branch `sim-checker-rules`, `git log -1` is the commit that adds this file (its parent `2b815a87b`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-28-0005 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
