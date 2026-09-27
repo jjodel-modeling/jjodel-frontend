@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-2236
 Chat: C-2026-09-27-1437
 Lane: discovery (read-only on the code; the report is the only file written)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane freeze-readiness · the commit that carries this line (docs-only discovery; its sha is in the hard stop)
 
 Worktree: `~/jjodel-w-freeze`, branch `freeze-readiness` (cut by the chat from `alfonso-frontend-jjtl` at `d88e70e0e`: the modal merge `5eccdd4d2` and the demo script merge `ff5855d74` included; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-freeze`, branch `freeze-readiness`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
