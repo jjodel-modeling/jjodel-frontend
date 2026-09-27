@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0035
 Chat: C-2026-09-26-1702
 Lane: full (Phase 1 discovery, read-only; Phase 2 may touch a critical-zone file, to be decided)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane enum-edge-guard · 4e5dff7ad
 
 Worktree: `~/jjodel-open`, branch `enum-edge-guard` (from the trunk `alfonso-frontend-jjtl` at `da84b10e5`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-open`, branch `enum-edge-guard`, `git log -1` is the commit that adds this file (subject `docs: add prompt P-2026-09-27-0035, enum edge guard discovery`), its parent is `da84b10e5`, `git status` empty. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0035 · session <id>]` and ends with an `Outcome:` line (P16).
 

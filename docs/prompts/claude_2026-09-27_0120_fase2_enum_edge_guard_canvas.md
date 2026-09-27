@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0120
 Chat: C-2026-09-26-1702
 Lane: full (three files, a new pure module, browser probe; no critical zone)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane enum-edge-guard · 5dc09a4ce · verifica visiva passata 2026-09-27 (chat, unattended, 51/51; Alfonso in the morning digest)
 
 Worktree: `~/jjodel-open`, branch `enum-edge-guard`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-open`, branch `enum-edge-guard`, `git log -1` is the commit that adds this file (subject `docs: add Phase 2 of the enum edge guard, canvas step (P-2026-09-27-0120)`), its parent is `90722c375` (the merge of the trunk into this branch, above the discovery `4e5dff7ad`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*` files. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0120 · session <id>]` and ends with an `Outcome:` line (P16).
 
