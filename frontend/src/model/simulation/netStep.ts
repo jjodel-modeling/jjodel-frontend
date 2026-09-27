@@ -13,7 +13,8 @@
  * - effect (§4.4): M' = M − pre + post, refused as «unsafe» when a place of M'
  *   exceeds k (R-SIM-23: the run stops, it does not saturate); then the actions
  *   of every site, all read on σ and written together, a double assignment or a
- *   value outside its domain halting the run;
+ *   value outside its domain halting the run; then the derived attributes of
+ *   σ′, when the caller passes their oracle (lane C2, R-SIM-73);
  * - status (R-SIM-29): five values on the candidate set.
  *
  * Interleaving (R-SIM-7): one firing per step, chosen by the caller.
@@ -24,7 +25,7 @@
 
 import type { GuardOutcome } from './guardEvaluator';
 import type {
-    ActionOracle, Candidate, CandidateSet, CompiledNet, Domain, Evaluation, GuardOracle, HaltReason,
+    ActionOracle, Candidate, CandidateSet, CompiledNet, DerivedOracle, Domain, Evaluation, GuardOracle, HaltReason,
     NetConfiguration, NetLabel, NetRunStatus, NetTransition, SimAssignment, SimState, SimStateAccess, SimValue,
     StepOutcome,
 } from './netTypes';
@@ -45,12 +46,15 @@ export function isMarked(state: SimState, id: string): boolean {
 /**
  * The read-only accessor of σ (R-SIM-30). `site` is the element an action is
  * attached to: only its presentation is readable (locality, R-SIM-18); without
- * a site no presentation is.
+ * a site no presentation is. A stored value first, then the derived one of the
+ * same space (R-SIM-73), so a guard or an action reads both alike.
  */
 export function stateAccess(state: SimState, site?: string): SimStateAccess {
     return {
-        read: (elementId, attr) => state.attrs.get(elementId)?.get(attr),
-        readPresentation: attr => (site === undefined ? undefined : state.presentation.get(site)?.get(attr)),
+        read: (elementId, attr) => state.attrs.get(elementId)?.get(attr) ?? state.derived?.attrs.get(elementId)?.get(attr),
+        readPresentation: attr => (site === undefined
+            ? undefined
+            : state.presentation.get(site)?.get(attr) ?? state.derived?.presentation.get(site)?.get(attr)),
         isMarked: elementId => isMarked(state, elementId),
         tokens: elementId => tokens(state, elementId),
     };
@@ -205,9 +209,15 @@ function applyAll(
  * One step (spec §4). A `halted` outcome leaves σ as it was and consumes the
  * event; quiescence returns the input configuration itself; every other
  * outcome has `next.event === null`.
+ *
+ * `derived`, when given, builds the derived attributes of σ′ after the
+ * parallel write (R-SIM-73): a semantic failure halts `derived`, a value
+ * outside its domain `domain`, both with σ unchanged; a presentation failure
+ * leaves that value out and the step goes on. Without it σ′ has no derived part.
  */
 export function step(
     net: CompiledNet, cfg: NetConfiguration, selector: string | null, guards: GuardOracle, actions: ActionOracle,
+    derived?: DerivedOracle,
 ): StepOutcome {
     const cs = candidates(net, cfg, guards);
     const event = cfg.event;
@@ -237,6 +247,7 @@ export function step(
         for (const a of out.assignments) {
             const decl = net.declared.get(a.element)?.get(a.attr);
             if (!decl) return halted({ kind: 'undeclared', site, element: a.element, attr: a.attr });
+            if (decl.equation !== undefined) return halted({ kind: 'read-only', site, element: a.element, attr: a.attr });
             const key = `${a.element}\u0000${a.attr}`;
             if (written.has(key)) return halted({ kind: 'double-assignment', element: a.element, attr: a.attr });
             written.add(key);
@@ -247,11 +258,25 @@ export function step(
         }
     }
 
-    const state: SimState = {
+    const assigned: SimState = {
         marking,
         attrs: applyAll(cfg.state.attrs, semantic),
         presentation: applyAll(cfg.state.presentation, presentation),
     };
+    let state = assigned;
+    if (derived) {
+        // σ′'s own derived values, never σ's (R-SIM-73).
+        const out = derived(assigned);
+        const failure = out.failures.find(f => f.space === 'semantic');
+        if (failure) return halted({ kind: 'derived', element: failure.element, attr: failure.attr, detail: failure.detail });
+        for (const [element, values] of out.derived.attrs) {
+            for (const [attr, value] of values) {
+                const decl = net.declared.get(element)?.get(attr);
+                if (decl && !inDomain(value, decl.domain)) return halted({ kind: 'domain', element, attr, value });
+            }
+        }
+        state = { ...assigned, derived: out.derived };
+    }
     return {
         kind: 'fired',
         next: { state, event: null },

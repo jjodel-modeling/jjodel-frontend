@@ -106,15 +106,15 @@ describe('decode: tolerant, a defect per record (R-SIM-68)', () => {
         }
     });
 
-    it('unknown fields are ignored: equation (lane C2) and any other; the record decodes (mutant 2)', () => {
+    it('unknown fields are ignored; the record decodes (mutant 2)', () => {
         const out = decodeStateAttributes(stored([
-            { ...VISITS, equation: 'self.[a] + 1' },
+            { ...VISITS, formula: 'self.[a] + 1' },
             { ...COLOR, note: 'x', domain: null },
             { ...VISITS, name: 'v2', domain: { kind: 'range', min: 0, max: 3, step: 1 } },
         ]));
         expect(out.defects).toEqual([]);
         expect(out.decls.map(d => d.name)).toEqual(['visits', 'color', 'v2']);
-        expect(out.decls[0]).not.toHaveProperty('equation');
+        expect(out.decls[0]).not.toHaveProperty('formula');
         expect(out.decls[2].domain).toEqual({ kind: 'range', min: 0, max: 3 });
     });
 
@@ -145,7 +145,7 @@ describe('the initial value, a JjEL literal typed by its form (question 14, ques
 
 describe('stateAttributeRows: what the panel edits, malformed fields as defaults', () => {
     it('the records as rows, in order; a malformed field falls back so the row can be fixed; unknown fields dropped', () => {
-        const raw = stored([VISITS, { name: 7, space: 'visual', domain: { kind: 'set' }, initial: 0 }, { ...COLOR, equation: 'x' }]);
+        const raw = stored([VISITS, { name: 7, space: 'visual', domain: { kind: 'set' }, initial: 0 }, { ...COLOR, note: 'x' }]);
         const { rows, readable } = stateAttributeRows(raw);
         expect(readable).toBe(true);
         expect(rows).toEqual([
@@ -164,5 +164,65 @@ describe('stateAttributeRows: what the panel edits, malformed fields as defaults
     it('rows encode back to the same string when nothing was malformed', () => {
         const raw = encodeStateAttributes([VISITS, COLOR, F, MODE]);
         expect(encodeStateAttributes(stateAttributeRows(raw).rows)).toBe(raw);
+    });
+});
+
+describe('lane C2: a record carries initial or equation, never both (P-2026-09-27-0200, R-SIM-72, R-SIM-75)', () => {
+    const TOTAL: StateAttributeRecord = {
+        name: 'total', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 6 }, initial: '', equation: 'p1.[visits] + p2.[visits]',
+    };
+    const BUSY: StateAttributeRecord = { name: 'busy', metaclass: 'C_Place', space: 'presentation', domain: null, initial: '', equation: 'self.[visits] > 0' };
+
+    it('encode: a derived record writes equation where a stored one writes initial, in the fixed order, never both', () => {
+        expect(encodeStateAttributes([VISITS, TOTAL])).toBe(
+            '{"v":1,"attrs":['
+            + '{"name":"visits","metaclass":"C_Place","space":"semantic","domain":{"kind":"range","min":0,"max":3},"initial":"0"},'
+            + '{"name":"total","metaclass":null,"space":"semantic","domain":{"kind":"range","min":0,"max":6},"equation":"p1.[visits] + p2.[visits]"}]}');
+    });
+
+    it('decode: a derived record is a declaration with its equation and no initial', () => {
+        const { decls, defects } = decodeStateAttributes(encodeStateAttributes([VISITS, TOTAL, BUSY]));
+        expect(defects).toEqual([]);
+        expect(decls[1]).toEqual({ name: 'total', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 6 }, equation: 'p1.[visits] + p2.[visits]' });
+        expect(decls[1]).not.toHaveProperty('initial');
+        expect(decls[2]).toEqual({ name: 'busy', metaclass: 'C_Place', space: 'presentation', domain: null, equation: 'self.[visits] > 0' });
+        // control: a stored record has no equation
+        expect(decls[0]).not.toHaveProperty('equation');
+    });
+
+    it('exclusivity: initial and equation together is a defect of its own; neither is a record defect; a blank equation too', () => {
+        const out = decodeStateAttributes(stored([
+            { ...VISITS, equation: 'self.[a] + 1' },
+            { name: 'n', metaclass: null, space: 'semantic', domain: { kind: 'boolean' } },
+            { ...TOTAL, initial: undefined, equation: '  ' },
+            { ...TOTAL, initial: undefined, equation: 3 },
+            { ...TOTAL, initial: undefined },
+        ]));
+        expect(out.decls.map(d => d.name)).toEqual(['total']);
+        expect(out.defects).toEqual([
+            { index: 0, name: 'visits', code: 'exclusive', message: 'initial and equation' },
+            { index: 1, name: 'n', code: 'record', message: 'no initial or equation' },
+            { index: 2, name: 'total', code: 'record', message: 'no equation text' },
+            { index: 3, name: 'total', code: 'record', message: 'no equation text' },
+        ]);
+    });
+
+    it('round trip through the rows keeps equation: a derived row is carried whole (report §4.5)', () => {
+        const raw = encodeStateAttributes([VISITS, TOTAL, BUSY]);
+        const { rows } = stateAttributeRows(raw);
+        expect(rows[1]).toEqual(TOTAL);
+        expect(rows[2]).toEqual(BUSY);
+        expect(encodeStateAttributes(rows)).toBe(raw);
+    });
+
+    it('editing another row does not drop equation: the edit lands, the equations stay (the C1 data loss, measured live)', () => {
+        const raw = encodeStateAttributes([VISITS, TOTAL, BUSY]);
+        const { rows } = stateAttributeRows(raw);
+        const edited = encodeStateAttributes(rows.map((r, i) => (i === 0 ? { ...r, initial: '1' } : r)));
+        const back = decodeStateAttributes(edited);
+        expect(back.defects).toEqual([]);
+        expect(back.decls.map(d => [d.name, d.initial, d.equation])).toEqual([
+            ['visits', 1, undefined], ['total', undefined, 'p1.[visits] + p2.[visits]'], ['busy', undefined, 'self.[visits] > 0'],
+        ]);
     });
 });

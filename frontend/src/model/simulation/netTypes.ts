@@ -33,6 +33,8 @@ export type Domain =
  * A state attribute, declared in the STC per metaclass (R-SIM-19). `marked`
  * and `tokens` are reserved names (R-SIM-30). `metaclass` is `null` for a
  * global attribute, which lives on the model element (`model.[x]`, R-SIM-18).
+ * Stored or derived (lane C2, R-SIM-72): exactly one of `initial` and
+ * `equation`; a derived attribute is read-only, recomputed on every σ.
  */
 export interface StateAttributeDecl {
     readonly name: string;
@@ -41,7 +43,10 @@ export interface StateAttributeDecl {
     readonly space: 'semantic' | 'presentation';
     /** Required when semantic; presentation has no finite domain (R-SIM-18). */
     readonly domain: Domain | null;
-    readonly initial: SimValue;
+    /** A stored attribute's value in the initial σ. */
+    readonly initial?: SimValue;
+    /** A derived attribute's JjEL equation, `self` its owner (R-SIM-73, R-SIM-75). */
+    readonly equation?: string;
 }
 
 /**
@@ -49,7 +54,10 @@ export interface StateAttributeDecl {
  * stored (`key`, `record`, from the codec), or what the compiler finds.
  */
 export type DeclarationDefectCode =
-    | 'key' | 'record' | 'initial' | 'no-domain' | 'bounds' | 'reserved' | 'metaclass' | 'two-spaces' | 'twice';
+    | 'key' | 'record' | 'initial' | 'no-domain' | 'bounds' | 'reserved' | 'metaclass' | 'two-spaces' | 'twice'
+    // lane C2 (R-SIM-73..75): both or neither of initial and equation; an equation that does not parse, that the
+    // subset checker rejects, that reads `event`, or that sits on a cycle; a derived value that fails at Reset.
+    | 'exclusive' | 'parse' | 'subset' | 'event' | 'cycle' | 'derived';
 
 /** A defect of the declarations, reported at Reset; never an element of the net. */
 export interface DeclarationDefect {
@@ -60,8 +68,14 @@ export interface DeclarationDefect {
     readonly code: DeclarationDefectCode;
     /** Short, with no id in it: `initial 7 outside 0..3`, `not JSON`. */
     readonly message: string;
-    /** For `two-spaces` and `twice`: the element where the two declarations meet. */
+    /** For `two-spaces` and `twice`: the element where the two declarations meet; for `derived`, where the value failed. */
     readonly element?: string;
+}
+
+/** The values of the derived attributes on one σ, by space, as `attrs` and `presentation` hold the stored ones. */
+export interface DerivedValues {
+    readonly attrs: ReadonlyMap<string, ReadonlyMap<string, SimValue>>;
+    readonly presentation: ReadonlyMap<string, ReadonlyMap<string, SimValue>>;
 }
 
 /** σ, owned by the engine. The marking maps a place to 1..k; an absent place holds 0. */
@@ -70,6 +84,11 @@ export interface SimState {
     /** Element id (the model id for a global) → attribute → value. */
     readonly attrs: ReadonlyMap<string, ReadonlyMap<string, SimValue>>;
     readonly presentation: ReadonlyMap<string, ReadonlyMap<string, SimValue>>;
+    /**
+     * The derived attributes, read-only (R-SIM-73): built from this σ by the
+     * `DerivedOracle`, never copied from another σ. Absent when none is declared.
+     */
+    readonly derived?: DerivedValues;
 }
 
 /** (σ, e). `event` is an event instance id, or `null` for ε; every step consumes it. */
@@ -196,7 +215,10 @@ export interface CompiledNet {
     readonly final: ReadonlySet<string> | null;
     readonly hasEventRole: boolean;
     readonly attributes: readonly StateAttributeDecl[];
-    /** Element → attribute → its declaration: what an assignment may target, and in which domain. */
+    /**
+     * Element → attribute → its declaration: what an assignment may target, and in which domain.
+     * A declaration with an `equation` is derived, never a target (R-SIM-75).
+     */
     readonly declared: ReadonlyMap<string, ReadonlyMap<string, StateAttributeDecl>>;
     readonly initial: SimState;
     readonly defects: readonly NetDefect[];
@@ -221,6 +243,22 @@ export type ActionOutcome =
 
 /** The actions of one site. Every right-hand side is evaluated on σ, the state BEFORE the step (spec §4.4). */
 export type ActionOracle = (site: ActionSite, event: string | null, state: SimStateAccess) => ActionOutcome;
+
+/** A derived attribute of one element that has no value on a σ: its equation threw, or returned no `SimValue`. */
+export interface DerivedFailure {
+    readonly element: string;
+    readonly attr: string;
+    /** A presentation failure never stops the semantics (R-SIM-74). */
+    readonly space: 'semantic' | 'presentation';
+    readonly detail: string;
+}
+
+/**
+ * Every derived attribute evaluated on `state`, in dependency order, into a
+ * fresh `DerivedValues` (R-SIM-73); what gave no value is left out and listed.
+ * The domain is the core's to check, as for an assignment.
+ */
+export type DerivedOracle = (state: SimState) => { readonly derived: DerivedValues; readonly failures: readonly DerivedFailure[] };
 
 // ── candidates, label, outcome, status (spec §4.2-§4.5) ─────────────────────
 
@@ -262,7 +300,11 @@ export type HaltReason =
     | { readonly kind: 'double-assignment'; readonly element: string; readonly attr: string }
     | { readonly kind: 'action-defect'; readonly site: ActionSite; readonly detail: string }
     /** An action of `site` assigned an attribute `element` does not declare (R-SIM-70): ids, for the caller to name. */
-    | { readonly kind: 'undeclared'; readonly site: ActionSite; readonly element: string; readonly attr: string };
+    | { readonly kind: 'undeclared'; readonly site: ActionSite; readonly element: string; readonly attr: string }
+    /** A semantic derived attribute of `element` failed on σ′ (R-SIM-73). */
+    | { readonly kind: 'derived'; readonly element: string; readonly attr: string; readonly detail: string }
+    /** An action of `site` assigned a derived attribute (R-SIM-75). */
+    | { readonly kind: 'read-only'; readonly site: ActionSite; readonly element: string; readonly attr: string };
 
 /**
  * The outcome of a step. `halted` leaves σ as it was and consumes the event;

@@ -887,4 +887,112 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
         // control: the same declarations, the same signature
         expect(runSignature(a, 'M', 'MM')).toBe(runSignature(cnet({ decls: [VISITS] }), 'M', 'MM'));
     });
+
+    describe('lane C2: derived attributes in the run (P-2026-09-27-0200, R-SIM-73..76)', () => {
+        const TOTAL = { name: 'total', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 6 }, equation: 'p1.[visits] + p2.[visits]' };
+        const derived = (name: string, equation: string, domain: unknown = { kind: 'range', min: 0, max: 9 }) =>
+            ({ name, metaclass: null, space: 'semantic', domain, equation });
+        const BUMP = 'p2.[visits] := p2.[visits] + 1';
+
+        it('Reset evaluates the derived values on the initial σ; Step recomputes them, and the title of «Last step» lists them after the assignments', () => {
+            const lookup = cnet({ decls: [VISITS, TOTAL], t1: [BUMP] });
+            const r = reset(lookup);
+            expect(r.compileDefects).toEqual([]);
+            expect(r.run.config.state.derived?.attrs.get('M')?.get('total')).toBe(0);
+            const out = eps(lookup);
+            expect(out.lastStep).toBe('ε: t1 (p1 → p2) fired');
+            expect(out.lastStepTitle).toBe('ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1\nderived: cnet.total = 1');
+            expect(getSimRun('M')!.config.state.derived?.attrs.get('M')?.get('total')).toBe(1);
+        });
+
+        it('no derived declared: no oracle and no derived part, the title as in C1 (mutant 8)', () => {
+            const lookup = cnet({ decls: [VISITS], t1: [BUMP] });
+            const r = reset(lookup);
+            expect(r.run.derived).toBeUndefined();
+            expect(r.run.config.state).not.toHaveProperty('derived');
+            const out = eps(lookup);
+            expect(out.lastStepTitle).toBe('ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1');
+            expect(getSimRun('M')!.config.state).not.toHaveProperty('derived');
+            // control: one derived declaration installs it
+            expect(reset(cnet({ decls: [VISITS, TOTAL] })).run.derived).toBeTypeOf('function');
+        });
+
+        it('a guard reads a derived value through the unchanged accessor: t1 stops when total reaches 2', () => {
+            const lookup = cnet({ decls: [VISITS, TOTAL], t1: [BUMP], roles: { simGuard: 'A_guard' } });
+            lookup.T1x.features.push('v_T1x_A_guard');
+            lookup.v_T1x_A_guard = { className: 'DValue', id: 'v_T1x_A_guard', instanceof: 'A_guard', values: ['model.[total] < 2'], father: 'T1x' };
+            expect(reset(lookup).compileDefects).toEqual([]);
+            expect(eps(lookup).outcome?.kind).toBe('fired');
+            expect(eps(lookup).outcome?.kind).toBe('fired');
+            expect(status()).toBe('Deadlock');
+        });
+
+        it('the equation defects at Reset, by the declaration\'s name; the source only in the title (R-SIM-62)', () => {
+            const cycle = cnet({ decls: [VISITS, derived('a', 'model.[b] + 1'), derived('b', 'model.[a]')] });
+            const c = reset(cycle);
+            expect(defectsLine(c.run.net, cycle, c.compileDefects)).toBe('2 defects: a (equation cycle: a → b → a); b (equation cycle: b → a → b).');
+            expect(defectsTitle(c.run.net, cycle, c.compileDefects)).toBe(
+                'a: equation cycle: a → b → a [model.[b] + 1]\nb: equation cycle: b → a → b [model.[a]]');
+
+            const roots = cnet({ decls: [VISITS, COLOR, derived('e', 'event == null', { kind: 'boolean' }), { ...derived('s', 'node.[color] == 1'), metaclass: 'C_PTr' }, derived('p', '1 +')] });
+            const d = reset(roots);
+            expect(defectsLine(d.run.net, roots, d.compileDefects)).toBe('3 defects: e (the equation reads event); s (E-NODE); p (parse error 1:4 Expected expression).');
+            expect(defectsTitle(d.run.net, roots, d.compileDefects)?.split('\n')[1]).toMatch(/^s: E-NODE: .* \[node\.\[color\] == 1\]$/);
+        });
+
+        it('an action on a derived target: read-only at Reset, then the halt names it; the source in the title only (mutant 7 through the bridge)', () => {
+            const lookup = cnet({ decls: [VISITS, TOTAL], t1: ['model.[total] := 5'] });
+            const r = reset(lookup);
+            expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['T1x', 'action', 'read-only']]);
+            expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe("1 defect: t1 action (assigns derived 'total').");
+            expect(status()).toBe('Running');
+            expect(eps(lookup).outcome?.kind).toBe('halted');
+            const halt = getSimRun('M')!.halt!;
+            expect(halt).toEqual({ kind: 'read-only', site: { element: 'T1x', role: 'transition' }, element: 'M', attr: 'total' });
+            const line = haltMessage(halt, lookup, FEATURES);
+            expect(line).toBe("Halted: the transition action of t1 failed: 'total' is derived and cannot be assigned.");
+            expect(haltTitle(halt, lookup, FEATURES, r.run.net)).toBe(`${line} [model.[total] := 5]`);
+            expect(getSimRun('M')!.config.state.derived?.attrs.get('M')?.get('total')).toBe(0);
+        });
+
+        it('a failing equation nobody reads: a defect at Reset with the value absent, the run starts, and the first step halts (strict)', () => {
+            const lookup = cnet({ decls: [VISITS, derived('q', 'p1.[visits] / 0')], t1: [BUMP] });
+            const r = reset(lookup);
+            expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: q (cnet.q failed: the value is null, not a boolean, a number or a string).');
+            expect(r.run.config.state.derived).toBeDefined();
+            expect(r.run.config.state.derived?.attrs.get('M')?.get('q')).toBeUndefined();
+            expect(status()).toBe('Running');
+            eps(lookup);
+            const halt = getSimRun('M')!.halt!;
+            expect(halt).toEqual({ kind: 'derived', element: 'M', attr: 'q', detail: 'the value is null, not a boolean, a number or a string' });
+            const line = haltMessage(halt, lookup, FEATURES);
+            expect(line).toBe("Halted: derived 'q' of cnet failed: the value is null, not a boolean, a number or a string.");
+            expect(haltTitle(halt, lookup, FEATURES, r.run.net)).toBe(`${line} [p1.[visits] / 0]`);
+        });
+
+        it('an evaluation error: the error class out of the line, the element by name, never by id', () => {
+            const lookup = cnet({ decls: [VISITS, { ...derived('bad', 'self.[nosuch]'), metaclass: 'C_Place' }] });
+            const r = reset(lookup);
+            expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe("1 defect: bad (p1.bad failed: 'nosuch' is not a state attribute of p1).");
+            expect(defectsLine(r.run.net, lookup, r.compileDefects)).not.toMatch(/P1x|JjelEvaluationError/);
+        });
+
+        it('out of domain: at Reset a defect with the value kept; after a step the halt domain, its equation in the title', () => {
+            const low = cnet({ decls: [VISITS, { ...TOTAL, domain: { kind: 'range', min: 1, max: 6 } }] });
+            const l = reset(low);
+            expect(defectsLine(l.run.net, low, l.compileDefects)).toBe('1 defect: total (cnet.total = 0 outside 1..6).');
+            expect(l.run.config.state.derived?.attrs.get('M')?.get('total')).toBe(0);
+
+            const tight = cnet({ decls: [VISITS, { ...TOTAL, domain: { kind: 'range', min: 0, max: 0 } }], t1: [BUMP] });
+            const t = reset(tight);
+            expect(t.compileDefects).toEqual([]);
+            eps(tight);
+            const halt = getSimRun('M')!.halt!;
+            expect(halt).toEqual({ kind: 'domain', element: 'M', attr: 'total', value: 1 });
+            const line = haltMessage(halt, tight, FEATURES);
+            expect(line).toBe('Halted: total of cnet would be 1, outside its domain.');
+            expect(haltTitle(halt, tight, FEATURES, t.run.net)).toBe(`${line} [p1.[visits] + p2.[visits]]`);
+            expect(getSimRun('M')!.config.state.attrs.get('P2x')?.get('visits')).toBe(0);
+        });
+    });
 });
