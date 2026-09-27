@@ -35,7 +35,7 @@ import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joi
 import { buildEvalContext } from '../../../jjscript';
 import { getSimRun, simClear, simReset } from './simRunState';
 import {
-    PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
+    PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
     profilePatch, profileSummary, profileSummaryText, storedProfile,
 } from './simRoleStatus';
 import {
@@ -44,7 +44,7 @@ import {
 } from './simBridge';
 import type { InputLabel, StopReason } from './simBridge';
 import { sketchOfMetamodel } from './metamodelSketch';
-import { largestInitialMarking } from './modelMarkings';
+import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
@@ -186,7 +186,7 @@ function overlapMessage(lookup: any, overlap: RoleOverlap): string {
 
 /** The groups of the M2 face (R-SIM-37, R-SIM-71), in ROLE_SPECS order within each. */
 const ROLE_GROUPS: ReadonlyArray<{ id: string; title: string; keys: readonly RoleKey[] }> = [
-    { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simBound', 'simTransition'] },
+    { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simActivityFinal', 'simBound', 'simTransition'] },
     { id: 'control-flow', title: 'Control flow', keys: ['simOwnedTransitions', 'simSource', 'simNextState', 'simFork', 'simJoin'] },
     { id: 'petri', title: 'Petri net', keys: ['simArc', 'simArcSource', 'simArcTarget', 'simArcWeight', 'simInhibitorArc'] },
     // No Event select: the event class is the Trigger's type (R-SIM-38), shown read-only after Trigger.
@@ -512,9 +512,22 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         () => (bindings ? boundProposalInputs(selected, profileBag, bindings) : null),
         [selected, profileBag, bindings],
     );
-    const largestMarking = useSelector((state: DState) => (open && configModelId && markingInputs
-        ? largestInitialMarking((state as any)?.idlookup ?? {}, configModelId, markingInputs.node, markingInputs.initialMarking)
-        : null));
+    // Since G12(b) (R-SIM-81(1) as amended 2026-09-27) the reachable markings of the models under the bag as Apply
+    // leaves it. The selector reads only their signature, on every store change while the panel is open; the
+    // exploration runs in the memo when the signature or the bag changes, capped (report §5.1 risk 5).
+    const boundBag = useMemo(
+        () => (markingInputs && bindings ? boundProposalBag(selected, profileBag, bindings) : null),
+        [markingInputs, selected, profileBag, bindings],
+    );
+    const markingSig = useSelector((state: DState) => (open && configModelId && boundBag
+        ? boundEstimateSignature((state as any)?.idlookup ?? {}, configModelId)
+        : ''));
+    const largestMarking = useMemo(
+        () => (markingSig && configModelId && boundBag
+            ? boundEstimate((store.getState() as any).idlookup ?? {}, configModelId, boundBag)
+            : null),
+        [markingSig, configModelId, boundBag],
+    );
     const summary = useMemo(
         () => profileSummary(selected, profileBag, bindings, largestMarking),
         [selected, profileBag, bindings, largestMarking],

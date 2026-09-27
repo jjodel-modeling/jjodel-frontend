@@ -2124,6 +2124,18 @@ come raccomandato», quindi le righe qui sotto non sono provvisorie.
   M3 «un ruolo di classe lega solo una classe concreta», che resta per gli altri ruoli. (3) Quando Action, Entry o Exit
   è legata e `simStateAttributes` è vuota, il riepilogo mostra una riga che invita a dichiarare gli attributi, con
   «Add attribute» raggiungibile senza aprire Configure…. Corsia R2, fast; nessun file del motore.
+  **Emendata il 2026-09-27, punto (1)** (ratified by Alfonso 2026-09-27, risposta A del report
+  `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md` §7, chat C-2026-09-27-1437, 16:05; G12(b)): Apply
+  propone `simBound` dall'esplorazione limitata dei marking raggiungibili dei modelli M1 del metamodello, non più dal
+  massimo marking iniziale. Ogni modello si compila con `compileNet` sul bag come Apply lo lascia, a bound sollevato;
+  guardie e trigger si ignorano, inibitori e terminazione si tengono; un marking che copre un antenato sul proprio
+  cammino con più token ferma l'esplorazione (controllo di Karp e Miller); al più 2000 marking fra tutti i modelli.
+  La proposta è il massimo dei token su un posto quando l'esplorazione chiude su ogni modello, e solo sopra 1: così
+  non è mai la causa di un arresto `unsafe` (R-SIM-23). Quando non chiude (copertura, tetto, o ruoli che dopo Apply
+  non danno una rete) la proposta è il massimo marking iniziale di prima, con un titolo che dice perché. Il pannello
+  legge nel selettore solo la firma dei modelli; l'esplorazione gira in un memo su di essa (report §5.1 rischio 5).
+  La decisione H resta per la demo; sulla rete della demo la proposta legge `Bound → 4`, e il passo 3 del copione
+  diventa ridondante (corsia docs dopo il merge). Codice `917b1546b` (corsia E2, P-2026-09-27-1611).
 - **R-SIM-82** (2026-09-27, evidence: measured, verified: none, reversible: branch). **La faccia M1 per il pubblico
   (G3, G8, G10, G11; decisioni D ed F).** Una riga della faccia M1 mostra per tutto il run il marking con i conteggi e
   poi σ (`Marking: p2 ×2, p3 · coins = 2, paid = true`), aggiornata a ogni scatto, clampata (R-SIM-63, R-SIM-66); la
