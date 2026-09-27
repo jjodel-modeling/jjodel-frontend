@@ -297,3 +297,28 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: Keys: `simProfile` (system id or user JSON, modes inside), `sim*` per role, `simStateAttributes`. `off` is read by validator, binder and summary, never by the run. Data runs on Petri in the engine; the Petri preset turns on Guard only. The mockups misplace eleven roles (report §4); 4a's third chip ends 39.5 px below its card. Required = `requiredRoles` (R-SIM-48); the dependency set shows as «Needed by» (D1). Slices A (pure), B (shell), C (user profiles, S10), six files.
 **Prompt document name**: 2026-09-27 17:40
+
+## 2026-09-27 — feat: the Simulation roles modal, S11b and S11c, Phase 2 (P-2026-09-27-1740)
+**Prompt**: `claude_2026-09-27_1740_prompt_sim_modal.md`, Phase 2 on `sim-modal` in `~/jjodel-w-modal`, full lane, after the chat's GO (Required as R-SIM-48, both awaiting items as recommended; the modal enters the MODELS demo, so every demo path through it). Slices A, B, C of `discovery_2026-09-27_sim_modal.md` (`30c28f817`): the pure layer, the dialog with the system presets, user profiles and compatible selects; the 4a overflow fixed; the Bound helper in the engine's words.
+**Files touched**: code `645703645` (A): `frontend/src/components/editor-v2/sim/simRolesDraft.ts` (new), `sim/__tests__/simRolesDraft.test.ts` (new); `b582ca7d4` (B): `sim/SimRolesModal.tsx` (new), `sim/SimRolesModal.scss` (new), `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`; `e34323517` (C): `simRolesDraft.ts`, its test, `SimRolesModal.tsx`, `SimRolesModal.scss`. Docs, this commit: this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_modal_*` gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Baseline at `30c28f817`: typecheck 14; vitest sim dirs 594 passed, 21 files. On `e34323517`: `npm run typecheck` exit 2, 14 errors, set identical; vitest sim dirs 623 passed (594 + 29), 22 files; `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` on this commit. Red first: A at collection, C 9 tests. Mutation bench A 15/16 (M14 equivalent), C 13/13.
+**Out-of-scope changes**: no — the six files of the report §8, above the Rule 19 five, listed there before the first edit; no conflict-map file, no critical-zone file.
+**Layer Impact Report**: not-required
+**Smoke visivo**: probe readings and crops for the chat on 3023 (four presets through the dialog and a run each, the hint route, 4e, a named copy, a warning; `~/.jjodel-lanes/shots_modal/1600x1000/` 45 crops, `1280x800/` 43); visual GO by the chat pending
+**Notes**: Every Marking and Last step line of the four demo runs as the script, at both sizes; Petri Bound 4 with the engine's reason; one Control+z after Apply empties the bag; folds move neither header nor footer; S11a ok on every bound demo role; one console error, the known kind. The ecore-loop error kind (P-2026-09-27-0225) showed once, 24 console errors, with ESM and Flowchart B in one page, and in none of the nine later runs. Logs in `~/.jjodel-lanes/P-2026-09-27-1740/`.
+**Prompt document name**: 2026-09-27 17:40
+**Ticket** (priority high, opened here, before the freeze). The demo script (`docs/demo/models_2026_simulator_demo.md`) walks the inline groups: §2.2 step 3 (Bound via Configure…, now proposed as 4 by Apply) and §2.3, §2.4 (the table's gestures) no longer match the panel on this branch. A docs lane re-walks the script through the dialog after the merge, from `probe-walk-final-*.log` and `probe-hint-1600.log`.
+**Ticket** (priority medium, opened here). The panel's summary badge still reads `checkability` without the S11a verdicts (`simRoleStatus.ts:364`, D5), the dialog's pill with them: a binding that warns reads «Checkable» on the panel and «Checkable with warnings» in the dialog. None does on the demo metamodels. For the S6-S8 bundle that owns `profileSummary`.
+**Ticket** (priority low, opened here). The rules of the inline groups and the old table in `simulation-panel.scss` are marked `TODO: cleanup`, left for the S17-S19 cleanup.
+
+**Decisions taken in the lane** (unattended, RC-25, for the digest):
+- turning a role on brings the roles it depends on, and Trigger brings Event derived from it, as the presets do, so no offered switch makes a `dependencyOff`;
+- Data offers «Turn on» wherever State attributes is off (the engine runs declarations on every shape, report §3.5), which makes a user copy;
+- the validator's defects are listed at the top of the body with their fix, not under the row (a folded row would hide 4e);
+- a warn or incompatible option carries «(warning)» or «(incompatible)» in its text (a native option shows no title), the bound value's verdict an icon in a fixed slot;
+- declarations are part of the draft, written by the same Apply; a text cell selects its text on focus, so a prefilled cell is replaced by typing (the S12 caret ticket, in the dialog only);
+- Apply closes the dialog, Escape and Cancel discard it, a click on the backdrop does nothing;
+- the Bound helper reads «Proposed N.» then `boundValue`'s reason verbatim.
