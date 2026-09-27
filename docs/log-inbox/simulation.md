@@ -249,3 +249,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: The Flow B comparison drops one reader key, `choiceSectionPaint` (null): the readiness common file gained it at 13:01, after its Flow B ran at 12:51. The G7 subject is shortened from the prompt's, 74 characters, over the 72 of §6.2. R-SIM-83 and 84 are numbered while E2 runs in parallel; a clash is the later merge's to renumber. The G6 commit message was amended once, pathspec only, before the G7 commit.
 **Prompt document name**: 2026-09-27 16:10
 **Ticket** (closed here). The G7 mirror ticket of the P-2026-09-27-1545 entry (an `else` on a plain edge whose sibling enters a fork was always true) is closed by `bce34aee1`: the test «mirror» in `netCompile.test.ts` and mutant M7 of the bench.
+
+## 2026-09-27 — discovery: the run state on the canvas, S15, G3 canvas side (P-2026-09-27-1647)
+**Prompt**: `claude_2026-09-27_1647_prompt_discovery_sim_canvas_state.md`, Phase 1 of S15 (R-SIM-33 3c) on `sim-canvas-state` in `~/jjodel-icons`, full lane, read-only, hard stop at the report. What a run-state channel into the canvas needs: where marking, σ and candidates are read, the render path, at least two channel options with files, R-SIM-4, critical zone, render cost and tests, and the draft Layer Impact Report of Phase 2.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_canvas_state.md` (new), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_canvas_*` (gitignored, not committed), vite on 3018 with its cache in `/tmp/canvas1647_scratch`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no file under `frontend/src` written; the probe exit 0, vite stopped after it (`lsof` on 3018 exit 1), `git status` empty after the run.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Measured on 7b66f879f: all 13 Petri demo nodes paint native, no viewpoint, so an IR channel shows nothing on the demo. G3 reproduced: p1 row `tokens = 2` while the run holds 1. A candidate sweep costs 1.2-8.8 µs. Recommended: option A, a per-node overlay in the R-SIM-3 pattern, 0 critical-zone files, no R-SIM-4 amendment; option B (IR surface) after J2. Four decisions await Alfonso (report §12). A halted run still yields candidates: Phase 2 gates on the status.
+**Prompt document name**: 2026-09-27 16:47
