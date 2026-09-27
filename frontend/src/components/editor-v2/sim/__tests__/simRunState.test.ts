@@ -9,7 +9,8 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, isSimActive, simClear, simCommit, simReset,
+    __resetSimRunsForTests, getSimActiveIds, getSimChoiceVersion, getSimRun, getSimVersion, isSimActive, isSimPending, simClear, simCommit,
+    simReset, simSetPending,
 } from '../simRunState';
 import type { SimRun } from '../simRunState';
 import { step } from '../../../../model/simulation/netStep';
@@ -157,5 +158,96 @@ describe('the halt reason (R-SIM-29): set by a halted step, cleared by Reset, go
         expect(getSimRun('M')!.halt).not.toBeNull();
         simClear('M');
         expect(getSimRun('M')).toBeUndefined();
+    });
+});
+
+describe('the choice channel: the open choice list on the canvas, a second counter (S15 slice A2, R-SIM-33 3c)', () => {
+    /** t and u both take the token of a (a conflict, the panel's list); w is not enabled. */
+    const CHOICE = mkNet([tr('t', { a: 1 }, { b: 1 }), tr('u', { a: 1 }, { c: 1 }), tr('w', { d: 1 }, { e: 1 })]);
+
+    it('a publish and a clear bump the choice version, never the mark version (killed by bumping the mark counter)', () => {
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        const v = getSimVersion();
+        const c = getSimChoiceVersion();
+        simSetPending('M', ['t', 'u']);
+        expect(getSimChoiceVersion()).toBe(c + 1);
+        simSetPending('M', null);
+        expect(getSimChoiceVersion()).toBe(c + 2);
+        expect(getSimVersion()).toBe(v);
+    });
+
+    it('a clear with no open list does not bump (killed by bumping on every clear)', () => {
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        const c = getSimChoiceVersion();
+        simSetPending('M', null);
+        expect(getSimChoiceVersion()).toBe(c);
+    });
+
+    it('marks exactly the listed transitions, not every enabled one (killed by marking the enabled set)', () => {
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        simSetPending('M', ['t']);
+        expect(isSimPending('t')).toBe(true);
+        expect(isSimPending('u')).toBe(false);
+        expect(isSimPending('w')).toBe(false);
+        expect(isSimPending('a')).toBe(false);
+    });
+
+    it('a clear removes the mark (killed by a publish that ignores null)', () => {
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        simSetPending('M', ['t', 'u']);
+        simSetPending('M', null);
+        expect(isSimPending('t')).toBe(false);
+        expect(isSimPending('u')).toBe(false);
+    });
+
+    it('a new list replaces the old one (killed by a publish that adds to the old list)', () => {
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        simSetPending('M', ['t']);
+        simSetPending('M', ['u']);
+        expect(isSimPending('t')).toBe(false);
+        expect(isSimPending('u')).toBe(true);
+    });
+
+    it('per model: a clear of one model leaves the list of another (killed by one list for every model)', () => {
+        simReset('M1', mkRun(CHOICE, { a: 1 }));
+        simReset('M2', mkRun(mkNet([tr('x', { p: 1 }, { q: 1 }), tr('y', { p: 1 }, { r: 1 })]), { p: 1 }));
+        simSetPending('M1', ['t', 'u']);
+        simSetPending('M2', ['x', 'y']);
+        simSetPending('M2', null);
+        expect(isSimPending('t')).toBe(true);
+        expect(isSimPending('x')).toBe(false);
+    });
+
+    it('shows only while the model has a run, as the panel list does (killed by dropping the run gate)', () => {
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        simSetPending('M', ['t']);
+        simClear('M');
+        expect(isSimPending('t')).toBe(false);
+        // A publish with no run marks nothing, before or after a later Reset.
+        simSetPending('M', ['t']);
+        expect(isSimPending('t')).toBe(false);
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        expect(isSimPending('t')).toBe(false);
+    });
+
+    it('Reset, a commit and Stop leave the choice channel to the panel (killed by clearing it inside the mark primitives)', () => {
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        simSetPending('M', ['t', 'u']);
+        const c = getSimChoiceVersion();
+        simCommit('M', step(CHOICE, { state: st({ a: 1 }), event: null }, 't', TRUE, NONE));
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        expect(getSimChoiceVersion()).toBe(c);
+        expect(isSimPending('t')).toBe(true);
+        simClear('M');
+        expect(getSimChoiceVersion()).toBe(c);
+    });
+
+    it('the test reset clears the lists and the counter (killed by a list that outlives __resetSimRunsForTests)', () => {
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        simSetPending('M', ['t']);
+        __resetSimRunsForTests();
+        simReset('M', mkRun(CHOICE, { a: 1 }));
+        expect(isSimPending('t')).toBe(false);
+        expect(getSimChoiceVersion()).toBe(0);
     });
 });

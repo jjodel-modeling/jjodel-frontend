@@ -19,6 +19,16 @@
     border-radius: 11px;
 }
 
+// A candidate of the panel's open choice list (slice A2, P-2026-09-27-2324): solid and amber, in place of the
+// dashed ring, so the objects the list offers read apart from the rest of the enabled set until the choice.
+.sim-node-run__pending {
+    position: absolute;
+    inset: -5px;
+    border: 3px solid var(--color-warning);
+    border-radius: 11px;
+    box-shadow: 0 0 0 3px var(--color-warning-muted);
+}
+
 // The count of a place, on the top-left corner (the problem dot owns top-right).
 .sim-node-run__tokens {
     position: absolute;

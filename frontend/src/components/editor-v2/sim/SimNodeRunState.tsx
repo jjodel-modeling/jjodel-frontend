@@ -9,7 +9,10 @@
  * - the tokens of a place of the net, 0 included, as a badge on the corner;
  * - a dashed ring when a candidate transition of some input was compiled from
  *   the object;
- * - the object's semantic σ, one `attr = value` row each, under the node.
+ * - the object's semantic σ, one `attr = value` row each, under the node;
+ * - slice A2 (P-2026-09-27-2324): a solid ring, in place of the dashed one,
+ *   while the object is a candidate of the panel's open «Choose a transition»
+ *   list. The overlay follows the choice version too; ObjectNode does not.
  *
  * Mounted as a SIBLING of the node wrapper, inside `.react-flow__node`: the
  * wrapper clips its own overflow (instanceNode.scss), and the badge and the σ
@@ -17,7 +20,8 @@
  * so the node keeps its size, its handles and every gesture.
  */
 
-import { getSimNodeState, useSimVersion } from './simRunState';
+import { getSimNodeState, isSimPending, useSimChoiceVersion, useSimVersion } from './simRunState';
+import type { SimNodeState } from './simCanvasState';
 import './simNodeRunState.scss';
 
 export interface SimNodeRunStateProps {
@@ -26,15 +30,26 @@ export interface SimNodeRunStateProps {
 }
 
 export function SimNodeRunState({ objectId }: SimNodeRunStateProps) {
-    // Unconditional (rules of hooks): the overlay re-reads the store on every bump.
+    // Unconditional (rules of hooks): the overlay re-reads the store on every bump of either channel.
     useSimVersion();
+    useSimChoiceVersion();
     if (typeof objectId !== 'string') return null;
-    const s = getSimNodeState(objectId);
-    if (!s) return null;
+    const found = getSimNodeState(objectId);
+    const pending = isSimPending(objectId);
+    if (!found && !pending) return null;
+    // A candidate of the open list is always enabled; the fallback only keeps the ring if that ever fails.
+    const s: Pick<SimNodeState, 'tokens' | 'sigma' | 'enabled'> = found ?? { tokens: null, sigma: [], enabled: false };
     const tokensTitle = s.tokens === null ? '' : `${s.tokens} ${s.tokens === 1 ? 'token' : 'tokens'} in the run`;
     return (
-        <div className="sim-node-run" data-sim-tokens={s.tokens ?? undefined} data-sim-enabled={s.enabled ? 'true' : undefined}>
-            {s.enabled && <div className="sim-node-run__ring" title="Enabled: can fire in the run" />}
+        <div
+            className="sim-node-run"
+            data-sim-tokens={s.tokens ?? undefined}
+            data-sim-enabled={s.enabled ? 'true' : undefined}
+            data-sim-pending={pending ? 'true' : undefined}
+        >
+            {pending
+                ? <div className="sim-node-run__pending" title="Candidate of the open choice: pick it in the panel" />
+                : s.enabled && <div className="sim-node-run__ring" title="Enabled: can fire in the run" />}
             {s.tokens !== null && (
                 <span
                     className={`sim-node-run__tokens${s.tokens === 0 ? ' sim-node-run__tokens--empty' : ''}`}

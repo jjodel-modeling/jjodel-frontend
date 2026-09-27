@@ -13,6 +13,9 @@
  *   space stays out, as it does in the panel's marking line (simBridge.ts);
  * - the elements a candidate transition was compiled from (`origin`), for ε
  *   and every event of the alphabet, while the run can move.
+ *
+ * Slice A2 adds a fourth, which is not a reading of the configuration: the
+ * elements of the transitions the panel's open choice list offers.
  */
 
 import { candidates, tokens } from '../../../model/simulation/netStep';
@@ -65,6 +68,18 @@ export function enabledElements(run: SimCanvasRun): ReadonlySet<string> {
         }
     }
     enabledCache.set(run, out);
+    return out;
+}
+
+/**
+ * The elements the transitions of an open choice list were compiled from
+ * (slice A2, P-2026-09-27-2324): the same `origin` mapping as the enabled set,
+ * over the listed transitions only. An id the net does not know marks nothing.
+ */
+export function choiceElements(net: SimCanvasRun['net'], transitions: readonly string[]): ReadonlySet<string> {
+    const listed = new Set(transitions);
+    const out = new Set<string>();
+    for (const t of net.transitions) if (listed.has(t.id)) for (const element of t.origin) out.add(element);
     return out;
 }
 

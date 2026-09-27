@@ -8,7 +8,7 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    enabledElements, initialMarkingFeature, isInitialMarkingRow, nodeStateOf,
+    choiceElements, enabledElements, initialMarkingFeature, isInitialMarkingRow, nodeStateOf,
 } from '../simCanvasState';
 import { __resetSimRunsForTests, getSimNodeState, simCommit, simReset } from '../simRunState';
 import type { SimRun } from '../simRunState';
@@ -120,6 +120,28 @@ describe('enabledElements: the origins of the candidates of some input, while th
         const run = mkRun(net, st({ a: 1 }));
         expect(nodeStateOf(run, 't')?.enabled).toBe(true);
         expect(nodeStateOf(run, 'u')).toBeNull();
+    });
+});
+
+describe('choiceElements: the elements the transitions of an open choice list were compiled from (slice A2)', () => {
+    it('maps a listed transition to its origins, not its id (killed by mapping the id)', () => {
+        const net = mkNet([
+            tr('fk#e1', { a: 1 }, { b: 1 }, { origin: ['fk', 'e1'] }),
+            tr('fk#e2', { a: 1 }, { c: 1 }, { origin: ['fk', 'e2'] }),
+        ]);
+        expect([...choiceElements(net, ['fk#e1', 'fk#e2'])].sort()).toEqual(['e1', 'e2', 'fk']);
+    });
+
+    it('only the listed transitions, not every candidate (killed by answering the enabled set)', () => {
+        const net = mkNet([tr('t', { a: 1 }, { b: 1 }), tr('u', { a: 1 }, { c: 1 })]);
+        expect(enabledElements(mkRun(net, st({ a: 1 }))).size).toBe(2);
+        expect([...choiceElements(net, ['u'])]).toEqual(['u']);
+    });
+
+    it('an id the net does not know, or an empty list, marks nothing', () => {
+        const net = mkNet([tr('t', { a: 1 }, { b: 1 })]);
+        expect(choiceElements(net, ['nope']).size).toBe(0);
+        expect(choiceElements(net, []).size).toBe(0);
     });
 });
 

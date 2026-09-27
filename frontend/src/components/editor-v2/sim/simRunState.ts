@@ -21,11 +21,17 @@
  * `halted` step, Stop or interruption of a run), never on a discard, a
  * quiescence or a refused selector, which change nothing the canvas reads. The
  * panel does not follow it for its own lines (R-SIM-36).
+ *
+ * Slice A2 of S15 (P-2026-09-27-2324) adds the second channel of R-SIM-33 3c:
+ * the choice version, with its own listeners. It rises only when the panel
+ * opens, replaces or closes its «Choose a transition» list, and only the node
+ * overlays (SimNodeRunState.tsx) follow it: ObjectNode and the IR resolvers
+ * read the `'mark'` version alone, so a choice never re-renders them.
  */
 
 import { useSyncExternalStore } from 'react';
 import { isMarked } from '../../../model/simulation/netStep';
-import { nodeStateOf, type SimNodeState } from './simCanvasState';
+import { choiceElements, nodeStateOf, type SimNodeState } from './simCanvasState';
 import type {
     ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, NetConfiguration, StepOutcome,
 } from '../../../model/simulation/netTypes';
@@ -55,6 +61,16 @@ const listeners = new Set<() => void>();
 function bump(): void {
     version++;
     for (const l of listeners) l();
+}
+
+/** The open choice list of each model, as the elements its transitions were compiled from (slice A2). */
+const pendings = new Map<string, ReadonlySet<string>>();
+let choiceVersion = 0;
+const choiceListeners = new Set<() => void>();
+
+function bumpChoice(): void {
+    choiceVersion++;
+    for (const l of choiceListeners) l();
 }
 
 /**
@@ -145,6 +161,34 @@ export function simCommit(modelId: string, outcome: StepOutcome): void {
     }
 }
 
+/**
+ * Publishes the panel's open choice list of a model (slice A2): `transitions`
+ * are the ids of its candidates, `null` closes it. Called by the panel where it
+ * sets its pending list, and at every site that clears it; a publish with no run
+ * closes the list, since the panel shows none without one. Bumps the choice
+ * version only, and not when there is nothing to close.
+ */
+export function simSetPending(modelId: string, transitions: readonly string[] | null): void {
+    const run = runs.get(modelId);
+    if (transitions === null || !run) {
+        if (!pendings.delete(modelId)) return;
+        bumpChoice();
+        return;
+    }
+    pendings.set(modelId, choiceElements(run.net, transitions));
+    bumpChoice();
+}
+
+/**
+ * True when the object is an element of a candidate of an open choice list.
+ * Only while that model has a run, as the panel shows its list (`pending && run`);
+ * the panel closes the list at Reset, at Stop and at an interruption.
+ */
+export function isSimPending(objectId: string): boolean {
+    for (const [modelId, elements] of pendings) if (runs.has(modelId) && elements.has(objectId)) return true;
+    return false;
+}
+
 /** Removes one model's run (Stop, interruption, and reset on model change or unmount). */
 export function simClear(modelId: string): void {
     if (!runs.has(modelId)) return;
@@ -166,8 +210,24 @@ export function useSimVersion(): number {
     return useSyncExternalStore(subscribe, getSimVersion, getSimVersion);
 }
 
+export function getSimChoiceVersion(): number {
+    return choiceVersion;
+}
+
+function subscribeChoice(fn: () => void): () => void {
+    choiceListeners.add(fn);
+    return () => choiceListeners.delete(fn);
+}
+
+/** React hook: re-renders the consumer when a choice list opens, changes or closes. The node overlays only. */
+export function useSimChoiceVersion(): number {
+    return useSyncExternalStore(subscribeChoice, getSimChoiceVersion, getSimChoiceVersion);
+}
+
 /** Tests only: the store is module-level, and a test inheriting a run would measure the file order. */
 export function __resetSimRunsForTests(): void {
     runs.clear();
     version = 0;
+    pendings.clear();
+    choiceVersion = 0;
 }
