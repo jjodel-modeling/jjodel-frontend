@@ -29,13 +29,13 @@
  * re-renders instead of firing one per dispatched action.
  */
 
-import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
+import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
 import { getSimRun, simClear, simReset } from './simRunState';
 import {
-    PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
+    PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
     profilePatch, profileSummary, profileSummaryText, storedProfile,
 } from './simRoleStatus';
 import {
@@ -44,6 +44,7 @@ import {
 } from './simBridge';
 import type { InputLabel, StopReason } from './simBridge';
 import { sketchOfMetamodel } from './metamodelSketch';
+import { largestInitialMarking } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
@@ -462,6 +463,17 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // «Configure…»: null follows the verdict (the groups show only when not checkable), a boolean is the user's.
     const [configureOpen, setConfigureOpen] = useState<boolean | null>(null);
     useEffect(() => { setChosen(null); setConfigureOpen(null); }, [configModelId]);
+    // «Add attribute» of the declarations hint (R-SIM-81, G9): once the Data group is rendered, its add
+    // control is brought into view in the scrolling body and takes the focus.
+    const [focusAdd, setFocusAdd] = useState(false);
+    const bodyRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!focusAdd) return;
+        setFocusAdd(false);
+        const add = bodyRef.current?.querySelector<HTMLButtonElement>('.sim-panel__decl-add');
+        add?.scrollIntoView({ block: 'nearest' });
+        add?.focus();
+    }, [focusAdd]);
 
     const roles: Roles = useMemo(() => {
         try { return JSON.parse(roleSig) as Roles; } catch { return {}; }
@@ -495,7 +507,18 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         () => (selected.system && sketch ? bindProfile(selected, sketch) : null),
         [selected, sketch],
     );
-    const summary = useMemo(() => profileSummary(selected, profileBag, bindings), [selected, profileBag, bindings]);
+    // The Bound proposal (R-SIM-81, G2): the largest initial marking on the models, read only while the panel is open.
+    const markingInputs = useMemo(
+        () => (bindings ? boundProposalInputs(selected, profileBag, bindings) : null),
+        [selected, profileBag, bindings],
+    );
+    const largestMarking = useSelector((state: DState) => (open && configModelId && markingInputs
+        ? largestInitialMarking((state as any)?.idlookup ?? {}, configModelId, markingInputs.node, markingInputs.initialMarking)
+        : null));
+    const summary = useMemo(
+        () => profileSummary(selected, profileBag, bindings, largestMarking),
+        [selected, profileBag, bindings, largestMarking],
+    );
     /** The groups show when the user unfolded them, or by default when the stored profile is not checkable. */
     const groupsShown = configureOpen ?? checkability(stored.profile, profileBag).status === 'notCheckable';
 
@@ -552,7 +575,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const lmm: any = LPointerTargetable.fromPointer(configModelId);
         if (!lmm) return;
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const result = profilePatch(selected, profileBag, bindings, lookup, options.classes.map(c => c.id));
+        const result = profilePatch(selected, profileBag, bindings, lookup, options.classes.map(c => c.id), largestMarking);
         if (result.kind === 'refused') {
             setRoleWarning(null);
             setRoleError(overlapMessage(lookup, result.overlap));
@@ -563,7 +586,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         lmm.state = result.patch;
         setChosen(null);
         setConfigureOpen(null);
-    }, [configModelId, bindings, selected, profileBag, options]);
+    }, [configModelId, bindings, selected, profileBag, options, largestMarking]);
 
     /** The declarations (R-SIM-67): the whole string in one write, `attrs: []` for none, never `undefined`. */
     const writeStateAttributes = useCallback((value: string): void => {
@@ -717,7 +740,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
      * so the select never shows the placeholder over a set key.
      */
     const selectOptions = (spec: RoleSpec): MetaOption[] => {
-        const list = optionsFor(spec.kind);
+        // Node and Transition may be abstract in control flow (R-SIM-81): the engine matches their instances by kind.
+        const list = (spec.key === 'simNode' || spec.key === 'simTransition') && !petriShape ? options.allClasses : optionsFor(spec.kind);
         const bound = roles[spec.key];
         if (!bound || (spec.kind !== 'expression' && spec.kind !== 'action') || list.some(o => o.id === bound)) return list;
         const kept = options.attributes.find(o => o.id === bound);
@@ -771,7 +795,14 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         return ((store.getState() as any).idlookup ?? {})[id]?.name ?? id;
     };
 
-    /** The summary under the profile row (R-SIM-77, R-SIM-79): verdict, missing, choices, proposals, kept, set but off. */
+    /** The hint's «Add attribute» (R-SIM-81, G9): the groups and Data unfold, and the table's add control takes the focus. */
+    const declareAttributes = (): void => {
+        setConfigureOpen(true);
+        setOpenGroups(g => ({ ...g, data: true }));
+        setFocusAdd(true);
+    };
+
+    /** The summary under the profile row (R-SIM-77, R-SIM-79): verdict, missing, choices, proposals, kept, set but off, declarations. */
     const renderSummary = (): ReactElement => {
         const text = profileSummaryText(summary, nameOf);
         return (
@@ -788,7 +819,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 {text.proposals.length > 0 && (
                     <ul className="sim-panel__proposals" aria-label="Apply sets">
                         {summary.proposals.map((p, i) => (
-                            <li className="sim-panel__proposal" key={p.key} title={`${text.proposals[i]}. ${bindings?.[p.role]?.why ?? ''}`}>
+                            <li className="sim-panel__proposal" key={p.key} title={`${text.proposals[i]}. ${p.why ?? bindings?.[p.role]?.why ?? ''}`}>
                                 {text.proposals[i]}
                             </li>
                         ))}
@@ -796,6 +827,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 )}
                 {text.kept && <div className="sim-panel__hint">{text.kept}</div>}
                 {text.setButOff && <div className="sim-panel__hint">{text.setButOff}</div>}
+                {text.declare && (
+                    <div className="sim-panel__hint">
+                        {`${text.declare} `}
+                        <button type="button" className="sim-panel__hint-action" onClick={declareAttributes}>Add attribute</button>
+                    </div>
+                )}
                 {!stored.readable && (
                     <div className="sim-panel__hint sim-panel__hint--warning">The stored profile is not readable.</div>
                 )}
@@ -859,7 +896,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 </button>
             </div>
 
-            <div className="sim-panel__body">
+            <div className="sim-panel__body" ref={bodyRef}>
                 {!isModelMode ? (
                     <>
                         <div className="sim-panel__section">Simulation roles</div>

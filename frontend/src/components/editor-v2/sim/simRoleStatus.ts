@@ -7,7 +7,7 @@
  * SimulationPanel.tsx, which imports them (P-2026-09-24-1005).
  */
 
-import { STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
+import { STATE_ATTRIBUTES_KEY, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
 import { ROLE_CATALOG, roleDescriptor } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
 import { checkability } from '../../../model/simulation/simProfiles';
@@ -214,7 +214,11 @@ export function storedProfile(bag: Readonly<Record<string, unknown>>): StoredPro
         : { profile: inferCustomProfile(bag).profile, custom: true, readable: false };
 }
 
-export interface ProfileProposal { readonly role: RoleId; readonly key: string; readonly label: string; readonly value: string }
+export interface ProfileProposal {
+    readonly role: RoleId; readonly key: string; readonly label: string; readonly value: string;
+    /** Why, for a proposal that is not the binder's: the Bound (R-SIM-81). */
+    readonly why?: string;
+}
 export interface ProfileChoice { readonly role: RoleId; readonly key: string; readonly label: string; readonly values: readonly string[] }
 export interface ProfileKept { readonly role: RoleId; readonly key: string; readonly label: string; readonly value: string; readonly proposed: string }
 
@@ -234,6 +238,11 @@ export interface ProfileSummary {
     readonly setButOff: readonly string[];
     /** Apply has something to write: a proposal, or a `simProfile` other than the stored one. */
     readonly pending: boolean;
+    /**
+     * Action, Entry or Exit is bound as Apply leaves the bag and no state
+     * attribute is declared: the first firing would halt (R-SIM-81, G9).
+     */
+    readonly declareHint?: boolean;
 }
 
 /** A role value: a non-empty string, the filter of stcFromRoles.ts. */
@@ -246,28 +255,68 @@ function itemLabel(item: RequiredItem): string {
     return typeof item === 'string' ? roleDescriptor(item).label : item.anyOf.map(r => roleDescriptor(r).label).join(' or ');
 }
 
-/** The writes of Apply for the role keys: bound, `edit`, unset. Never `undefined`, never over a set key. */
-function proposalsOf(profile: SimProfile, bag: Readonly<Record<string, unknown>>, bindings: ProfileBindings): ProfileProposal[] {
+/** The reason of the Bound proposal, in its title (R-SIM-81). */
+const BOUND_WHY = 'The largest initial marking on the models of this metamodel';
+
+/**
+ * The writes of Apply for the role keys: bound, `edit`, unset. Never `undefined`, never over a set key.
+ * Bound is a value, not a binding: the largest initial marking read on the models, when above 1 (R-SIM-81).
+ */
+function proposalsOf(
+    profile: SimProfile, bag: Readonly<Record<string, unknown>>, bindings: ProfileBindings, largestMarking?: number | null,
+): ProfileProposal[] {
     const out: ProfileProposal[] = [];
     for (const d of ROLE_CATALOG) {
+        if (d.key === null || profile.modes[d.id].mode !== 'edit' || isSetKey(bag, d.key)) continue;
+        if (d.id === 'bound') {
+            if (typeof largestMarking === 'number' && largestMarking > 1) {
+                out.push({ role: d.id, key: d.key, label: d.label, value: String(largestMarking), why: BOUND_WHY });
+            }
+            continue;
+        }
         const b = bindings[d.id];
-        if (d.key === null || profile.modes[d.id].mode !== 'edit' || b?.status !== 'bound' || isSetKey(bag, d.key)) continue;
-        out.push({ role: d.id, key: d.key, label: d.label, value: b.value });
+        if (b?.status === 'bound') out.push({ role: d.id, key: d.key, label: d.label, value: b.value });
     }
     return out;
 }
 
 /**
+ * What the Bound proposal measures on the models (R-SIM-81, G2): the Place
+ * class and the Initial marking attribute as Apply leaves them, the bag's value
+ * first, the binder's otherwise. `null` when Bound is not `edit`, is already
+ * set, or either input is unknown: then the models are not read.
+ */
+export function boundProposalInputs(
+    profile: SimProfile, bag: Readonly<Record<string, unknown>>, bindings: ProfileBindings,
+): { node: string; initialMarking: string } | null {
+    if (profile.modes.bound.mode !== 'edit' || isSetKey(bag, 'simBound')) return null;
+    const valueOf = (role: RoleId, key: string): string | undefined => {
+        if (isSetKey(bag, key)) return bag[key] as string;
+        const b = bindings[role];
+        return b?.status === 'bound' ? b.value : undefined;
+    };
+    const node = valueOf('node', 'simNode');
+    const initialMarking = valueOf('initialMarking', 'simInitialMarking');
+    return node && initialMarking ? { node, initialMarking } : null;
+}
+
+/** The keys whose actions write state attributes (R-SIM-69). */
+const ACTION_KEYS: readonly RoleKey[] = ['simAction', 'simEntry', 'simExit'];
+
+/**
  * The summary line of the profile row. `bindings` null for «Custom», which
  * nothing is bound against. The verdict is taken on the bag as Apply would
  * leave it, so a preview reads «Checkable» only when Apply gets there.
+ * `largestMarking` is `largestInitialMarking` over `boundProposalInputs`
+ * (modelMarkings.ts), the source of the Bound proposal (R-SIM-81).
  */
 export function profileSummary(
     profile: SimProfile,
     bag: Readonly<Record<string, unknown>>,
     bindings: ProfileBindings | null,
+    largestMarking?: number | null,
 ): ProfileSummary {
-    const proposals = bindings ? proposalsOf(profile, bag, bindings) : [];
+    const proposals = bindings ? proposalsOf(profile, bag, bindings, largestMarking) : [];
     const after: Record<string, unknown> = { ...bag };
     for (const p of proposals) after[p.key] = p.value;
     const verdict = checkability(profile, after);
@@ -297,6 +346,8 @@ export function profileSummary(
         kept,
         setButOff,
         pending: bindings !== null && (proposals.length > 0 || bag[PROFILE_KEY] !== encodeProfile(profile)),
+        declareHint: ACTION_KEYS.some(k => isSetKey(after, k))
+            && stateAttributeRows(isSetKey(after, STATE_ATTRIBUTES_KEY) ? after[STATE_ATTRIBUTES_KEY] as string : undefined).rows.length === 0,
     };
 }
 
@@ -312,6 +363,8 @@ export interface ProfileSummaryText {
     readonly kept: string | null;
     /** The information line of D8. */
     readonly setButOff: string | null;
+    /** The declarations hint (R-SIM-81, G9), followed in the panel by its «Add attribute» button. */
+    readonly declare?: string | null;
 }
 
 /** The text of the summary; `nameOf` names a class or feature by id. */
@@ -324,9 +377,11 @@ export function profileSummaryText(summary: ProfileSummary, nameOf: (id: string)
         choose: summary.choices.length > 0
             ? `Choose ${summary.choices.map(c => `${c.label}: ${c.values.length} candidates (${c.values.map(nameOf).join(', ')})`).join('; ')}.`
             : null,
-        proposals: summary.proposals.map(p => `${p.label} → ${nameOf(p.value)}`),
+        // A parameter (Bound) is a number, not an element to name.
+        proposals: summary.proposals.map(p => `${p.label} → ${roleDescriptor(p.role).kind === 'int' ? p.value : nameOf(p.value)}`),
         kept: summary.kept.length > 0 ? `Kept: ${summary.kept.map(k => `${k.label} (${nameOf(k.value)})`).join(', ')}.` : null,
         setButOff: summary.setButOff.length > 0 ? `Set but off: ${summary.setButOff.join(', ')}.` : null,
+        declare: summary.declareHint ? 'Declare the state attributes the actions write:' : null,
     };
 }
 
@@ -340,6 +395,7 @@ export type ProfileApply =
  * check of a role write (R-SIM-16) on the bag as it will stand, the event class
  * derived. A refusal writes nothing; an overlap that does not refuse is
  * written, with the overlap for the warning line, as a role write is.
+ * `largestMarking` is the summary's, so Apply writes the Bound it listed (R-SIM-81).
  */
 export function profilePatch(
     profile: SimProfile,
@@ -347,9 +403,10 @@ export function profilePatch(
     bindings: ProfileBindings,
     lookup: Record<string, any>,
     classIds: readonly string[],
+    largestMarking?: number | null,
 ): ProfileApply {
     const patch: Record<string, string> = {};
-    for (const p of proposalsOf(profile, bag, bindings)) patch[p.key] = p.value;
+    for (const p of proposalsOf(profile, bag, bindings, largestMarking)) patch[p.key] = p.value;
     patch[PROFILE_KEY] = encodeProfile(profile);
     const verdict = overlapVerdict(lookup, withDerivedEventRole({ ...bag, ...patch }, lookup), classIds);
     if (verdict?.refuse) return { kind: 'refused', overlap: verdict.overlap };

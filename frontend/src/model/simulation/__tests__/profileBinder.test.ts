@@ -255,6 +255,63 @@ describe('ties are never resolved (R-SIM-77, D3)', () => {
     });
 });
 
+/** The UML activity of the demo readiness report §3, flow A: the node superclass is abstract (G5). */
+const ACTIVITY: MetamodelSketch = {
+    classes: [
+        C('ActivityNode', [], true), C('InitialNode', ['ActivityNode']), C('Activity', ['ActivityNode']), C('Decision', ['ActivityNode']),
+        C('Fork', ['ActivityNode']), C('Join', ['ActivityNode']), C('ActivityFinal', ['ActivityNode']), C('ControlFlow'),
+    ],
+    attributes: [A('ControlFlow', 'guard', EXPR), A('ControlFlow', 'effect', ACT)],
+    references: [R('ControlFlow', 'source', 'ActivityNode'), R('ControlFlow', 'target', 'ActivityNode')],
+};
+
+describe('abstract Node and Transition in control flow (R-SIM-81, G5)', () => {
+    it('an abstract node superclass is Node under Flowchart, with a reason that says so (killed by the concrete-only rule on Node)', () => {
+        const b = bindProfile(profile('flowchart'), ACTIVITY);
+        expect(statuses(b)).toMatchObject({
+            node: 'ActivityNode', transition: 'ControlFlow', nextState: 'ControlFlow.target', source: 'ControlFlow.source',
+            initial: 'InitialNode', fork: 'Fork', join: 'Join', activityFinal: 'ActivityFinal', guard: 'ControlFlow.guard', action: 'ControlFlow.effect',
+        });
+        expect(b.node?.why).toContain('ActivityNode is abstract');
+        expect(checkability(profile('flowchart'), bagOf(b))).toEqual({ status: 'checkable', missing: [] });
+        // control: a concrete Node says nothing about abstraction
+        expect(bindProfile(profile('stateMachine'), TURNSTILE).node?.why).not.toContain('abstract');
+    });
+
+    it('an abstract edge superclass is Transition under State machine (killed by the concrete-only rule on Transition)', () => {
+        const edges: MetamodelSketch = {
+            classes: [C('Node'), C('Start', ['Node']), C('Edge', [], true), C('Flow', ['Edge'])],
+            attributes: [],
+            references: [R('Edge', 'source', 'Node'), R('Edge', 'target', 'Node')],
+        };
+        const b = bindProfile(profile('stateMachine'), edges);
+        expect(b.transition).toMatchObject({ status: 'bound', value: 'Edge' });
+        expect(b.transition?.why).toContain('Edge is abstract');
+        expect(checkability(profile('stateMachine'), bagOf(b)).status).toBe('checkable');
+    });
+
+    it('Initial and Terminal stay concrete: an abstract subclass named like one is none (killed by accepting an abstract class for Initial)', () => {
+        const ends: MetamodelSketch = {
+            classes: [C('State'), C('Initial', ['State'], true), C('Final', ['State'], true), C('Transition')],
+            attributes: [],
+            references: [R('State', 'out', 'Transition', true), R('Transition', 'next', 'State')],
+        };
+        const b = bindProfile(profile('flowchart'), ends);
+        expect(statuses(b)).toMatchObject({ node: 'State', initial: '-', terminal: '-' });
+        expect(b.initial?.why).toBe('No concrete subclass of State named like Initial');
+        // control: the same classes concrete are bound
+        const concrete: MetamodelSketch = { ...ends, classes: [C('State'), C('Initial', ['State']), C('Final', ['State']), C('Transition')] };
+        expect(statuses(bindProfile(profile('flowchart'), concrete))).toMatchObject({ initial: 'Initial', terminal: 'Final' });
+    });
+
+    it('Petri is unchanged: the abstract arc end is never Node, the place is (the allowance is control flow only)', () => {
+        const b = bindProfile(profile('petri'), PETRI_3B);
+        expect(b.node).toMatchObject({ status: 'bound', value: 'Place' });
+        expect(b.transition).toMatchObject({ status: 'bound', value: 'PTrans' });
+        expect(b.node?.why).not.toContain('abstract');
+    });
+});
+
 describe('Trigger is bound only within the transition lineage (report §3.1)', () => {
     it('a reference to an event-like class owned outside the transition lineage is never Trigger (killed by dropping the lineage restriction)', () => {
         const outside: MetamodelSketch = {
