@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1501
 Chat: C-2026-09-27-1428
 Lane: fast (a short discovery inside the lane, then one SCSS fix scoped to the simulation panel; a probe crop in dark replaces the visual check, the chat reads the pixels)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-dark-select-chevron · 50c198da5
 
 Worktree: `~/jjodel-open`, branch `sim-dark-select-chevron` (cut by the chat from `alfonso-frontend-jjtl` at `86520a8f3`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-open`, branch `sim-dark-select-chevron`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
