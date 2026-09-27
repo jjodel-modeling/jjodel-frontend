@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1500
 Chat: C-2026-09-27-1428
 Lane: fast (probe only: no source change, a discovery report, one log entry; the chat reads the crops)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-hint-path-probe · the commit of this line (docs-only probe: report, entry and flip in one commit, so no sha of its own)
 
 Worktree: `~/jjodel-icons`, branch `sim-hint-path-probe` (cut by the chat from `alfonso-frontend-jjtl` at `86520a8f3`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `sim-hint-path-probe`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
