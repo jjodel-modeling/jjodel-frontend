@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1015
 Chat: C-2026-09-26-1702
 Lane: full (Phase 1 discovery, read-only; measured on a dev server; a report)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane simulation-engine · 567dc25da (discovery only, no Phase 2: the report is the deliverable)
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine` (fast-forwarded by the chat to the trunk at `0eaf477a8`, which carries C1, C2 and M3 merged), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file (its parent `0eaf477a8`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*` (this tree holds many from earlier lanes; leave them). Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-1015 · session <id>]` and ends with a bare `Outcome:` line. Run gates and probes in the foreground.
 
