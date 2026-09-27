@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-2324
 Chat: C-2026-09-27-1437
 Lane: full (Phase 2 of P-2026-09-27-1647, slice A2; `SimulationPanel.tsx` touched; visual check by the chat on the lane's crops, RC-23)
-Status: eseguito 2026-09-28 · lane sim-canvas-state · e49b10497 · verifica visiva in attesa (RC-23; Phase 2 slice A2; crops in ~/.jjodel-lanes/shots_canvas_a2/)
+Status: eseguito 2026-09-28 · lane sim-canvas-state · e49b10497 · verifica visiva passata 2026-09-28 (chat, RC-23; Phase 2 slice A2, entry 606d9e761; crops in ~/.jjodel-lanes/shots_canvas_a2/)
 
 Worktree: `~/jjodel-icons`, branch `sim-canvas-state` (A1 at `4538d824f`, flip `b0d75d190`, then the trunk taken in by P-2026-09-27-2304 after the modal and halt-line merges), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `sim-canvas-state`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
