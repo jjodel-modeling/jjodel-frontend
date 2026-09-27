@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1540
 Chat: C-2026-09-27-1437
 Lane: fast (docs only: one section of the demo script, one log entry; no code, no visual check)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-demo-script-hint · the commit of this line
 
 Worktree: `~/jjodel-open`, branch `sim-demo-script-hint` (cut by the chat from `alfonso-frontend-jjtl` at `d7fe8871f`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-open`, branch `sim-demo-script-hint`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 

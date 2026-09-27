@@ -194,3 +194,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: probe readings and 2x crops for the chat (dark: an SVG `background-image` on the 4 table selects before, `none` on 21 of 21 panel selects after, one chevron; light: `none` before and after, the 4 crops byte-identical by `cmp`; shots in `~/.jjodel-lanes/shots_chevron/`)
 **Notes**: Closes C1's doubled-chevron ticket. Not a second chevron but a row: `[data-theme="dark"] select` (`_form-system.scss:760`, 0,1,1) outranks `.sim-panel__select` (0,1,0), and its SVG tiles (the dark shorthand at `:735` resets repeat) beside the native arrow. It hits every panel select since panel v1 (`1b67b65fa`), so the rule covers all 21. Dark background colour unchanged (report §5). Probes `_tmp_chevron_*` gitignored; logs in `~/.jjodel-lanes/P-2026-09-27-1501/`.
 **Prompt document name**: 2026-09-27 15:01
+
+## 2026-09-27 — docs: demo script names the ESM hint path gestures (P-2026-09-27-1540)
+**Prompt**: `claude_2026-09-27_1540_prompt_sim_demo_script_hint_gestures.md`, fast lane, docs only, on `sim-demo-script-hint` in `~/jjodel-open`: §6 of `discovery_2026-09-27_sim_demo_hint_path_trunk.md` (`6acdb7080`, branch `sim-hint-path-probe`) applied step by step to §2.3 of the demo script, the three scrolls and the double-clicks named, the R2-only claim of §4 replaced by the trunk measurement.
+**Files touched**: this commit: `docs/demo/models_2026_simulator_demo.md` (§2.3 declarations steps 1 to 4 and the count sentence, §4 the summary-button risk), this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 14:30 (`claude_2026-09-27_1430_prompt_sim_demo_script.md`: its §2.3 steps 2 and 3 did not name the scrolls and the prefilled cells the trunk measured)
+**Causa**: (c)
+**Regressions**: no. Docs only, no source file changed. `grep -c '—'` on the script 0 (exit 1, control `Marking` 43); `check:docs` 4/4.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: No value of §6 contradicts the script: min 0, max 3, initial 0, the 10 interactions (1 hint, 2 add, 7 cells) hold. Measured code `86520a8f3`; since then `frontend/src/components/editor-v2/sim/` differs by `50c198da5` only, a dark-only select rule (light computes `none`): read, not re-run. §2.4 line 274 types into the same prefilled cells and names no double-click; out of scope, left as is. The table-add ticket stays open (chat, RC-25).
+**Prompt document name**: 2026-09-27 15:40
