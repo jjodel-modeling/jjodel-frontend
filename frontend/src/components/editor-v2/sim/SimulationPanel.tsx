@@ -988,7 +988,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             stays where it is (R-SIM-82, G8); the marking line sits last, for the run's whole lifetime. */}
                         {pending && run && (
                             <>
-                                <div className="sim-panel__section">{`Choose a transition (${pending.input})`}</div>
+                                <div className="sim-panel__section">Choose a transition (<span className="sim-panel__section-input">{pending.input}</span>)</div>
                                 <div className="sim-panel__choices">
                                     {pending.candidates.map(c => (
                                         <button
