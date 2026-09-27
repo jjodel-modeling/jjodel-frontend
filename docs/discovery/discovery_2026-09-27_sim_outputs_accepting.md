@@ -584,3 +584,5 @@ Readings quoted in §1 and §5; the log verbatim:
 6. **The E2 merge is not on the trunk yet** (`sim-e2-panel-bound` not an ancestor of HEAD [M]). Lane 1 branches after
    it.
 7. **RC-27** (§10, item 11).
+
+**Answered by Alfonso, 2026-09-27 17:47 (in chat, C-2026-09-27-1437): ok to the recommendations.** Mealy: wire only the role-bound outputs now; the link to computed outputs (R-SIM-51) is deferred until after the modal lane.
