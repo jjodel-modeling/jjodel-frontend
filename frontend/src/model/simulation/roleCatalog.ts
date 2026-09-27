@@ -6,11 +6,12 @@
  * binds and the roles it depends on (memo table «Catalogo e dipendenze»). A
  * profile (simProfiles.ts) picks a mode for each role; it adds no semantics.
  *
- * `simAccepting`, `simActivityFinal`, `simStateOutput` and `simTransitionOutput`
- * are new and provisional (R-SIM-52): nothing reads or writes them yet.
+ * `simAccepting`, `simStateOutput` and `simTransitionOutput` are new and
+ * provisional (R-SIM-52): nothing reads or writes them yet.
  * `simAction`, `simEntry`, `simExit` and `simStateAttributes` are read by the run
- * since lane C1 (R-SIM-68, R-SIM-69). `simEvent` is not here: the event metaclass
- * is the declared type of Trigger, derived on every read (R-SIM-38).
+ * since lane C1 (R-SIM-68, R-SIM-69), `simActivityFinal` since lane E1 (R-SIM-53).
+ * `simEvent` is not here: the event metaclass is the declared type of Trigger,
+ * derived on every read (R-SIM-38).
  *
  * Pure data: no React, no store.
  */

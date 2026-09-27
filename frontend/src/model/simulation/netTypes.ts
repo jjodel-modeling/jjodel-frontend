@@ -120,6 +120,8 @@ export interface NetStc {
     /** The integer feature of the initial marking (the natural kind, R-SIM-9, R-SIM-28). */
     readonly initialMarking?: string;
     readonly terminal?: string;
+    /** R-SIM-53: the metaclass whose marked instance terminates the run, other tokens aside. */
+    readonly activityFinal?: string;
     readonly ownedTransitions?: string;
     readonly source?: string;
     readonly nextState?: string;
@@ -188,14 +190,17 @@ export interface NetTransition {
     readonly triggers: readonly string[];
     /** The elements whose guard applies, conjoined; `[]`: no guard, true (R-SIM-17). */
     readonly guardSites: readonly string[];
-    /** An explicit `else`: its guard is not (g1 or … or gn) over these siblings (R-SIM-25, R-SIM-31). */
+    /**
+     * An explicit `else`: its guard is not (g1 or … or gn) over these siblings (R-SIM-25, R-SIM-31),
+     * conjoined with its remaining `guardSites`, a fused transition's other edges (G7).
+     */
     readonly elseOf: readonly string[] | null;
     readonly actionSites: readonly ActionSite[];
 }
 
 export type NetDefectCode =
     | 'no-target' | 'no-source' | 'not-a-place' | 'pseudo-chain' | 'pseudo-open'
-    | 'bad-arc' | 'bad-weight' | 'else-twice' | 'initial-over-bound';
+    | 'bad-arc' | 'bad-weight' | 'else-twice' | 'else-position' | 'initial-over-bound';
 
 /** A compile defect (R-SIM-31): the element never becomes a candidate, and the reason is kept. */
 export interface NetDefect {
@@ -213,6 +218,8 @@ export interface CompiledNet {
     readonly bound: number;
     /** F, the places that are a kind of `simTerminal`; `null` when the role is unset (R-SIM-27, R-SIM-28). */
     readonly final: ReadonlySet<string> | null;
+    /** The places that are a kind of `simActivityFinal` (R-SIM-53); absent or `null` when the role is unset. */
+    readonly activityFinal?: ReadonlySet<string> | null;
     readonly hasEventRole: boolean;
     readonly attributes: readonly StateAttributeDecl[];
     /**

@@ -611,6 +611,32 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         expect(r.title.split("'nope' does not exist").length - 1).toBe(1);
     });
 
+    it('G7: an else into a fork whose out-edge guard is false names that edge, not the else (mutant: the entry always else)', () => {
+        // S -e1-> D ; D -e2 [false]-> A ; D -e3 [else]-> F ; F -e4 [false]-> B, -e5-> C
+        const lookup = buildLookup({ ...ROLES, simFork: 'C_Fork', simGuard: 'A_guard' }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+            D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+            F: { cls: 'C_Fork', slots: { R_out: ['e4', 'e5'] } },
+            A: { cls: 'C_State' },
+            B: { cls: 'C_State' },
+            C: { cls: 'C_State' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['D'] } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: ['false'] } },
+            e3: { cls: 'C_Trans', slots: { R_next: ['F'], A_guard: ['else'] } },
+            e4: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: ['false'] } },
+            e5: { cls: 'C_Trans', slots: { R_next: ['C'] } },
+        });
+        lookup.C_Fork = { className: 'DClass', id: 'C_Fork', name: 'Fork', extends: [] };
+        const r0 = reset(lookup);
+        // no defect at Reset: the else is no guard of the fork (on the tree: e3 guard, parse error)
+        expect(defectsLine(r0.run.net, lookup, r0.compileDefects)).toBeNull();
+        eps(lookup);
+        agrees(lookup);
+        const r = why(lookup)!;
+        expect(r.line).toBe('ε: e2 false; e4 false');
+        expect(r.title).toBe('ε: e2 (D → A) false [false]; F (D → B, C): e4 false [false]');
+    });
+
     it('an inhibitor names its place by name, never by id (mutant: the id printed)', () => {
         const lookup = petri({
             pa: { cls: 'C_Place', slots: { A_tokens: [1] } },
