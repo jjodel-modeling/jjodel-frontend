@@ -12,6 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+    boundProposalInputs,
     ENGINE_ROLE_KEYS,
     eventRoleWarning,
     incompleteConfigurationMessage,
@@ -25,7 +26,9 @@ import {
     storedProfile,
 } from '../simRoleStatus';
 import type { Roles } from '../simRoleStatus';
+import { largestInitialMarking } from '../modelMarkings';
 import { netStcFromRoles } from '../../../../model/simulation/netCompile';
+import { encodeStateAttributes } from '../../../../model/simulation/stateAttributesCodec';
 import { systemProfile } from '../../../../model/simulation/simProfiles';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
 import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
@@ -340,5 +343,118 @@ describe('profilePatch (R-SIM-78)', () => {
     it('a control-flow overlap without the event role writes, with the overlap as a warning (the rule of writeRole)', () => {
         const r = profilePatch(SM, {}, { node: bound('C_State'), transition: bound('C_State') }, TURN_LOOKUP, TURN_CLASSES);
         expect(r).toMatchObject({ kind: 'write', overlap: { classId: 'C_State', sorts: ['node', 'transition'] } });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Apply completes the natural shapes (R-SIM-81, P-2026-09-27-1110)
+// ---------------------------------------------------------------------------
+
+/** A Petri model of the metamodel MM whose places hold `markings`, as the raw lookup has it. */
+function petriLookup(markings: readonly number[]): Record<string, any> {
+    const lookup: Record<string, any> = {
+        MM: { className: 'DModel', id: 'MM' },
+        C_Place: { className: 'DClass', id: 'C_Place', extends: [] },
+        M1: { className: 'DModel', id: 'M1', instanceof: 'MM' },
+    };
+    markings.forEach((m, i) => {
+        lookup[`p${i}`] = { className: 'DObject', id: `p${i}`, instanceof: 'C_Place', father: 'M1', features: [`v${i}`] };
+        lookup[`v${i}`] = { className: 'DValue', id: `v${i}`, instanceof: 'A_tokens', father: `p${i}`, values: [m] };
+    });
+    return lookup;
+}
+
+/** The b2net bag before Apply: nothing set. */
+const PETRI_EMPTY_BAG: Record<string, string> = {};
+const B2NET_UNBOUNDED: Record<string, string> = { ...B2NET_BAG };
+delete B2NET_UNBOUNDED.simBound;
+
+describe('Bound from the models (R-SIM-81, G2)', () => {
+    it('markings 2 and 3 give the proposal Bound → 3, listed in catalog order and written by the same patch', () => {
+        const largest = largestInitialMarking(petriLookup([2, 3, 1]), 'MM', 'C_Place', 'A_tokens');
+        expect(largest).toBe(3);
+        const s = profileSummary(PETRI_PROFILE, PETRI_EMPTY_BAG, B2NET_BINDINGS, largest);
+        expect(s.proposals.map(p => p.key)).toEqual([
+            'simNode', 'simInitialMarking', 'simBound', 'simTransition', 'simArc', 'simArcSource', 'simArcTarget',
+        ]);
+        expect(s.proposals.find(p => p.key === 'simBound')).toMatchObject({ role: 'bound', label: 'Bound', value: '3' });
+        expect(s.proposals.find(p => p.key === 'simBound')?.why).toMatch(/\S/);
+        expect(profileSummaryText(s, () => 'not a name').proposals).toContain('Bound → 3');
+        const r = profilePatch(PETRI_PROFILE, PETRI_EMPTY_BAG, B2NET_BINDINGS, {}, [], largest);
+        expect((r as { patch: Record<string, string> }).patch).toMatchObject({ simBound: '3', simNode: 'C_Place', simProfile: 'petri' });
+    });
+
+    it('a Petri bag complete but for the bound is pending on Bound alone', () => {
+        const s = profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, 2);
+        expect(s.proposals.map(p => [p.key, p.value])).toEqual([['simBound', '2']]);
+        expect(s.pending).toBe(true);
+    });
+
+    it('not proposed when every marking is at or below 1 (killed by proposing from 1)', () => {
+        const largest = largestInitialMarking(petriLookup([1, 1, 0]), 'MM', 'C_Place', 'A_tokens');
+        expect(largest).toBe(1);
+        const s = profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, largest);
+        expect(s.proposals).toEqual([]);
+        expect(s.pending).toBe(false);
+        const r = profilePatch(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, {}, [], largest);
+        expect(Object.keys((r as { patch: Record<string, string> }).patch)).not.toContain('simBound');
+        // no model, or no marking read: nothing either
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, null).proposals).toEqual([]);
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS).proposals).toEqual([]);
+    });
+
+    it('never over a Bound the user set, in the summary and in the patch (killed by writing simBound over a set key)', () => {
+        const bag = { ...B2NET_UNBOUNDED, simBound: '4' };
+        expect(profileSummary(PETRI_PROFILE, bag, B2NET_BINDINGS, 3).proposals).toEqual([]);
+        const r = profilePatch(PETRI_PROFILE, bag, B2NET_BINDINGS, {}, [], 3);
+        expect(Object.keys((r as { patch: Record<string, string> }).patch)).not.toContain('simBound');
+    });
+
+    it('not proposed where Bound is not edit: the control-flow presets derive k = 1', () => {
+        const s = profileSummary(SM, {}, TURN, 3);
+        expect(s.proposals.map(p => p.key)).not.toContain('simBound');
+    });
+
+    it('boundProposalInputs: the Place class and the Initial marking attribute, the bag\'s value first, null when there is nothing to measure', () => {
+        expect(boundProposalInputs(PETRI_PROFILE, {}, B2NET_BINDINGS)).toEqual({ node: 'C_Place', initialMarking: 'A_tokens' });
+        expect(boundProposalInputs(PETRI_PROFILE, { simNode: 'C_Mine' }, B2NET_BINDINGS)).toEqual({ node: 'C_Mine', initialMarking: 'A_tokens' });
+        expect(boundProposalInputs(PETRI_PROFILE, { simBound: '2' }, B2NET_BINDINGS)).toBeNull();
+        expect(boundProposalInputs(PETRI_PROFILE, {}, { ...B2NET_BINDINGS, initialMarking: none })).toBeNull();
+        expect(boundProposalInputs(SM, {}, TURN)).toBeNull();
+    });
+});
+
+describe('the declarations hint (R-SIM-81, G9)', () => {
+    const ESM = systemProfile('extendedStateMachine') as SimProfile;
+    const WITH_ACTION: ProfileBindings = { ...TURN, action: bound('A_effect') };
+    const DECLS = encodeStateAttributes([
+        { name: 'coins', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' },
+    ]);
+    const HINT = 'Declare the state attributes the actions write:';
+
+    it('Action bound and no declarations: the hint, whether Action is set or only proposed', () => {
+        const proposed = profileSummary(ESM, {}, WITH_ACTION);
+        expect(proposed.declareHint).toBe(true);
+        expect(profileSummaryText(proposed, nameOf).declare).toBe(HINT);
+        expect(profileSummary(ESM, { simAction: 'A_effect' }, TURN).declareHint).toBe(true);
+    });
+
+    it('Entry or Exit alone is enough; an empty declarations table counts as none', () => {
+        expect(profileSummary(ESM, { simEntry: 'A_entry' }, TURN).declareHint).toBe(true);
+        expect(profileSummary(ESM, { simExit: 'A_exit' }, TURN).declareHint).toBe(true);
+        expect(profileSummary(ESM, { simAction: 'A_effect', simStateAttributes: encodeStateAttributes([]) }, TURN).declareHint).toBe(true);
+    });
+
+    it('no hint once a declaration exists', () => {
+        const s = profileSummary(ESM, { simAction: 'A_effect', simStateAttributes: DECLS }, TURN);
+        expect(s.declareHint).toBe(false);
+        expect(profileSummaryText(s, nameOf).declare).toBeNull();
+    });
+
+    it('no hint with no action role bound (killed by showing the hint without Action, Entry or Exit)', () => {
+        const s = profileSummary(ESM, {}, TURN);
+        expect(s.declareHint).toBe(false);
+        expect(profileSummaryText(s, nameOf).declare).toBeNull();
+        expect(profileSummary(SM, {}, TURN).declareHint).toBe(false);
     });
 });

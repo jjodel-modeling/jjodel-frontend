@@ -686,6 +686,32 @@
         }
     }
 
+    // The action inside a hint line, «Add attribute» of the declarations hint (R-SIM-81): text-sized,
+    // underlined, in the vocabulary of `__configure`.
+    &__hint-action {
+        display: inline;
+        height: auto;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
     // -- M2 face: the declared state attributes of the Data group (lane C1, R-SIM-71) --
     // One row of three fixed lines per declaration: a domain kind that shows other
     // cells, a space that hides them, or a derived form that puts the equation in

@@ -199,11 +199,18 @@ const NODE_SUBCLASS_ROLES: ReadonlyArray<{ role: RoleId; name: RegExp; except?: 
 
 type Found = Partial<Record<RoleId, RoleBinding>>;
 
-/** A class role must be concrete: the panel's selects list concrete classes only. */
-function concrete(ix: SketchIndex, b: RoleBinding): RoleBinding {
-    return b.status === 'bound' && ix.isAbstract(b.value)
-        ? { status: 'none', why: `${ix.name(b.value)} is abstract: choose a concrete class` }
-        : b;
+/**
+ * A class role must be concrete: the panel's selects list concrete classes only.
+ * Node and Transition in control flow are the exception (R-SIM-81, G5): the
+ * engine matches their instances by kind (R-SIM-8), so an abstract superclass
+ * such as the UML ActivityNode binds, its reason says so, and their selects
+ * list it.
+ */
+function concrete(ix: SketchIndex, b: RoleBinding, abstractAllowed = false): RoleBinding {
+    if (b.status !== 'bound' || !ix.isAbstract(b.value)) return b;
+    return abstractAllowed
+        ? { ...b, why: `${b.why}; ${ix.name(b.value)} is abstract: its instances are its subclasses'` }
+        : { status: 'none', why: `${ix.name(b.value)} is abstract: choose a concrete class` };
 }
 
 /** Node, Transition, Next state (control flow): the best-scored plain reference T → N between unrelated classes. */
@@ -230,8 +237,9 @@ function controlFlowCore(ix: SketchIndex, out: Found): { node?: string; transiti
     out.nextState = one(top.map(r => r.id), 'The transition-to-node reference with the best name score', 'No reference');
     const nodes = unique(top.map(r => r.type));
     const transitions = unique(top.map(r => r.owner));
-    out.node = concrete(ix, one(nodes, 'The type of Next state', 'No reference'));
-    out.transition = concrete(ix, one(transitions, 'The owner of Next state', 'No reference'));
+    // Control flow: Node and Transition may be abstract (R-SIM-81).
+    out.node = concrete(ix, one(nodes, 'The type of Next state', 'No reference'), true);
+    out.transition = concrete(ix, one(transitions, 'The owner of Next state', 'No reference'), true);
     return { node: nodes.length === 1 ? nodes[0] : undefined, transition: transitions.length === 1 ? transitions[0] : undefined };
 }
 
