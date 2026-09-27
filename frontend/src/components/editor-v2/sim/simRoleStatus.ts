@@ -8,6 +8,15 @@
  */
 
 import { STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
+import { ROLE_CATALOG, roleDescriptor } from '../../../model/simulation/roleCatalog';
+import type { RoleId } from '../../../model/simulation/roleCatalog';
+import { checkability } from '../../../model/simulation/simProfiles';
+import type { RequiredItem, SimProfile, SystemProfileId } from '../../../model/simulation/simProfiles';
+import { decodeProfile, encodeProfile, inferCustomProfile } from '../../../model/simulation/profileCodec';
+import type { ProfileBindings } from '../../../model/simulation/profileBinder';
+import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
+import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
+import { withDerivedEventRole } from '../../../model/simulation/netCompile';
 
 // ---------------------------------------------------------------------------
 // Roles — flat keys in the M2 bag (R-SIM-2). No nested `sim: {...}` object: the
@@ -167,4 +176,182 @@ export function incompleteConfigurationMessage(metamodelName: string, missing: r
 export function eventRoleWarning(missing: readonly string[], metamodelName: string | null): string {
     const where = metamodelName === null ? '' : onMetamodel(metamodelName);
     return `Events disabled. Missing${where}: ${missing.join(', ')}.`;
+}
+
+// ---------------------------------------------------------------------------
+// The profile row of the M2 face (R-SIM-77..79)
+// ---------------------------------------------------------------------------
+
+/**
+ * The presets the panel lists, in the order of the memo table (R-SIM-79, A2).
+ * DFA, NFA, Moore and Mealy stay hidden until R-SIM-50 and R-SIM-51 are in the
+ * engine: nothing reads Accepting or the outputs yet.
+ */
+export const PANEL_PROFILE_IDS: readonly SystemProfileId[] = ['petri', 'flowchart', 'stateMachine', 'extendedStateMachine'];
+
+/** The `simProfile` key of the bag (R-SIM-55). */
+export const PROFILE_KEY = 'simProfile';
+
+export interface StoredProfile {
+    readonly profile: SimProfile;
+    /** No readable `simProfile`: «Custom», rebuilt from the role keys. */
+    readonly custom: boolean;
+    /** False when `simProfile` is present but does not decode (D6). */
+    readonly readable: boolean;
+}
+
+/**
+ * The profile a bag names. `simProfile` absent or empty → «Custom» from the
+ * bag; present but not decodable → «Custom» too, with `readable` false for
+ * the warning line (D6). Never throws.
+ */
+export function storedProfile(bag: Readonly<Record<string, unknown>>): StoredProfile {
+    const raw = bag[PROFILE_KEY];
+    if (raw === undefined || raw === null || raw === '') return { profile: inferCustomProfile(bag).profile, custom: true, readable: true };
+    const profile = decodeProfile(raw);
+    return profile
+        ? { profile, custom: false, readable: true }
+        : { profile: inferCustomProfile(bag).profile, custom: true, readable: false };
+}
+
+export interface ProfileProposal { readonly role: RoleId; readonly key: string; readonly label: string; readonly value: string }
+export interface ProfileChoice { readonly role: RoleId; readonly key: string; readonly label: string; readonly values: readonly string[] }
+export interface ProfileKept { readonly role: RoleId; readonly key: string; readonly label: string; readonly value: string; readonly proposed: string }
+
+export interface ProfileSummary {
+    readonly name: string;
+    /** `checkability` on the bag as Apply leaves it, with no verdicts: never «with warnings» (D5). */
+    readonly status: 'checkable' | 'notCheckable';
+    /** The required items still missing, as labels; an either-item reads «A or B». */
+    readonly missing: readonly string[];
+    /** What Apply writes: the bound values of the unset keys of `edit` roles, in catalog order. */
+    readonly proposals: readonly ProfileProposal[];
+    /** Unset roles with several candidates: named, never picked (R-SIM-77, D3). */
+    readonly choices: readonly ProfileChoice[];
+    /** Set keys Apply keeps although the binder proposes another value (R-SIM-55). */
+    readonly kept: readonly ProfileKept[];
+    /** The labels of the roles whose key is set and whose mode is `off` (D8). */
+    readonly setButOff: readonly string[];
+    /** Apply has something to write: a proposal, or a `simProfile` other than the stored one. */
+    readonly pending: boolean;
+}
+
+/** A role value: a non-empty string, the filter of stcFromRoles.ts. */
+function isSetKey(bag: Readonly<Record<string, unknown>>, key: string): boolean {
+    const value = bag[key];
+    return typeof value === 'string' && value !== '';
+}
+
+function itemLabel(item: RequiredItem): string {
+    return typeof item === 'string' ? roleDescriptor(item).label : item.anyOf.map(r => roleDescriptor(r).label).join(' or ');
+}
+
+/** The writes of Apply for the role keys: bound, `edit`, unset. Never `undefined`, never over a set key. */
+function proposalsOf(profile: SimProfile, bag: Readonly<Record<string, unknown>>, bindings: ProfileBindings): ProfileProposal[] {
+    const out: ProfileProposal[] = [];
+    for (const d of ROLE_CATALOG) {
+        const b = bindings[d.id];
+        if (d.key === null || profile.modes[d.id].mode !== 'edit' || b?.status !== 'bound' || isSetKey(bag, d.key)) continue;
+        out.push({ role: d.id, key: d.key, label: d.label, value: b.value });
+    }
+    return out;
+}
+
+/**
+ * The summary line of the profile row. `bindings` null for «Custom», which
+ * nothing is bound against. The verdict is taken on the bag as Apply would
+ * leave it, so a preview reads «Checkable» only when Apply gets there.
+ */
+export function profileSummary(
+    profile: SimProfile,
+    bag: Readonly<Record<string, unknown>>,
+    bindings: ProfileBindings | null,
+): ProfileSummary {
+    const proposals = bindings ? proposalsOf(profile, bag, bindings) : [];
+    const after: Record<string, unknown> = { ...bag };
+    for (const p of proposals) after[p.key] = p.value;
+    const verdict = checkability(profile, after);
+    const choices: ProfileChoice[] = [];
+    const kept: ProfileKept[] = [];
+    const setButOff: string[] = [];
+    for (const d of ROLE_CATALOG) {
+        if (d.key === null) continue;
+        const mode = profile.modes[d.id].mode;
+        if (mode === 'off') {
+            if (isSetKey(bag, d.key)) setButOff.push(d.label);
+            continue;
+        }
+        const b = bindings?.[d.id];
+        if (mode !== 'edit' || !b) continue;
+        if (b.status === 'candidates' && !isSetKey(bag, d.key)) choices.push({ role: d.id, key: d.key, label: d.label, values: b.values });
+        if (b.status === 'bound' && isSetKey(bag, d.key) && bag[d.key] !== b.value) {
+            kept.push({ role: d.id, key: d.key, label: d.label, value: bag[d.key] as string, proposed: b.value });
+        }
+    }
+    return {
+        name: profile.name,
+        status: verdict.status === 'notCheckable' ? 'notCheckable' : 'checkable',
+        missing: verdict.missing.map(itemLabel),
+        proposals,
+        choices,
+        kept,
+        setButOff,
+        pending: bindings !== null && (proposals.length > 0 || bag[PROFILE_KEY] !== encodeProfile(profile)),
+    };
+}
+
+export interface ProfileSummaryText {
+    /** «State machine · Checkable», «… after Apply» while something is pending. */
+    readonly status: string;
+    readonly badge: 'Checkable' | 'Not checkable';
+    readonly missing: string | null;
+    /** «Not checkable: choose …» (R-SIM-77): the roles left to the user, with their candidates. */
+    readonly choose: string | null;
+    /** One «Label → Value» per proposal. */
+    readonly proposals: readonly string[];
+    readonly kept: string | null;
+    /** The information line of D8. */
+    readonly setButOff: string | null;
+}
+
+/** The text of the summary; `nameOf` names a class or feature by id. */
+export function profileSummaryText(summary: ProfileSummary, nameOf: (id: string) => string): ProfileSummaryText {
+    const badge = summary.status === 'checkable' ? 'Checkable' : 'Not checkable';
+    return {
+        status: `${summary.name} · ${badge}${summary.pending ? ' after Apply' : ''}`,
+        badge,
+        missing: summary.missing.length > 0 ? `Missing: ${summary.missing.join(', ')}.` : null,
+        choose: summary.choices.length > 0
+            ? `Choose ${summary.choices.map(c => `${c.label}: ${c.values.length} candidates (${c.values.map(nameOf).join(', ')})`).join('; ')}.`
+            : null,
+        proposals: summary.proposals.map(p => `${p.label} → ${nameOf(p.value)}`),
+        kept: summary.kept.length > 0 ? `Kept: ${summary.kept.map(k => `${k.label} (${nameOf(k.value)})`).join(', ')}.` : null,
+        setButOff: summary.setButOff.length > 0 ? `Set but off: ${summary.setButOff.join(', ')}.` : null,
+    };
+}
+
+export type ProfileApply =
+    | { readonly kind: 'write'; readonly patch: Readonly<Record<string, string>>; readonly overlap: RoleOverlap | null }
+    | { readonly kind: 'refused'; readonly overlap: RoleOverlap };
+
+/**
+ * Apply as one `state` assignment (R-SIM-78, D2): the bound values of the
+ * unset keys of `edit` roles, plus `simProfile`, judged first by the overlap
+ * check of a role write (R-SIM-16) on the bag as it will stand, the event class
+ * derived. A refusal writes nothing; an overlap that does not refuse is
+ * written, with the overlap for the warning line, as a role write is.
+ */
+export function profilePatch(
+    profile: SimProfile,
+    bag: Readonly<Record<string, unknown>>,
+    bindings: ProfileBindings,
+    lookup: Record<string, any>,
+    classIds: readonly string[],
+): ProfileApply {
+    const patch: Record<string, string> = {};
+    for (const p of proposalsOf(profile, bag, bindings)) patch[p.key] = p.value;
+    patch[PROFILE_KEY] = encodeProfile(profile);
+    const verdict = overlapVerdict(lookup, withDerivedEventRole({ ...bag, ...patch }, lookup), classIds);
+    if (verdict?.refuse) return { kind: 'refused', overlap: verdict.overlap };
+    return { kind: 'write', patch, overlap: verdict?.overlap ?? null };
 }
