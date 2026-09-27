@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1437
 Chat: C-2026-09-27-1428
 Lane: fast (one additive defect code in the profile validator, engine only, unit tests; no visual check)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-validate-profile-from · 6ade65d90
 
 Worktree: `~/jjodel-open` (moved from `~/jjodel-gate`, taken by lane P-2026-09-27-1440 of the sibling chat while the first run started; that run stopped blocked at 0 min), branch `sim-validate-profile-from` (cut by the chat from `alfonso-frontend-jjtl` at `86520a8f3`, the trunk with the `harness-lanerun-wait` merge), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-open`, branch `sim-validate-profile-from`, `git log -1` is the docs commit whose subject starts with `docs: P-2026-09-27-1437 moves to ~/jjodel-open`; if any of the three differs, stop with `Outcome: blocked` and say which.
 

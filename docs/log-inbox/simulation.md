@@ -140,3 +140,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: probe readings and two crops for the chat (G13: «CHOOSE A TRANSITION (ε)», U+03B5, 5 of 5 conflicts; G14: 116 of 124 px before, 124 of 124 after, select 147.4 to 159.4 px at both sizes; `g13_header.png`, `g14_profile_row.png`)
 **Notes**: Closes G13 (and R3's ε ticket) and G14. G14 room from the label gap only, 48 to 36px («Profile» 33.4px); Apply untouched; 4px spare on the longest option. The readiness canvas reader counted the content box: the menulist paints text from column 10 and the arrow cuts it at 125 of a 147px select. No event conflict in the probe: «(coin)» holds by construction, not read. Probes `_tmp_g13_*`, `_tmp_g14_*` gitignored; shots in `~/.jjodel-lanes/shots_polish/`.
 **Prompt document name**: 2026-09-27 13:10
+
+## 2026-09-27 — fix: validateProfile rejects a derived role whose source is off (P-2026-09-27-1437)
+**Prompt**: `claude_2026-09-27_1437_prompt_sim_validate_profile_derived_from_off.md`, lane fast on `sim-validate-profile-from` in `~/jjodel-open`. The M3 ticket (medium): `validateProfile` passed Initial `off` with Initial marking derived from Initial. New `ProfileDefectCode` literal `derivedFromOff` (Rule 11), one `if` in the role loop, two tests.
+**Files touched**: code `6ade65d90`: `frontend/src/model/simulation/simProfiles.ts`, tests `frontend/src/model/simulation/__tests__/simProfiles.test.ts`. Docs, this commit: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-25 18:40 (`claude_2026-09-25_1840_prompt_sim_profiles_genre_fix.md`: it made Initial marking derived from Initial and taught `checkability` the source, not `validateProfile`)
+**Causa**: (a)
+**Regressions**: no. Baseline at `8c1a499c1`: vitest `src/model/simulation` 407 passed, 14 files; typecheck 14. On `6ade65d90`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest `src/model/simulation` 409 passed (407 + 2), 14 files; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Mutation bench 2/2 killed.
+**Out-of-scope changes**: no — the two files of DOVE; the edit of the existing case at `simProfiles.test.ts:194` entered DOVE with the GO of the question stop.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Question stop, answered GO (RC-21): State machine with Trigger off pinned an exact list, and Event is derived from Trigger, so it gained `[derivedFromOff, event, trigger]`, second of three; the check stays unconditional, so Event reports both dependencyOff and derivedFromOff. Second cause of the stop, (a) too: the prompt counted 34 existing cases, the file held 42. Mutants: check dropped, 2 red; inverted to `active(source)`, 12 red.
+**Prompt document name**: 2026-09-27 14:37
