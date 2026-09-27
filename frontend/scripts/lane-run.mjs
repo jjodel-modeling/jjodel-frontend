@@ -7,7 +7,7 @@
  * says so (merge, with --launch, moves the prompt it rendered into the tree and
  * commits it alone).
  *
- *   start <worktree> <prompt-file>
+ *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light]
  *                runs `claude -p` in <worktree> with the prompt file on stdin
  *                (the path as given, absolute or relative to the caller's
  *                directory, then relative to the worktree; refused, naming both,
@@ -116,7 +116,7 @@
  *                place) in log.jsonl and exit.txt, so status and wait read it as
  *                a lane. A failed precondition falls back, saying why: the
  *                rendered prompt is launched with --launch, parked without.
- *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>]
+ *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light]
  *                validates every prompt (a header Prompt-ID, no id twice, no lane
  *                folder yet; one in the tree committed, one outside it not yet in
  *                docs/prompts/), writes ~/.jjodel-lanes/chain-<first Prompt-ID>/
@@ -137,12 +137,20 @@
  *
  * Every run passes `--output-format stream-json --verbose` (stream-json under -p
  * requires --verbose) and `--permission-mode bypassPermissions` (RC-19: a -p
- * session in default mode cannot commit). No --model: the pin lives in
- * .claude/settings.json only (RC-16). `claude` is looked up on the PATH, then in
+ * session in default mode cannot commit). The model follows the activity
+ * (RC-32, amending RC-16): a heavy lane passes no --model and runs the pin of
+ * .claude/settings.json; a light lane passes --model LIGHT_MODEL. start picks the
+ * tier from the prompt's header and DOVE and from the command, never from free
+ * text (tierRule, below; heavy when in doubt), prints it, and writes it to
+ * tier.txt; --tier heavy|light on start, merge --launch and chain overrides it,
+ * light refused where the rule forces heavy. A resume passes no --model: the
+ * session keeps its own (measured, report of P-2026-09-27-2330, 7.1). `claude` is
+ * looked up on the PATH, then in
  * ~/.local/bin; the child's PATH starts with the directory of the node running
  * this script, so the lane's own gates do not meet the node 16 of a bare shell.
  * LANE_RUN_NOW=YYYY-MM-DDTHH:mm stands in for the clock (the tests), and
- * LANE_RUN_NPM for the npm of the gates (else the one beside this node).
+ * LANE_RUN_NPM for the npm of the gates (else the one beside this node), and
+ * LANE_RUN_LIGHT_MODEL for LIGHT_MODEL (empty or `null`: no light model).
  *
  * Plain ES module, nothing outside node:*, like the hooks beside it.
  * Exit codes: 0 done, 1 the launched session failed to start (a probe's
@@ -160,6 +168,12 @@ import { get as httpGet } from 'node:http';
 import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CRITICAL_FILES } from './hooks/critical-zone.mjs';
+
+// Model by activity (RC-32). heavy: the pin of .claude/settings.json, no --model (RC-16).
+// light: LIGHT_MODEL, set by the owner chat under RC-32; null runs every lane heavy.
+const LIGHT_MODEL = 'claude-sonnet-5';
+const TIERS = ['heavy', 'light'];
 
 const DEFAULT_LIMIT_MINUTES = 90;
 const START_WAIT_MS = 120000;
@@ -208,6 +222,7 @@ function laneFiles(id) {
         exit: join(dir, 'exit.txt'),
         goahead: join(dir, 'goahead.txt'),
         prompt: join(dir, 'prompt.txt'),
+        tier: join(dir, 'tier.txt'),
     };
 }
 
@@ -314,16 +329,102 @@ function goAheadOption(rest, id) {
     return v;
 }
 
-async function start(worktreeArg, promptArg, rest = []) {
-    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>]');
+// ── the model tier (RC-32) ───────────────────────────────────────────────────
+
+/** The names that put a prompt in the critical zone: the six files of CLAUDE.md 3.2 (the hook's list) and rule 14's two. */
+const CRITICAL_NAMES = [...CRITICAL_FILES.map((p) => basename(p)), 'DV.tsx', 'defaultViewTemplate.ts'];
+
+/** The header of a prompt (the lines before its first `## `) and its DOVE section, null when it has none. */
+function promptParts(text) {
+    const lines = text.split('\n');
+    const first = lines.findIndex((l) => l.startsWith('## '));
+    const header = (first === -1 ? lines : lines.slice(0, first)).join('\n');
+    const s = lines.findIndex((l) => /^## DOVE\b/.test(l));
+    if (s === -1) return { header, dove: null };
+    const e = lines.findIndex((l, i) => i > s && l.startsWith('## '));
+    return { header, dove: lines.slice(s + 1, e === -1 ? lines.length : e).join('\n') };
+}
+
+/**
+ * The paths DOVE writes, read strictly (answer 9 of the report of
+ * P-2026-09-27-2330): backticked paths of the tree, under frontend/, docs/,
+ * scripts/ or .claude/, or a governance file; a gitignored probe (`_tmp_`) and a
+ * path outside the tree (`~/...`) are not writes.
+ */
+function doveTargets(dove) {
+    return [...dove.matchAll(/`([^`\s]+)`/g)].map((m) => m[1])
+        .filter((p) => /^(frontend|docs|scripts|\.claude)\//.test(p) || GOVERNANCE.includes(p))
+        .filter((p) => !p.includes('_tmp_'));
+}
+
+/**
+ * The rule of RC-32: the tier a prompt runs, whether the rule forces it, and
+ * why, from the header, DOVE and the command, never from free text. Forced
+ * heavy: the critical-zone go-ahead, a merge session, the governance go-ahead,
+ * a critical-zone name in the header or DOVE, a governance file in DOVE,
+ * `Lane: full`, a discovery whose DOVE writes outside docs/. Light: `Lane: fast`
+ * or `Lane: discovery` whose DOVE writes docs/ only. Heavy when in doubt.
+ */
+function tierRule(text, ctx) {
+    const { header, dove } = promptParts(text);
+    const lane = (/^Lane:\s*([A-Za-z-]+)/m.exec(header) || [])[1] || '';
+    const targets = dove === null ? [] : doveTargets(dove);
+    const docsOnly = targets.length > 0 && targets.every((p) => p.startsWith('docs/'));
+    const forced = (reason) => ({ tier: 'heavy', forced: true, reason });
+    if (ctx.goahead) return forced('--critical-zone-goahead');
+    if (ctx.merge) return forced('a merge that falls back to a session');
+    if (ctx.governanceGoahead) return forced('--governance-goahead');
+    const cz = CRITICAL_NAMES.find((n) => header.includes(n) || (dove || '').includes(n));
+    if (cz) return forced('names ' + cz);
+    const gov = targets.find((p) => GOVERNANCE.includes(p));
+    if (gov) return forced('DOVE writes ' + gov);
+    if (lane === 'full') return forced('Lane: full');
+    if (lane === 'discovery' && targets.length > 0 && !docsOnly) return forced('Lane: discovery writes outside docs/');
+    if ((lane === 'fast' || lane === 'discovery') && docsOnly) return { tier: 'light', forced: false, reason: 'Lane: ' + lane + ', DOVE writes docs only' };
+    return {
+        tier: 'heavy', forced: false,
+        reason: 'in doubt: ' + (lane ? 'Lane: ' + lane : 'no Lane line') + (dove === null ? ', no DOVE' : targets.length ? ', DOVE writes outside docs/' : ', DOVE names no path'),
+    };
+}
+
+/** The tier a lane runs: the rule, or --tier where the rule does not force; the model it passes, and the line printed and kept in tier.txt. */
+function chooseTier(text, ctx = {}, requested = null) {
+    const rule = tierRule(text, ctx);
+    const raw = 'LANE_RUN_LIGHT_MODEL' in process.env ? process.env.LANE_RUN_LIGHT_MODEL.trim() : LIGHT_MODEL;
+    const light = raw && raw !== 'null' ? raw : null;
+    let t;
+    if (requested === 'heavy') t = { tier: 'heavy', reason: '--tier heavy' };
+    else if (requested === 'light') {
+        if (rule.forced) refuse('--tier light refused: the rule forces heavy (' + rule.reason + ')');
+        if (!light) refuse('--tier light: no light model is set (LIGHT_MODEL, RC-32)');
+        t = { tier: 'light', reason: '--tier light (the rule: ' + rule.reason + ')' };
+    } else if (rule.tier === 'light' && !light) t = { tier: 'heavy', reason: 'no light model set (' + rule.reason + ')' };
+    else t = { tier: rule.tier, reason: rule.reason };
+    if (t.tier === 'light' && !/^claude-[a-z0-9][a-z0-9.-]*$/.test(light)) refuse('the light model id is malformed: "' + light + '"');
+    t.model = t.tier === 'light' ? light : null;
+    t.line = t.tier + ' (' + (t.model || 'settings pin') + '): ' + t.reason;
+    return t;
+}
+
+function tierOption(rest) {
+    const v = option(rest, '--tier');
+    if (v !== null && !TIERS.includes(v)) refuse('--tier takes heavy or light: ' + v);
+    return v;
+}
+
+async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
+    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light]');
     const worktree = resolve(worktreeArg);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
     // As given (absolute, or relative to the caller's directory), then relative to the worktree.
     const tried = [...new Set([resolve(promptArg), resolve(worktree, promptArg)])];
     const promptFile = tried.find((p) => existsSync(p) && statSync(p).isFile());
     if (!promptFile) refuse('no prompt file: tried ' + tried.join(' and '));
-    const id = headerPromptId(readFileSync(promptFile, 'utf8'));
+    const text = readFileSync(promptFile, 'utf8');
+    const id = headerPromptId(text);
     if (!id) refuse('the prompt header has no "Prompt-ID: P-YYYY-MM-DD-HHmm" line: ' + promptFile);
+    const goAhead = goAheadOption(rest, id);
+    const tier = chooseTier(text, { ...ctx, goahead: Boolean(goAhead) }, tierOption(rest));
 
     const claude = findClaude();
     const f = laneFiles(id);
@@ -335,10 +436,11 @@ async function start(worktreeArg, promptArg, rest = []) {
     closeSync(openSync(f.log, 'a'));
     const from = statSync(f.log).size;
 
-    const goAhead = goAheadOption(rest, id);
     if (goAhead) writeFileSync(f.goahead, goAhead + '\n');
-    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS], goAhead);
+    writeFileSync(f.tier, tier.line + '\n');
+    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS, ...(tier.model ? ['--model', tier.model] : [])], goAhead);
     console.log('prompt: ' + promptFile);
+    console.log('tier: ' + tier.line);
     console.log('log: ' + f.log);
 
     const end = Date.now() + START_WAIT_MS;
@@ -994,8 +1096,8 @@ function mergeValues(m, o, id, when, findings, goahead = null) {
 function parseMerge(rest) {
     const o = { launch: false, governanceGoahead: false, direct: false };
     const positional = [];
-    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat' };
-    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id>] [--direct] [--launch [--governance-goahead]]';
+    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat', '--tier': 'tier' };
+    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id>] [--direct] [--launch [--governance-goahead]] [--tier heavy]';
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i];
         if (a === '--launch') o.launch = true;
@@ -1008,6 +1110,7 @@ function parseMerge(rest) {
         } else if (a.startsWith('--')) refuse('unknown option for merge: ' + a);
         else positional.push(a);
     }
+    if (o.tier !== undefined && o.tier !== 'heavy') refuse('--tier ' + o.tier + ': a merge session runs heavy (RC-32)');
     if (o.trunkInto) {
         if (positional.length || o.into) refuse(usage);
         return { ...o, mode: 'trunk-into', branch: o.trunkInto, trunk: o.from || DEFAULT_TRUNK };
@@ -1090,12 +1193,13 @@ async function merge(rest) {
         refusals.push('--at ' + o.at + ' is not the tip of ' + o.trunk + ': a launched merge starts from the trunk tip');
     }
     const rel = relative(o.top, file);
-    const message = ['docs: add prompt ' + id + ', merge ' + (o.mode === 'into' ? o.branch + ' into ' + o.trunk : o.trunk + ' into ' + o.branch), modelTrailer()];
+    const subjectLine = 'docs: add prompt ' + id + ', merge ' + (o.mode === 'into' ? o.branch + ' into ' + o.trunk : o.trunk + ' into ' + o.branch);
+    const message = [subjectLine, modelTrailer() + '; lane tier heavy (a merge that falls back to a session)'];
     if (goahead) message.push("Governance go-ahead: Alfonso's yes, " + goahead + ' (--governance-goahead).');
     const byHand = 'by hand: cp ' + shWord(parked) + ' ' + shWord(file) + ' && git -C ' + shWord(o.top) + ' add -- ' + shWord(rel) +
         ' && git -C ' + shWord(o.top) + ' commit ' + message.map((x) => '-m ' + shWord(x)).join(' ') + ' -- ' + shWord(rel) +
         ' && lane-run start ' + shWord(o.top) + ' ' + shWord(rel);
-    if (goDirect) return mergeDirect({ o, m, id, when, file, parked, rel, values, direct, message: [...message, 'Run by lane-run merge --direct, no session.'] });
+    if (goDirect) return mergeDirect({ o, m, id, when, file, parked, rel, values, direct, message: [subjectLine, modelTrailer(), 'Run by lane-run merge --direct, no session.'] });
     if (!o.launch) {
         console.log('launch: not requested' + (refusals.length ? '; it would be refused: ' + refusals.join('; ') : ''));
         console.log(byHand);
@@ -1112,7 +1216,7 @@ async function merge(rest) {
     git(o.top, ['add', '--', rel]);
     git(o.top, ['commit', '-q', ...message.flatMap((x) => ['-m', x]), '--', rel]);
     console.log('launch: committed ' + shortSha(o.top, 'HEAD'));
-    return start(o.top, file);
+    return start(o.top, file, [], { merge: true, governanceGoahead: Boolean(goahead) });
 }
 
 // ── merge --direct ───────────────────────────────────────────────────────────
@@ -1519,13 +1623,13 @@ function chainStatus(id) {
  */
 function chain(rest) {
     if (rest[0] === '--stop') return chainStop(rest[1]);
-    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] | chain --stop <chain-id>';
+    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] | chain --stop <chain-id>';
     const positional = [];
-    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null };
+    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null, tier: null };
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i];
         if (a === '--merge-after') o.mergeAfter = true;
-        else if (a === '--into' || a === '--chat') {
+        else if (a === '--into' || a === '--chat' || a === '--tier') {
             o[a.slice(2)] = option(rest.slice(i), a);
             i++;
         } else if (a === '--limit') {
@@ -1536,6 +1640,7 @@ function chain(rest) {
     }
     if (positional.length < 2) refuse(usage);
     if (o.into && !o.mergeAfter) refuse('--into goes with --merge-after; ' + usage);
+    if (o.tier !== null && !TIERS.includes(o.tier)) refuse('--tier takes heavy or light: ' + o.tier);
     const worktree = resolve(positional[0]);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
     const t = git(worktree, ['rev-parse', '--show-toplevel'], [0, 128]);
@@ -1562,7 +1667,9 @@ function chain(rest) {
         } else if (existsSync(join(top, 'docs', 'prompts', basename(file))) || lanes.some((l) => !l.inTree && basename(l.prompt) === basename(file))) {
             refuse('docs/prompts/' + basename(file) + ' would be written twice');
         }
-        lanes.push({ id, prompt: file, inTree, state: 'queued' });
+        // The tier of each lane, --tier light refused on a lane the rule forces heavy, before anything runs.
+        const tier = chooseTier(readFileSync(file, 'utf8'), {}, o.tier);
+        lanes.push({ id, prompt: file, inTree, state: 'queued', tier: tier.tier, tierReason: tier.reason });
     }
     let into = null;
     if (o.mergeAfter) {
@@ -1574,7 +1681,7 @@ function chain(rest) {
     if (existsSync(cf.dir)) refuse(id + ' already exists in ' + lanesRoot());
     mkdirSync(cf.dir, { recursive: true });
     writeJson(cf.json, {
-        id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat,
+        id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat, tier: o.tier,
         lanes, mergeAfter: into ? { into, state: 'queued' } : null, stoppedAt: null, supervisor: null,
     });
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
@@ -1626,7 +1733,7 @@ async function chainRun(id) {
             copyFileSync(lane.prompt, target);
             const rel = relative(c.worktree, target);
             git(c.worktree, ['add', '--', rel]);
-            git(c.worktree, ['commit', '-q', '-m', 'docs: add prompt ' + lane.id + ', lane ' + (k + 1) + '/' + c.lanes.length + ' of ' + c.id, '-m', modelTrailer(), '--', rel]);
+            git(c.worktree, ['commit', '-q', '-m', 'docs: add prompt ' + lane.id + ', lane ' + (k + 1) + '/' + c.lanes.length + ' of ' + c.id, '-m', modelTrailer() + '; lane tier ' + lane.tier + ' (' + lane.tierReason + ')', '--', rel]);
             lane.committed = git(c.worktree, ['rev-parse', 'HEAD']).out.trim();
             if (dirname(lane.prompt) === pending) unlinkSync(lane.prompt);
             promptFile = target;
@@ -1635,7 +1742,7 @@ async function chainRun(id) {
         save();
         let code;
         try {
-            code = await start(c.worktree, promptFile, []);
+            code = await start(c.worktree, promptFile, c.tier ? ['--tier', c.tier] : []);
         } catch (err) {
             return stop(lane.id, 'start refused: ' + (err && err.message ? err.message : String(err)));
         }

@@ -744,3 +744,28 @@ describe('lane-run chain', { timeout: 60000 }, () => {
         expect(calls(c.l)).toEqual([]);
     });
 });
+
+describe('lane-run chain, the model tier', { timeout: 60000 }, () => {
+    test('kills "a chain lane without its tier", "the tier not in the chain\'s trailer", "--tier light on a chain not checked before it runs": each lane runs its own tier; --tier light is refused when a lane forces heavy', () => {
+        const c = chainLab();
+        // A: fast, the docs only (light); B: full (heavy).
+        writeFileSync(c.files[A], lanePrompt(A, 'da eseguire', 'chained lane 1') + '\n## DOVE\n\n`docs/log-inbox/lane.md`\n');
+        writeFileSync(c.files[B], lanePrompt(B, 'da eseguire', 'chained lane 2').replace('Lane: fast', 'Lane: full (more than 3 files)'));
+        const env = { LANE_RUN_LIGHT_MODEL: 'claude-light-test' };
+        const refused = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B], '--tier', 'light'], { env });
+        expect(refused.status).toBe(2);
+        expect(refused.stderr).toContain('forces heavy');
+        expect(existsSync(chainDir(c.l))).toBe(false);
+        const out = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B]], { env });
+        expect(out.status, out.stderr).toBe(0);
+        expect(chainEnd(c.l)).toBe(true);
+        const ch = chainJson(c.l);
+        expect(ch.state).toBe('done');
+        expect(ch.lanes.map((x: { tier: string }) => x.tier)).toEqual(['light', 'heavy']);
+        const k = calls(c.l);
+        expect(k[0].args.slice(-2)).toEqual(['--model', 'claude-light-test']);
+        expect(k[1].args).not.toContain('--model');
+        expect(gitIn(c.l, c.wt, ['log', '-1', '--format=%b', `--grep=add prompt ${A}`])).toContain('lane tier light (Lane: fast, DOVE writes docs only)');
+        expect(readFileSync(join(c.l.lanes, A, 'tier.txt'), 'utf8')).toContain('light (claude-light-test)');
+    });
+});
