@@ -80,6 +80,37 @@ export function terminated(net: CompiledNet, state: SimState): boolean {
     return any;
 }
 
+/**
+ * R-SIM-50: some marked place is a kind of `simAccepting`. A reading of the
+ * marking like `terminated`, outside the cycle: candidates and status never
+ * consult it, so an accepting configuration goes on. Never true without the role.
+ */
+export function isAccepting(net: CompiledNet, state: SimState): boolean {
+    const accepting = net.accepting;
+    if (!accepting) return false;
+    for (const [place, n] of state.marking) if (n !== 0 && accepting.has(place)) return true;
+    return false;
+}
+
+/**
+ * R-SIM-51, Moore: the outputs of the marked places, in the net's order, read on
+ * frozen M at Reset (`CompiledNet.stateOutputs`); a marked place with no output is
+ * left out. `[]` without the role or when no such place is marked.
+ */
+export function stateOutputOf(net: CompiledNet, state: SimState): Array<{ readonly place: string; readonly values: readonly SimValue[] }> {
+    const out: Array<{ readonly place: string; readonly values: readonly SimValue[] }> = [];
+    for (const [place, values] of net.stateOutputs ?? []) if (tokens(state, place) !== 0) out.push({ place, values });
+    return out;
+}
+
+/**
+ * R-SIM-51, Mealy: the output of firing `transition`, the fired step's
+ * `label.selector`; `[]` without the role or a value. The step itself is unchanged.
+ */
+export function transitionOutputOf(net: CompiledNet, transition: string): readonly SimValue[] {
+    return net.transitionOutputs?.get(transition) ?? [];
+}
+
 const INDEX = new WeakMap<CompiledNet, ReadonlyMap<string, NetTransition>>();
 
 function transitionsById(net: CompiledNet): ReadonlyMap<string, NetTransition> {

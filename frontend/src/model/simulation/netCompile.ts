@@ -52,6 +52,7 @@ const ROLE_KEYS: ReadonlyArray<[Exclude<keyof NetStc, 'shape' | 'bound'>, string
     ['arc', 'simArc'], ['arcSource', 'simArcSource'], ['arcTarget', 'simArcTarget'],
     ['arcWeight', 'simArcWeight'], ['inhibitorArc', 'simInhibitorArc'],
     ['event', 'simEvent'], ['trigger', 'simTrigger'], ['eventIdentifier', 'simEventIdentifier'],
+    ['accepting', 'simAccepting'], ['stateOutput', 'simStateOutput'], ['transitionOutput', 'simTransitionOutput'],
 ];
 
 /**
@@ -369,6 +370,23 @@ function compilePetri(
     return { places, transitions: resolveElse(transitions, isElse, defects, 'transitions share a preset') };
 }
 
+/**
+ * The role-bound outputs (R-SIM-51): for each key, the values of `feature` on its elements, in order,
+ * `SimValue`s only; a key with none has no entry. Read once at Reset, as the guards' texts are: a
+ * model edit withdraws the run (R-SIM-34), so this is the frozen M of the run.
+ */
+function outputsOf(
+    owners: ReadonlyArray<readonly [string, readonly string[]]>, feature: string, view: NetModelView,
+): Map<string, SimValue[]> {
+    const out = new Map<string, SimValue[]>();
+    for (const [key, elements] of owners) {
+        const values = elements.flatMap(e => view.values(e, feature))
+            .filter((v): v is SimValue => typeof v === 'boolean' || typeof v === 'number' || typeof v === 'string');
+        if (values.length > 0) out.set(key, values);
+    }
+    return out;
+}
+
 /** A domain as the defects print it: `0..3`, `{A, B}`, `{true, false}`. */
 function domainText(domain: Domain): string {
     switch (domain.kind) {
@@ -493,6 +511,14 @@ export function compileNet(
 
     const final = stc.terminal ? new Set(places.filter(p => kind(p, stc.terminal))) : null;
     const activityFinal = stc.activityFinal ? new Set(places.filter(p => kind(p, stc.activityFinal))) : null;
+    // R-SIM-50: apart from F, since an accepting place never ends the run.
+    const accepting = stc.accepting ? new Set(places.filter(p => kind(p, stc.accepting))) : null;
+    // R-SIM-51: a place's own slot; a transition's own elements, its `transition` action sites (an edge,
+    // the edges of a fused fork/join, a Petri transition), never its places or a fork/join node.
+    const stateOutputs = stc.stateOutput ? outputsOf(places.map(p => [p, [p]] as const), stc.stateOutput, view) : null;
+    const transitionOutputs = stc.transitionOutput
+        ? outputsOf(transitions.map(t => [t.id, t.actionSites.filter(s => s.role === 'transition').map(s => s.element)] as const), stc.transitionOutput, view)
+        : null;
     return {
         modelId,
         places: new Set(places),
@@ -500,6 +526,9 @@ export function compileNet(
         bound: stc.bound,
         final,
         activityFinal,
+        accepting,
+        stateOutputs,
+        transitionOutputs,
         hasEventRole,
         attributes: [...decls],
         declared,
