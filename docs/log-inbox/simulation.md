@@ -292,3 +292,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Prompt document name**: 2026-09-27 17:25
 **Ticket** (priority medium, owed to the face slice, report §5.1 H8). `simAccepting` is not in the node sort of `ROLE_SORTS` (`stcFromRoles.ts:23-28`), so a class playing Accepting and Transition passes the overlap check; the line is E2's and the file was outside this lane.
 **Ticket** (priority medium, for the chat). The R- rows of this slice (R-SIM-50 and R-SIM-51 implemented as written for the role-bound path, the three keys out of R-SIM-52's provisional list) are not written: the chat writes them (answer of the question stop).
+
+## 2026-09-27 — docs: provisional R-SIM-86..88 for the outputs engine slice (P-2026-09-27-1725)
+**Prompt**: resume of P-2026-09-27-1725 after Alfonso's «ok alle raccomandazioni» (2026-09-27 22:20): write in `docs/decisions.md` the rows the engine slice owes on R-SIM-50/51/52, provisional, unattended, pending Alfonso's ratification before the post-MODELS merge, with the measured evidence and what stays open. No code.
+**Files touched**: docs, this commit: `docs/decisions.md` (section «corsia S4», R-SIM-86, R-SIM-87, R-SIM-88), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs only, no source file changed; `check:docs` 4/4; em dash count on the added lines 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Numbered from 86: R-SIM-85 is on the trunk (sim-modal) and on no branch past it, measured by a grep of every local branch; a clash with a parallel lane is the later merge's to renumber, as for R-SIM-83/84. R-SIM-86 names the open overlap check (simAccepting outside ROLE_SORTS), owed to the face slice.
+**Prompt document name**: 2026-09-27 17:25

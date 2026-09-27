@@ -2162,6 +2162,52 @@ R-SIM-53 e R-SIM-31(1) sono attuate come scritte.
   nuovo di `NetDefectCode`, additivo per la regola 11 come in R-SIM-70) e quel nodo non compila. L'emendamento B
   (fratelli letti sull'arco) è respinto da Alfonso il 2026-09-27. R-SIM-64 (Petri) invariata.
 
+### Decisioni 2026-09-27: corsia S4, Accepting e output nel motore (R-SIM-86..88)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_outputs_accepting.md` (`5bfbdc5ce`, P-2026-09-27-1725),
+§5 e §9; risposte di Alfonso del 2026-09-27 17:47 (solo gli output legati a un ruolo, il collegamento agli output
+calcolati dopo la corsia del modale, `0b098be01`) e 22:20 («ok alle raccomandazioni»). Attuate dalla fetta motore
+della corsia (codice `ab4b8de8b`, ramo `sim-outputs-accepting`). Nessuna riga ratificata cambia: R-SIM-50, R-SIM-51 e
+R-SIM-52 sono attuate come scritte, per la parte che la fetta copre. Le tre righe restano provvisorie fino alla
+ratifica di Alfonso, prima del merge dopo MODELS. Numerate da 86 perché R-SIM-85 è sul tronco (`sim-modal`) e non su
+questo ramo; uno scontro con le corsie parallele si rinumera al merge successivo, come per R-SIM-83 e 84.
+
+- **R-SIM-86** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Il motore legge Accepting (R-SIM-50).** `simAccepting` entra nella STC (`NetStc.accepting`), la rete compilata ne
+  porta i posti per kind-of (`CompiledNet.accepting`, `null` senza il ruolo), mai fusi in F. `isAccepting(net, σ)` è
+  vero quando uno di quei posti è marcato. È una lettura del marking fuori dal ciclo, come `terminated`: candidati,
+  `terminated` e `netRunStatus` non la consultano, quindi una configurazione che accetta prosegue («Non ferma il
+  run») e gli stati del run restano cinque (R-SIM-29). Evidenza: test rossi prima; nel banco dei mutanti della
+  fetta, 18/18 uccisi, cadono anche l'insieme costruito da `terminal`, `every` al posto di `some`, lo zero contato e
+  il controllo fuso in `terminated`; sui quattro preset della demo le sonde di readiness-2 danno righe di run
+  identiche (State machine 13/13, Flow B 11/11, Petri 22/22, Extended state machine 12/12). Resta aperto:
+  `simAccepting` non è nel sort dei nodi di `ROLE_SORTS` (`stcFromRoles.ts:23-28`), quindi una classe che fa
+  Accepting e Transition passa il controllo di sovrapposizione (R-SIM-16); è dovuto alla fetta delle facce, dopo
+  il merge di E2 e di `sim-modal`, che porta anche «accepting» accanto allo stato del run.
+- **R-SIM-87** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Gli output legati a un ruolo nel motore (R-SIM-51).** `simStateOutput` e `simTransitionOutput` entrano nella STC;
+  `compileNet` legge al Reset i valori della feature sul modello congelato del run (una modifica del modello ritira il
+  run, R-SIM-34): per ogni posto il suo slot (`CompiledNet.stateOutputs`); per ogni transizione gli slot dei suoi
+  elementi propri, cioè i siti d'azione `transition` (un arco, gli archi di una transizione fusa in ordine, una
+  transizione di Petri), mai un nodo di fork o join (`CompiledNet.transitionOutputs`). Solo valori `SimValue`,
+  nessuna voce senza valore, `null` senza il ruolo. Moore: `stateOutputOf(net, σ)` dà gli output dei posti marcati
+  nell'ordine della rete. Mealy: `transitionOutputOf(net, t)`, con `t` il `label.selector` del passo scattato. `step`
+  non cambia. Gli output calcolati (R-SIM-51, ultima frase) restano fuori: il collegamento del ruolo a un attributo
+  derivato dichiarato è rinviato a dopo la corsia del modale (Alfonso, 17:47). Evidenza: banco dei mutanti 18/18
+  uccisi, ciascuno solo dai test nuovi (fra gli altri: il primo valore soltanto, il filtro dei `SimValue` tolto, il
+  solo id della transizione, il solo primo elemento proprio, l'`origin` letto con il nodo di fork, una mappa vuota
+  senza il ruolo); i quattro preset della demo identici come in R-SIM-86. Resta aperto: le righe State output e
+  Transition output nel pannello, la riga dell'output di Moore e l'output di Mealy in «Last step», con la fetta
+  delle facce; la forma di un output di tipo enumerazione, non misurata (report §5.6).
+- **R-SIM-88** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Le tre chiavi escono dalle provvisorie di R-SIM-52.** Con il commit `ab4b8de8b` `simAccepting`,
+  `simStateOutput` e `simTransitionOutput` sono lette dal motore (R-SIM-86, R-SIM-87) e diventano definitive senza
+  rinomine, come `simActivityFinal` con R-SIM-83: `NEW_KEYS` di `roleCatalog.test.ts` è vuoto e il test «finds every
+  existing key» conta 27 chiavi. I quattro preset nascosti (DFA, NFA, Moore, Mealy) restano nascosti: compaiono con
+  la fetta delle facce dopo MODELS (decisione H), con il risolutore delle chiavi `off` (S5) come precondizione
+  misurata (report §5.4: dopo State machine e poi DFA, il `simTerminal` rimasto chiude il run sullo stato che
+  accetta).
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
