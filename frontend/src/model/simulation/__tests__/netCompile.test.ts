@@ -338,6 +338,80 @@ describe('compileNet, control-flow shape', () => {
     });
 });
 
+describe('R-SIM-31 else over fused transitions (lane E1, P-2026-09-27-1610, G7)', () => {
+    const STC: NetStc = { ...CF, fork: 'C_Fork', join: 'C_Join', guard: 'A_g' };
+    type Objects = Spec['objects'];
+    const edge = (next: string, guard?: string) => ({ cls: 'C_Tr', slots: { R_next: [next], ...(guard === undefined ? {} : { A_g: [guard] }) } });
+    /** i0 -f1-> w -f2-> d ; d -f3 [g3]-> w ; d -f4 [g4]-> fk ; fk -f5 [g5]-> l, -f6-> r */
+    const decision = (g3: string, g4: string, g5?: string): Objects => ({
+        i0: { cls: 'C_Init', slots: { R_out: ['f1'] } }, w: { cls: 'C_Node', slots: { R_out: ['f2'] } },
+        d: { cls: 'C_Node', slots: { R_out: ['f3', 'f4'] } }, fk: { cls: 'C_Fork', slots: { R_out: ['f5', 'f6'] } },
+        l: { cls: 'C_Node' }, r: { cls: 'C_Node' },
+        f1: edge('w'), f2: edge('d'), f3: edge('w', g3), f4: edge('fk', g4), f5: edge('l', g5), f6: edge('r'),
+    });
+    /** Guards by text on a count: `lo` true below 2, `hi` from 2, `no` false, `else` read as a guard a defect; any other, true. */
+    const byText = (objects: Objects, count: number): GuardOracle => site => {
+        const text = objects[site]?.slots?.A_g?.[0];
+        if (text === 'lo') return { kind: count < 2 ? 'true' : 'false' };
+        if (text === 'hi') return { kind: count >= 2 ? 'true' : 'false' };
+        if (text === 'no') return { kind: 'false' };
+        if (text === 'else') return { kind: 'defect', reason: 'parse-error', detail: 'else read as a guard' };
+        return { kind: 'true' };
+    };
+    /** The candidates of ε on `marking`, the guards read at `count`. */
+    const at = (objects: Objects, marking: Record<string, number>, count: number) => {
+        const net = compile(STC, { classes: CLASSES, objects });
+        const state = { marking: new Map(Object.entries(marking)), attrs: new Map(), presentation: new Map() };
+        return candidates(net, { state, event: null }, byText(objects, count)).candidates.map(c => c.transition);
+    };
+
+    it('else on the edge into a fork is the complement of the decision\'s other edge, the fork keeping its out-edges\' guards (mutants: the fork\'s in-edge not marked; guardSites [] restored; else resolved among plain edges only)', () => {
+        const objects = decision('lo', 'else');
+        const net = compile(STC, { classes: CLASSES, objects });
+        const fk = byId(net.transitions).fk;
+        expect([fk.elseOf, fk.guardSites, net.defects]).toEqual([['f3'], ['f5', 'f6'], []]);
+        expect(at(objects, { d: 1 }, 1)).toEqual(['f3']);
+        expect(at(objects, { d: 1 }, 2)).toEqual(['fk']);
+    });
+
+    it('mirror: else on the plain edge has the fork\'s fused transition as its sibling (mutant: else resolved among plain edges only)', () => {
+        const objects = decision('else', 'hi');
+        expect(byId(compile(STC, { classes: CLASSES, objects }).transitions).f3.elseOf).toEqual(['fk']);
+        expect(at(objects, { d: 1 }, 2)).toEqual(['fk']);
+        expect(at(objects, { d: 1 }, 1)).toEqual(['f3']);
+    });
+
+    it('else on an edge out of a join is the complement of the join\'s other out-edge, the inputs\' guards kept (mutants: the join\'s out-edge not marked; guardSites [] restored)', () => {
+        const objects: Objects = {
+            a: { cls: 'C_Init', slots: { R_out: ['e1'] } }, b: { cls: 'C_Init', slots: { R_out: ['e2'] } },
+            jn: { cls: 'C_Join', slots: { R_out: ['o1', 'o2'] } }, x: { cls: 'C_End' }, y: { cls: 'C_End' },
+            e1: edge('jn'), e2: edge('jn', 'yes'), o1: edge('x', 'hi'), o2: edge('y', 'else'),
+        };
+        const net = compile(STC, { classes: CLASSES, objects });
+        const o2 = byId(net.transitions)['jn#o2'];
+        expect([o2.elseOf, o2.guardSites, net.defects]).toEqual([['jn#o1'], ['e1', 'e2'], []]);
+        expect(at(objects, { a: 1, b: 1 }, 0)).toEqual(['jn#o2']);
+        expect(at(objects, { a: 1, b: 1 }, 2)).toEqual(['jn#o1']);
+    });
+
+    it('else into a join or out of a fork is else-position and nothing of that node compiles; control: an explicit guard there compiles (mutant: the position check removed)', () => {
+        const intoJoin: Objects = {
+            i0: { cls: 'C_Init', slots: { R_out: ['e0'] } }, d: { cls: 'C_Node', slots: { R_out: ['e1', 'e2'] } },
+            r: { cls: 'C_Init', slots: { R_out: ['e3'] } }, jn: { cls: 'C_Join', slots: { R_out: ['e4'] } },
+            w: { cls: 'C_Node' }, fin: { cls: 'C_End' },
+            e0: edge('d'), e1: edge('w', 'lo'), e2: edge('jn', 'else'), e3: edge('jn'), e4: edge('fin'),
+        };
+        const net = compile(STC, { classes: CLASSES, objects: intoJoin });
+        expect(net.defects.map(x => [x.element, x.code, x.message])).toEqual([['e2', 'else-position', 'else on an edge into a join: it has no siblings']]);
+        expect(net.transitions.map(t => t.id)).toEqual(['e0', 'e1']);
+        const control = compile(STC, { classes: CLASSES, objects: { ...intoJoin, e2: edge('jn', 'hi') } });
+        expect([control.defects, control.transitions.map(t => t.id)]).toEqual([[], ['e0', 'e1', 'jn']]);
+        const outOfFork = compile(STC, { classes: CLASSES, objects: decision('lo', 'hi', 'else') });
+        expect(outOfFork.defects.map(x => [x.element, x.code, x.message])).toEqual([['f5', 'else-position', 'else on an edge out of a fork: it has no siblings']]);
+        expect(outOfFork.transitions.map(t => t.id)).toEqual(['f1', 'f2', 'f3']);
+    });
+});
+
 describe('compileNet, Petri shape (R-SIM-21, R-SIM-23, R-SIM-30)', () => {
     const PN: NetStc = {
         shape: 'petri', bound: 2, node: 'C_P', transition: 'C_T', arc: 'C_A', arcSource: 'R_s', arcTarget: 'R_t',

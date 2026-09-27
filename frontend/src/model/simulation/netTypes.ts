@@ -190,14 +190,17 @@ export interface NetTransition {
     readonly triggers: readonly string[];
     /** The elements whose guard applies, conjoined; `[]`: no guard, true (R-SIM-17). */
     readonly guardSites: readonly string[];
-    /** An explicit `else`: its guard is not (g1 or … or gn) over these siblings (R-SIM-25, R-SIM-31). */
+    /**
+     * An explicit `else`: its guard is not (g1 or … or gn) over these siblings (R-SIM-25, R-SIM-31),
+     * conjoined with its remaining `guardSites`, a fused transition's other edges (G7).
+     */
     readonly elseOf: readonly string[] | null;
     readonly actionSites: readonly ActionSite[];
 }
 
 export type NetDefectCode =
     | 'no-target' | 'no-source' | 'not-a-place' | 'pseudo-chain' | 'pseudo-open'
-    | 'bad-arc' | 'bad-weight' | 'else-twice' | 'initial-over-bound';
+    | 'bad-arc' | 'bad-weight' | 'else-twice' | 'else-position' | 'initial-over-bound';
 
 /** A compile defect (R-SIM-31): the element never becomes a candidate, and the reason is kept. */
 export interface NetDefect {

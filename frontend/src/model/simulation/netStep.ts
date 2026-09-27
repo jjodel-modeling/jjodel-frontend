@@ -145,8 +145,9 @@ function fireMarking(net: CompiledNet, marking: ReadonlyMap<string, number>, t: 
 /**
  * The candidate set of spec §4.2, in compile order. `evaluated` holds what was
  * asked of every structurally enabled transition: an inhibitor that blocked it,
- * its guard, or its `else`; a transition with no guard is a candidate without
- * an entry there. An unsafe firing stays a candidate, flagged.
+ * its guard, or its `else` (a fused `else` whose complement holds but whose
+ * other guards do not: their outcome); a transition with no guard is a
+ * candidate without an entry there. An unsafe firing stays a candidate, flagged.
  */
 export function candidates(net: CompiledNet, cfg: NetConfiguration, guards: GuardOracle): CandidateSet {
     const event = cfg.event;
@@ -164,8 +165,10 @@ export function candidates(net: CompiledNet, cfg: NetConfiguration, guards: Guar
         }
         let g: GuardOutcome;
         if (t.elseOf !== null) {
-            g = elseOutcome(net, t, event, access, guards);
-            evaluated.push({ transition: t.id, outcome: { kind: 'else', outcome: g } });
+            const e = elseOutcome(net, t, event, access, guards);
+            // A fused `else` keeps its other edges' guards (G7): the complement first, then their conjunction.
+            g = e.kind === 'true' ? guardOf(t, event, access, guards) : e;
+            evaluated.push({ transition: t.id, outcome: e.kind === 'true' && g.kind !== 'true' ? g : { kind: 'else', outcome: e } });
         } else {
             g = guardOf(t, event, access, guards);
             if (t.guardSites.length > 0) evaluated.push({ transition: t.id, outcome: g });

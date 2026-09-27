@@ -288,6 +288,36 @@ describe('else (R-SIM-25, R-SIM-31): the complement of its siblings\' guards', (
         expect(cs.candidates).toEqual([]);
         expect(cs.evaluated.find(e => e.transition === 'el')?.outcome).toMatchObject({ kind: 'else', outcome: { kind: 'defect' } });
     });
+
+    it('G7: a fused else keeps its other edges\' guards, conjoined after the complement; the entry is their outcome when they fail (mutants: no conjunction; the entry always else; guardSites [] restored)', () => {
+        // d -f3 [f3]-> w ; d -f4 [else]-> fk ; fk -f5 [f5]-> l, -f6-> r
+        const stc = netStcFromRoles({ simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next', simFork: 'C_Fork', simGuard: 'A_g' })!;
+        const net = compileSpec(stc, {
+            classes: CLASSES,
+            objects: {
+                d: { cls: 'C_Init', slots: { R_out: ['f3', 'f4'] } }, w: { cls: 'C_Node' },
+                fk: { cls: 'C_Fork', slots: { R_out: ['f5', 'f6'] } }, l: { cls: 'C_Node' }, r: { cls: 'C_Node' },
+                f3: { cls: 'C_Tr', slots: { R_next: ['w'], A_g: ['x'] } }, f4: { cls: 'C_Tr', slots: { R_next: ['fk'], A_g: ['else'] } },
+                f5: { cls: 'C_Tr', slots: { R_next: ['l'], A_g: ['y'] } }, f6: { cls: 'C_Tr', slots: { R_next: ['r'] } },
+            },
+        });
+        const at = (g: Record<string, GuardOutcome['kind']>) => candidates(net, cfg({ d: 1 }), guardsBy(g));
+        // the complement holds and f5 fails: no candidate, and the entry of fk is f5's outcome
+        const blocked = at({ f3: 'false', f5: 'false' });
+        expect(blocked.candidates).toEqual([]);
+        expect(blocked.evaluated).toEqual([
+            { transition: 'f3', outcome: { kind: 'false' } },
+            { transition: 'fk', outcome: { kind: 'false' } },
+        ]);
+        // control: f5 true, fk is the candidate and its entry is the else
+        const open = at({ f3: 'false', f5: 'true' });
+        expect(open.candidates.map(c => c.transition)).toEqual(['fk']);
+        expect(open.evaluated[1]).toEqual({ transition: 'fk', outcome: { kind: 'else', outcome: { kind: 'true' } } });
+        // the sibling true: the else is false whatever f5 says, and the entry says so as an else
+        expect(at({ f3: 'true', f5: 'false' }).evaluated[1]).toEqual({ transition: 'fk', outcome: { kind: 'else', outcome: { kind: 'false' } } });
+        // a defective f5 after the complement is the fork's defect
+        expect(at({ f3: 'false', f5: 'defect' }).evaluated[1]).toMatchObject({ transition: 'fk', outcome: { kind: 'defect' } });
+    });
 });
 
 describe('inhibitors (R-SIM-24, R-SIM-30): tokens(p) < w, as a guard', () => {

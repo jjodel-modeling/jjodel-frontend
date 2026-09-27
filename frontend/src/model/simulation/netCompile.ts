@@ -137,11 +137,12 @@ function siblingKey(t: NetTransition): string {
 
 /**
  * The `else` among `transitions` (R-SIM-31, R-SIM-64), for both shapes: an
- * `else` loses its guard site and becomes the complement of its siblings; two
- * `else` among siblings are `else-twice` and neither is compiled. `what` ends
- * the defect message. Order is kept.
+ * `else` loses the guard site of its `else` element (`isElse`: transition id →
+ * that element) and becomes the complement of its siblings; two `else` among
+ * siblings are `else-twice` and neither is compiled. `what` ends the defect
+ * message. Order is kept.
  */
-function resolveElse(transitions: readonly NetTransition[], isElse: ReadonlySet<string>, defects: NetDefect[], what: string): NetTransition[] {
+function resolveElse(transitions: readonly NetTransition[], isElse: ReadonlyMap<string, string>, defects: NetDefect[], what: string): NetTransition[] {
     const groups = new Map<string, NetTransition[]>();
     for (const t of transitions) {
         const key = siblingKey(t);
@@ -160,7 +161,8 @@ function resolveElse(transitions: readonly NetTransition[], isElse: ReadonlySet<
             defects.push({ element: t.id, code: 'else-twice', message: `two else ${what}: ${elses.map(s => s.id).join(', ')}` });
             continue;
         }
-        out.push({ ...t, guardSites: [], elseOf: group.filter(s => s !== t).map(s => s.id) });
+        // Only the `else` edge loses its site: a fused transition keeps its other edges' guards (G7).
+        out.push({ ...t, guardSites: t.guardSites.filter(s => s !== isElse.get(t.id)), elseOf: group.filter(s => s !== t).map(s => s.id) });
     }
     return out;
 }
@@ -255,15 +257,19 @@ function compileControlFlow(
         };
     };
 
-    // Plain edges, and the `else` among them.
+    const saysElse = (edge: string) => {
+        const text = stc.guard ? view.values(edge, stc.guard)[0] : undefined;
+        return typeof text === 'string' && text.trim() === 'else';
+    };
+    // Transition id → its `else` edge: a plain edge itself, a fused transition its choice edge (G7).
+    const isElse = new Map<string, string>();
+
+    // Plain edges.
     const plain = edges.filter(e => e.pseudoSource === null && e.pseudoTarget === null);
-    const isElse = new Set<string>();
     for (const e of plain) {
-        const text = stc.guard ? view.values(e.id, stc.guard)[0] : undefined;
-        if (typeof text === 'string' && text.trim() === 'else') isElse.add(e.id);
+        if (saysElse(e.id)) isElse.set(e.id, e.id);
         transitions.push(make(e.id, [e.id], e.sources, e.targets, triggersOf(e.id), [e.id]));
     }
-    const kept = resolveElse(transitions, isElse, defects, 'edges share a source');
 
     // Fork and join nodes: not places, their edges fuse (R-SIM-22, R-SIM-31).
     const pseudoNodes: string[] = [];
@@ -282,22 +288,34 @@ function compileControlFlow(
         const sourcesOf = (es: readonly Edge[]) => es.flatMap(e => e.sources);
         const targetsOf = (es: readonly Edge[]) => es.flatMap(e => e.targets);
         const edgeIdsOf = (es: readonly Edge[]) => es.map(e => e.id);
+        // An `else` chooses on the edge into a fork or on an edge out of a join; elsewhere its siblings are undefined (G7).
+        const what = fork && !join ? 'fork' : join && !fork ? 'join' : 'fork/join';
+        const stray = (fork && !join ? outs : join && !fork ? ins : [...ins, ...outs]).find(e => saysElse(e.id));
+        if (stray) {
+            defects.push({ element: stray.id, code: 'else-position', message: `else on an edge ${stray.pseudoTarget === p ? 'into' : 'out of'} a ${what}: it has no siblings` });
+            continue;
+        }
         if (fork && !join) {
             for (const e of ins) {
-                kept.push(make(ins.length === 1 ? p : `${p}#${e.id}`, [e.id, p, ...edgeIdsOf(outs)], e.sources, targetsOf(outs),
+                const id = ins.length === 1 ? p : `${p}#${e.id}`;
+                if (saysElse(e.id)) isElse.set(id, e.id);
+                transitions.push(make(id, [e.id, p, ...edgeIdsOf(outs)], e.sources, targetsOf(outs),
                     triggersOf(e.id), [e.id, ...edgeIdsOf(outs)]));
             }
         } else if (join && !fork) {
             for (const e of outs) {
-                kept.push(make(outs.length === 1 ? p : `${p}#${e.id}`, [...edgeIdsOf(ins), p, e.id], sourcesOf(ins), e.targets,
+                const id = outs.length === 1 ? p : `${p}#${e.id}`;
+                if (saysElse(e.id)) isElse.set(id, e.id);
+                transitions.push(make(id, [...edgeIdsOf(ins), p, e.id], sourcesOf(ins), e.targets,
                     triggersOf(e.id), [...edgeIdsOf(ins), e.id]));
             }
         } else {
-            kept.push(make(p, [...edgeIdsOf(ins), p, ...edgeIdsOf(outs)], sourcesOf(ins), targetsOf(outs),
+            transitions.push(make(p, [...edgeIdsOf(ins), p, ...edgeIdsOf(outs)], sourcesOf(ins), targetsOf(outs),
                 [...ins, ...outs].flatMap(e => triggersOf(e.id)), [...edgeIdsOf(ins), ...edgeIdsOf(outs)]));
         }
     }
-    return { places, transitions: kept };
+    // The `else` among plain and fused transitions alike (R-SIM-31, G7).
+    return { places, transitions: resolveElse(transitions, isElse, defects, 'edges share a source') };
 }
 
 function compilePetri(
@@ -337,12 +355,12 @@ function compilePetri(
     }
 
     // The literal `else`, as on a control-flow edge (R-SIM-64).
-    const isElse = new Set<string>();
+    const isElse = new Map<string, string>();
     const transitions = trs.map((t): NetTransition => {
         const preset = merge(pre.get(t)!);
         const postset = merge(post.get(t)!);
         const text = stc.guard ? view.values(t, stc.guard)[0] : undefined;
-        if (typeof text === 'string' && text.trim() === 'else') isElse.add(t);
+        if (typeof text === 'string' && text.trim() === 'else') isElse.set(t, t);
         return {
             id: t, origin: [t], preset, postset, inhibitors: merge(inh.get(t)!), triggers: triggersOf(t),
             guardSites: stc.guard ? [t] : [], elseOf: null, actionSites: actionSites(preset, [t], postset),
