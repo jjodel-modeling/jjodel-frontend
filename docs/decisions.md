@@ -1876,6 +1876,7 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   machine, DFA, NFA, Moore, Mealy. Nei profili a controllo di flusso il gruppo Petri net è `off`
   («compiled from control flow»), non `derived`; `derived` solo per Bound = 1 e Initial marking
   «1 on Initial» (R-SIM-28).
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat, C-2026-09-26-1702, punto A3 del digest della notte): nel profilo Petri net (P/T) il ruolo Guard è `edit`, non `off`, così una rete con una guardia sulla transizione (b2net, la rete della corsia C1) è checkable senza «Set but off: Guard.»; codice `7455d0075`.
 - **R-SIM-55** (2026-09-25). **Persistenza additiva.** Il profilo attivo si salva nel bag M2 con la
   chiave additiva `simProfile` (id del profilo di sistema o definizione serializzata del profilo
   utente). Chiavi dei ruoli di R-SIM-37 invariate. Senza `simProfile` il modale ricostruisce un
@@ -2041,6 +2042,7 @@ decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; q
   semantica del parallelo regge (le azioni leggono i derivati di σ, il ricalcolo è su σ′); sarebbe falsa se
   un'espressione potesse raggiungere un attributo senza nominarlo nel nodo StateAccess, e la grammatica di
   R-SIM-40 lo esclude (l'attributo è un IDENTIFIER letterale).`
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat, punto 7 del digest): al Reset un derivato fuori dominio o fallito tiene il valore calcolato quando ne ha uno e mostra il difetto di dichiarazione (decisione 5 del report, implementazione `5060657c5`); «valore assente» sopra vale solo per un'equazione che non produce un `SimValue`.
 - **R-SIM-74** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
   **Grafo delle dipendenze per nome, ciclo come difetto.** Gli archi vengono dai nodi `StateAccess` di ogni
   equazione, chiave il nome dell'attributo (G1): conservativo, completo perché ogni accesso nomina l'attributo;

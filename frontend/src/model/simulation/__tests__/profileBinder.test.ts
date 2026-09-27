@@ -189,26 +189,26 @@ describe('bindProfile on the report fixtures (§6.5)', () => {
         const b = bindProfile(profile('petri'), PETRI_3B);
         expect(statuses(b)).toEqual({
             node: 'Place', initialMarking: 'Place.tokens', terminal: '-', transition: 'PTrans',
-            arc: 'Arc', arcSource: 'Arc.src', arcTarget: 'Arc.tgt', arcWeight: 'Arc.weight', inhibitorArc: 'Inhibitor',
+            arc: 'Arc', arcSource: 'Arc.src', arcTarget: 'Arc.tgt', arcWeight: 'Arc.weight', inhibitorArc: 'Inhibitor', guard: '-',
         });
-        expect(counts(b)).toEqual({ bound: 8, candidates: 0, none: 1 });
+        expect(counts(b)).toEqual({ bound: 8, candidates: 0, none: 2 });
         expect(checkability(profile('petri'), bagOf(b))).toEqual({ status: 'checkable', missing: [] });
     });
 
-    it('Petri C1 x Petri net: six bound; the Data attributes are not proposed, their roles are off', () => {
+    it('Petri C1 x Petri net: seven bound, Guard among them; the other Data attributes are not proposed, their roles are off', () => {
         const b = bindProfile(profile('petri'), PETRI_C1);
-        expect(counts(b)).toEqual({ bound: 6, candidates: 0, none: 3 });
-        expect(b.guard).toBeUndefined();
+        expect(counts(b)).toEqual({ bound: 7, candidates: 0, none: 3 });
+        expect(b.guard).toMatchObject({ status: 'bound', value: 'PTrans.guard' });
         expect(b.action).toBeUndefined();
         expect(b.entry).toBeUndefined();
     });
 
-    it('b2net x Petri net: bound and checkable; Guard is off, so the binder does not touch it', () => {
+    it('b2net x Petri net: bound and checkable; Guard is edit (R-SIM-54 amended), so the binder binds it', () => {
         const b = bindProfile(profile('petri'), B2NET);
         expect(statuses(b)).toMatchObject({
             node: 'Place', transition: 'PTrans', arc: 'Arc', arcSource: 'Arc.src', arcTarget: 'Arc.tgt', initialMarking: 'Place.tokens',
         });
-        expect(b.guard).toBeUndefined();
+        expect(b.guard).toMatchObject({ status: 'bound', value: 'PTrans.guard' });
         expect(checkability(profile('petri'), bagOf(b)).status).toBe('checkable');
     });
 });

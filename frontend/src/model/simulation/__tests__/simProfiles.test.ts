@@ -25,7 +25,7 @@ const PETRI_GROUP: RoleId[] = ['arc', 'arcSource', 'arcTarget', 'arcWeight', 'in
 const TABLE: Record<SystemProfileId, {
     name: string; shape: 'controlFlow' | 'petri'; active: RoleId[]; added: RoleId[]; constraints: string[];
 }> = {
-    petri: { name: 'Petri net (P/T)', shape: 'petri', active: ['arcWeight', 'inhibitorArc', 'bound', 'terminal'], added: [], constraints: [] },
+    petri: { name: 'Petri net (P/T)', shape: 'petri', active: ['arcWeight', 'inhibitorArc', 'bound', 'terminal', 'guard'], added: [], constraints: [] },
     flowchart: { name: 'Flowchart / Activity', shape: 'controlFlow', active: ['guard', 'terminal', 'activityFinal', 'fork', 'join', 'action', 'entry', 'stateAttributes'], added: [], constraints: [] },
     stateMachine: { name: 'State machine', shape: 'controlFlow', active: ['trigger', 'eventIdentifier', 'guard', 'terminal'], added: [], constraints: ['singleToken'] },
     extendedStateMachine: { name: 'Extended state machine', shape: 'controlFlow', active: ['trigger', 'eventIdentifier', 'guard', 'terminal', 'action', 'entry', 'exit', 'stateAttributes'], added: [], constraints: ['singleToken'] },
@@ -97,6 +97,10 @@ describe('system profiles: complete and valid', () => {
         }
         expect(sys('petri').modes.bound).toEqual({ mode: 'edit' });
         expect(sys('petri').params).toEqual({ bound: 1, selector: 'list' });
+    });
+
+    it('Petri net keeps Guard in edit (R-SIM-54 amended 2026-09-27, killed by dropping guard from the Petri row)', () => {
+        expect(sys('petri').modes.guard).toEqual({ mode: 'edit' });
     });
 
     it('turn off the rest with the reasons of the prompt', () => {
