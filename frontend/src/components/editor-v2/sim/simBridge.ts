@@ -346,7 +346,8 @@ export function startRun(
         throw e;
     }
     // Derived attributes (R-SIM-73): an oracle only when one is declared, as NO_SIM_ACTIONS for the actions.
-    const equations = compileDerived(plain.attributes);
+    // The dependencies per element over the frozen M (R-SIM-74 as amended): a recursion on M is ordered.
+    const equations = compileDerived(plain.attributes, { snapshot, net: plain });
     const derived = plain.attributes.some(d => d.equation !== undefined) ? makeDerivedOracle(snapshot, plain, equations) : undefined;
     const net = derived ? withDerivedInitial(plain, derived, equations.defects) : plain;
     const guards = compileGuards(net, stc, lookup);
