@@ -509,6 +509,21 @@
         text-overflow: ellipsis;
     }
 
+    // The halt line, the one exception (P-2026-09-27-2225, ratified by Alfonso 2026-09-27): it exists in the halted
+    // state only, and it is the sentence that state shows, so it wraps into a slot of exactly two lines (3em is two
+    // rows of line-height 1.5), an ellipsis past the second. The slot sits above the buttons and its height does not
+    // depend on the text, so it grows the panel upward and moves none of them (R-SIM-65). «Last step» stays on one
+    // row: it sits below the buttons, and a second row there lifted them 16.5px (measured 2026-09-27).
+    &__hint--halt {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        box-sizing: content-box;
+        height: 3em;
+    }
+
     // The run's marking and σ (R-SIM-82): the line the audience reads, in the primary text token.
     &__hint--marking {
         color: var(--color-text-primary);
