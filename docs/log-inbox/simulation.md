@@ -194,3 +194,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: probe readings and 2x crops for the chat (dark: an SVG `background-image` on the 4 table selects before, `none` on 21 of 21 panel selects after, one chevron; light: `none` before and after, the 4 crops byte-identical by `cmp`; shots in `~/.jjodel-lanes/shots_chevron/`)
 **Notes**: Closes C1's doubled-chevron ticket. Not a second chevron but a row: `[data-theme="dark"] select` (`_form-system.scss:760`, 0,1,1) outranks `.sim-panel__select` (0,1,0), and its SVG tiles (the dark shorthand at `:735` resets repeat) beside the native arrow. It hits every panel select since panel v1 (`1b67b65fa`), so the rule covers all 21. Dark background colour unchanged (report §5). Probes `_tmp_chevron_*` gitignored; logs in `~/.jjodel-lanes/P-2026-09-27-1501/`.
 **Prompt document name**: 2026-09-27 15:01
+
+## 2026-09-27 — probe: the demo script's Add attribute hint path on the trunk (P-2026-09-27-1500)
+**Prompt**: `claude_2026-09-27_1500_prompt_sim_demo_hint_path_probe_trunk.md`, fast probe lane on `sim-hint-path-probe` in `~/jjodel-icons` (trunk code `86520a8f3`). Measure the ESM declarations path of `docs/demo/models_2026_simulator_demo.md` (`6fd1da38f`, lines 194-201) on the trunk: hint click, groups and focus, the two rows as typed, Apply, the marking line; four crops; confirm or amend each step.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-27_sim_demo_hint_path_trunk.md` (new), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_hint_*` gitignored; no source file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no source file touched; four probe runs on 3013, `EXIT=0` each, port free before and after.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — probe lane; five crops per variant for the chat in `~/.jjodel-lanes/shots_hint/{script,direct,prompt}/`
+**Notes**: Step 1 confirmed (focus on the table's add, 926-950 vs 950, R2's numbers); step 4 and the run confirmed. Steps 2 and 3 diverge in gestures only: cells prefilled `x1`/`false`/max `1`, a click leaves the caret after the text; row 1 line 3 at 945-969, second add 954-978, row 2 line 2 at 946-970, all past the 950 fold. Declarations byte-identical to the Configure path. Trunk moved to `2e7f966de` (validateProfile only, no panel caller). Report §6 has the script wording.
+**Prompt document name**: 2026-09-27 15:00
+**Ticket** (priority low, opened here, report §8 Q2). The table's own `Add attribute` scrolls nothing (`SimulationPanel.tsx:420`; only the hint scrolls, `:474-475`), so each new row starts at the body's bottom edge with its lower lines below the fold, and every new cell is prefilled (`:322`, `:274`) with the caret left after the text on click. After MODELS: scroll the new row into view, select a prefilled cell on focus.
