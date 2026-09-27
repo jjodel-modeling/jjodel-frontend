@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodS
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // lane-run.mjs run as a child process, the way the chat runs it (P11), against a
@@ -518,6 +518,9 @@ const MERGE_ENV = { LANE_RUN_NOW: NOW, ...GIT_ENV };
 const MERGE_FILE = 'docs/prompts/claude_2026-09-27_1040_prompt_merge_feat.md';
 const TAKE_FILE = 'docs/prompts/claude_2026-09-27_1040_prompt_feat_take_trunk.md';
 
+/** Where merge parks a prompt it does not launch: the state root's pending/, outside every tree. */
+const parked = (l: Lab, file: string) => join(l.lanes, 'pending', basename(file));
+
 const DECISIONS = '# Decisions\n\n### Series X\n\n- **R-X-1** (2026-09-26): the base row.\n';
 const INBOX = '# log-inbox\n\n---\n';
 const TEN = 'l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\nl10\n';
@@ -595,6 +598,16 @@ function repoLab(o: { conflict?: boolean; bothCode?: boolean; docsConflict?: boo
 
 const short = (sha: string) => sha.slice(0, 9);
 
+/** Runs the `by hand:` line of a merge as printed, through /bin/sh from HOME, `lane-run` a shim on the PATH for this script. */
+function byHand(l: Lab, stdout: string) {
+    const line = stdout.split('\n').find((x) => x.startsWith('by hand: '));
+    if (!line) throw new Error('no by hand line in: ' + stdout);
+    writeFileSync(join(l.bin, 'lane-run'), `#!/bin/sh\nexec "${process.execPath}" "${SCRIPT}" "$@"\n`);
+    chmodSync(join(l.bin, 'lane-run'), 0o755);
+    const r = spawnSync('/bin/sh', ['-c', line.slice('by hand: '.length)], { cwd: l.home, env: { ...l.env, ...MERGE_ENV }, encoding: 'utf8', timeout: 20000 });
+    return { status: r.status, stdout: r.stdout, stderr: r.stderr };
+}
+
 describe('lane-run merge', () => {
     test('kills "a measurement dropped or wrong", "the prompt not rendered", "a placeholder left": merge measures both sides and writes the rendered prompt, uncommitted', () => {
         const { l, repo, base, branchTip, trunkTip } = repoLab();
@@ -611,9 +624,9 @@ describe('lane-run merge', () => {
         expect(r.stdout).toContain('branch prompts: claude_2026-09-27_0100_prompt_feat.md eseguito');
         expect(r.stdout).toContain(`trunk in ${repo}`);
         expect(r.stdout).toContain(`Prompt-ID: ${NEW_ID}`);
-        expect(r.stdout).toContain(`prompt: ${join(repo, MERGE_FILE)}`);
+        expect(r.stdout).toContain(`prompt: ${parked(l, MERGE_FILE)}`);
         expect(r.stdout).toContain('launch: not requested');
-        const text = readFileSync(join(repo, MERGE_FILE), 'utf8');
+        const text = readFileSync(parked(l, MERGE_FILE), 'utf8');
         expect(text).toContain(`\nPrompt-ID: ${NEW_ID}\n`);
         expect(text).toContain('\nStatus: da eseguire\n');
         expect(text).toContain(`Worktree: \`${repo}\`, branch \`trunk\``);
@@ -624,7 +637,8 @@ describe('lane-run merge', () => {
         expect(text).toContain('## 2026-09-27 — feat: the thing (P-2026-09-27-0100)');
         expect(text).not.toContain('{{');
         expect(text).not.toContain('Findings');
-        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe(`?? ${MERGE_FILE}`);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(existsSync(join(repo, MERGE_FILE))).toBe(false);
         expect(calls(l)).toEqual([]);
     });
 
@@ -666,7 +680,7 @@ describe('lane-run merge', () => {
         expect(r.stdout).toContain('conflicts: none');
         expect(r.stdout).toContain('both sides: src/a.ts');
         expect(r.stderr).toContain('--trunk-into feat');
-        const text = readFileSync(join(repo, MERGE_FILE), 'utf8');
+        const text = readFileSync(parked(l, MERGE_FILE), 'utf8');
         expect(text).toMatch(/\*\*Findings\.\*\*[\s\S]*src\/a\.ts[\s\S]*## COME/);
         expect(gitIn(l, repo, ['rev-parse', 'HEAD'])).toBe(trunkTip);
         expect(existsSync(join(l.lanes, NEW_ID))).toBe(false);
@@ -731,7 +745,7 @@ describe('lane-run merge', () => {
         expect(r.status, r.stderr).toBe(0);
         expect(r.stdout).toContain(`trunk: trunk at ${short(past)}`);
         expect(r.stdout).toContain('trunk commits: 1');
-        rmSync(join(repo, MERGE_FILE));
+        rmSync(parked(l, MERGE_FILE));
         const x = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--at', 'trunk~1', '--launch'], { cwd: repo, env: MERGE_ENV });
         expect(x.status).toBe(2);
         expect(x.stderr).toContain('--at');
@@ -765,9 +779,117 @@ describe('lane-run merge', () => {
         expect(r.status).toBe(2);
         expect(r.stdout).toContain('conflicts: 1: src/a.ts');
         expect(r.stderr).toContain('src/a.ts');
-        expect(readFileSync(join(wt, TAKE_FILE), 'utf8')).toMatch(/\*\*Findings\.\*\*[\s\S]*src\/a\.ts[\s\S]*## COME/);
+        expect(readFileSync(parked(l, TAKE_FILE), 'utf8')).toMatch(/\*\*Findings\.\*\*[\s\S]*src\/a\.ts[\s\S]*## COME/);
         expect(gitIn(l, wt, ['rev-parse', 'HEAD'])).toBe(before);
         expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "rendered into the tree, moved out on refusal": a render that cannot be written leaves the trunk tree clean', () => {
+        const { l, repo } = repoLab();
+        mkdirSync(join(l.lanes, 'pending'), { recursive: true });
+        chmodSync(join(l.lanes, 'pending'), 0o555);
+        const r = laneRun(l, ['merge', 'feat', '--into', 'trunk'], { cwd: repo, env: MERGE_ENV });
+        chmodSync(join(l.lanes, 'pending'), 0o755);
+        expect(r.status).toBe(1);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+    });
+
+    test('kills "the by-hand line starts the pending path", "a by-hand commit unlike the launch one": the by-hand line, run as printed, commits the prompt alone into the tree and starts it from there', () => {
+        const { l, repo } = repoLab();
+        const r = laneRun(l, ['merge', 'feat', '--into', 'trunk'], { cwd: repo, env: MERGE_ENV });
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain(`by hand: cp ${parked(l, MERGE_FILE)} ${join(repo, MERGE_FILE)} && git -C ${repo} add -- ${MERGE_FILE} && ` +
+            `git -C ${repo} commit -m 'docs: add prompt ${NEW_ID}, merge feat into trunk' -m 'Model: chat via lane-run' -- ${MERGE_FILE} && ` +
+            `lane-run start ${repo} ${MERGE_FILE}\n`);
+        const h = byHand(l, r.stdout);
+        expect(h.status, h.stderr).toBe(0);
+        expect(gitIn(l, repo, ['log', '-1', '--format=%s'])).toBe(`docs: add prompt ${NEW_ID}, merge feat into trunk`);
+        expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toBe('Model: chat via lane-run');
+        expect(gitIn(l, repo, ['show', '--name-only', '--format=', 'HEAD'])).toBe(MERGE_FILE);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(waitFor(join(l.lanes, NEW_ID, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(l.lanes, NEW_ID, 'prompt.txt'), 'utf8').trim()).toBe(join(repo, MERGE_FILE));
+        expect(calls(l)[0].cwd).toBe(repo);
+    });
+
+    test('kills "a refused launch leaves the prompt in the tree": --launch refused on a governance change leaves the trunk tree clean, the prompt parked with its finding', () => {
+        const { l, repo, trunkTip } = repoLab({ governance: true });
+        const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--launch'], { cwd: repo, env: MERGE_ENV });
+        expect(r.status).toBe(2);
+        expect(r.stdout).toContain(`prompt: ${parked(l, MERGE_FILE)}`);
+        expect(r.stdout).toContain(`by hand: cp ${parked(l, MERGE_FILE)} `);
+        expect(readFileSync(parked(l, MERGE_FILE), 'utf8')).toMatch(/\*\*Findings\.\*\* `lane-run merge` refuses `--launch`[\s\S]*`CLAUDE\.md`/);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(gitIn(l, repo, ['rev-parse', 'HEAD'])).toBe(trunkTip);
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "the go-ahead not lifting governance", "the go-ahead sentence missing from the commit", "the go-ahead Findings not written": --launch --governance-goahead commits the prompt with the go-ahead under the Model trailer and starts it', () => {
+        const { l, repo } = repoLab({ governance: true });
+        const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--launch', '--governance-goahead'], { cwd: repo, env: MERGE_ENV });
+        expect(r.status, r.stderr).toBe(0);
+        expect(gitIn(l, repo, ['log', '-1', '--format=%s'])).toBe(`docs: add prompt ${NEW_ID}, merge feat into trunk`);
+        expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toBe(
+            'Model: chat via lane-run\n\nGovernance go-ahead: Alfonso\'s yes, 2026-09-27 10:40 (--governance-goahead).');
+        expect(gitIn(l, repo, ['show', '--name-only', '--format=', 'HEAD'])).toBe(MERGE_FILE);
+        const text = readFileSync(join(repo, MERGE_FILE), 'utf8');
+        expect(text).toContain('\n**Findings.** governance files changed on the branch: `CLAUDE.md`; launch allowed by Alfonso\'s yes (`--governance-goahead`, 2026-09-27 10:40)\n');
+        expect(text).not.toContain('refuses `--launch`');
+        expect(existsSync(parked(l, MERGE_FILE))).toBe(false);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(r.stdout).not.toContain('by hand:');
+        expect(r.stdout).toContain(`session: ${SESSION}`);
+        expect(waitFor(join(l.lanes, NEW_ID, 'exit.txt'))).toBe(true);
+        expect(calls(l)[0].stdin).toContain(`Prompt-ID: ${NEW_ID}`);
+    });
+
+    test('kills "the go-ahead lifting every finding": --governance-goahead lifts neither a conflict nor a branch prompt not flipped', () => {
+        for (const [o, reason] of [[{ conflict: true }, 'src/a.ts'], [{ pending: true }, 'Status']] as const) {
+            const { l, repo, trunkTip } = repoLab({ governance: true, ...o });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--launch', '--governance-goahead'], { cwd: repo, env: MERGE_ENV });
+            expect(r.status).toBe(2);
+            expect(r.stderr).toContain(reason);
+            expect(r.stderr).not.toContain('CLAUDE.md');
+            expect(gitIn(l, repo, ['rev-parse', 'HEAD'])).toBe(trunkTip);
+            expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+            expect(calls(l)).toEqual([]);
+        }
+    });
+
+    test('kills "a value taken by the go-ahead flag": --governance-goahead=x and --governance-goahead x are usage refusals, nothing rendered', () => {
+        const { l, repo } = repoLab({ governance: true });
+        for (const flag of [['--governance-goahead=x'], ['--governance-goahead', 'x']]) {
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--launch', ...flag], { cwd: repo, env: MERGE_ENV });
+            expect(r.status).toBe(2);
+            expect(r.stderr).toContain('usage: lane-run merge');
+        }
+        expect(existsSync(join(l.lanes, 'pending'))).toBe(false);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "the flag acting without --launch", "the go-ahead dropped from the by-hand line": without --launch the flag lifts nothing, and the by-hand commit carries the go-ahead', () => {
+        const { l, repo } = repoLab({ governance: true });
+        const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--governance-goahead'], { cwd: repo, env: MERGE_ENV });
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('launch: not requested; it would be refused: governance files changed on the branch: CLAUDE.md');
+        expect(readFileSync(parked(l, MERGE_FILE), 'utf8')).toContain('refuses `--launch`');
+        expect(calls(l)).toEqual([]);
+        const h = byHand(l, r.stdout);
+        expect(h.status, h.stderr).toBe(0);
+        expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toBe(
+            'Model: chat via lane-run\n\nGovernance go-ahead: Alfonso\'s yes, 2026-09-27 10:40 (--governance-goahead).');
+        expect(waitFor(join(l.lanes, NEW_ID, 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "a parked prompt of this minute ignored": a prompt of this minute in pending/ refuses the Prompt-ID, as one in docs/prompts/ does', () => {
+        const { l, repo } = repoLab();
+        mkdirSync(join(l.lanes, 'pending'), { recursive: true });
+        writeFileSync(join(l.lanes, 'pending', 'claude_2026-09-27_1040_prompt_merge_other.md'), lanePrompt(NEW_ID, 'da eseguire'));
+        const r = laneRun(l, ['merge', 'feat', '--into', 'trunk'], { cwd: repo, env: MERGE_ENV });
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain(NEW_ID);
+        expect(existsSync(parked(l, MERGE_FILE))).toBe(false);
     });
 });
 
