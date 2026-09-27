@@ -394,6 +394,14 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
   - `probe <worktree> <probe.ts> --port <n>` starts vite on its own port (never 3001, never a busy one), runs the probe with `npx tsx`, logs it with `EXIT=` in the lane folder, stops only the vite it started and exits with the probe's code.
   - Two fixes: `start` tries the prompt path as given, then relative to the worktree (so the bullet above no longer binds the chat to `docs/prompts/...`); an `Outcome:` line with a suffix after the word parses, one naming no outcome reads `unparsed: <line>`; `status --all` lists every lane in one table.
   - `wait <Prompt-ID>` or `wait --any <id,id,...>` polls every 2 s: exit 0 both when a lane ends, with its status, and at the deadline, with a `timeout:` line, `--max` at most 170 s (the chat's shell call ends near 180 s).
+- **Merge prompt and governance go-ahead (`P-2026-09-27-1440`).** `merge` renders its prompt into
+  `~/.jjodel-lanes/pending/`, and only a `--launch` that passes every refusal moves it into `docs/prompts/`, commits
+  it and starts it; not launched or refused, it prints a `by hand:` line with the cp, add, commit and start of that
+  launch, so a rendered prompt never sits untracked in the trunk tree. `--launch --governance-goahead`, passed by
+  the chat only after Alfonso's yes in chat (RC-26), lifts the refusal for a governance file (`CLAUDE.md`,
+  `AGENTS.md`, `docs/PROTOCOL.md`, `.claude/settings.json`) changed on the branch and no other, the prompt's
+  Findings and the commit body recording the yes; without `--launch` it lifts nothing and reaches only the commit
+  of the `by hand:` line.
 - **The chat reads one line.** The final message of a session ends with the `Outcome` line of P13, and the chat
   acts on that line through `lane-run status <Prompt-ID>`, never on the prose. A `question` is a hard stop: the
   session writes it and exits, the chat answers it or takes it to Alfonso, then resumes the session.
