@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-0405
 Chat: C-2026-09-26-1702
 Lane: fast (two files of code-adjacent config and comments, one protocol clause, one inbox entry; no source under `src/`, no critical zone)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane fast · fbd9064c9
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, `git log -1` is the commit that adds this file (its parent `2e8654646`, the Status flip of the profiles panel merge), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`. If the tip moved because another chat added a docs-only commit on top, say so and continue. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-0405 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

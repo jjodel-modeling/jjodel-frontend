@@ -382,6 +382,12 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
   resume runs in the caller's directory, not the session's (measured 2026-09-26,
   `docs/discovery/discovery_2026-09-26_orchestrated_lanes_harness.md` §5). Its logs live in
   `~/.jjodel-lanes/<Prompt-ID>/`, outside every tree.
+- **Prompt path.** `lane-run start` reads a relative `<prompt-file>` from `<worktree>`, so the chat passes
+  `docs/prompts/<file>.md`, never a path relative to its own directory (measured 2026-09-27: `../docs/...` from
+  `frontend/` fails with `no prompt file`).
+- **Foreground gates.** A `-p` session ends its turn when the last foreground command returns; a gate launched as
+  a background task is lost with the turn and the session exits without its `Outcome` line (measured 2026-09-27,
+  `P-2026-09-27-0120`). Every gate runs in the foreground; a prompt may still repeat it.
 - **The chat reads one line.** The final message of a session ends with the `Outcome` line of P13, and the chat
   acts on that line through `lane-run status <Prompt-ID>`, never on the prose. A `question` is a hard stop: the
   session writes it and exits, the chat answers it or takes it to Alfonso, then resumes the session.

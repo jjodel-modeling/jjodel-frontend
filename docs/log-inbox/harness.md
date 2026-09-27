@@ -55,3 +55,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Prompt document name**: 2026-09-27 00:51
 
 **Ticket** (history of the public branch, left by P-2026-09-27-0051, a decision reserved to Alfonso by RC-26): the history of `alfonso-frontend-jjtl` still carries the research material removed by `0793a8b6d` (every blob before it), the study's name in the old paths and in the lines rewritten by `d47f3cbb1`, and one commit subject that names it, `869f204eb` (scope written here as `docs(<scope>)`); it is the only commit message of the branch that does, measured with a word-boundary grep over every message. Removing them takes a history rewrite and a force push: not done, not planned by any lane.
+
+## 2026-09-27 — fix: typecheck:scripts skips _tmp_ probes, P16 prompt path and foreground gates (P-2026-09-27-0405)
+**Prompt**: `claude_2026-09-27_0405_prompt_harness_night_tickets.md`, fast lane, launched by `lane-run` on the trunk in `~/jjodel-release` at `2a0066f21`. Closes three tickets of the night lanes: `typecheck:scripts` red on gitignored `_tmp_*` probes (`P-2026-09-27-0325`); P16 silent on the relative prompt path of `lane-run start` (chat, 03:01) and on gates run as a background task (`P-2026-09-27-0120`); the `bash-guard.mjs` header still naming the `git commit*` ask that RC-29 removed.
+**Files touched**: `fbd9064c9`: `frontend/scripts/tsconfig.json` (`"exclude": ["**/_tmp_*"]`), `frontend/scripts/hooks/bash-guard.mjs` (header comment only). This commit: `docs/PROTOCOL.md` (P16, two bullets after Launch and resume), `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. From `frontend/`: hook tests 255/255 and `check:scripts` PASS (28 files) before and after the code change; `check:docs` 4/4, 5 warnings, at baseline and before this commit. `typecheck:scripts`: baseline exit 0, 0 errors; with the probe `scripts/smoke/_tmp_p0405_typeerror.ts` exit 2, TS2322, 15 `scripts/` files listed; with the exclude and the probe still present exit 0, the same 14 files as the baseline, equal to the 14 tracked `.ts`. No build: no `src/` file changed.
+**Out-of-scope changes**: no — the four files of DOVE plus this prompt's Status line.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The ticket's 25 errors did not reproduce: the chat's `_tmp_*` left in `scripts/smoke/` are `.md` only, so the probe stood in for them, then was removed. The child `exclude` replaces the one inherited from `frontend/tsconfig.json`, whose entries lie outside the child's `include`. Code subject is the prompt's fallback: the first one is 83 characters. Session `c9dbaa08`.
+**Prompt document name**: 2026-09-27 04:05
