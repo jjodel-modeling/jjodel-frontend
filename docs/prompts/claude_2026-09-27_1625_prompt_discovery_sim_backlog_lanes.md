@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1625
 Chat: C-2026-09-27-1437
 Lane: full (Phase 1 discovery, read-only; hard stop at the report)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane simulation-engine · the commit of this line (docs-only discovery: report, entry and flip in one commit)
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, fast-forwarded by the chat to `alfonso-frontend-jjtl` at `2b1b346da` plus this prompt's commit, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 

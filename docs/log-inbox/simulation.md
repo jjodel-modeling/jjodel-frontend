@@ -221,3 +221,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: No value of §6 contradicts the script: min 0, max 3, initial 0, the 10 interactions (1 hint, 2 add, 7 cells) hold. Measured code `86520a8f3`; since then `frontend/src/components/editor-v2/sim/` differs by `50c198da5` only, a dark-only select rule (light computes `none`): read, not re-run. §2.4 line 274 types into the same prefilled cells and names no double-click; out of scope, left as is. The table-add ticket stays open (chat, RC-25).
 **Prompt document name**: 2026-09-27 15:40
+
+## 2026-09-27 — discovery: the simulator backlog cut into parallel lanes (P-2026-09-27-1625)
+**Prompt**: `claude_2026-09-27_1625_prompt_discovery_sim_backlog_lanes.md`, read-only discovery on `simulation-engine` in `~/jjodel-sim` at `8479b6242`: every open simulator item with its origin, files verified by reading, tests, size, RC-26 and demo impact, conflicts with E1 (`P-2026-09-27-1610`) and E2 (`P-2026-09-27-1611`); the items grouped into waves of lanes with disjoint file sets.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_backlog_lanes.md` (new), this entry, the Status of the prompt file. No source file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no source file changed, no probe, no dev server. `check:docs` on this commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 24 items (S1-S24). Wave 1: `sim-binding-compat` (the only disjoint code lane) and six Phase 1 discoveries. Wave 2 split into 2a (after E1, whose two code commits exist) and 2b (after E2). E2's DOVE swaps two paths: `modelMarkings.ts` is under `sim/`, `stcFromRoles.ts` under `model/simulation/`. E1/E2 read from branch refs with `git show`. One closure commit as the prompt asks, not the inbox alone.
+**Prompt document name**: 2026-09-27 16:25
