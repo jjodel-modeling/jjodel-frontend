@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1430
 Chat: C-2026-09-27-1428
 Lane: fast (docs only: one new file under `docs/demo/`, one inbox entry; no frontend code, no critical zone; the probes are read, re-run only if a quoted line is missing)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane simulation-engine · 6fd1da38f
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file (its parent `4edc8bed5`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-1430 · session <id>]` and ends with a bare `Outcome:` line, the shas on the line above. Run gates in the foreground.
 
