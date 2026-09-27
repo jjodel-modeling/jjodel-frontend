@@ -1,0 +1,993 @@
+// SimRolesModal — the «Simulation roles» dialog (R-SIM-55; P-2026-09-27-1740).
+//
+// Overlay pattern of SymbolEditorModal: a fixed backdrop portaled onto
+// document.body, at the stacking level of the other modals. `--z-modal` is not
+// enough: it resolves to 1050 and inside `#root` no number reaches the
+// Properties rail (SymbolEditorModal.scss, measured 2026-09-16).
+//
+// FIXED size, 640 x 600 (the design): header, match line and footer never
+// move; folds, values and new rows scroll inside the body. Only design-system
+// tokens and the panel's literals (the slate gradient of a primary button, the
+// cyan of an indicator) are used; no variable is DEFINED here.
+//
+// Specificity: every rule is nested under `.sim-roles-modal`, (0,2,0) and up,
+// so it outranks the global form rules (styles/components/_form-system.scss):
+// `input[type="text"]` and `input[type="number"]` (0,1,1, 36px and 14px) and
+// the dark `[data-theme="dark"] select` (0,1,1, an SVG arrow that tiles beside
+// the native one, measured on the panel 2026-09-27).
+//
+// ICON COLOUR is declared on `.bi` itself with a `:hover` twin (`i.bi` and
+// `i.bi:hover`, styles/style.scss, set a colour on the tag), as in
+// simulation-panel.scss.
+
+.sim-roles-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-alert, 10000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.sim-roles-modal {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 640px;
+    max-width: 100%;
+    height: 600px;
+    max-height: calc(100vh - 32px);
+    overflow: hidden;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: var(--radius-xl, 16px);
+    background: var(--color-bg-secondary);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.06);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans, inherit);
+    font-size: 13px;
+    text-align: left;
+
+    &:focus {
+        outline: none;
+    }
+
+    .bi,
+    .bi:hover {
+        color: inherit;
+    }
+
+    // -- header ---------------------------------------------------------------
+    &__header {
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--color-border-secondary);
+    }
+
+    &__title-row,
+    &__preset-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        min-width: 0;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 32px;
+        color: var(--color-text-primary);
+    }
+
+    &__subtitle {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: var(--color-text-secondary);
+    }
+
+    // The verdict of the bag as Apply leaves it (`checkability`).
+    &__pill {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-full, 999px);
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+
+        .bi {
+            font-size: 11px;
+        }
+
+        &--checkable {
+            background: var(--color-success-muted);
+            color: var(--color-text-primary);
+        }
+
+        &--warnings {
+            background: var(--color-warning-muted);
+            color: var(--color-warning-text);
+        }
+
+        &--notCheckable {
+            border-color: var(--color-border-secondary);
+            background: var(--color-bg-tertiary);
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    &__close {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-left: auto;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-md, 8px);
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        .bi {
+            font-size: 14px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    & &__preset {
+        flex: 0 0 208px;
+        width: 208px;
+        font-weight: 500;
+    }
+
+    &__dot {
+        color: var(--color-text-placeholder);
+    }
+
+    &__shape {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+
+        .bi {
+            font-size: 12px;
+        }
+    }
+
+    &__warning {
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--color-warning-text);
+    }
+
+    // «Save as…» (S11c): the name of a user copy, the pencil inside the box.
+    &__name {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        flex: 0 1 176px;
+        min-width: 0;
+
+        .bi {
+            position: absolute;
+            left: 8px;
+            font-size: 11px;
+            color: var(--color-text-placeholder);
+            pointer-events: none;
+        }
+    }
+
+    // (0,3,0): above `& &__input` (0,2,0), which comes later in the file and would reset the padding.
+    & &__name &__name-input {
+        padding-left: 24px;
+        border-color: transparent;
+        background: transparent;
+        color: var(--color-text-secondary);
+
+        &:hover {
+            border-color: var(--color-border-primary);
+        }
+    }
+
+    &__tag {
+        flex: none;
+        padding: 0 6px;
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-warning-muted);
+        color: var(--color-warning-text);
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 16px;
+    }
+
+    // -- the match line -------------------------------------------------------
+    &__match {
+        flex: none;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+
+        .bi {
+            font-size: 14px;
+        }
+    }
+
+    &__link {
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    // -- body -----------------------------------------------------------------
+    &__body {
+        flex: 1 1 auto;
+        min-height: 0;
+        position: relative;
+        overflow-y: auto;
+        padding: 8px 24px 16px;
+    }
+
+    &__section {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    &__count {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0;
+        color: var(--color-text-tertiary);
+    }
+
+    &__row {
+        display: grid;
+        grid-template-columns: 208px minmax(0, 1fr);
+        column-gap: 16px;
+        padding: 4px 0;
+    }
+
+    &__role {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        min-width: 0;
+    }
+
+    &__label {
+        overflow: hidden;
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        &--muted {
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    // The kind badge (the design's Role Kind Badge): Class, Ref, Attr, Value.
+    &__badge {
+        box-sizing: border-box;
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 16px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm, 4px);
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1;
+        color: var(--color-text-tertiary);
+
+        &--class {
+            background: var(--color-bg-tertiary);
+            color: var(--color-text-secondary);
+        }
+
+        // An indicator: the cyan of the panel's running dot, as a tint.
+        &--ref {
+            border-color: rgba(14, 165, 233, 0.4);
+            background: rgba(14, 165, 233, 0.12);
+            color: #0369a1;
+
+            :root[data-theme="dark"] & {
+                color: #7dd3fc;
+            }
+        }
+    }
+
+    &__value {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    // The select and the fixed slot of its verdict (S11a): a verdict appearing never moves the row.
+    &__control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    &__verdict {
+        display: inline-flex;
+        flex: 0 0 16px;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 32px;
+
+        .bi {
+            font-size: 13px;
+        }
+
+        & .bi.sim-roles-modal__verdict--warn,
+        & .bi.sim-roles-modal__verdict--warn:hover {
+            color: var(--color-warning-text);
+        }
+
+        & .bi.sim-roles-modal__verdict--error,
+        & .bi.sim-roles-modal__verdict--error:hover {
+            color: var(--color-error-text);
+        }
+    }
+
+    // Turn a role off (S11c), at the end of its label cell.
+    &__switch {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        margin-left: auto;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-sm, 4px);
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        .bi {
+            font-size: 16px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    // The validator's defects (R-SIM-48), each with the switch that clears it (4e).
+    &__problems {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 8px 0 4px;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-error-subtle);
+    }
+
+    &__problem {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 24px;
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--color-error-text);
+
+        .bi {
+            flex: none;
+            font-size: 11px;
+        }
+
+        &--warning {
+            color: var(--color-warning-text);
+        }
+    }
+
+    & &__select,
+    & &__input {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        height: 32px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-bg-secondary);
+        background-image: none;
+        color: var(--color-text-primary);
+        font-family: inherit;
+        font-size: 13px;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--color-border-focus);
+            box-shadow: 0 0 0 3px var(--color-accent-muted);
+        }
+    }
+
+    & &__select {
+        cursor: pointer;
+    }
+
+    // A value the binder proposes and Apply would write: marked, the reason in the title.
+    & &__select--proposed {
+        border-color: rgba(14, 165, 233, 0.6);
+        box-shadow: inset 3px 0 0 #0ea5e9;
+    }
+
+    & &__select--empty {
+        color: var(--color-text-placeholder);
+    }
+
+    &__help {
+        display: block;
+        height: 16px;
+        overflow: hidden;
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        // The Bound helper: two lines always, whatever the text, the whole in the title.
+        &--two {
+            display: -webkit-box;
+            height: 32px;
+            white-space: normal;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__bound {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+    }
+
+    & &__bound-input {
+        flex: 0 0 96px;
+        width: 96px;
+        font-family: var(--font-mono, monospace);
+        font-size: 12px;
+    }
+
+    &__unit {
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+    }
+
+    // -- folds ----------------------------------------------------------------
+    &__fold {
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        height: 40px;
+        margin-top: 8px;
+        padding: 0;
+        border: none;
+        border-top: 1px solid var(--color-border-secondary);
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 13px;
+        text-align: left;
+        cursor: pointer;
+
+        .bi {
+            font-size: 12px;
+            color: var(--color-text-tertiary);
+        }
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: -2px;
+        }
+    }
+
+    &__fold-title {
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    &__locked {
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        min-width: 0;
+        padding: 0 12px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-bg-tertiary);
+        font-size: 13px;
+        color: var(--color-text-tertiary);
+
+        span {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .bi {
+            flex: none;
+            font-size: 12px;
+        }
+    }
+
+    &__off {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        min-height: 32px;
+        padding: 4px 0;
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--color-text-tertiary);
+    }
+
+    // A role of Not used: a button when the dialog can turn it on (S11c), text otherwise.
+    &__off-role {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-full, 999px);
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        .bi {
+            font-size: 10px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+
+        &--fixed {
+            border-style: dashed;
+            color: var(--color-text-tertiary);
+            cursor: default;
+
+            &:hover {
+                background: transparent;
+                color: var(--color-text-tertiary);
+            }
+        }
+    }
+
+    // -- Data -------------------------------------------------------------------
+    // The header sticks to the top of the body, so Add attribute stays in view (4d).
+    &__data-head {
+        position: sticky;
+        top: -8px;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 40px;
+        margin-top: 8px;
+        border-top: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-secondary);
+    }
+
+    & &__fold--data {
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-top: 0;
+        border-top: none;
+    }
+
+    &__data-note {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    &__empty {
+        display: flex;
+        align-items: center;
+        height: 40px;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    // Two fixed lines per row (D9): the row keeps its height, stored or derived, range or enum.
+    &__decl {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 0;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__decl-line {
+        display: grid;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+
+        &--first {
+            grid-template-columns: 136px minmax(0, 1fr) 104px 32px;
+        }
+
+        &--second {
+            grid-template-columns: 136px 104px 64px 64px minmax(0, 1fr);
+        }
+    }
+
+    & &__decl-name,
+    & &__decl-bound,
+    & &__decl-literals,
+    & &__decl-value {
+        font-family: var(--font-mono, monospace);
+        font-size: 12px;
+    }
+
+    & &__decl-literals,
+    &__decl-void {
+        grid-column: span 2;
+    }
+
+    &__decl-void {
+        box-sizing: border-box;
+        height: 32px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-bg-tertiary);
+    }
+
+    &__hidden {
+        visibility: hidden;
+    }
+
+    &__icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-sm, 4px);
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        .bi {
+            font-size: 12px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    // -- footer ---------------------------------------------------------------
+    &__footer {
+        flex: none;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 64px;
+        padding: 0 24px;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+
+        &--end {
+            flex: none;
+            margin-left: auto;
+        }
+    }
+
+    &__note {
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__message {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        overflow: hidden;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        .bi {
+            flex: none;
+            font-size: 11px;
+        }
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__btn {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-md, 8px);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+
+        .bi {
+            font-size: 13px;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        // The slate gradient and white text of the panel's primary buttons, in both themes.
+        &--primary {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #ffffff;
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(135deg, #1e293b, #0f172a);
+            }
+        }
+
+        &--secondary {
+            border-color: var(--color-border-primary);
+            background: var(--color-bg-secondary);
+            color: var(--color-text-secondary);
+
+            &:hover:not(:disabled) {
+                background: var(--color-bg-hover);
+            }
+        }
+
+        &--ghost {
+            padding: 0 8px;
+            background: transparent;
+            color: var(--color-text-secondary);
+
+            &:hover:not(:disabled) {
+                background: var(--color-bg-hover);
+            }
+        }
+
+        &--outline {
+            flex: none;
+            height: 28px;
+            padding: 0 8px;
+            border-color: var(--color-border-primary);
+            background: var(--color-bg-secondary);
+            color: var(--color-text-secondary);
+            font-size: 12px;
+
+            &:hover:not(:disabled) {
+                background: var(--color-bg-hover);
+            }
+        }
+    }
+
+    // -- the model kind picker (4a) ----------------------------------------------
+    &__kinds {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        padding-top: 8px;
+    }
+
+    // The card grows with its chips, one per line: none overflows (the design's 4a did, by 39.5px).
+    &__kind {
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+        padding: 16px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-lg, 12px);
+
+        &--on {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 3px var(--color-accent-muted);
+        }
+    }
+
+    &__kind-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-md, 8px);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-secondary);
+
+        .bi {
+            font-size: 16px;
+        }
+    }
+
+    &__kind-title {
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    &__kind-text {
+        min-height: 32px;
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__chips {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    &__chip {
+        box-sizing: border-box;
+        width: 100%;
+        height: 32px;
+        padding: 0 12px;
+        overflow: hidden;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: left;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+
+        &--on,
+        &--on:hover {
+            border-color: #334155;
+            background: #334155;
+            color: #ffffff;
+        }
+    }
+}

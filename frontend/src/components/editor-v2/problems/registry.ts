@@ -35,7 +35,12 @@ export type NodeProblemSeverity = 'warning' | 'error';
  * A differenza degli altri due, questo produttore **non e' reattivo**: scrive solo
  * quando l'utente lancia il comando (nessun debounce, nessun `AFTER_TRANSACTION`).
  *
- * `'simulation'` (P-2026-09-27-1805) is the fourth: the simulator's guard and action checks,
+ * `'classifier-kind'` (enum step B, S24, P-2026-09-27-1806) is the fourth: a metamodel saved
+ * before the canvas and model guards may hold a reference typed by a non-class, a data type
+ * with a supertype, or a class with a non-class supertype. Written by the M2 half of
+ * `UniquenessProblemSync`, reactive like it; shows, repairs nothing.
+ *
+ * `'simulation'` (P-2026-09-27-1805) is the fifth: the simulator's guard and action checks,
  * the defects the panel's Reset lists, published by `SimCheckProblemSync` through the bridge's
  * own `startRun` (R-SIM-17: the contextual check of a guard or an action belongs to the STC,
  * and its malformed value enters this registry). Named for the concern, not the channel, so a
@@ -43,7 +48,7 @@ export type NodeProblemSeverity = 'warning' | 'error';
  * optional property under Rule 11, authorized by the Phase 2 prompt. No consumer switches on
  * `kind` exhaustively (discovery_2026-09-27_sim_checker_gap.md §4.3), so none breaks.
  */
-export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'simulation';
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation';
 
 export interface NodeProblemAction {
     label: string;
