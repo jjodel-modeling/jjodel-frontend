@@ -285,12 +285,13 @@ describe('profileSummary and its text (R-SIM-77, R-SIM-79)', () => {
         expect(same.proposals.map(p => p.key)).not.toContain('simNode');
     });
 
-    it('b2net under Petri net: Checkable, nothing pending, Guard set but off (D8, §8 A3 not adopted)', () => {
+    it('b2net under Petri net: Checkable, nothing pending, Guard in edit and nothing set but off (§8 A3, R-SIM-54 amended; killed by Guard off in the Petri row)', () => {
         const s = profileSummary(PETRI_PROFILE, B2NET_BAG, B2NET_BINDINGS);
         expect(s).toMatchObject({ name: 'Petri net (P/T)', status: 'checkable', proposals: [], pending: false });
-        expect(s.setButOff).toEqual(['Guard']);
+        expect(s.setButOff).toEqual([]);
+        expect(s.kept).toEqual([]);
         const text = profileSummaryText(s, nameOf);
-        expect(text.setButOff).toBe('Set but off: Guard.');
+        expect(text.setButOff).toBeNull();
         expect(text.status).toBe('Petri net (P/T) · Checkable');
     });
 
@@ -324,8 +325,8 @@ describe('profilePatch (R-SIM-78)', () => {
     });
 
     it('writes only edit roles: a bound value for a role the profile turns off is dropped', () => {
-        const r = profilePatch(PETRI_PROFILE, {}, { ...B2NET_BINDINGS, guard: bound('A_guard') }, {}, []);
-        expect(Object.keys((r as { patch: Record<string, string> }).patch)).not.toContain('simGuard');
+        const r = profilePatch(PETRI_PROFILE, {}, { ...B2NET_BINDINGS, action: bound('A_actions') }, {}, []);
+        expect(Object.keys((r as { patch: Record<string, string> }).patch)).not.toContain('simAction');
     });
 
     it('refuses, writing nothing, when the roles after Apply overlap under the Petri shape (killed by skipping the check)', () => {

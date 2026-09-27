@@ -137,7 +137,7 @@ function systemProfileOf(row: SystemRow): SimProfile {
 const EVENTS: RoleId[] = ['trigger', 'eventIdentifier'];
 
 const SYSTEM_ROWS: readonly SystemRow[] = [
-    { id: 'petri', name: 'Petri net (P/T)', shape: 'petri', active: ['arcWeight', 'inhibitorArc', 'bound', 'terminal'] },
+    { id: 'petri', name: 'Petri net (P/T)', shape: 'petri', active: ['arcWeight', 'inhibitorArc', 'bound', 'terminal', 'guard'] },
     {
         id: 'flowchart', name: 'Flowchart / Activity', shape: 'controlFlow',
         active: ['guard', 'terminal', 'activityFinal', 'fork', 'join', 'action', 'entry', 'stateAttributes'],
