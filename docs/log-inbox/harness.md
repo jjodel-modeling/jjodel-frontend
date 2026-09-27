@@ -96,3 +96,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Prompt document name**: 2026-09-27 10:35
 
 **Ticket** (lane-run, left by P-2026-09-27-1035, to be found on their own): (1) `merge --into` does not refuse `--launch` when the branch has no commit the trunk lacks: measured on the dry run at the tip, where `sim-profiles` is already merged (base `939adb668`, 0 branch commits, launch not refused). (2) The merge-into-trunk template has no `simulation-engine` fast-forward step (0300 and 0345 had one): for a `sim-*` branch the chat adds it before `--launch`. (3) `npx tsx` resolves from the npx cache (`~/.npm/_npx/fd45a72a545557e9/`), not from a frontend dependency; on a machine without that cache npx would fetch it.
+
+## 2026-09-27 — fix: lane-run hides the Outcome of a running lane, wait exits 0 at the deadline (P-2026-09-27-1225)
+**Prompt**: `claude_2026-09-27_1225_prompt_harness_lanerun_wait_and_outcome.md`, fast lane, launched by `lane-run` in `~/jjodel-icons` on `harness-lanerun-wait` at `5e37e6027` (parent `097696d88`). Two tickets from the first use of lane-run v2: `status` showed the `Outcome:` of an earlier turn while a resumed lane ran (R2, P-2026-09-27-1110), and `wait` exited 3 at the deadline, so osascript dropped its output.
+**Files touched**: `e3c95ce23`: `frontend/scripts/lane-run.mjs` (`laneState`, `waitLanes`, usage header), `frontend/scripts/hooks/__tests__/laneRun.test.ts`. This commit: `docs/PROTOCOL.md` (P16, the `wait` bullet), `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 10:35 (`claude_2026-09-27_1035_prompt_lane_run_v2.md`: its `status` read the Outcome of any turn, its `wait` exited 3 at the deadline)
+**Causa**: (a)
+**Regressions**: no. From `frontend/`: `laneRun.test.ts` 54 green before, 3 red of 56 with the tests alone, 56/56 after; `check:scripts` PASS 39 files before and after; `typecheck:scripts` exit 0; `check:docs` 4/4 at this commit. Mutation bench 3/3 killed (table in `e3c95ce23`). No build: no `src/` file.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The single-lane tests sit in `lane-run status, the Outcome line`, beside `fakeLane`; the dead-process case removes `exit.txt` by hand, no new helper. The header's exit-code list also drops `3 wait timed out`. `/lane` and the chat's lane skill do not read exit 3. Bench copies left in `/tmp/lanerun-bench-D9kd` (`rm -rf` denied). Inbox, P16 and Status flip in one docs commit, as the prompt asks. Session `8c06b07f`.
+**Prompt document name**: 2026-09-27 12:25

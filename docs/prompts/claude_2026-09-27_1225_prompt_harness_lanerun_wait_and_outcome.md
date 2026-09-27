@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1225
 Chat: C-2026-09-27-1140
 Lane: fast (one script and its test, P16 paragraph; no frontend code, no critical zone; no visual check)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane harness-lanerun-wait · e3c95ce23
 
 Worktree: `~/jjodel-icons`, branch `harness-lanerun-wait` (cut by the chat from `alfonso-frontend-jjtl` at `097696d88`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-icons`, branch `harness-lanerun-wait`, `git log -1` is the commit that adds this file (its parent `097696d88`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-1225 · session <id>]` and ends with a bare `Outcome:` line, the shas on the line above. Run gates in the foreground.
 
