@@ -73,6 +73,12 @@ describe('netStcFromRoles (R-SIM-28, R-SIM-31, R-SIM-32)', () => {
         expect(netStcFromRoles({ ...cf, simTerminal: 'C_End' })?.terminal).toBe('C_End');
     });
 
+    it('R-SIM-53: simActivityFinal reaches the STC as activityFinal, optional like simTerminal (mutant: the ROLE_KEYS pair dropped)', () => {
+        expect(netStcFromRoles({ ...cf, simActivityFinal: 'C_AF' })?.activityFinal).toBe('C_AF');
+        // control: without the key the field is absent, and the STC still runs
+        expect(netStcFromRoles(cf)).not.toHaveProperty('activityFinal');
+    });
+
     it('control-flow needs simNextState, a source rule and an initial rule; empty strings count as unset', () => {
         expect(netStcFromRoles({ ...cf, simNextState: undefined })).toBeNull();
         expect(netStcFromRoles({ ...cf, simNextState: '' })).toBeNull();
@@ -476,6 +482,19 @@ describe('the initial state, F and the attributes (R-SIM-19, R-SIM-27, R-SIM-28)
         const spec: Spec = { classes: { ...CLASSES, C_SubEnd: ['C_End'] }, objects: { A: { cls: 'C_Init' }, E: { cls: 'C_End' }, S: { cls: 'C_SubEnd' } } };
         expect(compile(CF, spec).final).toBeNull();
         expect([...compile({ ...CF, terminal: 'C_End' }, spec).final!].sort()).toEqual(['E', 'S']);
+    });
+
+    it('R-SIM-53: the activity final set is the kind-of places of simActivityFinal, apart from F, null without the role (mutant: activityFinal null)', () => {
+        const spec: Spec = {
+            classes: { ...CLASSES, C_AF: ['C_Node'], C_SubAF: ['C_AF'] },
+            objects: { A: { cls: 'C_Init' }, F: { cls: 'C_AF' }, S: { cls: 'C_SubAF' }, E: { cls: 'C_End' } },
+        };
+        const net = compile({ ...CF, terminal: 'C_End', activityFinal: 'C_AF' }, spec);
+        expect([...net.activityFinal!].sort()).toEqual(['F', 'S']);
+        // not merged into F: F keeps the terminal role's places only
+        expect([...net.final!]).toEqual(['E']);
+        // control: without the role the set is null
+        expect(compile({ ...CF, terminal: 'C_End' }, spec).activityFinal).toBeNull();
     });
 
     it('attributes: per kind-of instance, global on the model id, presentation apart; the first declaration holds', () => {

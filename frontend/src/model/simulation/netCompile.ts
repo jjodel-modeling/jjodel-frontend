@@ -45,7 +45,7 @@ function readBound(raw: unknown): number | null | undefined {
 
 const ROLE_KEYS: ReadonlyArray<[Exclude<keyof NetStc, 'shape' | 'bound'>, string]> = [
     ['node', 'simNode'], ['transition', 'simTransition'], ['initial', 'simInitial'],
-    ['initialMarking', 'simInitialMarking'], ['terminal', 'simTerminal'],
+    ['initialMarking', 'simInitialMarking'], ['terminal', 'simTerminal'], ['activityFinal', 'simActivityFinal'],
     ['ownedTransitions', 'simOwnedTransitions'], ['source', 'simSource'], ['nextState', 'simNextState'],
     ['fork', 'simFork'], ['join', 'simJoin'], ['guard', 'simGuard'],
     ['action', 'simAction'], ['entry', 'simEntry'], ['exit', 'simExit'],
@@ -474,12 +474,14 @@ export function compileNet(
     }
 
     const final = stc.terminal ? new Set(places.filter(p => kind(p, stc.terminal))) : null;
+    const activityFinal = stc.activityFinal ? new Set(places.filter(p => kind(p, stc.activityFinal))) : null;
     return {
         modelId,
         places: new Set(places),
         transitions,
         bound: stc.bound,
         final,
+        activityFinal,
         hasEventRole,
         attributes: [...decls],
         declared,

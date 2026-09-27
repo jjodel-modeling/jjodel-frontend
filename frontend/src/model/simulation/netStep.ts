@@ -61,10 +61,14 @@ export function stateAccess(state: SimState, site?: string): SimStateAccess {
 }
 
 /**
- * R-SIM-27: the marking is not empty and every marked place is final. Never
- * true without the terminal role (R-SIM-28).
+ * R-SIM-27: the marking is not empty and every marked place is final, or
+ * (R-SIM-53) a place of the activity final is marked, whatever else is. Never
+ * true without the terminal or the activity final role (R-SIM-28).
  */
 export function terminated(net: CompiledNet, state: SimState): boolean {
+    // R-SIM-53: a marked activity final ends the run, whatever else is marked.
+    const activityFinal = net.activityFinal;
+    if (activityFinal) for (const [place, n] of state.marking) if (n !== 0 && activityFinal.has(place)) return true;
     const final = net.final;
     if (final === null) return false;
     let any = false;

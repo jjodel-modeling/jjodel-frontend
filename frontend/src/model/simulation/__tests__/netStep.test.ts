@@ -42,6 +42,8 @@ function tr(id: string, pre: Record<string, number>, post: Record<string, number
 interface NetOpts {
     bound?: number;
     final?: string[] | null;
+    /** The activity final places (R-SIM-53); absent from the net when not given. */
+    activityFinal?: string[];
     /** element -> declarations it carries */
     declared?: Record<string, StateAttributeDecl[]>;
 }
@@ -53,6 +55,7 @@ function mkNet(transitions: NetTransition[], o: NetOpts = {}): CompiledNet {
     for (const [e, ds] of Object.entries(o.declared ?? {})) declared.set(e, new Map(ds.map(d => [d.name, d])));
     return {
         modelId: 'M', places, transitions, bound: o.bound ?? 1, final: o.final ? new Set(o.final) : null,
+        ...(o.activityFinal ? { activityFinal: new Set(o.activityFinal) } : {}),
         hasEventRole: transitions.some(t => t.triggers.length > 0), attributes: [], declared,
         initial: { marking: new Map(), attrs: new Map(), presentation: new Map() }, defects: [],
     };
@@ -372,6 +375,21 @@ describe('termination (R-SIM-27) and status (R-SIM-29)', () => {
         expect(terminated(mkNet([tr('t', { a: 1 }, { f: 1 })]), st({ f: 1 }))).toBe(false);
     });
 
+    it('R-SIM-53: a marked activity final terminates with other tokens alive, F keeps its own rule (mutant: the check in terminated removed)', () => {
+        const af = mkNet([tr('t', { a: 1 }, { f: 1 }), tr('u', { n: 1 }, { x: 1 })], { final: ['f'], activityFinal: ['x'] });
+        expect(terminated(af, st({ x: 1, n: 1 }))).toBe(true);
+        expect(terminated(af, st({ n: 1 }))).toBe(false);
+        expect(terminated(af, st({ f: 1, n: 1 }))).toBe(false);
+        expect(terminated(af, st({ f: 1 }))).toBe(true);
+        expect(terminated(af, st({}))).toBe(false);
+        expect(candidates(af, cfg({ x: 1, n: 1 }), NO_GUARDS)).toMatchObject({ terminated: true, candidates: [] });
+        expect(netRunStatus(af, cfg({ x: 1, n: 1 }), [], NO_GUARDS, null)).toBe('Terminated');
+        // the activity final needs no F: the two roles are optional apart
+        expect(terminated(mkNet([tr('u', { n: 1 }, { x: 1 })], { activityFinal: ['x'] }), st({ x: 1, n: 1 }))).toBe(true);
+        // control: the same net and marking without the role
+        expect(terminated(mkNet([tr('u', { n: 1 }, { x: 1 })]), st({ x: 1, n: 1 }))).toBe(false);
+    });
+
     it('five statuses', () => {
         expect(netRunStatus(net, null, ['coin'], NO_GUARDS, null)).toBe('Not started');
         expect(netRunStatus(net, cfg({ a: 1 }), ['coin'], NO_GUARDS, { kind: 'unsafe', place: 'f', value: 2, bound: 1 })).toBe('Halted');
@@ -591,6 +609,50 @@ describe('Ex3: parallel fork, AND-join and inhibitor', () => {
         expect(netRunStatus(net, c, [], NO_GUARDS, null)).toBe('Terminated');
         // before the join both branches must be done: with only a2 marked, J is no candidate
         expect(ids(net, { state: st({ a2: 1, b1: 1 }), event: null })).toEqual(['eb']);
+    });
+});
+
+describe('R-SIM-53: Flow C of the readiness probes, the activity final ends the run', () => {
+    // i0 -f1-> work -f2 / count := count + 1 -> d1 ; d1 -f3 [count < 2]-> work ; d1 -f4 [count >= 2]-> fk
+    // fk -f5-> left, -f6-> right ; left -f7-> jn ; right -f8-> jn ; jn -f9-> fin, an ActivityFinal
+    const classes = { ...CLASSES, C_AF: ['C_Node'] };
+    const bag = { simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next', simFork: 'C_Fork', simJoin: 'C_Join', simGuard: 'A_g' };
+    const edge = (next: string) => ({ cls: 'C_Tr', slots: { R_next: [next] } });
+    const objects = {
+        i0: { cls: 'C_Init', slots: { R_out: ['f1'] } }, work: { cls: 'C_Node', slots: { R_out: ['f2'] } },
+        d1: { cls: 'C_Node', slots: { R_out: ['f3', 'f4'] } }, fk: { cls: 'C_Fork', slots: { R_out: ['f5', 'f6'] } },
+        left: { cls: 'C_Node', slots: { R_out: ['f7'] } }, right: { cls: 'C_Node', slots: { R_out: ['f8'] } },
+        jn: { cls: 'C_Join', slots: { R_out: ['f9'] } }, fin: { cls: 'C_AF' },
+        f1: edge('work'), f2: edge('d1'), f3: edge('work'), f4: edge('fk'), f5: edge('left'), f6: edge('right'),
+        f7: edge('jn'), f8: edge('jn'), f9: edge('fin'),
+    };
+    const guards: GuardOracle = (site, _e, s) => {
+        const count = s.read('M', 'count') as number;
+        if (site === 'f3') return { kind: count < 2 ? 'true' : 'false' };
+        if (site === 'f4') return { kind: count >= 2 ? 'true' : 'false' };
+        return { kind: 'true' };
+    };
+    const actions = actionsBy({ 'transition:f2': s => [{ element: 'M', attr: 'count', value: (s.read('M', 'count') as number) + 1 }] });
+    /** Six steps, each on the only candidate, as the probe presses Step. */
+    const run = (roles: Record<string, string>) => {
+        const net = compileSpec(netStcFromRoles(roles)!, { classes, objects }, [range('count', 3)]);
+        let c: NetConfiguration = { state: net.initial, event: null };
+        const fired: string[] = [];
+        for (let k = 0; k < 6; k++) {
+            const next = candidates(net, c, guards).candidates.map(x => x.transition);
+            if (next.length !== 1) break;
+            const out = step(net, c, next[0], guards, actions);
+            if (out.kind !== 'fired') break;
+            fired.push(next[0]);
+            c = out.next;
+        }
+        return { fired, marking: m(c.state), status: netRunStatus(net, c, [], guards, null) };
+    };
+
+    it('six steps end Terminated with simActivityFinal; control: without the role, Deadlock on the same marking (mutants: the ROLE_KEYS pair dropped, activityFinal null, the check in terminated removed)', () => {
+        const trace = ['f1', 'f2', 'f3', 'f2', 'fk', 'jn'];
+        expect(run({ ...bag, simActivityFinal: 'C_AF' })).toEqual({ fired: trace, marking: { fin: 1 }, status: 'Terminated' });
+        expect(run(bag)).toEqual({ fired: trace, marking: { fin: 1 }, status: 'Deadlock' });
     });
 });
 
