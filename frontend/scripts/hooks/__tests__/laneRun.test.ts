@@ -831,25 +831,51 @@ describe('lane-run status, the Outcome line', () => {
         expect(r.status, r.stderr).toBe(0);
         expect(r.stdout).toContain('outcome: unparsed: Outcome: doneish');
     });
+
+    test('kills "the Outcome of an earlier turn shown while the lane runs": a resumed lane, running or blocked, whose log holds `Outcome: blocked` says none', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: blocked'], running: true });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('state: running');
+        expect(r.stdout).toContain('outcome: none');
+        const b = laneRun(l, ['status', ID, '--limit', '0']);
+        expect(b.status, b.stderr).toBe(0);
+        expect(b.stdout).toContain('state: blocked');
+        expect(b.stdout).toContain('outcome: none');
+    });
+
+    test('kills "the outcome gated on exit.txt instead of the process": a lane whose process died without exit.txt keeps its outcome', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: done · abc123'] });
+        rmSync(join(laneDir(l), 'exit.txt'));
+        const r = laneRun(l, ['status', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('state: exited');
+        expect(r.stdout).toContain('exit: -');
+        expect(r.stdout).toContain('outcome: Outcome: done · abc123');
+    });
 });
 
 describe('lane-run status --all', () => {
-    test('kills "a lane missing", "not newest first", "non-lane folders listed", "the outcome word not parsed": one table of every lane', () => {
+    test('kills "a lane missing", "not newest first", "non-lane folders listed", "the outcome word not parsed", "the Outcome of an earlier turn shown while the lane runs": one table of every lane', () => {
         const l = lab();
         fakeLane(l, 'P-2026-09-26-1640', { texts: ['Outcome: done · abc123'], startedMsAgo: 5 * 60000 });
         fakeLane(l, 'P-2026-09-27-0405', { texts: ['Outcome: finished'] });
         fakeLane(l, 'P-2026-09-27-1015', { running: true, startedMsAgo: 12 * 60000 });
+        fakeLane(l, 'P-2026-09-27-1110', { texts: ['Outcome: blocked'], running: true, startedMsAgo: 20 * 60000 });
         mkdirSync(join(l.lanes, '_msgs'));
         mkdirSync(join(l.lanes, 'probe-2026-09-27'));
         writeFileSync(join(l.lanes, 'start_0345.sh'), '');
         const r = laneRun(l, ['status', '--all']);
         expect(r.status, r.stderr).toBe(0);
         const rows = r.stdout.trimEnd().split('\n');
-        expect(rows).toHaveLength(4);
+        expect(rows).toHaveLength(5);
         expect(rows[0].split(/\s+/)).toEqual(['id', 'state', 'outcome', 'elapsed']);
-        expect(rows[1].split(/\s+/)).toEqual(['P-2026-09-27-1015', 'running', 'none', '12', 'min']);
-        expect(rows[2].split(/\s+/)).toEqual(['P-2026-09-27-0405', 'exited', 'unparsed', '1', 'min']);
-        expect(rows[3].split(/\s+/)).toEqual(['P-2026-09-26-1640', 'exited', 'done', '5', 'min']);
+        expect(rows[1].split(/\s+/)).toEqual(['P-2026-09-27-1110', 'running', 'none', '20', 'min']);
+        expect(rows[2].split(/\s+/)).toEqual(['P-2026-09-27-1015', 'running', 'none', '12', 'min']);
+        expect(rows[3].split(/\s+/)).toEqual(['P-2026-09-27-0405', 'exited', 'unparsed', '1', 'min']);
+        expect(rows[4].split(/\s+/)).toEqual(['P-2026-09-26-1640', 'exited', 'done', '5', 'min']);
     });
 });
 
@@ -875,15 +901,15 @@ describe('lane-run wait', () => {
         expect(r.stdout).toContain('exit: 0');
     });
 
-    test('kills "no timeout", "timeout reported as done": a lane still running at the deadline exits 3', () => {
+    test('kills "no timeout", "timeout reported as done", "the deadline a failure", "the timeout line dropped": a lane still running at the deadline exits 0 with the timeout line', () => {
         const l = lab();
         const hold = join(l.state, 'release');
         expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_HOLD: hold } }).status).toBe(0);
         const t0 = Date.now();
         const r = laneRun(l, ['wait', ID, '--max', '1']);
         writeFileSync(hold, '');
-        expect(r.status).toBe(3);
-        expect(r.stdout).toContain('timeout');
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toBe(`timeout: ${ID} still running after 1 s\n`);
         expect(Date.now() - t0).toBeGreaterThanOrEqual(900);
         expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
     });
