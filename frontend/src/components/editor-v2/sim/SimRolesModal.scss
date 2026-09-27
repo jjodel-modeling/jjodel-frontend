@@ -169,6 +169,7 @@
     }
 
     &__shape {
+        margin-left: auto;
         display: inline-flex;
         align-items: center;
         gap: 4px;
@@ -185,6 +186,46 @@
         font-size: 11px;
         line-height: 16px;
         color: var(--color-warning-text);
+    }
+
+    // «Save as…» (S11c): the name of a user copy, the pencil inside the box.
+    &__name {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        flex: 0 1 176px;
+        min-width: 0;
+
+        .bi {
+            position: absolute;
+            left: 8px;
+            font-size: 11px;
+            color: var(--color-text-placeholder);
+            pointer-events: none;
+        }
+    }
+
+    // (0,3,0): above `& &__input` (0,2,0), which comes later in the file and would reset the padding.
+    & &__name &__name-input {
+        padding-left: 24px;
+        border-color: transparent;
+        background: transparent;
+        color: var(--color-text-secondary);
+
+        &:hover {
+            border-color: var(--color-border-primary);
+        }
+    }
+
+    &__tag {
+        flex: none;
+        padding: 0 6px;
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-warning-muted);
+        color: var(--color-warning-text);
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 16px;
     }
 
     // -- the match line -------------------------------------------------------
@@ -321,6 +362,98 @@
         display: flex;
         flex-direction: column;
         min-width: 0;
+    }
+
+    // The select and the fixed slot of its verdict (S11a): a verdict appearing never moves the row.
+    &__control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    &__verdict {
+        display: inline-flex;
+        flex: 0 0 16px;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 32px;
+
+        .bi {
+            font-size: 13px;
+        }
+
+        & .bi.sim-roles-modal__verdict--warn,
+        & .bi.sim-roles-modal__verdict--warn:hover {
+            color: var(--color-warning-text);
+        }
+
+        & .bi.sim-roles-modal__verdict--error,
+        & .bi.sim-roles-modal__verdict--error:hover {
+            color: var(--color-error-text);
+        }
+    }
+
+    // Turn a role off (S11c), at the end of its label cell.
+    &__switch {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        margin-left: auto;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-sm, 4px);
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        .bi {
+            font-size: 16px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    // The validator's defects (R-SIM-48), each with the switch that clears it (4e).
+    &__problems {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 8px 0 4px;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-error-subtle);
+    }
+
+    &__problem {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 24px;
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--color-error-text);
+
+        .bi {
+            flex: none;
+            font-size: 11px;
+        }
+
+        &--warning {
+            color: var(--color-warning-text);
+        }
     }
 
     & &__select,
@@ -474,11 +607,55 @@
 
     &__off {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
+        gap: 4px;
         min-height: 32px;
+        padding: 4px 0;
         font-size: 11px;
         line-height: 16px;
         color: var(--color-text-tertiary);
+    }
+
+    // A role of Not used: a button when the dialog can turn it on (S11c), text otherwise.
+    &__off-role {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-full, 999px);
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        .bi {
+            font-size: 10px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+
+        &--fixed {
+            border-style: dashed;
+            color: var(--color-text-tertiary);
+            cursor: default;
+
+            &:hover {
+                background: transparent;
+                color: var(--color-text-tertiary);
+            }
+        }
     }
 
     // -- Data -------------------------------------------------------------------

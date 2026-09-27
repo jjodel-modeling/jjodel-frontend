@@ -16,6 +16,13 @@
  * reason (R-SIM-81(1) as amended). A bag with no role key and no profile opens
  * on the model kind picker (4a, D10).
  *
+ * User profiles (S11c, R-SIM-47): a role turned on or off, or a name typed,
+ * makes a user copy of the profile, «modified» until named; the validator's
+ * defects are listed at the top of the body with the switch that clears them
+ * (4e), and Apply waits for none. The selects list the candidates S11a does not
+ * judge incompatible (S10), a warning or an incompatible bound value marked
+ * beside its select, and the pill reads the verdicts («with warnings»).
+ *
  * Portaled onto `document.body` from the panel, which holds every input it
  * reads (D4), at the stacking level of the other modals
  * (SymbolEditorModal.scss). React events bubble through the React tree, not
@@ -33,15 +40,17 @@ import {
 } from './simRoleStatus';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import {
-    bagWithEdits, boundHelp, draftApply, draftBag, draftPatch, draftProposals, draftStatus, isFirstOpen, matchLine, roleBadge,
-    roleSections, rowValue,
+    bagWithEdits, boundHelp, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus, isFirstOpen,
+    isModified, matchLine, roleBadge, roleSections, roleSwitch, rowValue, withProfileName, withRoleMode,
 } from './simRolesDraft';
 import type { DraftEdits, DraftInput, RoleBadge } from './simRolesDraft';
 import { bindProfile } from '../../../model/simulation/profileBinder';
+import { bindingVerdicts, currentVerdicts } from '../../../model/simulation/bindingCompat';
 import { roleDescriptor } from '../../../model/simulation/roleCatalog';
 import { systemProfile, validateProfile } from '../../../model/simulation/simProfiles';
 import { encodeStateAttributes, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
+import type { BindingVerdicts } from '../../../model/simulation/bindingCompat';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
 import type { ProfileShape, SimProfile, SystemProfileId } from '../../../model/simulation/simProfiles';
 import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
@@ -97,6 +106,9 @@ const SHAPE_LABEL: Record<ProfileShape, { icon: string; label: string }> = {
 };
 
 const label = (r: RoleId) => roleDescriptor(r).label;
+
+/** The id `inferCustomProfile` gives «Custom» (profileCodec.ts). */
+const CUSTOM_ID = 'custom';
 
 /** The kind badge's text and title (the design's Role Kind Badge). */
 const BADGE: Record<RoleBadge, { text: string; title: string }> = {
@@ -343,15 +355,20 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const [dataOpen, setDataOpen] = useState(openOnData);
     const [focusRow, setFocusRow] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+    // A user copy made here (S11c): a role switched, or a name typed; `null` follows the preset or the stored profile.
+    const [draftProfile, setDraftProfile] = useState<SimProfile | null>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
     const bodyRef = useRef<HTMLDivElement>(null);
     const dataRef = useRef<HTMLDivElement>(null);
     const dialogRef = useRef<HTMLDivElement>(null);
 
     const firstOpen = preset === null && isFirstOpen(bag);
-    const profile: SimProfile = (preset ? systemProfile(preset) : undefined) ?? stored.profile;
+    const profile: SimProfile = draftProfile ?? (preset ? systemProfile(preset) : undefined) ?? stored.profile;
+    // «Custom» is bound against nothing (D7 of the profiles lane); a user profile is, as its preset.
+    const custom = profile.id === CUSTOM_ID;
     const bindings: ProfileBindings | null = useMemo(
-        () => (profile.system && sketch ? bindProfile(profile, sketch) : null),
-        [profile, sketch],
+        () => (!custom && sketch ? bindProfile(profile, sketch) : null),
+        [custom, profile, sketch],
     );
     const edited = useMemo(() => bagWithEdits(bag, edits), [bag, edits]);
 
@@ -374,21 +391,23 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
         profile, bag, bindings, edits,
         declarations: declRows ? encodeStateAttributes(declRows) : null,
         matchOff,
-        writeProfile: preset !== null || !stored.custom,
+        writeProfile: preset !== null || draftProfile !== null || !stored.custom,
         estimate,
     };
     const proposals = draftProposals(input);
     const patch = draftPatch(input);
-    const status = draftStatus(input);
+    // S11a on the bag as Apply would leave it: the selects' candidates and the verdict of each bound value.
+    const after = draftBag(input);
+    const verdicts: BindingVerdicts | null = sketch ? bindingVerdicts(profile, after, sketch) : null;
+    const status = draftStatus(input, verdicts ? currentVerdicts(verdicts) : undefined);
     const sections = roleSections(profile, edited);
     const defects = validateProfile(profile);
     const match = matchLine(bindings);
     const help = boundHelp(proposals);
     // The actions write state attributes and none is declared: the first firing would halt (R-SIM-81(3), G9).
-    const after = draftBag(input);
     const declareHint = ['simAction', 'simEntry', 'simExit'].some(k => typeof after[k] === 'string' && after[k] !== '') && rows.length === 0;
     const pending = Object.keys(patch).length > 0;
-    const pristine = preset === initialPreset && Object.keys(edits).length === 0 && declRows === null && !matchOff;
+    const pristine = preset === initialPreset && draftProfile === null && Object.keys(edits).length === 0 && declRows === null && !matchOff;
 
     // Escape closes without writing: from inside, the root's onKeyDown (which stops the event there, so it never
     // reaches window); with the focus outside the dialog, this listener. The focus goes into the dialog on open.
@@ -412,6 +431,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
 
     const reset = (): void => {
         setPreset(initialPreset);
+        setDraftProfile(null);
         setEdits({});
         setDeclRows(null);
         setMatchOff(false);
@@ -429,6 +449,23 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
         }
         lmm.state = result.patch;
         onApplied(result.overlap ? describeOverlap(result.overlap) : null);
+    };
+
+    /** A role turned on or off: the profile becomes a user copy (S11c). */
+    const switchRole = (r: RoleId, on: boolean): void => {
+        setDraftProfile(withRoleMode(profile, r, on));
+        setError(null);
+    };
+
+    const switchButton = (r: RoleId): ReactElement | null => {
+        const s = roleSwitch(profile, r);
+        if (s !== 'off') return null;
+        return (
+            <button type="button" className="sim-roles-modal__switch" title={`Turn ${label(r)} off`} aria-label={`Turn ${label(r)} off`}
+                onClick={() => switchRole(r, false)}>
+                <i className="bi bi-toggle-on" />
+            </button>
+        );
     };
 
     const addDeclaration = (): void => {
@@ -449,16 +486,28 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const bindingRow = (r: RoleId, prefix?: string, note?: string | null): ReactElement => {
         const key = roleDescriptor(r).key as string;
         const v = rowValue(key, input, proposals);
-        const list = listOf(r, profile.shape, options);
-        const all = v.value && !list.some(o => o.id === v.value) ? [{ id: v.value, name: nameOf(v.value) }, ...list] : list;
+        const compat = verdicts?.[r];
+        const byName = (a: SimRoleOption, b: SimRoleOption) => a.name.localeCompare(b.name);
+        // S10: the candidates S11a does not judge incompatible, the bound value always; the lists of the panel without a sketch.
+        const all: SimRoleOption[] = compat
+            ? compatibleOptions(compat, v.value)
+                .map(o => ({ id: o.id, name: `${nameOf(o.id)}${o.verdict === 'warn' ? ' (warning)' : o.verdict === 'incompatible' ? ' (incompatible)' : ''}` }))
+                .sort((a, b) => (a.id === v.value ? -1 : b.id === v.value ? 1 : byName(a, b)))
+            : (() => {
+                const list = listOf(r, profile.shape, options);
+                return v.value && !list.some(o => o.id === v.value) ? [{ id: v.value, name: nameOf(v.value) }, ...list] : list;
+            })();
         const why = v.source === 'proposed' ? bindings?.[r]?.why : undefined;
+        const judged = v.value ? compat?.candidates.find(c => c.id === v.value) ?? compat?.current ?? null : null;
         return (
             <div className="sim-roles-modal__row" key={r}>
                 <div className="sim-roles-modal__role">
                     {badge(r)}
                     <span className="sim-roles-modal__label">{prefix ? `${prefix} ${label(r)}` : label(r)}</span>
+                    {switchButton(r)}
                 </div>
                 <div className="sim-roles-modal__value">
+                    <div className="sim-roles-modal__control">
                     <select
                         className={`sim-roles-modal__select sim-roles-modal__select--${v.source}${v.value ? '' : ' sim-roles-modal__select--empty'}`}
                         aria-label={label(r)}
@@ -469,6 +518,17 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                         <option value="">{placeholderOf(r)}</option>
                         {all.map(o => <option value={o.id} key={o.id}>{o.name}</option>)}
                     </select>
+                    {/* A fixed slot: a verdict appearing never moves the row (S11a). */}
+                    <span className="sim-roles-modal__verdict">
+                        {judged && judged.verdict !== 'ok' && (
+                            <i
+                                className={`bi ${judged.verdict === 'warn' ? 'bi-exclamation-triangle-fill sim-roles-modal__verdict--warn' : 'bi-exclamation-circle-fill sim-roles-modal__verdict--error'}`}
+                                title={`${judged.verdict === 'warn' ? 'Warning' : 'Incompatible'}: ${judged.why}`}
+                                aria-label={`${judged.verdict === 'warn' ? 'Warning' : 'Incompatible'}: ${judged.why}`}
+                            />
+                        )}
+                    </span>
+                    </div>
                     {note && <span className="sim-roles-modal__help">{note}</span>}
                 </div>
             </div>
@@ -526,7 +586,10 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     // -- render ----------------------------------------------------------------
 
     const shape = SHAPE_LABEL[profile.shape];
-    const presetValue = preset ?? (stored.profile.system && PANEL_PROFILE_IDS.some(id => id === stored.profile.id) && !stored.custom ? stored.profile.id : '');
+    // The select shows the preset, or the system profile a user copy is based on; «Custom» and the others as a state.
+    const base = profile.system ? profile.id : profile.basedOn ?? '';
+    const presetValue = preset ?? (PANEL_PROFILE_IDS.some(id => id === base) ? base : '');
+    const modified = isModified(profile);
     const statusText = status.status === 'checkable' ? 'Checkable' : status.status === 'warnings' ? 'Checkable with warnings' : 'Not checkable';
     const statusTitle = status.missing.length > 0 ? `Missing: ${status.missing.join(', ')}.` : 'Every required role is bound.';
     const dataMode = profile.modes.stateAttributes;
@@ -556,14 +619,28 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                         className="sim-roles-modal__select sim-roles-modal__preset"
                         aria-label="Simulation profile"
                         value={presetValue}
-                        onChange={e => { setPreset(e.target.value); setError(null); }}
+                        onChange={e => { setPreset(e.target.value); setDraftProfile(null); setError(null); }}
                     >
-                        {!presetValue && <option value="" disabled hidden>{stored.profile.name}</option>}
+                        {!presetValue && <option value="" disabled hidden>{profile.name || 'Custom'}</option>}
                         {PANEL_PROFILE_IDS.map(id => <option value={id} key={id}>{systemProfile(id)?.name}</option>)}
                     </select>
                     <span className="sim-roles-modal__dot">·</span>
+                    {/* «Save as…» (R-SIM-47): a name makes a user copy of the profile, written by Apply in `simProfile`. */}
+                    <span className="sim-roles-modal__name">
+                        <i className="bi bi-pencil" />
+                        <input
+                            ref={nameRef}
+                            type="text"
+                            className="sim-roles-modal__input sim-roles-modal__name-input"
+                            aria-label="Profile name"
+                            title="A name saves a copy of the profile in this metamodel"
+                            placeholder={profile.system || custom ? 'Save as…' : 'Name'}
+                            value={profile.system || custom ? '' : profile.name}
+                            onChange={e => { setDraftProfile(withProfileName(profile, e.target.value)); setError(null); }}
+                        />
+                    </span>
+                    {modified && <span className="sim-roles-modal__tag" title={`Roles changed from ${systemProfile(profile.basedOn ?? '')?.name ?? 'the preset'}`}>modified</span>}
                     <span className="sim-roles-modal__shape"><i className={`bi ${shape.icon}`} />{shape.label}</span>
-                    {!stored.readable && <span className="sim-roles-modal__warning">The stored profile is not readable.</span>}
                 </div>
             )}
         </div>
@@ -633,6 +710,34 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                 )}
             </div>
             <div className="sim-roles-modal__body" ref={bodyRef}>
+                {(defects.length > 0 || !stored.readable) && (
+                    <div className="sim-roles-modal__problems">
+                        {!stored.readable && (
+                            <div className="sim-roles-modal__problem sim-roles-modal__problem--warning">
+                                <i className="bi bi-exclamation-triangle-fill" />
+                                <span>The stored profile is not readable.</span>
+                            </div>
+                        )}
+                        {defects.map((d, i) => {
+                            const fix = defectFix(profile, d);
+                            const naming = d.code === 'blankName' || d.code === 'systemName';
+                            return (
+                                <div className="sim-roles-modal__problem" key={i}>
+                                    <i className="bi bi-exclamation-circle-fill" />
+                                    <span>{`${d.message}.`}</span>
+                                    {fix && (
+                                        <button type="button" className="sim-roles-modal__link" onClick={() => switchRole(fix.role, fix.on)}>
+                                            {`Turn ${label(fix.role)} ${fix.on ? 'on' : 'off'}`}
+                                        </button>
+                                    )}
+                                    {naming && (
+                                        <button type="button" className="sim-roles-modal__link" onClick={() => nameRef.current?.focus()}>Name it</button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
                 <div className="sim-roles-modal__section">
                     Required<span className="sim-roles-modal__count">{sections.required.length}</span>
                 </div>
@@ -677,11 +782,21 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                         ))}
                         <div className="sim-roles-modal__row sim-roles-modal__row--off">
                             <div className="sim-roles-modal__role"><span className="sim-roles-modal__label sim-roles-modal__label--muted">Not used</span></div>
-                            <div
-                                className="sim-roles-modal__off"
-                                title={sections.off.map(r => { const m = profile.modes[r]; return `${label(r)}: ${m.mode === 'off' ? m.reason : ''}`; }).join('\n')}
-                            >
-                                {sections.off.map(r => `${label(r)}${edited[roleDescriptor(r).key ?? ''] ? ' (set)' : ''}`).join(', ') || 'none'}
+                            <div className="sim-roles-modal__off">
+                                {sections.off.length === 0 && 'none'}
+                                {sections.off.map(r => {
+                                    const m = profile.modes[r];
+                                    const text = `${label(r)}${edited[roleDescriptor(r).key ?? ''] ? ' (set)' : ''}`;
+                                    const reason = m.mode === 'off' ? m.reason : '';
+                                    return roleSwitch(profile, r) === 'on' ? (
+                                        <button type="button" key={r} className="sim-roles-modal__off-role" title={`${reason}. Turn ${label(r)} on`}
+                                            onClick={() => switchRole(r, true)}>
+                                            <i className="bi bi-plus-lg" />{text}
+                                        </button>
+                                    ) : (
+                                        <span key={r} className="sim-roles-modal__off-role sim-roles-modal__off-role--fixed" title={reason}>{text}</span>
+                                    );
+                                })}
                             </div>
                         </div>
                     </>
@@ -698,7 +813,13 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                                 {declareHint ? 'Declare the state attributes the actions write' : dataNeeded ?? (dataOff ? dataOffReason : '')}
                             </span>
                         </button>
-                        {dataOpen && (
+                        {dataOff && roleSwitch(profile, 'stateAttributes') === 'on' && (
+                            <button type="button" className="sim-roles-modal__btn sim-roles-modal__btn--outline" onClick={() => switchRole('stateAttributes', true)}>
+                                <i className="bi bi-toggle-off" />
+                                Turn on
+                            </button>
+                        )}
+                        {dataOpen && !dataOff && (
                             <button type="button" className="sim-roles-modal__btn sim-roles-modal__btn--outline sim-roles-modal__add" onClick={addDeclaration}>
                                 <i className="bi bi-plus-lg" />
                                 Add attribute

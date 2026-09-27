@@ -16,14 +16,23 @@
  * three roles nothing reads (Accepting, State output, Transition output)
  * show only when their key is set (D8).
  *
+ * User profiles (S11c, R-SIM-47): a mode changed or a name given makes a user
+ * copy of the profile, «modified» until named; the switches offered are the
+ * ones the validator accepts, and each of its defects that one switch clears
+ * carries that switch. The selects list the candidates S11a does not judge
+ * incompatible (S10), the bound value always.
+ *
  * Pure: no React, no store, no import from the joiner, so it runs under the
  * node test bench (sim/__tests__/simRolesDraft.test.ts).
  */
 
 import { ROLE_CATALOG, ROLE_IDS, roleDescriptor } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
-import { checkability, requiredRoles } from '../../../model/simulation/simProfiles';
-import type { BindingVerdict, RequiredItem, SimProfile } from '../../../model/simulation/simProfiles';
+import {
+    EVENT_FROM_TRIGGER, OTHER_SHAPE_GROUP, checkability, isSystemProfileId, requiredRoles, systemProfile,
+} from '../../../model/simulation/simProfiles';
+import type { BindingVerdict, ProfileDefect, RequiredItem, RoleMode, SimProfile } from '../../../model/simulation/simProfiles';
+import type { RoleCompatibility } from '../../../model/simulation/bindingCompat';
 import { encodeProfile } from '../../../model/simulation/profileCodec';
 import type { ProfileBindings } from '../../../model/simulation/profileBinder';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
@@ -266,4 +275,129 @@ export function matchLine(bindings: ProfileBindings | null): { matched: number; 
 export function boundHelp(proposals: readonly ProfileProposal[]): string | null {
     const p = proposals.find(x => x.role === 'bound');
     return p ? `Proposed ${p.value}. ${p.why ?? ''}.` : null;
+}
+
+// ---------------------------------------------------------------------------
+// User profiles (S11c, R-SIM-47): a mode changed makes a user copy, named by the user
+// ---------------------------------------------------------------------------
+
+/** The id of a user profile: one `simProfile` per metamodel bag, so one id does (R-SIM-55). */
+export const USER_PROFILE_ID = 'user';
+
+/** The reason of a role turned off in the dialog. */
+export const TURNED_OFF = 'Turned off';
+
+/**
+ * The user copy of `profile`: a system profile becomes a copy based on it, and
+ * «Custom» a profile of its own, both unnamed until the user names them
+ * (R-SIM-47: a modified system profile is «modified» until saved with a name).
+ * A user profile is its own copy.
+ */
+function userCopy(profile: SimProfile): SimProfile {
+    if (!profile.system && profile.id !== CUSTOM_ID) return profile;
+    return {
+        id: USER_PROFILE_ID,
+        name: '',
+        system: false,
+        ...(profile.system && isSystemProfileId(profile.id) ? { basedOn: profile.id } : {}),
+        shape: profile.shape,
+        modes: profile.modes,
+        params: profile.params,
+        constraints: profile.constraints,
+        addedRequired: profile.addedRequired,
+    };
+}
+
+/** The id `inferCustomProfile` gives «Custom» (profileCodec.ts). */
+const CUSTOM_ID = 'custom';
+
+/**
+ * Whether the dialog offers to turn `role` on (`'on'`) or off (`'off'`), or
+ * neither. On: an `off` role of the profile's shape that the engine reads (not
+ * the other shape's group, not Initial in Petri, not the three roles nothing
+ * reads, not Event, which is derived). Off: an `edit` role that is no side of a
+ * required item, no parameter, not needed by an active role (`dependencyOff`)
+ * and not the source of an active derived role (`derivedFromOff`). The rule is
+ * the validator's, so a switch the dialog offers never makes a defect.
+ */
+export function roleSwitch(profile: SimProfile, role: RoleId): 'on' | 'off' | null {
+    const d = roleDescriptor(role);
+    const mode = profile.modes[role].mode;
+    if (mode === 'off') {
+        if (role === 'event' || UNREAD_ROLES.has(role) || d.group === OTHER_SHAPE_GROUP[profile.shape]) return null;
+        if (profile.shape === 'petri' && role === 'initial') return null;
+        return 'on';
+    }
+    if (mode !== 'edit' || d.key === null || d.kind === 'int') return null;
+    if (requiredRoles(profile).some(item => rolesOf(item).includes(role))) return null;
+    const active = (r: RoleId) => profile.modes[r].mode !== 'off';
+    if (ROLE_CATALOG.some(o => active(o.id) && o.dependsOn.includes(role))) return null;
+    if (ROLE_IDS.some(r => { const m = profile.modes[r]; return m.mode === 'derived' && m.from === role; })) return null;
+    return 'off';
+}
+
+/**
+ * `profile` with `role` turned on (`edit`) or off, as a user copy. On brings
+ * the roles it depends on that are off (Action brings State attributes), and
+ * Trigger brings Event derived from it, as the system profiles have it
+ * (simProfiles.ts `systemProfileOf`): no switch leaves a `dependencyOff`.
+ */
+export function withRoleMode(profile: SimProfile, role: RoleId, on: boolean): SimProfile {
+    const copy = userCopy(profile);
+    const modes: Record<RoleId, RoleMode> = { ...copy.modes };
+    if (!on) {
+        modes[role] = { mode: 'off', reason: TURNED_OFF };
+        return { ...copy, modes };
+    }
+    const turnOn = (r: RoleId): void => {
+        if (modes[r].mode !== 'off') return;
+        modes[r] = r === 'event' ? EVENT_FROM_TRIGGER : { mode: 'edit' };
+        for (const dep of roleDescriptor(r).dependsOn) turnOn(dep);
+        if (r === 'trigger') turnOn('event');
+    };
+    turnOn(role);
+    return { ...copy, modes };
+}
+
+/** `profile` named `name`, as a user copy («Save as…», R-SIM-47). */
+export function withProfileName(profile: SimProfile, name: string): SimProfile {
+    return { ...userCopy(profile), name };
+}
+
+/** A user copy whose modes differ from the system profile it is based on. */
+export function isModified(profile: SimProfile): boolean {
+    if (profile.system || !profile.basedOn) return false;
+    const base = systemProfile(profile.basedOn);
+    return !!base && ROLE_IDS.some(r => JSON.stringify(profile.modes[r]) !== JSON.stringify(base.modes[r]));
+}
+
+/** The one switch that clears a defect, when there is one: the fix the dialog offers beside it (4e). */
+export function defectFix(profile: SimProfile, defect: ProfileDefect): { role: RoleId; on: boolean } | null {
+    const on = (r: RoleId) => (roleSwitch(profile, r) === 'on' ? { role: r, on: true } : null);
+    switch (defect.code) {
+        case 'closureRoleOff':
+            return defect.roles.map(on).find(x => x !== null) ?? null;
+        case 'dependencyOff':
+        case 'derivedFromOff':
+            return on(defect.roles[1]);
+        case 'otherShapeActive':
+            return { role: defect.roles[0], on: false };
+        default:
+            return null;
+    }
+}
+
+/** A select option judged by S11a: the incompatible ones are left out, but the bound value is always listed. */
+export interface CompatibleOption {
+    readonly id: string;
+    readonly verdict: BindingVerdict;
+    readonly why: string;
+}
+
+/** The options of a role's select from its compatibility (bindingCompat.ts, S10): never incompatible, but for the current value. */
+export function compatibleOptions(compat: RoleCompatibility | undefined, current: string): CompatibleOption[] {
+    if (!compat) return [];
+    const out: CompatibleOption[] = compat.candidates.filter(c => c.verdict !== 'incompatible' || c.id === current);
+    if (current && !out.some(c => c.id === current)) out.unshift(compat.current ?? { id: current, verdict: 'incompatible', why: 'Not an element of this metamodel' });
+    return out;
 }

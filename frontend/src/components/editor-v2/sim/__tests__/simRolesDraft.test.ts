@@ -9,13 +9,15 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    bagWithEdits, boundHelp, draftApply, draftPatch, draftProposals, draftStatus, isFirstOpen, matchLine, roleBadge,
-    roleSections, rowValue,
+    bagWithEdits, boundHelp, compatibleOptions, defectFix, draftApply, draftPatch, draftProposals, draftStatus, isFirstOpen,
+    isModified, matchLine, roleBadge, roleSections, roleSwitch, rowValue, withProfileName, withRoleMode,
 } from '../simRolesDraft';
 import type { DraftInput } from '../simRolesDraft';
 import { profilePatch, storedProfile } from '../simRoleStatus';
 import type { BoundEstimate } from '../modelMarkings';
-import { systemProfile } from '../../../../model/simulation/simProfiles';
+import { systemProfile, validateProfile } from '../../../../model/simulation/simProfiles';
+import { decodeProfile, encodeProfile } from '../../../../model/simulation/profileCodec';
+import { ROLE_IDS } from '../../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
 import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
 
@@ -224,5 +226,98 @@ describe('boundHelp: the engine reasons (R-SIM-81(1) as amended, D2)', () => {
         const edited = input({ profile: PETRI, bindings: B2NET_BINDINGS, estimate: closed(4), edits: { simBound: '6' } });
         expect(boundHelp(draftProposals(edited))).toBeNull();
         expect(draftPatch(edited)).toMatchObject({ simBound: '6' });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// User profiles and compatible selects (S11c, S10)
+// ---------------------------------------------------------------------------
+
+describe('roleSwitch: the dialog offers only switches the validator accepts (R-SIM-47, R-SIM-48)', () => {
+    it('State machine: Terminal and Guard off, Fork on; Trigger (needed), Initial (required), Bound (derived), Arc (other shape), Accepting (unread) none (killed by offering a switch into a defect)', () => {
+        expect(roleSwitch(SM, 'terminal')).toBe('off');
+        expect(roleSwitch(SM, 'guard')).toBe('off');
+        expect(roleSwitch(SM, 'fork')).toBe('on');
+        for (const r of ['trigger', 'initial', 'bound', 'arc', 'accepting', 'event', 'initialMarking'] as const) expect(roleSwitch(SM, r)).toBeNull();
+        // Every offered switch leaves a profile the validator accepts, but for the name.
+        for (const r of ROLE_IDS) {
+            const s = roleSwitch(SM, r);
+            if (s === null) continue;
+            const codes = validateProfile(withProfileName(withRoleMode(SM, r, s === 'on'), 'Mine')).map(d => d.code);
+            expect({ r, codes }).toEqual({ r, codes: [] });
+        }
+    });
+
+    it('Petri: Data can be turned on (the engine runs it on nets, report §3.5); Initial and the control-flow group cannot', () => {
+        for (const r of ['action', 'entry', 'exit', 'stateAttributes'] as const) expect(roleSwitch(PETRI, r)).toBe('on');
+        for (const r of ['initial', 'ownedTransitions', 'nextState', 'bound'] as const) expect(roleSwitch(PETRI, r)).toBeNull();
+    });
+
+    it('on brings what the role depends on: Action brings State attributes, Trigger brings Event from Trigger (killed by turning the role alone on)', () => {
+        const withAction = withRoleMode(SM, 'action', true);
+        expect(withAction.modes.stateAttributes).toEqual({ mode: 'edit' });
+        const petriEvents = withRoleMode(PETRI, 'trigger', true);
+        expect(petriEvents.modes.event).toEqual({ mode: 'derived', from: 'trigger', note: 'Declared type of Trigger' });
+        expect(validateProfile(withProfileName(petriEvents, 'Mine'))).toEqual([]);
+    });
+
+    it('a role needed by an active role, or the source of an active derived role, cannot be turned off', () => {
+        expect(roleSwitch(ESM, 'stateAttributes')).toBeNull();
+        expect(roleSwitch(withRoleMode(SM, 'eventIdentifier', false), 'trigger')).toBeNull();
+        // The source rule alone (killed by dropping it): Terminal, switchable on State machine, is the source of a derived Bound here.
+        const fromTerminal = { ...SM, modes: { ...SM.modes, bound: { mode: 'derived' as const, from: 'terminal' as const, note: 'test' } } };
+        expect(roleSwitch(SM, 'terminal')).toBe('off');
+        expect(roleSwitch(fromTerminal, 'terminal')).toBeNull();
+    });
+});
+
+describe('user profiles: a changed mode is a user copy, «modified» until named (R-SIM-47, R-SIM-55)', () => {
+    it('turning Fork on copies State machine: based on it, no name, the one defect blankName; named, it validates and round-trips (killed by editing the system profile in place)', () => {
+        const copy = withRoleMode(SM, 'fork', true);
+        expect(copy).toMatchObject({ id: 'user', name: '', system: false, basedOn: 'stateMachine' });
+        expect(copy.modes.fork).toEqual({ mode: 'edit' });
+        expect(SM.modes.fork.mode).toBe('off');
+        expect(isModified(copy)).toBe(true);
+        expect(validateProfile(copy).map(d => d.code)).toEqual(['blankName']);
+        const named = withProfileName(copy, 'Turnstile with fork');
+        expect(validateProfile(named)).toEqual([]);
+        expect(decodeProfile(encodeProfile(named))).toEqual(named);
+        expect(draftPatch(input({ profile: named, bindings: null }))).toEqual({ simProfile: encodeProfile(named) });
+    });
+
+    it('a name alone is a named copy, not modified; a system name is the validator\'s systemName (killed by isModified on the name)', () => {
+        const saved = withProfileName(SM, 'Mine');
+        expect(isModified(saved)).toBe(false);
+        expect(validateProfile(withProfileName(SM, 'state machine')).map(d => d.code)).toEqual(['systemName']);
+    });
+
+    it('«Custom» turned into a profile gets the user id and no name', () => {
+        const custom = storedProfile({}).profile;
+        expect(withRoleMode(custom, 'fork', true)).toMatchObject({ id: 'user', name: '', system: false });
+        expect(withRoleMode(custom, 'fork', true).basedOn).toBeUndefined();
+    });
+
+    it('4e: Initial off in a saved profile, the fix turns it on and clears derivedFromOff (killed by fixing the derived side)', () => {
+        const broken = withProfileName({ ...SM, modes: { ...SM.modes, initial: { mode: 'off', reason: 'x' } } }, 'Mine');
+        const defect = validateProfile(broken).find(d => d.code === 'derivedFromOff');
+        expect(defect?.message).toBe('Initial marking is derived from Initial, which is off');
+        const fix = defectFix(broken, defect!);
+        expect(fix).toEqual({ role: 'initial', on: true });
+        expect(validateProfile(withRoleMode(broken, fix!.role, fix!.on))).toEqual([]);
+    });
+});
+
+describe('compatibleOptions (S10 over S11a)', () => {
+    const compat = {
+        candidates: [
+            { id: 'a', verdict: 'ok' as const, why: '' }, { id: 'b', verdict: 'warn' as const, why: 'w' }, { id: 'c', verdict: 'incompatible' as const, why: 'i' },
+        ],
+        current: null,
+    };
+    it('leaves the incompatible out, keeps the warnings, and always lists the bound value (killed by dropping the bound value)', () => {
+        expect(compatibleOptions(compat, '').map(o => o.id)).toEqual(['a', 'b']);
+        expect(compatibleOptions(compat, 'c').map(o => o.id)).toEqual(['a', 'b', 'c']);
+        expect(compatibleOptions({ ...compat, current: { id: 'z', verdict: 'incompatible', why: 'gone' } }, 'z').map(o => o.id)).toEqual(['z', 'a', 'b']);
+        expect(compatibleOptions(undefined, 'x')).toEqual([]);
     });
 });
