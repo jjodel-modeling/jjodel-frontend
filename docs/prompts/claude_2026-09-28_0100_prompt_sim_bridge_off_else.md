@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-0100
 Chat: C-2026-09-27-1437
 Lane: full (two tickets in the simulation bridge; no critical zone; four demo scenes re-run as the visual check)
-Status: da eseguire
+Status: eseguito in parte 2026-09-28 · lane sim-bridge-off-else · 22cc00ffd (ticket 1) · ticket 2 fermo: domanda per Alfonso (RC-26, report §12 decisione 1), Recommended nella voce di log · quattro scene su 3033 on script (sonda della corsia)
 
 Worktree: `~/jjodel-w-bridge`, branch `sim-bridge-off-else`, cut by the chat from `alfonso-frontend-jjtl` at `2e4a09c78` (modal, halt line, enum step B and checker rules merged); `frontend/node_modules` symlinked (P14); a fresh session started by `lane-run`. Before anything else: `pwd` is that worktree, the branch is `sim-bridge-off-else`, `git log -1` is the commit that adds this file, `git status` is empty; otherwise `Outcome: blocked`.
 

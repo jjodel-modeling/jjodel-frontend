@@ -2246,6 +2246,29 @@ P-2026-09-27-2049.
   passo 3, §2.3 e §2.4 finché la corsia docs che la chat lancia subito dopo non lo ripercorre attraverso il
   dialogo (ticket high della Fase 2 di P-2026-09-27-1740).
 
+### Decisioni 2026-09-28: il run salta i ruoli off (R-SIM-86)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_modal.md` §3.2 («Not read by the run») e §11 punto 1
+(il risolutore in una corsia propria dopo quelle che liberano `simBridge.ts`); R-SIM-78 («il risolutore che salta
+le chiavi `off` arriva dopo la riga Petri di R-SIM-54», emendata da Alfonso il 2026-09-27, A3). Attuata dalla
+corsia P-2026-09-28-0100 (codice `22cc00ffd`) sotto RC-25. Nessuna riga ratificata da Alfonso cambia; il
+validatore (`derivedFromOff`) resta com'è.
+
+- **R-SIM-86** (2026-09-28, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Un ruolo `off` si legge come non legato.** Il run legge il bag attraverso `runBag` (`simBridge.ts`): le
+  chiavi dei ruoli che il profilo mette `off` cadono prima di `netStcFromRoles`, la classe degli eventi si deriva
+  dal Trigger salvo Event `off` (R-SIM-38), e `simStateAttributes` si legge dallo stesso bag; `runSignature`
+  legge lo stesso bag, così una chiave di un ruolo `off` modificata non interrompe il run. Il profilo è quello
+  che il pannello nomina (`storedProfile`): `simProfile`, altrimenti «Custom» ricostruito dalle chiavi, i cui
+  ruoli `off` sono le chiavi che non legge (`inferCustomProfile`). Si risolve solo `off`: un ruolo `derived` con
+  la chiave impostata si legge come prima (Bound k = 1 nei profili a controllo di flusso, la chiave vince).
+  Una lettura cambia fuori da un profilo esplicito: un bag senza `simProfile` con una chiave di azione e senza
+  `simStateAttributes` («Custom» spegne Action, Entry ed Exit per mancanza di State attributes) gira senza le
+  azioni, che prima erano difetti al Reset e fermavano il run allo sparo. `netCompile.ts` invariato. I bag dei
+  quattro preset della demo non hanno chiavi di ruoli `off`: le quattro scene e le righe dei difetti al Reset
+  sono identiche a P-2026-09-28-0023 (misurate su 3033). Restano sul bag grezzo i lettori fuori dal run (il
+  pannello, l'esplorazione del Bound, il produttore P2a): ticket della corsia.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
