@@ -263,3 +263,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: The rule table (report risk 10) is in the body of `3d44abce0`: sort, concrete (R-SIM-81 exception), proper subclass of Node or Arc, owner lineage, reference type, containment, attribute type (R-SIM-44); the worst failed rule decides. Not judged: multiplicity, and the overlap of the sorts beyond Trigger's type (`overlapVerdict`). `BindingVerdict` sufficed: no question stop, no exported type changed, no R- row.
 **Prompt document name**: 2026-09-27 16:46
 **Ticket** (priority low, opened here). `MetamodelSketch` carries no upper bound (report §3.1 of the profiles report lists one; `profileBinder.ts` and `metamodelSketch.ts` do not), so the compatibility check cannot judge multiplicity, the third check of the modal lane's «type, owner, multiplicity». An optional bound on `SketchAttribute` and `SketchReference` (Rule 11, additive) and its read in `metamodelSketch.ts` are owed to S11c or the modal lane.
+
+## 2026-09-27 — discovery: well-founded recursion in derived attributes, S3 (P-2026-09-27-1727)
+**Prompt**: `claude_2026-09-27_1727_prompt_discovery_sim_derived_recursion.md`, full lane, Phase 1 read-only on `sim-derived-recursion` in `~/jjodel-w-recursion` at `21394e437`, wave 1 of the backlog report (S3, ratification C): where R-SIM-74 refuses a well-founded recursion, the per-(element, attr) graph over frozen M with cycle detection, its cost on the demo presets, the collection form against R-SIM-43, the amendment texts and the Phase 2 lanes.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_derived_recursion.md` (new), this entry, the Status of the prompt file. Probe `frontend/scripts/smoke/_tmp_recur_probe/recur.test.ts` and its vitest config, gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no file under `frontend/src` written, `git status` empty after every probe run; probe exit 0, 9 tests, 37 `[RECUR]` lines on the last run. No dev server: port 3021 not opened.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The refusal is the name graph alone: tree size, depth via `parent`, list length pass the parser and the subset checker. The lambda form `self.children.sum(c => c.[size])` evaluates today, so R-SIM-43 needs no amendment; only the literal `children.[x]` is refused. G3 prototype: 5.8 ms at Reset for 1023 nodes, same plan on the ESM demo equation. Amending R-SIM-74 awaits Alfonso (RC-26). One docs commit per the prompt, not the skill's inbox-alone commit.
+**Prompt document name**: 2026-09-27 17:27
+**Ticket** (priority low, opened here, report §8.5). S2's planned message for a derived attribute with no value, «its equation failed», is wrong for a node absent because it sits on a cycle once G3 lands; `sim-derived-diagnostics` should say «has no value» and leave the cause to the defect line.

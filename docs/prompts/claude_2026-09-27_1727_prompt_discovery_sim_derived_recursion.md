@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1727
 Chat: C-2026-09-27-1437
 Lane: full (Phase 1, read-only; hard stop at the report; Phase 2 after MODELS per Alfonso's ratification of 2026-09-27 17:07)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-derived-recursion · the commit of this line (docs-only discovery: report, entry and flip in one commit)
 
 Worktree: `~/jjodel-w-recursion`, branch `sim-derived-recursion` (a new worktree created by the chat from `alfonso-frontend-jjtl` at `93e964141`, with `frontend/node_modules` symlinked to `/Users/alfonso/jjodel/frontend/node_modules` as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-recursion`, branch `sim-derived-recursion`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
