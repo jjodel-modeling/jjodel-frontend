@@ -17,6 +17,7 @@ import type { ProfileBindings } from '../../../model/simulation/profileBinder';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import { withDerivedEventRole } from '../../../model/simulation/netCompile';
+import type { BoundEstimate } from './modelMarkings';
 
 // ---------------------------------------------------------------------------
 // Roles — flat keys in the M2 bag (R-SIM-2). No nested `sim: {...}` object: the
@@ -259,18 +260,40 @@ function itemLabel(item: RequiredItem): string {
 const BOUND_WHY = 'The largest initial marking on the models of this metamodel';
 
 /**
+ * The Bound a measure proposes, and why (R-SIM-81(1) as amended by Alfonso on
+ * 2026-09-27, G12(b)): the most tokens over the reachable markings when their
+ * exploration closed, the largest initial marking otherwise, with a reason that
+ * says which. A number is the largest initial marking alone, the reading before
+ * the amendment. `null` when there is no value.
+ */
+function boundValue(measure: number | BoundEstimate | null | undefined): { value: number; why: string } | null {
+    if (typeof measure === 'number') return { value: measure, why: BOUND_WHY };
+    if (!measure) return null;
+    const e = measure.exploration;
+    if (e?.end === 'closed') {
+        return { value: e.max, why: `The most tokens a place holds over the ${e.markings} reachable markings of the models, guards aside` };
+    }
+    if (measure.largestInitial === null) return null;
+    const why = e === null ? 'the roles after Apply make no net to explore'
+        : e.end === 'unbounded' ? 'a reachable marking covers an earlier one with more tokens, so no bound was found'
+            : `more than ${e.markings} reachable markings, not all explored`;
+    return { value: measure.largestInitial, why: `${BOUND_WHY}: ${why}` };
+}
+
+/**
  * The writes of Apply for the role keys: bound, `edit`, unset. Never `undefined`, never over a set key.
- * Bound is a value, not a binding: the largest initial marking read on the models, when above 1 (R-SIM-81).
+ * Bound is a value, not a binding: the measure of the models, when above 1 (R-SIM-81(1) as amended, `boundValue`).
  */
 function proposalsOf(
-    profile: SimProfile, bag: Readonly<Record<string, unknown>>, bindings: ProfileBindings, largestMarking?: number | null,
+    profile: SimProfile, bag: Readonly<Record<string, unknown>>, bindings: ProfileBindings, largestMarking?: number | BoundEstimate | null,
 ): ProfileProposal[] {
     const out: ProfileProposal[] = [];
     for (const d of ROLE_CATALOG) {
         if (d.key === null || profile.modes[d.id].mode !== 'edit' || isSetKey(bag, d.key)) continue;
         if (d.id === 'bound') {
-            if (typeof largestMarking === 'number' && largestMarking > 1) {
-                out.push({ role: d.id, key: d.key, label: d.label, value: String(largestMarking), why: BOUND_WHY });
+            const bound = boundValue(largestMarking);
+            if (bound && bound.value > 1) {
+                out.push({ role: d.id, key: d.key, label: d.label, value: String(bound.value), why: bound.why });
             }
             continue;
         }
@@ -300,6 +323,21 @@ export function boundProposalInputs(
     return node && initialMarking ? { node, initialMarking } : null;
 }
 
+/**
+ * The bag the Bound exploration compiles (G12(b), `boundEstimate` in
+ * modelMarkings.ts): the bag as Apply leaves it, the binder's proposals
+ * written over the unset keys, the Bound aside. `null` exactly when
+ * `boundProposalInputs` is: nothing to measure.
+ */
+export function boundProposalBag(
+    profile: SimProfile, bag: Readonly<Record<string, unknown>>, bindings: ProfileBindings,
+): Record<string, unknown> | null {
+    if (!boundProposalInputs(profile, bag, bindings)) return null;
+    const after: Record<string, unknown> = { ...bag };
+    for (const p of proposalsOf(profile, bag, bindings)) after[p.key] = p.value;
+    return after;
+}
+
 /** The keys whose actions write state attributes (R-SIM-69). */
 const ACTION_KEYS: readonly RoleKey[] = ['simAction', 'simEntry', 'simExit'];
 
@@ -307,14 +345,15 @@ const ACTION_KEYS: readonly RoleKey[] = ['simAction', 'simEntry', 'simExit'];
  * The summary line of the profile row. `bindings` null for «Custom», which
  * nothing is bound against. The verdict is taken on the bag as Apply would
  * leave it, so a preview reads «Checkable» only when Apply gets there.
- * `largestMarking` is `largestInitialMarking` over `boundProposalInputs`
- * (modelMarkings.ts), the source of the Bound proposal (R-SIM-81).
+ * `largestMarking` is the source of the Bound proposal (R-SIM-81): the panel
+ * passes `boundEstimate` over `boundProposalBag` (modelMarkings.ts, G12(b)); a
+ * number is `largestInitialMarking` alone, the reading before the amendment.
  */
 export function profileSummary(
     profile: SimProfile,
     bag: Readonly<Record<string, unknown>>,
     bindings: ProfileBindings | null,
-    largestMarking?: number | null,
+    largestMarking?: number | BoundEstimate | null,
 ): ProfileSummary {
     const proposals = bindings ? proposalsOf(profile, bag, bindings, largestMarking) : [];
     const after: Record<string, unknown> = { ...bag };
@@ -403,7 +442,7 @@ export function profilePatch(
     bindings: ProfileBindings,
     lookup: Record<string, any>,
     classIds: readonly string[],
-    largestMarking?: number | null,
+    largestMarking?: number | BoundEstimate | null,
 ): ProfileApply {
     const patch: Record<string, string> = {};
     for (const p of proposalsOf(profile, bag, bindings, largestMarking)) patch[p.key] = p.value;
