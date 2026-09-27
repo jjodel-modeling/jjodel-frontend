@@ -216,6 +216,13 @@ describe('roleOverlaps: the STC roles are disjoint under "is a" (R-SIM-16)', () 
         expect(roleOverlaps(withFork, { ...disjoint, simFork: 'C_Trans' }, concrete)).toEqual({ classId: 'C_Trans', sorts: ['node', 'transition'] });
     });
 
+    it('an activity final is a node: an activity-final class extending the node class is no overlap (G6, R-SIM-53)', () => {
+        const withFinal = { ...lookup, C_ActFinal: { className: 'DClass', extends: ['C_Node'] } };
+        expect(roleOverlaps(withFinal, { ...disjoint, simActivityFinal: 'C_ActFinal' }, [...concrete, 'C_ActFinal'])).toBeNull();
+        // control: an activity-final class that is the transition class overlaps (killed by leaving the key out of the node sort)
+        expect(roleOverlaps(withFinal, { ...disjoint, simActivityFinal: 'C_Trans' }, concrete)).toEqual({ classId: 'C_Trans', sorts: ['node', 'transition'] });
+    });
+
     it('arcs are a sort of their own; an inhibitor arc class extending the arc class is no overlap (step 3b)', () => {
         const withArcs = { ...lookup, C_Arc: { className: 'DClass', extends: [] }, C_Inh: { className: 'DClass', extends: ['C_Arc'] } };
         expect(roleOverlaps(withArcs, { ...disjoint, simArc: 'C_Arc', simInhibitorArc: 'C_Inh' }, [...concrete, 'C_Arc', 'C_Inh'])).toBeNull();

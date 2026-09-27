@@ -1,0 +1,63 @@
+/* ============================================================
+   JJODEL DESIGN TOKENS — ENTITY CATEGORICAL PALETTE
+   Identifies model-driven-engineering artifact types in the UI
+   (tree view, badges, cards, canvas nodes). Each type has a
+   pastel background + saturated foreground pair, plus a single
+   letter used in square badge chips.
+
+   Source of truth: frontend/src/common/entityMeta.ts
+   ============================================================ */
+
+:root,
+:root[data-theme="light"] {
+  /* Metamodel — violet (letter M) */
+  --color-entity-metamodel-bg: #eeedfe;
+  --color-entity-metamodel-fg: #534ab7;
+
+  /* Model — amber/tan (letter m) */
+  --color-entity-model-bg: #faeeda;
+  --color-entity-model-fg: #854f0b;
+
+  /* Transformation — emerald (letter T) */
+  --color-entity-transformation-bg: #e1f5ee;
+  --color-entity-transformation-fg: #0f6e56;
+
+  /* Viewpoint — pink (letter V) */
+  --color-entity-viewpoint-bg: #fce7f3;
+  --color-entity-viewpoint-fg: #db2777;
+
+  /* Package — blue (letter P) */
+  --color-entity-package-bg: #dbeafe;
+  --color-entity-package-fg: #2563eb;
+
+  /* Class — red (letter C) */
+  --color-entity-class-bg: #fee2e2;
+  --color-entity-class-fg: #dc2626;
+
+  /* Enumeration — amber (letter E) */
+  --color-entity-enum-bg: #fef3c7;
+  --color-entity-enum-fg: #d97706;
+
+  /* Attribute — green (letter A) */
+  --color-entity-attribute-bg: #d1fae5;
+  --color-entity-attribute-fg: #059669;
+
+  /* Reference — cyan (letter R) */
+  --color-entity-reference-bg: #cffafe;
+  --color-entity-reference-fg: #0891b2;
+
+  /* Operation — indigo (letter O) */
+  --color-entity-operation-bg: #e0e7ff;
+  --color-entity-operation-fg: #4f46e5;
+
+  /* Literal / parameter / datatype — neutral slate (letters L / P / D) */
+  --color-entity-neutral-bg: #f1f5f9;
+  --color-entity-neutral-fg: #475569;
+
+  /* Canvas type-accent border colors for nodes */
+  --color-type-class: #3b82f6;
+  --color-type-enum: #8b5cf6;
+  --color-type-package: #10b981;
+  --color-type-object: #f59e0b;
+  --color-type-datatype: #6366f1;
+}

@@ -1942,6 +1942,12 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   del pannello si limitano a una riga con il testo intero nel `title`: oggi una riga che va a capo
   sposta i pulsanti di 17 px (misurato). Entra nella stessa corsia, come aggiunta dichiarata allo
   scope.
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat, 22:20, punto 3 delle risposte della sera, memo
+  `docs/ratifiche/claude_ratifiche_2026-09-27_evening_answers.md`): nello stato Halted la riga di halt va a capo
+  in uno slot riservato di due righe, un'ellissi oltre la seconda. Lo slot sta sopra i pulsanti e ha altezza
+  fissa, quindi il pannello cresce verso l'alto di 16,5 px e i pulsanti non si muovono (misurato a 1600x1000 e
+  1280x800, P-2026-09-27-2225, `e0e6ee5e4`). «Last step», i difetti, l'errore e ogni altra riga restano a una
+  riga: «Last step» sta sotto i pulsanti, e una seconda riga li alzava di 16,5 px (misurato).
 - **R-SIM-64** (2026-09-26). **`else` anche nella forma Petri. Completa R-SIM-31.** Una transizione
   di Petri la cui guardia è il testo `else` è il complemento dei suoi fratelli, come un arco del
   controllo di flusso: i fratelli sono le transizioni con lo stesso preset (posti e pesi) e gli stessi
@@ -2124,6 +2130,18 @@ come raccomandato», quindi le righe qui sotto non sono provvisorie.
   M3 «un ruolo di classe lega solo una classe concreta», che resta per gli altri ruoli. (3) Quando Action, Entry o Exit
   è legata e `simStateAttributes` è vuota, il riepilogo mostra una riga che invita a dichiarare gli attributi, con
   «Add attribute» raggiungibile senza aprire Configure…. Corsia R2, fast; nessun file del motore.
+  **Emendata il 2026-09-27, punto (1)** (ratified by Alfonso 2026-09-27, risposta A del report
+  `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md` §7, chat C-2026-09-27-1437, 16:05; G12(b)): Apply
+  propone `simBound` dall'esplorazione limitata dei marking raggiungibili dei modelli M1 del metamodello, non più dal
+  massimo marking iniziale. Ogni modello si compila con `compileNet` sul bag come Apply lo lascia, a bound sollevato;
+  guardie e trigger si ignorano, inibitori e terminazione si tengono; un marking che copre un antenato sul proprio
+  cammino con più token ferma l'esplorazione (controllo di Karp e Miller); al più 2000 marking fra tutti i modelli.
+  La proposta è il massimo dei token su un posto quando l'esplorazione chiude su ogni modello, e solo sopra 1: così
+  non è mai la causa di un arresto `unsafe` (R-SIM-23). Quando non chiude (copertura, tetto, o ruoli che dopo Apply
+  non danno una rete) la proposta è il massimo marking iniziale di prima, con un titolo che dice perché. Il pannello
+  legge nel selettore solo la firma dei modelli; l'esplorazione gira in un memo su di essa (report §5.1 rischio 5).
+  La decisione H resta per la demo; sulla rete della demo la proposta legge `Bound → 4`, e il passo 3 del copione
+  diventa ridondante (corsia docs dopo il merge). Codice `917b1546b` (corsia E2, P-2026-09-27-1611).
 - **R-SIM-82** (2026-09-27, evidence: measured, verified: none, reversible: branch). **La faccia M1 per il pubblico
   (G3, G8, G10, G11; decisioni D ed F).** Una riga della faccia M1 mostra per tutto il run il marking con i conteggi e
   poi σ (`Marking: p2 ×2, p3 · coins = 2, paid = true`), aggiornata a ogni scatto, clampata (R-SIM-63, R-SIM-66); la
@@ -2161,6 +2179,22 @@ R-SIM-53 e R-SIM-31(1) sono attuate come scritte.
   uscente da un fork non ha fratelli sotto R-SIM-31(1): è il difetto di compilazione `else-position` (letterale
   nuovo di `NetDefectCode`, additivo per la regola 11 come in R-SIM-70) e quel nodo non compila. L'emendamento B
   (fratelli letti sull'arco) è respinto da Alfonso il 2026-09-27. R-SIM-64 (Petri) invariata.
+
+### Decisioni 2026-09-27: il dialogo Simulation roles entra nella demo (R-SIM-85)
+
+Decisa da Alfonso nella chat di progetto `C-2026-09-27-1437`, 2026-09-27 17:39, dopo la scrittura di
+P-2026-09-27-1740: «voglio il modale gia nella demo e se ci sono problemi faremo un roll back». È una decisione
+sua, riportata dalla chat, non un'inferenza della chat: non è provvisoria. Registrata dalla corsia di merge
+P-2026-09-27-2049.
+
+- **R-SIM-85** (2026-09-27, ratified by Alfonso 2026-09-27 17:39, evidence: read, verified: agent, reversible:
+  trunk). **Il branch `sim-modal` entra nel trunk prima del freeze del 2026-10-01, e la demo MODELS percorre il
+  dialogo Simulation roles.** Sostituisce la riga di P-2026-09-27-1740 (COSA, decisioni di Alfonso del
+  2026-09-27) «the branch is not merged on the trunk before 2026-10-04, because the MODELS demo walks the current
+  panel». Merge `5eccdd4d2` (P-2026-09-27-2049). Punto di rollback: il tag locale `pre-sim-modal` su
+  `d9e88f792`, la base del merge. Il copione `docs/demo/models_2026_simulator_demo.md` resta stale su §2.2
+  passo 3, §2.3 e §2.4 finché la corsia docs che la chat lancia subito dopo non lo ripercorre attraverso il
+  dialogo (ticket high della Fase 2 di P-2026-09-27-1740).
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 

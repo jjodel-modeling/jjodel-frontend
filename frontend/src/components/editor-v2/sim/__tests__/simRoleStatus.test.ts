@@ -12,6 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+    boundProposalBag,
     boundProposalInputs,
     ENGINE_ROLE_KEYS,
     eventRoleWarning,
@@ -25,11 +26,13 @@ import {
     ROLE_SPECS,
     storedProfile,
 } from '../simRoleStatus';
-import type { Roles } from '../simRoleStatus';
+import type { ProfileSummary, Roles } from '../simRoleStatus';
 import { largestInitialMarking } from '../modelMarkings';
+import type { BoundEstimate } from '../modelMarkings';
 import { netStcFromRoles } from '../../../../model/simulation/netCompile';
 import { encodeStateAttributes } from '../../../../model/simulation/stateAttributesCodec';
 import { systemProfile } from '../../../../model/simulation/simProfiles';
+import { roleDescriptor } from '../../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
 import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
 
@@ -147,6 +150,26 @@ describe('the event role specs (R-SIM-38)', () => {
 
     it('the identifier is an override of name: its empty option reads "name (default)"', () => {
         expect(ROLE_SPECS.find(spec => spec.key === 'simEventIdentifier')?.placeholder).toBe('name (default)');
+    });
+});
+
+describe('the activity-final row (G6, R-SIM-53)', () => {
+    it('Activity final follows Terminal in ROLE_SPECS, a class select with the catalog\'s label (killed by dropping the row)', () => {
+        const keys = ROLE_SPECS.map(spec => spec.key);
+        expect(keys.indexOf('simActivityFinal')).toBe(keys.indexOf('simTerminal') + 1);
+        expect(ROLE_SPECS.find(spec => spec.key === 'simActivityFinal')).toEqual({
+            key: 'simActivityFinal', label: roleDescriptor('activityFinal').label, kind: 'class', placeholder: 'Select a metaclass',
+        });
+        // control: the label is the catalog's, as Terminal's is
+        expect(ROLE_SPECS.find(spec => spec.key === 'simTerminal')?.label).toBe(roleDescriptor('terminal').label);
+    });
+
+    it('the key is never required: missing and invalid roles are the same with and without it (R-SIM-28 as for Terminal)', () => {
+        for (const bag of [{}, CF, PETRI, { ...CF, simInitial: undefined }]) {
+            const withFinal = { ...bag, simActivityFinal: 'C_ActFinal' };
+            expect(missingEngineRoles(withFinal)).toEqual(missingEngineRoles(bag));
+            expect(invalidEngineRoles(withFinal)).toEqual(invalidEngineRoles(bag));
+        }
     });
 });
 
@@ -421,6 +444,60 @@ describe('Bound from the models (R-SIM-81, G2)', () => {
         expect(boundProposalInputs(PETRI_PROFILE, { simBound: '2' }, B2NET_BINDINGS)).toBeNull();
         expect(boundProposalInputs(PETRI_PROFILE, {}, { ...B2NET_BINDINGS, initialMarking: none })).toBeNull();
         expect(boundProposalInputs(SM, {}, TURN)).toBeNull();
+    });
+});
+
+describe('the Bound from the reachable markings (G12(b), R-SIM-81(1) as amended by Alfonso 2026-09-27)', () => {
+    const closed = (max: number, largestInitial: number | null = 2, markings = 9): BoundEstimate => ({
+        largestInitial, exploration: { max, end: 'closed', markings },
+    });
+    const boundOf = (s: ProfileSummary) => s.proposals.find(p => p.key === 'simBound');
+    const FALLBACK = 'The largest initial marking on the models of this metamodel';
+
+    it('a closed exploration proposes its maximum, 4 on the demo net, and the title says so (killed by proposing the largest initial marking, 2)', () => {
+        const s = profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, closed(4));
+        expect(boundOf(s)).toMatchObject({ role: 'bound', value: '4' });
+        expect(boundOf(s)?.why).toBe('The most tokens a place holds over the 9 reachable markings of the models, guards aside');
+        expect(profileSummaryText(s, nameOf).proposals).toEqual(['Bound → 4']);
+        const r = profilePatch(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, {}, [], closed(4));
+        expect((r as { patch: Record<string, string> }).patch).toMatchObject({ simBound: '4' });
+    });
+
+    it('an exploration that does not close proposes the largest initial marking, and the title says why (killed by proposing the partial maximum)', () => {
+        const cases: Array<[BoundEstimate, string]> = [
+            [{ largestInitial: 2, exploration: { max: 3, end: 'unbounded', markings: 5 } },
+                `${FALLBACK}: a reachable marking covers an earlier one with more tokens, so no bound was found`],
+            [{ largestInitial: 2, exploration: { max: 7, end: 'cap', markings: 2000 } },
+                `${FALLBACK}: more than 2000 reachable markings, not all explored`],
+            [{ largestInitial: 2, exploration: null }, `${FALLBACK}: the roles after Apply make no net to explore`],
+        ];
+        for (const [estimate, why] of cases) {
+            const s = profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, estimate);
+            expect(boundOf(s)).toMatchObject({ value: '2', why });
+            const r = profilePatch(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, {}, [], estimate);
+            expect((r as { patch: Record<string, string> }).patch).toMatchObject({ simBound: '2' });
+        }
+    });
+
+    it('nothing at or below 1 on either path, and never over a set Bound or where Bound is not edit (R-SIM-81 as before)', () => {
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, closed(1, 1)).proposals).toEqual([]);
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, { largestInitial: 1, exploration: null }).proposals).toEqual([]);
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, { largestInitial: null, exploration: null }).proposals).toEqual([]);
+        expect(profileSummary(PETRI_PROFILE, { ...B2NET_UNBOUNDED, simBound: '3' }, B2NET_BINDINGS, closed(4)).proposals).toEqual([]);
+        expect(profileSummary(SM, {}, TURN, closed(4)).proposals.map(p => p.key)).not.toContain('simBound');
+        // control: the same closed 4 is proposed on the unbounded bag
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, closed(4)).proposals).toHaveLength(1);
+    });
+
+    it('boundProposalBag: the bag as Apply leaves it with the Bound aside, null exactly when boundProposalInputs is', () => {
+        expect(boundProposalBag(PETRI_PROFILE, {}, B2NET_BINDINGS)).toEqual({
+            simNode: 'C_Place', simInitialMarking: 'A_tokens', simTransition: 'C_PTrans', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+        });
+        // a set key is kept over the binder's value
+        expect(boundProposalBag(PETRI_PROFILE, { simNode: 'C_Mine' }, B2NET_BINDINGS)).toMatchObject({ simNode: 'C_Mine' });
+        expect(boundProposalBag(PETRI_PROFILE, { simBound: '2' }, B2NET_BINDINGS)).toBeNull();
+        expect(boundProposalBag(PETRI_PROFILE, {}, { ...B2NET_BINDINGS, initialMarking: none })).toBeNull();
+        expect(boundProposalBag(SM, {}, TURN)).toBeNull();
     });
 });
 
