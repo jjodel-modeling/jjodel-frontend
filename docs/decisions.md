@@ -1991,6 +1991,43 @@ o una corsia.
   ignorato: l'esportatore emetterebbe `VAR` con init e `DEFINE` per lo stesso nome, e il pannello mostrerebbe
   un campo senza senso. La C1 non ne risente: i suoi record hanno sempre `initial`.
 
+### Decisioni 2026-09-27: profili nel pannello, corsia demo (R-SIM-77..79)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_profiles_panel.md` (`1dddb15ae`), dieci decisioni del
+suo §7 e quattro punti di RC-26 del §8. Decise dalla chat `C-2026-09-26-1702` sotto RC-25 nella notte del
+2026-09-27 su mandato di Alfonso (procedere, domande raccolte per il mattino), con la verifica avversariale di
+RC-27 sul binder (due vincoli accolti). I quattro punti di RC-26 (A1 forma della demo M3, A2 quattro preset, A3
+emenda della riga Petri di R-SIM-54, A4 Initial/Final come classi) restano ad Alfonso: la corsia procede sulla
+raccomandazione per A1, A2 e A4, e non emenda R-SIM-54 (A3 resta nel digest).
+
+- **R-SIM-77** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Il binder: un modulo puro che lega un preset al metamodello, senza scegliere.** `profileBinder.ts` sopra
+  uno `MetamodelSketch` (raccolto da `metamodelSketch.ts` dal lookup grezzo) dà per ogni ruolo `edit`
+  `bound | candidates | none` con il motivo; lega solo con un candidato strutturale unico, non risolve mai un
+  pareggio (D1, D3). Vincolo dalla verifica: la struttura non è l'intento (l'unico attributo `Expression` di una
+  classe potrebbe non essere una guardia), quindi Apply non scrive alla cieca: il riepilogo elenca prima i
+  legami proposti (`Guard → PTrans.guard`) e Apply li conferma; un ruolo con candidati resta «Not checkable:
+  choose …» nel riepilogo, mai un no-op silenzioso. `collectMetaOptions` invariato.
+- **R-SIM-78** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Apply scrive una sola assegnazione dello stato, solo chiavi non impostate.** I valori legati delle chiavi
+  vuote dei ruoli `edit` più `simProfile`, mai sopra una chiave impostata, mai `undefined`, dopo il controllo di
+  sovrapposizione di `writeRole` (un rifiuto non scrive nulla), un solo passo di undo (D2). Cambiare profilo non
+  cancella legami (R-SIM-55): i legami di un profilo precedente restano e il riepilogo li elenca in una riga
+  «Set but off: …» (D8); un'azione «Clear bindings» è rinviata. `simProfile` assente → Custom; presente ma
+  illeggibile → Custom con una riga di avviso (D6). Nella corsia demo il motore legge il bag come oggi; il
+  risolutore che salta le chiavi `off` arriva dopo la riga Petri di R-SIM-54 (D4).
+- **R-SIM-79** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Forma M3 per la build demo, in attesa di A1.** Nel pannello M2 inline: una riga «Profile» con il selettore
+  dei preset di sistema (quattro per la demo: Petri net, Flowchart / Activity, State machine, Extended state
+  machine; DFA, NFA, Moore e Mealy nascosti finché R-SIM-50 e 51 non sono nel motore), Apply, una riga di
+  riepilogo con `checkability(profile, bag)` («Checkable» o «Not checkable» più i mancanti, mai «with warnings»
+  finché non esiste il controllo di compatibilità, D5), e «Configure…» che ripiega e riapre i gruppi inline
+  (scostamento dichiarato da R-SIM-55 fino alla corsia del modale, dopo MODELS). «Custom» è uno stato, non
+  un'opzione; «Save as…» e i profili utente aspettano il modale (D7). Stessa corsia: `max-height` con scroll sul
+  corpo del pannello, che oggi a 1000 px di viewport è alto 1006 px con l'intestazione nascosta (D10). Test:
+  binder su sette fixture, collettore su un lookup finto, `profileSummary`, banco di mutanti sulla regola del
+  pareggio, sulla regola «solo chiavi vuote» e sulla restrizione di lignaggio del Trigger (D9).
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
