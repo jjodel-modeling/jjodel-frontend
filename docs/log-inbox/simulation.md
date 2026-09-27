@@ -297,3 +297,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: Measured on 7b66f879f: all 13 Petri demo nodes paint native, no viewpoint, so an IR channel shows nothing on the demo. G3 reproduced: p1 row `tokens = 2` while the run holds 1. A candidate sweep costs 1.2-8.8 µs. Recommended: option A, a per-node overlay in the R-SIM-3 pattern, 0 critical-zone files, no R-SIM-4 amendment; option B (IR surface) after J2. Four decisions await Alfonso (report §12). A halted run still yields candidates: Phase 2 gates on the status.
 **Prompt document name**: 2026-09-27 16:47
+
+## 2026-09-27 — docs: demo script after E1 and E2 (P-2026-09-27-1738)
+**Prompt**: `claude_2026-09-27_1738_prompt_sim_demo_script_after_e1_e2.md`, fast lane, docs only, on `sim-demo-script-e1e2` in `~/jjodel-w-script` (cut at `d9e88f792`, E1 and E2 merged): the demo script drops the three constraints E1 and E2 make obsolete (answers memo, item B): the Petri step 3 becomes Apply's own `Bound → 4`, decision E is lifted with what is now allowed, each new value probed on 3022.
+**Files touched**: this commit: `docs/demo/models_2026_simulator_demo.md` (§1 the Petri row, §2.2 steps 1 to 3 and the line before Reset, §2.4 a variants paragraph, §3 the Petri and Flowchart bullets and the footnote, §5 three lines), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_script_*` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 14:30 (`claude_2026-09-27_1430_prompt_sim_demo_script.md`: its decision H step and decision E constraints, made obsolete by E1 and E2)
+**Causa**: (f)
+**Regressions**: no. Docs only, no source file changed. Four probes through `lane-run probe` on 3022 (petri, flowB, flowBF, flowBE), `EXIT=0` each, one known console error per run, port free after; `grep -c '—'` on the script 0 (exit 1, control `Marking` 44); `check:docs` 4/4.
+**Out-of-scope changes**: yes — two places outside DOVE's §2.2, §2.4, §3, §4: §1, the Petri row's live «Bound» (an interaction, COSA item 3), and §5, the G6, G7 and G12 lines (the same three constraints as deferred work). §4 names none of them and is unchanged.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Readings on 3022: (1) Petri `Bound → 4`, title over «the 9 reachable markings», bag 4; the §2.2 run line for line after Apply alone; t1 twice gives `p2 ×4`, no unsafe, Deadlock at step 4. (2) Flow B with `ActivityFinal`: `Activity final → ActivityFinal`, Terminated at step 6. (3) `else` on f4 into the Fork: no guard defect, Terminated at step 6. Flow B itself unchanged. No reading contradicts E1 or E2. One commit for script, entry and Status, as the prompt orders.
+**Prompt document name**: 2026-09-27 17:38
+**Ticket** (priority medium, opened here). The script's header asks for a re-run of the readiness probes after any trunk commit to `SimulationPanel.tsx`; E2 made two (`917b1546b`, `babbc161c`). This lane re-ran Petri and Flow B only: the SM (§2.1) and ESM (§2.3) scenes are not re-measured on this tree. `sim-readiness-3` (answers memo) covers them.
