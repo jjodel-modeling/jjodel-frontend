@@ -388,6 +388,12 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
 - **Foreground gates.** A `-p` session ends its turn when the last foreground command returns; a gate launched as
   a background task is lost with the turn and the session exits without its `Outcome` line (measured 2026-09-27,
   `P-2026-09-27-0120`). Every gate runs in the foreground; a prompt may still repeat it.
+- **lane-run v2 (`P-2026-09-27-1035`).** Five additions for the chat's side, one line each:
+  - `merge <branch> --into <trunk>` from the trunk's worktree, `merge --trunk-into <branch>` from the branch's (RC-14): measures the merge and renders its prompt from `frontend/scripts/lane-templates/` with a fresh Prompt-ID; `--launch` commits it alone and starts it, refused on a conflict the union rule does not cover, a governance file changed on the branch, or, into the trunk, a code file changed on both sides or a branch prompt not flipped.
+  - `resume <Prompt-ID> --text "<message>"` or `resume <Prompt-ID> -` (stdin) beside the message file, the text kept as `msg-<n>.md` in the lane folder; `go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>]` sends the standard GO.
+  - `probe <worktree> <probe.ts> --port <n>` starts vite on its own port (never 3001, never a busy one), runs the probe with `npx tsx`, logs it with `EXIT=` in the lane folder, stops only the vite it started and exits with the probe's code.
+  - Two fixes: `start` tries the prompt path as given, then relative to the worktree (so the bullet above no longer binds the chat to `docs/prompts/...`); an `Outcome:` line with a suffix after the word parses, one naming no outcome reads `unparsed: <line>`; `status --all` lists every lane in one table.
+  - `wait <Prompt-ID>` or `wait --any <id,id,...>` polls every 2 s: exit 0 with the status when a lane ends, 3 at the deadline, `--max` at most 170 s (the chat's shell call ends near 180 s).
 - **The chat reads one line.** The final message of a session ends with the `Outcome` line of P13, and the chat
   acts on that line through `lane-run status <Prompt-ID>`, never on the prose. A `question` is a hard stop: the
   session writes it and exits, the chat answers it or takes it to Alfonso, then resumes the session.
