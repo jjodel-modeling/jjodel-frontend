@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1310
 Chat: C-2026-09-27-1140
 Lane: fast (two style fixes in the panel; a probe screenshot replaces the visual check, the chat looks at the pixels)
-Status: da eseguire
+Status: eseguito 2026-09-27 · lane sim-polish-g13-g14 · 5739b950f
 
 Worktree: `~/jjodel-gate`, branch `sim-polish-g13-g14` (cut by the chat from `alfonso-frontend-jjtl` at `72177a866`, the trunk with R3 merged), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-gate`, branch `sim-polish-g13-g14`, `git log -1` is the commit that adds this file (its parent `72177a866`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-27-1310 · session <id>]` and ends with a bare `Outcome:` line, the shas on the line above. Run gates in the foreground.
 
