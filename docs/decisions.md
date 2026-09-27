@@ -2174,6 +2174,22 @@ R-SIM-53 e R-SIM-31(1) sono attuate come scritte.
   nuovo di `NetDefectCode`, additivo per la regola 11 come in R-SIM-70) e quel nodo non compila. L'emendamento B
   (fratelli letti sull'arco) è respinto da Alfonso il 2026-09-27. R-SIM-64 (Petri) invariata.
 
+### Decisioni 2026-09-27: il dialogo Simulation roles entra nella demo (R-SIM-85)
+
+Decisa da Alfonso nella chat di progetto `C-2026-09-27-1437`, 2026-09-27 17:39, dopo la scrittura di
+P-2026-09-27-1740: «voglio il modale gia nella demo e se ci sono problemi faremo un roll back». È una decisione
+sua, riportata dalla chat, non un'inferenza della chat: non è provvisoria. Registrata dalla corsia di merge
+P-2026-09-27-2049.
+
+- **R-SIM-85** (2026-09-27, ratified by Alfonso 2026-09-27 17:39, evidence: read, verified: agent, reversible:
+  trunk). **Il branch `sim-modal` entra nel trunk prima del freeze del 2026-10-01, e la demo MODELS percorre il
+  dialogo Simulation roles.** Sostituisce la riga di P-2026-09-27-1740 (COSA, decisioni di Alfonso del
+  2026-09-27) «the branch is not merged on the trunk before 2026-10-04, because the MODELS demo walks the current
+  panel». Merge `5eccdd4d2` (P-2026-09-27-2049). Punto di rollback: il tag locale `pre-sim-modal` su
+  `d9e88f792`, la base del merge. Il copione `docs/demo/models_2026_simulator_demo.md` resta stale su §2.2
+  passo 3, §2.3 e §2.4 finché la corsia docs che la chat lancia subito dopo non lo ripercorre attraverso il
+  dialogo (ticket high della Fase 2 di P-2026-09-27-1740).
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`

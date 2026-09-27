@@ -349,3 +349,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 - declarations are part of the draft, written by the same Apply; a text cell selects its text on focus, so a prefilled cell is replaced by typing (the S12 caret ticket, in the dialog only);
 - Apply closes the dialog, Escape and Cancel discard it, a click on the backdrop does nothing;
 - the Bound helper reads «Proposed N.» then `boundValue`'s reason verbatim.
+
+## 2026-09-27 — merge: sim-modal into alfonso-frontend-jjtl (P-2026-09-27-2049)
+**Prompt**: `claude_2026-09-27_2049_prompt_merge_sim-modal.md`, merge lane on `alfonso-frontend-jjtl` in `~/jjodel-release`: `--no-ff` of `78afc0378` (`sim-modal`, P-2026-09-27-1740), 1 conflict in this file resolved by union. Resumed after the chat relayed Alfonso's reversal of the not-before-2026-10-04 embargo (17:39), with a decision row, gates and this entry.
+**Files touched**: merge `5eccdd4d2` (the branch's 25 files; union of `docs/log-inbox/simulation.md`, trunk's file +38 -0); docs, this commit: `docs/decisions.md` (R-SIM-85), the Status of the prompt file, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gates green on `5eccdd4d2`: typecheck exit 2, 14 errors, set identical; vitest 5265 passed across 214 files (5236 + 29), the nine known red at import; hooks 300; build exit 0; `typecheck:scripts` exit 0; `check:agents`, `check:scripts` PASS; `check:docs` 4/4. No smoke on 3001 in this lane.
+**Out-of-scope changes**: no — the merge's files are the branch's, declared by the prompt; `docs/decisions.md` and this entry were asked by the chat's answer.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non eseguito in questa corsia: la chat ha chiesto Outcome: done dopo i gate; il suo smoke su 3001 segue (3001 su, PID 61660, non riavviato)
+**Notes**: The first run stopped before the commit on P-2026-09-27-1740's not-before-2026-10-04 line (Outcome: question) and ran `git merge --abort`; the resume re-merged to the same tree `2c5a67a2d`. `frontend/` at `5eccdd4d2` equals `78afc0378`'s. The demo script is stale on §2.2 step 3, §2.3 and §2.4 until the chat's re-walk docs lane. Rollback tag `pre-sim-modal` at `d9e88f792`.
+**Prompt document name**: 2026-09-27 20:49
