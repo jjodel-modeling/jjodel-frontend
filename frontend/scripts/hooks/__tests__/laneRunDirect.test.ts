@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lintEntry, splitLog } from '../../gates/log-tools.ts';
 
 // lane-run.mjs merge --direct, go on a direct merge, and chain, run as child
 // processes the way the chat runs them (P11), against a fake `claude` and a
@@ -222,6 +223,7 @@ interface RepoOpts {
     tscError?: boolean;
     failedTest?: boolean;
     dirtyWorktree?: boolean;
+    twoInboxes?: boolean;
 }
 
 interface RepoLab {
@@ -243,7 +245,8 @@ interface RepoLab {
  * prompt not flipped (pending), an inbox the trunk folded while the branch
  * appended (unionEdit), R-X-2 added on both sides (probeClash), a type error on
  * the branch (tscError), a failing test on the branch (failedTest), a tracked
- * change in the branch worktree (dirtyWorktree).
+ * change in the branch worktree (dirtyWorktree), an entry in a second inbox on
+ * the branch (twoInboxes).
  */
 function repoLab(o: RepoOpts = {}): RepoLab {
     const l = lab();
@@ -276,6 +279,7 @@ function repoLab(o: RepoOpts = {}): RepoLab {
     const branchTip = commitFiles(l, repo, 'docs: the feat rows', {
         'docs/decisions.md': DECISIONS + '- **R-X-2** (2026-09-27): the feat row.\n',
         'docs/log-inbox/lane.md': baseInbox + FEAT_ENTRY,
+        ...(o.twoInboxes ? { 'docs/log-inbox/other.md': INBOX + ENTRY('docs: the other front (P-2026-09-27-0100)', 'the other front') } : {}),
     });
     gitIn(l, repo, ['checkout', '-q', 'trunk']);
     const trunkCode: Record<string, string> = { 'frontend/src/c.ts': 'c2\n' };
@@ -470,5 +474,97 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(out.stdout).toContain('direct: falls back');
         expect(out.stdout).toContain('code files changed on both sides');
         expect(gitIn(r.l, r.wt, ['rev-parse', 'HEAD'])).toBe(r.branchTip);
+    });
+});
+
+// ── go on a direct merge, and the templates' closure ─────────────────────────
+
+const SMOKE = 'Smoke on 3001 by the chat: the feat panel renders, 4/4.';
+const FLIP = (sha: string) => `Status: eseguito 2026-09-27 · lane merge · ${short(sha)} · verifica visiva passata 2026-09-27 (${SMOKE})`;
+
+/** A direct merge of feat into trunk run to the end of its worker, green. */
+function merged(o: RepoOpts = {}): RepoLab {
+    const r = repoLab(o);
+    const out = directMerge(r);
+    if (out.status !== 0 || !waitFor(join(laneDir(r.l), 'exit.txt'))) throw new Error('direct merge did not end: ' + out.stdout + out.stderr);
+    return r;
+}
+
+/** The last entry of an inbox file, as the gate splits it. */
+function lastEntry(text: string) {
+    const { entries } = splitLog(text);
+    return entries[entries.length - 1];
+}
+
+describe('lane-run go on a direct merge', { timeout: 60000 }, () => {
+    test('kills "two closure commits", "the Status not flipped", "the entry not written", "the entry in the wrong inbox", "the entry outside the P9 lint", "no synthetic done", "go resumes a session": one docs commit flips the Status and appends the P9 entry', () => {
+        const r = merged();
+        const { l, repo } = r;
+        const mergeSha = gitIn(l, repo, ['rev-parse', 'HEAD']);
+        const g = laneRun(l, ['go', NEW_ID, '--smoke', SMOKE]);
+        expect(g.status, g.stderr).toBe(0);
+        expect(gitIn(l, repo, ['rev-parse', 'HEAD^'])).toBe(mergeSha);
+        expect(gitIn(l, repo, ['log', '-1', '--format=%s'])).toBe(`docs: Status flip and log entry for the feat merge (${NEW_ID})`);
+        expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toContain('Model: none (lane-run go, direct merge');
+        expect(gitIn(l, repo, ['show', '--name-only', '--format=', 'HEAD']).split('\n').sort()).toEqual(['docs/log-inbox/lane.md', MERGE_FILE]);
+        const prompt = readFileSync(join(repo, MERGE_FILE), 'utf8');
+        expect(prompt.split('\n').filter((x) => x.startsWith('Status:'))).toEqual([FLIP(mergeSha)]);
+        const inbox = readFileSync(join(repo, 'docs/log-inbox/lane.md'), 'utf8');
+        const e = lastEntry(inbox);
+        expect(e.heading).toBe(`## 2026-09-27 — merge: feat into trunk (${NEW_ID})`);
+        expect(lintEntry(e, new Set()).findings).toEqual([]);
+        expect(e.text).toContain(`**Smoke visivo**: passato — chat, unattended: ${SMOKE}`);
+        expect(e.text).toContain('**Prompt document name**: 2026-09-27 10:40');
+        expect(e.text).toContain(`merge \`${short(mergeSha)}\``);
+        expect(inbox.startsWith(INBOX + FEAT_ENTRY + '\n## 2026-09-27 — merge:')).toBe(true);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(result(l).closure).toBe(gitIn(l, repo, ['rev-parse', 'HEAD']));
+        expect(laneRun(l, ['status', NEW_ID]).stdout).toContain('outcome: Outcome: done');
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "go over a blocked merge", "go twice", "--step taken on a direct lane": each is refused and commits nothing', () => {
+        const r = repoLab();
+        expect(directMerge(r, { FAKE_RED: 'build' }).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        const head = gitIn(r.l, r.repo, ['rev-parse', 'HEAD']);
+        const b = laneRun(r.l, ['go', NEW_ID, '--smoke', SMOKE]);
+        expect(b.status).toBe(2);
+        expect(b.stderr).toContain('blocked');
+        expect(gitIn(r.l, r.repo, ['rev-parse', 'HEAD'])).toBe(head);
+        const m = merged();
+        expect(laneRun(m.l, ['go', NEW_ID, '--smoke', SMOKE, '--step', '2']).status).toBe(2);
+        expect(laneRun(m.l, ['go', NEW_ID, '--smoke', SMOKE]).status).toBe(0);
+        const closed = gitIn(m.l, m.repo, ['rev-parse', 'HEAD']);
+        const again = laneRun(m.l, ['go', NEW_ID, '--smoke', SMOKE]);
+        expect(again.status).toBe(2);
+        expect(again.stderr).toContain('already closed');
+        expect(gitIn(m.l, m.repo, ['rev-parse', 'HEAD'])).toBe(closed);
+        expect(calls(m.l)).toEqual([]);
+    });
+
+    test('kills "an inbox guessed among two", "--front ignored": a branch that writes two inboxes needs --front, which names the file', () => {
+        const r = merged({ twoInboxes: true });
+        const g = laneRun(r.l, ['go', NEW_ID, '--smoke', SMOKE]);
+        expect(g.status).toBe(2);
+        expect(g.stderr).toContain('--front');
+        const f = laneRun(r.l, ['go', NEW_ID, '--smoke', SMOKE, '--front', 'other']);
+        expect(f.status, f.stderr).toBe(0);
+        expect(lastEntry(readFileSync(join(r.repo, 'docs/log-inbox/other.md'), 'utf8')).heading).toBe(`## 2026-09-27 — merge: feat into trunk (${NEW_ID})`);
+        expect(readFileSync(join(r.repo, 'docs/log-inbox/lane.md'), 'utf8')).not.toContain('merge: feat into trunk');
+    });
+
+    test('kills "the template still says no log entry", "the template names no inbox", "two closure commits in the template", "the take-trunk template still says no log entry": a rendered merge prompt asks for one docs commit with the Status flip and the entry in the branch\'s inbox', () => {
+        const r = repoLab();
+        const out = laneRun(r.l, ['merge', 'feat', '--into', 'trunk'], { cwd: r.repo });
+        expect(out.status, out.stderr).toBe(0);
+        const text = readFileSync(join(r.l.lanes, 'pending', basename(MERGE_FILE)), 'utf8');
+        expect(text).not.toContain('No log entry');
+        expect(text).toMatch(/one docs commit: this prompt's Status flipped to [^\n]* and the P9 entry of this merge appended at the end of `docs\/log-inbox\/lane\.md`, both in that commit/);
+        const take = laneRun(r.l, ['merge', '--trunk-into', 'feat', '--from', 'trunk'], { cwd: r.wt, env: { LANE_RUN_NOW: '2026-09-27T10:41' } });
+        expect(take.status, take.stderr).toBe(0);
+        const t2 = readFileSync(join(r.l.lanes, 'pending', 'claude_2026-09-27_1041_prompt_feat_take_trunk.md'), 'utf8');
+        expect(t2).not.toContain('No log entry');
+        expect(t2).toMatch(/one docs commit: this prompt's Status flipped to [^\n]* and the P9 entry of this merge appended at the end of `docs\/log-inbox\/lane\.md`, both in that commit/);
     });
 });

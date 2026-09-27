@@ -26,10 +26,16 @@
  *                written to msg-<n>.md in the lane folder, so the log stays
  *                reproducible. Appends to the same log. Refused without
  *                session.txt or worktree.txt, and while a run is live.
- *   go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>]
+ *   go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>] [--front <inbox>]
  *                resumes with the standard GO: `[<Prompt-ID>] GO.`, the smoke
  *                sentence, and step <n> of the prompt's COME (of its `### Steps`
  *                when it has one), or the closure commit when --step is absent.
+ *                On a direct merge (merge --direct) there is no session: go
+ *                writes the closure itself, one docs commit that flips the merge
+ *                prompt's Status (the smoke sentence in parentheses) and appends
+ *                the P9 entry, generated from git and result.json, to the one
+ *                inbox the branch adds headings to (--front <name> when it
+ *                writes several); refused on a blocked merge and on a second go.
  *   status <Prompt-ID> [--limit <minutes>]
  *                running, exited or blocked (running past the limit, 90 minutes
  *                by default); the exit code; the last `Outcome:` line of the
@@ -682,8 +688,12 @@ function comeStep(text, n) {
 function go(idArg, rest) {
     const id = checkId(idArg);
     const smoke = option(rest, '--smoke');
-    if (!smoke || smoke.trim() === '') refuse('usage: lane-run go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>]');
+    if (!smoke || smoke.trim() === '') refuse('usage: lane-run go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>] [--front <inbox>]');
     const stepArg = option(rest, '--step');
+    if (existsSync(join(laneFiles(id).dir, 'direct.json'))) {
+        if (stepArg !== null) refuse(id + ' is a direct merge: it has no session and no steps; go writes its closure');
+        return closeDirect(id, smoke.trim(), option(rest, '--front'));
+    }
     let next = 'Now the closure commit as the prompt says.';
     if (stepArg !== null) {
         if (!/^[1-9]\d*$/.test(stepArg)) refuse('--step takes a step number: ' + stepArg);
@@ -863,6 +873,7 @@ function measureMerge(cwd, o) {
         precedent,
         worktrees: worktrees(cwd),
         probeList: probes,
+        fronts: inboxFronts(cwd, base, branchTip),
         probes: mergeProbes(probes),
         short: { trunk: shortSha(cwd, trunkTip), branch: shortSha(cwd, branchTip), base: shortSha(cwd, base) },
     };
@@ -945,6 +956,7 @@ function mergeValues(m, o, id, when, findings, goahead = null) {
         ].filter((x) => x !== '').join('\n\n'),
         probes: (m.probes.length ? m.probes : ['none: neither side adds a decision row or an inbox heading since the base.']).map((x) => '   - ' + x).join('\n'),
         mergeSubject: subject,
+        front: m.fronts.length === 1 ? '`' + m.fronts[0] + '`' : 'the `docs/log-inbox/` file of this branch\'s front (the branch adds headings to ' + (m.fronts.length ? quote(m.fronts) : 'none') + ')',
     };
 }
 
@@ -1430,6 +1442,111 @@ async function directRun(idArg) {
     ];
     console.log(JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: summary.join('\n') }] } }));
     return res.outcome === 'hard-stop' ? 0 : 1;
+}
+
+// ── go on a direct merge: the one closure commit ─────────────────────────────
+
+const NOTES_MAX = 500;
+
+const INBOX_FILE = /^docs\/log-inbox\/[^/]+\.md$/;
+
+/** The inboxes a side adds headings to since the base: a merge's entry goes to the branch's front. */
+function inboxFronts(cwd, base, tip) {
+    return [...new Set(addedLines(cwd, base, tip, ['docs/log-inbox/']).filter((a) => /^## /.test(a.text) && INBOX_FILE.test(a.file)).map((a) => a.file))];
+}
+
+/** `YYYY-MM-DD HH:mm` of a prompt file named claude_<date>_<HHmm>_...: its P9 `Prompt document name`. */
+function promptDocumentName(file) {
+    const m = /^claude_(\d{4}-\d{2}-\d{2})_(\d{2})(\d{2})_/.exec(basename(file));
+    return m ? m[1] + ' ' + m[2] + ':' + m[3] : '—';
+}
+
+/** The P9 entry of a direct merge, generated from git and result.json; Notes within the cap of CLAUDE.md 21.2. */
+function directEntry(plan, res, smoke, date) {
+    const into = plan.mode === 'into';
+    const cwd = plan.top;
+    const s = (sha) => shortSha(cwd, sha);
+    const files = nonEmpty(git(cwd, ['diff', '--name-only', res.merge + '^1', res.merge]).out);
+    const shown = files.slice(0, 8).map((p) => '`' + p + '`').join(', ') + (files.length > 8 ? ', and ' + (files.length - 8) + ' more' : '');
+    const commits = nonEmpty(git(cwd, ['rev-list', plan.base + '..' + plan.incomingTip]).out).length;
+    const incomingSide = into ? 'the branch side' : 'the trunk side';
+    let notes = (res.tag ? 'Rollback tag `' + res.tag + '` on `' + s(plan.trunkTip) + '` (RC-31). ' : '') +
+        'Union: ' + (res.union.length ? res.union.map((p) => '`' + p + '`').join(', ') : 'none') + '. Worker and gates: `~/.jjodel-lanes/' + res.promptId + '/result.json`.';
+    if (notes.length > NOTES_MAX) notes = notes.slice(0, NOTES_MAX - 3) + '...';
+    return [
+        '## ' + date + ' — ' + (into ? 'merge: ' + plan.branch + ' into ' + plan.trunk : 'merge: ' + plan.branch + ' takes ' + plan.trunk) + ' (' + res.promptId + ')',
+        '**Prompt**: `' + basename(plan.prompt) + '`, a direct merge by `lane-run merge --direct`, no session: `' + (into ? plan.branch : plan.trunk) + '` at `' + s(plan.incomingTip) +
+            '` into `' + (into ? plan.trunk : plan.branch) + '`, merge base `' + s(plan.base) + '`, ' + commits + (commits === 1 ? ' commit' : ' commits') + ' on ' + incomingSide + '.',
+        '**Files touched**: merge `' + s(res.merge) + '`: ' + files.length + ' files from ' + incomingSide + (files.length ? ' (' + shown + ')' : '') + '; this commit: this entry and the Status of the prompt file.',
+        '**Outcome**: ✅ completed',
+        '**Corregge**: —',
+        '**Causa**: —',
+        '**Regressions**: no. Gates on `' + s(res.merge) + '` in the worker: ' + res.gates.map((g) => g.name + ' ' + g.detail).join('; ') + '.',
+        '**Out-of-scope changes**: no',
+        '**Layer Impact Report**: not-required',
+        '**Smoke visivo**: passato — chat, unattended: ' + smoke,
+        '**Notes**: ' + notes,
+        '**Prompt document name**: ' + promptDocumentName(plan.prompt),
+    ].join('\n') + '\n';
+}
+
+/**
+ * go on a direct merge (rule 2 of P-2026-09-27-2330): after the chat's visual
+ * check, one docs commit flips the merge prompt's Status and appends the P9
+ * entry to the inbox the branch writes to; no session is resumed.
+ */
+function closeDirect(id, smoke, frontArg) {
+    const f = laneFiles(id);
+    const plan = JSON.parse(readFileSync(join(f.dir, 'direct.json'), 'utf8'));
+    if (isRunning(f)) refuse(id + ' is still running its gates: wait for it');
+    const resultFile = join(f.dir, 'result.json');
+    if (!existsSync(resultFile)) refuse(id + ' has no result.json: the worker ended without one; see ' + f.err);
+    const res = JSON.parse(readFileSync(resultFile, 'utf8'));
+    if (res.closure) refuse(id + ' is already closed at ' + res.closure.slice(0, 9));
+    if (!res.ok || !res.merge) refuse(id + ' is blocked (' + (res.reason || 'no merge') + '): no closure over it');
+    const top = plan.top;
+    if (git(top, ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], [0, 1]).status === 0) refuse('a merge is in progress in ' + top);
+    if (git(top, ['merge-base', '--is-ancestor', res.merge, 'HEAD'], [0, 1]).status !== 0) refuse('the merge ' + res.merge.slice(0, 9) + ' is not in the history of HEAD in ' + top);
+
+    let inbox;
+    if (frontArg !== null) {
+        inbox = 'docs/log-inbox/' + frontArg.replace(/\.md$/, '') + '.md';
+        if (!existsSync(join(top, inbox))) refuse('--front ' + frontArg + ': no ' + inbox + ' in ' + top);
+    } else {
+        const fronts = inboxFronts(top, plan.base, plan.branchTip);
+        if (fronts.length !== 1) {
+            refuse('the branch adds headings to ' + (fronts.length ? fronts.join(', ') : 'no inbox') + ': name the entry\'s inbox with --front <name>');
+        }
+        inbox = fronts[0];
+    }
+    const promptRel = relative(top, plan.prompt);
+    if (git(top, ['status', '--porcelain', '--', promptRel, inbox]).out.trim() !== '') refuse(promptRel + ' or ' + inbox + ' has uncommitted changes in ' + top);
+
+    const { date } = stamp(clock());
+    const lines = readFileSync(plan.prompt, 'utf8').split('\n');
+    const end = lines.findIndex((l) => l.startsWith('## '));
+    const at = lines.findIndex((l, i) => (end === -1 || i < end) && /^Status:/.test(l));
+    if (at === -1 || lines[at].trim() !== 'Status: da eseguire') refuse(promptRel + ': the header Status is not `da eseguire`');
+    const lane = plan.mode === 'into' ? 'merge' : plan.branch;
+    lines[at] = 'Status: eseguito ' + date + ' · lane ' + lane + ' · ' + shortSha(top, res.merge) + ' · verifica visiva passata ' + date + ' (' + smoke + ')';
+    writeFileSync(plan.prompt, lines.join('\n'));
+    const current = readFileSync(join(top, inbox), 'utf8');
+    const sep = current === '' || current.endsWith('\n\n') ? '' : current.endsWith('\n') ? '\n' : '\n\n';
+    writeFileSync(join(top, inbox), current + sep + directEntry(plan, res, smoke, date));
+
+    const long = 'docs: Status flip and log entry for the ' + plan.branch + ' merge';
+    const subject = (long.length <= SUBJECT_MAX ? long : 'docs: Status flip and log entry for a direct merge') + ' (' + id + ')';
+    const trailer = 'Model: none (lane-run go, direct merge; ' + modelTrailer().replace(/^Model:\s*/, '') + ')';
+    git(top, ['add', '--', promptRel, inbox]);
+    git(top, ['commit', '-q', '-m', subject, '-m', trailer, '--', promptRel, inbox]);
+    res.closure = git(top, ['rev-parse', 'HEAD']).out.trim();
+    writeJson(resultFile, res);
+    const text = '[' + id + '] closure ' + res.closure.slice(0, 9) + ': Status flipped, entry in ' + inbox + '.\nOutcome: done';
+    writeFileSync(f.log, JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text }] } }) + '\n', { flag: 'a' });
+    console.log('closure: committed ' + res.closure.slice(0, 9));
+    console.log('status: ' + promptRel);
+    console.log('entry: ' + inbox);
+    return 0;
 }
 
 async function main(argv) {
