@@ -17,10 +17,18 @@ import {
     incompleteConfigurationMessage,
     invalidEngineRoles,
     missingEngineRoles,
+    PANEL_PROFILE_IDS,
+    profilePatch,
+    profileSummary,
+    profileSummaryText,
     ROLE_SPECS,
+    storedProfile,
 } from '../simRoleStatus';
 import type { Roles } from '../simRoleStatus';
 import { netStcFromRoles } from '../../../../model/simulation/netCompile';
+import { systemProfile } from '../../../../model/simulation/simProfiles';
+import type { SimProfile } from '../../../../model/simulation/simProfiles';
+import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
 
 /** A runnable control-flow bag: an initial rule, a source rule, the next state. */
 const CF: Roles = { simInitial: 'C_Initial', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
@@ -156,5 +164,180 @@ describe('messages', () => {
         expect(eventRoleWarning(['Trigger'], 'Smoke')).toBe('Events disabled. Missing on Smoke: Trigger.');
         expect(eventRoleWarning(['Event'], null)).toBe('Events disabled. Missing: Event.');
         expect(eventRoleWarning(['Trigger'], '')).toBe('Events disabled. Missing on the metamodel: Trigger.');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The profile row of the M2 face (R-SIM-77..79, P-2026-09-27-0225)
+// ---------------------------------------------------------------------------
+
+const bound = (value: string): RoleBinding => ({ status: 'bound', value, why: 'test' });
+const none: RoleBinding = { status: 'none', why: 'test' };
+const SM = systemProfile('stateMachine') as SimProfile;
+const PETRI_PROFILE = systemProfile('petri') as SimProfile;
+
+/** The turnstile under State machine, as the binder gives it. */
+const TURN: ProfileBindings = {
+    node: bound('C_State'), initial: bound('C_Init'), terminal: none, transition: bound('C_Trans'),
+    ownedTransitions: bound('R_out'), source: none, nextState: bound('R_next'), trigger: bound('R_trigger'),
+    eventIdentifier: none, guard: none,
+};
+const TWO_INITIALS: ProfileBindings = { ...TURN, initial: { status: 'candidates', values: ['C_Init', 'C_Start'], why: 'test' } };
+const NAMES: Record<string, string> = {
+    C_State: 'State', C_Init: 'Init', C_Start: 'Start', C_Trans: 'Trans', C_Other: 'Other',
+    R_out: 'State.out', R_next: 'Trans.next', R_trigger: 'Trans.trigger',
+};
+const nameOf = (id: string) => NAMES[id] ?? id;
+/** The event class the Trigger is typed to, and the classes the overlap check walks. */
+const TURN_LOOKUP: Record<string, any> = {
+    R_trigger: { className: 'DReference', type: 'C_Event' },
+    C_Event: { className: 'DClass', isPrimitive: false, extends: [] },
+    C_State: { className: 'DClass', extends: [] }, C_Init: { className: 'DClass', extends: ['C_State'] },
+    C_Trans: { className: 'DClass', extends: [] }, C_Other: { className: 'DClass', extends: [] },
+};
+const TURN_CLASSES = ['C_State', 'C_Init', 'C_Trans', 'C_Event', 'C_Other'];
+const B2NET_BAG: Record<string, string> = {
+    simNode: 'C_Place', simTransition: 'C_PTrans', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+    simInitialMarking: 'A_tokens', simBound: '3', simGuard: 'A_guard', simProfile: 'petri',
+};
+const B2NET_BINDINGS: ProfileBindings = {
+    node: bound('C_Place'), initialMarking: bound('A_tokens'), terminal: none, transition: bound('C_PTrans'),
+    arc: bound('C_Arc'), arcSource: bound('R_src'), arcTarget: bound('R_tgt'), arcWeight: none, inhibitorArc: none,
+};
+
+describe('the panel presets (R-SIM-79, A2)', () => {
+    it('lists Petri net, Flowchart / Activity, State machine, Extended state machine; DFA, NFA, Moore, Mealy wait for R-SIM-50/51', () => {
+        expect(PANEL_PROFILE_IDS).toEqual(['petri', 'flowchart', 'stateMachine', 'extendedStateMachine']);
+    });
+});
+
+describe('storedProfile (R-SIM-55, D6)', () => {
+    it('no simProfile, or an empty one, is Custom rebuilt from the bag, readable', () => {
+        for (const bag of [{}, { simProfile: '' }, { ...B2NET_BAG, simProfile: undefined }]) {
+            const s = storedProfile(bag);
+            expect(s).toMatchObject({ custom: true, readable: true });
+            expect(s.profile.name).toBe('Custom');
+        }
+        // control: the Custom of a Petri bag has the Petri shape
+        expect(storedProfile({ ...B2NET_BAG, simProfile: undefined }).profile.shape).toBe('petri');
+    });
+
+    it('a system id decodes to its profile, a hidden preset included', () => {
+        expect(storedProfile({ simProfile: 'stateMachine' })).toMatchObject({ custom: false, readable: true, profile: { id: 'stateMachine' } });
+        expect(storedProfile({ simProfile: 'dfa' }).profile.id).toBe('dfa');
+    });
+
+    it('an unreadable value is Custom with readable false, never a throw (killed by treating it as absent)', () => {
+        for (const raw of ['{not json', 'custom', 42]) {
+            const s = storedProfile({ simProfile: raw });
+            expect(s).toMatchObject({ custom: true, readable: false });
+            expect(s.profile.name).toBe('Custom');
+        }
+    });
+});
+
+describe('profileSummary and its text (R-SIM-77, R-SIM-79)', () => {
+    it('an empty bag under Custom: Not checkable, every closure item missing, nothing pending', () => {
+        const s = profileSummary(storedProfile({}).profile, {}, null);
+        expect(s).toMatchObject({ name: 'Custom', status: 'notCheckable', proposals: [], choices: [], kept: [], setButOff: [], pending: false });
+        expect(s.missing).toEqual(['Node', 'Transition', 'Next state', 'Initial or Initial marking', 'Source or Owned transitions']);
+        const text = profileSummaryText(s, nameOf);
+        expect(text.status).toBe('Custom · Not checkable');
+        expect(text.badge).toBe('Not checkable');
+        expect(text.missing).toBe('Missing: Node, Transition, Next state, Initial or Initial marking, Source or Owned transitions.');
+    });
+
+    it('State machine on an empty bag: the six proposals in catalog order, Checkable after Apply', () => {
+        const s = profileSummary(SM, {}, TURN);
+        expect(s.proposals.map(p => [p.key, p.value])).toEqual([
+            ['simNode', 'C_State'], ['simInitial', 'C_Init'], ['simTransition', 'C_Trans'],
+            ['simOwnedTransitions', 'R_out'], ['simNextState', 'R_next'], ['simTrigger', 'R_trigger'],
+        ]);
+        expect(s).toMatchObject({ status: 'checkable', missing: [], pending: true });
+        const text = profileSummaryText(s, nameOf);
+        expect(text.status).toBe('State machine · Checkable after Apply');
+        expect(text.proposals[0]).toBe('Node → State');
+        expect(text.proposals).toContain('Next state → Trans.next');
+    });
+
+    it('a candidates role is not checkable and not proposed: «choose» names it (killed by reporting candidates as bound)', () => {
+        const s = profileSummary(SM, {}, TWO_INITIALS);
+        expect(s.status).toBe('notCheckable');
+        expect(s.missing).toEqual(['Initial or Initial marking']);
+        expect(s.proposals.map(p => p.key)).not.toContain('simInitial');
+        expect(s.choices).toEqual([{ role: 'initial', key: 'simInitial', label: 'Initial', values: ['C_Init', 'C_Start'] }]);
+        const text = profileSummaryText(s, nameOf);
+        expect(text.status).toBe('State machine · Not checkable after Apply');
+        expect(text.choose).toBe('Choose Initial: 2 candidates (Init, Start).');
+        // control: once the user has chosen, the choice and the verdict follow the bag
+        const chosen = profileSummary(SM, { simInitial: 'C_Start' }, TWO_INITIALS);
+        expect(chosen.choices).toEqual([]);
+        expect(chosen.status).toBe('checkable');
+    });
+
+    it('a set key is kept and named when the binder proposes another value; an equal one is not «kept»', () => {
+        const s = profileSummary(SM, { simNode: 'C_Other' }, TURN);
+        expect(s.proposals.map(p => p.key)).not.toContain('simNode');
+        expect(s.kept).toEqual([{ role: 'node', key: 'simNode', label: 'Node', value: 'C_Other', proposed: 'C_State' }]);
+        expect(profileSummaryText(s, nameOf).kept).toBe('Kept: Node (Other).');
+        const same = profileSummary(SM, { simNode: 'C_State' }, TURN);
+        expect(same.kept).toEqual([]);
+        expect(same.proposals.map(p => p.key)).not.toContain('simNode');
+    });
+
+    it('b2net under Petri net: Checkable, nothing pending, Guard set but off (D8, §8 A3 not adopted)', () => {
+        const s = profileSummary(PETRI_PROFILE, B2NET_BAG, B2NET_BINDINGS);
+        expect(s).toMatchObject({ name: 'Petri net (P/T)', status: 'checkable', proposals: [], pending: false });
+        expect(s.setButOff).toEqual(['Guard']);
+        const text = profileSummaryText(s, nameOf);
+        expect(text.setButOff).toBe('Set but off: Guard.');
+        expect(text.status).toBe('Petri net (P/T) · Checkable');
+    });
+
+    it('another preset with nothing to bind is still pending: Apply writes simProfile', () => {
+        const esm = systemProfile('extendedStateMachine') as SimProfile;
+        const bag = { simNode: 'C_State', simInitial: 'C_Init', simTransition: 'C_Trans', simOwnedTransitions: 'R_out', simNextState: 'R_next', simProfile: 'stateMachine' };
+        expect(profileSummary(esm, bag, {}).pending).toBe(true);
+        expect(profileSummary(SM, bag, {}).pending).toBe(false);
+        expect(profileSummaryText(profileSummary(SM, bag, {}), nameOf).status).toBe('State machine · Checkable');
+    });
+});
+
+describe('profilePatch (R-SIM-78)', () => {
+    it('writes the bound values of the unset keys and simProfile, nothing else (killed by overwriting a set key)', () => {
+        const r = profilePatch(SM, { simNode: 'C_Other' }, TURN, TURN_LOOKUP, TURN_CLASSES);
+        expect(r.kind).toBe('write');
+        const patch = (r as { patch: Record<string, string> }).patch;
+        expect(patch).toEqual({
+            simInitial: 'C_Init', simTransition: 'C_Trans', simOwnedTransitions: 'R_out', simNextState: 'R_next',
+            simTrigger: 'R_trigger', simProfile: 'stateMachine',
+        });
+    });
+
+    it('never writes undefined: none and candidates roles have no key (killed by writing a none role)', () => {
+        const r = profilePatch(SM, {}, TWO_INITIALS, TURN_LOOKUP, TURN_CLASSES);
+        const patch = (r as { patch: Record<string, string> }).patch;
+        expect(Object.keys(patch)).not.toContain('simInitial');
+        expect(Object.keys(patch)).not.toContain('simTerminal');
+        expect(Object.keys(patch)).not.toContain('simGuard');
+        for (const v of Object.values(patch)) expect(typeof v === 'string' && v !== '').toBe(true);
+    });
+
+    it('writes only edit roles: a bound value for a role the profile turns off is dropped', () => {
+        const r = profilePatch(PETRI_PROFILE, {}, { ...B2NET_BINDINGS, guard: bound('A_guard') }, {}, []);
+        expect(Object.keys((r as { patch: Record<string, string> }).patch)).not.toContain('simGuard');
+    });
+
+    it('refuses, writing nothing, when the roles after Apply overlap under the Petri shape (killed by skipping the check)', () => {
+        const lookup = { C_Place: { className: 'DClass', extends: [] } };
+        const r = profilePatch(PETRI_PROFILE, { simArc: 'C_Place' }, { node: bound('C_Place') }, lookup, ['C_Place']);
+        expect(r).toEqual({ kind: 'refused', overlap: { classId: 'C_Place', sorts: ['node', 'arc'] } });
+        // control: the same patch without the overlap is written
+        expect(profilePatch(PETRI_PROFILE, { simArc: 'C_Arc' }, { node: bound('C_Place') }, lookup, ['C_Place']).kind).toBe('write');
+    });
+
+    it('a control-flow overlap without the event role writes, with the overlap as a warning (the rule of writeRole)', () => {
+        const r = profilePatch(SM, {}, { node: bound('C_State'), transition: bound('C_State') }, TURN_LOOKUP, TURN_CLASSES);
+        expect(r).toMatchObject({ kind: 'write', overlap: { classId: 'C_State', sorts: ['node', 'transition'] } });
     });
 });
