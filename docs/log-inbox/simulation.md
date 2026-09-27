@@ -284,3 +284,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 - the `unbounded` end reads «no bound was found»: with inhibitors or termination a covering marking need not repeat;
 - `profileSummary` and `profilePatch` take `number | BoundEstimate | null` (a compatible widening, a number keeps today's reading); `boundProposalBag`, `boundEstimate`, `boundEstimateSignature` and `exploreBound` are new exports;
 - the docs commit precedes the visual GO, as the prompt's step 7 and the chat's GO order it, where RC-17 puts it after.
+
+## 2026-09-27 — discovery: the Simulation roles modal, S11b and S11c, Phase 1 (P-2026-09-27-1740)
+**Prompt**: `claude_2026-09-27_1740_prompt_sim_modal.md`, full lane on `sim-modal` in `~/jjodel-w-modal`, Phase 1 read-only: the design README's five «To confirm» points from the code, the modal against today's M2 face field by field, every mockup element mapped to an engine key, Phase 2 cut into slices outside the conflict map (`simBridge.ts`, `net*.ts`).
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_modal.md` (new), this entry. No file under `frontend/`; probe in `/tmp/p1740/`, outside every tree.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: `git status` empty before the commit but for the two docs; the mockup served on 3023 by `python3 -m http.server`, port free before and after; the probe printed its measure, then exit 1 at a screenshot selector (`#4a` is not a valid CSS id), no retry needed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Keys: `simProfile` (system id or user JSON, modes inside), `sim*` per role, `simStateAttributes`. `off` is read by validator, binder and summary, never by the run. Data runs on Petri in the engine; the Petri preset turns on Guard only. The mockups misplace eleven roles (report §4); 4a's third chip ends 39.5 px below its card. Required = `requiredRoles` (R-SIM-48); the dependency set shows as «Needed by» (D1). Slices A (pure), B (shell), C (user profiles, S10), six files.
+**Prompt document name**: 2026-09-27 17:40
