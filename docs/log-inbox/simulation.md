@@ -128,7 +128,6 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Prompt document name**: 2026-09-27 11:45
 **Ticket** (priority low, seen in this lane's screenshot `petri_r3_choice_open_2.png`). The choice list title is uppercased by `text-transform`, so «Choose a transition (ε)» reads «CHOOSE A TRANSITION (Ε)», a capital epsilon that looks like E. Before R3 too; not changed here.
 
-<<<<<<< HEAD
 ## 2026-09-27 — discovery: demo readiness, second measurement on the trunk with R1-R3 (P-2026-09-27-1235)
 **Prompt**: `claude_2026-09-27_1235_prompt_discovery_sim_demo_readiness_2.md`, read-only discovery on `simulation-engine` in `~/jjodel-sim` at `e1cefcfbc`: the first readiness report's probes and scenarios (`567dc25da`), readers extended to R1, R2 and R3, run on the trunk with the three lanes merged; the second readiness report with G1..G11 re-measured.
 **Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_demo_readiness_2.md` (new), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_demo2_*` gitignored, not committed.
@@ -142,7 +141,7 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Gaps: 9 measured closed (G1, G2, G3 panel side, G4, G5, G8, G9, G10, G11), 2 measured open (G6, G7, after MODELS by decision E), 3 new (G12 Bound a lower bound, G13 header paints U+0395, G14 profile select clips), none demo-critical: no lane needed before the freeze (report §8). Readers `choiceSectionPaint` and `selectFit` added beyond the prompt's list to measure G13 and G14, hence the second Petri and ESM runs (report §9).
 **Prompt document name**: 2026-09-27 12:35
 **Ticket** (priority low, opened here, G14 of the report). The Profile select clips «Extended state machine» to «Extended state machin» at 1600×1000, on `ee1b7bfc8` as on `e1cefcfbc`; the M3 lane recorded that it fits. A canvas measure says fit (125 against a 137 px content box) because it does not count the native arrow.
-=======
+
 ## 2026-09-27 — fix: the ε of the choice header, the Profile select fits its options (P-2026-09-27-1310)
 **Prompt**: `claude_2026-09-27_1310_prompt_sim_polish_g13_g14.md`, lane fast on `sim-polish-g13-g14` in `~/jjodel-gate`. G13 and G14 of `discovery_2026-09-27_sim_demo_readiness_2.md` §5: the choice header's input in its own span out of the uppercase, and the Profile select wide enough for every option of `PANEL_PROFILES` at 1600×1000 and 1280×800, measured before and after.
 **Files touched**: code `5739b950f`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (the header line), `simulation-panel.scss` (`&__section-input`, the profile label basis). Docs, this commit: this entry, the Status of the prompt file.
@@ -155,7 +154,6 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: probe readings and two crops for the chat (G13: «CHOOSE A TRANSITION (ε)», U+03B5, 5 of 5 conflicts; G14: 116 of 124 px before, 124 of 124 after, select 147.4 to 159.4 px at both sizes; `g13_header.png`, `g14_profile_row.png`)
 **Notes**: Closes G13 (and R3's ε ticket) and G14. G14 room from the label gap only, 48 to 36px («Profile» 33.4px); Apply untouched; 4px spare on the longest option. The readiness canvas reader counted the content box: the menulist paints text from column 10 and the arrow cuts it at 125 of a 147px select. No event conflict in the probe: «(coin)» holds by construction, not read. Probes `_tmp_g13_*`, `_tmp_g14_*` gitignored; shots in `~/.jjodel-lanes/shots_polish/`.
 **Prompt document name**: 2026-09-27 13:10
->>>>>>> alfonso-frontend-jjtl
 
 ## 2026-09-27 — docs: MODELS 2026 demo script from the readiness reports (P-2026-09-27-1430)
 **Prompt**: `claude_2026-09-27_1430_prompt_sim_demo_script.md`, fast lane, docs only, on `simulation-engine` in `~/jjodel-sim`: the presenter's script for the four presets (PEST SM, Petri, ESM, flowchart B), every panel line quoted from the second readiness report (`a41e63496`) §4, its logs and screenshots, the shapes from the builder `_tmp_demo2_scenario.js`; decision H recorded as the script's rule.
