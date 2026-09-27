@@ -29,6 +29,7 @@ export type RoleKey =
     | 'simInitial'
     | 'simInitialMarking'
     | 'simTerminal'
+    | 'simActivityFinal'
     | 'simBound'
     | 'simTransition'
     | 'simGuard'
@@ -69,6 +70,8 @@ export const ROLE_SPECS: RoleSpec[] = [
     // The keys of the Petri core (R-SIM-32, definitive with step 3b, R-SIM-37), and simSource (R-SIM-10).
     { key: 'simInitialMarking', label: 'Initial marking', kind: 'attribute', placeholder: 'Select an attribute' },
     { key: 'simTerminal', label: 'Terminal', kind: 'class', placeholder: 'Select a metaclass' },
+    // R-SIM-53, which the engine reads from lane E1 on: a row, so a key left by a Flowchart Apply is seen and cleared (G6).
+    { key: 'simActivityFinal', label: 'Activity final', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simBound', label: 'Bound', kind: 'number', placeholder: '1' },
     { key: 'simTransition', label: 'Transition', kind: 'class', placeholder: 'Select a metaclass' },
     // The Data group (R-SIM-52, R-SIM-69): the guard, and the `Action [0..*]` features by site role.

@@ -14,9 +14,10 @@ import type { RoleId } from '../roleCatalog';
 /**
  * The keys R-SIM-50..53 introduce: provisional, nothing reads or writes them yet.
  * `simAction`, `simEntry`, `simExit` and `simStateAttributes` left the list with the
- * commit that wires them (lane C1, R-SIM-68, R-SIM-69).
+ * commit that wires them (lane C1, R-SIM-68, R-SIM-69); `simActivityFinal` with the
+ * engine's reading of it (lane E1, R-SIM-53).
  */
-const NEW_KEYS = ['simAccepting', 'simActivityFinal', 'simStateOutput', 'simTransitionOutput'];
+const NEW_KEYS = ['simAccepting', 'simStateOutput', 'simTransitionOutput'];
 
 /** The files of this lane: they name every key, so they are not evidence that the code does. */
 const OWN_FILES = new Set(['roleCatalog.ts', 'simProfiles.ts', 'profileCodec.ts']);
@@ -124,7 +125,7 @@ describe('roleCatalog: the keys against the code', () => {
 
     it('finds every existing key of the catalog as a string literal in the code', () => {
         const existing = ROLE_CATALOG.map(d => d.key).filter((k): k is string => k !== null && !NEW_KEYS.includes(k));
-        expect(existing).toHaveLength(23);
+        expect(existing).toHaveLength(24);
         for (const key of existing) {
             expect([...sources.values()].some(s => quoted(s, key)), key).toBe(true);
         }

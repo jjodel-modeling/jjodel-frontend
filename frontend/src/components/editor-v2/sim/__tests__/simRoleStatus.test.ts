@@ -32,6 +32,7 @@ import type { BoundEstimate } from '../modelMarkings';
 import { netStcFromRoles } from '../../../../model/simulation/netCompile';
 import { encodeStateAttributes } from '../../../../model/simulation/stateAttributesCodec';
 import { systemProfile } from '../../../../model/simulation/simProfiles';
+import { roleDescriptor } from '../../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
 import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
 
@@ -149,6 +150,26 @@ describe('the event role specs (R-SIM-38)', () => {
 
     it('the identifier is an override of name: its empty option reads "name (default)"', () => {
         expect(ROLE_SPECS.find(spec => spec.key === 'simEventIdentifier')?.placeholder).toBe('name (default)');
+    });
+});
+
+describe('the activity-final row (G6, R-SIM-53)', () => {
+    it('Activity final follows Terminal in ROLE_SPECS, a class select with the catalog\'s label (killed by dropping the row)', () => {
+        const keys = ROLE_SPECS.map(spec => spec.key);
+        expect(keys.indexOf('simActivityFinal')).toBe(keys.indexOf('simTerminal') + 1);
+        expect(ROLE_SPECS.find(spec => spec.key === 'simActivityFinal')).toEqual({
+            key: 'simActivityFinal', label: roleDescriptor('activityFinal').label, kind: 'class', placeholder: 'Select a metaclass',
+        });
+        // control: the label is the catalog's, as Terminal's is
+        expect(ROLE_SPECS.find(spec => spec.key === 'simTerminal')?.label).toBe(roleDescriptor('terminal').label);
+    });
+
+    it('the key is never required: missing and invalid roles are the same with and without it (R-SIM-28 as for Terminal)', () => {
+        for (const bag of [{}, CF, PETRI, { ...CF, simInitial: undefined }]) {
+            const withFinal = { ...bag, simActivityFinal: 'C_ActFinal' };
+            expect(missingEngineRoles(withFinal)).toEqual(missingEngineRoles(bag));
+            expect(invalidEngineRoles(withFinal)).toEqual(invalidEngineRoles(bag));
+        }
     });
 });
 

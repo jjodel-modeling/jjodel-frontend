@@ -186,7 +186,7 @@ function overlapMessage(lookup: any, overlap: RoleOverlap): string {
 
 /** The groups of the M2 face (R-SIM-37, R-SIM-71), in ROLE_SPECS order within each. */
 const ROLE_GROUPS: ReadonlyArray<{ id: string; title: string; keys: readonly RoleKey[] }> = [
-    { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simBound', 'simTransition'] },
+    { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simActivityFinal', 'simBound', 'simTransition'] },
     { id: 'control-flow', title: 'Control flow', keys: ['simOwnedTransitions', 'simSource', 'simNextState', 'simFork', 'simJoin'] },
     { id: 'petri', title: 'Petri net', keys: ['simArc', 'simArcSource', 'simArcTarget', 'simArcWeight', 'simInhibitorArc'] },
     // No Event select: the event class is the Trigger's type (R-SIM-38), shown read-only after Trigger.
