@@ -26,6 +26,7 @@ import {
     profileSummaryText,
     profileVerdict,
     ROLE_SPECS,
+    staleEventWarning,
     storedProfile,
     VERDICT_LABEL,
 } from '../simRoleStatus';
@@ -197,6 +198,16 @@ describe('messages', () => {
         expect(eventRoleWarning(['Trigger'], 'Smoke')).toBe('Events disabled. Missing on Smoke: Trigger.');
         expect(eventRoleWarning(['Event'], null)).toBe('Events disabled. Missing: Event.');
         expect(eventRoleWarning(['Trigger'], '')).toBe('Events disabled. Missing on the metamodel: Trigger.');
+    });
+
+    it('a stale simEvent warns, naming both classes (S7); equal, absent or no Trigger bound warns of nothing', () => {
+        const names: Record<string, string> = { C_Old: 'Old', C_New: 'New' };
+        const of = (id: string) => names[id] ?? id;
+        expect(staleEventWarning('C_Old', 'C_New', of)).toBe("Stored event class Old is ignored: the run uses New, the Trigger's type.");
+        expect(staleEventWarning('C_Old', 'C_Old', of)).toBeNull();
+        expect(staleEventWarning(undefined, 'C_New', of)).toBeNull();
+        expect(staleEventWarning('C_Old', undefined, of)).toBeNull();
+        expect(staleEventWarning(undefined, undefined, of)).toBeNull();
     });
 });
 
@@ -535,6 +546,12 @@ describe('the declarations hint (R-SIM-81, G9)', () => {
         expect(profileSummaryText(s, nameOf).declare).toBeNull();
     });
 
+    it('an unreadable declarations value shows nothing, not the hint for an empty one (S8; killed by treating unreadable as empty)', () => {
+        const s = profileSummary(ESM, { simAction: 'A_effect', simStateAttributes: 'not json' }, TURN);
+        expect(s.declareHint).toBe(false);
+        expect(profileSummaryText(s, nameOf).declare).toBeNull();
+    });
+
     it('no hint with no action role bound (killed by showing the hint without Action, Entry or Exit)', () => {
         const s = profileSummary(ESM, {}, TURN);
         expect(s.declareHint).toBe(false);
@@ -573,7 +590,7 @@ describe('the panel badge and the dialog pill read one verdict (P-2026-09-28-014
     /** The panel, SimulationPanel.tsx: the stored profile, its bindings, the summary with the sketch, the badge's word. */
     function panel(bag: Record<string, unknown>, sketch: MetamodelSketch | null = SKETCH) {
         const selected = storedProfile(bag).profile;
-        const summary = profileSummary(selected, bag, profileBindings(selected, sketch), null, sketch);
+        const summary = profileSummary(selected, bag, profileBindings(selected, sketch, bag), null, sketch);
         return { word: profileSummaryText(summary, nameOf).badge, status: summary.status, pending: summary.pending };
     }
 
@@ -581,7 +598,7 @@ describe('the panel badge and the dialog pill read one verdict (P-2026-09-28-014
     function dialog(bag: Record<string, unknown>, sketch: MetamodelSketch | null = SKETCH) {
         const stored = storedProfile(bag);
         const input: DraftInput = {
-            profile: stored.profile, bag, bindings: profileBindings(stored.profile, sketch), edits: {},
+            profile: stored.profile, bag, bindings: profileBindings(stored.profile, sketch, bag), edits: {},
             declarations: null, matchOff: false, writeProfile: !stored.custom, estimate: null,
         };
         const status = draftStatus(input, sketch).status;
@@ -638,6 +655,27 @@ describe('the panel badge and the dialog pill read one verdict (P-2026-09-28-014
         expect(profileBindings(SM, null)).toBeNull();
         expect(profileBindings(SM, SKETCH)?.node).toEqual(expect.objectContaining({ status: 'bound', value: 'State' }));
         expect(profileBindings(MINE, SKETCH)?.nextState).toEqual(expect.objectContaining({ status: 'bound', value: 'Transition.nextState' }));
+    });
+
+    it('a kept Node reaches the dependent proposals through profileBindings, the panel\'s and the dialog\'s call site (S6; killed by dropping the bag argument)', () => {
+        const bag = { simNode: 'Other', simProfile: 'stateMachine' };
+        const b = profileBindings(SM, SKETCH, bag);
+        // Node keeps its own guess: what makes the bag's Other a "kept" value in the first place.
+        expect(b?.node).toEqual(expect.objectContaining({ status: 'bound', value: 'State' }));
+        expect(b?.initial?.status).toBe('none');
+        expect(b?.ownedTransitions?.status).toBe('none');
+        const s = profileSummary(SM, bag, b, null, SKETCH);
+        expect(s.kept).toEqual([{ role: 'node', key: 'simNode', label: 'Node', value: 'Other', proposed: 'State' }]);
+        expect(s.proposals.map(p => p.key)).not.toContain('simInitial');
+        expect(s.proposals.map(p => p.key)).not.toContain('simOwnedTransitions');
+    });
+
+    it('a kept Transition reaches Guard and Trigger the same way (S6; killed by deriving them from the binder\'s own Transition)', () => {
+        const bag = { simTransition: 'Other', simProfile: 'stateMachine' };
+        const b = profileBindings(SM, SKETCH, bag);
+        expect(b?.transition).toEqual(expect.objectContaining({ status: 'bound', value: 'Transition' }));
+        expect(b?.guard?.status).toBe('none');
+        expect(b?.trigger?.status).toBe('none');
     });
 
     it('without a sketch the summary keeps the reading before the verdicts: no «with warnings» (the callers that pass none)', () => {

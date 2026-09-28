@@ -184,6 +184,19 @@ export function eventRoleWarning(missing: readonly string[], metamodelName: stri
     return `Events disabled. Missing${where}: ${missing.join(', ')}.`;
 }
 
+/**
+ * The warning line of a stored `simEvent` the run ignores (S7, R-SIM-38): the
+ * event class is always the Trigger's declared type, derived on every read, so
+ * a `simEvent` left over from before that rule is never used. `null` when there
+ * is nothing to warn about: no stored value, no derived class (no Trigger
+ * bound), or the two already agree. `nameOf` resolves a class pointer the way
+ * the panel already does (name, falling back to the id).
+ */
+export function staleEventWarning(stored: string | undefined, derived: string | undefined, nameOf: (id: string) => string): string | null {
+    if (!stored || !derived || stored === derived) return null;
+    return `Stored event class ${nameOf(stored)} is ignored: the run uses ${nameOf(derived)}, the Trigger's type.`;
+}
+
 // ---------------------------------------------------------------------------
 // The profile row of the M2 face (R-SIM-77..79)
 // ---------------------------------------------------------------------------
@@ -224,10 +237,14 @@ export function storedProfile(bag: Readonly<Record<string, unknown>>): StoredPro
  * The bindings a profile proposes from: the binder over the metamodel sketch,
  * for every profile but «Custom», which nothing is bound against (D7 of the
  * profiles lane). A user profile is bound as its preset (S11c). The panel and
- * the dialog read this one rule (P-2026-09-28-0140).
+ * the dialog read this one rule (P-2026-09-28-0140). `bag`, when given, is the
+ * values already set, so a kept Node or Transition carries into the roles that
+ * depend on it (S6), not the binder's own guess.
  */
-export function profileBindings(profile: SimProfile, sketch: MetamodelSketch | null | undefined): ProfileBindings | null {
-    return profile.id !== CUSTOM_ID && sketch ? bindProfile(profile, sketch) : null;
+export function profileBindings(
+    profile: SimProfile, sketch: MetamodelSketch | null | undefined, bag?: Readonly<Record<string, unknown>>,
+): ProfileBindings | null {
+    return profile.id !== CUSTOM_ID && sketch ? bindProfile(profile, sketch, bag) : null;
 }
 
 /** The id `inferCustomProfile` gives «Custom» (profileCodec.ts). */
@@ -403,6 +420,8 @@ export function profileSummary(
     const after: Record<string, unknown> = { ...bag };
     for (const p of proposals) after[p.key] = p.value;
     const verdict = profileVerdict(profile, after, sketch);
+    // Unreadable (D6) shows nothing, not the hint for an empty declaration (S8).
+    const stateRows = stateAttributeRows(isSetKey(after, STATE_ATTRIBUTES_KEY) ? after[STATE_ATTRIBUTES_KEY] as string : undefined);
     const choices: ProfileChoice[] = [];
     const kept: ProfileKept[] = [];
     const setButOff: string[] = [];
@@ -429,8 +448,7 @@ export function profileSummary(
         kept,
         setButOff,
         pending: bindings !== null && (proposals.length > 0 || bag[PROFILE_KEY] !== encodeProfile(profile)),
-        declareHint: ACTION_KEYS.some(k => isSetKey(after, k))
-            && stateAttributeRows(isSetKey(after, STATE_ATTRIBUTES_KEY) ? after[STATE_ATTRIBUTES_KEY] as string : undefined).rows.length === 0,
+        declareHint: ACTION_KEYS.some(k => isSetKey(after, k)) && stateRows.readable && stateRows.rows.length === 0,
     };
 }
 
