@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-1545
 Chat: C-2026-09-28-1120
 Lane: fast (scripts only, one module and its tests; no discovery). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane harness · c24a91000
 
 Worktree: `~/jjodel-w-outcome`, branch `lane-outcome-reminder` (cut by the chat from `alfonso-frontend-jjtl` after the merge of `harness-trace`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-outcome`, branch `lane-outcome-reminder`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
