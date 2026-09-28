@@ -216,7 +216,7 @@ cut on screen, its title holds the whole text [M, P-2026-09-27-2105].
 
 Steps 1 to 4 are 9 interactions: 1 hint, 2 `Add attribute`, 2 select choices (`range`, `derived`), 3 cells
 (maximum, initial value, equation), 1 Apply; 34 keystrokes; 2 scrolls; no double-click [M, P-2026-09-27-2105].
-The labels `range`, `derived`, `stored` are the options of the dialog's selects [M].
+The labels `range`, `derived`, `stored` are the options of the dialog's selects [M]. Since 2026-09-28 (R-SIM-88) the form select offers `stored`, `derived` and `input` [M, chat probe on `e259b94ec`]; the scene still picks `derived` and does not demonstrate `input`.
 **Say** "coins is stored, with the domain 0 to 3. paid is derived from coins."
 
 **Run** (tab `demoESM`). After the optional Reset above, the M1 face reads `Run interrupted: the model changed.

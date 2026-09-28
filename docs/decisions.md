@@ -2302,8 +2302,10 @@ P-2026-09-28-0100 in `docs/log-inbox/simulation.md`; `docs/discovery/discovery_2
   ha quindi tre ingressi: evento, selettore, valutazione degli input. Un'azione che scrive un input ferma il run
   (`read-only`). Per tenere una risposta visibile nella riga Marking basta un'azione esplicita su un attributo
   `stored`; nessuna copia automatica in σ. Respinte le opzioni (b) e (c), che emenderebbero R-SIM-16 e R-SIM-17.
-  Le fette S1-S3 si costruiscono sul branch `sim-input-variables` e si fondono dopo la demo di Málaga
-  (2026-10-04); il freeze del 2026-10-01 non si tocca e la demo non mostra decisioni a runtime.
+  Le fette S1-S3 si costruiscono sul branch `sim-input-variables`; la demo non mostra decisioni a runtime.
+  **Emendata da Alfonso il 2026-09-28 sera:** il branch si fonde subito, prima del freeze del 2026-10-01, non
+  dopo il 2026-10-04. Conseguenza sulla demo: il select della forma nel passo 3 della scena ESM offre anche
+  `input`, e il copione va allineato.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
