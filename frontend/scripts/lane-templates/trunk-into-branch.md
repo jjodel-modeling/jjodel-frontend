@@ -38,11 +38,11 @@ Measured by `lane-run merge --trunk-into` at {{measuredAt}}, trunk at `{{trunkTi
 6. Commit the merge. Subject within 72 characters, counted once the Prompt-ID is dropped: `{{mergeSubject}}`. Body: the two sides' shas, the merge-tree measurement, the union resolutions, the reading of step 5, `Model:` and `Co-Authored-By` trailers.
 7. Gates on the merge commit, from `frontend/`: typecheck exit 2 with the §17 set (14); `typecheck:scripts` exit 0; vitest: state the expectation first as the trunk tip's count (measure it read-only in {{trunkWorktree}} with `npx vitest run --reporter=dot`; do not write there) plus the tests this branch added, 0 failed, the same files red at import; hook tests (`npx vitest run scripts/hooks`) the trunk's count plus the branch's new ones; build exit 0; `check:docs` 4/4; `check:scripts` PASS.
 8. `Outcome: hard-stop`: the chat re-runs the visual probes of the branch on this tree and gives the GO. Do not start a server.
-9. After the GO (a resume), one docs commit: this prompt's Status flipped to `eseguito <YYYY-MM-DD> · lane {{branch}} · <merge sha> · verifica visiva passata <YYYY-MM-DD> (chat, unattended; Alfonso in the morning digest)`, pathspec after `--`, subject `docs: Status flip, {{branch}} took the trunk ({{promptId}})`. No log entry. `Outcome: done`. The merge of `{{branch}}` into the trunk gets its own prompt (`lane-run merge {{branch}} --into {{trunk}}`).
+9. After the GO (a resume), one docs commit: this prompt's Status flipped to `eseguito <YYYY-MM-DD> · lane {{branch}} · <merge sha> · verifica visiva passata <YYYY-MM-DD> (chat, unattended; Alfonso in the morning digest)` and the P9 entry of this merge appended at the end of {{front}}, both in that commit and nothing else, pathspec after `--`, subject `docs: Status flip and log entry, {{branch}} took the trunk ({{promptId}})` (P16, RC-17). `Outcome: done`. The merge of `{{branch}}` into the trunk gets its own prompt (`lane-run merge {{branch}} --into {{trunk}}`).
 
 Never: `git add .`, `-A`, `-u`, `git stash`, `git reset --hard`, `git checkout -- .`, `git clean`, `--no-verify`, a hand edit to a code file, editing any line inside a decision block or a log entry, rebase, squash, push, any other tree except the read-only vitest count in {{trunkWorktree}}.
 
 ## RIFERIMENTI
 
-- `docs/PROTOCOL.md` P13, P14, P16; `docs/decisions.md` RC-13, RC-14, RC-17, RC-29.
+- `docs/PROTOCOL.md` P9, P13, P14, P16; `docs/decisions.md` RC-13, RC-14, RC-17, RC-29.
 - Rendered by `lane-run merge --trunk-into` from `frontend/scripts/lane-templates/trunk-into-branch.md`, in the shape of `claude_2026-09-27_0325_prompt_sim_profiles_take_trunk.md`.

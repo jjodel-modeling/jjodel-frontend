@@ -150,3 +150,39 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Prompt document name**: 2026-09-28 00:55
 
 **Ticket** (priority low, opened here). In the `setTheme` dark crop (`A3_dark_app.png`) the status bar stays light: `.app-statusbar` hard-codes `background: #f8fafc` (`frontend/src/components/StatusBar.scss:17`) with no dark rule, so no way of switching reaches it. The Name input of the properties panel paints white in the same crop. Neither changed here, the second not investigated.
+
+## 2026-09-28 — feat: lane-run direct merges, one closure commit, chains, model tier, report briefs (P-2026-09-27-2330)
+**Prompt**: `claude_2026-09-27_2330_prompt_harness_lane_efficiency.md`, full lane (governance: P16) on `harness-lane-efficiency` in `~/jjodel-w-harness-eff`, launched by `lane-run`. Phase 1 report `d81a14423` (29 merge lanes of 2026-09-27 measured, 23 would have gone direct); the GO adopted its eleven `Recommended` answers and set the light model id to `claude-sonnet-5` (RC-32).
+**Files touched**: `00c414397` merge --direct: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts` (new). `3a11565df` go closes a direct merge: `lane-run.mjs`, `lane-templates/merge-into-trunk.md`, `lane-templates/trunk-into-branch.md`, `laneRunDirect.test.ts`. `1986cdf46` chain: `lane-run.mjs`, `laneRunDirect.test.ts`. `142b3eddf` model tier: `lane-run.mjs`, `laneRun.test.ts`, `laneRunDirect.test.ts`. `c9b506d9f` brief warning: `lane-run.mjs`, `laneRun.test.ts`. `0bdfa1f94`: `docs/PROTOCOL.md` P16, `docs/HARNESS-DOCS.md` §4.1, §7 and version 1.7, `docs/decisions.md` RC-32. This commit: this entry and four tickets, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. At every code commit: hook tests 300 in 4 files at the baseline, 310, 314, 322, 330, 333 in 5 files, 0 failed; check:docs 4/4 with 5 warnings (baseline 5); check:agents PASS; check:scripts PASS; typecheck:scripts exit 0. Mutation bench: 30, 16, 18 and 24 mutants on slices 1 to 4, 6 more on slice 5, all killed.
+**Out-of-scope changes**: no. Eleven paths, above five (rule 19), all in DOVE and declared in the report's section 9; `laneRunDirect.test.ts` is the new test file DOVE allows, its fixtures carrying a second worktree and a fake npm.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Deviation: the union rule adds its blank line only before a branch heading (the report said before any non-blank line); both reproduce 15 of the 16 measured files. The GO says the project instructions name Sonnet 5 as an accepted deroga: not found in CLAUDE.md, decisions.md, PROTOCOL.md or settings.json, where Sonnet 5 appears only as a past executor; RC-32 records the id as the owner chat's. Session `536c46ab`.
+**Prompt document name**: 2026-09-27 23:30
+
+## 2026-09-28 — ticket: HARNESS-DOCS §4.2 and the discovery-report skill do not state the brief rule
+**Ticket**: P16 and HARNESS-DOCS §4.1 (`0bdfa1f94`) say a discovery report opens with `## 0. Answer in brief`, at most 40 lines, and `lane-run status` warns otherwise (`c9b506d9f`). The card of the discovery report, HARNESS-DOCS §4.2, and `.claude/skills/discovery-report/SKILL.md` (rules 1 to 7) still describe the report without it, so a session that follows the skill writes no brief. Both were outside the DOVE of P-2026-09-27-2330.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 8)
+
+## 2026-09-28 — ticket: the log-entry skill commits the inbox alone, against the one closure commit
+**Ticket**: `.claude/skills/log-entry/SKILL.md:21` (rule 6) says "Commit the inbox alone", while P13 and RC-17 put the entry, the Status flip and the visual line in one closure commit, and `status-flip` (its line 19) already says the flip rides in that commit. It is one source of the two-commit closures measured on 2026-09-26/27.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 5)
+
+## 2026-09-28 — ticket: docs:digest stops on the wrapped header of R-SIM-85
+**Ticket**: `npm run docs:digest` exits on `docs/decisions.md`: the header of R-SIM-85 (added by `22aa888de`, on the trunk too) wraps before its closing parenthesis, "the parenthesis does not close on the header line". No digest is written until that header is on one line.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+
+## 2026-09-28 — ticket: a prose condition in a branch prompt is invisible to merge --direct
+**Ticket**: `merge --direct` checks what git and the prompt headers say. The session of P-2026-09-27-2049 stopped on "the branch is not merged on the trunk before 2026-10-04", written in the body of a branch prompt, with every mechanical precondition holding, so `--direct` would have merged it. RC-31 lifted that embargo, not the class. A header line a script can read (for example `Merge: not before <date>`) would let `--direct` refuse it.
+**Priority**: low
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 3)
