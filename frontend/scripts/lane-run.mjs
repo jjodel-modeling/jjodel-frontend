@@ -2067,7 +2067,8 @@ async function monitor(rest) {
     mkdirSync(dir, { recursive: true });
     const log = join(dir, 'monitor.log');
     const out = openSync(log, 'a');
-    const child = spawn(process.execPath, [join(dirname(SELF), 'gates', 'trace-monitor.ts'), '--port', String(port)], {
+    // The flags of npm run trace:index: node before 23.6 strips no types without them.
+    const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', '--experimental-strip-types', join(dirname(SELF), 'gates', 'trace-monitor.ts'), '--port', String(port)], {
         detached: true,
         stdio: ['ignore', out, out],
     });

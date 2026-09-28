@@ -17,6 +17,8 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = resolve(HERE, '..', 'trace-index.ts');
+// The flags of npm run trace:index: node before 23.6 strips no types without them.
+const NODE_TS = ['--disable-warning=ExperimentalWarning', '--experimental-strip-types'];
 
 const dirs: string[] = [];
 afterAll(() => {
@@ -331,7 +333,7 @@ describe('trace-index.ts', () => {
         const t = tree();
         const out1 = join(t.root, 'one.json');
         const out2 = join(t.root, 'two.json');
-        const run = (out: string) => spawnSync(process.execPath, [SCRIPT, '--repo', t.repo, '--lanes', t.lanes, '--out', out], { encoding: 'utf8' });
+        const run = (out: string) => spawnSync(process.execPath, [...NODE_TS, SCRIPT, '--repo', t.repo, '--lanes', t.lanes, '--out', out], { encoding: 'utf8' });
         const a = run(out1);
         expect(a.status, a.stderr).toBe(0);
         expect(run(out2).status).toBe(0);
@@ -358,7 +360,7 @@ describe('trace-index.ts', () => {
 
     test('kills "stdout silent without --out": without --out the index goes to stdout, with the counts on stderr', () => {
         const t = tree();
-        const r = spawnSync(process.execPath, [SCRIPT, '--repo', t.repo, '--lanes', t.lanes], { encoding: 'utf8' });
+        const r = spawnSync(process.execPath, [...NODE_TS, SCRIPT, '--repo', t.repo, '--lanes', t.lanes], { encoding: 'utf8' });
         expect(r.status, r.stderr).toBe(0);
         expect(JSON.parse(r.stdout).schema).toBe('jjodel-trace/1');
         expect(r.stderr).toMatch(/^nodes \d+: /m);

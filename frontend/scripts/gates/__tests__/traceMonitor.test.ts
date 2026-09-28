@@ -15,6 +15,8 @@ import { startMonitor } from '../trace-monitor.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = resolve(HERE, '..', 'trace-monitor.ts');
+// The flags of the other TS gates: node before 23.6 strips no types without them.
+const NODE_TS = ['--disable-warning=ExperimentalWarning', '--experimental-strip-types'];
 const ID = 'P-2026-09-28-1200';
 
 const dirs: string[] = [];
@@ -212,7 +214,7 @@ describe('trace-monitor', { timeout: 30000 }, () => {
 });
 
 describe('trace-monitor.ts CLI', () => {
-    const cli = (args: string[]) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', timeout: 10000 });
+    const cli = (args: string[]) => spawnSync(process.execPath, [...NODE_TS, SCRIPT, ...args], { encoding: 'utf8', timeout: 10000 });
 
     test('kills "3001 accepted": the trunk\'s dev server port is refused before anything listens', () => {
         const r = cli(['--port', '3001']);
