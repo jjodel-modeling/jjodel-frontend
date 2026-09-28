@@ -47,12 +47,12 @@
 
 import type { ExecutionContext } from '../../../jjscript/types';
 import type { JjelValue } from '../../../jjel/evaluator';
-import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../../../model/simulation/netCompile';
+import { compileNet, eventAlphabet, featuresOf, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../../../model/simulation/netCompile';
 import { candidates, netRunStatus, stateAccess, step, terminated, tokens } from '../../../model/simulation/netStep';
 import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess } from '../../../model/simulation/guardContext';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import { compileGuard, evaluateGuard } from '../../../model/simulation/guardEvaluator';
-import type { CompiledGuard, GuardDefectReason } from '../../../model/simulation/guardEvaluator';
+import type { CompiledGuard, GuardDefectReason, GuardOutcome } from '../../../model/simulation/guardEvaluator';
 import { actionSiteKey, compileAction, compileActions, judgeActionTarget, makeActionOracle } from '../../../model/simulation/actionEvaluator';
 import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
 import { compileDerived, makeDerivedOracle } from '../../../model/simulation/derivedEvaluator';
@@ -63,7 +63,7 @@ import {
 import type { StcDefect, StcScope } from '../../../model/simulation/stcChecks';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../../../model/simulation/objectSlots';
-import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
+import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
 import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, GuardOracle, HaltReason,
     InputRead, NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
@@ -173,16 +173,38 @@ export function evalContextFor(lookup: Lookup, modelId: string, projectId: strin
     };
 }
 
-/** Every guard of the net, compiled once per run: the text read by the `simGuard` pointer. */
-function compileGuards(net: CompiledNet, stc: NetStc, lookup: Lookup): Map<string, CompiledGuard> {
-    const out = new Map<string, CompiledGuard>();
-    if (!stc.guard) return out;
+/**
+ * The guard texts of a site (R-SIM-90): the first value of each Guard feature
+ * it carries, in feature order; a feature it does not carry, a blank value and
+ * the literal `else` (the complement, read by the compiler) are left out, so
+ * they count as true (R-SIM-17). A value that is not a string is still a
+ * guard: its text makes it a defect, never `true`.
+ */
+function guardTexts(lookup: Lookup, site: string, features: readonly string[]): string[] {
+    const out: string[] = [];
+    for (const feature of features) {
+        const value = objectSlotValues(lookup, site, feature)[0];
+        if (value === undefined) continue;
+        const text = String(value);
+        if (text.trim() !== '' && text.trim() !== 'else') out.push(text);
+    }
+    return out;
+}
+
+/** A caller's Guard features (R-SIM-90): a list as given, a string decoded (a plain id is one, the raw key its list). */
+function guardFeatures(features: string | readonly string[] | undefined): readonly string[] {
+    return typeof features === 'string' || features === undefined ? roleValues(features) : features;
+}
+
+/** Every guard of the net, compiled once per run: per site, one per Guard attribute it carries (R-SIM-90). */
+function compileGuards(net: CompiledNet, stc: NetStc, lookup: Lookup): Map<string, CompiledGuard[]> {
+    const out = new Map<string, CompiledGuard[]>();
+    const features = featuresOf(stc, 'guard');
+    if (features.length === 0) return out;
     for (const t of net.transitions) {
         for (const site of t.guardSites) {
             if (out.has(site)) continue;
-            const value = objectSlotValues(lookup, site, stc.guard)[0];
-            // A value that is not a string is still a guard: its text makes it a defect, never `true`.
-            out.set(site, compileGuard(value === undefined ? undefined : String(value)));
+            out.set(site, guardTexts(lookup, site, features).map(text => compileGuard(text)));
         }
     }
     return out;
@@ -191,28 +213,52 @@ function compileGuards(net: CompiledNet, stc: NetStc, lookup: Lookup): Map<strin
 /**
  * The guard oracle of the core over the frozen snapshot: `self` is the site,
  * `event` the input, and σ the state the core hands the oracle, read through
- * the adapter over the net's places (R-SIM-30, R-SIM-43).
+ * the adapter over the net's places (R-SIM-30, R-SIM-43). A site's guards are
+ * conjoined as the core conjoins the sites (R-SIM-90): a defect wins, then
+ * false; none is true.
  */
-function makeGuardOracle(snapshot: SimSnapshot, guards: ReadonlyMap<string, CompiledGuard>, places: ReadonlySet<string>): GuardOracle {
-    const absent = compileGuard(undefined);
-    return (site, event, state) =>
-        evaluateGuard(guards.get(site) ?? absent,
-            buildGuardContext(snapshot, { transitionId: site }, { event }, toJjelStateAccess(state, places)));
+function makeGuardOracle(snapshot: SimSnapshot, guards: ReadonlyMap<string, readonly CompiledGuard[]>, places: ReadonlySet<string>): GuardOracle {
+    return (site, event, state) => {
+        const list = guards.get(site) ?? [];
+        if (list.length === 0) return { kind: 'true' };
+        const ctx = buildGuardContext(snapshot, { transitionId: site }, { event }, toJjelStateAccess(state, places));
+        let result: GuardOutcome = { kind: 'true' };
+        for (const g of list) {
+            const outcome = evaluateGuard(g, ctx);
+            if (outcome.kind === 'defect') return outcome;
+            if (outcome.kind === 'false') result = outcome;
+        }
+        return result;
+    };
 }
 
 /** The oracle of a run with no action role bound (R-SIM-69): a step moves the marking only. */
 export const NO_SIM_ACTIONS: ActionOracle = () => ({ kind: 'ok', assignments: [] });
 
-/** The `Action` feature of a site's role (R-SIM-69): the transition's own, a place's entry, its exit. */
-export type ActionFeatures = Pick<NetStc, 'action' | 'entry' | 'exit'>;
+/**
+ * The `Action` features of a site's role (R-SIM-69): the transition's own, a place's entry, its exit.
+ * R-SIM-90: the lists, or the first attribute alone (a plain id, or the raw key, which is decoded).
+ */
+export type ActionFeatures = Pick<NetStc, 'action' | 'entry' | 'exit' | 'actions' | 'entries' | 'exits'>;
 
-function actionFeature(features: ActionFeatures, role: ActionSite['role']): string | undefined {
-    return role === 'transition' ? features.action : role === 'entry' ? features.entry : features.exit;
+function actionFeatures(features: ActionFeatures, role: ActionSite['role']): readonly string[] {
+    return featuresOf(features, role === 'transition' ? 'action' : role);
+}
+
+/**
+ * The action texts of a site (R-SIM-90): the `0..*` values of every feature
+ * of its role, feature by feature, in order; a feature the element does not
+ * carry gives none. The union: the actions of one step are one parallel
+ * assignment, so their order changes the label only, never σ′ (R-SIM-17).
+ */
+function siteTexts(lookup: Lookup, element: string, features: readonly string[]): Array<string | undefined> {
+    // A value that is not a string is still an action: its text makes it a defect.
+    return features.flatMap(f => objectSlotValues(lookup, element, f)).map(v => (v === undefined || v === null ? undefined : String(v)));
 }
 
 /**
  * Every action of the net, compiled once per run and keyed by `actionSiteKey`
- * (R-SIM-69): the `0..*` values of the role's feature on the site element, in
+ * (R-SIM-69): the `0..*` values of the role's features on the site element, in
  * order, blanks dropped, read from the raw lookup as the guards are. The sites
  * are the core's: in Petri an arc is never one.
  */
@@ -221,11 +267,9 @@ function compileActionTable(net: CompiledNet, features: ActionFeatures, lookup: 
     for (const t of net.transitions) {
         for (const site of t.actionSites) {
             const key = actionSiteKey(site);
-            const feature = actionFeature(features, site.role);
-            if (out.has(key) || !feature) continue;
-            // A value that is not a string is still an action: its text makes it a defect.
-            const texts = objectSlotValues(lookup, site.element, feature).map(v => (v === undefined || v === null ? undefined : String(v)));
-            const list = compileActions(texts);
+            const role = actionFeatures(features, site.role);
+            if (out.has(key) || role.length === 0) continue;
+            const list = compileActions(siteTexts(lookup, site.element, role));
             if (list.length > 0) out.set(key, list);
         }
     }
@@ -270,30 +314,34 @@ export type RunStart =
  * The guards of the map that never run, in compile order: a compile defect,
  * else the first rule of `checkGuard` that applies (P2b: R1, R2, R6).
  */
-function guardDefectsOf(guards: ReadonlyMap<string, CompiledGuard>, scope: StcScope): CompileDefect[] {
+function guardDefectsOf(guards: ReadonlyMap<string, readonly CompiledGuard[]>, scope: StcScope): CompileDefect[] {
     const out: CompileDefect[] = [];
-    for (const [element, g] of guards) {
-        if (g.defect) {
-            out.push({ element, role: 'guard', reason: g.defect.reason, detail: g.defect.detail, source: g.source });
-            continue;
+    for (const [element, list] of guards) {
+        // R-SIM-90: each Guard attribute of the site on its own, in feature order.
+        for (const g of list) {
+            if (g.defect) {
+                out.push({ element, role: 'guard', reason: g.defect.reason, detail: g.defect.detail, source: g.source });
+                continue;
+            }
+            const rule = g.expr === null ? null : checkGuard(g.expr, element, scope);
+            if (rule) out.push({ element, role: 'guard', reason: rule.reason, detail: rule.detail, source: g.source, ...(rule.short ? { short: rule.short } : {}) });
         }
-        const rule = g.expr === null ? null : checkGuard(g.expr, element, scope);
-        if (rule) out.push({ element, role: 'guard', reason: rule.reason, detail: rule.detail, source: g.source, ...(rule.short ? { short: rule.short } : {}) });
     }
     return out;
 }
 
 /**
  * R7 (R-SIM-87): each `else` with no sibling, named by the edge that says
- * `else` (a fused transition's choice edge), in compile order.
+ * `else` (a fused transition's choice edge) in any Guard attribute (R-SIM-90),
+ * in compile order.
  */
-function elseDefectsOf(net: CompiledNet, guardFeature: string | undefined, lookup: Lookup): CompileDefect[] {
+function elseDefectsOf(net: CompiledNet, features: readonly string[], lookup: Lookup): CompileDefect[] {
     const out: CompileDefect[] = [];
     for (const t of net.transitions) {
         const rule = checkElse(t);
         if (!rule) continue;
-        const element = t.origin.find(id => guardText(lookup, id, guardFeature)?.trim() === 'else') ?? t.id;
-        out.push({ element, role: 'guard', reason: rule.reason, detail: rule.detail, source: guardText(lookup, element, guardFeature) ?? 'else', ...(rule.short ? { short: rule.short } : {}) });
+        const element = t.origin.find(id => elseText(lookup, id, features) !== null) ?? t.id;
+        out.push({ element, role: 'guard', reason: rule.reason, detail: rule.detail, source: elseText(lookup, element, features) ?? 'else', ...(rule.short ? { short: rule.short } : {}) });
     }
     return out;
 }
@@ -414,13 +462,11 @@ function declarationDefectsOf(defects: readonly DeclarationDefect[], lookup: Loo
  * has no entry.
  */
 function inputReadTable(
-    net: CompiledNet, guards: ReadonlyMap<string, CompiledGuard>, table: ReadonlyMap<string, readonly CompiledAction[]>, scope: StcScope,
+    net: CompiledNet, guards: ReadonlyMap<string, readonly CompiledGuard[]>, table: ReadonlyMap<string, readonly CompiledAction[]>, scope: StcScope,
 ): Map<string, InputRead[]> {
     const byId = new Map(net.transitions.map(t => [t.id, t]));
-    const guardReads = (site: string): InputRead[] => {
-        const expr = guards.get(site)?.expr;
-        return expr ? inputReads(expr, site, scope) : [];
-    };
+    // R-SIM-90: every Guard attribute of the site.
+    const guardReads = (site: string): InputRead[] => (guards.get(site) ?? []).flatMap(g => (g.expr ? inputReads(g.expr, site, scope) : []));
     const out = new Map<string, InputRead[]>();
     for (const t of net.transitions) {
         const reads: InputRead[] = [];
@@ -501,7 +547,7 @@ export function startRun(
         },
         compileDefects: [
             ...guardDefectsOf(guards, scope),
-            ...elseDefectsOf(net, stc.guard, lookup),
+            ...elseDefectsOf(net, featuresOf(stc, 'guard'), lookup),
             ...actionDefectsOf(net, actions, snapshot, lookup, scope),
             ...declarationDefectsOf([...declarations.defects, ...(net.declarationDefects ?? [])], lookup, net.attributes),
         ],
@@ -575,10 +621,9 @@ export function runSignature(lookup: Lookup, modelId: string, configModelId: str
  * model edit interrupts the run (R-SIM-34), so they are the compiled ones.
  */
 function siteSources(site: ActionSite, lookup: Lookup, features: ActionFeatures | undefined): string[] {
-    const feature = features ? actionFeature(features, site.role) : undefined;
-    if (!feature) return [];
-    return compileActions(objectSlotValues(lookup, site.element, feature).map(v => (v === undefined || v === null ? undefined : String(v))))
-        .map(c => c.source);
+    const role = features ? actionFeatures(features, site.role) : [];
+    if (role.length === 0) return [];
+    return compileActions(siteTexts(lookup, site.element, role)).map(c => c.source);
 }
 
 /**
@@ -798,11 +843,17 @@ export interface StopReason {
     readonly inputs: readonly InputReason[];
 }
 
-/** The text of a guard, read by the `simGuard` pointer; a model edit interrupts the run (R-SIM-34), so it is the compiled one. */
-function guardText(lookup: Lookup, site: string, guardFeature: string | undefined): string | null {
-    if (!guardFeature) return null;
-    const value = objectSlotValues(lookup, site, guardFeature)[0];
-    return value === undefined ? null : String(value);
+/**
+ * The text of the Guard attribute that says `else` on an element, as written
+ * (R-SIM-90: any of them), `null` when none does; a model edit interrupts the
+ * run (R-SIM-34), so it is the compiled one.
+ */
+function elseText(lookup: Lookup, element: string, features: readonly string[]): string | null {
+    for (const feature of features) {
+        const value = objectSlotValues(lookup, element, feature)[0];
+        if (value !== undefined && String(value).trim() === 'else') return String(value);
+    }
+    return null;
 }
 
 /** The first guard site among the siblings of an `else` whose outcome is a defect. */
@@ -821,7 +872,7 @@ function defectiveSibling(run: SimRun, siblings: readonly string[], event: strin
  */
 function blocked(
     run: SimRun, e: CandidateSet['evaluated'][number], event: string | null, access: SimStateAccess, lookup: Lookup,
-    guardFeature: string | undefined,
+    features: readonly string[],
 ): { short: string; detail: string; full: string } | null {
     const t = run.net.transitions.find(x => x.id === e.transition);
     const own = elementName(lookup, e.transition.split('#')[0]);
@@ -848,7 +899,8 @@ function blocked(
     const names = failing.map(s => elementName(lookup, s.site)).join(', ');
     const short = g.kind === 'defect' ? `defect, ${defectShort(g.reason, g.detail)}` : 'false';
     const full = g.kind === 'defect' ? `defect, ${g.reason === 'exception' ? defectShort(g.reason, g.detail) : g.detail}` : 'false';
-    const sources = failing.map(s => guardText(lookup, s.site, guardFeature)).filter((x): x is string => x !== null);
+    // R-SIM-90: every guard text of a failing site, as the oracle conjoined them.
+    const sources = failing.flatMap(s => guardTexts(lookup, s.site, features));
     const src = sources.map(x => ` [${x}]`).join('');
     const plain = failing.length === 1 && failing[0].site === e.transition;
     const detail = plain ? `${label} ${full}` : `${label}: ${names} ${full}`;
@@ -857,7 +909,7 @@ function blocked(
 
 /** The reason of one input, and whether any transition said why; `null` when the input has a candidate or the run cannot move. */
 function explain(
-    run: SimRun, event: string | null, lookup: Lookup, label: InputLabel, guardFeature: string | undefined,
+    run: SimRun, event: string | null, lookup: Lookup, label: InputLabel, features: readonly string[],
 ): { reason: InputReason; explained: boolean } | null {
     if (run.halt !== null) return null;
     // An input that asks may have a candidate once answered (R-SIM-88): it is waiting, not blocked.
@@ -865,7 +917,7 @@ function explain(
     const cs = candidates(run.net, { state: run.config.state, event }, run.guards);
     if (cs.terminated || cs.candidates.length > 0) return null;
     const access = stateAccess(run.config.state);
-    const entries = cs.evaluated.map(e => blocked(run, e, event, access, lookup, guardFeature)).filter((b): b is { short: string; detail: string; full: string } => b !== null);
+    const entries = cs.evaluated.map(e => blocked(run, e, event, access, lookup, features)).filter((b): b is { short: string; detail: string; full: string } => b !== null);
     const name = label(event);
     if (entries.length === 0) {
         const nothing = `${name}: nothing enabled`;
@@ -878,12 +930,13 @@ function explain(
 /**
  * Why an input has no candidate in the run's configuration (R-SIM-60: the
  * `title` of a button that is on in `Running`); `null` when it has one, or
- * without a run, or when the run is terminated or halted.
+ * without a run, or when the run is terminated or halted. `guardFeature` is
+ * every Guard attribute (R-SIM-90), or a string read as the bag's key.
  */
 export function inputReason(
-    run: SimRun | undefined, event: string | null, lookup: Lookup, label: InputLabel, guardFeature?: string,
+    run: SimRun | undefined, event: string | null, lookup: Lookup, label: InputLabel, guardFeature?: string | readonly string[],
 ): InputReason | null {
-    return run ? explain(run, event, lookup, label, guardFeature)?.reason ?? null : null;
+    return run ? explain(run, event, lookup, label, guardFeatures(guardFeature))?.reason ?? null : null;
 }
 
 /**
@@ -892,11 +945,12 @@ export function inputReason(
  * so it is non-null exactly when that says `Deadlock`. The caller computes it
  * once per panel action, never per render (report §3.4).
  */
-export function stopReason(run: SimRun | undefined, lookup: Lookup, label: InputLabel, guardFeature?: string): StopReason | null {
+export function stopReason(run: SimRun | undefined, lookup: Lookup, label: InputLabel, guardFeature?: string | readonly string[]): StopReason | null {
     if (!run) return null;
+    const features = guardFeatures(guardFeature);
     const all: Array<{ reason: InputReason; explained: boolean }> = [];
     for (const event of [null, ...run.alphabet]) {
-        const r = explain(run, event, lookup, label, guardFeature);
+        const r = explain(run, event, lookup, label, features);
         if (r === null) return null;
         all.push(r);
     }
@@ -1008,7 +1062,7 @@ export interface InputPress {
 function firstBlocked(run: SimRun, outcome: StepOutcome, lookup: Lookup): string | null {
     const access = stateAccess(run.config.state);
     for (const e of outcome.label.evaluated) {
-        const b = blocked(run, e, outcome.label.event, access, lookup, undefined);
+        const b = blocked(run, e, outcome.label.event, access, lookup, []);
         if (b) return b.short;
     }
     return null;

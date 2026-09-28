@@ -419,3 +419,50 @@ describe('purity', () => {
         expect(bindingVerdicts(profile('extendedStateMachine'), bag, sketch)).toEqual(once);
     });
 });
+
+describe('R-SIM-90: a list of attributes is judged element by element (P-2026-09-29-0010)', () => {
+    const sm = profile('stateMachine');
+    const complete = {
+        simNode: 'State', simTransition: 'Transition', simNextState: 'Transition.next', simInitial: 'Initial', simOwnedTransitions: 'State.out',
+    };
+    const statusOf = (bag: Record<string, unknown>) => checkability(sm, bag, currentVerdicts(bindingVerdicts(sm, bag, SM)));
+    const THREE = '["Transition.guard","Timed.when","Transition.priority"]';
+
+    it('each element is judged by the candidate rules, in list order (mutant: the list judged as one id)', () => {
+        const v = bindingVerdicts(sm, { ...SM_BAG, simGuard: THREE }, SM);
+        const judged = (id: string) => v.guard?.candidates.find(c => c.id === id);
+        expect(v.guard?.currents).toEqual([judged('Transition.guard'), judged('Timed.when'), judged('Transition.priority')]);
+        expect(v.guard?.currents?.map(c => c.verdict)).toEqual([ok, warn, bad]);
+        // the JSON text itself is never judged
+        expect(v.guard?.current?.why).not.toBe('Not in this metamodel');
+    });
+
+    it('current is the worst element, the first of the worst in list order (mutants: the first element\'s verdict; the last of the worst)', () => {
+        expect(bindingVerdicts(sm, { ...SM_BAG, simGuard: THREE }, SM).guard?.current?.id).toBe('Transition.priority');
+        expect(bindingVerdicts(sm, { ...SM_BAG, simGuard: '["Transition.guard","Timed.when"]' }, SM).guard?.current)
+            .toMatchObject({ id: 'Timed.when', verdict: warn });
+        expect(bindingVerdicts(sm, { ...SM_BAG, simGuard: '["Transition.priority","Transition.effect"]' }, SM).guard?.current?.id)
+            .toBe('Transition.priority');
+    });
+
+    it('one attribute reads as before: current is its verdict, currents holds it alone (control)', () => {
+        const v = bindingVerdicts(sm, { ...SM_BAG, simGuard: 'Transition.guard' }, SM);
+        expect(v.guard?.current).toEqual({ id: 'Transition.guard', verdict: ok, why: '' });
+        expect(v.guard?.currents).toEqual([v.guard?.current]);
+        // unset: no current, no currents
+        expect(bindingVerdicts(sm, SM_BAG, SM).guard).toMatchObject({ current: null });
+        expect(bindingVerdicts(sm, SM_BAG, SM).guard).not.toHaveProperty('currents');
+    });
+
+    it('checkability: one incompatible element is Not checkable, one warning «with warnings», all ok checkable', () => {
+        expect(statusOf({ ...complete, simGuard: '["Transition.guard","Transition.cond"]' })).toEqual({ status: 'checkable', missing: [] });
+        expect(statusOf({ ...complete, simGuard: '["Transition.guard","Timed.when"]' })).toEqual({ status: 'warnings', missing: [] });
+        expect(statusOf({ ...complete, simGuard: '["Transition.guard","Transition.priority"]' })).toEqual({ status: 'notCheckable', missing: [] });
+    });
+
+    it('a single-valued role judges its raw value, a JSON text included (mutant: every key decoded)', () => {
+        const v = bindingVerdicts(sm, { ...SM_BAG, simNextState: '["Transition.next"]' }, SM);
+        expect(v.nextState?.current).toEqual({ id: '["Transition.next"]', verdict: bad, why: 'Not in this metamodel' });
+        expect(v.nextState).not.toHaveProperty('currents');
+    });
+});

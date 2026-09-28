@@ -23,6 +23,12 @@
  * judge incompatible (S10), a warning or an incompatible bound value marked
  * beside its select, and the pill reads the verdicts («with warnings»).
  *
+ * Guard, Action, Entry and Exit hold a list (R-SIM-90): the select keeps the
+ * first attribute, the others are 24 px tags on the same line, each with its
+ * remove button, and a 24 px «+» select adds one, offered only when the
+ * metamodel has two or more compatible candidates. The control stays 32 px
+ * high: a long list is clipped to `+n`, never wrapped.
+ *
  * Portaled onto `document.body` from the panel, which holds every input it
  * reads (D4), at the stacking level of the other modals
  * (SymbolEditorModal.scss). React events bubble through the React tree, not
@@ -40,10 +46,11 @@ import {
 } from './simRoleStatus';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import {
-    bagWithEdits, boundHelp, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus, isFirstOpen,
-    isModified, matchLine, roleBadge, roleSections, roleSwitch, rowValue, withProfileName, withRoleMode,
+    bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus,
+    isFirstOpen, isModified, matchLine, multiRow, multiRowLabels, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
+    withAdded, withPrimary, withProfileName, withRemoved, withRoleMode,
 } from './simRolesDraft';
-import type { DraftEdits, DraftInput, RoleBadge } from './simRolesDraft';
+import type { DraftEdits, DraftInput, MultiRow, RoleBadge, RowValue } from './simRolesDraft';
 import { bindingVerdicts } from '../../../model/simulation/bindingCompat';
 import { roleDescriptor } from '../../../model/simulation/roleCatalog';
 import { systemProfile, validateProfile } from '../../../model/simulation/simProfiles';
@@ -495,22 +502,85 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
             : <span className="sim-roles-modal__badge" />;
     };
 
+    /** An option's name, its verdict marked when it is not ok (S10). */
+    const optionName = (id: string, verdict: string | undefined): string =>
+        `${nameOf(id)}${verdict === 'warn' ? ' (warning)' : verdict === 'incompatible' ? ' (incompatible)' : ''}`;
+
+    /**
+     * The other attributes of a multi row and its «+» select (R-SIM-90). A tag's remove button
+     * takes Enter and Space as a click, and Delete or Backspace; the focus then goes back to the
+     * row's select, which stays. The «+» keeps its slot while hidden, so nothing moves.
+     */
+    const multiControls = (r: RoleId, key: string, v: RowValue, row: MultiRow, compatOf: (id: string) => string | undefined): ReactElement => {
+        const names = multiRowLabels(label(r));
+        const remove = (e: SyntheticEvent<HTMLButtonElement>, id: string): void => {
+            e.currentTarget.closest('.sim-roles-modal__control')?.querySelector<HTMLSelectElement>('select')?.focus();
+            setEdit(key, withRemoved(v.value, id));
+        };
+        return (
+            <>
+                {row.others.length > 0 && (
+                    <div className="sim-roles-modal__attrs" role="list" aria-label={names.strip}>
+                        {row.shown.map(id => (
+                            <span className={`sim-roles-modal__attr sim-roles-modal__attr--${v.source}`} role="listitem" key={id} title={nameOf(id)}>
+                                <span className="sim-roles-modal__attr-name">{nameOf(id)}</span>
+                                <button
+                                    type="button"
+                                    className="sim-roles-modal__attr-remove"
+                                    aria-label={names.remove(nameOf(id))}
+                                    title={names.remove(nameOf(id))}
+                                    onClick={e => remove(e, id)}
+                                    onKeyDown={e => { if (removesTag(e.key)) { e.preventDefault(); remove(e, id); } }}
+                                >
+                                    <i className="bi bi-x" />
+                                </button>
+                            </span>
+                        ))}
+                        {row.more.length > 0 && (
+                            <span className="sim-roles-modal__attr-more" role="listitem" title={names.more(row.more.map(nameOf))}>+{row.more.length}</span>
+                        )}
+                    </div>
+                )}
+                {row.plus && (
+                    <select
+                        className={`sim-roles-modal__attr-add${row.plusShown ? '' : ' sim-roles-modal__hidden'}`}
+                        aria-label={names.add}
+                        title={names.add}
+                        aria-hidden={!row.plusShown}
+                        tabIndex={row.plusShown ? undefined : -1}
+                        disabled={!row.plusShown}
+                        value=""
+                        onChange={e => { if (e.target.value) setEdit(key, withAdded(v.value, e.target.value)); }}
+                    >
+                        <option value="">+</option>
+                        {row.addable.map(id => <option value={id} key={id}>{optionName(id, compatOf(id))}</option>)}
+                    </select>
+                )}
+            </>
+        );
+    };
+
     const bindingRow = (r: RoleId, prefix?: string, note?: string | null): ReactElement => {
         const key = roleDescriptor(r).key as string;
         const v = rowValue(key, input, proposals);
         const compat = verdicts?.[r];
         const byName = (a: SimRoleOption, b: SimRoleOption) => a.name.localeCompare(b.name);
+        // R-SIM-90: a multi role's select holds the first attribute, the tags the others.
+        const multi = roleDescriptor(r).multi
+            ? multiRow(v.value, compat ? compatibleIds(compat) : listOf(r, profile.shape, options).map(o => o.id))
+            : null;
+        const primary = multi ? multi.primary : v.value;
         // S10: the candidates S11a does not judge incompatible, the bound value always; the lists of the panel without a sketch.
         const all: SimRoleOption[] = compat
-            ? compatibleOptions(compat, v.value)
-                .map(o => ({ id: o.id, name: `${nameOf(o.id)}${o.verdict === 'warn' ? ' (warning)' : o.verdict === 'incompatible' ? ' (incompatible)' : ''}` }))
-                .sort((a, b) => (a.id === v.value ? -1 : b.id === v.value ? 1 : byName(a, b)))
+            ? compatibleOptions(compat, primary)
+                .map(o => ({ id: o.id, name: optionName(o.id, o.verdict) }))
+                .sort((a, b) => (a.id === primary ? -1 : b.id === primary ? 1 : byName(a, b)))
             : (() => {
                 const list = listOf(r, profile.shape, options);
-                return v.value && !list.some(o => o.id === v.value) ? [{ id: v.value, name: nameOf(v.value) }, ...list] : list;
+                return primary && !list.some(o => o.id === primary) ? [{ id: primary, name: nameOf(primary) }, ...list] : list;
             })();
         const why = v.source === 'proposed' ? bindings?.[r]?.why : undefined;
-        const judged = v.value ? compat?.candidates.find(c => c.id === v.value) ?? compat?.current ?? null : null;
+        const judged = rowVerdict(compat, v.value, nameOf);
         return (
             <div className="sim-roles-modal__row" key={r}>
                 <div className="sim-roles-modal__role">
@@ -521,18 +591,19 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                 <div className="sim-roles-modal__value">
                     <div className="sim-roles-modal__control">
                     <select
-                        className={`sim-roles-modal__select sim-roles-modal__select--${v.source}${v.value ? '' : ' sim-roles-modal__select--empty'}`}
+                        className={`sim-roles-modal__select sim-roles-modal__select--${v.source}${primary ? '' : ' sim-roles-modal__select--empty'}`}
                         aria-label={label(r)}
-                        title={why ? `Proposed: ${nameOf(v.value)}. ${why}` : undefined}
-                        value={v.value}
-                        onChange={e => setEdit(key, e.target.value)}
+                        title={why ? `Proposed: ${nameOf(primary)}. ${why}` : undefined}
+                        value={primary}
+                        onChange={e => setEdit(key, multi ? withPrimary(v.value, e.target.value) : e.target.value)}
                     >
                         <option value="">{placeholderOf(r)}</option>
                         {all.map(o => <option value={o.id} key={o.id}>{o.name}</option>)}
                     </select>
+                    {multi && multiControls(r, key, v, multi, id => compat?.candidates.find(c => c.id === id)?.verdict)}
                     {/* A fixed slot: a verdict appearing never moves the row (S11a). */}
                     <span className="sim-roles-modal__verdict">
-                        {judged && judged.verdict !== 'ok' && (
+                        {judged && (
                             <i
                                 className={`bi ${judged.verdict === 'warn' ? 'bi-exclamation-triangle-fill sim-roles-modal__verdict--warn' : 'bi-exclamation-circle-fill sim-roles-modal__verdict--error'}`}
                                 title={`${judged.verdict === 'warn' ? 'Warning' : 'Incompatible'}: ${judged.why}`}

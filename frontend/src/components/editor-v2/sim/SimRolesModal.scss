@@ -395,6 +395,105 @@
         }
     }
 
+    // R-SIM-90: the other attributes of a multi role, tags on the select's line. The strip keeps its
+    // width and the select gives way; a longer list is counted, never wrapped, so the row stays 32 px.
+    &__attrs {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 4px;
+        max-width: 50%;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    &__attr {
+        box-sizing: border-box;
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        gap: 2px;
+        max-width: 120px;
+        height: var(--control-height-sm);
+        padding: 0 2px 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-primary);
+        font-size: 12px;
+    }
+
+    &__attr-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__attr-remove {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        .bi {
+            font-size: 14px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    &__attr-more {
+        flex: none;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    // The «+» select: 24 px square; hidden, it keeps its slot.
+    & &__attr-add {
+        box-sizing: border-box;
+        flex: none;
+        width: var(--control-height-sm);
+        height: var(--control-height-sm);
+        padding: 0;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-secondary);
+        background-image: none;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 14px;
+        text-align: center;
+        text-align-last: center;
+        appearance: none;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus-visible {
+            outline: none;
+            border-color: var(--color-border-focus);
+            box-shadow: 0 0 0 3px var(--color-accent-muted);
+        }
+    }
+
     // Turn a role off (S11c), at the end of its label cell.
     &__switch {
         display: inline-flex;

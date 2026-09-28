@@ -847,3 +847,21 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat: the four demo scenes probed on the branch in light theme (port 3038), 71 readings identical to the trunk once pointer ids are normalised. The M2 rows and the faces of the outputs come with the next lane.
 **Notes**: Closed by hand: the worker stops on the known vitest reds. Rollback tag `pre-sim-outputs-accepting` on `27badf6c2`. No `.smv` generation (deferred after Malaga). Chat C-2026-09-28-1936.
 **Prompt document name**: 2026-09-28 23:43
+
+## 2026-09-29 — feat: Entry, Exit, Action and Guard multi-valued, R-SIM-90 Phase 2 (P-2026-09-29-0010)
+**Prompt**: `claude_2026-09-29_0010_prompt_sim_multi_roles_p2.md`, full lane on `sim-multi-roles-p2` in `~/jjodel-w-multi2` (from the trunk at `024d95345`): R-SIM-90 as planned by the discovery of P-2026-09-28-2306, its nine Recommended answers adopted by the chat under RC-21; tests first, one commit per layer (codec and NetStc, engine, verdicts, dialog), crops on a lane probe on 3039; no merge.
+**Files touched**: `c6e28f893` `frontend/src/model/simulation/roleCatalog.ts`, `netTypes.ts`, `netCompile.ts` (type only), `__tests__/roleCatalog.test.ts`; `1bb05b781` `netCompile.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `SimulationPanel.tsx`, `__tests__/netCompile.test.ts`, `sim/__tests__/simBridge.test.ts`; `2fbb1fa97` `model/simulation/bindingCompat.ts`, `sim/simRoleStatus.ts`, `__tests__/bindingCompat.test.ts`, `sim/__tests__/simRoleStatus.test.ts`; `9ab66e047` `sim/simRolesDraft.ts`, `SimRolesModal.tsx`, `SimRolesModal.scss`, `sim/__tests__/simRolesDraft.test.ts`; docs, this commit: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates green: typecheck 14, the known set (14 before); vitest `src/model/simulation` and `src/components/editor-v2/sim` 25 files, 802 tests (761 before), each layer red first; full vitest 5598 passed, 6 failed, 9 files red at import, the known set (checkRange, five trace/monitor node-version reds); build exit 0; 32 mutants killed, 1 equivalent. The four demo scenes' runs are not re-walked here: the chat's.
+**Out-of-scope changes**: no. 16 files, above five: the discovery plan's 10 code and 6 test files, listed above and in chat before the first edit (Rule 19); no critical-zone file, `profileBinder.ts` and `simCheckToProblems.ts` unchanged (answers 7, 8).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3039 (`lane-run probe`, light, RC-23): DemoESM Entry row 40 px, one select, no «+»; DemoMulti (DemoESM plus `State.log`, alone in its page) 13 of 13 DOM checks (tags, «+», keyboard, accessible names, no layout shift, Apply writes the JSON list); crops `docs/discovery/harness/_tmp_multi_*.png` (gitignored). The chat's GO pending.
+**Notes**: Unattended choices: the list field is set for every bound multi role, a plain id giving a one-element list (one netCompile expectation updated); one tag shown, the rest +n (value column measured 366 px); the reasons and halt features decode a raw string too; commit type feat. Probe: two metamodels in one page give the known 6 ecore-loop error pairs, DemoMulti alone none. On DemoMulti the binder proposed State.entry (not a choice).
+**Prompt document name**: 2026-09-29 00:10
+
+## 2026-09-29 — ticket: the problems dedup reads only the first Guard or Action attribute
+**Ticket**: `frontend/src/components/editor-v2/problems/simCheckToProblems.ts` (critical zone) drops a parse error that conformance already reports by the type of the role's first attribute (`featureOf`, `stc.guard`/`stc.action`/`stc.entry`/`stc.exit`). With R-SIM-90 a parse error in a second attribute of another type is dropped (Expression first, EString second) or shown twice (EString first, Expression second). The panel's defects line is unaffected. Left alone before the freeze (answer 8); needs a critical-zone go-ahead. Evidence: the discovery of P-2026-09-28-2306 §11 risk 3 (branch `sim-multi-roles`).
+**Priority**: low
+**Found in**: P-2026-09-28-2306

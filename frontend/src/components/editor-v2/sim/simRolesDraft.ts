@@ -22,11 +22,17 @@
  * carries that switch. The selects list the candidates S11a does not judge
  * incompatible (S10), the bound value always.
  *
+ * Guard, Action, Entry and Exit hold a list (R-SIM-90): the row keeps its
+ * select for the first attribute and shows the others as tags, with a «+»
+ * select to add one when the metamodel offers two or more compatible
+ * candidates; the edit is the encoded list (`encodeRoleValues`), so Apply
+ * stays one assignment and one attribute is written as the plain id.
+ *
  * Pure: no React, no store, no import from the joiner, so it runs under the
  * node test bench (sim/__tests__/simRolesDraft.test.ts).
  */
 
-import { ROLE_CATALOG, ROLE_IDS, roleDescriptor } from '../../../model/simulation/roleCatalog';
+import { ROLE_CATALOG, ROLE_IDS, encodeRoleValues, roleDescriptor, roleValues } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
 import {
     EVENT_FROM_TRIGGER, OTHER_SHAPE_GROUP, isSystemProfileId, requiredRoles, systemProfile,
@@ -404,4 +410,103 @@ export function compatibleOptions(compat: RoleCompatibility | undefined, current
     const out: CompatibleOption[] = compat.candidates.filter(c => c.verdict !== 'incompatible' || c.id === current);
     if (current && !out.some(c => c.id === current)) out.unshift(compat.current ?? { id: current, verdict: 'incompatible', why: 'Not an element of this metamodel' });
     return out;
+}
+
+// ---------------------------------------------------------------------------
+// R-SIM-90: the multi row, the first attribute in the select, the others as tags
+// ---------------------------------------------------------------------------
+
+/** The tags a row shows before it counts the rest: the row never grows. */
+export const MULTI_TAGS_SHOWN = 1;
+
+/** The candidates S11a does not judge incompatible, in sketch order (S10): what the «+» may offer. */
+export function compatibleIds(compat: RoleCompatibility | undefined): string[] {
+    return compat ? compat.candidates.filter(c => c.verdict !== 'incompatible').map(c => c.id) : [];
+}
+
+export interface MultiRow {
+    /** The first attribute, the value of the row's select; `''` when the role is unset. */
+    readonly primary: string;
+    /** The other attributes, the tags, in order. */
+    readonly others: readonly string[];
+    /** The tags shown, then the ones counted as `+n`. */
+    readonly shown: readonly string[];
+    readonly more: readonly string[];
+    /**
+     * The «+» select has a slot: two or more candidates not incompatible. It depends on the
+     * metamodel and the context roles, never on the list, so it does not come and go while editing.
+     */
+    readonly plus: boolean;
+    /** The «+» select is visible: the primary set and something left to add; hidden, it keeps its slot. */
+    readonly plusShown: boolean;
+    /** The options of the «+» select: those candidates, the attributes already chosen aside. */
+    readonly addable: readonly string[];
+}
+
+/** The row of a multi role over its value (a plain id, a JSON list, or unset) and its compatible candidates. */
+export function multiRow(value: string, compatible: readonly string[]): MultiRow {
+    const list = roleValues(value);
+    const others = list.slice(1);
+    const addable = compatible.filter(id => !list.includes(id));
+    const plus = compatible.length >= 2;
+    return {
+        primary: list[0] ?? '',
+        others,
+        shown: others.slice(0, MULTI_TAGS_SHOWN),
+        more: others.slice(MULTI_TAGS_SHOWN),
+        plus,
+        plusShown: plus && list.length > 0 && addable.length > 0,
+        addable,
+    };
+}
+
+/** The edit of the row's select (an encoded list, `''` for none): `id` first, or `''` to clear it, which promotes the first tag. */
+export function withPrimary(value: string, id: string): string {
+    const list = roleValues(value);
+    const next = id === '' ? list.slice(1) : [id, ...list.slice(1).filter(x => x !== id)];
+    return encodeRoleValues(next) ?? '';
+}
+
+/** The edit of the «+» select: `id` after the others. */
+export function withAdded(value: string, id: string): string {
+    return encodeRoleValues([...roleValues(value), id]) ?? '';
+}
+
+/** The edit of a tag's remove button. */
+export function withRemoved(value: string, id: string): string {
+    return encodeRoleValues(roleValues(value).filter(x => x !== id)) ?? '';
+}
+
+/** The accessible names of a multi row, by the role's label. */
+export function multiRowLabels(label: string): {
+    readonly strip: string; readonly add: string; readonly remove: (name: string) => string; readonly more: (names: readonly string[]) => string;
+} {
+    return {
+        strip: `Other ${label} attributes`,
+        add: `Add another ${label} attribute`,
+        remove: name => `Remove ${name} from ${label}`,
+        more: names => `Also: ${names.join(', ')}`,
+    };
+}
+
+/** The keys that remove a tag from its focused remove button; Enter and Space click it, Escape closes the dialog. */
+export function removesTag(key: string): boolean {
+    return key === 'Delete' || key === 'Backspace';
+}
+
+/**
+ * The verdict beside a row (S11a), `null` when it is ok or unjudged: its value's; for several
+ * attributes (R-SIM-90) the worst, `current`, with each attribute that is not ok named in the why.
+ */
+export function rowVerdict(
+    compat: RoleCompatibility | undefined, value: string, nameOf: (id: string) => string,
+): { readonly verdict: 'warn' | 'incompatible'; readonly why: string } | null {
+    if (!compat || !value) return null;
+    if (compat.currents && compat.currents.length > 1) {
+        const worst = compat.current;
+        if (!worst || worst.verdict === 'ok') return null;
+        return { verdict: worst.verdict, why: compat.currents.filter(c => c.verdict !== 'ok').map(c => `${nameOf(c.id)}: ${c.why}`).join('; ') };
+    }
+    const judged = compat.candidates.find(c => c.id === value) ?? compat.current;
+    return judged && judged.verdict !== 'ok' ? { verdict: judged.verdict, why: judged.why } : null;
 }
