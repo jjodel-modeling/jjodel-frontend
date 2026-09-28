@@ -291,3 +291,18 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Priority**: medium
 **Found in**: P-2026-09-28-2001
 **Detail**: `frontend/scripts/gates/__tests__/check-addonly.test.ts` (the `checkRange` tests), commit `160b00d2a` body
+
+## 2026-09-28 — merge: log-addonly-gate into alfonso-frontend-jjtl (P-2026-09-28-2211)
+**Prompt**: `claude_2026-09-28_2211_prompt_merge_log-addonly-gate.md`, a lane-run merge session: `log-addonly-gate` at `fdb1e4390` into `alfonso-frontend-jjtl`, `--no-ff`, merge base `247a93549`, 5 commits on the branch side (check:addonly, P-2026-09-28-2001).
+**Files touched**: merge `d3dbacb36`: 9 files from the branch side (`frontend/scripts/gates/check-addonly.ts`, `frontend/scripts/gates/__tests__/check-addonly.test.ts`, `frontend/package.json`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/lane-templates/trunk-into-branch.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-09-28_2001_prompt_log_addonly_gate.md`); this commit: this entry and the Status flip.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: yes — the trunk's full vitest run, 0 failed at `7f2a76413`, is 1 failed at `d3dbacb36`: the branch's new `checkRange` test times out at the 5000 ms default under full-suite load (3 of 3 runs: once on `fdb1e4390`, twice on the merge) and passes alone in 3.5 s. No test that passed on the trunk fails. Other gates on `d3dbacb36`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 5548 tests in 225 files as expected (5527 + 21), 9 red at import; hooks 344 (343 + 1); build exit 0; check:docs 4/4; check:agents PASS; check:scripts PASS; check:addonly HEAD clean.
+**Out-of-scope changes**: no — the 9 files are the branch's, listed above; the rollback tag `pre-log-addonly-gate` on `ca43d6326`, not named by the prompt, follows RC-31.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — scripts-only merge, no UI change; the chat waived the four demo scenes (energy saving rule for scripts-only merges).
+**Notes**: Adopted by chat C-2026-09-28-1936: the prompt carries `Chat: —`, its launcher unidentified. The chat accepted the red `checkRange` test at the GO (ticket below). Zero conflicts, tree `3020f7f03` as measured, probes 1 each, no union. The merge body reads "22:1x" for 22:12: bash-guard refused the amend. 3001 up from this tree, not restarted.
+**Prompt document name**: 2026-09-28 22:11
+
+**Ticket** (priority medium, opened here for a follow-up harness lane, accepted by chat C-2026-09-28-1936 at the GO). (1) The `checkRange` test in `frontend/scripts/gates/__tests__/check-addonly.test.ts:201` has no timeout of its own: 3.4 to 3.7 s alone, over the 5000 ms default under full-suite load in 3 of 3 runs, so `npm run test` on the trunk reads 1 failed until it carries an explicit timeout. (2) `e2448cf61` in the range check: the chat's resolution of the open ticket of P-2026-09-28-2001 is a known-repairs list mapping `e2448cf61` -> `447e4239b`.
