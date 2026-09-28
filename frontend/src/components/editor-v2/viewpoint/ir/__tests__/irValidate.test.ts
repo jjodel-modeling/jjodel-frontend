@@ -222,6 +222,78 @@ describe('validateIR: shape.padding closed vocabulary (asse padding, 2026-08-25)
     });
 });
 
+describe('validateIR: shape.cornerRadius numeric guard (slice 3, D5)', () => {
+    /** Written through `unknown` for the same reason as padding above. */
+    const vertexWithRadius = (cornerRadius: unknown): VertexViewIR => ({
+        ...defaultObjectViewIR(),
+        shape: { ...defaultObjectViewIR().shape, cornerRadius } as VertexViewIR['shape'],
+    });
+
+    it('accepts a vertex with NO cornerRadius key (absent is the form base radius)', () => {
+        clearCompileCache();
+        // The object seed writes `cornerRadius: 8` since 400095370 (R-IRN-35 keeps it), so
+        // the absent case is built by dropping the key from the seed and not read from it.
+        const { cornerRadius: _seeded, ...shape } = defaultObjectViewIR().shape;
+        const ir = { ...defaultObjectViewIR(), shape };
+        expect('cornerRadius' in ir.shape).toBe(false);
+        expect(validateIR('v-radius-absent', ir)).toEqual({ ok: true });
+    });
+
+    it('accepts 0, integers and fractions, and values above the render clamp', () => {
+        for (const value of [0, 6, 2.5, 400]) {
+            clearCompileCache();
+            expect(validateIR(`v-radius-${value}`, vertexWithRadius(value))).toEqual({ ok: true });
+        }
+    });
+
+    it('rejects a negative, a non-finite and a non-number value, naming the field and the value read', () => {
+        for (const [value, printed] of [[-1, '-1'], [NaN, 'NaN'], [Infinity, 'Infinity'], ['6', '"6"'], [null, 'null']] as const) {
+            clearCompileCache();
+            const r = validateIR(`v-radius-bad-${printed}`, vertexWithRadius(value));
+            expect(r.ok, printed).toBe(false);
+            if (!r.ok) {
+                expect(r.error).toContain('shape.cornerRadius');
+                expect(r.error).toContain(`read ${printed}`);
+            }
+        }
+    });
+
+    it('accepts the conditional forms as it does the border axes: no value guard on the branches (R-IRN-35)', () => {
+        const rules = { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 12 }], default: 4 };
+        const whenElse = { when: { op: 'isKind', class: 'FinalState' }, then: 12, else: 4 };
+        const emptyRules = { rules: [] };
+        for (const [name, value] of [['rules', rules], ['when/else', whenElse], ['empty rules', emptyRules]] as const) {
+            clearCompileCache();
+            expect(validateIR(`v-radius-cond-${name}`, vertexWithRadius(value)), name).toEqual({ ok: true });
+        }
+        // The predicate is still checked, by the walk that already covers the border axes.
+        clearCompileCache();
+        const badOp = { rules: [{ when: { op: 'nope', class: 'FinalState' }, then: 12 }] };
+        const r = validateIR('v-radius-cond-bad-op', vertexWithRadius(badOp));
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('unknown predicate operator "nope"');
+    });
+
+    it('a conditional radius is not held to the literal numeric guard on its branches', () => {
+        clearCompileCache();
+        // Same permissiveness as the border axes, whose branch values are never checked.
+        expect(validateIR('v-radius-cond-nan-branch', vertexWithRadius({ rules: [], default: -3 })), 'negative default, read as absent by the render').toEqual({ ok: true });
+    });
+
+    it('applies to graphVertex too, not only to vertex', () => {
+        clearCompileCache();
+        const negative: unknown = -4;
+        const gv: GraphVertexViewIR = {
+            irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Package'],
+            shape: { form: 'rect', cornerRadius: negative } as GraphVertexViewIR['shape'],
+            containment: {},
+        };
+        const r = validateIR('gv-radius-negative', gv);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('shape.cornerRadius');
+    });
+});
+
 
 /**
  * FormSpec (Slice 1a, 2026-08-26).

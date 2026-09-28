@@ -86,6 +86,12 @@ export const MARKER_REGISTRY: Readonly<Record<string, MarkerDef>> = {
         id: 'history-deep', label: 'H* (deep history)',
         paths: [{ d: 'M30,32 L30,68 M50,32 L50,68 M30,50 L50,50' }, { d: 'M66,40 L66,60 M57,45 L75,55 M75,45 L57,55' }],
     },
+    // Goal modeling i* (D6): la barra che distingue Agent e Role dall'Actor, che
+    // e' il cerchio nudo. Unica deroga alla convenzione del glifo centrato: e' la
+    // POSIZIONE nel cerchio a portare il significato, quindi le due y (22 e 78)
+    // escono dal box 26..74 mentre le x restano dentro.
+    'bar-top': { id: 'bar-top', label: 'Bar top (agent)', paths: [{ d: 'M30,22 L70,22' }] },
+    'bar-bottom': { id: 'bar-bottom', label: 'Bar bottom (role)', paths: [{ d: 'M30,78 L70,78' }] },
 };
 
 /** Definizione del marker; id assente, vuoto o fuori tabella => undefined (nessun marker). */

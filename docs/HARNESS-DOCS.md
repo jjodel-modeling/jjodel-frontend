@@ -1,7 +1,7 @@
 # HARNESS-DOCS — organizzazione documentale dell'harness Jjodel
 
 Posizione: `docs/HARNESS-DOCS.md` nel repo `jjodel-frontend`.
-Versione: 1.1 (2026-08-18).
+Versione: 1.7 (2026-09-28).
 Copia nel Project Knowledge: sì, integrale. Sostituisce `INDICE_ARCHIVIO.md`.
 
 Questo file dice, per ogni tipo di documento che l'harness produce, chi lo scrive, chi lo legge, dove
@@ -111,18 +111,28 @@ timestamp `YYYY-MM-DD HH:mm` (ratifica RC-7), quindi un prompt senza orario non 
 una catena di rework e sparisce dalla misura del tasso di successo al primo colpo. Oggi solo 29 dei
 194 prompt archiviati portano l'orario: è un debito noto, e vale per i nuovi.
 
-**Struttura**: intestazione con nome del documento e riga di protocollo, poi COSA, DOVE, COME,
-RIFERIMENTI. Le clausole condivise si citano per numero, non si ricopiano.
+**Structure** (header amended 2026-09-26, RC-20 and RC-21): the header fields of P13 (`Prompt-ID`, `Chat`,
+`Lane`, `Status`), the protocol line, the worktree preconditions and the Lane discipline block, then COSA, DOVE,
+COME, RIFERIMENTI. Shared clauses are cited by number, never copied.
 
 ```
 # <titolo>
 
-> **Nome del documento prompt**: YYYY-MM-DD HH:mm
+Prompt-ID: P-YYYY-MM-DD-HHmm
+Chat: C-YYYY-MM-DD-HHmm
+Lane: fast | full (<RC-3 trigger>)
+Status: da eseguire
 
-Protocollo: docs/PROTOCOL.md — clausole P1..P10 applicabili (tutte salvo deroga esplicita nel prompt).
+Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P<n> non si applica (motivo: ...).
 
-Leggi `CLAUDE.md`. Branch: `alfonso-frontend-jjtl`.
+Worktree: `~/<tree>`, branch `<branch>`. Before anything else: `pwd`, branch, `git log -1` and
+`git status` are as stated here. Otherwise stop.
+
+## Lane discipline
+Every reply of this session opens with `[P-YYYY-MM-DD-HHmm · session <id>]`.
+Every final message ends with one line: `Outcome: done | hard-stop | question | blocked`.
+Every question that has a recommendation carries it in one line: `Recommended: <one line>`.
 
 ## Contesto (non rifare l'analisi)
 ## COSA
@@ -130,6 +140,22 @@ Leggi `CLAUDE.md`. Branch: `alfonso-frontend-jjtl`.
 ## NON FARE
 ## RIFERIMENTI
 ```
+
+**Closure** (amended 2026-09-28, `P-2026-09-27-2330`, on RC-17). The COME of a prompt ends with one closure
+commit: the log or inbox entry, the Status flip and the visual-check line, written after the code commit and
+committed together, after the GO when a visual check is due, at once otherwise. A prompt never asks for a docs
+commit before the visual GO. The Status of a docs-only lane without a report cites its last commit before the
+closure. Measured on 2026-09-26/27: seven launched lanes flipped their Status twice because their prompt asked
+for a docs commit before the GO.
+
+**Discovery phase** (amended 2026-09-28, P16). A prompt with a discovery phase asks for a report that opens with
+`## 0. Answer in brief`, at most 40 lines: the answer, the recommendation, the decisions awaiting Alfonso, and the
+questions with their `Recommended:` lines; everything else is appendix. `lane-run status` flags a brief that is
+missing, not the first section, or longer.
+
+**Model tier** (2026-09-28, RC-32). `lane-run` reads the tier from the header's `Lane:` and from DOVE: a prompt
+meant to run light writes its DOVE as backticked paths under `docs/`, and names a critical-zone file or a
+governance file only where the lane touches it, since either name forces the heavy tier.
 
 **Due corsie** (ratifica RC-3, 2026-08-05). Corsia completa, con two-phase, discovery report,
 ratifiche, verbale e gate pieni, per: critical zone (`useJjomSync.ts`, `portDistribution.ts`),
@@ -170,7 +196,7 @@ si confronta punto per punto, si aggiunge in coda un addendum con le sole cose n
 esplicitamente path e naming, così l'esecutore non può ometterli.
 
 **Sottocartelle**: `docs/discovery/harness/` contiene gli harness eseguibili di misura usati da una
-discovery (`.mjs`, `.html`); `docs/discovery/emse-dataset/` è materiale di ricerca, non harness.
+discovery (`.mjs`, `.html`); il materiale di ricerca non sta nell'albero: resta in locale, fuori dal repo.
 
 ### 4.3 Memo di ratifica
 
@@ -341,7 +367,7 @@ Vedi §5.
 |---|---|---|---|
 | `CLAUDE.md` (root) | fonte di verità delle convenzioni del codebase: regole non negoziabili, critical zone e Layer Impact Report (§3), diagnosi dei bug visivi (§5), comandi (§17), semantica dell'autovalutazione (§21.3) | Claude Code a inizio di ogni sessione | a mano, poi `npm run gen:agents` e `npm run check:agents` |
 | `AGENTS.md` (root) | **generato** da `CLAUDE.md` per gli agenti non-Claude | altri agenti | **mai a mano**: si rigenera |
-| `docs/PROTOCOL.md` | regole di ingaggio condivise, clausole P1..P10, citate per numero dai prompt | tutti e tre gli attori | a mano, con bump di versione |
+| `docs/PROTOCOL.md` | regole di ingaggio condivise, clausole P1..P16, citate per numero dai prompt | tutti e tre gli attori | a mano, con bump di versione |
 | `docs/decisions.md` | vincoli operativi attivi, una riga per decisione | Claude Code a inizio sessione | si aggiunge in coda alla serie; le superate si spostano |
 | `docs/TECH-DEBT.md` | debiti tecnici aperti con priorità, 31 KB | architetto in planning | si aggiunge o si chiude una voce |
 | `docs/claude-code-log.md` | registro operativo | Claude Code a inizio sessione | append in testa, formato validato |
@@ -355,7 +381,7 @@ Vedi §5.
    di §3 impone di toccare un file fuori dallo scope dichiarato, si segue §3 e si riporta
    l'allargamento nel diff di chiusura.
 3. `docs/decisions.md`, vincoli ratificati.
-4. `docs/PROTOCOL.md`, clausole P1..P10, salvo deroga esplicita e motivata nel prompt.
+4. `docs/PROTOCOL.md`, clausole P1..P16, salvo deroga esplicita e motivata nel prompt.
 5. Il prompt.
 
 **Duplicazione controllata**: il blocco di formato delle entry di log esiste in due posti,
@@ -373,10 +399,14 @@ I documenti generati sono verificati da un gate, non dalla disciplina (ratifica 
 |---|---|---|
 | `npm run check:docs` | **A**: identità byte a byte del blocco di formato fra `CLAUDE.md` §21.2 e `PROTOCOL.md` P9. **B**: campi delle entry di log dal 2026-08-02 in poi, con tassonomia e forma dei valori. **C**: tetto di 500 caratteri su `Notes`, entry dal 2026-08-19 in poi, più la telemetria di dimensione del log | 3/3, 0 warning |
 | `npm run check:agents` | rigenera in una temp di sistema e confronta con **tutti** i file prodotti dal generatore (`AGENTS.md` e `frontend/src/jjtl/AGENTS.md`), mai il solo root | da eseguire dopo ogni tocco a un `CLAUDE.md` |
-| `npm run typecheck` | `tsc --noEmit`. Baseline: 33 su macOS, 14 su Linux, ed è lo stesso numero (19 errori di casing non esistono su filesystem case-sensitive) | verde rispetto alla baseline |
+| `npm run typecheck` | `tsc --noEmit`. Baseline: 14, elencati per file e codice in `CLAUDE.md` §17 (misurata il 2026-09-24) | verde rispetto alla baseline |
 | `npx vitest run` | test unitari | 1315 passed; nove suite non collezionano per `window is not defined`, note |
 | `npm run build` | build di produzione | verde |
 | `npm run smoke` | cinque asserzioni su stati noti: console pulita, larghezza del canvas sopra soglia, nodi renderizzati sopra zero, nessun `position: fixed` che interseca la status bar, nessun figlio clippato oltre tolleranza | implementato; i prompt che non lo usano dichiarano la deroga |
+| deny list (`permissions.deny` in `.claude/settings.json`) | le forme fisse vietate da P6, P13 e RC-13-bis: stash, `git add` con `--all`, `-u`, `-A` e `.`, ogni comando che porta il flag no-verify, i ripristini dell'albero intero (checkout, restore, reset `--hard`) e `git clean`. **Fallisce chiusa**, ma vede solo la forma letterale: `sh -c`, `git -C` e un path assoluto di git la aggirano (discovery report H6). Il pattern del flag no-verify blocca anche un comando che lo cita soltanto. `rm -rf*` vi sta senza una clausola | attiva dal 2026-09-21 |
+| hook `bash-guard` (`frontend/scripts/hooks/bash-guard.mjs`, `PreToolUse` su `Bash`) | su `git commit`: pathspec dopo `--` (§6.1, P13), trailer `Model:` (P6), soggetto entro 72 senza il suffisso `(P-...)` (§6.2), pathspec che non mescola docs e codice (P13), nessun token di flag corto con `n` (§6.3, sempre, anche durante un merge). `ask` su stash e sulle forme dell'albero intero (RC-13-bis) dietro un wrapper. In `bypassPermissions` nega `git push`, in ogni forma che la stessa lettura trova, wrapper compresi (RC-19); negli altri modi il push non dà rilievi. **Fallisce aperto**: un errore, un timeout o un node mancante lasciano passare la chiamata. Aggiunge solo rifiuti e richieste: gli `ask` su `git commit*` e `git push*` di `.claude/settings.json` restano, ma il `git commit` non è più un cancello umano; i cancelli umani sono il GO visivo e il push (RC-19) | attivo dal 2026-09-21; `deny` del push in bypass dal 2026-09-25 |
+| hook `critical-zone` (`frontend/scripts/hooks/critical-zone.mjs`, `PreToolUse` su `Edit\|Write\|NotebookEdit`) | sui sei file di §3.2 e sui percorsi di scrittura del D-layer (un creator in un sorgente non di test sotto `frontend/src`, `SetFieldAction` in `sync/`): in `bypassPermissions` **nega**, con il motivo di §3.2 e l'invito a rilanciare la sessione senza `--dangerously-skip-permissions` (RC-19); in ogni altro modo, o se `permission_mode` manca o non è una stringa, `ask` con il motivo di §3.2. Non prova che il Layer Impact Report esista: lo chiede all'umano. **Fallisce aperto**. Un test confronta le sue costanti con §3.2 | attivo dal 2026-09-21; `deny` in bypass dal 2026-09-25 |
+| skill `log-entry`, `discovery-report`, `status-flip` (`.claude/skills/`) | la forma dell'artefatto: il blocco di §21.2 (P9), la clausola P4 e la clausola Status di P13 sono lette dal vivo dal file che le tiene, senza copie e quindi senza un gate da estendere; un'estrazione vuota aborta la skill. Non sono un controllo, e `status-flip` la invoca solo l'utente | disponibili dal 2026-09-21 |
 
 **Cosa nessun gate verifica, e resta disciplina**: che un memo abbia la sua riga in `decisions.md`;
 che un prompt abbia l'orario nel nome; che il Project Knowledge stia a sei file; che un discovery
@@ -390,31 +420,74 @@ di `check:docs` lo dice esplicitamente. Si legge prima cosa è fallito.
 
 ## 7. Il ciclo di vita di un task, documento per documento
 
-**Corsia completa.**
+**Full lane, orchestrated** (rewritten 2026-09-26, P16; figure `docs/harness/lane-lifecycle-bpmn.svg`, with its
+PDF alongside).
 
 ```
-Alfonso chiede una feature
-   → architetto scrive il PROMPT DI DISCOVERY            docs/prompts/
-       (con path e naming del report scritti dentro)
-   → Claude Code esegue Fase 1 read-only
-   → Claude Code scrive il DISCOVERY REPORT              docs/discovery/
-   → HARD STOP
-   → architetto analizza il report in chat, non a memoria
-   → Alfonso ratifica
-   → architetto scrive il MEMO DI RATIFICA               docs/ratifiche/
-   → architetto aggiunge la RIGA in                      docs/decisions.md
-   → architetto scrive il PROMPT DI IMPLEMENTAZIONE      docs/prompts/
-   → Claude Code implementa, gate, commit
-   → Claude Code scrive l'ENTRY DI LOG                   docs/claude-code-log.md
-   → Alfonso verifica a schermo, GO o rework
-   → al 60% di contesto: architetto scrive il CHECKPOINT
-       sessione_CORRENTE.md nel KB (sostituzione),
-       la versione precedente in                         docs/sessioni/
+Alfonso asks for a feature, a fix or a gate
+   → chat writes the DISCOVERY PROMPT, committed         docs/prompts/
+       (Prompt-ID, Chat, Lane, Status: da eseguire; report path and name inside)
+   → chat launches the session                          lane-run start <worktree> <prompt-file>
+   → Claude Code runs Phase 1 read-only
+   → Claude Code writes the DISCOVERY REPORT, commits    docs/discovery/
+   → HARD STOP: the session exits                       Outcome: hard-stop | question
+   → chat reads the Outcome line                        lane-run status <Prompt-ID>
+   → chat analyses the report from the file, never from memory
+   → Alfonso ratifies; a Recommended answer inside RC-21 is adopted by the chat
+   → chat writes the RATIFICATION MEMO                  docs/ratifiche/
+   → chat adds the ROW in                               docs/decisions.md
+   → chat writes the PHASE 2 PROMPT or the GO           docs/prompts/
+   → chat resumes the same session                      lane-run resume <Prompt-ID> <message-file>
+   → Claude Code: baseline gates, tests first, implementation, mutation bench, code commit
+   → Claude Code writes the LOG ENTRY and the Status     docs/log-inbox/<lane>.md
+       flip, uncommitted while a visual check is due (RC-17)
+   → the session exits                                  Outcome: hard-stop (visual check due) | done
+   → chat runs the VISUAL CHECKLIST in the built-in browser, DOM and console measures (P8, RC-23)
+   → Alfonso's GO (every lane until 2026-10-03, by sampling after), or rework:
+       chat resumes the same session with a new Phase 2 prompt that Corregge the old one;
+       a new discovery only when the cause is the analysis, declared
+   → chat resumes the session; Claude Code commits the closure (entry, Status, visual line)
+   → the session exits                                  Outcome: done
+   → at ~60% of context: chat writes the CHECKPOINT
+       sessione_CORRENTE.md in the KB (replaced),
+       the previous version in                          docs/sessioni/
 ```
+
+A lane without a visual check closes in the same session right after its code commit and exits with
+`Outcome: done`. A session still running at 90 minutes, or at the limit its prompt declares, is `blocked`: the
+chat reports it and does not resume it on its own. A question is a hard stop at any point of the sequence.
+
+**Merge lane, direct** (2026-09-28, P16, `P-2026-09-27-2330`):
+
+```
+chat measures the merge                              lane-run merge <branch> --into <trunk> --direct
+   → every precondition holds: the prompt committed alone, tag pre-<branch> (RC-31),
+       a detached worker merges, runs the gates, writes result.json   ~/.jjodel-lanes/<Prompt-ID>/
+   → Outcome: hard-stop, or blocked on a red gate      lane-run status | wait <Prompt-ID>
+   → chat runs the VISUAL CHECKLIST, then               lane-run go <Prompt-ID> --smoke "..."
+   → one docs commit: Status flip and P9 entry          docs/log-inbox/<front>.md
+   → Outcome: done
+   a precondition fails: the merge prompt is launched as a session (--launch) or parked, the reason printed
+```
+
+**Chain** (2026-09-28): `lane-run chain <worktree> <prompt>... [--merge-after]` runs lanes without a visual
+check one after the other; a lane that does not end `done` stops the chain, and `chain.json` in
+`~/.jjodel-lanes/chain-<first Prompt-ID>/` says where and why. With `--merge-after` a finished chain ends with
+`merge --direct` into the trunk, parked on a fallback.
 
 **Corsia veloce**: cadono discovery report, memo e ratifica; il prompt sta sotto le 80 righe, la
 verifica preventiva sta in dieci righe dentro l'entry di log, la verifica visiva si raggruppa in un
 solo hard stop di fine sessione. Restano obbligatori: prompt archiviato, entry di log, commit.
+
+**Figure** (`docs/harness/lane-lifecycle-bpmn.svg`, regenerated 2026-09-27 from
+`docs/harness/lane-lifecycle-bpmn.gen.py`, PDF alongside): the diagram now draws the orchestrated lane
+as run since RC-20. The chat launches and resumes the session (`lane-run start` / `resume`, RC-19
+bypass, RC-30 flag for a pre-authorised critical zone); the fast lane is the executor's shortcut from
+the guards straight to the baseline gates, because a fast prompt carries the GO; the chat decides its
+own design questions as recommended (RC-25) and only the RC-26 list reaches Alfonso; the visual
+checklist runs in the chat's built-in browser (RC-23) and Alfonso's GO follows it (every lane until
+2026-10-03, sampled after); the lane closes with the RC-17 single docs commit, the merge, and the
+digest of the unattended decisions with his veto right (RC-25, RC-28).
 
 **Eccezione documentata**: dal 13 al 15 agosto 2026 quattro sessioni hanno implementato direttamente
 in chat Cowork col bridge, saltando Claude Code. Resta l'eccezione, non la norma, ed è dichiarata nei

@@ -1,0 +1,24 @@
+/* ============================================================
+   JJODEL DESIGN TOKENS — GRADIENTS
+   Slate gradients give primary buttons and the auth panel quiet
+   depth without ever reading as "colorful". Vertical 180deg for
+   buttons; 145deg diagonal for the branding panel.
+   ============================================================ */
+
+:root,
+:root[data-theme="light"] {
+  /* Primary button — slate-500 → slate-600, darkening on hover/active */
+  --gradient-primary: linear-gradient(180deg, #64748b 0%, #475569 100%); /* @kind color */
+  --gradient-primary-hover: linear-gradient(180deg, #475569 0%, #334155 100%); /* @kind color */
+  --gradient-primary-active: linear-gradient(180deg, #334155 0%, #1e293b 100%); /* @kind color */
+
+  --gradient-primary-diagonal: linear-gradient(135deg, #64748b 0%, #475569 100%); /* @kind color */
+  --gradient-primary-diagonal-hover: linear-gradient(135deg, #475569 0%, #334155 100%); /* @kind color */
+
+  /* Auth / branding panel — deep navy diagonal */
+  --gradient-brand-panel: linear-gradient(145deg, #334155 0%, #1e293b 50%, #0f172a 100%); /* @kind color */
+
+  /* Subtle surface gradients */
+  --gradient-card: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); /* @kind color */
+  --gradient-panel: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); /* @kind color */
+}

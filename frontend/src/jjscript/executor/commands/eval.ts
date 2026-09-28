@@ -15,6 +15,7 @@ import { extractAttributeValues } from '../../../jjel/evaluator/modelContext';
 import { AMBIGUOUS_INSTANCES_KEY } from '../../../jjel/evaluator/context';
 import type { AmbiguousInstanceCandidate, AmbiguousInstanceInfo } from '../../../jjel/evaluator/context';
 import { store, LPointerTargetable } from '../../../joiner';
+import { selectExtentModels } from './evalExtent';
 
 // ============================================
 // EVAL COMMAND EXECUTOR
@@ -86,12 +87,42 @@ export async function executeEval(
 // CONTEXT BUILDING
 // ============================================
 
+/** Opzioni di `buildEvalContext`. Tutte facoltative: omettendole il contesto e' quello
+ *  di sempre, ed e' quello che console, JjScript e Jjodie ricevono. */
+export interface BuildEvalContextOptions {
+    /**
+     * Restringe l'ESTENSIONE a un solo modello M1 (R-VAL-16): il pool, e con lui tutto
+     * cio' che ne deriva — `variables.instances`, `instances`/`allInstances`/
+     * `instanceCount` delle shell, le istanze qualificate e nude legate per nome, la
+     * mappa delle ambiguita' — contiene le sole istanze di quel modello.
+     *
+     * Il resto del contesto NON cambia: le classi del metamodello e la risoluzione dei
+     * nomi restano di progetto. A coincidere con il perimetro validato e' l'estensione,
+     * cioe' l'insieme che una quantificazione attraversa (spec §8.2).
+     *
+     * Nasce dalla validazione definita dall'utente, dove una regola di cardinalita' come
+     * `(forall s in State.instances such that s.isInitial).size == 1` contava gli stati
+     * iniziali di TUTTE le macchine a stati del progetto e dichiarava violate due
+     * macchine sane. Misurato il 2026-09-09,
+     * `docs/discovery/harness/probe_2026-09-09_estensione_perimetro_validato.mts`.
+     */
+    extentModelId?: string;
+}
+
 /**
  * Build JjEL evaluation context from the active metamodel.
  * Converts L-layer proxy objects to plain JjelValue objects
  * using shallow conversion to avoid circular reference issues.
+ *
+ * `opts` e' facoltativo e il ramo senza opzioni e' identico a prima: i tre chiamanti
+ * storici — la console (`Console.tsx` via `executeEval`), i comandi `let` e `forall` di
+ * JjScript, e Jjodie (`jodieJjelContext.ts`) — non sono stati toccati e continuano a
+ * vedere l'estensione di progetto.
  */
-export function buildEvalContext(context: ExecutionContext): Record<string, JjelValue> {
+export function buildEvalContext(
+    context: ExecutionContext,
+    opts?: BuildEvalContextOptions,
+): Record<string, JjelValue> {
     const variables: Record<string, JjelValue> = {};
 
     const project = getProject(context);
@@ -104,7 +135,12 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
     // `allInstances` can be derived by filtering on `obj.instanceof.name`. The
     // DClass.instances pointer list is unreliable here (often doesn't reflect
     // newly-created model objects), so we compute from the M1 model side instead.
-    const m1models: any[] = (metamodel as any).instances || [];
+    // La restrizione dell'estensione agisce QUI, sul pool, e non a valle sul valore di
+    // ritorno: tutto cio' che segue deriva da `rawM1Objects`, quindi restringere a monte
+    // copre per costruzione i cinque posti in cui l'estensione ricompare, mappa delle
+    // ambiguita' compresa (R-VAL-16, `evalExtent.ts`). Le shell nascono gia' ristrette,
+    // e nessuna viene ricostruita: `self.instanceOf == State` regge per identita'.
+    const m1models: any[] = selectExtentModels<any>((metamodel as any).instances || [], opts?.extentModelId) as any[];
     const rawM1Objects: any[] = [];
     for (const m of m1models) {
         const objs = (m as any).allSubObjects || (m as any).objects || [];

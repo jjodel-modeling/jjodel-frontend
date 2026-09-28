@@ -3,7 +3,7 @@
   // tsconfig's `include: ["src"]`.
   //
   // Deliberately a separate project: adding "scripts" to the main include
-  // would change both the `npm run typecheck` baseline (33 errors) and the
+  // would change both the `npm run typecheck` baseline (14 errors) and the
   // build perimeter. Run with `npm run typecheck:scripts`.
   "extends": "../tsconfig.json",
   "compilerOptions": {
@@ -18,5 +18,7 @@
   "include": [
     "smoke/**/*.ts",
     "gates/**/*.ts"
-  ]
+  ],
+  // Gitignored chat and session probes are not part of the gate.
+  "exclude": ["**/_tmp_*"]
 }

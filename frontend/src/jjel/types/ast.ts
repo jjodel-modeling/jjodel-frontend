@@ -42,7 +42,8 @@ export type JjelExpression =
     | ExistsExpr
     | WithDoExpr
     | IndexAccessExpr
-    | ObjectLiteralExpr;
+    | ObjectLiteralExpr
+    | StateAccessExpr;
 
 // ============================================
 // LITERALS
@@ -311,6 +312,22 @@ export interface IndexAccessExpr extends JjelASTNode {
 }
 
 // ============================================
+// STATE ACCESS
+// ============================================
+
+/**
+ * State access: expr.[attr] (R-SIM-18, R-SIM-40). The path locates the element,
+ * the last segment is the attribute; `node.[attr]` is the presentation of the
+ * element the expression is attached to, recognized by syntax (R-SIM-42).
+ * Examples: self.[visits], self.target.[visits], model.[i], p.[tokens]
+ */
+export interface StateAccessExpr extends JjelASTNode {
+    type: 'StateAccess';
+    object: JjelExpression;
+    attribute: string;
+}
+
+// ============================================
 // COLLECTIONS
 // ============================================
 
@@ -371,5 +388,21 @@ export interface JjelParserError {
 
 export interface JjelParserResult {
     expression: JjelExpression | null;
+    errors: JjelParserError[];
+}
+
+/**
+ * An action: `<target> := <expression>` (R-SIM-17, R-SIM-40). Not an
+ * expression, so no evaluator ever meets an assignment: the target is a
+ * state access whose attribute is never `marked` or `tokens` (R-SIM-30).
+ */
+export interface JjelAction {
+    target: StateAccessExpr;
+    value: JjelExpression;
+    location?: ASTLocation;
+}
+
+export interface JjelActionParserResult {
+    action: JjelAction | null;
     errors: JjelParserError[];
 }

@@ -23,6 +23,11 @@ import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import { JjodelEvents } from '../../events/registry';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
+import { runValidationOnModel } from '../../model/validation/validationContext';
+import { publishValidationProblems } from './problems/validationToProblems';
+import { buildVertexResolver } from './problems/vertexResolver';
+import { buildValidationSignature, noteValidationRun, resetFreshness } from './problems/validationFreshness';
+import { useValidationFreshness } from './problems/ValidationFreshnessSync';
 // TODO: cleanup — `ValidationPill` is no longer rendered here (2026-08-26). The import is
 // dropped, the component is not: it is the only conformance summary in the codebase and
 // the aggregated Problems panel it defers to (WP2-D) is still to be built.
@@ -69,6 +74,11 @@ interface ToolbarProps {
     isMetamodel?: boolean;
     /** Open model id — resolves the model name shown in the identity block, flush right. */
     modelId?: string;
+    /** Il DGraph aperto sul canvas. Serve al solo comando Validate, per tradurre l'id di
+     *  un'istanza in quello del suo DVertex e accendere il pallino sul nodo (R-VAL-18):
+     *  il registro dei problemi e' chiavato per id di nodo React Flow, che e' il vertice.
+     *  Assente — nessun grafo aperto — le violazioni restano nella lista e sul rail. */
+    graphId?: string | null;
     editorMode?: 'flow' | 'classic' | 'split';
     hasViewpoint?: boolean;
     onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
@@ -234,6 +244,7 @@ function Toolbar({
     onDistributeV,
     isMetamodel = false,
     modelId,
+    graphId,
     editorMode,
     hasViewpoint = false,
     onEditorModeChange,
@@ -653,6 +664,92 @@ function Toolbar({
         return '';
     });
 
+    /**
+     * L'id del DModel su cui girare la validazione. Stessa risalita di `editorTitle`
+     * — `modelId` e' gia' il DModel nel caso comune, la risalita copre la tab aperta
+     * su qualcosa piu' in basso — ma restituisce l'id invece del nome, perche' il
+     * perimetro e' il MODELLO APERTO (R-VAL-14) e le regole si valutano sulle sue
+     * istanze.
+     */
+    /** La modalita' Advanced, letta come booleano: l'ambiente delle regole vive li'
+     *  (spec §7, progressive disclosure). */
+    const advancedMode = useSelector((state: any) => !!state.advanced);
+
+    const validationModelId = useSelector((state: any) => {
+        const lookup = state.idlookup || {};
+        let id: string | undefined = modelId;
+        for (let hops = 0; id && hops < 64; hops++) {
+            const e = lookup[id];
+            if (!e) return '';
+            if (e.className === 'DModel') return e.id || '';
+            id = e.father;
+        }
+        return '';
+    });
+
+    /**
+     * Il comando «Validate» (R-VAL, Step 3): esplicito, e nient'altro.
+     *
+     * Nessun debounce, nessuna rivalutazione automatica, nessun `AFTER_TRANSACTION`:
+     * il costo della rivalutazione totale va misurato prima di renderla automatica
+     * (spec §9), e finche' resta a comando quella misura non e' bloccante.
+     *
+     * Due uscite, e sono due cose diverse: le violazioni entrano nel registro dei
+     * problemi come voci, l'esito intero va alla superficie che dichiara i TRE numeri
+     * (R-VAL-14). Le non valutabili NON diventano voci del registro: sono un
+     * contatore.
+     */
+    /**
+     * L'ambiente di authoring delle regole (R-VAL, Step 4). Vive sul METAMODELLO, perche'
+     * una regola predica su una classe M2, e in modalita' Advanced, perche' e' materia da
+     * language designer (spec §7, progressive disclosure). Non e' nel rail: R-VAL-1 e
+     * R-VAL-11 lo escludono per decisione, non per mancanza di spazio.
+     */
+    const handleOpenRules = useCallback(() => {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.VALIDATION_RULES_OPEN, {
+            detail: { metamodelId: modelId ?? '', metamodelName: editorTitle },
+        }));
+    }, [modelId, editorTitle]);
+
+    /**
+     * LA dichiarazione di freschezza (R-VAL-18): una, accanto al comando che la produce,
+     * mai sul nodo. Senza di questa il ritiro dei pallini sarebbe un difetto — l'assenza
+     * di pallini sarebbe indistinguibile da un modello validato e pulito, che e' la
+     * malattia di R-VAL-14 e R-VAL-17 un piano piu' in la'.
+     */
+    const freshness = useValidationFreshness(validationModelId);
+
+    const handleValidate = useCallback(() => {
+        const result = validationModelId ? runValidationOnModel(validationModelId) : null;
+        if (!result) {
+            // «Non ho potuto guardare» non e' «va tutto bene»: si torna a «mai validato»
+            // e si ritirano le voci di un giro precedente, che non rispondono piu' di
+            // niente (R-VAL-18).
+            if (validationModelId) resetFreshness(validationModelId);
+        }
+        if (result) {
+            // Il risolutore si costruisce QUI, una volta per comando, sullo stato del
+            // momento: e' una fotografia di `idlookup` e non e' reattiva, quindi va
+            // ricostruita a ogni giro. Il `graphId` e' cosa dell'editor e arriva come
+            // prop; senza, il pallino sul canvas non si accende e le violazioni restano
+            // nella lista e sul rail (R-VAL-18).
+            const state = store.getState();
+            const resolveVertex = buildVertexResolver(state.idlookup, graphId);
+            publishValidationProblems(validationModelId, result.violations, resolveVertex);
+            // La firma si prende QUI, sullo stato che il giro ha guardato, e non al primo
+            // render successivo: fra la corsa e quel render c'e' una finestra, e una
+            // modifica caduta li' dentro non verrebbe mai vista (R-VAL-18).
+            noteValidationRun(
+                validationModelId,
+                result.violations.length,
+                buildValidationSignature(state.idlookup),
+            );
+        }
+        window.dispatchEvent(new CustomEvent(JjodelEvents.VALIDATION_RESULTS, {
+            detail: result ? { ...result, modelId: validationModelId, modelName: editorTitle } : null,
+        }));
+    }, [validationModelId, editorTitle, graphId]);
+
     // Close dropdown on click outside
     useEffect(() => {
         if (!notationOpen) return;
@@ -758,6 +855,76 @@ function Toolbar({
                         <i className="bi bi-trash" />
                     </button>
                 </div>
+            )}
+
+            {/* ── REGOLE DI VALIDAZIONE (R-VAL, Step 4) ──
+                Solo sui metamodelli e solo in Advanced: le regole si scrivono sulle
+                classi M2, ed e' materia da language designer. */}
+            {isMetamodel && advancedMode && !!modelId && (
+                <>
+                    <div className="toolbar-separator" />
+                    <div className="toolbar-group">
+                        <button
+                            className="toolbar-btn"
+                            onClick={handleOpenRules}
+                            title="Validation rules of this metamodel"
+                        >
+                            <i className="bi bi-list-check" />
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {/* ── VALIDATE (R-VAL, Step 3) ──
+                Solo sui modelli: le regole predicano sulle istanze M1, e su un
+                metamodello non c'e' niente da validare in questo senso. */}
+            {!isMetamodel && !!validationModelId && (
+                <>
+                    <div className="toolbar-separator" />
+                    <div className="toolbar-group">
+                        <button
+                            className="toolbar-btn"
+                            onClick={handleValidate}
+                            title="Validate the open model against the active rules"
+                        >
+                            <i className="bi bi-shield-check" />
+                        </button>
+                        {/* I tre stati sono distinti a vista, e «mai validato» non e'
+                            «pulito»: il verde arriva solo dopo un giro che ha guardato. */}
+                        {freshness.status === 'never' && (
+                            <span
+                                className="validation-freshness validation-freshness--never"
+                                title="This model has not been validated in this session. No dots means nothing has been checked."
+                            >
+                                <i className="bi bi-shield" aria-hidden="true" /> Not validated
+                            </span>
+                        )}
+                        {freshness.status === 'fresh' && (
+                            <span
+                                className={`validation-freshness validation-freshness--${freshness.violationCount > 0 ? 'violated' : 'clean'}`}
+                                title={freshness.violationCount > 0
+                                    ? 'Validated against the active rules. The dots on the canvas are the violations of this run.'
+                                    : 'Validated against the active rules: no violations.'}
+                            >
+                                <i
+                                    className={`bi ${freshness.violationCount > 0 ? 'bi-shield-exclamation' : 'bi-shield-check'}`}
+                                    aria-hidden="true"
+                                />{' '}
+                                {freshness.violationCount === 0
+                                    ? 'No violations'
+                                    : `${freshness.violationCount} ${freshness.violationCount === 1 ? 'violation' : 'violations'}`}
+                            </span>
+                        )}
+                        {freshness.status === 'stale' && (
+                            <span
+                                className="validation-freshness validation-freshness--stale"
+                                title="The model or the rules changed after the last run: the dots were withdrawn rather than left to age. Validate again."
+                            >
+                                <i className="bi bi-shield-slash" aria-hidden="true" /> Changed since validation
+                            </span>
+                        )}
+                    </div>
+                </>
             )}
 
             <div className="toolbar-separator" />

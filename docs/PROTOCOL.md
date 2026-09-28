@@ -1,14 +1,14 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.3 (2026-09-19) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
+Versione: 1.6 (2026-09-26) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
 Riga da mettere in testa a ogni prompt Claude Code:
 
 ```
-Protocollo: docs/PROTOCOL.md — clausole P1..P15 applicabili (tutte salvo deroga esplicita nel prompt).
+Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 ```
 
 Le deroghe si scrivono così: `Deroga: P4 non si applica (motivo: ...)`.
@@ -88,9 +88,21 @@ Se uno smoke fallisce, il commit resta ma l'hard stop riporta il fallimento in c
 
 Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerarchia visiva e comportamento percepito.
 
+**The visual checklist, amended 2026-09-26 by RC-23.** The numbered visual steps of a prompt (its §11.5) are a
+checklist that the project chat runs in the built-in browser of the desktop app, against the lane's dev server on
+the Mac. Each item is read from the DOM or the console: positions, presence, texts, button states. A screenshot
+is never the evidence. Screenshots in light and dark are attached for Alfonso as a record. The browser profile is
+empty and separate from Alfonso's, so the prompt names the console script or the exported file that builds each
+fixture; a fixture is never assumed to exist. The log entry names the source in `Smoke visivo`, in the form
+`passato — chat, unattended, <n>/<n>`. Alfonso's GO stays mandatory on critical-zone lanes, on the items a prompt
+marks as perceptual judgements, and on every item the chat could not close for a technical reason, which counts
+as failed, not skipped. Measurement period: until 2026-10-03 every unattended checklist is followed by Alfonso's
+GO on every lane, with the screenshots and measures in hand. The sampled GO starts after that date, on the data
+(RC-15).
+
 ## P9 — Prompt log
 
-Al termine di ogni task, aggiungi un'entry in testa a `docs/claude-code-log.md` (newest-first per giorno, R-RAIL-45). Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`.
+Al termine di ogni task, aggiungi un'entry in testa a `docs/claude-code-log.md` (newest-first per giorno, R-RAIL-45). Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`. Il ripiegamento delle inbox e la rotazione si eseguono con `npm run log:rotate -- --fold --rotate --write` da `frontend/`, in corsia esclusiva (RC-12); sopra le 40 entry `check:docs` è rosso. Le entry che aspettano in `docs/log-inbox/*.md` sono verificate da `check:docs` con le regole del log attivo, e il ripiegamento si rifiuta (exit 1, niente scritto) di spostare una entry che non le passa: nessuna entry arriva al log o all'archivio senza lint.
 
 Formato:
 
@@ -111,11 +123,25 @@ Formato:
 
 La semantica dei campi di autovalutazione, incluse le regole di compilazione di `Corregge` e `Causa` e la tassonomia dei valori ammessi, è definita in `CLAUDE.md` §21.3. Questo file non la duplica. Il blocco di formato qui sopra è verificato byte a byte contro `CLAUDE.md` §21.2 da `npm run check:docs`.
 
+A **ticket** is an entry of its own type, for a finding that has to be found on its own and outlives the lane that made it. The heading is `## YYYY-MM-DD — ticket: short description` (the colon form, from 2026-09-24) and the fields are four, not twelve:
+
+```
+## YYYY-MM-DD — ticket: short description
+**Ticket**: the finding, in one or more lines
+**Priority**: high | medium | low
+**Found in**: P-YYYY-MM-DD-HHmm | C-YYYY-MM-DD-HHmm
+**Detail**: <path of the document that holds the evidence>   (optional)
+```
+
+A ticket carries no `Corregge`, `Causa`, `Regressions`, `Out-of-scope changes`, `Layer Impact Report`, `Smoke visivo` or `Prompt document name`: they measure a task. It has no status either: the log is add-only, so closure is read from the entry of the lane that closes it. It counts toward the 40 entries and rotates by position, verbatim, like any other. The paragraph `**Ticket** (` after the last field of a task entry stays legal and is not linted. `npm run check:docs` lints the entries waiting in `docs/log-inbox/*.md` by the same rules as the active log, and `npm run log:rotate -- --fold` refuses to fold an inbox entry that would fail them.
+
 Il log non sostituisce i commit message, e il discovery report non sostituisce il log: sono tre artefatti distinti.
 
 A corsie parallele, `docs/claude-code-log.md` si tocca solo nella §6.1 di chiusura batch, da una sessione sola a repo fermo. Ogni corsia scrive la propria entry in `docs/log-inbox/<lane>.md`; chi chiude il batch le sposta nel log verbatim e cancella l'inbox.
 
 RC-13-bis. Il ripristino di un file tracciato si fa **solo** con `git checkout HEAD -- <path>`. Nessun backup del working tree su disco, nessun file di appoggio in `/tmp` riusato fra sessioni, nessun `git stash`: sono i tre modi in cui il lavoro di un'altra corsia e' stato perso o sovrascritto, tre incidenti della stessa classe in due batch (uno `stash` incrociato, un `log-backup.md` stale, un `cp` da `/tmp` di job che ha sovrascritto il log con una copia pre-rotazione).
+
+Emendamento del 2026-09-21. `<path>` nomina file, mai `.` e mai una directory: ripristinare l'albero intero cancella il lavoro non committato di tutte le corsie che lo condividono. Sono la stessa classe di incidente, e quindi vietati su albero condiviso, `git reset --hard`, `git restore` con `.` o con una directory (anche con `--staged`, che scarta lo staged altrui), `git checkout -- .` e `git clean`.
 
 ## P10 — Dove vivono i documenti
 
@@ -197,6 +223,12 @@ Piu' sessioni lavorano sullo **stesso working tree** nello stesso momento. Non e
 limite: e' la condizione normale di questo repo, e ogni regola qui sotto nasce da un
 incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/decisions.md`.
 
+**Amended 2026-09-26 by RC-24.** For lanes launched under P16 the concurrency limit is one worktree and one
+branch per lane, merges one at a time in the order fixed at launch, and the three checks of RC-22 before the
+launch. It replaces the limit RC-24 quotes, «at most two sessions on the shared tree on disjoint files», which
+this clause never wrote down; its nearest written source is `docs/sessioni/claude_sessione_2026-08-05_5.md:50`.
+The rules below still bind every tree that hosts more than one session.
+
 - **Una corsia per giro.** Un giro chiude il perimetro che il suo prompt dichiara e nient'altro.
   Il lavoro di un'altra corsia che compare in albero a meta' sessione non e' un invito ad
   assorbirlo: si constata e si lascia dov'e'.
@@ -233,7 +265,30 @@ incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/deci
   Prompt-ID, or with none, does not act on it: it replies with its own ID and the one it received,
   and stops. A session does not relay messages to another session. Measured 2026-09-17: a Phase 2
   GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
-  message carried a scope change that nobody had written.
+  message carried a scope change that nobody had written. Amended 2026-09-26 by RC-20 and RC-21: every final
+  message of a session (hard stop, question, closing report) ends with one line
+  `Outcome: done | hard-stop | question | blocked`, and every question that has a recommendation carries it in
+  one line of the form `Recommended: <one line>`. The chat reads those two lines, not the prose around them
+  (P16).
+
+- **Every prompt declares its lane.** The header of a prompt in `docs/prompts/` carries `Lane: fast`
+  or `Lane: full (<trigger>)`, the trigger being one of RC-3's four: critical zone, migration, more than
+  3 files, a changed exported interface. The fast lane is the default; a full lane without a named
+  trigger is a defect of the prompt, and the session says so before starting (RC-17).
+- **Every prompt file carries a Status line, flipped once, in the lane's closure commit.** The header
+  of a prompt in `docs/prompts/` holds `Status: da eseguire`. After its code commit, the lane writes the
+  Status flip, its log or inbox entry and the visual-check line into its worktree and does not commit
+  them. One docs commit, the closure commit, carries all three. For a lane with a human visual check it
+  follows Alfonso's GO, and the line reads
+  `Status: eseguito <YYYY-MM-DD> · lane <name> · <sha> · verifica visiva passata <YYYY-MM-DD>` (or
+  `fallita`). For a lane without one (harness, docs) it follows the code commit at once, and the line ends
+  at the sha. The sha is the last code commit of the lane (the report commit for a docs-only lane). A
+  correction before the closure is an edit, not a commit. If another lane shares the tree and a file of
+  the closure commit already holds that lane's uncommitted change, stop and ask. No hook and no skill
+  flips the line unasked. Measured 2026-09-21: 9 of 66 September prompts carried the line, in two forms,
+  and no normative file stated the practice. Measured 2026-09-25: the two-flip form cost up to five docs
+  commits after a single code commit (RC-17, memo
+  `docs/ratifiche/claude_2026-09-25_1015_memo_harness_recalibration.md`).
 
 ## P14 — Worktrees and cherry-picks
 
@@ -252,13 +307,40 @@ and the cherry-pick loop then started in the wrong tree. It was aborted, no dama
 - Never move a ref (`git update-ref`, `git branch -f`) while a worktree has it checked out.
 - Never chain a `cd` that can fail in front of a destructive loop. Assert the branch with
   `git rev-parse --abbrev-ref HEAD` in the target tree before the first pick.
-- A tree without `node_modules` (such as `/Users/alfonso/jjodel-release`) can run the gates through a
-  temporary symlink to `~/jjodel/frontend/node_modules`, removed afterwards. `git status` in that
-  tree must be empty before and after.
+- `~/jjodel-release/frontend/node_modules` and `~/jjodel-sim/frontend/node_modules` are permanent
+  symlinks to `~/jjodel/frontend/node_modules`, part of the setup, and a lane never removes them. A
+  tree that has none (today `~/jjodel-open`, `~/jjodel-gate`) can run the gates through a temporary
+  symlink that the lane creates, names in its report and removes when done. Before removing a
+  symlink, the lane checks that it did not exist when the lane started. `git status` in that tree
+  must be empty before and after.
+- Each tree keeps its own Vite cache in `frontend/.vite-cache` (`cacheDir` in `vite.config.ts`). A
+  lane never writes, deletes or rebuilds another tree's cache, and starts a dev server only from its
+  own tree, on a port no other tree is using (`lsof -nP -iTCP -sTCP:LISTEN`). Measured 2026-09-25: a
+  lane removed the permanent symlink of `~/jjodel-release`, and a discovery rewrote the shared
+  cache; 3001 served a blank page.
 - Choose the positive control of a verify entry at the time of the entry, and measure its signal
   with the same command (§5). A file that differed between the two branches in an earlier entry
   may no longer differ, and a file an earlier entry called identical may differ. Do not inherit
   either claim from the log.
+
+**Reintegration of a branch.** The rules above are for the single fix. A branch that diverged on
+more than one front (`validation-skeleton` on 2026-09-19: 261 commits, 8 code fronts, 10
+conflicting files) is reintegrated by one merge commit, `--no-ff`, on these conditions (RC-14,
+`docs/decisions.md`):
+
+- A gate report in `docs/discovery/` exists and is cited in the merge body.
+- Semantic conflicts are resolved on the branch before the merge, so that the merge itself
+  resolves text only.
+- The merge commit is the one admitted exception to RC-13 (docs and code in one commit) and
+  declares it in its body.
+- The log conflict is resolved by union, and the log is rotated by the exclusive lane of P13 in
+  the next commit, with Check D red in between and declared (RC-11).
+- The branch is pushed before the trunk, so both parents of the merge are public.
+- A squash is never used: it erases the `Model:` and `Co-Authored-By` trailers and the shas the
+  log cites.
+
+P14 was written for the single-fix case (2026-09-14). A rule that needs a derogation the first
+time it meets a real case has a gap, so the rule is amended, not derogated.
 
 ## P15 — Where the rules live
 
@@ -282,6 +364,69 @@ simulator today is following a different set of rules from this branch's.
 - **`master` has no `CLAUDE.md`, and that is measured, not decided.** It is an open question for
   Alfonso. Do not create one there, and do not treat `master` as inside the development flow on
   your own authority.
+
+## P16 — Orchestrated lanes
+
+Written 2026-09-26 from RC-20, RC-21 and RC-22 (`docs/decisions.md`, memo
+`docs/ratifiche/claude_ratifiche_2026-09-26_orchestrated_lanes.md`). Three message flows of a lane cross between
+the project chat and Claude Code: the prompt to the session, the hard stop back to the chat, the GO to the
+session. Until this clause each was a paste by Alfonso; from here each is an operation of the chat. Two human
+gates stay: the ratification of a decision, and the visual GO, on every lane until 2026-10-03 and by sampling
+after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequence is in `docs/HARNESS-DOCS.md` §7.
+
+- **Launch and resume (RC-20).** The chat starts a lane from its committed prompt file with
+  `frontend/scripts/lane-run.mjs start <worktree> <prompt-file>`, run by an absolute node
+  (`~/.local/bin/node`), and sends the GO and every later message to the same session with
+  `lane-run resume <Prompt-ID> <message-file>`. A session started without a resume is new, so the `/clear` of a
+  prompt is implicit. `lane-run` runs `claude -p` in bypass mode (RC-19) and in the worktree recorded at start: a
+  resume runs in the caller's directory, not the session's (measured 2026-09-26,
+  `docs/discovery/discovery_2026-09-26_orchestrated_lanes_harness.md` §5). Its logs live in
+  `~/.jjodel-lanes/<Prompt-ID>/`, outside every tree.
+- **Prompt path.** `lane-run start` reads a relative `<prompt-file>` from `<worktree>`, so the chat passes
+  `docs/prompts/<file>.md`, never a path relative to its own directory (measured 2026-09-27: `../docs/...` from
+  `frontend/` fails with `no prompt file`).
+- **Foreground gates.** A `-p` session ends its turn when the last foreground command returns; a gate launched as
+  a background task is lost with the turn and the session exits without its `Outcome` line (measured 2026-09-27,
+  `P-2026-09-27-0120`). Every gate runs in the foreground; a prompt may still repeat it.
+- **lane-run v2 (`P-2026-09-27-1035`).** Five additions for the chat's side, one line each:
+  - `merge <branch> --into <trunk>` from the trunk's worktree, `merge --trunk-into <branch>` from the branch's (RC-14): measures the merge and renders its prompt from `frontend/scripts/lane-templates/` with a fresh Prompt-ID; `--launch` commits it alone and starts it, refused on a conflict the union rule does not cover, a governance file changed on the branch, or, into the trunk, a code file changed on both sides or a branch prompt not flipped.
+  - `resume <Prompt-ID> --text "<message>"` or `resume <Prompt-ID> -` (stdin) beside the message file, the text kept as `msg-<n>.md` in the lane folder; `go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>]` sends the standard GO.
+  - `probe <worktree> <probe.ts> --port <n>` starts vite on its own port (never 3001, never a busy one), runs the probe with `npx tsx`, logs it with `EXIT=` in the lane folder, stops only the vite it started and exits with the probe's code.
+  - Two fixes: `start` tries the prompt path as given, then relative to the worktree (so the bullet above no longer binds the chat to `docs/prompts/...`); an `Outcome:` line with a suffix after the word parses, one naming no outcome reads `unparsed: <line>`; `status --all` lists every lane in one table.
+  - `wait <Prompt-ID>` or `wait --any <id,id,...>` polls every 2 s: exit 0 both when a lane ends, with its status, and at the deadline, with a `timeout:` line, `--max` at most 170 s (the chat's shell call ends near 180 s).
+- **Merge prompt and governance go-ahead (`P-2026-09-27-1440`).** `merge` renders its prompt into
+  `~/.jjodel-lanes/pending/`, and only a `--launch` that passes every refusal moves it into `docs/prompts/`, commits
+  it and starts it; not launched or refused, it prints a `by hand:` line with the cp, add, commit and start of that
+  launch, so a rendered prompt never sits untracked in the trunk tree. `--launch --governance-goahead`, passed by
+  the chat only after Alfonso's yes in chat (RC-26), lifts the refusal for a governance file (`CLAUDE.md`,
+  `AGENTS.md`, `docs/PROTOCOL.md`, `.claude/settings.json`) changed on the branch and no other, the prompt's
+  Findings and the commit body recording the yes; without `--launch` it lifts nothing and reaches only the commit
+  of the `by hand:` line.
+- **lane-run v3 (`P-2026-09-27-2330`, 2026-09-28).** Five additions, one line each; the measures behind them are
+  in `docs/discovery/discovery_2026-09-27_lane_efficiency.md`.
+  - `merge ... --direct` merges without a session when every precondition holds, and otherwise falls back, saying why: launched with `--launch`, parked without. RC-14 still decides what cannot go direct: a conflict outside the union files, a union hunk that edits, code changed on both sides, a governance file or an open prompt on the branch, a failed probe, a dirty tree, a running lane. It tags `pre-<branch>` (RC-31), runs the template's gates in a detached worker and ends at `Outcome: hard-stop` for the chat's visual check, or at `Outcome: blocked` on a red gate, the merge commit left in place.
+  - `go <Prompt-ID> --smoke "<what the chat verified>"` on a direct merge writes the closure itself: one docs commit with the Status flip and the P9 entry in the inbox the branch writes to (`--front <name>` when it writes several). Every lane closes with one docs commit (RC-17, 2026-09-25): a merge session writes the P9 entry of the merge in it, from 2026-09-28.
+  - `chain <worktree> <prompt>... [--merge-after]` runs lanes one after the other under a detached supervisor, the next only on `Outcome: done` with exit 0, so it suits lanes without a visual check; `status` and `wait` take the chain id, and `chain --stop` stops it after the running lane.
+  - The model follows the activity (RC-32, 2026-09-28, amending RC-16): `lane-run` picks a heavy or a light tier from the prompt's header and DOVE and from the command, prints it and keeps it in `tier.txt`; `--tier` overrides it where the rule does not force heavy.
+  - A discovery report opens with `## 0. Answer in brief`, at most 40 lines: the answer, the recommendation, the decisions awaiting Alfonso, and the questions with their `Recommended:` lines; the rest is appendix (2026-09-28). `lane-run status` warns when the brief of a report the lane wrote is missing, not the first section, or longer.
+- **The chat reads one line.** The final message of a session ends with the `Outcome` line of P13, and the chat
+  acts on that line through `lane-run status <Prompt-ID>`, never on the prose. A `question` is a hard stop: the
+  session writes it and exits, the chat answers it or takes it to Alfonso, then resumes the session.
+- **Recommended answers (RC-21).** A question carrying one unconditional `Recommended:` line is answered with it
+  by the chat, within the limits of RC-21 and with the record it requires. The lane's closing report lists those
+  adoptions first.
+- **Refusals.** In a `-p` session an `ask` cannot be answered and is a refusal with its reason (measured
+  2026-09-26 for a hook `ask`, same report §7). A critical-zone lane is resumed only with the Layer Impact Report
+  and the explicit go-ahead in the resumed text, or is opened by Alfonso by hand.
+- **Time limit.** A session still running after 90 minutes, or after the limit its prompt declares, is `blocked`:
+  the chat reports it and does not resume it on its own.
+- **Rework.** After a failed visual GO the chat resumes the same session with a new Phase 2 prompt that
+  `Corregge` the old one. When the cause is in the analysis, the chat says so and opens a new discovery, declared.
+- **Before a merge.** A session that reports `done` while the Status line of its prompt is not flipped is an
+  inconsistency the chat reports before any merge.
+- **Parallel by default (RC-22).** Two lanes start together when the three checks of RC-22 pass. When one fails,
+  the chat names it and queues the lane with its merge position fixed. Semantic conflicts are resolved on the
+  branch first (RC-14).
 
 ---
 

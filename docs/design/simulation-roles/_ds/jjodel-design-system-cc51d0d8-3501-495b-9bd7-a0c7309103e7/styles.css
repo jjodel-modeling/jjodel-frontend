@@ -1,0 +1,42 @@
+/* ============================================================
+   JJODEL DESIGN SYSTEM — GLOBAL ENTRY POINT
+   Consumers link THIS file. It is an @import manifest only —
+   every token, font, and the body base lives in the files below.
+
+   Jjodel — open-source model-driven engineering for research
+   and education. Visual register: ultra-minimal slate, dense,
+   precise, calm. Built by Università dell'Aquila, Mälardalen
+   University, and Fondazione Bruno Kessler.
+   ============================================================ */
+
+/* Fonts first (CDN @font-face) */
+@import url("tokens/fonts.css");
+
+/* Foundations */
+@import url("tokens/colors.css");
+@import url("tokens/entities.css");
+@import url("tokens/typography.css");
+@import url("tokens/spacing.css");
+@import url("tokens/radius.css");
+@import url("tokens/shadows.css");
+@import url("tokens/transitions.css");
+@import url("tokens/gradients.css");
+
+/* ---- Base element styles ---- */
+* { box-sizing: border-box; }
+
+html { font-size: 16px; }
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}

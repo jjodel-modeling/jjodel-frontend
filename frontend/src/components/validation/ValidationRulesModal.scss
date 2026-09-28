@@ -1,0 +1,305 @@
+/* Ambiente di authoring delle regole di validazione (R-VAL, Step 4).
+ *
+ * Nessuna variabile CSS definita qui: solo token di `styles/tokens/` (regola 28), nessun
+ * token legacy (regola 27). Griglia 8px, icone Bootstrap, cyan mai come sfondo di un
+ * bottone. La forma segue `ValidationResultsModal.scss`, che a sua volta segue
+ * `ImportSummaryModal.scss`: e' la stessa famiglia di superfici. */
+
+.validation-rules-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    /* Sopra il rail delle Properties, che e' a 900 e con il solo `--z-modal` restava
+     * comunque davanti (misurato: il fondale calcolava 1050 e il pixel mostrava
+     * l'albero sopra). Il portale su `document.body` e questo livello vanno insieme:
+     * l'uno toglie il modale dall'albero dell'app, l'altro lo mette sopra a tutto
+     * quello che non e' un avviso. */
+    z-index: var(--z-alert, 10000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4, 16px);
+}
+
+.validation-rules {
+    background: var(--color-bg-secondary, #fff);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: var(--shadow-md);
+    width: 1080px;
+    max-width: 100%;
+    height: 640px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--color-text-primary);
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        padding: var(--space-4, 16px) var(--space-4, 16px) var(--space-3, 12px) var(--space-5, 20px);
+        border-bottom: 1px solid var(--color-border-secondary);
+        flex-shrink: 0;
+    }
+
+    &__header-icon {
+        font-size: 20px;
+        line-height: 1;
+        color: var(--color-text-secondary);
+    }
+
+    &__title {
+        flex: 1;
+        margin: 0;
+        font-size: var(--text-base, 15px);
+        font-weight: var(--font-semibold, 600);
+    }
+
+    &__close {
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        padding: var(--space-1, 4px);
+        line-height: 1;
+        border-radius: var(--radius-sm, 4px);
+
+        &:hover { color: var(--color-text-primary); background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+    }
+
+    /* Tre colonne: le classi, le regole della classe, il corpo della regola. E' la forma
+     * che la spec §7 descrive, nella versione piu' piccola che cammina. */
+    &__body {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 220px 260px minmax(0, 1fr);
+        min-height: 0;
+    }
+
+    &__classes,
+    &__rules {
+        border-right: 1px solid var(--color-border-secondary);
+        overflow-y: auto;
+        min-height: 0;
+        padding-bottom: var(--space-3, 12px);
+    }
+
+    &__editor {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
+    }
+
+    &__pane-title {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        padding: var(--space-3, 12px) var(--space-4, 16px) var(--space-2, 8px);
+        font-size: var(--text-xs, 12px);
+        font-weight: var(--font-semibold, 600);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--color-text-secondary);
+        position: sticky;
+        top: 0;
+        background: var(--color-bg-secondary, #fff);
+    }
+
+    &__new {
+        margin-left: auto;
+        border: 1px solid var(--color-border-secondary);
+        background: transparent;
+        color: var(--color-text-primary);
+        border-radius: var(--radius-sm, 4px);
+        padding: 2px var(--space-2, 8px);
+        font-size: var(--text-xs, 12px);
+        text-transform: none;
+        letter-spacing: 0;
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+    }
+
+    &__empty {
+        margin: 0;
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+        list-style: none;
+    }
+
+    &__class-list,
+    &__rule-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    &__class,
+    &__rule {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: var(--space-2, 8px) var(--space-4, 16px);
+        font-size: var(--text-sm, 13px);
+        color: var(--color-text-primary);
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+    }
+
+    &__class--selected,
+    &__rule--selected {
+        background: rgba(14, 165, 233, 0.08);   /* cyan sottile, mai come sfondo pieno */
+        font-weight: var(--font-medium, 500);
+    }
+
+    &__class-name,
+    &__rule-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__class-count {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+    }
+
+    &__rule-off {
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm, 4px);
+        padding: 0 4px;
+    }
+
+    /* Le ereditate: distinte a colpo d'occhio, e non cliccabili. Il grigio piu' chiaro e
+     * il corsivo dicono «non e' tuo da modificare qui» prima di qualunque etichetta. */
+    &__inherited {
+        margin-top: var(--space-3, 12px);
+        border-top: 1px dashed var(--color-border-secondary);
+        padding-top: var(--space-2, 8px);
+    }
+
+    &__inherited-title {
+        padding: 0 var(--space-4, 16px) var(--space-1, 4px);
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+    }
+
+    &__rule--inherited {
+        cursor: default;
+        color: var(--color-text-secondary);
+        font-style: italic;
+
+        &:hover { background: transparent; }
+    }
+
+    &__rule-from {
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-tertiary, var(--color-text-secondary));
+        white-space: nowrap;
+    }
+
+    /* Il riquadro della regola */
+    &__form {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        height: 100%;
+        padding: var(--space-3, 12px) var(--space-4, 16px) var(--space-4, 16px);
+        gap: var(--space-2, 8px);
+    }
+
+    &__form-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        flex-shrink: 0;
+    }
+
+    &__label {
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+        width: 60px;
+        flex-shrink: 0;
+    }
+
+    &__input {
+        flex: 0 1 240px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-bg-primary, #fff);
+        color: var(--color-text-primary);
+        padding: var(--space-1, 4px) var(--space-2, 8px);
+        font-size: var(--text-sm, 13px);
+
+        &:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
+        &--wide { flex: 1 1 auto; }
+    }
+
+    &__switch {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+        margin-left: auto;
+    }
+
+    &__delete {
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        padding: var(--space-1, 4px);
+        border-radius: var(--radius-sm, 4px);
+
+        &:hover { color: var(--color-error); background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+    }
+
+    /* Il contesto dichiarato, sempre sopra il corpo. */
+    &__context {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+        background: var(--color-bg-tertiary);
+        border-radius: var(--radius-sm, 4px) var(--radius-sm, 4px) 0 0;
+        padding: var(--space-1, 4px) var(--space-2, 8px);
+        flex-shrink: 0;
+    }
+
+    &__monaco {
+        flex: 1;
+        min-height: 120px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 0 0 var(--radius-sm, 4px) var(--radius-sm, 4px);
+        overflow: hidden;
+    }
+
+    &__hint {
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+        flex-shrink: 0;
+
+        code {
+            font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+            background: var(--color-bg-tertiary);
+            border-radius: var(--radius-sm, 4px);
+            padding: 0 4px;
+        }
+    }
+}

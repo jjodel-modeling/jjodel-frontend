@@ -191,6 +191,7 @@ export class EcoreParser{
             parsedElements = isMetamodel ? EcoreParser.parseM2Model(parsedjson, filename) : EcoreParser.parseM1Model(parsedjson, undefined, filename);
             console.warn("parse.result D", parsedElements);
             this.LinkAllNamesToIDs(parsedElements);
+            this.restoreJjodelTypes(parsedElements);
             this.fixNamingConflicts(parsedElements);
         } finally {
             Constructors.paused = false;
@@ -261,6 +262,9 @@ export class EcoreParser{
         const typeprefix = "#//";
         for (let shortkey in ShortAttribETypes) {
             if (shortkey === ShortAttribETypes.EVoid) continue;
+            // Never an eType in an .ecore (they travel as an annotated EString, R-SIM-45): kept out of the
+            // `#//<name>` map, so a user class called Action or Expression keeps its references.
+            if (shortkey === ShortAttribETypes.Expression || shortkey === ShortAttribETypes.Action) continue;
             let shortetype: ShortAttribETypes = (ShortAttribETypes as GObject)[shortkey];
             let longetype: AttribETypes = toLongEType(shortetype);
             let dClassType: DClassifier = Selectors.getPrimitiveType(shortetype, state);
@@ -688,6 +692,33 @@ export class EcoreParser{
      * consuma. Nessun typed element viene toccato: il contratto per cui il parser
      * costruisce con `type === undefined` resta quello, ed e' pinnato altrove.
      */
+    /** 'Expression' or 'Action' when `json` is the annotation `jjodel`/`type` naming one of them (R-SIM-45), else null. */
+    private static jjodelTypeOf(json: Json): string | null {
+        if (!json || this.read(json, ECoreAnnotation.source, '') !== 'jjodel') return null;
+        const details: Json[] = this.getDetails(json);
+        if (details.length !== 1 || this.read(details[0], ECoreDetail.key, '') !== 'type') return null;
+        const value: string = this.read(details[0], ECoreDetail.value, '');
+        return value === ShortAttribETypes.Expression || value === ShortAttribETypes.Action ? value : null;
+    }
+
+    /**
+     * R-SIM-45: an EString attribute that carried the `jjodel`/`type` annotation gets its primitive back.
+     * Runs after `LinkAllNamesToIDs`, which has turned the EString eType into the primitive's id. An
+     * annotation on anything but an EString leaves the type as the file says, with a warning.
+     */
+    private static restoreJjodelTypes(parsedElements: DModelElement[]): void {
+        const state: DState = store.getState();
+        const estring = Selectors.getPrimitiveType(ShortAttribETypes.EString, state)?.id;
+        for (const d of parsedElements) {
+            const jjodelType: string | undefined = (d as GObject).__jjodelType;
+            if (!jjodelType) continue;
+            delete (d as GObject).__jjodelType;
+            const primitive = Selectors.getPrimitiveType(jjodelType as ShortAttribETypes, state);
+            if (primitive && estring && (d as GObject).type === estring) (d as GObject).type = primitive.id;
+            else Log.ww('the jjodel/type annotation names ' + jjodelType + ' on an attribute that is not an EString: type left as the file says', { d });
+        }
+    }
+
     static parseDAnnotation(parent: DModelElement, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json || !parent) { return generated; }
@@ -923,7 +954,13 @@ export class EcoreParser{
         //dObject.name = this.read(json, ECoreNamed.namee, 'attr_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         const annotations: Json[] = this.getAnnotations(json);
-        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
+        for (let child of annotations) {
+            // R-SIM-45: the annotation that names a Jjodel primitive is consumed here, never kept as a
+            // DAnnotation; `restoreJjodelTypes` gives the type back once the names are linked.
+            const jjodelType = this.jjodelTypeOf(child);
+            if (jjodelType) { (dObject as GObject).__jjodelType = jjodelType; continue; }
+            EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
+        }
         /// *** specific start *** ///
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);

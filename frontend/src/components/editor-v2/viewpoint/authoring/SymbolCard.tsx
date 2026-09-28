@@ -32,7 +32,11 @@ export const SymbolCard: React.FC<SymbolCardProps> = ({ view }) => {
     const notations = [...new Set(matches.map((m) => m.notation))].join(' · ');
     const tail = matches.length > 1 ? matches.slice(1).map((m) => m.label).join(', ') : '';
     // Border color is scalar in the schema (cf. the Border section of the panel).
-    const borderColor = shape?.border?.color ?? DEFAULT_BORDER_COLOR;
+    // Scalar or the default (slice 2): a conditional colour has no single hex to show,
+    // the same guard the modal applies to its preview swatch.
+    const borderColor = typeof shape?.border?.color === 'string' && shape.border.color !== ''
+        ? shape.border.color
+        : DEFAULT_BORDER_COLOR;
 
     return (
         <section className="properties-tab properties-panel symbol-card">
