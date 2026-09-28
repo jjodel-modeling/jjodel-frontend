@@ -15,6 +15,7 @@
  * - R5: a right side that folds to a non-scalar, or to a value outside the
  *   target's domain.
  * - R6: a guard that is a `.[x]` read of a non-boolean declaration.
+ * - R7: an `else` with no sibling (R-SIM-87, amends R-SIM-31(1)), always true.
  *
  * R-SIM-88 (P-2026-09-28-0034) adds, beside the rules, what the bridge asks
  * before a step: `inputReads`, the input reads of an expression folded as R2
@@ -39,10 +40,10 @@ import type { SimSnapshot } from './guardContext';
 import { checkGuardSubset } from './subsetChecker';
 import { inDomain } from './netStep';
 import type { CompiledAction, FoldedTarget } from './actionEvaluator';
-import type { ActionSite, CompiledNet, Domain, InputRead, SimValue } from './netTypes';
+import type { ActionSite, CompiledNet, Domain, InputRead, NetTransition, SimValue } from './netTypes';
 
 /** The reasons of a rule, a subset of the bridge's `CompileDefect['reason']`. */
-export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value' | 'read-only';
+export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value' | 'else-alone' | 'read-only';
 
 export interface StcDefect {
     readonly reason: StcDefectReason;
@@ -247,6 +248,17 @@ export function checkActionValue(c: CompiledAction, site: ActionSite, target: Fo
         reason: 'value', detail: `${target.attr} of ${scope.nameOf(target.element)} would be ${String(v.value)}, outside its domain`,
         short: `${target.attr} = ${String(v.value)}, outside its domain`,
     };
+}
+
+/**
+ * R7 (R-SIM-87, amends R-SIM-31(1)): an `else` with no sibling, no other
+ * transition with its preset and its triggers. Its guard, the negation of an
+ * empty disjunction, is always true; the run keeps it so, and the defect only
+ * says it. `elseOf` is `null` on a transition that is not an `else`.
+ */
+export function checkElse(t: Pick<NetTransition, 'elseOf'>): StcDefect | null {
+    if (t.elseOf === null || t.elseOf.length > 0) return null;
+    return { reason: 'else-alone', detail: 'else with no sibling: no other transition has its preset and its triggers, so it is always true', short: 'else, no sibling' };
 }
 
 /** R-SIM-88: the defect of an assignment to an input, whichever way the target is known. */

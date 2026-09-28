@@ -633,6 +633,32 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Rollback tag `pre-sim-badge-pill` on `cf39cdbcb` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1423/result.json`.
 **Prompt document name**: 2026-09-28 14:23
 
+## 2026-09-28 — feat: an else with no sibling is a defect at Reset, R7 (P-2026-09-28-0100)
+**Prompt**: the chat's GO for ticket 2 of `claude_2026-09-28_0100_prompt_sim_bridge_off_else.md`, after Alfonso's «sì» (R-SIM-87, `docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md` point 2): fast-forward `sim-bridge-off-else` to the trunk tip, then rule R7 in `stcChecks.ts` with one new `CompileDefect.reason` literal, the run unchanged; no merge, stop at hard-stop.
+**Files touched**: fast-forward to `e54999b0b` (`git merge --ff-only alfonso-frontend-jjtl`). Code `d1df46ab4`: `frontend/src/model/simulation/stcChecks.ts`, `__tests__/stcChecks.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`. Docs, this commit: this entry, the Status of the prompt file. `docs/decisions.md` untouched (R-SIM-87 is the chat's). Probes `_tmp_bridge_*`, gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — baseline at `e54999b0b`: typecheck exit 2, 14 errors; vitest on `model/simulation`, `editor-v2/sim`, `editor-v2/problems` 797 passed, 31 files. On `d1df46ab4`: typecheck 14, set identical; 802 passed (+5); `npm run build` exit 0, 50 warning lines; `check:docs` 4/4. Red first: 4, the variant A control green before and after. Bench 5/5 killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3033 (DOM readings, not the RC-23 chat checklist): the four scenes and their Reset defect lines identical to this lane's first run, itself equal to P-2026-09-28-0023
+**Notes**: The defect is a guard defect named by the edge that says `else` (a fused fork names its choice edge, `f4`, not `fk`), so the P2a registry receives it with no change there. `CompileDefect.reason` and `StcDefectReason` gain `'else-alone'` (Rule 11, R-SIM-87). The `?? t.id` fallback is unreachable: declared, not tested. Logs `probe-*-r7.log` in `~/.jjodel-lanes/P-2026-09-28-0100/`.
+**Prompt document name**: 2026-09-28 01:00
+
+## 2026-09-28 — merge: sim-bridge-off-else into alfonso-frontend-jjtl (P-2026-09-28-1539)
+**Prompt**: `claude_2026-09-28_1539_prompt_merge_sim-bridge-off-else.md`, a direct merge by `lane-run merge --direct`, no session: `sim-bridge-off-else` at `b63c57571` into `alfonso-frontend-jjtl`, merge base `e54999b0b`, 2 commits on the branch side.
+**Files touched**: merge `18620166a`: 6 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-28_0100_prompt_sim_bridge_off_else.md`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/model/simulation/__tests__/stcChecks.test.ts`, `frontend/src/model/simulation/stcChecks.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `18620166a` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5450 tests in 221 files, 9 red at import, hooks 333; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: R7 only adds a Reset defect for an else with no sibling; the lane measured the four scenes identical to the trunk on 3033; gates green on the merge
+**Notes**: Rollback tag `pre-sim-bridge-off-else-P-2026-09-28-1539` on `0913b4c3f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1539/result.json`.
+**Prompt document name**: 2026-09-28 15:39
+
 ## 2026-09-28 — feat: input variables for the simulator, S1-S4 (P-2026-09-28-0034)
 **Prompt**: Phase 2 of `claude_2026-09-28_0034_prompt_sim_input_variables.md` (GO in chat, R-SIM-88: option (a), Q1-Q4 as recommended): merge the trunk in, build S1 core and codec, S2 bridge, S3 UI, S4 docs as the report `discovery_2026-09-28_sim_input_variables.md` §5.5 plans, tests first, the four demo scenes on 3035, crops light and dark; no merge before 2026-10-04.
 **Files touched**: merge `417b39053` (trunk `e54999b0b` in, no conflict). S1 `ffcd0d5ae`: `model/simulation/netTypes.ts`, `stateAttributesCodec.ts`, `netCompile.ts`, `netStep.ts`, `derivedEvaluator.ts`, `stcChecks.ts`, five of their tests. S2 `4884a57c3`: `editor-v2/sim/simBridge.ts`, `simRunState.ts`, `__tests__/simBridge.test.ts`. S3 `2033b731d`: `sim/SimInputDialog.tsx`, `SimInputDialog.scss`, `simInputs.ts`, `__tests__/simInputs.test.ts` (new), `SimRolesModal.tsx`, `SimRolesModal.scss`, `SimulationPanel.tsx`. S4 `b15fe4484`: `docs/spec/claude_spec_2026-09-13_computational_model.md`. This commit: this entry, the prompt's Status.

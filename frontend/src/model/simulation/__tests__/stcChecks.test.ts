@@ -19,7 +19,7 @@ import type { JjelExpression } from '../../../jjel/types/ast';
 import { freezeSnapshot } from '../guardContext';
 import { compileAction, foldActionTarget, judgeActionTarget } from '../actionEvaluator';
 import type { CompiledAction } from '../actionEvaluator';
-import { checkActionSubset, checkActionValue, checkGuard, checkInputTarget, checkTargetName, inputReads } from '../stcChecks';
+import { checkActionSubset, checkActionValue, checkElse, checkGuard, checkInputTarget, checkTargetName, inputReads } from '../stcChecks';
 import type { StcScope } from '../stcChecks';
 import type { ActionSite, StateAttributeDecl } from '../netTypes';
 
@@ -179,6 +179,16 @@ describe('A0 and G0 stay clean through every rule', () => {
             expect([text, checkActionSubset(c), checkTargetName(c, s), checkActionValue(c, TC, foldActionTarget(c, TC, s.snapshot), s)]).toEqual([text, null, null, null]);
         }
         expect(guard('model.[paid]')).toBeNull();
+    });
+});
+
+describe('R7: an else with no sibling (R-SIM-87, amends R-SIM-31(1), P-2026-09-28-0100)', () => {
+    it('an else whose sibling list is empty is a defect; with a sibling, or not an else, none (mutants: every else; no else)', () => {
+        expect(checkElse({ elseOf: [] })).toEqual({
+            reason: 'else-alone', detail: 'else with no sibling: no other transition has its preset and its triggers, so it is always true', short: 'else, no sibling',
+        });
+        expect(checkElse({ elseOf: ['t2'] })).toBeNull();
+        expect(checkElse({ elseOf: null })).toBeNull();
     });
 });
 

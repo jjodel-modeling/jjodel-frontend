@@ -58,7 +58,7 @@ import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
 import { compileDerived, makeDerivedOracle } from '../../../model/simulation/derivedEvaluator';
 import { decodeStateAttributes, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
 import {
-    checkActionSubset, checkActionValue, checkGuard, checkInputTarget, checkTargetName, inputReads, inputTarget,
+    checkActionSubset, checkActionValue, checkElse, checkGuard, checkInputTarget, checkTargetName, inputReads, inputTarget,
 } from '../../../model/simulation/stcChecks';
 import type { StcDefect, StcScope } from '../../../model/simulation/stcChecks';
 import { isKindOf } from '../../../model/simulation/isKindOf';
@@ -243,7 +243,8 @@ function compileActionTable(net: CompiledNet, features: ActionFeatures, lookup: 
  * element (`unresolved`) or reads what that element does not have, a subset
  * error on an action's right side, a right side that folds to a non-scalar or
  * outside the target's domain, and a guard that is one non-boolean read
- * (`value`). Never a run-time outcome: those depend on σ and are explained by
+ * (`value`); since R-SIM-87 (R7) an `else` with no sibling (`else-alone`),
+ * which the run still reads as always true. Never a run-time outcome: those depend on σ and are explained by
  * `stopReason` or halt the run. A defective guard takes its transition out of
  * the candidates; a defective action does not: the transition halts if it fires.
  */
@@ -251,7 +252,7 @@ export interface CompileDefect {
     /** A guard's or an action's element; for a declaration, its name, `record N`, or `state attributes` for the key. */
     readonly element: string;
     readonly role: 'guard' | 'action' | 'declaration';
-    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration' | 'read-only' | 'unresolved' | 'value';
+    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration' | 'read-only' | 'unresolved' | 'value' | 'else-alone';
     readonly detail: string;
     /** The guard's, the action's or the equation's text; `''` for any other declaration defect. */
     readonly source: string;
@@ -278,6 +279,21 @@ function guardDefectsOf(guards: ReadonlyMap<string, CompiledGuard>, scope: StcSc
         }
         const rule = g.expr === null ? null : checkGuard(g.expr, element, scope);
         if (rule) out.push({ element, role: 'guard', reason: rule.reason, detail: rule.detail, source: g.source, ...(rule.short ? { short: rule.short } : {}) });
+    }
+    return out;
+}
+
+/**
+ * R7 (R-SIM-87): each `else` with no sibling, named by the edge that says
+ * `else` (a fused transition's choice edge), in compile order.
+ */
+function elseDefectsOf(net: CompiledNet, guardFeature: string | undefined, lookup: Lookup): CompileDefect[] {
+    const out: CompileDefect[] = [];
+    for (const t of net.transitions) {
+        const rule = checkElse(t);
+        if (!rule) continue;
+        const element = t.origin.find(id => guardText(lookup, id, guardFeature)?.trim() === 'else') ?? t.id;
+        out.push({ element, role: 'guard', reason: rule.reason, detail: rule.detail, source: guardText(lookup, element, guardFeature) ?? 'else', ...(rule.short ? { short: rule.short } : {}) });
     }
     return out;
 }
@@ -485,6 +501,7 @@ export function startRun(
         },
         compileDefects: [
             ...guardDefectsOf(guards, scope),
+            ...elseDefectsOf(net, stc.guard, lookup),
             ...actionDefectsOf(net, actions, snapshot, lookup, scope),
             ...declarationDefectsOf([...declarations.defects, ...(net.declarationDefects ?? [])], lookup, net.attributes),
         ],
