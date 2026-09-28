@@ -156,6 +156,12 @@ export interface NetStc {
     readonly event?: string;
     readonly trigger?: string;
     readonly eventIdentifier?: string;
+    /** R-SIM-50: the metaclass whose marked instance makes the configuration accepting; the run goes on. */
+    readonly accepting?: string;
+    /** R-SIM-51: the attribute of a node read on frozen M as the output of the marked state (Moore). */
+    readonly stateOutput?: string;
+    /** R-SIM-51: the attribute of a transition read on frozen M as the output of its firing (Mealy). */
+    readonly transitionOutput?: string;
 }
 
 /**
@@ -236,6 +242,14 @@ export interface CompiledNet {
     readonly final: ReadonlySet<string> | null;
     /** The places that are a kind of `simActivityFinal` (R-SIM-53); absent or `null` when the role is unset. */
     readonly activityFinal?: ReadonlySet<string> | null;
+    /** The places that are a kind of `simAccepting` (R-SIM-50), never merged into F; absent or `null` when the role is unset. */
+    readonly accepting?: ReadonlySet<string> | null;
+    /**
+     * The role-bound outputs (R-SIM-51), read once at Reset: a place's `simStateOutput` values, a transition's
+     * `simTransitionOutput` values on its own elements; no entry without a value; absent or `null` without the role.
+     */
+    readonly stateOutputs?: ReadonlyMap<string, readonly SimValue[]> | null;
+    readonly transitionOutputs?: ReadonlyMap<string, readonly SimValue[]> | null;
     readonly hasEventRole: boolean;
     readonly attributes: readonly StateAttributeDecl[];
     /**

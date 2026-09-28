@@ -11,7 +11,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { admissible, candidates, isMarked, netRunStatus, stateAccess, step, structuralInputs, terminated, tokens } from '../netStep';
+import {
+    admissible, candidates, isAccepting, isMarked, netRunStatus, stateAccess, stateOutputOf, step, structuralInputs, terminated, tokens,
+    transitionOutputOf,
+} from '../netStep';
 import { compileNet, netStcFromRoles } from '../netCompile';
 import { isKindOf } from '../isKindOf';
 import { objectReferences, objectSlotValues } from '../objectSlots';
@@ -44,6 +47,10 @@ interface NetOpts {
     final?: string[] | null;
     /** The activity final places (R-SIM-53); absent from the net when not given. */
     activityFinal?: string[];
+    /** The accepting places (R-SIM-50) and the role-bound outputs (R-SIM-51); absent from the net when not given. */
+    accepting?: string[];
+    stateOutputs?: Record<string, SimValue[]>;
+    transitionOutputs?: Record<string, SimValue[]>;
     /** element -> declarations it carries */
     declared?: Record<string, StateAttributeDecl[]>;
 }
@@ -56,6 +63,9 @@ function mkNet(transitions: NetTransition[], o: NetOpts = {}): CompiledNet {
     return {
         modelId: 'M', places, transitions, bound: o.bound ?? 1, final: o.final ? new Set(o.final) : null,
         ...(o.activityFinal ? { activityFinal: new Set(o.activityFinal) } : {}),
+        ...(o.accepting ? { accepting: new Set(o.accepting) } : {}),
+        ...(o.stateOutputs ? { stateOutputs: new Map(Object.entries(o.stateOutputs)) } : {}),
+        ...(o.transitionOutputs ? { transitionOutputs: new Map(Object.entries(o.transitionOutputs)) } : {}),
         hasEventRole: transitions.some(t => t.triggers.length > 0), attributes: [], declared,
         initial: { marking: new Map(), attrs: new Map(), presentation: new Map() }, defects: [],
     };
@@ -760,6 +770,80 @@ describe('lane C2: derived attributes in the step (P-2026-09-27-0200, R-SIM-73)'
         expect(stateAccess(state).readPresentation('glow')).toBeUndefined();
         // the presentation part is never a semantic read
         expect(stateAccess(state).read('e', 'glow')).toBeUndefined();
+    });
+});
+
+describe('acceptance and role-bound outputs (lane S4, P-2026-09-27-1725, R-SIM-50, R-SIM-51)', () => {
+    const transitions = [tr('t', { a: 1 }, { x: 1 }), tr('u', { x: 1 }, { a: 1 })];
+    const net = mkNet(transitions, { accepting: ['x'], stateOutputs: { a: ['A'], x: ['X1', 'X2'] }, transitionOutputs: { t: ['go'] } });
+
+    it('isAccepting: some marked place is accepting, a zero entry does not count, never without the role (mutants: every for some, the zero check dropped)', () => {
+        expect(isAccepting(net, st({ x: 1 }))).toBe(true);
+        expect(isAccepting(net, st({ x: 1, a: 1 }))).toBe(true);
+        expect(isAccepting(net, st({ a: 1 }))).toBe(false);
+        expect(isAccepting(net, st({ a: 1, x: 0 }))).toBe(false);
+        expect(isAccepting(net, st({}))).toBe(false);
+        // control: the same net and marking without the role
+        expect(isAccepting(mkNet(transitions), st({ x: 1 }))).toBe(false);
+    });
+
+    it('accepting does not stop the run: a marked accepting place keeps its candidates and the status (mutant: the check fused into terminated)', () => {
+        expect(terminated(net, st({ x: 1 }))).toBe(false);
+        expect(ids(net, cfg({ x: 1 }))).toEqual(['u']);
+        expect(netRunStatus(net, cfg({ x: 1 }), [], NO_GUARDS, null)).toBe('Running');
+        // control: the same place in F terminates
+        expect(netRunStatus(mkNet(transitions, { final: ['x'], accepting: ['x'] }), cfg({ x: 1 }), [], NO_GUARDS, null)).toBe('Terminated');
+    });
+
+    it('stateOutputOf: the outputs of the marked places in the net order, a place with no output left out (mutants: every place read, the marking order)', () => {
+        expect(stateOutputOf(net, st({ x: 1 }))).toEqual([{ place: 'x', values: ['X1', 'X2'] }]);
+        expect(stateOutputOf(net, st({ x: 1, a: 2 }))).toEqual([{ place: 'a', values: ['A'] }, { place: 'x', values: ['X1', 'X2'] }]);
+        expect(stateOutputOf(net, st({ b: 1 }))).toEqual([]);
+        expect(stateOutputOf(net, st({ x: 0 }))).toEqual([]);
+        // control: without the role nothing is read
+        expect(stateOutputOf(mkNet(transitions), st({ x: 1 }))).toEqual([]);
+    });
+
+    it('transitionOutputOf: the output of a firing by the transition id, [] without a value or the role', () => {
+        expect(transitionOutputOf(net, 't')).toEqual(['go']);
+        expect(transitionOutputOf(net, 'u')).toEqual([]);
+        expect(transitionOutputOf(mkNet(transitions), 't')).toEqual([]);
+    });
+
+    it('a DFA-shaped machine compiled from its roles: the word a b a with acceptance and outputs per step; control: without the three keys the same firings and nothing else (mutants: a ROLE_KEYS pair dropped, a map not built)', () => {
+        // s0 -a-> s1 -b-> s2 (accepting) -a-> s1
+        const classes = { ...CLASSES, C_Acc: ['C_Node'] };
+        const bag = { simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next', simTrigger: 'R_trg', simEvent: 'C_Ev' };
+        const objects = {
+            s0: { cls: 'C_Init', slots: { R_out: ['t01'], A_so: ['x0'] } },
+            s1: { cls: 'C_Node', slots: { R_out: ['t12'], A_so: ['x1'] } },
+            s2: { cls: 'C_Acc', slots: { R_out: ['t21'], A_so: ['x2'] } },
+            a: { cls: 'C_Ev' }, b: { cls: 'C_Ev' },
+            t01: { cls: 'C_Tr', slots: { R_next: ['s1'], R_trg: ['a'], A_to: ['o01'] } },
+            t12: { cls: 'C_Tr', slots: { R_next: ['s2'], R_trg: ['b'], A_to: ['o12'] } },
+            t21: { cls: 'C_Tr', slots: { R_next: ['s1'], R_trg: ['a'], A_to: ['o21'] } },
+        };
+        const run = (roles: Record<string, string>) => {
+            const compiled = compileSpec(netStcFromRoles(roles)!, { classes, objects });
+            let c: NetConfiguration = { state: compiled.initial, event: null };
+            const trace: string[] = [];
+            for (const e of ['a', 'b', 'a']) {
+                const input: NetConfiguration = { state: c.state, event: e };
+                const out = step(compiled, input, ids(compiled, input)[0] ?? null, NO_GUARDS, NO_ACTIONS);
+                if (out.kind !== 'fired') { trace.push(out.kind); continue; }
+                c = out.next;
+                const sel = out.label.selector as string;
+                const moore = stateOutputOf(compiled, c.state).map(o => o.values.join('+')).join(',');
+                trace.push(`${sel} ${transitionOutputOf(compiled, sel).join('+')} | ${moore} ${isAccepting(compiled, c.state) ? 'accepting' : '-'}`);
+            }
+            return { initial: stateOutputOf(compiled, compiled.initial), trace, status: netRunStatus(compiled, c, ['a', 'b'], NO_GUARDS, null) };
+        };
+        expect(run({ ...bag, simAccepting: 'C_Acc', simStateOutput: 'A_so', simTransitionOutput: 'A_to' })).toEqual({
+            initial: [{ place: 's0', values: ['x0'] }],
+            trace: ['t01 o01 | x1 -', 't12 o12 | x2 accepting', 't21 o21 | x1 -'],
+            status: 'Running',
+        });
+        expect(run(bag)).toEqual({ initial: [], trace: ['t01  |  -', 't12  |  -', 't21  |  -'], status: 'Running' });
     });
 });
 

@@ -779,3 +779,58 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat: docs-only merge, no UI change
 **Notes**: Merged on Alfonso's ok (2026-09-28). Closed by hand: the worker stops on the known vitest reds (ticket P-2026-09-28-2332). Rollback tag `pre-scenes-base` on `fb044365b`. Chat C-2026-09-28-1936.
 **Prompt document name**: 2026-09-28 23:33
+
+## 2026-09-27 — discovery: Moore/Mealy outputs and Accepting, S4 (P-2026-09-27-1725)
+**Prompt**: `claude_2026-09-27_1725_prompt_discovery_sim_outputs_accepting.md`, read-only discovery on `sim-outputs-accepting` in `~/jjodel-w-outputs` at `6f83971cd`, wave 1 of the backlog report (S4): where R-SIM-50/51 and R-SIM-76 enter the configuration, the step and the marking line; what the four hidden presets need; the engine-first Phase 2 and the face slices; when the presets show (decision H).
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_outputs_accepting.md` (new), this entry, the Status of the prompt file. Probe `frontend/scripts/smoke/_tmp_outacc_probe.ts` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no file under `frontend/src` written, `git status` empty after every probe run; probe `npx tsx`, `EXIT=0`, no dev server, port 3019 unused.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: DFA, NFA, Moore, Mealy run today as state machines, Checkable after Apply; the engine reads none of the three keys. Showing them needs the engine, the M2 rows (DFA without a Final class: Missing: Accepting, no row to set it) and S5 (SM then DFA: the kept Terminal ends the run). Two Phase 2 lanes: sim-outputs-engine (9 files), sim-outputs-faces (6, after S5). One RC-26 item: R-SIM-51 computed outputs. One docs commit, as the prompt asks.
+**Prompt document name**: 2026-09-27 17:25
+**Ticket** (priority medium, opened here, report §5.4). The `off`-key resolver (S5, `sim-off-resolver`) is a precondition of showing DFA, NFA, Moore and Mealy: `netStcFromRoles` reads every key regardless of the profile, so a metamodel switched from State machine to DFA keeps `simTerminal` live and the run ends `Terminated` on its accepting state, all inputs off (measured on `6f83971cd`).
+
+## 2026-09-27 — feat: the engine reads Accepting and the role-bound outputs, S4 engine slice (P-2026-09-27-1725)
+**Prompt**: Phase 2 GO of `claude_2026-09-27_1725_prompt_discovery_sim_outputs_accepting.md` (Alfonso 17:53, cascade after Phase 1), on `sim-outputs-accepting` in `~/jjodel-w-outputs`: the engine slice of the report (§9 lane 1, option E), role-bound outputs only (Alfonso 17:47); the face slice waits for sim-modal's merge; this branch merges after MODELS.
+**Files touched**: code `ab4b8de8b`: `frontend/src/model/simulation/netTypes.ts`, `netCompile.ts`, `netStep.ts`, `roleCatalog.ts` (header comment), tests `__tests__/netCompile.test.ts`, `netStep.test.ts`, `roleCatalog.test.ts`. Docs, this commit: this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_outacc_*` gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Baseline at `0b098be01`: typecheck 14; vitest `src/model/simulation` 443 passed, 15 files. On `ab4b8de8b`: typecheck exit 2, 14 errors, set identical; vitest 454 passed (443 + 11), 15 files; `src/components/editor-v2/sim` 125 passed, 5 files; `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` on this commit. Red first: 10 of 11. Mutation bench 18/18 killed.
+**Out-of-scope changes**: yes — seven files, above the Rule 19 five: `roleCatalog.ts` (comment) and `roleCatalog.test.ts` (`NEW_KEYS` emptied, count 24 to 27) lie outside the GO's ownership map, approved at the question stop (answer: yes to both).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (engine only, nothing on screen changes); parity instead: the readiness-2 probes copied as `_tmp_outacc_demo_*`, vite on 3019, run lines identical to `/tmp/demo2_scratch`: SM 13/13, Flow B 11/11, Petri 22/22, ESM 12/12, each exit 0, one known console error.
+**Notes**: Question stop on roleCatalog.test.ts:134, the source-text pin of «nothing reads the new keys», red by design (report §7 item 8); answered yes. M11 (origin read, fork node included) survived the first bench and was killed once the fixture's fork node carried the transition's attribute, as under a common superclass. The Mac shut down during the stop; the tree was intact at resume. The emptied NEW_KEYS leaves one roleCatalog test iterating nothing, kept as in E1.
+**Prompt document name**: 2026-09-27 17:25
+**Ticket** (priority medium, owed to the face slice, report §5.1 H8). `simAccepting` is not in the node sort of `ROLE_SORTS` (`stcFromRoles.ts:23-28`), so a class playing Accepting and Transition passes the overlap check; the line is E2's and the file was outside this lane.
+**Ticket** (priority medium, for the chat). The R- rows of this slice (R-SIM-50 and R-SIM-51 implemented as written for the role-bound path, the three keys out of R-SIM-52's provisional list) are not written: the chat writes them (answer of the question stop).
+
+## 2026-09-27 — docs: provisional R-SIM-86..88 for the outputs engine slice (P-2026-09-27-1725)
+**Prompt**: resume of P-2026-09-27-1725 after Alfonso's «ok alle raccomandazioni» (2026-09-27 22:20): write in `docs/decisions.md` the rows the engine slice owes on R-SIM-50/51/52, provisional, unattended, pending Alfonso's ratification before the post-MODELS merge, with the measured evidence and what stays open. No code.
+**Files touched**: docs, this commit: `docs/decisions.md` (section «corsia S4», R-SIM-86, R-SIM-87, R-SIM-88), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs only, no source file changed; `check:docs` 4/4; em dash count on the added lines 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Numbered from 86: R-SIM-85 is on the trunk (sim-modal) and on no branch past it, measured by a grep of every local branch; a clash with a parallel lane is the later merge's to renumber, as for R-SIM-83/84. R-SIM-86 names the open overlap check (simAccepting outside ROLE_SORTS), owed to the face slice.
+**Prompt document name**: 2026-09-27 17:25
+
+## 2026-09-28 — merge: alfonso-frontend-jjtl into sim-outputs-accepting (P-2026-09-28-2305)
+**Prompt**: `claude_2026-09-28_2305_prompt_sim_outputs_take_trunk.md`, full lane (RC-14, branch side): take the trunk at `fb044365b` into the S4 engine slice (`ab4b8de8b`), every conflict resolved keeping both sides, the three S4 rows ratified by Alfonso 2026-09-28, gates at the trunk's baseline; no merge into the trunk, no dev server, no probe.
+**Files touched**: merge `813b1c058` (conflicts resolved: `frontend/src/model/simulation/__tests__/netCompile.test.ts`, `__tests__/netStep.test.ts`, `docs/log-inbox/simulation.md`, `docs/decisions.md`; auto-merged `netCompile.ts`, `netStep.ts`, `netTypes.ts`, each equal to both deltas); docs, this commit: `docs/decisions.md` (R-SIM-91..93 headers), this entry, the Status of `docs/prompts/claude_2026-09-28_2305_prompt_sim_outputs_take_trunk.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `813b1c058`: typecheck 14, the baseline set (14 before too); vitest `src/model/simulation` 17 files 518 tests and `src/components/editor-v2/sim` 8 files 243 tests, all green (the branch before the merge: 15 files, 454 tests); full vitest 5557 passed, 6 failed, 9 files red at import, the trunk's known set; build exit 0; check:addonly on the merge clean; docs:digest exit 0.
+**Out-of-scope changes**: yes: in `docs/decisions.md`, beyond the three headers, the merge renumbered the S4 rows R-SIM-86..88 to R-SIM-91..93 (the trunk holds different R-SIM-86..88), with the section heading, two cross-references and a note of the original numbering in the section intro.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no dev server by the prompt; the chat probes the four scenes after the hard stop.
+**Notes**: R-SIM-50/51/52 themselves were ratified on 2026-09-25 and are unchanged: the rows the prompt names are the branch's S4 rows implementing them, provisional since `bdd11814c`. The 6 failed: 5 trace/monitor kills (green under `~/.local/bin/node` v26, red under the PATH node v23.3.0) and `checkRange`, which walks 8 first-parent commits here against 43 on the trunk and turns green once merged into it.
+**Prompt document name**: 2026-09-28 23:05
