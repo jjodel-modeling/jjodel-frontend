@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0110
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2, simulation bridge, panel and a new dialog, tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-data-level-p2 · b4fba8a39, 59b020a5c, 6c06503b7, 35d0e19a2, ef24c0a7c, 812b17cab · non fuso: hard-stop, crop in docs/discovery/harness/_tmp_datalevel_*.png (gitignored), §8 della discovery con i passi del tab modello
 
 Worktree: `~/jjodel-w-datalevel2`, branch `sim-data-level-p2` (cut by the chat from `alfonso-frontend-jjtl` at `174f6c58a`, after the R-SIM-90 Phase 2 merge; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-datalevel2`, branch `sim-data-level-p2`, `git log -1` is the docs commit that added this prompt and the R-SIM-94 row; if any differs, stop with `Outcome: blocked` and say which.
 

@@ -878,3 +878,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: chat: four demo scenes probed on the branch in light theme (port 3041), 71 readings identical to the trunk after pointer normalisation; lane DOM checks 13/13; crops not viewed by the chat; Alfonso walk on 3001 still due
 **Notes**: Rollback tag `pre-sim-multi-roles-p2` on `b6e9d82ef` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0105/result.json`.
 **Prompt document name**: 2026-09-29 01:05
+
+## 2026-09-29 — feat: the globals of a system declared in its model, R-SIM-94 Phase 2 (P-2026-09-29-0110)
+**Prompt**: `claude_2026-09-29_0110_prompt_sim_data_level_p2.md`, full lane on `sim-data-level-p2` in `~/jjodel-w-datalevel2` (from the trunk at `174f6c58a`): R-SIM-94 as planned by §5 of the discovery of P-2026-09-29-0011; tests first, one commit per layer, a lane probe on 3040 with the ESM and Flow B declarations on the model tab; no merge.
+**Files touched**: `b4fba8a39` `frontend/src/model/simulation/stateAttributesCodec.ts`, `__tests__/stateAttributesCodec.test.ts`; `59b020a5c` `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`; `6c06503b7` `sim/SimRolesModal.tsx`; `35d0e19a2` `sim/SimDataModal.tsx` (new), `simBridge.ts`, `simBridge.test.ts`; `ef24c0a7c` `sim/SimulationPanel.tsx`; `812b17cab` `sim/simRoleStatus.ts`, `sim/__tests__/simRoleStatus.test.ts`; docs, this commit: this entry, the prompt's Status, `docs/discovery/discovery_2026-09-29_sim_data_level.md` (carried from `8db7cf475`, §8 appended).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the known set (14 before); vitest `src/model/simulation` and `src/components/editor-v2/sim` 25 files, 822 tests (802 before), each layer red first; full vitest 5627 passed, 9 files red at import, the known set; build exit 0; 16 mutants killed of 16 (codec 5, bridge 7, dialog 3, hint 1). The four demo scenes declared in the metamodel reach the script's readings on this branch (probe on 3040).
+**Out-of-scope changes**: yes — the discovery report, which is not on this branch, carried verbatim from `sim-data-level` to hold §8 (an add/add with that branch if both merge); the Data note of the roles dialog (`SimRolesModal.tsx`) takes the hint's new text. 11 files, above five: the plan's list of §5, named in the prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3040 (`lane-run probe`, light): ESM on the model tab 9 interactions, 34 keys, 10 events to Halted, coins would be 4; Flow B from the Reset line 5 and 4, 6 steps to Terminated, count = 2; Apply after a run interrupts it, one undo reverts it. Crops `docs/discovery/harness/_tmp_datalevel_*.png` (gitignored). The chat's GO pending.
+**Notes**: Commit order SimRolesModal, SimDataModal, panel, hint (each needs the one before), not the prompt's. Unattended: the model key's defects read `model state attributes`, `model record N`; the Reset line's names become draft rows of the dialog; `Data…` is hidden when the profile turns the declarations off. Perceptual, for the GO: in the Data dialog Add attribute sits after the note, not at the right edge.
+**Prompt document name**: 2026-09-29 01:10
