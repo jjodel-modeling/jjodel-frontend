@@ -588,3 +588,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: docs-only merge, no UI change; gates green; the union inbox checked verbatim against both parents
 **Notes**: Rollback tag `pre-simulation-engine` on `e2448cf61` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1300/result.json`.
 **Prompt document name**: 2026-09-28 13:00
+
+## 2026-09-28 — merge: demo-prep into alfonso-frontend-jjtl (P-2026-09-28-1236)
+**Prompt**: `claude_2026-09-28_1236_prompt_merge_demo-prep.md`, a direct merge by `lane-run merge --direct`, no session: `demo-prep` at `e913101fb` into `alfonso-frontend-jjtl`, merge base `888ea9a9d`, 3 commits on the branch side.
+**Files touched**: merge `63a80f62b`: 3 files from the branch side (`docs/discovery/discovery_2026-09-28_demo_prep_3001.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-28_1015_prompt_demo_prep_3001.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `63a80f62b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5436 tests in 221 files, 9 red at import, hooks 333; build exit 0; check:docs exit 1; check:agents exit 0; check:scripts exit 0. The check:docs red (B, D) came from `docs/claude-code-log.md`, which the merge does not touch: 55 active entries and one entry spliced by the staging merge `447e4239b`. Fixed on the trunk by `559eb82c5` (rotation) and `e2448cf61` (both entries restored from the parents); check:docs 4/4 after.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: docs-only merge, no UI change
+**Notes**: Closed by hand because `lane-run go` refuses a blocked merge. Rollback tag `pre-demo-prep` on `55c24d570` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1236/result.json`.
+**Prompt document name**: 2026-09-28 12:36
