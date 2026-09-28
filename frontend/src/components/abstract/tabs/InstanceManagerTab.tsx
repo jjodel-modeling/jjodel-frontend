@@ -1569,6 +1569,12 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     const [paneWidth, setPaneWidth] = useState<Record<SidePane, number>>(() => ({ ...PANE_DEFAULT_W }));
     /** The pane whose handle is being dragged, for the handle's own drag look. */
     const [resizingPane, setResizingPane] = useState<SidePane | null>(null);
+    /** #158 P5 — the neighborhood of the selected row is SHOWN. A view switch like
+     *  `showOutline`, one boolean for the tab and not a per-row expansion: the
+     *  expanded row is still «the selected row», only now with the view switched on
+     *  (FL6's rule, kept). It stays across selections, so a user who closed it to win
+     *  room is not handed it back at the next click. */
+    const [showNeighborhood, setShowNeighborhood] = useState(true);
     /** Il literal selezionato nel segmented, `''` per «All». Una stringa e non un
      *  indice: gli indici di un enum cambiano quando il metamodello cambia, e un
      *  filtro che dopo una modifica del metamodello punta a un altro literal e'
@@ -2002,6 +2008,16 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setAlsoSelected([]);
         setBulkTouched({});
         setNav(null);
+    };
+
+    /** #158 P5 — the chevron at the end of a row. On the selected row it closes or
+     *  reopens the neighborhood and leaves the selection alone (closing it must not
+     *  close the form under it); on any other row it selects that row AND shows its
+     *  neighborhood, which is what a chevron pointing down promises. */
+    const toggleNeighborhood = (id: string) => {
+        if (id === subjectId) { setShowNeighborhood(v => !v); return; }
+        selectOnly(id);
+        setShowNeighborhood(true);
     };
 
     const applyBulkEdit = () => {
@@ -2734,6 +2750,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         <i className="bi bi-list-nested instance-manager__view-icon" aria-hidden="true" />
                         <span className="instance-manager__row-name">Outline</span>
                     </li>
+                    {/* #158 P5 — the neighborhood graph of the selected row, as a view
+                        that opens and closes like Outline: the same `showNeighborhood`
+                        the row's chevron toggles. Here it is reachable while the
+                        neighborhood is closed and no chevron points at it. */}
+                    <li
+                        className={'instance-manager__row instance-manager__view'
+                            + (showNeighborhood ? ' instance-manager__row--selected' : '')}
+                        title="Neighborhood — the graph under the selected row"
+                        role="button"
+                        aria-pressed={showNeighborhood}
+                        onClick={() => setShowNeighborhood(v => !v)}
+                    >
+                        <i className="bi bi-bounding-box-circles instance-manager__view-icon" aria-hidden="true" />
+                        <span className="instance-manager__row-name">Neighborhood</span>
+                    </li>
                     {/* Visibile e inerte quando non c'e' un soggetto, con la causa
                         nel `title`: `openInCanvas` prende un oggetto, e la stessa
                         regola con cui il rail tiene visibili le metaclassi astratte
@@ -3202,7 +3233,10 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                        puo' essere vera, e il primo giorno in cui i
                                        due divergono la form parlerebbe di una riga
                                        e il nastro di un'altra. */
-                                    const isExpanded = row.id === subjectId;
+                                    /* #158 P5 — AND the view switch: the rule above
+                                       stands (still no per-row state, still one row
+                                       at most), and the neighborhood can be closed. */
+                                    const isExpanded = row.id === subjectId && showNeighborhood;
                                     return (
                                     <React.Fragment key={row.id}>
                                     <tr
@@ -3266,17 +3300,30 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                 onClick={e => { e.stopPropagation(); openDelete(row.id); }}
                                             />
                                         </td>
-                                        {/* Il chevron e' un INDICATORE, non un
-                                            secondo bottone: il gesto e' il click
-                                            sulla riga, gia' scritto sopra, e un
-                                            bersaglio annidato che fa la stessa cosa
-                                            e' un modo per farla due volte. */}
+                                        {/* Il chevron era un INDICATORE, perche' un
+                                            bersaglio annidato che rifacesse il click
+                                            sulla riga lo avrebbe fatto due volte.
+                                            #158 P5 gli da' un gesto che la riga NON
+                                            ha: chiudere e riaprire il vicinato
+                                            (`toggleNeighborhood`). Il click sulla riga
+                                            resta la selezione, e non passa di qui. */}
                                         <td className="instance-manager__td-chev">
-                                            <i
-                                                className={'bi instance-manager__chev '
-                                                    + (isExpanded ? 'bi-chevron-up' : 'bi-chevron-down')}
-                                                aria-hidden="true"
-                                            />
+                                            <button
+                                                type="button"
+                                                className="instance-manager__chev-btn"
+                                                aria-expanded={isExpanded}
+                                                aria-label={isExpanded
+                                                    ? `Hide the neighborhood of ${row.name || row.id}`
+                                                    : `Show the neighborhood of ${row.name || row.id}`}
+                                                title={isExpanded ? 'Hide the neighborhood' : 'Show the neighborhood'}
+                                                onClick={e => { e.stopPropagation(); toggleNeighborhood(row.id); }}
+                                            >
+                                                <i
+                                                    className={'bi instance-manager__chev '
+                                                        + (isExpanded ? 'bi-chevron-up' : 'bi-chevron-down')}
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
                                         </td>
                                     </tr>
 

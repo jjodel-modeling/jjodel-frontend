@@ -72,7 +72,11 @@ describe('FL6 — la form sotto la tabella', () => {
 
 describe('FL6 — la riga espandibile', () => {
     it('l\'espansione SEGUE la selezione: nessun secondo stato', () => {
-        expect(TSX).toContain('const isExpanded = row.id === subjectId;');
+        // #158 P5 — in AND con UN interruttore di vista del tab, che chiude il
+        // vicinato. Non e' uno stato per riga: la riga espansa resta al piu' una,
+        // ed e' sempre la selezionata.
+        expect(TSX).toContain('const isExpanded = row.id === subjectId && showNeighborhood;');
+        expect(TSX).toContain('const [showNeighborhood, setShowNeighborhood] = useState(true);');
         // Nessuno `useState` di espansione: se ce ne fosse uno, «una sola riga
         // per volta» tornerebbe a essere una regola da far rispettare a mano.
         expect(TSX).not.toMatch(/useState[^\n]*expandedId/);
@@ -100,13 +104,16 @@ describe('FL6 — la riga espandibile', () => {
         expect(TSX).toContain('instance-manager__td-chev');
     });
 
-    it('il chevron cambia verso e non e\' un secondo bersaglio di click', () => {
+    it('il chevron cambia verso ed e\' il gesto che chiude il vicinato, non la selezione', () => {
+        // #158 P5 — era un indicatore senza click. Ora e' un bottone con un gesto
+        // che la riga NON ha (`toggleNeighborhood`), e ferma la propagazione: il
+        // click sulla riga resta la selezione e non passa di qui due volte.
         expect(TSX).toContain("(isExpanded ? 'bi-chevron-up' : 'bi-chevron-down')");
-        // Indicatore: nessun onClick suo, e nascosto agli screen reader — il
-        // gesto e' il click sulla riga, che c'e' gia'.
         const cell = TSX.slice(TSX.indexOf('instance-manager__td-chev'));
         const end = cell.indexOf('</td>');
-        expect(cell.slice(0, end)).not.toContain('onClick');
+        expect(cell.slice(0, end)).toContain('onClick={e => { e.stopPropagation(); toggleNeighborhood(row.id); }}');
+        expect(cell.slice(0, end)).toContain('aria-expanded={isExpanded}');
+        // il glifo resta nascosto agli screen reader: il nome e' sul bottone
         expect(cell.slice(0, end)).toContain('aria-hidden');
     });
 

@@ -2489,7 +2489,8 @@
     }
 
     /* ── Il chevron di coda riga ────────────────────────────────────────────
-       Indicatore, non bottone: il gesto e' il click sulla riga. */
+       Era un indicatore; da #158 P5 e' il bottone che chiude e riapre il
+       vicinato (`&__chev-btn`). La selezione resta il click sulla riga. */
     &__th-chev, &__td-chev {
         width: 24px;
         text-align: center;
@@ -2498,6 +2499,26 @@
     &__chev {
         font-size: 10px;
         color: var(--color-form-muted);
+    }
+
+    /* #158 P5 — the chevron became a control: it closes and reopens the
+       neighborhood. The 24px column stays; the button fills it so the target is the
+       cell, not a 10px glyph. */
+    &__chev-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-hover); }
+        &:hover .instance-manager__chev { color: var(--color-form-label); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
     }
 
     /* ── L'header della form (FL6, banda propria in 10k) ─────────────────────
