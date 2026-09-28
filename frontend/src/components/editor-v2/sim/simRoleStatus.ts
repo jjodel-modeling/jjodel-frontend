@@ -184,6 +184,19 @@ export function eventRoleWarning(missing: readonly string[], metamodelName: stri
     return `Events disabled. Missing${where}: ${missing.join(', ')}.`;
 }
 
+/**
+ * The warning line of a stored `simEvent` the run ignores (S7, R-SIM-38): the
+ * event class is always the Trigger's declared type, derived on every read, so
+ * a `simEvent` left over from before that rule is never used. `null` when there
+ * is nothing to warn about: no stored value, no derived class (no Trigger
+ * bound), or the two already agree. `nameOf` resolves a class pointer the way
+ * the panel already does (name, falling back to the id).
+ */
+export function staleEventWarning(stored: string | undefined, derived: string | undefined, nameOf: (id: string) => string): string | null {
+    if (!stored || !derived || stored === derived) return null;
+    return `Stored event class ${nameOf(stored)} is ignored: the run uses ${nameOf(derived)}, the Trigger's type.`;
+}
+
 // ---------------------------------------------------------------------------
 // The profile row of the M2 face (R-SIM-77..79)
 // ---------------------------------------------------------------------------

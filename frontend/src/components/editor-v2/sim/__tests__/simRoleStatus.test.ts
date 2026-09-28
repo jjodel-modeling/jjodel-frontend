@@ -26,6 +26,7 @@ import {
     profileSummaryText,
     profileVerdict,
     ROLE_SPECS,
+    staleEventWarning,
     storedProfile,
     VERDICT_LABEL,
 } from '../simRoleStatus';
@@ -197,6 +198,16 @@ describe('messages', () => {
         expect(eventRoleWarning(['Trigger'], 'Smoke')).toBe('Events disabled. Missing on Smoke: Trigger.');
         expect(eventRoleWarning(['Event'], null)).toBe('Events disabled. Missing: Event.');
         expect(eventRoleWarning(['Trigger'], '')).toBe('Events disabled. Missing on the metamodel: Trigger.');
+    });
+
+    it('a stale simEvent warns, naming both classes (S7); equal, absent or no Trigger bound warns of nothing', () => {
+        const names: Record<string, string> = { C_Old: 'Old', C_New: 'New' };
+        const of = (id: string) => names[id] ?? id;
+        expect(staleEventWarning('C_Old', 'C_New', of)).toBe("Stored event class Old is ignored: the run uses New, the Trigger's type.");
+        expect(staleEventWarning('C_Old', 'C_Old', of)).toBeNull();
+        expect(staleEventWarning(undefined, 'C_New', of)).toBeNull();
+        expect(staleEventWarning('C_Old', undefined, of)).toBeNull();
+        expect(staleEventWarning(undefined, undefined, of)).toBeNull();
     });
 });
 

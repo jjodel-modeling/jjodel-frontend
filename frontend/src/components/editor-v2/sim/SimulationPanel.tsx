@@ -37,7 +37,7 @@ import { buildEvalContext } from '../../../jjscript';
 import { getSimRun, simClear, simReset, simSetPending } from './simRunState';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
-    profileBindings, profilePatch, profileSummary, profileSummaryText, storedProfile,
+    profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
     candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView, markingLine,
@@ -213,7 +213,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
-        modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, stateAttributesRaw, profileBagSig, sketchSig,
+        modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -539,6 +539,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 {!stored.readable && (
                     <div className="sim-panel__hint sim-panel__hint--warning">The stored profile is not readable.</div>
                 )}
+                {staleEventWarningText && (
+                    <div className="sim-panel__hint sim-panel__hint--warning">{staleEventWarningText}</div>
+                )}
             </div>
         );
     };
@@ -825,6 +828,11 @@ interface StateProps {
     /** Name of the derived event class, for the read-only row of the M2 face; '' without one. */
     eventClassName: string;
     /**
+     * The M2 face's warning when a stored `simEvent` (pre R-SIM-38) differs from
+     * the class the Trigger now derives (S7); `null` when there is nothing to warn about.
+     */
+    staleEventWarningText: string | null;
+    /**
      * The raw `simStateAttributes` string of the M2 face, `null` when unset or on
      * the M1 face: a primitive of its own, parsed in the table's memo, never
      * folded into roleSig (report risk 1).
@@ -849,12 +857,14 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         : (dModel ? ownProps.modelid : null);
 
     // The derived bag (R-SIM-38): simEvent is the Trigger's type, a stale value in the bag ignored.
-    const bag: any = withDerivedEventRole((configModelId ? lookup[configModelId]?._state : null) ?? {}, lookup);
+    const rawState: any = (configModelId ? lookup[configModelId]?._state : null) ?? {};
+    const bag: any = withDerivedEventRole(rawState, lookup);
     const roles: Roles = {};
     for (const key of ROLE_KEYS) {
         const value = bag[key];
         if (typeof value === 'string' && value) roles[key] = value;
     }
+    const nameOf = (id: string): string => lookup[id]?.name || id;
 
     return {
         configModelId,
@@ -864,7 +874,10 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             ? JSON.stringify(collectMetaOptions(lookup, configModelId))
             : '',
         eventSig: ownProps.isModelMode ? eventSigOf(lookup, ownProps.modelid, roles) : '',
-        eventClassName: roles.simEvent ? (lookup[roles.simEvent]?.name || roles.simEvent) : '',
+        eventClassName: roles.simEvent ? nameOf(roles.simEvent) : '',
+        staleEventWarningText: !ownProps.isModelMode
+            ? staleEventWarning(typeof rawState.simEvent === 'string' && rawState.simEvent ? rawState.simEvent : undefined, roles.simEvent, nameOf)
+            : null,
         stateAttributesRaw: !ownProps.isModelMode && typeof bag[STATE_ATTRIBUTES_SPEC.key] === 'string' ? bag[STATE_ATTRIBUTES_SPEC.key] : null,
         profileBagSig: !ownProps.isModelMode && configModelId ? profileBagSigOf(lookup[configModelId]?._state ?? {}) : '',
         sketchSig: !ownProps.isModelMode && configModelId ? JSON.stringify(sketchOfMetamodel(lookup, configModelId)) : '',
