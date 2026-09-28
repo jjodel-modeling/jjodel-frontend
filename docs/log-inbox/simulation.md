@@ -740,3 +740,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile — no dev server started this lane; the chat runs the four scene probes.
 **Notes**: Demo exports under `~/jjodel-demo-exports/` are `DProject` records, not the raw idlookup `sketchOfMetamodel` needs; the verdict-table sketches were built from `docs/demo/models_2026_simulator_demo.md` §2.1-2.4 instead (declared deviation, discovery report §Finding 1). None of the four demo metamodels has multiple inheritance, so the new branch is dead code on all of them by construction, confirmed by the diff.
 **Prompt document name**: 2026-09-28 22:30
+
+## 2026-09-28 — merge: sim-mixin-owner into alfonso-frontend-jjtl (P-2026-09-28-2250)
+**Prompt**: `claude_2026-09-28_2250_prompt_merge_sim-mixin-owner.md`, a direct merge by `lane-run merge --direct --chat C-2026-09-28-1936`, no session: `sim-mixin-owner` at `427b2090d` into `alfonso-frontend-jjtl`, merge base `d3dbacb36`, 5 commits on the branch side (R-SIM-89 of P-2026-09-28-2230 and the R-SIM-90 row).
+**Files touched**: merge `2d73c73d5`: from the branch side `frontend/src/model/simulation/bindingCompat.ts`, its test, `actionEvaluator.test.ts`, `docs/decisions.md` (R-SIM-89, R-SIM-90), the discovery report `docs/discovery/discovery_2026-09-28_sim_mixin_verdicts.md`, `docs/log-inbox/simulation.md`, the lane prompt; this commit: this entry and the Status flip.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2d73c73d5` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5552 tests in 225 files, 9 red at import, hooks 344, 6 failed; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0. The 6 failed are the same 6 before and after the merge: the 5 trace/monitor mutation kills already red on `247a93549` and `checkRange` from the `log-addonly-gate` merge (ticket), none touched by this branch.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: the four demo scenes probed on the branch in light theme (port 3037), 71 readings identical to the trunk run of the evening once pointer ids are normalised. Alfonso's walk on 3001 still due before the freeze.
+**Notes**: Closed by hand: the worker stops on the pre-existing vitest reds. Rollback tag `pre-sim-mixin-owner` on `95ff2ae75` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-09-28-2250/result.json`. The lane built the verdict tables from the builder spec, not from the demo exports (they are DProject records); the probes cover the four scenes.
+**Prompt document name**: 2026-09-28 22:50
