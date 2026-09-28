@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-1837
 Chat: C-2026-09-28-1120
 Lane: full (merge of the trunk into the branch; 5 conflicts: `docs/log-inbox/simulation.md`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/model/simulation/__tests__/stcChecks.test.ts`, `frontend/src/model/simulation/stcChecks.ts` measured)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane sim-input-variables · e259b94ec · verifica visiva passata 2026-09-28 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-input`, branch `sim-input-variables`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-input`, branch `sim-input-variables`, `git log -1` is the commit that adds this file (its parent `f15692c00`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-28-1837 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
