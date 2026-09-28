@@ -198,9 +198,18 @@ describe('checkCommit / checkRevision — real history', () => {
 });
 
 describe('checkRange', () => {
-    test('kills "e2448cf61 silently waved through a range scan", "a merge in the range skipped": every first-parent commit of a real range on this branch is checked, e2448cf61 the only one refused', () => {
-        const results = checkRange('65eb5475b', 'HEAD');
-        expect(results.length).toBeGreaterThan(20);
+    test('kills "e2448cf61 silently waved through a range scan", "a merge in the range skipped", "the first-parent walk dropped", "the range order reversed": every first-parent commit of a fixed real range is checked, oldest first, e2448cf61 the only one refused', { timeout: 30000 }, () => {
+        // Pinned to fixed commits of the trunk, not to HEAD (P-2026-09-28-2332):
+        // 65eb5475b..HEAD walked the first-parent history of whichever branch
+        // was checked out, and read the ~4MB archive for 40-odd commits, 6 s
+        // alone and over the 5000 ms default under full-suite load. The range
+        // below holds the rotation 559eb82c5, e2448cf61 and two merges
+        // (63a80f62b, 3e141466d); every worktree of the repository shares
+        // their objects.
+        const results = checkRange('65eb5475b', '3e141466d');
+        expect(results.map((r) => r.commit.slice(0, 9))).toEqual([
+            '55c24d570', 'a51973abf', '63a80f62b', '559eb82c5', 'e2448cf61', '8609ec3e0', '3e141466d',
+        ]);
         const dirty = results.filter((r) => r.violations.length > 0 || r.exempt !== null);
         expect(dirty.map((r) => r.commit)).toEqual(['e2448cf617f3b93a5b5c3bc5d10139d932d163c3']);
         expect(dirty[0].exempt).toBe(null);
