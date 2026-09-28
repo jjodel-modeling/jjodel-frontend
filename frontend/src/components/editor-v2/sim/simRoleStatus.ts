@@ -224,10 +224,14 @@ export function storedProfile(bag: Readonly<Record<string, unknown>>): StoredPro
  * The bindings a profile proposes from: the binder over the metamodel sketch,
  * for every profile but «Custom», which nothing is bound against (D7 of the
  * profiles lane). A user profile is bound as its preset (S11c). The panel and
- * the dialog read this one rule (P-2026-09-28-0140).
+ * the dialog read this one rule (P-2026-09-28-0140). `bag`, when given, is the
+ * values already set, so a kept Node or Transition carries into the roles that
+ * depend on it (S6), not the binder's own guess.
  */
-export function profileBindings(profile: SimProfile, sketch: MetamodelSketch | null | undefined): ProfileBindings | null {
-    return profile.id !== CUSTOM_ID && sketch ? bindProfile(profile, sketch) : null;
+export function profileBindings(
+    profile: SimProfile, sketch: MetamodelSketch | null | undefined, bag?: Readonly<Record<string, unknown>>,
+): ProfileBindings | null {
+    return profile.id !== CUSTOM_ID && sketch ? bindProfile(profile, sketch, bag) : null;
 }
 
 /** The id `inferCustomProfile` gives «Custom» (profileCodec.ts). */

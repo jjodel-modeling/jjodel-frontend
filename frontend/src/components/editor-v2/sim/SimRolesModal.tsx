@@ -374,9 +374,10 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const profile: SimProfile = draftProfile ?? (preset ? systemProfile(preset) : undefined) ?? stored.profile;
     // «Custom» is bound against nothing (D7 of the profiles lane); a user profile is, as its preset.
     const custom = profile.id === CUSTOM_ID;
+    // bag carries a kept Node or Transition into the roles that depend on it (S6).
     const bindings: ProfileBindings | null = useMemo(
-        () => profileBindings(profile, sketch),
-        [profile, sketch],
+        () => profileBindings(profile, sketch, bag),
+        [profile, sketch, bag],
     );
     const edited = useMemo(() => bagWithEdits(bag, edits), [bag, edits]);
 

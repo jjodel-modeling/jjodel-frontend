@@ -268,9 +268,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const storedPreset = !stored.custom && stored.profile.system && PANEL_PROFILE_IDS.some(id => id === stored.profile.id);
     const selected: SimProfile = (chosen ? systemProfile(chosen) : undefined) ?? stored.profile;
     // «Custom» is bound against nothing: no proposals, no Apply (D7); a user profile is, as in the dialog (profileBindings).
+    // profileBag carries a kept Node or Transition into the roles that depend on it (S6).
     const bindings: ProfileBindings | null = useMemo(
-        () => profileBindings(selected, sketch),
-        [selected, sketch],
+        () => profileBindings(selected, sketch, profileBag),
+        [selected, sketch, profileBag],
     );
     // The Bound proposal (R-SIM-81, G2): the largest initial marking on the models, read only while the panel is open.
     const markingInputs = useMemo(
