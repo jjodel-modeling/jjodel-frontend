@@ -2075,6 +2075,16 @@
        `&__child-reason`'s. Homogeneity is the design decision, so there is nothing to
        override — verified on the running app (#142 smoke). */
 
+    /* #158 P3 — the same sections inside an inline child's frame, under the child's
+       own form. The frame already separates the child from its parent, so the band
+       that separates the subject's section from the fields above it (rule and
+       padding of `&__inline`) is dropped here: two rules one above the other would
+       read as two sections. */
+    &__refs--nested {
+        padding: 8px 0 0;
+        border-top: none;
+    }
+
     /* ── The containment outline (10b) ─────────────────────────────────────────
        Mock 1b of `Q8 Catalogo vs Outline.dc.html`: 12px rows, a 12px genre icon,
        the metaclass in mono at the right, «+» in accent. The 14px inset and the

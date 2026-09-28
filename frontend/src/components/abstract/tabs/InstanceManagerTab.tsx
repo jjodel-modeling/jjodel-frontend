@@ -1394,6 +1394,76 @@ function PaneCollapse({ label, onCollapse }: { label: string; onCollapse: () => 
     );
 }
 
+/** One non-containment reference slot of an instance, as the form's reference
+ *  section lists it (#142): what it points at, and why «New … & link» is not offered
+ *  when it is not. */
+type RefSlot = { ref: RefShape; targets: string[]; count: number; createReason: string | null };
+
+/**
+ * The reference sections of ONE form (#142), extracted by #158 P3 so the subject and
+ * each inline child render the same thing: the same markup, the same drill-in, the same
+ * create-and-link. Two copies would be two sections that drift at the first change.
+ *
+ * `nested` is the inline child's variant: it sits inside the child's frame, under the
+ * child's own form, so it drops the band (rule and padding) that separates the
+ * subject's section from the fields above it.
+ */
+function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate }: {
+    slots: RefSlot[];
+    idlookup: Record<string, any>;
+    nested?: boolean;
+    /** Open a target as the form body. */
+    onOpen: (targetId: string, refKey: string) => void;
+    /** «New <Target> & link» on this form's instance. */
+    onCreate: (targetCls: string, refKey: string) => void;
+}) {
+    if (slots.length === 0) return null;
+    return (
+        <div className={'instance-manager__inline instance-manager__refs'
+            + (nested ? ' instance-manager__refs--nested' : '')}>
+            {slots.map(slot => (
+                <div className="instance-manager__inline-slot" key={slot.ref.key}>
+                    <h3 className="instance-manager__eyebrow">
+                        {slot.ref.key}
+                        <span className="instance-manager__draft-card">
+                            {slot.ref.of} [{slot.count}/{slot.ref.upper === -1 ? '*' : slot.ref.upper}]
+                        </span>
+                    </h3>
+                    {slot.targets.map(targetId => (
+                        <button
+                            type="button"
+                            className="instance-manager__inline-link"
+                            key={targetId}
+                            title="Open the referenced element — edits the shared instance"
+                            onClick={() => onOpen(targetId, slot.ref.key)}
+                        >
+                            {crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null })}
+                            <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                        </button>
+                    ))}
+                    {slot.targets.length === 0 && (
+                        <p className="instance-manager__note">No {slot.ref.of} linked yet.</p>
+                    )}
+                    {slot.createReason ? (
+                        <span className="instance-manager__child-reason" title={slot.createReason}>
+                            {slot.createReason}
+                        </span>
+                    ) : (
+                        <button
+                            type="button"
+                            className="instance-manager__add"
+                            onClick={() => onCreate(slot.ref.of, slot.ref.key)}
+                        >
+                            <i className="bi bi-plus" aria-hidden="true" />
+                            New {slot.ref.of} &amp; link
+                        </button>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -1939,16 +2009,26 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
     /** Drill into a contained child. The road is seeded from the SUBJECT's own
      *  position, not from the model root, so the breadcrumb starts where the form
-     *  started and does not print ancestors the user never navigated through. */
-    const drillTo = (childId: string, childKey: string) => {
+     *  started and does not print ancestors the user never navigated through.
+     *
+     *  `via` (#158 P3): the inline child a reference link belongs to. Its step goes on
+     *  the road first, so opening Antonio from Phase_0's `learners` reads
+     *  «ElenaScenario › Phase_0 › Antonio» — the way the user actually came — and Back
+     *  from Antonio lands on Phase_0, not past it. */
+    const drillTo = (childId: string, childKey: string, via?: { id: string; key: string }) => {
         const step = navStepOf(idlookup, childId, childKey);
         if (!step) return;
         navScrollRef.current[formDepth] = formPaneRef.current?.scrollTop ?? 0;
         pendingScrollRef.current = 0;
-        if (nav) { setNav(drillInto(nav, step)); return; }
-        const root = subjectId ? navStepOf(idlookup, subjectId) : null;
-        if (!root) return;
-        setNav(drillInto(navFor(root), step));
+        let from = nav;
+        if (!from) {
+            const root = subjectId ? navStepOf(idlookup, subjectId) : null;
+            if (!root) return;
+            from = navFor(root);
+        }
+        const viaStep = via ? navStepOf(idlookup, via.id, via.key) : null;
+        if (viaStep) from = drillInto(from, viaStep);
+        setNav(drillInto(from, step));
     };
 
     /** Where a return to `depth` lands: the offset saved when the form left it. */
@@ -2237,17 +2317,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      * instantiated at root (`newInstanceReason`) leaves the reason and drops the
      * button. A slot is shown when it has targets to navigate to OR a create is
      * offered — an empty, uncreatable reference is noise, like an empty child slot.
+     *
+     * #158 P3 — the body is `refSlotsOf(id)`, for ANY instance, because the form shows
+     * more than one: its subject and, at the inline level, each contained child with a
+     * form of its own. Only the subject got these sections, so a reference of an inline
+     * child (`Phase.learners` under a Scenario) showed its chips and no list — the
+     * «mappedLearners» the issue asks for next to `mappedCompetencies`, which is a
+     * reference of the subject. Same rule, now applied to every form on screen.
      */
-    const refSlots = useMemo(() => {
-        if (!formSubjectId || !shapeCtx) {
-            return [] as Array<{ ref: RefShape; targets: string[]; count: number; createReason: string | null }>;
-        }
+    const refSlotsOf = (objectId: string): RefSlot[] => {
         const shapeAll = shapeCtx.shape();
-        const clsName = pathTo(idlookup, formSubjectId).slice(-1)[0]?.cls;
+        const clsName = pathTo(idlookup, objectId).slice(-1)[0]?.cls;
         const shape = clsName ? shapeAll.classes[clsName] : null;
         if (!shape) return [];
         return shape.refs.map(ref => {
-            const targets = childrenIn(idlookup, formSubjectId, ref.key);
+            const targets = childrenIn(idlookup, objectId, ref.key);
             const count = targets.length;
             const full = ref.upper !== -1 && count >= ref.upper;
             let createReason: string | null;
@@ -2256,7 +2340,22 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             else createReason = newInstanceReason(shapeAll.classes[ref.of], countsByName[ref.of] ?? 0);
             return { ref, targets, count, createReason };
         }).filter(s => s.targets.length > 0 || s.createReason === null);
-    }, [idlookup, formSubjectId, shapeCtx, countsByName]);
+    };
+
+    const refSlots = useMemo(
+        () => (formSubjectId && shapeCtx ? refSlotsOf(formSubjectId) : [] as RefSlot[]),
+        [idlookup, formSubjectId, shapeCtx, countsByName],
+    );
+
+    /** #158 P3 — the same sections for each inline child, by child id. Empty past the
+     *  inline level: there the children are drill-in links, and a link carries no form
+     *  to put a section under — the section appears once the child IS the form. */
+    const inlineRefSlots = useMemo(() => {
+        const out: Record<string, RefSlot[]> = {};
+        if (!shapeCtx || !rendersInline(formDepth)) return out;
+        for (const slot of inlineChildren) for (const id of slot.ids) out[id] = refSlotsOf(id);
+        return out;
+    }, [inlineChildren, formDepth, idlookup, shapeCtx, countsByName]);
 
     /** Se il «+» va offerto affatto: la metaclasse ha almeno una feature di
      *  contenimento (il modello, almeno una rootable). Una lettura di shape, non
@@ -3359,6 +3458,18 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                         <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
                                                     </button>
                                                     <IRForm objectId={childId} host="manager" />
+                                                    {/* #158 P3 — the child's own reference
+                                                        sections, under its own form and inside
+                                                        its frame: they are the child's, and the
+                                                        frame is what says so. Opening a target
+                                                        goes THROUGH the child (`via`). */}
+                                                    <RefSlotsSection
+                                                        slots={inlineRefSlots[childId] ?? []}
+                                                        idlookup={idlookup}
+                                                        nested
+                                                        onOpen={(targetId, refKey) => drillTo(targetId, refKey, { id: childId, key: slot.key })}
+                                                        onCreate={(targetCls, refKey) => openCreateAndLink(targetCls, childId, refKey)}
+                                                    />
                                                 </div>
                                             ) : (
                                                 <button
@@ -3394,50 +3505,16 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             Not inside `IRForm`: the tab hosts `IRForm`/`IRFormField`/
                             `ListWidget` unchanged (the canvas rail mounts them too), so the
                             navigation and the create-and-link live at the tab, exactly where
-                            the containment inline level and «Add contained» already do. */}
-                        {refSlots.length > 0 && (
-                            <div className="instance-manager__inline instance-manager__refs">
-                                {refSlots.map(slot => (
-                                    <div className="instance-manager__inline-slot" key={slot.ref.key}>
-                                        <h3 className="instance-manager__eyebrow">
-                                            {slot.ref.key}
-                                            <span className="instance-manager__draft-card">
-                                                {slot.ref.of} [{slot.count}/{slot.ref.upper === -1 ? '*' : slot.ref.upper}]
-                                            </span>
-                                        </h3>
-                                        {slot.targets.map(targetId => (
-                                            <button
-                                                type="button"
-                                                className="instance-manager__inline-link"
-                                                key={targetId}
-                                                title="Open the referenced element — edits the shared instance"
-                                                onClick={() => drillTo(targetId, slot.ref.key)}
-                                            >
-                                                {crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null })}
-                                                <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
-                                            </button>
-                                        ))}
-                                        {slot.targets.length === 0 && (
-                                            <p className="instance-manager__note">No {slot.ref.of} linked yet.</p>
-                                        )}
-                                        {slot.createReason ? (
-                                            <span className="instance-manager__child-reason" title={slot.createReason}>
-                                                {slot.createReason}
-                                            </span>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                className="instance-manager__add"
-                                                onClick={() => { if (formSubjectId) openCreateAndLink(slot.ref.of, formSubjectId, slot.ref.key); }}
-                                            >
-                                                <i className="bi bi-plus" aria-hidden="true" />
-                                                New {slot.ref.of} &amp; link
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                            the containment inline level and «Add contained» already do.
+
+                            #158 P3 — the markup moved to `RefSlotsSection`, which each
+                            inline child mounts too; this call is the subject's. */}
+                        <RefSlotsSection
+                            slots={refSlots}
+                            idlookup={idlookup}
+                            onOpen={(targetId, refKey) => drillTo(targetId, refKey)}
+                            onCreate={(targetCls, refKey) => { if (formSubjectId) openCreateAndLink(targetCls, formSubjectId, refKey); }}
+                        />
                         {/* Route 2 of Turno 10: containment creates. One Add per child
                             slot of the shape, gated by `upper`; when the slot is full
                             the control is absent and the cardinality says why. The
