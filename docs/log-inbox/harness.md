@@ -272,3 +272,22 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Priority**: high
 **Found in**: P-2026-09-28-2001
 **Detail**: `frontend/scripts/gates/__tests__/check-addonly.test.ts` (the `documents "447e4239b"` test), commit `65b8763a7` body
+
+## 2026-09-28 — feat(harness): check:addonly compares whole entries, not lines (P-2026-09-28-2001)
+**Prompt**: GO stage 2 of P-2026-09-28-2001 — replace the per-line comparison with an entry-level one (whole `## ` entries, byte-identical and contiguous, entry order free to change); 447e4239b must now be refused; a `Log-Repair: <value>` commit trailer exempts a deliberate hand repair, tested with a synthetic commit since e2448cf61's real message cannot carry a trailer it was never written with.
+**Files touched**: code `160b00d2a`: `frontend/scripts/gates/check-addonly.ts` (rewritten: entry-level comparison via `log-tools.ts` `splitLog`/`entryStartLines`, `entryKey()` trailing-blank-line normalization, the `Log-Repair` exemption), `frontend/scripts/gates/__tests__/check-addonly.test.ts` (rewritten, 20 tests). This commit: `docs/log-inbox/harness.md` (this entry, the ticket below), the prompt's Status line (re-pointed to `160b00d2a`).
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-09-28 20:01
+**Causa**: (a)
+**Regressions**: no. `npm run typecheck:scripts` exit 0. `npx vitest run scripts/hooks scripts/gates`: before this stage's two-file diff (stage-1 committed state restored via `git checkout HEAD --`, cp/restore, no `git stash`) 631 tests, 626 passed, 5 pre-existing failures (unrelated, untouched); after, 629 tests, 624 passed, same 5, 0 new — the net −2 is the test file's restructure (20 tests vs 22), not lost coverage. `check:docs` 4/4. `check:scripts` PASS. `check:agents` PASS.
+**Out-of-scope changes**: no — exactly the two files this stage's GO named.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: `check:addonly --range 65eb5475b..HEAD` now finds exactly one real commit, `e2448cf61`, on this branch's own ancestry: the actual repair of 447e4239b, made before the `Log-Repair` trailer existed, so it cannot carry one retroactively. This is the explicit, accepted design tradeoff (GO stage 2's own words: "e2448cf61 passes only through that exemption"), not a new defect — see the ticket below for the decision this leaves open.
+**Prompt document name**: 2026-09-28 20:01
+
+## 2026-09-28 — ticket: e2448cf61 permanently fails check:addonly --range, by design, unresolved
+**Ticket**: `e2448cf61` (the real repair of the 447e4239b splice) is a legitimate ancestor of `alfonso-frontend-jjtl` at `65eb5475b..HEAD`, and now permanently fails `check:addonly` (2 entries named), because it carries no `Log-Repair` trailer — the mechanism did not exist when it was made, and a real commit's message cannot be amended after the fact without rewriting history (forbidden, P14/P15). `npm run check:addonly -- --range 65eb5475b..HEAD` will therefore never again return exit 0 on this branch's full range, only on ranges that exclude `e2448cf61`. Options, undecided: (a) accept permanently, document the one historical exception in `docs/PROTOCOL.md` or `CLAUDE.md` next to the gate's own rule, so a future reader of a red range scan does not treat it as a live regression; (b) narrow the default `--range` gate command future prompts cite to start after `e2448cf61` (`559eb82c5..HEAD` or later); (c) something else. Needs Alfonso's call, not a lane's.
+**Priority**: medium
+**Found in**: P-2026-09-28-2001
+**Detail**: `frontend/scripts/gates/__tests__/check-addonly.test.ts` (the `checkRange` tests), commit `160b00d2a` body
