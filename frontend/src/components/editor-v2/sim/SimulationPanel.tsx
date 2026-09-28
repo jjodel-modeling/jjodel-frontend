@@ -19,6 +19,9 @@
  *   (R-SIM-1). The simulation NEVER writes to the model nor to any bag (R-SIM-6,
  *   prototype invariant). A press that reads an input opens the input dialog
  *   (SimInputDialog.tsx, R-SIM-88), portaled: nothing in the panel moves.
+ *   «Data…» opens the model's own data dialog (SimDataModal.tsx, R-SIM-94): the
+ *   globals of the model in its bag's `simStateAttributes`, authoring as the M2
+ *   face is, never the run; the undeclared globals of the Reset line lead to it.
  *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
@@ -41,7 +44,7 @@ import {
 } from './simRoleStatus';
 import {
     candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView, markingLine,
-    panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
+    panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
 } from './simBridge';
 import type { InputLabel, InputValue, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -60,6 +63,7 @@ import type { SimEventInfo } from '../../../model/simulation/types';
 import type { RoleKey, Roles } from './simRoleStatus';
 import { SimRolesModal } from './SimRolesModal';
 import { SimInputDialog } from './SimInputDialog';
+import { SimDataModal } from './SimDataModal';
 import './simulation-panel.scss';
 
 // Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
@@ -214,6 +218,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
         modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
+        modelName, modelStateAttributesRaw, modelDataOff,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -231,6 +236,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // «Last step» and its title, which lists the assignments of the step (R-SIM-71).
     const [lastStep, setLastStep] = useState<{ text: string; title: string } | null>(null);
     const [defects, setDefects] = useState<{ line: string; title: string } | null>(null);
+    // The globals the Reset line finds undeclared (R-SIM-94), which lead to the model's Data dialog.
+    const [undeclared, setUndeclared] = useState<string[]>([]);
+    // The model's Data dialog (M1 face), with the undeclared names it opens with.
+    const [dataModal, setDataModal] = useState<{ undeclared: string[] } | null>(null);
     const [interrupted, setInterrupted] = useState(false);
     // The list of reasons under the status row, opened by the user only (R-SIM-58, R-SIM-63).
     const [reasonsOpen, setReasonsOpen] = useState(false);
@@ -239,6 +248,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // «Configure…» opens the «Simulation roles» dialog; the declarations hint opens it on Data (R-SIM-81(3)).
     const [modal, setModal] = useState<{ onData: boolean } | null>(null);
     useEffect(() => { setChosen(null); setModal(null); }, [configModelId]);
+    useEffect(() => { setDataModal(null); setUndeclared([]); }, [modelid]);
 
     const roles: Roles = useMemo(() => {
         try { return JSON.parse(roleSig) as Roles; } catch { return {}; }
@@ -357,6 +367,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
+        setUndeclared([]);
         setRunError(null);
         setRunWarning(null);
         setInterrupted(true);
@@ -418,6 +429,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
+        setUndeclared([]);
         setInterrupted(false);
         setReasonsOpen(false);
         // R-SIM-16: the roles are checked again at run start, since the
@@ -450,9 +462,11 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         // One line for the net's defects and the guards' (R-SIM-61), every defect in full in its title.
         const line = defectsLine(started.run.net, lookup, started.compileDefects);
         setDefects(line === null ? null : { line, title: defectsTitle(started.run.net, lookup, started.compileDefects) ?? line });
+        // The globals no declaration has lead to the model's Data dialog (R-SIM-94), unless the profile turns the declarations off.
+        setUndeclared(modelDataOff ? [] : undeclaredGlobals(started.compileDefects ?? [], lookup, modelid));
         setLastStep({ text: 'Reset', title: 'Reset' });
         setTick(t => t + 1);
-    }, [modelid, roles, configModelId]);
+    }, [modelid, roles, configModelId, modelDataOff]);
 
     const onStop = useCallback((): void => {
         setRunError(null);
@@ -462,6 +476,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
+        setUndeclared([]);
         setInterrupted(false);
         setReasonsOpen(false);
         simClear(modelid);
@@ -670,6 +685,30 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     </div>
                 ) : (
                     <>
+                        {/* The model's data (R-SIM-94): first, so it never moves with the lines below it; absent when the
+                            profile turns the declarations off, since the run would not read them. */}
+                        {!modelDataOff && (
+                            <button
+                                type="button"
+                                className="sim-panel__configure"
+                                aria-haspopup="dialog"
+                                title="The globals of this model, read as model.[name]"
+                                onClick={() => setDataModal({ undeclared: [] })}
+                            >
+                                <i className="bi bi-database" />
+                                <span>Data…</span>
+                            </button>
+                        )}
+                        {dataModal && (
+                            <SimDataModal
+                                modelId={modelid}
+                                modelName={modelName}
+                                stateAttributesRaw={modelStateAttributesRaw}
+                                undeclared={dataModal.undeclared}
+                                onClose={() => setDataModal(null)}
+                                onApplied={() => setDataModal(null)}
+                            />
+                        )}
                         {/* The lines that add to the others sit above the buttons: the panel is anchored at the
                             bottom and grows upward, so they never move the buttons (R-SIM-65, R-SIM-66). One row
                             each, the full text in the title (R-SIM-63). The choice list opens above them too, so Step
@@ -710,6 +749,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
                         {defects && (
                             <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
+                        )}
+                        {undeclared.length > 0 && (
+                            <div className="sim-panel__hint sim-panel__hint--line" title={`Undeclared: ${undeclared.join(', ')}. Declare them in the model's data.`}>
+                                {`Undeclared: ${undeclared.join(', ')}. `}
+                                <button type="button" className="sim-panel__hint-action" onClick={() => setDataModal({ undeclared })}>Declare in Data…</button>
+                            </div>
                         )}
                         {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line sim-panel__hint--halt" title={view.halt.title}>{view.halt.line}</div>}
                         {view?.marking && (
@@ -847,6 +892,15 @@ interface StateProps {
     profileBagSig: string;
     /** JSON of the metamodel sketch the profile binder reads (R-SIM-77); '' on the M1 face. */
     sketchSig: string;
+    /** The M1 model's name, for its Data dialog; '' on the M2 face. */
+    modelName: string;
+    /**
+     * The raw `simStateAttributes` string of the M1 model's own bag (R-SIM-94), `null` when unset or on the
+     * M2 face: a primitive of its own, as `stateAttributesRaw` is.
+     */
+    modelStateAttributesRaw: string | null;
+    /** The metamodel's profile turns the declarations off (R-SIM-78): the run reads no Data, the M1 face offers none. */
+    modelDataOff: boolean;
 }
 
 interface DispatchProps { }
@@ -883,6 +937,11 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         stateAttributesRaw: !ownProps.isModelMode && typeof bag[STATE_ATTRIBUTES_SPEC.key] === 'string' ? bag[STATE_ATTRIBUTES_SPEC.key] : null,
         profileBagSig: !ownProps.isModelMode && configModelId ? profileBagSigOf(lookup[configModelId]?._state ?? {}) : '',
         sketchSig: !ownProps.isModelMode && configModelId ? JSON.stringify(sketchOfMetamodel(lookup, configModelId)) : '',
+        modelName: ownProps.isModelMode ? String(dModel?.name ?? '') : '',
+        modelStateAttributesRaw: ownProps.isModelMode && typeof dModel?._state?.[STATE_ATTRIBUTES_SPEC.key] === 'string'
+            ? dModel._state[STATE_ATTRIBUTES_SPEC.key]
+            : null,
+        modelDataOff: ownProps.isModelMode && storedProfile(rawState).profile.modes.stateAttributes.mode === 'off',
     };
 }
 
