@@ -38,6 +38,12 @@
  * the record, not a lookup — and the CLI/checkRange report always name an
  * exemption when they use it.
  *
+ * Known repairs: a hand repair made before the trailer existed cannot carry
+ * one without a history rewrite. KNOWN_REPAIRS lists each such commit with
+ * the commit it repairs and a one-line reason; a listed commit is exempt
+ * exactly as if its message carried `Log-Repair: <repairs>`, and the report
+ * names it as a known repair (P-2026-09-28-2332, RC-34's open ticket).
+ *
  * checkAddonly() is pure (no I/O): it takes old/new text per file and
  * returns violations. checkCommit()/checkRevision()/checkRange() are the
  * git-backed callers the CLI and lane-run.mjs use; each takes an optional
@@ -263,16 +269,47 @@ function logRepairTrailer(repo: string, rev: string): string | null {
     return m ? m[1].trim() : null;
 }
 
+export interface KnownRepair {
+    /** Full sha of the repair commit. */
+    commit: string;
+    /** Full sha of the commit it repairs: the value its Log-Repair trailer would carry. */
+    repairs: string;
+    /** One line: what it repairs and why it carries no trailer. */
+    reason: string;
+}
+
+/** Hand repairs that predate the Log-Repair trailer. Add-only, like the logs it guards. */
+export const KNOWN_REPAIRS: readonly KnownRepair[] = [
+    {
+        commit: 'e2448cf617f3b93a5b5c3bc5d10139d932d163c3',
+        repairs: '447e4239bbc4b044bf42421bd4a0a718f84ed3b8',
+        reason: 'restores the two entries the staging merge 447e4239b spliced, made before the Log-Repair trailer existed',
+    },
+];
+
+/** The entry of `known` for the commit `rev` resolves to, or null. */
+function knownRepairOf(repo: string, rev: string, known: readonly KnownRepair[]): KnownRepair | null {
+    if (known.length === 0) return null;
+    const r = git(repo, ['rev-parse', '--verify', '--quiet', rev + '^{commit}']);
+    if (r.status !== 0) return null;
+    const sha = r.out.trim();
+    return known.find((k) => k.commit === sha) ?? null;
+}
+
 export interface CheckResult {
     violations: AddonlyViolation[];
     /** The Log-Repair trailer's value when the commit is exempt, else null. */
     exempt: string | null;
+    /** The reason of its KNOWN_REPAIRS entry when the exemption comes from that list, not from a trailer. */
+    knownRepair?: string;
 }
 
 /** One commit against its first parent. Exempt, or [] for a root commit or one outside scope. */
-export function checkCommit(rev: string, repo: string = REPO): CheckResult {
+export function checkCommit(rev: string, repo: string = REPO, known: readonly KnownRepair[] = KNOWN_REPAIRS): CheckResult {
     const exempt = logRepairTrailer(repo, rev);
     if (exempt !== null) return { violations: [], exempt };
+    const listed = knownRepairOf(repo, rev, known);
+    if (listed !== null) return { violations: [], exempt: listed.repairs, knownRepair: listed.reason };
 
     const parent = firstParent(rev, repo);
     if (parent === null) return { violations: [], exempt: null };
@@ -331,7 +368,8 @@ function shortSha(sha: string): string {
 
 function printResult(r: RevisionResult): void {
     if (r.exempt !== null) {
-        console.log(`EXEMPT  ${shortSha(r.commit)}  Log-Repair: ${r.exempt}`);
+        if (r.knownRepair !== undefined) console.log(`EXEMPT  ${shortSha(r.commit)}  known repair of ${shortSha(r.exempt)}: ${r.knownRepair}`);
+        else console.log(`EXEMPT  ${shortSha(r.commit)}  Log-Repair: ${r.exempt}`);
         return;
     }
     console.log(`FAIL  ${shortSha(r.commit)}  ${r.violations.length} entr${r.violations.length === 1 ? 'y' : 'ies'} rewritten:`);
