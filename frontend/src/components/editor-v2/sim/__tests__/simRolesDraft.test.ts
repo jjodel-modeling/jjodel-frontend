@@ -9,8 +9,9 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    bagWithEdits, boundHelp, compatibleOptions, defectFix, draftApply, draftPatch, draftProposals, draftStatus, isFirstOpen,
-    isModified, matchLine, roleBadge, roleSections, roleSwitch, rowValue, withProfileName, withRoleMode,
+    bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftPatch, draftProposals, draftStatus, isFirstOpen,
+    isModified, matchLine, MULTI_TAGS_SHOWN, multiRow, multiRowLabels, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
+    withAdded, withPrimary, withProfileName, withRemoved, withRoleMode,
 } from '../simRolesDraft';
 import type { DraftInput } from '../simRolesDraft';
 import { profilePatch, storedProfile } from '../simRoleStatus';
@@ -20,6 +21,7 @@ import { decodeProfile, encodeProfile } from '../../../../model/simulation/profi
 import { ROLE_IDS } from '../../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
 import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
+import type { RoleCompatibility } from '../../../../model/simulation/bindingCompat';
 
 const SM = systemProfile('stateMachine') as SimProfile;
 const ESM = systemProfile('extendedStateMachine') as SimProfile;
@@ -319,5 +321,103 @@ describe('compatibleOptions (S10 over S11a)', () => {
         expect(compatibleOptions(compat, 'c').map(o => o.id)).toEqual(['a', 'b', 'c']);
         expect(compatibleOptions({ ...compat, current: { id: 'z', verdict: 'incompatible', why: 'gone' } }, 'z').map(o => o.id)).toEqual(['z', 'a', 'b']);
         expect(compatibleOptions(undefined, 'x')).toEqual([]);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// R-SIM-90: a multi row, the primary select and the other attributes as tags
+// ---------------------------------------------------------------------------
+
+describe('R-SIM-90: the multi row of Guard, Action, Entry and Exit (P-2026-09-29-0010)', () => {
+    const compat = (verdicts: Record<string, 'ok' | 'warn' | 'incompatible'>): RoleCompatibility => ({
+        candidates: Object.entries(verdicts).map(([id, verdict]) => ({ id, verdict, why: verdict === 'ok' ? '' : `${id} is wrong` })),
+        current: null,
+    });
+
+    it('the primary is the first attribute, the tags the others; the stored plain id is a row without tags', () => {
+        expect(multiRow('A', ['A', 'B'])).toMatchObject({ primary: 'A', others: [] });
+        expect(multiRow('["A","B","C"]', ['A', 'B', 'C'])).toMatchObject({ primary: 'A', others: ['B', 'C'] });
+        expect(multiRow('', ['A', 'B'])).toMatchObject({ primary: '', others: [] });
+    });
+
+    it('the «+» exists only with two or more candidates not incompatible; its options leave out the chosen ones (mutants: «+» with one candidate; a chosen one offered again)', () => {
+        const ids = compatibleIds(compat({ A: 'ok', B: 'warn', C: 'incompatible' }));
+        expect(ids).toEqual(['A', 'B']);
+        expect(multiRow('A', ids)).toMatchObject({ plus: true, addable: ['B'], plusShown: true });
+        // one compatible candidate, or none: no «+», the row reads as today (the four demo scenes)
+        expect(multiRow('A', compatibleIds(compat({ A: 'ok', C: 'incompatible' })))).toMatchObject({ plus: false });
+        expect(multiRow('', [])).toMatchObject({ plus: false });
+        // every candidate chosen: the slot stays, the select is hidden
+        expect(multiRow('["A","B"]', ids)).toMatchObject({ plus: true, addable: [], plusShown: false });
+    });
+
+    it('the «+» keeps its slot but is hidden while the primary is empty (no layout shift)', () => {
+        expect(multiRow('', ['A', 'B'])).toMatchObject({ plus: true, plusShown: false, addable: ['A', 'B'] });
+    });
+
+    it('at most MULTI_TAGS_SHOWN tags show, the rest are counted: the row never grows', () => {
+        expect(MULTI_TAGS_SHOWN).toBe(1);
+        const row = multiRow('["A","B","C","D"]', ['A', 'B', 'C', 'D']);
+        expect([row.shown, row.more]).toEqual([['B'], ['C', 'D']]);
+        expect(multiRow('["A","B"]', ['A', 'B'])).toMatchObject({ shown: ['B'], more: [] });
+    });
+
+    it('editing the list: set the primary, clear it and promote the first tag, add, remove (mutants: clearing drops the tags; a repeated add)', () => {
+        expect(withPrimary('', 'A')).toBe('A');
+        expect(withPrimary('A', 'B')).toBe('B');
+        expect(withPrimary('["A","B","C"]', 'D')).toBe('["D","B","C"]');
+        // a tag chosen as the primary moves there, no duplicate
+        expect(withPrimary('["A","B","C"]', 'C')).toBe('["C","B"]');
+        // cleared: the first tag becomes the primary
+        expect(withPrimary('["A","B","C"]', '')).toBe('["B","C"]');
+        expect(withPrimary('["A","B"]', '')).toBe('B');
+        expect(withPrimary('A', '')).toBe('');
+        expect(withAdded('A', 'B')).toBe('["A","B"]');
+        expect(withAdded('["A","B"]', 'B')).toBe('["A","B"]');
+        expect(withRemoved('["A","B","C"]', 'B')).toBe('["A","C"]');
+        expect(withRemoved('["A","B"]', 'B')).toBe('A');
+    });
+
+    it('Apply writes the plain id for one attribute, JSON for two or more, nothing for none, in one patch (mutant: a single element encoded as JSON)', () => {
+        const edit = (value: string) => (value === '' ? null : value);
+        const two = draftPatch(input({ profile: ESM, bag: { simGuard: 'A_g' }, edits: { simGuard: edit(withAdded('A_g', 'A_h')) } }));
+        expect(two.simGuard).toBe('["A_g","A_h"]');
+        const back = draftPatch(input({ profile: ESM, bag: { simGuard: '["A_g","A_h"]' }, edits: { simGuard: edit(withRemoved('["A_g","A_h"]', 'A_h')) } }));
+        expect(back.simGuard).toBe('A_g');
+        const cleared = draftPatch(input({ profile: ESM, bag: { simGuard: 'A_g' }, edits: { simGuard: edit(withPrimary('A_g', '')) } }));
+        expect('simGuard' in cleared && cleared.simGuard === undefined).toBe(true);
+        // control: a list edited back to the stored one writes nothing for the key
+        expect(draftPatch(input({ profile: ESM, bag: { simGuard: '["A_g","A_h"]' }, edits: { simGuard: edit(withAdded('A_g', 'A_h')) } }))).not.toHaveProperty('simGuard');
+    });
+
+    it('the accessible names: the strip, each remove button, the «+» select', () => {
+        const names = multiRowLabels('Guard');
+        expect(names.strip).toBe('Other Guard attributes');
+        expect(names.add).toBe('Add another Guard attribute');
+        expect(names.remove('Transition.cond')).toBe('Remove Transition.cond from Guard');
+        expect(names.more(['Transition.cond', 'Transition.when'])).toBe('Also: Transition.cond, Transition.when');
+    });
+
+    it('the keyboard: Delete and Backspace on a focused remove button remove the tag; Escape and the rest do not (Enter and Space click the button)', () => {
+        expect(removesTag('Delete')).toBe(true);
+        expect(removesTag('Backspace')).toBe(true);
+        for (const key of ['Escape', 'Tab', 'Enter', ' ', 'ArrowLeft', 'a']) expect(removesTag(key), key).toBe(false);
+    });
+
+    it('the verdict slot: one attribute as before; several, the worst with each attribute that is not ok named in the title (mutant: the first attribute\'s verdict)', () => {
+        const nameOf = (id: string) => `N.${id}`;
+        const one: RoleCompatibility = { ...compat({ A: 'ok', W: 'warn' }), current: { id: 'W', verdict: 'warn', why: 'W is wrong' }, currents: [{ id: 'W', verdict: 'warn', why: 'W is wrong' }] };
+        expect(rowVerdict(one, 'W', nameOf)).toEqual({ verdict: 'warn', why: 'W is wrong' });
+        expect(rowVerdict(one, 'A', nameOf)).toBeNull();
+        const many: RoleCompatibility = {
+            ...compat({ A: 'ok', W: 'warn', X: 'incompatible' }),
+            current: { id: 'X', verdict: 'incompatible', why: 'X is wrong' },
+            currents: [{ id: 'A', verdict: 'ok', why: '' }, { id: 'W', verdict: 'warn', why: 'W is wrong' }, { id: 'X', verdict: 'incompatible', why: 'X is wrong' }],
+        };
+        expect(rowVerdict(many, '["A","W","X"]', nameOf)).toEqual({ verdict: 'incompatible', why: 'N.W: W is wrong; N.X: X is wrong' });
+        const fine: RoleCompatibility = { ...many, current: { id: 'A', verdict: 'ok', why: '' }, currents: [{ id: 'A', verdict: 'ok', why: '' }, { id: 'B', verdict: 'ok', why: '' }] };
+        expect(rowVerdict(fine, '["A","B"]', nameOf)).toBeNull();
+        // no sketch, no verdict
+        expect(rowVerdict(undefined, 'A', nameOf)).toBeNull();
     });
 });
