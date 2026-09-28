@@ -321,3 +321,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Prompt document name**: 2026-09-28 23:32
 
 **Ticket** (flaky, low, left by P-2026-09-28-2332): once under v26.8.1, with `traceIndex`, `traceMonitor` and `laneRun` run together, the three `--governance-goahead` tests of `laneRun.test.ts > lane-run merge` failed; not reproduced alone nor in three later runs (the same three files and all of `scripts/` under v26.8.1, the full suite under v23.3.0). The failure text was not captured; cause unknown.
+
+## 2026-09-29 — fix: light tier runs claude-sonnet-5-5, RC-32 (P-2026-09-28-2332)
+**Prompt**: GO step of P-2026-09-28-2332 before the merge: Alfonso chose `claude-sonnet-5-5` as the light model of RC-32 (verified on the Mac: `claude -p --model claude-sonnet-5-5` answers, `claude-sonnet-5.5` is refused); `LIGHT_MODEL` and every test or message naming `claude-sonnet-5` change, grep first.
+**Files touched**: `d5d2b7d49`: `frontend/scripts/lane-run.mjs` (`LIGHT_MODEL`), `frontend/scripts/hooks/__tests__/laneRun.test.ts` (the tier test that pins it). This commit: this entry, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. The pinned test red on the old constant, green after. Full `npx vitest run` under v23.3.0: 5555 passed, 0 failed, the 9 §17 files red at import. `typecheck:scripts` exit 0; `check:scripts` PASS 36 files; `check:docs` 4/4.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: `git grep claude-sonnet-5` hit three lines of code, all changed; `git grep "claude-sonnet-5'" -- frontend/scripts` exit 1 after. The docs hits (decisions.md RC-32, discovery reports, sessions) record history and stay. The id regex of `chooseTier` already accepts the new id. Subject: the GO's `(RC-32, P-...)` is 74 characters to bash-guard, which strips only a bare ` (P-...)` suffix, so RC-32 moved before it. Session `170177ff`.
+**Prompt document name**: 2026-09-28 23:32

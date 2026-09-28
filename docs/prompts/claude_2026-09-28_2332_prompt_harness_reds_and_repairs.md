@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-2332
 Chat: C-2026-09-28-1936
 Lane: fast (scripts only: gates, lane-run tests; no discovery). Tier: light.
-Status: eseguito 2026-09-28 · lane harness · c2e861e31, 3c22f4521, 6f43d630b · non fuso: hard-stop
+Status: eseguito 2026-09-28 · lane harness · c2e861e31, 3c22f4521, 6f43d630b, d5d2b7d49 · non fuso: hard-stop
 
 Worktree: `~/jjodel-w-harness2`, branch `harness-reds-repairs` (cut by the chat from `alfonso-frontend-jjtl` at `fb044365b`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-harness2`, branch `harness-reds-repairs`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
