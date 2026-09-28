@@ -33,6 +33,7 @@ import {
     LObject,
     LPointerTargetable,
     store,
+    Defaults,
 } from '../../joiner';
 
 // ============================================
@@ -311,14 +312,14 @@ export class JsonModelService {
      * Build the `type` value for an attribute. Canonical primitives (EString,
      * EInt, ...) are emitted as a plain string; enum / user-datatype / class
      * classifiers are emitted as a JsonClassifierRef object (carrying the
-     * origin metamodel when cross-metamodel). The `Pointer_E` id prefix is the
-     * canonical-primitive discriminator (same convention as EcoreService).
+     * origin metamodel when cross-metamodel). `Defaults.primitiveTypeIds` is the
+     * canonical-primitive discriminator (the same set as EcoreService, R-SIM-44).
      */
     private static buildTypeRef(type: any, currentModelId: string, ctx: BuildContext): string | JsonClassifierRef {
         if (!type) return 'EString';
         if (typeof type === 'string') return type;
         const id = typeof type.id === 'string' ? type.id : '';
-        if (id.startsWith('Pointer_E')) return type.name || 'EString';
+        if (Defaults.primitiveTypeIds.has(id)) return type.name || 'EString';
         return this.buildClassifierRef(type, currentModelId, ctx);
     }
 

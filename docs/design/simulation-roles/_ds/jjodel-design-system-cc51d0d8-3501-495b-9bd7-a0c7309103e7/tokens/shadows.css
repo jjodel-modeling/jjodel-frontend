@@ -1,0 +1,31 @@
+/* ============================================================
+   JJODEL DESIGN TOKENS — SHADOWS
+   Subtle, low-opacity elevation for a clean light UI. Shadows
+   carry depth; borders are kept hairline (0.5–1px slate).
+   ============================================================ */
+
+:root,
+:root[data-theme="light"] {
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
+  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.20);
+  --shadow-glow: 0 0 20px var(--color-accent-muted);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-none: none;
+
+  /* Semantic component shadows */
+  --shadow-button: var(--shadow-sm);
+  --shadow-button-hover: var(--shadow-md);
+  --shadow-card: var(--shadow-md);
+  --shadow-dropdown: var(--shadow-lg);
+  --shadow-modal: var(--shadow-xl);
+  --shadow-tooltip: var(--shadow-md);
+  --shadow-node: var(--shadow-md);
+  --shadow-node-hover: var(--shadow-lg);
+
+  /* Project-card specific (slightly tighter than --shadow-card) */
+  --shadow-project-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-project-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+}

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<sc-if value="{{ isClass }}" hint-placeholder-val="{{ true }}"><span title="Class: binds a metaclass" style="box-sizing:border-box;width:40px;height:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--color-border-primary,#cbd5e1);background:var(--color-bg-tertiary,#f1f5f9);color:var(--color-text-secondary,#334155);font-family:var(--font-sans);font-size:11px;font-weight:500;line-height:1">Class</span></sc-if>
+<sc-if value="{{ isRef }}"><span title="Reference: binds a reference of a metaclass" style="box-sizing:border-box;width:40px;height:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--m-ref-bd,#bae6fd);background:var(--m-ref-bg,#e0f2fe);color:var(--m-ref-fg,#0369a1);font-family:var(--font-sans);font-size:11px;font-weight:500;line-height:1">Ref</span></sc-if>
+<sc-if value="{{ isAttr }}"><span title="Attribute: binds an attribute of a metaclass" style="box-sizing:border-box;width:40px;height:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--color-border-primary,#cbd5e1);background:transparent;color:var(--color-text-tertiary,#475569);font-family:var(--font-sans);font-size:11px;font-weight:500;line-height:1">Attr</span></sc-if>
+<sc-if value="{{ isValue }}"><span title="Value: a number set in the profile" style="box-sizing:border-box;width:40px;height:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--color-border-primary,#cbd5e1);background:transparent;color:var(--color-text-tertiary,#475569);font-family:var(--font-sans);font-size:11px;font-weight:500;line-height:1">Value</span></sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;40px&quot;,&quot;height&quot;:&quot;16px&quot;},&quot;kind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;class&quot;,&quot;ref&quot;,&quot;attr&quot;,&quot;value&quot;],&quot;default&quot;:&quot;class&quot;,&quot;tsType&quot;:&quot;'class'|'ref'|'attr'|'value'&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const k = this.props.kind ?? 'class';
+    return { isClass: k === 'class', isRef: k === 'ref', isAttr: k === 'attr', isValue: k === 'value' };
+  }
+}
+</script>
+</body>
+</html>

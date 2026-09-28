@@ -3,12 +3,12 @@ import { Button } from '../common/Button';
 import type { ViewpointType } from '../../joiner';
 import '../CreateProjectDialog/create-project-dialog.scss';
 
-const VIEWPOINT_TYPES: { value: ViewpointType; label: string; description: string }[] = [
-    { value: 'syntax', label: 'Syntax', description: 'Exclusive view — defines the concrete syntax of a model' },
-    { value: 'decoration', label: 'Decoration', description: 'Overlay — adds visual decorations to existing views' },
-    { value: 'validation', label: 'Validation', description: 'Overlay — highlights validation errors and warnings' },
-    { value: 'semantics', label: 'Semantics', description: 'Overlay — shows semantic information' },
-    { value: 'editor_behavior', label: 'Editor behavior', description: 'Overlay — customizes editor interactions' },
+const VIEWPOINT_TYPES: { value: ViewpointType; label: string; description: string; enabled: boolean }[] = [
+    { value: 'syntax', label: 'Syntax', description: 'Exclusive view — defines the concrete syntax of a model', enabled: true },
+    { value: 'decoration', label: 'Decoration', description: 'Overlay — adds visual decorations to existing views', enabled: false },
+    { value: 'validation', label: 'Validation', description: 'Overlay — highlights validation errors and warnings', enabled: false },
+    { value: 'semantics', label: 'Semantics', description: 'Overlay — shows semantic information', enabled: false },
+    { value: 'editor_behavior', label: 'Editor behavior', description: 'Overlay — customizes editor interactions', enabled: false },
 ];
 
 interface NewViewpointDialogProps {
@@ -128,13 +128,13 @@ export const NewViewpointDialog: React.FC<NewViewpointDialogProps> = ({
                                 onChange={(e) => setVpType(e.target.value as ViewpointType)}
                             >
                                 {VIEWPOINT_TYPES.map((t) => (
-                                    <option key={t.value} value={t.value}>
+                                    <option key={t.value} value={t.value} disabled={!t.enabled}>
                                         {t.label}
                                     </option>
                                 ))}
                             </select>
                             <span className="form-hint">
-                                {VIEWPOINT_TYPES.find(t => t.value === vpType)?.description}
+                                <span>{VIEWPOINT_TYPES.find(t => t.value === vpType)?.description}. Only Syntax can be chosen here.</span>
                             </span>
                         </div>
                     </div>

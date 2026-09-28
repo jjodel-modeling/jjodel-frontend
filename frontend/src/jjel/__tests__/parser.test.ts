@@ -3,7 +3,7 @@ import { describe, it, test, expect } from 'vitest';
  * JjEL Parser Tests
  */
 
-import { parseExpression } from '../parser';
+import { parseExpression, parseExpressionStrict, parseAction } from '../parser';
 import { JjelExpression } from '../types';
 
 function parse(src: string): JjelExpression {
@@ -619,4 +619,162 @@ describe('FunctionCall (standalone)', () => {
         expect(ast.left.type).toBe('FunctionCall');
         expect(ast.right.type).toBe('Identifier');
     });
+});
+
+// ============================================================
+// STATE ACCESS `.[x]` AND ACTIONS (R-SIM-18, R-SIM-40, R-SIM-41), P-2026-09-25-1445
+// Each test names the mutant of report §7.1 (discovery_2026-09-25_state_operator_core_types.md)
+// that it kills.
+// ============================================================
+
+function firstError(result: { errors: { message: string }[] }): string {
+    expect(result.errors.length).toBeGreaterThan(0);
+    return result.errors[0].message;
+}
+
+describe('state access .[x] (M1, M3)', () => {
+    test('M1: a.[b] is a StateAccess whose last segment is the attribute', () => {
+        expect(parse('a.[b]')).toMatchObject({
+            type: 'StateAccess',
+            object: { type: 'Identifier', name: 'a' },
+            attribute: 'b',
+        });
+    });
+
+    test('M1: the path locates the element, the last segment is the attribute', () => {
+        expect(parse('self.target.[visits]')).toMatchObject({
+            type: 'StateAccess',
+            object: { type: 'MemberAccess', object: { type: 'Identifier', name: 'self' }, property: 'target' },
+            attribute: 'visits',
+        });
+    });
+
+    test('M1: .[x] is a postfix, tighter than the binary operators', () => {
+        expect(parse('model.[i] + 1 < 3')).toMatchObject({
+            type: 'Binary', operator: '<',
+            left: { type: 'Binary', operator: '+', left: { type: 'StateAccess', attribute: 'i' } },
+        });
+        expect(parse('node.[x] > 0')).toMatchObject({
+            type: 'Binary', left: { type: 'StateAccess', object: { type: 'Identifier', name: 'node' }, attribute: 'x' },
+        });
+    });
+
+    test('M1: marked and tokens are ordinary attribute names when read', () => {
+        expect(parse('p.[marked]')).toMatchObject({ type: 'StateAccess', attribute: 'marked' });
+        expect(parse('p.[tokens] < 2')).toMatchObject({ type: 'Binary', left: { type: 'StateAccess', attribute: 'tokens' } });
+    });
+
+    test('M3: `.[` is one contiguous token: `a. [b]` is not state access', () => {
+        const message = firstError(parseExpression('a. [b]'));
+        expect(message).toContain("Expected property name after '.'");
+    });
+
+    test('the attribute is an identifier: keywords and literals are refused', () => {
+        parseFails('a.[in]');
+        parseFails('a.[true]');
+        parseFails('a.[1]');
+        parseFails('a.[]');
+        parseFails('a.[b');
+    });
+
+    test('control: member access, index access and null-safe access are unchanged', () => {
+        expect(parse('a.b')).toMatchObject({ type: 'MemberAccess', property: 'b' });
+        expect(parse('a[b]')).toMatchObject({ type: 'IndexAccess' });
+        expect(parse('a?.b')).toMatchObject({ type: 'NullSafeMemberAccess', property: 'b' });
+    });
+});
+
+describe('`?.[` is a lexer error (M2)', () => {
+    test('M2: the message points to x.[a]', () => {
+        const message = firstError(parseExpression('a?.[b]'));
+        expect(message).toContain("'?.['");
+        expect(message).toContain("x.[a]");
+    });
+});
+
+describe('strict parse (M4, R-SIM-41)', () => {
+    test('M4: trailing tokens are an error in the strict entry', () => {
+        const result = parseExpressionStrict('a b');
+        expect(result.expression).toBeNull();
+        expect(firstError(result)).toContain("'b'");
+        expect(parseExpressionStrict('a.b c').expression).toBeNull();
+        expect(parseExpressionStrict('1 2').expression).toBeNull();
+    });
+
+    test('the strict entry accepts what a whole expression is', () => {
+        expect(parseExpressionStrict('self.[visits] + 1 < 3 and p.[marked]').errors).toEqual([]);
+        expect(parseExpressionStrict('if a then b else c').expression).toMatchObject({ type: 'IfThenElse' });
+    });
+
+    test('blank input: no expression and no error, as parseExpression', () => {
+        expect(parseExpressionStrict('')).toEqual({ expression: null, errors: [] });
+        expect(parseExpressionStrict('   ')).toEqual(parseExpression('   '));
+    });
+
+    test('parseExpression is unchanged: it still drops trailing tokens (ticket of R-SIM-41)', () => {
+        expect(parse('a b')).toMatchObject({ type: 'Identifier', name: 'a' });
+    });
+});
+
+describe('`:=` outside an action (M5)', () => {
+    test('M5: x := 1 is still an error in an expression, and the message names actions', () => {
+        const result = parseExpression('x := 1');
+        expect(result.expression).toBeNull();
+        expect(firstError(result)).toContain('action');
+        expect(parseExpressionStrict('x.[a] := 1').expression).toBeNull();
+    });
+});
+
+describe('parseAction (M6, M7)', () => {
+    test('the ratified example: target ends in .[a], the value is an expression', () => {
+        const { action, errors } = parseAction('self.target.[visits] := self.target.[visits] + 1');
+        expect(errors).toEqual([]);
+        expect(action).toMatchObject({
+            target: { type: 'StateAccess', attribute: 'visits', object: { type: 'MemberAccess', property: 'target' } },
+            value: { type: 'Binary', operator: '+', left: { type: 'StateAccess', attribute: 'visits' } },
+        });
+    });
+
+    test('every root may be a target', () => {
+        for (const src of ['model.[i] := 0', 'node.[color] := "red"', 'event.[n] := event.[n] + 1', 'self.[done] := true']) {
+            expect(parseAction(src).errors, src).toEqual([]);
+        }
+    });
+
+    test('M6: a target that does not end in .[a] is refused', () => {
+        const result = parseAction('self.x := 1');
+        expect(result.action).toBeNull();
+        expect(firstError(result)).toContain('.[');
+        expect(parseAction('x := 1').action).toBeNull();
+        expect(parseAction('self.[a].b := 1').action).toBeNull();
+    });
+
+    test('M7: marked and tokens are never assignable', () => {
+        const marked = parseAction('p.[marked] := true');
+        expect(marked.action).toBeNull();
+        expect(firstError(marked)).toContain('marked');
+        const tokens = parseAction('p.[tokens] := 1');
+        expect(tokens.action).toBeNull();
+        expect(firstError(tokens)).toContain('tokens');
+    });
+
+    test('the action is strict and needs := and a value', () => {
+        expect(parseAction('a.[b] := 1 2').action).toBeNull();
+        expect(parseAction('a.[b] = 1').action).toBeNull();
+        expect(parseAction('a.[b] :=').action).toBeNull();
+        expect(parseAction('a.[b]').action).toBeNull();
+        expect(parseAction('').action).toBeNull();
+    });
+});
+
+describe('the true/false/null defect is inherited, and pinned (M12, R-SIM-17)', () => {
+    for (const entry of [parseExpression, parseExpressionStrict]) {
+        test(`M12: ${entry.name}: True and NULL are literals, x.true is an error, x["true"] is the escape`, () => {
+            expect(entry('True').expression).toMatchObject({ type: 'Literal', value: true });
+            expect(entry('NULL').expression).toMatchObject({ type: 'Literal', value: null });
+            expect(entry('x.true').expression).toBeNull();
+            expect(entry('x.True').expression).toBeNull();
+            expect(entry('x["true"]').expression).toMatchObject({ type: 'IndexAccess', index: { value: 'true' } });
+        });
+    }
 });

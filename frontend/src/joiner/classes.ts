@@ -157,6 +157,7 @@ import { checkM2NameUniqueness, m2KindOf, pendingChildrenOf } from "../model/log
 // read as a recursion to anyone skimming. It is not — a bare identifier in a
 // static body resolves to module scope — but the alias says so without asking.
 import { uniqueModelName as uniqueModelNameImpl } from "../model/nameLookup";
+import { isClassKind } from "../model/classifierKindRules";
 import { DEFAULT_VIEW_CSS } from "../view/viewElement/defaultViewCss";
 var windoww = window as any;
 
@@ -737,7 +738,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                 if (alreadyParsed[target.id]) continue;
                 alreadyParsed[target.id] = target;
                 let ltarget = L.from(target) as LClass;
-                for (let ext of ltarget.extendedBy) nextTargets.push(D.from(ext));
+                // Enum step B (B5): `get_extendedBy` returns whatever holds an `extends` pointing here, so a saved
+                // S5b (`DEnumerator.extends = [this class]`) put an enum in the walk, and its missing `extendedBy`
+                // threw `not iterable` on every new feature of the class. An enum has no instances to update: skip it.
+                // docs/discovery/discovery_2026-09-27_enum_step_b.md §3.7.
+                for (let ext of ltarget.extendedBy) { if (!isClassKind(ext?.className)) continue; nextTargets.push(D.from(ext)); }
             }
             targets = nextTargets;
         }
@@ -897,7 +902,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // trust it and assign directly. `getByName2` does by-name lookup and would fail
         // for these Pointer IDs, falling through to the hardcoded ESTRING fallback below
         // — silently downgrading every non-EString input.
-        if (typeof type === 'string' && /^Pointer_E[A-Z]+$/.test(type)) {
+        if (typeof type === 'string' && Defaults.primitiveTypeIds.has(type)) {
             this.setPtr("type", type);
             return this;
         }

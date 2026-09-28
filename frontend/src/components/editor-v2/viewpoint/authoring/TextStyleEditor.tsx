@@ -1,5 +1,6 @@
 import React from 'react';
 import { Select, Input, ColorPicker, ConditionalEditor, isConditionalValue, type PathBuilderFeatures } from '../../../ui';
+import { toRules } from '../../../ui/ConditionalEditor/conditional';
 import type { TextStyle, FontFamilyToken, FontWeightToken, Conditional } from '../ir/irTypes';
 
 const FAMILY_OPTIONS = [
@@ -16,6 +17,11 @@ const STYLE_OPTIONS = [
     { value: 'normal', label: 'Normal' },
     { value: 'italic', label: 'Italic' },
 ];
+/** Boolean axis on a string-valued `Select`: the unset state is the empty option ("Default"). */
+const UNDERLINE_OPTIONS = [
+    { value: 'true', label: 'On' },
+    { value: 'false', label: 'Off' },
+];
 
 const COLOR_SEED = '#334155';
 
@@ -27,6 +33,12 @@ export interface TextStyleEditorProps {
     featuresHint?: string;
     /** All project class names — for the `isKind` selector in the conditional editor. */
     classNames: string[];
+    /**
+     * Hides the Underline row. Absent = shown. The Symbol-text mount sets it: the renderer
+     * applies that style on the box root, where a text decoration reaches every text of the
+     * symbol and no label can override it.
+     */
+    hideUnderline?: boolean;
 }
 
 /**
@@ -36,7 +48,7 @@ export interface TextStyleEditorProps {
  * byte-identical. UNCHANGED from TS1 — the "Default" state of a control unsets the
  * axis through exactly this key-drop (no new write path).
  */
-function setAxis(prev: TextStyle | undefined, patch: Partial<TextStyle>): TextStyle | undefined {
+export function setAxis(prev: TextStyle | undefined, patch: Partial<TextStyle>): TextStyle | undefined {
     const base: TextStyle = { ...(prev ?? {}) };
     (Object.keys(patch) as (keyof TextStyle)[]).forEach((k) => {
         if (patch[k] === undefined) delete base[k];
@@ -84,8 +96,11 @@ function AxisRow<T>({
 
     const flip = () => {
         if (isCond) {
-            // Collapse to the then-branch value (stays authored, not undefined).
-            onChange((value as { then: T }).then);
+            // Collapse to the first branch value (stays authored, not undefined). Read
+            // through toRules: a `rules` value has no `.then`, and reading it off the
+            // object would unset the axis.
+            const r = toRules(value);
+            onChange(r.rules[0]?.then ?? r.default ?? axisDefault);
         } else {
             const base = (value as T | undefined) ?? axisDefault;
             onChange({ when: { op: 'literal', value: true }, then: base });
@@ -141,6 +156,7 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
     features,
     featuresHint,
     classNames,
+    hideUnderline,
 }) => {
     const patch = (partial: Partial<TextStyle>) => onChange(setAxis(value, partial));
 
@@ -240,6 +256,28 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
                 featuresHint={featuresHint}
                 classNames={classNames}
             />
+            {!hideUnderline && (
+                <AxisRow<boolean>
+                    label="Underline"
+                    value={value?.underline}
+                    onChange={(next) => patch({ underline: next })}
+                    axisDefault={true}
+                    renderSimple={(bare, setBare) => (
+                        <Select
+                            placeholder="Default"
+                            options={UNDERLINE_OPTIONS}
+                            value={bare === undefined ? '' : bare ? 'true' : 'false'}
+                            onChange={(e) => setBare(e.target.value === '' ? undefined : e.target.value === 'true')}
+                        />
+                    )}
+                    renderBranch={(val, onCh) => (
+                        <Select placeholder="On" options={UNDERLINE_OPTIONS} value={val ? 'true' : 'false'} onChange={(e) => onCh(e.target.value !== 'false')} />
+                    )}
+                    features={features}
+                    featuresHint={featuresHint}
+                    classNames={classNames}
+                />
+            )}
             <AxisRow<string>
                 label="Color"
                 value={value?.color}

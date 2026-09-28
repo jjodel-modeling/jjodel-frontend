@@ -109,7 +109,7 @@ $transition: 150ms ease;
 }
 
 // Legacy header support - hide the large icon
-.alert-header, .dialog-header {
+.alert-header {
   display: none; // Remove the large icon with halo
 }
 

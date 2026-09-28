@@ -54,6 +54,7 @@ import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import { getSideFromHandle } from './utils/edgeUtils';
+import { isMetamodelConnectionValid } from './utils/connectionValidity';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme, CustomColorScheme, ActiveColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
@@ -68,6 +69,8 @@ import { useConformanceGuard } from '../../model/conformance/useConformanceGuard
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
 import { ConformanceProblemSync } from './problems/ConformanceProblemSync';
+import { SimCheckProblemSync } from './problems/SimCheckProblemSync';
+import { ValidationFreshnessSync } from './problems/ValidationFreshnessSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
 import {
     syncPositionToJjom,
@@ -104,7 +107,7 @@ import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
-import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastViewpoint';
+import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
@@ -619,7 +622,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
     const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
-    const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    const { screenToFlowPosition, getNodes, getNode, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
@@ -1568,6 +1571,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
         return applyIRPaletteFilter(candidates, irInteractionPlan);
     }, [modeInfo.rootableClasses, modeInfo.allClasses, modeInfo.mode, irInteractionPlan]);
+
+    // R-EDGE-1: in a metamodel both ends must be class nodes, else xyflow refuses the
+    // connection (no snap, no onConnect, no popup). Runs on every pointer move of a
+    // connect or reconnect gesture: getNode is a lookup, the mode comes from the editor.
+    const isValidConnection = useCallback(
+        (connection: Edge | Connection) => isMetamodelConnectionValid(
+            modeInfoRef.current.mode,
+            getNode(connection.source)?.type,
+            getNode(connection.target)?.type,
+        ),
+        [getNode]
+    );
 
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
@@ -2988,6 +3003,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
         if (contextMenu?.nodeId && contextMenu.childId) {
             const childLabel = contextMenu.childKind === 'attr' ? 'Attribute' : 'Operation';
+            // Resolved once, as in the edge branch. The row entry exists for attributes only:
+            // the rows themselves are rendered only when the body is shown and the notation is
+            // not `er` (ClassNode.tsx:442-446, :739-747), so in ER and compact notations there
+            // is no host for it — declared limit, not worked around (report `dbfeb67ac`).
+            const rowViewVp = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
+            const rowViewName = contextMenu.childKind === 'attr'
+                ? ((store.getState() as any)?.idlookup?.[contextMenu.childId]?.name ?? 'unnamed')
+                : '';
             return [
                 {
                     label: `Delete ${childLabel}`,
@@ -3018,6 +3041,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         }));
                     },
                 },
+                ...(contextMenu.childKind === 'attr' ? [{
+                    label: rowViewVp ? 'Create row view' : 'Create row view — no viewpoint available',
+                    icon: 'bi-eye',
+                    disabled: !rowViewVp,
+                    onClick: () => {
+                        createViewInWorkbench(contextMenu.childId!, rowViewName, 'DAttribute', rowViewVp!.dViewpoint.id);
+                    },
+                }] : []),
                 { divider: true },
                 {
                     label: 'Help',
@@ -3241,7 +3272,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // "Create View" — only for classifiers (classNode, enumNode), not objectNode/packageNode.
             // View authoring is an Advanced-mode feature (hidden in Basic).
             if ((node?.type === 'classNode' || node?.type === 'enumNode') && isAdvancedMode()) {
-                const resolved = resolveParentViewpoint();
+                // ONE resolution for the label AND the destination (2026-09-16). This entry used
+                // to read `resolveParentViewpoint()` for the label and then let
+                // `createViewInWorkbench` resolve again on its own: two answers to the same
+                // question, so a viewpoint change between the render and the click could file the
+                // view somewhere other than the place the label promised.
+                //
+                // `hasCreatableViewpoint()` is the same gate the tree entry uses, so the two menus
+                // agree on what «creatable» means, and the entry can no longer offer priority 3 of
+                // the chain — the system `Default`, which the toolbar, the megamodel and the
+                // dashboard all refuse to show (R-IRN-9). The chain itself is untouched.
+                const resolved = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
                 const vpName = resolved?.vpName;
                 const data = node.data as any;
                 items.push(
@@ -3258,7 +3299,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             const classId = modelElement?.id ?? node.id;
                             const className = modelElement?.__raw?.className ?? 'DClass';
                             // console.log('[EditorV2] resolved classId:', classId, 'className:', className);
-                            createViewInWorkbench(classId, data?.label ?? 'unnamed', className);
+                            // Fourth argument: the viewpoint resolved for the label, so the
+                            // destination cannot drift from what the entry promised.
+                            createViewInWorkbench(classId, data?.label ?? 'unnamed', className, resolved?.dViewpoint?.id);
                         },
                     },
                 );
@@ -3325,6 +3368,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const isInheritance = edge?.type === 'inheritance';
             const edgeData = edge?.data as ReferenceEdgeData | InheritanceEdgeData | undefined;
             const hasWaypoints = edgeData?.waypoints && edgeData.waypoints.length > 0;
+            // Resolved ONCE for the «Create edge view» entry below: gate and destination from
+            // the same answer, so the view cannot land anywhere but where the entry promised.
+            const edgeViewVp = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
 
             return [
                 {
@@ -3350,6 +3396,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                     : ed
                             )
                         );
+                    },
+                }] : []),
+                // «Create edge view» (2026-09-16). The host is this menu and not the child
+                // menu's `ref` branch: that one is fed by the cross-metamodel ghost chip
+                // alone, so an ordinary reference — which lives on the canvas as its edge —
+                // would never have shown it (report `dbfeb67ac`). One resolution for the gate
+                // and the destination, as the other four entries do since `86f822d50`.
+                ...(!isInheritance && (edgeData as ReferenceEdgeData | undefined)?.reference?.id ? [{
+                    label: edgeViewVp ? 'Create edge view' : 'Create edge view — no viewpoint available',
+                    icon: 'bi-eye',
+                    disabled: !edgeViewVp,
+                    onClick: () => {
+                        const ref = (edgeData as ReferenceEdgeData).reference;
+                        createViewInWorkbench(ref.id, ref.name ?? 'unnamed', 'DReference', edgeViewVp!.dViewpoint.id);
                     },
                 }] : []),
                 {
@@ -4094,6 +4154,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onConnectEnd={onConnectEnd}
+                isValidConnection={isValidConnection}
                 onReconnect={handleReconnect}
                 onReconnectStart={handleReconnectStart}
                 edgesReconnectable={true}
@@ -4222,6 +4283,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
+                <SimCheckProblemSync modelid={modelid} graphId={graphId} />
+                <ValidationFreshnessSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
                     rootableClasses={irPalette.classes}
@@ -4265,6 +4328,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onDistributeV={() => withSnapshot(distributeVertically)}
                         isMetamodel={!isModelMode}
                         modelId={modelid}
+                        graphId={graphId}
                         editorMode={editorMode}
                         hasViewpoint={hasViewpoint}
                         onEditorModeChange={onEditorModeChange}
@@ -4348,10 +4412,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     document.body,
                 )}
 
-                {modelid && createPortal(
-                    <SimulationPanel modelid={modelid} isModelMode={isModelMode} />,
-                    document.body,
-                )}
+                {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
+                {modelid && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
 
             </div>
         </EditorContext.Provider>

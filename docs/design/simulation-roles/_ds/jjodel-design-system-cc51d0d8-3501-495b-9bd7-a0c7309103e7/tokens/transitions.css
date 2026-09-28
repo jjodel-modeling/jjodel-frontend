@@ -1,0 +1,34 @@
+/* ============================================================
+   JJODEL DESIGN TOKENS — TRANSITIONS
+   Fast (150ms) for hover/focus, normal (250ms) for most UI,
+   slow (400ms) for modals & canvas. ease-out is the default feel.
+   ============================================================ */
+
+:root {
+  --duration-instant: 0ms;     /* @kind other */
+  --duration-fast: 150ms;      /* @kind other */
+  --duration-normal: 250ms;    /* @kind other */
+  --duration-slow: 400ms;      /* @kind other */
+  --duration-slower: 600ms;    /* @kind other */
+
+  --ease-linear: linear;                            /* @kind other */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);            /* @kind other */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);           /* @kind other */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);      /* @kind other */
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55); /* @kind other */
+
+  --transition-fast: var(--duration-fast) var(--ease-out);          /* @kind other */
+  --transition-fast-all: all var(--duration-fast) var(--ease-out);  /* @kind other */
+  --transition-normal: var(--duration-normal) var(--ease-in-out);   /* @kind other */
+  --transition-normal-all: all var(--duration-normal) var(--ease-in-out); /* @kind other */
+  --transition-slow: var(--duration-slow) var(--ease-in-out);       /* @kind other */
+
+  --transition-button: background-color var(--duration-fast) var(--ease-out),
+                        color var(--duration-fast) var(--ease-out),
+                        transform var(--duration-fast) var(--ease-out); /* @kind other */
+  --transition-input: border-color var(--duration-fast) var(--ease-out),
+                      box-shadow var(--duration-fast) var(--ease-out);  /* @kind other */
+  --transition-colors: background-color var(--duration-fast) var(--ease-out),
+                       color var(--duration-fast) var(--ease-out),
+                       border-color var(--duration-fast) var(--ease-out); /* @kind other */
+}
