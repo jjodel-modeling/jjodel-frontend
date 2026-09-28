@@ -227,3 +227,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: passato — chat, unattended: scripts-only merge, no UI change; gates green on the merge
 **Notes**: Rollback tag `pre-harness-trace-P-2026-09-28-1543` on `2e401d51c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1543/result.json`.
 **Prompt document name**: 2026-09-28 15:43
+
+## 2026-09-28 — feat(harness): lane-run appends the RC-20 closing line to every input (P-2026-09-28-1545)
+**Prompt**: `claude_2026-09-28_1545_prompt_lane_outcome_reminder.md`, fast lane, no discovery. Three lane sessions closed on 2026-09-28 without a valid RC-20 Outcome line; the rule stated in CLAUDE.md 21.2 has to travel with every input, not wait to be read.
+**Files touched**: `c24a91000`: `frontend/scripts/lane-run.mjs` (`CLOSE_REMINDER`, `withCloseReminder`, `closingInput`, used in `launch()`), `frontend/scripts/hooks/__tests__/laneRun.test.ts` (+6 tests, 3 assertions of the existing "keeps a copy of every input" test updated for the new input-N.md shape). This commit: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. typecheck:scripts exit 0; vitest scripts/hooks + scripts/gates 602 before, 608 after (11 files), all green; check:docs 4/4; check:scripts PASS (34 files). Mutation bench, four mutants of `lane-run.mjs` against a full `scripts/` tree copy (`LANE_RUN` env): dropping the append entirely killed by 6 tests, dropping the idempotency guard by 1, copying the pre-reminder text into input-N.md by 4, feeding claude's real stdin the pre-reminder file by 5.
+**Out-of-scope changes**: no — the two files named in DOVE.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — harness/CLI change, no app UI
+**Notes**: The reminder is appended once, inside `launch()`, the single point every real claude invocation passes through (start, resume, go, chain); never written into the worktree's prompt file or the chat's message file — a scratch `stdin.md` in the lane folder carries it.
+**Prompt document name**: 2026-09-28 15:45
