@@ -1,13 +1,20 @@
 import { useState } from 'react';
-import { useTheme } from '../../services/ThemeService';
+import { ThemeService, useTheme } from '../../services/ThemeService';
 
 type Theme = 'light' | 'dark';
 export function AppearanceSettings({onDirtyChange}: {onDirtyChange?:((b:boolean)=>any)}) {
     //const [theme, setTheme] = useTheme();
     const setTheme = (newTheme: Theme, init: boolean = false) => {
+        // A user's choice goes through ThemeService, whose THEME_CHANGED event is what an open
+        // editor listens to (useTheme): writing the attribute alone left it in the old theme.
+        // The init sync below runs inside a useState initializer and stays silent.
+        if (!init) {
+            ThemeService.set(newTheme);
+            setThemeState(newTheme);
+            return;
+        }
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
-        if (!init) setThemeState(newTheme);
     };
     const [theme, setThemeState] = useState<Theme>(() => {
         let theme: Theme = (localStorage.getItem('theme') as Theme | null) || 'light';

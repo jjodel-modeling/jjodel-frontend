@@ -1,7 +1,11 @@
 // === Wizard Step Identifiers ===
-export type EnvGenStepId = 'general' | 'tech-stack' | 'design' | 'features' | 'concrete-syntax' | 'output';
+// #157: the environment is CONFIGURED (stand-alone mode), not generated as code. The
+// tech-stack / concrete-syntax / output steps of the code-gen draft are dropped; the
+// stand-alone steps (editable metaclasses + profiles) are added. Their content lives in
+// the project state (DEnvironmentConfig/DProfile), not in the wizard's localStorage config.
+export type EnvGenStepId = 'general' | 'design' | 'features' | 'metaclasses' | 'profiles';
 
-export const STEP_ORDER: EnvGenStepId[] = ['general', 'tech-stack', 'design', 'features', 'concrete-syntax', 'output'];
+export const STEP_ORDER: EnvGenStepId[] = ['general', 'design', 'features', 'metaclasses', 'profiles'];
 
 // === Sidebar Nav Structure ===
 export interface EnvGenNavGroup {
@@ -14,26 +18,20 @@ export const ENVGEN_NAV_GROUPS: EnvGenNavGroup[] = [
         label: 'CONFIGURATION',
         items: [
             { id: 'general', label: 'General', icon: 'bi-info-circle' },
-            { id: 'tech-stack', label: 'Tech Stack', icon: 'bi-layers' },
         ],
     },
     {
-        label: 'DESIGN',
+        label: 'APPEARANCE',
         items: [
             { id: 'design', label: 'Design & UI', icon: 'bi-palette' },
             { id: 'features', label: 'Features', icon: 'bi-toggles2' },
         ],
     },
     {
-        label: 'LANGUAGE',
+        label: 'STAND-ALONE',
         items: [
-            { id: 'concrete-syntax', label: 'Concrete Syntax', icon: 'bi-aspect-ratio' },
-        ],
-    },
-    {
-        label: 'OUTPUT',
-        items: [
-            { id: 'output', label: 'Output', icon: 'bi-file-earmark-text' },
+            { id: 'metaclasses', label: 'Editable metaclasses', icon: 'bi-grid-1x2' },
+            { id: 'profiles', label: 'Profiles', icon: 'bi-people' },
         ],
     },
 ];

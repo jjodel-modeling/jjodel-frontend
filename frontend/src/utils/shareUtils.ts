@@ -13,6 +13,18 @@ export function getPublicProjectUrl(projectId: string): string {
 }
 
 /**
+ * Generate a stand-alone environment URL for a project + profile (#157).
+ * Format: <origin>/#/project?id=PROJECT_ID&profile=PROFILE_ID
+ * Uses window.location.origin so the link works wherever the app is served
+ * (localhost while testing, production otherwise), unlike getPublicProjectUrl
+ * which is pinned to the production host.
+ */
+export function getStandaloneEnvironmentUrl(projectId: string, profileId: string): string {
+    const origin = (typeof window !== 'undefined' && window.location?.origin) || 'https://app.jjodel.io';
+    return `${origin}/#/project?id=${projectId}&profile=${profileId}`;
+}
+
+/**
  * Check if a project can be shared (is public)
  */
 export function canShareProject(project: { type?: string }): boolean {

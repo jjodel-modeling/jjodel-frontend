@@ -490,6 +490,20 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-inode-selected-badge-fg: #0e7490;          /* cyan-700 */
   --color-inode-selected-ring: rgba(6, 182, 212, 0.18);
 
+  /* Simulation run state on the canvas (S15, P-2026-09-27-1647). The sky hue of
+     the sim-active outline (simulation-panel.scss), so a marked place, its count
+     and an enabled transition read as one family. A place with no token keeps a
+     hollow badge: 0 is a count, not an absence. */
+  --color-sim-token-bg: #0ea5e9;                     /* sky-500, = the sim-active outline */
+  --color-sim-token-fg: #ffffff;
+  --color-sim-token-empty-bg: #{$slate-100};
+  --color-sim-token-empty-fg: #{$slate-600};
+  --color-sim-token-empty-border: #{$slate-300};
+  --color-sim-enabled-ring: #0ea5e9;                 /* dashed: could fire, not marked */
+  --color-sim-sigma-bg: #f0f9ff;                     /* sky-50 */
+  --color-sim-sigma-border: #bae6fd;                 /* sky-200 */
+  --color-sim-sigma-fg: #0c4a6e;                     /* sky-900 */
+
   /* ── Option colours — one slot per alternative (TXT/pill, 2026-09-01) ────────
      Seven slots, in fixed order, for the reference pills of the IR form: two
      options a user is choosing BETWEEN never wear the same colour. Seven and not

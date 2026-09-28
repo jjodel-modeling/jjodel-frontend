@@ -35,7 +35,7 @@
  * show, the fix is a signature selector, not a cache.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import { getMetaclassInfo, type MetaclassInfo } from '../../editor-v2/hooks/useEditorMode';
@@ -52,10 +52,14 @@ import {
     preflightFor,
 } from '../../editor-v2/hooks/deleteAdapter';
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
+import { appendValue } from '../../editor-v2/viewpoint/ir/formWrite';
 import { autoLayoutRows, inputFromDraftField } from '../../editor-v2/viewpoint/ir/formAutoLayout';
-import { computeIRSignature, getIRIndex } from '../../editor-v2/viewpoint/ir/irResolveCore';
+import { computeIRSignature, getIRIndex, resolveIRView } from '../../editor-v2/viewpoint/ir/irResolveCore';
+import { makeDrawReadCtx } from '../../editor-v2/viewpoint/ir/irReadCtx';
+import { resolveFormSpec } from '../../editor-v2/viewpoint/ir/formHosts';
 import { resolveTableSpec } from '../../editor-v2/viewpoint/ir/tableViews';
 import { EmptyState } from '../../ui';
+import { ResizeHandle } from '../../ResizeHandle';
 import type { RendererDecision } from '../../editor-v2/nodes/valueRenderer';
 import type {
     ClassShape,
@@ -84,6 +88,7 @@ import {
     depthOf,
     draftModel,
     drillInto,
+    drillOut,
     egoDispatch,
     egoLabel,
     egoLayout,
@@ -131,12 +136,14 @@ import {
     orderColumns,
     pageCount,
     pageOf,
+    referenceSummary,
     shownColumnsWith,
     tableColumns,
     tableRow,
     toCsv,
     type ColumnOverrides,
     type Discriminant,
+    type SummaryItem,
     type TableCell,
     type TableRow,
 } from './instanceTable';
@@ -933,8 +940,12 @@ function MultiForm({ model, touched, onTouch, onApply, onClear, onDelete }: {
  */
 function OutlinePanel({
     rows, subjectId, isOpen, hasSlots, menuFor, menuOf,
-    onToggle, onSelect, onMenu, onCreate,
+    onToggle, onSelect, onMenu, onCreate, width, onCollapse,
 }: {
+    /** #158 P2 — the pane's width, set by its resize handle. */
+    width: number;
+    /** #158 P2 — collapse the pane to its rail. */
+    onCollapse: () => void;
     rows: OutlineNode[];
     subjectId: string | null;
     isOpen: (node: OutlineNode) => boolean;
@@ -983,8 +994,9 @@ function OutlinePanel({
     };
 
     return (
-        <aside className="instance-manager__pane instance-manager__pane--outline">
+        <aside className="instance-manager__pane instance-manager__pane--outline" style={{ flexBasis: width }}>
             <h3 className="instance-manager__eyebrow">Model outline</h3>
+            <PaneCollapse label="the model outline" onCollapse={onCollapse} />
             {rows.length === 0 ? (
                 <p className="instance-manager__note">No model resolved.</p>
             ) : (
@@ -1310,6 +1322,182 @@ function computeColumnsPanelStyle(rect: DOMRect): React.CSSProperties {
         : { ...base, top: rect.bottom + GAP };
 }
 
+/** #158 P2 — the two side panes, Model outline and Metaclasses. */
+type SidePane = 'outline' | 'classes';
+
+/** The default widths. SAME numbers as `&__pane--outline` and `&__pane--classes` in
+ *  `instanceManagerTab.scss` (asserted there by 10h), restated because the width is now
+ *  applied inline: the pane and the handle sitting on its edge must read ONE number,
+ *  and the stylesheet's stays as the width of a pane rendered without it. Change one,
+ *  change both — same rule as `COLUMNS_PANEL_MAX_W` above. */
+const PANE_DEFAULT_W: Readonly<Record<SidePane, number>> = { outline: 300, classes: 200 };
+
+/** The bounds of a resize. Below the minimum a row no longer fits its name and its
+ *  class; above the maximum the table loses the room the whole layout exists to give it. */
+const PANE_LIMITS: Readonly<Record<SidePane, readonly [number, number]>> = {
+    outline: [180, 560],
+    classes: [150, 420],
+};
+
+/** A collapsed pane: the width of its expand button. Same number as `&__pane--rail`. */
+const PANE_RAIL_W = 32;
+
+/** Arrow-key step of the handles: the rhythm of the rows beside them. */
+const PANE_KEY_STEP = 16;
+
+function clampPane(pane: SidePane, width: number): number {
+    const [min, max] = PANE_LIMITS[pane];
+    return Math.round(Math.min(max, Math.max(min, width)));
+}
+
+/**
+ * A side pane, collapsed (#158 P2): a thin rail that says which pane it is and gives
+ * it back in one click. The WHOLE rail is the button — a 32px target that is only an
+ * icon would be the hardest control of the tab to hit.
+ *
+ * Still a `__pane`: the separator between the columns is one adjacency rule
+ * (`&__pane + &__pane`), and a rail outside it would lose the border on one side.
+ */
+function PaneRail({ label, icon, onExpand }: {
+    label: string;
+    icon: string;
+    onExpand: () => void;
+}) {
+    return (
+        <aside className="instance-manager__pane instance-manager__pane--rail">
+            <button
+                type="button"
+                className="instance-manager__rail"
+                title={`Show ${label}`}
+                aria-label={`Show ${label}`}
+                aria-expanded={false}
+                onClick={onExpand}
+            >
+                <i className="bi bi-chevron-double-right instance-manager__rail-icon" aria-hidden="true" />
+                <i className={`bi ${icon} instance-manager__rail-icon`} aria-hidden="true" />
+                <span className="instance-manager__rail-label">{label}</span>
+            </button>
+        </aside>
+    );
+}
+
+/** The collapse control at the top of an open side pane (#158 P2). Absolutely placed
+ *  in the pane's corner, so the eyebrow beside it keeps its markup and its rules. */
+function PaneCollapse({ label, onCollapse }: { label: string; onCollapse: () => void }) {
+    return (
+        <button
+            type="button"
+            className="instance-manager__pane-collapse"
+            title={`Hide ${label}`}
+            aria-label={`Hide ${label}`}
+            aria-expanded={true}
+            onClick={onCollapse}
+        >
+            <i className="bi bi-chevron-double-left" aria-hidden="true" />
+        </button>
+    );
+}
+
+/** One non-containment reference slot of an instance, as the form's reference
+ *  section lists it (#142): what it points at, and why «New … & link» is not offered
+ *  when it is not. */
+type RefSlot = {
+    ref: RefShape;
+    targets: string[];
+    count: number;
+    createReason: string | null;
+    /** #158 P4 — the key fields of each target, by target id (`referenceSummary`). */
+    summaries: Record<string, SummaryItem[]>;
+};
+
+/**
+ * The reference sections of ONE form (#142), extracted by #158 P3 so the subject and
+ * each inline child render the same thing: the same markup, the same drill-in, the same
+ * create-and-link. Two copies would be two sections that drift at the first change.
+ *
+ * `nested` is the inline child's variant: it sits inside the child's frame, under the
+ * child's own form, so it drops the band (rule and padding) that separates the
+ * subject's section from the fields above it.
+ */
+function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate }: {
+    slots: RefSlot[];
+    idlookup: Record<string, any>;
+    nested?: boolean;
+    /** Open a target as the form body. */
+    onOpen: (targetId: string, refKey: string) => void;
+    /** «New <Target> & link» on this form's instance. */
+    onCreate: (targetCls: string, refKey: string) => void;
+}) {
+    if (slots.length === 0) return null;
+    return (
+        <div className={'instance-manager__inline instance-manager__refs'
+            + (nested ? ' instance-manager__refs--nested' : '')}>
+            {slots.map(slot => (
+                <div className="instance-manager__inline-slot" key={slot.ref.key}>
+                    <h3 className="instance-manager__eyebrow">
+                        {slot.ref.key}
+                        <span className="instance-manager__draft-card">
+                            {slot.ref.of} [{slot.count}/{slot.ref.upper === -1 ? '*' : slot.ref.upper}]
+                        </span>
+                    </h3>
+                    {slot.targets.map(targetId => {
+                        const summary = slot.summaries[targetId] ?? [];
+                        const summaryText = summary.map(s => `${s.label}: ${s.text}`).join(' · ');
+                        return (
+                            <button
+                                type="button"
+                                className="instance-manager__inline-link instance-manager__ref-link"
+                                key={targetId}
+                                title={'Open the referenced element — edits the shared instance'
+                                    + (summaryText ? '\n' + summaryText : '')}
+                                onClick={() => onOpen(targetId, slot.ref.key)}
+                            >
+                                {/* #158 P4 — the name, and under it what the target IS:
+                                    its key fields, so telling D01 from D05 does not take
+                                    opening both. Inside the button: the whole card opens
+                                    the element, as the name alone did. */}
+                                <span className="instance-manager__ref-text">
+                                    <span className="instance-manager__ref-name">
+                                        {crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null })}
+                                    </span>
+                                    {summary.length > 0 && (
+                                        <span className="instance-manager__ref-summary">
+                                            {summary.map(s => (
+                                                <span className="instance-manager__ref-summary-item" key={s.key}>
+                                                    <span className="instance-manager__ref-summary-key">{s.label}</span>
+                                                    {s.text}
+                                                </span>
+                                            ))}
+                                        </span>
+                                    )}
+                                </span>
+                                <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                            </button>
+                        );
+                    })}
+                    {slot.targets.length === 0 && (
+                        <p className="instance-manager__note">No {slot.ref.of} linked yet.</p>
+                    )}
+                    {slot.createReason ? (
+                        <span className="instance-manager__child-reason" title={slot.createReason}>
+                            {slot.createReason}
+                        </span>
+                    ) : (
+                        <button
+                            type="button"
+                            className="instance-manager__add"
+                            onClick={() => onCreate(slot.ref.of, slot.ref.key)}
+                        >
+                            <i className="bi bi-plus" aria-hidden="true" />
+                            New {slot.ref.of} &amp; link
+                        </button>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -1337,6 +1525,13 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  ONLY place a not-yet-created instance exists: nothing reaches the store
      *  until Create, so Cancel is `setDraft(null)` and nothing else. */
     const [draft, setDraft] = useState<Draft | null>(null);
+    /** Where a «New … & link» create must wire its result back once committed
+     *  (#142). Non-null only while a create-and-link draft is in flight: the target
+     *  is created at model root like any other, then a pointer to it is appended to
+     *  `sourceId.refKey`. Kept beside the draft, not on it, so the draft stays the
+     *  transactional object it already is — this is a post-commit side effect of the
+     *  HOST, not a field the create engine reads. Cleared on Cancel and on commit. */
+    const [linkBack, setLinkBack] = useState<{ sourceId: string; refKey: string } | null>(null);
     /** The delete preflight in flight (12d). Null when no delete is pending, and
      *  like the draft it is the only place the decision lives: nothing is written
      *  until a row of the dialogue is pressed, so Cancel is `setPending(null)`. */
@@ -1365,6 +1560,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  cui 10b l'ha consegnata, e chiuderla d'ufficio sarebbe una regressione di
      *  superficie travestita da default. */
     const [showOutline, setShowOutline] = useState(true);
+    /** #158 P2 — the Metaclasses pane open, the sister of `showOutline`. Closed, it is
+     *  a rail, like the outline closed: VIEWS › Outline and the outline's own rail act
+     *  on the SAME state, so there is one answer to «is the outline open». */
+    const [showClasses, setShowClasses] = useState(true);
+    /** #158 P2 — the side panes' widths. State of the session, not a preference: same
+     *  reason `columnChoice` is (R-RAIL-11 closes the keys that survive a reload). */
+    const [paneWidth, setPaneWidth] = useState<Record<SidePane, number>>(() => ({ ...PANE_DEFAULT_W }));
+    /** The pane whose handle is being dragged, for the handle's own drag look. */
+    const [resizingPane, setResizingPane] = useState<SidePane | null>(null);
+    /** #158 P5 — the neighborhood of the selected row is SHOWN. A view switch like
+     *  `showOutline`, one boolean for the tab and not a per-row expansion: the
+     *  expanded row is still «the selected row», only now with the view switched on
+     *  (FL6's rule, kept). It stays across selections, so a user who closed it to win
+     *  room is not handed it back at the next click. */
+    const [showNeighborhood, setShowNeighborhood] = useState(true);
     /** Il literal selezionato nel segmented, `''` per «All». Una stringa e non un
      *  indice: gli indici di un enum cambiano quando il metamodello cambia, e un
      *  filtro che dopo una modifica del metamodello punta a un altro literal e'
@@ -1465,6 +1675,55 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             window.removeEventListener('resize', onResize);
         };
     }, [columnsOpen]);
+
+    /* #158 P2 — resizing the side panes.
+     *
+     * The drag is the idiom `PropertiesWithTreeView` already uses with the same
+     * `ResizeHandle`: listeners on `document` for the gesture's lifetime, the cursor and
+     * `user-select` held on `body` so the pointer can leave the 8px strip without the
+     * page selecting text. One difference: the width is committed once per animation
+     * frame, because a width change re-renders this whole tab — table and form — and a
+     * mouse reports far more often than a screen paints. */
+    const resizePaneBy = (pane: SidePane, delta: number) =>
+        setPaneWidth(prev => ({ ...prev, [pane]: clampPane(pane, prev[pane] + delta) }));
+
+    const resetPane = (pane: SidePane) =>
+        setPaneWidth(prev => ({ ...prev, [pane]: PANE_DEFAULT_W[pane] }));
+
+    const startPaneResize = (pane: SidePane) => (e: React.MouseEvent) => {
+        const startX = e.clientX;
+        const startW = paneWidth[pane];
+        let latest = startW;
+        let frame = 0;
+        setResizingPane(pane);
+        const onMove = (ev: MouseEvent) => {
+            latest = clampPane(pane, startW + ev.clientX - startX);
+            if (frame) return;
+            frame = requestAnimationFrame(() => {
+                frame = 0;
+                setPaneWidth(prev => (prev[pane] === latest ? prev : { ...prev, [pane]: latest }));
+            });
+        };
+        const onUp = () => {
+            if (frame) cancelAnimationFrame(frame);
+            setPaneWidth(prev => (prev[pane] === latest ? prev : { ...prev, [pane]: latest }));
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            setResizingPane(null);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    };
+
+    /** Where each handle sits: the right edge of its pane, measured from the tab's left
+     *  edge. Arithmetic on the widths the panes are GIVEN, not a DOM read: both panes are
+     *  `flex: 0 0 <basis>` under `box-sizing: border-box`, so the basis is the width. */
+    const outlineEdge = showOutline ? paneWidth.outline : PANE_RAIL_W;
+    const classesEdge = outlineEdge + (showClasses ? paneWidth.classes : PANE_RAIL_W);
 
     // Name-sorted so the column does not reorder itself when a class is renamed
     // elsewhere. `getMetaclassInfo` is impure (it reads the store and L-proxies),
@@ -1751,6 +2010,16 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setNav(null);
     };
 
+    /** #158 P5 — the chevron at the end of a row. On the selected row it closes or
+     *  reopens the neighborhood and leaves the selection alone (closing it must not
+     *  close the form under it); on any other row it selects that row AND shows its
+     *  neighborhood, which is what a chevron pointing down promises. */
+    const toggleNeighborhood = (id: string) => {
+        if (id === subjectId) { setShowNeighborhood(v => !v); return; }
+        selectOnly(id);
+        setShowNeighborhood(true);
+    };
+
     const applyBulkEdit = () => {
         if (!multi) return;
         const plan = bulkPlan(multi, bulkTouched);
@@ -1778,17 +2047,62 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
     const crumbs: Crumb[] = useMemo(() => (nav ? breadcrumbOf(nav) : []), [nav]);
 
+    /** #158 P1 — the form pane is the scroll container, and a drill-in is usually
+     *  started from a link far down the form (the reference list sits under every
+     *  field). Going back must land where the user left, not at the top of a long
+     *  form: that is what «back to the list» means. One scroll offset per DEPTH,
+     *  written when the form leaves that depth, read when it returns to it. A ref and
+     *  not state: it is bookkeeping for the next layout, never something to render. */
+    const formPaneRef = useRef<HTMLElement | null>(null);
+    const navScrollRef = useRef<number[]>([]);
+    const pendingScrollRef = useRef<number | null>(null);
+
     /** Drill into a contained child. The road is seeded from the SUBJECT's own
      *  position, not from the model root, so the breadcrumb starts where the form
-     *  started and does not print ancestors the user never navigated through. */
-    const drillTo = (childId: string, childKey: string) => {
+     *  started and does not print ancestors the user never navigated through.
+     *
+     *  `via` (#158 P3): the inline child a reference link belongs to. Its step goes on
+     *  the road first, so opening Antonio from Phase_0's `learners` reads
+     *  «ElenaScenario › Phase_0 › Antonio» — the way the user actually came — and Back
+     *  from Antonio lands on Phase_0, not past it. */
+    const drillTo = (childId: string, childKey: string, via?: { id: string; key: string }) => {
         const step = navStepOf(idlookup, childId, childKey);
         if (!step) return;
-        if (nav) { setNav(drillInto(nav, step)); return; }
-        const root = subjectId ? navStepOf(idlookup, subjectId) : null;
-        if (!root) return;
-        setNav(drillInto(navFor(root), step));
+        navScrollRef.current[formDepth] = formPaneRef.current?.scrollTop ?? 0;
+        pendingScrollRef.current = 0;
+        let from = nav;
+        if (!from) {
+            const root = subjectId ? navStepOf(idlookup, subjectId) : null;
+            if (!root) return;
+            from = navFor(root);
+        }
+        const viaStep = via ? navStepOf(idlookup, via.id, via.key) : null;
+        if (viaStep) from = drillInto(from, viaStep);
+        setNav(drillInto(from, step));
     };
+
+    /** Where a return to `depth` lands: the offset saved when the form left it. */
+    const restoreScrollFor = (depth: number) => {
+        pendingScrollRef.current = navScrollRef.current[depth] ?? 0;
+    };
+
+    /** #158 P1 — «Back»: up one level, with the pure `drillOut` the breadcrumb module
+     *  already exports for exactly this. The breadcrumb stays: it jumps anywhere on
+     *  the road, Back is the one-step gesture every list-to-detail screen offers. */
+    const goBack = () => {
+        if (!nav) return;
+        const next = drillOut(nav);
+        restoreScrollFor(depthOf(next));
+        setNav(next);
+    };
+
+    /** Applied before paint, so the form never shows one frame at the old offset. */
+    useLayoutEffect(() => {
+        const top = pendingScrollRef.current;
+        if (top === null) return;
+        pendingScrollRef.current = null;
+        if (formPaneRef.current) formPaneRef.current.scrollTop = top;
+    }, [formSubjectId]);
 
     /** The contained children of the form's current subject, per child slot.
      *  Empty at depth >= INLINE_DEPTH_LIMIT: beyond the inline level the children
@@ -1980,6 +2294,32 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setDraft(newDraft(shapeCtx.shape(), clsName, ownerId, childKey));
     };
 
+    /**
+     * «New <Target> & link» for a NON-containment reference (#142).
+     *
+     * The target is created at the MODEL ROOT — `(clsName, null, null)`, the same
+     * gesture the catalogue's own New uses — and only AFTER it exists is a pointer
+     * to it appended to `sourceId.refKey` (`commitDraft`, via `linkBack`). A
+     * reference does not own its target, so there is no `childKey` to parent it
+     * under: unlike «Add contained», this create makes a free-standing instance and
+     * then wires a link to it. The button that calls this is gated on
+     * `newInstanceReason` being null, so the root create is always legal when it
+     * runs. Linking an EXISTING target is not here — that is the form's own
+     * reference widget (`ReferenceWidget` / `ListWidget` picker), which this bar
+     * does not duplicate; what the form cannot do is CREATE the target, which is the
+     * navigation-away this feature removes.
+     *
+     * It goes THROUGH `openCreate`, never straight to the draft constructor:
+     * «openCreate is the one door of the draft» is an invariant the tab's tests
+     * assert by counting the draft-constructor call sites (`instanceManagerOutline`,
+     * `instanceManager10c`). The link-back is the only thing this route adds, and it
+     * is a HOST side effect kept beside the draft, not a fourth create engine.
+     */
+    const openCreateAndLink = (targetCls: string, sourceId: string, refKey: string) => {
+        setLinkBack({ sourceId, refKey });
+        openCreate(targetCls, null, null);
+    };
+
     // ── L'outline di containment (10b) ─────────────────────────────────────────
     // Terza superficie della create, e ZERO rami nuovi: `openCreate` e' chiamata
     // qui con (cls, node.id, childKey) da un nodo istanza e con (cls, null, null)
@@ -2008,6 +2348,90 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         for (const cls of classes) out[cls.name] = counts[cls.id] ?? 0;
         return out;
     }, [classes, counts]);
+
+    /**
+     * The NON-containment reference slots of the form's CURRENT subject (#142).
+     *
+     * Sister of `inlineChildren`, and read the same way: keyed on `formSubjectId`
+     * (not `subjectId`), so after a drill-in the references shown are the ones of
+     * the element on screen, and the class comes from `pathTo(...).slice(-1)` for
+     * the identical reason `inlineChildren` reads it there. It scans `shape.refs`
+     * — the «reference selects» half of the shape — never `shape.children`, which
+     * `inlineChildren` and `childSlots` already own.
+     *
+     * `targets` are the pointer values the slot holds, read with the same
+     * `childrenIn` the containment side uses: it filters holes and dangling
+     * pointers, so a link is never mounted on a phantom. `createReason` gates the
+     * «New & link» button exactly as `childSlots`'s `reason` gates «Add»: a
+     * read-only or derived reference, a full slot, or a target that cannot be
+     * instantiated at root (`newInstanceReason`) leaves the reason and drops the
+     * button. A slot is shown when it has targets to navigate to OR a create is
+     * offered — an empty, uncreatable reference is noise, like an empty child slot.
+     *
+     * #158 P3 — the body is `refSlotsOf(id)`, for ANY instance, because the form shows
+     * more than one: its subject and, at the inline level, each contained child with a
+     * form of its own. Only the subject got these sections, so a reference of an inline
+     * child (`Phase.learners` under a Scenario) showed its chips and no list — the
+     * «mappedLearners» the issue asks for next to `mappedCompetencies`, which is a
+     * reference of the subject. Same rule, now applied to every form on screen.
+     */
+    const refSlotsOf = (objectId: string): RefSlot[] => {
+        const shapeAll = shapeCtx.shape();
+        const clsName = pathTo(idlookup, objectId).slice(-1)[0]?.cls;
+        const shape = clsName ? shapeAll.classes[clsName] : null;
+        if (!shape) return [];
+        return shape.refs.map(ref => {
+            const targets = childrenIn(idlookup, objectId, ref.key);
+            const count = targets.length;
+            const full = ref.upper !== -1 && count >= ref.upper;
+            let createReason: string | null;
+            if (ref.readOnly || ref.derived) createReason = 'Read-only reference';
+            else if (full) createReason = `Slot full [${count}/${ref.upper}]`;
+            else createReason = newInstanceReason(shapeAll.classes[ref.of], countsByName[ref.of] ?? 0);
+            const summaries: Record<string, SummaryItem[]> = {};
+            for (const t of targets) summaries[t] = summaryOf(t);
+            return { ref, targets, count, createReason, summaries };
+        }).filter(s => s.targets.length > 0 || s.createReason === null);
+    };
+
+    /** #158 P4 — the D-side read context the target's view predicate is evaluated
+     *  with: the one the table's cells already come from (`tableRow`). */
+    const summaryReadCtx = useMemo(() => makeDrawReadCtx(idlookup ?? {}), [idlookup]);
+
+    /**
+     * #158 P4 — the key fields of one referenced element.
+     *
+     * The target's CONCRETE class (an `ofId` may be abstract: `Goal` points at a
+     * `CompetencyGoal`), its row as the table would print it, and the `FormSpec` of
+     * its own view in the Data Manager's viewpoint — the one its form opens with
+     * (`IRForm host="manager"`), through the same host override. Read only:
+     * `resolveIRView` and `resolveFormSpec` are called here as `resolveTableSpec` is
+     * above, and nothing under `viewpoint/ir/` changes.
+     */
+    const summaryOf = (targetId: string): SummaryItem[] => {
+        const shapeAll = shapeCtx.shape();
+        const clsName = shapeCtx.classOf(targetId);
+        const cls = clsName ? shapeAll.classes[clsName] ?? null : null;
+        if (!cls) return [];
+        const compiled = irIndex ? resolveIRView(targetId, cls.id, irIndex, summaryReadCtx, idlookup) : null;
+        const form = resolveFormSpec(compiled?.formSpec ?? undefined, 'manager');
+        return referenceSummary(cls, tableRow(idlookup, targetId, cls, shapeAll), form);
+    };
+
+    const refSlots = useMemo(
+        () => (formSubjectId && shapeCtx ? refSlotsOf(formSubjectId) : [] as RefSlot[]),
+        [idlookup, formSubjectId, shapeCtx, countsByName, irIndex, summaryReadCtx],
+    );
+
+    /** #158 P3 — the same sections for each inline child, by child id. Empty past the
+     *  inline level: there the children are drill-in links, and a link carries no form
+     *  to put a section under — the section appears once the child IS the form. */
+    const inlineRefSlots = useMemo(() => {
+        const out: Record<string, RefSlot[]> = {};
+        if (!shapeCtx || !rendersInline(formDepth)) return out;
+        for (const slot of inlineChildren) for (const id of slot.ids) out[id] = refSlotsOf(id);
+        return out;
+    }, [inlineChildren, formDepth, idlookup, shapeCtx, countsByName, irIndex, summaryReadCtx]);
 
     /** Se il «+» va offerto affatto: la metaclasse ha almeno una feature di
      *  contenimento (il modello, almeno una rootable). Una lettura di shape, non
@@ -2183,8 +2607,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     const commitDraft = () => {
         if (!draft || !draftView?.valid) return;
         const createdId = applyCreate(modelid, shapeCtx.shape(), draft);
+        const link = linkBack;
         setDraft(null);
+        setLinkBack(null);
         if (!createdId) return;
+        // «New <Target> & link» (#142): the target was created at root above; now
+        // wire the reference that this create existed to fill, with the same pointer
+        // append the form's own picker performs (`appendValue(..., isPtr=true)`) — no
+        // canvas edge, no TRANSACTION around a creator (CLAUDE.md §3.3/§3.4 stay out
+        // of reach). Selection is left ON THE SOURCE: the whole point is to manage
+        // the association from where the user is, so the new link appears in the form
+        // they are looking at rather than yanking them to the target's collection.
+        if (link) {
+            appendValue(link.sourceId, link.refKey, createdId, true);
+            return;
+        }
         // Show what was just made, whichever route made it: the created instance's
         // own collection becomes the visible one and the instance is selected, so
         // the round trip through the table of 2b is what the user sees next.
@@ -2213,11 +2650,23 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 onSelect={selectFromOutline}
                 onMenu={node => setMenuFor(prev => (prev === node.id ? null : node.id))}
                 onCreate={outlineCreate}
+                width={paneWidth.outline}
+                onCollapse={() => { setMenuFor(null); setShowOutline(false); }}
             />}
+            {/* #158 P2 — closed, the outline leaves its rail instead of nothing: the
+                way back is where the pane was, not only in VIEWS, which a closed
+                Metaclasses pane would hide as well. */}
+            {!showOutline && (
+                <PaneRail label="Model outline" icon="bi-list-nested" onExpand={() => setShowOutline(true)} />
+            )}
 
             {/* ── Metaclasses ─────────────────────────────────────────────── */}
-            <aside className="instance-manager__pane instance-manager__pane--classes">
+            {!showClasses ? (
+                <PaneRail label="Metaclasses" icon="bi-collection" onExpand={() => setShowClasses(true)} />
+            ) : (
+            <aside className="instance-manager__pane instance-manager__pane--classes" style={{ flexBasis: paneWidth.classes }}>
                 <h3 className="instance-manager__eyebrow">Metaclasses</h3>
+                <PaneCollapse label="the metaclasses" onCollapse={() => setShowClasses(false)} />
                 {classes.length === 0 ? (
                     <p className="instance-manager__note">
                         No metamodel resolved for this model.
@@ -2301,6 +2750,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         <i className="bi bi-list-nested instance-manager__view-icon" aria-hidden="true" />
                         <span className="instance-manager__row-name">Outline</span>
                     </li>
+                    {/* #158 P5 — the neighborhood graph of the selected row, as a view
+                        that opens and closes like Outline: the same `showNeighborhood`
+                        the row's chevron toggles. Here it is reachable while the
+                        neighborhood is closed and no chevron points at it. */}
+                    <li
+                        className={'instance-manager__row instance-manager__view'
+                            + (showNeighborhood ? ' instance-manager__row--selected' : '')}
+                        title="Neighborhood — the graph under the selected row"
+                        role="button"
+                        aria-pressed={showNeighborhood}
+                        onClick={() => setShowNeighborhood(v => !v)}
+                    >
+                        <i className="bi bi-bounding-box-circles instance-manager__view-icon" aria-hidden="true" />
+                        <span className="instance-manager__row-name">Neighborhood</span>
+                    </li>
                     {/* Visibile e inerte quando non c'e' un soggetto, con la causa
                         nel `title`: `openInCanvas` prende un oggetto, e la stessa
                         regola con cui il rail tiene visibili le metaclassi astratte
@@ -2322,6 +2786,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     </li>
                 </ul>
             </aside>
+            )}
 
             {/* ── La colonna centrale: la tabella SOPRA, la form SOTTO ────────
                 Il riassetto di FL6. La form lascia la quarta colonna e prende il
@@ -2768,7 +3233,10 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                        puo' essere vera, e il primo giorno in cui i
                                        due divergono la form parlerebbe di una riga
                                        e il nastro di un'altra. */
-                                    const isExpanded = row.id === subjectId;
+                                    /* #158 P5 — AND the view switch: the rule above
+                                       stands (still no per-row state, still one row
+                                       at most), and the neighborhood can be closed. */
+                                    const isExpanded = row.id === subjectId && showNeighborhood;
                                     return (
                                     <React.Fragment key={row.id}>
                                     <tr
@@ -2832,17 +3300,30 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                 onClick={e => { e.stopPropagation(); openDelete(row.id); }}
                                             />
                                         </td>
-                                        {/* Il chevron e' un INDICATORE, non un
-                                            secondo bottone: il gesto e' il click
-                                            sulla riga, gia' scritto sopra, e un
-                                            bersaglio annidato che fa la stessa cosa
-                                            e' un modo per farla due volte. */}
+                                        {/* Il chevron era un INDICATORE, perche' un
+                                            bersaglio annidato che rifacesse il click
+                                            sulla riga lo avrebbe fatto due volte.
+                                            #158 P5 gli da' un gesto che la riga NON
+                                            ha: chiudere e riaprire il vicinato
+                                            (`toggleNeighborhood`). Il click sulla riga
+                                            resta la selezione, e non passa di qui. */}
                                         <td className="instance-manager__td-chev">
-                                            <i
-                                                className={'bi instance-manager__chev '
-                                                    + (isExpanded ? 'bi-chevron-up' : 'bi-chevron-down')}
-                                                aria-hidden="true"
-                                            />
+                                            <button
+                                                type="button"
+                                                className="instance-manager__chev-btn"
+                                                aria-expanded={isExpanded}
+                                                aria-label={isExpanded
+                                                    ? `Hide the neighborhood of ${row.name || row.id}`
+                                                    : `Show the neighborhood of ${row.name || row.id}`}
+                                                title={isExpanded ? 'Hide the neighborhood' : 'Show the neighborhood'}
+                                                onClick={e => { e.stopPropagation(); toggleNeighborhood(row.id); }}
+                                            >
+                                                <i
+                                                    className={'bi instance-manager__chev '
+                                                        + (isExpanded ? 'bi-chevron-up' : 'bi-chevron-down')}
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
                                         </td>
                                     </tr>
 
@@ -2938,6 +3419,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 un contenitore che dichiara un contenuto assente. */}
             {(isMulti || subjectId || !collectionIsEmpty) && (
             <section
+                ref={formPaneRef}
                 className={'instance-manager__pane instance-manager__pane--form'
                     + (isMulti || subjectId ? '' : ' instance-manager__pane--form-collapsed')}
             >
@@ -2958,7 +3440,19 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             a drill-in has happened — a form sitting on its own subject
                             has a road of one step, and printing it would be noise. */}
                         {crumbs.length > 1 && (
-                            <nav className="instance-manager__crumbs" aria-label="Containment path">
+                            <nav className="instance-manager__crumbs" aria-label="Navigation path">
+                                {/* #158 P1 — the one-step way back, ahead of the road it
+                                    walks. Named after where it lands, so the tooltip says
+                                    what the arrow alone cannot. */}
+                                <button
+                                    type="button"
+                                    className="instance-manager__back"
+                                    title={`Back to ${crumbLabel(crumbs[crumbs.length - 2])}`}
+                                    onClick={goBack}
+                                >
+                                    <i className="bi bi-arrow-left" aria-hidden="true" />
+                                    Back
+                                </button>
                                 {crumbs.map(c => (
                                     <span key={c.id + ':' + c.depth} className="instance-manager__crumb-wrap">
                                         {c.isCurrent ? (
@@ -2969,7 +3463,10 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                             <button
                                                 type="button"
                                                 className="instance-manager__crumb"
-                                                onClick={() => setNav(prev => (prev ? truncateTo(prev, c.depth) : prev))}
+                                                onClick={() => {
+                                                    restoreScrollFor(c.depth);
+                                                    setNav(prev => (prev ? truncateTo(prev, c.depth) : prev));
+                                                }}
                                             >
                                                 {crumbLabel(c)}
                                             </button>
@@ -3068,6 +3565,18 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                         <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
                                                     </button>
                                                     <IRForm objectId={childId} host="manager" />
+                                                    {/* #158 P3 — the child's own reference
+                                                        sections, under its own form and inside
+                                                        its frame: they are the child's, and the
+                                                        frame is what says so. Opening a target
+                                                        goes THROUGH the child (`via`). */}
+                                                    <RefSlotsSection
+                                                        slots={inlineRefSlots[childId] ?? []}
+                                                        idlookup={idlookup}
+                                                        nested
+                                                        onOpen={(targetId, refKey) => drillTo(targetId, refKey, { id: childId, key: slot.key })}
+                                                        onCreate={(targetCls, refKey) => openCreateAndLink(targetCls, childId, refKey)}
+                                                    />
                                                 </div>
                                             ) : (
                                                 <button
@@ -3085,6 +3594,34 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                 ))}
                             </div>
                         )}
+                        {/* Referenced elements (#142). The associations/compositions the
+                            subject POINTS AT — `shape.refs`, the «reference selects» half —
+                            each target openable in place and each slot able to create a new
+                            target and link it, WITHOUT the canvas edge workflow.
+
+                            Homogeneous with the containment drill-in above: the same
+                            `drillTo` / `NavState` / breadcrumb, targets rendered as drill-in
+                            LINKS (references fan out far more than containment, so the body
+                            swaps to the target rather than nesting a form per pointer). Drill
+                            replaces the body with the referenced element's OWN `IRForm`, which
+                            resolves the target metaclass's view — the customization is
+                            inherited by construction (`useIRFormView`), the same way it is for
+                            a contained child. A referenced target is SHARED: editing it edits
+                            the one instance everything points at, said in the link title.
+
+                            Not inside `IRForm`: the tab hosts `IRForm`/`IRFormField`/
+                            `ListWidget` unchanged (the canvas rail mounts them too), so the
+                            navigation and the create-and-link live at the tab, exactly where
+                            the containment inline level and «Add contained» already do.
+
+                            #158 P3 — the markup moved to `RefSlotsSection`, which each
+                            inline child mounts too; this call is the subject's. */}
+                        <RefSlotsSection
+                            slots={refSlots}
+                            idlookup={idlookup}
+                            onOpen={(targetId, refKey) => drillTo(targetId, refKey)}
+                            onCreate={(targetCls, refKey) => { if (formSubjectId) openCreateAndLink(targetCls, formSubjectId, refKey); }}
+                        />
                         {/* Route 2 of Turno 10: containment creates. One Add per child
                             slot of the shape, gated by `upper`; when the slot is full
                             the control is absent and the cardinality says why. The
@@ -3170,6 +3707,53 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             )}
             </div>
 
+            {/* ── #158 P2: the width handles of the side panes ─────────────────
+                The design system's `ResizeHandle`, the one the properties rail uses.
+                OVER the seams and not between the columns: the separator between the
+                columns is one adjacency rule (`&__pane + &__pane`, asserted by 10h),
+                and a handle placed as a sibling in between would break the adjacency
+                and take the border with it. Each slot is a zero-width anchor at the
+                pane's right edge; the handle straddles it. Absent on a closed pane:
+                there is no width to set, only the rail's button. */}
+            {showOutline && (
+                <div className="instance-manager__resizer-slot" style={{ left: outlineEdge }}>
+                    <ResizeHandle
+                        className="instance-manager__resizer"
+                        orientation="vertical"
+                        isDragging={resizingPane === 'outline'}
+                        onMouseDown={startPaneResize('outline')}
+                        onDoubleClick={() => resetPane('outline')}
+                        onResizeBy={delta => resizePaneBy('outline', delta)}
+                        step={PANE_KEY_STEP}
+                        label="Resize the model outline"
+                        value={paneWidth.outline}
+                        min={PANE_LIMITS.outline[0]}
+                        max={PANE_LIMITS.outline[1]}
+                        readoutPrefix="w"
+                        hint="Drag to resize · double-click to reset"
+                    />
+                </div>
+            )}
+            {showClasses && (
+                <div className="instance-manager__resizer-slot" style={{ left: classesEdge }}>
+                    <ResizeHandle
+                        className="instance-manager__resizer"
+                        orientation="vertical"
+                        isDragging={resizingPane === 'classes'}
+                        onMouseDown={startPaneResize('classes')}
+                        onDoubleClick={() => resetPane('classes')}
+                        onResizeBy={delta => resizePaneBy('classes', delta)}
+                        step={PANE_KEY_STEP}
+                        label="Resize the metaclasses"
+                        value={paneWidth.classes}
+                        min={PANE_LIMITS.classes[0]}
+                        max={PANE_LIMITS.classes[1]}
+                        readoutPrefix="w"
+                        hint="Drag to resize · double-click to reset"
+                    />
+                </div>
+            )}
+
             {pendingMulti && (
                 <MultiDeleteDialog
                     pre={pendingMulti}
@@ -3196,7 +3780,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     model={draftView}
                     ownerLabel={draftOwnerLabel}
                     onChange={setDraft}
-                    onCancel={() => setDraft(null)}
+                    onCancel={() => { setDraft(null); setLinkBack(null); }}
                     onCommit={commitDraft}
                 />
             )}

@@ -1,21 +1,32 @@
 // Simulation panel (R-SIM-3) — floating panel, closed to a chip.
 //
-// The panel is portaled to <body> by EditorV2, so the theme variables declared
-// on `.editor-v2.theme-dark/.theme-light` do NOT reach it (same constraint as
-// `.context-menu`, EditorV2.scss:3295). Only the design-system tokens are used
-// here: they live on `:root` / `:root[data-theme="dark"]` (styles/tokens/), so
-// they resolve for body-level content in both themes. No variable is DEFINED in
-// this file (design-system rule).
+// Mounted by EditorV2 inside the editor, no longer portaled to <body>
+// (P-2026-09-24-1005): rc-dock keeps an inactive tab mounted and hides its pane
+// with `visibility: hidden`, so the panel of a hidden editor hides with it and
+// only the active editor's panel shows. Two panels portaled to <body> sat at
+// the same fixed spot, and the last-mounted one painted on top in every tab.
 //
-// z-index 850: above the rc-dock drop layers (max 400) and the canvas, below the
-// navbar (950, tokens/_z-index.scss) and every dropdown/modal (>= 1000). The
-// panel sits bottom-LEFT because the MiniMap owns the bottom-right corner
-// (EditorV2.tsx:3869).
+// `position: absolute` anchors on `.editor-switch-container` (EditorSwitch.scss,
+// `position: relative`), the nearest positioned ancestor, whose box is the
+// editor's: `.editor-v2` itself is static. EditorV2 gets a modelid only from
+// EditorSwitch, and the panel is gated on it, so that anchor is always there.
 //
-// bottom 48px = the 32px status bar (StatusBar.scss:13, in normal flow at the
-// viewport bottom) + a 16px gutter. A fixed element measured from the viewport
-// bottom would otherwise sit ON the bar — which is exactly what smoke assertion
-// A3 checks (PROTOCOL P8), and what it caught at bottom: 16px.
+// Only the design-system tokens are used here: they live on `:root` /
+// `:root[data-theme="dark"]` (styles/tokens/), and no editor theme class
+// redefines one of them (grep of components/editor-v2, 2026-09-24). No variable
+// is DEFINED in this file (design-system rule).
+//
+// z-index 850 orders the panel inside the dock only: `.pinnable-dock-root` has
+// `transform-style: preserve-3d` (DockManagerStyles.scss), a stacking context that
+// holds every editor (measured 2026-09-24). It is above the rc-dock drop layers
+// (max 400) and the canvas; whatever lies outside the dock with a z-index (the
+// navbar, the minimized Jodie button, the Properties rail, modals) paints above
+// it, whatever the value here. The panel sits bottom-LEFT because the MiniMap
+// owns the bottom-right corner (`<MiniMap>` in EditorV2.tsx).
+//
+// bottom 16px: a gutter from the editor's bottom edge. The 32px status bar
+// (StatusBar.scss:13) lies outside the editor box, so the 48px offset from the
+// viewport bottom that smoke assertion A3 (PROTOCOL P8) once forced is gone.
 //
 // ICON COLOUR — declared ON the icon, never inherited (CLAUDE.md §5 gotcha).
 // `i.bi` (styles/style.scss:790) sets `color` directly on the tag, and `i.bi:hover`
@@ -32,11 +43,17 @@
 // buttons: slate gradient, white icons".
 
 .sim-panel {
-    position: fixed;
-    // Clear of the 200px palette rail (EditorV2.scss .editor-v2-palette): the chip
-    // floats on the canvas, not on the rail's hint block.
-    left: calc(200px + 16px);
-    bottom: 48px;
+    position: absolute;
+    // Clear of the 200px palette rail (EditorV2.scss .editor-v2-palette) AND of the
+    // minimized Jodie button: 200px rail + 30px Jodie offset + 58px Jodie width +
+    // 16px gutter (Jodie/JodieWindow.css:871-878 and :918-923, `.jodie-minimized`,
+    // fixed at bottom 100px, z-index 10000). Jodie sits outside the dock, and the
+    // dock is a stacking context (`.pinnable-dock-root`, `transform-style:
+    // preserve-3d`, DockManagerStyles.scss:133), so no z-index here can lift the
+    // panel over it: at `200px + 16px` the button covered the Reset button of the
+    // open panel. Moving the Jodie geometry means moving this offset too.
+    left: calc(200px + 30px + 58px + 16px);
+    bottom: 16px;
     z-index: 850;
     font-family: inherit;
     color: var(--color-text-primary);
@@ -48,6 +65,12 @@
         border-radius: 8px;
         box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
         overflow: hidden;
+        // D10 (R-SIM-79): never taller than the editor less a 16px gutter at each end, so
+        // the header stays in view; the body scrolls instead. Measured 2026-09-27: with
+        // every group open the panel was 1006px in a 1000px viewport, its top at -55px.
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100% - 32px);
     }
 
     // -- closed: chip -------------------------------------------------------
@@ -92,6 +115,7 @@
     // -- open: header -------------------------------------------------------
     &__header {
         display: flex;
+        flex: 0 0 auto;
         align-items: center;
         gap: 8px;
         padding: 8px 12px;
@@ -150,6 +174,9 @@
 
     // -- open: body ---------------------------------------------------------
     &__body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
         padding: 8px 12px 12px;
     }
 
@@ -162,11 +189,18 @@
         color: var(--color-text-tertiary);
     }
 
+    // The input of the choice header keeps its own case: uppercased, ε paints Ε, a Latin E to the reader (G13).
+    &__section-input {
+        text-transform: none;
+    }
+
     &__hint {
         padding: 4px 0;
         font-size: 11px;
         line-height: 1.5;
         color: var(--color-text-tertiary);
+        // A long metamodel name in a message wraps inside the panel width.
+        overflow-wrap: anywhere;
     }
 
     &__row {
@@ -184,6 +218,71 @@
         flex: 0 0 96px;
         font-size: 11px;
         color: var(--color-text-tertiary);
+    }
+
+    // TODO: cleanup — unused since the roles moved into SimRolesModal (P-2026-09-27-1740).
+    // M2 face: a collapsible group of roles (step 3b, R-SIM-37), styled as a section title.
+    &__group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        margin: 8px 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        .bi {
+            font-size: 10px;
+            line-height: 1;
+        }
+
+        // Follows the button's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+    }
+
+    // TODO: cleanup — unused since the roles moved into SimRolesModal (P-2026-09-27-1740).
+    // The bound (k): the one role that is a value, not a pointer. Same box as the select.
+    &__input {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 24px;
+        padding: 0 4px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: inherit;
+        font-size: 11px;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.18);
+        }
     }
 
     &__select {
@@ -208,6 +307,14 @@
             border-color: #0ea5e9;
             box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.18);
         }
+    }
+
+    // The dark-theme select rule (styles/components/_form-system.scss, `[data-theme="dark"] select`,
+    // specificity 0,1,1) outranks `__select` (0,1,0) and adds an SVG arrow, which the dark `background`
+    // shorthand of the same file leaves on repeat at 0 0: a row of arrows beside the native one,
+    // measured 2026-09-27. Light computes `none`, so restating it at (0,2,0) changes dark only.
+    & &__select {
+        background-image: none;
     }
 
     // -- open: run controls (M1) --------------------------------------------
@@ -258,6 +365,170 @@
         }
     }
 
+    // -- open: events (M1, step 1, R-SIM-16) --------------------------------
+    // One button per event instance. Enablement changes only the opacity: the
+    // buttons keep their box, so the section does not shift when the marking moves.
+    &__events {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0 0 8px;
+    }
+
+    &__event {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        max-width: 100%;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bi {
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        // Follows the button's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+
+    // -- open: the choice among candidates (M1, step 3b, R-SIM-35) ----------
+    // One button per candidate, full width, in the event buttons' vocabulary.
+    &__choices {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 0 0 8px;
+    }
+
+    &__choice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 24px;
+        padding: 4px 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1.3;
+        text-align: left;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
+    // Choosing this candidate halts the run (R-SIM-23): said before the click.
+    &__choice-note {
+        flex: 0 0 auto;
+        color: var(--color-warning-text);
+    }
+
+    &__cancel {
+        align-self: flex-start;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 11px;
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
+    // A refused role write or run start: the reason, in the error text token.
+    &__hint--error {
+        color: var(--color-error-text);
+    }
+
+    // A run started, or a role saved, despite a role overlap (no event role): the warning text token.
+    &__hint--warning {
+        color: var(--color-warning-text);
+    }
+
+    // One row whatever the text, the full text in the `title` (R-SIM-63): the panel is
+    // anchored at the bottom, so a line that wrapped pushed the buttons 17px up.
+    &__hint--line {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // The halt line, the one exception (P-2026-09-27-2225, ratified by Alfonso 2026-09-27): it exists in the halted
+    // state only, and it is the sentence that state shows, so it wraps into a slot of exactly two lines (3em is two
+    // rows of line-height 1.5), an ellipsis past the second. The slot sits above the buttons and its height does not
+    // depend on the text, so it grows the panel upward and moves none of them (R-SIM-65). «Last step» stays on one
+    // row: it sits below the buttons, and a second row there lifted them 16.5px (measured 2026-09-27).
+    &__hint--halt {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        box-sizing: content-box;
+        height: 3em;
+    }
+
+    // The run's marking and σ (R-SIM-82): the line the audience reads, in the primary text token.
+    &__hint--marking {
+        color: var(--color-text-primary);
+    }
+
     &__status {
         display: flex;
         align-items: center;
@@ -271,6 +542,359 @@
         color: var(--color-text-secondary);
     }
 
+    // Deadlock: the row says why and opens the list of reasons (R-SIM-58).
+    &__status--clickable {
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        // The toggle glyph: declared on the icon, as every icon of the panel.
+        .bi,
+        .bi:hover {
+            font-size: 10px;
+            line-height: 1;
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    // The reason after the status, on the row's one line; the full text is the row's `title`.
+    &__status-reason {
+        flex: 1;
+        min-width: 0;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // One reason per input, opened by the user: the only text of the panel that
+    // may change its height (R-SIM-63).
+    &__reasons {
+        margin: 4px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__reason {
+        padding: 2px 0;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-text-secondary);
+        overflow-wrap: anywhere;
+    }
+
+    // -- M2 face: the profile row, its summary and «Configure…» (R-SIM-77..79) --
+    // The row holds Apply too: a narrower label leaves the select room for «Extended state machine».
+    // Measured 2026-09-27 (G14): at 48px the select painted 116 of the option's 124px, the native
+    // arrow takes the rest; «Profile» is 33.4px, so 36px gives the select 12px.
+    &__profile &__label {
+        flex-basis: 36px;
+    }
+
+    // Apply is the row's one primary action: the slate gradient and white text of `__btn`.
+    &__apply {
+        flex: 0 0 auto;
+        height: 24px;
+        padding: 0 10px;
+        border: none;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #ffffff;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+
+    &__summary {
+        margin-bottom: 4px;
+    }
+
+    &__summary-status {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 0;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-text-secondary);
+    }
+
+    &__summary-name {
+        white-space: pre;
+    }
+
+    &__summary-after {
+        white-space: pre;
+        color: var(--color-text-tertiary);
+    }
+
+    // The verdict of R-SIM-79: Checkable or Not checkable, never «with warnings» (D5).
+    &__badge {
+        display: inline-flex;
+        align-items: center;
+        height: 16px;
+        padding: 0 6px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1;
+
+        &--checkable {
+            background: var(--color-success-muted);
+            color: var(--color-text-primary);
+        }
+
+        &--not-checkable {
+            background: var(--color-warning-muted);
+            color: var(--color-warning-text);
+        }
+    }
+
+    // What Apply writes, one binding per line, the reason in the title (R-SIM-77).
+    &__proposals {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__proposal {
+        padding: 1px 0;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // «Configure…»: folds the groups away and back, in the vocabulary of `__group`.
+    &__configure {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        margin: 4px 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        .bi {
+            font-size: 10px;
+            line-height: 1;
+        }
+
+        // Follows the button's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+    }
+
+    // The action inside a hint line, «Add attribute» of the declarations hint (R-SIM-81): text-sized,
+    // underlined, in the vocabulary of `__configure`.
+    &__hint-action {
+        display: inline;
+        height: auto;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
+    // TODO: cleanup — `__decls` to `__decl-add`: unused since the declarations moved into SimRolesModal (P-2026-09-27-1740).
+    // -- M2 face: the declared state attributes of the Data group (lane C1, R-SIM-71) --
+    // One row of three fixed lines per declaration: a domain kind that shows other
+    // cells, a space that hides them, or a derived form that puts the equation in
+    // the place of the initial value (lane C2, R-SIM-76), never changes the height
+    // of a row. The controls keep the box of `__input` and `__select`; these rules
+    // only size them.
+    &__decls {
+        margin-top: 8px;
+    }
+
+    &__decls-title {
+        margin-bottom: 4px;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__decl {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        height: 88px;
+        box-sizing: border-box;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__decl-line {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        min-width: 0;
+    }
+
+    // The global text-input rule (styles/components/_form-system.scss, `input[type="text"]`,
+    // specificity 0,1,1) outranks `__input` (0,1,0) and makes it 36px with a 14px font,
+    // measured 2026-09-27: inside a row the box is restated at (0,2,0), so a line keeps 24px.
+    &__decl &__input {
+        height: 24px;
+        padding: 0 4px;
+        font-size: 11px;
+        line-height: normal;
+    }
+
+    &__decl-name,
+    &__decl-owner {
+        flex: 1 1 0;
+    }
+
+    // The initial value and the equation share one cell box on the second line.
+    &__decl-initial,
+    &__decl-equation {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    &__decl-form {
+        flex: 0 0 76px;
+    }
+
+    &__decl-space {
+        flex: 0 0 96px;
+    }
+
+    &__decl-kind {
+        flex: 0 0 68px;
+    }
+
+    &__decl-domain {
+        display: flex;
+        flex: 1 1 0;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    &__decl-bound,
+    &__decl-literals {
+        flex: 1 1 0;
+    }
+
+    &__decl-hidden {
+        visibility: hidden;
+    }
+
+    &__decl-remove {
+        display: inline-flex;
+        flex: 0 0 20px;
+        align-items: center;
+        justify-content: center;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 1px;
+        }
+
+        // Follows the button's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+    }
+
+    // In the vocabulary of `__cancel`: a text action, not a primary button.
+    &__decl-add {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        border-top: 1px solid var(--color-border-secondary);
+        width: 100%;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+    }
+
     // Status dot — an indicator, so cyan is allowed here (design system §7.1:
     // cyan never as a button background).
     &__dot {
@@ -282,6 +906,7 @@
         &--running { background: #0ea5e9; }
         &--terminated { background: #22c55e; }
         &--deadlock { background: #f59e0b; }
+        &--halted { background: var(--color-error); }
     }
 }
 

@@ -234,6 +234,18 @@ export function formatAmbiguousCandidates(
     return rest > 0 ? `${shown.join(', ')}, and ${rest} more` : shown.join(', ');
 }
 
+/**
+ * What `x.[a]` reads (R-SIM-18, R-SIM-43). Set only by the simulator, over its
+ * state; everywhere else `.[a]` is an error. JjEL knows elements by `id` and
+ * nothing of the attributes: `marked` and `tokens` are the adapter's business.
+ */
+export interface JjelStateAccess {
+    /** Attribute `attr` of the element `elementId`; `undefined` when it has none. */
+    read(elementId: string, attr: string): JjelValue | undefined;
+    /** Attribute `attr` of the presentation of the element the expression is attached to (`node.[a]`). */
+    readPresentation(attr: string): JjelValue | undefined;
+}
+
 // ============================================
 // EVALUATION CONTEXT
 // ============================================
@@ -259,6 +271,11 @@ export class EvaluationContext {
      * `AMBIGUOUS_INSTANCES_KEY` binding at construction; inherited by children.
      */
     ambiguousInstances?: Map<string, AmbiguousInstanceInfo>;
+    /**
+     * The state `x.[a]` reads (R-SIM-43). `undefined`: no state here, and
+     * `.[a]` throws. Inherited by children, like `diagnostics`.
+     */
+    stateAccess?: JjelStateAccess;
 
     constructor(
         initialBindings?: Record<string, JjelValue>,
@@ -335,6 +352,8 @@ export class EvaluationContext {
         child.diagnostics = this.diagnostics;
         // Propagate the ambiguity map so warnings fire inside forall/lambda scopes.
         child.ambiguousInstances = this.ambiguousInstances;
+        // Propagate the state hook so `.[a]` reads inside forall/lambda scopes.
+        child.stateAccess = this.stateAccess;
         child.pushScope();
 
         if (bindings) {

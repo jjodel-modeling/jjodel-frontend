@@ -24,13 +24,15 @@ import {
 import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
-import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
+import { hasCreatableViewpoint, resolveParentViewpoint, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
+import { NewViewDialog, type NewViewClassOption, type NewViewTarget } from '../project/NewViewDialog';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
 import { getTypeName, getMultiplicity } from '../../common/featureSignature';
 import type { NodeProblem } from '../editor-v2/problems/registry';
 import { computeTreeViewScope } from './treeViewScope';
+import { partitionByConcern, concernCounts } from './concernCounts';
 import { natureOf } from '../editor-v2/viewpoint/ir/edgeEndpoints';
 import { widgetLabel } from '../editor-v2/viewpoint/authoring/FormAuthoringBody';
 import type { AnyViewIR, EdgeViewIR, WidgetKind } from '../editor-v2/viewpoint/ir/irTypes';
@@ -60,6 +62,10 @@ const SECTION_KEYS = {
     VIEWPOINTS: '__section:viewpoints',
     VIEWPOINTS_SYNTAX: '__section:viewpoints/syntax',
     VIEWPOINTS_VALIDATION: '__section:viewpoints/validation',
+    // The Data Manager concern, moved under VIEWPOINTS by R-VAL-19. The OLD key
+    // `__section:dataManager` stays right below and is still the section's key: it is
+    // what every saved project carries in `expandedTreeNodes`, and swapping it would
+    // silently reopen a section the user had closed. The tree changed place, not identity.
     DATA_MANAGER: '__section:dataManager',
     DOCUMENTATION: '__section:documentation',
 } as const;
@@ -271,6 +277,36 @@ interface TreeDataManagerData {
     /** True when the `DViewPoint` is really there. False is the ordinary state today. */
     exists: boolean;
     classes: TreeDataManagerClassData[];
+}
+
+/**
+ * Il concern VALIDATION (R-VAL-19).
+ *
+ * Due specie di viewpoint stanno sotto la stessa etichetta, e non e' una svista:
+ * - i `DViewPoint` con `isValidation` — viewpoint di view, il secchio `validation` di
+ *   `partitionByConcern`, resi da `ViewpointNode` come sempre;
+ * - i `DValidationViewpoint` dello scheletro R-VAL, che portano REGOLE e non view, resi
+ *   dai due tipi qui sotto.
+ * Il tipo nuovo non e' un `DViewElement` per decisione (R-VAL-6-bis: una view seleziona,
+ * una regola predica), quindi non passa da `TreeViewpointData` e non puo' passarci.
+ */
+interface TreeValidationRuleData {
+    id: string;
+    name: string;
+    /** Il nome della classe M2 su cui la regola predica, gia' risolto. Va nella colonna
+     *  dove per le view compare «Vertex» (R-VAL-19). Vuoto se il contesto manca o non
+     *  risolve: la riga resta, perche' la regola esiste comunque. */
+    contextName: string;
+    /** Il metamodello della classe di contesto: e' quello che l'ambiente di authoring
+     *  vuole per aprirsi (`VALIDATION_RULES_OPEN`). Vuoto quando non risale. */
+    metamodelId: string;
+    metamodelName: string;
+}
+
+interface TreeValidationViewpointData {
+    id: string;
+    name: string;
+    rules: TreeValidationRuleData[];
 }
 
 interface TreeTransformationData {
@@ -618,11 +654,18 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
     }, []);
 
     const handleAddView = useCallback(() => {
-        createViewInWorkbench(elementId, name, className);
+        // Resolve ONCE and pass the id (2026-09-16). The gate below answers at render and the
+        // creator used to resolve again on its own at click, so a viewpoint deactivated in
+        // between could file the view in the system `Default` — priority 3 of the chain, which
+        // the toolbar, the megamodel and the dashboard refuse to show. Same fix as the v2
+        // entry (`86f822d50`); the chain itself is untouched.
+        const resolved = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
+        if (!resolved) { setCtxMenu(null); return; }
+        createViewInWorkbench(elementId, name, className, resolved.dViewpoint.id);
         setCtxMenu(null);
     }, [elementId, name, className]);
 
-    const hasWorkbenchVP = !!getLastEditedViewpointId();
+    const hasWorkbenchVP = hasCreatableViewpoint();
 
     const popup = ctxMenu ? (
         <div
@@ -635,7 +678,7 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
                 onClick={hasWorkbenchVP ? handleAddView : undefined}
             >
                 <i className="bi bi-eye" />
-                <span>{hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first'}</span>
+                <span>{hasWorkbenchVP ? 'Create View' : 'Create View: open a viewpoint first'}</span>
             </div>
         </div>
     ) : null;
@@ -821,6 +864,140 @@ const DataManagerEmptyState = memo(function DataManagerEmptyState({
             title="Open the Data Manager configuration"
         >
             <span className="tree-empty-dmv-label">All classes use the type-derived defaults</span>
+        </div>
+    );
+});
+
+/**
+ * La riga di stato di un concern vuoto (R-VAL-19: «i tre concern si vedono anche a zero,
+ * con la riga che dice cosa ci andrebbe»).
+ *
+ * Non e' un bersaglio di click e non lo diventa: l'albero nomina e naviga, non modifica
+ * (R-VAL-19-bis (a)), e qui non c'e' nemmeno niente da selezionare — un concern vuoto non
+ * ha un oggetto dietro. Il Data Manager fa eccezione e tiene la sua
+ * `DataManagerEmptyState`, che un oggetto dietro ce l'ha (lo stub del singleton, R-DMV-6)
+ * ed e' cliccabile da prima di questa fetta.
+ */
+const ConcernEmptyState = memo(function ConcernEmptyState({
+    text, depth,
+}: { text: string; depth: number }): ReactElement {
+    return (
+        <div
+            className="tree-empty-concern"
+            style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}
+        >
+            <span className="tree-empty-concern-label">{text}</span>
+        </div>
+    );
+});
+
+// ─── Validation rows (R-VAL-19) ─────────────────────────────────────────────
+
+/**
+ * Una regola. Foglia sempre: una regola non contiene niente.
+ *
+ * Il click apre l'ambiente di authoring — la stessa `CustomEvent` che il bottone della
+ * Toolbar dispaccia, con lo stesso `detail`, perche' la porta e' una sola. Il modale si
+ * apre sul METAMODELLO della classe di contesto; **non si posiziona ancora sulla regola**,
+ * perche' `ValidationRulesOpenDetail` non porta un `ruleId` e aggiungerlo vorrebbe dire
+ * modificare `ValidationRulesModal.tsx`, che in questo giro e' di un'altra corsia
+ * (RC-13). Il detail resta quello consumato oggi: un campo che nessuno legge sarebbe una
+ * scrittura morta, e le scritture morte sono il difetto che CLAUDE.md §5 insegue.
+ *
+ * Nessuna spunta Active, per decisione (R-VAL-19): l'authoring della regola sta
+ * nell'ambiente, e due editor per la stessa cosa sono la domanda su quale sia quello vero.
+ */
+const ValidationRuleRow = memo(function ValidationRuleRow({
+    rule, depth, onSelect, highlightQuery,
+}: {
+    rule: TreeValidationRuleData;
+    depth: number;
+    onSelect?: () => void;
+    highlightQuery?: string;
+}): ReactElement {
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!rule.metamodelId) return;
+        window.dispatchEvent(new CustomEvent(JjodelEvents.VALIDATION_RULES_OPEN, {
+            detail: { metamodelId: rule.metamodelId, metamodelName: rule.metamodelName },
+        }));
+        onSelect?.();
+    }, [rule.metamodelId, rule.metamodelName, onSelect]);
+
+    return (
+        <div className="tree-node" data-element-id={rule.id}>
+            <EntityRow
+                badge="R"
+                badgeClassName="tree-rule"
+                name={rule.name}
+                isLeaf
+                onClick={handleClick}
+                depth={depth}
+                dataElementId={rule.id}
+                highlightQuery={highlightQuery}
+                nameOverride={(
+                    <>
+                        <span className="tree-row__name">
+                            {renderHighlightedName(rule.name || 'unnamed', highlightQuery)}
+                        </span>
+                        {rule.contextName && (
+                            <span className="tree-feature__type">{rule.contextName}</span>
+                        )}
+                    </>
+                )}
+            />
+        </div>
+    );
+});
+
+/**
+ * Un viewpoint di validazione, con le sue regole IN PIANO (R-VAL-19): nessun
+ * raggruppamento per classe di contesto, che e' gia' scritto sulla riga della regola.
+ *
+ * La riga del viewpoint non ha click. Non e' una dimenticanza: un `DValidationViewpoint`
+ * non e' un `DViewElement`, e scrivere il suo id in `_lastSelected.view` manderebbe
+ * `Info.tsx` a risolvere una view che non esiste. Resta contenitore — si apre, si chiude,
+ * e le cose da aprire sono le regole.
+ */
+const ValidationViewpointNode = memo(function ValidationViewpointNode({
+    vp, depth, isExpandedFn, onToggleFn, onSelect, highlightQuery,
+}: {
+    vp: TreeValidationViewpointData;
+    depth: number;
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
+    onSelect?: () => void;
+    highlightQuery?: string;
+}): ReactElement {
+    const expanded = isExpandedFn(vp.id);
+    const hasRules = vp.rules.length > 0;
+    return (
+        <div className="tree-node" data-element-id={vp.id}>
+            <EntityRow
+                badge="VP"
+                badgeClassName="tree-viewpoint"
+                name={vp.name}
+                expandKey={vp.id}
+                isLeaf={!hasRules}
+                expanded={expanded}
+                onToggle={() => onToggleFn(vp.id)}
+                depth={depth}
+                dataElementId={vp.id}
+                highlightQuery={highlightQuery}
+            />
+            {expanded && hasRules && (
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
+                    {vp.rules.map(r => (
+                        <ValidationRuleRow
+                            key={r.id}
+                            rule={r}
+                            depth={depth + 1}
+                            onSelect={onSelect}
+                            highlightQuery={highlightQuery}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 });
@@ -1553,6 +1730,19 @@ const SubViewItem = memo(function SubViewItem({
     const hasChildren = view.children.length > 0;
     const expanded = isExpandedFn(view.id);
     const isRenaming = renamingViewId === view.id;
+    // The row that starts a rename is not necessarily mounted yet — a
+    // newly-created view's store write is a macrotask (action.ts:349), so it can
+    // land 100-300ms after the setState that flips isRenaming (measured,
+    // discovery_2026-09-18_rename_input_focus.md). Focusing from here, on this
+    // row's own mount/isRenaming transition, means the ref is always the one
+    // this render just attached, not a stale read from a parent effect that ran
+    // before this row existed.
+    useEffect(() => {
+        if (isRenaming && renameInputRef.current) {
+            renameInputRef.current.focus();
+            renameInputRef.current.select();
+        }
+    }, [isRenaming]);
     const isSelected = !!selectedViewId && view.id === selectedViewId;
 
     const lView = useMemo(
@@ -1692,6 +1882,25 @@ interface ViewpointRenameProps extends SubViewItemRenameProps {
     startRenameView: (viewId: string, currentName: string, isFirst?: boolean) => void;
 }
 
+/**
+ * The project's classes for NewViewDialog, read off the metamodel data the tree already
+ * built in mapStateToProps (`buildPackageData`): the same list the METAMODELS section
+ * shows, not a second derivation from the store.
+ */
+function collectNewViewClasses(metamodels: TreeMetamodelData[]): NewViewClassOption[] {
+    const out: NewViewClassOption[] = [];
+    const walk = (mm: TreeMetamodelData, pkgs: TreePackageData[]) => {
+        for (const pkg of pkgs) {
+            for (const c of pkg.classes) {
+                out.push({ id: c.id, name: c.name, metamodelId: mm.id, metamodelName: mm.name });
+            }
+            walk(mm, pkg.subPackages);
+        }
+    };
+    for (const mm of metamodels) walk(mm, mm.rootPackages);
+    return out;
+}
+
 const ViewpointNode = memo(function ViewpointNode({
     vp,
     depth,
@@ -1707,6 +1916,7 @@ const ViewpointNode = memo(function ViewpointNode({
     submitRenameView,
     handleRenameKeyDown,
     renameInputRef,
+    metamodels,
 }: {
     vp: TreeViewpointData;
     depth: number;
@@ -1715,6 +1925,7 @@ const ViewpointNode = memo(function ViewpointNode({
     onSelect?: () => void;
     selectedViewId?: string;
     highlightQuery?: string;
+    metamodels: TreeMetamodelData[];
 } & ViewpointRenameProps): ReactElement {
     const hasSubViews = vp.subViews.length > 0;
     const expanded = isExpandedFn(vp.id);
@@ -1739,16 +1950,44 @@ const ViewpointNode = memo(function ViewpointNode({
         onSelect?.();
     }, [vp.id, onSelect]);
 
+    // `+` creates nothing on the spot: a view born with an IR cannot be neutral on the
+    // canvas, so the dialog asks what it applies to first.
+    const [newViewOpen, setNewViewOpen] = useState(false);
+    const newViewClasses = useMemo(
+        () => (newViewOpen ? collectNewViewClasses(metamodels) : []),
+        [newViewOpen, metamodels]
+    );
+
     const handleAddView = useCallback(() => {
+        setNewViewOpen(true);
+    }, []);
+
+    const handleNewViewSubmit = useCallback((target: NewViewTarget) => {
+        setNewViewOpen(false);
+        if (target.kind === 'class') {
+            // The class's own context-menu creator, so the two views are the same modulo id
+            // and name; this row's viewpoint is passed, not the last edited one.
+            const newViewId = createViewInWorkbench(target.classId, target.className, 'DClass', vp.id);
+            // null: the creator already raised its own toast.
+            if (!newViewId) return;
+            // The name is read back from the D element, not recomposed: the creator does
+            // not uniquify it, and the rename shows what was really written.
+            const dView = DPointerTargetable.from(newViewId) as DViewElement | undefined;
+            if (dView) startRenameView(newViewId, dView.name, true);
+            return;
+        }
         const dVp = DPointerTargetable.from(vp.id) as DViewElement | undefined;
         if (!dVp) {
             console.warn('[TreeView] handleAddView: viewpoint D-element not found:', vp.id);
             return;
         }
         const newView = createBlankViewInViewpoint(dVp, 'New view');
-        // React 18 automatic batching: il dispatch Redux di new2 e la
-        // setState di startRenameView sono applicati nello stesso commit.
-        // Quando il nuovo <SubViewItem> monta, vede già renamingViewId === newView.id.
+        // The Redux dispatch behind createBlankViewInViewpoint is a macrotask
+        // (action.ts:349's setTimeout(…, 0)), not the same commit as this
+        // setState: the new <SubViewItem> mounts 100-300ms later, once the
+        // store write lands (measured, discovery_2026-09-18_rename_input_focus.md).
+        // startRenameView only sets renamingViewId here; the input focuses itself
+        // once it mounts and sees isRenaming true (see SubViewItem below).
         startRenameView(newView.id, newView.name, true);
     }, [vp.id, startRenameView]);
 
@@ -1802,6 +2041,12 @@ const ViewpointNode = memo(function ViewpointNode({
                     ))}
                 </div>
             )}
+            <NewViewDialog
+                isOpen={newViewOpen}
+                onClose={() => setNewViewOpen(false)}
+                onSubmit={handleNewViewSubmit}
+                classes={newViewClasses}
+            />
         </div>
     );
 });
@@ -1927,6 +2172,7 @@ interface StateProps {
     standaloneModels: TreeModelData[];
     viewpoints: TreeViewpointData[];
     dataManager: TreeDataManagerData;
+    validationViewpoints: TreeValidationViewpointData[];
     selectedElementId?: string;
     selectedViewId?: string;
     projectId?: Pointer<DProject>;
@@ -1939,7 +2185,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function TreeViewContentComponent(props: AllProps) {
     const {
-        metamodels, standaloneModels, viewpoints, dataManager, selectedElementId,
+        metamodels, standaloneModels, viewpoints, dataManager, validationViewpoints,
+        selectedElementId,
         selectedViewId, projectId, expandedTreeNodes, onSelect,
         searchOpen, onSearchClose,
     } = props;
@@ -2030,13 +2277,6 @@ function TreeViewContentComponent(props: AllProps) {
         },
         [submitRenameView, cancelRenameView]
     );
-
-    useEffect(() => {
-        if (renamingViewId && renameInputRef.current) {
-            renameInputRef.current.focus();
-            renameInputRef.current.select();
-        }
-    }, [renamingViewId]);
 
     // Transformations received via CustomEvent from ProjectEditor
     const [transformations, setTransformations] = useState<TreeTransformationData[]>([]);
@@ -2137,6 +2377,12 @@ function TreeViewContentComponent(props: AllProps) {
             };
             for (const sv of vp.subViews) visit(sv);
         }
+        // I `DValidationViewpoint` sono chiavi di espansione come gli altri viewpoint
+        // (R-VAL-19). Senza questo giro, collassarne uno scrive `!<id>` e questo stesso
+        // effetto lo rimuove subito come orfano: il chevron si riapre da solo, che e' il
+        // guasto gia' misurato sulle istanze M1 qui sopra. Le regole non entrano: sono
+        // foglie, e una foglia non ha una chiave di espansione.
+        for (const vvp of validationViewpoints) validIds.add(vvp.id);
         const liveMetamodelIds = new Set(metamodels.map(m => m.id));
 
         const filtered = expandedTreeNodes.filter(entry => {
@@ -2152,7 +2398,7 @@ function TreeViewContentComponent(props: AllProps) {
         if (filtered.length !== expandedTreeNodes.length) {
             SetFieldAction.new(projectId, 'expandedTreeNodes', filtered, '', false);
         }
-    }, [projectId, expandedTreeNodes, metamodels, standaloneModels, viewpoints]);
+    }, [projectId, expandedTreeNodes, metamodels, standaloneModels, viewpoints, validationViewpoints]);
 
     // Search filtering — prune the in-memory Tree*Data. No debounce (data is
     // already in memory). Only the RENDER consumes these; the orphan-cleanup
@@ -2219,25 +2465,55 @@ function TreeViewContentComponent(props: AllProps) {
 
     // Group viewpoints by type (filtered set during search).
     //
-    // The Data Manager singleton is dropped from ALL THREE buckets and from the counter
-    // (R-DMV-5): it has its own section below, and the `other` bucket is a catch-all that
-    // would otherwise have picked the new type up on its own, showing the singleton as a
-    // bare viewpoint under «Viewpoints» — which is exactly what this decision undoes.
-    const { syntaxVps, validationVps, otherVps, viewpointCount } = useMemo(() => {
-        const syntax: TreeViewpointData[] = [];
-        const validation: TreeViewpointData[] = [];
-        const other: TreeViewpointData[] = [];
-        for (const vp of displayViewpoints) {
-            if (isDataManagerViewpointId(vp.id)) continue;
-            if (vp.vpType === 'syntax') syntax.push(vp);
-            else if (vp.vpType === 'validation') validation.push(vp);
-            else other.push(vp);
-        }
-        return {
-            syntaxVps: syntax, validationVps: validation, otherVps: other,
-            viewpointCount: syntax.length + validation.length + other.length,
-        };
-    }, [displayViewpoints]);
+    // The Data Manager singleton is dropped from ALL THREE buckets (R-DMV-5): it has a
+    // concern of its own, and the `other` bucket is a catch-all that would otherwise have
+    // picked the new type up, showing the singleton as a bare viewpoint under «Viewpoints».
+    // Where it is filed changed with R-VAL-19 — a concern under VIEWPOINTS instead of a
+    // sibling of it — and that is exactly why it must still leave the buckets: otherwise
+    // it would now appear TWICE under the same branch.
+    const { syntax: syntaxVps, validation: validationVps, other: otherVps } = useMemo(
+        () => partitionByConcern(displayViewpoints, isDataManagerViewpointId),
+        [displayViewpoints]
+    );
+
+    // The four numbers, from the pure module so the formula can be EXECUTED by a test and
+    // not read off this file (P11 — see `concernCounts.ts`).
+    //
+    // Two things the input encodes, and both are deliberate:
+    // - the Data Manager term is counted only OUTSIDE a search, because its rows are not in
+    //   the search index (`filterViewpoints` never reaches them) and its concern is hidden
+    //   while searching: counting it there would make the header claim content the branch
+    //   does not show;
+    // - the number is now VIEWPOINTS at every level (R-VAL-19-bis (b)). The Data Manager's
+    //   customized-class count did not disappear — `DataManagerEmptyState` says it in words
+    //   at zero, and above zero the rows themselves are the count.
+    const counts = useMemo(() => concernCounts({
+        syntaxViewpoints: syntaxVps.length,
+        validationViews: validationVps.length,
+        otherViewpoints: otherVps.length,
+        validationViewpoints: validationViewpoints.length,
+        dataManagerViewpoints: (!searchActive && dataManager.exists) ? 1 : 0,
+    }), [syntaxVps.length, validationVps.length, otherVps.length,
+         validationViewpoints.length, searchActive, dataManager.exists]);
+
+    // The searchable content of VIEWPOINTS: the three buckets that `filterViewpoints`
+    // prunes. NOT `counts.total`, which also carries the Data Manager and the validation
+    // viewpoints — neither is searched, and a branch kept open by content the search cannot
+    // reach would be a branch that says «no matches» and shows rows anyway.
+    const viewpointCount = syntaxVps.length + validationVps.length + otherVps.length;
+
+    // ONE guard for the three concerns (R-VAL-19: «i tre concern si vedono anche a zero»).
+    // Same shape for all three — visible at zero when not searching, and during a search
+    // only if the concern has content the search actually matched. Before this round the
+    // three were written by hand with two different guards: SYNTAX and VALIDATION behind a
+    // `length > 0`, so they vanished at zero and taught nobody that they exist; DATA
+    // MANAGER behind `!searchActive`, so it was the only one that showed empty.
+    //
+    // The Data Manager's match term is a constant false, and honestly so: its rows are not
+    // in the search index, so it has nothing that a search could match.
+    const showSyntaxConcern = !searchActive || syntaxVps.length > 0;
+    const showDataManagerConcern = !searchActive || false;
+    const showValidationConcern = !searchActive || validationVps.length > 0;
 
     const hasContent =
         metamodels.length > 0 ||
@@ -2345,29 +2621,37 @@ function TreeViewContentComponent(props: AllProps) {
                 </SectionNode>
                 )}
 
-                {/* VIEWPOINTS — hidden during search when nothing matches */}
+                {/* VIEWPOINTS — one branch, three concerns (R-VAL-19). Hidden during a
+                    search when nothing the search can reach matches; at zero it stays, and
+                    so do the three concerns under it. */}
                 {(!searchActive || viewpointCount > 0) && (
                 <SectionNode
                     sectionKey={SECTION_KEYS.VIEWPOINTS}
                     label="Viewpoints"
-                    counter={viewpointCount}
+                    counter={counts.total}
                     expanded={viewpointsExpanded}
                     onToggle={() => onToggleFn(SECTION_KEYS.VIEWPOINTS)}
                     depth={1}
                 >
-                    {syntaxVps.length > 0 && (
+                    {showSyntaxConcern && (
                         <SectionNode
                             sectionKey={SECTION_KEYS.VIEWPOINTS_SYNTAX}
                             label="Syntax"
-                            counter={syntaxVps.length}
+                            counter={counts.syntax}
                             expanded={syntaxExpanded}
                             onToggle={() => onToggleFn(SECTION_KEYS.VIEWPOINTS_SYNTAX)}
                             depth={2}
                         >
-                            {syntaxVps.map(vp => (
+                            {syntaxVps.length === 0 ? (
+                                <ConcernEmptyState
+                                    depth={3}
+                                    text="No concrete syntax — models render in abstract syntax"
+                                />
+                            ) : syntaxVps.map(vp => (
                                 <ViewpointNode
                                     key={vp.id}
                                     vp={vp}
+                                    metamodels={metamodels}
                                     depth={3}
                                     isExpandedFn={isExpandedFn}
                                     onToggleFn={onToggleFn}
@@ -2385,40 +2669,112 @@ function TreeViewContentComponent(props: AllProps) {
                             ))}
                         </SectionNode>
                     )}
-                    {validationVps.length > 0 && (
+
+                    {/* DATA MANAGER — a concern, not a sibling of VIEWPOINTS (R-VAL-19).
+                        The Data Manager Viewpoint IS a `DViewPoint` (R-DMV-1), so filing it
+                        beside VIEWPOINTS stated something false about the megamodel; with
+                        validation moving in, the falsehood became arbitrary too.
+                        R-DMV-1 is untouched: singleton, builtin, born at the first write.
+                        Its key is the old one, so no saved project reopens a closed branch.
+                        DECLARED COST (R-VAL-19-bis (c)): collapse is persisted per project,
+                        so closing VIEWPOINTS now hides the Data Manager as well. Accepted —
+                        the alternative was the exception this decision removes. */}
+                    {showDataManagerConcern && (
+                        <SectionNode
+                            sectionKey={SECTION_KEYS.DATA_MANAGER}
+                            label="Data Manager"
+                            counter={counts.dataManager}
+                            expanded={dataManagerExpanded}
+                            onToggle={() => onToggleFn(SECTION_KEYS.DATA_MANAGER)}
+                            onLabelClick={() => { selectDataManager(); onSelect?.(); }}
+                            labelTitle="Open the Data Manager configuration"
+                            depth={2}
+                        >
+                            {dataManager.classes.length === 0 ? (
+                                <DataManagerEmptyState depth={3} onSelect={onSelect} />
+                            ) : (
+                                dataManager.classes.map(cls => (
+                                    <DataManagerClassNode
+                                        key={cls.viewId}
+                                        cls={cls}
+                                        depth={3}
+                                        isExpandedFn={isExpandedFn}
+                                        onToggleFn={onToggleFn}
+                                        onSelect={onSelect}
+                                        selectedViewId={selectedViewId}
+                                        highlightQuery={highlightQuery}
+                                    />
+                                ))
+                            )}
+                        </SectionNode>
+                    )}
+
+                    {/* VALIDATION — the `DViewPoint`s flagged `isValidation` and the
+                        `DValidationViewpoint`s of the R-VAL skeleton, under one label.
+                        Both are viewpoints of validation by their own declaration; only the
+                        second kind carries rules, because a rule is not a view
+                        (R-VAL-6-bis). Rules are listed FLAT, with the context class in the
+                        column where a view shows «Vertex» (R-VAL-19). */}
+                    {showValidationConcern && (
                         <SectionNode
                             sectionKey={SECTION_KEYS.VIEWPOINTS_VALIDATION}
                             label="Validation"
-                            counter={validationVps.length}
+                            counter={counts.validation}
                             expanded={validationExpanded}
                             onToggle={() => onToggleFn(SECTION_KEYS.VIEWPOINTS_VALIDATION)}
                             depth={2}
                         >
-                            {validationVps.map(vp => (
-                                <ViewpointNode
-                                    key={vp.id}
-                                    vp={vp}
+                            {counts.validation === 0 ? (
+                                <ConcernEmptyState
                                     depth={3}
-                                    isExpandedFn={isExpandedFn}
-                                    onToggleFn={onToggleFn}
-                                    onSelect={onSelect}
-                                    selectedViewId={selectedViewId}
-                                    highlightQuery={highlightQuery}
-                                    startRenameView={startRenameView}
-                                    renamingViewId={renamingViewId}
-                                    renameValue={renameValue}
-                                    setRenameValue={setRenameValue}
-                                    submitRenameView={submitRenameView}
-                                    handleRenameKeyDown={handleRenameKeyDown}
-                                    renameInputRef={renameInputRef}
+                                    text="No validation viewpoint — no user-defined rules to check"
                                 />
-                            ))}
+                            ) : (
+                                <>
+                                    {validationViewpoints.map(vp => (
+                                        <ValidationViewpointNode
+                                            key={vp.id}
+                                            vp={vp}
+                                            depth={3}
+                                            isExpandedFn={isExpandedFn}
+                                            onToggleFn={onToggleFn}
+                                            onSelect={onSelect}
+                                            highlightQuery={highlightQuery}
+                                        />
+                                    ))}
+                                    {validationVps.map(vp => (
+                                        <ViewpointNode
+                                            key={vp.id}
+                                            vp={vp}
+                                            metamodels={metamodels}
+                                            depth={3}
+                                            isExpandedFn={isExpandedFn}
+                                            onToggleFn={onToggleFn}
+                                            onSelect={onSelect}
+                                            selectedViewId={selectedViewId}
+                                            highlightQuery={highlightQuery}
+                                            startRenameView={startRenameView}
+                                            renamingViewId={renamingViewId}
+                                            renameValue={renameValue}
+                                            setRenameValue={setRenameValue}
+                                            submitRenameView={submitRenameView}
+                                            handleRenameKeyDown={handleRenameKeyDown}
+                                            renameInputRef={renameInputRef}
+                                        />
+                                    ))}
+                                </>
+                            )}
                         </SectionNode>
                     )}
+
+                    {/* Viewpoints that belong to no concern (today `decoration`): loose at
+                        depth 2, exactly as before. R-VAL-19 names three concerns and says
+                        nothing about a fourth, so this bucket is left where it was. */}
                     {otherVps.map(vp => (
                         <ViewpointNode
                             key={vp.id}
                             vp={vp}
+                            metamodels={metamodels}
                             depth={2}
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
@@ -2434,40 +2790,6 @@ function TreeViewContentComponent(props: AllProps) {
                             renameInputRef={renameInputRef}
                         />
                     ))}
-                </SectionNode>
-                )}
-
-                {/* DATA MANAGER (R-DMV-5) — ALWAYS present, singleton or not: the section
-                    is where the configuration lives, and «there is no configuration» is a
-                    state it has to be able to say. Hidden during search only, like the
-                    other sections with no searchable content of their own. */}
-                {!searchActive && (
-                <SectionNode
-                    sectionKey={SECTION_KEYS.DATA_MANAGER}
-                    label="Data Manager"
-                    counter={dataManager.classes.length}
-                    expanded={dataManagerExpanded}
-                    onToggle={() => onToggleFn(SECTION_KEYS.DATA_MANAGER)}
-                    onLabelClick={() => { selectDataManager(); onSelect?.(); }}
-                    labelTitle="Open the Data Manager configuration"
-                    depth={1}
-                >
-                    {dataManager.classes.length === 0 ? (
-                        <DataManagerEmptyState depth={2} onSelect={onSelect} />
-                    ) : (
-                        dataManager.classes.map(cls => (
-                            <DataManagerClassNode
-                                key={cls.viewId}
-                                cls={cls}
-                                depth={2}
-                                isExpandedFn={isExpandedFn}
-                                onToggleFn={onToggleFn}
-                                onSelect={onSelect}
-                                selectedViewId={selectedViewId}
-                                highlightQuery={highlightQuery}
-                            />
-                        ))
-                    )}
                 </SectionNode>
                 )}
 
@@ -2855,6 +3177,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     } catch { /* ignore */ }
     ret.viewpoints = vpList;
     ret.dataManager = buildDataManagerData(state);
+    ret.validationViewpoints = buildValidationViewpointsData(state);
 
     ret.selectedElementId = state._lastSelected?.modelElement || undefined;
     // Selected view/viewpoint id (DProject._lastSelected.view) — highlights the
@@ -2925,6 +3248,64 @@ function buildDataManagerData(state: DState): TreeDataManagerData {
         exists: !!dVp,
         classes,
     };
+}
+
+/**
+ * Il concern VALIDATION, letto dal D layer (R-VAL-19).
+ *
+ * SCANSIONE PER `className`, non lettura del puntatore fisso `VALIDATION_VIEWPOINT_ID`.
+ * Quel puntatore e' una scorciatoia dichiarata dello scheletro, non la forma del concetto:
+ * R-VAL-2 vuole i viewpoint di validazione MULTIPLI, e `validationTypes.ts` scrive a
+ * chiare lettere che chi aprira' quella corsia deve togliere la costante di mezzo, non
+ * aggirarla. Un indice che sapesse mostrarne uno solo andrebbe riscritto quel giorno; uno
+ * che scandisce ne mostra due appena esistono. Il costo e' un giro su `idlookup`, lo
+ * stesso che `buildDataManagerData` fa una riga piu' su.
+ *
+ * Le regole si leggono dalla collezione `rules` del viewpoint e non da una seconda
+ * scansione: e' quella la collezione che `collectValidationRules` itera, ed e' quella che
+ * decide cosa il valutatore vede.
+ */
+function buildValidationViewpointsData(state: DState): TreeValidationViewpointData[] {
+    const lookup: any = (state as any).idlookup;
+    if (!lookup) return [];
+
+    /** Dalla classe di contesto al suo metamodello, per `father`: il legame all'indietro
+     *  e' quello affidabile (CLAUDE.md §3.6), e la collezione in avanti qui non servirebbe
+     *  comunque. Il tetto sui salti e' lo stesso che usa `resolveActiveModelId`. */
+    const metamodelOf = (classId: string): { id: string; name: string } => {
+        let cur: any = lookup[classId];
+        for (let hops = 0; cur && hops < 64; hops++) {
+            if (cur.className === 'DModel') return { id: cur.id, name: cur.name || '' };
+            const fatherId = cur.father;
+            if (typeof fatherId !== 'string' || !fatherId) break;
+            cur = lookup[fatherId];
+        }
+        return { id: '', name: '' };
+    };
+
+    const out: TreeValidationViewpointData[] = [];
+    for (const id in lookup) {
+        const vp = lookup[id];
+        if (!vp || vp.className !== 'DValidationViewpoint') continue;
+        const rules: TreeValidationRuleData[] = [];
+        for (const rid of (Array.isArray(vp.rules) ? vp.rules : [])) {
+            const r = lookup[rid];
+            if (!r || r.className !== 'DValidationRule') continue;
+            const ctxId: string = typeof r.context === 'string' ? r.context : '';
+            const ctx = ctxId ? lookup[ctxId] : null;
+            const mm = ctxId ? metamodelOf(ctxId) : { id: '', name: '' };
+            rules.push({
+                id: r.id,
+                name: r.name || '',
+                contextName: (ctx?.name as string) || '',
+                metamodelId: mm.id,
+                metamodelName: mm.name,
+            });
+        }
+        out.push({ id: vp.id, name: vp.name || 'Unnamed', rules });
+    }
+    out.sort((a, b) => a.name.localeCompare(b.name));
+    return out;
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

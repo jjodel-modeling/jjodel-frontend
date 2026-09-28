@@ -81,6 +81,46 @@ export const irTabBodyStyle = (id: IRTabId, active: IRTabId | undefined): CSSPro
     (active === undefined || active === id) ? undefined : { display: 'none' };
 
 /**
+ * The sections of the Appearance body, addressable one at a time (slice 4b).
+ *
+ * The symbol editor modal replaces its catalog column with a 170px section nav, and an
+ * entry of that nav shows ONE section of the re-hosted panel. Same mechanism as the tab
+ * partition one level down — an extra prop, a `display: none` filter, no fork of the
+ * panel — which is what the spec asks for in so many words.
+ *
+ * `symbol` covers the recognition line AND the Shape section (form, corner radius): the
+ * spec's nav names seven entries and the body renders eight sections, and Shape is not
+ * among the names. Dropping it was not an option — `irTabsForKind` gives a vertex the
+ * rail tabs `applies-to / structure / symbol / form`, so the Appearance body is reachable
+ * ONLY through this modal, and a nav that omits a section deletes the last way to reach
+ * the form selector and the slice-3 corner radius. `badges` is here for the same reason.
+ */
+export type IRSectionId = 'symbol' | 'fill' | 'border' | 'padding' | 'marker' | 'sizing' | 'badges';
+
+/** Nav labels — English, like IR_TAB_LABELS. */
+export const IR_SECTION_LABELS: Record<IRSectionId, string> = {
+    symbol: 'Symbol',
+    fill: 'Fill',
+    border: 'Border',
+    padding: 'Padding',
+    marker: 'Marker',
+    sizing: 'Sizing',
+    badges: 'Badges',
+};
+
+/**
+ * Style of one section: `display: none` when it is not the active one, exactly as
+ * `irTabBodyStyle` does for a body, and for the same R-A reason (a hidden subtree must
+ * not stay reachable with the Tab key).
+ *
+ * `active === undefined` means "no host is driving the section partition": every section
+ * shows, which is the rendering every other mount site gets and what keeps the new prop
+ * genuinely optional.
+ */
+export const irSectionStyle = (id: IRSectionId, active: IRSectionId | undefined): CSSProperties | undefined =>
+    (active === undefined || active === id) ? undefined : { display: 'none' };
+
+/**
  * The single extra prop `ViewData` passes down for the relocated fields: what they
  * need beyond the view itself. Bundled into one object because the amendment allows
  * exactly one additional prop per panel.

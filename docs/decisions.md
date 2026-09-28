@@ -55,7 +55,8 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   dell'archivio descrive un blocco invertito: è superata da questa clausola, e i batch già
   scritti non si toccano.
 - **RC-13** (2026-09-01) — **Una corsia per giro, e l'albero è condiviso.** Le regole operative
-  della concorrenza fra corsie stanno in `CLAUDE.md` §6.4, che questa clausola iscrive senza
+  della concorrenza fra corsie stanno in `docs/PROTOCOL.md` **P13** (spostato verbatim da
+  `CLAUDE.md` §6.4 il 2026-09-18, P-2026-09-18-1930 Fase 2), che questa clausola iscrive senza
   duplicare: una corsia per giro, docs e codice mai nello stesso commit, `git add` per pathspec,
   lo staged altrui intoccabile, **niente `git stash` su albero condiviso**, rotazione del log in
   corsia esclusiva. Nasce da un incidente misurato: uno `stash push -- <paths>` con dentro un
@@ -64,6 +65,239 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   (`discovery_2026-09-01_irf1_annotation_subscription.md` §14).
   Generalizza la clausola §8 del memo del 2026-08-22 a ogni documento; confermata a voce il
   2026-08-24.
+- **RC-14** (2026-09-19) — **La reintegrazione di un branch di lunga vita avviene per merge
+  commit.** P14 governa il trasporto dei singoli fix fra branch vivi: `cherry-pick -x` di sha
+  espliciti. La reintegrazione di un branch divergente su più fronti (`validation-skeleton` il
+  2026-09-19: 261 commit, 8 fronti di codice, 10 file in conflitto) avviene con un solo merge
+  commit, `--no-ff`, a queste condizioni: esiste un report di gate in `docs/discovery/`, citato
+  nel corpo del merge; i conflitti semantici si risolvono sul branch prima del merge, così che il
+  merge stesso risolva solo testo; il merge commit è l'unica eccezione ammessa a RC-13 (docs e
+  codice nello stesso commit) e la dichiara nel proprio corpo; il conflitto del log si risolve
+  per unione e il log si ruota con la corsia esclusiva di P13 nel commit successivo, con Check D
+  rosso nel frattempo e dichiarato (RC-11); il branch si pubblica prima del tronco, così che
+  entrambi i genitori del merge siano pubblici. Lo squash non si usa mai: cancella i trailer
+  `Model:` e `Co-Authored-By` e gli sha che il log cita.
+  Motivazione: P14 (2026-09-14) fu scritta per il caso del singolo fix; una regola che richiede
+  una deroga la prima volta che incontra un caso reale ha una lacuna, quindi la regola si
+  emenda, non si deroga. Scritta in `docs/PROTOCOL.md` P14 ("Reintegration of a branch").
+  (Ratified on question 4 of section 10 of the gate report cited above.)
+- **RC-15** (2026-09-21) — **Le norme passano all'enforcement dove una macchina le regge onestamente.**
+  Direzione del 2026-09-19, ratificata il 2026-09-21 sul report
+  `docs/discovery/discovery_2026-09-21_harness_mechanization.md` (P-2026-09-21-1620). Tre strati, tre
+  modi di fallire, e ciascuno lo dichiara: la deny list di `.claude/settings.json` fallisce chiusa e vede
+  solo la forma letterale; gli hook `PreToolUse` di `frontend/scripts/hooks/` falliscono aperti (un errore,
+  un timeout o un node mancante lasciano passare) e dicono solo ciò che un pattern non sa dire; le skill di
+  `.claude/skills/` danno la forma dell'artefatto leggendo la clausola dal vivo, senza copie. Il resto
+  resta prosa. Le sedici decisioni: (1) modello `claude-opus-5`, ID intero, nominato solo in
+  `.claude/settings.json`, e `CLAUDE.md` §0 vi rimanda; (2) il gate della critical zone segue il trigger di
+  §3.2, sei file e percorsi di scrittura del D-layer, non la tabella di §3.1; (3) prova del Layer Impact
+  Report: `ask` senza stato; (4) nessun hook `Stop` per la entry di log, ticket riaperto quando la
+  decisione 5 dà una chiave sessione-prompt; (5) il Prompt-ID sui messaggi resta prosa, con il probe pronto in
+  `docs/discovery/harness/probe_2026-09-21_userpromptsubmit.json`; (6) le 72 battute di §6.2 non contano il
+  suffisso ` (P-YYYY-MM-DD-HHmm)`; (7) l'`ask` su `git commit*` resta, gli hook aggiungono solo rifiuti;
+  (8) la riga Status è una clausola di P13, due flip a mano; (9) il checkpoint resta all'architetto;
+  (10) hook in `.mjs` senza sintassi TypeScript, `node "$CLAUDE_PROJECT_DIR/frontend/scripts/hooks/<nome>.mjs"`,
+  nessun interprete assoluto; (11) le skill leggono §21.2, P4 e la clausola Status dal vivo, con una
+  guardia che abortisce se l'estrazione è vuota; (12) la deny list si estende alle sole forme dell'albero
+  intero, dopo l'emendamento di RC-13-bis (`rm -rf*` resta com'è, senza clausola); (13) nessun carry su
+  altri branch; (14) l'`effortLevel` utente non si cita; (15) i transcript dei probe restano; (16) l'`include`
+  di `frontend/vitest.config.ts` per i test degli hook è in scope. Aggiunte dell'ACK del batch A
+  (2026-09-21): `bash-guard` nega su `git commit` ogni token di flag corto con `n` (lì è solo no-verify) e
+  chiede sulle forme dell'albero intero dietro un wrapper, come per lo stash; sono accettate l'esenzione
+  durante un merge, un cherry-pick o un revert e la lettura dei percorsi di scrittura del D-layer di §3.2
+  (un creator in un sorgente non di test sotto `frontend/src`, `SetFieldAction` in `sync/`).
+  Emendata il 2026-09-25: la decisione (1) da RC-16, la (8) da RC-17, la (3) e la (7) da RC-19.
+- **RC-16** (2026-09-25): **Il pin dell'implementer è `claude-opus-5-5`.** `.claude/settings.json` fissa
+  `claude-opus-5-5`; sostituisce l'ID della decisione (1) di RC-15, il resto della decisione resta (un solo
+  luogo, ID intero, `CLAUDE.md` §0 vi rimanda). Le deroghe passano dal `settings.local.json` del worktree e si
+  dichiarano nel prompt; nessuna catena di ripiego. Misura (memo del 2026-09-25 §2): Opus 5.5 gira nelle
+  sessioni Claude Code dal 2026-09-23 16:05 (nella chat di progetto dal 2026-09-22), sempre via `/model`
+  contro un pin che diceva Opus 5; la sola sessione senza il rito (2026-09-25 09:25) ha girato Opus 5.
+  Il trailer resta quello di P6 (`Anthropic Claude Opus 5.5`); le 6 forme a ID nudo sono una deroga notata.
+  Fonte: `docs/ratifiche/claude_2026-09-25_1015_memo_harness_recalibration.md`, ratificato in chat il 2026-09-25.
+- **RC-17** (2026-09-25): **Una corsia chiude con un solo commit di docs.** Dopo il commit di codice la
+  corsia scrive Status, voce di log (o inbox) e riga di verifica visiva nel proprio worktree senza
+  committarle; dopo il GO visivo un solo commit le porta insieme con l'esito reale. Le correzioni di ACK
+  prima del GO sono modifiche, non commit. Le corsie senza verifica visiva chiudono con lo stesso commit
+  subito dopo il codice. Il commit del prompt resta. Emenda RC-15 (8): un solo flip dello Status, e la
+  clausola Status di P13. La corsia veloce di RC-3 è il default dichiarato: l'intestazione del prompt porta
+  `Lane: fast` oppure `Lane: full (<trigger di RC-3>)`, e una corsia completa senza trigger è un difetto del
+  prompt. Scritta in `docs/PROTOCOL.md` P13.
+- **RC-18** (2026-09-25): **L'harness ha un budget misurato, non un gate.** Su una settimana mobile, al
+  più una corsia su quattro i cui commit di codice toccano solo `frontend/scripts/`, `.claude/` o `docs/`.
+  La chat lo misura una volta a settimana con lo script del costo per feature e lo riporta nel checkpoint,
+  insieme a una tabella di attrito calcolata dai transcript locali di Claude Code (turni per corsia, tempo
+  dal primo turno al commit di chiusura); nessun campo nuovo nella voce di log. A budget superato, sono
+  ammesse solo corsie di harness che riparano un enforcement che si è mostrato non tenere.
+- **RC-19** (2026-09-25): **Le sessioni girano in `bypassPermissions`; i gate umani non si appoggiano ad
+  `ask`.** Misura (memo del 2026-09-25 §3): 22 sessioni su 22 dal 2026-09-21; la deny list e i `deny` degli
+  hook tengono; `ask` sotto bypass non è verificato alla ratifica (i transcript non registrano i prompt), e
+  l'esito del probe interattivo del memo §3 si aggiunge qui quando c'è: la decisione vale in entrambi i casi.
+  Gli hook leggono `permission_mode`: in bypass `critical-zone` nega (la corsia di critical zone si rilancia
+  senza il flag) e `bash-guard` nega `git push`; negli altri modi resta `ask`. Il `git commit` non è più un
+  gate umano: restano il GO visivo e il push. Emenda RC-15 (3) e (7).
+
+### Ratifiche 2026-09-26: orchestrated lanes (RC-20..24)
+
+Source: `docs/ratifiche/claude_ratifiche_2026-09-26_orchestrated_lanes.md`, ratified by Alfonso in chat on
+2026-09-26 ("si ratifichiamo tutto") with one addition to RC-21.
+
+- **RC-20** (2026-09-26): **The project chat launches and resumes Claude Code sessions.** `claude -p` in the
+  lane's worktree with the committed prompt file as input, in the background with the transcript on a log
+  file, session id captured; GO and every later message reach the same session through `--resume`. A session
+  without `--resume` is new by construction. Every final message ends with `Outcome: done | hard-stop |
+  question | blocked`, required by the lane discipline section of every prompt; the chat reads that line and
+  never interprets prose. A question is a hard stop: written, the session terminates, the chat answers within
+  its remit or brings it to Alfonso, then resumes. A rework after a failed visual GO resumes the same session
+  with a new Phase 2 prompt that `Corregge` the old one; a rework whose cause is the analysis opens a new
+  discovery, declared. In non-interactive mode an `ask` is a refusal with its reason; a critical-zone lane
+  needs the Layer Impact Report and the explicit go-ahead in the resumed text, or is opened by Alfonso by
+  hand. No exit within 90 minutes (a prompt may declare another limit) is `blocked`: reported, never resumed
+  unattended. `done` with the Status line not flipped is reported before any merge.
+- **RC-21** (2026-09-26): **Recommended answers are adopted unattended.** A question carrying one
+  unconditional `Recommended: <one line>` is answered with it when the choice stays inside the lane's
+  perimeter; a binary "proceed?" question, and a numbered list whose first option is the default, count as a
+  recommendation for yes, respectively option 1. Alfonso answers when the recommendation touches a
+  critical-zone file, changes an exported interface, amends a ratified R- decision, deletes a file, adds a
+  file outside the DOVE list, or when there is no single recommendation. Every unattended adoption is
+  recorded in `decisions.md` and in the memo with the marker `ratified as recommended, unattended`, and the
+  closing report lists them first; above five in one lane the chat stops and submits them together.
+- **RC-22** (2026-09-26): **Parallel by default.** Two lanes start together when three mechanical checks
+  pass: DOVE lists (tests included) disjoint; neither depends on an exported interface the other changes and
+  the trunk does not yet have; each has its own worktree and branch. When they pass, parallel launch is the
+  default; when one fails the chat says which and queues the lane with its merge position fixed. Shape: one
+  lane with a visual check plus as many without (pure modules with a mutation bench, read-only discoveries,
+  textual oracles) as there are worktrees. Simulator lanes in parallel branch from `simulation-engine` as
+  `sim-<slug>` and merge back into it, one at a time in the order fixed at launch, semantic conflicts
+  resolved on the branch first (RC-14).
+- **RC-23** (2026-09-26): **The visual checklist runs in the built-in browser, by the chat.** The numbered
+  visual steps of a prompt are executed by the chat in the desktop app's built-in browser against the lane's
+  dev server on the Mac; every item is read from the DOM or the console, never from a screenshot; screenshots
+  in light and dark are attached as a record. The browser profile is empty and separate from Alfonso's:
+  fixtures are built with the console script the prompt names or imported from an exported file. The log
+  entry records `Smoke visivo: passato — chat, unattended, <n>/<n>`. Alfonso's GO stays mandatory on
+  critical-zone lanes, on items marked as perceptual judgements, and on items the chat could not close for a
+  technical reason, which count as failed. Until 2026-10-03 every unattended check is followed by Alfonso's
+  GO on every lane with screenshots and measures in hand; the sampled GO starts after that, with the data
+  (RC-15). Emenda P8.
+- **RC-24** (2026-09-26): **One branch per lane replaces the two-sessions limit.** The P13 limit "at most two
+  sessions on the shared tree on disjoint files" was written for one worktree; it is replaced by one worktree
+  and one branch per lane, merges one at a time, and the three checks of RC-22 at launch. Emenda P13.
+
+### Ratifiche 2026-09-26: ratification by invariants (RC-25..28)
+
+Source: `docs/ratifiche/claude_ratifiche_2026-09-26_ratification_by_invariants.md`, ratified by Alfonso in chat
+`C-2026-09-26-1702` on 2026-09-26 («procedi»).
+
+- **RC-25** (2026-09-26): **Decisions proceed; ratification is asynchronous and revocable.** The project chat
+  answers its own design questions as RC-21 answers Claude Code's: it adopts the recommended option, writes the
+  R- row at once with the marker `provisional, unattended`, and proceeds. Alfonso receives a digest at the close
+  of every lane, in the chat, decisions ordered by consequence, the three most consequential first, and may veto
+  any of them: a veto before merge is a revert on the lane's branch, after merge a lane of its own. Silence does
+  not block; the marker becomes `ratified by digest <date>` when Alfonso acknowledges, or the row is reverted on
+  veto. The five-adoption cap of RC-21 is removed. Amends RC-21.
+- **RC-26** (2026-09-26): **The pre-approval list is closed and short.** Only these wait for Alfonso: a
+  critical-zone edit (Layer Impact Report); an exported-interface change that breaks a consumer outside the
+  lane; the amendment of an R- row Alfonso already ratified (not of a provisional one); the deletion of a file
+  or of persisted data; anything that changes what the MODELS demo shows or leaves out; model, effort and cost
+  of the sessions; the push. Discovery reports end with «Decisions taken (unattended)» and «Decisions awaiting
+  Alfonso» (items of this list only) instead of «Questions for Alfonso». The Phase 1 hard stop stays a session
+  boundary, not a human gate: the chat writes Phase 2 as soon as the report is in the repo. Amends P13 and the
+  Phase 2 hand-off of the prompt template.
+- **RC-27** (2026-09-26): **Verification replaces ratification where a second opinion is needed.** A
+  recommendation that touches more than one exported interface, or chooses between design options with
+  different data models (bag, persistence, migration), is checked by a second agent before adoption, with the
+  report and the proposed decision as input and one line `Verified: <what was checked, what would falsify it>`
+  as output, recorded in the R- row. Alfonso is not the second opinion.
+- **RC-28** (2026-09-26): **The gate is measured.** Every request that waits for Alfonso records the time to
+  the answer; every checkpoint reports, for its lanes, decisions taken unattended, decisions that waited, the
+  median wait, and the vetoes the digests produced. On these data the RC-26 list is shortened (no veto in two
+  weeks) or lengthened (a veto on a decision that did not wait, with its class named), and the visual GO moves
+  to sampling (RC-23, RC-15).
+
+### Ratifica 2026-09-27: the commit gate of a launched lane (RC-29)
+
+Source: `docs/ratifiche/claude_ratifiche_2026-09-27_commit_ask_under_bypass.md`, decided by chat
+`C-2026-09-26-1702` under RC-25 on Alfonso's request, after both first orchestrated launches stopped at
+their first commit.
+
+- **RC-29** (2026-09-27, provisional, unattended): **The commit gate of a lane is the hook layer, not an
+  `ask`.** Measured on the real tree at `651f10543`: under `-p` and `bypassPermissions` the `ask` on
+  `Bash(git commit*)` holds and refuses the commit; `--allowedTools` does not override it; with the rule removed
+  the commit passes and `bash-guard` keeps every rule of its own (pathspec, `Model:` trailer, push deny). The
+  1640 probe repository (§7 of its report) is not a valid oracle for permission rules. `Bash(git commit*)`
+  leaves `permissions.ask`; `Bash(git push*)` stays. A commit is gated by `bash-guard` and by the lane's gates
+  before it, and reviewed through the digest and the veto of RC-25. Withdraws the interactive human gate on
+  `git commit` of 2026-09-21; RC-19 and RC-25 already carried the rest. Applied to the trunk at once, to
+  `simulation-engine` with the next merge; a lane already running keeps the settings it loaded.
+
+### Decisione 2026-09-27: the go-ahead of a critical-zone lane under bypass (RC-30)
+
+- **RC-30** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: trunk):
+  **A critical-zone lane runs orchestrated with an explicit go-ahead.** Alfonso, in chat (2026-09-27 00:58,
+  on the enum edge guard lane): «se per la decisione serve useJjomSync.ts o canvasToJjom.ts, procedi anche lì
+  in automatico». Mechanism: `lane-run start … --critical-zone-goahead <Prompt-ID>` (the lane's own id,
+  refused otherwise) sets `JJODEL_CRITICAL_ZONE_GOAHEAD` in the session and records it in `goahead.txt`, so
+  a resume carries it; `critical-zone.mjs` under `bypassPermissions` lets the edit through only when the
+  variable holds a Prompt-ID, and keeps the deny otherwise (default mode keeps the `ask`). The Layer Impact
+  Report stays mandatory: the Phase 2 prompt of such a lane writes it as its first step, in
+  `docs/lir/`, before the diff, and names the go-ahead in its header. Hook tests 255 (five new). Amends
+  RC-19 (relaunch without the flag is no longer the only way).
+
+### Decisione 2026-09-27: merges before the freeze (RC-31)
+
+Decided by Alfonso in the project chat `C-2026-09-27-1437`, 2026-09-27 23:26, and reported by the chat in the GO
+of P-2026-09-27-2327. It is his decision, not an inference of the chat: it is not provisional. Recorded by the
+merge lane P-2026-09-27-2327.
+
+- **RC-31** (2026-09-27, ratified by Alfonso 2026-09-27 23:26, evidence: read, verified: none, reversible: trunk):
+  **No branch waits for 2026-10-04 to merge; the freeze of 2026-10-01 evening stays.** The rule that no branch
+  merges on the trunk before 2026-10-04 (P-2026-09-27-1545, P-2026-09-27-1740, P-2026-09-27-1806; already lifted
+  for `sim-modal` by R-SIM-85) is abolished. Each merge on the trunk before the freeze carries a rollback tag
+  `pre-<branch>`, the full gates, and the four demo scenes of `docs/demo/models_2026_simulator_demo.md` (SM,
+  Petri, ESM, Flow B) re-run on the merged tree. First applied to `enum-step-b`: merge `c030871ff`, tag
+  `pre-enum-step-b` on `e529b6c7f`, the four scenes on script on 3029.
+
+### Decisione 2026-09-28: the model follows the activity (RC-32)
+
+- **RC-32** (2026-09-28, principle ratified by Alfonso 2026-09-27 23:52, evidence: measured, verified: none, reversible: trunk):
+  **`lane-run` picks the model of each lane from its activity.** Amends RC-16: the pin of `.claude/settings.json`
+  stays the heavy tier and the one place that names it; the light tier runs `LIGHT_MODEL` of
+  `frontend/scripts/lane-run.mjs`, passed as `--model`. The rule, deterministic and heavy when in doubt, is in P16
+  and in `tierRule` of that file. Alfonso ratified the principle in the owner chat `C-2026-09-27-1437` (2026-09-27
+  23:52: «lane-run sceglie il modello più conveniente per l'attività che deve svolgere»). The id `claude-sonnet-5`
+  was set by that chat at the GO of `P-2026-09-27-2330`, under that ratification, and is to be confirmed in the
+  morning digest (RC-25). Measure: `docs/discovery/discovery_2026-09-27_lane_efficiency.md` §7, where `--model` coexists
+  with the pin and wins and a resume keeps the session's model.
+
+## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_enum_edge_guard.md` (`4e5dff7ad`), otto ipotesi
+misurate su 3004. Decise dalla chat `C-2026-09-26-1702` sotto RC-25, con la verifica avversariale di RC-27
+(due obiezioni accolte come vincoli: la località dell'handle per la C1, i percorsi di caricamento e replay
+per la C2). Alfonso riceve il digest alla chiusura della corsia.
+
+- **R-EDGE-1** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **In un metamodello una connessione del canvas è valida solo se entrambi gli estremi sono nodi classe.**
+  Predicato puro `isMetamodelConnectionValid(mode, sourceType, targetType)`, simmetrico, `true` in modalità
+  modello, cablato in `isValidConnection` di `EditorV2.tsx`; rifiuta classe→enum, enum→classe, enum→enum e
+  classe→package (§6b del report: la regola è positiva, non "non un enum"). Feedback: lo stato invalido di
+  xyflow più una regola SCSS, niente toast. Vincolo dalla verifica: se un handle di un metamodello non sta su
+  un nodo classe, il predicato deve risolvere il classificatore proprietario dell'handle, non il nodo.
+- **R-EDGE-2** (2026-09-27, provisional, unattended, evidence: read, verified: agent, reversible: branch).
+  **L'invariante del modello arriva in una corsia C2 separata.** `set_type` di un `DReference` rifiuta un
+  non-`DClass`, `_canExtend` rifiuta con un motivo invece di morire su `.map`, i tipi di dato ricevono un
+  `set_extends` che rifiuta, e il linker dell'import Ecore ritipa a `EObject` con avviso un `EReference`
+  tipato da un `EEnum` invece di fallire. Modifica del core (Rule 5). Prima della sua Fase 2 va misurato che
+  il caricamento, undo/redo e il replay di VersionFixer non passino per i setter guardati, altrimenti i
+  progetti salvati smetterebbero di aprirsi (obiezione della verifica, accolta come precondizione).
+- **R-EDGE-3** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: trunk).
+  **Nessuna migrazione dei progetti salvati ora.** Gli stati S1, S5b e S6 caricano, si disegnano e (S1)
+  fanno il giro dell'export; un ticket registra le tre forme e le due opzioni (regola di buona formazione M2
+  nel registro dei problemi, oppure migrazione VersionFixer che ritipa e cancella gli edge orfani: cancellazione
+  di dati persistiti, quindi RC-26), con la decisione sulla regola M2 fissata alla chiusura della C2. L'opzione
+  D (la caduta classe→enum crea un attributo di quel tipo) è rinviata: comodità a bassa scopribilità che tocca
+  l'unione esportata `EdgeTypeChoice`.
 
 ## Arco A — barra a tab e capi degli edge
 
@@ -955,6 +1189,8 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   file, oltre la soglia di cinque della Rule 19. `2.228` porta quindi il fronte B e il ritiro
   effettivo; `2.229` portera' la purga dei record e la decisione sui puntatori, su un corpus
   misurato invece che su uno.
+  **Emendata il 2026-09-25 da R-SIM-46**: `2.229` va ai tipi `Expression`/`Action`; la purga
+  passa al primo numero libero quando sarà calendarizzata.
 
 - **R-IRN-20** (2026-08-18) — **Il test dell'adapter entra nel perimetro di `2.228`.** Il LIR dice che
   nessun gate si accorge di nessuna delle tre modifiche, e che l'area non ha copertura ne' rossa ne'
@@ -1100,6 +1336,115 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   riparte da questa misura. Ratificata da Alfonso il 2026-09-03 su proposta della chat, dopo la
   domanda posta da Claude Design.
 
+## Serie R-IRN (seguito) — Parità della object view di default con la sintassi astratta (ratifiche 2026-09-19)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-18_default_view_parity.md` (con l'appendice di
+verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-18_2219_prompt_default_view_parity.md`
+(P-2026-09-18-2219). Commit: `400095370`, `12ae8c41c`, `6ee6efcd5`, `971234d94`, `516afd310`.
+
+- **R-IRN-29** (2026-09-19) — **Criterio del giro: parità del chrome, non della geometria.** Il
+  criterio di accettazione copre bordo, raggio, sfondo, nome (font-size/colore/underline/offset) e
+  separatore themed della object view IR contro il renderer nativo — misurato a zero delta dopo il
+  batch (appendice del 2026-09-19 al discovery report). Restano fuori, come differenze note che
+  aprono un giro separato sui default di layout dell'IR: padding e altezza del compartimento (IR
+  4px/8px e 27.19px contro 10px/14px e 36px nativi, radice in `--ir-pad-x/-y` e `.ir-row { line-height:
+  1.4 }` di `irStyle.ts`, condivisi con l'etichetta — nessun valore del preset `shape.padding` copre
+  14/10), il separatore assente su un'istanza a zero attributi (nativo lo disegna comunque via
+  `.mm-object__header { border-bottom }` incondizionato, IR lo lega alla presenza del compartimento),
+  il padding dell'header nativo (`11px 14px`) contro quello dell'etichetta IR, e l'allineamento del
+  testo (nativo a sinistra, IR centrato).
+- **R-IRN-30** (2026-09-19) — **`TextStyle.underline` e `LabelSpec.style.color`, opzionali su
+  ir-1.3, nessun bump.** Lettura del §7 dell'addendum TextStyle
+  (`claude_spec_2026-07-27_ir_textstyle_addendum.md`): additivo sul campo `ir`, nessuna migrazione
+  necessaria per un opzionale `undefined`. L'offset di 3px della sottolineatura nativa
+  (`instanceNode.scss:108`) è cablato dentro il meccanismo dell'asse `underline`
+  (`resolveTextStyle`, `IRNodeContent.tsx`) invece di diventare un campo separato: per scelta,
+  `underline` significa "la sottolineatura nativa", non un asse tipografico generico.
+- **R-IRN-31** (2026-09-19) — **`ShapeSpec.cornerRadius`, sibling di `border` e non suo campo.**
+  Opzionale su `ShapeSpec` (non dentro `border`, che sarebbe irraggiungibile senza un bordo
+  dichiarato — la radice appartiene al box, non al tratto). Fallback di compile non-emesso
+  (`undefined`), esplicitamente non `0`: `0` è un valore autorato legittimo (angolo vivo) e va
+  distinto da "nessun ramo ha risolto". Ignorato — mai approssimato, mai convertito — sulle forme
+  senza angoli retti (ellipse, circle, stadium) e sulle forme disegnate via SVG; l'avviso in
+  authoring per questo caso resta dovuto (S5, non implementato in questo giro). L'8px del seed
+  (`irDefaults.ts`) è accoppiato a mano al letterale nativo di `instanceNode.scss:28`, non
+  tokenizzato su nessuno dei due lati.
+- **R-IRN-32** (2026-09-19) — **Nessuna migrazione: solo le view create da qui in avanti.**
+  Decisione 3 del prompt confermata: `VersionFixer.tsx` non tocco, nessun nuovo metodo di
+  migrazione. La row view resta fuori scope (decisione 2 del prompt): `EnableIRPanel.tsx`'s
+  `rowSeed` resta un letterale invece di delegare a `defaultRowViewIR()`, perché il suo
+  `metaclasses: []` è semantica voluta (il testo d'aiuto del pannello dice "start with no
+  metaclass") e la row view non ha chrome da misurare.
+- **R-IRN-33** (2026-09-19) — **Il criterio di parità ha un debito: l'identità della view migrata è
+  per uguaglianza strutturale con un bersaglio mobile, e questo giro l'ha rotta una volta.**
+  `isMigratedDefaultView` (`irDefaults.ts`) decide se una view migrata rende nativo confrontando la
+  sua struttura, per hash, con `defaultObjectViewIR()` **live**. Il batch di questo giro
+  (`400095370`, `6ee6efcd5`) ha cambiato quella factory senza toccare il confronto: ogni progetto
+  migrato da `VersionFixer` 2.225→2.226 (`637a5e238`, 2026-07-18 in poi) porta la vecchia forma
+  verbatim nel proprio `ir`, smesso di combaciare, e le sue object view di default sono silenziosamente
+  ricadute dal renderer nativo all'interprete IR sul loro `ir` non aggiornato — rendendo con la
+  resa pre-parità (raggio 4px, bordo grigio, nessuna sottolineatura) invece di quella nativa. Misurato
+  eseguendo `isMigratedDefaultView` su uno snapshot della forma pre-batch: `delegated = false` prima
+  del fix, `true` dopo. **Fix** (`516afd310`): forma pre-batch congelata in
+  `LEGACY_OBJECT_VIEW_SNAPSHOT` (`irDefaults.ts`), `isMigratedDefaultView` riconosce entrambe le
+  forme per hash. Nessun `VersionFixer`, nessuna migrazione — coerente con R-IRN-32. Tre nuovi test
+  in `ir.test.ts` (forma vecchia → `true`, forma corrente → `true`, forma vecchia modificata → `false`),
+  verificati su mutation bench (§5): la sola forma pre-fix di `irDefaults.ts`, ripristinata da `git
+  show HEAD:<path>` — non da uno stash — fa fallire esattamente il primo test e nessun altro.
+  **DEBITO, non chiuso qui**: questa e' una toppa per-modifica, non la causa. Ogni futura modifica
+  alla factory richiede una nuova forma congelata riconosciuta a mano, o il prossimo cambiamento
+  rompe di nuovo in silenzio la stessa classe di progetti. La soluzione strutturale — marcare
+  l'identità al momento della migrazione (un flag "non toccato dall'utente" tracciato sulla view,
+  invece di un confronto per uguaglianza con un bersaglio che cambia) — resta da decidere in un giro
+  proprio, non aperto da questo prompt. **Nota di processo**: durante la verifica di questo fix è
+  stato usato `git stash push -- irDefaults.ts` su un albero condiviso, in violazione di RC-13/§6.4;
+  rilevato subito, il pop ha ripristinato lo stato esatto senza toccare lo stash di altre corsie
+  (`git stash list` invariato a parte l'entry propria), e la verifica è stata rifatta nel modo
+  conforme (`git show HEAD:<path>`, ripristino da copia in scratchpad, indice mai toccato).
+  **Chiusura del debito** (2026-09-24, P-2026-09-24-1455, `e7e47a7f0`): la migrazione 2.225→2.226
+  timbra l'`ir` che scrive con `migratedHash`, l'hash strutturale di sé al momento della migrazione
+  (dentro `ir`, accanto a `migratedFrom`, perché `updateDefaultView` porta con sé il solo `ir`), e
+  una view timbrata delega finché il suo hash coincide col timbro, a qualunque factory. Le view non
+  timbrate restano su una lista chiusa di quattro forme congelate (07-18, `400095370`, 09-18, 09-22),
+  che non legge più la factory viva e a cui non si aggiunge più nulla. Nessun bump, nessuno step
+  nuovo, nessun timbro retroattivo. Referto: `docs/discovery/discovery_2026-09-24_migrated_view_identity.md`.
+- **R-IRN-34** (2026-09-19) — **Il criterio di questo giro copriva solo le view nuove; esteso a un
+  progetto migrato pre-batch.** La verifica visiva originale e la misura del probe coprivano solo
+  una object view creata da zero dopo il batch. Il criterio va esteso: una object view migrata da un
+  progetto salvato **prima** di `400095370` deve continuare a rendere nativo (nessuna differenza
+  visibile rispetto a prima del giro), oltre a una view nuova che deve avere la parità di R-IRN-29.
+  Verificato per R-IRN-33 solo a livello di `isMigratedDefaultView` (unità), non ancora con uno
+  smoke visivo end-to-end su un progetto salvato reale — aperto per la conferma di Alfonso.
+  Chiusa il 2026-09-19: verifica visiva di Alfonso su un progetto salvato prima di `400095370`, le
+  view di default migrate rendono ancora via nativo. Nessuna differenza visibile.
+- **R-IRN-35** (2026-09-19) — **Corner radius: un solo contratto, il tipo dal tronco, il
+  rendering dal branch.** `ShapeSpec.cornerRadius?: Conditional<number>` (px), fratello di
+  `border`, come dice R-IRN-31: dopo D1 ogni asse del bordo è un condizionale, e S6 deve mettere
+  il raggio nella tabella delle regole come ogni altro asse, quindi uno scalare sarebbe l'unico
+  asse fuori dal meccanismo. Compilato come `CompiledView.cornerRadius:
+  CompiledConditional<number | undefined> | null`, con il fallback non emesso e mai 0. Assente
+  non è zero: un raggio assente mantiene il rendering di base della forma (D5 mantenuta). Il
+  rendering segue il branch (Symbol Editor 1b, D5): onorato dalle forme a box come
+  `border-radius` inline e da `diamond`, `hexagon` e `parallelogram` tramite
+  `roundedPolygonPath`, con clamp al render; ignorato solo dalle forme senza spigoli (`ellipse`,
+  `circle`, `stadium`). Il renderer legge il valore compilato risolto, mai l'IR sorgente. Questo
+  sostituisce la clausola "not Conditional in v1" di D5
+  (`docs/handoff/decisions-symbol-editor-1b.md`) e restringe la clausola "ignored on SVG-painted
+  shapes" di R-IRN-31 alle forme senza spigoli. Il valore `8` del seed dell'oggetto è invariato.
+  (Ratified on question 1 of section 10 of
+  `docs/discovery/discovery_2026-09-19_merge_gate_validation_skeleton.md`.)
+  **Chiusura S6** (2026-09-21, P-2026-09-21-1455, `94eb92a21`): il raggio è entrato nel pannello
+  come asse a regole del blocco Shape, `ConditionalEditor` con `rulesTable` come `form`, `fill` e
+  `marker`; l'anteprima lo risolve per istanza nella striscia e con l'`otherwise` nelle miniature.
+  La lettura OVERRIDES del Border (`borderOverrideRows`) non lo contiene e non è stata toccata: la
+  formulazione «quarto asse accanto a color, width e style» del prompt è superata da questa lettura
+  della frase «come ogni altro asse».
+- **R-IRN-36** (2026-09-19) — **Il colore del separatore segue il colore del bordo per asse.**
+  La regola di parità di S2 (il separatore dei compartimenti riusa il colore del bordo del box)
+  è mantenuta e riancorata a D1: legge l'asse `borderColor` risolto, non l'oggetto `border`
+  compilato, che D1 rimuove. Stesso comportamento, una sola fonte per il colore del bordo.
+  (Ratified on question 2 of section 10 of the same gate report.)
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
@@ -1131,6 +1476,810 @@ addendum A1..A4). Memo: `docs/ratifiche/claude_2026-08-17_memo_ratifica_pannello
   reset/step/stop e l'invariante «la simulazione non tocca il modello» restano; il codice rinasce
   come pannello connesso. La spec del pannello fissa prima del codice il comportamento su
   deadlock (stato attivo senza transizioni uscenti) e il criterio di terminazione.
+
+### Ratifiche 2026-09-14 — il modello computazionale
+
+Base di evidenza: `docs/discovery/discovery_2026-09-13_simulation_engine_state.md` e
+`docs/discovery/discovery_2026-09-13_jjel_eval_context.md`. Spec:
+`docs/spec/claude_spec_2026-09-13_computational_model.md`. Ratificate da Alfonso il 2026-09-14 su
+proposta della chat.
+
+- **R-SIM-7** (2026-09-14) — **Il passo è interleaving con selettore, il fire-all è rimosso.** Un
+  passo ha due ingressi, evento e selettore; il selettore è ammissibile solo su un candidato
+  abilitato e vale `none` solo se nessun candidato lo è (vincolo di progresso). Lo scarto di un
+  evento non accettato e la quiescenza sono passi a stato invariato, registrati. Il comportamento
+  committato oggi (`simApplyStep`, tutte le transizioni di tutte le istanze attive in un colpo) è
+  una semantica a step che la spec §10 esclude, e viene sostituito, non affiancato.
+- **R-SIM-8** (2026-09-14) — **Una sola nozione di «is a».** Il motore riconosce le metaclassi dei
+  ruoli con la stessa nozione dell'IR (`isKindOf` con ascendenza), non con `instanceof ===`.
+- **R-SIM-9** (2026-09-14) — **Regola iniziale per genere di STC.** La STC ha un genere: a marking
+  booleano (flowchart, state machine) o a naturali limitati (reti di Petri). Nel genere booleano il
+  ruolo iniziale e il ruolo finale restano metaclassi, come oggi; nel genere a naturali la regola
+  iniziale è una feature intera di marking iniziale sul nodo e il finale non esiste.
+- **R-SIM-10** (2026-09-14) — **Sorgente e destinazione espliciti, contenimento ammesso come legame
+  derivato.** Nuova chiave additiva `simSource` (reference, molteplicità ammessa); `simNextState`
+  ammette molteplicità. Se `simSource` manca, la sorgente è il proprietario di
+  `simOwnedTransitions`. Nessuna migrazione.
+- **R-SIM-11** (2026-09-14) — **`marked` è una vista derivata.** Sul dominio a valori, `marked`
+  significa «valore diverso dal default del dominio» della componente marking. Il contratto
+  booleano di `ReadCtx.isMarked` non cambia; la lettura dei valori dall'IR passa dal profilo JjEL
+  (R-J7); `mark?: string` (R-MK-3) resta riservato ai marking con nome.
+- **R-SIM-12** (2026-09-14) — **Gli eventi sono istanze M1.** L'enumerazione degli eventi è
+  l'insieme delle istanze della metaclasse evento nel modello, con la feature identificatore come
+  nome; il trigger dell'arco è un riferimento a un'istanza evento. Nessun letterale lato M2.
+- **R-SIM-13** (2026-09-14) — **Run-state per modello.** Il singleton diventa una mappa
+  `modelId → configurazione`; `simClear` agisce sul proprio modello. Resta fuori da Redux
+  (R-SIM-1). Una transazione che tocca il modello durante un'esecuzione la interrompe con
+  dichiarazione, come la freschezza della validazione (R-VAL-18); nessun lock sul modello.
+- **R-SIM-14** (2026-09-14) — **Nucleo puro in `model/simulation/`.** Builder di contesto a tre
+  radici (`self`, `state`, `event`), valutatore di guardie e azioni, checker del sottoinsieme
+  traducibile, funzione di passo ed esportatore `.smv` vivono in `frontend/src/model/simulation/`,
+  gemello di `model/validation/`, senza React; in `components/editor-v2/sim/` restano pannello e
+  store. Le guardie usano la via B dell'evaluatore (`new JjelEvaluator()` su un contesto
+  separato, come la validazione): niente `now()`, date né conversioni, radici libere. Lo snapshot
+  di M si costruisce una volta per esecuzione e si congela in profondità; per passo si
+  ricostruiscono solo `state` ed `event`.
+- **R-SIM-15** (2026-09-14) — **Tri-stato condiviso, non copiato.** Le tre entrate e `verdict` di
+  `validationEvaluator.ts` escono in un modulo puro sotto `model/` importato da validazione e
+  simulazione, in un commit proprio con i test della validazione verdi prima e dopo. I tre
+  comportamenti dell'evaluatore (`and`/`or` eager, proprietà silenziosa sui primitivi, `is` sulle
+  istanze) non entrano in questa corsia: l'eager è un bug contro `SPEC.md` da correggere nella
+  sua corsia, gli altri due li segnala il checker.
+- **Rinviato** — la casa degli scenari: nel quinto passo sono documenti JSON esportati e importati
+  come file, stesso formato dei controesempi; la persistenza nel progetto si decide dopo il
+  formato. I candidati sul canvas entrano nel terzo passo come secondo canale, non nel primo.
+
+### Ratifiche 2026-09-23: eventi, guardie, azioni, stato
+
+Base: discussione in chat del 2026-09-23 sulla spec
+`docs/spec/claude_spec_2026-09-13_computational_model.md` (§3.1, §5). Ratificate da Alfonso il
+2026-09-23 su proposta della chat. R-SIM-16 si implementa al passo 1 del piano
+(`P-2026-09-23-1850`); R-SIM-17..19 al passo 3, dopo la corsia sui tipi `Expression` e `Action`.
+
+- **R-SIM-16** (2026-09-23). **Eventi: un pulsante per istanza, abilitazione strutturale, motore
+  totale.** Le istanze evento vivono nello stesso modello M1 della macchina (precisa R-SIM-12). Il
+  trigger di un arco si confronta per identità con l'evento corrente, non con `isKindOf`: gli
+  eventi sono istanze, non tipi. Il pannello mostra un pulsante `>` per ogni istanza evento, con la
+  feature identificatore come etichetta, e un pulsante ε per gli archi senza trigger. Il pulsante di
+  un evento è abilitato se e solo se l'evento è il trigger di almeno un arco uscente da un nodo
+  marcato; le guardie non si valutano (regola strutturale, l'effetto di una guardia falsa resta
+  visibile nella traccia). Un arco senza trigger è abilitato solo nel passo ε. La restrizione è
+  dell'interfaccia, non del motore: il passo resta definito per ogni evento in ogni
+  configurazione, e un evento che non abilita nessun arco produce uno scarto a stato invariato
+  (R-SIM-7). Serve a rigiocare gli scenari e all'IVAR dell'esportatore, dove la restrizione
+  dell'interfaccia diventa un'ipotesi d'ambiente opzionale nella `TRANS` (ambiente cooperativo o
+  aperto). Senza il ruolo evento nella STC l'alfabeto è {ε} e il comportamento è quello di oggi:
+  la parità delle tracce sui modelli esistenti è l'oracolo di non regressione. I ruoli della STC
+  sono disgiunti rispetto a `isKindOf` (un'istanza evento non può essere anche nodo o arco), con
+  controllo al salvataggio della STC. I parametri di un evento sono attributi congelati della sua
+  istanza; gli eventi con parametri liberi sono fuori scope.
+- **R-SIM-17** (2026-09-23). **Guardie e azioni come tipi del core, con caso degenere.** Due tipi
+  primitivi nuovi: `Expression` (stringa JjEL la cui validità sintattica è controllata dal tipo) e
+  `Action` (`<bersaglio> := <Expression>`). Il controllo contestuale (risultato booleano della
+  guardia, radici disponibili, bersaglio ammesso) spetta al ruolo che consuma il valore, cioè alla
+  STC. Una guardia assente, per ruolo non dichiarato o feature vuota, vale `true`; una guardia
+  malformata o non booleana non vale `true`: è un difetto e l'arco esce dai candidati (spec §5.2,
+  R-VAL-13). Il valore malformato si salva comunque ed è una violazione di conformità del modello,
+  quindi entra nel registro dei problemi, a differenza dei difetti delle regole di validazione. Le
+  azioni sono una feature `[0..*]` di tipo `Action` sugli archi e, dove il linguaggio li ha, su
+  entry, exit e nodo di azione; ruolo assente o lista vuota significa che il passo sposta solo il
+  marking. Tutte le azioni di un passo (exit della sorgente, arco, entry della destinazione)
+  formano un unico assegnamento parallelo letto sullo stato precedente; due azioni sullo stesso
+  bersaglio nello stesso passo sono un difetto segnalato in authoring, e l'ordine di scrittura non
+  conta (va detto nella documentazione). In esportazione Ecore i due tipi diventano `EString` con
+  un'`EAnnotation` che li marca, e l'importazione li ripristina. È una modifica del core: corsia
+  dedicata con discovery e Layer Impact Report prima del passo 3. Il controllo sintattico eredita
+  il difetto noto del lexer su `true`/`false`/`null`, da coprire con test.
+- **R-SIM-18** (2026-09-23). **Accesso allo stato con `.[x]`, presentazione locale con `node`.**
+  Lo stato si legge e si scrive solo con l'operatore `.[x]`, che non è JavaScript valido e quindi
+  non collide con nessuna feature: `e.f` è sempre navigazione su M, `e.[x]` è sempre stato. Niente
+  zucchero e niente divieto di omonimia tra feature e attributi. Il percorso localizza l'elemento e
+  l'ultimo segmento è l'attributo (`self.target.[visits] := self.target.[visits] + 1`); un
+  percorso che dà un primitivo o una collezione è un errore in authoring, un riferimento vuoto su
+  M congelato è un difetto all'avvio del run. Radici: `self`, `event`, `model` (l'elemento radice,
+  per lo stato globale: `model.[i]`) e `node`. `node.[x]` è lo stato di presentazione
+  dell'elemento a cui l'espressione è attaccata, unico per elemento e condiviso da tutti i suoi
+  nodi grafici e viewpoint; la presentazione di un altro elemento non si raggiunge (località: la
+  scrivono solo le azioni attaccate a quell'elemento). Nelle view `data.[x]` e `node.[x]` leggono
+  lo stato dell'elemento disegnato. Una guardia che contiene `node` è un difetto, perché la
+  semantica non dipende dalla presentazione; per la stessa ragione gli attributi di presentazione
+  restano fuori dall'esportazione `.smv` e non richiedono un dominio finito. Entrambi gli spazi
+  vivono in σ, di proprietà del motore, coperti da snapshot e step indietro; mai nel `DObject`, in
+  `data.state` o in `node.state` (R-SIM-1, R-SIM-13). Emenda R-SIM-14: la radice `state` è
+  sostituita da `.[x]`, e il marking resta leggibile con `marked` (R-SIM-11). Il lexer rifiuta
+  `?.[`, che in JavaScript è un accesso calcolato; `.[`, `node` e `model` entrano nell'elenco unico
+  dei nomi riservati. Da verificare in discovery: che nel contesto delle regole IR dell'editor v2
+  `node` non indichi già altro (se collide, il nome ripiega su `look`). L'estensione alle view tocca
+  i file elencati in R-SIM-4.
+- **R-SIM-19** (2026-09-23). **Attributi di stato dichiarati, come in una grammatica ad
+  attributi.** Ogni attributo si dichiara nella STC per metaclasse, con spazio (semantico o di
+  presentazione), valore iniziale e, se semantico, dominio finito. Accanto agli attributi
+  memorizzati (scritti dalle azioni, `VAR` in nuXmv) la STC ammette attributi derivati: definiti da
+  un'equazione JjEL, di sola lettura, mai assegnati (`DEFINE`), con controllo di circolarità sulle
+  dipendenze. Il divieto di doppio assegnamento nello stesso passo è il requisito di una sola
+  equazione per attributo. Un attributo che nessuna azione assegna in un passo conserva il suo
+  valore: l'esportatore genera la frame condition esplicita (ultimo ramo `TRUE : x` del `case`),
+  altrimenti nuXmv lo lascerebbe non deterministico. Rinviati: attributi indicizzati e
+  assegnamenti quantificati su collezioni.
+- **R-SIM-20** (2026-09-24). **Emenda la spec §7: nessuna stabilità prima di un evento.** Il
+  passo ε e il passo con evento sono ingressi indipendenti scelti dall'ambiente; il motore non
+  richiede che gli archi senza trigger siano esauriti prima di accettare un evento
+  (run-to-completion). La stabilità diventa un'ipotesi d'ambiente opzionale dell'esportatore,
+  come l'ambiente cooperativo di R-SIM-16: senza di essa la verifica copre un sovrainsieme dei
+  comportamenti UML. Coerente con l'esclusione delle priorità dal nucleo.
+- **Esecuzione** (2026-09-24). R-SIM-16 è implementata da `P-2026-09-23-1850` sul ramo
+  `simulation-engine` (`e6cb005a4`, log `f486bc777`), non ancora nel tronco. Letture del GO: il
+  passo con evento restringe il fire-all agli archi il cui trigger contiene l'evento (any-of,
+  per identità); la divisione del token su un evento non deterministico è provvisoria fino
+  all'interleaving del passo 3 (R-SIM-7). La sovrapposizione dei ruoli nodo/arco senza ruolo
+  evento è un avviso, al salvataggio e all'avvio; con il ruolo evento è un rifiuto.
+
+### Ratifiche 2026-09-25: nucleo di Petri (R-SIM-21..26)
+
+Memo: `docs/ratifiche/claude_ratifiche_2026-09-25_rsim21_nucleo_petri.md`. Semantica discussa il
+2026-09-24 (`docs/sessioni/sessione_2026-09-24.md`, paragrafo «Semantica, discussa e non ancora
+ratificata») e ratificata da Alfonso il 2026-09-25. Ratificare non è schedulare: l'implementazione
+entra dal passo 3, dopo la sua discovery.
+
+- **R-SIM-21** (2026-09-25). **Il nucleo del motore è la transizione di Petri.** Una transizione ha
+  un preset e un postset di posti; flowchart e statechart ne sono casi particolari (uno stato o un
+  blocco è un posto, un arco è una transizione con un posto nel preset e uno nel postset). Una
+  transizione è abilitata quando ogni posto del preset porta almeno il peso del suo arco, la guardia
+  è vera e nessun inibitore la blocca (R-SIM-24). Lo scatto toglie i pesi dal preset, li aggiunge al
+  postset ed esegue le azioni della transizione come assegnamenti paralleli letti sullo stato
+  precedente. Interleaving invariato (R-SIM-7): uno scatto per passo, che coincide con la semantica
+  a sequenze di firing.
+- **R-SIM-22** (2026-09-25). **Fork e join sono istruzioni di compilazione, non costrutti del
+  nucleo.** Ruoli facoltativi `simFork` e `simJoin` nella STC. Un fork parallelo compila in una
+  transizione con più posti nel postset; un fork non deterministico è un conflitto fra transizioni
+  che condividono un posto del preset. Un join con sincronizzazione compila in una transizione con
+  più posti nel preset (AND-join), senza token sugli archi; un join di merge è fatto di più
+  transizioni verso lo stesso posto. Una STC senza questi ruoli si comporta come oggi.
+- **R-SIM-23** (2026-09-25). **Marking a naturali limitati, con pesi.** Ogni posto porta un naturale
+  da 0 a k; k si dichiara nella STC, default 1 (reti safe). Uno scatto che porterebbe un posto oltre
+  k è l'errore «unsafe»: il run si ferma e lo segnala, non satura. Ogni arco porta un peso naturale,
+  default 1. Il dominio finito del marking è quello che l'esportatore `.smv` dichiara (R-SIM-19).
+- **R-SIM-24** (2026-09-25). **Archi inibitori come guardia.** L'inibitore non è un tipo di arco del
+  nucleo: è una guardia che legge il marking attraverso un accessore di sola lettura. Nessuna radice
+  nuova oltre le quattro riservate (`self`, `event`, `model`, `node`); la forma dell'accessore la
+  propone la discovery del passo 3, a partire da `marked` (R-SIM-11).
+- **R-SIM-25** (2026-09-25). **Riduzione dei costrutti di flowchart a tre concetti:** guardia con
+  arco `else` esplicito, scelta esterna, fork/join (R-SIM-22). Un decision block con esito booleano
+  è una coppia di transizioni con guardia ed `else`. La scelta esterna (modale all'utente, random,
+  scenario) è una politica del selettore (R-SIM-7), mai un'espressione con effetti nella guardia:
+  la guardia resta pura e l'esportatore vede la scelta come non determinismo.
+- **R-SIM-26** (2026-09-25). **La terminazione è una proprietà del marking**, non del raggiungimento
+  di un elemento con ruolo `Terminal`. Restano aperti, da chiudere nella discovery del passo 3 e da
+  ratificare a parte: la forma del predicato di terminazione, il destino del ruolo `Terminal` oggi
+  obbligatorio (fonte del predicato di default o ruolo facoltativo), e se il motore distingue la
+  terminazione dal deadlock.
+- **Esclusi** (2026-09-25): OR-join alla BPMN, reti non limitate, reti colorate, reti temporizzate.
+  Il tipo `Expression` nel core resta una proposta separata, non ratificata qui.
+
+### Ratifiche 2026-09-25: passo 3, punti aperti e compilazione (R-SIM-27..33)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-25_sim_step3_petri_core.md` (`de21a2c93`), risposte
+alle tredici domande del suo §1, ratificate da Alfonso il 2026-09-25 nella chat di progetto
+`C-2026-09-25-1030` come raccomandate dal report. Chiudono i punti lasciati aperti da R-SIM-24 e
+R-SIM-26.
+
+- **R-SIM-27** (2026-09-25). **Terminazione: tutti i token in F.** F è l'insieme dei posti che sono
+  istanze (per `isKindOf`, R-SIM-8) del ruolo `simTerminal`. Una configurazione è terminata quando il
+  marking non è vuoto e ogni posto marcato sta in F; una configurazione terminata non ha candidati.
+  Con un solo token coincide con la regola di oggi; dopo un fork parallelo aspetta tutti i rami. Un
+  predicato JjEL nella STC (marking finale esatto, combinazioni) è l'estensione naturale, rinviata
+  alla corsia `Expression` e all'operatore `.[x]`. nuXmv: `DEFINE terminated` come disgiunzione dei
+  posti finali marcati in congiunzione con l'azzeramento dei posti non finali.
+- **R-SIM-28** (2026-09-25). **Il ruolo `simTerminal` è facoltativo.** Se presente è la fonte di F;
+  se assente nessuna configurazione termina e il run finisce in `Deadlock` o non finisce. Ribalta la
+  decisione di `P-2026-09-24-1005` (ruolo obbligatorio) e chiude il ticket del passo 1 sulla
+  metaclasse `TFinal` senza istanze. Emenda R-SIM-9: il ruolo finale è ammesso anche nel genere a
+  naturali, e i due generi si riducono a k e alla regola iniziale (genere booleano: k = 1 e regola
+  iniziale per metaclasse; genere a naturali: la feature intera `simInitialMarking`).
+- **R-SIM-29** (2026-09-25). **Terminazione e deadlock sono distinti; il run ha cinque stati.**
+  `Not started` (nessun run del modello nello store; un marking vuoto non lo è), `Halted` (dopo uno
+  scatto «unsafe», una violazione di dominio, un doppio assegnamento o un difetto d'azione; resta
+  fino a Reset e mostra il motivo), `Terminated` (R-SIM-27), `Running` (qualche ingresso fra ε e
+  l'alfabeto ha un candidato, con guardie e inibitori valutati), `Deadlock` (nessuno dei precedenti).
+  I pulsanti restano strutturali (R-SIM-16: preset abilitato e trigger, guardie non valutate); il
+  pannello li disabilita tutti in `Terminated`, `Deadlock` e `Halted`, così un run bloccato dalle
+  sole guardie non mostra pulsanti attivi.
+- **R-SIM-30** (2026-09-25). **Accessore del marking.** Nel nucleo: `SimStateAccess`, cioè
+  `SimStateReader` (`guardContext.ts`) più `tokens(id)`. Nella superficie JjEL: `x.[marked]`
+  (booleano, la vista derivata di R-SIM-11) e `x.[tokens]` (0..k), di sola lettura, raggiungibili da
+  qualunque cammino dalle quattro radici, mai assegnabili; `marked` e `tokens` sono nomi riservati
+  fra gli attributi di stato. Il subset checker li accetta come esportabili quando arriva l'operatore
+  `.[x]`. Fino ad allora un arco con ruolo `simInhibitorArc` dal posto p alla transizione t, di peso
+  w, compila nel congiunto di guardia `tokens(p) < w` (R-SIM-24: il nucleo vede una guardia, non un
+  tipo d'arco).
+- **R-SIM-31** (2026-09-25). **Regole di compilazione.** (1) L'arco `else` si scrive con il testo
+  letterale `else` nella feature di guardia, come `[else]` in UML, senza chiavi nuove; la sua guardia
+  è la negazione della disgiunzione delle guardie dei fratelli (stesso preset, stessi trigger); un
+  fratello difettoso rende difettoso l'`else`; due `else` fra fratelli sono un difetto. La corsia
+  `Expression` accetterà `else` come parola riservata solo in posizione di guardia. (2) Un arco senza
+  target, con target cancellato o con un target che non è un posto è un difetto di compilazione, mai
+  un candidato né un pozzo che consuma il token. (3) I nodi con ruolo `simFork` o `simJoin` non sono
+  posti: i loro archi si fondono in una transizione (preset: le sorgenti degli archi entranti;
+  postset: i target degli uscenti; origini registrate); un arco fra due pseudo-nodi è un difetto; un
+  nodo di fork o join non è mai evidenziato. (4) La forma Petri si riconosce dal ruolo `simArc`;
+  altrimenti la STC è controllo di flusso.
+- **R-SIM-32** (2026-09-25). **Chiavi nuove, provvisorie fino alla 3b.** `simBound` (k, default 1),
+  `simInitialMarking`, `simFork`, `simJoin`, `simGuard`, `simArc`, `simArcSource`, `simArcTarget`,
+  `simArcWeight`, `simInhibitorArc`, accanto a `simSource` (R-SIM-10). Nella 3a nulla è cablato né
+  persistito, quindi i nomi si possono rivedere nella 3b senza migrazione; diventano definitivi con
+  il commit di codice della 3b. Il compilatore della 3a copre sia il controllo di flusso sia la forma
+  Petri: è la prova che flowchart e statechart sono casi particolari del nucleo (R-SIM-21).
+- **R-SIM-33** (2026-09-25). **Il passo 3 in tre ondate.** 3a: nucleo puro in
+  `frontend/src/model/simulation/`, soltanto file nuovi, niente cablaggio. 3b: pannello e run-state
+  sul nuovo nucleo, con Layer Impact Report; cancella il vecchio step (`stepFlowchartBoolean`,
+  `applyStepLabel`, `simApplyStep`) nella stessa corsia. 3c: candidati sul canvas come secondo canale
+  accanto a `'mark'`, critical zone, discovery propria. La convivenza dei due step dalla 3a alla 3b è
+  compatibile con R-SIM-7 perché uno solo è cablato. Le leggi della spec §3.3 restano fuori dal passo
+  3; la legge «un solo nodo marcato» dei flowchart cade con i fork paralleli, e la spec §3.3 e §3.4
+  sono emendate di conseguenza.
+- **Conseguenze accettate** (2026-09-25). Due token concorrenti che confluiscono nello stesso posto
+  con k = 1 sono «unsafe», dove oggi collassano in silenzio (report §9, R1). Con gli assegnamenti
+  paralleli di R-SIM-17 le azioni exit(sorgente), arco ed entry(target) formano un solo assegnamento:
+  exit(A) ed entry(A) che scrivono lo stesso attributo in un self-loop sono un doppio assegnamento e
+  portano il run in `Halted`, dove la lettura sequenziale di UML li accetterebbe.
+- **Ticket** (2026-09-25). Da una scheda M1 `getActiveMetamodel()` è `null` e `getTargetMetamodel`
+  (`utils.ts:299-317`) ripiega sul primo metamodello del progetto: la validazione di un modello di un
+  altro metamodello costruisce un pool vuoto e non riporta violazioni (misurato nel report §8.1: pool
+  0 senza `targetMetamodelId`, 1 con). Corsia propria, fuori dalla simulazione; il bridge della 3b
+  passa `targetMetamodelId` fin dall'inizio.
+
+### Ratifiche 2026-09-25: passo 3b, pannello e run-state (R-SIM-34..37)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-25_sim_step3b_panel.md` (`b9fd3a1f7`), risposte
+alle sedici domande del suo §1, ratificate da Alfonso il 2026-09-25 nella chat `C-2026-09-25-1030`
+come raccomandate, con due precisazioni (R-SIM-36, ultima frase; ticket in fondo).
+
+- **R-SIM-34** (2026-09-25). **Interruzione del run (R-SIM-13) con firma limitata al run.** Una
+  modifica del modello che la firma del run rileva ritira il run: evidenziazione tolta, stato
+  `Not started`, una riga nel pannello «Run interrupted: the model changed. Reset to run again.».
+  Nessun sesto stato e nessun `Halted` che lasci un'evidenziazione vecchia. La firma è nuova,
+  limitata al run, nel modulo del bridge: misurata sei casi su sei, dove `buildValidationSignature`
+  ne sbaglia due (non vede un cambio di ruolo nel metamodello, scatta su un altro modello). Spostare
+  un nodo non interrompe.
+- **R-SIM-35** (2026-09-25). **Scelta fra candidati come lista.** Quando un ingresso ha più di un
+  candidato, il pannello mostra la lista dopo il clic e l'utente sceglie; annullare lascia il run
+  com'è. Nessuna politica random nella 3b: un run casuale si riproduce solo con un seme registrato, e
+  la traccia arriva con il passo 5 (R-SIM-25).
+- **R-SIM-36** (2026-09-25). **Store e versione.** Lo store tiene per modello il record del run
+  (`SimRun`: configurazione, rete compilata, motivo di arresto); `simReset` conserva il nome e prende
+  il record, `simApplyStep` è sostituito da `simCommit`, nuovo `getSimRun`. Un run resta nello store
+  anche a marking vuoto. La versione (canale `'mark'`) sale su Reset, su ogni commit `fired` o
+  `halted`, su Stop o interruzione di un run esistente; non sale su scarto, quiescenza e selettore
+  rifiutato, che non cambiano il marking. Lo stato del pannello e la riga «Last step» non dipendono
+  dalla versione: si aggiornano anche quando la versione non sale.
+- **R-SIM-37** (2026-09-25). **Pannello e lato M2.** Il bridge sta in un modulo proprio con il
+  costruttore del contesto iniettato e passa sempre `targetMetamodelId`. Con ruolo evento o forma
+  Petri ogni sovrapposizione di ruoli è un rifiuto; il percorso di avviso resta per il controllo di
+  flusso senza eventi. Il lato M2 ha quattro gruppi (General, Control flow, Petri net, Events), la
+  forma si deduce da `simArc`, `simBound` è un campo numerico che scrive una stringa di cifre. Dopo
+  Reset i difetti di compilazione compaiono in una riga di avviso e il run parte comunque; una riga
+  «Last step» riporta l'ultimo passo (scatto, scarto, quiescenza). Le chiavi di R-SIM-32 diventano
+  definitive senza rinomine con il commit di codice della 3b.
+- **Ticket** (2026-09-25). `SimModelView` conserva membri usati solo dal vecchio step: si snellisce in
+  una corsia propria, senza marcatori `TODO` nel codice. `stcFromRoles.ts` dopo la 3b contiene solo le
+  funzioni di sovrapposizione e il nome non lo dice più: rinomina in una corsia propria (la regola 2
+  la vieta nella 3b).
+
+### Ratifica 2026-09-25: la classe evento si deriva dal trigger (R-SIM-38)
+
+Discussa e ratificata da Alfonso il 2026-09-25 nella chat `C-2026-09-25-1500`, a partire dal gruppo
+Events del lato M2 (tre campi: Event, Trigger, Event identifier). Implementazione:
+`P-2026-09-25-1500`.
+
+- **R-SIM-38** (2026-09-25). **Il ruolo evento si configura dal solo Trigger.** Il campo primario è
+  Trigger, un riferimento della classe che porta gli archi. La metaclasse evento è il tipo
+  dichiarato di quel riferimento: si deriva a ogni lettura del bag e non si copia mai, così un
+  cambio di tipo nel metamodello si riflette senza riconfigurare. Tre precisazioni. (1) Tipo
+  astratto: gli eventi sono le istanze delle sottoclassi concrete, con lo stesso `isKindOf` del
+  motore (R-SIM-8); nessun override per restringere a una sottoclasse. (2) Il trigger è solo un
+  riferimento: un attributo stringa sull'arco non definisce eventi (conferma R-SIM-12, eventi come
+  istanze M1). (3) Con molteplicità maggiore di uno l'arco è abilitato da uno qualsiasi degli
+  eventi referenziati: la lettura any-of registrata all'esecuzione di R-SIM-16 diventa ratificata.
+  L'identificatore resta facoltativo con default `name` (`objectLabel`, `objectSlots.ts`) e il
+  pannello lo presenta come override. La chiave `simEvent` non si scrive più; un valore già
+  presente in un bag si ignora, senza migrazione. Lo stato «ruolo evento a metà» scompare. Emenda
+  R-SIM-12 e R-SIM-16 sul lato M2; il motore e il lato M1 non cambiano.
+
+### Ratifiche 2026-09-25: operatore `.[x]` e tipi `Expression`/`Action` (R-SIM-39..46)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-25_state_operator_core_types.md` (`ec68ddb9b`),
+risposte alle diciotto domande del suo §10, ratificate da Alfonso il 2026-09-25 nella chat
+`C-2026-09-25-1353` come raccomandate, con due precisazioni (R-SIM-44 e R-SIM-46).
+Mappano R-SIM-17, R-SIM-18, R-SIM-19 e R-SIM-30 sul codice senza riaprirle.
+Numerate in origine R-SIM-38..45 (`86f36a205`, e così le citano i body di `86f36a205`, `1c7a9be76`,
+`7727d715b`, il prompt di Fase 2 e la entry dell'ondata B1); rinumerate R-SIM-39..46 il 2026-09-25
+perché il tronco aveva già ratificato un R-SIM-38 diverso (`79175e94c`, chat `C-2026-09-25-1500`).
+
+- **R-SIM-39** (2026-09-25). **Tre ondate, C fuori.** B1 (grammatica, AST, gancio del valutatore,
+  checker; puro, nessuna critical zone), poi A (i due tipi primitivi con la migrazione, critical
+  zone `VersionFixer.tsx`, verifica visiva), poi B2 (le guardie leggono lo stato, valutatore delle
+  azioni testato e non cablato al pannello, verifica visiva). Le dichiarazioni degli attributi di
+  stato (R-SIM-19) sono una corsia propria con discovery propria: toccano R-SIM-2, un gruppo M2 nuovo
+  e le chiavi di ruolo delle azioni. Il nucleo accetta già le dichiarazioni, quindi B2 si prova senza C.
+- **R-SIM-40** (2026-09-25). **Grammatica.** `.[` è un solo token contiguo (`. [` non lo è);
+  l'attributo è un `IDENTIFIER`, parole chiave escluse; `?.[` è un errore del lexer con un messaggio
+  che rimanda a `x.[a]`. `:=` è un token solo in modalità azione; nelle espressioni resta l'errore di
+  oggi, con un messaggio che nomina le azioni. Un nodo AST `StateAccess`; l'azione non è
+  un'espressione ma un tipo esportato a parte (`JjelAction`), quindi nessun valutatore vede un
+  assegnamento. Il bersaglio di un'azione finisce in `.[a]` e non è mai `marked` o `tokens`.
+- **R-SIM-41** (2026-09-25). **Parse stretto.** Una entrata di parse che richiede la fine
+  dell'input serve i due tipi, le guardie e le azioni: `a b` è un difetto. `parseExpression` resta
+  com'è per Console, Jodie, validazione e JjTL, dove oggi scarta in silenzio i token finali: la
+  correzione globale è un ticket, non una clausola di questa corsia. Il controllo di `Expression`
+  accetta esattamente `else` (senza spazi attorno) come ben formato; il rifiuto fuori dalle feature
+  di guardia spetta al controllo contestuale della STC (C, R-SIM-31).
+- **R-SIM-42** (2026-09-25). **Nomi riservati e `node`.** Una sola lista esportata in `jjel/`
+  (l'operatore, le radici `self`, `event`, `model`, `node`, gli attributi `marked` e `tokens`), letta
+  da checker e autocompletamento; nessuna parola chiave nuova nel lexer. `node` resta: nelle regole
+  IR dell'editor v2 non collide, il ripiego su `look` non serve. Il significato che `node` ha già in
+  Console, Jodie e validazione (il vertice selezionato) si documenta accanto; in `node.[x]` `node` si
+  riconosce per sintassi e non si valuta mai come variabile.
+- **R-SIM-43** (2026-09-25). **Gancio del valutatore.** Campo facoltativo di `EvaluationContext`,
+  ereditato da `child()`. Senza gancio `.[x]` lancia un errore («state is readable only in the
+  simulator»), mai un `null` silenzioso. `marked` e `tokens` li risolve l'adattatore del simulatore,
+  non JjEL. Un percorso che dà una collezione o `null` è un difetto a tempo di run in B2, risolto una
+  volta per sito ed evento su M congelato; il controllo statico arriva con il checker tipato di C.
+  Il valutatore delle azioni rifiuta un bersaglio non-`node` su un attributo di presentazione e un
+  bersaglio `node` su uno semantico (località, R-SIM-18).
+- **R-SIM-44** (2026-09-25). **I due tipi nel core.** Due DClass primitive con migrazione, come
+  ratificato in R-SIM-17: l'annotazione resta solo la forma Ecore. Nomi `Expression` e `Action`, id
+  `Pointer_EXPRESSION` e `Pointer_ACTION`. I tre controlli sul prefisso `Pointer_E`
+  (`classes.ts:899`, `EcoreService.ts:702`, `JsonModelService.ts:321`) si sostituiscono con **un solo
+  insieme esportato degli id primitivi**, letto da tutti e tre e tenuto da mutanti; non tre
+  riscritture indipendenti. Un valore malformato è il `type_mismatch` esistente a severità `warning`,
+  come int e boolean oggi. `simGuard` continua ad accettare attributi di tipo EString accanto a quelli
+  di tipo `Expression`, senza ritipare i metamodelli esistenti.
+- **R-SIM-45** (2026-09-25). **Ecore.** Forma
+  `<eAnnotations source="jjodel"><details key="type" value="Expression"/></eAnnotations>` su un
+  `EString`, consumata all'import (la DAnnotation non si conserva). I due tipi restano fuori dalla
+  mappa `#//<name>` dell'import: una classe utente chiamata `Action` o `Expression` vince, e i tipi
+  tornano solo tramite l'annotazione.
+- **R-SIM-46** (2026-09-25). **Numero di VersionFixer. Emenda R-IRN-19.** L'ondata A prende `2.229`;
+  la purga di R-IRN-19 passa al primo numero libero quando sarà calendarizzata. Motivo: gli step si
+  applicano in ordine di numero, e un `2.230` spedito prima di un `2.229` lascerebbe senza purga i
+  progetti già migrati. La purga oggi è un commento e un piano, non codice. L'ondata A aggiorna il
+  commento di `VersionFixer.tsx:1193` nello stesso commit dello step. È la prima migrazione che
+  aggiunge un tipo built-in.
+- **Ticket** (2026-09-25). `parseExpression` scarta in silenzio i token finali (`a b` vale `a`) in
+  Console, Jodie, validazione e JjTL (report §4.2). Corsia propria.
+- **Ticket** (2026-09-25). Progetti salvati più vecchi sembrano privi di `Pointer_EOBJECT`, e
+  l'import `.ecore` lancerebbe (report §3.2, R10): letto, non riprodotto. Si riproduce prima di
+  aprire una corsia.
+
+### Ratifiche 2026-09-25: catalogo dei ruoli e profili (R-SIM-47..55)
+
+Memo: `docs/ratifiche/claude_2026-09-25_1759_memo_simulation_roles_profiles.md` (`f827970bb`), con
+input di design `docs/design/claude_2026-09-25_simulation_roles_modal_design.md` (Claude Design, sola
+parte UI). Ratificate da Alfonso il 2026-09-25 nella chat `C-2026-09-25-1759` come proposte. I tre
+punti aperti del memo sono chiusi dalla chat secondo la direzione già data da Alfonso e restano
+reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare.
+
+- **R-SIM-47** (2026-09-25). **Catalogo unico, profili senza semantica.** Il catalogo dei ruoli della
+  STC è uno solo ed è il superset. Un profilo è un nome più, per ogni ruolo, un modo (`edit`,
+  `derived` con valore fisso o sorgente dichiarata, `off` con motivo), più parametri e vincoli
+  (R-SIM-49). Motore ed esportatore leggono i ruoli risolti, mai il profilo. Profili di sistema nel
+  codice, in sola lettura; un profilo utente nasce vuoto o come copia di uno di sistema («Save as…»);
+  un profilo di sistema modificato è «modified» finché non lo si salva con un nome.
+- **R-SIM-48** (2026-09-25). **L'obbligatorietà si calcola.** `required(profilo)` è la chiusura di
+  eseguibilità della forma (controllo di flusso: Node, Transition, Next state, una sorgente fra Source
+  e Owned transitions, Initial; Petri: Node, Transition, Arc, Arc source, Arc target, Initial marking)
+  unita ai requisiti aggiunti dal profilo, che possono solo restringere. La chiusura segue la tabella
+  delle dipendenze del memo; i gruppi Control flow e Petri net si escludono (forma da `simArc`,
+  R-SIM-31(4)). Checkable: ogni ruolo richiesto legato e nessun legame incompatibile; «with warnings»
+  se qualche legame è un avviso.
+- **R-SIM-49** (2026-09-25). **Parametri e vincoli del profilo.** Parametri: k (`simBound`), politica
+  del selettore (lista, R-SIM-35), ipotesi d'ambiente dell'esportatore (R-SIM-16, R-SIM-20). Vincoli:
+  proprietà strutturali di M1 («nessun arco ε», «deterministico», «un solo token») che non entrano nel
+  motore e diventano regole di un validation viewpoint generato dal profilo, con il tri-stato di
+  R-SIM-15. Il determinismo non è un controllo di tipo su M2. Fork e join non hanno parametri di modo
+  (li esprime la presenza del ruolo, R-SIM-22); il decision block resta R-SIM-25.
+- **R-SIM-50** (2026-09-25). **Accettazione distinta dalla terminazione.** Ruolo facoltativo
+  `simAccepting` (metaclasse): una configurazione accetta quando un posto marcato è istanza di
+  Accepting. Non ferma il run. Pannello: «accepting» accanto allo stato del run; esportatore:
+  `DEFINE accepting`.
+- **R-SIM-51** (2026-09-25). **Output di Moore e di Mealy.** Ruoli facoltativi `simStateOutput`
+  (attributo della metaclasse nodo) e `simTransitionOutput` (attributo della classe degli archi),
+  letti dal modello congelato del run. Il pannello mostra l'output dello stato marcato e quello
+  dell'ultimo scatto in «Last step»; esportatore: `DEFINE out`. Gli output calcolati sono attributi
+  derivati (R-SIM-19).
+- **R-SIM-52** (2026-09-25). **Gruppo Data.** `simGuard` più `simAction` (`Action [0..*]` sulla
+  classe degli archi), `simEntry` e `simExit` (sulla metaclasse nodo), come da R-SIM-17; il nodo di
+  azione è un nodo con `simEntry`. Le dichiarazioni degli attributi di stato (R-SIM-19) sono una
+  sezione del gruppo e arrivano con la corsia C di R-SIM-39. Chiavi nuove provvisorie fino al commit
+  di codice che le cabla (come R-SIM-32).
+- **R-SIM-53** (2026-09-25). **Activity final. Emenda R-SIM-27.** Ruolo facoltativo
+  `simActivityFinal` (metaclasse): un suo posto marcato porta il run in `Terminated` anche con altri
+  token vivi; `simTerminal` resta il flow final. Terminata vale «marking non vuoto e ogni posto marcato
+  in F, oppure un posto di activity final marcato»; in nuXmv una disgiunzione in più in
+  `DEFINE terminated`.
+- **R-SIM-54** (2026-09-25). **Profili di sistema.** Otto, secondo la tabella del memo con la fusione
+  di Flowchart e Activity: Petri net (P/T), Flowchart / Activity, State machine, Extended state
+  machine, DFA, NFA, Moore, Mealy. Nei profili a controllo di flusso il gruppo Petri net è `off`
+  («compiled from control flow»), non `derived`; `derived` solo per Bound = 1 e Initial marking
+  «1 on Initial» (R-SIM-28).
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat, C-2026-09-26-1702, punto A3 del digest della notte): nel profilo Petri net (P/T) il ruolo Guard è `edit`, non `off`, così una rete con una guardia sulla transizione (b2net, la rete della corsia C1) è checkable senza «Set but off: Guard.»; codice `7455d0075`.
+- **R-SIM-55** (2026-09-25). **Persistenza additiva.** Il profilo attivo si salva nel bag M2 con la
+  chiave additiva `simProfile` (id del profilo di sistema o definizione serializzata del profilo
+  utente). Chiavi dei ruoli di R-SIM-37 invariate. Senza `simProfile` il modale ricostruisce un
+  profilo «Custom» dalle chiavi presenti: nessuna migrazione, nessun salto di VersionFixer. Cambiare
+  profilo non cancella legami; il profilo si scrive solo con Apply. Libreria personale di profili
+  rinviata. Sul metamodello il pannello mostra il riassunto e «Configure…», che apre il modale; i
+  quattro gruppi di R-SIM-37 passano nel modale. Il pannello SMV resta un segnaposto inerte fino
+  all'esportatore.
+- **Punti aperti chiusi** (2026-09-25). (1) Flowchart e Activity sono un profilo solo, perché i
+  requisiti del 2026-09-24 mettono fork e join nei flowchart; differiscono solo per l'uso di
+  Activity final, che nel profilo è facoltativo. (2) R-SIM-53 è ratificata insieme alle altre;
+  l'implementazione entra con la corsia di Accepting e degli output. (3) Il nome di un profilo utente
+  è unico nel metamodello; il profilo conserva `basedOn` (id del profilo di sistema di partenza) come
+  informazione, senza ereditarietà: modificare un profilo di sistema non cambia le copie.
+- **Esclusi** (2026-09-25): stati gerarchici, regioni ortogonali, history, composizione di macchine,
+  object flow, tempo.
+- **R-SIM-56** (2026-09-25). **Forma e genere sono indipendenti anche nei profili. Emenda R-SIM-48,
+  R-SIM-54 e R-SIM-55.** R-SIM-28 ha reso il genere (booleano o a naturali) indipendente dalla forma
+  (controllo di flusso o Petri); la chiusura di R-SIM-48 li aveva confusi. Nella chiusura del
+  controllo di flusso Initial diventa un requisito «uno dei due» fra Initial e Initial marking, come
+  Source e Owned transitions. Un ruolo `derived` con sorgente (`from`) conta come legato solo quando
+  la sua sorgente è legata; Initial marking nei profili di sistema a controllo di flusso diventa
+  `derived` da Initial («1 on Initial»), non un valore fisso. Il profilo «Custom» di un bag a
+  controllo di flusso mette `simBound` e `simInitialMarking` in `edit` quando sono valorizzati, invece
+  di ignorarli: un controllo di flusso a naturali (k > 1, marking iniziale da `simInitialMarking`,
+  anche senza `simInitial`) è una configurazione ratificata e il Custom la riconosce completa. I
+  profili di sistema restano a k = 1. Chiude il ticket di `P-2026-09-25-1805` (`a14c7dfa8`).
+- **Correzione della tabella di R-SIM-54** (2026-09-25). La tabella dei profili di sistema del memo
+  `claude_2026-09-25_1759_memo_simulation_roles_profiles.md` era incompleta; vale quella del prompt
+  `P-2026-09-25-1805`, confermata da Alfonso all'hard stop di quella corsia: il vincolo
+  `singleToken` vale per State machine, Extended state machine, DFA, NFA, Moore e Mealy, e
+  `eventIdentifier` è `edit` dovunque Trigger è attivo (serve a R-SIM-38, che lo presenta come
+  override).
+- **R-SIM-57** (2026-09-26). **Perché una guardia non lascia passare: combinazione.** Dalla discovery
+  `discovery_2026-09-26_sim_guard_outcomes.md` (`7abb57eaa`): il pannello mostra il motivo per input
+  nello stato fermo (opzione C1) e i difetti di compilazione dopo Reset (opzione A), e corregge il
+  testo del discard, che oggi dice «no transition accepted it» anche quando una transizione accettava
+  l'input e la sua guardia era falsa. Gli esiti delle guardie sotto «Last step» (opzione B) non si
+  fanno: descrivono la configurazione prima del passo e non spiegano un blocco; la storia delle label
+  appartiene alla traccia (R-SIM-25).
+- **R-SIM-58** (2026-09-26). **Dove sta il motivo.** Nella riga di stato, una sola riga con ellissi e
+  il testo intero nel `title` (per esempio `Deadlock · ε: t1 false`); la lista per input si apre con
+  un clic sulla riga. Il pannello Simulation non ha oggi la distinzione Basic/Advanced e questa corsia
+  non la introduce: la lista dietro il clic è la sua forma di disclosure.
+- **R-SIM-59** (2026-09-26). **Il motivo si ricalcola nel bridge, sito per sito.** Nessuna modifica a
+  `netStep.ts`: il bridge ricalcola i candidati per ε e per ogni evento dal `SimRun`, dentro il memo
+  del pannello (mai a ogni render), e per spiegare un esito chiama l'oracolo su ogni `guardSite` della
+  transizione, così una transizione fusa (fork/join) nomina l'arco la cui guardia è falsa o in
+  difetto. Un test tiene il ricalcolo allineato a `netRunStatus`: `Deadlock` se e solo se nessun input
+  ha un candidato.
+- **R-SIM-60** (2026-09-26). **In `Running` solo il `title`.** Un pulsante acceso il cui input non ha
+  candidati riceve il motivo nel `title`; R-SIM-16 resta invariata (i pulsanti sono strutturali).
+- **R-SIM-61** (2026-09-26). **Difetti di compilazione dopo Reset.** `startRun` restituisce i difetti
+  delle guardie in un campo facoltativo di `RunStart` dal nome generale `compileDefects`, che la
+  corsia C userà per le azioni e le dichiarazioni. Si mostrano nella riga dei difetti esistente, che
+  cambia testo perché copra entrambi i casi (una guardia in difetto non è un elemento «not compiled»:
+  la transizione è compilata ma non diventa mai candidata). Solo difetti: gli avvisi del checker di
+  sottoinsieme non si elencano.
+- **R-SIM-62** (2026-09-26). **Testi e nomi.** Il testo sorgente di una guardia sta solo nel `title`,
+  mai nella riga. Nei dettagli e nel `title` le transizioni si nominano `name (S → D)` come in
+  `candidateLabel`; un id di posto (un inibitore) si risolve sempre in un nome.
+- **R-SIM-63** (2026-09-26). **Nessuno scatto di layout.** Le righe «Last step», di halt e d'errore
+  del pannello si limitano a una riga con il testo intero nel `title`: oggi una riga che va a capo
+  sposta i pulsanti di 17 px (misurato). Entra nella stessa corsia, come aggiunta dichiarata allo
+  scope.
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat, 22:20, punto 3 delle risposte della sera, memo
+  `docs/ratifiche/claude_ratifiche_2026-09-27_evening_answers.md`): nello stato Halted la riga di halt va a capo
+  in uno slot riservato di due righe, un'ellissi oltre la seconda. Lo slot sta sopra i pulsanti e ha altezza
+  fissa, quindi il pannello cresce verso l'alto di 16,5 px e i pulsanti non si muovono (misurato a 1600x1000 e
+  1280x800, P-2026-09-27-2225, `e0e6ee5e4`). «Last step», i difetti, l'errore e ogni altra riga restano a una
+  riga: «Last step» sta sotto i pulsanti, e una seconda riga li alzava di 16,5 px (misurato).
+- **R-SIM-64** (2026-09-26). **`else` anche nella forma Petri. Completa R-SIM-31.** Una transizione
+  di Petri la cui guardia è il testo `else` è il complemento dei suoi fratelli, come un arco del
+  controllo di flusso: i fratelli sono le transizioni con lo stesso preset (posti e pesi) e gli stessi
+  trigger, la stessa chiave `siblingKey` di `netCompile.ts`; due `else` fra fratelli sono il difetto
+  `else-twice`. Misurato il 2026-09-26 (chiusura `5a398eaee`): oggi quella guardia va al parse come
+  espressione ordinaria, diventa un difetto e il run va in `Deadlock` dove `te` dovrebbe scattare.
+- **R-SIM-65** (2026-09-26). **Le righe che compaiono stanno sopra i pulsanti. Completa R-SIM-63.** Il
+  pannello è ancorato in basso e cresce verso l'alto: le righe che compaiono e scompaiono (difetti al
+  Reset, halt, errore del run, avviso del run, interruzione) si mettono sopra la fila dei pulsanti,
+  così crescono verso l'alto senza spostarli. Restano sotto la riga di stato e «Last step», che ci sono
+  per tutta la durata di un run. Misurato il 2026-09-26: la riga dei difetti al Reset spostava Step di
+  24,5 px.
+- **R-SIM-66** (2026-09-26). **Un solo posto per l'esito dell'ultima azione. Emenda R-SIM-65.** Sotto
+  i pulsanti c'è una sola riga, l'esito dell'ultima azione sul pannello: «Last step», l'interruzione del
+  run per una modifica del modello, oppure il rifiuto di un Reset. Si sostituiscono a vicenda nella
+  stessa riga e non spostano i pulsanti. Sopra i pulsanti restano le righe che si aggiungono senza
+  sostituirne un'altra: i difetti al Reset, l'halt, l'avviso del run. La prima azione di un run fa
+  comparire la riga una volta, come risposta al clic. Misurato il 2026-09-26: l'interruzione sopra i
+  pulsanti, con «Last step» cancellato sotto, spostava Step di 24,5 px verso il basso.
+
+### Decisioni 2026-09-26: corsia C, dichiarazioni degli attributi di stato e chiavi delle azioni (R-SIM-67..72)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-26_sim_state_declarations.md` (`06d911dd9`), diciotto
+domande del suo §9. Decise dalla chat `C-2026-09-26-1702` sotto RC-25 (`provisional, unattended`), con la
+verifica avversariale di RC-27 sulle due scelte strutturali (R-SIM-67 e R-SIM-71); Alfonso riceve il digest
+alla chiusura della corsia C1 e può porre il veto. Le domande 3, 4, 6, 9, 10, 12, 13, 14, 15, 16, 18 sono
+adottate come raccomandate e restano nel report; qui stanno le sei che fissano un formato, un'interfaccia
+o una corsia.
+
+- **R-SIM-67** (2026-09-26, provisional, unattended). **Le dichiarazioni vivono in una chiave additiva del
+  bag, `simStateAttributes`.** Il valore è una stringa JSON, come `simProfile` (R-SIM-55): un oggetto
+  `{ "v": 1, "attrs": [record...] }`, con record dalla forma di `StateAttributeDecl` (`name`, `metaclass`
+  puntatore o `null`, `space`, `domain`, `initial`, più `equation` dalla C2), serializzato con ordine dei
+  campi fisso. R-SIM-2 resta intatta (chiave piatta, valore primitivo), nessun passo di VersionFixer,
+  `runSignature` la copre già. Scartate D2 (elementi del metamodello: contro spec §3 e R-SIM-18, e un tipo
+  primitivo nuovo passa per la critical zone) e D3 (dentro il profilo: contro R-SIM-47, persa con Custom).
+  `Verified: la stringa non ha copie shallow che scappano e runSignature confronta la stringa grezza; sarebbe
+  falsa se la serializzazione non fosse deterministica nell'ordine dei campi, da cui la regola dell'ordine
+  fisso.`
+- **R-SIM-68** (2026-09-26, provisional, unattended). **Decodifica tollerante, difetti per record.** Un record
+  malformato è un difetto di quel record e gli altri compilano; una stringa che non è JSON, o non ha `v` e
+  `attrs`, è un difetto di compilazione sulla chiave, mai un insieme vuoto silenzioso; i campi sconosciuti
+  si ignorano, così la C2 aggiunge `equation` senza cambiare formato; l'insieme vuoto si scrive `'[]'` dentro
+  `attrs`, mai `undefined` sulla chiave (ticket sul mancato `set_state` a `undefined`, §7.6 del report). Nel
+  catalogo `stateAttributes.key` diventa `'simStateAttributes'`; `action`, `entry`, `exit` dipendono da
+  `stateAttributes`. Emenda la decodifica tutto-o-niente di `decodeProfile` solo per questa chiave.
+- **R-SIM-69** (2026-09-26, provisional, unattended). **Le tre chiavi delle azioni entrano in `NetStc`.**
+  `action`, `entry`, `exit` campi opzionali di `NetStc` e tre coppie in `ROLE_KEYS`; i valori `Action [0..*]`
+  si leggono per ruolo con `objectSlotValues` dal lookup, in ordine, in una tabella costruita al Reset accanto
+  a `compileGuards`; i siti sono quelli del core (in Petri gli archi non sono siti: exit del preset,
+  transizione, entry del postset). `NO_SIM_ACTIONS` resta l'oracolo quando nessun ruolo di azione è legato,
+  non un flag per run; l'asserzione di `simBridge.test.ts:428-429` si riscrive.
+- **R-SIM-70** (2026-09-26, provisional, unattended). **Difetti di compilazione delle azioni al Reset, halt a
+  run time come rete di sicurezza.** Al Reset si segnalano: azione che non parsa, dichiarazione malformata,
+  bersaglio non dichiarato e località quando il bersaglio si riduce senza σ ed evento, doppio bersaglio per
+  transizione sui suoi siti quando i bersagli si riducono, `E-NODE` sul lato destro di un assegnamento
+  semantico. Un difetto di compilazione di un'azione non esclude la transizione dai candidati (a differenza
+  di una guardia difettosa): la transizione resta candidata e ferma il run se scatta. `CompileDefect.role` e
+  `reason` si allargano (Rule 11 autorizzata: unione di letterali, additiva); `HaltReason` riceve un genere
+  proprio per il bersaglio non dichiarato con elemento e attributo, così la riga dice il nome e non il
+  puntatore; la riga dell'halt non porta il testo sorgente dell'azione, che va nel `title` (R-SIM-62).
+  **Estesa il 2026-09-27** (P2b, `P-2026-09-27-2235`, provisional, unattended; report
+  `discovery_2026-09-27_sim_checker_gap.md` §8; codice `8beb4b28e`, modulo puro `model/simulation/stcChecks.ts`
+  chiamato da `guardDefectsOf` e `actionDefectsOf`, così riga dei difetti e registro dei problemi li ricevono
+  insieme). Al Reset si segnalano anche: (R1) una lettura `.[x]`, o un bersaglio che il run risolve, il cui nome
+  nessuna dichiarazione ha, `marked` e `tokens` esclusi; (R2) una lettura di guardia il cui oggetto si riduce
+  senza σ, evento né variabile legata, giudicata come un bersaglio ridotto: nessun elemento (`unresolved`), non
+  dichiarata sull'elemento, `marked`/`tokens` fuori da un posto, attributo di presentazione; (R3) un bersaglio
+  ridotto che non nomina un elemento, `unresolved`, con il testo dell'halt (`judgeActionTarget` accanto a
+  `foldActionTarget`, il cui contratto non cambia); (R4) gli errori del checker di sottoinsieme sul lato destro,
+  non solo `E-NODE`; (R5) un lato destro che si riduce a un non scalare o fuori dal dominio del bersaglio ridotto;
+  (R6) una guardia che è una sola lettura `.[x]` di una dichiarazione non booleana. `CompileDefect.reason` riceve
+  `'unresolved'` e `'value'` (Rule 11, come sopra). Il run resta com'è: guardie e azioni si valutano come prima,
+  e l'halt resta la rete di sicurezza. Limiti dichiarati: R4 è solo al Reset, `compileAction` non cambia, così
+  un'azione con `E-EAGER`, `E-NOELSE`, `E-SHADOW` o `E-WITH` ferma il run solo se la valutazione fallisce; R2 elenca
+  anche una lettura in un ramo che il run non valuta mai. Prima delle dichiarazioni le guardie che leggono un
+  attributo non ancora dichiarato sono difetti al Reset (ESM +1, Flow B +2, risposta A della chat alla domanda
+  della corsia). Fuori: `else` senza fratelli, gli avvisi W-* e T-*, A11 e ogni valore che dipende da σ o
+  dall'evento.
+- **R-SIM-71** (2026-09-26, provisional, unattended). **Due corsie: C1 memorizzati e azioni, C2 derivati.**
+  C1: codec, catalogo, `NetStc`, `compileNet` con i difetti delle dichiarazioni (iniziale fuori dominio,
+  dominio mancante su semantico, `min > max`, nome riservato, metaclasse inesistente, stesso nome su due spazi
+  o due volte su un elemento), tabella delle azioni e `compileDefects` nel bridge, testi dell'halt; poi il
+  gruppo Data nel pannello (quinto gruppo inline, `simGuard` vi si sposta da General, liste filtrate per tipo,
+  tabella delle dichiarazioni con valori iniziali scritti come letterali JjEL, letterali di enumerazione come
+  identificatori liberi, assegnamenti dell'ultimo passo solo nel `title` di «Last step»). Il modale di
+  R-SIM-55 resta una corsia propria. C2: `equation`, grafo delle dipendenze e ciclo, risolutore in lettura in
+  `guardContext.ts`, bersaglio di sola lettura. `Verified: guardContext legge σ (state.attrs), che compileNet
+  popola dai valori iniziali, quindi C1 non lo tocca; sarebbe falso se l'accessore dovesse consultare
+  CompiledNet.declared, e non lo fa (§2(c) del report).`
+- **R-SIM-72** (2026-09-26, provisional, unattended). **Forma del record per i derivati, decisa ora per la
+  C2.** Un record ha esattamente uno fra `initial` e `equation`; `initial` diventa opzionale in
+  `StateAttributeDecl` con la C2 (Rule 11 in quella corsia), e un derivato con `initial`, o un memorizzato
+  con `equation`, è un difetto del record. Respinta la proposta del report di tenere `initial` obbligatorio e
+  ignorato: l'esportatore emetterebbe `VAR` con init e `DEFINE` per lo stesso nome, e il pannello mostrerebbe
+  un campo senza senso. La C1 non ne risente: i suoi record hanno sempre `initial`.
+
+### Decisioni 2026-09-27: corsia C2, attributi derivati (R-SIM-73..76)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_derived_attributes.md` (`655706bab`), undici
+decisioni del suo §10. Decise dalla chat `C-2026-09-26-1702` sotto RC-25 nella notte del 2026-09-27, su mandato
+esplicito di Alfonso («esegui la C2»), con la verifica avversariale di RC-27 su E1 (tre vincoli accolti). Le
+decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; qui le quattro strutturali.
+
+- **R-SIM-73** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Valutazione eager dei derivati (E1).** Al Reset e dopo ogni scatto, assemblata σ′, un `DerivedOracle`
+  opzionale di `step` valuta ogni attributo derivato su σ′ in ordine di dipendenza in una mappa `derived` di
+  sola lettura di `SimState`, ricostruita ogni volta e mai copiata in avanti; l'accessore ripiega su `derived`,
+  così guardie e azioni leggono un derivato come un memorizzato e `toJjelStateAccess` non cambia. Coincide con
+  il `DEFINE` di nuXmv (funzione pura dello stato corrente; `next(v)` legge lo stato corrente, derivati
+  compresi). Un fallimento, un risultato che non è un `SimValue` (la divisione per zero dà `null`) o un valore
+  fuori dominio: difetto di dichiarazione al Reset (valore assente, il run parte), halt `derived` o `domain`
+  dopo uno scatto con σ invariata. Un derivato che nessuno legge viene comunque valutato e può fermare il run:
+  rigore accettato, dichiarato. Ogni σ ricostruita da fuori (snapshot, traccia, modello modificato) ricalcola
+  `derived`, mai una copia salvata. Emenda la R-SIM-71 provvisoria sul risolutore in lettura. `Verified: la
+  semantica del parallelo regge (le azioni leggono i derivati di σ, il ricalcolo è su σ′); sarebbe falsa se
+  un'espressione potesse raggiungere un attributo senza nominarlo nel nodo StateAccess, e la grammatica di
+  R-SIM-40 lo esclude (l'attributo è un IDENTIFIER letterale).`
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat, punto 7 del digest): al Reset un derivato fuori dominio o fallito tiene il valore calcolato quando ne ha uno e mostra il difetto di dichiarazione (decisione 5 del report, implementazione `5060657c5`); «valore assente» sopra vale solo per un'equazione che non produce un `SimValue`.
+- **R-SIM-74** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Grafo delle dipendenze per nome, ciclo come difetto.** Gli archi vengono dai nodi `StateAccess` di ogni
+  equazione, chiave il nome dell'attributo (G1): conservativo, completo perché ogni accesso nomina l'attributo;
+  un ciclo tra istanze proietta su un ciclo tra nomi. Un ciclo è un difetto di dichiarazione su ogni membro, con
+  il ciclo nominato nel messaggio; l'ordine di valutazione è il topologico per nome. Limite dichiarato: una
+  ricorsione ben fondata sul contenimento (`total := own + sum(children.[total])`) è un self-loop per nome e
+  viene rifiutata; nuXmv, che controlla dopo l'appiattimento, la accetterebbe. Rinviato un raffinamento per
+  (metaclasse, nome). Un arco da un'equazione semantica a un derivato di presentazione è vietato (`E-NODE`
+  transitivo); un fallimento di presentazione non ferma la semantica.
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat `C-2026-09-27-1437`, 17:47, risposta A al report
+  `docs/discovery/discovery_2026-09-27_sim_derived_recursion.md` §9.1; codice `805c8ecdd`, `d2a19ccab`): il grafo
+  delle dipendenze di un run è per (elemento, attributo) su M congelato (G3). Per ogni proprietario di
+  un'equazione, l'oggetto di ogni nodo `StateAccess` che non legge σ si valuta su M congelato con `self` il
+  proprietario; una variabile legata da una lambda argomento di un metodo di collezione, o da `forall`/`exists`,
+  prende gli elementi della collezione su cui itera quando questa non legge σ; `node` è il proprietario. Dove
+  l'oggetto non si riduce così, o chiede più di 10 000 legami delle sue variabili, l'arco va a ogni proprietario
+  dell'attributo derivato per nome (il G1 di prima, ristretto a quel nodo). Un ciclo è un difetto di
+  dichiarazione, uno per dichiarazione: con il testo di prima se il ciclo resta su un elemento, con gli elementi
+  nominati (`equation cycle: c1.len → c2.len → c1.len`) se li attraversa; restano senza valore solo gli elementi
+  sul ciclo, e chi li legge viene valutato e fallisce, come prima per chi leggeva un nome ciclico. L'ordine è il
+  topologico per (elemento, attributo), a parità il rango del nome nell'ordine per nome e poi l'ordine degli
+  elementi, così ogni modello accettato da G1 conserva il piano di oggi. Una ricorsione ben fondata sul
+  contenimento o su un riferimento (`size := self.[own] + self.children.sum(c => c.[size])`,
+  `len := if self.next == null then 1 else self.next.[len] + 1`) è accettata; su un M ciclico lungo quel percorso
+  resta un difetto, come in nuXmv dopo l'appiattimento. Il raffinamento «per (metaclasse, nome)» cade: non avrebbe
+  tolto il limite. R-SIM-43 e R-SIM-18 restano come sono (risposta B): la forma su collezione si scrive con una
+  lambda o con `forall`, mai con una collezione a sinistra di `.[x]`.
+- **R-SIM-75** (2026-09-27, provisional, unattended, evidence: read, verified: agent, reversible: branch).
+  **Radici e record.** In un'equazione: `self` è il proprietario, la radice del modello per un globale, `model`
+  ammesso, `event` vietato (difetto di dichiarazione: un DEFINE non dipende dall'input), `node` `E-NODE` su
+  un'equazione semantica e ammesso su una di presentazione. Record: esattamente uno fra `initial` ed `equation`
+  (R-SIM-72), esclusività come difetto del record nel codec; `StateAttributeDecl.initial?` ed `equation?`;
+  `StateAttributeRecord.equation?`; un'azione su un bersaglio derivato è difetto `read-only` al Reset quando il
+  bersaglio si riduce e halt `read-only` nel core. Chiude la perdita di dati misurata (§4.5: la tabella C1
+  riscrive ogni record senza `equation` al primo edit).
+- **R-SIM-76** (2026-09-27, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Output di Moore e Mealy fuori dalla C2.** `simStateOutput` e `simTransitionOutput` non hanno lettori; gli
+  output legati a un ruolo sono un percorso sul modello congelato, quelli calcolati sono derivati sulla via E1;
+  corsia propria dopo la C2 (R-SIM-51). Il pannello riceve un selettore «stored | derived» e una cella
+  dell'equazione per le righe derivate, con il layout fissato alla visiva: se la demo di MODELS mostra il
+  pannello, questa modifica alla tabella è un punto di RC-26 e va nel digest.
+
+### Decisioni 2026-09-27: profili nel pannello, corsia demo (R-SIM-77..79)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_profiles_panel.md` (`1dddb15ae`), dieci decisioni del
+suo §7 e quattro punti di RC-26 del §8. Decise dalla chat `C-2026-09-26-1702` sotto RC-25 nella notte del
+2026-09-27 su mandato di Alfonso (procedere, domande raccolte per il mattino), con la verifica avversariale di
+RC-27 sul binder (due vincoli accolti). I quattro punti di RC-26 (A1 forma della demo M3, A2 quattro preset, A3
+emenda della riga Petri di R-SIM-54, A4 Initial/Final come classi) restano ad Alfonso: la corsia procede sulla
+raccomandazione per A1, A2 e A4, e non emenda R-SIM-54 (A3 resta nel digest).
+
+- **R-SIM-77** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Il binder: un modulo puro che lega un preset al metamodello, senza scegliere.** `profileBinder.ts` sopra
+  uno `MetamodelSketch` (raccolto da `metamodelSketch.ts` dal lookup grezzo) dà per ogni ruolo `edit`
+  `bound | candidates | none` con il motivo; lega solo con un candidato strutturale unico, non risolve mai un
+  pareggio (D1, D3). Vincolo dalla verifica: la struttura non è l'intento (l'unico attributo `Expression` di una
+  classe potrebbe non essere una guardia), quindi Apply non scrive alla cieca: il riepilogo elenca prima i
+  legami proposti (`Guard → PTrans.guard`) e Apply li conferma; un ruolo con candidati resta «Not checkable:
+  choose …» nel riepilogo, mai un no-op silenzioso. `collectMetaOptions` invariato.
+- **R-SIM-78** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Apply scrive una sola assegnazione dello stato, solo chiavi non impostate.** I valori legati delle chiavi
+  vuote dei ruoli `edit` più `simProfile`, mai sopra una chiave impostata, mai `undefined`, dopo il controllo di
+  sovrapposizione di `writeRole` (un rifiuto non scrive nulla), un solo passo di undo (D2). Cambiare profilo non
+  cancella legami (R-SIM-55): i legami di un profilo precedente restano e il riepilogo li elenca in una riga
+  «Set but off: …» (D8); un'azione «Clear bindings» è rinviata. `simProfile` assente → Custom; presente ma
+  illeggibile → Custom con una riga di avviso (D6). Nella corsia demo il motore legge il bag come oggi; il
+  risolutore che salta le chiavi `off` arriva dopo la riga Petri di R-SIM-54 (D4).
+- **R-SIM-79** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Forma M3 per la build demo, in attesa di A1.** Nel pannello M2 inline: una riga «Profile» con il selettore
+  dei preset di sistema (quattro per la demo: Petri net, Flowchart / Activity, State machine, Extended state
+  machine; DFA, NFA, Moore e Mealy nascosti finché R-SIM-50 e 51 non sono nel motore), Apply, una riga di
+  riepilogo con `checkability(profile, bag)` («Checkable» o «Not checkable» più i mancanti, mai «with warnings»
+  finché non esiste il controllo di compatibilità, D5), e «Configure…» che ripiega e riapre i gruppi inline
+  (scostamento dichiarato da R-SIM-55 fino alla corsia del modale, dopo MODELS). «Custom» è uno stato, non
+  un'opzione; «Save as…» e i profili utente aspettano il modale (D7). Stessa corsia: `max-height` con scroll sul
+  corpo del pannello, che oggi a 1000 px di viewport è alto 1006 px con l'intestazione nascosta (D10). Test:
+  binder su sette fixture, collettore su un lookup finto, `profileSummary`, banco di mutanti sulla regola del
+  pareggio, sulla regola «solo chiavi vuote» e sulla restrizione di lignaggio del Trigger (D9).
+
+### Decisioni 2026-09-27: prontezza demo, le tre corsie prima del freeze (R-SIM-80..82)
+
+Dal report `docs/discovery/discovery_2026-09-27_sim_demo_readiness.md` (`567dc25da`, P-2026-09-27-1015): quattro
+scenari misurati end-to-end sui quattro preset visibili, undici gap, tre demo-critical aperti (G1, G2, G3; G4 chiuso da
+`7455d0075`). Alfonso ha ratificato in chat (C-2026-09-26-1702, 2026-09-27 11:00) le sei decisioni A..F del §10 «tutte
+come raccomandato», quindi le righe qui sotto non sono provvisorie.
+
+- **R-SIM-80** (2026-09-27, evidence: measured, verified: none, reversible: branch). **Etichette degli eventi dal nome
+  dell'istanza (G1, decisione A).** `objectLabel` in `objectSlots.ts` ripiega su `lookup[id].name` prima di `shortId`,
+  così i pulsanti degli eventi e la riga «Last step» leggono `coin` e non `…_136` quando la classe Event non ha un
+  attributo `name` proprio. Corsia R1, fast, nessun file del motore di C2. Alternativa scartata: aggiungere `name` a
+  Event nel metamodello della demo (vincolo di script invece di codice).
+- **R-SIM-81** (2026-09-27, evidence: measured, verified: none, reversible: branch). **L'Apply completa le forme
+  naturali (G2, G5, G9; decisioni B e C).** (1) Bound: se il preset è Petri e il valore non è impostato, Apply propone
+  `simBound` = massimo marking iniziale sui modelli M1 del metamodello quando supera 1, con un aiuto puro sul lookup;
+  la proposta è elencata prima di Apply come le altre (R-SIM-77). (2) Node e Transition possono legarsi a una classe
+  astratta nei profili a controllo di flusso: il binder la accetta e il select la elenca; emenda la decisione interna a
+  M3 «un ruolo di classe lega solo una classe concreta», che resta per gli altri ruoli. (3) Quando Action, Entry o Exit
+  è legata e `simStateAttributes` è vuota, il riepilogo mostra una riga che invita a dichiarare gli attributi, con
+  «Add attribute» raggiungibile senza aprire Configure…. Corsia R2, fast; nessun file del motore.
+  **Emendata il 2026-09-27, punto (1)** (ratified by Alfonso 2026-09-27, risposta A del report
+  `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md` §7, chat C-2026-09-27-1437, 16:05; G12(b)): Apply
+  propone `simBound` dall'esplorazione limitata dei marking raggiungibili dei modelli M1 del metamodello, non più dal
+  massimo marking iniziale. Ogni modello si compila con `compileNet` sul bag come Apply lo lascia, a bound sollevato;
+  guardie e trigger si ignorano, inibitori e terminazione si tengono; un marking che copre un antenato sul proprio
+  cammino con più token ferma l'esplorazione (controllo di Karp e Miller); al più 2000 marking fra tutti i modelli.
+  La proposta è il massimo dei token su un posto quando l'esplorazione chiude su ogni modello, e solo sopra 1: così
+  non è mai la causa di un arresto `unsafe` (R-SIM-23). Quando non chiude (copertura, tetto, o ruoli che dopo Apply
+  non danno una rete) la proposta è il massimo marking iniziale di prima, con un titolo che dice perché. Il pannello
+  legge nel selettore solo la firma dei modelli; l'esplorazione gira in un memo su di essa (report §5.1 rischio 5).
+  La decisione H resta per la demo; sulla rete della demo la proposta legge `Bound → 4`, e il passo 3 del copione
+  diventa ridondante (corsia docs dopo il merge). Codice `917b1546b` (corsia E2, P-2026-09-27-1611).
+- **R-SIM-82** (2026-09-27, evidence: measured, verified: none, reversible: branch). **La faccia M1 per il pubblico
+  (G3, G8, G10, G11; decisioni D ed F).** Una riga della faccia M1 mostra per tutto il run il marking con i conteggi e
+  poi σ (`Marking: p2 ×2, p3 · coins = 2, paid = true`), aggiornata a ogni scatto, clampata (R-SIM-63, R-SIM-66); la
+  lista delle scelte sale sopra i pulsanti, completando R-SIM-65 (Step non si muove: misurato 854.5 → 751.9 oggi);
+  `haltSource` toglie il prefisso `JjelEvaluationError:` come già per `derived`; un lato vuoto di una transizione si
+  scrive `∅`. Corsia R3, piena con verifica visiva, dopo R2 (entrambe toccano `SimulationPanel.tsx`); tocca
+  `simBridge.ts`, file di C2, quindi dopo il rientro del tronco in `simulation-engine`. Decisione E (flowchart della
+  demo con `FinalNode` e complemento esplicito; R-SIM-53 e `else` verso Fork/Join dopo MODELS) è un vincolo di script,
+  registrato nel report §8, senza corsia.
+
+### Decisioni 2026-09-27: corsia E1, il motore dopo MODELS (R-SIM-83..84)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md` (`948fdad8a`, P-2026-09-27-1545),
+§2 e §3; risposte di Alfonso del 2026-09-27 16:05 (A sì, B no, `f60a0f0b2`). Attuate dalla corsia E1
+(P-2026-09-27-1610, codice `45a796050` e `bce34aee1`) sotto RC-25. Nessuna riga ratificata da Alfonso cambia:
+R-SIM-53 e R-SIM-31(1) sono attuate come scritte.
+
+- **R-SIM-83** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Il motore legge l'activity final (G6).** R-SIM-53 attuata come scritta: `simActivityFinal` entra nella STC
+  (`NetStc.activityFinal`), la rete compilata ne porta i posti per kind-of (`CompiledNet.activityFinal`, `null`
+  senza il ruolo), e `terminated` è vero quando uno di essi è marcato, qualunque altro token sia vivo. L'insieme
+  non si fonde in F: «ogni posto marcato in F» resta com'era, l'activity final è un disgiunto a parte. Con il
+  commit `45a796050` la chiave esce dalle provvisorie di R-SIM-52. Il punto (2) dei «Punti aperti chiusi» del
+  2026-09-25 (attuazione con la corsia di Accepting e degli output) è sciolto dalla chat: G6 va da sola. La riga
+  del pannello per la chiave arriva con la corsia E2; fino ad allora la chiave si vede solo nelle proposte di
+  Apply (report §5.1 rischio 1). Sui quattro preset della demo nulla cambia (report §2.6; Flow B identico).
+- **R-SIM-84** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **`else` sulle transizioni fuse, e il difetto `else-position` (G7).** R-SIM-31(1) attuata come scritta anche
+  dopo la fusione di fork e join: l'`else` si riconosce sull'arco di scelta della transizione fusa (l'arco
+  entrante in un fork, un arco uscente da un join), i fratelli restano «stesso preset, stessi trigger», e si
+  risolve una volta sola su transizioni semplici e fuse insieme, quindi anche l'`else` di un arco semplice vede
+  il fratello che entra in un fork. Perde il proprio sito di guardia solo l'arco `else`: le guardie degli altri
+  archi della transizione fusa restano e si congiungono dopo il complemento (R-SIM-17); quando falliscono, la
+  voce di valutazione è il loro esito e la spiegazione nomina l'arco. Un `else` su un arco entrante in un join o
+  uscente da un fork non ha fratelli sotto R-SIM-31(1): è il difetto di compilazione `else-position` (letterale
+  nuovo di `NetDefectCode`, additivo per la regola 11 come in R-SIM-70) e quel nodo non compila. L'emendamento B
+  (fratelli letti sull'arco) è respinto da Alfonso il 2026-09-27. R-SIM-64 (Petri) invariata.
+
+### Decisioni 2026-09-27: il dialogo Simulation roles entra nella demo (R-SIM-85)
+
+Decisa da Alfonso nella chat di progetto `C-2026-09-27-1437`, 2026-09-27 17:39, dopo la scrittura di
+P-2026-09-27-1740: «voglio il modale gia nella demo e se ci sono problemi faremo un roll back». È una decisione
+sua, riportata dalla chat, non un'inferenza della chat: non è provvisoria. Registrata dalla corsia di merge
+P-2026-09-27-2049.
+
+- **R-SIM-85** (2026-09-27, ratified by Alfonso 2026-09-27 17:39, evidence: read, verified: agent, reversible: trunk).
+  **Il branch `sim-modal` entra nel trunk prima del freeze del 2026-10-01, e la demo MODELS percorre il
+  dialogo Simulation roles.** Sostituisce la riga di P-2026-09-27-1740 (COSA, decisioni di Alfonso del
+  2026-09-27) «the branch is not merged on the trunk before 2026-10-04, because the MODELS demo walks the current
+  panel». Merge `5eccdd4d2` (P-2026-09-27-2049). Punto di rollback: il tag locale `pre-sim-modal` su
+  `d9e88f792`, la base del merge. Il copione `docs/demo/models_2026_simulator_demo.md` resta stale su §2.2
+  passo 3, §2.3 e §2.4 finché la corsia docs che la chat lancia subito dopo non lo ripercorre attraverso il
+  dialogo (ticket high della Fase 2 di P-2026-09-27-1740).
+
+### Decisioni 2026-09-28: il run salta i ruoli off (R-SIM-86)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_modal.md` §3.2 («Not read by the run») e §11 punto 1
+(il risolutore in una corsia propria dopo quelle che liberano `simBridge.ts`); R-SIM-78 («il risolutore che salta
+le chiavi `off` arriva dopo la riga Petri di R-SIM-54», emendata da Alfonso il 2026-09-27, A3). Attuata dalla
+corsia P-2026-09-28-0100 (codice `22cc00ffd`) sotto RC-25. Nessuna riga ratificata da Alfonso cambia; il
+validatore (`derivedFromOff`) resta com'è.
+
+- **R-SIM-86** (2026-09-28, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Un ruolo `off` si legge come non legato.** Il run legge il bag attraverso `runBag` (`simBridge.ts`): le
+  chiavi dei ruoli che il profilo mette `off` cadono prima di `netStcFromRoles`, la classe degli eventi si deriva
+  dal Trigger salvo Event `off` (R-SIM-38), e `simStateAttributes` si legge dallo stesso bag; `runSignature`
+  legge lo stesso bag, così una chiave di un ruolo `off` modificata non interrompe il run. Il profilo è quello
+  che il pannello nomina (`storedProfile`): `simProfile`, altrimenti «Custom» ricostruito dalle chiavi, i cui
+  ruoli `off` sono le chiavi che non legge (`inferCustomProfile`). Si risolve solo `off`: un ruolo `derived` con
+  la chiave impostata si legge come prima (Bound k = 1 nei profili a controllo di flusso, la chiave vince).
+  Una lettura cambia fuori da un profilo esplicito: un bag senza `simProfile` con una chiave di azione e senza
+  `simStateAttributes` («Custom» spegne Action, Entry ed Exit per mancanza di State attributes) gira senza le
+  azioni, che prima erano difetti al Reset e fermavano il run allo sparo. `netCompile.ts` invariato. I bag dei
+  quattro preset della demo non hanno chiavi di ruoli `off`: le quattro scene e le righe dei difetti al Reset
+  sono identiche a P-2026-09-28-0023 (misurate su 3033). Restano sul bag grezzo i lettori fuori dal run (il
+  pannello, l'esplorazione del Bound, il produttore P2a): ticket della corsia.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
@@ -3172,6 +4321,74 @@ rimedio sarebbe l'eccezione che la decisione toglie. Iscritto e fuori: `hasConte
 l'albero con «No metamodels» in un progetto vuoto, e nessuno dei tre concern si vede proprio quando
 la scoperta servirebbe.
 
+
+
+## Serie R-NV — nascita delle view e proprietà del viewpoint (ratifiche 2026-09-15/18)
+
+Sessioni `sessione_2026-09-16.md` e `sessione_CORRENTE.md`. Cinque fette committate e verificate a
+schermo; qui il vincolo operativo, le misure restano nei file di sessione.
+
+**R-NV-1** (2026-09-15) — **Il tipo del viewpoint non è una scelta dell'utente.** Nel dialogo New
+Viewpoint solo `syntax` resta selezionabile. `decoration`, `validation`, `semantics`,
+`editor_behavior` restano visibili e disabilitati, perché un viewpoint salvato con quel tipo deve
+continuare a mostrare il proprio (e `decoration` è il valore di ricaduta di `getViewpointType`). Le
+ragioni sono distinte e non si fondono: la validazione ha una specie propria
+(`DValidationViewpoint`) e un ambiente di authoring suo (serie R-VAL); `semantics` ed
+`editor_behavior` non hanno consumatori, perché ogni lettura a valle confronta `vpType === 'syntax'`;
+`decoration` è consumato da `selectors.ts:558` (`VP_Decorative`), quindi i decorativi esistenti
+continuano a rendersi e si congela solo la creazione dall'interfaccia. `dataManager` resta fuori dai
+selettori per costruzione (R-DMV-4). Corollario misurato: la ragione non si appende alla descrizione
+dell'opzione disabilitata, perché un `<option disabled>` non diventa mai il valore del select e quel
+testo è irraggiungibile (`98e6fd6cb`).
+
+**R-NV-2** (2026-09-15) — **Il tema della form è proprietà del Data Manager Viewpoint**, non del
+viewpoint di sintassi. Il select in `ViewpointProperties` era UI morta: unico lettore il rung 0 in
+`IRForm.tsx:232-237`, che passa da `viewpointOfHost`, e `IRForm` è montato solo con `host="manager"`.
+Rimosso (`d039fc7e7`). Il campo `formTheme` su `DViewElement` resta: nessuna migrazione, nessun bump
+del VersionFixer. Iscrive nel repo la conseguenza di R-DMV-1 e R-DMV-4, che fin qui era solo nel
+codice.
+
+**R-NV-3** (2026-09-16) — **Il `+` sul viewpoint chiede a cosa si applica la view**, invece di
+crearne una vuota. Una view IR vuota non esiste: col wildcard matcha tutto a specificità minima e
+ridisegna il canvas del viewpoint attivo, con `metaclasses: []` il viewpoint passa comunque in resa
+IR e i nodi diventano neutri. Il difetto non era il seme, era il gesto che creava senza sapere per
+cosa. Invariante di creazione: una view creata dal `+` per la classe X è identica campo per campo a
+una creata dal menu contestuale di X, garantita per costruzione riusando `createViewInWorkbench` e
+non riseminando. Etichetta e destinazione vengono da una sola risoluzione, con l'id del viewpoint
+risolto passato come quarto argomento; i cancelli si agganciano a `hasCreatableViewpoint()`, la
+stessa condizione della priorità 2 di `resolveParentViewpoint`, così cancello e risoluzione non
+possono divergere. I quattro fallback su `Pointer_ViewPointDefault` non si rimuovono e non si fanno
+convergere: servono alla creazione programmatica, e l'invariante da difendere («nessun gesto
+dell'utente crea una view in Default») si difende ai chiamanti.
+
+**R-NV-4** (2026-09-18) — **Una lista di metaclassi vuota è una modifica incompleta, non un
+matching.** `metaclasses: []` non si committa: resta nel draft, il gate di commit dei tre pannelli lo
+salta (predicato puro `isCommittableMatching` in `authoring/committableMatching.ts`) e il flush
+all'unmount lo scarta, quindi non sopravvive al cambio di tab (`3f5fe347b`). Che un draft incompleto
+debba invece sopravvivere al cambio di tab è una decisione a parte, non presa qui.
+
+
+## Serie R-JS — JjScript, esecuzione degli script M2 (ratifiche 2026-09-17)
+
+**R-JS-1** (2026-09-17) — **Un `create` è all-or-nothing sulle superclassi.** Tutte si risolvono
+prima di creare la classe e una sola mancante rifiuta l'intero create, invece di creare la classe e
+attaccarle le superclassi risolte (`4898aa60f`): una classe a metà è peggio di una classe non creata,
+perché il rifiuto si vede e la generalizzazione mancante no. Due conseguenze accettate e misurate: le
+dipendenze `superclass` di `class`, `abstract class` e `interface` diventano `required: true`, così
+`waitForDependencies` aspetta una superclasse creata dalla riga precedente dello stesso script invece
+di risolverla prima che Redux l'abbia propagata (`9345a4046`, report
+`discovery_2026-09-17_superclass_same_script_race.md`); e una superclasse davvero assente impiega
+fino a 500 ms a essere rifiutata. La gara non è del ruolo `superclass`: `waitForDependencies` in
+`jjscript/executor/dependencies.ts` aspetta solo le dipendenze `required: true`, quindi ogni ruolo
+lasciato `required: false` la corre, a partire da `type-reference` (`dependencies.ts:205-235`).
+
+## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homonyms.md`.
+
+**R-MCID-1** (2026-09-19) — **Due metaclassi dichiarate da metamodelli diversi sono metaclassi diverse anche quando hanno lo stesso nome.** Una view può elencarle entrambe o una sola, e il resolver onora esattamente la scelta. `ir.metaclasses` resta una lista di nomi e l'indice del resolver resta per nome; l'identità sta in `authoringMetaclassPins`, che da oggi ammette per nome un id o un array di id (`string | string[]`, additivo, nessun bump di `irVersion`, array di lunghezza 1 scritto come stringa). Un nome senza pin continua a significare «ogni classe con quel nome» (view autorate prima del pin). Il picker esclude per id, non per nome. Le feature del PathBuilder si risolvono dalla prima metaclasse in lista e, se ha più pin, dal primo. Chiude il difetto del 2026-09-19 (dropdown "Add metaclass…" che nascondeva `metamodel_2.State` dopo l'aggiunta di `metamodel_1.State`).
+
+**R-MCID-2** (2026-09-19) — **Un array vuoto non è un pin: `pinAccepts` e `withMetaclassPins` lo leggono in modo diverso, di proposito.** `pinAccepts` applica `includes` come scritto, quindi un `[]` scritto a mano non accetta nessuna classe (la view non matcha nulla); `withMetaclassPins` e `metaclassEntries` lo leggono come «nessun pin» (ricade sulla catena, la riga resta visibile e rimovibile). L'authoring non scrive mai `[]`: un array che si svuota toglie la chiave e il nome dalla lista. La differenza è dichiarata nel commento di `AuthoringMetaclassPins` in `irTypes.ts`.
 
 ## Superate
 

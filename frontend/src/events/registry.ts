@@ -45,6 +45,14 @@ export const JjodelEvents = {
   // view (and toggles the pin off when the same view comes back). Navigation entries that
   // just need the panel on screen dispatch this one and leave the pin alone.
   PROPERTIES_SHOW: 'jjodel:properties-show',
+  // R-VAL. L'esito di un giro di validazione definita dall'utente, dal comando alla
+  // superficie che lo mostra. detail: ValidationRunResult & { modelId, modelName } | null.
+  // `null` significa «non ho potuto guardare», che non e' «va tutto bene»: la superficie
+  // deve distinguerli.
+  VALIDATION_RESULTS: 'jjodel:validation-results',
+  // R-VAL. Apre l'ambiente di authoring delle regole su un metamodello.
+  // detail: { metamodelId: string; metamodelName?: string }.
+  VALIDATION_RULES_OPEN: 'jjodel:validation-rules-open',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   CREATE_MODEL: 'jjodel:createModel',
@@ -55,6 +63,9 @@ export const JjodelEvents = {
   // quello silenzioso: l'autosave non notifica piu' l'utente, quindi l'indicatore
   // di «ultimo salvataggio» e' l'unico posto in cui resta leggibile.
   PROJECT_SAVED: 'jjodel:project-saved',
+  // stateInitializer changed ProjectsApi.isLoading or ProjectsApi.loadError, which live outside
+  // the store; the project page re-renders on it (P-2026-09-25-0030). No detail.
+  PROJECT_OPEN_CHANGED: 'jjodel:project-open-changed',
   OPEN_TRANSFORMATION: 'jjodel:openTransformation',
   TRANSFORMATIONS: 'jjodel:transformations',
   OPEN_NEW_TRANSFORMATION_DIALOG: 'jjodel:open-new-transformation-dialog',

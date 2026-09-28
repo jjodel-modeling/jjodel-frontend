@@ -582,7 +582,8 @@ describe('10c — zero regressioni sulle superfici FL6 / 10b / FL7', () => {
     });
 
     it('FL6: la riga espandibile segue ancora la selezione, e non e\' un secondo stato', () => {
-        expect(TSX).toContain('const isExpanded = row.id === subjectId;');
+        // #158 P5 — con in AND l'interruttore di vista del vicinato, uno per il tab.
+        expect(TSX).toContain('const isExpanded = row.id === subjectId && showNeighborhood;');
         expect(CODE).not.toContain('expandedId');
     });
 

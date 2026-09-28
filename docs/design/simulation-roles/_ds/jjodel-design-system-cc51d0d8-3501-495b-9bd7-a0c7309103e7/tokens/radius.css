@@ -1,0 +1,23 @@
+/* ============================================================
+   JJODEL DESIGN TOKENS — BORDER RADIUS
+   Modest rounding. 4px on tight controls, 8px on buttons,
+   12px on cards/panels, pills are fully rounded.
+   ============================================================ */
+
+:root {
+  --radius-none: 0;
+  --radius-sm: 4px;     /* inputs, tags, tooltips, version chips */
+  --radius-md: 8px;     /* buttons, dropdowns */
+  --radius-lg: 12px;    /* cards, panels, canvas nodes */
+  --radius-xl: 16px;    /* modals, dialogs, form cards */
+  --radius-2xl: 24px;   /* special cases */
+  --radius-full: 9999px;/* pills, avatars */
+
+  --radius-button: var(--radius-md);
+  --radius-input: var(--radius-md);
+  --radius-card: var(--radius-lg);
+  --radius-modal: var(--radius-xl);
+  --radius-dropdown: var(--radius-md);
+  --radius-tooltip: var(--radius-sm);
+  --radius-node: var(--radius-lg);
+}
