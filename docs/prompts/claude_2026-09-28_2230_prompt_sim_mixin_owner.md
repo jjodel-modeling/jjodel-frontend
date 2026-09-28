@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-2230
 Chat: C-2026-09-28-1936
 Lane: fast (one verdict rule in `judge`, its tests, one engine test; no discovery). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane sim-mixin-owner · 68dbbc1fb (fix), 18e63e184 (discovery) · verifica visiva non eseguita da questa sessione (il prompt vieta dev server/probe qui: le quattro scene demo restano da verificare alla chat prima del merge)
 
 Worktree: `~/jjodel-w-mixin`, branch `sim-mixin-owner` (cut by the chat from `alfonso-frontend-jjtl` at `d3dbacb36`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-mixin`, branch `sim-mixin-owner`, `git log -1` is the docs commit that added this prompt and the R-SIM-89 row; if any of the three differs, stop with `Outcome: blocked` and say which.
 
