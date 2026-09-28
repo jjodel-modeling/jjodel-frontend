@@ -50,7 +50,7 @@ import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
-import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
+import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
 import { systemProfile } from '../../../model/simulation/simProfiles';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { SimProfile } from '../../../model/simulation/simProfiles';
@@ -386,21 +386,23 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const noCandidate = new Map<string | null, string>();
         // R-SIM-88: a button whose press reads an input names it in its title.
         const asks = new Map<string | null, string>();
+        // R-SIM-90: every Guard attribute, decoded from the bag's key.
+        const guards = roleValues(roles.simGuard);
         if (status === 'Running') {
             for (const e of [...(inputs.epsilon ? [null] : []), ...inputs.events]) {
-                const why = inputReason(r, e, lookup, label, roles.simGuard);
+                const why = inputReason(r, e, lookup, label, guards);
                 if (why) noCandidate.set(e, why.full);
                 const read = inputAsks(r, e);
                 if (read.length > 0) asks.set(e, read.map(a => inputLabel(a, r.net, lookup)).join(', '));
             }
         }
         // The halt names elements, never ids; the action that stopped the run is in its title only (R-SIM-62, R-SIM-70).
-        const features = { action: roles.simAction, entry: roles.simEntry, exit: roles.simExit };
+        const features = { actions: roleValues(roles.simAction), entries: roleValues(roles.simEntry), exits: roleValues(roles.simExit) };
         return {
             status,
             inputs,
             halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features, r.net) } : null,
-            reason: status === 'Deadlock' ? stopReason(r, lookup, label, roles.simGuard) : null,
+            reason: status === 'Deadlock' ? stopReason(r, lookup, label, guards) : null,
             noCandidate,
             asks,
             // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3).

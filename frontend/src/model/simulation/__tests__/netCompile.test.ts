@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../netCompile';
+import { compileNet, eventAlphabet, featuresOf, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../netCompile';
 import { candidates } from '../netStep';
 import { isKindOf } from '../isKindOf';
 import { objectReferences, objectSlotValues } from '../objectSlots';
@@ -101,8 +101,9 @@ describe('netStcFromRoles (R-SIM-28, R-SIM-31, R-SIM-32)', () => {
     it('the action keys reach the STC (R-SIM-69): simAction, simEntry, simExit, and the run needs none of them', () => {
         const stc = netStcFromRoles({ ...petri, simAction: 'A_act', simEntry: 'A_in', simExit: 'A_out' });
         expect([stc?.action, stc?.entry, stc?.exit]).toEqual(['A_act', 'A_in', 'A_out']);
+        // R-SIM-90: the list field beside the first attribute, a one-element list for a plain id
         expect(netStcFromRoles({ ...cf, simEntry: 'A_in' })).toEqual({
-            shape: 'control-flow', bound: 1, initial: 'C_Init', ownedTransitions: 'R_out', nextState: 'R_next', entry: 'A_in',
+            shape: 'control-flow', bound: 1, initial: 'C_Init', ownedTransitions: 'R_out', nextState: 'R_next', entry: 'A_in', entries: ['A_in'],
         });
         // control: without them the STC has no action field, and it still runs
         expect(netStcFromRoles(petri)).not.toHaveProperty('action');
@@ -894,5 +895,83 @@ describe('R-SIM-88: input declarations at compile (P-2026-09-28-0034)', () => {
         ]);
         expect(net.initial.attrs.size).toBe(0);
         expect(net.initial.presentation.size).toBe(0);
+    });
+});
+
+describe('R-SIM-90: Guard, Action, Entry and Exit read as lists (P-2026-09-29-0010)', () => {
+    const cf = { simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
+
+    it('a list fills the first attribute and the list field; a plain id gives a one-element list (mutant: the key read as one pointer)', () => {
+        const stc = netStcFromRoles({
+            ...cf, simGuard: '["A_g","A_h"]', simAction: 'A_act', simEntry: '["A_in","A_in2"]', simExit: '["A_out","A_out"]',
+        });
+        expect([stc?.guard, stc?.guards]).toEqual(['A_g', ['A_g', 'A_h']]);
+        expect([stc?.action, stc?.actions]).toEqual(['A_act', ['A_act']]);
+        expect([stc?.entry, stc?.entries]).toEqual(['A_in', ['A_in', 'A_in2']]);
+        expect([stc?.exit, stc?.exits]).toEqual(['A_out', ['A_out']]);
+        // control: an unbound role has neither field
+        for (const field of ['guard', 'guards', 'action', 'actions']) expect(netStcFromRoles(cf)).not.toHaveProperty(field);
+    });
+
+    it('the other keys stay single: a JSON text there is one pointer (mutant: every key decoded)', () => {
+        const stc = netStcFromRoles({ ...cf, simStateOutput: '["A_a","A_b"]', simTransitionOutput: 'A_t' });
+        expect([stc?.stateOutput, stc?.transitionOutput]).toEqual(['["A_a","A_b"]', 'A_t']);
+        expect(stc).not.toHaveProperty('stateOutputs');
+    });
+
+    it('featuresOf reads the list, else the first attribute alone of a hand-built STC, else nothing', () => {
+        expect(featuresOf({ guard: 'A_g', guards: ['A_g', 'A_h'] }, 'guard')).toEqual(['A_g', 'A_h']);
+        expect(featuresOf({ guard: 'A_g' }, 'guard')).toEqual(['A_g']);
+        expect(featuresOf({ entry: 'A_in' }, 'exit')).toEqual([]);
+        expect(featuresOf({ action: 'A_a', actions: ['A_a', 'A_b'] }, 'action')).toEqual(['A_a', 'A_b']);
+    });
+
+    const G2: NetStc = { ...CF, guard: 'A_g', guards: ['A_g', 'A_h'] };
+    /** D feeds e3 [x < 2] and e4, whose two Guard attributes are given: siblings. */
+    const decision = (e4: Record<string, unknown[]>) => compile(G2, {
+        classes: CLASSES,
+        objects: {
+            D: { cls: 'C_Init', slots: { R_out: ['e3', 'e4'] } }, I: { cls: 'C_Node' }, E: { cls: 'C_End' },
+            e3: { cls: 'C_Tr', slots: { R_next: ['I'], A_g: ['x < 2'] } },
+            e4: { cls: 'C_Tr', slots: { R_next: ['E'], ...e4 } },
+        },
+    });
+
+    it('else in the second Guard attribute alone marks the edge, which loses its site (answer 3; mutant: else read in the first attribute only)', () => {
+        const net = decision({ A_h: ['else'] });
+        const t = byId(net.transitions);
+        expect([t.e4.elseOf, t.e4.guardSites]).toEqual([['e3'], []]);
+        expect(net.defects).toEqual([]);
+        // a blank first attribute is no guard: the site still goes
+        expect(byId(decision({ A_g: ['  '], A_h: [' else '] }).transitions).e4.guardSites).toEqual([]);
+    });
+
+    it('else beside a non-blank Guard attribute keeps the site: that guard holds after the complement (answer 3, G7; mutant: the site dropped)', () => {
+        const net = decision({ A_g: ['y > 0'], A_h: ['else'] });
+        const t = byId(net.transitions);
+        expect([t.e4.elseOf, t.e4.guardSites]).toEqual([['e3'], ['e4']]);
+        // the core: e3 false, the complement true, then e4's other guard decides
+        const state = { marking: new Map([['D', 1]]), attrs: new Map(), presentation: new Map() };
+        const oracle = (other: 'true' | 'false'): GuardOracle => site => ({ kind: site === 'e3' ? 'false' : other });
+        expect(candidates(net, { state, event: null }, oracle('false')).candidates.map(c => c.transition)).toEqual([]);
+        expect(candidates(net, { state, event: null }, oracle('true')).candidates.map(c => c.transition)).toEqual(['e4']);
+    });
+
+    it('a Petri transition reads else over every Guard attribute too', () => {
+        const PG2: NetStc = {
+            shape: 'petri', bound: 1, node: 'C_P', transition: 'C_T', arc: 'C_A', arcSource: 'R_s', arcTarget: 'R_t', initialMarking: 'A_m',
+            guard: 'A_g', guards: ['A_g', 'A_h'],
+        };
+        const arc = (s: string, t: string) => ({ cls: 'C_A', slots: { R_s: [s], R_t: [t] } });
+        const petri = (te: Record<string, unknown[]>) => compile(PG2, {
+            classes: { C_P: [], C_T: [], C_A: [] },
+            objects: {
+                p: { cls: 'C_P', slots: { A_m: [1] } }, a: { cls: 'C_P' }, b: { cls: 'C_P' },
+                tf: { cls: 'C_T', slots: { A_g: ['false'] } }, te: { cls: 'C_T', slots: te },
+                x1: arc('p', 'tf'), x2: arc('tf', 'a'), x3: arc('p', 'te'), x4: arc('te', 'b'),
+            },
+        });
+        expect(byId(petri({ A_h: ['else'] }).transitions).te).toMatchObject({ elseOf: ['tf'], guardSites: [] });
+        expect(byId(petri({ A_g: ['y > 0'], A_h: ['else'] }).transitions).te).toMatchObject({ elseOf: ['tf'], guardSites: ['te'] });
     });
 });

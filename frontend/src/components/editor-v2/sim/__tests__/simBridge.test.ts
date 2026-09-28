@@ -1687,3 +1687,171 @@ describe('R-SIM-88: inputs asked at the press that reads them (P-2026-09-28-0034
         ]);
     });
 });
+
+describe('R-SIM-90: Guard, Action, Entry and Exit hold a list of attributes (P-2026-09-29-0010)', () => {
+    /** visits on every place, 0..3; f a global boolean, initially `f`. */
+    const decls = (f = false) => JSON.stringify({ v: 1, attrs: [
+        { name: 'visits', metaclass: 'C_Place', space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' },
+        { name: 'f', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: String(f) },
+    ] });
+    const PETRI = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+        simInitialMarking: 'A_tokens', simBound: '3',
+    };
+    type Slots = Record<string, unknown[]>;
+    const arc = (s: string, t: string): Obj => ({ cls: 'C_Arc', slots: { R_src: [s], R_tgt: [t] } });
+
+    function petri(roles: Record<string, unknown>, objects: Record<string, Obj>, f = false): Lookup {
+        const lookup = buildLookup({ ...PETRI, simStateAttributes: decls(f), ...roles }, objects);
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        lookup.M.name = 'multi';
+        return lookup;
+    }
+    /** p1 (1 token) -a1-> t1 -a2-> p2, t1 and p2 with the slots given. */
+    const line = (roles: Record<string, unknown>, t1: Slots = {}, p2: Slots = {}) => petri(roles, {
+        p1: { cls: 'C_Place', slots: { A_tokens: [1] } }, p2: { cls: 'C_Place', slots: p2 }, t1: { cls: 'C_PTr', slots: t1 },
+        a1: arc('p1', 't1'), a2: arc('t1', 'p2'),
+    });
+    /** p1 (1 token) feeds tA -> pA and tE -> pE: one preset, so an `else` on tE is the complement of tA. */
+    const pair = (roles: Record<string, unknown>, tA: Slots, tE: Slots, f = false) => petri(roles, {
+        p1: { cls: 'C_Place', slots: { A_tokens: [1] } }, pA: { cls: 'C_Place' }, pE: { cls: 'C_Place' },
+        tA: { cls: 'C_PTr', slots: tA }, tE: { cls: 'C_PTr', slots: tE },
+        a1: arc('p1', 'tA'), a2: arc('tA', 'pA'), a3: arc('p1', 'tE'), a4: arc('tE', 'pE'),
+    }, f);
+
+    const record = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record(lookup)).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const eps = (lookup: Lookup) => pressInput('M', null, undefined, lookup, 'ε');
+    const status = () => {
+        const run = getSimRun('M')!;
+        return netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+    };
+    const label = (e: string | null) => (e === null ? 'ε' : e);
+    const GUARDS = '["A_guard","A_cond"]';
+
+    it('the silent failure of the discovery (§4.3): a list is never read as one pointer, so its guards never degrade to true', () => {
+        const lookup = line({ simGuard: GUARDS }, { A_guard: ['false'], A_cond: ['false'] });
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        expect(status()).toBe('Deadlock');
+    });
+
+    it('the guard is the conjunction of every Guard attribute: one false blocks the transition, the reason names both texts (mutants: any-of; the first attribute only)', () => {
+        for (const [a, b] of [['true', 'false'], ['false', 'true']]) {
+            const lookup = line({ simGuard: GUARDS }, { A_guard: [a], A_cond: [b] });
+            reset(lookup);
+            expect(status(), `${a} and ${b}`).toBe('Deadlock');
+            expect(stopReason(getSimRun('M'), lookup, label, ['A_guard', 'A_cond'])?.title).toBe(`ε: t1 (p1 → p2) false [${a}] [${b}]`);
+            expect(inputReason(getSimRun('M'), null, lookup, label, ['A_guard', 'A_cond'])?.full).toBe(`ε: t1 (p1 → p2) false [${a}] [${b}]`);
+        }
+        // control: both true, it fires
+        const both = line({ simGuard: GUARDS }, { A_guard: ['true'], A_cond: ['true'] });
+        reset(both);
+        expect(eps(both).outcome?.kind).toBe('fired');
+    });
+
+    it('the raw key, as a caller held it before R-SIM-90, gives the same reason as the decoded list (mutant: a string read as one pointer)', () => {
+        const lookup = line({ simGuard: GUARDS }, { A_guard: ['true'], A_cond: ['false'] });
+        reset(lookup);
+        expect(stopReason(getSimRun('M'), lookup, label, GUARDS)?.title).toBe('ε: t1 (p1 → p2) false [true] [false]');
+        // control: a plain id reads its one text, as before
+        expect(stopReason(getSimRun('M'), lookup, label, 'A_cond')?.title).toBe('ε: t1 (p1 → p2) false [false]');
+    });
+
+    it('a Guard attribute the transition does not carry contributes true (R-SIM-17) (mutant: an attribute not carried read as false)', () => {
+        const lookup = line({ simGuard: '["A_guard","A_other"]' }, { A_guard: ['true'] });
+        expect(reset(lookup).compileDefects).toEqual([]);
+        expect(eps(lookup).outcome?.kind).toBe('fired');
+        // control: the attribute it carries still counts
+        const off = line({ simGuard: '["A_guard","A_other"]' }, { A_guard: ['false'] });
+        reset(off);
+        expect(status()).toBe('Deadlock');
+    });
+
+    it('a defect in the second Guard attribute is a Reset defect of the site, with its own text, and wins over a false one (mutants: the first attribute only; false before a defect)', () => {
+        const lookup = line({ simGuard: GUARDS }, { A_guard: ['true'], A_cond: ['a b'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['t1', 'guard', 'parse-error', 'a b']]);
+        expect(status()).toBe('Deadlock');
+        // the site's conjunction as the core's over sites: a defect first, then false
+        const both = line({ simGuard: GUARDS }, { A_guard: ['false'], A_cond: ['a b'] });
+        reset(both);
+        expect(eps(both).outcome?.label.evaluated.map(e => [e.transition, e.outcome.kind])).toEqual([['t1', 'defect']]);
+    });
+
+    it('the actions of a site are the union of its Action attributes, in attribute order; one not carried assigns nothing (mutant: the first attribute only)', () => {
+        const lookup = line({ simAction: '["A_actions","A_more","A_none"]' }, { A_actions: ['p2.[visits] := 1'], A_more: ['model.[f] := true'] });
+        expect(reset(lookup).compileDefects).toEqual([]);
+        const out = eps(lookup);
+        expect(out.outcome?.label.assignments).toEqual([{ element: 'p2', attr: 'visits', value: 1 }, { element: 'M', attr: 'f', value: true }]);
+        expect(out.lastStepTitle).toBe('ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1, multi.f = true');
+    });
+
+    it('two Entry attributes of one place writing one target: the Reset defect double-assignment, then the halt (answer 4)', () => {
+        const lookup = line({ simEntry: '["A_entry","A_entry2"]' }, {}, { A_entry: ['p2.[visits] := 1'], A_entry2: ['p2.[visits] := 2'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['t1', 'action', 'double-assignment']]);
+        eps(lookup);
+        expect(haltMessage(getSimRun('M')!.halt!, lookup, { entries: ['A_entry', 'A_entry2'] })).toBe('Halted: visits of p2 is assigned twice in one step.');
+        // control: distinct targets fire
+        const distinct = line({ simEntry: '["A_entry","A_entry2"]' }, {}, { A_entry: ['p2.[visits] := 1'], A_entry2: ['p1.[visits] := 2'] });
+        expect(reset(distinct).compileDefects).toEqual([]);
+        expect(eps(distinct).outcome?.kind).toBe('fired');
+    });
+
+    it('the halt title quotes the text of the second Action attribute that stopped the run (mutant: the halt reads the first attribute only)', () => {
+        const lookup = line({ simAction: '["A_actions","A_more"]' }, { A_actions: ['p2.[visits] := 1'], A_more: ['p1.[count] := 1'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['t1', 'action', 'undeclared', 'p1.[count] := 1']]);
+        eps(lookup);
+        const halt = getSimRun('M')!.halt!;
+        const text = haltMessage(halt, lookup, { actions: ['A_actions', 'A_more'] });
+        expect(text).toBe("Halted: the transition action of t1 failed: 'count' is not declared on p1.");
+        expect(haltTitle(halt, lookup, { actions: ['A_actions', 'A_more'] })).toBe(`${text} [p1.[count] := 1]`);
+        // the raw key as the panel passed it before R-SIM-90 reads the same
+        expect(haltTitle(halt, lookup, { action: '["A_actions","A_more"]' })).toBe(`${text} [p1.[count] := 1]`);
+    });
+
+    it('else in the second Guard attribute alone: the complement of its sibling, never compiled as a guard (answer 3; mutant: else read in the first attribute only)', () => {
+        const lookup = pair({ simGuard: GUARDS }, { A_guard: ['false'] }, { A_cond: ['else'] });
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        expect(r.run.net.transitions.find(t => t.id === 'tE')).toMatchObject({ elseOf: ['tA'], guardSites: [] });
+        expect(eps(lookup).lastStep).toBe('ε: tE (p1 → pE) fired');
+    });
+
+    it('else beside another Guard attribute: the complement first, then that guard, conjoined (answer 3, G7; mutant: an else that drops the other conjuncts)', () => {
+        const tE = { A_guard: ['model.[f]'], A_cond: ['else'] };
+        const shut = pair({ simGuard: GUARDS }, { A_guard: ['false'] }, tE, false);
+        const r = reset(shut);
+        expect(r.compileDefects).toEqual([]);
+        expect(r.run.net.transitions.find(t => t.id === 'tE')).toMatchObject({ elseOf: ['tA'], guardSites: ['tE'] });
+        expect(status()).toBe('Deadlock');
+        expect(stopReason(getSimRun('M'), shut, label, ['A_guard', 'A_cond'])?.title).toBe('ε: tA (p1 → pA) false [false]; tE (p1 → pE) false [model.[f]]');
+        // control: the other guard true, the else fires
+        const open = pair({ simGuard: GUARDS }, { A_guard: ['false'] }, tE, true);
+        reset(open);
+        expect(eps(open).lastStep).toBe('ε: tE (p1 → pE) fired');
+        // control: the sibling true, the else is false whatever its other guard
+        const sibling = pair({ simGuard: GUARDS }, { A_guard: ['true'] }, tE, true);
+        reset(sibling);
+        expect(eps(sibling).lastStep).toBe('ε: tA (p1 → pA) fired');
+    });
+
+    it('an else with no sibling is named by the edge whose second attribute says it (R7 over every Guard attribute)', () => {
+        const lookup = line({ simGuard: GUARDS }, { A_cond: [' else '] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['t1', 'guard', 'else-alone', ' else ']]);
+    });
+});

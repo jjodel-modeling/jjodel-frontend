@@ -29,6 +29,7 @@ import type {
 import type { SimEventInfo, SimModelView } from './types';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import { inDomain } from './netStep';
+import { roleDescriptor, roleOfKey, roleValues } from './roleCatalog';
 
 /** A role value: a non-empty string, as the M2 face writes it (R-SIM-2). */
 function pointer(bag: Record<string, unknown>, key: string): string | undefined {
@@ -55,6 +56,23 @@ const ROLE_KEYS: ReadonlyArray<[Exclude<keyof NetStc, 'shape' | 'bound' | 'guard
     ['accepting', 'simAccepting'], ['stateOutput', 'simStateOutput'], ['transitionOutput', 'simTransitionOutput'],
 ];
 
+/** The roles whose key holds a list of attributes (R-SIM-90), and the field of the STC that keeps the list. */
+export type ListRole = 'guard' | 'action' | 'entry' | 'exit';
+const LIST_FIELD: Readonly<Record<ListRole, 'guards' | 'actions' | 'entries' | 'exits'>> = {
+    guard: 'guards', action: 'actions', entry: 'entries', exit: 'exits',
+};
+
+/**
+ * Every attribute bound to `role` (R-SIM-90), in bag order: the list of the
+ * STC, else its first attribute alone, which is how a hand-built STC or a
+ * caller that holds the raw key gives it (a plain id is one element, a JSON
+ * list is decoded). `[]` when the role is unbound. The one reader of the four
+ * roles: a reader of the first attribute alone would miss the others.
+ */
+export function featuresOf(stc: Partial<Pick<NetStc, ListRole | 'guards' | 'actions' | 'entries' | 'exits'>>, role: ListRole): readonly string[] {
+    return stc[LIST_FIELD[role]] ?? roleValues(stc[role]);
+}
+
 /**
  * The STC from the role bag, or `null` when it cannot run. Control-flow needs
  * `simNextState`, a source rule (`simOwnedTransitions` or `simSource`) and an
@@ -73,6 +91,15 @@ export function netStcFromRoles(bag: Record<string, unknown> | undefined): NetSt
         bound: bound ?? 1,
     };
     for (const [field, key] of ROLE_KEYS) {
+        const role = roleOfKey(key);
+        if (role && roleDescriptor(role).multi) {
+            // R-SIM-90: a list; the field keeps the first attribute, the list field all of them.
+            const values = roleValues(bag[key]);
+            if (values.length === 0) continue;
+            stc[field] = values[0];
+            stc[LIST_FIELD[field as ListRole]] = values;
+            continue;
+        }
         const value = pointer(bag, key);
         if (value) stc[field] = value;
     }
@@ -137,13 +164,37 @@ function siblingKey(t: NetTransition): string {
 }
 
 /**
+ * How an element reads `else` (R-SIM-31, R-SIM-90): `says` when the first value
+ * of any Guard attribute it carries is the literal; `keeps` when another Guard
+ * attribute it carries is not blank, so its guard site stays and those guards
+ * hold after the complement, as a fused transition's other edges do (G7). A
+ * value that is not a string is a guard, a defective one, never blank.
+ */
+function elseReading(stc: NetStc, view: NetModelView, element: string): { says: boolean; keeps: boolean } {
+    let says = false;
+    let keeps = false;
+    for (const feature of featuresOf(stc, 'guard')) {
+        const value = view.values(element, feature)[0];
+        if (value === undefined) continue;
+        const text = typeof value === 'string' ? value.trim() : null;
+        if (text === 'else') says = true;
+        else if (text !== '') keeps = true;
+    }
+    return { says, keeps };
+}
+
+/**
  * The `else` among `transitions` (R-SIM-31, R-SIM-64), for both shapes: an
  * `else` loses the guard site of its `else` element (`isElse`: transition id →
- * that element) and becomes the complement of its siblings; two `else` among
- * siblings are `else-twice` and neither is compiled. `what` ends the defect
- * message. Order is kept.
+ * that element), unless the element `keeps` it (R-SIM-90: another Guard
+ * attribute of it is set), and becomes the complement of its siblings; two
+ * `else` among siblings are `else-twice` and neither is compiled. `what` ends
+ * the defect message. Order is kept.
  */
-function resolveElse(transitions: readonly NetTransition[], isElse: ReadonlyMap<string, string>, defects: NetDefect[], what: string): NetTransition[] {
+function resolveElse(
+    transitions: readonly NetTransition[], isElse: ReadonlyMap<string, string>, defects: NetDefect[], what: string,
+    keeps: ReadonlySet<string>,
+): NetTransition[] {
     const groups = new Map<string, NetTransition[]>();
     for (const t of transitions) {
         const key = siblingKey(t);
@@ -162,8 +213,11 @@ function resolveElse(transitions: readonly NetTransition[], isElse: ReadonlyMap<
             defects.push({ element: t.id, code: 'else-twice', message: `two else ${what}: ${elses.map(s => s.id).join(', ')}` });
             continue;
         }
-        // Only the `else` edge loses its site: a fused transition keeps its other edges' guards (G7).
-        out.push({ ...t, guardSites: t.guardSites.filter(s => s !== isElse.get(t.id)), elseOf: group.filter(s => s !== t).map(s => s.id) });
+        // Only the `else` edge loses its site: a fused transition keeps its other edges' guards (G7), and an
+        // `else` edge its other Guard attributes (R-SIM-90).
+        out.push({
+            ...t, guardSites: t.guardSites.filter(s => s !== isElse.get(t.id) || keeps.has(s)), elseOf: group.filter(s => s !== t).map(s => s.id),
+        });
     }
     return out;
 }
@@ -258,9 +312,12 @@ function compileControlFlow(
         };
     };
 
+    // R-SIM-90: `else` in any Guard attribute; the edges that keep their site beside it.
+    const keeps = new Set<string>();
     const saysElse = (edge: string) => {
-        const text = stc.guard ? view.values(edge, stc.guard)[0] : undefined;
-        return typeof text === 'string' && text.trim() === 'else';
+        const reading = elseReading(stc, view, edge);
+        if (reading.says && reading.keeps) keeps.add(edge);
+        return reading.says;
     };
     // Transition id → its `else` edge: a plain edge itself, a fused transition its choice edge (G7).
     const isElse = new Map<string, string>();
@@ -316,7 +373,7 @@ function compileControlFlow(
         }
     }
     // The `else` among plain and fused transitions alike (R-SIM-31, G7).
-    return { places, transitions: resolveElse(transitions, isElse, defects, 'edges share a source') };
+    return { places, transitions: resolveElse(transitions, isElse, defects, 'edges share a source', keeps) };
 }
 
 function compilePetri(
@@ -357,17 +414,20 @@ function compilePetri(
 
     // The literal `else`, as on a control-flow edge (R-SIM-64).
     const isElse = new Map<string, string>();
+    const keeps = new Set<string>();
     const transitions = trs.map((t): NetTransition => {
         const preset = merge(pre.get(t)!);
         const postset = merge(post.get(t)!);
-        const text = stc.guard ? view.values(t, stc.guard)[0] : undefined;
-        if (typeof text === 'string' && text.trim() === 'else') isElse.set(t, t);
+        // R-SIM-90: `else` in any Guard attribute, the site kept beside another one.
+        const reading = elseReading(stc, view, t);
+        if (reading.says) isElse.set(t, t);
+        if (reading.says && reading.keeps) keeps.add(t);
         return {
             id: t, origin: [t], preset, postset, inhibitors: merge(inh.get(t)!), triggers: triggersOf(t),
             guardSites: stc.guard ? [t] : [], elseOf: null, actionSites: actionSites(preset, [t], postset),
         };
     });
-    return { places, transitions: resolveElse(transitions, isElse, defects, 'transitions share a preset') };
+    return { places, transitions: resolveElse(transitions, isElse, defects, 'transitions share a preset', keeps) };
 }
 
 /**
