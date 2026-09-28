@@ -15,6 +15,8 @@
  *                the stream-json on log.jsonl; prints the log path, then the
  *                session id of the first event that carries one, which it also
  *                writes to session.txt; the prompt path goes to prompt.txt.
+ *                Every run, start or resume, first copies its input into the
+ *                lane folder as input-<n>.md, <n> the run's number.
  *                Refused, before anything runs, when the prompt header has no
  *                `Prompt-ID: P-YYYY-MM-DD-HHmm`, and when the lane already has a
  *                session.
@@ -282,8 +284,25 @@ function isRunning(f) {
     return !existsSync(f.exit) && isAlive(Number(readTrim(f.pid)));
 }
 
+/**
+ * A verbatim copy of what a run reads on stdin, input-<n>.md in the lane folder,
+ * <n> the run's number: the stream never echoes its input (discovery report of
+ * P-2026-09-27-1030, 2.3), and a message file is rewritten by the chat for the
+ * next lane. Nothing for the /dev/null of a direct run.
+ */
+function keepInput(f, input) {
+    if (!existsSync(input) || !statSync(input).isFile()) return;
+    let n = 0;
+    for (const name of readdirSync(f.dir)) {
+        const m = /^input-(\d+)\.md$/.exec(name);
+        if (m) n = Math.max(n, Number(m[1]));
+    }
+    writeFileSync(join(f.dir, 'input-' + (n + 1) + '.md'), readFileSync(input));
+}
+
 function launch(f, claude, cwd, input, args, goAhead = null) {
     if (existsSync(f.exit)) unlinkSync(f.exit);
+    keepInput(f, input);
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
     if (goAhead) env.JJODEL_CRITICAL_ZONE_GOAHEAD = goAhead;
     else delete env.JJODEL_CRITICAL_ZONE_GOAHEAD;

@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -292,6 +292,45 @@ describe('lane-run resume', () => {
         expect(r.stderr).toContain('running');
         expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
         expect(calls(l)).toHaveLength(1);
+    });
+});
+
+// ── the inputs of a lane ─────────────────────────────────────────────────────
+
+describe('lane-run keeps a copy of every input', () => {
+    const inputs = (dir: string) => readdirSync(dir).filter((n) => n.startsWith('input-')).sort();
+
+    test('kills "the prompt not kept", "a message file not kept", "an inline message not kept", "a link instead of a copy", "runs numbered apart": run <n> reads input-<n>.md, a verbatim copy made at launch', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        const dir = laneDir(l);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(dir, 'input-1.md'), 'utf8')).toBe(PROMPT);
+        writeFileSync(join(l.home, 'go.md'), `[${ID}] GO from a file\n`);
+        const r = laneRun(l, ['resume', ID, join(l.home, 'go.md')]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        // The chat rewrites its message file for the next lane: the copy keeps what was sent.
+        writeFileSync(join(l.home, 'go.md'), 'rewritten afterwards\n');
+        expect(readFileSync(join(dir, 'input-2.md'), 'utf8')).toBe(`[${ID}] GO from a file\n`);
+        const t = laneRun(l, ['resume', ID, '--text', `[${ID}] GO inline`]);
+        expect(t.status, t.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(dir, 'input-3.md'), 'utf8')).toBe(`[${ID}] GO inline\n`);
+        expect(readFileSync(join(dir, 'msg-1.md'), 'utf8')).toBe(`[${ID}] GO inline\n`);
+        expect(inputs(dir)).toEqual(['input-1.md', 'input-2.md', 'input-3.md']);
+    });
+
+    test('kills "a refused run keeps an input": a resume refused over a running session copies nothing', () => {
+        const l = lab();
+        const hold = join(l.state, 'release');
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_HOLD: hold } }).status).toBe(0);
+        writeFileSync(join(l.home, 'go.md'), `[${ID}] GO`);
+        const r = laneRun(l, ['resume', ID, join(l.home, 'go.md')]);
+        writeFileSync(hold, '');
+        expect(r.status).toBe(2);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(inputs(laneDir(l))).toEqual(['input-1.md']);
     });
 });
 
