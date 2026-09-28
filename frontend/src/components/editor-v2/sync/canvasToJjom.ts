@@ -33,6 +33,7 @@ import { resolveVertexLayoutWrite, type VertexLayout, type VertexLayoutSource, t
 import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
 import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
 import { sweepAllM1ReferenceGraphs } from './m1EdgeSweep';
+import { isClassKind } from '../../../model/classifierKindRules';
 
 // ---------------------------------------------------------------------------
 // Per-viewpoint layout resolution (slice 1b)
@@ -219,6 +220,13 @@ export function syncInheritanceEdge(
             console.warn('[canvasToJjom] Cannot create inheritance: missing model on vertex');
             return null;
         }
+        // Enum step B: the model refuses an extends from or to a non-class (_canExtend, LDataType.set_extends),
+        // and the proxy discards the refusal, so check before any write: otherwise the DEdge below is created
+        // for a supertype the model never took. C1 (isMetamodelConnectionValid) stops the drag first.
+        if (!isClassKind(sourceClass.className) || !isClassKind(targetClass.className)) {
+            console.warn('[canvasToJjom] Cannot create inheritance: both ends must be classes');
+            return null;
+        }
 
         const graphId = sourceProxy?.graph?.id ?? sourceProxy?.__raw?.graph;
         if (!graphId) {
@@ -292,6 +300,12 @@ export function syncReferenceEdge(
 
         if (!sourceClass || !targetClass) {
             console.warn('[canvasToJjom] Cannot create reference: missing model on vertex');
+            return null;
+        }
+        // Enum step B: a reference is owned by a class and typed by a class (LTypedElement.set_type refuses the
+        // rest, silently for this caller). Check before addReference, so no untyped reference and no DEdge is left.
+        if (!isClassKind(sourceClass.className) || !isClassKind(targetClass.className)) {
+            console.warn('[canvasToJjom] Cannot create reference: both ends must be classes');
             return null;
         }
 

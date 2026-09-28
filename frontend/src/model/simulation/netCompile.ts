@@ -402,12 +402,17 @@ function domainText(domain: Domain): string {
  * range bounds that are not integers or are reversed, an initial value outside
  * the domain or of another type. The initial is checked only on a sound domain.
  * A derived declaration has no initial (R-SIM-72): both or neither is `exclusive`;
- * its equation is compiled at Reset (`derivedEvaluator.ts`).
+ * its equation is compiled at Reset (`derivedEvaluator.ts`). An input has
+ * neither (R-SIM-88): one of the two with it is `exclusive`, and it is semantic.
  */
 function declarationDefects(decl: StateAttributeDecl, index: number, view: NetModelView): DeclarationDefect[] {
     const out: DeclarationDefect[] = [];
     const defect = (code: DeclarationDefect['code'], message: string) => out.push({ index, name: decl.name, code, message });
-    if ((decl.initial === undefined) === (decl.equation === undefined)) {
+    if (decl.input === true) {
+        if (decl.initial !== undefined) defect('exclusive', 'input and initial');
+        else if (decl.equation !== undefined) defect('exclusive', 'input and equation');
+        if (decl.space !== 'semantic') defect('input', 'an input is semantic');
+    } else if ((decl.initial === undefined) === (decl.equation === undefined)) {
         defect('exclusive', decl.equation === undefined ? 'no initial or equation' : 'initial and equation');
     }
     if (STATE_RESERVED.readOnlyAttributes.includes(decl.name)) defect('reserved', 'reserved name');
@@ -444,7 +449,8 @@ function declarationDefects(decl: StateAttributeDecl, index: number, view: NetMo
  * once, at the first element where they meet. A defective declaration still
  * applies where it can: the defects are reported, not enforced. A derived
  * attribute is declared but has no stored value: its values come at Reset from
- * `withDerivedInitial` (lane C2, R-SIM-73).
+ * `withDerivedInitial` (lane C2, R-SIM-73). An input is declared and never has
+ * one: the bridge asks it for the step that reads it (R-SIM-88).
  */
 export function compileNet(
     stc: NetStc, view: NetModelView, modelId: string, ids: readonly string[],
@@ -501,7 +507,8 @@ export function compileNet(
                 continue;
             }
             byName.set(decl.name, decl);
-            if (decl.equation !== undefined || decl.initial === undefined) continue;
+            // A derived value comes from its equation, an input from the environment at each step (R-SIM-88).
+            if (decl.equation !== undefined || decl.input === true || decl.initial === undefined) continue;
             const space = decl.space === 'semantic' ? attrs : presentation;
             let values = space.get(e);
             if (!values) { values = new Map(); space.set(e, values); }

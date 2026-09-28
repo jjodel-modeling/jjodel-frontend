@@ -4,6 +4,7 @@ import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
 import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
+import { isConsumerMode } from '../environment/consumerMode';
 import {DocumentationTab} from "./tabs/DocumentationTab";
 import React from 'react';
 import { JjtlDevelopmentEnv, ModelOption } from '../../jjtl/components';
@@ -142,6 +143,12 @@ class DockManager {
     }
 
     static async open2(me: LModel): Promise<void> {
+        // #157 Fase 3: in consumer mode (a ?profile= is active) metamodels are not editable —
+        // refuse to open the M2 editor even if something asks. Models stay open.
+        if (isConsumerMode() && me?.isMetamodel) {
+            console.warn('[DockManager] open2: metamodels are hidden in consumer mode', me?.id);
+            return;
+        }
         const tab = (me.isMetamodel) ? TabDataMaker.metamodel(me) : TabDataMaker.model(me);
         await DockManager.open('models', tab);
         const editorType = me.isMetamodel ? 'metamodel' : 'model';
@@ -246,6 +253,11 @@ class DockManager {
     static openViewpoint(vp: DViewPoint | LViewPoint): void {
         if (!vp?.id) {
             console.warn('[DockManager] openViewpoint: invalid viewpoint');
+            return;
+        }
+        // #157 Fase 3: viewpoints are a developer surface — hidden in consumer mode.
+        if (isConsumerMode()) {
+            console.warn('[DockManager] openViewpoint: viewpoints are hidden in consumer mode', vp.id);
             return;
         }
 

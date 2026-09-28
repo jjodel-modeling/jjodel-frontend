@@ -20,7 +20,9 @@
  *   superclass of it warns (every instance would play the role);
  * - owner: a feature is declared on the lineage of the class whose instances
  *   the role reads (Node, Transition, Arc, the event class); on a proper
- *   subclass of it it warns (the other instances do not carry it);
+ *   subclass of it it warns (the other instances do not carry it); on an
+ *   unrelated class it warns too when a common concrete subclass exists (a
+ *   mixin owner, R-SIM-89), else it is incompatible;
  * - reference type: Next state and Source lead to Node, Owned transitions to
  *   Transition, a wider type warns; an arc end covers Node and Transition, one
  *   of them warns; Trigger leads to a class unrelated to both (R-SIM-16), else
@@ -146,6 +148,14 @@ class Index {
         return this.isKind(a, b) || this.isKind(b, a);
     }
 
+    /** A concrete class that is a kind of both `a` and `b` (mixin owners, R-SIM-89). */
+    hasCommonConcreteSubclass(a: string, b: string): boolean {
+        for (const c of this.classes.values()) {
+            if (!c.abstract && this.isKind(c.id, a) && this.isKind(c.id, b)) return true;
+        }
+        return false;
+    }
+
     /** A class by name, a feature as `Owner.name`, a type pointer without its prefix. */
     name(id: string): string {
         const f = this.references.get(id) ?? this.attributes.get(id);
@@ -207,6 +217,8 @@ function judge(
     if (owner && !ix.isKind(owner, feature.owner)) {
         if (ix.isKind(feature.owner, owner)) {
             warn(`${name} is declared on ${ix.name(feature.owner)}, a subclass of ${ix.name(owner)}: other ${ix.name(owner)} instances do not carry it`);
+        } else if (ix.hasCommonConcreteSubclass(owner, feature.owner)) {
+            warn(`${name} is declared on ${ix.name(feature.owner)}: only ${ix.name(owner)} instances that are also ${ix.name(feature.owner)} carry it`);
         } else {
             bad(`${name} is not a feature of ${ix.name(owner)}`);
         }

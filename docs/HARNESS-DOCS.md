@@ -1,7 +1,7 @@
 # HARNESS-DOCS — organizzazione documentale dell'harness Jjodel
 
 Posizione: `docs/HARNESS-DOCS.md` nel repo `jjodel-frontend`.
-Versione: 1.6 (2026-09-27).
+Versione: 1.7 (2026-09-28).
 Copia nel Project Knowledge: sì, integrale. Sostituisce `INDICE_ARCHIVIO.md`.
 
 Questo file dice, per ogni tipo di documento che l'harness produce, chi lo scrive, chi lo legge, dove
@@ -140,6 +140,22 @@ Every question that has a recommendation carries it in one line: `Recommended: <
 ## NON FARE
 ## RIFERIMENTI
 ```
+
+**Closure** (amended 2026-09-28, `P-2026-09-27-2330`, on RC-17). The COME of a prompt ends with one closure
+commit: the log or inbox entry, the Status flip and the visual-check line, written after the code commit and
+committed together, after the GO when a visual check is due, at once otherwise. A prompt never asks for a docs
+commit before the visual GO. The Status of a docs-only lane without a report cites its last commit before the
+closure. Measured on 2026-09-26/27: seven launched lanes flipped their Status twice because their prompt asked
+for a docs commit before the GO.
+
+**Discovery phase** (amended 2026-09-28, P16). A prompt with a discovery phase asks for a report that opens with
+`## 0. Answer in brief`, at most 40 lines: the answer, the recommendation, the decisions awaiting Alfonso, and the
+questions with their `Recommended:` lines; everything else is appendix. `lane-run status` flags a brief that is
+missing, not the first section, or longer.
+
+**Model tier** (2026-09-28, RC-32). `lane-run` reads the tier from the header's `Lane:` and from DOVE: a prompt
+meant to run light writes its DOVE as backticked paths under `docs/`, and names a critical-zone file or a
+governance file only where the lane touches it, since either name forces the heavy tier.
 
 **Due corsie** (ratifica RC-3, 2026-08-05). Corsia completa, con two-phase, discovery report,
 ratifiche, verbale e gate pieni, per: critical zone (`useJjomSync.ts`, `portDistribution.ts`),
@@ -440,6 +456,24 @@ Alfonso asks for a feature, a fix or a gate
 A lane without a visual check closes in the same session right after its code commit and exits with
 `Outcome: done`. A session still running at 90 minutes, or at the limit its prompt declares, is `blocked`: the
 chat reports it and does not resume it on its own. A question is a hard stop at any point of the sequence.
+
+**Merge lane, direct** (2026-09-28, P16, `P-2026-09-27-2330`):
+
+```
+chat measures the merge                              lane-run merge <branch> --into <trunk> --direct
+   → every precondition holds: the prompt committed alone, tag pre-<branch> (RC-31),
+       a detached worker merges, runs the gates, writes result.json   ~/.jjodel-lanes/<Prompt-ID>/
+   → Outcome: hard-stop, or blocked on a red gate      lane-run status | wait <Prompt-ID>
+   → chat runs the VISUAL CHECKLIST, then               lane-run go <Prompt-ID> --smoke "..."
+   → one docs commit: Status flip and P9 entry          docs/log-inbox/<front>.md
+   → Outcome: done
+   a precondition fails: the merge prompt is launched as a session (--launch) or parked, the reason printed
+```
+
+**Chain** (2026-09-28): `lane-run chain <worktree> <prompt>... [--merge-after]` runs lanes without a visual
+check one after the other; a lane that does not end `done` stops the chain, and `chain.json` in
+`~/.jjodel-lanes/chain-<first Prompt-ID>/` says where and why. With `--merge-after` a finished chain ends with
+`merge --direct` into the trunk, parked on a fallback.
 
 **Corsia veloce**: cadono discovery report, memo e ratifica; il prompt sta sotto le 80 righe, la
 verifica preventiva sta in dieci righe dentro l'entry di log, la verifica visiva si raggruppa in un

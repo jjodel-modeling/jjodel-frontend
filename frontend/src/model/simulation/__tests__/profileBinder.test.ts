@@ -336,6 +336,50 @@ describe('Trigger is bound only within the transition lineage (report §3.1)', (
     });
 });
 
+describe('a kept Node or Transition anchors the dependent rules, not the binder\'s own guess (S6)', () => {
+    it('a kept Node (turnstile x State machine): Node keeps its own guess, Initial and Owned transitions follow the kept value instead (killed by deriving them from the binder\'s Node)', () => {
+        const withoutKept = bindProfile(profile('stateMachine'), TURNSTILE);
+        expect(withoutKept).toMatchObject({
+            node: { status: 'bound', value: 'TState' },
+            initial: { status: 'bound', value: 'TInit' },
+            ownedTransitions: { status: 'bound', value: 'TState.out' },
+        });
+        const kept = bindProfile(profile('stateMachine'), TURNSTILE, { simNode: 'TEvent' });
+        // Node's own binding is still the binder's guess: what makes the bag's TEvent a "kept" value in the first place.
+        expect(kept.node).toMatchObject({ status: 'bound', value: 'TState' });
+        // TEvent has no subclasses and owns no composition to TTrans: the dependent rules now say so, not TInit / TState.out.
+        expect(kept.initial?.status).toBe('none');
+        expect(kept.ownedTransitions?.status).toBe('none');
+    });
+
+    it('a kept Transition (ESM_ACTIONS x Extended state machine): Guard, Action and Trigger follow the kept value (killed by deriving them from the binder\'s Transition)', () => {
+        const withoutKept = bindProfile(profile('extendedStateMachine'), ESM_ACTIONS);
+        expect(withoutKept).toMatchObject({
+            transition: { status: 'bound', value: 'Transition' },
+            guard: { status: 'bound', value: 'Transition.guard' },
+            action: { status: 'bound', value: 'Transition.effect' },
+            trigger: { status: 'bound', value: 'Transition.event' },
+        });
+        const kept = bindProfile(profile('extendedStateMachine'), ESM_ACTIONS, { simTransition: 'Event' });
+        expect(kept.transition).toMatchObject({ status: 'bound', value: 'Transition' });
+        // Event has neither an Expression nor an Action attribute, and owns no reference: none of the three binds.
+        expect(kept.guard?.status).toBe('none');
+        expect(kept.action?.status).toBe('none');
+        expect(kept.trigger?.status).toBe('none');
+    });
+
+    it('no bag, or an empty one, reproduces exactly what bindProfile gave before the kept-Node/Transition override, on each of the four presets (killed by reading an absent key as kept)', () => {
+        const cases: Array<[string, MetamodelSketch]> = [
+            ['stateMachine', TURNSTILE], ['petri', PETRI_3B], ['extendedStateMachine', ESM_ACTIONS], ['flowchart', FLOW],
+        ];
+        for (const [id, sketch] of cases) {
+            const before = bindProfile(profile(id), sketch);
+            expect(bindProfile(profile(id), sketch, {})).toEqual(before);
+            expect(bindProfile(profile(id), sketch, undefined)).toEqual(before);
+        }
+    });
+});
+
 describe('output shape', () => {
     it('one binding per edit role with a binding kind; derived, off, parameters and tables are absent', () => {
         const b = bindProfile(profile('extendedStateMachine'), ESM_ACTIONS);

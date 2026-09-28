@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { ROLE_IDS } from '../roleCatalog';
 import type { RoleId } from '../roleCatalog';
-import { checkability, systemProfile, validateProfile } from '../simProfiles';
+import { checkability, SYSTEM_PROFILES, systemProfile, validateProfile } from '../simProfiles';
 import type { SimProfile } from '../simProfiles';
 import { decodeProfile, encodeProfile, inferCustomProfile } from '../profileCodec';
 
@@ -44,6 +44,18 @@ describe('encodeProfile / decodeProfile', () => {
         const encoded = encodeProfile(USER);
         expect(encoded.startsWith('{')).toBe(true);
         expect(decodeProfile(encoded)).toEqual(USER);
+    });
+
+    it('re-encodes a decoded user copy byte for byte, every system profile as a base (killed by a derived mode decoded note first)', () => {
+        for (const base of SYSTEM_PROFILES) {
+            // The key order of a user copy (simRolesDraft.ts userCopy), which Apply writes into simProfile.
+            const copy: SimProfile = {
+                id: 'user', name: 'Mine', system: false, basedOn: base.id as SimProfile['basedOn'], shape: base.shape,
+                modes: base.modes, params: base.params, constraints: base.constraints, addedRequired: base.addedRequired,
+            };
+            const raw = encodeProfile(copy);
+            expect(encodeProfile(decodeProfile(raw) as SimProfile), base.id).toBe(raw);
+        }
     });
 
     it('round-trips a user profile without basedOn', () => {

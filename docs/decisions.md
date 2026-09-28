@@ -244,6 +244,36 @@ their first commit.
   `docs/lir/`, before the diff, and names the go-ahead in its header. Hook tests 255 (five new). Amends
   RC-19 (relaunch without the flag is no longer the only way).
 
+### Decisione 2026-09-27: merges before the freeze (RC-31)
+
+Decided by Alfonso in the project chat `C-2026-09-27-1437`, 2026-09-27 23:26, and reported by the chat in the GO
+of P-2026-09-27-2327. It is his decision, not an inference of the chat: it is not provisional. Recorded by the
+merge lane P-2026-09-27-2327.
+
+- **RC-31** (2026-09-27, ratified by Alfonso 2026-09-27 23:26, evidence: read, verified: none, reversible: trunk):
+  **No branch waits for 2026-10-04 to merge; the freeze of 2026-10-01 evening stays.** The rule that no branch
+  merges on the trunk before 2026-10-04 (P-2026-09-27-1545, P-2026-09-27-1740, P-2026-09-27-1806; already lifted
+  for `sim-modal` by R-SIM-85) is abolished. Each merge on the trunk before the freeze carries a rollback tag
+  `pre-<branch>`, the full gates, and the four demo scenes of `docs/demo/models_2026_simulator_demo.md` (SM,
+  Petri, ESM, Flow B) re-run on the merged tree. First applied to `enum-step-b`: merge `c030871ff`, tag
+  `pre-enum-step-b` on `e529b6c7f`, the four scenes on script on 3029.
+
+### Decisione 2026-09-28: the model follows the activity (RC-32)
+
+- **RC-32** (2026-09-28, principle ratified by Alfonso 2026-09-27 23:52, evidence: measured, verified: none, reversible: trunk):
+  **`lane-run` picks the model of each lane from its activity.** Amends RC-16: the pin of `.claude/settings.json`
+  stays the heavy tier and the one place that names it; the light tier runs `LIGHT_MODEL` of
+  `frontend/scripts/lane-run.mjs`, passed as `--model`. The rule, deterministic and heavy when in doubt, is in P16
+  and in `tierRule` of that file. Alfonso ratified the principle in the owner chat `C-2026-09-27-1437` (2026-09-27
+  23:52: «lane-run sceglie il modello più conveniente per l'attività che deve svolgere»). The id `claude-sonnet-5`
+  was set by that chat at the GO of `P-2026-09-27-2330`, under that ratification, and is to be confirmed in the
+  morning digest (RC-25). Measure: `docs/discovery/discovery_2026-09-27_lane_efficiency.md` §7, where `--model` coexists
+  with the pin and wins and a resume keeps the session's model.
+- **RC-33** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: trunk):
+  **A chat acts only on its own Prompt-IDs.** Every chat declares an ID `C-YYYY-MM-DD-HHmm` at its start and writes it in the `Chat:` line of every prompt it writes. Before acting on a Prompt-ID (launch, resume, GO, merge, closure), a chat reads the `Chat:` line of that prompt: when it is another chat's ID or `—`, it does not act, names the owner and asks Alfonso, who may assign the prompt to it. A merge rendered by `lane-run merge` carries the launching chat's ID through `--chat`. Trigger: the merge `P-2026-09-28-2211` of `log-addonly-gate`, launched at 22:11 without `--chat` by an unidentified actor, adopted by `C-2026-09-28-1936` on Alfonso's word.
+- **RC-34** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: measured, verified: agent, reversible: trunk):
+  **The add-only logs are checked by whole entries at every merge.** `npm run check:addonly` (P-2026-09-28-2001, merged `d3dbacb36`) compares a commit with its first parent: every entry of `docs/claude-code-log.md`, `docs/claude-code-log-archive.md` and `docs/log-inbox/*.md` must reappear byte-identical and contiguous in the same file, in the archive (rotation) or in the log (batch closure). A deliberate hand repair carries the trailer `Log-Repair: <sha of the incident>`. `lane-run merge` runs it on the merge commit and rolls back on a violation. Trigger: the staging merge `447e4239b`, repaired in `e2448cf61`. Open tickets: `e2448cf61` predates the trailer (a known-repairs list), and the timing of the `checkRange` test.
+
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-27_enum_edge_guard.md` (`4e5dff7ad`), otto ipotesi
@@ -1942,6 +1972,12 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   del pannello si limitano a una riga con il testo intero nel `title`: oggi una riga che va a capo
   sposta i pulsanti di 17 px (misurato). Entra nella stessa corsia, come aggiunta dichiarata allo
   scope.
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat, 22:20, punto 3 delle risposte della sera, memo
+  `docs/ratifiche/claude_ratifiche_2026-09-27_evening_answers.md`): nello stato Halted la riga di halt va a capo
+  in uno slot riservato di due righe, un'ellissi oltre la seconda. Lo slot sta sopra i pulsanti e ha altezza
+  fissa, quindi il pannello cresce verso l'alto di 16,5 px e i pulsanti non si muovono (misurato a 1600x1000 e
+  1280x800, P-2026-09-27-2225, `e0e6ee5e4`). «Last step», i difetti, l'errore e ogni altra riga restano a una
+  riga: «Last step» sta sotto i pulsanti, e una seconda riga li alzava di 16,5 px (misurato).
 - **R-SIM-64** (2026-09-26). **`else` anche nella forma Petri. Completa R-SIM-31.** Una transizione
   di Petri la cui guardia è il testo `else` è il complemento dei suoi fratelli, come un arco del
   controllo di flusso: i fratelli sono le transizioni con lo stesso preset (posti e pesi) e gli stessi
@@ -2003,6 +2039,24 @@ o una corsia.
   `reason` si allargano (Rule 11 autorizzata: unione di letterali, additiva); `HaltReason` riceve un genere
   proprio per il bersaglio non dichiarato con elemento e attributo, così la riga dice il nome e non il
   puntatore; la riga dell'halt non porta il testo sorgente dell'azione, che va nel `title` (R-SIM-62).
+  **Estesa il 2026-09-27** (P2b, `P-2026-09-27-2235`, provisional, unattended; report
+  `discovery_2026-09-27_sim_checker_gap.md` §8; codice `8beb4b28e`, modulo puro `model/simulation/stcChecks.ts`
+  chiamato da `guardDefectsOf` e `actionDefectsOf`, così riga dei difetti e registro dei problemi li ricevono
+  insieme). Al Reset si segnalano anche: (R1) una lettura `.[x]`, o un bersaglio che il run risolve, il cui nome
+  nessuna dichiarazione ha, `marked` e `tokens` esclusi; (R2) una lettura di guardia il cui oggetto si riduce
+  senza σ, evento né variabile legata, giudicata come un bersaglio ridotto: nessun elemento (`unresolved`), non
+  dichiarata sull'elemento, `marked`/`tokens` fuori da un posto, attributo di presentazione; (R3) un bersaglio
+  ridotto che non nomina un elemento, `unresolved`, con il testo dell'halt (`judgeActionTarget` accanto a
+  `foldActionTarget`, il cui contratto non cambia); (R4) gli errori del checker di sottoinsieme sul lato destro,
+  non solo `E-NODE`; (R5) un lato destro che si riduce a un non scalare o fuori dal dominio del bersaglio ridotto;
+  (R6) una guardia che è una sola lettura `.[x]` di una dichiarazione non booleana. `CompileDefect.reason` riceve
+  `'unresolved'` e `'value'` (Rule 11, come sopra). Il run resta com'è: guardie e azioni si valutano come prima,
+  e l'halt resta la rete di sicurezza. Limiti dichiarati: R4 è solo al Reset, `compileAction` non cambia, così
+  un'azione con `E-EAGER`, `E-NOELSE`, `E-SHADOW` o `E-WITH` ferma il run solo se la valutazione fallisce; R2 elenca
+  anche una lettura in un ramo che il run non valuta mai. Prima delle dichiarazioni le guardie che leggono un
+  attributo non ancora dichiarato sono difetti al Reset (ESM +1, Flow B +2, risposta A della chat alla domanda
+  della corsia). Fuori: `else` senza fratelli, gli avvisi W-* e T-*, A11 e ogni valore che dipende da σ o
+  dall'evento.
 - **R-SIM-71** (2026-09-26, provisional, unattended). **Due corsie: C1 memorizzati e azioni, C2 derivati.**
   C1: codec, catalogo, `NetStc`, `compileNet` con i difetti delle dichiarazioni (iniziale fuori dominio,
   dominio mancante su semantico, `min > max`, nome riservato, metaclasse inesistente, stesso nome su due spazi
@@ -2052,6 +2106,24 @@ decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; q
   viene rifiutata; nuXmv, che controlla dopo l'appiattimento, la accetterebbe. Rinviato un raffinamento per
   (metaclasse, nome). Un arco da un'equazione semantica a un derivato di presentazione è vietato (`E-NODE`
   transitivo); un fallimento di presentazione non ferma la semantica.
+  **Emendata il 2026-09-27** (ratifica di Alfonso in chat `C-2026-09-27-1437`, 17:47, risposta A al report
+  `docs/discovery/discovery_2026-09-27_sim_derived_recursion.md` §9.1; codice `805c8ecdd`, `d2a19ccab`): il grafo
+  delle dipendenze di un run è per (elemento, attributo) su M congelato (G3). Per ogni proprietario di
+  un'equazione, l'oggetto di ogni nodo `StateAccess` che non legge σ si valuta su M congelato con `self` il
+  proprietario; una variabile legata da una lambda argomento di un metodo di collezione, o da `forall`/`exists`,
+  prende gli elementi della collezione su cui itera quando questa non legge σ; `node` è il proprietario. Dove
+  l'oggetto non si riduce così, o chiede più di 10 000 legami delle sue variabili, l'arco va a ogni proprietario
+  dell'attributo derivato per nome (il G1 di prima, ristretto a quel nodo). Un ciclo è un difetto di
+  dichiarazione, uno per dichiarazione: con il testo di prima se il ciclo resta su un elemento, con gli elementi
+  nominati (`equation cycle: c1.len → c2.len → c1.len`) se li attraversa; restano senza valore solo gli elementi
+  sul ciclo, e chi li legge viene valutato e fallisce, come prima per chi leggeva un nome ciclico. L'ordine è il
+  topologico per (elemento, attributo), a parità il rango del nome nell'ordine per nome e poi l'ordine degli
+  elementi, così ogni modello accettato da G1 conserva il piano di oggi. Una ricorsione ben fondata sul
+  contenimento o su un riferimento (`size := self.[own] + self.children.sum(c => c.[size])`,
+  `len := if self.next == null then 1 else self.next.[len] + 1`) è accettata; su un M ciclico lungo quel percorso
+  resta un difetto, come in nuXmv dopo l'appiattimento. Il raffinamento «per (metaclasse, nome)» cade: non avrebbe
+  tolto il limite. R-SIM-43 e R-SIM-18 restano come sono (risposta B): la forma su collezione si scrive con una
+  lambda o con `forall`, mai con una collezione a sinistra di `.[x]`.
 - **R-SIM-75** (2026-09-27, provisional, unattended, evidence: read, verified: agent, reversible: branch).
   **Radici e record.** In un'equazione: `self` è il proprietario, la radice del modello per un globale, `model`
   ammesso, `event` vietato (difetto di dichiarazione: un DEFINE non dipende dall'input), `node` `E-NODE` su
@@ -2124,6 +2196,18 @@ come raccomandato», quindi le righe qui sotto non sono provvisorie.
   M3 «un ruolo di classe lega solo una classe concreta», che resta per gli altri ruoli. (3) Quando Action, Entry o Exit
   è legata e `simStateAttributes` è vuota, il riepilogo mostra una riga che invita a dichiarare gli attributi, con
   «Add attribute» raggiungibile senza aprire Configure…. Corsia R2, fast; nessun file del motore.
+  **Emendata il 2026-09-27, punto (1)** (ratified by Alfonso 2026-09-27, risposta A del report
+  `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md` §7, chat C-2026-09-27-1437, 16:05; G12(b)): Apply
+  propone `simBound` dall'esplorazione limitata dei marking raggiungibili dei modelli M1 del metamodello, non più dal
+  massimo marking iniziale. Ogni modello si compila con `compileNet` sul bag come Apply lo lascia, a bound sollevato;
+  guardie e trigger si ignorano, inibitori e terminazione si tengono; un marking che copre un antenato sul proprio
+  cammino con più token ferma l'esplorazione (controllo di Karp e Miller); al più 2000 marking fra tutti i modelli.
+  La proposta è il massimo dei token su un posto quando l'esplorazione chiude su ogni modello, e solo sopra 1: così
+  non è mai la causa di un arresto `unsafe` (R-SIM-23). Quando non chiude (copertura, tetto, o ruoli che dopo Apply
+  non danno una rete) la proposta è il massimo marking iniziale di prima, con un titolo che dice perché. Il pannello
+  legge nel selettore solo la firma dei modelli; l'esplorazione gira in un memo su di essa (report §5.1 rischio 5).
+  La decisione H resta per la demo; sulla rete della demo la proposta legge `Bound → 4`, e il passo 3 del copione
+  diventa ridondante (corsia docs dopo il merge). Codice `917b1546b` (corsia E2, P-2026-09-27-1611).
 - **R-SIM-82** (2026-09-27, evidence: measured, verified: none, reversible: branch). **La faccia M1 per il pubblico
   (G3, G8, G10, G11; decisioni D ed F).** Una riga della faccia M1 mostra per tutto il run il marking con i conteggi e
   poi σ (`Marking: p2 ×2, p3 · coins = 2, paid = true`), aggiornata a ogni scatto, clampata (R-SIM-63, R-SIM-66); la
@@ -2162,7 +2246,87 @@ R-SIM-53 e R-SIM-31(1) sono attuate come scritte.
   nuovo di `NetDefectCode`, additivo per la regola 11 come in R-SIM-70) e quel nodo non compila. L'emendamento B
   (fratelli letti sull'arco) è respinto da Alfonso il 2026-09-27. R-SIM-64 (Petri) invariata.
 
-### Decisioni 2026-09-27: corsia S4, Accepting e output nel motore (R-SIM-86..88)
+### Decisioni 2026-09-27: il dialogo Simulation roles entra nella demo (R-SIM-85)
+
+Decisa da Alfonso nella chat di progetto `C-2026-09-27-1437`, 2026-09-27 17:39, dopo la scrittura di
+P-2026-09-27-1740: «voglio il modale gia nella demo e se ci sono problemi faremo un roll back». È una decisione
+sua, riportata dalla chat, non un'inferenza della chat: non è provvisoria. Registrata dalla corsia di merge
+P-2026-09-27-2049.
+
+- **R-SIM-85** (2026-09-27, ratified by Alfonso 2026-09-27 17:39, evidence: read, verified: agent, reversible: trunk).
+  **Il branch `sim-modal` entra nel trunk prima del freeze del 2026-10-01, e la demo MODELS percorre il
+  dialogo Simulation roles.** Sostituisce la riga di P-2026-09-27-1740 (COSA, decisioni di Alfonso del
+  2026-09-27) «the branch is not merged on the trunk before 2026-10-04, because the MODELS demo walks the current
+  panel». Merge `5eccdd4d2` (P-2026-09-27-2049). Punto di rollback: il tag locale `pre-sim-modal` su
+  `d9e88f792`, la base del merge. Il copione `docs/demo/models_2026_simulator_demo.md` resta stale su §2.2
+  passo 3, §2.3 e §2.4 finché la corsia docs che la chat lancia subito dopo non lo ripercorre attraverso il
+  dialogo (ticket high della Fase 2 di P-2026-09-27-1740).
+
+### Decisioni 2026-09-28: il run salta i ruoli off (R-SIM-86)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_modal.md` §3.2 («Not read by the run») e §11 punto 1
+(il risolutore in una corsia propria dopo quelle che liberano `simBridge.ts`); R-SIM-78 («il risolutore che salta
+le chiavi `off` arriva dopo la riga Petri di R-SIM-54», emendata da Alfonso il 2026-09-27, A3). Attuata dalla
+corsia P-2026-09-28-0100 (codice `22cc00ffd`) sotto RC-25. Nessuna riga ratificata da Alfonso cambia; il
+validatore (`derivedFromOff`) resta com'è.
+
+- **R-SIM-86** (2026-09-28, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Un ruolo `off` si legge come non legato.** Il run legge il bag attraverso `runBag` (`simBridge.ts`): le
+  chiavi dei ruoli che il profilo mette `off` cadono prima di `netStcFromRoles`, la classe degli eventi si deriva
+  dal Trigger salvo Event `off` (R-SIM-38), e `simStateAttributes` si legge dallo stesso bag; `runSignature`
+  legge lo stesso bag, così una chiave di un ruolo `off` modificata non interrompe il run. Il profilo è quello
+  che il pannello nomina (`storedProfile`): `simProfile`, altrimenti «Custom» ricostruito dalle chiavi, i cui
+  ruoli `off` sono le chiavi che non legge (`inferCustomProfile`). Si risolve solo `off`: un ruolo `derived` con
+  la chiave impostata si legge come prima (Bound k = 1 nei profili a controllo di flusso, la chiave vince).
+  Una lettura cambia fuori da un profilo esplicito: un bag senza `simProfile` con una chiave di azione e senza
+  `simStateAttributes` («Custom» spegne Action, Entry ed Exit per mancanza di State attributes) gira senza le
+  azioni, che prima erano difetti al Reset e fermavano il run allo sparo. `netCompile.ts` invariato. I bag dei
+  quattro preset della demo non hanno chiavi di ruoli `off`: le quattro scene e le righe dei difetti al Reset
+  sono identiche a P-2026-09-28-0023 (misurate su 3033). Restano sul bag grezzo i lettori fuori dal run (il
+  pannello, l'esplorazione del Bound, il produttore P2a): ticket della corsia.
+
+### Decisioni 2026-09-28 (pomeriggio): `else` senza fratelli e variabili di input (R-SIM-87, R-SIM-88)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_checker_gap.md` §12 punto 1 e la voce di ticket 2 di
+P-2026-09-28-0100 in `docs/log-inbox/simulation.md`; `docs/discovery/discovery_2026-09-28_sim_input_variables.md`
+(branch `sim-input-variables`) §0, §5, §6. Risposte di Alfonso in chat il 2026-09-28:
+`docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md`.
+
+- **R-SIM-87** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: read, verified: none, reversible: branch).
+  **Un `else` senza fratelli è un difetto. Emenda R-SIM-31(1).** Un arco `else` senza archi fratelli (stesso
+  preset, stessi trigger) non è più sempre vero in silenzio: è un difetto elencato al Reset, regola R7 in
+  `stcChecks.ts`, con un nuovo letterale di `CompileDefect.reason`. Il run non cambia. Nessuna lettura della demo
+  cambia: l'unico `else` dei preset (Flow B variante A, `f4`) ha il fratello `f3`.
+- **R-SIM-88** (2026-09-28, decided by the chat on Alfonso's «decidi tu» 2026-09-28, evidence: measured, verified: none, reversible: branch).
+  **Le variabili di input: una terza forma della riga Data. Emenda R-SIM-7.** Accanto a
+  `stored` e `derived`, la forma `input`: un valore scelto dall'ambiente a ogni passo che lo legge (l'IVAR di
+  nuXmv), per elemento o globale come ogni dichiarazione, mai in σ, in sola lettura. A una pressione (▶ o un
+  evento) il bridge raccoglie gli input letti da guardie e azioni delle transizioni strutturalmente abilitate e,
+  se ce ne sono, li chiede in un solo dialogo prima di impegnare il passo; Annulla lascia il run com'è. Un passo
+  ha quindi tre ingressi: evento, selettore, valutazione degli input. Un'azione che scrive un input ferma il run
+  (`read-only`). Per tenere una risposta visibile nella riga Marking basta un'azione esplicita su un attributo
+  `stored`; nessuna copia automatica in σ. Respinte le opzioni (b) e (c), che emenderebbero R-SIM-16 e R-SIM-17.
+  Le fette S1-S3 si costruiscono sul branch `sim-input-variables`; la demo non mostra decisioni a runtime.
+  **Emendata da Alfonso il 2026-09-28 sera:** il branch si fonde subito, prima del freeze del 2026-10-01, non
+  dopo il 2026-10-04. Conseguenza sulla demo: il select della forma nel passo 3 della scena ESM offre anche
+  `input`, e il copione va allineato.
+
+### Decisions 2026-09-28 (evening): mixin owners in the roles dialog (R-SIM-89)
+
+Evidence: proposal of the observer chat C-2026-09-25-1353 (2026-09-28), root cause read on the trunk in `model/simulation/bindingCompat.ts` (`judge`, the owner-context branch) and `SimRolesModal.tsx` (S10 hides incompatible candidates). Ratified by Alfonso in the chat C-2026-09-28-1936. Part 2 of the same proposal (Entry, Exit, Action and, by its amendment, Guard multi-valued) is ratified too and enters before the freeze: R-SIM-90.
+
+- **R-SIM-89** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: read, verified: none, reversible: branch).
+  **A feature declared on a sibling owner is a warning, not an incompatibility. Amends the S11a verdicts of `judge`.** For every feature role with an owner context (entry, exit, action, guard, stateOutput, transitionOutput, source, nextState, trigger, the arc roles, eventIdentifier and any other role with an `OWNER` entry), when the context class C and the feature's owner O are unrelated but have a common concrete subclass (a non-abstract S with isKind(S, C) and isKind(S, O)), the verdict is `warn`, with the text «<O.f> is declared on <O>: only <C> instances that are also <O> carry it». It stays `incompatible` when no common concrete subclass exists (an abstract common subclass with no concrete descendant does not count: no instance could carry the feature). Rationale: the same partial coverage as the subclass case, already a warning; multiple inheritance is how a metamodel expresses a mixin, and the STC binds to the metamodel as it is. Conditions of the ratification: the engine treats an instance whose class lacks the bound feature as as it already treats one in the subclass case (for Entry, Exit and Action: no assignments), proven by a test and not assumed; the verdicts of every candidate of every role on the four demo metamodels are identical before and after. Enters the MODELS build before the freeze of 2026-10-01.
+- **R-SIM-90** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: read, verified: none, reversible: branch).
+  **Entry, Exit, Action and Guard are multi-valued.** Ratified; enters the MODELS build before the freeze of 2026-10-01 (Alfonso, 2026-09-28 about 23:00: nothing is deferred after Malaga except the .smv generation; the earlier «deferred» reading was a misunderstanding of the chat). Text of the observer chat C-2026-09-25-1353, recorded as written.
+
+  `simEntry`, `simExit` and `simAction` hold a list of attributes. A plain string is read as a one-element list, so saved metamodels stay valid (additive key change, no migration). Semantics: the entry (exit, arc) action of an instance x is the union of the assignments of every bound attribute that x's class carries, by declaration or inheritance. Since assignments in a step are parallel and read the previous state (R-SIM-17), the order among attributes is irrelevant; two assignments to the same target in one step remain the existing double-assignment defect. The .smv exporter is unaffected (per-class union). Each bound attribute is judged on its own by `judge` (with Part 1, R-SIM-89). Rationale: unrelated metaclasses with their own action attributes (State.entry, ProcessNode.action) can be bound without introducing a common superclass into the metamodel; precedent: multi-valued Trigger read as any-of (R-SIM-38). Out of scope: multi-valued output roles. Touches: `roleCatalog.ts` (kind or cardinality of the roles), `netCompile.ts` (reading the keys), `bindingCompat.ts` (verdicts per element), `SimRolesModal.tsx` (multi-select as chips, fixed height, no layout shift), `simRolesDraft.ts`, `profileBinder.ts`.
+
+  **Amendment to Part 2 (same day): Guard is multi-valued too.** `simGuard` holds a list of attributes, a plain string read as a one-element list. The guard of a transition t is the conjunction of the Expressions of every bound attribute that t's class carries; an attribute t does not carry contributes `true`, consistent with "absent guard = true" (R-SIM-17) and with inhibitors as guard conjuncts (R-SIM-24). Disjunction is excluded: adding a binding must never enable a transition. Single-valued roles stay single: Event identifier, State output, Transition output, Arc weight, Bound. This amendment supersedes the "Out of scope: a multi-valued Guard" line of Part 2. Same schedule as Part 2: after Málaga (superseded the same evening: before the freeze, see the head of this row).
+
+  Open for the discovery of the lane (not ratified): where the double-assignment defect is reported once several attributes are bound; the chat suggests a static defect at Reset when two attributes carried by the same class write the same target.
+
+### Decisioni 2026-09-27: corsia S4, Accepting e output nel motore (R-SIM-91..93)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_outputs_accepting.md` (`5bfbdc5ce`, P-2026-09-27-1725),
 §5 e §9; risposte di Alfonso del 2026-09-27 17:47 (solo gli output legati a un ruolo, il collegamento agli output
@@ -2171,8 +2335,12 @@ della corsia (codice `ab4b8de8b`, ramo `sim-outputs-accepting`). Nessuna riga ra
 R-SIM-52 sono attuate come scritte, per la parte che la fetta copre. Le tre righe restano provvisorie fino alla
 ratifica di Alfonso, prima del merge dopo MODELS. Numerate da 86 perché R-SIM-85 è sul tronco (`sim-modal`) e non su
 questo ramo; uno scontro con le corsie parallele si rinumera al merge successivo, come per R-SIM-83 e 84.
+Numerate in origine R-SIM-86..88 (`bdd11814c`, e così le citano il body di `bdd11814c` e la entry «docs: provisional
+R-SIM-86..88» di `docs/log-inbox/simulation.md`); rinumerate R-SIM-91..93 il 2026-09-28 dal merge del tronco
+(P-2026-09-28-2305), perché il tronco aveva già R-SIM-86..90 diversi (R-SIM-86 il run salta i ruoli off, R-SIM-87
+`else` senza fratelli, R-SIM-88 le variabili di input).
 
-- **R-SIM-86** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-91** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **Il motore legge Accepting (R-SIM-50).** `simAccepting` entra nella STC (`NetStc.accepting`), la rete compilata ne
   porta i posti per kind-of (`CompiledNet.accepting`, `null` senza il ruolo), mai fusi in F. `isAccepting(net, σ)` è
   vero quando uno di quei posti è marcato. È una lettura del marking fuori dal ciclo, come `terminated`: candidati,
@@ -2184,7 +2352,7 @@ questo ramo; uno scontro con le corsie parallele si rinumera al merge successivo
   `simAccepting` non è nel sort dei nodi di `ROLE_SORTS` (`stcFromRoles.ts:23-28`), quindi una classe che fa
   Accepting e Transition passa il controllo di sovrapposizione (R-SIM-16); è dovuto alla fetta delle facce, dopo
   il merge di E2 e di `sim-modal`, che porta anche «accepting» accanto allo stato del run.
-- **R-SIM-87** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-92** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **Gli output legati a un ruolo nel motore (R-SIM-51).** `simStateOutput` e `simTransitionOutput` entrano nella STC;
   `compileNet` legge al Reset i valori della feature sul modello congelato del run (una modifica del modello ritira il
   run, R-SIM-34): per ogni posto il suo slot (`CompiledNet.stateOutputs`); per ogni transizione gli slot dei suoi
@@ -2196,12 +2364,12 @@ questo ramo; uno scontro con le corsie parallele si rinumera al merge successivo
   derivato dichiarato è rinviato a dopo la corsia del modale (Alfonso, 17:47). Evidenza: banco dei mutanti 18/18
   uccisi, ciascuno solo dai test nuovi (fra gli altri: il primo valore soltanto, il filtro dei `SimValue` tolto, il
   solo id della transizione, il solo primo elemento proprio, l'`origin` letto con il nodo di fork, una mappa vuota
-  senza il ruolo); i quattro preset della demo identici come in R-SIM-86. Resta aperto: le righe State output e
+  senza il ruolo); i quattro preset della demo identici come in R-SIM-91. Resta aperto: le righe State output e
   Transition output nel pannello, la riga dell'output di Moore e l'output di Mealy in «Last step», con la fetta
   delle facce; la forma di un output di tipo enumerazione, non misurata (report §5.6).
-- **R-SIM-88** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-93** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **Le tre chiavi escono dalle provvisorie di R-SIM-52.** Con il commit `ab4b8de8b` `simAccepting`,
-  `simStateOutput` e `simTransitionOutput` sono lette dal motore (R-SIM-86, R-SIM-87) e diventano definitive senza
+  `simStateOutput` e `simTransitionOutput` sono lette dal motore (R-SIM-91, R-SIM-92) e diventano definitive senza
   rinomine, come `simActivityFinal` con R-SIM-83: `NEW_KEYS` di `roleCatalog.test.ts` è vuoto e il test «finds every
   existing key» conta 27 chiavi. I quattro preset nascosti (DFA, NFA, Moore, Mealy) restano nascosti: compaiono con
   la fetta delle facce dopo MODELS (decisione H), con il risolutore delle chiavi `off` (S5) come precondizione

@@ -7,7 +7,7 @@
  * says so (merge, with --launch, moves the prompt it rendered into the tree and
  * commits it alone).
  *
- *   start <worktree> <prompt-file>
+ *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light]
  *                runs `claude -p` in <worktree> with the prompt file on stdin
  *                (the path as given, absolute or relative to the caller's
  *                directory, then relative to the worktree; refused, naming both,
@@ -15,6 +15,8 @@
  *                the stream-json on log.jsonl; prints the log path, then the
  *                session id of the first event that carries one, which it also
  *                writes to session.txt; the prompt path goes to prompt.txt.
+ *                Every run, start or resume, first copies its input into the
+ *                lane folder as input-<n>.md, <n> the run's number.
  *                Refused, before anything runs, when the prompt header has no
  *                `Prompt-ID: P-YYYY-MM-DD-HHmm`, and when the lane already has a
  *                session.
@@ -26,23 +28,38 @@
  *                written to msg-<n>.md in the lane folder, so the log stays
  *                reproducible. Appends to the same log. Refused without
  *                session.txt or worktree.txt, and while a run is live.
- *   go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>]
+ *   go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>] [--front <inbox>]
  *                resumes with the standard GO: `[<Prompt-ID>] GO.`, the smoke
  *                sentence, and step <n> of the prompt's COME (of its `### Steps`
  *                when it has one), or the closure commit when --step is absent.
+ *                On a direct merge (merge --direct) there is no session: go
+ *                writes the closure itself, one docs commit that flips the merge
+ *                prompt's Status (the smoke sentence in parentheses) and appends
+ *                the P9 entry, generated from git and result.json, to the one
+ *                inbox the branch adds headings to (--front <name> when it
+ *                writes several); refused on a blocked merge and on a second go.
  *   status <Prompt-ID> [--limit <minutes>]
  *                running, exited or blocked (running past the limit, 90 minutes
  *                by default); the exit code; the last `Outcome:` line of the
  *                assistant text in the log, a suffix after the word tolerated,
  *                `unparsed: <line>` when that line names no outcome, `none` while
  *                the lane runs (the line belongs to an earlier turn); the elapsed
- *                time of the last run.
+ *                time of the last run. Once the lane has exited, a warning line
+ *                for each discovery report it wrote (its log's Write and Edit
+ *                calls, else the commits carrying its Prompt-ID) whose brief, `## 0.
+ *                Answer in brief`, is missing, not the first section, or above 40
+ *                lines (P16).
  *   status --all [--limit <minutes>]
  *                every lane folder of ~/.jjodel-lanes in one table (id, state,
- *                outcome, elapsed), newest Prompt-ID first.
+ *                outcome, elapsed), newest Prompt-ID first; a chain is one row,
+ *                its position in the outcome column, its lanes not listed apart.
+ *   status <chain-id>
+ *                a chain: state (running, done, stopped, lost when its
+ *                supervisor died), position, lanes, the merge after, where it
+ *                stopped and why.
  *   wait <Prompt-ID> | --any <id,id,...> [--max <seconds>]
- *                polls every 2 s until the lane, or any of the lanes, no longer
- *                runs (exit 0, its status printed) or the deadline passes (exit
+ *                (a chain id waits for the chain) polls every 2 s until the lane,
+ *                or any of the lanes, no longer runs (exit 0, its status printed) or the deadline passes (exit
  *                0, the line `timeout: <ids> still running after <max> s`: an
  *                osascript `do shell script` drops the output of a non-zero
  *                exit). --max defaults to 170 and is refused above it: the chat's
@@ -86,14 +103,68 @@
  *                governance file changed on the branch and nothing else; the
  *                Findings and the commit body record it. Without --launch it
  *                reaches only the commit of the `by hand:` line.
+ *   merge ... --direct [--launch]
+ *                the same measurement, and when every precondition holds (no
+ *                conflict outside the union files, each union hunk a pure
+ *                insertion, governance unchanged on the branch, no code file
+ *                changed on both sides, every branch prompt at Status: eseguito,
+ *                every probe once on the resolved merge, the receiving tree
+ *                clean, no MERGE_HEAD, no lane running in it, the incoming
+ *                side's worktree at its tip when it changes test files) the
+ *                script merges without a session: it commits the prompt alone,
+ *                tags pre-<branch> on the trunk tip (into the trunk, RC-31;
+ *                pre-<branch>-<Prompt-ID> when taken), and starts a detached
+ *                worker (direct-run) that runs the gates of the template on the
+ *                receiving tip, merges --no-ff, resolves the union files, commits
+ *                with the template's subject and a measured body, runs the gates
+ *                on the merge, and writes result.json, a synthetic `Outcome:
+ *                hard-stop` (or `blocked` on a red gate, the merge commit left in
+ *                place) in log.jsonl and exit.txt, so status and wait read it as
+ *                a lane. A failed precondition falls back, saying why: the
+ *                rendered prompt is launched with --launch, parked without.
+ *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light]
+ *                validates every prompt (a header Prompt-ID, no id twice, no lane
+ *                folder yet; one in the tree committed, one outside it not yet in
+ *                docs/prompts/), writes ~/.jjodel-lanes/chain-<first Prompt-ID>/
+ *                chain.json and starts a detached supervisor (chain-run, nohup)
+ *                that runs the lanes one after the other in <worktree>: a prompt
+ *                outside the tree is committed alone at its launch (its copy in
+ *                pending/ removed), and the next lane starts only on `Outcome:
+ *                done` with exit 0. Any other outcome, a non-zero exit, a lane
+ *                past the limit (90 minutes by default, the lane left running),
+ *                tracked changes before the next commit, or a stop request stops
+ *                the chain, chain.json naming the lane and the reason, the rest
+ *                left queued and parked. --merge-after ends a finished chain with
+ *                `merge <branch> --into <trunk> --direct` run in the trunk's
+ *                worktree (default alfonso-frontend-jjtl); a fallback is parked,
+ *                never launched.
+ *   chain --stop <chain-id>
+ *                the chain stops after its running lane, which runs to its end.
+ *   monitor [--port <n>] [--no-open]
+ *                refused on port 3001 and on a port in use (lsof). Starts
+ *                gates/trace-monitor.ts detached on 127.0.0.1:<n> (3008 by
+ *                default): the lanes of ~/.jjodel-lanes and the trace graph of
+ *                this repo, live over Server-Sent Events, a notification when a
+ *                lane stops (P-2026-09-27-1030). Waits for its /health, prints the
+ *                URL, the pid and the log (~/.jjodel-lanes/_monitor/), and opens
+ *                the page as an app window unless --no-open.
  *
  * Every run passes `--output-format stream-json --verbose` (stream-json under -p
  * requires --verbose) and `--permission-mode bypassPermissions` (RC-19: a -p
- * session in default mode cannot commit). No --model: the pin lives in
- * .claude/settings.json only (RC-16). `claude` is looked up on the PATH, then in
+ * session in default mode cannot commit). The model follows the activity
+ * (RC-32, amending RC-16): a heavy lane passes no --model and runs the pin of
+ * .claude/settings.json; a light lane passes --model LIGHT_MODEL. start picks the
+ * tier from the prompt's header and DOVE and from the command, never from free
+ * text (tierRule, below; heavy when in doubt), prints it, and writes it to
+ * tier.txt; --tier heavy|light on start, merge --launch and chain overrides it,
+ * light refused where the rule forces heavy. A resume passes no --model: the
+ * session keeps its own (measured, report of P-2026-09-27-2330, 7.1). `claude` is
+ * looked up on the PATH, then in
  * ~/.local/bin; the child's PATH starts with the directory of the node running
  * this script, so the lane's own gates do not meet the node 16 of a bare shell.
- * LANE_RUN_NOW=YYYY-MM-DDTHH:mm stands in for the clock (the tests).
+ * LANE_RUN_NOW=YYYY-MM-DDTHH:mm stands in for the clock (the tests), and
+ * LANE_RUN_NPM for the npm of the gates (else the one beside this node), and
+ * LANE_RUN_LIGHT_MODEL for LIGHT_MODEL (empty or `null`: no light model).
  *
  * Plain ES module, nothing outside node:*, like the hooks beside it.
  * Exit codes: 0 done, 1 the launched session failed to start (a probe's
@@ -104,13 +175,19 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import {
-    accessSync, closeSync, constants, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync,
-    unlinkSync, writeFileSync,
+    accessSync, closeSync, constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync,
+    realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync,
 } from 'node:fs';
 import { get as httpGet } from 'node:http';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CRITICAL_FILES } from './hooks/critical-zone.mjs';
+
+// Model by activity (RC-32). heavy: the pin of .claude/settings.json, no --model (RC-16).
+// light: LIGHT_MODEL, set by the owner chat under RC-32; null runs every lane heavy.
+const LIGHT_MODEL = 'claude-sonnet-5';
+const TIERS = ['heavy', 'light'];
 
 const DEFAULT_LIMIT_MINUTES = 90;
 const START_WAIT_MS = 120000;
@@ -119,7 +196,8 @@ const PROMPT_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
 const HEADER_PROMPT_ID = /^Prompt-ID: (P-\d{4}-\d{2}-\d{2}-\d{4})\s*$/;
 const OUTCOME = /^Outcome:\s*(done|hard-stop|question|blocked)\b/;
 const FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions'];
-const TEMPLATES = join(dirname(fileURLToPath(import.meta.url)), 'lane-templates');
+const SELF = fileURLToPath(import.meta.url);
+const TEMPLATES = join(dirname(SELF), 'lane-templates');
 const DEFAULT_TRUNK = 'alfonso-frontend-jjtl';
 const GOVERNANCE = ['CLAUDE.md', 'AGENTS.md', 'docs/PROTOCOL.md', '.claude/settings.json'];
 const LISTED_MAX = 40;
@@ -129,6 +207,21 @@ const WAIT_POLL_MS = 2000;
 const PROBE_SERVE_MS = 60000;
 const PROBE_STOP_MS = 5000;
 const PROBE_POLL_MS = 250;
+
+// RC-20/RC-21 (CLAUDE.md 21.2, docs/PROTOCOL.md P16): the reminder closingInput
+// appends to every text a lane reads on stdin, so the last thing a session reads
+// before acting is the closing contract. Amended 2026-09-28 (P-2026-09-28-1545)
+// after three lane sessions closed without it: the rule has to travel with every
+// input, not wait to be read.
+const CLOSE_REMINDER =
+    '---\n' +
+    'Close your final message (hard stop, question, closing report) with one line `Outcome: done | hard-stop | question | blocked`: exactly one of those four words, nothing else on that line (RC-20). A question with a recommendation also carries one line `Recommended: <one line>` (RC-21). The `**Outcome**` field of a log entry is not this line.\n';
+
+/** `text` with CLOSE_REMINDER appended once; unchanged if it already ends with it. */
+function withCloseReminder(text) {
+    if (text.trimEnd().endsWith(CLOSE_REMINDER.trimEnd())) return text;
+    return (text.endsWith('\n') ? text : text + '\n') + '\n' + CLOSE_REMINDER;
+}
 
 // The detached run: claude with the input file on stdin, stdout appended to the
 // log, then its exit code written atomically, so status never reads half a file.
@@ -158,6 +251,7 @@ function laneFiles(id) {
         exit: join(dir, 'exit.txt'),
         goahead: join(dir, 'goahead.txt'),
         prompt: join(dir, 'prompt.txt'),
+        tier: join(dir, 'tier.txt'),
     };
 }
 
@@ -213,12 +307,46 @@ function isRunning(f) {
     return !existsSync(f.exit) && isAlive(Number(readTrim(f.pid)));
 }
 
+/**
+ * A verbatim copy of what a run reads on stdin, input-<n>.md in the lane folder,
+ * <n> the run's number: the stream never echoes its input (discovery report of
+ * P-2026-09-27-1030, 2.3), and a message file is rewritten by the chat for the
+ * next lane. Nothing for the /dev/null of a direct run.
+ */
+function keepInput(f, input) {
+    if (!existsSync(input) || !statSync(input).isFile()) return;
+    let n = 0;
+    for (const name of readdirSync(f.dir)) {
+        const m = /^input-(\d+)\.md$/.exec(name);
+        if (m) n = Math.max(n, Number(m[1]));
+    }
+    writeFileSync(join(f.dir, 'input-' + (n + 1) + '.md'), readFileSync(input));
+}
+
+/**
+ * The file `launch` feeds on stdin: `input` unchanged for a non-file (the
+ * /dev/null of a direct-run merge), else its text with CLOSE_REMINDER appended,
+ * written to a scratch file in the lane folder so the worktree's prompt file and
+ * any message file the chat passed are never written to.
+ */
+function closingInput(f, input) {
+    if (!existsSync(input) || !statSync(input).isFile()) return input;
+    const text = readFileSync(input, 'utf8');
+    const withReminder = withCloseReminder(text);
+    if (withReminder === text) return input;
+    const path = join(f.dir, 'stdin.md');
+    writeFileSync(path, withReminder);
+    return path;
+}
+
 function launch(f, claude, cwd, input, args, goAhead = null) {
     if (existsSync(f.exit)) unlinkSync(f.exit);
+    const stdin = closingInput(f, input);
+    keepInput(f, stdin);
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
     if (goAhead) env.JJODEL_CRITICAL_ZONE_GOAHEAD = goAhead;
     else delete env.JJODEL_CRITICAL_ZONE_GOAHEAD;
-    const child = spawn('/bin/sh', ['-c', WRAPPER, 'lane-run', input, f.log, f.err, f.exit, claude, ...args], {
+    const child = spawn('/bin/sh', ['-c', WRAPPER, 'lane-run', stdin, f.log, f.err, f.exit, claude, ...args], {
         cwd,
         env,
         detached: true,
@@ -264,16 +392,102 @@ function goAheadOption(rest, id) {
     return v;
 }
 
-async function start(worktreeArg, promptArg, rest = []) {
-    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>]');
+// ── the model tier (RC-32) ───────────────────────────────────────────────────
+
+/** The names that put a prompt in the critical zone: the six files of CLAUDE.md 3.2 (the hook's list) and rule 14's two. */
+const CRITICAL_NAMES = [...CRITICAL_FILES.map((p) => basename(p)), 'DV.tsx', 'defaultViewTemplate.ts'];
+
+/** The header of a prompt (the lines before its first `## `) and its DOVE section, null when it has none. */
+function promptParts(text) {
+    const lines = text.split('\n');
+    const first = lines.findIndex((l) => l.startsWith('## '));
+    const header = (first === -1 ? lines : lines.slice(0, first)).join('\n');
+    const s = lines.findIndex((l) => /^## DOVE\b/.test(l));
+    if (s === -1) return { header, dove: null };
+    const e = lines.findIndex((l, i) => i > s && l.startsWith('## '));
+    return { header, dove: lines.slice(s + 1, e === -1 ? lines.length : e).join('\n') };
+}
+
+/**
+ * The paths DOVE writes, read strictly (answer 9 of the report of
+ * P-2026-09-27-2330): backticked paths of the tree, under frontend/, docs/,
+ * scripts/ or .claude/, or a governance file; a gitignored probe (`_tmp_`) and a
+ * path outside the tree (`~/...`) are not writes.
+ */
+function doveTargets(dove) {
+    return [...dove.matchAll(/`([^`\s]+)`/g)].map((m) => m[1])
+        .filter((p) => /^(frontend|docs|scripts|\.claude)\//.test(p) || GOVERNANCE.includes(p))
+        .filter((p) => !p.includes('_tmp_'));
+}
+
+/**
+ * The rule of RC-32: the tier a prompt runs, whether the rule forces it, and
+ * why, from the header, DOVE and the command, never from free text. Forced
+ * heavy: the critical-zone go-ahead, a merge session, the governance go-ahead,
+ * a critical-zone name in the header or DOVE, a governance file in DOVE,
+ * `Lane: full`, a discovery whose DOVE writes outside docs/. Light: `Lane: fast`
+ * or `Lane: discovery` whose DOVE writes docs/ only. Heavy when in doubt.
+ */
+function tierRule(text, ctx) {
+    const { header, dove } = promptParts(text);
+    const lane = (/^Lane:\s*([A-Za-z-]+)/m.exec(header) || [])[1] || '';
+    const targets = dove === null ? [] : doveTargets(dove);
+    const docsOnly = targets.length > 0 && targets.every((p) => p.startsWith('docs/'));
+    const forced = (reason) => ({ tier: 'heavy', forced: true, reason });
+    if (ctx.goahead) return forced('--critical-zone-goahead');
+    if (ctx.merge) return forced('a merge that falls back to a session');
+    if (ctx.governanceGoahead) return forced('--governance-goahead');
+    const cz = CRITICAL_NAMES.find((n) => header.includes(n) || (dove || '').includes(n));
+    if (cz) return forced('names ' + cz);
+    const gov = targets.find((p) => GOVERNANCE.includes(p));
+    if (gov) return forced('DOVE writes ' + gov);
+    if (lane === 'full') return forced('Lane: full');
+    if (lane === 'discovery' && targets.length > 0 && !docsOnly) return forced('Lane: discovery writes outside docs/');
+    if ((lane === 'fast' || lane === 'discovery') && docsOnly) return { tier: 'light', forced: false, reason: 'Lane: ' + lane + ', DOVE writes docs only' };
+    return {
+        tier: 'heavy', forced: false,
+        reason: 'in doubt: ' + (lane ? 'Lane: ' + lane : 'no Lane line') + (dove === null ? ', no DOVE' : targets.length ? ', DOVE writes outside docs/' : ', DOVE names no path'),
+    };
+}
+
+/** The tier a lane runs: the rule, or --tier where the rule does not force; the model it passes, and the line printed and kept in tier.txt. */
+function chooseTier(text, ctx = {}, requested = null) {
+    const rule = tierRule(text, ctx);
+    const raw = 'LANE_RUN_LIGHT_MODEL' in process.env ? process.env.LANE_RUN_LIGHT_MODEL.trim() : LIGHT_MODEL;
+    const light = raw && raw !== 'null' ? raw : null;
+    let t;
+    if (requested === 'heavy') t = { tier: 'heavy', reason: '--tier heavy' };
+    else if (requested === 'light') {
+        if (rule.forced) refuse('--tier light refused: the rule forces heavy (' + rule.reason + ')');
+        if (!light) refuse('--tier light: no light model is set (LIGHT_MODEL, RC-32)');
+        t = { tier: 'light', reason: '--tier light (the rule: ' + rule.reason + ')' };
+    } else if (rule.tier === 'light' && !light) t = { tier: 'heavy', reason: 'no light model set (' + rule.reason + ')' };
+    else t = { tier: rule.tier, reason: rule.reason };
+    if (t.tier === 'light' && !/^claude-[a-z0-9][a-z0-9.-]*$/.test(light)) refuse('the light model id is malformed: "' + light + '"');
+    t.model = t.tier === 'light' ? light : null;
+    t.line = t.tier + ' (' + (t.model || 'settings pin') + '): ' + t.reason;
+    return t;
+}
+
+function tierOption(rest) {
+    const v = option(rest, '--tier');
+    if (v !== null && !TIERS.includes(v)) refuse('--tier takes heavy or light: ' + v);
+    return v;
+}
+
+async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
+    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light]');
     const worktree = resolve(worktreeArg);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
     // As given (absolute, or relative to the caller's directory), then relative to the worktree.
     const tried = [...new Set([resolve(promptArg), resolve(worktree, promptArg)])];
     const promptFile = tried.find((p) => existsSync(p) && statSync(p).isFile());
     if (!promptFile) refuse('no prompt file: tried ' + tried.join(' and '));
-    const id = headerPromptId(readFileSync(promptFile, 'utf8'));
+    const text = readFileSync(promptFile, 'utf8');
+    const id = headerPromptId(text);
     if (!id) refuse('the prompt header has no "Prompt-ID: P-YYYY-MM-DD-HHmm" line: ' + promptFile);
+    const goAhead = goAheadOption(rest, id);
+    const tier = chooseTier(text, { ...ctx, goahead: Boolean(goAhead) }, tierOption(rest));
 
     const claude = findClaude();
     const f = laneFiles(id);
@@ -285,10 +499,11 @@ async function start(worktreeArg, promptArg, rest = []) {
     closeSync(openSync(f.log, 'a'));
     const from = statSync(f.log).size;
 
-    const goAhead = goAheadOption(rest, id);
     if (goAhead) writeFileSync(f.goahead, goAhead + '\n');
-    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS], goAhead);
+    writeFileSync(f.tier, tier.line + '\n');
+    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS, ...(tier.model ? ['--model', tier.model] : [])], goAhead);
     console.log('prompt: ' + promptFile);
+    console.log('tier: ' + tier.line);
     console.log('log: ' + f.log);
 
     const end = Date.now() + START_WAIT_MS;
@@ -397,6 +612,7 @@ function laneState(f, limit) {
 
 function status(idArg, rest) {
     if (idArg === '--all') return statusAll(rest);
+    if (typeof idArg === 'string' && CHAIN_ID.test(idArg)) return chainStatus(idArg);
     const id = checkId(idArg);
     const limit = limitOption(rest);
     const f = laneFiles(id);
@@ -410,19 +626,70 @@ function status(idArg, rest) {
     console.log('elapsed: ' + s.minutes + ' min, limit ' + limit + ' min');
     console.log('session: ' + (readTrim(f.session) || '-'));
     console.log('log: ' + f.log);
+    if (s.state !== 'exited') return 0;
+    const tree = readTrim(f.worktree);
+    for (const path of laneReports(f, id)) {
+        const w = briefWarning(path);
+        if (w) console.log('warning: ' + (tree ? relative(tree, path) : path) + ': ' + w + ' (P16)');
+    }
     return 0;
+}
+
+// The brief of a discovery report (P16, rule 5 of P-2026-09-27-2330): it opens the report, at most 40 lines.
+const BRIEF_MAX = 40;
+const BRIEF = /^## 0\. Answer in brief\s*$/;
+const REPORT_FILE = /(^|\/)docs\/discovery\/discovery_[^/]+\.md$/;
+
+/**
+ * The discovery reports a lane wrote: the Write and Edit calls of its log (the
+ * prompt text also names the reports it reads, so it is not the source); else
+ * the files under docs/discovery/ that commits carrying its Prompt-ID add.
+ */
+function laneReports(f, id) {
+    const tree = readTrim(f.worktree);
+    const written = [];
+    for (const e of events(f.log)) {
+        if (!e || e.type !== 'assistant' || !e.message || !Array.isArray(e.message.content)) continue;
+        for (const b of e.message.content) {
+            const p = b && b.type === 'tool_use' && (b.name === 'Write' || b.name === 'Edit') && b.input ? b.input.file_path : null;
+            if (typeof p === 'string' && REPORT_FILE.test(p)) written.push(p.startsWith('/') ? p : join(tree, p));
+        }
+    }
+    if (written.length || !tree || !existsSync(tree)) return [...new Set(written)];
+    const r = spawnSync('git', ['log', '--format=', '--name-only', '--diff-filter=A', '--fixed-strings', '--grep=' + id, '--', 'docs/discovery/'], { cwd: tree, encoding: 'utf8' });
+    if (r.status !== 0) return [];
+    return [...new Set(nonEmpty(r.stdout).filter((p) => REPORT_FILE.test(p)).map((p) => join(tree, p)))];
+}
+
+/** What is wrong with a report's brief, or null: absent, not the first section, or above BRIEF_MAX lines (trailing blank lines dropped). */
+function briefWarning(path) {
+    if (!existsSync(path)) return null;
+    const lines = readFileSync(path, 'utf8').split('\n');
+    const at = lines.findIndex((l) => BRIEF.test(l));
+    if (at === -1) return 'no "## 0. Answer in brief"';
+    if (lines.findIndex((l) => l.startsWith('## ')) !== at) return '"## 0. Answer in brief" is not the first section';
+    const end = lines.findIndex((l, i) => i > at && l.startsWith('## '));
+    const body = lines.slice(at + 1, end === -1 ? lines.length : end);
+    while (body.length && body[body.length - 1].trim() === '') body.pop();
+    return body.length > BRIEF_MAX ? 'the brief runs ' + body.length + ' lines, above ' + BRIEF_MAX : null;
 }
 
 /** Every lane folder of ~/.jjodel-lanes in one table, newest Prompt-ID first; other folders and files are not lanes. */
 function statusAll(rest) {
     const limit = limitOption(rest);
     const root = lanesRoot();
-    const ids = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && statSync(join(root, n)).isDirectory()) : [];
+    const chains = existsSync(root) ? readdirSync(root).filter((n) => CHAIN_ID.test(n) && existsSync(chainFiles(n).json)).map((n) => readChain(n)) : [];
+    // A chain is one row with its position; its lanes are not listed on their own.
+    const chained = new Set(chains.flatMap((c) => c.lanes.map((l) => l.id)));
+    const ids = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && !chained.has(n) && statSync(join(root, n)).isDirectory()) : [];
     const rows = [['id', 'state', 'outcome', 'elapsed']];
     for (const id of ids.sort().reverse()) {
         const s = laneState(laneFiles(id), limit);
         const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
         rows.push([id, s.state, s.outcome === null ? 'none' : m ? m[1] : 'unparsed', s.minutes + ' min']);
+    }
+    for (const c of chains.sort((a, b) => (a.id < b.id ? 1 : -1))) {
+        rows.push([c.id, chainState(c), chainPosition(c), Math.floor((Date.now() - c.created) / 60000) + ' min']);
     }
     const widths = rows[0].map((_, c) => Math.max(...rows.map((r) => r[c].length)));
     for (const r of rows) console.log(r.map((x, c) => (c === r.length - 1 ? x : x.padEnd(widths[c]))).join('  '));
@@ -437,8 +704,9 @@ async function waitLanes(rest) {
     if (ids.length === 0 || (any === null && (!rest[0] || rest[0].startsWith('--')))) {
         refuse('usage: lane-run wait <Prompt-ID> | --any <id,id,...> [--max <seconds>]');
     }
-    // An unknown lane never runs: status, below, refuses it at the first poll.
-    ids.forEach(checkId);
+    // An unknown lane never runs: status, below, refuses it at the first poll. A chain waits until it stops.
+    ids.forEach((id) => (CHAIN_ID.test(id) ? readChain(id) : checkId(id)));
+    const live = (id) => (CHAIN_ID.test(id) ? chainRunning(readChain(id)) : isRunning(laneFiles(id)));
     const maxArg = option(rest, '--max');
     const max = maxArg === null ? WAIT_MAX_S : Number(maxArg);
     if (!Number.isFinite(max) || max < 0) refuse('--max takes a number of seconds');
@@ -447,7 +715,7 @@ async function waitLanes(rest) {
     }
     const end = Date.now() + max * 1000;
     for (;;) {
-        const ended = ids.filter((id) => !isRunning(laneFiles(id)));
+        const ended = ids.filter((id) => !live(id));
         if (ended.length) {
             ended.forEach((id, i) => {
                 if (i) console.log('');
@@ -661,8 +929,12 @@ function comeStep(text, n) {
 function go(idArg, rest) {
     const id = checkId(idArg);
     const smoke = option(rest, '--smoke');
-    if (!smoke || smoke.trim() === '') refuse('usage: lane-run go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>]');
+    if (!smoke || smoke.trim() === '') refuse('usage: lane-run go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>] [--front <inbox>]');
     const stepArg = option(rest, '--step');
+    if (existsSync(join(laneFiles(id).dir, 'direct.json'))) {
+        if (stepArg !== null) refuse(id + ' is a direct merge: it has no session and no steps; go writes its closure');
+        return closeDirect(id, smoke.trim(), option(rest, '--front'));
+    }
     let next = 'Now the closure commit as the prompt says.';
     if (stepArg !== null) {
         if (!/^[1-9]\d*$/.test(stepArg)) refuse('--step takes a step number: ' + stepArg);
@@ -743,8 +1015,12 @@ function addedLines(cwd, base, tip, paths) {
     return out;
 }
 
-/** The decision rows and inbox headings each side adds, each to be found once after the merge; the next row id of the series is the control. */
-function mergeProbes(cwd, base, sides) {
+/**
+ * The decision rows and inbox headings each side adds, each to be found once
+ * after the merge; the next row id of the series is the control. Plain data, so
+ * a direct merge carries it to its worker.
+ */
+function probeList(cwd, base, sides) {
     const rows = new Map();
     const headings = new Map();
     for (const [side, tip] of sides) {
@@ -756,7 +1032,7 @@ function mergeProbes(cwd, base, sides) {
             map.set(key, map.has(key) && map.get(key).side !== side ? { ...map.get(key), side: 'both sides' } : { file: a.file, text: a.text, side });
         }
     }
-    const out = [];
+    let control = null;
     if (rows.size) {
         const ids = [...rows.keys()];
         const series = ids[ids.length - 1].replace(/-\d+$/, '');
@@ -766,11 +1042,42 @@ function mergeProbes(cwd, base, sides) {
             const r = git(cwd, ['show', tip + ':docs/decisions.md'], [0, 128]);
             for (const m of r.status === 0 ? r.out.matchAll(re) : []) max = Math.max(max, Number(m[1]));
         }
-        out.push('`docs/decisions.md`, each row once, counted on `- **<id>**`: ' +
-            ids.map((id) => '`' + id + '` (' + rows.get(id).side + ')').join(', ') +
-            '; control: `- **' + series + '-' + (max + 1) + '**` none.');
+        control = series + '-' + (max + 1);
     }
-    for (const h of headings.values()) out.push('`' + h.file + '`: the heading `' + h.text + '` once (' + h.side + ').');
+    return {
+        rows: [...rows].map(([id, r]) => ({ id, side: r.side })),
+        headings: [...headings.values()].map((h) => ({ file: h.file, text: h.text, side: h.side })),
+        control,
+    };
+}
+
+function mergeProbes(list) {
+    const out = [];
+    if (list.rows.length) {
+        out.push('`docs/decisions.md`, each row once, counted on `- **<id>**`: ' +
+            list.rows.map((r) => '`' + r.id + '` (' + r.side + ')').join(', ') +
+            '; control: `- **' + list.control + '**` none.');
+    }
+    for (const h of list.headings) out.push('`' + h.file + '`: the heading `' + h.text + '` once (' + h.side + ').');
+    return out;
+}
+
+/** The probes a merged text fails: each row and each heading once, the control absent. */
+function failedProbes(list, textOf) {
+    const out = [];
+    const count = (file, keep) => textOf(file).split('\n').filter(keep).length;
+    for (const r of list.rows) {
+        const n = count('docs/decisions.md', (l) => l.startsWith('- **' + r.id + '**'));
+        if (n !== 1) out.push('`- **' + r.id + '**` ' + n + ' times in docs/decisions.md');
+    }
+    if (list.control) {
+        const n = count('docs/decisions.md', (l) => l.startsWith('- **' + list.control + '**'));
+        if (n !== 0) out.push('the control `- **' + list.control + '**` ' + n + ' times in docs/decisions.md');
+    }
+    for (const h of list.headings) {
+        const n = count(h.file, (l) => l === h.text);
+        if (n !== 1) out.push('the heading `' + h.text + '` ' + n + ' times in ' + h.file);
+    }
     return out;
 }
 
@@ -782,19 +1089,23 @@ function measureMerge(cwd, o) {
     const base = mb.out.trim();
     const pair = o.mode === 'into' ? [trunkTip, branchTip] : [branchTip, trunkTip];
     const mt = git(cwd, ['merge-tree', '--write-tree', '--name-only', '--no-messages', ...pair], [0, 1]);
+    const tree = nonEmpty(mt.out)[0];
     const conflicts = mt.status === 0 ? [] : [...new Set(nonEmpty(mt.out).slice(1))];
     const branchFiles = nonEmpty(git(cwd, ['diff', '--name-only', base, branchTip]).out);
     const trunkFiles = nonEmpty(git(cwd, ['diff', '--name-only', base, trunkTip]).out);
     const log = (tip) => nonEmpty(git(cwd, ['log', '--format=%h %s', '--abbrev=9', base + '..' + tip]).out);
     const prompts = nonEmpty(git(cwd, ['diff', '--name-only', '--diff-filter=A', base, branchTip, '--', 'docs/prompts/']).out).map((path) => {
-        const status = headerStatus(git(cwd, ['show', branchTip + ':' + path]).out);
-        return { name: basename(path), status, done: /^eseguito\b/.test(status) };
+        const text = git(cwd, ['show', branchTip + ':' + path]).out;
+        const status = headerStatus(text);
+        const title = (text.split('\n')[0] || '').replace(/^#\s*(Prompt:\s*)?/, '').trim();
+        return { name: basename(path), status, done: /^eseguito\b/.test(status), title };
     });
     const lastMerge = (tip) => git(cwd, ['log', '--merges', '-1', '--format=%h', '--abbrev=9', tip]).out.trim();
     let precedent = { sha: lastMerge(o.mode === 'into' ? trunkTip : branchTip), on: o.mode === 'into' ? o.trunk : o.branch };
     if (!precedent.sha && o.mode !== 'into') precedent = { sha: lastMerge(trunkTip), on: o.trunk };
+    const probes = probeList(cwd, base, [['branch', branchTip], ['trunk', trunkTip]]);
     return {
-        trunkTip, branchTip, base, conflicts, branchFiles, trunkFiles,
+        trunkTip, branchTip, base, tree, conflicts, branchFiles, trunkFiles,
         both: branchFiles.filter((p) => trunkFiles.includes(p)),
         governance: nonEmpty(git(cwd, ['diff', '--name-only', base, branchTip, '--', ...GOVERNANCE]).out),
         branchCommits: log(branchTip),
@@ -802,7 +1113,9 @@ function measureMerge(cwd, o) {
         prompts,
         precedent,
         worktrees: worktrees(cwd),
-        probes: mergeProbes(cwd, base, [['branch', branchTip], ['trunk', trunkTip]]),
+        probeList: probes,
+        fronts: inboxFronts(cwd, base, branchTip),
+        probes: mergeProbes(probes),
         short: { trunk: shortSha(cwd, trunkTip), branch: shortSha(cwd, branchTip), base: shortSha(cwd, base) },
     };
 }
@@ -884,17 +1197,19 @@ function mergeValues(m, o, id, when, findings, goahead = null) {
         ].filter((x) => x !== '').join('\n\n'),
         probes: (m.probes.length ? m.probes : ['none: neither side adds a decision row or an inbox heading since the base.']).map((x) => '   - ' + x).join('\n'),
         mergeSubject: subject,
+        front: m.fronts.length === 1 ? '`' + m.fronts[0] + '`' : 'the `docs/log-inbox/` file of this branch\'s front (the branch adds headings to ' + (m.fronts.length ? quote(m.fronts) : 'none') + ')',
     };
 }
 
 function parseMerge(rest) {
-    const o = { launch: false, governanceGoahead: false };
+    const o = { launch: false, governanceGoahead: false, direct: false };
     const positional = [];
-    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat' };
-    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id>] [--launch [--governance-goahead]]';
+    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat', '--tier': 'tier' };
+    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id>] [--direct] [--launch [--governance-goahead]] [--tier heavy]';
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i];
         if (a === '--launch') o.launch = true;
+        else if (a === '--direct') o.direct = true;
         else if (a === '--governance-goahead') o.governanceGoahead = true;
         else if (a.startsWith('--governance-goahead=')) refuse('--governance-goahead takes no value; ' + usage);
         else if (a in valued) {
@@ -903,6 +1218,7 @@ function parseMerge(rest) {
         } else if (a.startsWith('--')) refuse('unknown option for merge: ' + a);
         else positional.push(a);
     }
+    if (o.tier !== undefined && o.tier !== 'heavy') refuse('--tier ' + o.tier + ': a merge session runs heavy (RC-32)');
     if (o.trunkInto) {
         if (positional.length || o.into) refuse(usage);
         return { ...o, mode: 'trunk-into', branch: o.trunkInto, trunk: o.from || DEFAULT_TRUNK };
@@ -946,10 +1262,18 @@ async function merge(rest) {
     // Alfonso's yes on a governance change: lifted only by a launch; the by-hand commit records it all the same.
     const goahead = o.governanceGoahead && m.governance.length ? when : null;
     const findings = mergeFindings(m, o, Boolean(o.launch && goahead));
+    const direct = o.direct ? directFindings(m, o) : null;
+    const goDirect = direct !== null && direct.findings.length === 0;
     const slug = o.branch.replace(/[^A-Za-z0-9._-]+/g, '-');
     const file = join(dir, 'claude_' + date + '_' + hhmm + (o.mode === 'into' ? '_prompt_merge_' + slug : '_prompt_' + slug + '_take_trunk') + '.md');
     const parked = join(pending, basename(file));
     const values = mergeValues(m, o, id, when, findings, o.launch ? goahead : null);
+    if (direct) {
+        const note = goDirect
+            ? '**Direct.** Merged by `lane-run merge --direct`, no session: the gates and the outcome are in `' + join(laneFiles(id).dir, 'result.json') + '`.'
+            : '**Direct.** `lane-run merge --direct` fell back:\n\n' + direct.findings.map((x) => '- ' + x).join('\n');
+        values.findings = [values.findings, note].filter((x) => x !== '').join('\n\n');
+    }
     const text = render(o.mode === 'into' ? 'merge-into-trunk.md' : 'trunk-into-branch.md', values);
     mkdirSync(pending, { recursive: true });
     writeFileSync(parked, text);
@@ -970,17 +1294,20 @@ async function merge(rest) {
     console.log('probes: ' + m.probes.length);
     console.log('Prompt-ID: ' + id);
     console.log('prompt: ' + parked);
+    if (direct) console.log(goDirect ? 'direct: preconditions hold' : 'direct: falls back: ' + direct.findings.map((x) => x.replace(/`/g, '')).join('; '));
 
     const refusals = findings.map((x) => x.replace(/`/g, ''));
     if (o.at && o.mode === 'into' && commitOf(o.top, o.trunk) !== m.trunkTip) {
         refusals.push('--at ' + o.at + ' is not the tip of ' + o.trunk + ': a launched merge starts from the trunk tip');
     }
     const rel = relative(o.top, file);
-    const message = ['docs: add prompt ' + id + ', merge ' + (o.mode === 'into' ? o.branch + ' into ' + o.trunk : o.trunk + ' into ' + o.branch), modelTrailer()];
+    const subjectLine = 'docs: add prompt ' + id + ', merge ' + (o.mode === 'into' ? o.branch + ' into ' + o.trunk : o.trunk + ' into ' + o.branch);
+    const message = [subjectLine, modelTrailer() + '; lane tier heavy (a merge that falls back to a session)'];
     if (goahead) message.push("Governance go-ahead: Alfonso's yes, " + goahead + ' (--governance-goahead).');
     const byHand = 'by hand: cp ' + shWord(parked) + ' ' + shWord(file) + ' && git -C ' + shWord(o.top) + ' add -- ' + shWord(rel) +
         ' && git -C ' + shWord(o.top) + ' commit ' + message.map((x) => '-m ' + shWord(x)).join(' ') + ' -- ' + shWord(rel) +
         ' && lane-run start ' + shWord(o.top) + ' ' + shWord(rel);
+    if (goDirect) return mergeDirect({ o, m, id, when, file, parked, rel, values, direct, message: [subjectLine, modelTrailer(), 'Run by lane-run merge --direct, no session.'] });
     if (!o.launch) {
         console.log('launch: not requested' + (refusals.length ? '; it would be refused: ' + refusals.join('; ') : ''));
         console.log(byHand);
@@ -997,11 +1324,779 @@ async function merge(rest) {
     git(o.top, ['add', '--', rel]);
     git(o.top, ['commit', '-q', ...message.flatMap((x) => ['-m', x]), '--', rel]);
     console.log('launch: committed ' + shortSha(o.top, 'HEAD'));
-    return start(o.top, file);
+    return start(o.top, file, [], { merge: true, governanceGoahead: Boolean(goahead) });
+}
+
+// ── merge --direct ───────────────────────────────────────────────────────────
+
+const GATES = ['typecheck', 'typecheck:scripts', 'vitest', 'build', 'check:docs', 'check:agents', 'check:scripts'];
+// Conflict markers longer than any line of a markdown document, so a `=======` in the text is never taken for one.
+const MARKER = 31;
+const isTest = (p) => /\.test\.tsx?$/.test(p);
+
+/** The npm of the gates: LANE_RUN_NPM (the tests), else the one beside this node, else the PATH's. */
+function findNpm() {
+    const v = (process.env.LANE_RUN_NPM || '').trim();
+    if (v) return v;
+    const beside = join(dirname(process.execPath), 'npm');
+    if (isExecutable(beside)) return beside;
+    const found = onPath('npm');
+    if (!found) throw new Error('npm is neither beside ' + process.execPath + ' nor on the PATH');
+    return found;
+}
+
+/**
+ * The union of a docs file both sides changed, the templates' rule made
+ * deterministic: `git merge-file --diff3` of the trunk, the base and the branch;
+ * every conflict hunk must be a pure insertion (an empty base section) and
+ * becomes the trunk's lines, one blank line when the branch's block opens with a
+ * heading right after a non-blank line, then the branch's lines. Measured on the
+ * 16 union files of 2026-09-26/27: 15 byte-identical to the sessions' own
+ * resolutions (report P-2026-09-27-2330, 4.3). Null when a hunk edits (a fold on
+ * one side): that is not an append, and the merge falls back.
+ */
+function unionResolve(cwd, base, trunkTip, branchTip, path) {
+    const dir = mkdtempSync(join(tmpdir(), 'lane-run-union-'));
+    try {
+        const input = (rev, name) => {
+            const r = git(cwd, ['show', rev + ':' + path], [0, 128]);
+            writeFileSync(join(dir, name), r.status === 0 ? r.out : '');
+            return join(dir, name);
+        };
+        const sides = [input(trunkTip, 'trunk'), input(base, 'base'), input(branchTip, 'branch')];
+        const r = spawnSync('git', ['merge-file', '-p', '--diff3', '--marker-size=' + MARKER, '-L', 'trunk', '-L', 'base', '-L', 'branch', ...sides], {
+            encoding: 'utf8', maxBuffer: 256 * 1024 * 1024,
+        });
+        if (r.error || r.status === null || r.status > 127) throw new Error('git merge-file ' + path + ': ' + (r.error ? r.error.message : r.stderr.trim()));
+        const open = '<'.repeat(MARKER) + ' trunk';
+        const mid = '|'.repeat(MARKER) + ' base';
+        const sep = '='.repeat(MARKER);
+        const close = '>'.repeat(MARKER) + ' branch';
+        const out = [];
+        let state = null;
+        let ours = [];
+        let baseLines = [];
+        let theirs = [];
+        for (const line of r.stdout.split('\n')) {
+            if (state === null && line === open) {
+                state = 'ours';
+                ours = [];
+                baseLines = [];
+                theirs = [];
+            } else if (state === 'ours' && line === mid) state = 'base';
+            else if ((state === 'ours' || state === 'base') && line === sep) state = 'theirs';
+            else if (state === 'theirs' && line === close) {
+                if (baseLines.length) return null;
+                out.push(...ours);
+                if (ours.length && theirs.length && ours[ours.length - 1].trim() !== '' && theirs[0].startsWith('#')) out.push('');
+                out.push(...theirs);
+                state = null;
+            } else if (state === 'ours') ours.push(line);
+            else if (state === 'base') baseLines.push(line);
+            else if (state === 'theirs') theirs.push(line);
+            else out.push(line);
+        }
+        if (state !== null) throw new Error('git merge-file ' + path + ': a conflict without its end marker');
+        return out.join('\n');
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+}
+
+/** The lanes whose run is live in a tree. */
+function runningIn(tree) {
+    const root = lanesRoot();
+    if (!existsSync(root)) return [];
+    return readdirSync(root).filter((n) => PROMPT_ID.test(n)).filter((n) => {
+        const f = laneFiles(n);
+        return readTrim(f.worktree) === tree && isRunning(f);
+    });
+}
+
+/**
+ * What keeps a merge from running without a session, on top of what refuses
+ * --launch (P16, question 3 of the report of P-2026-09-27-2330). Also the union
+ * texts and the incoming side's test files, which the worker needs.
+ */
+function directFindings(m, o) {
+    const into = o.mode === 'into';
+    const out = mergeFindings(m, o, false);
+    if (!into) {
+        const code = m.both.filter(isCode);
+        if (code.length) out.push('code files changed on both sides since the base; step 5 of the template is a reading no script does: ' + quote(code));
+        const open = m.prompts.filter((p) => !p.done);
+        if (open.length) out.push('branch prompts whose Status is not eseguito: ' + open.map((p) => '`' + p.name + '` (' + (p.status || 'no Status line') + ')').join(', '));
+    }
+    if (o.at) out.push('--at ' + o.at + ': a direct merge takes the tip');
+    if (git(o.top, ['status', '--porcelain']).out.trim() !== '') out.push('the tree is not clean (`git status --porcelain`)');
+    if (git(o.top, ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], [0, 1]).status === 0) out.push('a merge is in progress (`MERGE_HEAD`)');
+    for (const id of runningIn(o.top)) out.push(id + ' is running in ' + o.top);
+
+    const union = {};
+    let edits = false;
+    for (const p of m.conflicts.filter(isUnion)) {
+        const text = unionResolve(o.top, m.base, m.trunkTip, m.branchTip, p);
+        if (text === null) {
+            edits = true;
+            out.push('a union hunk edits ' + p + ' (a base section): not an append');
+        } else union[p] = text;
+    }
+    if (!edits) {
+        const textOf = (p) => {
+            if (p in union) return union[p];
+            const r = git(o.top, ['show', m.tree + ':' + p], [0, 128]);
+            return r.status === 0 ? r.out : '';
+        };
+        const failed = failedProbes(m.probeList, textOf);
+        if (failed.length) out.push('a probe does not hold on the resolved merge: ' + failed.join('; '));
+    }
+
+    // The incoming side's test files are counted in its own worktree, at its tip (the template's vitest step).
+    const incoming = into ? { branch: o.branch, tip: m.branchTip } : { branch: o.trunk, tip: m.trunkTip };
+    const tests = (filter) => nonEmpty(git(o.top, ['diff', '--name-only', '--no-renames', '--diff-filter=' + filter, m.base, incoming.tip, '--', 'frontend/']).out)
+        .filter(isTest).map((p) => p.slice('frontend/'.length));
+    const changed = tests('AM');
+    const deleted = tests('D');
+    let tree = null;
+    if (changed.length) {
+        const trees = m.worktrees.filter((w) => w.branch === incoming.branch).map((w) => w.path);
+        if (trees.length !== 1) {
+            out.push('the ' + incoming.branch + ' side changes test files and has ' + (trees.length ? trees.length + ' worktrees' : 'no worktree') + ' to count them in');
+        } else if (git(trees[0], ['rev-parse', 'HEAD']).out.trim() !== incoming.tip) {
+            out.push('the worktree of ' + incoming.branch + ' (' + trees[0] + ') is not at ' + shortSha(o.top, incoming.tip));
+        } else if (git(trees[0], ['status', '--porcelain', '--untracked-files=no']).out.trim() !== '') {
+            out.push('the worktree of ' + incoming.branch + ' (' + trees[0] + ') has tracked changes');
+        } else tree = trees[0];
+    }
+    return { findings: out, union, incoming: { ...incoming, tree, tests: changed, deleted } };
+}
+
+/** The commit message of a direct merge: the template's subject, a body of measurements only (question 5). */
+function directMessage(m, o, id, when, values, tag) {
+    const into = o.mode === 'into';
+    const list = (xs) => (xs.length ? xs.slice(0, LISTED_MAX).map((l) => '- ' + l).join('\n') + (xs.length > LISTED_MAX ? '\n- and ' + (xs.length - LISTED_MAX) + ' more' : '') : '- none');
+    const count = (n) => n + (n === 1 ? ' commit' : ' commits');
+    const union = Object.keys(m.union);
+    const lines = [
+        into
+            ? 'Brings ' + o.branch + ' at ' + m.short.branch + ' into ' + o.trunk + ' by lane-run merge --direct, no session (P16, RC-14). Merge base ' + m.short.base + '.'
+            : 'Brings the trunk ' + o.trunk + ' at ' + m.short.trunk + ' into ' + o.branch + ' by lane-run merge --direct, no session (P16, RC-14). Merge base ' + m.short.base + '.',
+        '',
+        'The branch side, ' + count(m.branchCommits.length) + ':',
+        list(m.branchCommits),
+        '',
+        'The trunk side since the base, ' + count(m.trunkCommits.length) + (into ? ', and this merge\'s prompt on top:' : ':'),
+        list(m.trunkCommits),
+        '',
+        'Measured by lane-run merge at ' + when + ': git merge-tree --write-tree --name-only: ' + values.conflicts.replace(/`/g, '') + '. Files changed since the base: ' +
+            values.branchFileCount + ' on the branch side, ' + values.trunkFileCount + ' on the trunk side; on both sides: ' + values.bothSides.replace(/`/g, '') +
+            '. Governance files changed on the branch: none. Branch prompts: ' + values.branchPrompts.replace(/`/g, '') + '.',
+        union.length ? 'Union resolutions, the trunk\'s block first, then the branch\'s: ' + union.join(', ') + '.' : 'No union resolution.',
+        'Probes on the resolved merge, each once: ' + (m.probeList.rows.length + m.probeList.headings.length) + (m.probeList.control ? '; the control ' + m.probeList.control + ' absent' : '') + '.',
+        'What the branch brings, by the titles of its prompts: ' + (m.prompts.length ? m.prompts.map((p) => p.title || p.name).join('; ') : 'none') + '.',
+    ];
+    if (tag) lines.push('Rollback tag: ' + tag + ' on ' + m.short.trunk + ' (RC-31).');
+    lines.push('The gates run on this commit in the same worker; the result is in ~/.jjodel-lanes/' + id + '/result.json.');
+    lines.push('', 'Model: none (lane-run merge --direct; ' + (o.chat ? 'chat ' + o.chat + ', ' : '') + modelTrailer().replace(/^Model:\s*/, '') + ')');
+    return values.mergeSubject + '\n\n' + lines.join('\n') + '\n';
+}
+
+/** The foreground of a direct merge: the prompt committed alone, the rollback tag, the worker started. */
+function mergeDirect({ o, m, id, when, file, parked, rel, values, direct, message }) {
+    const into = o.mode === 'into';
+    const tagged = (t) => git(o.top, ['rev-parse', '--verify', '--quiet', 'refs/tags/' + t], [0, 1, 128]).status === 0;
+    let tag = null;
+    if (into) {
+        tag = tagged('pre-' + o.branch) ? 'pre-' + o.branch + '-' + id : 'pre-' + o.branch;
+        if (tagged(tag)) refuse('the rollback tags pre-' + o.branch + ' and ' + tag + ' both exist: tag by hand and merge again');
+    }
+    mkdirSync(dirname(file), { recursive: true });
+    copyFileSync(parked, file);
+    unlinkSync(parked);
+    git(o.top, ['add', '--', rel]);
+    git(o.top, ['commit', '-q', ...message.flatMap((x) => ['-m', x]), '--', rel]);
+    const promptCommit = git(o.top, ['rev-parse', 'HEAD']).out.trim();
+    console.log('launch: committed ' + shortSha(o.top, promptCommit));
+    if (tag) {
+        git(o.top, ['tag', tag, m.trunkTip]);
+        console.log('tag: ' + tag + ' on ' + m.short.trunk);
+    }
+
+    const f = laneFiles(id);
+    mkdirSync(f.dir, { recursive: true });
+    writeFileSync(f.worktree, o.top + '\n');
+    writeFileSync(f.prompt, file + '\n');
+    const plan = {
+        kind: 'direct', mode: o.mode, promptId: id, top: o.top, branch: o.branch, trunk: o.trunk, chat: o.chat || null,
+        base: m.base, trunkTip: m.trunkTip, branchTip: m.branchTip, promptCommit,
+        incomingTip: direct.incoming.tip, incomingTree: direct.incoming.tree, incomingTests: direct.incoming.tests, deletedTests: direct.incoming.deleted,
+        union: direct.union, probes: m.probeList, tag, prompt: file,
+        message: directMessage({ ...m, union: direct.union }, o, id, when, values, tag),
+    };
+    writeFileSync(join(f.dir, 'direct.json'), JSON.stringify(plan, null, 1) + '\n');
+    closeSync(openSync(f.log, 'a'));
+    launch(f, process.execPath, o.top, '/dev/null', [SELF, 'direct-run', id]);
+    console.log('direct: worker started, lane folder ' + f.dir);
+    console.log('log: ' + f.log);
+    return 0;
+}
+
+/** `<file> <code>` of every type error in a tsc output, sorted: the gate compares it with the receiving tip's. */
+function typeErrors(text) {
+    const out = [];
+    for (const line of text.split('\n')) {
+        const e = /^(\S.*?)\(\d+,\d+\): error (TS\d+):/.exec(line);
+        if (e) out.push(e[1] + ' ' + e[2]);
+    }
+    return out.sort();
+}
+
+/** Per test file, relative to frontend/: its tests, the failed ones, and whether it failed at import. */
+function vitestFiles(report, frontend) {
+    if (!existsSync(report)) throw new Error('vitest wrote no report at ' + report);
+    const j = JSON.parse(readFileSync(report, 'utf8'));
+    const root = realpathSync(frontend);
+    const files = {};
+    for (const t of j.testResults || []) {
+        const a = t.assertionResults || [];
+        files[relative(root, t.name)] = { tests: a.length, failed: a.filter((x) => x.status === 'failed').length, importRed: t.status === 'failed' && a.length === 0 };
+    }
+    return files;
+}
+
+/** Atomic, like exit.txt: status never reads half a file. */
+function writeJson(path, value) {
+    writeFileSync(path + '.tmp', JSON.stringify(value, null, 1) + '\n');
+    renameSync(path + '.tmp', path);
+}
+
+/**
+ * The detached worker of a direct merge: the template's steps 4 to 7 without a
+ * session. Its stdout is the lane's log.jsonl, so it prints events only.
+ */
+async function directRun(idArg) {
+    const id = checkId(idArg);
+    const f = laneFiles(id);
+    const plan = JSON.parse(readFileSync(join(f.dir, 'direct.json'), 'utf8'));
+    const res = {
+        kind: 'direct', mode: plan.mode, promptId: id, branch: plan.branch, trunk: plan.trunk, tree: plan.top, tag: plan.tag,
+        promptCommit: plan.promptCommit, merge: null, union: Object.keys(plan.union), gates: [], ok: false, outcome: 'blocked',
+        reason: null, port3001: null, closure: null,
+    };
+    console.log(JSON.stringify({ type: 'system', subtype: 'direct', prompt_id: id }));
+    try {
+        const npm = findNpm();
+        const frontend = join(plan.top, 'frontend');
+        const run = (name, cwd, args) => {
+            const log = join(f.dir, 'gate-' + name + '.log');
+            const fd = openSync(log, 'w');
+            const r = spawnSync(npm, args, { cwd, stdio: ['ignore', fd, fd] });
+            closeSync(fd);
+            return { code: r.error || r.status === null ? 1 : r.status, text: readFileSync(log, 'utf8') };
+        };
+        const vitest = (name, cwd, files, extra = []) => {
+            const report = join(f.dir, 'vitest-' + name + '.json');
+            run('vitest-' + name, cwd, ['run', 'test', '--', ...files, '--reporter=json', '--outputFile=' + report, ...extra]);
+            return vitestFiles(report, cwd);
+        };
+
+        // Before the merge: the receiving tip's type errors and tests, and the incoming side's changed test files.
+        const typesBefore = typeErrors(run('typecheck-before', frontend, ['run', 'typecheck']).text);
+        const expected = vitest('before', frontend, []);
+        if (plan.incomingTests.length) {
+            const incoming = vitest('incoming', join(plan.incomingTree, 'frontend'), plan.incomingTests, ['--passWithNoTests']);
+            for (const p of plan.incomingTests) {
+                if (incoming[p]) expected[p] = incoming[p];
+                else delete expected[p];
+            }
+        }
+        for (const p of plan.deletedTests) delete expected[p];
+
+        // The merge: --no-ff of the measured tip, the union files written, the probes on the index.
+        git(plan.top, ['merge', '--no-ff', '--no-commit', plan.incomingTip], [0, 1]);
+        const unmerged = nonEmpty(git(plan.top, ['diff', '--name-only', '--diff-filter=U']).out);
+        const stray = unmerged.filter((p) => !(p in plan.union));
+        if (stray.length) {
+            git(plan.top, ['merge', '--abort']);
+            throw new Error('conflicts the measurement did not show, merge aborted: ' + stray.join(', '));
+        }
+        for (const p of unmerged) {
+            writeFileSync(join(plan.top, p), plan.union[p]);
+            git(plan.top, ['add', '--', p]);
+        }
+        const failed = failedProbes(plan.probes, (p) => {
+            const r = git(plan.top, ['show', ':' + p], [0, 128]);
+            return r.status === 0 ? r.out : '';
+        });
+        if (failed.length) {
+            git(plan.top, ['merge', '--abort']);
+            throw new Error('probes on the index, merge aborted: ' + failed.join('; '));
+        }
+        const messageFile = join(f.dir, 'merge-message.txt');
+        writeFileSync(messageFile, plan.message);
+        git(plan.top, ['commit', '-q', '-F', messageFile]);
+        res.merge = git(plan.top, ['rev-parse', 'HEAD']).out.trim();
+
+        // The gates of the template on the merge commit, every one of them, no fail-fast.
+        for (const name of GATES) {
+            if (name === 'typecheck') {
+                const after = typeErrors(run(name, frontend, ['run', 'typecheck']).text);
+                const added = after.filter((e, i, xs) => xs.indexOf(e) === i && after.filter((x) => x === e).length > typesBefore.filter((x) => x === e).length);
+                const gone = typesBefore.filter((e, i, xs) => xs.indexOf(e) === i && typesBefore.filter((x) => x === e).length > after.filter((x) => x === e).length);
+                const ok = added.length === 0 && gone.length === 0;
+                res.gates.push({ name, ok, detail: after.length + ' errors' + (ok ? ', the receiving tip\'s set' : '; new: ' + (added.join(', ') || 'none') + '; gone: ' + (gone.join(', ') || 'none')) });
+            } else if (name === 'vitest') {
+                const after = vitest('after', frontend, []);
+                const keys = [...new Set([...Object.keys(expected), ...Object.keys(after)])].sort();
+                const differ = keys.filter((k) => !expected[k] || !after[k] || expected[k].tests !== after[k].tests || expected[k].importRed !== after[k].importRed);
+                const tests = Object.values(after).reduce((s, x) => s + x.tests, 0);
+                const failedTests = Object.values(after).reduce((s, x) => s + x.failed, 0);
+                const red = Object.values(after).filter((x) => x.importRed).length;
+                const hooks = Object.entries(after).filter(([k]) => k.startsWith('scripts/hooks/')).reduce((s, [, x]) => s + x.tests, 0);
+                const ok = differ.length === 0 && failedTests === 0;
+                res.gates.push({
+                    name, ok,
+                    detail: tests + ' tests in ' + Object.keys(after).length + ' files, ' + red + ' red at import, hooks ' + hooks +
+                        (failedTests ? '; ' + failedTests + ' failed' : '') + (differ.length ? '; not as expected: ' + differ.slice(0, 5).join(', ') : ''),
+                });
+            } else {
+                const code = run(name, frontend, ['run', name]).code;
+                res.gates.push({ name, ok: code === 0, detail: 'exit ' + code });
+            }
+        }
+        // check:addonly, apart from GATES above: unlike a red typecheck/vitest/build/etc, which
+        // leaves the merge commit for inspection, a merge commit that rewrites an add-only log
+        // (docs/claude-code-log.md, its archive, a lane inbox) must never persist even for
+        // debugging, so a violation resets the trunk to the pre-merge tip already recorded for the
+        // rollback tag (plan.trunkTip / plan.branchTip) rather than leaving it in place.
+        const addonly = run('check:addonly', frontend, ['run', 'check:addonly']);
+        const addonlyOk = addonly.code === 0;
+        res.gates.push({ name: 'check:addonly', ok: addonlyOk, detail: addonlyOk ? 'exit 0' : 'exit ' + addonly.code + ' — rewrites the add-only log' });
+
+        if (!addonlyOk) {
+            const preMergeTip = plan.mode === 'into' ? plan.trunkTip : plan.branchTip;
+            git(plan.top, ['reset', '--hard', preMergeTip]);
+            res.merge = null;
+            res.ok = false;
+            res.outcome = 'blocked';
+            const offending = addonly.text.split('\n').filter((l) => l.trim() !== '').slice(0, 30).join(' | ');
+            res.reason = 'check:addonly refused the merge commit; reset ' + (plan.mode === 'into' ? plan.trunk : plan.branch) +
+                ' to its pre-merge tip ' + preMergeTip + '. ' + offending;
+        } else {
+            res.ok = res.gates.every((g) => g.ok);
+            res.outcome = res.ok ? 'hard-stop' : 'blocked';
+            if (!res.ok) res.reason = 'red gates: ' + res.gates.filter((g) => !g.ok).map((g) => g.name).join(', ') + '; the merge commit stays';
+        }
+    } catch (err) {
+        res.reason = err && err.message ? err.message : String(err);
+    }
+    try {
+        res.port3001 = portInUse(3001) ? 'up' : 'down';
+    } catch {
+        res.port3001 = 'unknown';
+    }
+    writeJson(join(f.dir, 'result.json'), res);
+    const summary = [
+        '[' + id + '] direct merge of ' + (plan.mode === 'into' ? plan.branch + ' into ' + plan.trunk : plan.trunk + ' into ' + plan.branch) +
+            (res.merge ? ': merge ' + res.merge.slice(0, 9) : ': no merge commit') + (res.tag ? ', rollback tag ' + res.tag : '') + '.',
+        ...res.gates.map((g) => '- ' + g.name + ': ' + (g.ok ? 'ok' : 'RED') + ', ' + g.detail),
+        res.reason ? 'Reason: ' + res.reason : 'Every gate green. 3001 is ' + res.port3001 + '; the chat runs the visual check, then `lane-run go ' + id + ' --smoke "..."`.',
+        'Outcome: ' + res.outcome,
+    ];
+    console.log(JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: summary.join('\n') }] } }));
+    return res.outcome === 'hard-stop' ? 0 : 1;
+}
+
+// ── chain ────────────────────────────────────────────────────────────────────
+
+const CHAIN_ID = /^chain-P-\d{4}-\d{2}-\d{2}-\d{4}$/;
+const CHAIN_POLL_MS = 500;
+
+function chainFiles(id) {
+    const dir = join(lanesRoot(), id);
+    return { dir, json: join(dir, 'chain.json'), stop: join(dir, 'stop'), log: join(dir, 'chain.log') };
+}
+
+function readChain(id) {
+    const cf = chainFiles(id);
+    if (!existsSync(cf.json)) refuse('no chain ' + id + ' in ' + lanesRoot());
+    return JSON.parse(readFileSync(cf.json, 'utf8'));
+}
+
+/** Running while its state says so and its supervisor lives (not yet known right after the launch). */
+const chainRunning = (c) => c.state === 'running' && (!c.supervisor || isAlive(c.supervisor.pid));
+const chainState = (c) => (c.state === 'running' && c.supervisor && !isAlive(c.supervisor.pid) ? 'lost' : c.state);
+const chainPosition = (c) => c.position + '/' + c.lanes.length + ' ' + (c.lanes[Math.max(0, c.position - 1)] || { id: '-' }).id;
+
+function chainStatus(id) {
+    const c = readChain(id);
+    console.log('chain: ' + c.id);
+    console.log('state: ' + chainState(c));
+    console.log('position: ' + chainPosition(c));
+    console.log('lanes: ' + c.lanes.map((l) => l.id + ' ' + l.state + (l.outcome ? ' (' + l.outcome + ')' : '')).join('; '));
+    console.log('merge after: ' + (c.mergeAfter ? 'into ' + c.mergeAfter.into + ', ' + c.mergeAfter.state + (c.mergeAfter.promptId ? ' ' + c.mergeAfter.promptId : '') +
+        (c.mergeAfter.reason ? ': ' + c.mergeAfter.reason : '') : 'none'));
+    console.log('stopped at: ' + (c.stoppedAt ? (c.stoppedAt.id || '-') + ': ' + c.stoppedAt.reason : '-'));
+    console.log('elapsed: ' + Math.floor((Date.now() - c.created) / 60000) + ' min');
+    console.log('log: ' + chainFiles(id).log);
+    return 0;
+}
+
+/**
+ * chain <worktree> <prompt>...: the lanes run one after the other in one
+ * worktree, the next only on `Outcome: done` with exit 0, under a detached
+ * supervisor that outlives the chat's call (nohup, its own session, as start's
+ * wrapper). A prompt outside the tree (parked in pending/) is committed alone
+ * at its launch, as merge --launch does.
+ */
+function chain(rest) {
+    if (rest[0] === '--stop') return chainStop(rest[1]);
+    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] | chain --stop <chain-id>';
+    const positional = [];
+    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null, tier: null };
+    for (let i = 0; i < rest.length; i++) {
+        const a = rest[i];
+        if (a === '--merge-after') o.mergeAfter = true;
+        else if (a === '--into' || a === '--chat' || a === '--tier') {
+            o[a.slice(2)] = option(rest.slice(i), a);
+            i++;
+        } else if (a === '--limit') {
+            o.limit = limitOption(rest.slice(i));
+            i++;
+        } else if (a.startsWith('--')) refuse('unknown option for chain: ' + a + '; ' + usage);
+        else positional.push(a);
+    }
+    if (positional.length < 2) refuse(usage);
+    if (o.into && !o.mergeAfter) refuse('--into goes with --merge-after; ' + usage);
+    if (o.tier !== null && !TIERS.includes(o.tier)) refuse('--tier takes heavy or light: ' + o.tier);
+    const worktree = resolve(positional[0]);
+    if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
+    const t = git(worktree, ['rev-parse', '--show-toplevel'], [0, 128]);
+    if (t.status !== 0) refuse('not inside a git worktree: ' + worktree);
+    const top = t.out.trim();
+    const branch = git(top, ['branch', '--show-current']).out.trim();
+    if (!branch) refuse(top + ' is on a detached HEAD: a chain runs on a branch');
+
+    const lanes = [];
+    for (const p of positional.slice(1)) {
+        const tried = [...new Set([resolve(p), resolve(top, p)])];
+        const file = tried.find((x) => existsSync(x) && statSync(x).isFile());
+        if (!file) refuse('no prompt file: tried ' + tried.join(' and '));
+        const id = headerPromptId(readFileSync(file, 'utf8'));
+        if (!id) refuse('the prompt header has no "Prompt-ID: P-YYYY-MM-DD-HHmm" line: ' + file);
+        if (lanes.some((l) => l.id === id)) refuse(id + ' is chained twice');
+        if (existsSync(laneFiles(id).dir)) refuse(id + ' already has a lane folder in ' + lanesRoot());
+        const inTree = !relative(top, file).startsWith('..');
+        if (inTree) {
+            const rel = relative(top, file);
+            if (git(top, ['ls-files', '--error-unmatch', '--', rel], [0, 1]).status !== 0 || git(top, ['status', '--porcelain', '--', rel]).out.trim() !== '') {
+                refuse(rel + ' is in the tree but not committed: park it in ' + join(lanesRoot(), 'pending') + ' or commit it');
+            }
+        } else if (existsSync(join(top, 'docs', 'prompts', basename(file))) || lanes.some((l) => !l.inTree && basename(l.prompt) === basename(file))) {
+            refuse('docs/prompts/' + basename(file) + ' would be written twice');
+        }
+        // The tier of each lane, --tier light refused on a lane the rule forces heavy, before anything runs.
+        const tier = chooseTier(readFileSync(file, 'utf8'), {}, o.tier);
+        lanes.push({ id, prompt: file, inTree, state: 'queued', tier: tier.tier, tierReason: tier.reason });
+    }
+    let into = null;
+    if (o.mergeAfter) {
+        into = o.into || DEFAULT_TRUNK;
+        if (!worktrees(top).some((w) => w.branch === into)) refuse('--merge-after: ' + into + ' has no worktree to merge in');
+    }
+    const id = 'chain-' + lanes[0].id;
+    const cf = chainFiles(id);
+    if (existsSync(cf.dir)) refuse(id + ' already exists in ' + lanesRoot());
+    mkdirSync(cf.dir, { recursive: true });
+    writeJson(cf.json, {
+        id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat, tier: o.tier,
+        lanes, mergeAfter: into ? { into, state: 'queued' } : null, stoppedAt: null, supervisor: null,
+    });
+    const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
+    const child = spawn('/bin/sh', ['-c', 'nohup "$@" >> "$0" 2>&1', cf.log, process.execPath, SELF, 'chain-run', id], {
+        cwd: top, env, detached: true, stdio: 'ignore',
+    });
+    child.unref();
+    console.log('chain: ' + id);
+    console.log('lanes: ' + lanes.map((l) => l.id).join(', '));
+    console.log('merge after: ' + (into ? 'into ' + into + ' --direct' : 'none'));
+    console.log('log: ' + cf.log);
+    return 0;
+}
+
+function chainStop(idArg) {
+    if (typeof idArg !== 'string' || !CHAIN_ID.test(idArg)) refuse('usage: lane-run chain --stop <chain-id>');
+    const c = readChain(idArg);
+    if (!chainRunning(c)) refuse(idArg + ' is not running (' + chainState(c) + ')');
+    writeFileSync(chainFiles(idArg).stop, new Date().toISOString() + '\n');
+    console.log('stop: requested; ' + idArg + ' stops after the running lane, which is not interrupted');
+    return 0;
+}
+
+/** The supervisor of a chain; its output goes to chain.log. */
+async function chainRun(id) {
+    const cf = chainFiles(id);
+    const c = readChain(id);
+    const save = () => writeJson(cf.json, c);
+    const stop = (laneId, reason) => {
+        c.state = 'stopped';
+        c.stoppedAt = { id: laneId, reason };
+        save();
+        return 1;
+    };
+    c.supervisor = { pid: process.pid, started: Date.now() };
+    save();
+    const pending = join(lanesRoot(), 'pending');
+    for (let k = 0; k < c.lanes.length; k++) {
+        const lane = c.lanes[k];
+        c.position = k + 1;
+        save();
+        if (existsSync(cf.stop)) return stop(lane.id, '--stop');
+        let promptFile = lane.prompt;
+        if (!lane.inTree) {
+            if (git(c.worktree, ['status', '--porcelain', '--untracked-files=no']).out.trim() !== '') return stop(lane.id, 'tree dirty');
+            const target = join(c.worktree, 'docs', 'prompts', basename(lane.prompt));
+            if (existsSync(target)) return stop(lane.id, 'docs/prompts/' + basename(target) + ' exists');
+            mkdirSync(dirname(target), { recursive: true });
+            copyFileSync(lane.prompt, target);
+            const rel = relative(c.worktree, target);
+            git(c.worktree, ['add', '--', rel]);
+            git(c.worktree, ['commit', '-q', '-m', 'docs: add prompt ' + lane.id + ', lane ' + (k + 1) + '/' + c.lanes.length + ' of ' + c.id, '-m', modelTrailer() + '; lane tier ' + lane.tier + ' (' + lane.tierReason + ')', '--', rel]);
+            lane.committed = git(c.worktree, ['rev-parse', 'HEAD']).out.trim();
+            if (dirname(lane.prompt) === pending) unlinkSync(lane.prompt);
+            promptFile = target;
+        }
+        lane.state = 'running';
+        save();
+        let code;
+        try {
+            code = await start(c.worktree, promptFile, c.tier ? ['--tier', c.tier] : []);
+        } catch (err) {
+            return stop(lane.id, 'start refused: ' + (err && err.message ? err.message : String(err)));
+        }
+        if (code !== 0) return stop(lane.id, 'start failed, exit ' + code);
+        const f = laneFiles(lane.id);
+        while (isRunning(f)) {
+            if (Date.now() - Number(readTrim(f.started)) > c.limit * 60000) return stop(lane.id, 'limit ' + c.limit + ' min');
+            await sleep(CHAIN_POLL_MS);
+        }
+        const line = lastOutcome(f.log);
+        const m = line === null ? null : OUTCOME.exec(line);
+        lane.exit = readTrim(f.exit) || '-';
+        lane.outcome = line === null ? 'none' : m ? m[1] : 'unparsed';
+        if (lane.outcome !== 'done') {
+            lane.state = 'ended';
+            return stop(lane.id, 'Outcome: ' + lane.outcome);
+        }
+        if (lane.exit !== '0') {
+            lane.state = 'ended';
+            return stop(lane.id, 'exit ' + lane.exit);
+        }
+        lane.state = 'done';
+        save();
+    }
+    if (c.mergeAfter) {
+        if (existsSync(cf.stop)) return stop(null, '--stop');
+        const tree = worktrees(c.worktree).find((w) => w.branch === c.mergeAfter.into);
+        if (!tree) return stop(null, 'merge after: ' + c.mergeAfter.into + ' has no worktree');
+        // Parked on a fallback, never launched: the chat decides (question 11 of the report).
+        const r = spawnSync(process.execPath, [SELF, 'merge', c.branch, '--into', c.mergeAfter.into, '--direct', ...(c.chat ? ['--chat', c.chat] : [])], {
+            cwd: tree.path, encoding: 'utf8',
+        });
+        const out = (r.stdout || '') + (r.stderr || '');
+        const pid = /^Prompt-ID: (P-\S+)$/m.exec(out);
+        const falls = /^direct: falls back: (.*)$/m.exec(out);
+        const byHand = /^by hand: .*$/m.exec(out);
+        c.mergeAfter.promptId = pid ? pid[1] : null;
+        c.mergeAfter.exit = r.status;
+        c.mergeAfter.state = /^direct: worker started/m.test(out) ? 'direct' : falls ? 'fallback' : 'refused';
+        if (falls) c.mergeAfter.reason = falls[1];
+        else if (c.mergeAfter.state === 'refused') c.mergeAfter.reason = out.trim().split('\n').pop() || 'exit ' + r.status;
+        if (byHand) c.mergeAfter.byHand = byHand[0].slice('by hand: '.length);
+        if (c.mergeAfter.state !== 'direct') return stop(null, 'merge after: ' + c.mergeAfter.state);
+    }
+    c.state = 'done';
+    save();
+    return 0;
+}
+
+// ── go on a direct merge: the one closure commit ─────────────────────────────
+
+const NOTES_MAX = 500;
+
+const INBOX_FILE = /^docs\/log-inbox\/[^/]+\.md$/;
+
+/** The inboxes a side adds headings to since the base: a merge's entry goes to the branch's front. */
+function inboxFronts(cwd, base, tip) {
+    return [...new Set(addedLines(cwd, base, tip, ['docs/log-inbox/']).filter((a) => /^## /.test(a.text) && INBOX_FILE.test(a.file)).map((a) => a.file))];
+}
+
+/** `YYYY-MM-DD HH:mm` of a prompt file named claude_<date>_<HHmm>_...: its P9 `Prompt document name`. */
+function promptDocumentName(file) {
+    const m = /^claude_(\d{4}-\d{2}-\d{2})_(\d{2})(\d{2})_/.exec(basename(file));
+    return m ? m[1] + ' ' + m[2] + ':' + m[3] : '—';
+}
+
+/** The P9 entry of a direct merge, generated from git and result.json; Notes within the cap of CLAUDE.md 21.2. */
+function directEntry(plan, res, smoke, date) {
+    const into = plan.mode === 'into';
+    const cwd = plan.top;
+    const s = (sha) => shortSha(cwd, sha);
+    const files = nonEmpty(git(cwd, ['diff', '--name-only', res.merge + '^1', res.merge]).out);
+    const shown = files.slice(0, 8).map((p) => '`' + p + '`').join(', ') + (files.length > 8 ? ', and ' + (files.length - 8) + ' more' : '');
+    const commits = nonEmpty(git(cwd, ['rev-list', plan.base + '..' + plan.incomingTip]).out).length;
+    const incomingSide = into ? 'the branch side' : 'the trunk side';
+    let notes = (res.tag ? 'Rollback tag `' + res.tag + '` on `' + s(plan.trunkTip) + '` (RC-31). ' : '') +
+        'Union: ' + (res.union.length ? res.union.map((p) => '`' + p + '`').join(', ') : 'none') + '. Worker and gates: `~/.jjodel-lanes/' + res.promptId + '/result.json`.';
+    if (notes.length > NOTES_MAX) notes = notes.slice(0, NOTES_MAX - 3) + '...';
+    return [
+        '## ' + date + ' — ' + (into ? 'merge: ' + plan.branch + ' into ' + plan.trunk : 'merge: ' + plan.branch + ' takes ' + plan.trunk) + ' (' + res.promptId + ')',
+        '**Prompt**: `' + basename(plan.prompt) + '`, a direct merge by `lane-run merge --direct`, no session: `' + (into ? plan.branch : plan.trunk) + '` at `' + s(plan.incomingTip) +
+            '` into `' + (into ? plan.trunk : plan.branch) + '`, merge base `' + s(plan.base) + '`, ' + commits + (commits === 1 ? ' commit' : ' commits') + ' on ' + incomingSide + '.',
+        '**Files touched**: merge `' + s(res.merge) + '`: ' + files.length + ' files from ' + incomingSide + (files.length ? ' (' + shown + ')' : '') + '; this commit: this entry and the Status of the prompt file.',
+        '**Outcome**: ✅ completed',
+        '**Corregge**: —',
+        '**Causa**: —',
+        '**Regressions**: no. Gates on `' + s(res.merge) + '` in the worker: ' + res.gates.map((g) => g.name + ' ' + g.detail).join('; ') + '.',
+        '**Out-of-scope changes**: no',
+        '**Layer Impact Report**: not-required',
+        '**Smoke visivo**: passato — chat, unattended: ' + smoke,
+        '**Notes**: ' + notes,
+        '**Prompt document name**: ' + promptDocumentName(plan.prompt),
+    ].join('\n') + '\n';
+}
+
+/**
+ * go on a direct merge (rule 2 of P-2026-09-27-2330): after the chat's visual
+ * check, one docs commit flips the merge prompt's Status and appends the P9
+ * entry to the inbox the branch writes to; no session is resumed.
+ */
+function closeDirect(id, smoke, frontArg) {
+    const f = laneFiles(id);
+    const plan = JSON.parse(readFileSync(join(f.dir, 'direct.json'), 'utf8'));
+    if (isRunning(f)) refuse(id + ' is still running its gates: wait for it');
+    const resultFile = join(f.dir, 'result.json');
+    if (!existsSync(resultFile)) refuse(id + ' has no result.json: the worker ended without one; see ' + f.err);
+    const res = JSON.parse(readFileSync(resultFile, 'utf8'));
+    if (res.closure) refuse(id + ' is already closed at ' + res.closure.slice(0, 9));
+    if (!res.ok || !res.merge) refuse(id + ' is blocked (' + (res.reason || 'no merge') + '): no closure over it');
+    const top = plan.top;
+    if (git(top, ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], [0, 1]).status === 0) refuse('a merge is in progress in ' + top);
+    if (git(top, ['merge-base', '--is-ancestor', res.merge, 'HEAD'], [0, 1]).status !== 0) refuse('the merge ' + res.merge.slice(0, 9) + ' is not in the history of HEAD in ' + top);
+
+    let inbox;
+    if (frontArg !== null) {
+        inbox = 'docs/log-inbox/' + frontArg.replace(/\.md$/, '') + '.md';
+        if (!existsSync(join(top, inbox))) refuse('--front ' + frontArg + ': no ' + inbox + ' in ' + top);
+    } else {
+        const fronts = inboxFronts(top, plan.base, plan.branchTip);
+        if (fronts.length !== 1) {
+            refuse('the branch adds headings to ' + (fronts.length ? fronts.join(', ') : 'no inbox') + ': name the entry\'s inbox with --front <name>');
+        }
+        inbox = fronts[0];
+    }
+    const promptRel = relative(top, plan.prompt);
+    if (git(top, ['status', '--porcelain', '--', promptRel, inbox]).out.trim() !== '') refuse(promptRel + ' or ' + inbox + ' has uncommitted changes in ' + top);
+
+    const { date } = stamp(clock());
+    const lines = readFileSync(plan.prompt, 'utf8').split('\n');
+    const end = lines.findIndex((l) => l.startsWith('## '));
+    const at = lines.findIndex((l, i) => (end === -1 || i < end) && /^Status:/.test(l));
+    if (at === -1 || lines[at].trim() !== 'Status: da eseguire') refuse(promptRel + ': the header Status is not `da eseguire`');
+    const lane = plan.mode === 'into' ? 'merge' : plan.branch;
+    lines[at] = 'Status: eseguito ' + date + ' · lane ' + lane + ' · ' + shortSha(top, res.merge) + ' · verifica visiva passata ' + date + ' (' + smoke + ')';
+    writeFileSync(plan.prompt, lines.join('\n'));
+    const current = readFileSync(join(top, inbox), 'utf8');
+    const sep = current === '' || current.endsWith('\n\n') ? '' : current.endsWith('\n') ? '\n' : '\n\n';
+    writeFileSync(join(top, inbox), current + sep + directEntry(plan, res, smoke, date));
+
+    const long = 'docs: Status flip and log entry for the ' + plan.branch + ' merge';
+    const subject = (long.length <= SUBJECT_MAX ? long : 'docs: Status flip and log entry for a direct merge') + ' (' + id + ')';
+    const trailer = 'Model: none (lane-run go, direct merge; ' + modelTrailer().replace(/^Model:\s*/, '') + ')';
+    git(top, ['add', '--', promptRel, inbox]);
+    git(top, ['commit', '-q', '-m', subject, '-m', trailer, '--', promptRel, inbox]);
+    res.closure = git(top, ['rev-parse', 'HEAD']).out.trim();
+    writeJson(resultFile, res);
+    const text = '[' + id + '] closure ' + res.closure.slice(0, 9) + ': Status flipped, entry in ' + inbox + '.\nOutcome: done';
+    writeFileSync(f.log, JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text }] } }) + '\n', { flag: 'a' });
+    console.log('closure: committed ' + res.closure.slice(0, 9));
+    console.log('status: ' + promptRel);
+    console.log('entry: ' + inbox);
+    return 0;
+}
+
+// ── monitor ──────────────────────────────────────────────────────────────────
+
+const MONITOR_PORT = 3008;
+const MONITOR_WAIT_MS = 30000;
+
+/** True when GET /health of 127.0.0.1:<port> answers 200. */
+function monitorUp(port) {
+    return new Promise((res) => {
+        const req = httpGet({ host: '127.0.0.1', port, path: '/health', timeout: 2000 }, (r) => {
+            r.resume();
+            res(r.statusCode === 200);
+        });
+        req.on('timeout', () => req.destroy());
+        req.on('error', () => res(false));
+    });
+}
+
+/** The page as an app window (--app=) in the first Chromium browser that opens, else in the default browser. */
+function openWindow(url) {
+    for (const app of ['Google Chrome', 'Brave Browser', 'Microsoft Edge']) {
+        if (spawnSync('open', ['-na', app, '--args', '--app=' + url]).status === 0) return;
+    }
+    spawnSync('open', [url]);
+}
+
+/**
+ * Starts gates/trace-monitor.ts detached (the trace of this repo and the lanes of
+ * ~/.jjodel-lanes, P-2026-09-27-1030), waits for its /health, and opens the page.
+ * Its pid and log go to ~/.jjodel-lanes/_monitor/.
+ */
+async function monitor(rest) {
+    const usage = 'usage: lane-run monitor [--port <n>] [--no-open]';
+    for (const a of rest) if (a.startsWith('--') && a !== '--port' && a !== '--no-open') refuse(usage);
+    const portArg = option(rest, '--port');
+    const port = portArg === null ? MONITOR_PORT : Number(portArg);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) refuse(usage);
+    if (port === 3001) refuse('port 3001 is the trunk\'s dev server: pick another');
+    if (portInUse(port)) refuse('port ' + port + ' is in use: a monitor may already run there, open http://127.0.0.1:' + port + '/');
+    const dir = join(lanesRoot(), '_monitor');
+    mkdirSync(dir, { recursive: true });
+    const log = join(dir, 'monitor.log');
+    const out = openSync(log, 'a');
+    const child = spawn(process.execPath, [join(dirname(SELF), 'gates', 'trace-monitor.ts'), '--port', String(port)], {
+        detached: true,
+        stdio: ['ignore', out, out],
+    });
+    closeSync(out);
+    let exited = null;
+    child.on('exit', (code) => (exited = code));
+    child.unref();
+    writeFileSync(join(dir, 'pid.txt'), String(child.pid) + '\n');
+    const end = Date.now() + MONITOR_WAIT_MS;
+    let up = false;
+    while (!up && exited === null && Date.now() < end) {
+        up = await monitorUp(port);
+        if (!up) await sleep(200);
+    }
+    if (!up) {
+        console.error('lane-run: the monitor ' + (exited !== null ? 'exited with ' + exited : 'did not answer within ' + MONITOR_WAIT_MS / 1000 + ' s') + '; see ' + log);
+        return 1;
+    }
+    const url = 'http://127.0.0.1:' + port + '/';
+    console.log('monitor: ' + url);
+    console.log('pid: ' + child.pid + ' (stop: kill ' + child.pid + ')');
+    console.log('log: ' + log);
+    if (!rest.includes('--no-open')) openWindow(url);
+    return 0;
 }
 
 async function main(argv) {
     const [command, ...rest] = argv;
+    if (command === 'monitor') return monitor(rest);
     if (command === 'start') return start(rest[0], rest[1], rest.slice(2));
     if (command === 'resume') return resume(rest[0], rest.slice(1));
     if (command === 'go') return go(rest[0], rest.slice(1));
@@ -1009,10 +2104,13 @@ async function main(argv) {
     if (command === 'merge') return merge(rest);
     if (command === 'wait') return waitLanes(rest);
     if (command === 'probe') return probe(rest);
+    if (command === 'direct-run') return directRun(rest[0]);
+    if (command === 'chain') return chain(rest);
+    if (command === 'chain-run') return chainRun(rest[0]);
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
         'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | ' +
         'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>] | ' +
-        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n>');
+        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n> | monitor [--port <n>] [--no-open]');
 }
 
 main(process.argv.slice(2)).then(

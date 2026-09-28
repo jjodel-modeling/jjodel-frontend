@@ -870,3 +870,29 @@ describe('role-bound outputs at compile (lane S4, P-2026-09-27-1725, R-SIM-51)',
         expect(withRoles.defects).toEqual(without.defects);
     });
 });
+
+describe('R-SIM-88: input declarations at compile (P-2026-09-28-0034)', () => {
+    const SPEC: Spec = { classes: CLASSES, objects: { A: { cls: 'C_Init' }, N: { cls: 'C_Node' }, T: { cls: 'C_Tr' } } };
+    const ASK: StateAttributeDecl = { name: 'ask', metaclass: 'C_Node', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    const ANSWER: StateAttributeDecl = { name: 'answer', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, input: true };
+
+    it('an input is declared on every owner and puts no value in σ, with no defect (mutant: exclusivity of two)', () => {
+        const net = compile(CF, SPEC, [ASK, ANSWER]);
+        expect(net.declarationDefects).toEqual([]);
+        expect(net.declared.get('A')?.get('ask')).toBe(ASK);
+        expect(net.declared.get('N')?.get('ask')).toBe(ASK);
+        expect(net.declared.get('M')?.get('answer')).toBe(ANSWER);
+        expect(net.initial.attrs.size).toBe(0);
+    });
+
+    it('an input with an initial or an equation is exclusive and still never in σ; on presentation it is the defect input (mutants: the input stored, presentation accepted)', () => {
+        const net = compile(CF, SPEC, [
+            { ...ASK, name: 'a1', initial: true }, { ...ASK, name: 'a2', equation: 'true' }, { ...ASK, name: 'a3', space: 'presentation', domain: null },
+        ]);
+        expect((net.declarationDefects ?? []).map(d => [d.index, d.name, d.code, d.message])).toEqual([
+            [0, 'a1', 'exclusive', 'input and initial'], [1, 'a2', 'exclusive', 'input and equation'], [2, 'a3', 'input', 'an input is semantic'],
+        ]);
+        expect(net.initial.attrs.size).toBe(0);
+        expect(net.initial.presentation.size).toBe(0);
+    });
+});

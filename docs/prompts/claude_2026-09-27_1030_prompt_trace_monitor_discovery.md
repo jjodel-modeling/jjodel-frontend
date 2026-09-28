@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-27-1030
 Chat: C-2026-09-27-1030
 Lane: full (new harness tool, exported script interface, more than three files in Phase 2)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane harness-trace · 7d2c53599
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: the rule "one front, one chat" does not apply as written. The harness front belongs to C-2026-09-26-1702; this lane is opened by C-2026-09-27-1030 on Alfonso's request and touches no file that chat has in flight. Declared, not silent.

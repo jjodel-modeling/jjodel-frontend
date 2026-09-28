@@ -27,13 +27,16 @@
 | Preset | Metamodel / model | Prepared before the talk | Live |
 |---|---|---|---|
 | State machine (PEST) | `DemoPEST` / `demoSM` | metamodel and model, as §2.1 | profile, Apply, the run |
-| Petri net (P/T) | `DemoPetri` / `demoNet` | metamodel and model, as §2.2 | profile, Apply, Bound, the run |
+| Petri net (P/T) | `DemoPetri` / `demoNet` | metamodel and model, as §2.2 | profile, Apply, the run |
 | Extended state machine | `DemoESM` / `demoESM` | metamodel and model, as §2.3 | profile, Apply, the declarations, the run |
 | Flowchart B | `DemoFlowB` / `demoFlowB` | metamodel and model, as §2.4 | profile, Apply, the declaration, the run |
 
 - The builder writes the metamodels and models through the store. No probe drew them on the canvas. Drawing a preset
   live must end in the same names, types, abstract flags and references as §2.
   <!-- not measured: a preset drawn live on the canvas -->
+- **Save check.** After preparing each project: Cmd+S, reload the page once, check that the metamodel, the model and
+  its objects are intact. Without Cmd+S, model edits may be lost on reload although the bar reads `Saved just now`
+  (freeze readiness F1, `c6933dded`) [M].
 - **Empty bag.** Set no simulation role before Apply. Every measured path starts from an empty bag. On every preset
   the M2 face then reads `Custom · Not checkable` and `Missing: Node, Transition, Next state, Initial or Initial
   marking, Source or Owned transitions.` [M].
@@ -65,15 +68,18 @@
 | `t5` | `locked` | `off` | `stop` |
 
 **Apply** (tab `DemoPEST`).
-1. Profile: `State machine`. The summary reads `State machine · Checkable after Apply` and seven proposals [M]:
-   `Node → State`, `Initial → Initial`, `Terminal → Terminal`, `Transition → Transition`,
-   `Owned transitions → State.transitions`, `Next state → Transition.nextState`, `Trigger → Transition.event`.
-   Hover titles, e.g. `Owned transitions → State.transitions. The composition from State to Transition` and
-   `Trigger → Transition.event. The reference from Transition to an event class` [M].
-   **Say** "I pick a profile. The panel proposes a binding for every role, each with its reason."
-2. Apply. The summary reads `State machine · Checkable` [M]. The groups fold: the panel is 157.5 px high at top
-   793.5 [M].
+1. Click `Configure…` [R]. The dialog `Simulation roles` opens on `What kind of model is this?`, with `Continue` off
+   and `Pick a model kind to continue.` [M, P-2026-09-27-2105]. Click `State machine`, then `Continue` [M].
+2. The dialog reads `Checkable` and `7 of 10 roles matched` [M, P-2026-09-27-2105]. Required 5 is open: Node
+   `State`, Initial `Initial`, Transition `Transition`, Owned transitions `State.transitions`, Next state
+   `Transition.nextState`. Optional 4, folded, holds the other two: Terminal `Terminal`, Trigger `Transition.event`
+   [M]. Hover titles, e.g. `Proposed: State.transitions. The composition from State to Transition` [M].
+   **Say** "I say what kind of model this is. The dialog proposes a binding for every role, each with its reason."
+3. Apply, in the dialog. It closes, and the summary reads `State machine · Checkable` [M]. The panel is 157.5 px
+   high at top 793.5 [M, P-2026-09-27-2105].
    **Say** "One Apply writes the whole binding. It is one undo step."
+
+Count: 4 clicks, no keystroke; the run below, 11 clicks [M, P-2026-09-27-2105].
 
 **Run** (tab `demoSM`). Before Reset: `Not started`, `coin(off)`, `push(off)`, `stop(off)` [M].
 
@@ -123,21 +129,20 @@ Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
 | `i1` | `InhibitorArc` | `lock` | `t2` | unset |
 
 **Apply** (tab `DemoPetri`).
-1. Profile: `Petri net (P/T)`. The summary reads `Petri net (P/T) · Checkable after Apply` and ten proposals [M]:
-   `Node → Place`, `Initial marking → Place.tokens`, `Bound → 2`, `Transition → Transition`, `Arc → Arc`,
-   `Arc source → Arc.src`, `Arc target → Arc.tgt`, `Arc weight → Arc.weight`, `Inhibitor arc → InhibitorArc`,
-   `Guard → Transition.guard`. The title of Bound: `Bound → 2. The largest initial marking on the models of this
-   metamodel` [M].
+1. Click `Configure…`, then `Petri net (P/T)`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads `Checkable`
+   and `9 of 10 roles matched` [M]. Required 6 is open: Node `Place`, Initial marking `Place.tokens`, Transition
+   `Transition`, Arc `Arc`, Arc source `Arc.src`, Arc target `Arc.tgt`. Optional 4, folded: Arc weight
+   `Arc.weight`, Inhibitor arc `InhibitorArc`, Guard `Transition.guard`, Terminal unset [M].
    **Say** "The binder recognises the net from the shape of the metamodel, the inhibitor and the guard included."
-2. Apply. The summary reads `Petri net (P/T) · Checkable` [M]. The groups fold: 157.5 px at 793.5 [M]. The bag holds
-   Bound `2` [M].
-3. **Bound = 4 on screen (decision H).** Configure…, then in the Bound field replace 2 with 4: two interactions [M].
-   The groups unfold with no scroll, and the summary shows no line [M].
-   **Say** "Apply proposes 2, the largest initial marking. The ×2 arcs need 4. The bound is a parameter I set here."
+2. Under Parameters, Bound reads `4`, with `Proposed 4. The most tokens a place holds over the 9 reachable markings
+   of the models, guards aside.` [M, P-2026-09-27-2105].
+   **Say** "The dialog finds the bound by exploring the net."
+3. Apply, in the dialog. The summary reads `Petri net (P/T) · Checkable`, the panel 157.5 px at 793.5 [M]. The bag
+   holds Bound `4` [M, P-2026-09-27-2105].
 
-**Run** (tab `demoNet`). <!-- not measured: the M1 face before Reset with Bound set before any run. Run A's open,
-before any run, read `Not started` with the buttons only; run B's open, after run A, read `Run interrupted: the
-model changed. Reset to run again.` -->
+Count: 4 clicks, no keystroke; the run below, 8 clicks: Reset, ▶ four times, three choices [M, P-2026-09-27-2105].
+
+**Run** (tab `demoNet`). Before Reset: `Not started`, ▶ disabled, no line [M, P-2026-09-27-1738].
 
 Reset: `Marking: lock, p1 ×2`, `Last step: Reset`, `Running` [M].
 **Say** "Two tokens on p1, one on lock. The panel shows the marking of the run."
@@ -154,7 +159,8 @@ the buttons do not move (Step's top 854.5) [M].
 | 4 | ▶ | none | `Marking: p2 ×2, p3` | `Last step: ε: t1 (p1 → p2 ×2) fired` | "t1 is the only enabled transition. t2 has its tokens, but its guard is false." |
 
 After step 4 the status reads `Deadlock · ε: t2 false`, with the title `ε: t2 (p2 ×2 → p3) false [p3.[tokens] <
-1]` [M]. ▶ is disabled [M].
+1]` [M]. ▶ is disabled [M]. The table and this status read the same line for line after the dialog's Apply
+[M, P-2026-09-27-2105].
 **Say** "Deadlock. The panel names the transition and the guard that stops it."
 
 Optional: click the status row. The reasons list reads `ε: t2 (p2 ×2 → p3) false` and moves Step's top from 854.5
@@ -177,35 +183,40 @@ to 830 [M]. Click it again to close.
 | `ts` | `locked` | `off` | `stop` | | |
 
 **Apply** (tab `DemoESM`).
-1. Profile: `Extended state machine`. The summary reads `Extended state machine · Checkable after Apply`, the line
-   `Declare the state attributes the actions write: Add attribute`, and ten proposals [M]: the seven of §2.1 plus
-   `Guard → Transition.guard`, `Action → Transition.effect`, `Entry → State.entry`.
-2. Apply. The summary reads `Extended state machine · Checkable` [M]. The declarations line stays, its `Add
-   attribute` in view [M]. The groups fold: 198.5 px at 752.5 [M].
+1. Click `Configure…`, then `Extended state machine`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads
+   `Checkable` and `10 of 13 roles matched`: the seven of §2.1 plus Guard `Transition.guard`, Action
+   `Transition.effect`, Entry `State.entry` [M]. The Data fold reads `Declare the state attributes the actions
+   write` [M].
+2. Apply, in the dialog, with no declaration. The summary reads `Extended state machine · Checkable` and the line
+   `Declare the state attributes the actions write: Add attribute`, its `Add attribute` in view [M]. The panel is
+   198.5 px at 752.5 [M, P-2026-09-27-2105].
    **Say** "The binding is complete. The actions write state attributes, and the panel asks me to declare them."
 
-**Optional: Reset before declaring** (tab `demoESM`). Reset shows `2 defects: tc action (undeclared 'coins' on
-demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M]. `coin` then shows `Halted: the
+Count: 4 clicks, no keystroke; the optional Reset below, 2 clicks; the declarations, 9 interactions and 34
+keystrokes; the run, 11 clicks [M, P-2026-09-27-2105].
+
+**Optional: Reset before declaring** (tab `demoESM`). Reset shows `3 defects: tp guard (undeclared 'paid'); tc action
+(undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M,
+P-2026-09-28-0023]. `coin` then shows `Halted: the
 transition action of tc failed: 'coins' is not a state attribute of demoESM.` and `Last step: coin: tc (locked →
-locked) halted the run` [M].
+locked) halted the run` [M]. The halt line reads whole on two lines [M, P-2026-09-27-2225]; the defects line is
+cut on screen, its title holds the whole text [M, P-2026-09-27-2105].
 **Say** "Without the declarations the run names the missing attribute and stops at the first action."
 
 **Declarations** (tab `DemoESM`).
-1. Click `Add attribute` in the summary line. The groups unfold with Data open, and the focus is on the table's own
-   `Add attribute`, in view [M, on the trunk by P-2026-09-27-1500: 926-950, body bottom 950].
-2. `Add attribute`. Scroll the panel body to its end: the new row's third line is below the fold [M 945-969, body
-   bottom 950]. The row reads `x1` and `false`; double-click a cell before typing, since a click leaves the caret
-   after the text [M]. Row 1: name `coins`, Enter; domain `range`, then the maximum reads `1`; double-click it, `3`,
-   Enter (the minimum stays 0 [M]); double-click the initial value, `0`, Enter.
-3. Scroll the panel body to its end: the second `Add attribute` is below the fold [M 954-978 > 950]. `Add
-   attribute`, then scroll again: `stored` is below the fold [M 946-970 > 950]. Row 2: double-click the name, `paid`,
-   Enter; `derived`; equation `model.[coins] >= 2`, Enter.
-4. The declarations line is gone from the first `Add attribute` on [M].
+1. Click `Add attribute` in the summary line. The dialog opens on Data, its own `Add attribute` in view and focused
+   [M, P-2026-09-27-2105: 645.5-673.5, body 338-735]. The dialog's Apply is off, `Nothing to write` [M].
+2. Click `Add attribute`. Row 1 reads `x1`, the name selected: type `coins`, Enter [M]. Scroll the dialog body to
+   its end: the row's second line is below the fold [M 728-760, body bottom 735]. Domain `range`: the minimum reads
+   `0`, the maximum `1` [M]. Click the maximum, `3`, Enter; click the initial value, `0`, Enter. A click selects the
+   cell's text, so typing replaces it [M].
+3. Click `Add attribute`. Row 2's name is selected: `paid`, Enter; `derived`. Scroll the dialog body to its end: the
+   equation is below the fold [M 743-775 > 735]. Click it, `model.[coins] >= 2`, Enter [M].
+4. Apply, in the dialog. The declarations line is gone from the summary [M, P-2026-09-27-2105].
 
-Steps 1 to 3 are 10 interactions, clicks and entries: 1 hint, 2 `Add attribute`, 7 cells; on the hint path plus
-three scrolls, and each of the four prefilled cells (name 1, maximum 1, initial 1, name 2) is entered by a
-double-click instead of a click [M, P-2026-09-27-1500]. The labels `range`, `derived`, `stored` are the options of
-the table's selects [R].
+Steps 1 to 4 are 9 interactions: 1 hint, 2 `Add attribute`, 2 select choices (`range`, `derived`), 3 cells
+(maximum, initial value, equation), 1 Apply; 34 keystrokes; 2 scrolls; no double-click [M, P-2026-09-27-2105].
+The labels `range`, `derived`, `stored` are the options of the dialog's selects [M]. Since 2026-09-28 (R-SIM-88) the form select offers `stored`, `derived` and `input` [M, chat probe on `e259b94ec`]; the scene still picks `derived` and does not demonstrate `input`.
 **Say** "coins is stored, with the domain 0 to 3. paid is derived from coins."
 
 **Run** (tab `demoESM`). After the optional Reset above, the M1 face reads `Run interrupted: the model changed.
@@ -229,7 +240,8 @@ Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M].
 
 - After step 5 only `push` is on: `coin(off)`, `stop(off)` [M].
 - After step 10 the halt line reads `Halted: coins of demoESM would be 4, outside its domain.` and every event is
-  off [M].
+  off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; `Last step:` is cut at `halted the r…`,
+  its title is the whole line [M, P-2026-09-27-2105: 264 px of text in 262].
 - The hover title of `Last step:` adds the writes, e.g. after step 4 `assignments: demoESM.coins = 2` and
   `derived: demoESM.paid = true` [M].
 
@@ -262,22 +274,25 @@ together. <!-- not measured: abstract ActivityNode with FinalNode and the explic
 | `f9` | `jn` | `fin` | | |
 
 **Apply** (tab `DemoFlowB`).
-1. Profile: `Flowchart / Activity`. The summary reads `Flowchart / Activity · Checkable after Apply`, the line
-   `Declare the state attributes the actions write: Add attribute`, and ten proposals [M]: `Node → ActivityNode`,
-   `Initial → InitialNode`, `Terminal → FinalNode`, `Transition → ControlFlow`, `Source → ControlFlow.source`,
-   `Next state → ControlFlow.target`, `Fork → Fork`, `Join → Join`, `Guard → ControlFlow.guard`,
-   `Action → ControlFlow.effect`.
+1. Click `Configure…`, then `Flowchart / Activity`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads
+   `Checkable` and `10 of 13 roles matched` [M]: Node `ActivityNode`, Initial `InitialNode`, Transition
+   `ControlFlow`, Source `ControlFlow.source`, Next state `ControlFlow.target`; in Optional, folded, Terminal
+   `FinalNode`, Fork `Fork`, Join `Join`, Guard `ControlFlow.guard`, Action `ControlFlow.effect` [M].
    **Say** "The same binder, on a control-flow shape: fork and join are roles too."
-2. Apply. The summary reads `Flowchart / Activity · Checkable`, the declarations line in view [M]. The groups fold:
-   198.5 px at 752.5 [M].
+2. Apply, in the dialog, with no declaration. The summary reads `Flowchart / Activity · Checkable`, the declarations
+   line in view [M]. The panel is 198.5 px at 752.5 [M, P-2026-09-27-2105].
 
-**Optional: Reset before declaring** (tab `demoFlowB`): `1 defect: f2 action (undeclared 'count' on demoFlowB).`
-and `Marking: i0` [M].
+Count: 4 clicks, no keystroke; the optional Reset below, 1 click; the declaration, 6 interactions and 10
+keystrokes; the run, 7 clicks [M, P-2026-09-27-2105].
 
-**Declaration** (tab `DemoFlowB`). Click `Add attribute` in the summary line, then the table's `Add attribute`.
-Row 1: name `count`, Enter; domain `range`; maximum `3`, Enter; initial value `0`, Enter. The declarations line is
-gone [M]. The table path is measured (through Configure…, 6 interactions) [M]; the summary button on this preset
-<!-- not measured: the summary Add attribute on Flow; measured on ESM by R2 -->.
+**Optional: Reset before declaring** (tab `demoFlowB`): `3 defects: f3 guard (undeclared 'count'); f4 guard
+(undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023].
+
+**Declaration** (tab `DemoFlowB`). Click `Add attribute` in the summary line: the dialog opens on Data, its own `Add
+attribute` in view and focused [M, P-2026-09-27-2105]. Click it; row 1's name is selected: `count`, Enter. Scroll
+the dialog body to its end [M 728-760 > 735]. Domain `range`; click the maximum, `3`, Enter; click the initial
+value, `0`, Enter. Apply, in the dialog: the declarations line is gone [M]. 6 interactions: 1 hint, 1 `Add
+attribute`, 1 select choice, 2 cells, 1 Apply; 10 keystrokes; 1 scroll [M, P-2026-09-27-2105].
 **Say** "count, from 0 to 3, starts at 0."
 
 **Run** (tab `demoFlowB`). Reset: `Marking: i0 · count = 0`, `Last step: Reset` [M]. No choice list opens in this
@@ -295,28 +310,37 @@ run [M].
 After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover title of `Last step:` after step 2 adds
 `assignments: demoFlowB.count = 1` [M].
 
+**Two variants run the same** [M, P-2026-09-27-1738]. With the final class named `ActivityFinal` (G6, closed by E1),
+Apply proposes `Activity final → ActivityFinal` in place of `Terminal → FinalNode`. With `f4` guarded `else` in place
+of `model.[count] >= 2` (G7, closed by E1), Reset shows `2 defects: f3 guard (undeclared 'count'); f2 action (undeclared
+'count' on demoFlowB).` before the declaration and none after it [M, P-2026-09-28-0023]. Each variant alone gives the six
+steps above line for line and `Terminated` at step 6. The script keeps
+`FinalNode` and the explicit complement. <!-- not measured: the two variants through the dialog; the lines above are
+the panel's Profile and Apply, P-2026-09-27-1738 -->
+
 ---
 
 ## 3. Script constraints
 
-- **Petri: Bound = 4 on screen after Apply** (Configure…, Bound: two interactions, as run B does). Decision H, taken
-  by Alfonso on 2026-09-27 14:27. No code change. From G12: Apply proposes the largest initial marking (2), a lower
-  bound, and under k = 2 run A halts `unsafe` at step 2 [M].[^h]
-- **Flowchart: the flow final is named `FinalNode` (or `Final`), never `ActivityFinal`.** Decision E, from G6:
-  `ActivityFinal` ends in `Deadlock`, `· nothing enabled` (Flow C) [M].
-- **Flowchart: an explicit complement (`model.[count] >= 2`) instead of `[else]` into a Fork or a Join.** Decision
-  E, from G7: `[else]` gives `1 defect: f4 guard (parse error 1:1 Expected expression).` and a deadlock at step 4
-  (Flow A) [M].
+- **Petri: read `Proposed 4.` under Bound in the dialog before Apply.** The proposal explores every model of
+  `DemoPetri` (R-SIM-81(1), amended by E2), and one model that does not close sends it back to the largest initial
+  marking, with a reason that says so. The project holds `demoNet` alone, as the builder makes it. If the Bound row
+  reads a lower number, type 4 over it before Apply: click the cell, Cmd+A, `4`, 1 click and 2 keystrokes; a click
+  alone leaves the caret after the digit, `45` [M, P-2026-09-27-2105, typed with 5 over the stored 4, then Cancel].
+  With `Bound → 4`, taking `t1` twice before `t2` reads `Marking: lock, p2 ×4` at step 2 and the run goes on
+  to `Deadlock` at step 4, no `unsafe` halt [M, P-2026-09-27-1738]; under Bound 2 the readiness run halted `unsafe`
+  at step 2.
+- **Flowchart: `FinalNode` and the explicit complement are the script's model, no longer a constraint.** E1 lifted
+  decision E: the engine reads the activity final (G6, R-SIM-83) and resolves `[else]` on the edge into a Fork or out
+  of a Join (G7, R-SIM-84). `ActivityFinal` and `[else]` into the Fork each run the scene of §2.4 to `Terminated`
+  [M, P-2026-09-27-1738]. `[else]` into a Join or out of a Fork is the compile defect `else-position`
+  (R-SIM-84). <!-- not measured: [else] out of a Join; else-position in the panel -->
 - **Initial and Final as classes.** A4, ratified: a boolean flag binds as `none`, with its reason.
 - **Undo right after Apply, with the focus in the editor: click the empty canvas first, never a node.** From the
   first report's risk 4: with the focus on the page body Control+z does nothing, and after a node click it reverts
   the selection first [M].
 - **Reset starts the run: before Reset every input is off.** From the first report's risk 6 [M].
 - **Each preset as the builder draws it (§2), from an empty bag.** Every other shape or order is unmeasured.
-
-[^h]: Fallback only: with Bound left at 2, fire `t1`, `t3`, `t2`, `t1`, the order of §2.2. `p2` never holds more
-    than 2 tokens by arithmetic; not measured under k = 2. Never take `t1` twice before `t2`: the list marks it
-    `exceeds bound 2`, and the run halts with `Halted: unsafe. p2 would hold 4 tokens; the bound is 2.` [M].
 
 ---
 
@@ -326,22 +350,20 @@ After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover ti
   values: after step 4 `p1 : Place` reads `tokens 2` under `Marking: p2 ×2, p3` [M]. Point at the panel line.
   **Say** "The panel shows the run. The canvas shows the model; the run on the canvas comes after MODELS."
 - **`∅` reads like `ø` at 11-12 px** in `t3 (lock → ∅)` [M]. **Say** "t3 has an empty postset."
-- **The declarations table below the fold via Configure…** on ESM: `addTop 992 > bodyBottom 950` [M]. Use the
-  summary line's `Add attribute`, which brings the table's button into view.
-- **The summary button's path on ESM is measured on the trunk** by P-2026-09-27-1500
-  (`discovery_2026-09-27_sim_demo_hint_path_trunk.md`, `6acdb7080`, headless, 1600×1000): every value of §2.3
-  holds, and three targets sit 19 to 28 px below the fold, named in §2.3 steps 2 and 3 [M]. The RC-23 browser check
-  re-reads the three below-the-fold positions before the freeze. The summary button on Flow (§2.4) is not measured.
-  Rehearse §2.3 and §2.4 on 3001 before the freeze. If a target is out of view, scroll the panel body.
+- **Declaration targets below the dialog body's fold** at 1600×1000: row 1's second line, 728-760 against the
+  body's 735, on ESM and Flow B, and row 2's second line, 743-775, on ESM [M, P-2026-09-27-2105]. Scroll the dialog
+  body to its end before Domain and before the equation, as §2.3 and §2.4 say. The summary line's `Add attribute`
+  brings the dialog's own button into view and focuses it [M].
+- **The hint path through the dialog is measured on ESM and on Flow B** by P-2026-09-27-2105 on 3024 (headless,
+  1600×1000, one fresh page per scene): every value of §2.3 and §2.4 holds [M]. The RC-23 browser check re-reads the
+  below-the-fold positions before the freeze. Rehearse §2.3 and §2.4 on 3001 before the freeze. If a target is out
+  of view, scroll the dialog body.
 
 ---
 
 ## 5. Out of the demo
 
 - The canvas side of G3: token counts and σ on the nodes (the R-SIM-4 view lane).
-- G6: `ActivityFinal` as a flow final (R-SIM-53 in the engine).
-- G7: `[else]` into a Fork or a Join.
-- G12, engine side: a reachability bound at Apply.
 - The `.smv` exporter.
-- The modal lane.
+- The modal lane is no longer out: the demo walks the Simulation roles dialog (R-SIM-85).
 - The outputs profiles (Moore, Mealy).

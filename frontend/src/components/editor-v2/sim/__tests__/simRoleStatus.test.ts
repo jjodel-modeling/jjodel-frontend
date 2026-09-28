@@ -12,6 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+    boundProposalBag,
     boundProposalInputs,
     ENGINE_ROLE_KEYS,
     eventRoleWarning,
@@ -19,19 +20,29 @@ import {
     invalidEngineRoles,
     missingEngineRoles,
     PANEL_PROFILE_IDS,
+    profileBindings,
     profilePatch,
     profileSummary,
     profileSummaryText,
+    profileVerdict,
     ROLE_SPECS,
+    staleEventWarning,
     storedProfile,
+    VERDICT_LABEL,
 } from '../simRoleStatus';
-import type { Roles } from '../simRoleStatus';
+import type { ProfileSummary, Roles } from '../simRoleStatus';
+import { draftPatch, draftStatus, withProfileName, withRoleMode } from '../simRolesDraft';
+import type { DraftInput } from '../simRolesDraft';
 import { largestInitialMarking } from '../modelMarkings';
+import type { BoundEstimate } from '../modelMarkings';
 import { netStcFromRoles } from '../../../../model/simulation/netCompile';
 import { encodeStateAttributes } from '../../../../model/simulation/stateAttributesCodec';
 import { systemProfile } from '../../../../model/simulation/simProfiles';
+import { roleDescriptor } from '../../../../model/simulation/roleCatalog';
+import { encodeProfile } from '../../../../model/simulation/profileCodec';
+import { SKETCH_TYPE } from '../../../../model/simulation/profileBinder';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
-import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
+import type { MetamodelSketch, ProfileBindings, RoleBinding, SketchAttribute, SketchClass, SketchReference } from '../../../../model/simulation/profileBinder';
 
 /** A runnable control-flow bag: an initial rule, a source rule, the next state. */
 const CF: Roles = { simInitial: 'C_Initial', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
@@ -150,6 +161,26 @@ describe('the event role specs (R-SIM-38)', () => {
     });
 });
 
+describe('the activity-final row (G6, R-SIM-53)', () => {
+    it('Activity final follows Terminal in ROLE_SPECS, a class select with the catalog\'s label (killed by dropping the row)', () => {
+        const keys = ROLE_SPECS.map(spec => spec.key);
+        expect(keys.indexOf('simActivityFinal')).toBe(keys.indexOf('simTerminal') + 1);
+        expect(ROLE_SPECS.find(spec => spec.key === 'simActivityFinal')).toEqual({
+            key: 'simActivityFinal', label: roleDescriptor('activityFinal').label, kind: 'class', placeholder: 'Select a metaclass',
+        });
+        // control: the label is the catalog's, as Terminal's is
+        expect(ROLE_SPECS.find(spec => spec.key === 'simTerminal')?.label).toBe(roleDescriptor('terminal').label);
+    });
+
+    it('the key is never required: missing and invalid roles are the same with and without it (R-SIM-28 as for Terminal)', () => {
+        for (const bag of [{}, CF, PETRI, { ...CF, simInitial: undefined }]) {
+            const withFinal = { ...bag, simActivityFinal: 'C_ActFinal' };
+            expect(missingEngineRoles(withFinal)).toEqual(missingEngineRoles(bag));
+            expect(invalidEngineRoles(withFinal)).toEqual(invalidEngineRoles(bag));
+        }
+    });
+});
+
 describe('messages', () => {
     it('incomplete configuration names the metamodel and the labels, comma-separated (GO wording)', () => {
         expect(incompleteConfigurationMessage('Smoke', ['Next state']))
@@ -167,6 +198,16 @@ describe('messages', () => {
         expect(eventRoleWarning(['Trigger'], 'Smoke')).toBe('Events disabled. Missing on Smoke: Trigger.');
         expect(eventRoleWarning(['Event'], null)).toBe('Events disabled. Missing: Event.');
         expect(eventRoleWarning(['Trigger'], '')).toBe('Events disabled. Missing on the metamodel: Trigger.');
+    });
+
+    it('a stale simEvent warns, naming both classes (S7); equal, absent or no Trigger bound warns of nothing', () => {
+        const names: Record<string, string> = { C_Old: 'Old', C_New: 'New' };
+        const of = (id: string) => names[id] ?? id;
+        expect(staleEventWarning('C_Old', 'C_New', of)).toBe("Stored event class Old is ignored: the run uses New, the Trigger's type.");
+        expect(staleEventWarning('C_Old', 'C_Old', of)).toBeNull();
+        expect(staleEventWarning(undefined, 'C_New', of)).toBeNull();
+        expect(staleEventWarning('C_Old', undefined, of)).toBeNull();
+        expect(staleEventWarning(undefined, undefined, of)).toBeNull();
     });
 });
 
@@ -424,6 +465,60 @@ describe('Bound from the models (R-SIM-81, G2)', () => {
     });
 });
 
+describe('the Bound from the reachable markings (G12(b), R-SIM-81(1) as amended by Alfonso 2026-09-27)', () => {
+    const closed = (max: number, largestInitial: number | null = 2, markings = 9): BoundEstimate => ({
+        largestInitial, exploration: { max, end: 'closed', markings },
+    });
+    const boundOf = (s: ProfileSummary) => s.proposals.find(p => p.key === 'simBound');
+    const FALLBACK = 'The largest initial marking on the models of this metamodel';
+
+    it('a closed exploration proposes its maximum, 4 on the demo net, and the title says so (killed by proposing the largest initial marking, 2)', () => {
+        const s = profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, closed(4));
+        expect(boundOf(s)).toMatchObject({ role: 'bound', value: '4' });
+        expect(boundOf(s)?.why).toBe('The most tokens a place holds over the 9 reachable markings of the models, guards aside');
+        expect(profileSummaryText(s, nameOf).proposals).toEqual(['Bound → 4']);
+        const r = profilePatch(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, {}, [], closed(4));
+        expect((r as { patch: Record<string, string> }).patch).toMatchObject({ simBound: '4' });
+    });
+
+    it('an exploration that does not close proposes the largest initial marking, and the title says why (killed by proposing the partial maximum)', () => {
+        const cases: Array<[BoundEstimate, string]> = [
+            [{ largestInitial: 2, exploration: { max: 3, end: 'unbounded', markings: 5 } },
+                `${FALLBACK}: a reachable marking covers an earlier one with more tokens, so no bound was found`],
+            [{ largestInitial: 2, exploration: { max: 7, end: 'cap', markings: 2000 } },
+                `${FALLBACK}: more than 2000 reachable markings, not all explored`],
+            [{ largestInitial: 2, exploration: null }, `${FALLBACK}: the roles after Apply make no net to explore`],
+        ];
+        for (const [estimate, why] of cases) {
+            const s = profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, estimate);
+            expect(boundOf(s)).toMatchObject({ value: '2', why });
+            const r = profilePatch(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, {}, [], estimate);
+            expect((r as { patch: Record<string, string> }).patch).toMatchObject({ simBound: '2' });
+        }
+    });
+
+    it('nothing at or below 1 on either path, and never over a set Bound or where Bound is not edit (R-SIM-81 as before)', () => {
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, closed(1, 1)).proposals).toEqual([]);
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, { largestInitial: 1, exploration: null }).proposals).toEqual([]);
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, { largestInitial: null, exploration: null }).proposals).toEqual([]);
+        expect(profileSummary(PETRI_PROFILE, { ...B2NET_UNBOUNDED, simBound: '3' }, B2NET_BINDINGS, closed(4)).proposals).toEqual([]);
+        expect(profileSummary(SM, {}, TURN, closed(4)).proposals.map(p => p.key)).not.toContain('simBound');
+        // control: the same closed 4 is proposed on the unbounded bag
+        expect(profileSummary(PETRI_PROFILE, B2NET_UNBOUNDED, B2NET_BINDINGS, closed(4)).proposals).toHaveLength(1);
+    });
+
+    it('boundProposalBag: the bag as Apply leaves it with the Bound aside, null exactly when boundProposalInputs is', () => {
+        expect(boundProposalBag(PETRI_PROFILE, {}, B2NET_BINDINGS)).toEqual({
+            simNode: 'C_Place', simInitialMarking: 'A_tokens', simTransition: 'C_PTrans', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+        });
+        // a set key is kept over the binder's value
+        expect(boundProposalBag(PETRI_PROFILE, { simNode: 'C_Mine' }, B2NET_BINDINGS)).toMatchObject({ simNode: 'C_Mine' });
+        expect(boundProposalBag(PETRI_PROFILE, { simBound: '2' }, B2NET_BINDINGS)).toBeNull();
+        expect(boundProposalBag(PETRI_PROFILE, {}, { ...B2NET_BINDINGS, initialMarking: none })).toBeNull();
+        expect(boundProposalBag(SM, {}, TURN)).toBeNull();
+    });
+});
+
 describe('the declarations hint (R-SIM-81, G9)', () => {
     const ESM = systemProfile('extendedStateMachine') as SimProfile;
     const WITH_ACTION: ProfileBindings = { ...TURN, action: bound('A_effect') };
@@ -451,10 +546,142 @@ describe('the declarations hint (R-SIM-81, G9)', () => {
         expect(profileSummaryText(s, nameOf).declare).toBeNull();
     });
 
+    it('an unreadable declarations value shows nothing, not the hint for an empty one (S8; killed by treating unreadable as empty)', () => {
+        const s = profileSummary(ESM, { simAction: 'A_effect', simStateAttributes: 'not json' }, TURN);
+        expect(s.declareHint).toBe(false);
+        expect(profileSummaryText(s, nameOf).declare).toBeNull();
+    });
+
     it('no hint with no action role bound (killed by showing the hint without Action, Entry or Exit)', () => {
         const s = profileSummary(ESM, {}, TURN);
         expect(s.declareHint).toBe(false);
         expect(profileSummaryText(s, nameOf).declare).toBeNull();
         expect(profileSummary(SM, {}, TURN).declareHint).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// One verdict for the panel's badge and the dialog's pill (P-2026-09-28-0140,
+// docs/discovery/discovery_2026-09-28_sim_badge_pill.md §4)
+// ---------------------------------------------------------------------------
+
+describe('the panel badge and the dialog pill read one verdict (P-2026-09-28-0140)', () => {
+    const { string: ESTRING, expression: EXPR } = SKETCH_TYPE;
+    const C = (id: string, supers: string[] = []): SketchClass => ({ id, name: id, abstract: false, supers });
+    const A = (owner: string, name: string, type: string): SketchAttribute => ({ id: `${owner}.${name}`, name, owner, type });
+    const R = (owner: string, name: string, type: string, composition = false): SketchReference => (
+        { id: `${owner}.${name}`, name, owner, type, composition, aggregation: false }
+    );
+    /** PEST SM as profileBinder.test.ts reconstructs it, plus Timed ⊂ Transition with its own guard, and an unrelated class. */
+    const SKETCH: MetamodelSketch = {
+        classes: [C('State'), C('Initial', ['State']), C('Final', ['State']), C('Transition'), C('Timed', ['Transition']), C('Event'), C('Other')],
+        attributes: [A('Transition', 'guard', EXPR), A('Timed', 'when', EXPR), A('Other', 'label', ESTRING)],
+        references: [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State'), R('Transition', 'event', 'Event')],
+    };
+    /** What Apply of State machine leaves on this sketch (the binder's bag, report §4). */
+    const APPLIED = {
+        simNode: 'State', simInitial: 'Initial', simTerminal: 'Final', simTransition: 'Transition', simOwnedTransitions: 'State.transitions',
+        simNextState: 'Transition.nextState', simTrigger: 'Transition.event', simGuard: 'Transition.guard', simProfile: 'stateMachine',
+    };
+    const MINE = withProfileName(withRoleMode(SM, 'terminal', false), 'Mine');
+    const { simProfile: _stored, ...CUSTOM_BAG } = APPLIED;
+    const { simNextState: _next, ...NO_NEXT } = APPLIED;
+
+    /** The panel, SimulationPanel.tsx: the stored profile, its bindings, the summary with the sketch, the badge's word. */
+    function panel(bag: Record<string, unknown>, sketch: MetamodelSketch | null = SKETCH) {
+        const selected = storedProfile(bag).profile;
+        const summary = profileSummary(selected, bag, profileBindings(selected, sketch, bag), null, sketch);
+        return { word: profileSummaryText(summary, nameOf).badge, status: summary.status, pending: summary.pending };
+    }
+
+    /** The dialog opened on the stored profile, SimRolesModal.tsx: a pristine draft, the pill's word. */
+    function dialog(bag: Record<string, unknown>, sketch: MetamodelSketch | null = SKETCH) {
+        const stored = storedProfile(bag);
+        const input: DraftInput = {
+            profile: stored.profile, bag, bindings: profileBindings(stored.profile, sketch, bag), edits: {},
+            declarations: null, matchOff: false, writeProfile: !stored.custom, estimate: null,
+        };
+        const status = draftStatus(input, sketch).status;
+        return { word: VERDICT_LABEL[status], status, pending: Object.keys(draftPatch(input)).length > 0 };
+    }
+
+    it('the words of the three verdicts are one table (killed by a label written twice and changed once)', () => {
+        expect(VERDICT_LABEL).toEqual({ checkable: 'Checkable', warnings: 'Checkable with warnings', notCheckable: 'Not checkable' });
+    });
+
+    it('controls: the applied bag, an empty State machine bag and a Custom bag read the same on both sides', () => {
+        expect(panel(APPLIED)).toEqual({ word: 'Checkable', status: 'checkable', pending: false });
+        expect(dialog(APPLIED)).toEqual({ word: 'Checkable', status: 'checkable', pending: false });
+        expect(panel({ simProfile: 'stateMachine' })).toMatchObject({ word: 'Checkable', pending: true });
+        expect(dialog({ simProfile: 'stateMachine' })).toMatchObject({ word: 'Checkable', pending: true });
+        expect(panel(CUSTOM_BAG).word).toBe('Checkable');
+        expect(dialog(CUSTOM_BAG).word).toBe('Checkable');
+    });
+
+    it('a warning binding reads «Checkable with warnings» on both sides, a system profile and Custom (killed by a summary that drops the sketch)', () => {
+        const warn = { ...APPLIED, simGuard: 'Timed.when' };
+        expect(panel(warn)).toMatchObject({ word: 'Checkable with warnings', status: 'warnings' });
+        expect(dialog(warn)).toMatchObject({ word: 'Checkable with warnings', status: 'warnings' });
+        expect(profileSummaryText(profileSummary(SM, warn, profileBindings(SM, SKETCH), null, SKETCH), nameOf).status)
+            .toBe('State machine · Checkable with warnings');
+        const custom = { ...CUSTOM_BAG, simGuard: 'Timed.when' };
+        expect(panel(custom).word).toBe('Checkable with warnings');
+        expect(dialog(custom).word).toBe('Checkable with warnings');
+    });
+
+    it('an incompatible binding, or the id of a deleted class, reads «Not checkable» on both sides (killed by a verdict that ignores incompatible)', () => {
+        for (const bag of [{ ...APPLIED, simInitial: 'Other' }, { ...APPLIED, simInitial: 'C_gone' }]) {
+            expect(panel(bag)).toMatchObject({ word: 'Not checkable', status: 'notCheckable' });
+            expect(dialog(bag)).toMatchObject({ word: 'Not checkable', status: 'notCheckable' });
+            // nothing is missing: the verdict alone decides
+            expect(profileVerdict(SM, bag, SKETCH).missing).toEqual([]);
+        }
+    });
+
+    it('a user profile is bound on both sides: a required key left unset is proposed, Checkable after Apply (killed by binding system profiles only)', () => {
+        const bag = { ...NO_NEXT, simProfile: encodeProfile(MINE) };
+        expect(panel(bag)).toEqual({ word: 'Checkable', status: 'checkable', pending: true });
+        expect(dialog(bag)).toEqual({ word: 'Checkable', status: 'checkable', pending: true });
+    });
+
+    it('a user profile once applied is pending on neither side (killed by a decoded derived mode that re-encodes in another order)', () => {
+        const bag = { ...APPLIED, simProfile: encodeProfile(MINE) };
+        expect(panel(bag)).toEqual({ word: 'Checkable', status: 'checkable', pending: false });
+        expect(dialog(bag)).toEqual({ word: 'Checkable', status: 'checkable', pending: false });
+    });
+
+    it('profileBindings: Custom and a missing sketch bind nothing; a system and a user profile are bound', () => {
+        expect(profileBindings(storedProfile(CUSTOM_BAG).profile, SKETCH)).toBeNull();
+        expect(profileBindings(SM, null)).toBeNull();
+        expect(profileBindings(SM, SKETCH)?.node).toEqual(expect.objectContaining({ status: 'bound', value: 'State' }));
+        expect(profileBindings(MINE, SKETCH)?.nextState).toEqual(expect.objectContaining({ status: 'bound', value: 'Transition.nextState' }));
+    });
+
+    it('a kept Node reaches the dependent proposals through profileBindings, the panel\'s and the dialog\'s call site (S6; killed by dropping the bag argument)', () => {
+        const bag = { simNode: 'Other', simProfile: 'stateMachine' };
+        const b = profileBindings(SM, SKETCH, bag);
+        // Node keeps its own guess: what makes the bag's Other a "kept" value in the first place.
+        expect(b?.node).toEqual(expect.objectContaining({ status: 'bound', value: 'State' }));
+        expect(b?.initial?.status).toBe('none');
+        expect(b?.ownedTransitions?.status).toBe('none');
+        const s = profileSummary(SM, bag, b, null, SKETCH);
+        expect(s.kept).toEqual([{ role: 'node', key: 'simNode', label: 'Node', value: 'Other', proposed: 'State' }]);
+        expect(s.proposals.map(p => p.key)).not.toContain('simInitial');
+        expect(s.proposals.map(p => p.key)).not.toContain('simOwnedTransitions');
+    });
+
+    it('a kept Transition reaches Guard and Trigger the same way (S6; killed by deriving them from the binder\'s own Transition)', () => {
+        const bag = { simTransition: 'Other', simProfile: 'stateMachine' };
+        const b = profileBindings(SM, SKETCH, bag);
+        expect(b?.transition).toEqual(expect.objectContaining({ status: 'bound', value: 'Transition' }));
+        expect(b?.guard?.status).toBe('none');
+        expect(b?.trigger?.status).toBe('none');
+    });
+
+    it('without a sketch the summary keeps the reading before the verdicts: no «with warnings» (the callers that pass none)', () => {
+        const warn = { ...APPLIED, simGuard: 'Timed.when' };
+        expect(profileSummary(SM, warn, profileBindings(SM, SKETCH)).status).toBe('checkable');
+        expect(panel(warn, null).word).toBe('Checkable');
+        expect(dialog(warn, null).word).toBe('Checkable');
     });
 });

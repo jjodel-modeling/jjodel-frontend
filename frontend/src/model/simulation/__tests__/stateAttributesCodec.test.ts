@@ -226,3 +226,48 @@ describe('lane C2: a record carries initial or equation, never both (P-2026-09-2
         ]);
     });
 });
+
+describe('R-SIM-88: an input record, neither initial nor equation (P-2026-09-28-0034)', () => {
+    const DECISION: StateAttributeRecord = { name: 'decision', metaclass: 'C_Dec', space: 'semantic', domain: { kind: 'boolean' }, initial: '', input: true };
+
+    it('encode: an input record writes `"input":true` last, with no initial and no equation (mutant: the input written as initial)', () => {
+        expect(encodeStateAttributes([F, DECISION])).toBe(
+            '{"v":1,"attrs":['
+            + '{"name":"f","metaclass":null,"space":"semantic","domain":{"kind":"boolean"},"initial":"false"},'
+            + '{"name":"decision","metaclass":"C_Dec","space":"semantic","domain":{"kind":"boolean"},"input":true}]}');
+    });
+
+    it('decode: an input is a declaration with `input` and no initial (mutant: the input record a defect)', () => {
+        const { decls, defects } = decodeStateAttributes(encodeStateAttributes([F, DECISION]));
+        expect(defects).toEqual([]);
+        expect(decls[1]).toEqual({ name: 'decision', metaclass: 'C_Dec', space: 'semantic', domain: { kind: 'boolean' }, input: true });
+        expect(decls[1]).not.toHaveProperty('initial');
+        // control: a stored record has no input
+        expect(decls[0]).not.toHaveProperty('input');
+    });
+
+    it('exclusivity of three: input with initial or equation is `exclusive`; on presentation, or not `true`, a record defect (mutant: exclusivity of two only)', () => {
+        const out = decodeStateAttributes(stored([
+            { ...F, input: true },
+            { name: 'd', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, equation: 'true', input: true },
+            { name: 'p', metaclass: null, space: 'presentation', domain: null, input: true },
+            { name: 'q', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, input: 1 },
+            { name: 'ok', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, input: true },
+        ]));
+        expect(out.decls.map(d => d.name)).toEqual(['ok']);
+        expect(out.defects).toEqual([
+            { index: 0, name: 'f', code: 'exclusive', message: 'input and initial' },
+            { index: 1, name: 'd', code: 'exclusive', message: 'input and equation' },
+            { index: 2, name: 'p', code: 'record', message: 'an input is semantic' },
+            { index: 3, name: 'q', code: 'record', message: 'bad input' },
+        ]);
+    });
+
+    it('the rows carry input, and the round trip through them keeps it (mutant: the rows drop input)', () => {
+        const raw = encodeStateAttributes([F, DECISION]);
+        const { rows } = stateAttributeRows(raw);
+        expect(rows[1]).toEqual(DECISION);
+        expect(rows[0]).not.toHaveProperty('input');
+        expect(encodeStateAttributes(rows)).toBe(raw);
+    });
+});

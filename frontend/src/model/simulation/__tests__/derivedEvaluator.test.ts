@@ -219,3 +219,204 @@ describe('failures (R-SIM-73): an exception or a value that is not a SimValue', 
         expect(out.failures.map(f => [f.element, f.attr, f.space])).toEqual([['T1x', 'shade', 'presentation']]);
     });
 });
+
+// ---------------------------------------------------------------------------
+// R-SIM-74 as amended (S3, P-2026-09-27-1727): the graph per (element, attribute)
+// over the frozen M, G3 of docs/discovery/discovery_2026-09-27_sim_derived_recursion.md.
+// ---------------------------------------------------------------------------
+
+interface Item { id: string; name: string; cls: string; refs?: Record<string, string[] | string | null> }
+
+/**
+ * b2net with the items beside it, and the snapshot of the whole: every reference
+ * of an item is a pool handle, a list for many, a handle or null for one, as
+ * `buildEvalContext` fills them; `parent` stands for its eContainer.
+ */
+function frozenWorld(items: Item[], decls: StateAttributeDecl[]) {
+    const base: Item[] = [
+        { id: 'P1x', name: 'p1', cls: 'C_Place' }, { id: 'T1x', name: 't1', cls: 'C_PTr' },
+        { id: 'a1', name: 'a1', cls: 'C_Arc' }, { id: 'a2', name: 'a2', cls: 'C_Arc' },
+    ];
+    const all = [...base, ...items];
+    const lookup: Record<string, any> = {};
+    for (const c of ['C_Place', 'C_PTr', 'C_Arc', 'C_Node', 'C_Cell']) lookup[c] = { className: 'DClass', extends: [] };
+    const slots: Record<string, Record<string, unknown[]>> = {
+        P1x: { A_tokens: [1] }, a1: { R_src: ['P1x'], R_tgt: ['T1x'] }, a2: { R_src: ['T1x'], R_tgt: ['P1x'] },
+    };
+    for (const o of all) {
+        const features: string[] = [];
+        for (const [f, values] of Object.entries(slots[o.id] ?? {})) {
+            features.push(`v_${o.id}_${f}`);
+            lookup[`v_${o.id}_${f}`] = { className: 'DValue', instanceof: f, values };
+        }
+        lookup[o.id] = { className: 'DObject', instanceof: o.cls, features };
+    }
+    const view: NetModelView = {
+        exists: id => !!lookup[id], isInstanceOf: (id, c) => isKindOf(lookup, id, c),
+        outgoingTransitions: () => [], transitionTarget: () => null,
+        references: (o, f) => objectReferences(lookup, o, f), values: (o, f) => objectSlotValues(lookup, o, f),
+    };
+    const stc = netStcFromRoles({
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt', simInitialMarking: 'A_tokens', simBound: 3,
+    })!;
+    const net = compileNet(stc, view, 'M', all.map(o => o.id), decls);
+    const h = new Map<string, any>();
+    for (const o of all) h.set(o.id, { id: o.id, __type: 'Object', name: o.name });
+    for (const o of all) {
+        for (const [f, v] of Object.entries(o.refs ?? {})) h.get(o.id)[f] = Array.isArray(v) ? v.map(id => h.get(id)) : v === null ? null : h.get(v);
+    }
+    const byName = Object.fromEntries([...h.values()].map(x => [x.name, x]));
+    const snap = freezeSnapshot({ instances: [...h.values()], classes: [], ...byName }, { id: 'M', name: 'cnet' });
+    const compiled = compileDerived(net.attributes, { snapshot: snap, net });
+    return { net, snap, compiled, out: makeDerivedOracle(snap, net, compiled)(net.initial) };
+}
+
+/** A complete binary tree of `C_Node`, ids in pre-order, the root first: an order by id is the wrong one. */
+function tree(depth: number): Item[] {
+    const out: Item[] = [];
+    let k = 0;
+    const build = (d: number, parent: string | null): string => {
+        const id = `N${++k}`;
+        const item: Item = { id, name: `n${k}`, cls: 'C_Node', refs: { parent, children: [] } };
+        out.push(item);
+        if (d < depth) item.refs!.children = [build(d + 1, id), build(d + 1, id)];
+        return id;
+    };
+    build(0, null);
+    return out;
+}
+
+/** `n` cells of `C_Cell`, the head first; `loopTo` closes the list on that cell. */
+function cells(prefix: string, n: number, loopTo: number | null = null): Item[] {
+    return Array.from({ length: n }, (_, i) => ({
+        id: `${prefix.toUpperCase()}${i + 1}`, name: `${prefix}${i + 1}`, cls: 'C_Cell',
+        refs: { next: i + 1 < n ? `${prefix.toUpperCase()}${i + 2}` : loopTo === null ? null : `${prefix.toUpperCase()}${loopTo}` },
+    }));
+}
+
+const OWN = stored('own', 'C_Node', 1, 1);
+const SIZE = derived('size', 'C_Node', 'self.[own] + self.children.sum(c => c.[size])', range(0, 20000));
+const LEN = derived('len', 'C_Cell', 'if self.next == null then 1 else self.next.[len] + 1');
+const valuesOf = (m: ReadonlyMap<string, ReadonlyMap<string, SimValue>>, attr: string, ids: string[]) => ids.map(id => m.get(id)?.get(attr));
+const planOf = (c: ReturnType<typeof compileDerived>) => (c.plan ?? []).map(e => `${e.owner}.${e.eq.decl.name}`);
+
+describe('recursion per (element, attribute) over the frozen M (R-SIM-74 as amended)', () => {
+    it('a tree size through the lambda over children: every node, the root last (mutant G1: a name self-loop)', () => {
+        const { compiled, out } = frozenWorld(tree(2), [OWN, SIZE]);
+        expect(compiled.defects).toEqual([]);
+        expect(out.failures).toEqual([]);
+        expect(valuesOf(out.derived.attrs, 'size', ['N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7'])).toEqual([7, 3, 1, 1, 3, 1, 1]);
+    });
+
+    it('a depth through the parent: a null fold is no edge, the root is 0 (mutant: null read as a fallback)', () => {
+        const DEPTH = derived('depth', 'C_Node', 'if self.parent == null then 0 else self.parent.[depth] + 1');
+        const { compiled, out } = frozenWorld(tree(2), [OWN, DEPTH]);
+        expect(compiled.defects).toEqual([]);
+        expect(valuesOf(out.derived.attrs, 'depth', ['N1', 'N2', 'N3', 'N7'])).toEqual([0, 1, 2, 2]);
+    });
+
+    it('a list length, the head first in the model: the plan runs the tail first (mutant: owners in id order)', () => {
+        const { compiled, out } = frozenWorld(cells('c', 5), [LEN]);
+        expect(planOf(compiled)).toEqual(['C5.len', 'C4.len', 'C3.len', 'C2.len', 'C1.len']);
+        expect(valuesOf(out.derived.attrs, 'len', ['C1', 'C3', 'C5'])).toEqual([5, 3, 1]);
+    });
+
+    it('a forall projection binds its variable to the collection, as a lambda does', () => {
+        const FA = derived('fa', 'C_Node', 'self.[own] + (forall c in self.children : c.[fa]).sum()', range(0, 99));
+        const { compiled, out } = frozenWorld(tree(2), [OWN, FA]);
+        expect(compiled.defects).toEqual([]);
+        expect(out.derived.attrs.get('N1')?.get('fa')).toBe(7);
+    });
+
+    it('two equations reading each other down the tree interleave per element (mutant: the plan grouped by equation)', () => {
+        const decls = [OWN, derived('a', 'C_Node', 'self.children.sum(c => c.[b])'), derived('b', 'C_Node', 'self.[own] + self.[a]')];
+        const { compiled, out } = frozenWorld(tree(2), decls);
+        expect(compiled.defects).toEqual([]);
+        expect(out.failures).toEqual([]);
+        expect(out.derived.attrs.get('N1')?.get('b')).toBe(7);
+    });
+});
+
+describe('cycles per element (R-SIM-74 as amended)', () => {
+    it('a circular list is a defect naming its elements; only they lose their value, a list beside it runs (mutants: no SCC, the whole declaration out)', () => {
+        const { compiled, out } = frozenWorld([...cells('c', 3, 1), ...cells('d', 4)], [LEN]);
+        expect(compiled.defects.map(d => [d.index, d.name, d.code, d.message, d.element])).toEqual([
+            [0, 'len', 'cycle', 'equation cycle: c1.len → c2.len → c3.len → c1.len', undefined],
+        ]);
+        expect(out.failures).toEqual([]);
+        expect(valuesOf(out.derived.attrs, 'len', ['D1', 'D4', 'C1', 'C2', 'C3'])).toEqual([4, 1, undefined, undefined, undefined]);
+    });
+
+    it('a lasso: the cell before the loop still runs, and fails on the value the cycle does not give (mutant: readers of a cycle dropped)', () => {
+        const { compiled, out } = frozenWorld(cells('c', 3, 2), [LEN]);
+        expect(compiled.defects.map(d => d.message)).toEqual(['equation cycle: c2.len → c3.len → c2.len']);
+        expect(out.failures).toEqual([{ element: 'C1', attr: 'len', space: 'semantic', detail: "JjelEvaluationError: 'len' is not a state attribute of c2" }]);
+    });
+
+    it('a receiver that reads σ falls back to the name: a self-loop, today\'s text; the test inside the lambda folds (mutant: a σ-dependent receiver folded)', () => {
+        const S2 = derived('size2', 'C_Node', 'self.[own] + self.children.filter(c => c.[own] > 0).sum(c => c.[size2])');
+        const bad = frozenWorld(tree(2), [OWN, S2]);
+        expect(bad.compiled.defects.map(d => [d.code, d.message])).toEqual([['cycle', 'equation cycle: size2 → size2']]);
+        expect(bad.out.derived.attrs.size).toBe(0);
+        const S3 = derived('size3', 'C_Node', 'self.[own] + self.children.sum(c => if c.[own] > 0 then c.[size3] else 0)');
+        const good = frozenWorld(tree(2), [OWN, S3]);
+        expect(good.compiled.defects).toEqual([]);
+        expect(good.out.derived.attrs.get('N1')?.get('size3')).toBe(7);
+    });
+
+    it('the cycles of the name graph that stay on one element keep today\'s defects and plan (mutant: element names always)', () => {
+        const decls = [derived('a', null, 'model.[b] + 1'), derived('b', null, 'model.[a]'), derived('c', null, 'self.[c] + 1'), derived('d', null, '1')];
+        const { compiled, out } = frozenWorld([], decls);
+        expect(compiled.defects).toEqual(compileDerived(decls).defects);
+        expect(planOf(compiled)).toEqual(['M.d']);
+        expect(plain(out.derived.attrs)).toEqual({ M: { d: 1 } });
+    });
+
+    it('an object with too many bindings to fold falls back to the name (mutant: no cap); under the cap it folds', () => {
+        const PAIRS = derived('size', 'C_Node', 'self.[own] + self.children.sum(x => self.children.sum(y => (if x == y then x else y).[size]))', range(0, 20000));
+        const flat = (n: number): Item[] => [
+            { id: 'R', name: 'r', cls: 'C_Node', refs: { children: Array.from({ length: n }, (_, i) => `L${i}`) } },
+            ...Array.from({ length: n }, (_, i) => ({ id: `L${i}`, name: `l${i}`, cls: 'C_Node', refs: { children: [] } })),
+        ];
+        const over = frozenWorld(flat(101), [OWN, PAIRS]);
+        expect(over.compiled.defects.map(d => d.message)).toEqual(['equation cycle: size → size']);
+        const under = frozenWorld(flat(99), [OWN, PAIRS]);
+        expect(under.compiled.defects).toEqual([]);
+        expect(under.out.derived.attrs.get('R')?.get('size')).toBe(1 + 99 * 99);
+    });
+});
+
+describe('the order per element keeps today\'s plan where the name graph accepts the model', () => {
+    it('a name edge the frozen M does not have: the order by name holds (mutant: ties by name alone)', () => {
+        const decls = [derived('a', 'C_Place', 'self.[b] + 1'), derived('b', 'C_PTr', '1')];
+        const { compiled } = frozenWorld([], decls);
+        expect(planOf(compiled)).toEqual(['T1x.b', 'P1x.a']);
+    });
+
+    it('b2net total, busy, count and the ESM demo equation: the same plan as the loop by name, the same values', () => {
+        const sets: StateAttributeDecl[][] = [
+            [VISITS, derived('total', null, 'p1.[visits] * 2', range(0, 6)), BUSY, derived('count', null, 'if p1.[busy] then 1 else 0', range(0, 2))],
+            [stored('coins', null, 3, 0), derived('paid', null, 'model.[coins] >= 2', { kind: 'boolean' })],
+        ];
+        for (const decls of sets) {
+            const { net, snap, compiled, out } = frozenWorld([], decls);
+            const byName = compileDerived(decls);
+            const loop: string[] = [];
+            for (const eq of byName.order) for (const [owner, names] of net.declared) if (names.get(eq.decl.name) === eq.decl) loop.push(`${owner}.${eq.decl.name}`);
+            expect(planOf(compiled)).toEqual(loop);
+            expect(out.failures).toEqual([]);
+            expect(plain(out.derived.attrs)).toEqual(plain(makeDerivedOracle(snap, net, byName)(net.initial).derived.attrs));
+        }
+    });
+});
+
+describe('R-SIM-88: an equation that reads an input is a defect (P-2026-09-28-0034)', () => {
+    const ASK: StateAttributeDecl = { name: 'ask', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, input: true };
+
+    it('a derived value is a function of σ, never of an input (mutant: an input read as a stored attribute)', () => {
+        expect(codes([ASK, derived('e', null, 'model.[ask]', { kind: 'boolean' })])).toEqual([[1, 'e', 'input', "the equation reads the input 'ask'"]]);
+        // control: a stored attribute of the same name is read
+        const stored: StateAttributeDecl = { name: 'ask', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: true };
+        expect(codes([stored, derived('e', null, 'model.[ask]', { kind: 'boolean' })])).toEqual([]);
+    });
+});

@@ -13,12 +13,17 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputReason, markingLine, NO_SIM_ACTIONS,
-    panelInputs, pressInput, runSignature, startRun, stopReason,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, markingLine,
+    NO_SIM_ACTIONS, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
 } from '../simBridge';
-import type { ContextBuilder, PanelInputs } from '../simBridge';
+import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
-import { netRunStatus } from '../../../../model/simulation/netStep';
+import { candidates, netRunStatus, step } from '../../../../model/simulation/netStep';
+import { encodeProfile } from '../../../../model/simulation/profileCodec';
+import { ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
+import type { RoleId } from '../../../../model/simulation/roleCatalog';
+import { EVENT_FROM_TRIGGER } from '../../../../model/simulation/simProfiles';
+import type { ProfileShape, RoleMode } from '../../../../model/simulation/simProfiles';
 import type { CompiledNet, NetRunStatus, NetTransition, SimState, SimValue } from '../../../../model/simulation/netTypes';
 
 type Lookup = Record<string, any>;
@@ -478,9 +483,11 @@ describe('guards read σ in the run (wave B2, P-2026-09-26-1105, R-SIM-30, R-SIM
 
     it('the action oracle of the run is NO_SIM_ACTIONS when no action role is bound (R-SIM-69, mutant 10)', () => {
         expect(started(petriLookup('true'), spyBuilder(petriRecord).build).actions).toBe(NO_SIM_ACTIONS);
-        // control: with an action role bound the run has an oracle of its own
+        // control: with an action role bound the run has an oracle of its own; with the declarations key set,
+        // since «Custom» turns Action off without State attributes and the run reads it as unbound (R-SIM-78)
         const bound = petriLookup('true');
         bound.MM._state.simAction = 'A_guard';
+        bound.MM._state.simStateAttributes = JSON.stringify({ v: 1, attrs: [] });
         expect(started(bound, spyBuilder(petriRecord).build).actions).not.toBe(NO_SIM_ACTIONS);
     });
 });
@@ -724,7 +731,10 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         };
         expect(defectsOf('a b')).toEqual([['t1', 'guard', 'parse-error', 'a b']]);
         expect(defectsOf('node.[x] > 0')).toEqual([['t1', 'guard', 'subset', 'node.[x] > 0']]);
-        for (const guard of ['false', 'p2.[visits] > 0', '1 + 1', 'p2.[tokens] < 2']) expect([guard, defectsOf(guard)]).toEqual([guard, []]);
+        // P2b (R1): an undeclared name is known at Reset; an exception that depends on σ is still the run's
+        expect(defectsOf('p2.[visits] > 0')).toEqual([['t1', 'guard', 'undeclared', 'p2.[visits] > 0']]);
+        expect(defectsOf('t1.[tokens] == 0')).toEqual([['t1', 'guard', 'undeclared', 't1.[tokens] == 0']]);
+        for (const guard of ['false', '(if p2.[marked] then p2 else null).[tokens] > 0', '1 + 1', 'p2.[tokens] < 2']) expect([guard, defectsOf(guard)]).toEqual([guard, []]);
     });
 
     it('the defects line says «defect» for net and guard defects alike, never «not compiled» (mutant: the old wording for a guard)', () => {
@@ -910,7 +920,8 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
 
     it('an action that fails to evaluate: the halt line without the error class, the source in the title (R-SIM-82, G10; mutant 5)', () => {
         const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := p2.[nosuch]'] });
-        expect(reset(lookup).compileDefects).toEqual([]);
+        // P2b (R1): the undeclared read is a defect at Reset too, and the transition stays a candidate
+        expect(reset(lookup).compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['T1x', 'action', 'undeclared']]);
         eps(lookup);
         const halt = getSimRun('M')!.halt!;
         expect(halt.kind).toBe('action-defect');
@@ -922,18 +933,23 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             .toBe("Halted: the transition action of t1 failed: 'x' is not a state attribute of p2.");
     });
 
-    it('a value outside its domain is a run-time halt only: no defect at Reset', () => {
-        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := 9'] });
+    it('a value outside its domain that reads σ is a run-time halt only: no defect at Reset; a folded one is a defect too (P2b, R5)', () => {
+        const lookup = cnet({ decls: [VISITS], t1: ['p2.[visits] := p2.[visits] + 9'] });
         expect(reset(lookup).compileDefects).toEqual([]);
         eps(lookup);
         expect(haltMessage(getSimRun('M')!.halt!, lookup, FEATURES)).toBe('Halted: visits of p2 would be 9, outside its domain.');
+        const folded = cnet({ decls: [VISITS], t1: ['p2.[visits] := 9'] });
+        const f = reset(folded);
+        expect(defectsLine(f.run.net, folded, f.compileDefects)).toBe('1 defect: t1 action (visits = 9, outside its domain).');
+        eps(folded);
+        expect(haltMessage(getSimRun('M')!.halt!, folded, FEATURES)).toBe('Halted: visits of p2 would be 9, outside its domain.');
     });
 
     it('a target that reads σ is not judged at Reset; the run halts on it (report H4)', () => {
-        const lookup = cnet({ decls: [VISITS, F], t1: ['(if model.[f] then p1 else p2).[count] := 1'] });
+        const lookup = cnet({ decls: [VISITS, F], t1: ['(if model.[f] then p1 else t1).[visits] := 1'] });
         expect(reset(lookup).compileDefects).toEqual([]);
         eps(lookup);
-        expect(getSimRun('M')!.halt).toMatchObject({ kind: 'undeclared', element: 'P2x', attr: 'count' });
+        expect(getSimRun('M')!.halt).toMatchObject({ kind: 'undeclared', element: 'T1x', attr: 'visits' });
     });
 
     it('declaration defects at Reset, in the one line: a record, the key, the compiler\'s (mutant 6 through the bridge)', () => {
@@ -1018,6 +1034,28 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             expect(status()).toBe('Deadlock');
         });
 
+        it('a recursion along a reference of the frozen M runs per element, at Reset and after a step; a loop names its elements (R-SIM-74 as amended; mutant: the bridge without the frozen M)', () => {
+            const LEN = { name: 'len', metaclass: 'C_Place', space: 'semantic', domain: { kind: 'range', min: 0, max: 9 }, equation: 'if self.next == null then 1 else self.next.[len] + 1' };
+            const lookup = cnet({ decls: [VISITS, LEN], t1: [BUMP] });
+            // `next` is a reference of the snapshot only: p1 -> p2 -> null, p1 first among the ids
+            const chain = (loop: boolean) => () => {
+                const r = record(lookup)();
+                r.p1.next = r.p2;
+                r.p2.next = loop ? r.p1 : null;
+                return r;
+            };
+            const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(chain(false)).build);
+            if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+            expect(r.compileDefects).toEqual([]);
+            expect([r.run.config.state.derived?.attrs.get('P1x')?.get('len'), r.run.config.state.derived?.attrs.get('P2x')?.get('len')]).toEqual([2, 1]);
+            simReset('M', r.run);
+            expect(eps(lookup).outcome?.kind).toBe('fired');
+            expect(getSimRun('M')!.config.state.derived?.attrs.get('P1x')?.get('len')).toBe(2);
+            const loop = startRun(lookup, 'M', 'MM', 'P', spyBuilder(chain(true)).build);
+            if (loop.kind !== 'started') throw new Error(`refused: ${loop.reason}`);
+            expect(defectsLine(loop.run.net, lookup, loop.compileDefects)).toBe('1 defect: len (equation cycle: p1.len → p2.len → p1.len).');
+        });
+
         it('the equation defects at Reset, by the declaration\'s name; the source only in the title (R-SIM-62)', () => {
             const cycle = cnet({ decls: [VISITS, derived('a', 'model.[b] + 1'), derived('b', 'model.[a]')] });
             const c = reset(cycle);
@@ -1099,5 +1137,553 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             expect(eps(tight).outcome?.kind).toBe('halted');
             expect(markingLine(getSimRun('M')!.config.state, t.run.net, tight).line).toBe('Marking: p1 ×3 · p1.visits = 0, p2.visits = 0, total = 0');
         });
+    });
+});
+
+describe('P2b: the checker rules at Reset, on the rows of the checker gap report §5.2 (P-2026-09-27-2235)', () => {
+    const DECLS = [
+        { name: 'coins', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' },
+        { name: 'paid', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, equation: 'model.[coins] >= 2' },
+    ];
+
+    /**
+     * The ESM demo preset (docs/demo/models_2026_simulator_demo.md §2.3) with its declarations: tc (locked → locked,
+     * coin) carries `effect`, tp (locked → unlocked, push) `guard`; the ids unlike the names, so a pointer shows.
+     */
+    function esm(tpGuard: string, tcEffect: string): Lookup {
+        const lookup = buildLookup({ ...ROLES, simGuard: 'A_guard', simAction: 'A_effect', simStateAttributes: JSON.stringify({ v: 1, attrs: DECLS }) }, {
+            Lx: { cls: 'C_Init', slots: { R_out: ['TCx', 'TPx'] } },
+            Ux: { cls: 'C_State' },
+            coin: { cls: 'C_Event', slots: { A_label: ['Coin'] } },
+            push: { cls: 'C_Event', slots: { A_label: ['Push'] } },
+            TCx: { cls: 'C_Trans', slots: { R_next: ['Lx'], R_trigger: ['coin'], A_effect: [tcEffect] } },
+            TPx: { cls: 'C_Trans', slots: { R_next: ['Ux'], R_trigger: ['push'], A_guard: [tpGuard], A_effect: ['model.[coins] := 0'] } },
+        });
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        Object.assign(lookup.Lx, { name: 'locked' });
+        Object.assign(lookup.Ux, { name: 'unlocked' });
+        Object.assign(lookup.TCx, { name: 'tc' });
+        Object.assign(lookup.TPx, { name: 'tp' });
+        lookup.M.name = 'demoESM';
+        return lookup;
+    }
+
+    /** buildEvalContext's record: handles by id, `next` and `trigger` resolved to handles, names bound. */
+    const record = () => {
+        const h: Record<string, any> = {};
+        for (const [id, name] of [['Lx', 'locked'], ['Ux', 'unlocked'], ['coin', 'coin'], ['push', 'push'], ['TCx', 'tc'], ['TPx', 'tp']]) {
+            h[id] = { id, __type: 'Object', name };
+        }
+        h.coin.label = 'Coin'; h.push.label = 'Push';
+        h.TCx.next = h.Lx; h.TCx.trigger = h.coin;
+        h.TPx.next = h.Ux; h.TPx.trigger = h.push;
+        return { instances: Object.values(h), classes: [], ...Object.fromEntries(Object.values(h).map(x => [x.name, x])) };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const A0 = 'model.[coins] := model.[coins] + 1';
+    const G0 = 'model.[paid]';
+
+    it('each rule on its rows, in the one line: R1 G3 A10, R2 G4 G10, R3 A4 A14, R4 A12, R5 A9 A13, R6 G5 (mutants: one per rule)', () => {
+        const rows: Array<[string, string, string, string]> = [
+            ['G3', 'self.[visits] > 0', A0, "1 defect: tp guard (undeclared 'visits')."],
+            ['G4', 'demoESM.[paid]', A0, '1 defect: tp guard (unresolved .[paid]).'],
+            ['G5', 'model.[coins]', A0, '1 defect: tp guard (returns number).'],
+            ['G10', 'self.next.[coins] > 0', A0, "1 defect: tp guard (undeclared 'coins' on unlocked)."],
+            ['A4', G0, 'demoESM.[coins] := 1', '1 defect: tc action (unresolved .[coins]).'],
+            ['A9', G0, "model.[coins] := 'a'", '1 defect: tc action (coins = a, outside its domain).'],
+            ['A10', G0, 'model.[coins] := self.[visits]', "1 defect: tc action (undeclared 'visits')."],
+            ['A12', G0, 'model.[coins] := now()', '1 defect: tc action (E-CALL).'],
+            ['A13', G0, 'model.[coins] := self', '1 defect: tc action (value is object).'],
+            ['A14', G0, 'self.name.[coins] := 1', '1 defect: tc action (unresolved .[coins]).'],
+        ];
+        for (const [row, guard, effect, line] of rows) {
+            const lookup = esm(guard, effect);
+            const r = reset(lookup);
+            const got = defectsLine(r.run.net, lookup, r.compileDefects);
+            expect([row, got]).toEqual([row, line]);
+            expect([row, /Lx|Ux|TCx|TPx/.test(defectsTitle(r.run.net, lookup, r.compileDefects) ?? '')]).toEqual([row, false]);
+        }
+    });
+
+    it('the reasons widen by two literals only: unresolved (R3, R2) and value (R5, R6)', () => {
+        const reasons = (guard: string, effect: string) => {
+            const lookup = esm(guard, effect);
+            return reset(lookup).compileDefects?.map(d => [d.role, d.reason]);
+        };
+        expect(reasons(G0, 'demoESM.[coins] := 1')).toEqual([['action', 'unresolved']]);
+        expect(reasons('demoESM.[paid]', A0)).toEqual([['guard', 'unresolved']]);
+        expect(reasons(G0, 'model.[coins] := self')).toEqual([['action', 'value']]);
+        expect(reasons('model.[coins]', A0)).toEqual([['guard', 'value']]);
+    });
+
+    it('A4, C2 probe (4): the Reset detail is the halt\'s, and the transition stays a candidate until it fires', () => {
+        const lookup = esm(G0, 'demoESM.[coins] := 1');
+        const r = reset(lookup);
+        expect(defectsTitle(r.run.net, lookup, r.compileDefects)).toBe("tc action: the target: 'demoESM' does not exist [demoESM.[coins] := 1]");
+        expect(pressInput('M', 'coin', undefined, lookup, 'Coin').outcome?.kind).toBe('halted');
+        expect(haltMessage(getSimRun('M')!.halt!, lookup, { action: 'A_effect' })).toBe("Halted: the transition action of tc failed: the target: 'demoESM' does not exist.");
+    });
+
+    it('A11 stays silent at Reset, the run halts on it; A0 and G0 are clean and the run fires (negative controls)', () => {
+        const a11 = esm(G0, 'event.[coins] := 1');
+        expect(reset(a11).compileDefects).toEqual([]);
+        expect(pressInput('M', 'coin', undefined, a11, 'Coin').outcome?.kind).toBe('halted');
+        expect(getSimRun('M')!.halt).toMatchObject({ kind: 'undeclared', element: 'coin', attr: 'coins' });
+
+        const clean = esm(G0, A0);
+        expect(reset(clean).compileDefects).toEqual([]);
+        expect(pressInput('M', 'coin', undefined, clean, 'Coin').outcome?.kind).toBe('fired');
+        expect(pressInput('M', 'push', undefined, clean, 'Push').outcome?.kind).toBe('discard');
+    });
+});
+
+describe('roles that are off are read as unbound (P-2026-09-28-0100, R-SIM-78)', () => {
+    const EDIT: RoleMode = { mode: 'edit' };
+    const OFF: RoleMode = { mode: 'off', reason: 'Turned off' };
+
+    /** A user profile of `shape`: the other shape's group off, Event from Trigger, every other role edit; `modes` over them. */
+    function userProfile(shape: ProfileShape, modes: Partial<Record<RoleId, RoleMode>> = {}): string {
+        const other = shape === 'petri' ? 'controlFlow' : 'petri';
+        const base = Object.fromEntries(ROLE_IDS.map(r => [r, roleDescriptor(r).group === other ? OFF : r === 'event' ? EVENT_FROM_TRIGGER : EDIT]));
+        return encodeProfile({
+            id: 'u-test', name: 'Test', system: false, shape, modes: { ...base, ...modes } as Record<RoleId, RoleMode>,
+            params: { bound: 1, selector: 'list' }, constraints: [], addedRequired: [],
+        });
+    }
+
+    const without = (bag: Record<string, unknown>, keys: readonly string[]) =>
+        Object.fromEntries(Object.entries(bag).filter(([k]) => !keys.includes(k)));
+
+    /** The record of `buildEvalContext`: one handle per object, instance names bound at the top. */
+    const record = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const run = (lookup: Lookup): RunStart => startRun(lookup, 'M', 'MM', 'P', spyBuilder(record(lookup)).build);
+
+    /**
+     * What a run is, as a string: refused with its reason, or the net, the configuration, the alphabet, the defects
+     * at Reset, which oracles it has, one step per input from the initial configuration (the guard and action
+     * oracles executed), and the signature unless left out.
+     */
+    function face(r: RunStart, signature = true): string {
+        if (r.kind === 'refused') return JSON.stringify({ refused: r.reason });
+        const x = r.run;
+        const steps = [null, ...x.alphabet].map(event => {
+            const cfg = { state: x.config.state, event };
+            return step(x.net, cfg, candidates(x.net, cfg, x.guards).candidates[0]?.transition ?? null, x.guards, x.actions, x.derived);
+        });
+        return JSON.stringify({
+            net: x.net, config: x.config, alphabet: x.alphabet, halt: x.halt, compileDefects: r.compileDefects,
+            noActions: x.actions === NO_SIM_ACTIONS, derived: x.derived !== undefined, steps, ...(signature ? { signature: x.signature } : {}),
+        }, (_k, v) => (v instanceof Map ? { map: [...v] } : v instanceof Set ? { set: [...v] } : v));
+    }
+
+    const DECLS = JSON.stringify({ v: 1, attrs: ['a', 'b', 'c'].map(name => ({ name, metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' })) });
+
+    /** Every key of both shapes set; the Petri keys point at control-flow features, which only a Petri run would read. */
+    const CF_BAG: Record<string, unknown> = {
+        simNode: 'C_State', simTransition: 'C_Trans', simInitial: 'C_Init', simInitialMarking: 'A_tokens',
+        simTerminal: 'C_Final', simAccepting: 'C_Final', simActivityFinal: 'C_AFinal', simBound: '2',
+        simOwnedTransitions: 'R_out', simSource: 'R_src', simNextState: 'R_next', simFork: 'C_Fork', simJoin: 'C_Join',
+        simArc: 'C_Trans', simArcSource: 'R_src', simArcTarget: 'R_next', simArcWeight: 'A_tokens', simInhibitorArc: 'C_Trans',
+        simTrigger: 'R_trigger', simEventIdentifier: 'A_label', simGuard: 'A_guard',
+        simAction: 'A_act', simEntry: 'A_entry', simExit: 'A_exit', simStateAttributes: DECLS,
+        simStateOutput: 'A_label', simTransitionOutput: 'A_label',
+    };
+
+    /**
+     * A control-flow model where each role changes the run when it is read: s0 (2 tokens by Initial marking, 1 by
+     * Initial) leaves by tB (trigger ev1, guard, action) to s1 and by the join jn to sA (activity final); tA is owned
+     * by s0 but has s1 as Source; s1 forks through fk to sA and sF (terminal); exit of s0 and entry of s1 assign.
+     * The event identifier sorts ev2 (Alpha) before ev1 (Zed).
+     */
+    function cfLookup(bag: Record<string, unknown>): Lookup {
+        const lookup = buildLookup(bag, {
+            s0: { cls: 'C_Init', slots: { A_tokens: [2], R_out: ['tA', 'tB', 'tJ1'], A_exit: ['model.[c] := 1'] } },
+            s1: { cls: 'C_State', slots: { R_out: ['tF1'], A_entry: ['model.[b] := 1'] } },
+            sF: { cls: 'C_Final' },
+            sA: { cls: 'C_AFinal' },
+            fk: { cls: 'C_Fork', slots: { R_out: ['tF2', 'tF3'] } },
+            jn: { cls: 'C_Join', slots: { R_out: ['tJ2'] } },
+            ev1: { cls: 'C_Event', slots: { A_label: ['Zed'] } },
+            ev2: { cls: 'C_Event', slots: { A_label: ['Alpha'] } },
+            tA: { cls: 'C_Trans', slots: { R_src: ['s1'], R_next: ['sF'] } },
+            tB: { cls: 'C_Trans', slots: { R_next: ['s1'], R_trigger: ['ev1'], A_guard: ['true'], A_act: ['model.[a] := 1'] } },
+            tF1: { cls: 'C_Trans', slots: { R_next: ['fk'] } },
+            tF2: { cls: 'C_Trans', slots: { R_next: ['sA'] } },
+            tF3: { cls: 'C_Trans', slots: { R_next: ['sF'] } },
+            tJ1: { cls: 'C_Trans', slots: { R_next: ['jn'] } },
+            tJ2: { cls: 'C_Trans', slots: { R_next: ['sA'] } },
+        });
+        lookup.C_AFinal = { className: 'DClass', id: 'C_AFinal', name: 'AFinal', extends: ['C_State'] };
+        for (const id of ['C_Fork', 'C_Join']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        lookup.R_src = { className: 'DReference', id: 'R_src', name: 'src' };
+        for (const id of ['A_act', 'A_entry', 'A_exit', 'A_tokens']) lookup[id] = { className: 'DAttribute', id, name: id.slice(2) };
+        return lookup;
+    }
+
+    /** Each role a control-flow profile can turn off; `read` when the run (not only the signature) reads its key. */
+    const CF_ROWS: ReadonlyArray<{ role: RoleId; read: boolean; omit?: readonly string[] }> = [
+        { role: 'initial', read: true, omit: ['simInitialMarking'] }, { role: 'initialMarking', read: true },
+        { role: 'terminal', read: true }, { role: 'accepting', read: false }, { role: 'activityFinal', read: true },
+        { role: 'bound', read: true }, { role: 'ownedTransitions', read: true }, { role: 'source', read: true },
+        { role: 'fork', read: true }, { role: 'join', read: true },
+        { role: 'arc', read: true }, { role: 'arcSource', read: false }, { role: 'arcTarget', read: false },
+        { role: 'arcWeight', read: false }, { role: 'inhibitorArc', read: false },
+        { role: 'trigger', read: true }, { role: 'eventIdentifier', read: true },
+        { role: 'guard', read: true }, { role: 'action', read: true }, { role: 'entry', read: true }, { role: 'exit', read: true },
+        { role: 'stateAttributes', read: true }, { role: 'stateOutput', read: false }, { role: 'transitionOutput', read: false },
+    ];
+
+    /** The off row and its control: with the role on, the key changes the run, or the signature for a key nothing reads. */
+    function checkRow(shape: ProfileShape, bag: Record<string, unknown>, lookupOf: (b: Record<string, unknown>) => Lookup,
+        row: { role: RoleId; read: boolean; omit?: readonly string[] }) {
+        const key = roleDescriptor(row.role).key as string;
+        const base = without(bag, row.omit ?? []);
+        const off = userProfile(shape, { [row.role]: OFF });
+        const on = userProfile(shape, { [row.role]: EDIT });
+        const set = (profile: string) => lookupOf({ ...base, simProfile: profile });
+        const unset = (profile: string) => lookupOf({ ...without(base, [key]), simProfile: profile });
+        expect([row.role, face(run(set(off)))]).toEqual([row.role, face(run(unset(off)))]);
+        expect([row.role, face(run(set(on)), !row.read) === face(run(unset(on)), !row.read)]).toEqual([row.role, false]);
+    }
+
+    it('control flow: each role off with its key set runs as the same profile with the key unset, signature included (mutants: the key read; the signature reads it)', () => {
+        expect(run(cfLookup({ ...CF_BAG, simProfile: userProfile('controlFlow') })).kind).toBe('started');
+        for (const row of CF_ROWS) checkRow('controlFlow', CF_BAG, cfLookup, row);
+    });
+
+    const PN_BAG: Record<string, unknown> = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+        simInitialMarking: 'A_tokens', simArcWeight: 'A_w', simInhibitorArc: 'C_Inh', simBound: '2', simTerminal: 'C_PFinal',
+        simGuard: 'A_guard', simInitial: 'C_Place', simNextState: 'R_tgt', simFork: 'C_Place',
+    };
+
+    /** p1 (2 tokens) -a1 ×2-> t1 -a2-> p2 (terminal), p3 -i1-o t1: weight, inhibitor, bound, terminal and guard each change the net. */
+    function pnLookup(bag: Record<string, unknown>): Lookup {
+        const lookup = buildLookup(bag, {
+            p1: { cls: 'C_Place', slots: { A_tokens: [2] } },
+            p2: { cls: 'C_PFinal' },
+            p3: { cls: 'C_Place', slots: { A_tokens: [0] } },
+            t1: { cls: 'C_PTr', slots: { A_guard: ['true'] } },
+            a1: { cls: 'C_Arc', slots: { R_src: ['p1'], R_tgt: ['t1'], A_w: [2] } },
+            a2: { cls: 'C_Arc', slots: { R_src: ['t1'], R_tgt: ['p2'] } },
+            i1: { cls: 'C_Inh', slots: { R_src: ['p3'], R_tgt: ['t1'] } },
+        });
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc', 'C_Inh']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        lookup.C_PFinal = { className: 'DClass', id: 'C_PFinal', name: 'PFinal', extends: ['C_Place'] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        for (const id of ['A_tokens', 'A_w']) lookup[id] = { className: 'DAttribute', id, name: id.slice(2) };
+        return lookup;
+    }
+
+    it('Petri: arc weight, inhibitor arc, bound, terminal and guard off read as unbound; Initial and the control-flow keys by the signature only', () => {
+        expect(run(pnLookup({ ...PN_BAG, simProfile: userProfile('petri') })).kind).toBe('started');
+        for (const row of [
+            { role: 'arcWeight', read: true }, { role: 'inhibitorArc', read: true }, { role: 'bound', read: true },
+            { role: 'terminal', read: true }, { role: 'guard', read: true },
+            { role: 'initial', read: false }, { role: 'nextState', read: false }, { role: 'fork', read: false },
+        ] as const) checkRow('petri', PN_BAG, pnLookup, row);
+    });
+
+    it('Event off: no event role with the Trigger bound, as a Trigger with no class type (mutant: the event still derived)', () => {
+        const typed = (profile: string) => cfLookup({ ...CF_BAG, simProfile: profile });
+        const untyped = (profile: string) => { const l = typed(profile); delete l.R_trigger.type; return l; };
+        const off = userProfile('controlFlow', { event: OFF });
+        const r = run(typed(off));
+        expect(r.kind === 'started' && [r.run.net.hasEventRole, r.run.alphabet]).toEqual([false, []]);
+        expect(face(r, false)).toBe(face(run(untyped(off)), false));
+        // control: Event from Trigger, the events are there
+        const on = run(typed(userProfile('controlFlow')));
+        expect(on.kind === 'started' && on.run.alphabet).toEqual(['ev2', 'ev1']);
+    });
+
+    it('«Custom» (no simProfile): Action, Entry and Exit left off for want of State attributes read as unbound; declared, they run (inferCustomProfile)', () => {
+        const petri = ['simArc', 'simArcSource', 'simArcTarget', 'simArcWeight', 'simInhibitorArc'];
+        const actionKeys = ['simAction', 'simEntry', 'simExit'];
+        const bare = without(CF_BAG, [...petri, 'simStateAttributes']);
+        expect(face(run(cfLookup(bare)))).toBe(face(run(cfLookup(without(bare, actionKeys)))));
+        // control: with the declarations the Custom profile has them on, and the run reads them
+        const declared = { ...bare, simStateAttributes: DECLS };
+        expect(face(run(cfLookup(declared)), false)).not.toBe(face(run(cfLookup(without(declared, actionKeys))), false));
+    });
+
+    it('only off is skipped: a derived role with its key set is read as before (Bound k = 1 in State machine, the key 2 read; mutant: derived skipped too)', () => {
+        const r = run(buildLookup({ ...ROLES, simBound: '2', simProfile: 'stateMachine' }, TURNSTILE));
+        expect(r.kind === 'started' && r.run.net.bound).toBe(2);
+    });
+
+    it('the four demo profiles skip the keys they turn off: State machine drops Action and State attributes, Petri net the control-flow keys (system profiles)', () => {
+        const sm = run(cfLookup({ ...without(CF_BAG, ['simArc']), simProfile: 'stateMachine' }));
+        expect(sm.kind === 'started' && [sm.run.actions === NO_SIM_ACTIONS, sm.run.net.attributes, sm.run.net.activityFinal ?? null]).toEqual([true, [], null]);
+        const pn = run(pnLookup({ ...PN_BAG, simProfile: 'petri' }));
+        expect(face(pn)).toBe(face(run(pnLookup({ ...without(PN_BAG, ['simInitial', 'simNextState', 'simFork']), simProfile: 'petri' }))));
+    });
+});
+
+describe('R7: an else with no sibling is a defect at Reset, the run unchanged (P-2026-09-28-0100, R-SIM-87)', () => {
+    const COUNT = JSON.stringify({ v: 1, attrs: [{ name: 'count', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' }] });
+    const FLOW_ROLES = {
+        simNode: 'C_AN', simTransition: 'C_CF', simSource: 'R_source', simNextState: 'R_target', simInitial: 'C_IN', simFork: 'C_Fork',
+        simJoin: 'C_Join', simTerminal: 'C_Fin', simGuard: 'A_guard', simAction: 'A_effect', simStateAttributes: COUNT, simProfile: 'flowchart',
+    };
+
+    /**
+     * Flow B variant A of the demo (docs/demo/models_2026_simulator_demo.md §2.4): i0 -f1-> work -f2-> d1, d1 -f3-> work
+     * `count < 2`, d1 -f4-> fk `else`, the fork to left and right, the join jn to fin. `f3` false leaves f4 without its sibling.
+     */
+    function flow(f3: boolean, f4Guard = 'else'): Lookup {
+        const wires: Array<[string, string, string]> = [['f1', 'i0', 'work'], ['f2', 'work', 'd1'], ['f3', 'd1', 'work'], ['f4', 'd1', 'fk'],
+            ['f5', 'fk', 'left'], ['f6', 'fk', 'right'], ['f7', 'left', 'jn'], ['f8', 'right', 'jn'], ['f9', 'jn', 'fin']];
+        const guards: Record<string, string> = { f3: 'model.[count] < 2', f4: f4Guard };
+        const objects: Record<string, Obj> = {
+            i0: { cls: 'C_IN' }, work: { cls: 'C_Act' }, d1: { cls: 'C_Dec' }, fk: { cls: 'C_Fork' }, left: { cls: 'C_Act' },
+            right: { cls: 'C_Act' }, jn: { cls: 'C_Join' }, fin: { cls: 'C_Fin' },
+        };
+        for (const [e, s, t] of wires) {
+            if (e === 'f3' && !f3) continue;
+            objects[e] = { cls: 'C_CF', slots: {
+                R_source: [s], R_target: [t], ...(guards[e] ? { A_guard: [guards[e]] } : {}),
+                ...(e === 'f2' ? { A_effect: ['model.[count] := model.[count] + 1'] } : {}),
+            } };
+        }
+        const lookup = buildLookup(FLOW_ROLES, objects);
+        lookup.C_AN = { className: 'DClass', id: 'C_AN', name: 'ActivityNode', extends: [], abstract: true };
+        for (const [id, name] of [['C_IN', 'InitialNode'], ['C_Act', 'Activity'], ['C_Dec', 'Decision'], ['C_Fork', 'Fork'], ['C_Join', 'Join'], ['C_Fin', 'FinalNode']]) {
+            lookup[id] = { className: 'DClass', id, name, extends: ['C_AN'] };
+        }
+        lookup.C_CF = { className: 'DClass', id: 'C_CF', name: 'ControlFlow', extends: [] };
+        for (const id of ['R_source', 'R_target']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        lookup.M.name = 'demoFlowA';
+        return lookup;
+    }
+
+    const recordOf = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(recordOf(lookup)).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    /** ε until the run stops, at most 12 presses: the «Last step» lines and the status. */
+    const walk = (lookup: Lookup) => {
+        const lines: string[] = [];
+        for (let i = 0; i < 12; i++) {
+            const run = getSimRun('M')!;
+            const status = netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+            if (status !== 'Running') return { lines, status };
+            lines.push(pressInput('M', null, undefined, lookup, 'ε').lastStep ?? '');
+        }
+        return { lines, status: 'Running' };
+    };
+
+    it('Flow B variant A: f4 else has the sibling f3, no defect at Reset, 6 steps to Terminated (control: the demo preset unchanged)', () => {
+        const lookup = flow(true);
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBeNull();
+        const w = walk(lookup);
+        expect([w.lines.length, w.status]).toEqual([6, 'Terminated']);
+    });
+
+    it('f4 else into the fork with no sibling: one guard defect named by f4, not by the fork; the run is the one of f4 unguarded (mutants: no R7; the fork named)', () => {
+        const lookup = flow(false);
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['f4', 'guard', 'else-alone', 'else']]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: f4 guard (else, no sibling).');
+        expect(defectsTitle(r.run.net, lookup, r.compileDefects)).toBe('f4 guard: else with no sibling: no other transition has its preset and its triggers, so it is always true [else]');
+        const lone = walk(lookup);
+        // the run unchanged: the else is always true, as the same edge with no guard
+        const bare = flow(false, '');
+        expect(reset(bare).compileDefects).toEqual([]);
+        expect(lone).toEqual(walk(bare));
+        expect(lone.status).toBe('Terminated');
+    });
+
+    it('a plain edge: tPushL else leaves Locked on push, tCoin shares Locked but not the trigger, so no sibling; a second push edge from Locked is one (same preset, same triggers)', () => {
+        const alone = buildLookup({ ...ROLES, simGuard: 'A_guard' }, { ...TURNSTILE, tPushL: { ...TURNSTILE.tPushL, slots: { ...TURNSTILE.tPushL.slots, A_guard: ['else'] } } });
+        const r = startRun(alone, 'M', 'MM', 'P', spyBuilder().build);
+        expect(r.kind === 'started' && defectsLine(r.run.net, alone, r.compileDefects)).toBe('1 defect: tPushL guard (else, no sibling).');
+        // the run unchanged: push on Locked fires tPushL, the else always true
+        simReset('M', started(alone));
+        expect(pressInput('M', 'push', undefined, alone, 'Push').lastStep).toBe('Push: tPushL (Locked → Locked) fired');
+        const paired = buildLookup({ ...ROLES, simGuard: 'A_guard' }, {
+            ...TURNSTILE,
+            Locked: { ...TURNSTILE.Locked, slots: { R_out: ['tCoin', 'tPushL', 'tPush2'] } },
+            tPushL: { ...TURNSTILE.tPushL, slots: { ...TURNSTILE.tPushL.slots, A_guard: ['else'] } },
+            tPush2: { cls: 'C_Trans', slots: { R_next: ['Unlocked'], R_trigger: ['push'], A_guard: ['false'] } },
+        });
+        const p = startRun(paired, 'M', 'MM', 'P', spyBuilder().build);
+        expect(p.kind === 'started' && p.compileDefects).toEqual([]);
+    });
+
+    it('Petri (R-SIM-64): t1 else with no other transition on its preset is the same defect, and t1 still fires', () => {
+        const PN = {
+            simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+            simInitialMarking: 'A_tokens', simBound: '3', simGuard: 'A_guard',
+        };
+        const lookup = buildLookup(PN, {
+            p1: { cls: 'C_Place', slots: { A_tokens: [1] } }, p2: { cls: 'C_Place' }, t1: { cls: 'C_PTr', slots: { A_guard: ['else'] } },
+            a1: { cls: 'C_Arc', slots: { R_src: ['p1'], R_tgt: ['t1'] } }, a2: { cls: 'C_Arc', slots: { R_src: ['t1'], R_tgt: ['p2'] } },
+        });
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        const r = reset(lookup);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: t1 guard (else, no sibling).');
+        expect(pressInput('M', null, undefined, lookup, 'ε').lastStep).toBe('ε: t1 (p1 → p2) fired');
+    });
+});
+
+describe('R-SIM-88: inputs asked at the press that reads them (P-2026-09-28-0034)', () => {
+    /** S -e1-> D; D -e2 [g2]-> A, D -e3 [g3]-> B; `decision` an input of every State, A and B terminal. */
+    const DECISION = { name: 'decision', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    function decision(g2: string, g3 = 'else', e1Effect?: string, extra: object[] = []): Lookup {
+        const lookup = buildLookup({
+            ...ROLES, simGuard: 'A_guard', simTerminal: 'C_Final', ...(e1Effect ? { simAction: 'A_effect' } : {}),
+            simStateAttributes: JSON.stringify({ v: 1, attrs: [DECISION, ...extra] }),
+        }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+            D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+            A: { cls: 'C_Final' },
+            B: { cls: 'C_Final' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['D'], ...(e1Effect ? { A_effect: [e1Effect] } : {}) } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: [g2] } },
+            e3: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: [g3] } },
+        });
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        return lookup;
+    }
+    /** buildEvalContext's record: handles by id, `next` resolved, every name bound. */
+    const record = () => {
+        const h: Record<string, any> = {};
+        for (const id of ['S', 'D', 'A', 'B', 'e1', 'e2', 'e3']) h[id] = { id, __type: 'Object', name: id };
+        h.e1.next = h.D; h.e2.next = h.A; h.e3.next = h.B;
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', () => record());
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const eps = (lookup: Lookup, values?: Array<{ element: string; attr: string; value: boolean }>, selector?: string) =>
+        pressInput('M', null, selector, lookup, 'ε', values);
+    const answer = (value: boolean) => [{ element: 'D', attr: 'decision', value }];
+    const label = (e: string | null) => (e === null ? 'ε' : e);
+
+    it('the press that reads an input returns the asks and commits nothing (mutant: the ask skipped)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        expect(eps(lookup).lastStep).toBe('ε: e1 (S → D) fired');
+        const before = getSimRun('M')!.config;
+        const version = getSimVersion();
+        const out = eps(lookup);
+        expect(out.asks).toEqual([{ element: 'D', attr: 'decision', domain: { kind: 'boolean' } }]);
+        expect([out.pending, out.lastStep, out.outcome]).toEqual([null, null, null]);
+        expect(getSimRun('M')!.config).toBe(before);
+        expect(getSimVersion()).toBe(version);
+    });
+
+    it('the values reach the guards: true fires e2, false the else e3; σ′ never holds the input (mutants: the overlay unread, the input written into σ)', () => {
+        for (const [value, fired] of [[true, 'ε: e2 (D → A) fired'], [false, 'ε: e3 (D → B) fired']] as const) {
+            const lookup = decision('D.[decision]');
+            reset(lookup);
+            eps(lookup);
+            expect(eps(lookup, answer(value)).lastStep).toBe(fired);
+            const run = getSimRun('M')!;
+            expect(run.config.state.attrs.get('D')).toBeUndefined();
+            expect(markingLine(run.config.state, run.net, lookup).line).toBe(`Marking: ${value ? 'A' : 'B'}`);
+        }
+    });
+
+    it('the title of Last step lists the inputs of the step (mutant: the inputs left out of the title)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, answer(false)).lastStepTitle).toBe('ε: e3 (D → B) fired\ninputs: D.decision = false');
+        expect(inputLabel({ element: 'M', attr: 'answer' }, getSimRun('M')!.net, lookup)).toBe('answer');
+    });
+
+    it('an answer never shadows σ: a value given for a stored name is ignored (mutant: every value overlaid)', () => {
+        const SEEN = { name: 'seen', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' };
+        const lookup = decision('D.[decision] and not model.[seen]', 'else', undefined, [SEEN]);
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, [...answer(true), { element: 'M', attr: 'seen', value: true }]).lastStep).toBe('ε: e2 (D → A) fired');
+    });
+
+    it('several candidates after the answer: the list, then the choice with the same values (mutant: the values dropped on the choice)', () => {
+        const lookup = decision('D.[decision]', 'D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, answer(true)).pending?.map(c => c.transition)).toEqual(['e2', 'e3']);
+        expect(eps(lookup, answer(true), 'e3').lastStep).toBe('ε: e3 (D → B) fired');
+    });
+
+    it('runStatus: Running while an enabled transition waits for an input, where the core alone says Deadlock; Terminated after (mutant: the waiting rule dropped)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        const run = getSimRun('M')!;
+        expect(netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt)).toBe('Deadlock');
+        expect(runStatus(run)).toBe('Running');
+        eps(lookup, answer(true));
+        expect(runStatus(getSimRun('M')!)).toBe('Terminated');
+    });
+
+    it('the reasons: an input that asks is no «no candidate» and no Deadlock reason (mutant: explained as a defect)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        const run = getSimRun('M')!;
+        expect(inputReason(run, null, lookup, label)).toBeNull();
+        expect(stopReason(run, lookup, label)).toBeNull();
+    });
+
+    it('nothing is asked where no enabled transition that accepts the input reads one: today\'s press (mutants: not filtered by the preset, nor by the input)', () => {
+        const lookup = decision('D.[decision]');
+        const r = reset(lookup);
+        expect(r.run.inputs?.get('e2')).toEqual([{ element: 'D', attr: 'decision', domain: { kind: 'boolean' } }]);
+        // the else reads what its siblings read: the core evaluates them for the complement
+        expect(r.run.inputs?.get('e3')).toEqual(r.run.inputs?.get('e2'));
+        expect(inputAsks(getSimRun('M')!, null)).toEqual([]);
+        eps(lookup);
+        expect(inputAsks(getSimRun('M')!, 'coin')).toEqual([]);
+        expect(inputAsks(getSimRun('M')!, null)).toHaveLength(1);
+        // control: no input declared, no table
+        expect(started(buildLookup(ROLES, TURNSTILE)).inputs).toBeUndefined();
+    });
+
+    it('an action that assigns an input: a read-only defect at Reset and a read-only halt that says input (mutant: the checks for derived only)', () => {
+        const lookup = decision('D.[decision]', 'else', 'D.[decision] := true');
+        const r = reset(lookup);
+        expect(r.compileDefects?.filter(d => d.role === 'action').map(d => [d.element, d.reason, d.detail])).toEqual([
+            ['e1', 'read-only', "'decision' is an input and cannot be assigned"],
+        ]);
+        const out = eps(lookup);
+        expect(out.outcome?.kind).toBe('halted');
+        const halt = getSimRun('M')!.halt!;
+        expect(haltMessage(halt, lookup, { action: 'A_effect' })).toBe("Halted: the transition action of e1 failed: 'decision' is an input and cannot be assigned.");
+    });
+
+    it('a target the run resolves whose name only an input has: the same read-only defect at Reset (mutant: left to the run)', () => {
+        const SEEN = { name: 'seen', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' };
+        const lookup = decision('D.[decision]', 'else', '(if model.[seen] then D else S).[decision] := true', [SEEN]);
+        expect(reset(lookup).compileDefects?.filter(d => d.role === 'action').map(d => [d.element, d.reason, d.detail])).toEqual([
+            ['e1', 'read-only', "'decision' is an input and cannot be assigned"],
+        ]);
     });
 });

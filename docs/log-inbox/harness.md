@@ -135,3 +135,174 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: Text read from the code, two points where it is narrower than the prompt: a launch moves the prompt into `docs/prompts/` (copy, then the pending copy removed), not just copies it; `--governance-goahead` without `--launch` lifts nothing and reaches only the commit of the `by hand:` line. The v2 `merge` line is left as it is: still true. Alfonso's yes (16:15, in chat) is the go-ahead of this governance change.
 **Prompt document name**: 2026-09-27 16:20
+
+## 2026-09-28 — fix: bordr line, probe theme helper, R-SIM-85 header (P-2026-09-28-0055)
+**Prompt**: `claude_2026-09-28_0055_prompt_small_cleanups.md`, fast lane, launched by `lane-run` in `~/jjodel-w-cleanups` on `small-cleanups` at `ba74632df` (cut from `alfonso-frontend-jjtl` at `b452d9e5c`). Three tickets of 2026-09-27: the `bordr` build warning (P-2026-09-27-2248), probes whose dark crops keep canvas and tree light (P-2026-09-27-1647, 1806, 2324, P-2026-09-28-0023), `docs:digest` exit 2 on the R-SIM-85 header.
+**Files touched**: `ce3531f99`: `docs/decisions.md` (R-SIM-85 header, two lines reflowed). `935d054f0`: `frontend/scripts/smoke/states.ts` (`setTheme`, `ThemeResult`). `dbcc9f2e9`: `frontend/src/components/editors/properties-with-tree-view.scss` (one line removed). This commit: `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 20:49 (merge lane of `sim-modal`: it wrote the R-SIM-85 header wrapped, item 3 only)
+**Causa**: (c)
+**Regressions**: no. From `frontend/`: `typecheck` exit 2, 14 errors, the baseline set; `build` exit 0, esbuild warnings 1 to 0 (`bordr`), Sass deprecations 43 and rollup notices 5 unchanged; `typecheck:scripts` exit 0; `check:scripts` PASS 31 files (29 before the gitignored probe and the scratch vite config existed); `docs:digest` exit 2 to 0, the reflow empty under a whitespace-normalised diff. Probe `_tmp_p0055_theme.ts` on 3032: 16/16, zero page errors (numbers in `935d054f0`). No vitest: no test covers the touched files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no human visual check in the prompt); probe crops light, attribute-only dark and `setTheme` dark in `~/.jjodel-lanes/P-2026-09-28-0055/shots_theme/`
+**Notes**: One stop with `Outcome: question` on `bordr`: renaming it to `border` would arm a red debug border on `.tree-node__header`, which no TSX emits; the chat adopted the Recommended answer (RC-21) and the line is deleted. `setTheme` calls `ThemeService.set` in the page; on this tree Settings > Appearance still writes the attribute only (`813a73ff5` is on `demo-polish`).
+**Prompt document name**: 2026-09-28 00:55
+
+**Ticket** (priority low, opened here). In the `setTheme` dark crop (`A3_dark_app.png`) the status bar stays light: `.app-statusbar` hard-codes `background: #f8fafc` (`frontend/src/components/StatusBar.scss:17`) with no dark rule, so no way of switching reaches it. The Name input of the properties panel paints white in the same crop. Neither changed here, the second not investigated.
+
+## 2026-09-28 — feat: lane-run direct merges, one closure commit, chains, model tier, report briefs (P-2026-09-27-2330)
+**Prompt**: `claude_2026-09-27_2330_prompt_harness_lane_efficiency.md`, full lane (governance: P16) on `harness-lane-efficiency` in `~/jjodel-w-harness-eff`, launched by `lane-run`. Phase 1 report `d81a14423` (29 merge lanes of 2026-09-27 measured, 23 would have gone direct); the GO adopted its eleven `Recommended` answers and set the light model id to `claude-sonnet-5` (RC-32).
+**Files touched**: `00c414397` merge --direct: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts` (new). `3a11565df` go closes a direct merge: `lane-run.mjs`, `lane-templates/merge-into-trunk.md`, `lane-templates/trunk-into-branch.md`, `laneRunDirect.test.ts`. `1986cdf46` chain: `lane-run.mjs`, `laneRunDirect.test.ts`. `142b3eddf` model tier: `lane-run.mjs`, `laneRun.test.ts`, `laneRunDirect.test.ts`. `c9b506d9f` brief warning: `lane-run.mjs`, `laneRun.test.ts`. `0bdfa1f94`: `docs/PROTOCOL.md` P16, `docs/HARNESS-DOCS.md` §4.1, §7 and version 1.7, `docs/decisions.md` RC-32. This commit: this entry and four tickets, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. At every code commit: hook tests 300 in 4 files at the baseline, 310, 314, 322, 330, 333 in 5 files, 0 failed; check:docs 4/4 with 5 warnings (baseline 5); check:agents PASS; check:scripts PASS; typecheck:scripts exit 0. Mutation bench: 30, 16, 18 and 24 mutants on slices 1 to 4, 6 more on slice 5, all killed.
+**Out-of-scope changes**: no. Eleven paths, above five (rule 19), all in DOVE and declared in the report's section 9; `laneRunDirect.test.ts` is the new test file DOVE allows, its fixtures carrying a second worktree and a fake npm.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Deviation: the union rule adds its blank line only before a branch heading (the report said before any non-blank line); both reproduce 15 of the 16 measured files. The GO says the project instructions name Sonnet 5 as an accepted deroga: not found in CLAUDE.md, decisions.md, PROTOCOL.md or settings.json, where Sonnet 5 appears only as a past executor; RC-32 records the id as the owner chat's. Session `536c46ab`.
+**Prompt document name**: 2026-09-27 23:30
+
+## 2026-09-28 — ticket: HARNESS-DOCS §4.2 and the discovery-report skill do not state the brief rule
+**Ticket**: P16 and HARNESS-DOCS §4.1 (`0bdfa1f94`) say a discovery report opens with `## 0. Answer in brief`, at most 40 lines, and `lane-run status` warns otherwise (`c9b506d9f`). The card of the discovery report, HARNESS-DOCS §4.2, and `.claude/skills/discovery-report/SKILL.md` (rules 1 to 7) still describe the report without it, so a session that follows the skill writes no brief. Both were outside the DOVE of P-2026-09-27-2330.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 8)
+
+## 2026-09-28 — ticket: the log-entry skill commits the inbox alone, against the one closure commit
+**Ticket**: `.claude/skills/log-entry/SKILL.md:21` (rule 6) says "Commit the inbox alone", while P13 and RC-17 put the entry, the Status flip and the visual line in one closure commit, and `status-flip` (its line 19) already says the flip rides in that commit. It is one source of the two-commit closures measured on 2026-09-26/27.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 5)
+
+## 2026-09-28 — ticket: docs:digest stops on the wrapped header of R-SIM-85
+**Ticket**: `npm run docs:digest` exits on `docs/decisions.md`: the header of R-SIM-85 (added by `22aa888de`, on the trunk too) wraps before its closing parenthesis, "the parenthesis does not close on the header line". No digest is written until that header is on one line.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+
+## 2026-09-28 — ticket: a prose condition in a branch prompt is invisible to merge --direct
+**Ticket**: `merge --direct` checks what git and the prompt headers say. The session of P-2026-09-27-2049 stopped on "the branch is not merged on the trunk before 2026-10-04", written in the body of a branch prompt, with every mechanical precondition holding, so `--direct` would have merged it. RC-31 lifted that embargo, not the class. A header line a script can read (for example `Merge: not before <date>`) would let `--direct` refuse it.
+**Priority**: low
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 3)
+
+## 2026-09-28 — merge: harness-trace into alfonso-frontend-jjtl (P-2026-09-28-1324)
+**Prompt**: `claude_2026-09-28_1324_prompt_merge_harness-trace.md`, a direct merge by `lane-run merge --direct`, no session: `harness-trace` at `5038c7cd2` into `alfonso-frontend-jjtl`, merge base `6c69783cf`, 2 commits on the branch side.
+**Files touched**: merge `c4bb0e0af`: 2 files from the branch side (`docs/discovery/discovery_2026-09-27_trace_monitor.md`, `docs/prompts/claude_2026-09-27_1030_prompt_trace_monitor_discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c4bb0e0af` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5436 tests in 221 files, 9 red at import, hooks 333; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge, no UI change; gates green
+**Notes**: Rollback tag `pre-harness-trace` on `3e141466d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1324/result.json`.
+**Prompt document name**: 2026-09-28 13:24
+
+## 2026-09-28 — feat(harness): trace index and lane monitor, stage 1 (P-2026-09-27-1030)
+**Prompt**: `claude_2026-09-27_1030_prompt_trace_monitor_discovery.md`, Phase 2 (stage 1), full lane, GO of 2026-09-28 in the resumed session on the answers of `docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md` point 4 (Q1-Q4, T1 with the RC-27 change). Branch fast-forwarded to `e54999b0b` first.
+**Files touched**: `ee84361f3`: `frontend/scripts/lane-run.mjs` (`keepInput` in `launch()`), `frontend/scripts/hooks/__tests__/laneRun.test.ts` (+2). `7d2c53599`: `frontend/scripts/gates/trace-index.ts`, `trace-monitor.ts`, `__tests__/traceIndex.test.ts`, `__tests__/traceMonitor.test.ts` (new), `lane-run.mjs` (`monitor`), `laneRun.test.ts` (+2), `frontend/package.json` (`trace:index`). This commit: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest scripts/gates and scripts/hooks 569 at `e54999b0b`, 602 at `7d2c53599`; typecheck:scripts exit 0; check:scripts PASS (34 files); check:docs 4/4; no build (no `src/` file). Mutation bench: Q3 4 of 5 killed, stage 1 16 of 17 (survivors in the commit bodies). Real run: `lane-run monitor --no-open` on 3008, `/health` 200, foreign Host 403, live `lanes` events, a second start refused; 0.9 s CPU per 20 s, RSS 206 MB.
+**Out-of-scope changes**: no — nine files over two code commits, all named by the GO (steps 2 and 3).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no app UI; the monitor page was served (200, 7881 bytes) and not looked at
+**Notes**: `trace:index` on the trunk tree (`e54999b0b`) and `~/.jjodel-lanes`, 2.1 s, two runs byte-identical. Nodes 2694: chat 24, check 88, commit 758, decision 225, lane 102, logEntry 1344, prompt 153. Edges 1474: cites 601, citesDecision 148, closedBy 129, corrects 22, decidedIn 104, foundIn 27, measures 88, openedBy 143, reports 114, runs 98. Misses 267: commit 152, decision 29, lane 4, logEntry 39, prompt 43. No P16 line: `docs/PROTOCOL.md` is a governance file and would stop `merge --direct`.
+**Prompt document name**: 2026-09-27 10:30
+
+**Ticket** (recurrence of «docs:digest stops on the wrapped header of R-SIM-85»): at `e54999b0b` `npm run docs:digest` exits 2 again, now on R-SIM-88 (`docs/decisions.md:2296`, the parenthesis does not close on the header line). `trace:index` reports it as a decision miss and reads the other rows. The class wants a gate on the register, not a fix per row.
+
+## 2026-09-28 — merge: harness-trace into alfonso-frontend-jjtl (P-2026-09-28-1543)
+**Prompt**: `claude_2026-09-28_1543_prompt_merge_harness-trace.md`, a direct merge by `lane-run merge --direct`, no session: `harness-trace` at `58d168441` into `alfonso-frontend-jjtl`, merge base `e54999b0b`, 3 commits on the branch side.
+**Files touched**: merge `19f8ae493`: 9 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-09-27_1030_prompt_trace_monitor_discovery.md`, `frontend/package.json`, `frontend/scripts/gates/__tests__/traceIndex.test.ts`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`, `frontend/scripts/gates/trace-index.ts`, `frontend/scripts/gates/trace-monitor.ts`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `19f8ae493` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5483 tests in 223 files, 9 red at import, hooks 337; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge, no UI change; gates green on the merge
+**Notes**: Rollback tag `pre-harness-trace-P-2026-09-28-1543` on `2e401d51c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1543/result.json`.
+**Prompt document name**: 2026-09-28 15:43
+
+## 2026-09-28 — feat(harness): lane-run appends the RC-20 closing line to every input (P-2026-09-28-1545)
+**Prompt**: `claude_2026-09-28_1545_prompt_lane_outcome_reminder.md`, fast lane, no discovery. Three lane sessions closed on 2026-09-28 without a valid RC-20 Outcome line; the rule stated in CLAUDE.md 21.2 has to travel with every input, not wait to be read.
+**Files touched**: `c24a91000`: `frontend/scripts/lane-run.mjs` (`CLOSE_REMINDER`, `withCloseReminder`, `closingInput`, used in `launch()`), `frontend/scripts/hooks/__tests__/laneRun.test.ts` (+6 tests, 3 assertions of the existing "keeps a copy of every input" test updated for the new input-N.md shape). This commit: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. typecheck:scripts exit 0; vitest scripts/hooks + scripts/gates 602 before, 608 after (11 files), all green; check:docs 4/4; check:scripts PASS (34 files). Mutation bench, four mutants of `lane-run.mjs` against a full `scripts/` tree copy (`LANE_RUN` env): dropping the append entirely killed by 6 tests, dropping the idempotency guard by 1, copying the pre-reminder text into input-N.md by 4, feeding claude's real stdin the pre-reminder file by 5.
+**Out-of-scope changes**: no — the two files named in DOVE.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — harness/CLI change, no app UI
+**Notes**: The reminder is appended once, inside `launch()`, the single point every real claude invocation passes through (start, resume, go, chain); never written into the worktree's prompt file or the chat's message file — a scratch `stdin.md` in the lane folder carries it.
+**Prompt document name**: 2026-09-28 15:45
+
+## 2026-09-28 — merge: lane-outcome-reminder into alfonso-frontend-jjtl (P-2026-09-28-1826)
+**Prompt**: `claude_2026-09-28_1826_prompt_merge_lane-outcome-reminder.md`, a direct merge by `lane-run merge --direct`, no session: `lane-outcome-reminder` at `ca1862b1f` into `alfonso-frontend-jjtl`, merge base `df0487f94`, 3 commits on the branch side.
+**Files touched**: merge `ef8356005`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-09-28_1545_prompt_lane_outcome_reminder.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ef8356005` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5489 tests in 223 files, 9 red at import, hooks 343; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge, no UI change; gates green on the merge
+**Notes**: Rollback tag `pre-lane-outcome-reminder` on `df0487f94` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1826/result.json`.
+**Prompt document name**: 2026-09-28 18:26
+
+## 2026-09-28 — feat(harness): check:addonly refuses add-only log rewrites (P-2026-09-28-2001)
+**Prompt**: `claude_2026-09-28_2001_prompt_log_addonly_gate.md`, fast lane, light tier. A gate comparing a commit's `docs/claude-code-log.md` / its archive / `docs/log-inbox/*.md` against its first parent, refusing a rewritten or removed line except a legitimate same-file move, rotation (active→archive) or batch closure (inbox→active), each verified against the same commit's new content.
+**Files touched**: code `65b8763a7`: `frontend/scripts/gates/check-addonly.ts` (new), `frontend/scripts/gates/__tests__/check-addonly.test.ts` (new), `frontend/package.json`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/lane-templates/trunk-into-branch.md`. This commit: `docs/log-inbox/harness.md` (this entry and the ticket below), the prompt's Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. `npm run typecheck:scripts` exit 0. `npx vitest run scripts/hooks scripts/gates`: baseline (HEAD, WIP set aside per §6.1's cp/git-show pattern — `git stash` refused by the settings deny list) 608 tests, 603 passed, 5 pre-existing failures (`traceIndex.test.ts`/`traceMonitor.test.ts`/lane-run monitor, files this task never touched); after, 631 tests, 626 passed, same 5, 0 new failures. `check:docs` 4/4. `check:scripts` PASS (36 files). `check:agents` PASS (no `CLAUDE.md` touched). `check:addonly -- --range 65eb5475b..HEAD`: 33/33 clean, 8 real merges included.
+**Out-of-scope changes**: yes — the two `lane-templates` files, not in the prompt's DOVE list: a one-line addition each to their existing "Gates on the merge commit" step, declared in the commit body (`65b8763a7`).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Mutation bench, 3 mutations each reverted after and diffed byte-identical: disabling the rotation-exception match killed 4 tests; removing `splitLines('')`'s empty-string case killed 3; disabling the `lane-run.mjs` reset-on-violation killed the new `laneRunDirect.test.ts` test. 447e4239b, the incident that motivated this gate, is NOT refused by it — ticket below.
+**Prompt document name**: 2026-09-28 20:01
+
+## 2026-09-28 — ticket: check:addonly cannot refuse 447e4239b, the incident that motivated it
+**Ticket**: A first-parent-only, per-file line-multiset comparison (COME step 3 of P-2026-09-28-2001: "a line that moves within the same file counts as unchanged", needed so R-RAIL-45 reordering and fold/rotate relocation are not refused) cannot tell the 447e4239b splice from a legitimate repair. Proven with git plumbing before writing any code: relative to its first parent `888ea9a9d`, `docs/claude-code-log.md` at `447e4239b` gained 195 lines and lost none. The P-2026-09-26-2350 entry's 10-line tail, present in the first parent, was dropped from its rightful place and reattached, byte for byte, under the newly-introduced `2026-09-18` entry (which only the second parent had; that entry's own correct tail is what actually vanished, and it never existed in the first parent to be missed). That is structurally the same operation the repair commit `e2448cf61` depends on to legitimately pass. Comparing against the second parent instead is not a fix: it produced 628 false-positive line-occurrences on this same commit, mostly staging's own entries never meant to carry over — the two branches keep independently-divergent logs by design (`CLAUDE.md` P15). Catching this class needs entry-provenance tracking or a real three-way (both-parents) comparison, a different and larger algorithm than this prompt specified.
+**Priority**: high
+**Found in**: P-2026-09-28-2001
+**Detail**: `frontend/scripts/gates/__tests__/check-addonly.test.ts` (the `documents "447e4239b"` test), commit `65b8763a7` body
+
+## 2026-09-28 — feat(harness): check:addonly compares whole entries, not lines (P-2026-09-28-2001)
+**Prompt**: GO stage 2 of P-2026-09-28-2001 — replace the per-line comparison with an entry-level one (whole `## ` entries, byte-identical and contiguous, entry order free to change); 447e4239b must now be refused; a `Log-Repair: <value>` commit trailer exempts a deliberate hand repair, tested with a synthetic commit since e2448cf61's real message cannot carry a trailer it was never written with.
+**Files touched**: code `160b00d2a`: `frontend/scripts/gates/check-addonly.ts` (rewritten: entry-level comparison via `log-tools.ts` `splitLog`/`entryStartLines`, `entryKey()` trailing-blank-line normalization, the `Log-Repair` exemption), `frontend/scripts/gates/__tests__/check-addonly.test.ts` (rewritten, 20 tests). This commit: `docs/log-inbox/harness.md` (this entry, the ticket below), the prompt's Status line (re-pointed to `160b00d2a`).
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-09-28 20:01
+**Causa**: (a)
+**Regressions**: no. `npm run typecheck:scripts` exit 0. `npx vitest run scripts/hooks scripts/gates`: before this stage's two-file diff (stage-1 committed state restored via `git checkout HEAD --`, cp/restore, no `git stash`) 631 tests, 626 passed, 5 pre-existing failures (unrelated, untouched); after, 629 tests, 624 passed, same 5, 0 new — the net −2 is the test file's restructure (20 tests vs 22), not lost coverage. `check:docs` 4/4. `check:scripts` PASS. `check:agents` PASS.
+**Out-of-scope changes**: no — exactly the two files this stage's GO named.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: `check:addonly --range 65eb5475b..HEAD` now finds exactly one real commit, `e2448cf61`, on this branch's own ancestry: the actual repair of 447e4239b, made before the `Log-Repair` trailer existed, so it cannot carry one retroactively. This is the explicit, accepted design tradeoff (GO stage 2's own words: "e2448cf61 passes only through that exemption"), not a new defect — see the ticket below for the decision this leaves open.
+**Prompt document name**: 2026-09-28 20:01
+
+## 2026-09-28 — ticket: e2448cf61 permanently fails check:addonly --range, by design, unresolved
+**Ticket**: `e2448cf61` (the real repair of the 447e4239b splice) is a legitimate ancestor of `alfonso-frontend-jjtl` at `65eb5475b..HEAD`, and now permanently fails `check:addonly` (2 entries named), because it carries no `Log-Repair` trailer — the mechanism did not exist when it was made, and a real commit's message cannot be amended after the fact without rewriting history (forbidden, P14/P15). `npm run check:addonly -- --range 65eb5475b..HEAD` will therefore never again return exit 0 on this branch's full range, only on ranges that exclude `e2448cf61`. Options, undecided: (a) accept permanently, document the one historical exception in `docs/PROTOCOL.md` or `CLAUDE.md` next to the gate's own rule, so a future reader of a red range scan does not treat it as a live regression; (b) narrow the default `--range` gate command future prompts cite to start after `e2448cf61` (`559eb82c5..HEAD` or later); (c) something else. Needs Alfonso's call, not a lane's.
+**Priority**: medium
+**Found in**: P-2026-09-28-2001
+**Detail**: `frontend/scripts/gates/__tests__/check-addonly.test.ts` (the `checkRange` tests), commit `160b00d2a` body
+
+## 2026-09-28 — merge: log-addonly-gate into alfonso-frontend-jjtl (P-2026-09-28-2211)
+**Prompt**: `claude_2026-09-28_2211_prompt_merge_log-addonly-gate.md`, a lane-run merge session: `log-addonly-gate` at `fdb1e4390` into `alfonso-frontend-jjtl`, `--no-ff`, merge base `247a93549`, 5 commits on the branch side (check:addonly, P-2026-09-28-2001).
+**Files touched**: merge `d3dbacb36`: 9 files from the branch side (`frontend/scripts/gates/check-addonly.ts`, `frontend/scripts/gates/__tests__/check-addonly.test.ts`, `frontend/package.json`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/lane-templates/trunk-into-branch.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-09-28_2001_prompt_log_addonly_gate.md`); this commit: this entry and the Status flip.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: yes — the trunk's full vitest run, 0 failed at `7f2a76413`, is 1 failed at `d3dbacb36`: the branch's new `checkRange` test times out at the 5000 ms default under full-suite load (3 of 3 runs: once on `fdb1e4390`, twice on the merge) and passes alone in 3.5 s. No test that passed on the trunk fails. Other gates on `d3dbacb36`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 5548 tests in 225 files as expected (5527 + 21), 9 red at import; hooks 344 (343 + 1); build exit 0; check:docs 4/4; check:agents PASS; check:scripts PASS; check:addonly HEAD clean.
+**Out-of-scope changes**: no — the 9 files are the branch's, listed above; the rollback tag `pre-log-addonly-gate` on `ca43d6326`, not named by the prompt, follows RC-31.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — scripts-only merge, no UI change; the chat waived the four demo scenes (energy saving rule for scripts-only merges).
+**Notes**: Adopted by chat C-2026-09-28-1936: the prompt carries `Chat: —`, its launcher unidentified. The chat accepted the red `checkRange` test at the GO (ticket below). Zero conflicts, tree `3020f7f03` as measured, probes 1 each, no union. The merge body reads "22:1x" for 22:12: bash-guard refused the amend. 3001 up from this tree, not restarted.
+**Prompt document name**: 2026-09-28 22:11
+
+**Ticket** (priority medium, opened here for a follow-up harness lane, accepted by chat C-2026-09-28-1936 at the GO). (1) The `checkRange` test in `frontend/scripts/gates/__tests__/check-addonly.test.ts:201` has no timeout of its own: 3.4 to 3.7 s alone, over the 5000 ms default under full-suite load in 3 of 3 runs, so `npm run test` on the trunk reads 1 failed until it carries an explicit timeout. (2) `e2448cf61` in the range check: the chat's resolution of the open ticket of P-2026-09-28-2001 is a known-repairs list mapping `e2448cf61` -> `447e4239b`.

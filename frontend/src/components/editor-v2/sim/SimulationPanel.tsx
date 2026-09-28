@@ -6,18 +6,19 @@
  *
  * Two faces, one component:
  *
- * - M2 face (metamodel): the simulation ROLES in five groups (step 3b, R-SIM-37;
- *   Data, lane C1, R-SIM-71), written into the `data.state` bag of the M2 model
- *   with flat `sim*` keys and pointer values (R-SIM-2), the bound as a digit
- *   string, the declared state attributes as one JSON string (R-SIM-67).
- *   Persisted, undoable, shared in collaborative — it is authoring. Above the
- *   groups, the profile row (R-SIM-77..79): a preset, its summary, Apply, and
- *   «Configure…» that folds the groups away.
+ * - M2 face (metamodel): the profile row (R-SIM-77..79): a preset, its summary,
+ *   Apply, and «Configure…», which opens the «Simulation roles» dialog
+ *   (SimRolesModal.tsx, R-SIM-55; P-2026-09-27-1740). The roles are written into
+ *   the `data.state` bag of the M2 model with flat `sim*` keys and pointer values
+ *   (R-SIM-2), the bound as a digit string, the declared state attributes as one
+ *   JSON string (R-SIM-67). Persisted, undoable, shared in collaborative — it is
+ *   authoring.
  * - M1 face (model): Reset / Step / Stop and the event buttons over a run of the
  *   Petri core (model/simulation/net*.ts), built and stepped by the bridge
  *   (simBridge.ts) and kept in the `simRunState` singleton, outside Redux
  *   (R-SIM-1). The simulation NEVER writes to the model nor to any bag (R-SIM-6,
- *   prototype invariant).
+ *   prototype invariant). A press that reads an input opens the input dialog
+ *   (SimInputDialog.tsx, R-SIM-88), portaled: nothing in the panel moves.
  *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
@@ -29,36 +30,36 @@
  * re-renders instead of firing one per dispatched action.
  */
 
-import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
-import { getSimRun, simClear, simReset } from './simRunState';
+import { getSimRun, simClear, simReset, simSetPending } from './simRunState';
 import {
-    PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
-    profilePatch, profileSummary, profileSummaryText, storedProfile,
+    PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
+    profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputReason, makeNetModelView, markingLine, panelInputs,
-    pressInput, runSignature, startRun, stopReason,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView, markingLine,
+    panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
 } from './simBridge';
-import type { InputLabel, StopReason } from './simBridge';
+import type { InputLabel, InputValue, StopReason } from './simBridge';
+import { inputRows } from './simInputs';
 import { sketchOfMetamodel } from './metamodelSketch';
-import { largestInitialMarking } from './modelMarkings';
+import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
-import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
+import { structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
-import { encodeStateAttributes, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
-import { bindProfile } from '../../../model/simulation/profileBinder';
 import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
-import { checkability, systemProfile } from '../../../model/simulation/simProfiles';
+import { systemProfile } from '../../../model/simulation/simProfiles';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { SimProfile } from '../../../model/simulation/simProfiles';
-import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
-import type { Candidate, NetRunStatus } from '../../../model/simulation/netTypes';
+import type { Candidate, InputRead, NetRunStatus } from '../../../model/simulation/netTypes';
 import type { SimEventInfo } from '../../../model/simulation/types';
-import type { RoleKey, RoleKind, RoleSpec, Roles } from './simRoleStatus';
+import type { RoleKey, Roles } from './simRoleStatus';
+import { SimRolesModal } from './SimRolesModal';
+import { SimInputDialog } from './SimInputDialog';
 import './simulation-panel.scss';
 
 // Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
@@ -184,17 +185,6 @@ function overlapMessage(lookup: any, overlap: RoleOverlap): string {
 // Component
 // ---------------------------------------------------------------------------
 
-/** The groups of the M2 face (R-SIM-37, R-SIM-71), in ROLE_SPECS order within each. */
-const ROLE_GROUPS: ReadonlyArray<{ id: string; title: string; keys: readonly RoleKey[] }> = [
-    { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simBound', 'simTransition'] },
-    { id: 'control-flow', title: 'Control flow', keys: ['simOwnedTransitions', 'simSource', 'simNextState', 'simFork', 'simJoin'] },
-    { id: 'petri', title: 'Petri net', keys: ['simArc', 'simArcSource', 'simArcTarget', 'simArcWeight', 'simInhibitorArc'] },
-    // No Event select: the event class is the Trigger's type (R-SIM-38), shown read-only after Trigger.
-    { id: 'events', title: 'Events', keys: ['simTrigger', 'simEventIdentifier'] },
-    // The guard moved here from General (R-SIM-71); the declarations table follows the four roles.
-    { id: 'data', title: 'Data', keys: ['simGuard', 'simAction', 'simEntry', 'simExit'] },
-];
-
 /** The project of the current user, as validation reads it (validationContext.ts); '' when none. */
 function projectIdOfUser(): string {
     try {
@@ -204,239 +194,26 @@ function projectIdOfUser(): string {
     }
 }
 
-// ---------------------------------------------------------------------------
-// The declared state attributes of the Data group (R-SIM-19, R-SIM-67, R-SIM-71)
-// ---------------------------------------------------------------------------
-
-/** An editable cell of a declaration row; `form` is «stored | derived» (lane C2, R-SIM-76). */
-type DeclField = 'name' | 'metaclass' | 'initial' | 'space' | 'kind' | 'min' | 'max' | 'literals' | 'form' | 'equation';
-
-interface StateAttributesTableProps {
-    /** The raw string of `simStateAttributes`, `null` when unset. */
-    raw: string | null;
-    /** Every class of the metamodel, abstract ones included. */
-    classes: MetaOption[];
-    onCommit: (value: string) => void;
-}
-
-/** The first name `x1`, `x2`, … no row uses: a new declaration is never nameless. */
-function freshName(rows: readonly StateAttributeRecord[]): string {
-    for (let n = 1; ; n++) if (!rows.some(r => r.name === `x${n}`)) return `x${n}`;
-}
-
-/**
- * The declarations as a table: one row of three fixed lines per declaration
- * (name, metaclass or global; stored or derived, then the initial value as a
- * JjEL literal or the equation as a JjEL expression; space, domain kind and its
- * fields). Every row has the same height, stored or derived (lane C2, R-SIM-76);
- * switching the form clears the value of the other. A text cell commits on blur
- * or Enter, a select on change: one write of the whole string per edit, never
- * one per keystroke (report risk 2); Escape drops the edit. What was typed stays
- * shown until the store gives the string back, so a deferred commit does not
- * flicker.
- */
-function StateAttributesTable({ raw, classes, onCommit }: StateAttributesTableProps): ReactElement {
-    const { rows, readable } = useMemo(() => stateAttributeRows(raw ?? undefined), [raw]);
-    const [drafts, setDrafts] = useState<Record<string, string>>({});
-    useEffect(() => { setDrafts({}); }, [raw]);
-
-    const keyOf = (index: number, field: DeclField) => `${index}:${field}`;
-    const drop = (key: string) => setDrafts(d => {
-        const rest = { ...d };
-        delete rest[key];
-        return rest;
-    });
-
-    /** Writes the rows unless they give back the string already stored; `true` when it wrote. */
-    const commit = (next: StateAttributeRecord[]): boolean => {
-        const value = encodeStateAttributes(next);
-        if (readable && raw !== null && value === encodeStateAttributes(rows)) return false;
-        onCommit(value);
-        return true;
-    };
-
-    const patchOf = (row: StateAttributeRecord, field: DeclField, typed: string): Partial<StateAttributeRecord> | null => {
-        switch (field) {
-            case 'name': return { name: typed.trim() };
-            case 'initial': return { initial: typed.trim() };
-            case 'equation': return { equation: typed.trim() };
-            // A derived row has no initial (R-SIM-72); back to stored, the equation goes.
-            case 'form':
-                return typed === 'derived' ? { initial: '', equation: row.equation ?? '' } : { equation: undefined };
-            case 'metaclass': return { metaclass: typed === '' ? null : typed };
-            case 'space':
-                // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed.
-                return typed === 'presentation'
-                    ? { space: 'presentation', domain: null }
-                    : { space: 'semantic', domain: row.domain ?? { kind: 'boolean' } };
-            case 'kind':
-                return {
-                    domain: typed === 'range' ? { kind: 'range', min: 0, max: 1 }
-                        : typed === 'enum' ? { kind: 'enum', literals: [] } : { kind: 'boolean' },
-                };
-            case 'literals':
-                return { domain: { kind: 'enum', literals: typed.split(',').map(x => x.trim()).filter(x => x !== '') } };
-            case 'min':
-            case 'max': {
-                const n = Number(typed);
-                if (typed.trim() === '' || !Number.isFinite(n) || row.domain?.kind !== 'range') return null;
-                return { domain: { kind: 'range', min: field === 'min' ? n : row.domain.min, max: field === 'max' ? n : row.domain.max } };
-            }
-        }
-    };
-
-    /** One cell into its row, and the rows into the key; a draft with no write is dropped at once. */
-    const commitCell = (index: number, field: DeclField, typed: string | undefined): void => {
-        const key = keyOf(index, field);
-        const row = rows[index];
-        const patch = row && typed !== undefined ? patchOf(row, field, typed) : null;
-        if (!patch || !commit(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)))) drop(key);
-    };
-
-    const shown = (index: number, field: DeclField, stored: string) => drafts[keyOf(index, field)] ?? stored;
-
-    const textCell = (index: number, field: DeclField, stored: string, label: string, placeholder: string, extra: string, title?: string) => (
-        <input
-            type="text"
-            className={`sim-panel__input ${extra}`}
-            aria-label={label}
-            placeholder={placeholder}
-            title={title}
-            value={shown(index, field, stored)}
-            onChange={e => { const v = e.target.value; setDrafts(d => ({ ...d, [keyOf(index, field)]: v })); }}
-            onBlur={() => commitCell(index, field, drafts[keyOf(index, field)])}
-            onKeyDown={e => {
-                if (e.key === 'Enter') e.currentTarget.blur();
-                if (e.key === 'Escape') drop(keyOf(index, field));
-            }}
-        />
-    );
-
-    /** A select commits at once; its draft holds the choice until the store answers. */
-    const choose = (index: number, field: DeclField, value: string): void => {
-        setDrafts(d => ({ ...d, [keyOf(index, field)]: value }));
-        commitCell(index, field, value);
-    };
-
-    const add = (): void => {
-        commit([...rows, { name: freshName(rows), metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' }]);
-    };
-
-    return (
-        <div className="sim-panel__decls">
-            <div className="sim-panel__decls-title">{STATE_ATTRIBUTES_SPEC.label}</div>
-            {!readable && (
-                <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line"
-                    title="The stored declarations are not readable. Adding an attribute replaces them.">
-                    The stored declarations are not readable. Adding an attribute replaces them.
-                </div>
-            )}
-            {rows.map((r, i) => {
-                const n = i + 1;
-                const semantic = shown(i, 'space', r.space) !== 'presentation';
-                const kind = shown(i, 'kind', r.domain?.kind ?? '');
-                const derived = shown(i, 'form', r.equation !== undefined ? 'derived' : 'stored') === 'derived';
-                const equation = shown(i, 'equation', r.equation ?? '');
-                return (
-                    <div className="sim-panel__decl" key={i}>
-                        <div className="sim-panel__decl-line">
-                            {textCell(i, 'name', r.name, `Name of state attribute ${n}`, 'name', 'sim-panel__decl-name')}
-                            <select
-                                className="sim-panel__select sim-panel__decl-owner"
-                                aria-label={`Metaclass of state attribute ${n}`}
-                                value={shown(i, 'metaclass', r.metaclass ?? '')}
-                                onChange={e => choose(i, 'metaclass', e.target.value)}
-                            >
-                                <option value="">Global</option>
-                                {r.metaclass && !classes.some(c => c.id === r.metaclass) && (
-                                    <option value={r.metaclass}>Unknown metaclass</option>
-                                )}
-                                {classes.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}
-                            </select>
-                            <button
-                                type="button"
-                                className="sim-panel__decl-remove"
-                                title="Remove"
-                                aria-label={`Remove state attribute ${n}`}
-                                onClick={() => commit(rows.filter((_, j) => j !== i))}
-                            >
-                                <i className="bi bi-x" />
-                            </button>
-                        </div>
-                        <div className="sim-panel__decl-line">
-                            <select
-                                className="sim-panel__select sim-panel__decl-form"
-                                aria-label={`Stored or derived, state attribute ${n}`}
-                                value={derived ? 'derived' : 'stored'}
-                                onChange={e => choose(i, 'form', e.target.value)}
-                            >
-                                <option value="stored">stored</option>
-                                <option value="derived">derived</option>
-                            </select>
-                            {/* The equation takes the place of the initial value, in the same cell box (R-SIM-76). */}
-                            {derived
-                                ? textCell(i, 'equation', r.equation ?? '', `Equation of state attribute ${n}, a JjEL expression`, 'equation', 'sim-panel__decl-equation', equation || undefined)
-                                : textCell(i, 'initial', r.initial, `Initial value of state attribute ${n}, a JjEL literal`, 'initial', 'sim-panel__decl-initial')}
-                        </div>
-                        <div className="sim-panel__decl-line">
-                            <select
-                                className="sim-panel__select sim-panel__decl-space"
-                                aria-label={`Space of state attribute ${n}`}
-                                value={semantic ? 'semantic' : 'presentation'}
-                                onChange={e => choose(i, 'space', e.target.value)}
-                            >
-                                <option value="semantic">semantic</option>
-                                <option value="presentation">presentation</option>
-                            </select>
-                            {/* Presentation has no domain: the cells stay, hidden, so the row keeps its layout. */}
-                            <select
-                                className={`sim-panel__select sim-panel__decl-kind${semantic ? '' : ' sim-panel__decl-hidden'}`}
-                                aria-label={`Domain of state attribute ${n}`}
-                                aria-hidden={!semantic}
-                                tabIndex={semantic ? undefined : -1}
-                                value={kind}
-                                onChange={e => choose(i, 'kind', e.target.value)}
-                            >
-                                {kind === '' && <option value="" disabled>domain</option>}
-                                <option value="boolean">boolean</option>
-                                <option value="range">range</option>
-                                <option value="enum">enum</option>
-                            </select>
-                            <span className={`sim-panel__decl-domain${semantic ? '' : ' sim-panel__decl-hidden'}`}>
-                                {semantic && r.domain?.kind === 'range' && kind === 'range' && (
-                                    <>
-                                        {textCell(i, 'min', String(r.domain.min), `Minimum of state attribute ${n}`, 'min', 'sim-panel__decl-bound')}
-                                        {textCell(i, 'max', String(r.domain.max), `Maximum of state attribute ${n}`, 'max', 'sim-panel__decl-bound')}
-                                    </>
-                                )}
-                                {semantic && r.domain?.kind === 'enum' && kind === 'enum' && (
-                                    textCell(i, 'literals', r.domain.literals.join(', '), `Literals of state attribute ${n}`, 'A, B', 'sim-panel__decl-literals')
-                                )}
-                            </span>
-                        </div>
-                    </div>
-                );
-            })}
-            <button type="button" className="sim-panel__decl-add" onClick={add}>
-                <i className="bi bi-plus" />
-                <span>Add attribute</span>
-            </button>
-        </div>
-    );
-}
-
-/** A choice waiting for the user (R-SIM-35): the input and its candidates. */
+/** A choice waiting for the user (R-SIM-35): the input and its candidates, and the values it was given (R-SIM-88). */
 interface PendingChoice {
     event: string | null;
     input: string;
     candidates: readonly Candidate[];
+    values?: readonly InputValue[];
+}
+
+/** A press waiting for the values of the inputs it reads (R-SIM-88): nothing committed until the dialog confirms. */
+interface AskingInputs {
+    event: string | null;
+    input: string;
+    asks: readonly InputRead[];
 }
 
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
-        modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, stateAttributesRaw, profileBagSig, sketchSig,
+        modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -450,30 +227,18 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // version of the 'mark' channel does not follow. `tick` re-reads the run.
     const [tick, setTick] = useState(0);
     const [pending, setPending] = useState<PendingChoice | null>(null);
+    const [asking, setAsking] = useState<AskingInputs | null>(null);
     // «Last step» and its title, which lists the assignments of the step (R-SIM-71).
     const [lastStep, setLastStep] = useState<{ text: string; title: string } | null>(null);
     const [defects, setDefects] = useState<{ line: string; title: string } | null>(null);
     const [interrupted, setInterrupted] = useState(false);
     // The list of reasons under the status row, opened by the user only (R-SIM-58, R-SIM-63).
     const [reasonsOpen, setReasonsOpen] = useState(false);
-    // M2 face: the groups the user opened or closed; the others follow their default.
-    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
     // M2 face: the preset picked in the select and not applied yet (R-SIM-79); null shows the stored profile.
     const [chosen, setChosen] = useState<string | null>(null);
-    // «Configure…»: null follows the verdict (the groups show only when not checkable), a boolean is the user's.
-    const [configureOpen, setConfigureOpen] = useState<boolean | null>(null);
-    useEffect(() => { setChosen(null); setConfigureOpen(null); }, [configModelId]);
-    // «Add attribute» of the declarations hint (R-SIM-81, G9): once the Data group is rendered, its add
-    // control is brought into view in the scrolling body and takes the focus.
-    const [focusAdd, setFocusAdd] = useState(false);
-    const bodyRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        if (!focusAdd) return;
-        setFocusAdd(false);
-        const add = bodyRef.current?.querySelector<HTMLButtonElement>('.sim-panel__decl-add');
-        add?.scrollIntoView({ block: 'nearest' });
-        add?.focus();
-    }, [focusAdd]);
+    // «Configure…» opens the «Simulation roles» dialog; the declarations hint opens it on Data (R-SIM-81(3)).
+    const [modal, setModal] = useState<{ onData: boolean } | null>(null);
+    useEffect(() => { setChosen(null); setModal(null); }, [configModelId]);
 
     const roles: Roles = useMemo(() => {
         try { return JSON.parse(roleSig) as Roles; } catch { return {}; }
@@ -502,31 +267,45 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     /** The stored profile is one of the select's presets; otherwise the select shows it as the current state. */
     const storedPreset = !stored.custom && stored.profile.system && PANEL_PROFILE_IDS.some(id => id === stored.profile.id);
     const selected: SimProfile = (chosen ? systemProfile(chosen) : undefined) ?? stored.profile;
-    // «Custom» is bound against nothing: no proposals, no Apply (D7).
+    // «Custom» is bound against nothing: no proposals, no Apply (D7); a user profile is, as in the dialog (profileBindings).
+    // profileBag carries a kept Node or Transition into the roles that depend on it (S6).
     const bindings: ProfileBindings | null = useMemo(
-        () => (selected.system && sketch ? bindProfile(selected, sketch) : null),
-        [selected, sketch],
+        () => profileBindings(selected, sketch, profileBag),
+        [selected, sketch, profileBag],
     );
     // The Bound proposal (R-SIM-81, G2): the largest initial marking on the models, read only while the panel is open.
     const markingInputs = useMemo(
         () => (bindings ? boundProposalInputs(selected, profileBag, bindings) : null),
         [selected, profileBag, bindings],
     );
-    const largestMarking = useSelector((state: DState) => (open && configModelId && markingInputs
-        ? largestInitialMarking((state as any)?.idlookup ?? {}, configModelId, markingInputs.node, markingInputs.initialMarking)
-        : null));
-    const summary = useMemo(
-        () => profileSummary(selected, profileBag, bindings, largestMarking),
-        [selected, profileBag, bindings, largestMarking],
+    // Since G12(b) (R-SIM-81(1) as amended 2026-09-27) the reachable markings of the models under the bag as Apply
+    // leaves it. The selector reads only their signature, on every store change while the panel is open; the
+    // exploration runs in the memo when the signature or the bag changes, capped (report §5.1 risk 5).
+    const boundBag = useMemo(
+        () => (markingInputs && bindings ? boundProposalBag(selected, profileBag, bindings) : null),
+        [markingInputs, selected, profileBag, bindings],
     );
-    /** The groups show when the user unfolded them, or by default when the stored profile is not checkable. */
-    const groupsShown = configureOpen ?? checkability(stored.profile, profileBag).status === 'notCheckable';
+    const markingSig = useSelector((state: DState) => (open && configModelId && boundBag
+        ? boundEstimateSignature((state as any)?.idlookup ?? {}, configModelId)
+        : ''));
+    const largestMarking = useMemo(
+        () => (markingSig && configModelId && boundBag
+            ? boundEstimate((store.getState() as any).idlookup ?? {}, configModelId, boundBag)
+            : null),
+        [markingSig, configModelId, boundBag],
+    );
+    // The verdict with the S11a verdicts, the dialog's pill's (profileVerdict, P-2026-09-28-0140).
+    const summary = useMemo(
+        () => profileSummary(selected, profileBag, bindings, largestMarking, sketch),
+        [selected, profileBag, bindings, largestMarking, sketch],
+    );
 
     // R-SIM-5: the run-state is per model. Clearing on modelid change and on
     // unmount keeps the flags from surviving into another model of the session.
     // R-SIM-13: the cleanup captures the modelid of its own render, so it clears
     // that model's run only.
-    useEffect(() => () => { simClear(modelid); }, [modelid]);
+    // The open choice list goes with it from the canvas (S15 slice A2).
+    useEffect(() => () => { simSetPending(modelid, null); simClear(modelid); }, [modelid]);
 
     /** Labels of the engine roles the shape lacks, and of the invalid ones (simRoleStatus.ts). */
     const missingRoles = missingEngineRoles(roles);
@@ -537,38 +316,11 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
      * the derived roles, so a Trigger typed to a class (R-SIM-38).
      */
     const eventRole = !!(roles.simEvent && roles.simTrigger);
-    /** The Petri shape, recognised by the arc role (R-SIM-31). */
-    const petriShape = !!roles.simArc;
-
-    const writeRole = useCallback((key: RoleKey, value: string): void => {
-        if (!configModelId) return;
-        const lmm: any = LPointerTargetable.fromPointer(configModelId);
-        if (!lmm) return;
-        // R-SIM-16, the same verdict as the run start, on the roles as they will
-        // stand after this save: with the event role or the Petri shape an overlap
-        // refuses the save; otherwise the save goes through with a warning. The
-        // event class is derived after the write, so a new Trigger is judged with
-        // its own type (R-SIM-38).
-        const lookup: any = (store.getState() as any).idlookup ?? {};
-        const after = withDerivedEventRole({ ...roles, [key]: value === '' ? undefined : value }, lookup);
-        const verdict = overlapVerdict(lookup, after, options.classes.map(c => c.id));
-        if (verdict?.refuse) {
-            setRoleWarning(null);
-            setRoleError(overlapMessage(lookup, verdict.overlap));
-            return;
-        }
-        setRoleError(null);
-        setRoleWarning(verdict ? overlapMessage(lookup, verdict.overlap) : null);
-        // Shallow patch of the bag: the empty option writes `undefined`, which
-        // set_state turns into the removal of the key (joiner/classes.ts:2222).
-        // The value is a pointer (the option id), never a proxy; the bound, a digit string.
-        lmm.state = { [key]: value === '' ? undefined : value };
-    }, [configModelId, roles, options]);
 
     /**
      * Apply (R-SIM-78): one assignment of the proposed values of the unset keys
      * and `simProfile`, so one transaction and one undo step (report §6.3). The
-     * overlap check of writeRole runs first; a refusal writes nothing and says why.
+     * overlap check of a role write (R-SIM-16) runs first; a refusal writes nothing and says why.
      */
     const applyProfile = useCallback((): void => {
         if (!configModelId || !bindings) return;
@@ -585,16 +337,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setRoleWarning(result.overlap ? overlapMessage(lookup, result.overlap) : null);
         lmm.state = result.patch;
         setChosen(null);
-        setConfigureOpen(null);
     }, [configModelId, bindings, selected, profileBag, options, largestMarking]);
-
-    /** The declarations (R-SIM-67): the whole string in one write, `attrs: []` for none, never `undefined`. */
-    const writeStateAttributes = useCallback((value: string): void => {
-        if (!configModelId) return;
-        const lmm: any = LPointerTargetable.fromPointer(configModelId);
-        if (!lmm) return;
-        lmm.state = { [STATE_ATTRIBUTES_SPEC.key]: value };
-    }, [configModelId]);
 
     // The run of this model, read on the panel's renders: the ones its own state
     // triggers (tick) and the ones connect triggers; never on the version.
@@ -610,6 +353,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!current || liveSignature === '' || liveSignature === current.signature) return;
         simClear(modelid);
         setPending(null);
+        setAsking(null);
+        simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
         setRunError(null);
@@ -628,20 +373,25 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!r) {
             return {
                 status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as { line: string; title: string } | null,
-                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(),
+                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(),
                 marking: null as { line: string; title: string } | null,
             };
         }
-        const status = netRunStatus(r.net, r.config, r.alphabet, r.guards, r.halt);
+        // A run waiting for an input is Running, not Deadlock (R-SIM-88).
+        const status = runStatus(r);
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const inputs = panelInputs(status, structuralInputs(r.net, r.config.state));
         const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
         // R-SIM-60: a button that is on while its input has no candidate says why in its title.
         const noCandidate = new Map<string | null, string>();
+        // R-SIM-88: a button whose press reads an input names it in its title.
+        const asks = new Map<string | null, string>();
         if (status === 'Running') {
             for (const e of [...(inputs.epsilon ? [null] : []), ...inputs.events]) {
                 const why = inputReason(r, e, lookup, label, roles.simGuard);
                 if (why) noCandidate.set(e, why.full);
+                const read = inputAsks(r, e);
+                if (read.length > 0) asks.set(e, read.map(a => inputLabel(a, r.net, lookup)).join(', '));
             }
         }
         // The halt names elements, never ids; the action that stopped the run is in its title only (R-SIM-62, R-SIM-70).
@@ -652,6 +402,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features, r.net) } : null,
             reason: status === 'Deadlock' ? stopReason(r, lookup, label, roles.simGuard) : null,
             noCandidate,
+            asks,
             // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3).
             marking: markingLine(r.config.state, r.net, lookup),
         };
@@ -661,6 +412,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const onReset = useCallback((): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
         setPending(null);
+        setAsking(null);
+        simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
         setInterrupted(false);
@@ -703,6 +456,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setRunError(null);
         setRunWarning(null);
         setPending(null);
+        setAsking(null);
+        simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
         setInterrupted(false);
@@ -716,78 +471,27 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
      * transition the user chose from the list. The bridge commits the step and
      * gives back the lines to show (R-SIM-35, R-SIM-36).
      */
-    const fire = useCallback((event: string | null, selector?: string): void => {
+    const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[]): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
-        const pressed = pressInput(modelid, event, selector, lookup, input);
-        setPending(pressed.pending ? { event, input, candidates: pressed.pending } : null);
+        const pressed = pressInput(modelid, event, selector, lookup, input, values);
+        // The press reads inputs (R-SIM-88): the dialog asks them; nothing was committed, the lines stay.
+        if (pressed.asks) {
+            setPending(null);
+            simSetPending(modelid, null);
+            setAsking({ event, input, asks: pressed.asks });
+            return;
+        }
+        setAsking(null);
+        setPending(pressed.pending ? { event, input, candidates: pressed.pending, values } : null);
+        // The canvas marks the list's candidates while it is open (S15 slice A2); a step that opens none closes it.
+        simSetPending(modelid, pressed.pending ? pressed.pending.map(c => c.transition) : null);
         if (pressed.lastStep !== null) setLastStep({ text: pressed.lastStep, title: pressed.lastStepTitle ?? pressed.lastStep });
         setReasonsOpen(false);
         setTick(t => t + 1);
     }, [modelid, events]);
 
     const onStep = useCallback((): void => { fire(null); }, [fire]);
-
-    const optionsFor = (kind: RoleKind): MetaOption[] => {
-        if (kind === 'class') return options.classes;
-        if (kind === 'composition') return options.compositions;
-        if (kind === 'attribute') return options.attributes;
-        if (kind === 'expression') return options.expressionAttributes;
-        if (kind === 'action') return options.actionAttributes;
-        return options.references;
-    };
-
-    /**
-     * The options of a role's select. A Data role bound to an attribute its
-     * type filter leaves out (bound before the filter existed) keeps its option,
-     * so the select never shows the placeholder over a set key.
-     */
-    const selectOptions = (spec: RoleSpec): MetaOption[] => {
-        // Node and Transition may be abstract in control flow (R-SIM-81): the engine matches their instances by kind.
-        const list = (spec.key === 'simNode' || spec.key === 'simTransition') && !petriShape ? options.allClasses : optionsFor(spec.kind);
-        const bound = roles[spec.key];
-        if (!bound || (spec.kind !== 'expression' && spec.kind !== 'action') || list.some(o => o.id === bound)) return list;
-        const kept = options.attributes.find(o => o.id === bound);
-        return kept ? [kept, ...list] : list;
-    };
-
-    /** Groups open by default: the ones the shape uses, and Events when any of its keys is set. */
-    const groupOpen = (id: string): boolean => {
-        if (openGroups[id] !== undefined) return openGroups[id];
-        if (id === 'control-flow') return !petriShape;
-        if (id === 'petri') return petriShape;
-        if (id === 'events') return !!(roles.simTrigger || roles.simEventIdentifier);
-        if (id === 'data') return !!(roles.simGuard || roles.simAction || roles.simEntry || roles.simExit || stateAttributesRaw);
-        return true;
-    };
-
-    const renderRole = (spec: RoleSpec): ReactElement => (
-        <label className="sim-panel__row" key={spec.key}>
-            <span className="sim-panel__label">{spec.label}</span>
-            {spec.kind === 'number' ? (
-                <input
-                    type="number"
-                    className="sim-panel__input"
-                    min={1}
-                    step={1}
-                    placeholder={spec.placeholder}
-                    value={roles[spec.key] ?? ''}
-                    onChange={e => writeRole(spec.key, e.target.value)}
-                />
-            ) : (
-                <select
-                    className="sim-panel__select"
-                    value={roles[spec.key] ?? ''}
-                    onChange={e => writeRole(spec.key, e.target.value)}
-                >
-                    <option value="">{spec.placeholder}</option>
-                    {selectOptions(spec).map(o => (
-                        <option value={o.id} key={o.id}>{o.name}</option>
-                    ))}
-                </select>
-            )}
-        </label>
-    );
 
     /** A class or feature by id, with the labels of the selects: `Class.feature` for a feature. */
     const nameOf = (id: string): string => {
@@ -798,12 +502,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         return ((store.getState() as any).idlookup ?? {})[id]?.name ?? id;
     };
 
-    /** The hint's «Add attribute» (R-SIM-81, G9): the groups and Data unfold, and the table's add control takes the focus. */
-    const declareAttributes = (): void => {
-        setConfigureOpen(true);
-        setOpenGroups(g => ({ ...g, data: true }));
-        setFocusAdd(true);
-    };
+    /** The hint's «Add attribute» (R-SIM-81, G9): the dialog opens on Data, its Add attribute focused. */
+    const declareAttributes = (): void => { setModal({ onData: true }); };
 
     /** The summary under the profile row (R-SIM-77, R-SIM-79): verdict, missing, choices, proposals, kept, set but off, declarations. */
     const renderSummary = (): ReactElement => {
@@ -812,7 +512,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             <div className="sim-panel__summary">
                 <div className="sim-panel__summary-status" title={summary.pending ? `${text.status}. ${APPLY_NOTE}` : text.status}>
                     <span className="sim-panel__summary-name">{`${summary.name} · `}</span>
-                    <span className={`sim-panel__badge sim-panel__badge--${summary.status === 'checkable' ? 'checkable' : 'not-checkable'}`}>
+                    <span className={`sim-panel__badge sim-panel__badge--${summary.status === 'notCheckable' ? 'not-checkable' : summary.status}`}>
                         {text.badge}
                     </span>
                     {summary.pending && <span className="sim-panel__summary-after"> after Apply</span>}
@@ -839,28 +539,20 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 {!stored.readable && (
                     <div className="sim-panel__hint sim-panel__hint--warning">The stored profile is not readable.</div>
                 )}
+                {staleEventWarningText && (
+                    <div className="sim-panel__hint sim-panel__hint--warning">{staleEventWarningText}</div>
+                )}
             </div>
         );
     };
-
-    /** The derived event class, read-only (R-SIM-38): its name, or why there is none. */
-    const renderEventClass = (): ReactElement => (
-        <div className="sim-panel__row" key="eventClass">
-            <span className="sim-panel__label">Event class</span>
-            <span className="sim-panel__hint">
-                {!roles.simTrigger
-                    ? 'Set Trigger to enable events.'
-                    : roles.simEvent ? eventClassName : 'The Trigger reference has no class type.'}
-            </span>
-        </div>
-    );
 
     const status: NetRunStatus | null = view?.status ?? null;
     const reason: StopReason | null = view?.reason ?? null;
     /** A button's title, and why its input has no candidate when it is on without one (R-SIM-60). */
     const inputTitle = (base: string, event: string | null): string => {
         const why = view?.noCandidate.get(event);
-        return why ? `${base}\nNo candidate. ${why}` : base;
+        const asks = view?.asks.get(event);
+        return why ? `${base}\nNo candidate. ${why}` : asks ? `${base}\nAsks: ${asks}` : base;
     };
 
     if (!open) {
@@ -899,7 +591,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 </button>
             </div>
 
-            <div className="sim-panel__body" ref={bodyRef}>
+            <div className="sim-panel__body">
                 {!isModelMode ? (
                     <>
                         <div className="sim-panel__section">Simulation roles</div>
@@ -933,39 +625,33 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 <button
                                     type="button"
                                     className="sim-panel__configure"
-                                    aria-expanded={groupsShown}
-                                    onClick={() => setConfigureOpen(!groupsShown)}
+                                    aria-haspopup="dialog"
+                                    onClick={() => setModal({ onData: false })}
                                 >
-                                    <i className={`bi bi-chevron-${groupsShown ? 'down' : 'right'}`} />
+                                    <i className="bi bi-sliders" />
                                     <span>Configure…</span>
                                 </button>
-                                {groupsShown && (
-                                    <div className="sim-panel__hint">
-                                        {petriShape ? 'Shape: Petri net.' : 'Shape: control flow. Set Arc for a Petri net.'}
-                                    </div>
+                                {modal && (
+                                    <SimRolesModal
+                                        configModelId={configModelId}
+                                        bag={profileBag}
+                                        sketch={sketch}
+                                        options={options}
+                                        stateAttributesRaw={stateAttributesRaw}
+                                        eventClassName={eventClassName}
+                                        initialPreset={chosen}
+                                        openOnData={modal.onData}
+                                        describeOverlap={o => overlapMessage((store.getState() as any).idlookup ?? {}, o)}
+                                        nameOf={nameOf}
+                                        onClose={() => setModal(null)}
+                                        onApplied={warning => {
+                                            setModal(null);
+                                            setChosen(null);
+                                            setRoleError(null);
+                                            setRoleWarning(warning);
+                                        }}
+                                    />
                                 )}
-                                {groupsShown && ROLE_GROUPS.map(group => {
-                                    const isOpen = groupOpen(group.id);
-                                    return (
-                                        <div key={group.id}>
-                                            <button
-                                                type="button"
-                                                className="sim-panel__group"
-                                                aria-expanded={isOpen}
-                                                onClick={() => setOpenGroups(g => ({ ...g, [group.id]: !isOpen }))}
-                                            >
-                                                <i className={`bi bi-chevron-${isOpen ? 'down' : 'right'}`} />
-                                                <span>{group.title}</span>
-                                            </button>
-                                            {isOpen && ROLE_SPECS.filter(spec => group.keys.includes(spec.key)).flatMap(spec => (
-                                                spec.key === 'simTrigger' ? [renderRole(spec), renderEventClass()] : [renderRole(spec)]
-                                            ))}
-                                            {isOpen && group.id === 'data' && (
-                                                <StateAttributesTable raw={stateAttributesRaw} classes={options.allClasses} onCommit={writeStateAttributes} />
-                                            )}
-                                        </div>
-                                    );
-                                })}
                             </>
                         )}
                         {invalidRoles.length > 0 && (
@@ -995,7 +681,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                             type="button"
                                             className="sim-panel__choice"
                                             key={c.transition}
-                                            onClick={() => fire(pending.event, c.transition)}
+                                            onClick={() => fire(pending.event, c.transition, pending.values)}
                                         >
                                             <span>{candidateLabel(run.net, c.transition, lookupNow)}</span>
                                             {c.unsafe && (
@@ -1003,17 +689,27 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                             )}
                                         </button>
                                     ))}
-                                    <button type="button" className="sim-panel__cancel" onClick={() => setPending(null)}>
+                                    <button type="button" className="sim-panel__cancel" onClick={() => { setPending(null); simSetPending(modelid, null); }}>
                                         Cancel
                                     </button>
                                 </div>
                             </>
                         )}
+                        {/* The input dialog (R-SIM-88) is portaled onto the body: nothing is added here, nothing moves. */}
+                        {asking && run && (
+                            <SimInputDialog
+                                press={asking.event === null ? 'Step (ε)' : asking.input}
+                                action={asking.event === null ? 'Step' : `Fire ${asking.input}`}
+                                rows={inputRows(asking.asks, run.net, lookupNow)}
+                                onCancel={() => setAsking(null)}
+                                onConfirm={values => { const a = asking; setAsking(null); fire(a.event, undefined, values); }}
+                            />
+                        )}
                         {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
                         {defects && (
                             <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
                         )}
-                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={view.halt.title}>{view.halt.line}</div>}
+                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line sim-panel__hint--halt" title={view.halt.title}>{view.halt.line}</div>}
                         {view?.marking && (
                             <div className="sim-panel__hint sim-panel__hint--line sim-panel__hint--marking" title={view.marking.title}>{view.marking.line}</div>
                         )}
@@ -1132,6 +828,11 @@ interface StateProps {
     /** Name of the derived event class, for the read-only row of the M2 face; '' without one. */
     eventClassName: string;
     /**
+     * The M2 face's warning when a stored `simEvent` (pre R-SIM-38) differs from
+     * the class the Trigger now derives (S7); `null` when there is nothing to warn about.
+     */
+    staleEventWarningText: string | null;
+    /**
      * The raw `simStateAttributes` string of the M2 face, `null` when unset or on
      * the M1 face: a primitive of its own, parsed in the table's memo, never
      * folded into roleSig (report risk 1).
@@ -1156,12 +857,14 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         : (dModel ? ownProps.modelid : null);
 
     // The derived bag (R-SIM-38): simEvent is the Trigger's type, a stale value in the bag ignored.
-    const bag: any = withDerivedEventRole((configModelId ? lookup[configModelId]?._state : null) ?? {}, lookup);
+    const rawState: any = (configModelId ? lookup[configModelId]?._state : null) ?? {};
+    const bag: any = withDerivedEventRole(rawState, lookup);
     const roles: Roles = {};
     for (const key of ROLE_KEYS) {
         const value = bag[key];
         if (typeof value === 'string' && value) roles[key] = value;
     }
+    const nameOf = (id: string): string => lookup[id]?.name || id;
 
     return {
         configModelId,
@@ -1171,7 +874,10 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             ? JSON.stringify(collectMetaOptions(lookup, configModelId))
             : '',
         eventSig: ownProps.isModelMode ? eventSigOf(lookup, ownProps.modelid, roles) : '',
-        eventClassName: roles.simEvent ? (lookup[roles.simEvent]?.name || roles.simEvent) : '',
+        eventClassName: roles.simEvent ? nameOf(roles.simEvent) : '',
+        staleEventWarningText: !ownProps.isModelMode
+            ? staleEventWarning(typeof rawState.simEvent === 'string' && rawState.simEvent ? rawState.simEvent : undefined, roles.simEvent, nameOf)
+            : null,
         stateAttributesRaw: !ownProps.isModelMode && typeof bag[STATE_ATTRIBUTES_SPEC.key] === 'string' ? bag[STATE_ATTRIBUTES_SPEC.key] : null,
         profileBagSig: !ownProps.isModelMode && configModelId ? profileBagSigOf(lookup[configModelId]?._state ?? {}) : '',
         sketchSig: !ownProps.isModelMode && configModelId ? JSON.stringify(sketchOfMetamodel(lookup, configModelId)) : '',

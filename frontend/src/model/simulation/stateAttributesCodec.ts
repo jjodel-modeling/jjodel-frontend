@@ -17,6 +17,9 @@
  * carry `equation`, so an edit of the panel's table keeps it (report §4.5 of
  * docs/discovery/discovery_2026-09-27_sim_derived_attributes.md).
  *
+ * An input record (R-SIM-88) has `"input":true` in the place of both: semantic
+ * only, and one of `initial` or `equation` beside it is `exclusive`.
+ *
  * Decoding is tolerant, record by record (R-SIM-68): a malformed record is a
  * defect of its own and the others decode; a string that is not JSON, or has no
  * `v` and `attrs`, is one defect on the key, never a silent empty set. Unknown
@@ -42,6 +45,8 @@ export interface StateAttributeRecord {
     readonly domain: Domain | null;
     readonly initial: string;
     readonly equation?: string;
+    /** An input variable (R-SIM-88): no initial (`''` as a row), no equation. */
+    readonly input?: true;
 }
 
 /** A domain with its fields in a fixed order, `null` when it is none of the three. */
@@ -66,14 +71,14 @@ function domainOf(raw: unknown): Domain | null {
 
 /**
  * The one string of the key: `{"v":1,"attrs":[...]}`, every record's fields in the order of R-SIM-67,
- * the last one `equation` for a derived record and `initial` otherwise, never both.
+ * the last one `equation` for a derived record, `input` for an input (R-SIM-88), `initial` otherwise.
  */
 export function encodeStateAttributes(records: readonly StateAttributeRecord[]): string {
     return JSON.stringify({
         v: 1,
         attrs: records.map(r => ({
             name: r.name, metaclass: r.metaclass, space: r.space, domain: domainOf(r.domain),
-            ...(r.equation !== undefined ? { equation: r.equation } : { initial: r.initial }),
+            ...(r.equation !== undefined ? { equation: r.equation } : r.input === true ? { input: true } : { initial: r.initial }),
         })),
     });
 }
@@ -119,6 +124,14 @@ function decodeRecord(raw: unknown, index: number): StateAttributeDecl | Declara
     if (r.space !== 'semantic' && r.space !== 'presentation') return defect('bad space');
     const domain = domainOf(r.domain);
     if (r.domain !== null && domain === null) return defect('bad domain');
+    // An input has neither initial nor equation, and is semantic (R-SIM-88).
+    if (r.input !== undefined) {
+        if (r.input !== true) return defect('bad input');
+        if (r.initial !== undefined) return { index, name, code: 'exclusive', message: 'input and initial' };
+        if (r.equation !== undefined) return { index, name, code: 'exclusive', message: 'input and equation' };
+        if (r.space !== 'semantic') return defect('an input is semantic');
+        return { name, metaclass: r.metaclass as string | null, space: 'semantic', domain, input: true };
+    }
     // Exactly one of initial and equation (R-SIM-72); the equation is compiled at Reset, not here.
     if (r.initial !== undefined && r.equation !== undefined) return { index, name, code: 'exclusive', message: 'initial and equation' };
     if (r.equation !== undefined) {
@@ -169,6 +182,7 @@ export function stateAttributeRows(raw: string | undefined): { rows: StateAttrib
             domain: domainOf(r.domain),
             initial: typeof initial === 'string' ? initial : typeof initial === 'number' || typeof initial === 'boolean' ? String(initial) : '',
             ...(typeof r.equation === 'string' ? { equation: r.equation } : {}),
+            ...(r.input === true ? { input: true as const } : {}),
         };
     });
     return { rows, readable: true };

@@ -402,6 +402,14 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
   `AGENTS.md`, `docs/PROTOCOL.md`, `.claude/settings.json`) changed on the branch and no other, the prompt's
   Findings and the commit body recording the yes; without `--launch` it lifts nothing and reaches only the commit
   of the `by hand:` line.
+- **lane-run v3 (`P-2026-09-27-2330`, 2026-09-28).** Five additions, one line each; the measures behind them are
+  in `docs/discovery/discovery_2026-09-27_lane_efficiency.md`.
+  - `merge ... --direct` merges without a session when every precondition holds, and otherwise falls back, saying why: launched with `--launch`, parked without. RC-14 still decides what cannot go direct: a conflict outside the union files, a union hunk that edits, code changed on both sides, a governance file or an open prompt on the branch, a failed probe, a dirty tree, a running lane. It tags `pre-<branch>` (RC-31), runs the template's gates in a detached worker and ends at `Outcome: hard-stop` for the chat's visual check, or at `Outcome: blocked` on a red gate, the merge commit left in place.
+  - `go <Prompt-ID> --smoke "<what the chat verified>"` on a direct merge writes the closure itself: one docs commit with the Status flip and the P9 entry in the inbox the branch writes to (`--front <name>` when it writes several). Every lane closes with one docs commit (RC-17, 2026-09-25): a merge session writes the P9 entry of the merge in it, from 2026-09-28.
+  - `chain <worktree> <prompt>... [--merge-after]` runs lanes one after the other under a detached supervisor, the next only on `Outcome: done` with exit 0, so it suits lanes without a visual check; `status` and `wait` take the chain id, and `chain --stop` stops it after the running lane.
+  - The model follows the activity (RC-32, 2026-09-28, amending RC-16): `lane-run` picks a heavy or a light tier from the prompt's header and DOVE and from the command, prints it and keeps it in `tier.txt`; `--tier` overrides it where the rule does not force heavy.
+  - A discovery report opens with `## 0. Answer in brief`, at most 40 lines: the answer, the recommendation, the decisions awaiting Alfonso, and the questions with their `Recommended:` lines; the rest is appendix (2026-09-28). `lane-run status` warns when the brief of a report the lane wrote is missing, not the first section, or longer.
+- **Trace monitor (`P-2026-09-27-1030`, 2026-09-28).** `npm run trace:index` prints the trace index (lanes, prompts, chats, decisions, commits, log entries, checks and the edges between them, each edge with the place that declares it, plus the items that did not parse); `lane-run monitor [--port <n>] [--no-open]` serves it live on 127.0.0.1 (3008 by default, refused on 3001 and on a port in use). `lane-run` also keeps a copy of every input it sends to a lane in the lane folder.
 - **The chat reads one line.** The final message of a session ends with the `Outcome` line of P13, and the chat
   acts on that line through `lane-run status <Prompt-ID>`, never on the prose. A `question` is a hard stop: the
   session writes it and exits, the chat answers it or takes it to Alfonso, then resumes the session.
@@ -420,6 +428,8 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
 - **Parallel by default (RC-22).** Two lanes start together when the three checks of RC-22 pass. When one fails,
   the chat names it and queues the lane with its merge position fixed. Semantic conflicts are resolved on the
   branch first (RC-14).
+- **The `Chat:` line (RC-33).** A chat acts on a Prompt-ID only when the prompt's `Chat:` line carries its own ID; `—` or another chat's ID means stop, name the owner, ask Alfonso. `lane-run merge` gets `--chat <id>` every time.
+- **Add-only gate (RC-34).** `npm run check:addonly [<rev>] [--range <a>..<b>]` refuses a commit that changes or drops an entry of the add-only logs outside rotation and batch closure; `lane-run merge` runs it on every merge commit. A hand repair carries `Log-Repair: <sha>`.
 
 ---
 
