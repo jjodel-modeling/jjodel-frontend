@@ -119,6 +119,16 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
     const canCreate = selectedPerm === 'edit';
     const readOnly = selectedPerm === 'read';
 
+    // R2 (#157, triage of the field test): tell the "nothing to show" cases apart, so a failure is
+    // legible instead of reading as a blank panel. `profileMissing` is the load-bearing one: a
+    // `?profile=` that resolves to no profile leaves `profile` null, and a null profile is treated
+    // as "no profile at all" = full access — on screen that looks exactly like "hidden did not hide".
+    const configuredTypes: string[] = (config && Array.isArray(config.topLevelTypes)) ? config.topLevelTypes : [];
+    const profileMissing = !!profileId && !profile;
+    // No `?profile=` means the developer is looking. Only they can reach the wizard (the action is
+    // hidden in consumer mode), so the "go configure it" hint is addressed to them alone.
+    const isDeveloperView = !profileId;
+
     return createPortal(
         <div className="configurator-overlay" role="dialog" aria-modal="true" aria-label="Configurator">
             <div className="configurator">
@@ -141,11 +151,41 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                     </div>
                 </div>
 
+                {profileMissing && (
+                    <div className="configurator__warn" role="status">
+                        <i className="bi bi-exclamation-triangle" />
+                        <span>
+                            The profile <code>{profileId}</code> is not part of this project's environment
+                            configuration, so <strong>no permission is being applied</strong> — everything
+                            below reads as editable. If the profile was configured in another session,
+                            check that the project was <strong>saved</strong> before this link was opened.
+                        </span>
+                    </div>
+                )}
+
                 {!hasTypes ? (
                     <div className="configurator__empty">
-                        No top-level element types configured for this project.
-                        <br />
-                        Open <strong>Environment config</strong> in the project sidebar to choose them.
+                        {!config ? (
+                            <>
+                                No environment is configured for this project yet.
+                                {isDeveloperView && (
+                                    <><br />Open <strong>Configure environment</strong> in the project sidebar to set it up.</>
+                                )}
+                            </>
+                        ) : configuredTypes.length === 0 ? (
+                            <>
+                                No metaclasses are marked as editable for this project.
+                                {isDeveloperView && (
+                                    <><br />Open <strong>Configure environment</strong> → <strong>Editable metaclasses</strong> to choose them.</>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                The profile <strong>{profile?.name || profileId}</strong> has no visible types:
+                                all {configuredTypes.length} configured{' '}
+                                {configuredTypes.length === 1 ? 'type is' : 'types are'} set to <em>Hidden</em>.
+                            </>
+                        )}
                     </div>
                 ) : (
                     <>
@@ -170,18 +210,19 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                                         {selectedTypeId ? classNameById[selectedTypeId] : ''} instances
                                         {readOnly && <span className="configurator__perm-badge">Read only</span>}
                                     </span>
-                                    <button
-                                        className="configurator__new"
-                                        onClick={createNew}
-                                        disabled={!modelId || !selectedTypeId || !canCreate}
-                                        title={
-                                            !modelId ? 'This project has no model yet'
-                                            : !canCreate ? 'This profile cannot create instances of this type'
-                                            : undefined
-                                        }
-                                    >
-                                        <i className="bi bi-plus-lg" /> New
-                                    </button>
+                                    {/* R4 (#157): on a type the profile may read but not create, the button
+                                        is not rendered at all — a disabled "New" was reported as
+                                        misleading in the field test. */}
+                                    {canCreate && (
+                                        <button
+                                            className="configurator__new"
+                                            onClick={createNew}
+                                            disabled={!modelId || !selectedTypeId}
+                                            title={!modelId ? 'This project has no model yet' : undefined}
+                                        >
+                                            <i className="bi bi-plus-lg" /> New
+                                        </button>
+                                    )}
                                 </div>
                                 {!modelId ? (
                                     <p className="configurator__hint">This project has no model yet.</p>

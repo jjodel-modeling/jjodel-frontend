@@ -159,6 +159,26 @@
         line-height: 1.6;
     }
 
+    // R2 (#157) — a loud, legible reason when the `?profile=` in the URL resolves to no profile.
+    // That case used to be silent: permissions were skipped and the panel looked merely empty.
+    // Tokens: --color-warning / --color-warning-muted exist in both the light and the dark set.
+    &__warn {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--color-text-primary, #0f172a);
+        background: var(--color-warning-muted, rgba(245, 158, 11, 0.12));
+        border: 1px solid var(--color-warning, #f59e0b);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: 0 var(--space-4, 16px) var(--space-3, 12px);
+
+        i { flex: 0 0 auto; margin-top: 1px; color: var(--color-warning, #f59e0b); }
+        code { font-size: 11px; word-break: break-all; }
+    }
+
     // F2 — read-only gate for a profile that may view but not edit a type.
     &__ro-banner {
         display: flex;

@@ -961,6 +961,24 @@ html[data-theme="dark"] {
     margin: 8px 0;
 }
 
+// R6 (#157) — metaclasses and permission rows grouped per metamodel. The flat
+// `metamodel:metaclass` list was reported as hard to scan when several metamodels contribute
+// classes; the heading carries the metamodel name so the rows can show the bare class name.
+.envgen-mm-group {
+    & + & { margin-top: 14px; }
+
+    &__title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: $color-text-secondary;
+        padding-bottom: 4px;
+        margin-bottom: 6px;
+        border-bottom: 1px solid $color-border;
+    }
+}
+
 .envgen-checklist {
     list-style: none;
     margin: 0;
