@@ -1,0 +1,100 @@
+// The run state of one node on the canvas (S15, slice A1, P-2026-09-27-1647).
+// Painted by SimNodeRunState.tsx, a sibling of the node wrapper inside
+// `.react-flow__node`: the layer covers the node's box and paints outside it.
+// Colours are the --color-sim-* tokens (styles/tokens/_colors-*.scss).
+
+.sim-node-run {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    // Above the node's own content, below the problem dot of a later node.
+    z-index: 2;
+}
+
+// Enabled transition: dashed, so it never reads as the solid sim-active outline.
+.sim-node-run__ring {
+    position: absolute;
+    inset: -5px;
+    border: 2px dashed var(--color-sim-enabled-ring);
+    border-radius: 11px;
+}
+
+// A candidate of the panel's open choice list (slice A2, P-2026-09-27-2324): solid and amber, in place of the
+// dashed ring, so the objects the list offers read apart from the rest of the enabled set until the choice.
+.sim-node-run__pending {
+    position: absolute;
+    inset: -5px;
+    border: 3px solid var(--color-warning);
+    border-radius: 11px;
+    box-shadow: 0 0 0 3px var(--color-warning-muted);
+}
+
+// The count of a place, on the top-left corner (the problem dot owns top-right).
+.sim-node-run__tokens {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    border: 2px solid var(--color-inode-surface);
+    background: var(--color-sim-token-bg);
+    color: var(--color-sim-token-fg);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+
+    .bi {
+        font-size: 6px;
+    }
+
+    &--empty {
+        border-color: var(--color-sim-token-empty-border);
+        background: var(--color-sim-token-empty-bg);
+        color: var(--color-sim-token-empty-fg);
+        box-shadow: none;
+
+        .bi {
+            display: none;
+        }
+    }
+}
+
+// The element's semantic σ, under the node.
+.sim-node-run__sigma {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    max-width: 240px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--color-sim-sigma-border);
+    background: var(--color-sim-sigma-bg);
+    color: var(--color-sim-sigma-fg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 16px;
+}
+
+.sim-node-run__sigma-row {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sim-node-run__sigma-attr {
+    font-weight: 600;
+}
+
+// The initial-marking row of a place during a run: the model's M0, muted, so
+// it no longer reads as the run's count (the badge carries that).
+.mm-node.mm-object .sim-initial-marking {
+    opacity: 0.45;
+}

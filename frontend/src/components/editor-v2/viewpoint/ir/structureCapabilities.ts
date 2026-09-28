@@ -61,6 +61,7 @@ export const SHAPE_LABEL: Readonly<Record<ShapeForm, string>> = {
     hexagon: 'Hexagon',
     parallelogram: 'Parallelogram',
     cylinder: 'Cylinder',
+    cloud: 'Cloud',
 };
 
 /** The three geometric facts the capabilities are derived from. One row per shape. */
@@ -93,6 +94,9 @@ const GEOMETRY: Readonly<Record<ShapeForm, ShapeGeometry>> = {
     parallelogram: { flatTopEdge: true, straightLeftEdge: false, roomForRows: true },
     // Vertical sides, curved lid.
     cylinder: { flatTopEdge: false, straightLeftEdge: true, roomForRows: true },
+    // Bumps on every side: no straight edge anywhere, and the interior width
+    // changes at every height. The ellipse's row, for the ellipse's reasons.
+    cloud: { flatTopEdge: false, straightLeftEdge: false, roomForRows: false },
 };
 
 /** Every value of each vocabulary, in the order the controls offer them. */

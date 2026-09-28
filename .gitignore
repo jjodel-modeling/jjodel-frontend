@@ -43,6 +43,7 @@ sandbox.tsx
 /frontend/dist
 /frontend/dist/
 /frontend/dist/*
+/frontend/.vite-cache/
 
 /frontend/node_modules/.cache
 /database
@@ -58,9 +59,10 @@ frontend/build.rar
 frontend/src/todo_others
 /cloudflare-worker/node_modules
 /frontend/dist
-/CLAUDE.md
 _to_delete/
 .claude/settings.local.json
+.claude/projects/
+.claude/*.lock
 
 # Sonde temporanee dello smoke: restano su disco, fuori da git
 frontend/scripts/smoke/_tmp_*
@@ -70,3 +72,21 @@ docs/discovery/harness/_tmp_*
 
 # Cartella locale di Cowork (Claude desktop), non fa parte del repo
 Claude outputs/
+
+# File di build LaTeX dei paper sotto docs/: .tex e .pdf restano tracciati
+docs/**/*.aux
+docs/**/*.bbl
+docs/**/*.blg
+docs/**/*.fdb_latexmk
+docs/**/*.fls
+docs/**/*.synctex.gz
+docs/**/*.dvi
+docs/**/*.toc
+docs/**/*.out
+docs/jjtl-jjel-paper.log
+docs/mde-intelligence-2026/paper/_build/*
+!docs/mde-intelligence-2026/paper/_build/main.pdf
+
+# research material, kept out of the tree (2026-09-27)
+docs/discovery/*-dataset/
+docs/analysis/harness-attribution*

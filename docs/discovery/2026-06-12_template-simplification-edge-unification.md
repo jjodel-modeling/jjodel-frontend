@@ -30,7 +30,7 @@ Nothing was staged, stashed, checked out, or otherwise touched.
 ### ⚠️ MAJOR CORRECTION to the prompt's Phase-0 premise
 
 The prompt states the working tree "contains THREE uncommitted streams (segment-drag fix,
-composition/aggregation marker work incl. a drafted `2.221 -> 2.222` migration, EMSE artifacts)"
+composition/aggregation marker work incl. a drafted `2.221 -> 2.222` migration, research artifacts)"
 and instructs me to dual-report HEAD vs working-tree for `DV.tsx` and `VersionFixer.tsx`.
 
 **This is no longer true.** As of HEAD the working tree is clean except for one unrelated file

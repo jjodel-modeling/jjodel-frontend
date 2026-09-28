@@ -96,8 +96,14 @@
 
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { DObject, DState, LModel, LObject, LPointerTargetable } from '../../../joiner';
+import { DObject, DState, LModel, LObject, LPointerTargetable, store } from '../../../joiner';
 import { detectDuplicateNames, detectM2DuplicateNames, m2KindOf } from '../../../model/logicWrapper/nameUniqueness';
+import {
+    findClassifierKindViolations,
+    classifierKindSignature,
+    describeClassifierKindViolation,
+    type ClassifierKindLookup,
+} from '../../../model/classifierKindRules';
 import {
     registerProblem,
     markResolved,
@@ -181,6 +187,54 @@ export function reconcileDuplicateProblems(modelid: string): void {
     }
 }
 
+// ── Classifier kinds (enum step B, S24, P-2026-09-27-1806) ───────────────────
+//
+// The second M2 check this producer carries: a metamodel saved before the canvas guard (C1)
+// and the model guard (step B) may hold a reference typed by an enum or a package, an enum
+// with a supertype, or a class with a non-class supertype. They load as they were; this shows
+// them in the tree, on the element's row and on the class row that carries it (the tree lists
+// classes, not features nor enumerations), and repairs nothing. The detector, the texts and
+// the reactivity signature live in model/classifierKindRules.ts, where the bench executes them.
+// Its own kind, its own revoke pass: `getProblemIdsOwnedBy` filters on kind AND owner, so the
+// duplicate-name entries above and this kind's entries of another model are never touched.
+const CLASSIFIER_KIND: NodeProblem['kind'] = 'classifier-kind';
+
+/**
+ * The body of the classifier-kind effect. Exported for the test, like the duplicate one.
+ * `idlookup` is the store's (the effect passes `store.getState().idlookup`): the detector
+ * reads its own keys only, so a pending create is not reported before its commit.
+ */
+export function reconcileClassifierKindProblems(modelid: string, idlookup: ClassifierKindLookup): void {
+    const isMetamodel = !!idlookup[modelid]?.isMetamodel;
+    const violations = isMetamodel ? findClassifierKindViolations(idlookup, modelid) : [];
+    const desiredIds = new Set<string>();
+    for (const v of violations) {
+        // A pointer to nothing is its own verdict, not a non-class, and undo can expose one
+        // between two steps (report §3.3, §8 decision 6): not published.
+        if (v.kind === 'reference-type-missing') continue;
+        const { title, description } = describeClassifierKindViolation(v, idlookup);
+        for (const nodeId of v.anchorIds) {
+            const id = `${CLASSIFIER_KIND}:${v.elementId}@${nodeId}`;
+            desiredIds.add(id);
+            registerProblem({
+                id,
+                nodeId,
+                kind: CLASSIFIER_KIND,
+                severity: 'error',
+                title,
+                description,
+                relatedNodeIds: v.targetIds,
+                ownerModelId: modelid,
+                createdAt: Date.now(),
+            });
+        }
+    }
+    for (const id of getProblemIdsOwnedBy(CLASSIFIER_KIND, modelid)) {
+        if (desiredIds.has(id)) continue;
+        markResolved(id);
+    }
+}
+
 export function UniquenessProblemSync({ modelid }: Props) {
     const sig = useSelector((state: DState) => {
         const lookup = state?.idlookup ?? {};
@@ -208,6 +262,19 @@ export function UniquenessProblemSync({ modelid }: Props) {
         if (!modelid) return;
         reconcileDuplicateProblems(modelid);
     }, [modelid, sig]);
+
+    // A separate signature, so the duplicate scan above keeps running exactly when it did.
+    // Empty unless the open model is a metamodel.
+    const kindSig = useSelector((state: DState) => {
+        const lookup = (state?.idlookup ?? {}) as unknown as ClassifierKindLookup;
+        if (!modelid || !lookup[modelid]?.isMetamodel) return '';
+        return classifierKindSignature(lookup);
+    });
+
+    useEffect(() => {
+        if (!modelid) return;
+        reconcileClassifierKindProblems(modelid, store.getState().idlookup as unknown as ClassifierKindLookup);
+    }, [modelid, kindSig]);
 
     return null;
 }

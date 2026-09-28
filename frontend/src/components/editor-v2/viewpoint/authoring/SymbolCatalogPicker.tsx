@@ -24,7 +24,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { Button, Input, Select } from '../../../ui';
+import { Button, Checkbox, Input, Select } from '../../../ui';
 import {
     CATALOG_FAMILIES,
     CATALOG_NOTATIONS,
@@ -42,15 +42,24 @@ export interface SymbolCatalogPickerProps {
      * 'disclosure' (default): Browse/Hide gate, the pre-D15b behavior, kept for
      * any other mount. 'column': always open, no gate and no Hide button — the
      * persistent catalog column of the symbol editor modal (D15b); the host
-     * provides the container and its styling.
+     * provides the container and its styling. 'popover' (D7, slice 4b): the same
+     * column path plus a footer, floated under the header chip of the modal now
+     * that the column is gone.
      */
-    variant?: 'disclosure' | 'column';
+    variant?: 'disclosure' | 'column' | 'popover';
     /**
      * Recent preset ids, most recent first (column variant only, D18). Unknown
      * ids are dropped at render, which keeps the strip safe when the catalog
      * evolves (and, later, when D17 stencil ids share the same store).
      */
     recentIds?: readonly string[];
+    /**
+     * «Keep my Fill / Border rules when switching» (D7, popover variant only),
+     * checked by default. Controlled by the host, because it is the HOST that
+     * applies the preset: the picker only reports the click.
+     */
+    keepRules?: boolean;
+    onKeepRulesChange?: (next: boolean) => void;
 }
 
 const NOTATION_OPTIONS = [
@@ -79,8 +88,13 @@ const cellLabelStyle: React.CSSProperties = {
     maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 };
 
-export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onApply, variant = 'disclosure', recentIds }) => {
-    const column = variant === 'column';
+export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({
+    onApply, variant = 'disclosure', recentIds, keepRules = true, onKeepRulesChange,
+}) => {
+    // The popover IS the column path (D7): same search, same chips, same recents, same
+    // family sections, no second branch to keep in step. All it adds is the footer.
+    const column = variant === 'column' || variant === 'popover';
+    const popover = variant === 'popover';
     const [open, setOpen] = useState(false);
     const [notation, setNotation] = useState('');
     const [query, setQuery] = useState('');
@@ -184,7 +198,7 @@ export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onAppl
     const visibleSections = sections.filter((s) => !filtersActive || s.presets.length > 0);
 
     return (
-        <div className="jj-field symbol-catalog">
+        <div className={`jj-field symbol-catalog${popover ? ' symbol-catalog--popover' : ''}`}>
             <Input
                 value={query}
                 placeholder="Search symbol or notation…"
@@ -270,6 +284,23 @@ export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onAppl
                     <span className="symbol-catalog__empty">No symbol matches this search.</span>
                 )}
             </div>
+            {/* Footer (D7): the preservation promise sits next to the action it
+                qualifies, so the author reads it before clicking a tile, not after.
+                «Manage presets…» is deliberately absent rather than disabled — a
+                control that does nothing is noise, and D7 allows either. */}
+            {popover && (
+                <div className="symbol-catalog__foot">
+                    <Checkbox
+                        checked={keepRules}
+                        onChange={(next) => onKeepRulesChange?.(next)}
+                        label="Keep my Fill / Border rules when switching"
+                        id="symbol-catalog-keep-rules"
+                    />
+                    <span className="symbol-catalog__foot-count">
+                        {NOTATION_CATALOG.length} presets · {CATALOG_FAMILIES.length} families
+                    </span>
+                </div>
+            )}
         </div>
     );
 };

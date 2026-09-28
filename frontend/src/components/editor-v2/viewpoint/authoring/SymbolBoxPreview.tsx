@@ -16,9 +16,14 @@
  * (irStyle.ts); without a .mm-node ancestor the inline zeros reproduce exactly
  * that lifted state.
  *
- * Declared limit: per-instance content (compartment rows, conditional axes,
- * badge visibility) needs an instance and stays out; the preview is the view
- * with its label, not the clone of one node. A large box scales DOWN to fit
+ * Declared limit, narrowed in slice 5: the CONDITIONAL AXES are now per instance,
+ * because the caller resolves them — `previewInstances.ts` evaluates form, fill,
+ * border and marker against one instance through the same `ReadCtx` the canvas uses,
+ * and hands the result down as the preset VALUE plus the caption below. This
+ * component still resolves nothing and reads no model; it draws what it is given, one
+ * instance per mount. What remains out is per-instance CONTENT — compartment rows,
+ * badge visibility, the label: the tile shows the view's label, not the clone of one
+ * node, and the strip is not a real IR render (D8). A large box scales DOWN to fit
  * the strip and never scales up.
  *
  * Pure presentation: no state, no model access. SymbolPreview (the 72x48 tile
@@ -28,8 +33,16 @@
 
 import React from 'react';
 import { MARKER_STROKE_WIDTH, MARKER_VIEWBOX, getMarkerDef } from '../ir/markerRegistry';
-import { SVG_BORDER_DASH, getShapeDescriptor } from '../ir/shapeRegistry';
+import { SVG_BORDER_DASH, getShapeDescriptor, resolveCornerRadius, roundedPolygonPath } from '../ir/shapeRegistry';
 import type { SymbolPreset } from '../ir/notationCatalog';
+
+/**
+ * Width of the box border `.ir-node-content` always carries (irStyle.ts, `border: 1px
+ * solid`; the svg-painted forms only make it transparent). The SVG layer sits inside
+ * it, so the rounded path is computed on the box minus this border on each side,
+ * which is the box the canvas painter measures on its own `<svg>`.
+ */
+const BOX_BORDER_PX = 1;
 
 /** Box dimensions in canvas pixels. */
 export interface PreviewBox {
@@ -68,15 +81,33 @@ export interface SymbolBoxPreviewProps {
      * default, exactly as IRNodeContent falls back.
      */
     borderColor?: string;
+    /**
+     * Authored `ShapeSpec.cornerRadius`, px (slice 3). Travels separately for the same
+     * reason as the border color: it is not a preset axis. Absent = the form's base
+     * radius, exactly as on the canvas.
+     */
+    cornerRadius?: number;
     /** Stage bounds the preview must fit in, px. */
     maxW: number;
     maxH: number;
+    /**
+     * One line under the box (slice 5, D8-a): the size caption, or `<instance> ·
+     * <predicate>` on a section whose axis carries rules. Composed by the caller
+     * (`previewInstances.captionForInstance`), never derived here. Absent = no line,
+     * and the tile is exactly the scaled box, as before.
+     */
+    caption?: string;
 }
 
-export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, maxW, maxH }) => {
+export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, cornerRadius, maxW, maxH, caption }) => {
     const v = preset.values;
     const desc = getShapeDescriptor(v.form);
-    const svgPainter = desc.painter.kind === 'svg' ? desc.painter : null;
+    // Entrambi i painter SVG, con la stessa narrowing di IRNodeContent: una forma
+    // `svgPath` (il cilindro, la nuvola) porta il contorno in `silhouette` invece
+    // che in `points`. Senza questo ramo irStyle.ts spegne la box CSS e nessuno
+    // disegna la sagoma, cioe' la replica esce vuota.
+    const painter = desc.painter;
+    const svgPainter = painter.kind === 'svg' || painter.kind === 'svgPath' ? painter : null;
     const markerDef = getMarkerDef(v.marker);
 
     const s = fitScale(box, maxW, maxH);
@@ -106,57 +137,76 @@ export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box,
     const svgDouble = (b?.style ?? 'solid') === 'double';
     const markerColor = borderColor ?? 'var(--border-default)';
 
+    // Corner radius (slice 3): the same decision and the same painter as IRNodeContent,
+    // on a box that is known here instead of measured. CSS forms clamp on the border box,
+    // the polygons on the SVG layer inside the border (BOX_BORDER_PX).
+    const cornerPaint = resolveCornerRadius(
+        v.form,
+        cornerRadius,
+        svgPainter ? { w: box.w - 2 * BOX_BORDER_PX, h: box.h - 2 * BOX_BORDER_PX } : box,
+    );
+    if (cornerPaint.kind === 'css') replicaStyle.borderRadius = cornerPaint.px;
+    const roundedD = cornerPaint.kind === 'path' && svgPainter?.kind === 'svg'
+        ? roundedPolygonPath(svgPainter.points, cornerPaint.r, cornerPaint.w, cornerPaint.h)
+        : '';
+    const svgViewBox = roundedD && cornerPaint.kind === 'path' ? `0 0 ${cornerPaint.w} ${cornerPaint.h}` : '0 0 100 100';
+    /** The outline: the rounded path when there is one, the registry contour otherwise. */
+    const outline = (props: { fill: string; stroke: string; strokeWidth: number; strokeDasharray?: string }) => {
+        if (roundedD) return <path d={roundedD} vectorEffect="non-scaling-stroke" {...props} />;
+        if (!svgPainter) return null;
+        return svgPainter.kind === 'svgPath'
+            ? <path d={svgPainter.silhouette} vectorEffect="non-scaling-stroke" {...props} />
+            : <polygon points={svgPainter.points} vectorEffect="non-scaling-stroke" {...props} />;
+    };
+
     return (
-        <div style={{ position: 'relative', width: dw, height: dh }} aria-hidden="true">
-            <div className={`ir-node-content ir-shape--${v.form}`} style={replicaStyle}>
-                {svgPainter && (
-                    <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none">
-                        {svgDouble ? (
-                            <>
-                                <polygon
-                                    points={svgPainter.points}
-                                    vectorEffect="non-scaling-stroke"
-                                    fill={svgFill}
-                                    stroke={svgStroke}
-                                    strokeWidth={svgStrokeWidth * 3}
-                                />
-                                <polygon
-                                    points={svgPainter.points}
+        <div className="symbol-box-preview">
+            <div className="symbol-box-preview__stage" style={{ width: dw, height: dh }} aria-hidden="true">
+                <div className={`ir-node-content ir-shape--${v.form}`} style={replicaStyle}>
+                    {svgPainter && (
+                        <svg className={svgPainter.svgClassName} viewBox={svgViewBox} preserveAspectRatio="none">
+                            {svgDouble ? (
+                                <>
+                                    {outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth * 3 })}
+                                    {outline({ fill: 'none', stroke: svgFill, strokeWidth: svgStrokeWidth })}
+                                </>
+                            ) : (
+                                outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth, strokeDasharray: svgDash })
+                            )}
+                            {/* Ornamenti (il coperchio del cilindro): sopra la
+                                silhouette, solo tratto, come su IRNodeContent. */}
+                            {svgPainter.kind === 'svgPath' && (svgPainter.ornaments ?? []).map((d, i) => (
+                                <path
+                                    key={`ir-ornament-${i}`}
+                                    d={d}
                                     vectorEffect="non-scaling-stroke"
                                     fill="none"
-                                    stroke={svgFill}
+                                    stroke={svgStroke}
                                     strokeWidth={svgStrokeWidth}
+                                    strokeDasharray={svgDash}
                                 />
-                            </>
-                        ) : (
-                            <polygon
-                                points={svgPainter.points}
-                                vectorEffect="non-scaling-stroke"
-                                fill={svgFill}
-                                stroke={svgStroke}
-                                strokeWidth={svgStrokeWidth}
-                                strokeDasharray={svgDash}
-                            />
-                        )}
-                    </svg>
-                )}
-                {markerDef && (
-                    <svg className="ir-marker-svg" viewBox={MARKER_VIEWBOX} preserveAspectRatio="xMidYMid meet">
-                        {markerDef.paths.map((p, i) => (
-                            <path
-                                key={i}
-                                d={p.d}
-                                fill={p.fill ? markerColor : 'none'}
-                                stroke={p.fill ? 'none' : markerColor}
-                                strokeWidth={MARKER_STROKE_WIDTH}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        ))}
-                    </svg>
-                )}
-                {label ? <span className="ir-label ir-label--center">{label}</span> : null}
+                            ))}
+                        </svg>
+                    )}
+                    {markerDef && (
+                        <svg className="ir-marker-svg" viewBox={MARKER_VIEWBOX} preserveAspectRatio="xMidYMid meet">
+                            {markerDef.paths.map((p, i) => (
+                                <path
+                                    key={i}
+                                    d={p.d}
+                                    fill={p.fill ? markerColor : 'none'}
+                                    stroke={p.fill ? 'none' : markerColor}
+                                    strokeWidth={MARKER_STROKE_WIDTH}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            ))}
+                        </svg>
+                    )}
+                    {label ? <span className="ir-label ir-label--center">{label}</span> : null}
+                </div>
             </div>
+            {caption ? <span className="symbol-box-preview__caption">{caption}</span> : null}
         </div>
     );
 };

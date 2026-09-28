@@ -16,7 +16,7 @@ Stato di partenza atteso: working tree `~/jjodel-docs` sul Mac di Alfonso pulito
 
 **COSA.** Arricchire `src/content/docs/user-guide/viewpoints.md` e `src/content/docs/reference/jjodel-events.md` con il materiale del transcript della lezione (pendenza aperta dal 2026-04-16). `console.md` è GIÀ stata riscritta il 16/07: non rifarla; al massimo integrazioni puntuali se il transcript copre aspetti della Console non documentati.
 
-**DOVE.** Chiedere la connessione di due cartelle: `~/jjodel-docs` e `~/jjodel-emse-transcripts-backup-2026-06-12` (i transcript). Se la cartella transcript non esiste o non contiene il materiale della lezione su viewpoints/events, chiedere ad Alfonso dove si trova PRIMA di procedere; se non è recuperabile, passare al fallback.
+**DOVE.** Chiedere la connessione di due cartelle: `~/jjodel-docs` e `<local transcripts folder>` (i transcript). Se la cartella transcript non esiste o non contiene il materiale della lezione su viewpoints/events, chiedere ad Alfonso dove si trova PRIMA di procedere; se non è recuperabile, passare al fallback.
 
 **COME.**
 1. Leggere per intero le due pagine correnti (viewpoints.md è stata toccata dalla PR copilot: nota sui default views read-only da preservare).

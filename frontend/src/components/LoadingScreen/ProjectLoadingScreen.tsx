@@ -4,12 +4,16 @@ import './project-loading-screen.scss';
 
 interface ProjectLoadingScreenProps {
   projectName?: string;
+  /** Set when the open failed: the screen shows why, in place of the spinner (P-2026-09-25-0030). */
+  error?: { kind: 'unreadable' | 'not-found'; details?: string };
 }
 
 export const ProjectLoadingScreen: React.FC<ProjectLoadingScreenProps> = ({
-  projectName
+  projectName,
+  error
 }) => {
   const navigate = useNavigate();
+  const errorTitle = error?.kind === 'not-found' ? 'This project was not found.' : 'This project could not be opened';
 
   const handleBackClick = () => {
     navigate('/allProjects');
@@ -29,7 +33,7 @@ export const ProjectLoadingScreen: React.FC<ProjectLoadingScreenProps> = ({
 
       <div className="loading-content">
         {/* Animated Spinner */}
-        <div className="loading-spinner">
+        {!error && <div className="loading-spinner">
           <svg viewBox="0 0 50 50" className="spinner-svg">
             <circle
               className="spinner-circle"
@@ -40,16 +44,25 @@ export const ProjectLoadingScreen: React.FC<ProjectLoadingScreenProps> = ({
               strokeWidth="4"
             />
           </svg>
-        </div>
+        </div>}
 
         {/* Loading Message */}
         <h2 className="loading-title">
-          {projectName ? `Loading "${projectName}"...` : 'Loading Project...'}
+          {error ? errorTitle : projectName ? `Loading "${projectName}"...` : 'Loading Project...'}
         </h2>
 
-        <p className="loading-subtitle">
+        {!error && <p className="loading-subtitle">
           This should only take a moment
-        </p>
+        </p>}
+
+        {error?.kind === 'unreadable' && <p className="loading-subtitle">
+          Jjodel could not read the saved data of this project. Nothing was loaded and your saved copy was not changed.
+        </p>}
+
+        {error?.details && <details className="loading-subtitle">
+          <summary>Details</summary>
+          {error.details}
+        </details>}
       </div>
     </div>
   );

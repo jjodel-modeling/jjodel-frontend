@@ -214,7 +214,16 @@ check('D1 la classe personalizzata e\' elencata, con la feature toccata sotto',
     !!d && d.rows.includes('Sensor') && d.rows.includes('note'), `righe ${JSON.stringify(d?.rows)}`);
 check('D2 l\'override e\' scritto accanto alla feature, col nome del widget e non con la chiave',
     !!d && d.overrides.includes('Code'), `override ${JSON.stringify(d?.overrides)}`);
-check('D3 il contatore della sezione conta le classi personalizzate',
+// D3 RISCRITTO il 2026-09-09 con R-VAL-19-bis (b): la riga del concern conta VIEWPOINT,
+// non piu' classi personalizzate. Il numero di classi non e' perduto — a zero lo dice a
+// parole la riga di stato, sopra zero lo dicono le righe stesse, che D1 gia' verifica.
+//
+// QUESTA FIXTURE NON DISCRIMINA (P12), e va detto invece che lasciato credere il
+// contrario: qui la classe personalizzata e' UNA e il viewpoint e' UNO, quindi il '1'
+// atteso e' lo stesso sotto entrambe le semantiche. Il caso che discrimina — due classi
+// personalizzate e contatore che resta 1 — sta in
+// `probe_2026-09-09_albero_tre_concern.mts`, blocco D.
+check('D3 il contatore del concern conta il viewpoint del Data Manager, materializzato',
     !!d && d.counter === '1', `contatore ${JSON.stringify(d?.counter)}`);
 
 const vpSection = await page.evaluate(() => {
@@ -229,8 +238,13 @@ note('sezione Viewpoints', vpSection);
 check('D4 positivo di controllo: la sezione Viewpoints elenca il viewpoint ordinario',
     !!vpSection && vpSection.names.some(n => n.includes('Ordinary syntax')),
     `nomi ${JSON.stringify(vpSection?.names)}`);
-check('D5 il singleton NON e\' fra i viewpoint, e il contatore non lo conta (R-DMV-5)',
-    !!vpSection && !vpSection.names.some(n => n.includes('Data Manager')) && vpSection.counter === '1',
+// D5 RISCRITTO il 2026-09-09 con R-VAL-19: il Data Manager e' ora un CONCERN dentro
+// «Viewpoints», non un fratello, quindi il totale della riga lo comprende — 1 sintassi
+// piu' 1 Data Manager = 2. Cio' che R-DMV-5 vietava resta vietato e resta misurato: il
+// singleton non e' una RIGA di viewpoint fra le altre (`.tree-row__name`), e' una sezione
+// con la sua etichetta. Le due cose non si confondono nel DOM.
+check('D5 il singleton e\' un concern e non una riga di viewpoint, e il totale lo conta una volta sola (R-VAL-19)',
+    !!vpSection && !vpSection.names.some(n => n.includes('Data Manager')) && vpSection.counter === '2',
     `nomi ${JSON.stringify(vpSection?.names)}, contatore ${JSON.stringify(vpSection?.counter)}`);
 
 check('D6 nessun errore di pagina in tutto il giro',
