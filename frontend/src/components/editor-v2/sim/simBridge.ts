@@ -62,7 +62,8 @@ import type { CompiledGuard, GuardDefectReason, GuardOutcome } from '../../../mo
 import { actionSiteKey, compileAction, compileActions, judgeActionTarget, makeActionOracle } from '../../../model/simulation/actionEvaluator';
 import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
 import { compileDerived, makeDerivedOracle } from '../../../model/simulation/derivedEvaluator';
-import { decodeStateAttributes, mergeDeclarations, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
+import { decodeStateAttributes, encodeStateAttributes, mergeDeclarations, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
+import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 import {
     checkActionSubset, checkActionValue, checkElse, checkGuard, checkInputTarget, checkTargetName, inputReads, inputTarget,
 } from '../../../model/simulation/stcChecks';
@@ -155,6 +156,37 @@ export function modelRunBag(lookup: Lookup, modelId: string, configRaw: Record<s
     for (const key of Object.keys(own)) if (key.startsWith('sim')) bag[key] = own[key];
     if (storedProfile(configRaw ?? {}).profile.modes.stateAttributes.mode === 'off') delete bag[STATE_ATTRIBUTES_KEY];
     return bag;
+}
+
+/**
+ * A new row of the model's Data dialog (R-SIM-94): a global, as the
+ * metamodel's Add attribute makes one (stored, semantic, `false`), named
+ * `name` or the first `x1`, `x2`, … no row uses.
+ */
+export function newGlobalRow(rows: readonly StateAttributeRecord[], name?: string): StateAttributeRecord {
+    let fresh = name;
+    for (let n = 1; fresh === undefined; n++) if (!rows.some(r => r.name === `x${n}`)) fresh = `x${n}`;
+    return { name: fresh, metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' };
+}
+
+/**
+ * The rows the Data dialog opens with (R-SIM-94): the stored ones as they are,
+ * then a new global row for each undeclared name of the Reset line that no row
+ * names. Nothing is written until Apply.
+ */
+export function modelDataRows(stored: readonly StateAttributeRecord[], undeclared: readonly string[]): StateAttributeRecord[] {
+    const rows = [...stored];
+    for (const name of undeclared) if (!rows.some(r => r.name === name)) rows.push(newGlobalRow(rows, name));
+    return rows;
+}
+
+/**
+ * The Data dialog's Apply (R-SIM-94): one `state` assignment holding the
+ * model's key alone, so one `set_state`, one TRANSACTION and one undo step;
+ * it moves `runSignature`, so a run of the model is interrupted.
+ */
+export function modelDataPatch(rows: readonly StateAttributeRecord[]): Record<string, string> {
+    return { [STATE_ATTRIBUTES_KEY]: encodeStateAttributes(rows) };
 }
 
 /**

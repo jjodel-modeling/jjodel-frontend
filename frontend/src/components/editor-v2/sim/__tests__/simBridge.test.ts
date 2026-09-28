@@ -14,7 +14,7 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
     candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, markingLine,
-    NO_SIM_ACTIONS, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
+    modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
@@ -1998,5 +1998,30 @@ describe('R-SIM-94: the globals of a model are declared in its bag (P-2026-09-29
         ], lookup, 'M')).toEqual([]);
         // declared in the model, nothing left to declare
         expect(undeclaredGlobals(reset(flowB(undefined, COUNT)).compileDefects ?? [], lookup, 'M')).toEqual([]);
+    });
+
+    it("the Data dialog is globals only: its new rows, typed or taken from the Reset line, have no metaclass (mutant: a new row bound)", () => {
+        expect(newGlobalRow([])).toEqual({ name: 'x1', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' });
+        expect(newGlobalRow([newGlobalRow([])]).name).toBe('x2');
+        const stored = [{ ...COUNT_REC } as any];
+        const rows = modelDataRows(stored, ['count', 'paid']);
+        expect(rows.map(r => [r.name, r.metaclass])).toEqual([['count', null], ['paid', null]]);
+        expect(rows[0]).toBe(stored[0]);
+        expect(modelDataRows(stored, [])).toEqual(stored);
+    });
+
+    it("the Data dialog's Apply is one state assignment of the model's key alone: one set_state, one undo step (mutant: the key and the profile written)", () => {
+        const rows = modelDataRows([], ['count']);
+        const patch = modelDataPatch(rows);
+        expect(Object.keys(patch)).toEqual(['simStateAttributes']);
+        expect(patch.simStateAttributes).toBe('{"v":1,"attrs":[{"name":"count","metaclass":null,"space":"semantic","domain":{"kind":"boolean"},"initial":"false"}]}');
+    });
+
+    it("the Data dialog's Apply interrupts a run of the model: the patch, merged into the model's bag as set_state merges it, moves the signature (mutant: the signature term dropped)", () => {
+        const lookup = flowB(undefined, COUNT);
+        const r = reset(lookup);
+        expect(runSignature(lookup, 'M', 'MM')).toBe(r.run.signature);
+        lookup.M._state = { ...lookup.M._state, ...modelDataPatch([{ ...COUNT_REC, domain: { kind: 'range', min: 0, max: 5 } } as any]) };
+        expect(runSignature(lookup, 'M', 'MM')).not.toBe(r.run.signature);
     });
 });
