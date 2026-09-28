@@ -562,3 +562,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Built against trunk `447e4239bbc4b044bf42421bd4a0a718f84ed3b8` (`~/jjodel-release`, confirmed unmoved start to end). Exports: `scene_1_DemoPEST.json` md5 `b5c3b586dc4ca34ccc2c8d31af7c172e`, `scene_2_DemoPetri.json` md5 `f7dbc47d194700f0474b47fba8742aa6`, `scene_3_DemoESM.json` md5 `94cb2ef331e5d848b0cc818c37d894dc`, `scene_4_DemoFlowB.json` md5 `b8f38c77acf1fe542e057f42bdcff980`. Full per-scene counts and method notes in the discovery report §9.
 **Prompt document name**: 2026-09-28 10:15
 **Ticket** (priority low, opened here). Every run's return-to-project-summary navigation (during the headless build, not ordinary app use as far as measured) logged `wrong project setup in navbar {projectid: null, project: undefined}`, 3x, in `Navbar.tsx` per `chunk-RVSELR2N.js:17833`. No functional effect measured (every check after it still passed, all four scenes). Not reproduced through ordinary UI clicks; only through this lane's specific tab-then-list-card sequence. Worth a look if it turns out to reproduce on a normal click path.
+
+## 2026-09-27 — discovery: the simulator backlog cut into parallel lanes (P-2026-09-27-1625)
+**Prompt**: `claude_2026-09-27_1625_prompt_discovery_sim_backlog_lanes.md`, read-only discovery on `simulation-engine` in `~/jjodel-sim` at `8479b6242`: every open simulator item with its origin, files verified by reading, tests, size, RC-26 and demo impact, conflicts with E1 (`P-2026-09-27-1610`) and E2 (`P-2026-09-27-1611`); the items grouped into waves of lanes with disjoint file sets.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_backlog_lanes.md` (new), this entry, the Status of the prompt file. No source file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only: no source file changed, no probe, no dev server. `check:docs` on this commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 24 items (S1-S24). Wave 1: `sim-binding-compat` (the only disjoint code lane) and six Phase 1 discoveries. Wave 2 split into 2a (after E1, whose two code commits exist) and 2b (after E2). E2's DOVE swaps two paths: `modelMarkings.ts` is under `sim/`, `stcFromRoles.ts` under `model/simulation/`. E1/E2 read from branch refs with `git show`. One closure commit as the prompt asks, not the inbox alone.
+**Prompt document name**: 2026-09-27 16:25
