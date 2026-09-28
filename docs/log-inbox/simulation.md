@@ -865,3 +865,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Ticket**: `frontend/src/components/editor-v2/problems/simCheckToProblems.ts` (critical zone) drops a parse error that conformance already reports by the type of the role's first attribute (`featureOf`, `stc.guard`/`stc.action`/`stc.entry`/`stc.exit`). With R-SIM-90 a parse error in a second attribute of another type is dropped (Expression first, EString second) or shown twice (EString first, Expression second). The panel's defects line is unaffected. Left alone before the freeze (answer 8); needs a critical-zone go-ahead. Evidence: the discovery of P-2026-09-28-2306 §11 risk 3 (branch `sim-multi-roles`).
 **Priority**: low
 **Found in**: P-2026-09-28-2306
+
+## 2026-09-29 — merge: sim-multi-roles-p2 into alfonso-frontend-jjtl (P-2026-09-29-0105)
+**Prompt**: `claude_2026-09-29_0105_prompt_merge_sim-multi-roles-p2.md`, a direct merge by `lane-run merge --direct`, no session: `sim-multi-roles-p2` at `aa6b0897c` into `alfonso-frontend-jjtl`, merge base `024d95345`, 6 commits on the branch side.
+**Files touched**: merge `8fdb5bf77`: 18 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_0010_prompt_sim_multi_roles_p2.md`, `frontend/src/components/editor-v2/sim/SimRolesModal.scss`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRoleStatus.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRolesDraft.test.ts`, and 10 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `8fdb5bf77` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5607 tests in 225 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat: four demo scenes probed on the branch in light theme (port 3041), 71 readings identical to the trunk after pointer normalisation; lane DOM checks 13/13; crops not viewed by the chat; Alfonso walk on 3001 still due
+**Notes**: Rollback tag `pre-sim-multi-roles-p2` on `b6e9d82ef` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0105/result.json`.
+**Prompt document name**: 2026-09-29 01:05
