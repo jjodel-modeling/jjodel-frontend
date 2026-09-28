@@ -25,6 +25,10 @@
  * `v` and `attrs`, is one defect on the key, never a silent empty set. Unknown
  * fields are ignored.
  *
+ * A model (M1) carries the same key in its own bag for its globals (R-SIM-94):
+ * `mergeDeclarations` gives the run the metamodel's list with the model's
+ * globals over it, by name; a model record naming a metaclass is a record defect.
+ *
  * Pure: JjEL's parser for the initial literal, and the types of the core.
  */
 
@@ -186,4 +190,42 @@ export function stateAttributeRows(raw: string | undefined): { rows: StateAttrib
         };
     });
     return { rows, readable: true };
+}
+
+/** What `decodeStateAttributes` gives: the declarations of one key, and its defects. */
+export interface DecodedStateAttributes {
+    readonly decls: readonly StateAttributeDecl[];
+    readonly defects: readonly DeclarationDefect[];
+}
+
+/**
+ * The declarations a run reads (R-SIM-94): the metamodel's, then the model's
+ * globals. A model global shadows the metamodel's global of the same name, with
+ * no defect, so a global declared in the metamodel is the default of every model
+ * that does not declare its own; a metaclass-bound record of the metamodel is
+ * never shadowed. A model record naming a metaclass is a record defect, left
+ * out: a model declares globals only. `defects` holds those defects only, indexed
+ * as the records of the model's key; the decoder's defects stay the caller's.
+ * Pure: neither input is mutated.
+ */
+export function mergeDeclarations(
+    metamodel: DecodedStateAttributes, model: DecodedStateAttributes,
+): { decls: StateAttributeDecl[]; defects: DeclarationDefect[] } {
+    // The decoder gives one declaration or one defect per record, in order: the declarations' record
+    // indices are the ones no record defect holds.
+    const dropped = new Set(model.defects.map(d => d.index));
+    const globals: StateAttributeDecl[] = [];
+    const defects: DeclarationDefect[] = [];
+    let index = 0;
+    for (const decl of model.decls) {
+        while (dropped.has(index)) index++;
+        if (decl.metaclass !== null) defects.push({ index, name: decl.name, code: 'record', message: 'a model declares globals only' });
+        else globals.push(decl);
+        index++;
+    }
+    const shadowed = new Set(globals.map(d => d.name));
+    return {
+        decls: [...metamodel.decls.filter(d => d.metaclass !== null || !shadowed.has(d.name)), ...globals],
+        defects,
+    };
 }
