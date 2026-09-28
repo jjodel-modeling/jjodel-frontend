@@ -81,6 +81,8 @@
 1. A, B, or A+B?
 2. Under A: normalise `completed` to `done` (recommended) or print it as its own word?
 
+Decided 2026-09-28 by Alfonso: **B** only. The parser is left as is; the sentence goes in `CLAUDE.md` §21.2, `AGENTS.md` regenerated.
+
 ## 7. Files read
 
 - `frontend/scripts/lane-run.mjs` (HEAD `447e4239b`), lines 30-60, 180-195, 515-570, 620-635, 1795-1820
