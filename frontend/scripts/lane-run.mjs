@@ -15,6 +15,8 @@
  *                the stream-json on log.jsonl; prints the log path, then the
  *                session id of the first event that carries one, which it also
  *                writes to session.txt; the prompt path goes to prompt.txt.
+ *                Every run, start or resume, first copies its input into the
+ *                lane folder as input-<n>.md, <n> the run's number.
  *                Refused, before anything runs, when the prompt header has no
  *                `Prompt-ID: P-YYYY-MM-DD-HHmm`, and when the lane already has a
  *                session.
@@ -138,6 +140,14 @@
  *                never launched.
  *   chain --stop <chain-id>
  *                the chain stops after its running lane, which runs to its end.
+ *   monitor [--port <n>] [--no-open]
+ *                refused on port 3001 and on a port in use (lsof). Starts
+ *                gates/trace-monitor.ts detached on 127.0.0.1:<n> (3008 by
+ *                default): the lanes of ~/.jjodel-lanes and the trace graph of
+ *                this repo, live over Server-Sent Events, a notification when a
+ *                lane stops (P-2026-09-27-1030). Waits for its /health, prints the
+ *                URL, the pid and the log (~/.jjodel-lanes/_monitor/), and opens
+ *                the page as an app window unless --no-open.
  *
  * Every run passes `--output-format stream-json --verbose` (stream-json under -p
  * requires --verbose) and `--permission-mode bypassPermissions` (RC-19: a -p
@@ -282,8 +292,25 @@ function isRunning(f) {
     return !existsSync(f.exit) && isAlive(Number(readTrim(f.pid)));
 }
 
+/**
+ * A verbatim copy of what a run reads on stdin, input-<n>.md in the lane folder,
+ * <n> the run's number: the stream never echoes its input (discovery report of
+ * P-2026-09-27-1030, 2.3), and a message file is rewritten by the chat for the
+ * next lane. Nothing for the /dev/null of a direct run.
+ */
+function keepInput(f, input) {
+    if (!existsSync(input) || !statSync(input).isFile()) return;
+    let n = 0;
+    for (const name of readdirSync(f.dir)) {
+        const m = /^input-(\d+)\.md$/.exec(name);
+        if (m) n = Math.max(n, Number(m[1]));
+    }
+    writeFileSync(join(f.dir, 'input-' + (n + 1) + '.md'), readFileSync(input));
+}
+
 function launch(f, claude, cwd, input, args, goAhead = null) {
     if (existsSync(f.exit)) unlinkSync(f.exit);
+    keepInput(f, input);
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
     if (goAhead) env.JJODEL_CRITICAL_ZONE_GOAHEAD = goAhead;
     else delete env.JJODEL_CRITICAL_ZONE_GOAHEAD;
@@ -1946,8 +1973,78 @@ function closeDirect(id, smoke, frontArg) {
     return 0;
 }
 
+// ── monitor ──────────────────────────────────────────────────────────────────
+
+const MONITOR_PORT = 3008;
+const MONITOR_WAIT_MS = 30000;
+
+/** True when GET /health of 127.0.0.1:<port> answers 200. */
+function monitorUp(port) {
+    return new Promise((res) => {
+        const req = httpGet({ host: '127.0.0.1', port, path: '/health', timeout: 2000 }, (r) => {
+            r.resume();
+            res(r.statusCode === 200);
+        });
+        req.on('timeout', () => req.destroy());
+        req.on('error', () => res(false));
+    });
+}
+
+/** The page as an app window (--app=) in the first Chromium browser that opens, else in the default browser. */
+function openWindow(url) {
+    for (const app of ['Google Chrome', 'Brave Browser', 'Microsoft Edge']) {
+        if (spawnSync('open', ['-na', app, '--args', '--app=' + url]).status === 0) return;
+    }
+    spawnSync('open', [url]);
+}
+
+/**
+ * Starts gates/trace-monitor.ts detached (the trace of this repo and the lanes of
+ * ~/.jjodel-lanes, P-2026-09-27-1030), waits for its /health, and opens the page.
+ * Its pid and log go to ~/.jjodel-lanes/_monitor/.
+ */
+async function monitor(rest) {
+    const usage = 'usage: lane-run monitor [--port <n>] [--no-open]';
+    for (const a of rest) if (a.startsWith('--') && a !== '--port' && a !== '--no-open') refuse(usage);
+    const portArg = option(rest, '--port');
+    const port = portArg === null ? MONITOR_PORT : Number(portArg);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) refuse(usage);
+    if (port === 3001) refuse('port 3001 is the trunk\'s dev server: pick another');
+    if (portInUse(port)) refuse('port ' + port + ' is in use: a monitor may already run there, open http://127.0.0.1:' + port + '/');
+    const dir = join(lanesRoot(), '_monitor');
+    mkdirSync(dir, { recursive: true });
+    const log = join(dir, 'monitor.log');
+    const out = openSync(log, 'a');
+    const child = spawn(process.execPath, [join(dirname(SELF), 'gates', 'trace-monitor.ts'), '--port', String(port)], {
+        detached: true,
+        stdio: ['ignore', out, out],
+    });
+    closeSync(out);
+    let exited = null;
+    child.on('exit', (code) => (exited = code));
+    child.unref();
+    writeFileSync(join(dir, 'pid.txt'), String(child.pid) + '\n');
+    const end = Date.now() + MONITOR_WAIT_MS;
+    let up = false;
+    while (!up && exited === null && Date.now() < end) {
+        up = await monitorUp(port);
+        if (!up) await sleep(200);
+    }
+    if (!up) {
+        console.error('lane-run: the monitor ' + (exited !== null ? 'exited with ' + exited : 'did not answer within ' + MONITOR_WAIT_MS / 1000 + ' s') + '; see ' + log);
+        return 1;
+    }
+    const url = 'http://127.0.0.1:' + port + '/';
+    console.log('monitor: ' + url);
+    console.log('pid: ' + child.pid + ' (stop: kill ' + child.pid + ')');
+    console.log('log: ' + log);
+    if (!rest.includes('--no-open')) openWindow(url);
+    return 0;
+}
+
 async function main(argv) {
     const [command, ...rest] = argv;
+    if (command === 'monitor') return monitor(rest);
     if (command === 'start') return start(rest[0], rest[1], rest.slice(2));
     if (command === 'resume') return resume(rest[0], rest.slice(1));
     if (command === 'go') return go(rest[0], rest.slice(1));
@@ -1961,7 +2058,7 @@ async function main(argv) {
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
         'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | ' +
         'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>] | ' +
-        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n>');
+        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n> | monitor [--port <n>] [--no-open]');
 }
 
 main(process.argv.slice(2)).then(
