@@ -2128,6 +2128,33 @@
         color: var(--color-form-section);
     }
 
+    /* #157 — a target of a type the stand-alone profile hides: listed, because the
+       form's own chips name it, but not a link. Same card, no pointer, muted. */
+    &__ref-link--hidden {
+        cursor: default;
+        color: var(--color-form-muted);
+
+        &:hover { border-color: var(--color-form-border); color: var(--color-form-muted); }
+    }
+
+    /* #157 — a form the stand-alone profile may read but not edit (`InstanceDetail`'s
+       `ReadOnlyGate`). The soft gate of D1, the one the Configurator used before the
+       shared panel: the form renders and takes no input. The note says why, so a form
+       that ignores clicks does not read as a broken one. */
+    &__ro-note {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 10px 0 0;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    &__ro-body {
+        pointer-events: none;
+        opacity: 0.75;
+    }
+
     /* ── The containment outline (10b) ─────────────────────────────────────────
        Mock 1b of `Q8 Catalogo vs Outline.dc.html`: 12px rows, a 12px genre icon,
        the metaclass in mono at the right, «+» in accent. The 14px inset and the
