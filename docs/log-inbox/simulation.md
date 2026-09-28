@@ -632,3 +632,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: Alfonso passed the branch crops on 2026-09-28; gates green on the merge; the union inbox checked verbatim against both parents; the four scenes not re-run on 3001 by the chat
 **Notes**: Rollback tag `pre-sim-badge-pill` on `cf39cdbcb` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1423/result.json`.
 **Prompt document name**: 2026-09-28 14:23
+
+## 2026-09-28 — feat: an else with no sibling is a defect at Reset, R7 (P-2026-09-28-0100)
+**Prompt**: the chat's GO for ticket 2 of `claude_2026-09-28_0100_prompt_sim_bridge_off_else.md`, after Alfonso's «sì» (R-SIM-87, `docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md` point 2): fast-forward `sim-bridge-off-else` to the trunk tip, then rule R7 in `stcChecks.ts` with one new `CompileDefect.reason` literal, the run unchanged; no merge, stop at hard-stop.
+**Files touched**: fast-forward to `e54999b0b` (`git merge --ff-only alfonso-frontend-jjtl`). Code `d1df46ab4`: `frontend/src/model/simulation/stcChecks.ts`, `__tests__/stcChecks.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`. Docs, this commit: this entry, the Status of the prompt file. `docs/decisions.md` untouched (R-SIM-87 is the chat's). Probes `_tmp_bridge_*`, gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — baseline at `e54999b0b`: typecheck exit 2, 14 errors; vitest on `model/simulation`, `editor-v2/sim`, `editor-v2/problems` 797 passed, 31 files. On `d1df46ab4`: typecheck 14, set identical; 802 passed (+5); `npm run build` exit 0, 50 warning lines; `check:docs` 4/4. Red first: 4, the variant A control green before and after. Bench 5/5 killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3033 (DOM readings, not the RC-23 chat checklist): the four scenes and their Reset defect lines identical to this lane's first run, itself equal to P-2026-09-28-0023
+**Notes**: The defect is a guard defect named by the edge that says `else` (a fused fork names its choice edge, `f4`, not `fk`), so the P2a registry receives it with no change there. `CompileDefect.reason` and `StcDefectReason` gain `'else-alone'` (Rule 11, R-SIM-87). The `?? t.id` fallback is unreachable: declared, not tested. Logs `probe-*-r7.log` in `~/.jjodel-lanes/P-2026-09-28-0100/`.
+**Prompt document name**: 2026-09-28 01:00
