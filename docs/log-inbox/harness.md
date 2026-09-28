@@ -334,3 +334,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: `git grep claude-sonnet-5` hit three lines of code, all changed; `git grep "claude-sonnet-5'" -- frontend/scripts` exit 1 after. The docs hits (decisions.md RC-32, discovery reports, sessions) record history and stay. The id regex of `chooseTier` already accepts the new id. Subject: the GO's `(RC-32, P-...)` is 74 characters to bash-guard, which strips only a bare ` (P-...)` suffix, so RC-32 moved before it. Session `170177ff`.
 **Prompt document name**: 2026-09-28 23:32
+
+## 2026-09-29 — merge: harness-reds-repairs into alfonso-frontend-jjtl (P-2026-09-29-0029)
+**Prompt**: `claude_2026-09-29_0029_prompt_merge_harness-reds-repairs.md`, a direct merge by `lane-run merge --direct`, no session: `harness-reds-repairs` at `2ed46699c` into `alfonso-frontend-jjtl`, merge base `fb044365b`, 7 commits on the branch side.
+**Files touched**: merge `27f3f7c25`: 8 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-09-28_2332_prompt_harness_reds_and_repairs.md`, `frontend/scripts/gates/__tests__/check-addonly.test.ts`, `frontend/scripts/gates/__tests__/traceIndex.test.ts`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`, `frontend/scripts/gates/check-addonly.ts`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `27f3f7c25` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5566 tests in 225 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat: scripts-only merge, no UI change; the six known vitest reds are gone
+**Notes**: Rollback tag `pre-harness-reds-repairs` on `024d95345` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0029/result.json`.
+**Prompt document name**: 2026-09-29 00:29
