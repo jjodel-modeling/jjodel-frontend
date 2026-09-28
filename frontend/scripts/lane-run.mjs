@@ -186,7 +186,7 @@ import { CRITICAL_FILES } from './hooks/critical-zone.mjs';
 
 // Model by activity (RC-32). heavy: the pin of .claude/settings.json, no --model (RC-16).
 // light: LIGHT_MODEL, set by the owner chat under RC-32; null runs every lane heavy.
-const LIGHT_MODEL = 'claude-sonnet-5';
+const LIGHT_MODEL = 'claude-sonnet-5-5';
 const TIERS = ['heavy', 'light'];
 
 const DEFAULT_LIMIT_MINUTES = 90;
@@ -2067,7 +2067,8 @@ async function monitor(rest) {
     mkdirSync(dir, { recursive: true });
     const log = join(dir, 'monitor.log');
     const out = openSync(log, 'a');
-    const child = spawn(process.execPath, [join(dirname(SELF), 'gates', 'trace-monitor.ts'), '--port', String(port)], {
+    // The flags of npm run trace:index: node before 23.6 strips no types without them.
+    const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', '--experimental-strip-types', join(dirname(SELF), 'gates', 'trace-monitor.ts'), '--port', String(port)], {
         detached: true,
         stdio: ['ignore', out, out],
     });

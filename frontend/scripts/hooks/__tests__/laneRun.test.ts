@@ -1398,10 +1398,10 @@ describe('lane-run start, the model tier (RC-32)', () => {
         expect(t.r.stderr).toContain('no light model');
     });
 
-    test('kills "the constant not claude-sonnet-5", "a malformed id passed to claude": the light tier runs the id the owner chat set; a malformed id is refused', () => {
+    test('kills "the constant not claude-sonnet-5-5", "a malformed id passed to claude": the light tier runs the id the owner chat set; a malformed id is refused', () => {
         const s = startTier(TIER_CASES[3][1], [], {});
         expect(s.r.status, s.r.stderr).toBe(0);
-        expect(s.call.args.slice(-2)).toEqual(['--model', 'claude-sonnet-5']);
+        expect(s.call.args.slice(-2)).toEqual(['--model', 'claude-sonnet-5-5']);
         const bad = startTier(TIER_CASES[3][1], [], { LANE_RUN_LIGHT_MODEL: 'claude sonnet' });
         expect(bad.r.status).toBe(2);
         expect(bad.r.stderr).toContain('malformed');

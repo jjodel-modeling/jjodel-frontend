@@ -1,14 +1,16 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
     checkAddonly,
     checkCommit,
     checkRevision,
     checkRange,
     firstParent,
+    KNOWN_REPAIRS,
     LOG_MD,
     LOG_ARCHIVE_MD,
 } from '../check-addonly.ts';
@@ -166,7 +168,7 @@ describe('checkCommit / checkRevision — real history', () => {
         }]);
     });
 
-    test('kills "e2448cf61 waved through without its exemption": the real repair commit is refused, because it carries no Log-Repair trailer', () => {
+    test('kills "e2448cf61 waved through without its exemption": without the known-repairs list the real repair commit is refused, because it carries no Log-Repair trailer', () => {
         // e2448cf61 restores BOTH entries: the 2350 entry regains its tail,
         // and the 2026-09-18 entry gets its own (different) correct tail
         // back. Neither of the two OLD (broken) entries reappears anywhere,
@@ -175,13 +177,26 @@ describe('checkCommit / checkRevision — real history', () => {
         // for exactly this shape of commit, but it cannot be retrofitted
         // onto a real commit's message after the fact — see the synthetic
         // exemption tests below for the mechanism itself.
-        const { violations, exempt } = checkRevision('e2448cf61');
+        const { violations, exempt } = checkCommit('e2448cf61', undefined, []);
         expect(exempt).toBe(null);
         expect(violations.map((v) => v.line).sort((a, b) => a - b)).toEqual([31, 216]);
         expect(violations.map((v) => v.heading)).toContain(
             '## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)',
         );
         expect(violations.map((v) => v.heading)).toContain('## 2026-09-18 — docs: trasporto normativo, passo 2 di P-2026-09-18-2110');
+    });
+
+    test('kills "the known repair not exempt", "the repaired commit not named", "the reason not named": e2448cf61 is exempt through the known-repairs list, as if it carried Log-Repair: 447e4239b, and the result names the reason', () => {
+        // RC-34's open ticket (P-2026-09-28-2211): e2448cf61 predates the
+        // trailer, and its message cannot carry one without a history rewrite.
+        expect(KNOWN_REPAIRS).toHaveLength(1);
+        const [known] = KNOWN_REPAIRS;
+        expect(known.reason).toMatch(/^[^\n]+$/);
+        const { commit, violations, exempt, knownRepair } = checkRevision('e2448cf61');
+        expect(commit).toBe('e2448cf617f3b93a5b5c3bc5d10139d932d163c3');
+        expect(violations).toEqual([]);
+        expect(exempt).toBe('447e4239bbc4b044bf42421bd4a0a718f84ed3b8');
+        expect(knownRepair).toBe(known.reason);
     });
 
     test('kills "a non-touching commit diffs the whole tree": a commit that does not change any in-scope file returns clean without reading the log or archive content', () => {
@@ -198,12 +213,23 @@ describe('checkCommit / checkRevision — real history', () => {
 });
 
 describe('checkRange', () => {
-    test('kills "e2448cf61 silently waved through a range scan", "a merge in the range skipped": every first-parent commit of a real range on this branch is checked, e2448cf61 the only one refused', () => {
-        const results = checkRange('65eb5475b', 'HEAD');
-        expect(results.length).toBeGreaterThan(20);
+    test('kills "e2448cf61 silently waved through a range scan", "a merge in the range skipped", "the first-parent walk dropped", "the range order reversed": every first-parent commit of a fixed real range is checked, oldest first, e2448cf61 the only one not plainly clean, exempt as a known repair', { timeout: 30000 }, () => {
+        // Pinned to fixed commits of the trunk, not to HEAD (P-2026-09-28-2332):
+        // 65eb5475b..HEAD walked the first-parent history of whichever branch
+        // was checked out, and read the ~4MB archive for 40-odd commits, 6 s
+        // alone and over the 5000 ms default under full-suite load. The range
+        // below holds the rotation 559eb82c5, e2448cf61 and two merges
+        // (63a80f62b, 3e141466d); every worktree of the repository shares
+        // their objects.
+        const results = checkRange('65eb5475b', '3e141466d');
+        expect(results.map((r) => r.commit.slice(0, 9))).toEqual([
+            '55c24d570', 'a51973abf', '63a80f62b', '559eb82c5', 'e2448cf61', '8609ec3e0', '3e141466d',
+        ]);
         const dirty = results.filter((r) => r.violations.length > 0 || r.exempt !== null);
         expect(dirty.map((r) => r.commit)).toEqual(['e2448cf617f3b93a5b5c3bc5d10139d932d163c3']);
-        expect(dirty[0].exempt).toBe(null);
+        expect(dirty[0].violations).toEqual([]);
+        expect(dirty[0].exempt).toBe('447e4239bbc4b044bf42421bd4a0a718f84ed3b8');
+        expect(dirty[0].knownRepair).toBe(KNOWN_REPAIRS[0].reason);
     });
 
     test('kills "the range direction reversed": a..b walks only commits reachable from b and not from a', () => {
@@ -286,5 +312,35 @@ describe('checkCommit — Log-Repair exemption (synthetic repository)', () => {
         const { violations, exempt } = checkCommit(repaired, repo);
         expect(exempt).toBe('0000000');
         expect(violations).toEqual([]);
+    });
+});
+
+describe('checkCommit — known-repairs list (synthetic repository)', () => {
+    test('kills "a known repair exempting every commit", "the list matched against the rev as written", "the repaired commit not reported": a listed commit is exempt exactly as with Log-Repair, by short sha too, and a commit not in the list is still refused', () => {
+        const repo = tmpRepo();
+        commitFile(repo, LOG_MD, A, ['base: entry A']);
+        const corrupt = commitFile(repo, LOG_MD, A_CHANGED, ['fix: an accidental edit of entry A']);
+        // The repair carries no trailer: without the list it is refused like any rewrite.
+        const repaired = commitFile(repo, LOG_MD, A, ['docs: repair entry A']);
+        const refusedA = { violations: [{ file: LOG_MD, line: 1, heading: '## 2026-01-01 — feat: entry A' }], exempt: null };
+        expect(checkCommit(repaired, repo, [])).toEqual(refusedA);
+
+        const known = [{ commit: repaired, repairs: corrupt, reason: 'a hand repair before the trailer' }];
+        const exempt = { violations: [], exempt: corrupt, knownRepair: 'a hand repair before the trailer' };
+        expect(checkCommit(repaired, repo, known)).toEqual(exempt);
+        expect(checkCommit(repaired.slice(0, 9), repo, known)).toEqual(exempt);
+        expect(checkCommit(corrupt, repo, known)).toEqual(refusedA);
+    });
+});
+
+// ── CLI ──────────────────────────────────────────────────────────────────────
+
+describe('check-addonly.ts CLI', () => {
+    test('kills "the known repair not named in the report", "a known repair counted as failed": --range 559eb82c5..e2448cf61 exits 0 and names e2448cf61 as the known repair of 447e4239b', () => {
+        const script = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'check-addonly.ts');
+        const r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '--experimental-strip-types', script, '--range', '559eb82c5..e2448cf61'], { encoding: 'utf8' });
+        expect(r.status, r.stdout + r.stderr).toBe(0);
+        expect(r.stdout).toContain(`EXEMPT  e2448cf61  known repair of 447e4239b: ${KNOWN_REPAIRS[0].reason}\n`);
+        expect(r.stdout).toContain('1 commit(s) checked, 1 clean (1 exempt), 0 rewriting an add-only log.');
     });
 });
