@@ -409,3 +409,14 @@ describe('the order per element keeps today\'s plan where the name graph accepts
         }
     });
 });
+
+describe('R-SIM-88: an equation that reads an input is a defect (P-2026-09-28-0034)', () => {
+    const ASK: StateAttributeDecl = { name: 'ask', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, input: true };
+
+    it('a derived value is a function of σ, never of an input (mutant: an input read as a stored attribute)', () => {
+        expect(codes([ASK, derived('e', null, 'model.[ask]', { kind: 'boolean' })])).toEqual([[1, 'e', 'input', "the equation reads the input 'ask'"]]);
+        // control: a stored attribute of the same name is read
+        const stored: StateAttributeDecl = { name: 'ask', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: true };
+        expect(codes([stored, derived('e', null, 'model.[ask]', { kind: 'boolean' })])).toEqual([]);
+    });
+});

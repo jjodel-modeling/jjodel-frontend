@@ -17,7 +17,8 @@
  *   Petri core (model/simulation/net*.ts), built and stepped by the bridge
  *   (simBridge.ts) and kept in the `simRunState` singleton, outside Redux
  *   (R-SIM-1). The simulation NEVER writes to the model nor to any bag (R-SIM-6,
- *   prototype invariant).
+ *   prototype invariant). A press that reads an input opens the input dialog
+ *   (SimInputDialog.tsx, R-SIM-88), portaled: nothing in the panel moves.
  *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
@@ -39,24 +40,26 @@ import {
     profileBindings, profilePatch, profileSummary, profileSummaryText, storedProfile,
 } from './simRoleStatus';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputReason, makeNetModelView, markingLine, panelInputs,
-    pressInput, runSignature, startRun, stopReason,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView, markingLine,
+    panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
 } from './simBridge';
-import type { InputLabel, StopReason } from './simBridge';
+import type { InputLabel, InputValue, StopReason } from './simBridge';
+import { inputRows } from './simInputs';
 import { sketchOfMetamodel } from './metamodelSketch';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
-import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
+import { structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
 import { systemProfile } from '../../../model/simulation/simProfiles';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { SimProfile } from '../../../model/simulation/simProfiles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
-import type { Candidate, NetRunStatus } from '../../../model/simulation/netTypes';
+import type { Candidate, InputRead, NetRunStatus } from '../../../model/simulation/netTypes';
 import type { SimEventInfo } from '../../../model/simulation/types';
 import type { RoleKey, Roles } from './simRoleStatus';
 import { SimRolesModal } from './SimRolesModal';
+import { SimInputDialog } from './SimInputDialog';
 import './simulation-panel.scss';
 
 // Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
@@ -191,11 +194,19 @@ function projectIdOfUser(): string {
     }
 }
 
-/** A choice waiting for the user (R-SIM-35): the input and its candidates. */
+/** A choice waiting for the user (R-SIM-35): the input and its candidates, and the values it was given (R-SIM-88). */
 interface PendingChoice {
     event: string | null;
     input: string;
     candidates: readonly Candidate[];
+    values?: readonly InputValue[];
+}
+
+/** A press waiting for the values of the inputs it reads (R-SIM-88): nothing committed until the dialog confirms. */
+interface AskingInputs {
+    event: string | null;
+    input: string;
+    asks: readonly InputRead[];
 }
 
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -216,6 +227,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // version of the 'mark' channel does not follow. `tick` re-reads the run.
     const [tick, setTick] = useState(0);
     const [pending, setPending] = useState<PendingChoice | null>(null);
+    const [asking, setAsking] = useState<AskingInputs | null>(null);
     // «Last step» and its title, which lists the assignments of the step (R-SIM-71).
     const [lastStep, setLastStep] = useState<{ text: string; title: string } | null>(null);
     const [defects, setDefects] = useState<{ line: string; title: string } | null>(null);
@@ -340,6 +352,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!current || liveSignature === '' || liveSignature === current.signature) return;
         simClear(modelid);
         setPending(null);
+        setAsking(null);
         simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
@@ -359,20 +372,25 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (!r) {
             return {
                 status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as { line: string; title: string } | null,
-                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(),
+                reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(),
                 marking: null as { line: string; title: string } | null,
             };
         }
-        const status = netRunStatus(r.net, r.config, r.alphabet, r.guards, r.halt);
+        // A run waiting for an input is Running, not Deadlock (R-SIM-88).
+        const status = runStatus(r);
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const inputs = panelInputs(status, structuralInputs(r.net, r.config.state));
         const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
         // R-SIM-60: a button that is on while its input has no candidate says why in its title.
         const noCandidate = new Map<string | null, string>();
+        // R-SIM-88: a button whose press reads an input names it in its title.
+        const asks = new Map<string | null, string>();
         if (status === 'Running') {
             for (const e of [...(inputs.epsilon ? [null] : []), ...inputs.events]) {
                 const why = inputReason(r, e, lookup, label, roles.simGuard);
                 if (why) noCandidate.set(e, why.full);
+                const read = inputAsks(r, e);
+                if (read.length > 0) asks.set(e, read.map(a => inputLabel(a, r.net, lookup)).join(', '));
             }
         }
         // The halt names elements, never ids; the action that stopped the run is in its title only (R-SIM-62, R-SIM-70).
@@ -383,6 +401,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             halt: r.halt ? { line: haltMessage(r.halt, lookup, features), title: haltTitle(r.halt, lookup, features, r.net) } : null,
             reason: status === 'Deadlock' ? stopReason(r, lookup, label, roles.simGuard) : null,
             noCandidate,
+            asks,
             // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3).
             marking: markingLine(r.config.state, r.net, lookup),
         };
@@ -392,6 +411,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const onReset = useCallback((): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
         setPending(null);
+        setAsking(null);
         simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
@@ -435,6 +455,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setRunError(null);
         setRunWarning(null);
         setPending(null);
+        setAsking(null);
         simSetPending(modelid, null);
         setLastStep(null);
         setDefects(null);
@@ -449,11 +470,19 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
      * transition the user chose from the list. The bridge commits the step and
      * gives back the lines to show (R-SIM-35, R-SIM-36).
      */
-    const fire = useCallback((event: string | null, selector?: string): void => {
+    const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[]): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
-        const pressed = pressInput(modelid, event, selector, lookup, input);
-        setPending(pressed.pending ? { event, input, candidates: pressed.pending } : null);
+        const pressed = pressInput(modelid, event, selector, lookup, input, values);
+        // The press reads inputs (R-SIM-88): the dialog asks them; nothing was committed, the lines stay.
+        if (pressed.asks) {
+            setPending(null);
+            simSetPending(modelid, null);
+            setAsking({ event, input, asks: pressed.asks });
+            return;
+        }
+        setAsking(null);
+        setPending(pressed.pending ? { event, input, candidates: pressed.pending, values } : null);
         // The canvas marks the list's candidates while it is open (S15 slice A2); a step that opens none closes it.
         simSetPending(modelid, pressed.pending ? pressed.pending.map(c => c.transition) : null);
         if (pressed.lastStep !== null) setLastStep({ text: pressed.lastStep, title: pressed.lastStepTitle ?? pressed.lastStep });
@@ -518,7 +547,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     /** A button's title, and why its input has no candidate when it is on without one (R-SIM-60). */
     const inputTitle = (base: string, event: string | null): string => {
         const why = view?.noCandidate.get(event);
-        return why ? `${base}\nNo candidate. ${why}` : base;
+        const asks = view?.asks.get(event);
+        return why ? `${base}\nNo candidate. ${why}` : asks ? `${base}\nAsks: ${asks}` : base;
     };
 
     if (!open) {
@@ -647,7 +677,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                             type="button"
                                             className="sim-panel__choice"
                                             key={c.transition}
-                                            onClick={() => fire(pending.event, c.transition)}
+                                            onClick={() => fire(pending.event, c.transition, pending.values)}
                                         >
                                             <span>{candidateLabel(run.net, c.transition, lookupNow)}</span>
                                             {c.unsafe && (
@@ -660,6 +690,16 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                     </button>
                                 </div>
                             </>
+                        )}
+                        {/* The input dialog (R-SIM-88) is portaled onto the body: nothing is added here, nothing moves. */}
+                        {asking && run && (
+                            <SimInputDialog
+                                press={asking.event === null ? 'Step (ε)' : asking.input}
+                                action={asking.event === null ? 'Step' : `Fire ${asking.input}`}
+                                rows={inputRows(asking.asks, run.net, lookupNow)}
+                                onCancel={() => setAsking(null)}
+                                onConfirm={values => { const a = asking; setAsking(null); fire(a.event, undefined, values); }}
+                            />
                         )}
                         {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
                         {defects && (

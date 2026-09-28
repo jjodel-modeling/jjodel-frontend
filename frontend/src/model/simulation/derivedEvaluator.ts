@@ -5,8 +5,8 @@
  * `compileDerived` runs once per run over the declarations: every equation is
  * parsed strictly and checked as a guard is (`checkGuardSubset`), `E-NODE`
  * only on a semantic one, since a presentation equation reads `node` as its own
- * element; `event` is a defect, a derived value being a function of σ alone; a
- * semantic equation that reads a presentation attribute, stored or derived, is
+ * element; `event` is a defect, a derived value being a function of σ alone,
+ * and so is a read of an input's name (R-SIM-88); a semantic equation that reads a presentation attribute, stored or derived, is
  * `E-NODE` too. The dependencies are the attribute names of the `StateAccess`
  * nodes (R-SIM-74, G1 of the report): a cycle among the names is a defect on
  * each member, with its cycle named, and the order of evaluation is
@@ -425,6 +425,8 @@ function compileOnM(
 export function compileDerived(decls: readonly StateAttributeDecl[], frozen?: FrozenM): CompiledDerived {
     const defects: DeclarationDefect[] = [];
     const presentationNames = new Set(decls.filter(d => d.space === 'presentation').map(d => d.name));
+    // By name, as the presentation names: an input is chosen per step, a derived value is a function of σ (R-SIM-88).
+    const inputNames = new Set(decls.filter(d => d.input === true).map(d => d.name));
     const compiled: CompiledEquation[] = [];
     decls.forEach((decl, index) => {
         const text = decl.equation;
@@ -453,6 +455,11 @@ export function compileDerived(decls: readonly StateAttributeDecl[], frozen?: Fr
         });
         if (event) {
             defect('event', 'the equation reads event');
+            return;
+        }
+        const asked = reads.find(r => inputNames.has(r));
+        if (asked !== undefined) {
+            defect('input', `the equation reads the input '${asked}'`);
             return;
         }
         const shown = semantic ? reads.find(r => presentationNames.has(r)) : undefined;

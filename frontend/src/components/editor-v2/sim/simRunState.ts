@@ -33,7 +33,7 @@ import { useSyncExternalStore } from 'react';
 import { isMarked } from '../../../model/simulation/netStep';
 import { choiceElements, nodeStateOf, type SimNodeState } from './simCanvasState';
 import type {
-    ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, NetConfiguration, StepOutcome,
+    ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, InputRead, NetConfiguration, StepOutcome,
 } from '../../../model/simulation/netTypes';
 
 /** One started run of one model. */
@@ -52,6 +52,11 @@ export interface SimRun {
     readonly alphabet: readonly string[];
     /** The R-SIM-13 baseline: `runSignature` on the lookup the net was compiled from. */
     readonly signature: string;
+    /**
+     * R-SIM-88: per transition id, the inputs its guards (its `else` siblings' too) and its actions read,
+     * folded at Reset over the frozen M; absent when no input is declared. The bridge asks them at a press.
+     */
+    readonly inputs?: ReadonlyMap<string, readonly InputRead[]>;
 }
 
 const runs = new Map<string, SimRun>();

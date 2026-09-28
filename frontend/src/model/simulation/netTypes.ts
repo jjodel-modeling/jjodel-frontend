@@ -34,7 +34,9 @@ export type Domain =
  * and `tokens` are reserved names (R-SIM-30). `metaclass` is `null` for a
  * global attribute, which lives on the model element (`model.[x]`, R-SIM-18).
  * Stored or derived (lane C2, R-SIM-72): exactly one of `initial` and
- * `equation`; a derived attribute is read-only, recomputed on every σ.
+ * `equation`; a derived attribute is read-only, recomputed on every σ. An input
+ * (R-SIM-88) has neither: the environment chooses its value for the step that
+ * reads it, so it is never in σ and never assigned (nuXmv's IVAR).
  */
 export interface StateAttributeDecl {
     readonly name: string;
@@ -47,6 +49,8 @@ export interface StateAttributeDecl {
     readonly initial?: SimValue;
     /** A derived attribute's JjEL equation, `self` its owner (R-SIM-73, R-SIM-75). */
     readonly equation?: string;
+    /** An input variable (R-SIM-88): semantic, no initial, no equation; asked by the bridge at the press that reads it. */
+    readonly input?: true;
 }
 
 /**
@@ -57,7 +61,9 @@ export type DeclarationDefectCode =
     | 'key' | 'record' | 'initial' | 'no-domain' | 'bounds' | 'reserved' | 'metaclass' | 'two-spaces' | 'twice'
     // lane C2 (R-SIM-73..75): both or neither of initial and equation; an equation that does not parse, that the
     // subset checker rejects, that reads `event`, or that sits on a cycle; a derived value that fails at Reset.
-    | 'exclusive' | 'parse' | 'subset' | 'event' | 'cycle' | 'derived';
+    | 'exclusive' | 'parse' | 'subset' | 'event' | 'cycle' | 'derived'
+    // R-SIM-88: an input on presentation, or an equation that reads an input.
+    | 'input';
 
 /** A defect of the declarations, reported at Reset; never an element of the net. */
 export interface DeclarationDefect {
@@ -76,6 +82,16 @@ export interface DeclarationDefect {
 export interface DerivedValues {
     readonly attrs: ReadonlyMap<string, ReadonlyMap<string, SimValue>>;
     readonly presentation: ReadonlyMap<string, ReadonlyMap<string, SimValue>>;
+}
+
+/**
+ * A read of an input declaration (R-SIM-88), folded to the element it reads:
+ * what the environment is asked before a step whose guards or actions read it.
+ */
+export interface InputRead {
+    readonly element: string;
+    readonly attr: string;
+    readonly domain: Domain;
 }
 
 /** σ, owned by the engine. The marking maps a place to 1..k; an absent place holds 0. */
@@ -310,8 +326,8 @@ export type HaltReason =
     | { readonly kind: 'undeclared'; readonly site: ActionSite; readonly element: string; readonly attr: string }
     /** A semantic derived attribute of `element` failed on σ′ (R-SIM-73). */
     | { readonly kind: 'derived'; readonly element: string; readonly attr: string; readonly detail: string }
-    /** An action of `site` assigned a derived attribute (R-SIM-75). */
-    | { readonly kind: 'read-only'; readonly site: ActionSite; readonly element: string; readonly attr: string };
+    /** An action of `site` assigned a derived attribute (R-SIM-75), or an input (`input`, R-SIM-88). */
+    | { readonly kind: 'read-only'; readonly site: ActionSite; readonly element: string; readonly attr: string; readonly input?: true };
 
 /**
  * The outcome of a step. `halted` leaves σ as it was and consumes the event;

@@ -255,6 +255,8 @@ export function step(
             const decl = net.declared.get(a.element)?.get(a.attr);
             if (!decl) return halted({ kind: 'undeclared', site, element: a.element, attr: a.attr });
             if (decl.equation !== undefined) return halted({ kind: 'read-only', site, element: a.element, attr: a.attr });
+            // An input is the environment's, for the step that reads it: never assigned (R-SIM-88).
+            if (decl.input === true) return halted({ kind: 'read-only', site, element: a.element, attr: a.attr, input: true });
             const key = `${a.element}\u0000${a.attr}`;
             if (written.has(key)) return halted({ kind: 'double-assignment', element: a.element, attr: a.attr });
             written.add(key);

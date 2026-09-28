@@ -740,6 +740,11 @@
         border: 1px solid var(--color-border-secondary);
         border-radius: var(--radius-sm, 4px);
         background: var(--color-bg-tertiary);
+
+        // The value cell of an input row (R-SIM-88): one column, where the initial or the equation would be.
+        &--value {
+            grid-column: auto;
+        }
     }
 
     &__hidden {
