@@ -1866,7 +1866,13 @@
 
     // ── The breadcrumb of 12c ────────────────────────────────────────────────
 
+    /* #158 P1 — `sticky`: the form pane is the scroll container, and a drill-in
+       started from a link far down the form used to leave the way back scrolled out
+       of sight. The band keeps its own opaque fill, so the fields pass under it. */
     &__crumbs {
+        position: sticky;
+        top: 0;
+        z-index: 2;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -1874,6 +1880,26 @@
         padding: 8px 20px;
         border-bottom: 1px solid var(--color-form-border);
         background: var(--color-bg-tertiary);
+    }
+
+    /* The one-step way back. A bordered control and not a link like the segments
+       beside it: it is the gesture, the segments are the road. */
+    &__back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-accent); color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
     }
 
     &__crumb-wrap { display: inline-flex; align-items: center; gap: 2px; }

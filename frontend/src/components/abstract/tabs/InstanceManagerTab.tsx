@@ -35,7 +35,7 @@
  * show, the fix is a signature selector, not a cache.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import { getMetaclassInfo, type MetaclassInfo } from '../../editor-v2/hooks/useEditorMode';
@@ -85,6 +85,7 @@ import {
     depthOf,
     draftModel,
     drillInto,
+    drillOut,
     egoDispatch,
     egoLabel,
     egoLayout,
@@ -1786,17 +1787,52 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
     const crumbs: Crumb[] = useMemo(() => (nav ? breadcrumbOf(nav) : []), [nav]);
 
+    /** #158 P1 — the form pane is the scroll container, and a drill-in is usually
+     *  started from a link far down the form (the reference list sits under every
+     *  field). Going back must land where the user left, not at the top of a long
+     *  form: that is what «back to the list» means. One scroll offset per DEPTH,
+     *  written when the form leaves that depth, read when it returns to it. A ref and
+     *  not state: it is bookkeeping for the next layout, never something to render. */
+    const formPaneRef = useRef<HTMLElement | null>(null);
+    const navScrollRef = useRef<number[]>([]);
+    const pendingScrollRef = useRef<number | null>(null);
+
     /** Drill into a contained child. The road is seeded from the SUBJECT's own
      *  position, not from the model root, so the breadcrumb starts where the form
      *  started and does not print ancestors the user never navigated through. */
     const drillTo = (childId: string, childKey: string) => {
         const step = navStepOf(idlookup, childId, childKey);
         if (!step) return;
+        navScrollRef.current[formDepth] = formPaneRef.current?.scrollTop ?? 0;
+        pendingScrollRef.current = 0;
         if (nav) { setNav(drillInto(nav, step)); return; }
         const root = subjectId ? navStepOf(idlookup, subjectId) : null;
         if (!root) return;
         setNav(drillInto(navFor(root), step));
     };
+
+    /** Where a return to `depth` lands: the offset saved when the form left it. */
+    const restoreScrollFor = (depth: number) => {
+        pendingScrollRef.current = navScrollRef.current[depth] ?? 0;
+    };
+
+    /** #158 P1 — «Back»: up one level, with the pure `drillOut` the breadcrumb module
+     *  already exports for exactly this. The breadcrumb stays: it jumps anywhere on
+     *  the road, Back is the one-step gesture every list-to-detail screen offers. */
+    const goBack = () => {
+        if (!nav) return;
+        const next = drillOut(nav);
+        restoreScrollFor(depthOf(next));
+        setNav(next);
+    };
+
+    /** Applied before paint, so the form never shows one frame at the old offset. */
+    useLayoutEffect(() => {
+        const top = pendingScrollRef.current;
+        if (top === null) return;
+        pendingScrollRef.current = null;
+        if (formPaneRef.current) formPaneRef.current.scrollTop = top;
+    }, [formSubjectId]);
 
     /** The contained children of the form's current subject, per child slot.
      *  Empty at depth >= INLINE_DEPTH_LIMIT: beyond the inline level the children
@@ -3024,6 +3060,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 un contenitore che dichiara un contenuto assente. */}
             {(isMulti || subjectId || !collectionIsEmpty) && (
             <section
+                ref={formPaneRef}
                 className={'instance-manager__pane instance-manager__pane--form'
                     + (isMulti || subjectId ? '' : ' instance-manager__pane--form-collapsed')}
             >
@@ -3045,6 +3082,18 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             has a road of one step, and printing it would be noise. */}
                         {crumbs.length > 1 && (
                             <nav className="instance-manager__crumbs" aria-label="Navigation path">
+                                {/* #158 P1 — the one-step way back, ahead of the road it
+                                    walks. Named after where it lands, so the tooltip says
+                                    what the arrow alone cannot. */}
+                                <button
+                                    type="button"
+                                    className="instance-manager__back"
+                                    title={`Back to ${crumbLabel(crumbs[crumbs.length - 2])}`}
+                                    onClick={goBack}
+                                >
+                                    <i className="bi bi-arrow-left" aria-hidden="true" />
+                                    Back
+                                </button>
                                 {crumbs.map(c => (
                                     <span key={c.id + ':' + c.depth} className="instance-manager__crumb-wrap">
                                         {c.isCurrent ? (
@@ -3055,7 +3104,10 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                             <button
                                                 type="button"
                                                 className="instance-manager__crumb"
-                                                onClick={() => setNav(prev => (prev ? truncateTo(prev, c.depth) : prev))}
+                                                onClick={() => {
+                                                    restoreScrollFor(c.depth);
+                                                    setNav(prev => (prev ? truncateTo(prev, c.depth) : prev));
+                                                }}
                                             >
                                                 {crumbLabel(c)}
                                             </button>
