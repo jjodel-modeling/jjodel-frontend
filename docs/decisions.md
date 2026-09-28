@@ -221,7 +221,7 @@ Source: `docs/ratifiche/claude_ratifiche_2026-09-27_commit_ask_under_bypass.md`,
 `C-2026-09-26-1702` under RC-25 on Alfonso's request, after both first orchestrated launches stopped at
 their first commit.
 
-- **RC-29** (2026-09-27, provisional, unattended): **The commit gate of a lane is the hook layer, not an
+- **RC-29** (2026-09-27, ratified by Alfonso 2026-09-28): **The commit gate of a lane is the hook layer, not an
   `ask`.** Measured on the real tree at `651f10543`: under `-p` and `bypassPermissions` the `ask` on
   `Bash(git commit*)` holds and refuses the commit; `--allowedTools` does not override it; with the rule removed
   the commit passes and `bash-guard` keeps every rule of its own (pathspec, `Model:` trailer, push deny). The
@@ -233,7 +233,7 @@ their first commit.
 
 ### Decisione 2026-09-27: the go-ahead of a critical-zone lane under bypass (RC-30)
 
-- **RC-30** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: trunk):
+- **RC-30** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: trunk):
   **A critical-zone lane runs orchestrated with an explicit go-ahead.** Alfonso, in chat (2026-09-27 00:58,
   on the enum edge guard lane): «se per la decisione serve useJjomSync.ts o canvasToJjom.ts, procedi anche lì
   in automatico». Mechanism: `lane-run start … --critical-zone-goahead <Prompt-ID>` (the lane's own id,
@@ -266,8 +266,8 @@ merge lane P-2026-09-27-2327.
   `frontend/scripts/lane-run.mjs`, passed as `--model`. The rule, deterministic and heavy when in doubt, is in P16
   and in `tierRule` of that file. Alfonso ratified the principle in the owner chat `C-2026-09-27-1437` (2026-09-27
   23:52: «lane-run sceglie il modello più conveniente per l'attività che deve svolgere»). The id `claude-sonnet-5`
-  was set by that chat at the GO of `P-2026-09-27-2330`, under that ratification, and is to be confirmed in the
-  morning digest (RC-25). Measure: `docs/discovery/discovery_2026-09-27_lane_efficiency.md` §7, where `--model` coexists
+  was set by that chat at the GO of `P-2026-09-27-2330`, under that ratification; on 2026-09-28 Alfonso chose
+  `claude-sonnet-5-5` instead (verified on the Mac: `claude-sonnet-5.5` is refused), applied by P-2026-09-28-2332. Measure: `docs/discovery/discovery_2026-09-27_lane_efficiency.md` §7, where `--model` coexists
   with the pin and wins and a resume keeps the session's model.
 - **RC-33** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: trunk):
   **A chat acts only on its own Prompt-IDs.** Every chat declares an ID `C-YYYY-MM-DD-HHmm` at its start and writes it in the `Chat:` line of every prompt it writes. Before acting on a Prompt-ID (launch, resume, GO, merge, closure), a chat reads the `Chat:` line of that prompt: when it is another chat's ID or `—`, it does not act, names the owner and asks Alfonso, who may assign the prompt to it. A merge rendered by `lane-run merge` carries the launching chat's ID through `--chat`. Trigger: the merge `P-2026-09-28-2211` of `log-addonly-gate`, launched at 22:11 without `--chat` by an unidentified actor, adopted by `C-2026-09-28-1936` on Alfonso's word.
@@ -281,21 +281,21 @@ misurate su 3004. Decise dalla chat `C-2026-09-26-1702` sotto RC-25, con la veri
 (due obiezioni accolte come vincoli: la località dell'handle per la C1, i percorsi di caricamento e replay
 per la C2). Alfonso riceve il digest alla chiusura della corsia.
 
-- **R-EDGE-1** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-EDGE-1** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: agent, reversible: branch).
   **In un metamodello una connessione del canvas è valida solo se entrambi gli estremi sono nodi classe.**
   Predicato puro `isMetamodelConnectionValid(mode, sourceType, targetType)`, simmetrico, `true` in modalità
   modello, cablato in `isValidConnection` di `EditorV2.tsx`; rifiuta classe→enum, enum→classe, enum→enum e
   classe→package (§6b del report: la regola è positiva, non "non un enum"). Feedback: lo stato invalido di
   xyflow più una regola SCSS, niente toast. Vincolo dalla verifica: se un handle di un metamodello non sta su
   un nodo classe, il predicato deve risolvere il classificatore proprietario dell'handle, non il nodo.
-- **R-EDGE-2** (2026-09-27, provisional, unattended, evidence: read, verified: agent, reversible: branch).
+- **R-EDGE-2** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: read, verified: agent, reversible: branch).
   **L'invariante del modello arriva in una corsia C2 separata.** `set_type` di un `DReference` rifiuta un
   non-`DClass`, `_canExtend` rifiuta con un motivo invece di morire su `.map`, i tipi di dato ricevono un
   `set_extends` che rifiuta, e il linker dell'import Ecore ritipa a `EObject` con avviso un `EReference`
   tipato da un `EEnum` invece di fallire. Modifica del core (Rule 5). Prima della sua Fase 2 va misurato che
   il caricamento, undo/redo e il replay di VersionFixer non passino per i setter guardati, altrimenti i
   progetti salvati smetterebbero di aprirsi (obiezione della verifica, accolta come precondizione).
-- **R-EDGE-3** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: trunk).
+- **R-EDGE-3** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: agent, reversible: trunk).
   **Nessuna migrazione dei progetti salvati ora.** Gli stati S1, S5b e S6 caricano, si disegnano e (S1)
   fanno il giro dell'export; un ticket registra le tre forme e le due opzioni (regola di buona formazione M2
   nel registro dei problemi, oppure migrazione VersionFixer che ritipa e cancella gli edge orfani: cancellazione
@@ -2017,20 +2017,20 @@ o una corsia.
   `Verified: la stringa non ha copie shallow che scappano e runSignature confronta la stringa grezza; sarebbe
   falsa se la serializzazione non fosse deterministica nell'ordine dei campi, da cui la regola dell'ordine
   fisso.`
-- **R-SIM-68** (2026-09-26, provisional, unattended). **Decodifica tollerante, difetti per record.** Un record
+- **R-SIM-68** (2026-09-26, ratified by Alfonso 2026-09-28). **Decodifica tollerante, difetti per record.** Un record
   malformato è un difetto di quel record e gli altri compilano; una stringa che non è JSON, o non ha `v` e
   `attrs`, è un difetto di compilazione sulla chiave, mai un insieme vuoto silenzioso; i campi sconosciuti
   si ignorano, così la C2 aggiunge `equation` senza cambiare formato; l'insieme vuoto si scrive `'[]'` dentro
   `attrs`, mai `undefined` sulla chiave (ticket sul mancato `set_state` a `undefined`, §7.6 del report). Nel
   catalogo `stateAttributes.key` diventa `'simStateAttributes'`; `action`, `entry`, `exit` dipendono da
   `stateAttributes`. Emenda la decodifica tutto-o-niente di `decodeProfile` solo per questa chiave.
-- **R-SIM-69** (2026-09-26, provisional, unattended). **Le tre chiavi delle azioni entrano in `NetStc`.**
+- **R-SIM-69** (2026-09-26, ratified by Alfonso 2026-09-28). **Le tre chiavi delle azioni entrano in `NetStc`.**
   `action`, `entry`, `exit` campi opzionali di `NetStc` e tre coppie in `ROLE_KEYS`; i valori `Action [0..*]`
   si leggono per ruolo con `objectSlotValues` dal lookup, in ordine, in una tabella costruita al Reset accanto
   a `compileGuards`; i siti sono quelli del core (in Petri gli archi non sono siti: exit del preset,
   transizione, entry del postset). `NO_SIM_ACTIONS` resta l'oracolo quando nessun ruolo di azione è legato,
   non un flag per run; l'asserzione di `simBridge.test.ts:428-429` si riscrive.
-- **R-SIM-70** (2026-09-26, provisional, unattended). **Difetti di compilazione delle azioni al Reset, halt a
+- **R-SIM-70** (2026-09-26, ratified by Alfonso 2026-09-28). **Difetti di compilazione delle azioni al Reset, halt a
   run time come rete di sicurezza.** Al Reset si segnalano: azione che non parsa, dichiarazione malformata,
   bersaglio non dichiarato e località quando il bersaglio si riduce senza σ ed evento, doppio bersaglio per
   transizione sui suoi siti quando i bersagli si riducono, `E-NODE` sul lato destro di un assegnamento
@@ -2057,7 +2057,7 @@ o una corsia.
   attributo non ancora dichiarato sono difetti al Reset (ESM +1, Flow B +2, risposta A della chat alla domanda
   della corsia). Fuori: `else` senza fratelli, gli avvisi W-* e T-*, A11 e ogni valore che dipende da σ o
   dall'evento.
-- **R-SIM-71** (2026-09-26, provisional, unattended). **Due corsie: C1 memorizzati e azioni, C2 derivati.**
+- **R-SIM-71** (2026-09-26, ratified by Alfonso 2026-09-28). **Due corsie: C1 memorizzati e azioni, C2 derivati.**
   C1: codec, catalogo, `NetStc`, `compileNet` con i difetti delle dichiarazioni (iniziale fuori dominio,
   dominio mancante su semantico, `min > max`, nome riservato, metaclasse inesistente, stesso nome su due spazi
   o due volte su un elemento), tabella delle azioni e `compileDefects` nel bridge, testi dell'halt; poi il
@@ -2068,7 +2068,7 @@ o una corsia.
   `guardContext.ts`, bersaglio di sola lettura. `Verified: guardContext legge σ (state.attrs), che compileNet
   popola dai valori iniziali, quindi C1 non lo tocca; sarebbe falso se l'accessore dovesse consultare
   CompiledNet.declared, e non lo fa (§2(c) del report).`
-- **R-SIM-72** (2026-09-26, provisional, unattended). **Forma del record per i derivati, decisa ora per la
+- **R-SIM-72** (2026-09-26, ratified by Alfonso 2026-09-28). **Forma del record per i derivati, decisa ora per la
   C2.** Un record ha esattamente uno fra `initial` e `equation`; `initial` diventa opzionale in
   `StateAttributeDecl` con la C2 (Rule 11 in quella corsia), e un derivato con `initial`, o un memorizzato
   con `equation`, è un difetto del record. Respinta la proposta del report di tenere `initial` obbligatorio e
@@ -2082,7 +2082,7 @@ decisioni del suo §10. Decise dalla chat `C-2026-09-26-1702` sotto RC-25 nella 
 esplicito di Alfonso («esegui la C2»), con la verifica avversariale di RC-27 su E1 (tre vincoli accolti). Le
 decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; qui le quattro strutturali.
 
-- **R-SIM-73** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-SIM-73** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: agent, reversible: branch).
   **Valutazione eager dei derivati (E1).** Al Reset e dopo ogni scatto, assemblata σ′, un `DerivedOracle`
   opzionale di `step` valuta ogni attributo derivato su σ′ in ordine di dipendenza in una mappa `derived` di
   sola lettura di `SimState`, ricostruita ogni volta e mai copiata in avanti; l'accessore ripiega su `derived`,
@@ -2097,7 +2097,7 @@ decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; q
   un'espressione potesse raggiungere un attributo senza nominarlo nel nodo StateAccess, e la grammatica di
   R-SIM-40 lo esclude (l'attributo è un IDENTIFIER letterale).`
   **Emendata il 2026-09-27** (ratifica di Alfonso in chat, punto 7 del digest): al Reset un derivato fuori dominio o fallito tiene il valore calcolato quando ne ha uno e mostra il difetto di dichiarazione (decisione 5 del report, implementazione `5060657c5`); «valore assente» sopra vale solo per un'equazione che non produce un `SimValue`.
-- **R-SIM-74** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-SIM-74** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: agent, reversible: branch).
   **Grafo delle dipendenze per nome, ciclo come difetto.** Gli archi vengono dai nodi `StateAccess` di ogni
   equazione, chiave il nome dell'attributo (G1): conservativo, completo perché ogni accesso nomina l'attributo;
   un ciclo tra istanze proietta su un ciclo tra nomi. Un ciclo è un difetto di dichiarazione su ogni membro, con
@@ -2124,7 +2124,7 @@ decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; q
   resta un difetto, come in nuXmv dopo l'appiattimento. Il raffinamento «per (metaclasse, nome)» cade: non avrebbe
   tolto il limite. R-SIM-43 e R-SIM-18 restano come sono (risposta B): la forma su collezione si scrive con una
   lambda o con `forall`, mai con una collezione a sinistra di `.[x]`.
-- **R-SIM-75** (2026-09-27, provisional, unattended, evidence: read, verified: agent, reversible: branch).
+- **R-SIM-75** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: read, verified: agent, reversible: branch).
   **Radici e record.** In un'equazione: `self` è il proprietario, la radice del modello per un globale, `model`
   ammesso, `event` vietato (difetto di dichiarazione: un DEFINE non dipende dall'input), `node` `E-NODE` su
   un'equazione semantica e ammesso su una di presentazione. Record: esattamente uno fra `initial` ed `equation`
@@ -2132,7 +2132,8 @@ decisioni 2, 4, 5, 6, 8, 9, 10, 11 del report sono adottate come raccomandate; q
   `StateAttributeRecord.equation?`; un'azione su un bersaglio derivato è difetto `read-only` al Reset quando il
   bersaglio si riduce e halt `read-only` nel core. Chiude la perdita di dati misurata (§4.5: la tabella C1
   riscrive ogni record senza `equation` al primo edit).
-- **R-SIM-76** (2026-09-27, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+- **R-SIM-76** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: read, verified: none, reversible: trunk).
+  Ratification note (2026-09-28): the outputs entered the engine later, with R-SIM-91..93.
   **Output di Moore e Mealy fuori dalla C2.** `simStateOutput` e `simTransitionOutput` non hanno lettori; gli
   output legati a un ruolo sono un percorso sul modello congelato, quelli calcolati sono derivati sulla via E1;
   corsia propria dopo la C2 (R-SIM-51). Il pannello riceve un selettore «stored | derived» e una cella
@@ -2148,7 +2149,7 @@ RC-27 sul binder (due vincoli accolti). I quattro punti di RC-26 (A1 forma della
 emenda della riga Petri di R-SIM-54, A4 Initial/Final come classi) restano ad Alfonso: la corsia procede sulla
 raccomandazione per A1, A2 e A4, e non emenda R-SIM-54 (A3 resta nel digest).
 
-- **R-SIM-77** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-SIM-77** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: agent, reversible: branch).
   **Il binder: un modulo puro che lega un preset al metamodello, senza scegliere.** `profileBinder.ts` sopra
   uno `MetamodelSketch` (raccolto da `metamodelSketch.ts` dal lookup grezzo) dà per ogni ruolo `edit`
   `bound | candidates | none` con il motivo; lega solo con un candidato strutturale unico, non risolve mai un
@@ -2156,7 +2157,7 @@ raccomandazione per A1, A2 e A4, e non emenda R-SIM-54 (A3 resta nel digest).
   classe potrebbe non essere una guardia), quindi Apply non scrive alla cieca: il riepilogo elenca prima i
   legami proposti (`Guard → PTrans.guard`) e Apply li conferma; un ruolo con candidati resta «Not checkable:
   choose …» nel riepilogo, mai un no-op silenzioso. `collectMetaOptions` invariato.
-- **R-SIM-78** (2026-09-27, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-SIM-78** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: agent, reversible: branch).
   **Apply scrive una sola assegnazione dello stato, solo chiavi non impostate.** I valori legati delle chiavi
   vuote dei ruoli `edit` più `simProfile`, mai sopra una chiave impostata, mai `undefined`, dopo il controllo di
   sovrapposizione di `writeRole` (un rifiuto non scrive nulla), un solo passo di undo (D2). Cambiare profilo non
@@ -2164,7 +2165,8 @@ raccomandazione per A1, A2 e A4, e non emenda R-SIM-54 (A3 resta nel digest).
   «Set but off: …» (D8); un'azione «Clear bindings» è rinviata. `simProfile` assente → Custom; presente ma
   illeggibile → Custom con una riga di avviso (D6). Nella corsia demo il motore legge il bag come oggi; il
   risolutore che salta le chiavi `off` arriva dopo la riga Petri di R-SIM-54 (D4).
-- **R-SIM-79** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-79** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: branch).
+  Ratification note (2026-09-28): interim until A1.
   **Forma M3 per la build demo, in attesa di A1.** Nel pannello M2 inline: una riga «Profile» con il selettore
   dei preset di sistema (quattro per la demo: Petri net, Flowchart / Activity, State machine, Extended state
   machine; DFA, NFA, Moore e Mealy nascosti finché R-SIM-50 e 51 non sono nel motore), Apply, una riga di
@@ -2225,7 +2227,7 @@ Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md
 (P-2026-09-27-1610, codice `45a796050` e `bce34aee1`) sotto RC-25. Nessuna riga ratificata da Alfonso cambia:
 R-SIM-53 e R-SIM-31(1) sono attuate come scritte.
 
-- **R-SIM-83** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-83** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: branch).
   **Il motore legge l'activity final (G6).** R-SIM-53 attuata come scritta: `simActivityFinal` entra nella STC
   (`NetStc.activityFinal`), la rete compilata ne porta i posti per kind-of (`CompiledNet.activityFinal`, `null`
   senza il ruolo), e `terminated` è vero quando uno di essi è marcato, qualunque altro token sia vivo. L'insieme
@@ -2234,7 +2236,8 @@ R-SIM-53 e R-SIM-31(1) sono attuate come scritte.
   2026-09-25 (attuazione con la corsia di Accepting e degli output) è sciolto dalla chat: G6 va da sola. La riga
   del pannello per la chiave arriva con la corsia E2; fino ad allora la chiave si vede solo nelle proposte di
   Apply (report §5.1 rischio 1). Sui quattro preset della demo nulla cambia (report §2.6; Flow B identico).
-- **R-SIM-84** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-84** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: branch).
+  Ratification note (2026-09-28): amended by R-SIM-87 (rule R7).
   **`else` sulle transizioni fuse, e il difetto `else-position` (G7).** R-SIM-31(1) attuata come scritta anche
   dopo la fusione di fork e join: l'`else` si riconosce sull'arco di scelta della transizione fusa (l'arco
   entrante in un fork, un arco uscente da un join), i fratelli restano «stesso preset, stessi trigger», e si
@@ -2270,7 +2273,7 @@ le chiavi `off` arriva dopo la riga Petri di R-SIM-54», emendata da Alfonso il 
 corsia P-2026-09-28-0100 (codice `22cc00ffd`) sotto RC-25. Nessuna riga ratificata da Alfonso cambia; il
 validatore (`derivedFromOff`) resta com'è.
 
-- **R-SIM-86** (2026-09-28, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-86** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: branch).
   **Un ruolo `off` si legge come non legato.** Il run legge il bag attraverso `runBag` (`simBridge.ts`): le
   chiavi dei ruoli che il profilo mette `off` cadono prima di `netStcFromRoles`, la classe degli eventi si deriva
   dal Trigger salvo Event `off` (R-SIM-38), e `simStateAttributes` si legge dallo stesso bag; `runSignature`
