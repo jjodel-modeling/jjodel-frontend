@@ -766,3 +766,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — probe `_tmp_p1025_walk.ts` on 3029, one run per scene: SM 10 steps Terminated; Petri Bound 4, 4 steps, Deadlock · ε: t2 false; ESM 10 steps, halt line whole on two rows (`haltFit.whole: true`); Flow B 6 steps Terminated, `fin · count = 2`. `openModel()` (throws on a missing tab or chip) completed 16/16 calls across the four runs with no thrown error, so the Simulation panel docked and was readable on both tabs, all four scenes. Console: one `failed to get project {project: null}` per run, the known kind, no `pageerror`.
 **Notes**: The prompt's background states 12 feature commits of #157; measured `git log --no-merges 888ea9a9d..447e4239b -- frontend/src` gives 14, all tagged `(#157)`. Does not change the verdict (behavioral, not a commit count) — see discovery report §1. Logs and crops in `~/.jjodel-lanes/shots_scenes_after_staging/`.
 **Prompt document name**: 2026-09-28 10:25
+
+## 2026-09-28 — merge: scenes-base into alfonso-frontend-jjtl (P-2026-09-28-2333)
+**Prompt**: `claude_2026-09-28_2333_prompt_merge_scenes-base.md`, a direct merge by `lane-run merge --direct --chat C-2026-09-28-1936`, no session: `scenes-base` into `alfonso-frontend-jjtl`, 3 docs commits on the branch side (the report of P-2026-09-28-1025, four demo scenes read identical after the staging merge).
+**Files touched**: merge `b0e4b9f15`: `docs/discovery/discovery_2026-09-28_scenes_after_staging_merge.md`, `docs/log-inbox/simulation.md` (union of the add-only inbox), `docs/prompts/claude_2026-09-28_1025_prompt_scenes_after_staging_merge.md`; this commit: this entry and the Status flip.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs only. Gates on `b0e4b9f15` in the worker: typecheck 14, the receiving tip's set; typecheck:scripts exit 0; vitest 5552 tests in 225 files, 9 red at import, 6 failed (7 before the merge, the known node and checkRange reds plus one flaky under load); build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: docs-only merge, no UI change
+**Notes**: Merged on Alfonso's ok (2026-09-28). Closed by hand: the worker stops on the known vitest reds (ticket P-2026-09-28-2332). Rollback tag `pre-scenes-base` on `fb044365b`. Chat C-2026-09-28-1936.
+**Prompt document name**: 2026-09-28 23:33
