@@ -30,6 +30,14 @@
  * defects; the run-time halts stay the backstop. No action role bound: the run
  * keeps `NO_SIM_ACTIONS`.
  *
+ * Inputs (R-SIM-88, P-2026-09-28-0034): at Reset the input reads of every
+ * transition are folded into `SimRun.inputs`; at a press, `inputAsks` lists
+ * those of the enabled transitions that accept the input, and `pressInput`
+ * returns them instead of committing; the answer comes back as `values`, which
+ * reach guards and actions through an overlay of the state accessor, never σ.
+ * `runStatus` keeps a run that waits for an input `Running`, and the reasons
+ * never explain such an input as blocked.
+ *
  * Derived attributes (lane C2, R-SIM-73..75): their equations are compiled at
  * Reset and, when one is declared, the run gets a `DerivedOracle` that gives
  * the initial σ its derived values and every step its σ′'s; with none the run
@@ -40,7 +48,7 @@
 import type { ExecutionContext } from '../../../jjscript/types';
 import type { JjelValue } from '../../../jjel/evaluator';
 import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../../../model/simulation/netCompile';
-import { candidates, stateAccess, step } from '../../../model/simulation/netStep';
+import { candidates, netRunStatus, stateAccess, step, terminated, tokens } from '../../../model/simulation/netStep';
 import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess } from '../../../model/simulation/guardContext';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import { compileGuard, evaluateGuard } from '../../../model/simulation/guardEvaluator';
@@ -49,14 +57,16 @@ import { actionSiteKey, compileAction, compileActions, judgeActionTarget, makeAc
 import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
 import { compileDerived, makeDerivedOracle } from '../../../model/simulation/derivedEvaluator';
 import { decodeStateAttributes, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
-import { checkActionSubset, checkActionValue, checkGuard, checkTargetName } from '../../../model/simulation/stcChecks';
+import {
+    checkActionSubset, checkActionValue, checkGuard, checkInputTarget, checkTargetName, inputReads, inputTarget,
+} from '../../../model/simulation/stcChecks';
 import type { StcDefect, StcScope } from '../../../model/simulation/stcChecks';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../../../model/simulation/objectSlots';
 import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
 import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, GuardOracle, HaltReason,
-    NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, StateAttributeDecl, StepOutcome,
+    InputRead, NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import { getSimRun, simCommit } from './simRunState';
 import type { SimRun } from './simRunState';
@@ -316,7 +326,7 @@ function actionDefectsOf(
                     if (v) rule(v);
                 };
                 if (target === null) {
-                    const unknown = checkTargetName(c, scope);
+                    const unknown = checkTargetName(c, scope) ?? checkInputTarget(c, scope);
                     if (unknown) rule(unknown);
                     else value();
                     continue;
@@ -329,6 +339,10 @@ function actionDefectsOf(
                 }
                 if (decl.equation !== undefined) {
                     report('read-only', `'${target.attr}' is derived and cannot be assigned`, `assigns derived '${target.attr}'`);
+                    continue;
+                }
+                if (decl.input === true) {
+                    rule(inputTarget(target.attr));
                     continue;
                 }
                 if ((decl.space === 'semantic') === target.onNode) {
@@ -377,6 +391,45 @@ function declarationDefectsOf(defects: readonly DeclarationDefect[], lookup: Loo
 }
 
 /**
+ * R-SIM-88: per transition, the inputs its evaluation reads, folded once at
+ * Reset over the frozen M (`inputReads`): the guards of its sites and of its
+ * `else` siblings' sites, which the core evaluates for the complement, and the
+ * target objects and right sides of its actions. A transition that reads none
+ * has no entry.
+ */
+function inputReadTable(
+    net: CompiledNet, guards: ReadonlyMap<string, CompiledGuard>, table: ReadonlyMap<string, readonly CompiledAction[]>, scope: StcScope,
+): Map<string, InputRead[]> {
+    const byId = new Map(net.transitions.map(t => [t.id, t]));
+    const guardReads = (site: string): InputRead[] => {
+        const expr = guards.get(site)?.expr;
+        return expr ? inputReads(expr, site, scope) : [];
+    };
+    const out = new Map<string, InputRead[]>();
+    for (const t of net.transitions) {
+        const reads: InputRead[] = [];
+        const seen = new Set<string>();
+        const add = (found: readonly InputRead[]) => {
+            for (const r of found) {
+                const key = `${r.element}\u0000${r.attr}`;
+                if (!seen.has(key)) { seen.add(key); reads.push(r); }
+            }
+        };
+        for (const site of t.guardSites) add(guardReads(site));
+        for (const id of t.elseOf ?? []) for (const site of byId.get(id)?.guardSites ?? []) add(guardReads(site));
+        for (const site of t.actionSites) {
+            for (const c of table.get(actionSiteKey(site)) ?? []) {
+                if (c.action === null) continue;
+                add(inputReads(c.action.target.object, site.element, scope));
+                add(inputReads(c.action.value, site.element, scope));
+            }
+        }
+        if (reads.length > 0) out.set(t.id, reads);
+    }
+    return out;
+}
+
+/**
  * The run of an M1 model at Reset. `configModelId` is the metamodel whose bag
  * holds the roles. Refused when the roles do not make an STC or the snapshot
  * cannot be frozen; the overlap check of the roles stays with the panel, which
@@ -415,6 +468,8 @@ export function startRun(
     const actions = actionRoles ? compileActionTable(net, stc, lookup) : new Map<string, CompiledAction[]>();
     // The rules of P2b read M frozen and the declarations of the net (stcChecks.ts).
     const scope: StcScope = { snapshot, net, nameOf: id => elementName(lookup, id) };
+    // The inputs each transition reads (R-SIM-88): only when one is declared, as the derived oracle.
+    const inputs = net.attributes.some(d => d.input === true) ? inputReadTable(net, guards, actions, scope) : undefined;
     return {
         kind: 'started',
         run: {
@@ -426,6 +481,7 @@ export function startRun(
             derived,
             alphabet: eventAlphabet(stc, view, ids).map(e => e.id),
             signature: runSignature(lookup, modelId, configModelId),
+            ...(inputs ? { inputs } : {}),
         },
         compileDefects: [
             ...guardDefectsOf(guards, scope),
@@ -556,7 +612,7 @@ export function haltMessage(reason: HaltReason, lookup: Lookup, features?: Actio
         case 'undeclared':
             return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: '${reason.attr}' is not declared on ${elementName(lookup, reason.element)}.`;
         case 'read-only':
-            return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: '${reason.attr}' is derived and cannot be assigned.`;
+            return `Halted: the ${reason.site.role} action of ${elementName(lookup, reason.site.element)} failed: '${reason.attr}' is ${reason.input ? 'an input' : 'derived'} and cannot be assigned.`;
         case 'derived':
             return `Halted: derived '${reason.attr}' of ${elementName(lookup, reason.element)} failed: ${reason.detail.replace(/^JjelEvaluationError: /, '')}.`;
     }
@@ -787,6 +843,8 @@ function explain(
     run: SimRun, event: string | null, lookup: Lookup, label: InputLabel, guardFeature: string | undefined,
 ): { reason: InputReason; explained: boolean } | null {
     if (run.halt !== null) return null;
+    // An input that asks may have a candidate once answered (R-SIM-88): it is waiting, not blocked.
+    if (inputAsks(run, event).length > 0) return null;
     const cs = candidates(run.net, { state: run.config.state, event }, run.guards);
     if (cs.terminated || cs.candidates.length > 0) return null;
     const access = stateAccess(run.config.state);
@@ -835,6 +893,80 @@ export function stopReason(run: SimRun | undefined, lookup: Lookup, label: Input
 }
 
 // ---------------------------------------------------------------------------
+// Inputs (R-SIM-88)
+// ---------------------------------------------------------------------------
+
+/** The value the environment gave an input for one press. */
+export interface InputValue {
+    readonly element: string;
+    readonly attr: string;
+    readonly value: SimValue;
+}
+
+/**
+ * The inputs a press of `event` (`null` for ε) reads: those of the transitions
+ * that accept it, whose preset is enabled and that no inhibitor blocks, in
+ * compile order, each (element, name) once. `[]` without inputs, on a halted
+ * or terminated run, and wherever none is read: the press is then today's.
+ */
+export function inputAsks(run: SimRun, event: string | null): InputRead[] {
+    if (!run.inputs || run.halt !== null) return [];
+    const state = run.config.state;
+    if (terminated(run.net, state)) return [];
+    const out: InputRead[] = [];
+    const seen = new Set<string>();
+    for (const t of run.net.transitions) {
+        const reads = run.inputs.get(t.id);
+        if (!reads) continue;
+        if (!(event === null ? t.triggers.length === 0 : t.triggers.includes(event))) continue;
+        if (!t.preset.every(a => tokens(state, a.place) >= a.weight)) continue;
+        if (t.inhibitors.some(a => tokens(state, a.place) >= a.weight)) continue;
+        for (const r of reads) {
+            const key = `${r.element}\u0000${r.attr}`;
+            if (!seen.has(key)) { seen.add(key); out.push(r); }
+        }
+    }
+    return out;
+}
+
+/** An input as the dialog and Last step name it: `D.decision`, a global (the model's own) as `answer`. */
+export function inputLabel(read: { readonly element: string; readonly attr: string }, net: Pick<CompiledNet, 'modelId'>, lookup: Lookup): string {
+    return read.element === net.modelId ? read.attr : `${elementName(lookup, read.element)}.${read.attr}`;
+}
+
+/**
+ * The run with its oracles reading `values` for the inputs they name, σ for
+ * everything else. A value for a name that is not an input of its element is
+ * ignored, so an answer never shadows σ. The record is not stored: the values
+ * hold for this press only, and σ′ is built from σ and the assignments alone.
+ */
+function withInputs(run: SimRun, values: readonly InputValue[]): SimRun {
+    const given = new Map<string, SimValue>();
+    for (const v of values) {
+        if (run.net.declared.get(v.element)?.get(v.attr)?.input === true) given.set(`${v.element}\u0000${v.attr}`, v.value);
+    }
+    const over = (s: SimStateAccess): SimStateAccess => ({
+        ...s,
+        read: (element, attr) => {
+            const key = `${element}\u0000${attr}`;
+            return given.has(key) ? given.get(key) : s.read(element, attr);
+        },
+    });
+    return { ...run, guards: (site, e, s) => run.guards(site, e, over(s)), actions: (site, e, s) => run.actions(site, e, over(s)) };
+}
+
+/**
+ * The status of a run as the panel shows it: `netRunStatus`, except that a run
+ * the core finds in `Deadlock` while some input asks is `Running`: a transition
+ * waiting for an input may fire once it is answered (R-SIM-88).
+ */
+export function runStatus(run: SimRun): NetRunStatus {
+    const status = netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+    if (status !== 'Deadlock') return status;
+    return [null, ...run.alphabet].some(e => inputAsks(run, e).length > 0) ? 'Running' : status;
+}
+
+// ---------------------------------------------------------------------------
 // One input
 // ---------------------------------------------------------------------------
 
@@ -846,6 +978,8 @@ export interface InputPress {
     /** Its `title`: the line, then the assignments of the step when it made any (R-SIM-71), then the derived values of σ′ (R-SIM-73). */
     readonly lastStepTitle?: string;
     readonly outcome: StepOutcome | null;
+    /** R-SIM-88: the inputs the press reads and was not given; nothing committed, the panel asks them. */
+    readonly asks?: readonly InputRead[];
 }
 
 /**
@@ -901,27 +1035,36 @@ function lastStepText(outcome: StepOutcome, net: CompiledNet, lookup: Lookup, in
  */
 export function pressInput(
     modelId: string, event: string | null, selector: string | undefined, lookup: Lookup, input: string,
+    values?: readonly InputValue[],
 ): InputPress {
     const run = getSimRun(modelId);
     if (!run) return { pending: null, lastStep: null, outcome: null };
+    // R-SIM-88: what the press reads is asked first; nothing is committed before the answer.
+    if (values === undefined) {
+        const asks = inputAsks(run, event);
+        if (asks.length > 0) return { pending: null, lastStep: null, outcome: null, asks };
+    }
+    const live = values === undefined ? run : withInputs(run, values);
     const cfg = { state: run.config.state, event };
     let chosen: string | null;
     if (selector === undefined) {
-        const cs = candidates(run.net, cfg, run.guards);
+        const cs = candidates(run.net, cfg, live.guards);
         if (cs.candidates.length > 1) return { pending: cs.candidates, lastStep: null, outcome: null };
         chosen = cs.candidates[0]?.transition ?? null;
     } else {
         chosen = selector;
     }
-    const outcome = step(run.net, cfg, chosen, run.guards, run.actions, run.derived);
+    const outcome = step(run.net, cfg, chosen, live.guards, live.actions, run.derived);
     simCommit(modelId, outcome);
-    const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(run, outcome, lookup) : null;
+    const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(live, outcome, lookup) : null;
     const lastStep = lastStepText(outcome, run.net, lookup, input, why);
     const assigned = outcome.label.assignments.map(a => `${elementName(lookup, a.element)}.${a.attr} = ${String(a.value)}`);
+    const asked = (values ?? []).map(v => `${inputLabel(v, run.net, lookup)} = ${String(v.value)}`);
     const derivedValues = outcome.kind === 'fired' ? derivedText(outcome.next.state, lookup) : [];
     const lastStepTitle = [
         lastStep,
         ...(assigned.length === 0 ? [] : [`assignments: ${assigned.join(', ')}`]),
+        ...(asked.length === 0 ? [] : [`inputs: ${asked.join(', ')}`]),
         ...(derivedValues.length === 0 ? [] : [`derived: ${derivedValues.join(', ')}`]),
     ].join('\n');
     return { pending: null, lastStep, lastStepTitle, outcome };

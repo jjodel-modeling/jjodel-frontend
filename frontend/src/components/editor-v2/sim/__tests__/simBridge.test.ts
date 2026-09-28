@@ -13,8 +13,8 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputReason, markingLine, NO_SIM_ACTIONS,
-    panelInputs, pressInput, runSignature, startRun, stopReason,
+    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, markingLine,
+    NO_SIM_ACTIONS, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
@@ -1425,5 +1425,146 @@ describe('roles that are off are read as unbound (P-2026-09-28-0100, R-SIM-78)',
         expect(sm.kind === 'started' && [sm.run.actions === NO_SIM_ACTIONS, sm.run.net.attributes, sm.run.net.activityFinal ?? null]).toEqual([true, [], null]);
         const pn = run(pnLookup({ ...PN_BAG, simProfile: 'petri' }));
         expect(face(pn)).toBe(face(run(pnLookup({ ...without(PN_BAG, ['simInitial', 'simNextState', 'simFork']), simProfile: 'petri' }))));
+    });
+});
+
+describe('R-SIM-88: inputs asked at the press that reads them (P-2026-09-28-0034)', () => {
+    /** S -e1-> D; D -e2 [g2]-> A, D -e3 [g3]-> B; `decision` an input of every State, A and B terminal. */
+    const DECISION = { name: 'decision', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    function decision(g2: string, g3 = 'else', e1Effect?: string, extra: object[] = []): Lookup {
+        const lookup = buildLookup({
+            ...ROLES, simGuard: 'A_guard', simTerminal: 'C_Final', ...(e1Effect ? { simAction: 'A_effect' } : {}),
+            simStateAttributes: JSON.stringify({ v: 1, attrs: [DECISION, ...extra] }),
+        }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+            D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+            A: { cls: 'C_Final' },
+            B: { cls: 'C_Final' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['D'], ...(e1Effect ? { A_effect: [e1Effect] } : {}) } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: [g2] } },
+            e3: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: [g3] } },
+        });
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        return lookup;
+    }
+    /** buildEvalContext's record: handles by id, `next` resolved, every name bound. */
+    const record = () => {
+        const h: Record<string, any> = {};
+        for (const id of ['S', 'D', 'A', 'B', 'e1', 'e2', 'e3']) h[id] = { id, __type: 'Object', name: id };
+        h.e1.next = h.D; h.e2.next = h.A; h.e3.next = h.B;
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', () => record());
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const eps = (lookup: Lookup, values?: Array<{ element: string; attr: string; value: boolean }>, selector?: string) =>
+        pressInput('M', null, selector, lookup, 'ε', values);
+    const answer = (value: boolean) => [{ element: 'D', attr: 'decision', value }];
+    const label = (e: string | null) => (e === null ? 'ε' : e);
+
+    it('the press that reads an input returns the asks and commits nothing (mutant: the ask skipped)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        expect(eps(lookup).lastStep).toBe('ε: e1 (S → D) fired');
+        const before = getSimRun('M')!.config;
+        const version = getSimVersion();
+        const out = eps(lookup);
+        expect(out.asks).toEqual([{ element: 'D', attr: 'decision', domain: { kind: 'boolean' } }]);
+        expect([out.pending, out.lastStep, out.outcome]).toEqual([null, null, null]);
+        expect(getSimRun('M')!.config).toBe(before);
+        expect(getSimVersion()).toBe(version);
+    });
+
+    it('the values reach the guards: true fires e2, false the else e3; σ′ never holds the input (mutants: the overlay unread, the input written into σ)', () => {
+        for (const [value, fired] of [[true, 'ε: e2 (D → A) fired'], [false, 'ε: e3 (D → B) fired']] as const) {
+            const lookup = decision('D.[decision]');
+            reset(lookup);
+            eps(lookup);
+            expect(eps(lookup, answer(value)).lastStep).toBe(fired);
+            const run = getSimRun('M')!;
+            expect(run.config.state.attrs.get('D')).toBeUndefined();
+            expect(markingLine(run.config.state, run.net, lookup).line).toBe(`Marking: ${value ? 'A' : 'B'}`);
+        }
+    });
+
+    it('the title of Last step lists the inputs of the step (mutant: the inputs left out of the title)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, answer(false)).lastStepTitle).toBe('ε: e3 (D → B) fired\ninputs: D.decision = false');
+        expect(inputLabel({ element: 'M', attr: 'answer' }, getSimRun('M')!.net, lookup)).toBe('answer');
+    });
+
+    it('an answer never shadows σ: a value given for a stored name is ignored (mutant: every value overlaid)', () => {
+        const SEEN = { name: 'seen', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' };
+        const lookup = decision('D.[decision] and not model.[seen]', 'else', undefined, [SEEN]);
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, [...answer(true), { element: 'M', attr: 'seen', value: true }]).lastStep).toBe('ε: e2 (D → A) fired');
+    });
+
+    it('several candidates after the answer: the list, then the choice with the same values (mutant: the values dropped on the choice)', () => {
+        const lookup = decision('D.[decision]', 'D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, answer(true)).pending?.map(c => c.transition)).toEqual(['e2', 'e3']);
+        expect(eps(lookup, answer(true), 'e3').lastStep).toBe('ε: e3 (D → B) fired');
+    });
+
+    it('runStatus: Running while an enabled transition waits for an input, where the core alone says Deadlock; Terminated after (mutant: the waiting rule dropped)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        const run = getSimRun('M')!;
+        expect(netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt)).toBe('Deadlock');
+        expect(runStatus(run)).toBe('Running');
+        eps(lookup, answer(true));
+        expect(runStatus(getSimRun('M')!)).toBe('Terminated');
+    });
+
+    it('the reasons: an input that asks is no «no candidate» and no Deadlock reason (mutant: explained as a defect)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        const run = getSimRun('M')!;
+        expect(inputReason(run, null, lookup, label)).toBeNull();
+        expect(stopReason(run, lookup, label)).toBeNull();
+    });
+
+    it('nothing is asked where no enabled transition that accepts the input reads one: today\'s press (mutants: not filtered by the preset, nor by the input)', () => {
+        const lookup = decision('D.[decision]');
+        const r = reset(lookup);
+        expect(r.run.inputs?.get('e2')).toEqual([{ element: 'D', attr: 'decision', domain: { kind: 'boolean' } }]);
+        // the else reads what its siblings read: the core evaluates them for the complement
+        expect(r.run.inputs?.get('e3')).toEqual(r.run.inputs?.get('e2'));
+        expect(inputAsks(getSimRun('M')!, null)).toEqual([]);
+        eps(lookup);
+        expect(inputAsks(getSimRun('M')!, 'coin')).toEqual([]);
+        expect(inputAsks(getSimRun('M')!, null)).toHaveLength(1);
+        // control: no input declared, no table
+        expect(started(buildLookup(ROLES, TURNSTILE)).inputs).toBeUndefined();
+    });
+
+    it('an action that assigns an input: a read-only defect at Reset and a read-only halt that says input (mutant: the checks for derived only)', () => {
+        const lookup = decision('D.[decision]', 'else', 'D.[decision] := true');
+        const r = reset(lookup);
+        expect(r.compileDefects?.filter(d => d.role === 'action').map(d => [d.element, d.reason, d.detail])).toEqual([
+            ['e1', 'read-only', "'decision' is an input and cannot be assigned"],
+        ]);
+        const out = eps(lookup);
+        expect(out.outcome?.kind).toBe('halted');
+        const halt = getSimRun('M')!.halt!;
+        expect(haltMessage(halt, lookup, { action: 'A_effect' })).toBe("Halted: the transition action of e1 failed: 'decision' is an input and cannot be assigned.");
+    });
+
+    it('a target the run resolves whose name only an input has: the same read-only defect at Reset (mutant: left to the run)', () => {
+        const SEEN = { name: 'seen', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' };
+        const lookup = decision('D.[decision]', 'else', '(if model.[seen] then D else S).[decision] := true', [SEEN]);
+        expect(reset(lookup).compileDefects?.filter(d => d.role === 'action').map(d => [d.element, d.reason, d.detail])).toEqual([
+            ['e1', 'read-only', "'decision' is an input and cannot be assigned"],
+        ]);
     });
 });
