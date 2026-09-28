@@ -2293,8 +2293,8 @@ P-2026-09-28-0100 in `docs/log-inbox/simulation.md`; `docs/discovery/discovery_2
   preset, stessi trigger) non è più sempre vero in silenzio: è un difetto elencato al Reset, regola R7 in
   `stcChecks.ts`, con un nuovo letterale di `CompileDefect.reason`. Il run non cambia. Nessuna lettura della demo
   cambia: l'unico `else` dei preset (Flow B variante A, `f4`) ha il fratello `f3`.
-- **R-SIM-88** (2026-09-28, decided by the chat on Alfonso's «decidi tu» 2026-09-28, evidence: measured, verified:
-  none, reversible: branch). **Le variabili di input: una terza forma della riga Data. Emenda R-SIM-7.** Accanto a
+- **R-SIM-88** (2026-09-28, decided by the chat on Alfonso's «decidi tu» 2026-09-28, evidence: measured, verified: none, reversible: branch).
+  **Le variabili di input: una terza forma della riga Data. Emenda R-SIM-7.** Accanto a
   `stored` e `derived`, la forma `input`: un valore scelto dall'ambiente a ogni passo che lo legge (l'IVAR di
   nuXmv), per elemento o globale come ogni dichiarazione, mai in σ, in sola lettura. A una pressione (▶ o un
   evento) il bridge raccoglie gli input letti da guardie e azioni delle transizioni strutturalmente abilitate e,
