@@ -306,3 +306,18 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Prompt document name**: 2026-09-28 22:11
 
 **Ticket** (priority medium, opened here for a follow-up harness lane, accepted by chat C-2026-09-28-1936 at the GO). (1) The `checkRange` test in `frontend/scripts/gates/__tests__/check-addonly.test.ts:201` has no timeout of its own: 3.4 to 3.7 s alone, over the 5000 ms default under full-suite load in 3 of 3 runs, so `npm run test` on the trunk reads 1 failed until it carries an explicit timeout. (2) `e2448cf61` in the range check: the chat's resolution of the open ticket of P-2026-09-28-2001 is a known-repairs list mapping `e2448cf61` -> `447e4239b`.
+
+## 2026-09-28 — fix: the six known vitest reds and the known-repairs list of check:addonly (P-2026-09-28-2332)
+**Prompt**: `claude_2026-09-28_2332_prompt_harness_reds_and_repairs.md`, fast lane, light tier, launched by `lane-run` in `~/jjodel-w-harness2` on `harness-reds-repairs` at `68399c96e`. The six vitest reds every merge worker stopped on (five node-dependent, `checkRange`), and `e2448cf61` refused by `check:addonly --range`: a known-repairs list, RC-34's open ticket.
+**Files touched**: `c2e861e31`: `frontend/scripts/lane-run.mjs` (monitor spawn), `frontend/scripts/gates/__tests__/traceIndex.test.ts`, `traceMonitor.test.ts`. `3c22f4521`: `frontend/scripts/gates/__tests__/check-addonly.test.ts`. `6f43d630b`: `frontend/scripts/gates/check-addonly.ts`, the same test file. This commit: this entry, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-28 20:01
+**Causa**: (c)
+**Regressions**: no. Before, the four files under v23.3.0 on PATH: 133 tests, 6 failed (5 `ERR_UNKNOWN_FILE_EXTENSION ".ts"`, `checkRange` over 5000 ms); under v26.8.1: 1 failed (`checkRange`, 7.0 s). After, full `npx vitest run` under v23.3.0: 5555 tests, 5555 passed, 0 failed, 9 files red at import (the §17 set, `window is not defined`); `scripts/` under v26.8.1 632/632. `typecheck:scripts` exit 0; `check:scripts` PASS 36 files; `check:docs` 4/4; `check:addonly -- --range 65eb5475b..HEAD` exit 0, 47 commits, 1 exempt: `e2448cf61`, known repair of `447e4239b`.
+**Out-of-scope changes**: no. Seven files, above five (rule 19), all in DOVE.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Cause of the five: node 23.3.0 strips no TS types without `--experimental-strip-types` (unflagged from 23.6), and the tests and `lane-run monitor` spawned `.ts` bare. Second cause `(g)`, for the trace tests of P-2026-09-27-1030. `checkRange` read HEAD's first-parent history: pinned to `65eb5475b..3e141466d`. `b7b708d46` amended to `3c22f4521` (a count in its body), nothing built on it. Benches in the commit bodies: 3/3 and 6/6, one equivalent survivor. Session `170177ff`.
+**Prompt document name**: 2026-09-28 23:32
+
+**Ticket** (flaky, low, left by P-2026-09-28-2332): once under v26.8.1, with `traceIndex`, `traceMonitor` and `laneRun` run together, the three `--governance-goahead` tests of `laneRun.test.ts > lane-run merge` failed; not reproduced alone nor in three later runs (the same three files and all of `scripts/` under v26.8.1, the full suite under v23.3.0). The failure text was not captured; cause unknown.
