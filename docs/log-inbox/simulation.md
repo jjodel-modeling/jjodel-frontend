@@ -727,3 +727,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat: the four demo scenes probed on the branch in light theme (port 3036), 71 readings identical to the trunk run of the same evening once pointer ids are normalised (SM 10 steps Terminated; Petri 4 steps Deadlock · ε: t2 false; ESM 10 steps Halted, coins would be 4; Flow B 6 steps Terminated). Alfonso's walk on 3001 still due before the freeze.
 **Notes**: Closed by hand because the worker stops on the pre-existing vitest red and `lane-run go` refuses a blocked merge. Rollback tag `pre-sim-summary-fixes` on `247a93549` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-09-28-2143/result.json`. Chat C-2026-09-28-1936.
 **Prompt document name**: 2026-09-28 21:43
+
+## 2026-09-28 — fix: mixin owner is a warning, not incompatible (R-SIM-89) (P-2026-09-28-2230)
+**Prompt**: `claude_2026-09-28_2230_prompt_sim_mixin_owner.md`, fast lane, light tier: `ActionElement.action` on a mixin (`ProcessNode extends Node, ActionElement`) never showed in the Entry select because `judge()`'s owner-context branch read an unrelated owner as incompatible even with a common concrete subclass. Implements R-SIM-89.
+**Files touched**: discovery `18e63e184`: `docs/discovery/discovery_2026-09-28_sim_mixin_verdicts.md` (new); code `68dbbc1fb`: `frontend/src/model/simulation/bindingCompat.ts` (`judge()`'s owner-context branch, new `Index.hasCommonConcreteSubclass`, header comment), `frontend/src/model/simulation/__tests__/bindingCompat.test.ts` (new `MIXIN` fixture, `describe('owner roles: a mixin owner (R-SIM-89)')`, 3 tests), `frontend/src/model/simulation/__tests__/actionEvaluator.test.ts` (`CLASSES` extended with `C_ActionElement`/`C_ProcessNode`, `describe('Ex3: ...')`, 1 engine test); this commit: this entry, the Status flip.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck`: 14 errors, baseline set, unchanged. `npx vitest run src/model/simulation src/components/editor-v2/sim`: 25 files, 750 passed (746 before the 4 new tests, all green). The verdict table (`bindingVerdicts`) for all four MODELS demo metamodels is byte-identical before and after the fix (discovery report). Red first: the new `bindingCompat.test.ts` case ran against the reverted branch failed with `incompatible` where `warn` was expected, then passed after reapplying.
+**Out-of-scope changes**: no — exactly the files DOVE listed.
+**Layer Impact Report**: not-required — `bindingCompat.ts` is pure data/functions outside the sync/D-L critical zone (its own header comment); no `useJjomSync.ts`, `syncState.ts`, `canvasToJjom.ts`, `portDistribution.ts`, `useM1ReferenceEdges.ts`, `VersionFixer.tsx` or D-layer write path touched.
+**Smoke visivo**: non applicabile — no dev server started this lane; the chat runs the four scene probes.
+**Notes**: Demo exports under `~/jjodel-demo-exports/` are `DProject` records, not the raw idlookup `sketchOfMetamodel` needs; the verdict-table sketches were built from `docs/demo/models_2026_simulator_demo.md` §2.1-2.4 instead (declared deviation, discovery report §Finding 1). None of the four demo metamodels has multiple inheritance, so the new branch is dead code on all of them by construction, confirmed by the diff.
+**Prompt document name**: 2026-09-28 22:30

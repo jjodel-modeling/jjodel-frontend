@@ -97,6 +97,28 @@ const PETRI: MetamodelSketch = {
 
 const PETRI_BAG = { simNode: 'Place', simTransition: 'PTrans', simArc: 'Arc' };
 
+/**
+ * A mixin owner (R-SIM-89): Node and ActionElement (abstract) are unrelated,
+ * ProcessNode extends both and is concrete — a common concrete subclass.
+ * Lonely's feature has no common subclass with Node at all. AbstractCommon
+ * extends Node and MixinBase but is itself abstract, with no concrete
+ * descendant, so MixinBase's feature stays incompatible against Node.
+ */
+const MIXIN: MetamodelSketch = {
+    classes: [
+        C('Node'), C('ActionElement', [], true), C('ProcessNode', ['Node', 'ActionElement']),
+        C('Lonely'), C('MixinBase', [], true), C('AbstractCommon', ['Node', 'MixinBase'], true),
+    ],
+    attributes: [
+        A('ActionElement', 'action', ACT),
+        A('Lonely', 'flag', ACT),
+        A('MixinBase', 'thing', ACT),
+    ],
+    references: [],
+};
+
+const MIXIN_BAG = { simNode: 'Node' };
+
 // ---------------------------------------------------------------------------
 
 describe('output shape', () => {
@@ -316,6 +338,25 @@ describe('attribute roles', () => {
             'Transition.guard': ok, 'Transition.cond': ok, 'Transition.priority': ok, 'Transition.effect': ok,
             'Timed.delay': warn, 'Timed.when': warn, 'Event.code': bad, 'Signal.id': bad, 'Other.flag': bad,
         });
+    });
+});
+
+describe('owner roles: a mixin owner (R-SIM-89)', () => {
+    it('a feature owned by an unrelated class warns when a common concrete subclass exists, with the exact text (killed by leaving it incompatible, or dropping the concrete check)', () => {
+        const v = bindingVerdicts(profile('extendedStateMachine'), MIXIN_BAG, MIXIN);
+        expect(mapOf(v, 'entry')).toMatchObject({ 'ActionElement.action': warn, 'Lonely.flag': bad, 'MixinBase.thing': bad });
+        expect(why(v, 'entry', 'ActionElement.action'))
+            .toBe('ActionElement.action is declared on ActionElement: only Node instances that are also ActionElement carry it');
+    });
+
+    it('no common subclass at all stays incompatible (killed by warning on any unrelated owner)', () => {
+        const v = bindingVerdicts(profile('extendedStateMachine'), MIXIN_BAG, MIXIN);
+        expect(why(v, 'entry', 'Lonely.flag')).toContain('is not a feature of Node');
+    });
+
+    it('an abstract common subclass with no concrete descendant does not count: still incompatible (killed by counting an abstract common subclass)', () => {
+        const v = bindingVerdicts(profile('extendedStateMachine'), MIXIN_BAG, MIXIN);
+        expect(why(v, 'entry', 'MixinBase.thing')).toContain('is not a feature of Node');
     });
 });
 
