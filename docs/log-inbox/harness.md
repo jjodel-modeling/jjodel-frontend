@@ -240,3 +240,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile — harness/CLI change, no app UI
 **Notes**: The reminder is appended once, inside `launch()`, the single point every real claude invocation passes through (start, resume, go, chain); never written into the worktree's prompt file or the chat's message file — a scratch `stdin.md` in the lane folder carries it.
 **Prompt document name**: 2026-09-28 15:45
+
+## 2026-09-28 — merge: lane-outcome-reminder into alfonso-frontend-jjtl (P-2026-09-28-1826)
+**Prompt**: `claude_2026-09-28_1826_prompt_merge_lane-outcome-reminder.md`, a direct merge by `lane-run merge --direct`, no session: `lane-outcome-reminder` at `ca1862b1f` into `alfonso-frontend-jjtl`, merge base `df0487f94`, 3 commits on the branch side.
+**Files touched**: merge `ef8356005`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-09-28_1545_prompt_lane_outcome_reminder.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ef8356005` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5489 tests in 223 files, 9 red at import, hooks 343; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge, no UI change; gates green on the merge
+**Notes**: Rollback tag `pre-lane-outcome-reminder` on `df0487f94` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1826/result.json`.
+**Prompt document name**: 2026-09-28 18:26
