@@ -8,7 +8,8 @@
  * load the panel (the panel imports the joiner). The panel passes
  * `buildEvalContext` and the store's lookup.
  *
- * - `startRun`: at Reset, the STC from the M2 bag (`netStcFromRoles`), the net
+ * - `startRun`: at Reset, the STC from the M2 bag (`netStcFromRoles`) as
+ *   `runBag` resolves it, the keys of the roles that are off dropped, the net
  *   (`compileNet` over `makeNetModelView`), the JjEL context of the model with
  *   `targetMetamodelId` always set (R-SIM-37, the defect of report §8.1 of step 3
  *   must not reach the simulator), frozen once (`freezeSnapshot`), the guards
@@ -52,12 +53,14 @@ import { checkActionSubset, checkActionValue, checkGuard, checkTargetName } from
 import type { StcDefect, StcScope } from '../../../model/simulation/stcChecks';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../../../model/simulation/objectSlots';
+import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
 import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, GuardOracle, HaltReason,
     NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import { getSimRun, simCommit } from './simRunState';
 import type { SimRun } from './simRunState';
+import { storedProfile } from './simRoleStatus';
 
 type Lookup = Record<string, any>;
 
@@ -103,6 +106,24 @@ export function makeNetModelView(lookup: Lookup, eventIdentifier?: string): NetM
         values: (objectId, featureId) => objectSlotValues(lookup, objectId, featureId),
         label: id => objectLabel(lookup, id, eventIdentifier),
     };
+}
+
+/**
+ * The bag a run reads (R-SIM-78): the raw bag without the keys of the roles its
+ * profile turns off, so an `off` role is read exactly as an unbound one, and
+ * with the event class derived from the Trigger unless Event is off (R-SIM-38).
+ * The profile is the one the panel names (`storedProfile`): `simProfile`, else
+ * «Custom» rebuilt from the keys, whose `off` roles are the keys it does not
+ * read. Only `off` is resolved: a derived role with its key set is read as
+ * before. The input is not mutated.
+ */
+export function runBag(raw: Record<string, unknown>, lookup: Lookup): Record<string, unknown> {
+    const { profile } = storedProfile(raw);
+    const bag: Record<string, unknown> = { ...raw };
+    for (const d of ROLE_CATALOG) if (d.key !== null && profile.modes[d.id].mode === 'off') delete bag[d.key];
+    const derived = withDerivedEventRole(bag, lookup);
+    if (profile.modes.event.mode === 'off') delete derived.simEvent;
+    return derived;
 }
 
 /**
@@ -364,9 +385,11 @@ function declarationDefectsOf(defects: readonly DeclarationDefect[], lookup: Loo
 export function startRun(
     lookup: Lookup, modelId: string, configModelId: string | null, projectId: string, build: ContextBuilder,
 ): RunStart {
-    const bag = configModelId ? lookup[configModelId]?._state : undefined;
-    // The event class is the Trigger's type, derived here and never read from the bag (R-SIM-38).
-    const stc = netStcFromRoles(bag ? withDerivedEventRole(bag, lookup) : undefined);
+    const raw = configModelId ? lookup[configModelId]?._state : undefined;
+    // The keys of the roles the profile turns off are not read (R-SIM-78); the event class is
+    // the Trigger's type, derived here and never read from the bag (R-SIM-38).
+    const bag = raw ? runBag(raw, lookup) : undefined;
+    const stc = netStcFromRoles(bag);
     if (!stc) return { kind: 'refused', reason: 'The simulation roles are incomplete.' };
     const ids = collectModelObjectIds(lookup, modelId);
     const view = makeNetModelView(lookup, stc.eventIdentifier);
@@ -433,8 +456,8 @@ export function runSignature(lookup: Lookup, modelId: string, configModelId: str
     let sig = `m${modelId}=${model?.name ?? ''},${model?.instanceof ?? ''};`;
     const raw = configModelId ? lookup[configModelId]?._state : undefined;
     if (raw && typeof raw === 'object') {
-        // The bag the run reads: `simEvent` derived from the Trigger, a stale one ignored (R-SIM-38).
-        const bag = withDerivedEventRole(raw, lookup);
+        // The bag the run reads: the keys of off roles dropped (R-SIM-78), `simEvent` derived from the Trigger, a stale one ignored (R-SIM-38).
+        const bag = runBag(raw, lookup);
         for (const key of Object.keys(bag).filter(k => k.startsWith('sim')).sort()) sig += `${key}=${JSON.stringify(bag[key])};`;
     }
     for (const id of collectModelObjectIds(lookup, modelId)) {
