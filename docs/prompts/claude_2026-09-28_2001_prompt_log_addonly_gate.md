@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-2001
 Chat: C-2026-09-28-1936
 Lane: fast (scripts only: one new gate, its tests, one call in lane-run; no discovery). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane harness · 65b8763a7
 
 Worktree: `~/jjodel-w-addonly`, branch `log-addonly-gate` (cut by the chat from `alfonso-frontend-jjtl` at `247a93549`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-addonly`, branch `log-addonly-gate`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
