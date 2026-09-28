@@ -48,6 +48,7 @@ import { bindingVerdicts } from '../../../model/simulation/bindingCompat';
 import { roleDescriptor } from '../../../model/simulation/roleCatalog';
 import { systemProfile, validateProfile } from '../../../model/simulation/simProfiles';
 import { encodeStateAttributes, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import { declarationForm, formPatch } from './simInputs';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { BindingVerdicts } from '../../../model/simulation/bindingCompat';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
@@ -160,8 +161,8 @@ function patchOf(row: StateAttributeRecord, field: DeclField, typed: string): Pa
         case 'name': return { name: typed.trim() };
         case 'initial': return { initial: typed.trim() };
         case 'equation': return { equation: typed.trim() };
-        // A derived row has no initial (R-SIM-72); back to stored, the equation goes.
-        case 'form': return typed === 'derived' ? { initial: '', equation: row.equation ?? '' } : { equation: undefined };
+        // A derived row has no initial (R-SIM-72); back to stored, the equation goes; an input has neither (R-SIM-88).
+        case 'form': return formPatch(row, typed);
         case 'metaclass': return { metaclass: typed === '' ? null : typed };
         // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed.
         case 'space': return typed === 'presentation' ? { space: 'presentation', domain: null } : { space: 'semantic', domain: row.domain ?? { kind: 'boolean' } };
@@ -190,9 +191,9 @@ interface DeclarationsProps {
 }
 
 /**
- * The declarations as rows of two fixed lines (D9): name, metaclass, stored or
- * derived, remove; space, domain, its bounds or literals, then the initial
- * value or the equation. A text cell commits into the draft on blur or Enter,
+ * The declarations as rows of two fixed lines (D9): name, metaclass, stored,
+ * derived or input (R-SIM-88), remove; space, domain, its bounds or literals,
+ * then the initial value, the equation, or for an input a void cell. A text cell commits into the draft on blur or Enter,
  * a select on change; Escape drops the cell's edit; focusing a text cell
  * selects its text, so a prefilled cell is replaced by typing.
  */
@@ -253,7 +254,9 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
                 const n = i + 1;
                 const semantic = r.space !== 'presentation';
                 const kind = r.domain?.kind ?? '';
-                const derived = r.equation !== undefined;
+                const form = declarationForm(r);
+                const derived = form === 'derived';
+                const input = form === 'input';
                 return (
                     <div className="sim-roles-modal__decl" key={i}>
                         <div className="sim-roles-modal__decl-line sim-roles-modal__decl-line--first">
@@ -271,11 +274,12 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
                             <select
                                 className="sim-roles-modal__select"
                                 aria-label={`Stored or derived, state attribute ${n}`}
-                                value={derived ? 'derived' : 'stored'}
+                                value={form}
                                 onChange={e => choose(i, 'form', e.target.value)}
                             >
                                 <option value="stored">stored</option>
                                 <option value="derived">derived</option>
+                                <option value="input">input</option>
                             </select>
                             <button
                                 type="button"
@@ -292,12 +296,14 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
                                 className="sim-roles-modal__select"
                                 aria-label={`Space of state attribute ${n}`}
                                 value={semantic ? 'semantic' : 'presentation'}
+                                disabled={input}
                                 onChange={e => choose(i, 'space', e.target.value)}
                             >
                                 <option value="semantic">semantic</option>
                                 <option value="presentation">presentation</option>
                             </select>
-                            {/* Presentation has no domain: the cells stay, hidden, so the row keeps its layout. */}
+                            {/* Presentation has no domain: the cells stay, hidden, so the row keeps its layout. An input is
+                                semantic (R-SIM-88): its space select is off. */}
                             <select
                                 className={`sim-roles-modal__select${semantic ? '' : ' sim-roles-modal__hidden'}`}
                                 aria-label={`Domain of state attribute ${n}`}
@@ -321,10 +327,13 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
                             ) : (
                                 <span className="sim-roles-modal__decl-void" title={semantic ? 'Only for range and enum' : 'Presentation has no domain'} />
                             )}
-                            {/* The equation takes the place of the initial value, in the same cell (R-SIM-76). */}
-                            {derived
-                                ? text(i, 'equation', r.equation ?? '', `Equation of state attribute ${n}, a JjEL expression`, 'equation', 'value')
-                                : text(i, 'initial', r.initial, `Initial value of state attribute ${n}, a JjEL literal`, 'initial', 'value')}
+                            {/* The equation takes the place of the initial value, in the same cell (R-SIM-76); an input
+                                has neither, and the cell stays void so the row keeps its layout (R-SIM-88). */}
+                            {input
+                                ? <span className="sim-roles-modal__decl-void sim-roles-modal__decl-void--value" title="An input has no initial value: it is asked at each step that reads it" />
+                                : derived
+                                    ? text(i, 'equation', r.equation ?? '', `Equation of state attribute ${n}, a JjEL expression`, 'equation', 'value')
+                                    : text(i, 'initial', r.initial, `Initial value of state attribute ${n}, a JjEL literal`, 'initial', 'value')}
                         </div>
                     </div>
                 );
