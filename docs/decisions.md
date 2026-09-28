@@ -2307,6 +2307,13 @@ P-2026-09-28-0100 in `docs/log-inbox/simulation.md`; `docs/discovery/discovery_2
   dopo il 2026-10-04. Conseguenza sulla demo: il select della forma nel passo 3 della scena ESM offre anche
   `input`, e il copione va allineato.
 
+### Decisions 2026-09-28 (evening): mixin owners in the roles dialog (R-SIM-89)
+
+Evidence: proposal of the observer chat C-2026-09-25-1353 (2026-09-28), root cause read on the trunk in `model/simulation/bindingCompat.ts` (`judge`, the owner-context branch) and `SimRolesModal.tsx` (S10 hides incompatible candidates). Ratified by Alfonso in the chat C-2026-09-28-1936. Part 2 of the same proposal (Entry, Exit and Action multi-valued) is accepted on the merits and deferred until after the MODELS demo; its row is written when the amended text (the Guard) is attached.
+
+- **R-SIM-89** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: read, verified: none, reversible: branch).
+  **A feature declared on a sibling owner is a warning, not an incompatibility. Amends the S11a verdicts of `judge`.** For every feature role with an owner context (entry, exit, action, guard, stateOutput, transitionOutput, source, nextState, trigger, the arc roles, eventIdentifier and any other role with an `OWNER` entry), when the context class C and the feature's owner O are unrelated but have a common concrete subclass (a non-abstract S with isKind(S, C) and isKind(S, O)), the verdict is `warn`, with the text «<O.f> is declared on <O>: only <C> instances that are also <O> carry it». It stays `incompatible` when no common concrete subclass exists (an abstract common subclass with no concrete descendant does not count: no instance could carry the feature). Rationale: the same partial coverage as the subclass case, already a warning; multiple inheritance is how a metamodel expresses a mixin, and the STC binds to the metamodel as it is. Conditions of the ratification: the engine treats an instance whose class lacks the bound feature as as it already treats one in the subclass case (for Entry, Exit and Action: no assignments), proven by a test and not assumed; the verdicts of every candidate of every role on the four demo metamodels are identical before and after. Enters the MODELS build before the freeze of 2026-10-01.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
