@@ -2085,6 +2085,49 @@
         border-top: none;
     }
 
+    /* #158 P4 — a target link with its key fields under the name. The link keeps
+       every rule of `&__inline-link`; the text block stacks the two lines and may
+       shrink (`min-width: 0`), so a long value ellipses instead of pushing the icon
+       out of the card. */
+    &__ref-link { text-align: left; }
+
+    &__ref-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    &__ref-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Muted, and it STAYS muted on hover: the accent says «this opens», which is the
+       name's job, not the summary's. */
+    &__ref-summary {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 10px;
+        overflow: hidden;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+        white-space: nowrap;
+    }
+
+    &__ref-summary-item {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* The field name, in the eyebrow's register: it labels, the value informs. */
+    &__ref-summary-key {
+        margin-right: 4px;
+        color: var(--color-form-section);
+    }
+
     /* ── The containment outline (10b) ─────────────────────────────────────────
        Mock 1b of `Q8 Catalogo vs Outline.dc.html`: 12px rows, a 12px genre icon,
        the metaclass in mono at the right, «+» in accent. The 14px inset and the

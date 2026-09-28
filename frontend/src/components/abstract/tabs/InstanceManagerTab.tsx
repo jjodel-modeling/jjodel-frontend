@@ -54,7 +54,9 @@ import {
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
 import { appendValue } from '../../editor-v2/viewpoint/ir/formWrite';
 import { autoLayoutRows, inputFromDraftField } from '../../editor-v2/viewpoint/ir/formAutoLayout';
-import { computeIRSignature, getIRIndex } from '../../editor-v2/viewpoint/ir/irResolveCore';
+import { computeIRSignature, getIRIndex, resolveIRView } from '../../editor-v2/viewpoint/ir/irResolveCore';
+import { makeDrawReadCtx } from '../../editor-v2/viewpoint/ir/irReadCtx';
+import { resolveFormSpec } from '../../editor-v2/viewpoint/ir/formHosts';
 import { resolveTableSpec } from '../../editor-v2/viewpoint/ir/tableViews';
 import { EmptyState } from '../../ui';
 import { ResizeHandle } from '../../ResizeHandle';
@@ -134,12 +136,14 @@ import {
     orderColumns,
     pageCount,
     pageOf,
+    referenceSummary,
     shownColumnsWith,
     tableColumns,
     tableRow,
     toCsv,
     type ColumnOverrides,
     type Discriminant,
+    type SummaryItem,
     type TableCell,
     type TableRow,
 } from './instanceTable';
@@ -1397,7 +1401,14 @@ function PaneCollapse({ label, onCollapse }: { label: string; onCollapse: () => 
 /** One non-containment reference slot of an instance, as the form's reference
  *  section lists it (#142): what it points at, and why «New … & link» is not offered
  *  when it is not. */
-type RefSlot = { ref: RefShape; targets: string[]; count: number; createReason: string | null };
+type RefSlot = {
+    ref: RefShape;
+    targets: string[];
+    count: number;
+    createReason: string | null;
+    /** #158 P4 — the key fields of each target, by target id (`referenceSummary`). */
+    summaries: Record<string, SummaryItem[]>;
+};
 
 /**
  * The reference sections of ONE form (#142), extracted by #158 P3 so the subject and
@@ -1429,18 +1440,41 @@ function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate }: {
                             {slot.ref.of} [{slot.count}/{slot.ref.upper === -1 ? '*' : slot.ref.upper}]
                         </span>
                     </h3>
-                    {slot.targets.map(targetId => (
-                        <button
-                            type="button"
-                            className="instance-manager__inline-link"
-                            key={targetId}
-                            title="Open the referenced element — edits the shared instance"
-                            onClick={() => onOpen(targetId, slot.ref.key)}
-                        >
-                            {crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null })}
-                            <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
-                        </button>
-                    ))}
+                    {slot.targets.map(targetId => {
+                        const summary = slot.summaries[targetId] ?? [];
+                        const summaryText = summary.map(s => `${s.label}: ${s.text}`).join(' · ');
+                        return (
+                            <button
+                                type="button"
+                                className="instance-manager__inline-link instance-manager__ref-link"
+                                key={targetId}
+                                title={'Open the referenced element — edits the shared instance'
+                                    + (summaryText ? '\n' + summaryText : '')}
+                                onClick={() => onOpen(targetId, slot.ref.key)}
+                            >
+                                {/* #158 P4 — the name, and under it what the target IS:
+                                    its key fields, so telling D01 from D05 does not take
+                                    opening both. Inside the button: the whole card opens
+                                    the element, as the name alone did. */}
+                                <span className="instance-manager__ref-text">
+                                    <span className="instance-manager__ref-name">
+                                        {crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null })}
+                                    </span>
+                                    {summary.length > 0 && (
+                                        <span className="instance-manager__ref-summary">
+                                            {summary.map(s => (
+                                                <span className="instance-manager__ref-summary-item" key={s.key}>
+                                                    <span className="instance-manager__ref-summary-key">{s.label}</span>
+                                                    {s.text}
+                                                </span>
+                                            ))}
+                                        </span>
+                                    )}
+                                </span>
+                                <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                            </button>
+                        );
+                    })}
                     {slot.targets.length === 0 && (
                         <p className="instance-manager__note">No {slot.ref.of} linked yet.</p>
                     )}
@@ -2338,13 +2372,39 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             if (ref.readOnly || ref.derived) createReason = 'Read-only reference';
             else if (full) createReason = `Slot full [${count}/${ref.upper}]`;
             else createReason = newInstanceReason(shapeAll.classes[ref.of], countsByName[ref.of] ?? 0);
-            return { ref, targets, count, createReason };
+            const summaries: Record<string, SummaryItem[]> = {};
+            for (const t of targets) summaries[t] = summaryOf(t);
+            return { ref, targets, count, createReason, summaries };
         }).filter(s => s.targets.length > 0 || s.createReason === null);
+    };
+
+    /** #158 P4 — the D-side read context the target's view predicate is evaluated
+     *  with: the one the table's cells already come from (`tableRow`). */
+    const summaryReadCtx = useMemo(() => makeDrawReadCtx(idlookup ?? {}), [idlookup]);
+
+    /**
+     * #158 P4 — the key fields of one referenced element.
+     *
+     * The target's CONCRETE class (an `ofId` may be abstract: `Goal` points at a
+     * `CompetencyGoal`), its row as the table would print it, and the `FormSpec` of
+     * its own view in the Data Manager's viewpoint — the one its form opens with
+     * (`IRForm host="manager"`), through the same host override. Read only:
+     * `resolveIRView` and `resolveFormSpec` are called here as `resolveTableSpec` is
+     * above, and nothing under `viewpoint/ir/` changes.
+     */
+    const summaryOf = (targetId: string): SummaryItem[] => {
+        const shapeAll = shapeCtx.shape();
+        const clsName = shapeCtx.classOf(targetId);
+        const cls = clsName ? shapeAll.classes[clsName] ?? null : null;
+        if (!cls) return [];
+        const compiled = irIndex ? resolveIRView(targetId, cls.id, irIndex, summaryReadCtx, idlookup) : null;
+        const form = resolveFormSpec(compiled?.formSpec ?? undefined, 'manager');
+        return referenceSummary(cls, tableRow(idlookup, targetId, cls, shapeAll), form);
     };
 
     const refSlots = useMemo(
         () => (formSubjectId && shapeCtx ? refSlotsOf(formSubjectId) : [] as RefSlot[]),
-        [idlookup, formSubjectId, shapeCtx, countsByName],
+        [idlookup, formSubjectId, shapeCtx, countsByName, irIndex, summaryReadCtx],
     );
 
     /** #158 P3 — the same sections for each inline child, by child id. Empty past the
@@ -2355,7 +2415,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         if (!shapeCtx || !rendersInline(formDepth)) return out;
         for (const slot of inlineChildren) for (const id of slot.ids) out[id] = refSlotsOf(id);
         return out;
-    }, [inlineChildren, formDepth, idlookup, shapeCtx, countsByName]);
+    }, [inlineChildren, formDepth, idlookup, shapeCtx, countsByName, irIndex, summaryReadCtx]);
 
     /** Se il «+» va offerto affatto: la metaclasse ha almeno una feature di
      *  contenimento (il modello, almeno una rootable). Una lettura di shape, non
