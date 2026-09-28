@@ -186,3 +186,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Priority**: low
 **Found in**: P-2026-09-27-2330
 **Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 3)
+
+## 2026-09-28 — merge: harness-trace into alfonso-frontend-jjtl (P-2026-09-28-1324)
+**Prompt**: `claude_2026-09-28_1324_prompt_merge_harness-trace.md`, a direct merge by `lane-run merge --direct`, no session: `harness-trace` at `5038c7cd2` into `alfonso-frontend-jjtl`, merge base `6c69783cf`, 2 commits on the branch side.
+**Files touched**: merge `c4bb0e0af`: 2 files from the branch side (`docs/discovery/discovery_2026-09-27_trace_monitor.md`, `docs/prompts/claude_2026-09-27_1030_prompt_trace_monitor_discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c4bb0e0af` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5436 tests in 221 files, 9 red at import, hooks 333; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge, no UI change; gates green
+**Notes**: Rollback tag `pre-harness-trace` on `3e141466d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1324/result.json`.
+**Prompt document name**: 2026-09-28 13:24
