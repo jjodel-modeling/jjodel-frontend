@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-1025
 Chat: C-2026-09-27-1437
 Lane: fast (read-only measurement; saved report, no code change). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane fast · `69f7dbea1` (discovery report) · quattro scene identiche a `888ea9a9d`, docking ok su entrambe le tab, nessun bisect necessario
 
 Worktree: `/Users/alfonso/jjodel-w-scenes`, branch `scenes-base`, created from trunk tip `447e4239b`, `frontend/node_modules` symlinked (P14). Before anything else run `pwd` and `git branch --show-current`: if the answer is not that worktree on `scenes-base`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-28-1025 · session <id>]` and ends with an `Outcome:` line (P16). Run probes in the foreground.
 
