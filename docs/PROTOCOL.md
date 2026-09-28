@@ -428,6 +428,8 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
 - **Parallel by default (RC-22).** Two lanes start together when the three checks of RC-22 pass. When one fails,
   the chat names it and queues the lane with its merge position fixed. Semantic conflicts are resolved on the
   branch first (RC-14).
+- **The `Chat:` line (RC-33).** A chat acts on a Prompt-ID only when the prompt's `Chat:` line carries its own ID; `—` or another chat's ID means stop, name the owner, ask Alfonso. `lane-run merge` gets `--chat <id>` every time.
+- **Add-only gate (RC-34).** `npm run check:addonly [<rev>] [--range <a>..<b>]` refuses a commit that changes or drops an entry of the add-only logs outside rotation and batch closure; `lane-run merge` runs it on every merge commit. A hand repair carries `Log-Repair: <sha>`.
 
 ---
 

@@ -269,6 +269,10 @@ merge lane P-2026-09-27-2327.
   was set by that chat at the GO of `P-2026-09-27-2330`, under that ratification, and is to be confirmed in the
   morning digest (RC-25). Measure: `docs/discovery/discovery_2026-09-27_lane_efficiency.md` §7, where `--model` coexists
   with the pin and wins and a resume keeps the session's model.
+- **RC-33** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: trunk):
+  **A chat acts only on its own Prompt-IDs.** Every chat declares an ID `C-YYYY-MM-DD-HHmm` at its start and writes it in the `Chat:` line of every prompt it writes. Before acting on a Prompt-ID (launch, resume, GO, merge, closure), a chat reads the `Chat:` line of that prompt: when it is another chat's ID or `—`, it does not act, names the owner and asks Alfonso, who may assign the prompt to it. A merge rendered by `lane-run merge` carries the launching chat's ID through `--chat`. Trigger: the merge `P-2026-09-28-2211` of `log-addonly-gate`, launched at 22:11 without `--chat` by an unidentified actor, adopted by `C-2026-09-28-1936` on Alfonso's word.
+- **RC-34** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: measured, verified: agent, reversible: trunk):
+  **The add-only logs are checked by whole entries at every merge.** `npm run check:addonly` (P-2026-09-28-2001, merged `d3dbacb36`) compares a commit with its first parent: every entry of `docs/claude-code-log.md`, `docs/claude-code-log-archive.md` and `docs/log-inbox/*.md` must reappear byte-identical and contiguous in the same file, in the archive (rotation) or in the log (batch closure). A deliberate hand repair carries the trailer `Log-Repair: <sha of the incident>`. `lane-run merge` runs it on the merge commit and rolls back on a violation. Trigger: the staging merge `447e4239b`, repaired in `e2448cf61`. Open tickets: `e2448cf61` predates the trailer (a known-repairs list), and the timing of the `checkRange` test.
 
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
