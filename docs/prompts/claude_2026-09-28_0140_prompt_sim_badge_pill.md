@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-0140
 Chat: C-2026-09-27-1437
 Lane: two-phase (Phase 1 discovery read-only with a saved report, hard stop; Phase 2 only after the chat's GO)
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane sim-badge-pill · 67659beb4 · verifica visiva in attesa (Alfonso; crops ~/.jjodel-lanes/shots_badge/warn_after/)
 
 Worktree: `~/jjodel-w-badge`, branch `sim-badge-pill` (cut by the chat from `alfonso-frontend-jjtl` at `d861cc922`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-badge`, branch `sim-badge-pill`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
