@@ -546,6 +546,12 @@ describe('the declarations hint (R-SIM-81, G9)', () => {
         expect(profileSummaryText(s, nameOf).declare).toBeNull();
     });
 
+    it('an unreadable declarations value shows nothing, not the hint for an empty one (S8; killed by treating unreadable as empty)', () => {
+        const s = profileSummary(ESM, { simAction: 'A_effect', simStateAttributes: 'not json' }, TURN);
+        expect(s.declareHint).toBe(false);
+        expect(profileSummaryText(s, nameOf).declare).toBeNull();
+    });
+
     it('no hint with no action role bound (killed by showing the hint without Action, Entry or Exit)', () => {
         const s = profileSummary(ESM, {}, TURN);
         expect(s.declareHint).toBe(false);

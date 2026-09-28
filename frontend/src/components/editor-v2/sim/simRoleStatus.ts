@@ -420,6 +420,8 @@ export function profileSummary(
     const after: Record<string, unknown> = { ...bag };
     for (const p of proposals) after[p.key] = p.value;
     const verdict = profileVerdict(profile, after, sketch);
+    // Unreadable (D6) shows nothing, not the hint for an empty declaration (S8).
+    const stateRows = stateAttributeRows(isSetKey(after, STATE_ATTRIBUTES_KEY) ? after[STATE_ATTRIBUTES_KEY] as string : undefined);
     const choices: ProfileChoice[] = [];
     const kept: ProfileKept[] = [];
     const setButOff: string[] = [];
@@ -446,8 +448,7 @@ export function profileSummary(
         kept,
         setButOff,
         pending: bindings !== null && (proposals.length > 0 || bag[PROFILE_KEY] !== encodeProfile(profile)),
-        declareHint: ACTION_KEYS.some(k => isSetKey(after, k))
-            && stateAttributeRows(isSetKey(after, STATE_ATTRIBUTES_KEY) ? after[STATE_ATTRIBUTES_KEY] as string : undefined).rows.length === 0,
+        declareHint: ACTION_KEYS.some(k => isSetKey(after, k)) && stateRows.readable && stateRows.rows.length === 0,
     };
 }
 

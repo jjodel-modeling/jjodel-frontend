@@ -415,7 +415,9 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const match = matchLine(bindings);
     const help = boundHelp(proposals);
     // The actions write state attributes and none is declared: the first firing would halt (R-SIM-81(3), G9).
-    const declareHint = ['simAction', 'simEntry', 'simExit'].some(k => typeof after[k] === 'string' && after[k] !== '') && rows.length === 0;
+    // Unreadable (D6) shows nothing, not the hint for an empty declaration (S8); a draft's rows are always readable.
+    const rowsReadable = declRows !== null || storedRows.readable;
+    const declareHint = ['simAction', 'simEntry', 'simExit'].some(k => typeof after[k] === 'string' && after[k] !== '') && rowsReadable && rows.length === 0;
     const pending = Object.keys(patch).length > 0;
     const pristine = preset === initialPreset && draftProfile === null && Object.keys(edits).length === 0 && declRows === null && !matchOff;
 
