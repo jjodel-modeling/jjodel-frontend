@@ -87,3 +87,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Notes**: Probe copied read-only from P-2026-09-27-2105, one fresh page per scene, EXIT=0, one known console error each. SM 10 steps, Terminated. Petri Bound 4 (proposed, stored), 4 steps, Deadlock · ε: t2 false. ESM 10 steps, Halted, `Halted: coins of demoESM would be 4, outside its domain.` whole on 2 rows (41px slot, scroll = client). Flow B 6 steps, Terminated. 3029 stopped, 3001 not restarted. Logs in `~/.jjodel-lanes/P-2026-09-27-2327/`.
 **Prompt document name**: 2026-09-27 23:27
 **Ticket** (priority low, opened here). `npm run docs:digest -- --date 2026-09-27` exits 2 on R-SIM-85's header: its parenthesis does not close on the header line (pre-existing, not edited here). RC-31 parses.
+
+## 2026-09-29 — docs(views): discovery, deriving a viewpoint from a metamodel into the view IR (P-2026-09-29-0111)
+**Prompt**: `claude_2026-09-29_0111_prompt_discovery_viewpoint_derivation.md`, read-only discovery on `~/jjodel-w-viewgen` branch `viewpoint-derivation`: can a deterministic derivation (metamodel plus role binding into one IR view per concrete class, Phase 2, no Jjodie) be built now, additively, and with which plan.
+**Files touched**: this commit only: `docs/discovery/discovery_2026-09-29_viewpoint_derivation.md` (new), this entry, the prompt's Status line. Probes gitignored under `frontend/scripts/smoke/_tmp_viewgen_*`, data in `/tmp/viewgen/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no product code written; `git status` shows only the three docs files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — read-only; no §3.1 file written
+**Smoke visivo**: non applicabile
+**Notes**: Prototype on the four demos: 22 views, validateIR 22/22, edges 5/5 by structure alone, 179 deterministic fields with roles (8.1 per view), 53 left to Jjodie. Exports hold no role binding, rebuilt with bindProfile. Hand-written IR views found only in 3 ERD exports of 780. Two decisions for Alfonso and three questions in report §0. The prompt's `frontend/src/ai/` does not exist: Jjodie was read in `services/` and `components/Jodie/`.
+**Prompt document name**: 2026-09-29 01:11
