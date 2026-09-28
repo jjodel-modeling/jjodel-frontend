@@ -688,3 +688,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat probes on `e259b94ec`, port 3035, light: SM 10 steps Terminated, Petri 4 steps Deadlock (ε: t2 false), ESM 10 steps Halted (coins 4), Flow B 6 steps Terminated, identical to the trunk; the input dialog opens on DecisionNode_0.decision, Escape leaves the run, false fires Flow_2, the run terminates
 **Notes**: No hunk had the two sides contradict: each resolved file differs from each parent by exactly the other side's delta (numstat in the body of e259b94ec). stcChecks.ts: checkElse, then the R-SIM-88 functions; the reasons gain 'else-alone' and 'read-only'. Both test files: the trunk's R7 describe, then the branch's R-SIM-88 one. Trunk counts measured read-only in ~/jjodel-release (--no-cache, status identical). The merge carries docs and code, the RC-14 exception.
 **Prompt document name**: 2026-09-28 18:37
+
+## 2026-09-28 — merge: sim-input-variables into alfonso-frontend-jjtl (P-2026-09-28-1914)
+**Prompt**: `claude_2026-09-28_1914_prompt_merge_sim-input-variables.md`, a direct merge by `lane-run merge --direct`, no session: `sim-input-variables` at `2230df5f1` into `alfonso-frontend-jjtl`, merge base `7b3e1cae0`, 11 commits on the branch side.
+**Files touched**: merge `680af3bb2`: 26 files from the branch side (`docs/discovery/discovery_2026-09-28_sim_input_variables.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-28_0034_prompt_sim_input_variables.md`, `docs/prompts/claude_2026-09-28_1837_prompt_sim-input-variables_take_trunk.md`, `docs/spec/claude_spec_2026-09-13_computational_model.md`, `frontend/src/components/editor-v2/sim/SimInputDialog.scss`, `frontend/src/components/editor-v2/sim/SimInputDialog.tsx`, `frontend/src/components/editor-v2/sim/SimRolesModal.scss`, and 18 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `680af3bb2` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5520 tests in 224 files, 9 red at import, hooks 343; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat probes on e259b94ec (the branch tree, identical code to this merge), port 3035, light theme: the four demo scenes identical to the trunk, the input dialog end to end; merged before the freeze by Alfonso (R-SIM-88 amended)
+**Notes**: Rollback tag `pre-sim-input-variables` on `016a03e86` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1914/result.json`.
+**Prompt document name**: 2026-09-28 19:14
