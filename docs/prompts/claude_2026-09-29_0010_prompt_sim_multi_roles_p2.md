@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0010
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2, simulation engine across modules and the roles dialog, tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-multi-roles-p2 · c6e28f893, 1bb05b781, 2fbb1fa97, 9ab66e047 · non fuso: hard-stop, crop in docs/discovery/harness/_tmp_multi_*.png (gitignored), le quattro scene le sonda la chat
 
 Worktree: `~/jjodel-w-multi2`, branch `sim-multi-roles-p2` (cut by the chat from `alfonso-frontend-jjtl` at `024d95345`, after the merge of `sim-outputs-accepting`; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-multi2`, branch `sim-multi-roles-p2`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
