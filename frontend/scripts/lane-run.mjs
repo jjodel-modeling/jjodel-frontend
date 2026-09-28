@@ -1664,9 +1664,29 @@ async function directRun(idArg) {
                 res.gates.push({ name, ok: code === 0, detail: 'exit ' + code });
             }
         }
-        res.ok = res.gates.every((g) => g.ok);
-        res.outcome = res.ok ? 'hard-stop' : 'blocked';
-        if (!res.ok) res.reason = 'red gates: ' + res.gates.filter((g) => !g.ok).map((g) => g.name).join(', ') + '; the merge commit stays';
+        // check:addonly, apart from GATES above: unlike a red typecheck/vitest/build/etc, which
+        // leaves the merge commit for inspection, a merge commit that rewrites an add-only log
+        // (docs/claude-code-log.md, its archive, a lane inbox) must never persist even for
+        // debugging, so a violation resets the trunk to the pre-merge tip already recorded for the
+        // rollback tag (plan.trunkTip / plan.branchTip) rather than leaving it in place.
+        const addonly = run('check:addonly', frontend, ['run', 'check:addonly']);
+        const addonlyOk = addonly.code === 0;
+        res.gates.push({ name: 'check:addonly', ok: addonlyOk, detail: addonlyOk ? 'exit 0' : 'exit ' + addonly.code + ' — rewrites the add-only log' });
+
+        if (!addonlyOk) {
+            const preMergeTip = plan.mode === 'into' ? plan.trunkTip : plan.branchTip;
+            git(plan.top, ['reset', '--hard', preMergeTip]);
+            res.merge = null;
+            res.ok = false;
+            res.outcome = 'blocked';
+            const offending = addonly.text.split('\n').filter((l) => l.trim() !== '').slice(0, 30).join(' | ');
+            res.reason = 'check:addonly refused the merge commit; reset ' + (plan.mode === 'into' ? plan.trunk : plan.branch) +
+                ' to its pre-merge tip ' + preMergeTip + '. ' + offending;
+        } else {
+            res.ok = res.gates.every((g) => g.ok);
+            res.outcome = res.ok ? 'hard-stop' : 'blocked';
+            if (!res.ok) res.reason = 'red gates: ' + res.gates.filter((g) => !g.ok).map((g) => g.name).join(', ') + '; the merge commit stays';
+        }
     } catch (err) {
         res.reason = err && err.message ? err.message : String(err);
     }
