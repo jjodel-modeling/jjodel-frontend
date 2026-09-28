@@ -199,3 +199,18 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: passato — chat, unattended: docs-only merge, no UI change; gates green
 **Notes**: Rollback tag `pre-harness-trace` on `3e141466d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1324/result.json`.
 **Prompt document name**: 2026-09-28 13:24
+
+## 2026-09-28 — feat(harness): trace index and lane monitor, stage 1 (P-2026-09-27-1030)
+**Prompt**: `claude_2026-09-27_1030_prompt_trace_monitor_discovery.md`, Phase 2 (stage 1), full lane, GO of 2026-09-28 in the resumed session on the answers of `docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md` point 4 (Q1-Q4, T1 with the RC-27 change). Branch fast-forwarded to `e54999b0b` first.
+**Files touched**: `ee84361f3`: `frontend/scripts/lane-run.mjs` (`keepInput` in `launch()`), `frontend/scripts/hooks/__tests__/laneRun.test.ts` (+2). `7d2c53599`: `frontend/scripts/gates/trace-index.ts`, `trace-monitor.ts`, `__tests__/traceIndex.test.ts`, `__tests__/traceMonitor.test.ts` (new), `lane-run.mjs` (`monitor`), `laneRun.test.ts` (+2), `frontend/package.json` (`trace:index`). This commit: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest scripts/gates and scripts/hooks 569 at `e54999b0b`, 602 at `7d2c53599`; typecheck:scripts exit 0; check:scripts PASS (34 files); check:docs 4/4; no build (no `src/` file). Mutation bench: Q3 4 of 5 killed, stage 1 16 of 17 (survivors in the commit bodies). Real run: `lane-run monitor --no-open` on 3008, `/health` 200, foreign Host 403, live `lanes` events, a second start refused; 0.9 s CPU per 20 s, RSS 206 MB.
+**Out-of-scope changes**: no — nine files over two code commits, all named by the GO (steps 2 and 3).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no app UI; the monitor page was served (200, 7881 bytes) and not looked at
+**Notes**: `trace:index` on the trunk tree (`e54999b0b`) and `~/.jjodel-lanes`, 2.1 s, two runs byte-identical. Nodes 2694: chat 24, check 88, commit 758, decision 225, lane 102, logEntry 1344, prompt 153. Edges 1474: cites 601, citesDecision 148, closedBy 129, corrects 22, decidedIn 104, foundIn 27, measures 88, openedBy 143, reports 114, runs 98. Misses 267: commit 152, decision 29, lane 4, logEntry 39, prompt 43. No P16 line: `docs/PROTOCOL.md` is a governance file and would stop `merge --direct`.
+**Prompt document name**: 2026-09-27 10:30
+
+**Ticket** (recurrence of «docs:digest stops on the wrapped header of R-SIM-85»): at `e54999b0b` `npm run docs:digest` exits 2 again, now on R-SIM-88 (`docs/decisions.md:2296`, the parenthesis does not close on the header line). `trace:index` reports it as a decision miss and reads the other rows. The class wants a gate on the register, not a fix per row.
