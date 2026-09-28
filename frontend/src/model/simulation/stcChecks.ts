@@ -16,6 +16,11 @@
  *   target's domain.
  * - R6: a guard that is a `.[x]` read of a non-boolean declaration.
  *
+ * R-SIM-88 (P-2026-09-28-0034) adds, beside the rules, what the bridge asks
+ * before a step: `inputReads`, the input reads of an expression folded as R2
+ * folds; and `checkInputTarget`, a target the run resolves whose name only an
+ * input has (a folded one is the bridge's, as for a derived target).
+ *
  * Every rule is a certainty before the run: the texts are those the run would
  * give when it meets the same text. What depends on σ or the event stays the
  * run's to halt on (R-SIM-70), and a guard or an action judged here is still
@@ -34,10 +39,10 @@ import type { SimSnapshot } from './guardContext';
 import { checkGuardSubset } from './subsetChecker';
 import { inDomain } from './netStep';
 import type { CompiledAction, FoldedTarget } from './actionEvaluator';
-import type { ActionSite, CompiledNet, Domain, SimValue } from './netTypes';
+import type { ActionSite, CompiledNet, Domain, InputRead, SimValue } from './netTypes';
 
 /** The reasons of a rule, a subset of the bridge's `CompileDefect['reason']`. */
-export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value';
+export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value' | 'read-only';
 
 export interface StcDefect {
     readonly reason: StcDefectReason;
@@ -242,4 +247,56 @@ export function checkActionValue(c: CompiledAction, site: ActionSite, target: Fo
         reason: 'value', detail: `${target.attr} of ${scope.nameOf(target.element)} would be ${String(v.value)}, outside its domain`,
         short: `${target.attr} = ${String(v.value)}, outside its domain`,
     };
+}
+
+/** R-SIM-88: the defect of an assignment to an input, whichever way the target is known. */
+export function inputTarget(attr: string): StcDefect {
+    return { reason: 'read-only', detail: `'${attr}' is an input and cannot be assigned`, short: `assigns input '${attr}'` };
+}
+
+/**
+ * R-SIM-88 on a target the run resolves (it reads σ or the event): when every
+ * declaration of its name is an input, the assignment can only halt `read-only`.
+ */
+export function checkInputTarget(c: CompiledAction, scope: StcScope): StcDefect | null {
+    if (c.action === null) return null;
+    const attr = c.action.target.attribute;
+    const decls = scope.net.attributes.filter(d => d.name === attr);
+    return decls.length > 0 && decls.every(d => d.input === true) ? inputTarget(attr) : null;
+}
+
+/**
+ * R-SIM-88: the input reads of one expression attached to `site`, in pre-order,
+ * each (element, name) once. A read whose object folds (no σ, no event, no bound
+ * variable) names the element it folds to, and counts when that element declares
+ * the name as an input; any other read of an input's name counts every element
+ * that declares it as an input, since the run may read any of them. `node.[x]`
+ * is presentation, never an input; an input without a domain is a declaration
+ * defect and is not asked.
+ */
+export function inputReads(expr: JjelExpression, site: string, scope: StcScope): InputRead[] {
+    const names = new Set(scope.net.attributes.filter(d => d.input === true).map(d => d.name));
+    if (names.size === 0) return [];
+    const out: InputRead[] = [];
+    const seen = new Set<string>();
+    const add = (element: string, attr: string) => {
+        const decl = scope.net.declared.get(element)?.get(attr);
+        if (decl?.input !== true || decl.domain === null) return;
+        const key = `${element}\u0000${attr}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push({ element, attr, domain: decl.domain });
+    };
+    walk(expr, NONE, (e, bound) => {
+        if (e.type !== 'StateAccess' || !names.has(e.attribute)) return;
+        if (e.object.type === 'Identifier' && e.object.name === STATE_RESERVED.presentationRoot) return;
+        if (folds(e.object, bound)) {
+            const object = fold(e.object, site, scope.snapshot);
+            const id = object?.ok ? elementId(object.value) : null;
+            if (id !== null) add(id, e.attribute);
+            return;
+        }
+        for (const element of scope.net.declared.keys()) add(element, e.attribute);
+    });
+    return out;
 }

@@ -762,3 +762,15 @@ describe('lane C2: derived attributes in the step (P-2026-09-27-0200, R-SIM-73)'
         expect(stateAccess(state).read('e', 'glow')).toBeUndefined();
     });
 });
+
+describe('R-SIM-88: an input is read-only in the step (P-2026-09-28-0034)', () => {
+    const ASK: StateAttributeDecl = { name: 'ask', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    const net = mkNet([tr('t', { a: 1 }, { b: 1 })], { declared: { M: [ASK] } });
+
+    it('an action on an input halts read-only, marked input, before any write, σ unchanged (mutant: only a derived target is read-only)', () => {
+        const c = cfg({ a: 1 });
+        const out = step(net, c, 't', NO_GUARDS, actionsBy({ 'transition:t': () => [{ element: 'M', attr: 'ask', value: true }] }));
+        expect(out.kind === 'halted' && out.reason).toEqual({ kind: 'read-only', site: { element: 't', role: 'transition' }, element: 'M', attr: 'ask', input: true });
+        expect(out.kind === 'halted' && out.next.state).toBe(c.state);
+    });
+});
