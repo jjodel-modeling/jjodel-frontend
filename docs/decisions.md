@@ -2281,6 +2281,30 @@ validatore (`derivedFromOff`) resta com'è.
   sono identiche a P-2026-09-28-0023 (misurate su 3033). Restano sul bag grezzo i lettori fuori dal run (il
   pannello, l'esplorazione del Bound, il produttore P2a): ticket della corsia.
 
+### Decisioni 2026-09-28 (pomeriggio): `else` senza fratelli e variabili di input (R-SIM-87, R-SIM-88)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_checker_gap.md` §12 punto 1 e la voce di ticket 2 di
+P-2026-09-28-0100 in `docs/log-inbox/simulation.md`; `docs/discovery/discovery_2026-09-28_sim_input_variables.md`
+(branch `sim-input-variables`) §0, §5, §6. Risposte di Alfonso in chat il 2026-09-28:
+`docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md`.
+
+- **R-SIM-87** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: read, verified: none, reversible: branch).
+  **Un `else` senza fratelli è un difetto. Emenda R-SIM-31(1).** Un arco `else` senza archi fratelli (stesso
+  preset, stessi trigger) non è più sempre vero in silenzio: è un difetto elencato al Reset, regola R7 in
+  `stcChecks.ts`, con un nuovo letterale di `CompileDefect.reason`. Il run non cambia. Nessuna lettura della demo
+  cambia: l'unico `else` dei preset (Flow B variante A, `f4`) ha il fratello `f3`.
+- **R-SIM-88** (2026-09-28, decided by the chat on Alfonso's «decidi tu» 2026-09-28, evidence: measured, verified:
+  none, reversible: branch). **Le variabili di input: una terza forma della riga Data. Emenda R-SIM-7.** Accanto a
+  `stored` e `derived`, la forma `input`: un valore scelto dall'ambiente a ogni passo che lo legge (l'IVAR di
+  nuXmv), per elemento o globale come ogni dichiarazione, mai in σ, in sola lettura. A una pressione (▶ o un
+  evento) il bridge raccoglie gli input letti da guardie e azioni delle transizioni strutturalmente abilitate e,
+  se ce ne sono, li chiede in un solo dialogo prima di impegnare il passo; Annulla lascia il run com'è. Un passo
+  ha quindi tre ingressi: evento, selettore, valutazione degli input. Un'azione che scrive un input ferma il run
+  (`read-only`). Per tenere una risposta visibile nella riga Marking basta un'azione esplicita su un attributo
+  `stored`; nessuna copia automatica in σ. Respinte le opzioni (b) e (c), che emenderebbero R-SIM-16 e R-SIM-17.
+  Le fette S1-S3 si costruiscono sul branch `sim-input-variables` e si fondono dopo la demo di Málaga
+  (2026-10-04); il freeze del 2026-10-01 non si tocca e la demo non mostra decisioni a runtime.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
