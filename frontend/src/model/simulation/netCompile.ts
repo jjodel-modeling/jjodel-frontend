@@ -43,7 +43,7 @@ function readBound(raw: unknown): number | null | undefined {
     return Number.isInteger(n) && n >= 1 ? n : null;
 }
 
-const ROLE_KEYS: ReadonlyArray<[Exclude<keyof NetStc, 'shape' | 'bound'>, string]> = [
+const ROLE_KEYS: ReadonlyArray<[Exclude<keyof NetStc, 'shape' | 'bound' | 'guards' | 'actions' | 'entries' | 'exits'>, string]> = [
     ['node', 'simNode'], ['transition', 'simTransition'], ['initial', 'simInitial'],
     ['initialMarking', 'simInitialMarking'], ['terminal', 'simTerminal'], ['activityFinal', 'simActivityFinal'],
     ['ownedTransitions', 'simOwnedTransitions'], ['source', 'simSource'], ['nextState', 'simNextState'],

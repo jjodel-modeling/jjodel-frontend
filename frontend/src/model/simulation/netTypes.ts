@@ -148,6 +148,15 @@ export interface NetStc {
     readonly action?: string;
     readonly entry?: string;
     readonly exit?: string;
+    /**
+     * R-SIM-90: every attribute bound to Guard, Action, Entry and Exit, in bag order; the field
+     * above is the first of the list. Absent when the role is unbound. A hand-built STC may carry
+     * the first alone, so the readers go through `featuresOf` (netCompile.ts).
+     */
+    readonly guards?: readonly string[];
+    readonly actions?: readonly string[];
+    readonly entries?: readonly string[];
+    readonly exits?: readonly string[];
     readonly arc?: string;
     readonly arcSource?: string;
     readonly arcTarget?: string;
