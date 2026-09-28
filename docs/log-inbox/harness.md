@@ -214,3 +214,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Prompt document name**: 2026-09-27 10:30
 
 **Ticket** (recurrence of «docs:digest stops on the wrapped header of R-SIM-85»): at `e54999b0b` `npm run docs:digest` exits 2 again, now on R-SIM-88 (`docs/decisions.md:2296`, the parenthesis does not close on the header line). `trace:index` reports it as a decision miss and reads the other rows. The class wants a gate on the register, not a fix per row.
+
+## 2026-09-28 — merge: harness-trace into alfonso-frontend-jjtl (P-2026-09-28-1543)
+**Prompt**: `claude_2026-09-28_1543_prompt_merge_harness-trace.md`, a direct merge by `lane-run merge --direct`, no session: `harness-trace` at `58d168441` into `alfonso-frontend-jjtl`, merge base `e54999b0b`, 3 commits on the branch side.
+**Files touched**: merge `19f8ae493`: 9 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-09-27_1030_prompt_trace_monitor_discovery.md`, `frontend/package.json`, `frontend/scripts/gates/__tests__/traceIndex.test.ts`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`, `frontend/scripts/gates/trace-index.ts`, `frontend/scripts/gates/trace-monitor.ts`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `19f8ae493` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5483 tests in 223 files, 9 red at import, hooks 337; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge, no UI change; gates green on the merge
+**Notes**: Rollback tag `pre-harness-trace-P-2026-09-28-1543` on `2e401d51c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1543/result.json`.
+**Prompt document name**: 2026-09-28 15:43
