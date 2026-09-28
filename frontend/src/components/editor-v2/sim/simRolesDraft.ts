@@ -29,17 +29,17 @@
 import { ROLE_CATALOG, ROLE_IDS, roleDescriptor } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
 import {
-    EVENT_FROM_TRIGGER, OTHER_SHAPE_GROUP, checkability, isSystemProfileId, requiredRoles, systemProfile,
+    EVENT_FROM_TRIGGER, OTHER_SHAPE_GROUP, isSystemProfileId, requiredRoles, systemProfile,
 } from '../../../model/simulation/simProfiles';
 import type { BindingVerdict, ProfileDefect, RequiredItem, RoleMode, SimProfile } from '../../../model/simulation/simProfiles';
 import type { RoleCompatibility } from '../../../model/simulation/bindingCompat';
 import { encodeProfile } from '../../../model/simulation/profileCodec';
-import type { ProfileBindings } from '../../../model/simulation/profileBinder';
+import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import { withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
-import { PROFILE_KEY, profileSummary } from './simRoleStatus';
+import { PROFILE_KEY, profileSummary, profileVerdict } from './simRoleStatus';
 import type { ProfileProposal } from './simRoleStatus';
 import type { BoundEstimate } from './modelMarkings';
 
@@ -243,9 +243,13 @@ export interface DraftStatus {
     readonly missing: readonly string[];
 }
 
-/** `checkability` on the bag as Apply would leave it, with the binding verdicts when given. */
-export function draftStatus(input: DraftInput, verdicts?: Readonly<Partial<Record<RoleId, BindingVerdict>>>): DraftStatus {
-    const c = checkability(input.profile, draftBag(input), verdicts);
+/**
+ * `profileVerdict` on the bag as Apply would leave it, the S11a verdicts
+ * counted when the sketch is given: the panel's badge reads the same function
+ * (P-2026-09-28-0140).
+ */
+export function draftStatus(input: DraftInput, sketch?: MetamodelSketch | null): DraftStatus {
+    const c = profileVerdict(input.profile, draftBag(input), sketch);
     return { status: c.status, missing: c.missing.map(itemLabel) };
 }
 

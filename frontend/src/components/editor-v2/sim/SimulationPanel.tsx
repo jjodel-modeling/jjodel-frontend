@@ -36,7 +36,7 @@ import { buildEvalContext } from '../../../jjscript';
 import { getSimRun, simClear, simReset, simSetPending } from './simRunState';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
-    profilePatch, profileSummary, profileSummaryText, storedProfile,
+    profileBindings, profilePatch, profileSummary, profileSummaryText, storedProfile,
 } from './simRoleStatus';
 import {
     candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputReason, makeNetModelView, markingLine, panelInputs,
@@ -48,7 +48,6 @@ import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
-import { bindProfile } from '../../../model/simulation/profileBinder';
 import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
 import { systemProfile } from '../../../model/simulation/simProfiles';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
@@ -256,9 +255,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     /** The stored profile is one of the select's presets; otherwise the select shows it as the current state. */
     const storedPreset = !stored.custom && stored.profile.system && PANEL_PROFILE_IDS.some(id => id === stored.profile.id);
     const selected: SimProfile = (chosen ? systemProfile(chosen) : undefined) ?? stored.profile;
-    // «Custom» is bound against nothing: no proposals, no Apply (D7).
+    // «Custom» is bound against nothing: no proposals, no Apply (D7); a user profile is, as in the dialog (profileBindings).
     const bindings: ProfileBindings | null = useMemo(
-        () => (selected.system && sketch ? bindProfile(selected, sketch) : null),
+        () => profileBindings(selected, sketch),
         [selected, sketch],
     );
     // The Bound proposal (R-SIM-81, G2): the largest initial marking on the models, read only while the panel is open.
@@ -282,9 +281,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             : null),
         [markingSig, configModelId, boundBag],
     );
+    // The verdict with the S11a verdicts, the dialog's pill's (profileVerdict, P-2026-09-28-0140).
     const summary = useMemo(
-        () => profileSummary(selected, profileBag, bindings, largestMarking),
-        [selected, profileBag, bindings, largestMarking],
+        () => profileSummary(selected, profileBag, bindings, largestMarking, sketch),
+        [selected, profileBag, bindings, largestMarking, sketch],
     );
 
     // R-SIM-5: the run-state is per model. Clearing on modelid change and on
@@ -482,7 +482,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             <div className="sim-panel__summary">
                 <div className="sim-panel__summary-status" title={summary.pending ? `${text.status}. ${APPLY_NOTE}` : text.status}>
                     <span className="sim-panel__summary-name">{`${summary.name} · `}</span>
-                    <span className={`sim-panel__badge sim-panel__badge--${summary.status === 'checkable' ? 'checkable' : 'not-checkable'}`}>
+                    <span className={`sim-panel__badge sim-panel__badge--${summary.status === 'notCheckable' ? 'not-checkable' : summary.status}`}>
                         {text.badge}
                     </span>
                     {summary.pending && <span className="sim-panel__summary-after"> after Apply</span>}
