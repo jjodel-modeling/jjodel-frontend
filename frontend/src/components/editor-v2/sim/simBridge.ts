@@ -38,6 +38,12 @@
  * `runStatus` keeps a run that waits for an input `Running`, and the reasons
  * never explain such an input as blocked.
  *
+ * The globals of a model (R-SIM-94): the model's own bag carries the same key
+ * for them; `startRun` merges it over the metamodel's (`mergeDeclarations`),
+ * drops it when the profile turns the declarations off, as `runBag` drops the
+ * metamodel's, and labels its defects as the model's; `runSignature` covers
+ * the model's `sim*` keys, so an edit of them interrupts the run.
+ *
  * Derived attributes (lane C2, R-SIM-73..75): their equations are compiled at
  * Reset and, when one is declared, the run gets a `DerivedOracle` that gives
  * the initial σ its derived values and every step its σ′'s; with none the run
@@ -56,7 +62,7 @@ import type { CompiledGuard, GuardDefectReason, GuardOutcome } from '../../../mo
 import { actionSiteKey, compileAction, compileActions, judgeActionTarget, makeActionOracle } from '../../../model/simulation/actionEvaluator';
 import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
 import { compileDerived, makeDerivedOracle } from '../../../model/simulation/derivedEvaluator';
-import { decodeStateAttributes, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
+import { decodeStateAttributes, mergeDeclarations, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
 import {
     checkActionSubset, checkActionValue, checkElse, checkGuard, checkInputTarget, checkTargetName, inputReads, inputTarget,
 } from '../../../model/simulation/stcChecks';
@@ -134,6 +140,21 @@ export function runBag(raw: Record<string, unknown>, lookup: Lookup): Record<str
     const derived = withDerivedEventRole(bag, lookup);
     if (profile.modes.event.mode === 'off') delete derived.simEvent;
     return derived;
+}
+
+/**
+ * The model's own bag as a run reads it (R-SIM-94): its `sim*` keys, the
+ * declarations dropped when the metamodel's profile turns them off, as `runBag`
+ * drops the metamodel's key (R-SIM-78). `configRaw` is the metamodel's raw bag.
+ * The input is not mutated.
+ */
+export function modelRunBag(lookup: Lookup, modelId: string, configRaw: Record<string, unknown> | undefined): Record<string, unknown> {
+    const own = lookup[modelId]?._state;
+    const bag: Record<string, unknown> = {};
+    if (!own || typeof own !== 'object') return bag;
+    for (const key of Object.keys(own)) if (key.startsWith('sim')) bag[key] = own[key];
+    if (storedProfile(configRaw ?? {}).profile.modes.stateAttributes.mode === 'off') delete bag[STATE_ATTRIBUTES_KEY];
+    return bag;
 }
 
 /**
@@ -440,9 +461,13 @@ const EQUATION_CODES: ReadonlySet<DeclarationDefectCode> = new Set<DeclarationDe
  * its text for the title only (R-SIM-62); a subset defect is its code in the
  * line; a value at Reset names its element, `cnet.total`, never the id.
  */
-function declarationDefectsOf(defects: readonly DeclarationDefect[], lookup: Lookup, attributes: readonly StateAttributeDecl[] = []): CompileDefect[] {
+function declarationDefectsOf(
+    defects: readonly DeclarationDefect[], lookup: Lookup, attributes: readonly StateAttributeDecl[] = [], bag: 'metamodel' | 'model' = 'metamodel',
+): CompileDefect[] {
+    // The model's key (R-SIM-94) says so: its records are numbered in its own key, not after the metamodel's.
+    const own = bag === 'model' ? 'model ' : '';
     return defects.map((d): CompileDefect => {
-        const element = d.code === 'key' ? 'state attributes' : d.name ?? `record ${(d.index ?? 0) + 1}`;
+        const element = d.code === 'key' ? `${own}state attributes` : d.name ?? `${own}record ${(d.index ?? 0) + 1}`;
         const source = EQUATION_CODES.has(d.code) && d.index !== null ? attributes[d.index]?.equation ?? '' : '';
         if (d.code === 'derived') {
             const where = d.element === undefined ? element : `${elementName(lookup, d.element)}.${element}`;
@@ -511,7 +536,11 @@ export function startRun(
     // The declarations (R-SIM-67, R-SIM-68): an absent key is the empty set, any other value is decoded.
     const stored = bag?.[STATE_ATTRIBUTES_KEY];
     const declarations = decodeStateAttributes(stored === undefined || stored === null ? undefined : String(stored));
-    const plain = compileNet(stc, view, modelId, ids, declarations.decls);
+    // The model's globals (R-SIM-94), over the metamodel's by name; dropped with the metamodel's when the profile turns them off.
+    const own = modelRunBag(lookup, modelId, raw)[STATE_ATTRIBUTES_KEY];
+    const modelDeclarations = decodeStateAttributes(own === undefined || own === null ? undefined : String(own));
+    const merged = mergeDeclarations(declarations, modelDeclarations);
+    const plain = compileNet(stc, view, modelId, ids, merged.decls);
     const globals = build(evalContextFor(lookup, modelId, projectId), { extentModelId: modelId });
     let snapshot: SimSnapshot;
     try {
@@ -549,7 +578,10 @@ export function startRun(
             ...guardDefectsOf(guards, scope),
             ...elseDefectsOf(net, featuresOf(stc, 'guard'), lookup),
             ...actionDefectsOf(net, actions, snapshot, lookup, scope),
-            ...declarationDefectsOf([...declarations.defects, ...(net.declarationDefects ?? [])], lookup, net.attributes),
+            ...declarationDefectsOf(declarations.defects, lookup),
+            ...declarationDefectsOf([...modelDeclarations.defects, ...merged.defects], lookup, [], 'model'),
+            // The compiler's indices are the merged list's, which is the net's.
+            ...declarationDefectsOf(net.declarationDefects ?? [], lookup, net.attributes),
         ],
     };
 }
@@ -564,7 +596,7 @@ function ptrs(v: unknown): string {
 
 /**
  * The content a run depends on (R-SIM-34): the model itself (name, metaclass),
- * the `sim*` keys of the metamodel's bag, the model's objects with every slot,
+ * the `sim*` keys of the metamodel's bag and of the model's (R-SIM-94), the model's objects with every slot,
  * and the metamodel part of `buildValidationSignature`
  * (problems/validationFreshness.ts), since guards read class and feature names.
  * Not layout, not other models: moving a node or editing another model of the
@@ -579,6 +611,9 @@ export function runSignature(lookup: Lookup, modelId: string, configModelId: str
         const bag = runBag(raw, lookup);
         for (const key of Object.keys(bag).filter(k => k.startsWith('sim')).sort()) sig += `${key}=${JSON.stringify(bag[key])};`;
     }
+    // The model's own keys (R-SIM-94), as the run reads them: its declarations dropped when the profile turns them off.
+    const own = modelRunBag(lookup, modelId, raw && typeof raw === 'object' ? raw : undefined);
+    for (const key of Object.keys(own).sort()) sig += `model.${key}=${JSON.stringify(own[key])};`;
     for (const id of collectModelObjectIds(lookup, modelId)) {
         const o = lookup[id];
         sig += `o${id}=${o.instanceof ?? ''},${o.name ?? ''};`;
@@ -792,6 +827,26 @@ export function defectsTitle(net: CompiledNet, lookup: Lookup, compileDefects: r
         ...compileDefects.map(d => `${defectSubject(d, lookup)}: ${d.detail}${d.source === '' ? '' : ` [${d.source}]`}`),
     ];
     return lines.length === 0 ? null : lines.join('\n');
+}
+
+/**
+ * The names the Reset line finds undeclared that the model's Data… can declare
+ * (R-SIM-94): a name no declaration has (`undeclared 'x'`, a guard's or an
+ * action's), or one undeclared on the model itself (`undeclared 'x' on <model>`),
+ * each once, in the line's order. A name undeclared on another element is bound
+ * to a metaclass, the metamodel's to declare, and is not listed. Read from the
+ * one-line forms of `stcChecks.ts` and `actionDefectsOf`, which carry no name field.
+ */
+export function undeclaredGlobals(defects: readonly CompileDefect[], lookup: Lookup, modelId: string): string[] {
+    const model = elementName(lookup, modelId);
+    const out: string[] = [];
+    for (const d of defects) {
+        if (d.reason !== 'undeclared' || d.short === undefined) continue;
+        const m = /^undeclared '([^']+)'(?: on (.+))?$/.exec(d.short);
+        if (!m || (m[2] !== undefined && m[2] !== model)) continue;
+        if (!out.includes(m[1])) out.push(m[1]);
+    }
+    return out;
 }
 
 export interface PanelInputs {
