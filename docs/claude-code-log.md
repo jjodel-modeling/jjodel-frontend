@@ -31,6 +31,19 @@ Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 ## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)
 **Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.
 **Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.
+## 2026-09-28 — docs(#157): triage del feedback di test di @tmaog + piano di rimedio
+**Prompt**: Tommaso ha testato le nuove feature e riportato sulla issue #157 esiti e problemi; fare un piano per risolverli.
+**Files touched**: `docs/discovery/discovery_2026-09-28_157_triage_feedback_tmaog.md` (nuovo), `docs/claude-code-log.md`. Nessun file di codice.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-24 14:00
+**Causa**: (d)
+**Regressions**: no — analisi read-only, nessun sorgente toccato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna modifica di codice.
+**Smoke visivo**: non applicabile
+**Notes**: I 4 sintomi MAGGIORI (Configurator bianco, hidden non nasconde, New su read-only, profili assenti al riapri) sono **UN** guasto: config/profilo non risolti a runtime ⇒ `resolveTypePermission(null,…)` = `'edit'`. Il trim LeftBar/Navbar regge perché dipende solo da `?profile=`. FALSIFICATA l'ipotesi della raggiungibilità: `U.compressedState` serializza tutto l'idlookup. R0 discrimina: progetto non salvato (M1) vs config duplicata da `getOrCreate` (M2). F4b rinviata dopo R1.
+**Prompt document name**: 2026-09-28 (chat)
+
 ## 2026-09-24 — feat(#157): «Copy stand-alone link» per profilo (Fase 4a)
 **Prompt**: «procede con la prossima fase» → F4, diviso in F4a (link, procedo ora) e F4b (assegnazione profilo→utente, tocca D/L → semantica da confermare).
 **Files touched**: `frontend/src/utils/shareUtils.ts`, `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Referto discovery + questa entry in commit docs separato (§6.4/P13).
