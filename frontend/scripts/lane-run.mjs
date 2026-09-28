@@ -208,6 +208,21 @@ const PROBE_SERVE_MS = 60000;
 const PROBE_STOP_MS = 5000;
 const PROBE_POLL_MS = 250;
 
+// RC-20/RC-21 (CLAUDE.md 21.2, docs/PROTOCOL.md P16): the reminder closingInput
+// appends to every text a lane reads on stdin, so the last thing a session reads
+// before acting is the closing contract. Amended 2026-09-28 (P-2026-09-28-1545)
+// after three lane sessions closed without it: the rule has to travel with every
+// input, not wait to be read.
+const CLOSE_REMINDER =
+    '---\n' +
+    'Close your final message (hard stop, question, closing report) with one line `Outcome: done | hard-stop | question | blocked`: exactly one of those four words, nothing else on that line (RC-20). A question with a recommendation also carries one line `Recommended: <one line>` (RC-21). The `**Outcome**` field of a log entry is not this line.\n';
+
+/** `text` with CLOSE_REMINDER appended once; unchanged if it already ends with it. */
+function withCloseReminder(text) {
+    if (text.trimEnd().endsWith(CLOSE_REMINDER.trimEnd())) return text;
+    return (text.endsWith('\n') ? text : text + '\n') + '\n' + CLOSE_REMINDER;
+}
+
 // The detached run: claude with the input file on stdin, stdout appended to the
 // log, then its exit code written atomically, so status never reads half a file.
 const WRAPPER =
@@ -308,13 +323,30 @@ function keepInput(f, input) {
     writeFileSync(join(f.dir, 'input-' + (n + 1) + '.md'), readFileSync(input));
 }
 
+/**
+ * The file `launch` feeds on stdin: `input` unchanged for a non-file (the
+ * /dev/null of a direct-run merge), else its text with CLOSE_REMINDER appended,
+ * written to a scratch file in the lane folder so the worktree's prompt file and
+ * any message file the chat passed are never written to.
+ */
+function closingInput(f, input) {
+    if (!existsSync(input) || !statSync(input).isFile()) return input;
+    const text = readFileSync(input, 'utf8');
+    const withReminder = withCloseReminder(text);
+    if (withReminder === text) return input;
+    const path = join(f.dir, 'stdin.md');
+    writeFileSync(path, withReminder);
+    return path;
+}
+
 function launch(f, claude, cwd, input, args, goAhead = null) {
     if (existsSync(f.exit)) unlinkSync(f.exit);
-    keepInput(f, input);
+    const stdin = closingInput(f, input);
+    keepInput(f, stdin);
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
     if (goAhead) env.JJODEL_CRITICAL_ZONE_GOAHEAD = goAhead;
     else delete env.JJODEL_CRITICAL_ZONE_GOAHEAD;
-    const child = spawn('/bin/sh', ['-c', WRAPPER, 'lane-run', input, f.log, f.err, f.exit, claude, ...args], {
+    const child = spawn('/bin/sh', ['-c', WRAPPER, 'lane-run', stdin, f.log, f.err, f.exit, claude, ...args], {
         cwd,
         env,
         detached: true,
