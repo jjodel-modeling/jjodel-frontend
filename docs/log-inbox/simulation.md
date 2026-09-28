@@ -575,3 +575,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: 24 items (S1-S24). Wave 1: `sim-binding-compat` (the only disjoint code lane) and six Phase 1 discoveries. Wave 2 split into 2a (after E1, whose two code commits exist) and 2b (after E2). E2's DOVE swaps two paths: `modelMarkings.ts` is under `sim/`, `stcFromRoles.ts` under `model/simulation/`. E1/E2 read from branch refs with `git show`. One closure commit as the prompt asks, not the inbox alone.
 **Prompt document name**: 2026-09-27 16:25
+
+## 2026-09-28 — merge: simulation-engine into alfonso-frontend-jjtl (P-2026-09-28-1300)
+**Prompt**: `claude_2026-09-28_1300_prompt_merge_simulation-engine.md`, a direct merge by `lane-run merge --direct`, no session: `simulation-engine` at `f205a80d6` into `alfonso-frontend-jjtl`, merge base `2b1b346da`, 2 commits on the branch side.
+**Files touched**: merge `3e141466d`: 3 files from the branch side (`docs/discovery/discovery_2026-09-27_sim_backlog_lanes.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-27_1625_prompt_discovery_sim_backlog_lanes.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3e141466d` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5436 tests in 221 files, 9 red at import, hooks 333; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge, no UI change; gates green; the union inbox checked verbatim against both parents
+**Notes**: Rollback tag `pre-simulation-engine` on `e2448cf61` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1300/result.json`.
+**Prompt document name**: 2026-09-28 13:00
