@@ -338,7 +338,7 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(res.ok).toBe(true);
         expect(res.merge).toBe(gitIn(l, repo, ['rev-parse', 'HEAD']));
         expect(res.tag).toBe('pre-feat');
-        expect(res.gates.map((g: { name: string }) => g.name)).toEqual(['typecheck', 'typecheck:scripts', 'vitest', 'build', 'check:docs', 'check:agents', 'check:scripts']);
+        expect(res.gates.map((g: { name: string }) => g.name)).toEqual(['typecheck', 'typecheck:scripts', 'vitest', 'build', 'check:docs', 'check:agents', 'check:scripts', 'check:addonly']);
         expect(res.gates.every((g: { ok: boolean }) => g.ok)).toBe(true);
         expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
         const s = laneRun(l, ['status', NEW_ID]);
@@ -430,6 +430,28 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(res.gates.find((g: { name: string }) => g.name === 'check:scripts').ok).toBe(true);
         expect(gitIn(r.l, r.repo, ['log', '-1', '--format=%s'])).toBe(`merge: feat into trunk (${NEW_ID})`);
         expect(laneRun(r.l, ['status', NEW_ID]).stdout).toContain('outcome: Outcome: blocked');
+    });
+
+    test('kills "check:addonly ignored", "the merge commit kept on an addonly violation", "a second rollback path invented": check:addonly red resets the trunk to its pre-merge tip, unlike every other gate', () => {
+        const r = repoLab();
+        expect(directMerge(r, { FAKE_RED: 'check:addonly' }).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(laneDir(r.l), 'exit.txt'), 'utf8').trim()).toBe('1');
+        const res = result(r.l);
+        expect(res.outcome).toBe('blocked');
+        expect(res.merge).toBe(null);
+        expect(res.gates.find((g: { name: string }) => g.name === 'check:addonly').ok).toBe(false);
+        expect(res.gates.find((g: { name: string }) => g.name === 'build').ok).toBe(true);
+        expect(res.reason).toContain('reset');
+        expect(res.reason).toContain(r.trunkTip);
+        const { l, repo } = r;
+        // The reset lands on the SAME tip the rollback tag already recorded (RC-31): no
+        // second rollback mechanism, and the prompt-file commit is undone with it.
+        expect(gitIn(l, repo, ['rev-parse', 'HEAD'])).toBe(r.trunkTip);
+        expect(gitIn(l, repo, ['rev-parse', 'pre-feat'])).toBe(r.trunkTip);
+        expect(existsSync(join(repo, MERGE_FILE))).toBe(false);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(laneRun(l, ['status', NEW_ID]).stdout).toContain('outcome: Outcome: blocked');
     });
 
     test('kills "typecheck judged by its exit code": a new type error on the branch is red although tsc exits 2 on both sides', () => {
