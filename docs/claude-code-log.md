@@ -31,6 +31,16 @@ Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 ## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)
 **Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.
 **Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Dry run at `6d0eaf9fc`: fold 19, move 19, nothing refused. Write at `13ebde1e6`: harness 10, simulation 5, versionfixer 5 folded (20), 20 moved, active 40, archive 1202 to 1222; each inbox keeps its preamble, archive +445/-0 above its previous first entry, log preambles unchanged. This entry makes 41; one more `--rotate --write` moves the oldest, 40 again. `check:docs` 4/4 at each commit; `check:agents` green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Closed: `CLAUDE.md still cites P1..P15` by `13ebde1e6`. Written down: `bash-guard reads the merge state from the payload cwd only` (ticket, low, open). The first `git commit` hit the settings `ask`, not granted; resumed on Alfonso's word. The fold drops the blank line after an inbox's last entry: headings with none above, log plus archive, 54 before, 56 after; `check:docs` does not see it.
+**Prompt document name**: 2026-09-26 23:50
+
 ## 2026-09-24 — feat(#157): «Copy stand-alone link» per profilo (Fase 4a)
 **Prompt**: «procede con la prossima fase» → F4, diviso in F4a (link, procedo ora) e F4b (assegnazione profilo→utente, tocca D/L → semantica da confermare).
 **Files touched**: `frontend/src/utils/shareUtils.ts`, `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Referto discovery + questa entry in commit docs separato (§6.4/P13).
@@ -223,12 +233,16 @@ questo tronco (RC-10).
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Dry run at `6d0eaf9fc`: fold 19, move 19, nothing refused. Write at `13ebde1e6`: harness 10, simulation 5, versionfixer 5 folded (20), 20 moved, active 40, archive 1202 to 1222; each inbox keeps its preamble, archive +445/-0 above its previous first entry, log preambles unchanged. This entry makes 41; one more `--rotate --write` moves the oldest, 40 again. `check:docs` 4/4 at each commit; `check:agents` green.
+**Regressions**: no — solo CLAUDE.md/PROTOCOL.md e la loro proiezione, nessun sorgente toccato.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
-**Notes**: Closed: `CLAUDE.md still cites P1..P15` by `13ebde1e6`. Written down: `bash-guard reads the merge state from the payload cwd only` (ticket, low, open). The first `git commit` hit the settings `ask`, not granted; resumed on Alfonso's word. The fold drops the blank line after an inbox's last entry: headings with none above, log plus archive, 54 before, 56 after; `check:docs` does not see it.
-**Prompt document name**: 2026-09-26 23:50
+**Notes**: Conteggi: CLAUDE.md 63444 char (era 60208, +3236, atteso ~3200), PROTOCOL.md 14258
+char. Tre gate, tutti exit 0: `gen:agents` (2 scritti, 0 skippati), `check:agents` PASS (2/2
+allineati), `check:docs` PASS (3/3, 2 warning preesistenti non correlati, `Corregge` del
+2026-09-02). Worktree gia' su `alfonso-frontend-jjtl`: la premessa "prunable" del prompt era
+superata, non ricreato. Commit `32dbe1ef8`.
+**Prompt document name**: 2026-09-18 21:10
 
 ## 2026-09-26 — ticket: one Back after a cancelled navigation stays on the same project
 **Ticket**: After "Stay on page", `R.navigate` rewrites the entry that setting the hash pushed back to the shown URL (`location.replace`), so the history holds that URL twice. Measured (P5 of `982581260`): entries `[A, A]` at index 1; one `history.back()` is a same-document traverse that stays on A, with no `U.resetState` and the editor mounted. Accepted by Q5 of P-2026-09-25-1905; recorded so that a later history change knows it.
