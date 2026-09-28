@@ -632,3 +632,20 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: Alfonso passed the branch crops on 2026-09-28; gates green on the merge; the union inbox checked verbatim against both parents; the four scenes not re-run on 3001 by the chat
 **Notes**: Rollback tag `pre-sim-badge-pill` on `cf39cdbcb` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1423/result.json`.
 **Prompt document name**: 2026-09-28 14:23
+
+## 2026-09-28 — feat: input variables for the simulator, S1-S4 (P-2026-09-28-0034)
+**Prompt**: Phase 2 of `claude_2026-09-28_0034_prompt_sim_input_variables.md` (GO in chat, R-SIM-88: option (a), Q1-Q4 as recommended): merge the trunk in, build S1 core and codec, S2 bridge, S3 UI, S4 docs as the report `discovery_2026-09-28_sim_input_variables.md` §5.5 plans, tests first, the four demo scenes on 3035, crops light and dark; no merge before 2026-10-04.
+**Files touched**: merge `417b39053` (trunk `e54999b0b` in, no conflict). S1 `ffcd0d5ae`: `model/simulation/netTypes.ts`, `stateAttributesCodec.ts`, `netCompile.ts`, `netStep.ts`, `derivedEvaluator.ts`, `stcChecks.ts`, five of their tests. S2 `4884a57c3`: `editor-v2/sim/simBridge.ts`, `simRunState.ts`, `__tests__/simBridge.test.ts`. S3 `2033b731d`: `sim/SimInputDialog.tsx`, `SimInputDialog.scss`, `simInputs.ts`, `__tests__/simInputs.test.ts` (new), `SimRolesModal.tsx`, `SimRolesModal.scss`, `SimulationPanel.tsx`. S4 `b15fe4484`: `docs/spec/claude_spec_2026-09-13_computational_model.md`. This commit: this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14 after each slice, the §17 set (sorted diff empty). Sim directories 797 → 810 → 820 → 828; full vitest 5476 in 222 files, the 9 known red at import; build exit 0; check:docs 4/4. Four scenes on 3035, trunk sources (restored from HEAD after) against S3, logs normalized for pointer ids: identical but for ESM step 3, `FORM OPTIONS ["stored","derived"]` → `["stored","derived","input"]`.
+**Out-of-scope changes**: yes. 22 files, all under `model/simulation/`, `editor-v2/sim/` and the spec. Outside the report's lists: `simRunState.ts` (the optional `SimRun.inputs`, S2) and `SimRolesModal.scss` (`__decl-void--value`, S3).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe on 3035, not by hand): `_tmp_input_dialog.ts` light and dark, Step at 854.5 with the dialog open, Escape leaves the run, `false` fires Flow_2, input row height 89 as a stored row's; crops in `~/.jjodel-lanes/shots_input/` await Alfonso
+**Notes**: Report §5-§6 lines moved on the merge 417b39053: simBridge.ts pressInput 884-893→907-916, explain 763-778→786-801, read-only 309-312→330-333, title 899-903→922-926; SimRolesModal.tsx form select 272-280→271-279, void cells 301-306→300-305; demo script :11-13→:12-13, :209→:213, :215→:219; the rest unchanged. Bench 35/35 killed, tables in the three code commits.
+**Prompt document name**: 2026-09-28 00:34
+**Ticket** (priority low, opened here, seen in `light_input_dialog_page.png`). The canvas ring of an enabled element (`simCanvasState.ts` `enabledElements`) reads the run's guards without inputs: at the DecisionNode, Flow_1 and Flow_2 wait for an input and show no ring. A waiting rule like `runStatus`'s, in its own lane.
+**Ticket** (priority low, opened here). The form select keeps the aria-label `Stored or derived, state attribute n` while it offers `input`: the demo probes select it by that label. Rename with the probes after the demo.
+**Ticket** (priority low, opened here, `dark_form_select_options.png`). In dark the disabled space select of an input row takes the global disabled look (navy); in light it shows no disabled state.
+**Ticket** (priority low, opened here). An equation that reads a name some input has is a defect by name (`derivedEvaluator.ts`), as the presentation check: a stored attribute sharing an input's name on another metaclass is refused in equations.
