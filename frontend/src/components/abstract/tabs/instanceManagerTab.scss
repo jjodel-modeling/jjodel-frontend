@@ -27,6 +27,10 @@
    here (rule 28). */
 
 .instance-manager {
+    /* #158 P2 — the anchor of the side panes' width handles (`&__resizer-slot`). The
+       only `absolute` below it before this was `&__sr`, which has no offsets and so
+       stays where it was. */
+    position: relative;
     display: flex;
     width: 100%;
     height: 100%;
@@ -64,6 +68,102 @@
        with the metamodel, so it takes the slack. */
     &__pane--outline { flex: 0 0 300px; padding: 14px 0; }
     &__pane--classes { flex: 0 0 200px; }
+
+    /* #158 P2 — the two side panes resize and collapse.
+       A rule of its own rather than a word added to the two lines above: those are
+       the default widths, asserted verbatim by 10h, and the width a user drags lands
+       inline over them as `flex-basis` (the TSX restates 300 and 200 as
+       `PANE_DEFAULT_W`). `position: relative` anchors the corner control. */
+    &__pane--outline,
+    &__pane--classes { position: relative; }
+
+    /* A closed side pane: the button that reopens it, full height. 32px is
+       `PANE_RAIL_W` in the TSX, which places the handles from it. No padding and no
+       scroll: the pane IS the button. */
+    &__pane--rail {
+        flex: 0 0 32px;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    &__rail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        height: 100%;
+        padding: 12px 0;
+        border: none;
+        background: transparent;
+        color: var(--color-form-muted);
+        cursor: pointer;
+        transition: background-color 150ms ease-out;
+
+        &:hover { background: var(--color-bg-hover); color: var(--color-form-label); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
+    }
+
+    &__rail-icon { font-size: 12px; }
+
+    /* The pane's name, read down the rail: the eyebrow's type, turned. */
+    &__rail-label {
+        writing-mode: vertical-rl;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    /* The collapse control, in the pane's top-right corner beside the eyebrow. Quiet
+       like the eyebrow until hovered: it is chrome, not content. */
+    &__pane-collapse {
+        position: absolute;
+        top: 10px;
+        right: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        font-size: 12px;
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-hover); color: var(--color-form-label); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* The handle's anchor: zero wide, full height, at the pane's right edge (`left` is
+       inline). Above the columns, below the Columns panel (30) and the dialog scrim
+       (40). */
+    &__resizer-slot {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        z-index: 3;
+    }
+
+    /* Two classes, as `.properties-panel-resize-handle.resize-handle` does, so this
+       geometry beats the component's own `position: relative` and 10px. The strip
+       straddles the seam, 4px each side. The resting hairline is hidden because the
+       seam already has its border (the adjacency rule of `&__pane`); it comes back on
+       hover, focus and drag, when the handle has something to say. */
+    &__resizer.resize-handle {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -4px;
+        width: 8px;
+
+        &:not(:hover):not(:focus-visible):not(.dragging)::before { background: transparent; }
+    }
 
     /* FL6 — la colonna centrale e' IMPILATA: la tabella sopra, la form sotto.
        Le due letture (outline, catalogo) restano affiancate a sinistra, perche'
@@ -1866,7 +1966,13 @@
 
     // ── The breadcrumb of 12c ────────────────────────────────────────────────
 
+    /* #158 P1 — `sticky`: the form pane is the scroll container, and a drill-in
+       started from a link far down the form used to leave the way back scrolled out
+       of sight. The band keeps its own opaque fill, so the fields pass under it. */
     &__crumbs {
+        position: sticky;
+        top: 0;
+        z-index: 2;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -1874,6 +1980,26 @@
         padding: 8px 20px;
         border-bottom: 1px solid var(--color-form-border);
         background: var(--color-bg-tertiary);
+    }
+
+    /* The one-step way back. A bordered control and not a link like the segments
+       beside it: it is the gesture, the segments are the road. */
+    &__back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-accent); color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
     }
 
     &__crumb-wrap { display: inline-flex; align-items: center; gap: 2px; }
@@ -1948,6 +2074,59 @@
        `margin-left: auto`, the same place «Add contained» sits) and the reason keeps
        `&__child-reason`'s. Homogeneity is the design decision, so there is nothing to
        override — verified on the running app (#142 smoke). */
+
+    /* #158 P3 — the same sections inside an inline child's frame, under the child's
+       own form. The frame already separates the child from its parent, so the band
+       that separates the subject's section from the fields above it (rule and
+       padding of `&__inline`) is dropped here: two rules one above the other would
+       read as two sections. */
+    &__refs--nested {
+        padding: 8px 0 0;
+        border-top: none;
+    }
+
+    /* #158 P4 — a target link with its key fields under the name. The link keeps
+       every rule of `&__inline-link`; the text block stacks the two lines and may
+       shrink (`min-width: 0`), so a long value ellipses instead of pushing the icon
+       out of the card. */
+    &__ref-link { text-align: left; }
+
+    &__ref-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    &__ref-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Muted, and it STAYS muted on hover: the accent says «this opens», which is the
+       name's job, not the summary's. */
+    &__ref-summary {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 10px;
+        overflow: hidden;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+        white-space: nowrap;
+    }
+
+    &__ref-summary-item {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* The field name, in the eyebrow's register: it labels, the value informs. */
+    &__ref-summary-key {
+        margin-right: 4px;
+        color: var(--color-form-section);
+    }
 
     /* ── The containment outline (10b) ─────────────────────────────────────────
        Mock 1b of `Q8 Catalogo vs Outline.dc.html`: 12px rows, a 12px genre icon,
@@ -2310,7 +2489,8 @@
     }
 
     /* ── Il chevron di coda riga ────────────────────────────────────────────
-       Indicatore, non bottone: il gesto e' il click sulla riga. */
+       Era un indicatore; da #158 P5 e' il bottone che chiude e riapre il
+       vicinato (`&__chev-btn`). La selezione resta il click sulla riga. */
     &__th-chev, &__td-chev {
         width: 24px;
         text-align: center;
@@ -2319,6 +2499,26 @@
     &__chev {
         font-size: 10px;
         color: var(--color-form-muted);
+    }
+
+    /* #158 P5 — the chevron became a control: it closes and reopens the
+       neighborhood. The 24px column stays; the button fills it so the target is the
+       cell, not a 10px glyph. */
+    &__chev-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-hover); }
+        &:hover .instance-manager__chev { color: var(--color-form-label); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
     }
 
     /* ── L'header della form (FL6, banda propria in 10k) ─────────────────────

@@ -24,7 +24,8 @@
 
 import { findFeatureRaw, makeDrawReadCtx } from '../../editor-v2/viewpoint/ir/irReadCtx';
 import { readRowViewAnnotations } from '../../editor-v2/nodes/rowViewAnnotations';
-import type { TableSpec } from '../../editor-v2/viewpoint/ir/irTypes';
+import type { FormSpec, TableSpec } from '../../editor-v2/viewpoint/ir/irTypes';
+import { orderFields } from '../../editor-v2/viewpoint/ir/formHosts';
 import { optionSlot } from '../../../jjform';
 import {
     detectValueRenderer,
@@ -649,4 +650,80 @@ export function mostPopulatedClassId(
         if (n > best) { best = n; bestId = cls.id; }
     }
     return bestId;
+}
+
+/* ── #158 P4: what a referenced element IS, in one line ──────────────────────
+ *
+ * A reference shows its target by name only («D01»), and knowing anything more
+ * about it meant opening it. The summary is the target's KEY fields, printed under
+ * its link in the form's reference section.
+ *
+ * WHICH fields: the target's Basic ones — `FormSpec.basic` of its own view in the
+ * Data Manager, the same list the form's Basic/Advanced switch reads. The issue asks
+ * for «a flag in the metamodel» to choose them; this is that choice, already
+ * authorable (the form authoring panel writes `basic`) and with no new field on the
+ * metamodel. Absent, the heuristic is the form's own (`useFormWidgets.isBasicField`):
+ * the required features, `lowerBound >= 1`. Restated as one line rather than
+ * imported: `isBasicField` takes a form descriptor built from L-proxies, and this
+ * module runs on the D shape.
+ */
+
+/** One entry of a reference summary. */
+export interface SummaryItem {
+    /** The feature name. */
+    key: string;
+    /** What the form prints for it: the view's `labels` override, else the name. */
+    label: string;
+    /** The value, as the table cell prints it. */
+    text: string;
+}
+
+/** How many entries a summary holds: one line under a link, not a second form. */
+export const SUMMARY_LIMIT = 3;
+
+/**
+ * The key fields of one instance, from its table row.
+ *
+ * - Order: the view's `order` (`formHosts.orderFields`, the form's own), else the
+ *   shape's.
+ * - Out: features the view hides (`hidden`, `features: 'hidden'`), empty and broken
+ *   cells, and the value that REPEATS the name — the link beside it already prints
+ *   the name, and `name` is only the usual identity slot, not the only one.
+ * - A DECLARED `basic` is the whole answer, even when none of its fields holds a
+ *   value: an author who listed them has said what matters. The heuristic is not
+ *   an author, so when no required feature holds a value the summary falls back to
+ *   the first valued ATTRIBUTES — a metamodel without required features would
+ *   otherwise print nothing anywhere.
+ */
+export function referenceSummary(
+    cls: ClassShape,
+    row: TableRow,
+    form?: FormSpec | null,
+    limit: number = SUMMARY_LIMIT,
+): SummaryItem[] {
+    const spec = form ?? undefined;
+    const hidden = (key: string) =>
+        !!spec?.hidden?.includes(key) || spec?.features?.[key] === 'hidden';
+    const filled = (key: string) => {
+        const cell = row.cells[key];
+        return !!cell && !cell.broken && cell.text.trim() !== '' && cell.text !== row.name;
+    };
+    const item = (f: AttrShape | RefShape): SummaryItem => ({
+        key: f.key,
+        label: spec?.labels?.[f.key] ?? f.key,
+        text: row.cells[f.key].text,
+    });
+
+    const ordered = orderFields(tableFeatures(cls).map(f => ({ name: f.key, f })), spec).map(x => x.f);
+    const candidates = ordered.filter(f => f.key !== NAME_COLUMN_KEY && !hidden(f.key));
+
+    const declared = Array.isArray(spec?.basic);
+    const basic = candidates.filter(f => (declared ? spec!.basic!.includes(f.key) : f.required));
+    const picked = basic.filter(f => filled(f.key));
+    if (picked.length > 0 || declared) return picked.slice(0, limit).map(item);
+
+    return candidates
+        .filter(f => !('of' in f) && filled(f.key))
+        .slice(0, limit)
+        .map(item);
 }
