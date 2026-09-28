@@ -525,7 +525,8 @@ describe('the declarations hint (R-SIM-81, G9)', () => {
     const DECLS = encodeStateAttributes([
         { name: 'coins', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' },
     ]);
-    const HINT = 'Declare the state attributes the actions write:';
+    // R-SIM-94: the metamodel cannot see its models' declarations, so the hint says where a global goes.
+    const HINT = "Declare the state attributes the actions write (a model's globals go in its Data…):";
 
     it('Action bound and no declarations: the hint, whether Action is set or only proposed', () => {
         const proposed = profileSummary(ESM, {}, WITH_ACTION);

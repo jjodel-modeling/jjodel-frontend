@@ -491,7 +491,8 @@ export function profileSummaryText(summary: ProfileSummary, nameOf: (id: string)
         proposals: summary.proposals.map(p => `${p.label} → ${roleDescriptor(p.role).kind === 'int' ? p.value : nameOf(p.value)}`),
         kept: summary.kept.length > 0 ? `Kept: ${summary.kept.map(k => `${k.label} (${keptValues(k.role, k.value).map(nameOf).join(', ')})`).join(', ')}.` : null,
         setButOff: summary.setButOff.length > 0 ? `Set but off: ${summary.setButOff.join(', ')}.` : null,
-        declare: summary.declareHint ? 'Declare the state attributes the actions write:' : null,
+        // R-SIM-94: the metamodel cannot see its models' declarations, so the hint says where a global goes.
+        declare: summary.declareHint ? "Declare the state attributes the actions write (a model's globals go in its Data…):" : null,
     };
 }
 
