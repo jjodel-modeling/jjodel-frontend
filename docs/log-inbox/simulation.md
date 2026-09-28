@@ -753,3 +753,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat: the four demo scenes probed on the branch in light theme (port 3037), 71 readings identical to the trunk run of the evening once pointer ids are normalised. Alfonso's walk on 3001 still due before the freeze.
 **Notes**: Closed by hand: the worker stops on the pre-existing vitest reds. Rollback tag `pre-sim-mixin-owner` on `95ff2ae75` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-09-28-2250/result.json`. The lane built the verdict tables from the builder spec, not from the demo exports (they are DProject records); the probes cover the four scenes.
 **Prompt document name**: 2026-09-28 22:50
+
+## 2026-09-28 — discovery: four demo scenes read identical after the staging merge (P-2026-09-28-1025)
+**Prompt**: `claude_2026-09-28_1025_prompt_scenes_after_staging_merge.md`, fast/light lane on `scenes-base` in `~/jjodel-w-scenes` (cut at `447e4239b`), read-only: measure whether the staging merge (ticket #157, 20 files under `frontend/src`) changed any of the four demo scenes against the known-good reading at trunk `888ea9a9d`, and check the Simulation panel still docks on both tabs for all four (the merge touches `Dock.tsx`, `DockManager.tsx`, `MyRcDock.tsx`, `Navbar.tsx`, `LeftBar.tsx`, `joiner/classes.ts`, `joiner/index.ts`).
+**Files touched**: docs only, this lane: `docs/discovery/discovery_2026-09-28_scenes_after_staging_merge.md` (`69f7dbea1`), this entry. No `frontend/src` file read or written by this task; the four `_tmp_p1025_*` harness copies under `frontend/scripts/smoke/` are gitignored scratch (P14), not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nothing under `frontend/src` was touched; the four scenes and the docking check read identical to the `888ea9a9d` baseline.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe `_tmp_p1025_walk.ts` on 3029, one run per scene: SM 10 steps Terminated; Petri Bound 4, 4 steps, Deadlock · ε: t2 false; ESM 10 steps, halt line whole on two rows (`haltFit.whole: true`); Flow B 6 steps Terminated, `fin · count = 2`. `openModel()` (throws on a missing tab or chip) completed 16/16 calls across the four runs with no thrown error, so the Simulation panel docked and was readable on both tabs, all four scenes. Console: one `failed to get project {project: null}` per run, the known kind, no `pageerror`.
+**Notes**: The prompt's background states 12 feature commits of #157; measured `git log --no-merges 888ea9a9d..447e4239b -- frontend/src` gives 14, all tagged `(#157)`. Does not change the verdict (behavioral, not a commit count) — see discovery report §1. Logs and crops in `~/.jjodel-lanes/shots_scenes_after_staging/`.
+**Prompt document name**: 2026-09-28 10:25
