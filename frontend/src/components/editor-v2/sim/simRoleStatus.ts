@@ -11,9 +11,11 @@ import { STATE_ATTRIBUTES_KEY, stateAttributeRows } from '../../../model/simulat
 import { ROLE_CATALOG, roleDescriptor } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
 import { checkability } from '../../../model/simulation/simProfiles';
-import type { RequiredItem, SimProfile, SystemProfileId } from '../../../model/simulation/simProfiles';
+import type { Checkability, CheckabilityStatus, RequiredItem, SimProfile, SystemProfileId } from '../../../model/simulation/simProfiles';
 import { decodeProfile, encodeProfile, inferCustomProfile } from '../../../model/simulation/profileCodec';
-import type { ProfileBindings } from '../../../model/simulation/profileBinder';
+import { bindProfile } from '../../../model/simulation/profileBinder';
+import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
+import { bindingVerdicts, currentVerdicts } from '../../../model/simulation/bindingCompat';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import { withDerivedEventRole } from '../../../model/simulation/netCompile';
@@ -218,6 +220,39 @@ export function storedProfile(bag: Readonly<Record<string, unknown>>): StoredPro
         : { profile: inferCustomProfile(bag).profile, custom: true, readable: false };
 }
 
+/**
+ * The bindings a profile proposes from: the binder over the metamodel sketch,
+ * for every profile but «Custom», which nothing is bound against (D7 of the
+ * profiles lane). A user profile is bound as its preset (S11c). The panel and
+ * the dialog read this one rule (P-2026-09-28-0140).
+ */
+export function profileBindings(profile: SimProfile, sketch: MetamodelSketch | null | undefined): ProfileBindings | null {
+    return profile.id !== CUSTOM_ID && sketch ? bindProfile(profile, sketch) : null;
+}
+
+/** The id `inferCustomProfile` gives «Custom» (profileCodec.ts). */
+const CUSTOM_ID = 'custom';
+
+/**
+ * The verdict of a bag as Apply leaves it: `checkability` with the S11a
+ * verdicts of its bound values (R-SIM-48; bindingCompat.ts), so a warning
+ * reads «with warnings» and an incompatible value «Not checkable». Without a
+ * sketch, no verdicts: the reading before S11a. The panel's badge and the
+ * dialog's pill read this one function (P-2026-09-28-0140).
+ */
+export function profileVerdict(
+    profile: SimProfile, after: Readonly<Record<string, unknown>>, sketch: MetamodelSketch | null | undefined,
+): Checkability {
+    return checkability(profile, after, sketch ? currentVerdicts(bindingVerdicts(profile, after, sketch)) : undefined);
+}
+
+/** The words of a verdict, the badge's and the pill's. */
+export const VERDICT_LABEL = {
+    checkable: 'Checkable',
+    warnings: 'Checkable with warnings',
+    notCheckable: 'Not checkable',
+} as const satisfies Readonly<Record<CheckabilityStatus, string>>;
+
 export interface ProfileProposal {
     readonly role: RoleId; readonly key: string; readonly label: string; readonly value: string;
     /** Why, for a proposal that is not the binder's: the Bound (R-SIM-81). */
@@ -228,8 +263,12 @@ export interface ProfileKept { readonly role: RoleId; readonly key: string; read
 
 export interface ProfileSummary {
     readonly name: string;
-    /** `checkability` on the bag as Apply leaves it, with no verdicts: never «with warnings» (D5). */
-    readonly status: 'checkable' | 'notCheckable';
+    /**
+     * `profileVerdict` on the bag as Apply leaves it: with a sketch, the S11a
+     * verdicts count, the dialog's pill (P-2026-09-28-0140; D5's «never with
+     * warnings» held until the compatibility check existed).
+     */
+    readonly status: CheckabilityStatus;
     /** The required items still missing, as labels; an either-item reads «A or B». */
     readonly missing: readonly string[];
     /** What Apply writes: the bound values of the unset keys of `edit` roles, in catalog order. */
@@ -351,17 +390,19 @@ const ACTION_KEYS: readonly RoleKey[] = ['simAction', 'simEntry', 'simExit'];
  * `largestMarking` is the source of the Bound proposal (R-SIM-81): the panel
  * passes `boundEstimate` over `boundProposalBag` (modelMarkings.ts, G12(b)); a
  * number is `largestInitialMarking` alone, the reading before the amendment.
+ * `sketch`, when given, lets the S11a verdicts into the status (`profileVerdict`).
  */
 export function profileSummary(
     profile: SimProfile,
     bag: Readonly<Record<string, unknown>>,
     bindings: ProfileBindings | null,
     largestMarking?: number | BoundEstimate | null,
+    sketch?: MetamodelSketch | null,
 ): ProfileSummary {
     const proposals = bindings ? proposalsOf(profile, bag, bindings, largestMarking) : [];
     const after: Record<string, unknown> = { ...bag };
     for (const p of proposals) after[p.key] = p.value;
-    const verdict = checkability(profile, after);
+    const verdict = profileVerdict(profile, after, sketch);
     const choices: ProfileChoice[] = [];
     const kept: ProfileKept[] = [];
     const setButOff: string[] = [];
@@ -381,7 +422,7 @@ export function profileSummary(
     }
     return {
         name: profile.name,
-        status: verdict.status === 'notCheckable' ? 'notCheckable' : 'checkable',
+        status: verdict.status,
         missing: verdict.missing.map(itemLabel),
         proposals,
         choices,
@@ -396,7 +437,7 @@ export function profileSummary(
 export interface ProfileSummaryText {
     /** «State machine · Checkable», «… after Apply» while something is pending. */
     readonly status: string;
-    readonly badge: 'Checkable' | 'Not checkable';
+    readonly badge: 'Checkable' | 'Checkable with warnings' | 'Not checkable';
     readonly missing: string | null;
     /** «Not checkable: choose …» (R-SIM-77): the roles left to the user, with their candidates. */
     readonly choose: string | null;
@@ -411,7 +452,7 @@ export interface ProfileSummaryText {
 
 /** The text of the summary; `nameOf` names a class or feature by id. */
 export function profileSummaryText(summary: ProfileSummary, nameOf: (id: string) => string): ProfileSummaryText {
-    const badge = summary.status === 'checkable' ? 'Checkable' : 'Not checkable';
+    const badge = VERDICT_LABEL[summary.status];
     return {
         status: `${summary.name} · ${badge}${summary.pending ? ' after Apply' : ''}`,
         badge,

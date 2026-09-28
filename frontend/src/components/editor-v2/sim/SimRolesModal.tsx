@@ -36,7 +36,7 @@ import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import { DState, LPointerTargetable, store } from '../../../joiner';
 import {
-    PANEL_PROFILE_IDS, boundProposalBag, boundProposalInputs, invalidEngineRoles, storedProfile,
+    PANEL_PROFILE_IDS, VERDICT_LABEL, boundProposalBag, boundProposalInputs, invalidEngineRoles, profileBindings, storedProfile,
 } from './simRoleStatus';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import {
@@ -44,8 +44,7 @@ import {
     isModified, matchLine, roleBadge, roleSections, roleSwitch, rowValue, withProfileName, withRoleMode,
 } from './simRolesDraft';
 import type { DraftEdits, DraftInput, RoleBadge } from './simRolesDraft';
-import { bindProfile } from '../../../model/simulation/profileBinder';
-import { bindingVerdicts, currentVerdicts } from '../../../model/simulation/bindingCompat';
+import { bindingVerdicts } from '../../../model/simulation/bindingCompat';
 import { roleDescriptor } from '../../../model/simulation/roleCatalog';
 import { systemProfile, validateProfile } from '../../../model/simulation/simProfiles';
 import { encodeStateAttributes, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
@@ -367,8 +366,8 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     // «Custom» is bound against nothing (D7 of the profiles lane); a user profile is, as its preset.
     const custom = profile.id === CUSTOM_ID;
     const bindings: ProfileBindings | null = useMemo(
-        () => (!custom && sketch ? bindProfile(profile, sketch) : null),
-        [custom, profile, sketch],
+        () => profileBindings(profile, sketch),
+        [profile, sketch],
     );
     const edited = useMemo(() => bagWithEdits(bag, edits), [bag, edits]);
 
@@ -399,7 +398,8 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     // S11a on the bag as Apply would leave it: the selects' candidates and the verdict of each bound value.
     const after = draftBag(input);
     const verdicts: BindingVerdicts | null = sketch ? bindingVerdicts(profile, after, sketch) : null;
-    const status = draftStatus(input, verdicts ? currentVerdicts(verdicts) : undefined);
+    // The verdict: profileVerdict, which the panel's badge reads too (P-2026-09-28-0140).
+    const status = draftStatus(input, sketch);
     const sections = roleSections(profile, edited);
     const defects = validateProfile(profile);
     const match = matchLine(bindings);
@@ -590,7 +590,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const base = profile.system ? profile.id : profile.basedOn ?? '';
     const presetValue = preset ?? (PANEL_PROFILE_IDS.some(id => id === base) ? base : '');
     const modified = isModified(profile);
-    const statusText = status.status === 'checkable' ? 'Checkable' : status.status === 'warnings' ? 'Checkable with warnings' : 'Not checkable';
+    const statusText = VERDICT_LABEL[status.status];
     const statusTitle = status.missing.length > 0 ? `Missing: ${status.missing.join(', ')}.` : 'Every required role is bound.';
     const dataMode = profile.modes.stateAttributes;
     const dataOff = dataMode.mode === 'off';

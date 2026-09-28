@@ -648,7 +648,8 @@
         color: var(--color-text-tertiary);
     }
 
-    // The verdict of R-SIM-79: Checkable or Not checkable, never «with warnings» (D5).
+    // The verdict of R-SIM-79 with the S11a verdicts, the dialog's pill's (P-2026-09-28-0140): Checkable, Checkable
+    // with warnings, Not checkable. The warnings colours are the pill's (SimRolesModal.scss `&__pill--warnings`).
     &__badge {
         display: inline-flex;
         align-items: center;
@@ -662,6 +663,11 @@
         &--checkable {
             background: var(--color-success-muted);
             color: var(--color-text-primary);
+        }
+
+        &--warnings {
+            background: var(--color-warning-muted);
+            color: var(--color-warning-text);
         }
 
         &--not-checkable {

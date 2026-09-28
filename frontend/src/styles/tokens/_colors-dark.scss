@@ -379,6 +379,18 @@
   --color-inode-selected-badge-fg: #a5f3fc;            /* cyan-200 */
   --color-inode-selected-ring: rgba(34, 211, 238, 0.28);
 
+  /* Simulation run state on the canvas (S15), dark. Sky stepped up for the
+     #334155 node ground; see the light file for the roles. */
+  --color-sim-token-bg: #38bdf8;                       /* sky-400 */
+  --color-sim-token-fg: #082f49;                       /* sky-950 */
+  --color-sim-token-empty-bg: #475569;                 /* slate-600, opaque: it sits half on the canvas */
+  --color-sim-token-empty-fg: rgba(255, 255, 255, 0.75);
+  --color-sim-token-empty-border: rgba(255, 255, 255, 0.3);
+  --color-sim-enabled-ring: #38bdf8;                   /* sky-400 */
+  --color-sim-sigma-bg: #0c4a6e;                       /* sky-900, opaque over the canvas */
+  --color-sim-sigma-border: rgba(125, 211, 252, 0.4);  /* sky-300 */
+  --color-sim-sigma-fg: #e0f2fe;                       /* sky-100 */
+
   /* Option colours, dark. Same seven families, stepped for this surface and
      validated as their own set — not a flip of the light column. The foreground is
      the 400 step (the 300s the canvas pill uses are too pale to tell apart: at 300

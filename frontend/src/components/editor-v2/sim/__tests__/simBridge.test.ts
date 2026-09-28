@@ -16,9 +16,14 @@ import {
     candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputReason, markingLine, NO_SIM_ACTIONS,
     panelInputs, pressInput, runSignature, startRun, stopReason,
 } from '../simBridge';
-import type { ContextBuilder, PanelInputs } from '../simBridge';
+import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
-import { netRunStatus } from '../../../../model/simulation/netStep';
+import { candidates, netRunStatus, step } from '../../../../model/simulation/netStep';
+import { encodeProfile } from '../../../../model/simulation/profileCodec';
+import { ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
+import type { RoleId } from '../../../../model/simulation/roleCatalog';
+import { EVENT_FROM_TRIGGER } from '../../../../model/simulation/simProfiles';
+import type { ProfileShape, RoleMode } from '../../../../model/simulation/simProfiles';
 import type { CompiledNet, NetRunStatus, NetTransition, SimState, SimValue } from '../../../../model/simulation/netTypes';
 
 type Lookup = Record<string, any>;
@@ -478,9 +483,11 @@ describe('guards read σ in the run (wave B2, P-2026-09-26-1105, R-SIM-30, R-SIM
 
     it('the action oracle of the run is NO_SIM_ACTIONS when no action role is bound (R-SIM-69, mutant 10)', () => {
         expect(started(petriLookup('true'), spyBuilder(petriRecord).build).actions).toBe(NO_SIM_ACTIONS);
-        // control: with an action role bound the run has an oracle of its own
+        // control: with an action role bound the run has an oracle of its own; with the declarations key set,
+        // since «Custom» turns Action off without State attributes and the run reads it as unbound (R-SIM-78)
         const bound = petriLookup('true');
         bound.MM._state.simAction = 'A_guard';
+        bound.MM._state.simStateAttributes = JSON.stringify({ v: 1, attrs: [] });
         expect(started(bound, spyBuilder(petriRecord).build).actions).not.toBe(NO_SIM_ACTIONS);
     });
 });
@@ -1232,5 +1239,191 @@ describe('P2b: the checker rules at Reset, on the rows of the checker gap report
         expect(reset(clean).compileDefects).toEqual([]);
         expect(pressInput('M', 'coin', undefined, clean, 'Coin').outcome?.kind).toBe('fired');
         expect(pressInput('M', 'push', undefined, clean, 'Push').outcome?.kind).toBe('discard');
+    });
+});
+
+describe('roles that are off are read as unbound (P-2026-09-28-0100, R-SIM-78)', () => {
+    const EDIT: RoleMode = { mode: 'edit' };
+    const OFF: RoleMode = { mode: 'off', reason: 'Turned off' };
+
+    /** A user profile of `shape`: the other shape's group off, Event from Trigger, every other role edit; `modes` over them. */
+    function userProfile(shape: ProfileShape, modes: Partial<Record<RoleId, RoleMode>> = {}): string {
+        const other = shape === 'petri' ? 'controlFlow' : 'petri';
+        const base = Object.fromEntries(ROLE_IDS.map(r => [r, roleDescriptor(r).group === other ? OFF : r === 'event' ? EVENT_FROM_TRIGGER : EDIT]));
+        return encodeProfile({
+            id: 'u-test', name: 'Test', system: false, shape, modes: { ...base, ...modes } as Record<RoleId, RoleMode>,
+            params: { bound: 1, selector: 'list' }, constraints: [], addedRequired: [],
+        });
+    }
+
+    const without = (bag: Record<string, unknown>, keys: readonly string[]) =>
+        Object.fromEntries(Object.entries(bag).filter(([k]) => !keys.includes(k)));
+
+    /** The record of `buildEvalContext`: one handle per object, instance names bound at the top. */
+    const record = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const run = (lookup: Lookup): RunStart => startRun(lookup, 'M', 'MM', 'P', spyBuilder(record(lookup)).build);
+
+    /**
+     * What a run is, as a string: refused with its reason, or the net, the configuration, the alphabet, the defects
+     * at Reset, which oracles it has, one step per input from the initial configuration (the guard and action
+     * oracles executed), and the signature unless left out.
+     */
+    function face(r: RunStart, signature = true): string {
+        if (r.kind === 'refused') return JSON.stringify({ refused: r.reason });
+        const x = r.run;
+        const steps = [null, ...x.alphabet].map(event => {
+            const cfg = { state: x.config.state, event };
+            return step(x.net, cfg, candidates(x.net, cfg, x.guards).candidates[0]?.transition ?? null, x.guards, x.actions, x.derived);
+        });
+        return JSON.stringify({
+            net: x.net, config: x.config, alphabet: x.alphabet, halt: x.halt, compileDefects: r.compileDefects,
+            noActions: x.actions === NO_SIM_ACTIONS, derived: x.derived !== undefined, steps, ...(signature ? { signature: x.signature } : {}),
+        }, (_k, v) => (v instanceof Map ? { map: [...v] } : v instanceof Set ? { set: [...v] } : v));
+    }
+
+    const DECLS = JSON.stringify({ v: 1, attrs: ['a', 'b', 'c'].map(name => ({ name, metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' })) });
+
+    /** Every key of both shapes set; the Petri keys point at control-flow features, which only a Petri run would read. */
+    const CF_BAG: Record<string, unknown> = {
+        simNode: 'C_State', simTransition: 'C_Trans', simInitial: 'C_Init', simInitialMarking: 'A_tokens',
+        simTerminal: 'C_Final', simAccepting: 'C_Final', simActivityFinal: 'C_AFinal', simBound: '2',
+        simOwnedTransitions: 'R_out', simSource: 'R_src', simNextState: 'R_next', simFork: 'C_Fork', simJoin: 'C_Join',
+        simArc: 'C_Trans', simArcSource: 'R_src', simArcTarget: 'R_next', simArcWeight: 'A_tokens', simInhibitorArc: 'C_Trans',
+        simTrigger: 'R_trigger', simEventIdentifier: 'A_label', simGuard: 'A_guard',
+        simAction: 'A_act', simEntry: 'A_entry', simExit: 'A_exit', simStateAttributes: DECLS,
+        simStateOutput: 'A_label', simTransitionOutput: 'A_label',
+    };
+
+    /**
+     * A control-flow model where each role changes the run when it is read: s0 (2 tokens by Initial marking, 1 by
+     * Initial) leaves by tB (trigger ev1, guard, action) to s1 and by the join jn to sA (activity final); tA is owned
+     * by s0 but has s1 as Source; s1 forks through fk to sA and sF (terminal); exit of s0 and entry of s1 assign.
+     * The event identifier sorts ev2 (Alpha) before ev1 (Zed).
+     */
+    function cfLookup(bag: Record<string, unknown>): Lookup {
+        const lookup = buildLookup(bag, {
+            s0: { cls: 'C_Init', slots: { A_tokens: [2], R_out: ['tA', 'tB', 'tJ1'], A_exit: ['model.[c] := 1'] } },
+            s1: { cls: 'C_State', slots: { R_out: ['tF1'], A_entry: ['model.[b] := 1'] } },
+            sF: { cls: 'C_Final' },
+            sA: { cls: 'C_AFinal' },
+            fk: { cls: 'C_Fork', slots: { R_out: ['tF2', 'tF3'] } },
+            jn: { cls: 'C_Join', slots: { R_out: ['tJ2'] } },
+            ev1: { cls: 'C_Event', slots: { A_label: ['Zed'] } },
+            ev2: { cls: 'C_Event', slots: { A_label: ['Alpha'] } },
+            tA: { cls: 'C_Trans', slots: { R_src: ['s1'], R_next: ['sF'] } },
+            tB: { cls: 'C_Trans', slots: { R_next: ['s1'], R_trigger: ['ev1'], A_guard: ['true'], A_act: ['model.[a] := 1'] } },
+            tF1: { cls: 'C_Trans', slots: { R_next: ['fk'] } },
+            tF2: { cls: 'C_Trans', slots: { R_next: ['sA'] } },
+            tF3: { cls: 'C_Trans', slots: { R_next: ['sF'] } },
+            tJ1: { cls: 'C_Trans', slots: { R_next: ['jn'] } },
+            tJ2: { cls: 'C_Trans', slots: { R_next: ['sA'] } },
+        });
+        lookup.C_AFinal = { className: 'DClass', id: 'C_AFinal', name: 'AFinal', extends: ['C_State'] };
+        for (const id of ['C_Fork', 'C_Join']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        lookup.R_src = { className: 'DReference', id: 'R_src', name: 'src' };
+        for (const id of ['A_act', 'A_entry', 'A_exit', 'A_tokens']) lookup[id] = { className: 'DAttribute', id, name: id.slice(2) };
+        return lookup;
+    }
+
+    /** Each role a control-flow profile can turn off; `read` when the run (not only the signature) reads its key. */
+    const CF_ROWS: ReadonlyArray<{ role: RoleId; read: boolean; omit?: readonly string[] }> = [
+        { role: 'initial', read: true, omit: ['simInitialMarking'] }, { role: 'initialMarking', read: true },
+        { role: 'terminal', read: true }, { role: 'accepting', read: false }, { role: 'activityFinal', read: true },
+        { role: 'bound', read: true }, { role: 'ownedTransitions', read: true }, { role: 'source', read: true },
+        { role: 'fork', read: true }, { role: 'join', read: true },
+        { role: 'arc', read: true }, { role: 'arcSource', read: false }, { role: 'arcTarget', read: false },
+        { role: 'arcWeight', read: false }, { role: 'inhibitorArc', read: false },
+        { role: 'trigger', read: true }, { role: 'eventIdentifier', read: true },
+        { role: 'guard', read: true }, { role: 'action', read: true }, { role: 'entry', read: true }, { role: 'exit', read: true },
+        { role: 'stateAttributes', read: true }, { role: 'stateOutput', read: false }, { role: 'transitionOutput', read: false },
+    ];
+
+    /** The off row and its control: with the role on, the key changes the run, or the signature for a key nothing reads. */
+    function checkRow(shape: ProfileShape, bag: Record<string, unknown>, lookupOf: (b: Record<string, unknown>) => Lookup,
+        row: { role: RoleId; read: boolean; omit?: readonly string[] }) {
+        const key = roleDescriptor(row.role).key as string;
+        const base = without(bag, row.omit ?? []);
+        const off = userProfile(shape, { [row.role]: OFF });
+        const on = userProfile(shape, { [row.role]: EDIT });
+        const set = (profile: string) => lookupOf({ ...base, simProfile: profile });
+        const unset = (profile: string) => lookupOf({ ...without(base, [key]), simProfile: profile });
+        expect([row.role, face(run(set(off)))]).toEqual([row.role, face(run(unset(off)))]);
+        expect([row.role, face(run(set(on)), !row.read) === face(run(unset(on)), !row.read)]).toEqual([row.role, false]);
+    }
+
+    it('control flow: each role off with its key set runs as the same profile with the key unset, signature included (mutants: the key read; the signature reads it)', () => {
+        expect(run(cfLookup({ ...CF_BAG, simProfile: userProfile('controlFlow') })).kind).toBe('started');
+        for (const row of CF_ROWS) checkRow('controlFlow', CF_BAG, cfLookup, row);
+    });
+
+    const PN_BAG: Record<string, unknown> = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+        simInitialMarking: 'A_tokens', simArcWeight: 'A_w', simInhibitorArc: 'C_Inh', simBound: '2', simTerminal: 'C_PFinal',
+        simGuard: 'A_guard', simInitial: 'C_Place', simNextState: 'R_tgt', simFork: 'C_Place',
+    };
+
+    /** p1 (2 tokens) -a1 ×2-> t1 -a2-> p2 (terminal), p3 -i1-o t1: weight, inhibitor, bound, terminal and guard each change the net. */
+    function pnLookup(bag: Record<string, unknown>): Lookup {
+        const lookup = buildLookup(bag, {
+            p1: { cls: 'C_Place', slots: { A_tokens: [2] } },
+            p2: { cls: 'C_PFinal' },
+            p3: { cls: 'C_Place', slots: { A_tokens: [0] } },
+            t1: { cls: 'C_PTr', slots: { A_guard: ['true'] } },
+            a1: { cls: 'C_Arc', slots: { R_src: ['p1'], R_tgt: ['t1'], A_w: [2] } },
+            a2: { cls: 'C_Arc', slots: { R_src: ['t1'], R_tgt: ['p2'] } },
+            i1: { cls: 'C_Inh', slots: { R_src: ['p3'], R_tgt: ['t1'] } },
+        });
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc', 'C_Inh']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        lookup.C_PFinal = { className: 'DClass', id: 'C_PFinal', name: 'PFinal', extends: ['C_Place'] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        for (const id of ['A_tokens', 'A_w']) lookup[id] = { className: 'DAttribute', id, name: id.slice(2) };
+        return lookup;
+    }
+
+    it('Petri: arc weight, inhibitor arc, bound, terminal and guard off read as unbound; Initial and the control-flow keys by the signature only', () => {
+        expect(run(pnLookup({ ...PN_BAG, simProfile: userProfile('petri') })).kind).toBe('started');
+        for (const row of [
+            { role: 'arcWeight', read: true }, { role: 'inhibitorArc', read: true }, { role: 'bound', read: true },
+            { role: 'terminal', read: true }, { role: 'guard', read: true },
+            { role: 'initial', read: false }, { role: 'nextState', read: false }, { role: 'fork', read: false },
+        ] as const) checkRow('petri', PN_BAG, pnLookup, row);
+    });
+
+    it('Event off: no event role with the Trigger bound, as a Trigger with no class type (mutant: the event still derived)', () => {
+        const typed = (profile: string) => cfLookup({ ...CF_BAG, simProfile: profile });
+        const untyped = (profile: string) => { const l = typed(profile); delete l.R_trigger.type; return l; };
+        const off = userProfile('controlFlow', { event: OFF });
+        const r = run(typed(off));
+        expect(r.kind === 'started' && [r.run.net.hasEventRole, r.run.alphabet]).toEqual([false, []]);
+        expect(face(r, false)).toBe(face(run(untyped(off)), false));
+        // control: Event from Trigger, the events are there
+        const on = run(typed(userProfile('controlFlow')));
+        expect(on.kind === 'started' && on.run.alphabet).toEqual(['ev2', 'ev1']);
+    });
+
+    it('«Custom» (no simProfile): Action, Entry and Exit left off for want of State attributes read as unbound; declared, they run (inferCustomProfile)', () => {
+        const petri = ['simArc', 'simArcSource', 'simArcTarget', 'simArcWeight', 'simInhibitorArc'];
+        const actionKeys = ['simAction', 'simEntry', 'simExit'];
+        const bare = without(CF_BAG, [...petri, 'simStateAttributes']);
+        expect(face(run(cfLookup(bare)))).toBe(face(run(cfLookup(without(bare, actionKeys)))));
+        // control: with the declarations the Custom profile has them on, and the run reads them
+        const declared = { ...bare, simStateAttributes: DECLS };
+        expect(face(run(cfLookup(declared)), false)).not.toBe(face(run(cfLookup(without(declared, actionKeys))), false));
+    });
+
+    it('only off is skipped: a derived role with its key set is read as before (Bound k = 1 in State machine, the key 2 read; mutant: derived skipped too)', () => {
+        const r = run(buildLookup({ ...ROLES, simBound: '2', simProfile: 'stateMachine' }, TURNSTILE));
+        expect(r.kind === 'started' && r.run.net.bound).toBe(2);
+    });
+
+    it('the four demo profiles skip the keys they turn off: State machine drops Action and State attributes, Petri net the control-flow keys (system profiles)', () => {
+        const sm = run(cfLookup({ ...without(CF_BAG, ['simArc']), simProfile: 'stateMachine' }));
+        expect(sm.kind === 'started' && [sm.run.actions === NO_SIM_ACTIONS, sm.run.net.attributes, sm.run.net.activityFinal ?? null]).toEqual([true, [], null]);
+        const pn = run(pnLookup({ ...PN_BAG, simProfile: 'petri' }));
+        expect(face(pn)).toBe(face(run(pnLookup({ ...without(PN_BAG, ['simInitial', 'simNextState', 'simFork']), simProfile: 'petri' }))));
     });
 });

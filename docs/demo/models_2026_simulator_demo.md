@@ -34,6 +34,9 @@
 - The builder writes the metamodels and models through the store. No probe drew them on the canvas. Drawing a preset
   live must end in the same names, types, abstract flags and references as §2.
   <!-- not measured: a preset drawn live on the canvas -->
+- **Save check.** After preparing each project: Cmd+S, reload the page once, check that the metamodel, the model and
+  its objects are intact. Without Cmd+S, model edits may be lost on reload although the bar reads `Saved just now`
+  (freeze readiness F1, `c6933dded`) [M].
 - **Empty bag.** Set no simulation role before Apply. Every measured path starts from an empty bag. On every preset
   the M2 face then reads `Custom · Not checkable` and `Missing: Node, Transition, Next state, Initial or Initial
   marking, Source or Owned transitions.` [M].
@@ -192,8 +195,9 @@ to 830 [M]. Click it again to close.
 Count: 4 clicks, no keystroke; the optional Reset below, 2 clicks; the declarations, 9 interactions and 34
 keystrokes; the run, 11 clicks [M, P-2026-09-27-2105].
 
-**Optional: Reset before declaring** (tab `demoESM`). Reset shows `2 defects: tc action (undeclared 'coins' on
-demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M]. `coin` then shows `Halted: the
+**Optional: Reset before declaring** (tab `demoESM`). Reset shows `3 defects: tp guard (undeclared 'paid'); tc action
+(undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M,
+P-2026-09-28-0023]. `coin` then shows `Halted: the
 transition action of tc failed: 'coins' is not a state attribute of demoESM.` and `Last step: coin: tc (locked →
 locked) halted the run` [M]. The halt line reads whole on two lines [M, P-2026-09-27-2225]; the defects line is
 cut on screen, its title holds the whole text [M, P-2026-09-27-2105].
@@ -281,8 +285,8 @@ together. <!-- not measured: abstract ActivityNode with FinalNode and the explic
 Count: 4 clicks, no keystroke; the optional Reset below, 1 click; the declaration, 6 interactions and 10
 keystrokes; the run, 7 clicks [M, P-2026-09-27-2105].
 
-**Optional: Reset before declaring** (tab `demoFlowB`): `1 defect: f2 action (undeclared 'count' on demoFlowB).`
-and `Marking: i0` [M].
+**Optional: Reset before declaring** (tab `demoFlowB`): `3 defects: f3 guard (undeclared 'count'); f4 guard
+(undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023].
 
 **Declaration** (tab `DemoFlowB`). Click `Add attribute` in the summary line: the dialog opens on Data, its own `Add
 attribute` in view and focused [M, P-2026-09-27-2105]. Click it; row 1's name is selected: `count`, Enter. Scroll
@@ -308,8 +312,9 @@ After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover ti
 
 **Two variants run the same** [M, P-2026-09-27-1738]. With the final class named `ActivityFinal` (G6, closed by E1),
 Apply proposes `Activity final → ActivityFinal` in place of `Terminal → FinalNode`. With `f4` guarded `else` in place
-of `model.[count] >= 2` (G7, closed by E1), Reset lists only the `count` defect before the declaration and none after
-it. Each variant alone gives the six steps above line for line and `Terminated` at step 6. The script keeps
+of `model.[count] >= 2` (G7, closed by E1), Reset shows `2 defects: f3 guard (undeclared 'count'); f2 action (undeclared
+'count' on demoFlowB).` before the declaration and none after it [M, P-2026-09-28-0023]. Each variant alone gives the six
+steps above line for line and `Terminated` at step 6. The script keeps
 `FinalNode` and the explicit complement. <!-- not measured: the two variants through the dialog; the lines above are
 the panel's Profile and Apply, P-2026-09-27-1738 -->
 

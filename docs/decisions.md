@@ -258,6 +258,18 @@ merge lane P-2026-09-27-2327.
   Petri, ESM, Flow B) re-run on the merged tree. First applied to `enum-step-b`: merge `c030871ff`, tag
   `pre-enum-step-b` on `e529b6c7f`, the four scenes on script on 3029.
 
+### Decisione 2026-09-28: the model follows the activity (RC-32)
+
+- **RC-32** (2026-09-28, principle ratified by Alfonso 2026-09-27 23:52, evidence: measured, verified: none, reversible: trunk):
+  **`lane-run` picks the model of each lane from its activity.** Amends RC-16: the pin of `.claude/settings.json`
+  stays the heavy tier and the one place that names it; the light tier runs `LIGHT_MODEL` of
+  `frontend/scripts/lane-run.mjs`, passed as `--model`. The rule, deterministic and heavy when in doubt, is in P16
+  and in `tierRule` of that file. Alfonso ratified the principle in the owner chat `C-2026-09-27-1437` (2026-09-27
+  23:52: «lane-run sceglie il modello più conveniente per l'attività che deve svolgere»). The id `claude-sonnet-5`
+  was set by that chat at the GO of `P-2026-09-27-2330`, under that ratification, and is to be confirmed in the
+  morning digest (RC-25). Measure: `docs/discovery/discovery_2026-09-27_lane_efficiency.md` §7, where `--model` coexists
+  with the pin and wins and a resume keeps the session's model.
+
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-27_enum_edge_guard.md` (`4e5dff7ad`), otto ipotesi
@@ -2237,14 +2249,61 @@ P-2026-09-27-1740: «voglio il modale gia nella demo e se ci sono problemi farem
 sua, riportata dalla chat, non un'inferenza della chat: non è provvisoria. Registrata dalla corsia di merge
 P-2026-09-27-2049.
 
-- **R-SIM-85** (2026-09-27, ratified by Alfonso 2026-09-27 17:39, evidence: read, verified: agent, reversible:
-  trunk). **Il branch `sim-modal` entra nel trunk prima del freeze del 2026-10-01, e la demo MODELS percorre il
+- **R-SIM-85** (2026-09-27, ratified by Alfonso 2026-09-27 17:39, evidence: read, verified: agent, reversible: trunk).
+  **Il branch `sim-modal` entra nel trunk prima del freeze del 2026-10-01, e la demo MODELS percorre il
   dialogo Simulation roles.** Sostituisce la riga di P-2026-09-27-1740 (COSA, decisioni di Alfonso del
   2026-09-27) «the branch is not merged on the trunk before 2026-10-04, because the MODELS demo walks the current
   panel». Merge `5eccdd4d2` (P-2026-09-27-2049). Punto di rollback: il tag locale `pre-sim-modal` su
   `d9e88f792`, la base del merge. Il copione `docs/demo/models_2026_simulator_demo.md` resta stale su §2.2
   passo 3, §2.3 e §2.4 finché la corsia docs che la chat lancia subito dopo non lo ripercorre attraverso il
   dialogo (ticket high della Fase 2 di P-2026-09-27-1740).
+
+### Decisioni 2026-09-28: il run salta i ruoli off (R-SIM-86)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_modal.md` §3.2 («Not read by the run») e §11 punto 1
+(il risolutore in una corsia propria dopo quelle che liberano `simBridge.ts`); R-SIM-78 («il risolutore che salta
+le chiavi `off` arriva dopo la riga Petri di R-SIM-54», emendata da Alfonso il 2026-09-27, A3). Attuata dalla
+corsia P-2026-09-28-0100 (codice `22cc00ffd`) sotto RC-25. Nessuna riga ratificata da Alfonso cambia; il
+validatore (`derivedFromOff`) resta com'è.
+
+- **R-SIM-86** (2026-09-28, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Un ruolo `off` si legge come non legato.** Il run legge il bag attraverso `runBag` (`simBridge.ts`): le
+  chiavi dei ruoli che il profilo mette `off` cadono prima di `netStcFromRoles`, la classe degli eventi si deriva
+  dal Trigger salvo Event `off` (R-SIM-38), e `simStateAttributes` si legge dallo stesso bag; `runSignature`
+  legge lo stesso bag, così una chiave di un ruolo `off` modificata non interrompe il run. Il profilo è quello
+  che il pannello nomina (`storedProfile`): `simProfile`, altrimenti «Custom» ricostruito dalle chiavi, i cui
+  ruoli `off` sono le chiavi che non legge (`inferCustomProfile`). Si risolve solo `off`: un ruolo `derived` con
+  la chiave impostata si legge come prima (Bound k = 1 nei profili a controllo di flusso, la chiave vince).
+  Una lettura cambia fuori da un profilo esplicito: un bag senza `simProfile` con una chiave di azione e senza
+  `simStateAttributes` («Custom» spegne Action, Entry ed Exit per mancanza di State attributes) gira senza le
+  azioni, che prima erano difetti al Reset e fermavano il run allo sparo. `netCompile.ts` invariato. I bag dei
+  quattro preset della demo non hanno chiavi di ruoli `off`: le quattro scene e le righe dei difetti al Reset
+  sono identiche a P-2026-09-28-0023 (misurate su 3033). Restano sul bag grezzo i lettori fuori dal run (il
+  pannello, l'esplorazione del Bound, il produttore P2a): ticket della corsia.
+
+### Decisioni 2026-09-28 (pomeriggio): `else` senza fratelli e variabili di input (R-SIM-87, R-SIM-88)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-27_sim_checker_gap.md` §12 punto 1 e la voce di ticket 2 di
+P-2026-09-28-0100 in `docs/log-inbox/simulation.md`; `docs/discovery/discovery_2026-09-28_sim_input_variables.md`
+(branch `sim-input-variables`) §0, §5, §6. Risposte di Alfonso in chat il 2026-09-28:
+`docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md`.
+
+- **R-SIM-87** (2026-09-28, ratified by Alfonso 2026-09-28, evidence: read, verified: none, reversible: branch).
+  **Un `else` senza fratelli è un difetto. Emenda R-SIM-31(1).** Un arco `else` senza archi fratelli (stesso
+  preset, stessi trigger) non è più sempre vero in silenzio: è un difetto elencato al Reset, regola R7 in
+  `stcChecks.ts`, con un nuovo letterale di `CompileDefect.reason`. Il run non cambia. Nessuna lettura della demo
+  cambia: l'unico `else` dei preset (Flow B variante A, `f4`) ha il fratello `f3`.
+- **R-SIM-88** (2026-09-28, decided by the chat on Alfonso's «decidi tu» 2026-09-28, evidence: measured, verified:
+  none, reversible: branch). **Le variabili di input: una terza forma della riga Data. Emenda R-SIM-7.** Accanto a
+  `stored` e `derived`, la forma `input`: un valore scelto dall'ambiente a ogni passo che lo legge (l'IVAR di
+  nuXmv), per elemento o globale come ogni dichiarazione, mai in σ, in sola lettura. A una pressione (▶ o un
+  evento) il bridge raccoglie gli input letti da guardie e azioni delle transizioni strutturalmente abilitate e,
+  se ce ne sono, li chiede in un solo dialogo prima di impegnare il passo; Annulla lascia il run com'è. Un passo
+  ha quindi tre ingressi: evento, selettore, valutazione degli input. Un'azione che scrive un input ferma il run
+  (`read-only`). Per tenere una risposta visibile nella riga Marking basta un'azione esplicita su un attributo
+  `stored`; nessuna copia automatica in σ. Respinte le opzioni (b) e (c), che emenderebbero R-SIM-16 e R-SIM-17.
+  Le fette S1-S3 si costruiscono sul branch `sim-input-variables` e si fondono dopo la demo di Málaga
+  (2026-10-04); il freeze del 2026-10-01 non si tocca e la demo non mostra decisioni a runtime.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 

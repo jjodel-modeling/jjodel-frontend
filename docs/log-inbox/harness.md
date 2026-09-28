@@ -135,3 +135,67 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: Text read from the code, two points where it is narrower than the prompt: a launch moves the prompt into `docs/prompts/` (copy, then the pending copy removed), not just copies it; `--governance-goahead` without `--launch` lifts nothing and reaches only the commit of the `by hand:` line. The v2 `merge` line is left as it is: still true. Alfonso's yes (16:15, in chat) is the go-ahead of this governance change.
 **Prompt document name**: 2026-09-27 16:20
+
+## 2026-09-28 — fix: bordr line, probe theme helper, R-SIM-85 header (P-2026-09-28-0055)
+**Prompt**: `claude_2026-09-28_0055_prompt_small_cleanups.md`, fast lane, launched by `lane-run` in `~/jjodel-w-cleanups` on `small-cleanups` at `ba74632df` (cut from `alfonso-frontend-jjtl` at `b452d9e5c`). Three tickets of 2026-09-27: the `bordr` build warning (P-2026-09-27-2248), probes whose dark crops keep canvas and tree light (P-2026-09-27-1647, 1806, 2324, P-2026-09-28-0023), `docs:digest` exit 2 on the R-SIM-85 header.
+**Files touched**: `ce3531f99`: `docs/decisions.md` (R-SIM-85 header, two lines reflowed). `935d054f0`: `frontend/scripts/smoke/states.ts` (`setTheme`, `ThemeResult`). `dbcc9f2e9`: `frontend/src/components/editors/properties-with-tree-view.scss` (one line removed). This commit: `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-27 20:49 (merge lane of `sim-modal`: it wrote the R-SIM-85 header wrapped, item 3 only)
+**Causa**: (c)
+**Regressions**: no. From `frontend/`: `typecheck` exit 2, 14 errors, the baseline set; `build` exit 0, esbuild warnings 1 to 0 (`bordr`), Sass deprecations 43 and rollup notices 5 unchanged; `typecheck:scripts` exit 0; `check:scripts` PASS 31 files (29 before the gitignored probe and the scratch vite config existed); `docs:digest` exit 2 to 0, the reflow empty under a whitespace-normalised diff. Probe `_tmp_p0055_theme.ts` on 3032: 16/16, zero page errors (numbers in `935d054f0`). No vitest: no test covers the touched files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no human visual check in the prompt); probe crops light, attribute-only dark and `setTheme` dark in `~/.jjodel-lanes/P-2026-09-28-0055/shots_theme/`
+**Notes**: One stop with `Outcome: question` on `bordr`: renaming it to `border` would arm a red debug border on `.tree-node__header`, which no TSX emits; the chat adopted the Recommended answer (RC-21) and the line is deleted. `setTheme` calls `ThemeService.set` in the page; on this tree Settings > Appearance still writes the attribute only (`813a73ff5` is on `demo-polish`).
+**Prompt document name**: 2026-09-28 00:55
+
+**Ticket** (priority low, opened here). In the `setTheme` dark crop (`A3_dark_app.png`) the status bar stays light: `.app-statusbar` hard-codes `background: #f8fafc` (`frontend/src/components/StatusBar.scss:17`) with no dark rule, so no way of switching reaches it. The Name input of the properties panel paints white in the same crop. Neither changed here, the second not investigated.
+
+## 2026-09-28 — feat: lane-run direct merges, one closure commit, chains, model tier, report briefs (P-2026-09-27-2330)
+**Prompt**: `claude_2026-09-27_2330_prompt_harness_lane_efficiency.md`, full lane (governance: P16) on `harness-lane-efficiency` in `~/jjodel-w-harness-eff`, launched by `lane-run`. Phase 1 report `d81a14423` (29 merge lanes of 2026-09-27 measured, 23 would have gone direct); the GO adopted its eleven `Recommended` answers and set the light model id to `claude-sonnet-5` (RC-32).
+**Files touched**: `00c414397` merge --direct: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts` (new). `3a11565df` go closes a direct merge: `lane-run.mjs`, `lane-templates/merge-into-trunk.md`, `lane-templates/trunk-into-branch.md`, `laneRunDirect.test.ts`. `1986cdf46` chain: `lane-run.mjs`, `laneRunDirect.test.ts`. `142b3eddf` model tier: `lane-run.mjs`, `laneRun.test.ts`, `laneRunDirect.test.ts`. `c9b506d9f` brief warning: `lane-run.mjs`, `laneRun.test.ts`. `0bdfa1f94`: `docs/PROTOCOL.md` P16, `docs/HARNESS-DOCS.md` §4.1, §7 and version 1.7, `docs/decisions.md` RC-32. This commit: this entry and four tickets, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. At every code commit: hook tests 300 in 4 files at the baseline, 310, 314, 322, 330, 333 in 5 files, 0 failed; check:docs 4/4 with 5 warnings (baseline 5); check:agents PASS; check:scripts PASS; typecheck:scripts exit 0. Mutation bench: 30, 16, 18 and 24 mutants on slices 1 to 4, 6 more on slice 5, all killed.
+**Out-of-scope changes**: no. Eleven paths, above five (rule 19), all in DOVE and declared in the report's section 9; `laneRunDirect.test.ts` is the new test file DOVE allows, its fixtures carrying a second worktree and a fake npm.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Deviation: the union rule adds its blank line only before a branch heading (the report said before any non-blank line); both reproduce 15 of the 16 measured files. The GO says the project instructions name Sonnet 5 as an accepted deroga: not found in CLAUDE.md, decisions.md, PROTOCOL.md or settings.json, where Sonnet 5 appears only as a past executor; RC-32 records the id as the owner chat's. Session `536c46ab`.
+**Prompt document name**: 2026-09-27 23:30
+
+## 2026-09-28 — ticket: HARNESS-DOCS §4.2 and the discovery-report skill do not state the brief rule
+**Ticket**: P16 and HARNESS-DOCS §4.1 (`0bdfa1f94`) say a discovery report opens with `## 0. Answer in brief`, at most 40 lines, and `lane-run status` warns otherwise (`c9b506d9f`). The card of the discovery report, HARNESS-DOCS §4.2, and `.claude/skills/discovery-report/SKILL.md` (rules 1 to 7) still describe the report without it, so a session that follows the skill writes no brief. Both were outside the DOVE of P-2026-09-27-2330.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 8)
+
+## 2026-09-28 — ticket: the log-entry skill commits the inbox alone, against the one closure commit
+**Ticket**: `.claude/skills/log-entry/SKILL.md:21` (rule 6) says "Commit the inbox alone", while P13 and RC-17 put the entry, the Status flip and the visual line in one closure commit, and `status-flip` (its line 19) already says the flip rides in that commit. It is one source of the two-commit closures measured on 2026-09-26/27.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 5)
+
+## 2026-09-28 — ticket: docs:digest stops on the wrapped header of R-SIM-85
+**Ticket**: `npm run docs:digest` exits on `docs/decisions.md`: the header of R-SIM-85 (added by `22aa888de`, on the trunk too) wraps before its closing parenthesis, "the parenthesis does not close on the header line". No digest is written until that header is on one line.
+**Priority**: medium
+**Found in**: P-2026-09-27-2330
+
+## 2026-09-28 — ticket: a prose condition in a branch prompt is invisible to merge --direct
+**Ticket**: `merge --direct` checks what git and the prompt headers say. The session of P-2026-09-27-2049 stopped on "the branch is not merged on the trunk before 2026-10-04", written in the body of a branch prompt, with every mechanical precondition holding, so `--direct` would have merged it. RC-31 lifted that embargo, not the class. A header line a script can read (for example `Merge: not before <date>`) would let `--direct` refuse it.
+**Priority**: low
+**Found in**: P-2026-09-27-2330
+**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 3)
+
+## 2026-09-28 — merge: harness-trace into alfonso-frontend-jjtl (P-2026-09-28-1324)
+**Prompt**: `claude_2026-09-28_1324_prompt_merge_harness-trace.md`, a direct merge by `lane-run merge --direct`, no session: `harness-trace` at `5038c7cd2` into `alfonso-frontend-jjtl`, merge base `6c69783cf`, 2 commits on the branch side.
+**Files touched**: merge `c4bb0e0af`: 2 files from the branch side (`docs/discovery/discovery_2026-09-27_trace_monitor.md`, `docs/prompts/claude_2026-09-27_1030_prompt_trace_monitor_discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c4bb0e0af` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5436 tests in 221 files, 9 red at import, hooks 333; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge, no UI change; gates green
+**Notes**: Rollback tag `pre-harness-trace` on `3e141466d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1324/result.json`.
+**Prompt document name**: 2026-09-28 13:24

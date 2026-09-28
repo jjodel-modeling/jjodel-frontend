@@ -602,6 +602,18 @@ export class PinnableDock extends DockLayout{
     }));
 }
 
+    /**
+     * #157 Fase 3 (A): force a re-broadcast of the active tab's editor type even when the active
+     * tab id has not changed. Used when leaving consumer mode (?profile= removed) so the shell —
+     * the Properties panel is CSS-gated by body[data-editor-type] — re-syncs to the real active
+     * editor instead of staying on the value the last EDITOR_TYPE_CHANGE left. If no editor tab is
+     * active (e.g. the project dashboard), _detectActiveTabChange resolves to 'summary' as usual.
+     */
+    public forceEditorTypeBroadcast(): void {
+        this._lastActiveId = undefined;
+        this._detectActiveTabChange();
+    }
+
     componentDidUpdate(prevProps: Readonly<LayoutProps>, prevState: Readonly<LayoutState>, snapshot?: any) {
         super.componentDidUpdate(prevProps, prevState, snapshot);
         this._detectActiveTabChange();

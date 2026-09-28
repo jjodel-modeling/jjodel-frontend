@@ -799,12 +799,12 @@ describe('lane-run merge', () => {
         const r = laneRun(l, ['merge', 'feat', '--into', 'trunk'], { cwd: repo, env: MERGE_ENV });
         expect(r.status, r.stderr).toBe(0);
         expect(r.stdout).toContain(`by hand: cp ${parked(l, MERGE_FILE)} ${join(repo, MERGE_FILE)} && git -C ${repo} add -- ${MERGE_FILE} && ` +
-            `git -C ${repo} commit -m 'docs: add prompt ${NEW_ID}, merge feat into trunk' -m 'Model: chat via lane-run' -- ${MERGE_FILE} && ` +
+            `git -C ${repo} commit -m 'docs: add prompt ${NEW_ID}, merge feat into trunk' -m 'Model: chat via lane-run; lane tier heavy (a merge that falls back to a session)' -- ${MERGE_FILE} && ` +
             `lane-run start ${repo} ${MERGE_FILE}\n`);
         const h = byHand(l, r.stdout);
         expect(h.status, h.stderr).toBe(0);
         expect(gitIn(l, repo, ['log', '-1', '--format=%s'])).toBe(`docs: add prompt ${NEW_ID}, merge feat into trunk`);
-        expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toBe('Model: chat via lane-run');
+        expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toBe('Model: chat via lane-run; lane tier heavy (a merge that falls back to a session)');
         expect(gitIn(l, repo, ['show', '--name-only', '--format=', 'HEAD'])).toBe(MERGE_FILE);
         expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
         expect(waitFor(join(l.lanes, NEW_ID, 'exit.txt'))).toBe(true);
@@ -830,7 +830,7 @@ describe('lane-run merge', () => {
         expect(r.status, r.stderr).toBe(0);
         expect(gitIn(l, repo, ['log', '-1', '--format=%s'])).toBe(`docs: add prompt ${NEW_ID}, merge feat into trunk`);
         expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toBe(
-            'Model: chat via lane-run\n\nGovernance go-ahead: Alfonso\'s yes, 2026-09-27 10:40 (--governance-goahead).');
+            'Model: chat via lane-run; lane tier heavy (a merge that falls back to a session)\n\nGovernance go-ahead: Alfonso\'s yes, 2026-09-27 10:40 (--governance-goahead).');
         expect(gitIn(l, repo, ['show', '--name-only', '--format=', 'HEAD'])).toBe(MERGE_FILE);
         const text = readFileSync(join(repo, MERGE_FILE), 'utf8');
         expect(text).toContain('\n**Findings.** governance files changed on the branch: `CLAUDE.md`; launch allowed by Alfonso\'s yes (`--governance-goahead`, 2026-09-27 10:40)\n');
@@ -878,7 +878,7 @@ describe('lane-run merge', () => {
         const h = byHand(l, r.stdout);
         expect(h.status, h.stderr).toBe(0);
         expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toBe(
-            'Model: chat via lane-run\n\nGovernance go-ahead: Alfonso\'s yes, 2026-09-27 10:40 (--governance-goahead).');
+            'Model: chat via lane-run; lane tier heavy (a merge that falls back to a session)\n\nGovernance go-ahead: Alfonso\'s yes, 2026-09-27 10:40 (--governance-goahead).');
         expect(waitFor(join(l.lanes, NEW_ID, 'exit.txt'))).toBe(true);
     });
 
@@ -1180,5 +1180,175 @@ describe('lane-run probe', () => {
         expect(r.stderr).toContain('vite');
         expect(Date.now() - t0).toBeLessThan(10000);
         expect(npxCalls(l).some((c) => c.startsWith('npx tsx'))).toBe(false);
+    });
+});
+
+// ── model by activity (RC-32) ────────────────────────────────────────────────
+
+const LIGHT = 'claude-light-test';
+const tierPrompt = (lane: string, dove: string | null, extraHeader = '') =>
+    `# Prompt: tier\n\nPrompt-ID: ${ID}\nChat: C-2026-09-25-1353\nLane: ${lane}\nStatus: da eseguire\n${extraHeader}\n## COSA\n\nThe thing.\n` +
+    (dove === null ? '' : `\n## DOVE\n\n${dove}\n`) + '\n## COME\n\nDo it.\n';
+
+/** Starts a lane on the prompt and runs it to its exit; the call claude received and the lane's tier.txt. */
+function startTier(prompt: string, args: string[] = [], env: Record<string, string> = { LANE_RUN_LIGHT_MODEL: LIGHT }) {
+    const l = lab();
+    writeFileSync(join(l.worktree, 'tier.md'), prompt);
+    const r = laneRun(l, ['start', l.worktree, 'tier.md', ...args], { env });
+    const ran = r.status === 0 && waitFor(join(laneDir(l), 'exit.txt'));
+    const tierFile = join(laneDir(l), 'tier.txt');
+    return { l, r, ran, call: calls(l)[0], tier: existsSync(tierFile) ? readFileSync(tierFile, 'utf8').trim() : null };
+}
+
+const TIER_CASES: Array<[string, string, string[], 'heavy' | 'light', string]> = [
+    ['full', tierPrompt('full (more than 3 files)', '`docs/HARNESS-DOCS.md`'), [], 'heavy', 'Lane: full'],
+    ['discovery, the report only', tierPrompt('discovery (read-only)', '`docs/discovery/discovery_2026-09-28_x.md`'), [], 'light', 'Lane: discovery, DOVE writes docs only'],
+    ['discovery that writes code', tierPrompt('discovery (read-only)', '`docs/discovery/discovery_x.md` and `frontend/src/x.ts`'), [], 'heavy', 'Lane: discovery writes outside docs/'],
+    ['fast, docs only, probes aside', tierPrompt('fast (docs only)', '`docs/log-inbox/harness.md`, `docs/HARNESS-DOCS.md`; probes `frontend/scripts/smoke/_tmp_x.ts`, shots in `~/.jjodel-lanes/shots/`'), [], 'light', 'Lane: fast, DOVE writes docs only'],
+    ['fast, code', tierPrompt('fast (one file)', '`frontend/src/a.ts`'), [], 'heavy', 'in doubt'],
+    ['no DOVE', tierPrompt('fast (docs only)', null), [], 'heavy', 'in doubt'],
+    ['critical zone in the header', tierPrompt('fast (docs only)', '`docs/x.md`', 'Touches: `useJjomSync.ts`\n'), [], 'heavy', 'names useJjomSync.ts'],
+    ['critical zone in DOVE', tierPrompt('fast (docs only)', '`docs/x.md`; it reads `canvasToJjom.ts`'), [], 'heavy', 'names canvasToJjom.ts'],
+    ['governance', tierPrompt('fast (docs only)', '`docs/PROTOCOL.md` P16'), [], 'heavy', 'DOVE writes docs/PROTOCOL.md'],
+    ['critical-zone go-ahead', tierPrompt('fast (docs only)', '`docs/x.md`'), ['--critical-zone-goahead', ID], 'heavy', '--critical-zone-goahead'],
+];
+
+describe('lane-run start, the model tier (RC-32)', () => {
+    test('kills "light never picked", "--model not passed", "full not forced", "discovery that writes code not forced", "the critical zone ignored", "the header not read", "governance docs taken for docs", "the go-ahead not forced", "a probe path counted as a write", "tier not recorded", "tier not printed": each rule of the table picks its tier, recorded and printed', () => {
+        for (const [name, prompt, args, tier, reason] of TIER_CASES) {
+            const s = startTier(prompt, args);
+            expect(s.r.status, name + ': ' + s.r.stderr).toBe(0);
+            expect(s.ran, name).toBe(true);
+            const model = tier === 'light' ? LIGHT : 'settings pin';
+            expect(s.tier, name).toBe(`${tier} (${model}): ${s.tier?.split(': ').slice(1).join(': ')}`);
+            expect(s.tier, name).toContain(reason);
+            expect(s.r.stdout, name).toContain(`tier: ${s.tier}`);
+            if (tier === 'light') expect(s.call.args.slice(-2), name).toEqual(['--model', LIGHT]);
+            else expect(s.call.args, name).not.toContain('--model');
+        }
+    }, 60000);
+
+    test('kills "--tier light accepted where the rule forces heavy": refused on full, discovery that writes code, the critical zone, governance and the go-ahead, before anything runs', () => {
+        for (const i of [0, 2, 6, 8, 9]) {
+            const [name, prompt, args] = TIER_CASES[i];
+            const s = startTier(prompt, [...args, '--tier', 'light']);
+            expect(s.r.status, name).toBe(2);
+            expect(s.r.stderr, name).toContain('forces heavy');
+            expect(s.call, name).toBeUndefined();
+        }
+    }, 60000);
+
+    test('kills "--tier light refused in doubt", "--tier heavy ignored": --tier overrides a rule that does not force', () => {
+        const up = startTier(TIER_CASES[4][1], ['--tier', 'light']);
+        expect(up.r.status, up.r.stderr).toBe(0);
+        expect(up.call.args.slice(-2)).toEqual(['--model', LIGHT]);
+        expect(up.tier).toContain('--tier light');
+        const down = startTier(TIER_CASES[3][1], ['--tier', 'heavy']);
+        expect(down.r.status, down.r.stderr).toBe(0);
+        expect(down.call.args).not.toContain('--model');
+        expect(down.tier).toBe('heavy (settings pin): --tier heavy');
+    });
+
+    test('kills "light picked with no model", "--tier light with no model": while the light model is unset every lane runs heavy', () => {
+        const s = startTier(TIER_CASES[3][1], [], { LANE_RUN_LIGHT_MODEL: '' });
+        expect(s.r.status, s.r.stderr).toBe(0);
+        expect(s.call.args).not.toContain('--model');
+        expect(s.tier).toContain('heavy (settings pin): no light model set');
+        const t = startTier(TIER_CASES[3][1], ['--tier', 'light'], { LANE_RUN_LIGHT_MODEL: '' });
+        expect(t.r.status).toBe(2);
+        expect(t.r.stderr).toContain('no light model');
+    });
+
+    test('kills "the constant not claude-sonnet-5", "a malformed id passed to claude": the light tier runs the id the owner chat set; a malformed id is refused', () => {
+        const s = startTier(TIER_CASES[3][1], [], {});
+        expect(s.r.status, s.r.stderr).toBe(0);
+        expect(s.call.args.slice(-2)).toEqual(['--model', 'claude-sonnet-5']);
+        const bad = startTier(TIER_CASES[3][1], [], { LANE_RUN_LIGHT_MODEL: 'claude sonnet' });
+        expect(bad.r.status).toBe(2);
+        expect(bad.r.stderr).toContain('malformed');
+        expect(bad.call).toBeUndefined();
+    });
+
+    test('kills "resume changes the model": a resumed light lane passes no --model, the session keeps its own', () => {
+        const s = startTier(TIER_CASES[3][1]);
+        expect(s.call.args.slice(-2)).toEqual(['--model', LIGHT]);
+        const r = laneRun(s.l, ['resume', ID, '--text', `[${ID}] GO`], { env: { LANE_RUN_LIGHT_MODEL: LIGHT } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(s.l), 'exit.txt'))).toBe(true);
+        expect(calls(s.l)[1].args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions']);
+    });
+
+    test('kills "a merge session not forced heavy", "the tier not in the trailer": merge --launch runs heavy for a merge that falls back, and says so in the prompt commit', () => {
+        const { l, repo } = repoLab();
+        const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--launch'], { cwd: repo, env: { ...MERGE_ENV, LANE_RUN_LIGHT_MODEL: LIGHT } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(l.lanes, NEW_ID, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(l.lanes, NEW_ID, 'tier.txt'), 'utf8').trim()).toBe('heavy (settings pin): a merge that falls back to a session');
+        expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toContain('lane tier heavy (a merge that falls back to a session)');
+        expect(calls(l)[0].args).not.toContain('--model');
+        expect(r.stdout).toContain('tier: heavy (settings pin): a merge that falls back to a session');
+    });
+});
+
+// ── the brief of a discovery report (P16) ────────────────────────────────────
+
+const REPORT_REL = 'docs/discovery/discovery_2026-09-28_brief.md';
+const report = (brief: number | null, first = true) => {
+    const lead = '# Discovery: a report\n\nPrompt-ID: ' + ID + '\n\n';
+    const b = brief === null ? '' : '## 0. Answer in brief\n\n' + Array.from({ length: brief - 1 }, (_, i) => '- line ' + (i + 1)).join('\n') + '\n\n';
+    const rest = '## 1. Objective\n\nText.\n';
+    return lead + (first ? b + rest : rest + b);
+};
+
+/** An exited lane in l.worktree whose log wrote the report through the Write tool (or through a shell, with no tool call named). */
+function reportLane(l: Lab, text: string, viaWrite = true) {
+    mkdirSync(join(l.worktree, 'docs', 'discovery'), { recursive: true });
+    writeFileSync(join(l.worktree, REPORT_REL), text);
+    const dir = laneDir(l);
+    mkdirSync(dir, { recursive: true });
+    const tool = { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: viaWrite ? 'Write' : 'Bash', input: viaWrite ? { file_path: join(l.worktree, REPORT_REL), content: text } : { command: 'cat > report' } }] } };
+    const other = { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Read', input: { file_path: join(l.worktree, 'docs/discovery/discovery_2026-09-27_other.md') } }] } };
+    writeFileSync(join(dir, 'log.jsonl'), [other, tool].map((e) => JSON.stringify(e)).join('\n') + '\n' + assistant('Outcome: hard-stop') + '\n');
+    writeFileSync(join(dir, 'worktree.txt'), l.worktree + '\n');
+    writeFileSync(join(dir, 'started.txt'), String(Date.now() - 60000) + '\n');
+    writeFileSync(join(dir, 'pid.txt'), '999999\n');
+    writeFileSync(join(dir, 'exit.txt'), '0\n');
+}
+
+describe('lane-run status, the brief of the report', () => {
+    test('kills "a long brief not flagged", "the cap off by one", "a missing brief not flagged", "a brief that is not first accepted": status warns above 40 lines, without the heading, or when it is not the first section', () => {
+        for (const [text, warn] of [
+            [report(41), `warning: ${REPORT_REL}: the brief runs 41 lines, above 40 (P16)`],
+            [report(40), null],
+            [report(null), `warning: ${REPORT_REL}: no "## 0. Answer in brief" (P16)`],
+            [report(10, false), `warning: ${REPORT_REL}: "## 0. Answer in brief" is not the first section (P16)`],
+        ] as const) {
+            const l = lab();
+            reportLane(l, text);
+            const r = laneRun(l, ['status', ID]);
+            expect(r.status, r.stderr).toBe(0);
+            const lines = r.stdout.split('\n').filter((x) => x.startsWith('warning:'));
+            expect(lines).toEqual(warn === null ? [] : [warn]);
+        }
+    });
+
+    test('kills "the report read from the prompt", "a report read by the lane taken for its own": only the report the lane wrote is judged', () => {
+        const l = lab();
+        reportLane(l, report(41));
+        mkdirSync(join(l.worktree, 'docs', 'discovery'), { recursive: true });
+        writeFileSync(join(l.worktree, 'docs/discovery/discovery_2026-09-27_other.md'), report(null));
+        const r = laneRun(l, ['status', ID]);
+        expect(r.stdout.split('\n').filter((x) => x.startsWith('warning:'))).toEqual([`warning: ${REPORT_REL}: the brief runs 41 lines, above 40 (P16)`]);
+    });
+
+    test('kills "no git fallback": a report written through a shell is found in the commits that carry the Prompt-ID', () => {
+        const l = lab();
+        const env = { ...l.env, GIT_AUTHOR_NAME: 'T', GIT_AUTHOR_EMAIL: 't@t.invalid', GIT_COMMITTER_NAME: 'T', GIT_COMMITTER_EMAIL: 't@t.invalid' };
+        spawnSync('git', ['init', '-q', '-b', 'b'], { cwd: l.worktree, env });
+        reportLane(l, report(null), false);
+        spawnSync('git', ['add', '--', REPORT_REL], { cwd: l.worktree, env });
+        spawnSync('git', ['commit', '-q', '-m', `docs: the report (${ID})`, '--', REPORT_REL], { cwd: l.worktree, env });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.stdout).toContain(`warning: ${REPORT_REL}: no "## 0. Answer in brief" (P16)`);
     });
 });
