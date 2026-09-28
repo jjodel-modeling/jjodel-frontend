@@ -685,3 +685,46 @@ describe('the panel badge and the dialog pill read one verdict (P-2026-09-28-014
         expect(dialog(warn, null).word).toBe('Checkable');
     });
 });
+
+describe('R-SIM-90: the summary of a list of attributes (P-2026-09-29-0010)', () => {
+    const ESM = systemProfile('extendedStateMachine') as SimProfile;
+    const WITH_GUARD: ProfileBindings = { ...TURN, guard: bound('A_g') };
+    const names: Record<string, string> = { A_g: 'Trans.guard', A_h: 'Trans.cond' };
+    const named = (id: string) => names[id] ?? nameOf(id);
+
+    it('a list is kept over the binder\'s one attribute, and the line names each attribute (mutant: the list printed raw)', () => {
+        const s = profileSummary(ESM, { simGuard: '["A_g","A_h"]' }, WITH_GUARD);
+        expect(s.kept.map(k => [k.key, k.value, k.proposed])).toEqual([['simGuard', '["A_g","A_h"]', 'A_g']]);
+        expect(profileSummaryText(s, named).kept).toBe('Kept: Guard (Trans.guard, Trans.cond).');
+        // control: the binder's attribute stored as the plain id is not «kept»
+        expect(profileSummary(ESM, { simGuard: 'A_g' }, WITH_GUARD).kept).toEqual([]);
+    });
+
+    it('the declarations hint reads a list of Action attributes as bound', () => {
+        expect(profileSummary(ESM, { simAction: '["A_effect","A_more"]' }, TURN).declareHint).toBe(true);
+    });
+
+    it('the verdict of the badge and the pill: one incompatible attribute of a list is Not checkable, one warning «with warnings» (mutant: the first element\'s verdict)', () => {
+        const { string: ESTRING, expression: EXPR } = SKETCH_TYPE;
+        const C = (id: string, supers: string[] = []): SketchClass => ({ id, name: id, abstract: false, supers });
+        const A = (owner: string, name: string, type: string): SketchAttribute => ({ id: `${owner}.${name}`, name, owner, type });
+        const R = (owner: string, name: string, type: string, composition = false): SketchReference => (
+            { id: `${owner}.${name}`, name, owner, type, composition, aggregation: false }
+        );
+        const SKETCH: MetamodelSketch = {
+            classes: [C('State'), C('Initial', ['State']), C('Transition'), C('Timed', ['Transition']), C('Other')],
+            attributes: [A('Transition', 'guard', EXPR), A('Transition', 'cond', ESTRING), A('Timed', 'when', EXPR), A('Other', 'label', ESTRING)],
+            references: [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State')],
+        };
+        const bag = {
+            simNode: 'State', simInitial: 'Initial', simTransition: 'Transition', simOwnedTransitions: 'State.transitions',
+            simNextState: 'Transition.nextState',
+        };
+        const status = (guard: string) => profileVerdict(SM, { ...bag, simGuard: guard }, SKETCH).status;
+        expect(status('["Transition.guard","Transition.cond"]')).toBe('checkable');
+        expect(status('["Transition.guard","Timed.when"]')).toBe('warnings');
+        expect(status('["Transition.guard","Other.label"]')).toBe('notCheckable');
+        // control: the incompatible attribute alone
+        expect(status('Other.label')).toBe('notCheckable');
+    });
+});

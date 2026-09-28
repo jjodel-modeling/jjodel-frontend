@@ -8,7 +8,7 @@
  */
 
 import { STATE_ATTRIBUTES_KEY, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
-import { ROLE_CATALOG, roleDescriptor } from '../../../model/simulation/roleCatalog';
+import { ROLE_CATALOG, roleDescriptor, roleValues } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
 import { checkability } from '../../../model/simulation/simProfiles';
 import type { Checkability, CheckabilityStatus, RequiredItem, SimProfile, SystemProfileId } from '../../../model/simulation/simProfiles';
@@ -435,8 +435,12 @@ export function profileSummary(
         const b = bindings?.[d.id];
         if (mode !== 'edit' || !b) continue;
         if (b.status === 'candidates' && !isSetKey(bag, d.key)) choices.push({ role: d.id, key: d.key, label: d.label, values: b.values });
-        if (b.status === 'bound' && isSetKey(bag, d.key) && bag[d.key] !== b.value) {
-            kept.push({ role: d.id, key: d.key, label: d.label, value: bag[d.key] as string, proposed: b.value });
+        if (b.status === 'bound' && isSetKey(bag, d.key)) {
+            // R-SIM-90: a list is kept unless it is the binder's one attribute.
+            const stored = keptValues(d.id, bag[d.key] as string);
+            if (!(stored.length === 1 && stored[0] === b.value)) {
+                kept.push({ role: d.id, key: d.key, label: d.label, value: bag[d.key] as string, proposed: b.value });
+            }
         }
     }
     return {
@@ -450,6 +454,11 @@ export function profileSummary(
         pending: bindings !== null && (proposals.length > 0 || bag[PROFILE_KEY] !== encodeProfile(profile)),
         declareHint: ACTION_KEYS.some(k => isSetKey(after, k)) && stateRows.readable && stateRows.rows.length === 0,
     };
+}
+
+/** The elements of a kept value: every attribute of a `multi` role (R-SIM-90), else the value itself. */
+function keptValues(role: RoleId, value: string): string[] {
+    return roleDescriptor(role).multi ? roleValues(value) : [value];
 }
 
 export interface ProfileSummaryText {
@@ -480,7 +489,7 @@ export function profileSummaryText(summary: ProfileSummary, nameOf: (id: string)
             : null,
         // A parameter (Bound) is a number, not an element to name.
         proposals: summary.proposals.map(p => `${p.label} → ${roleDescriptor(p.role).kind === 'int' ? p.value : nameOf(p.value)}`),
-        kept: summary.kept.length > 0 ? `Kept: ${summary.kept.map(k => `${k.label} (${nameOf(k.value)})`).join(', ')}.` : null,
+        kept: summary.kept.length > 0 ? `Kept: ${summary.kept.map(k => `${k.label} (${keptValues(k.role, k.value).map(nameOf).join(', ')})`).join(', ')}.` : null,
         setButOff: summary.setButOff.length > 0 ? `Set but off: ${summary.setButOff.join(', ')}.` : null,
         declare: summary.declareHint ? 'Declare the state attributes the actions write:' : null,
     };
