@@ -619,3 +619,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Ticket** (priority medium, queued, Q4). S6, S7 and S8 stay in `sim-summary-fixes`, which queues behind this branch on `simRoleStatus.ts` and `SimulationPanel.tsx` (RC-22). Add to its list the S8 twin in the dialog: `SimRolesModal.tsx:408` reads `rows.length === 0` for an unreadable `simStateAttributes` too.
 **Ticket** (priority low, opened here, found by the probe). On an incompatible verdict the pill's title still reads «Every required role is bound.» (`SimRolesModal.tsx:594`). That is true of the roles and says nothing of the verdict.
 **Ticket** (priority low, opened here, report risk 5). A user profile stored twice under the old codec, in the note-first form, reads pending once more after this commit; Apply again settles it.
+
+## 2026-09-28 — merge: sim-badge-pill into alfonso-frontend-jjtl (P-2026-09-28-1423)
+**Prompt**: `claude_2026-09-28_1423_prompt_merge_sim-badge-pill.md`, a direct merge by `lane-run merge --direct`, no session: `sim-badge-pill` at `c111dd403` into `alfonso-frontend-jjtl`, merge base `d861cc922`, 5 commits on the branch side.
+**Files touched**: merge `ca2ca7046`: 11 files from the branch side (`docs/discovery/discovery_2026-09-28_sim_badge_pill.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-28_0140_prompt_sim_badge_pill.md`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simRoleStatus.test.ts`, `frontend/src/components/editor-v2/sim/simRoleStatus.ts`, `frontend/src/components/editor-v2/sim/simRolesDraft.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ca2ca7046` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5445 tests in 221 files, 9 red at import, hooks 333; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Alfonso passed the branch crops on 2026-09-28; gates green on the merge; the union inbox checked verbatim against both parents; the four scenes not re-run on 3001 by the chat
+**Notes**: Rollback tag `pre-sim-badge-pill` on `cf39cdbcb` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-28-1423/result.json`.
+**Prompt document name**: 2026-09-28 14:23
