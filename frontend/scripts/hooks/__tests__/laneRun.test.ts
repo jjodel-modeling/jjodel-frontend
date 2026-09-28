@@ -1391,3 +1391,66 @@ describe('lane-run status, the brief of the report', () => {
         expect(r.stdout).toContain(`warning: ${REPORT_REL}: no "## 0. Answer in brief" (P16)`);
     });
 });
+
+// ── monitor ──────────────────────────────────────────────────────────────────
+
+describe('lane-run monitor', { timeout: 60000 }, () => {
+    const started: number[] = [];
+    afterAll(() => {
+        for (const pid of started) {
+            try {
+                process.kill(pid, 'SIGTERM');
+            } catch {
+                // already gone
+            }
+        }
+    });
+
+    const freePort = () =>
+        new Promise<number>((res) => {
+            const s = createServer();
+            s.listen(0, '127.0.0.1', () => {
+                const port = (s.address() as { port: number }).port;
+                s.close(() => res(port));
+            });
+        });
+
+    const fetchText = async (port: number, path: string) => {
+        const r = await fetch(`http://127.0.0.1:${port}${path}`);
+        return { status: r.status, text: await r.text() };
+    };
+
+    test('kills "3001 accepted", "a port in use taken": both are refused before anything starts', async () => {
+        const l = lab();
+        const r = laneRun(l, ['monitor', '--port', '3001', '--no-open']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('3001');
+        const busy: Server = createServer();
+        await new Promise<void>((ok) => busy.listen(0, '127.0.0.1', () => ok()));
+        const port = (busy.address() as { port: number }).port;
+        const b = laneRun(l, ['monitor', '--port', String(port), '--no-open']);
+        await new Promise<void>((ok) => busy.close(() => ok()));
+        expect(b.status).toBe(2);
+        expect(b.stderr).toContain('in use');
+        expect(existsSync(join(l.lanes, '_monitor', 'pid.txt'))).toBe(false);
+    });
+
+    test('kills "the monitor not started", "the lanes of another HOME": monitor starts trace-monitor, which outlives lane-run and serves the lanes of ~/.jjodel-lanes', async () => {
+        const l = lab();
+        mkdirSync(laneDir(l), { recursive: true });
+        writeFileSync(join(laneDir(l), 'log.jsonl'), assistant('Outcome: done') + '\n');
+        writeFileSync(join(laneDir(l), 'exit.txt'), '0\n');
+        const port = await freePort();
+        const r = laneRun(l, ['monitor', '--port', String(port), '--no-open']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain(`monitor: http://127.0.0.1:${port}/`);
+        const pid = Number(readFileSync(join(l.lanes, '_monitor', 'pid.txt'), 'utf8'));
+        started.push(pid);
+        expect(r.stdout).toContain(`pid: ${pid}`);
+        expect((await fetchText(port, '/health')).status).toBe(200);
+        const idx = JSON.parse((await fetchText(port, '/index.json')).text);
+        const lane = idx.nodes.find((n: { type: string; id: string }) => n.type === 'lane' && n.id === ID);
+        expect(lane.outcome).toBe('done');
+        process.kill(pid, 'SIGTERM');
+    });
+});
