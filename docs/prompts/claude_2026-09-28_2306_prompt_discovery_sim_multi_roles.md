@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-2306
 Chat: C-2026-09-28-1936
 Lane: discovery (read-only, simulation engine across modules and the roles dialog). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane sim-multi-roles · discovery measured on d73f17383; the report is in the commit that carries this line (a commit cannot name its own sha)
 
 Worktree: `~/jjodel-w-multi`, branch `sim-multi-roles` (cut by the chat from `alfonso-frontend-jjtl` at `fb044365b`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-multi`, branch `sim-multi-roles`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

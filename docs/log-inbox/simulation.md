@@ -753,3 +753,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat: the four demo scenes probed on the branch in light theme (port 3037), 71 readings identical to the trunk run of the evening once pointer ids are normalised. Alfonso's walk on 3001 still due before the freeze.
 **Notes**: Closed by hand: the worker stops on the pre-existing vitest reds. Rollback tag `pre-sim-mixin-owner` on `95ff2ae75` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-09-28-2250/result.json`. The lane built the verdict tables from the builder spec, not from the demo exports (they are DProject records); the probes cover the four scenes.
 **Prompt document name**: 2026-09-28 22:50
+
+## 2026-09-28 — discovery: Entry, Exit, Action and Guard multi-valued, R-SIM-90 (P-2026-09-28-2306)
+**Prompt**: `claude_2026-09-28_2306_prompt_discovery_sim_multi_roles.md`, read-only discovery on `sim-multi-roles` in `~/jjodel-w-multi` (cut from `alfonso-frontend-jjtl` at `fb044365b`), heavy tier: a Phase 2 plan for R-SIM-90 (the four Data roles multi-valued) before the freeze, the risks for the four demo scenes measured, every open point with a `Recommended:` line, the order against the `sim-outputs-accepting` merge.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-28_sim_multi_roles.md` (new), this entry, the Status of the prompt file. No code. Probes, gitignored: `frontend/scripts/smoke/_tmp_multi_probe.ts`, `_tmp_multi_scenes.ts` (`npx tsx`, exit 0 both).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs only, no file under `frontend/src` written; `npm run check:docs` on this commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The prompt's premise of a Trigger list codec is false: `simTrigger` is one pointer, the list is the M1 slot; the encoding is new (plain id for one, JSON array string for more). Measured: today's engine reads a list as one pointer and the guard becomes true, silently; the dialog says Not checkable. The four scenes bind at most one attribute per multi role, each with at most one compatible candidate (sketches from the builder spec). RC-27 verifier: holds-with-changes, two adopted (report §12).
+**Prompt document name**: 2026-09-28 23:06
+**Ticket** (priority low, opened here, report §11 risk 3). With R-SIM-90 in, `simCheckToProblems.ts:117-120` dedups a parse error by the first bound attribute's type only: a parse error in a second attribute of another type is dropped or shown twice in the problems registry. Critical zone, left for after the freeze.
