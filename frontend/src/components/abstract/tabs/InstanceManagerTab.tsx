@@ -57,6 +57,7 @@ import { autoLayoutRows, inputFromDraftField } from '../../editor-v2/viewpoint/i
 import { computeIRSignature, getIRIndex } from '../../editor-v2/viewpoint/ir/irResolveCore';
 import { resolveTableSpec } from '../../editor-v2/viewpoint/ir/tableViews';
 import { EmptyState } from '../../ui';
+import { ResizeHandle } from '../../ResizeHandle';
 import type { RendererDecision } from '../../editor-v2/nodes/valueRenderer';
 import type {
     ClassShape,
@@ -935,8 +936,12 @@ function MultiForm({ model, touched, onTouch, onApply, onClear, onDelete }: {
  */
 function OutlinePanel({
     rows, subjectId, isOpen, hasSlots, menuFor, menuOf,
-    onToggle, onSelect, onMenu, onCreate,
+    onToggle, onSelect, onMenu, onCreate, width, onCollapse,
 }: {
+    /** #158 P2 — the pane's width, set by its resize handle. */
+    width: number;
+    /** #158 P2 — collapse the pane to its rail. */
+    onCollapse: () => void;
     rows: OutlineNode[];
     subjectId: string | null;
     isOpen: (node: OutlineNode) => boolean;
@@ -985,8 +990,9 @@ function OutlinePanel({
     };
 
     return (
-        <aside className="instance-manager__pane instance-manager__pane--outline">
+        <aside className="instance-manager__pane instance-manager__pane--outline" style={{ flexBasis: width }}>
             <h3 className="instance-manager__eyebrow">Model outline</h3>
+            <PaneCollapse label="the model outline" onCollapse={onCollapse} />
             {rows.length === 0 ? (
                 <p className="instance-manager__note">No model resolved.</p>
             ) : (
@@ -1312,6 +1318,82 @@ function computeColumnsPanelStyle(rect: DOMRect): React.CSSProperties {
         : { ...base, top: rect.bottom + GAP };
 }
 
+/** #158 P2 — the two side panes, Model outline and Metaclasses. */
+type SidePane = 'outline' | 'classes';
+
+/** The default widths. SAME numbers as `&__pane--outline` and `&__pane--classes` in
+ *  `instanceManagerTab.scss` (asserted there by 10h), restated because the width is now
+ *  applied inline: the pane and the handle sitting on its edge must read ONE number,
+ *  and the stylesheet's stays as the width of a pane rendered without it. Change one,
+ *  change both — same rule as `COLUMNS_PANEL_MAX_W` above. */
+const PANE_DEFAULT_W: Readonly<Record<SidePane, number>> = { outline: 300, classes: 200 };
+
+/** The bounds of a resize. Below the minimum a row no longer fits its name and its
+ *  class; above the maximum the table loses the room the whole layout exists to give it. */
+const PANE_LIMITS: Readonly<Record<SidePane, readonly [number, number]>> = {
+    outline: [180, 560],
+    classes: [150, 420],
+};
+
+/** A collapsed pane: the width of its expand button. Same number as `&__pane--rail`. */
+const PANE_RAIL_W = 32;
+
+/** Arrow-key step of the handles: the rhythm of the rows beside them. */
+const PANE_KEY_STEP = 16;
+
+function clampPane(pane: SidePane, width: number): number {
+    const [min, max] = PANE_LIMITS[pane];
+    return Math.round(Math.min(max, Math.max(min, width)));
+}
+
+/**
+ * A side pane, collapsed (#158 P2): a thin rail that says which pane it is and gives
+ * it back in one click. The WHOLE rail is the button — a 32px target that is only an
+ * icon would be the hardest control of the tab to hit.
+ *
+ * Still a `__pane`: the separator between the columns is one adjacency rule
+ * (`&__pane + &__pane`), and a rail outside it would lose the border on one side.
+ */
+function PaneRail({ label, icon, onExpand }: {
+    label: string;
+    icon: string;
+    onExpand: () => void;
+}) {
+    return (
+        <aside className="instance-manager__pane instance-manager__pane--rail">
+            <button
+                type="button"
+                className="instance-manager__rail"
+                title={`Show ${label}`}
+                aria-label={`Show ${label}`}
+                aria-expanded={false}
+                onClick={onExpand}
+            >
+                <i className="bi bi-chevron-double-right instance-manager__rail-icon" aria-hidden="true" />
+                <i className={`bi ${icon} instance-manager__rail-icon`} aria-hidden="true" />
+                <span className="instance-manager__rail-label">{label}</span>
+            </button>
+        </aside>
+    );
+}
+
+/** The collapse control at the top of an open side pane (#158 P2). Absolutely placed
+ *  in the pane's corner, so the eyebrow beside it keeps its markup and its rules. */
+function PaneCollapse({ label, onCollapse }: { label: string; onCollapse: () => void }) {
+    return (
+        <button
+            type="button"
+            className="instance-manager__pane-collapse"
+            title={`Hide ${label}`}
+            aria-label={`Hide ${label}`}
+            aria-expanded={true}
+            onClick={onCollapse}
+        >
+            <i className="bi bi-chevron-double-left" aria-hidden="true" />
+        </button>
+    );
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -1374,6 +1456,15 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  cui 10b l'ha consegnata, e chiuderla d'ufficio sarebbe una regressione di
      *  superficie travestita da default. */
     const [showOutline, setShowOutline] = useState(true);
+    /** #158 P2 — the Metaclasses pane open, the sister of `showOutline`. Closed, it is
+     *  a rail, like the outline closed: VIEWS › Outline and the outline's own rail act
+     *  on the SAME state, so there is one answer to «is the outline open». */
+    const [showClasses, setShowClasses] = useState(true);
+    /** #158 P2 — the side panes' widths. State of the session, not a preference: same
+     *  reason `columnChoice` is (R-RAIL-11 closes the keys that survive a reload). */
+    const [paneWidth, setPaneWidth] = useState<Record<SidePane, number>>(() => ({ ...PANE_DEFAULT_W }));
+    /** The pane whose handle is being dragged, for the handle's own drag look. */
+    const [resizingPane, setResizingPane] = useState<SidePane | null>(null);
     /** Il literal selezionato nel segmented, `''` per «All». Una stringa e non un
      *  indice: gli indici di un enum cambiano quando il metamodello cambia, e un
      *  filtro che dopo una modifica del metamodello punta a un altro literal e'
@@ -1474,6 +1565,55 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             window.removeEventListener('resize', onResize);
         };
     }, [columnsOpen]);
+
+    /* #158 P2 — resizing the side panes.
+     *
+     * The drag is the idiom `PropertiesWithTreeView` already uses with the same
+     * `ResizeHandle`: listeners on `document` for the gesture's lifetime, the cursor and
+     * `user-select` held on `body` so the pointer can leave the 8px strip without the
+     * page selecting text. One difference: the width is committed once per animation
+     * frame, because a width change re-renders this whole tab — table and form — and a
+     * mouse reports far more often than a screen paints. */
+    const resizePaneBy = (pane: SidePane, delta: number) =>
+        setPaneWidth(prev => ({ ...prev, [pane]: clampPane(pane, prev[pane] + delta) }));
+
+    const resetPane = (pane: SidePane) =>
+        setPaneWidth(prev => ({ ...prev, [pane]: PANE_DEFAULT_W[pane] }));
+
+    const startPaneResize = (pane: SidePane) => (e: React.MouseEvent) => {
+        const startX = e.clientX;
+        const startW = paneWidth[pane];
+        let latest = startW;
+        let frame = 0;
+        setResizingPane(pane);
+        const onMove = (ev: MouseEvent) => {
+            latest = clampPane(pane, startW + ev.clientX - startX);
+            if (frame) return;
+            frame = requestAnimationFrame(() => {
+                frame = 0;
+                setPaneWidth(prev => (prev[pane] === latest ? prev : { ...prev, [pane]: latest }));
+            });
+        };
+        const onUp = () => {
+            if (frame) cancelAnimationFrame(frame);
+            setPaneWidth(prev => (prev[pane] === latest ? prev : { ...prev, [pane]: latest }));
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            setResizingPane(null);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    };
+
+    /** Where each handle sits: the right edge of its pane, measured from the tab's left
+     *  edge. Arithmetic on the widths the panes are GIVEN, not a DOM read: both panes are
+     *  `flex: 0 0 <basis>` under `box-sizing: border-box`, so the basis is the width. */
+    const outlineEdge = showOutline ? paneWidth.outline : PANE_RAIL_W;
+    const classesEdge = outlineEdge + (showClasses ? paneWidth.classes : PANE_RAIL_W);
 
     // Name-sorted so the column does not reorder itself when a class is renamed
     // elsewhere. `getMetaclassInfo` is impure (it reads the store and L-proxies),
@@ -2335,11 +2475,23 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 onSelect={selectFromOutline}
                 onMenu={node => setMenuFor(prev => (prev === node.id ? null : node.id))}
                 onCreate={outlineCreate}
+                width={paneWidth.outline}
+                onCollapse={() => { setMenuFor(null); setShowOutline(false); }}
             />}
+            {/* #158 P2 — closed, the outline leaves its rail instead of nothing: the
+                way back is where the pane was, not only in VIEWS, which a closed
+                Metaclasses pane would hide as well. */}
+            {!showOutline && (
+                <PaneRail label="Model outline" icon="bi-list-nested" onExpand={() => setShowOutline(true)} />
+            )}
 
             {/* ── Metaclasses ─────────────────────────────────────────────── */}
-            <aside className="instance-manager__pane instance-manager__pane--classes">
+            {!showClasses ? (
+                <PaneRail label="Metaclasses" icon="bi-collection" onExpand={() => setShowClasses(true)} />
+            ) : (
+            <aside className="instance-manager__pane instance-manager__pane--classes" style={{ flexBasis: paneWidth.classes }}>
                 <h3 className="instance-manager__eyebrow">Metaclasses</h3>
+                <PaneCollapse label="the metaclasses" onCollapse={() => setShowClasses(false)} />
                 {classes.length === 0 ? (
                     <p className="instance-manager__note">
                         No metamodel resolved for this model.
@@ -2444,6 +2596,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     </li>
                 </ul>
             </aside>
+            )}
 
             {/* ── La colonna centrale: la tabella SOPRA, la form SOTTO ────────
                 Il riassetto di FL6. La form lascia la quarta colonna e prende il
@@ -3369,6 +3522,53 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             </section>
             )}
             </div>
+
+            {/* ── #158 P2: the width handles of the side panes ─────────────────
+                The design system's `ResizeHandle`, the one the properties rail uses.
+                OVER the seams and not between the columns: the separator between the
+                columns is one adjacency rule (`&__pane + &__pane`, asserted by 10h),
+                and a handle placed as a sibling in between would break the adjacency
+                and take the border with it. Each slot is a zero-width anchor at the
+                pane's right edge; the handle straddles it. Absent on a closed pane:
+                there is no width to set, only the rail's button. */}
+            {showOutline && (
+                <div className="instance-manager__resizer-slot" style={{ left: outlineEdge }}>
+                    <ResizeHandle
+                        className="instance-manager__resizer"
+                        orientation="vertical"
+                        isDragging={resizingPane === 'outline'}
+                        onMouseDown={startPaneResize('outline')}
+                        onDoubleClick={() => resetPane('outline')}
+                        onResizeBy={delta => resizePaneBy('outline', delta)}
+                        step={PANE_KEY_STEP}
+                        label="Resize the model outline"
+                        value={paneWidth.outline}
+                        min={PANE_LIMITS.outline[0]}
+                        max={PANE_LIMITS.outline[1]}
+                        readoutPrefix="w"
+                        hint="Drag to resize · double-click to reset"
+                    />
+                </div>
+            )}
+            {showClasses && (
+                <div className="instance-manager__resizer-slot" style={{ left: classesEdge }}>
+                    <ResizeHandle
+                        className="instance-manager__resizer"
+                        orientation="vertical"
+                        isDragging={resizingPane === 'classes'}
+                        onMouseDown={startPaneResize('classes')}
+                        onDoubleClick={() => resetPane('classes')}
+                        onResizeBy={delta => resizePaneBy('classes', delta)}
+                        step={PANE_KEY_STEP}
+                        label="Resize the metaclasses"
+                        value={paneWidth.classes}
+                        min={PANE_LIMITS.classes[0]}
+                        max={PANE_LIMITS.classes[1]}
+                        readoutPrefix="w"
+                        hint="Drag to resize · double-click to reset"
+                    />
+                </div>
+            )}
 
             {pendingMulti && (
                 <MultiDeleteDialog

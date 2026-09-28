@@ -27,6 +27,10 @@
    here (rule 28). */
 
 .instance-manager {
+    /* #158 P2 — the anchor of the side panes' width handles (`&__resizer-slot`). The
+       only `absolute` below it before this was `&__sr`, which has no offsets and so
+       stays where it was. */
+    position: relative;
     display: flex;
     width: 100%;
     height: 100%;
@@ -64,6 +68,102 @@
        with the metamodel, so it takes the slack. */
     &__pane--outline { flex: 0 0 300px; padding: 14px 0; }
     &__pane--classes { flex: 0 0 200px; }
+
+    /* #158 P2 — the two side panes resize and collapse.
+       A rule of its own rather than a word added to the two lines above: those are
+       the default widths, asserted verbatim by 10h, and the width a user drags lands
+       inline over them as `flex-basis` (the TSX restates 300 and 200 as
+       `PANE_DEFAULT_W`). `position: relative` anchors the corner control. */
+    &__pane--outline,
+    &__pane--classes { position: relative; }
+
+    /* A closed side pane: the button that reopens it, full height. 32px is
+       `PANE_RAIL_W` in the TSX, which places the handles from it. No padding and no
+       scroll: the pane IS the button. */
+    &__pane--rail {
+        flex: 0 0 32px;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    &__rail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        height: 100%;
+        padding: 12px 0;
+        border: none;
+        background: transparent;
+        color: var(--color-form-muted);
+        cursor: pointer;
+        transition: background-color 150ms ease-out;
+
+        &:hover { background: var(--color-bg-hover); color: var(--color-form-label); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
+    }
+
+    &__rail-icon { font-size: 12px; }
+
+    /* The pane's name, read down the rail: the eyebrow's type, turned. */
+    &__rail-label {
+        writing-mode: vertical-rl;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    /* The collapse control, in the pane's top-right corner beside the eyebrow. Quiet
+       like the eyebrow until hovered: it is chrome, not content. */
+    &__pane-collapse {
+        position: absolute;
+        top: 10px;
+        right: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        font-size: 12px;
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-hover); color: var(--color-form-label); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* The handle's anchor: zero wide, full height, at the pane's right edge (`left` is
+       inline). Above the columns, below the Columns panel (30) and the dialog scrim
+       (40). */
+    &__resizer-slot {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        z-index: 3;
+    }
+
+    /* Two classes, as `.properties-panel-resize-handle.resize-handle` does, so this
+       geometry beats the component's own `position: relative` and 10px. The strip
+       straddles the seam, 4px each side. The resting hairline is hidden because the
+       seam already has its border (the adjacency rule of `&__pane`); it comes back on
+       hover, focus and drag, when the handle has something to say. */
+    &__resizer.resize-handle {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -4px;
+        width: 8px;
+
+        &:not(:hover):not(:focus-visible):not(.dragging)::before { background: transparent; }
+    }
 
     /* FL6 — la colonna centrale e' IMPILATA: la tabella sopra, la form sotto.
        Le due letture (outline, catalogo) restano affiancate a sinistra, perche'
