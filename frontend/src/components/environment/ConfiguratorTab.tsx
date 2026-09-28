@@ -5,7 +5,8 @@
  * role in the URL) replaces the metaclass rail: pick a type → its instances → open one in
  * `IRForm` → create a new one. Reuses the Data Manager engine WITHOUT touching it:
  *   - `instancesOfClass` (pure, instanceManagerModel) for the list;
- *   - `IRForm` (standalone) for the detail/edit;
+ *   - `InstanceDetail` for the detail/edit — the Data Manager's own panel (2026-09-28), so
+ *     an element shows and navigates the same in both; it replaced a bare `IRForm`;
  *   - `applyCreate` + `newDraft` + `makeShapeCtx` (the same chain InstanceManagerTab commits
  *     through) for "New" — called bare, never wrapped in a TRANSACTION (editor-v2 §3.3).
  *
@@ -13,10 +14,11 @@
  * Permission gating of editing (read-only forms) is Fase 2; here the role only filters which
  * types the bar shows (via `visibleTopLevelTypes`).
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import {
+    DATA_MANAGER_VIEWPOINT_ID,
     DState,
     U,
     LProject,
@@ -25,11 +27,15 @@ import {
     visibleTopLevelTypes,
     resolveTypePermission,
 } from '../../joiner';
-import { newDraft } from '../../jjform';
+import { newDraft, paletteAttr } from '../../jjform';
 import { instancesOfClass } from '../abstract/tabs/instanceManagerModel';
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
 import { applyCreate } from '../editor-v2/hooks/createAdapter';
-import IRForm from '../editor-v2/viewpoint/ir/IRForm';
+import { applyDelete, deletePlan, preflightFor } from '../editor-v2/hooks/deleteAdapter';
+import { appendValue } from '../editor-v2/viewpoint/ir/formWrite';
+import InstanceDetail, { type DetailPermission } from '../abstract/tabs/InstanceDetail';
+import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
+import type { DeleteOptions, DeletePreflight, NavState } from '../../jjform';
 import './configuratorTab.scss';
 
 export interface ConfiguratorTabProps {
@@ -98,6 +104,71 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
         () => (selectedTypeId && modelId ? instancesOfClass(idlookup, modelId, selectedTypeId) : []),
         [idlookup, modelId, selectedTypeId],
     );
+
+    // ── The detail: the Data Manager's panel (`InstanceDetail`) ────────────────
+    // The same header, breadcrumb and Back, form, inline children and reference sections
+    // the Data Manager shows, so an element reads and navigates the same in both places.
+    // What this host adds is what `InstanceDetail` leaves to its hosts: the navigation
+    // state, the scroll container, the create and delete gestures, and the profile.
+
+    /** Where the detail has drilled to. Cleared when another instance is picked, as the
+     *  Data Manager clears it from its selection gestures. */
+    const [nav, setNav] = useState<NavState | null>(null);
+    useEffect(() => { setNav(null); }, [selectedInstanceId]);
+
+    /** The detail column is the element that scrolls: Back restores its offset. */
+    const detailRef = useRef<HTMLDivElement | null>(null);
+
+    /** The profile's rule for every type the detail shows or reaches by navigating
+     *  (`resolveTypePermission`, unchanged: Juri's decision of 2026-09-28). Stable per
+     *  profile, because the detail's memos depend on it. */
+    const permissionOf = useCallback(
+        (classId: string): DetailPermission => resolveTypePermission(profile, classId),
+        [profile],
+    );
+
+    /** The Data Manager's form palette, so the detail is painted as it is there. */
+    const palette = useSelector((s: any) => paletteAttr(s?.idlookup?.[DATA_MANAGER_VIEWPOINT_ID]?.formPalette));
+
+    /** Delete, with the Data Manager's confirmation (12d): the preflight lists who points
+     *  at the instance and offers to reassign or clear those references. `InstanceDetail`
+     *  offers it only on a type the profile may edit. */
+    const [pendingDelete, setPendingDelete] = useState<DeletePreflight | null>(null);
+    const [reassignTo, setReassignTo] = useState('');
+    const openDelete = (instanceId: string) => {
+        if (!modelId) return;
+        const pre = preflightFor(modelId, makeShapeCtx(modelId).shape(), instanceId);
+        setReassignTo(pre.reassignCandidates[0]?.id ?? '');
+        setPendingDelete(pre);
+    };
+    const confirmDelete = (options: DeleteOptions) => {
+        if (!pendingDelete) return;
+        const plan = deletePlan(pendingDelete, options);
+        setPendingDelete(null);
+        if (plan.blocked) {
+            console.warn('[ConfiguratorTab] delete refused', plan.blocked);
+            return;
+        }
+        applyDelete(plan);
+        if (selectedInstanceId && plan.deletes.includes(selectedInstanceId)) setSelectedInstanceId(null);
+    };
+
+    /** «Add <Child>» from the detail: created in place, like this screen's «New», without
+     *  the Data Manager's draft dialog. Bare call (editor-v2 §3.3). */
+    const createIn = (cls: string, ownerId: string | null, childKey: string | null) => {
+        if (!modelId) return;
+        const shape = makeShapeCtx(modelId).shape();
+        applyCreate(modelId, shape, newDraft(shape, cls, ownerId, childKey));
+    };
+
+    /** «New <Target> & link»: the target at model root, then the pointer appended to the
+     *  source slot — the same two steps the Data Manager's commit makes (#142). */
+    const createAndLink = (targetCls: string, sourceId: string, refKey: string) => {
+        if (!modelId) return;
+        const shape = makeShapeCtx(modelId).shape();
+        const id = applyCreate(modelId, shape, newDraft(shape, targetCls, null, null));
+        if (id) appendValue(sourceId, refKey, id, true);
+    };
 
     if (!open) return null;
 
@@ -243,29 +314,47 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                                 )}
                             </div>
 
-                            <div className="configurator__detail">
-                                {selectedInstanceId ? (
-                                    readOnly ? (
-                                        <>
-                                            <div className="configurator__ro-banner">
-                                                <i className="bi bi-eye" /> Read only
-                                                {profile?.name ? ` — the "${profile.name}" profile cannot edit ${selectedTypeId ? classNameById[selectedTypeId] : 'this type'}` : ''}
-                                            </div>
-                                            {/* Soft gate (frontend enforcement, D1): the form still renders but takes no
-                                                input. The detail column keeps its own scroll. */}
-                                            <div className="configurator__ro-body" aria-disabled="true">
-                                                <IRForm objectId={selectedInstanceId} host="rail" />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <IRForm objectId={selectedInstanceId} host="rail" />
-                                    )
+                            <div className="configurator__detail" ref={detailRef}>
+                                {selectedInstanceId && modelId ? (
+                                    /* The Data Manager's detail, not a second one: header,
+                                       breadcrumb and Back, the form (host `manager`, so the
+                                       Data Manager's view applies here too), inline children,
+                                       reference sections with their summaries, «Add».
+                                       Wrapped in the manager's root class for its palette and
+                                       tokens; `configuratorTab.scss` undoes the root's layout. */
+                                    <div className="instance-manager configurator__dm" data-palette={palette}>
+                                        <div className="instance-manager__form-inner">
+                                            <InstanceDetail
+                                                modelid={modelId}
+                                                subjectId={selectedInstanceId}
+                                                nav={nav}
+                                                setNav={setNav}
+                                                scrollRef={detailRef}
+                                                openDelete={openDelete}
+                                                onCreate={createIn}
+                                                onCreateAndLink={createAndLink}
+                                                permissionOf={permissionOf}
+                                            />
+                                        </div>
+                                    </div>
                                 ) : (
                                     <p className="configurator__hint">Select an instance, or create a new one.</p>
                                 )}
                             </div>
                         </div>
                     </>
+                )}
+
+                {/* The Data Manager's delete confirmation, inside the overlay so it paints
+                    above it (its scrim is `fixed` at 40, in the overlay's stacking context). */}
+                {pendingDelete && (
+                    <DeleteDialog
+                        pre={pendingDelete}
+                        reassignTo={reassignTo}
+                        onReassignTo={setReassignTo}
+                        onCancel={() => setPendingDelete(null)}
+                        onConfirm={confirmDelete}
+                    />
                 )}
             </div>
         </div>,
