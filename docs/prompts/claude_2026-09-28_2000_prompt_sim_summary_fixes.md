@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-2000
 Chat: C-2026-09-28-1936
 Lane: fast (three small fixes in the sim panel and the profile binder, tests first; no discovery). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane sim-summary-fixes, this worktree · 434ba5a52 (S6 83f5f9cca, S7 ff9aef558, S8 434ba5a52) · verifica visiva non eseguita da questa sessione (il prompt vieta dev server/probe qui: le quattro scene demo restano da verificare alla chat prima del merge)
 
 Worktree: `~/jjodel-w-summary`, branch `sim-summary-fixes` (cut by the chat from `alfonso-frontend-jjtl` at `247a93549`, pushed to origin the same evening; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-summary`, branch `sim-summary-fixes`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
