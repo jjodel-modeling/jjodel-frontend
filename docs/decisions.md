@@ -2340,7 +2340,7 @@ R-SIM-86..88» di `docs/log-inbox/simulation.md`); rinumerate R-SIM-91..93 il 20
 (P-2026-09-28-2305), perché il tronco aveva già R-SIM-86..90 diversi (R-SIM-86 il run salta i ruoli off, R-SIM-87
 `else` senza fratelli, R-SIM-88 le variabili di input).
 
-- **R-SIM-91** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-91** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: branch).
   **Il motore legge Accepting (R-SIM-50).** `simAccepting` entra nella STC (`NetStc.accepting`), la rete compilata ne
   porta i posti per kind-of (`CompiledNet.accepting`, `null` senza il ruolo), mai fusi in F. `isAccepting(net, σ)` è
   vero quando uno di quei posti è marcato. È una lettura del marking fuori dal ciclo, come `terminated`: candidati,
@@ -2352,7 +2352,7 @@ R-SIM-86..88» di `docs/log-inbox/simulation.md`); rinumerate R-SIM-91..93 il 20
   `simAccepting` non è nel sort dei nodi di `ROLE_SORTS` (`stcFromRoles.ts:23-28`), quindi una classe che fa
   Accepting e Transition passa il controllo di sovrapposizione (R-SIM-16); è dovuto alla fetta delle facce, dopo
   il merge di E2 e di `sim-modal`, che porta anche «accepting» accanto allo stato del run.
-- **R-SIM-92** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-92** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: branch).
   **Gli output legati a un ruolo nel motore (R-SIM-51).** `simStateOutput` e `simTransitionOutput` entrano nella STC;
   `compileNet` legge al Reset i valori della feature sul modello congelato del run (una modifica del modello ritira il
   run, R-SIM-34): per ogni posto il suo slot (`CompiledNet.stateOutputs`); per ogni transizione gli slot dei suoi
@@ -2367,7 +2367,7 @@ R-SIM-86..88» di `docs/log-inbox/simulation.md`); rinumerate R-SIM-91..93 il 20
   senza il ruolo); i quattro preset della demo identici come in R-SIM-91. Resta aperto: le righe State output e
   Transition output nel pannello, la riga dell'output di Moore e l'output di Mealy in «Last step», con la fetta
   delle facce; la forma di un output di tipo enumerazione, non misurata (report §5.6).
-- **R-SIM-93** (2026-09-27, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-93** (2026-09-27, ratified by Alfonso 2026-09-28, evidence: measured, verified: none, reversible: branch).
   **Le tre chiavi escono dalle provvisorie di R-SIM-52.** Con il commit `ab4b8de8b` `simAccepting`,
   `simStateOutput` e `simTransitionOutput` sono lette dal motore (R-SIM-91, R-SIM-92) e diventano definitive senza
   rinomine, come `simActivityFinal` con R-SIM-83: `NEW_KEYS` di `roleCatalog.test.ts` è vuoto e il test «finds every

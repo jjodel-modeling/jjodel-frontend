@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-2305
 Chat: C-2026-09-28-1936
 Lane: full (merge of the trunk into the branch with code conflicts in the simulation engine, then gates). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane sim-outputs-accepting · 813b1c058 · non fuso nel tronco: hard-stop, le quattro scene le sonda la chat
 
 Worktree: `~/jjodel-w-outputs`, branch `sim-outputs-accepting` (6 commits ahead of the merge base, about 260 behind `alfonso-frontend-jjtl` at `fb044365b`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-outputs`, branch `sim-outputs-accepting`, `git log -1` is the docs commit that added this prompt, `git status` empty; if any differs, stop with `Outcome: blocked` and say which.
 

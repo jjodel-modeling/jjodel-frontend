@@ -795,3 +795,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: Numbered from 86: R-SIM-85 is on the trunk (sim-modal) and on no branch past it, measured by a grep of every local branch; a clash with a parallel lane is the later merge's to renumber, as for R-SIM-83/84. R-SIM-86 names the open overlap check (simAccepting outside ROLE_SORTS), owed to the face slice.
 **Prompt document name**: 2026-09-27 17:25
+
+## 2026-09-28 — merge: alfonso-frontend-jjtl into sim-outputs-accepting (P-2026-09-28-2305)
+**Prompt**: `claude_2026-09-28_2305_prompt_sim_outputs_take_trunk.md`, full lane (RC-14, branch side): take the trunk at `fb044365b` into the S4 engine slice (`ab4b8de8b`), every conflict resolved keeping both sides, the three S4 rows ratified by Alfonso 2026-09-28, gates at the trunk's baseline; no merge into the trunk, no dev server, no probe.
+**Files touched**: merge `813b1c058` (conflicts resolved: `frontend/src/model/simulation/__tests__/netCompile.test.ts`, `__tests__/netStep.test.ts`, `docs/log-inbox/simulation.md`, `docs/decisions.md`; auto-merged `netCompile.ts`, `netStep.ts`, `netTypes.ts`, each equal to both deltas); docs, this commit: `docs/decisions.md` (R-SIM-91..93 headers), this entry, the Status of `docs/prompts/claude_2026-09-28_2305_prompt_sim_outputs_take_trunk.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `813b1c058`: typecheck 14, the baseline set (14 before too); vitest `src/model/simulation` 17 files 518 tests and `src/components/editor-v2/sim` 8 files 243 tests, all green (the branch before the merge: 15 files, 454 tests); full vitest 5557 passed, 6 failed, 9 files red at import, the trunk's known set; build exit 0; check:addonly on the merge clean; docs:digest exit 0.
+**Out-of-scope changes**: yes: in `docs/decisions.md`, beyond the three headers, the merge renumbered the S4 rows R-SIM-86..88 to R-SIM-91..93 (the trunk holds different R-SIM-86..88), with the section heading, two cross-references and a note of the original numbering in the section intro.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no dev server by the prompt; the chat probes the four scenes after the hard stop.
+**Notes**: R-SIM-50/51/52 themselves were ratified on 2026-09-25 and are unchanged: the rows the prompt names are the branch's S4 rows implementing them, provisional since `bdd11814c`. The 6 failed: 5 trace/monitor kills (green under `~/.local/bin/node` v26, red under the PATH node v23.3.0) and `checkRange`, which walks 8 first-parent commits here against 43 on the trunk and turns green once merged into it.
+**Prompt document name**: 2026-09-28 23:05
