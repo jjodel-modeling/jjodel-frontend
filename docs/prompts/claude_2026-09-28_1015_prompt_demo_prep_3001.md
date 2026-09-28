@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-28-1015
 Chat: C-2026-09-27-1437
 Lane: fast (no code change; one discovery step with a saved report). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-09-28 · lane demo-prep, this worktree · the report and the log entry are in the commit that carries this line (a commit cannot name its own sha) · four scenes built headless against trunk 447e4239b, four JSON exports in /Users/alfonso/jjodel-demo-exports/, Alfonso imports them via the app's own Import
 
 Worktree: `/Users/alfonso/jjodel-w-demoprep`, branch `demo-prep`, created from trunk `888ea9a9d`, `frontend/node_modules` symlinked (P14). Before anything else run `pwd` and `git branch --show-current`: if the answer is not that worktree on `demo-prep`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-28-1015 · session <id>]` and ends with an `Outcome:` line (P16). Run gates and probes in the foreground.
 

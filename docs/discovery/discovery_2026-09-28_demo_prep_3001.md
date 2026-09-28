@@ -233,3 +233,91 @@ helper `_tmp_sim3b_scenarios.js`, was not completed in this read-only phase (tim
    deferred to Phase 2 itself?
 3. The prompt file path `docs/prompts/claude_2026-09-28_1015_prompt_demo_prep_3001.md` was assumed by naming
    convention; it was not opened or verified to exist in this phase.
+
+## 9. Addendum — 2026-09-28, Phase 2 (RC-21 answers received: take the fallback, no debug-port ask;
+read the builder in full in Phase 2; prompt path confirmed correct)
+
+Fallback executed: headless Chromium, one fresh browser context per scene, each pointed at
+`http://localhost:3001` — Alfonso's dev server, tree `~/jjodel-release`. Confirmed immediately before
+the run and unchanged after: `git -C ~/jjodel-release log -1 --format='%H %ai %s'` ->
+`447e4239bbc4b044bf42421bd4a0a718f84ed3b8 2026-09-28 10:13:11 +0200 Merge branch 'staging' into
+alfonso-frontend-jjtl`, tree clean. **All four scenes were built and read against this sha.**
+
+Each browser context: offline-seeded (states.ts `OFFLINE_USER` shape, advanced interface mode), a
+brand-new project created through the real UI ("New Project", named after the preset's metamodel), then
+`_tmp_demo2_scenario.js` (copied verbatim from `~/jjodel-sim/frontend/scripts/smoke/`, read in full —
+open question 2 above, closed) evaluated in-page with `window.__demoOnly = [preset]` to build exactly
+one of its six presets per project. `_tmp_sim3b_scenarios.js` was also read in full: it is a *different*,
+unrelated scratch scenario (`SimTurnstile`/`SimFlow`/`SimPetri`, P-2026-09-25-1103) that
+`_tmp_demo2_scenario.js`'s header comment credits only as a source of borrowed *helper patterns*
+(`L`, `id`, `idl`, `newMM`, `newM1`, `objects`, `refs`, `attrs`, `composition`) — `_tmp_demo2_scenario.js`
+does not import or otherwise depend on it at runtime. Driver script (new, this lane):
+`~/.jjodel-lanes/P-2026-09-28-1015/build_and_export.ts`, run from `frontend/` via
+`npx tsx scripts/smoke/_tmp_P20260928_build_and_export.ts <preset>` (a same-content copy kept
+transiently under `frontend/scripts/smoke/` — gitignored `_tmp_*`, confirmed with `git status` — because
+Node's CommonJS resolution for `@playwright/test` walks up from the *script's own* directory, not `cwd`,
+so the driver only resolves `frontend/node_modules` from inside that tree).
+
+### 9.1 Per-scene result
+
+| Scene | Build (classes/features/objects) | Reload-intact | M2 reading | M1 reading | Export |
+|---|---|---|---|---|---|
+| `DemoPEST`/`demoSM` | 5/3/11, all match §2.1 | 5/3/11 alive | `Custom · Not checkable` / `Missing: Node, Transition, Next state, Initial or Initial marking, Source or Owned transitions.` | `Simulation not configured. Missing on DemoPEST: Initial or Initial marking, Owned transitions or Source, Next state.` | `scene_1_DemoPEST.json`, 63077 bytes, md5 `b5c3b586dc4ca34ccc2c8d31af7c172e` |
+| `DemoPetri`/`demoNet` | 5/5/13, all match §2.2 | 5/5/13 alive | same as above (identical text on every preset, per §1) | `Simulation not configured. Missing on DemoPetri: Initial or Initial marking, Owned transitions or Source, Next state.` | `scene_2_DemoPetri.json`, 66402 bytes, md5 `f7dbc47d194700f0474b47fba8742aa6` |
+| `DemoESM`/`demoESM` | 5/7/10, all match §2.3 | 5/7/10 alive | same as above | `Simulation not configured. Missing on DemoESM: Initial or Initial marking, Owned transitions or Source, Next state.` | `scene_3_DemoESM.json`, 65072 bytes, md5 `94cb2ef331e5d848b0cc818c37d894dc` |
+| `DemoFlowB`/`demoFlowB` | 8/4/17, all match §2.4 | 8/4/17 alive | same as above | `Simulation not configured. Missing on DemoFlowB: Initial or Initial marking, Owned transitions or Source, Next state.` | `scene_4_DemoFlowB.json`, 75047 bytes, md5 `b8f38c77acf1fe542e057f42bdcff980` |
+
+"Build" counts are the builder's own `out.c`/`out.f`/`out.o` id-dict sizes; "reload-intact" counts are
+the same ids re-checked alive in `idlookup` after Cmd+S + one reload (per-id, not re-derived by name, so
+this also proves identity survives the round trip, not just the count). Both readings were measured
+**twice**: immediately after building (pre-save) and again after Cmd+S + reload — verbatim identical
+both times, on all four scenes, and identical to what CLAUDE.md's prompt text and §1/§2.x of
+`docs/demo/models_2026_simulator_demo.md` quote for the empty-bag M2 line; the M1 line
+(`Simulation not configured. Missing on <metamodel>: ...`) matches §2.1's "Undo, optional" text
+verbatim (that section is the only place in the demo script carrying this exact string — it is the
+pristine, never-Configured state, which undo-after-Apply returns to; the *different* string `Not started`
+elsewhere in the demo script is the *post*-Apply, pre-Reset state, not measured here since no Apply was
+done). Export format verified as the plain `data.__raw` shape (`Project.tsx:199-202`, §4 above): top-level
+`className: "DProject"`, `id`/`name` present, no `megamodel` wrapper key — confirmed by parsing all four
+files.
+
+### 9.2 One correction to §5 of this report
+
+§5 estimated Petri's reference-feature count as 2 (`Arc.src`, `Arc.tgt`) without running the builder. The
+builder's own `out.f` dict holds **every** feature it creates on a preset, attributes and references
+together, not references alone: Petri's `f = {tokens, guard, weight, src, tgt}` is 5, not 2; by the same
+count ESM is 7 (not 3) and Flow B is 4 (not 2); SM's 3 was right only because SM (non-extended) happens to
+add no attributes. The driver's expected-counts table was corrected to 5/7/4/3 respectively before the
+final run; §5's number is left as originally written above (not rewritten, per this file's own
+append-only-here convention) and corrected here.
+
+### 9.3 Two DOM-navigation findings, for anyone re-running this class of driver
+
+- **A model's dock tab is not restored by a reload; a metamodel's is.** Measured on all four scenes:
+  after `page.reload()`, `.dock-tab-btn[id$="-tab-<mmId>"]` was found immediately (rc-dock's persisted
+  layout reopens it), but the equivalent for the model id was never present — the model tab has to be
+  reopened by hand every time. The route that works is the project summary's **MODELS** card list
+  (`.list-card__name` exact text -> closest `.list-card__item`, click), reached via the
+  `project_summary` tab button when a different tab is focused. The project-level `LeftBar.tsx`
+  sidebar (`.psb-item`, `.psb-action` Download) that this report originally expected to use (§9's
+  first draft, superseded) was never observed in the DOM in this session — `.leftbar` matched zero
+  elements throughout, on every scene, in every state tried; export was reached instead through the top
+  navbar's File > Download Project (`Navbar.tsx:1376-1381`, same `buildProjectExportJson` shape), which
+  worked on the first attempt.
+- **Exact, case-sensitive text matching is required for the card click**, not Playwright's `hasText`
+  (a case-insensitive substring match). `DemoESM`/`demoESM` and `DemoFlowB`/`demoFlowB` differ only in
+  the case of the first letter; `hasText: 'demoESM'` matched both the metamodel's and the model's card,
+  and `.first()` silently picked the metamodel's — the click "succeeded" (no error) but the active tab
+  never changed. First measured on the `esm` scene, fixed before the `flowB` run by matching
+  `textContent.trim() === needle` in `page.evaluate` instead.
+
+### 9.4 One observed, non-blocking anomaly
+
+All four runs' `page.on('console', ...)` capture recorded the same three lines, each time immediately
+after the click back to the `project_summary` tab (the MODELS-card navigation of §9.3):
+`wrong project setup in navbar {projectid: null, project: undefined}` (with an `init_dash` line
+preceding it, from `chunk-RVSELR2N.js`, a Vite dep-cache chunk). It did not recur elsewhere, did not
+correlate with any wrong count or wrong reading (all checks after it still passed on all four scenes),
+and this lane touched zero files under `frontend/src` — so it is app behavior as shipped on `447e4239b`,
+not something introduced here. Recorded per CLAUDE.md §5's discipline on measured anomalies; not
+investigated further (out of this lane's scope, and non-blocking for the deliverable).
