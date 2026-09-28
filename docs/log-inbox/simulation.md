@@ -834,3 +834,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile — no dev server by the prompt; the chat probes the four scenes after the hard stop.
 **Notes**: R-SIM-50/51/52 themselves were ratified on 2026-09-25 and are unchanged: the rows the prompt names are the branch's S4 rows implementing them, provisional since `bdd11814c`. The 6 failed: 5 trace/monitor kills (green under `~/.local/bin/node` v26, red under the PATH node v23.3.0) and `checkRange`, which walks 8 first-parent commits here against 43 on the trunk and turns green once merged into it.
 **Prompt document name**: 2026-09-28 23:05
+
+## 2026-09-28 — merge: sim-outputs-accepting into alfonso-frontend-jjtl (P-2026-09-28-2343)
+**Prompt**: `claude_2026-09-28_2343_prompt_merge_sim-outputs-accepting.md`, a direct merge by `lane-run merge --direct --chat C-2026-09-28-1936`, no session: `sim-outputs-accepting` at `97082df02` into `alfonso-frontend-jjtl`, after the branch took the trunk (P-2026-09-28-2305). The engine reads Accepting and the role-bound Moore and Mealy outputs (S4 of P-2026-09-27-1725); the branch rows are renumbered R-SIM-91..93 and ratified.
+**Files touched**: merge `dfbd1ed3e`: from the branch side `frontend/src/model/simulation/netCompile.ts`, `netStep.ts`, `netTypes.ts`, `roleCatalog.ts` and their tests, `docs/decisions.md` (R-SIM-91..93), the S4 discovery report, `docs/log-inbox/simulation.md` (union of the add-only inbox), the lane prompts; this commit: this entry and the Status flip.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `dfbd1ed3e` in the worker: typecheck 14, the receiving tip's set; typecheck:scripts exit 0; vitest 5563 tests in 225 files, 9 red at import, 6 failed, the same 6 before and after the merge (the node-dependent trace and monitor reds and `checkRange`, ticket P-2026-09-28-2332); build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: the four demo scenes probed on the branch in light theme (port 3038), 71 readings identical to the trunk once pointer ids are normalised. The M2 rows and the faces of the outputs come with the next lane.
+**Notes**: Closed by hand: the worker stops on the known vitest reds. Rollback tag `pre-sim-outputs-accepting` on `27badf6c2`. No `.smv` generation (deferred after Malaga). Chat C-2026-09-28-1936.
+**Prompt document name**: 2026-09-28 23:43
