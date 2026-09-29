@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { deriveViewpointIRs } from '../viewpointDerivation';
+import { deriveViewpointIRs, isDerivableMetamodel } from '../viewpointDerivation';
 import type { DerivationRoles, DerivedView } from '../viewpointDerivation';
 import { validateIR } from '../../ir/irValidate';
 import { recognizeSymbol } from '../../ir/symbolRecognition';
@@ -534,5 +534,35 @@ describe('deriveViewpointIRs — pure: nothing it reads is touched', () => {
 
     it('an unknown metamodel id gives no view', () => {
         expect(deriveViewpointIRs(PEST.lookup, 'nope', null)).toEqual([]);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The metamodel test shared by createDerivedViewpoint and the tree's menu
+// ---------------------------------------------------------------------------
+//
+// createDerivedViewpoint (utils/deriveViewpoint.ts) does not import in this bench (monaco
+// dereferences `window` through the joiner barrel), so its guard is executed here, in the pure
+// predicate it and the tree row both call. That they call it is read from the two files, not run.
+
+describe('isDerivableMetamodel: the entity a derivation may start from', () => {
+    it('is true on a metamodel', () => {
+        expect(isDerivableMetamodel({ className: 'DModel', isMetamodel: true })).toBe(true);
+        expect(isDerivableMetamodel(PEST.lookup[PEST.id])).toBe(true);
+    });
+
+    it('is false on a model: the isMetamodel flag is read', () => {
+        expect(isDerivableMetamodel({ className: 'DModel', isMetamodel: false })).toBe(false);
+        expect(isDerivableMetamodel({ className: 'DModel' })).toBe(false);
+    });
+
+    it('is false on an entity that is not a DModel: the className is read', () => {
+        expect(isDerivableMetamodel({ className: 'DClass', isMetamodel: true })).toBe(false);
+        expect(isDerivableMetamodel({ className: 'DPackage', isMetamodel: true })).toBe(false);
+    });
+
+    it('is false on a missing entity', () => {
+        expect(isDerivableMetamodel(undefined)).toBe(false);
+        expect(isDerivableMetamodel(null)).toBe(false);
     });
 });
