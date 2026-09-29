@@ -43,7 +43,7 @@ import {
     profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
-    acceptingMark, candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView,
     markingLine, outputLine, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
 } from './simBridge';
 import type { InputLabel, InputValue, StopReason } from './simBridge';
@@ -596,6 +596,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     }
 
     const lookupNow: any = (store.getState() as any).idlookup ?? {};
+    const head = pending ? choiceHead(pending.input) : null;
 
     return (
         <div className="sim-panel sim-panel--open">
@@ -718,9 +719,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             each, the full text in the title (R-SIM-63). The choice list opens above them too, so Step
                             stays where it is (R-SIM-82, G8); the marking line sits last, for the run's whole lifetime,
                             with Moore's Output line under it when the net has state outputs (R-SIM-92). */}
-                        {pending && run && (
+                        {pending && run && head && (
                             <>
-                                <div className="sim-panel__section">Choose a transition (<span className="sim-panel__section-input">{pending.input}</span>)</div>
+                                <div className="sim-panel__section">{head.heading} (<span className="sim-panel__section-input">{head.input}</span>)</div>
+                                <div className="sim-panel__hint sim-panel__hint--line" title={head.subline}>{head.subline}</div>
                                 <div className="sim-panel__choices">
                                     {pending.candidates.map(c => (
                                         <button

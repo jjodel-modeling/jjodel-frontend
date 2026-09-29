@@ -13,7 +13,7 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    acceptingMark, candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason,
     markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
     undeclaredGlobals,
 } from '../simBridge';
@@ -366,6 +366,23 @@ describe('the panel\'s texts and gates', () => {
         expect(candidateLabel(net, 't3', names)).toBe('t3 (lock → ∅)');
         expect(candidateLabel(net, 't4', names)).toBe('t4 (∅ → lock)');
         expect(candidateLabel(net, 't', names)).toBe('t (∅ → ∅)');
+    });
+
+    describe('choiceHead (R-SIM-98): the choice list is a nondeterministic choice on the input pressed', () => {
+        it('an ε list reads «Nondeterministic choice (ε)» (mutant 1: the old «Choose a transition» heading kept)', () => {
+            const h = choiceHead('ε');
+            expect(`${h.heading} (${h.input})`).toBe('Nondeterministic choice (ε)');
+        });
+
+        it('an input-event list names the event pressed (mutant 2: the input fixed to ε)', () => {
+            const h = choiceHead('push');
+            expect(`${h.heading} (${h.input})`).toBe('Nondeterministic choice (push)');
+        });
+
+        it('the subline says what to do, and the head holds nothing else (mutant 3: the subline dropped or reworded)', () => {
+            expect(choiceHead('ε')).toEqual({ heading: 'Nondeterministic choice', input: 'ε', subline: 'Choose a transition' });
+            expect(choiceHead('push').subline).toBe('Choose a transition');
+        });
     });
 
     describe('markingLine (R-SIM-82, G3): the marking, then the stored σ, then the derived σ', () => {
