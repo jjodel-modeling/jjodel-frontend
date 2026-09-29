@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-09-29-2120
 Chat: C-2026-09-29-1840
 Lane: fast (Phase 2; persistence API; no critical zone). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane live-save · 041373870 · non fuso
 Worktree: `~/jjodel-w-livesave`, branch `live-save` (cut by the chat from `alfonso-frontend-jjtl` at `5626b3364`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-livesave`, branch `live-save`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-2120 · session <id>]` and ends with an `Outcome:` line (P16).
 
 ## COSA
