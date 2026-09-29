@@ -891,3 +891,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — lane probe on 3040 (`lane-run probe`, light): ESM on the model tab 9 interactions, 34 keys, 10 events to Halted, coins would be 4; Flow B from the Reset line 5 and 4, 6 steps to Terminated, count = 2; Apply after a run interrupts it, one undo reverts it. Crops `docs/discovery/harness/_tmp_datalevel_*.png` (gitignored). The chat's GO pending.
 **Notes**: Commit order SimRolesModal, SimDataModal, panel, hint (each needs the one before), not the prompt's. Unattended: the model key's defects read `model state attributes`, `model record N`; the Reset line's names become draft rows of the dialog; `Data…` is hidden when the profile turns the declarations off. Perceptual, for the GO: in the Data dialog Add attribute sits after the note, not at the right edge.
 **Prompt document name**: 2026-09-29 01:10
+
+## 2026-09-29 — merge: sim-data-level-p2 into alfonso-frontend-jjtl (P-2026-09-29-0214)
+**Prompt**: `claude_2026-09-29_0214_prompt_merge_sim-data-level-p2.md`, a direct merge by `lane-run merge --direct`, no session: `sim-data-level-p2` at `08491af8e` into `alfonso-frontend-jjtl`, merge base `174f6c58a`, 8 commits on the branch side.
+**Files touched**: merge `7cdf5d0f8`: 13 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-29_sim_data_level.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_0110_prompt_sim_data_level_p2.md`, `frontend/src/components/editor-v2/sim/SimDataModal.tsx`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, and 5 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7cdf5d0f8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5627 tests in 225 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat: four demo scenes probed on the branch, light theme, port 3043: FINAL and RUN readings identical to the trunk; 12 M2 lines differ only by the added R-SIM-94 texts (a model globals go in its Data..., default for models); lane measured the model-tab route (ESM 9/34, Flow B 5/4) and undo in one step; Alfonso walk on 3001 still due
+**Notes**: Rollback tag `pre-sim-data-level-p2` on `174f6c58a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0214/result.json`.
+**Prompt document name**: 2026-09-29 02:14

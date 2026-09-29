@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0214
 Chat: C-2026-09-28-1936
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane merge · 7cdf5d0f8 · verifica visiva passata 2026-09-29 (chat: four demo scenes probed on the branch, light theme, port 3043: FINAL and RUN readings identical to the trunk; 12 M2 lines differ only by the added R-SIM-94 texts (a model globals go in its Data..., default for models); lane measured the model-tab route (ESM 9/34, Flow B 5/4) and undo in one step; Alfonso walk on 3001 still due)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-0214 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
