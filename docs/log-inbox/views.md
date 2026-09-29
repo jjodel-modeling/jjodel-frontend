@@ -154,3 +154,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: pending — chat, Advanced mode: right-click a metamodel row shows Create View and Derive viewpoint; a class or package row shows Create View only; an M1 model row opens no menu.
 **Notes**: Read, not reproduced: the prompt says M1 rows show the item, but `MetamodelNode` (fed by `state.m2models`) is the only `'DModel'` caller of the hook and `ModelNode` has no menu. No M1 path found, so a metamodel row shows what it showed; «click does nothing» is unexplained.
 **Prompt document name**: 2026-09-29 03:05
+
+## 2026-09-29 — merge: derive-viewpoint-m2-only into alfonso-frontend-jjtl (P-2026-09-29-0315)
+**Prompt**: `claude_2026-09-29_0315_prompt_merge_derive-viewpoint-m2-only.md`, a direct merge by `lane-run merge --direct`, no session: `derive-viewpoint-m2-only` at `dfed9ea9f` into `alfonso-frontend-jjtl`, merge base `76c7b4f7f`, 3 commits on the branch side.
+**Files touched**: merge `79c3bd83c`: 6 files from the branch side (`docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_0305_prompt_derive_viewpoint_m2_only.md`, `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/editor-v2/viewpoint/derive/__tests__/viewpointDerivation.test.ts`, `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`, `frontend/src/utils/deriveViewpoint.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `79c3bd83c` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5668 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: tree menu: Derive viewpoint only on metamodel rows, shared predicate with createDerivedViewpoint; demo scenes untouched
+**Notes**: Rollback tag `pre-derive-viewpoint-m2-only` on `76c7b4f7f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0315/result.json`.
+**Prompt document name**: 2026-09-29 03:15

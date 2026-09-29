@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0315
 Chat: C-2026-09-28-1936
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane merge · 79c3bd83c · verifica visiva passata 2026-09-29 (tree menu: Derive viewpoint only on metamodel rows, shared predicate with createDerivedViewpoint; demo scenes untouched)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-0315 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
