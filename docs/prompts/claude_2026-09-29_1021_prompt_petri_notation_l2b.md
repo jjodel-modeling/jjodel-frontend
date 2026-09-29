@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1021
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2, Petri notation in the derived viewpoint; tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane petri-notation-l2b · 449c583b6, 7a254a52f · non fuso: hard-stop, lane probe 21/21 on 3048 (light), bar 48×12 against a place 64×64, names centred within 0.45 px, arcs orthogonal 6/6, run readings equal to the trunk's, crops in docs/discovery/harness/_tmp_petri2b_*.png (gitignored), verifica visiva alla chat
 
 Worktree: `~/jjodel-w-petri2b`, branch `petri-notation-l2b` (cut by the chat from `alfonso-frontend-jjtl` at `0fbb550ea`, after the merge of lane 1; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-petri2b`, branch `petri-notation-l2b`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
