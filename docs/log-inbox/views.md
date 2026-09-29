@@ -278,3 +278,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: pending — chat, RC-23; lane probe on 3054 (light, 1600×1000) EXIT=0, crops `docs/discovery/harness/_tmp_v1_{sm,esm,flowB}_derived.png`
 **Notes**: Measured: on the lproxy backend `$event.value` is the event's L proxy, printed as its DObject name (coin, push, stop); used as is. Re-scored: SM 7/10, ESM 7/11, activity 7/10 (was 4.5, 5, 4.5). Not reached: a small dot and bull's-eye (64 px), `[guard] / effect`, Events as nodes, the diamond, routing (t5, ts cross `unlocked`). An empty guard mounts a transparent 12×4 label box. One docs commit as the prompt asks, not the inbox alone.
 **Prompt document name**: 2026-09-29 13:31
+
+## 2026-09-29 — merge: visual-v1 into alfonso-frontend-jjtl (P-2026-09-29-1417)
+**Prompt**: `claude_2026-09-29_1417_prompt_merge_visual-v1.md`, a direct merge by `lane-run merge --direct`, no session: `visual-v1` at `5eed460a2` into `alfonso-frontend-jjtl`, merge base `afa951c64`, 3 commits on the branch side.
+**Files touched**: merge `5ecdaaa89`: 5 files from the branch side (`docs/decisions.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_1331_prompt_visual_v1.md`, `frontend/src/components/editor-v2/viewpoint/derive/__tests__/viewpointDerivation.test.ts`, `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5ecdaaa89` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5757 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: V1 derived control-flow notation, SM 7/10 ESM 7/11 activity 7/10
+**Notes**: Rollback tag `pre-visual-v1` on `d0d7b7463` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1417/result.json`.
+**Prompt document name**: 2026-09-29 14:17
