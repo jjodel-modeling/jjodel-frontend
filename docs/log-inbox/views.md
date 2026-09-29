@@ -252,3 +252,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile — read-only; the lane probe on 3053 (light, 1600×1000) is the measurement, `EXIT=0` on all five runs
 **Notes**: Derived today: SM 4.5/10, ESM 5/11, activity 4.5/10; M2 4/9, M1 1.5/5. 0 of 18 derived transitions labelled; contrast fails on M2 headers (2.4:1), edges (2.34:1), M1 quiet text (1.48:1); generalization paints as a downward V; M1 underline not painted. V1 (derivation only) projected to 7/10 before the freeze. Four decisions, three questions in report §0. Scenes built by the kit's builder, not imported.
 **Prompt document name**: 2026-09-29 12:27
+
+## 2026-09-29 — merge: visual-syntax-disc into alfonso-frontend-jjtl (P-2026-09-29-1359)
+**Prompt**: `claude_2026-09-29_1359_prompt_merge_visual-syntax-disc.md`, a direct merge by `lane-run merge --direct`, no session: `visual-syntax-disc` at `b612fae6b` into `alfonso-frontend-jjtl`, merge base `12ac29f74`, 2 commits on the branch side.
+**Files touched**: merge `b4d817c22`: 3 files from the branch side (`docs/discovery/discovery_2026-09-29_visual_concrete_syntax.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_1227_prompt_discovery_visual_concrete_syntax.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b4d817c22` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5740 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, the visual concrete syntax discovery
+**Notes**: Rollback tag `pre-visual-syntax-disc` on `1d940e825` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1359/result.json`.
+**Prompt document name**: 2026-09-29 13:59
