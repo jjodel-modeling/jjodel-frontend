@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-09-29-2122
 Chat: C-2026-09-29-1840
 Lane: full (Phase 2; critical zone `viewpoint/ir/` and the IR node, go-ahead given). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane ir-collapsed-render · 61a45540e · non fuso
 Worktree: `~/jjodel-w-collapsed`, branch `ir-collapsed-render` (cut by the chat from `alfonso-frontend-jjtl` at `5626b3364`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run` with `--critical-zone-goahead P-2026-09-29-2122`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-collapsed`, branch `ir-collapsed-render`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-2122 · session <id>]` and ends with an `Outcome:` line (P16).
 
 ## COSA

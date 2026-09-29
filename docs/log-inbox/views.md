@@ -317,3 +317,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: V2 legible default notation: M2 header 6.22:1, edges 16.3:1, M1 quiet 4.76:1, underline painted, generalization triangle up
 **Notes**: Rollback tag `pre-visual-v2` on `96360e0b7` (RC-31). Union: `docs/decisions.md`, `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1450/result.json`.
 **Prompt document name**: 2026-09-29 14:50
+
+## 2026-09-29 — feat(ir): render the declared collapsed form, fill and badge (P-2026-09-29-2122)
+**Prompt**: `claude_2026-09-29_2122_prompt_ir_collapsed_render.md`, lane F3 of discovery `a50fa6607`, `Lane: full`, critical-zone go-ahead (RC-30), on `~/jjodel-w-collapsed` branch `ir-collapsed-render`. A collapsed `graphVertex` paints `containment.collapsed.form`, `.fill` and `.badge` when declared (compiled, read nowhere before); the badge replaces the count chip. Resumed once for two defects the probe found.
+**Files touched**: code `04acac227`: `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editor-v2/nodes/__tests__/irCollapsedRender.test.ts` (new). Code `61a45540e`: `IRNodeContent.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts`, `irCollapsedRender.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/useContentSizeDrop.test.ts` (new). Docs `d6dff9e78`, `d6e9b8486`, `4784837e3`: `docs/discovery/discovery_2026-09-29_collapsed_render_layer_impact.md`. This commit: this entry, a ticket, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `61a45540e`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `typecheck:scripts` exit 0; `npx vitest run` 5884/5884 passed (5877 + 7, stated before the run), 232 files, the 9 known red at import, with `JJODEL_CRITICAL_ZONE_GOAHEAD` unset (ticket below); `npm run build` exit 0. Red first: 3 of 9, then 2 of 3 and 1 of 4. Mutation benches 13/13 and 6/6 killed, lists in the commit bodies.
+**Out-of-scope changes**: yes — eight files over the lane, above five (RC-11): the two DOVE files, `useContentSize.ts` added by the chat's RC-21 answer, three test files (two new), the report, this inbox and the prompt file. `irStyle.ts`, approved, not touched.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — lane probe on 3060, 15/15, light and dark, crops in `~/.jjodel-lanes/P-2026-09-29-2122/crops/`; the chat's checklist and Alfonso's GO pending (RC-23)
+**Notes**: Chat decisions under RC-21 (2026-09-29): (1) useContentSize.ts:159 drops a derived size too: applied. (2) `:not(.ir-badge)` on irStyle's five SVG-form rules: not applied, measured in Chromium it turns the outside label relative on all five forms (Rule 3); every badge gets inline position:absolute instead, irStyle.ts untouched. Chat: flat collapsed fields. The badge replaces the chip's count, not the chip. Spec §8 amendment: question in the report §5.
+**Prompt document name**: 2026-09-29 21:22
+
+## 2026-09-29 — ticket: a critical-zone lane's go-ahead variable reaches the criticalZone hook tests
+**Ticket**: `lane-run start --critical-zone-goahead` exports `JJODEL_CRITICAL_ZONE_GOAHEAD` into the session, and a full `npx vitest run` from that session inherits it: four tests of `frontend/scripts/hooks/__tests__/criticalZone.test.ts` («kills "bypass not read"» ×2, «kills "deny limited to the six files"» ×2) fail because the hook they spawn sees a go-ahead. With the variable unset the file is 70/70. Every critical-zone lane reports four reds that are not regressions. Fix: the tests clear the variable from the environment they hand the hook, or the gate runs with it unset.
+**Priority**: medium
+**Found in**: P-2026-09-29-2122
+**Detail**: docs/discovery/discovery_2026-09-29_collapsed_render_layer_impact.md (§6, harness note)
