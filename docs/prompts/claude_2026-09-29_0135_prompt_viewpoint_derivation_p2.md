@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0135
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2, one new module, its test, one utility, one menu item; tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane viewpoint-derivation-p2 · 1eb916bba, 9511f745c, fead37b48 · non fuso: hard-stop, lane probe 32/32 on 3042 (light), crop in docs/discovery/harness/_tmp_viewgen_*.png (gitignored), verifica visiva alla chat
 
 Worktree: `~/jjodel-w-viewgen2`, branch `viewpoint-derivation-p2` (cut by the chat from `alfonso-frontend-jjtl` at `174f6c58a`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-viewgen2`, branch `viewpoint-derivation-p2`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

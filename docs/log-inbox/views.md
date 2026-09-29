@@ -87,3 +87,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Notes**: Probe copied read-only from P-2026-09-27-2105, one fresh page per scene, EXIT=0, one known console error each. SM 10 steps, Terminated. Petri Bound 4 (proposed, stored), 4 steps, Deadlock · ε: t2 false. ESM 10 steps, Halted, `Halted: coins of demoESM would be 4, outside its domain.` whole on 2 rows (41px slot, scroll = client). Flow B 6 steps, Terminated. 3029 stopped, 3001 not restarted. Logs in `~/.jjodel-lanes/P-2026-09-27-2327/`.
 **Prompt document name**: 2026-09-27 23:27
 **Ticket** (priority low, opened here). `npm run docs:digest -- --date 2026-09-27` exits 2 on R-SIM-85's header: its parenthesis does not close on the header line (pre-existing, not edited here). RC-31 parses.
+
+## 2026-09-29 — feat(views): viewpoint derivation Phase 2, a deterministic viewpoint from a metamodel (P-2026-09-29-0135)
+**Prompt**: `claude_2026-09-29_0135_prompt_viewpoint_derivation_p2.md`, Phase 2 of the discovery P-2026-09-29-0111, `Lane: full`, on `~/jjodel-w-viewgen2` branch `viewpoint-derivation-p2`: «Derive viewpoint» in the metamodel's tree menu creates a new viewpoint, one IR view per concrete class, from the structure and the stored role binding; no priority, no provenance key, catalogue ink `#334155` on solid symbols, tests first.
+**Files touched**: code `1eb916bba`: `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts` (new), `frontend/src/components/editor-v2/viewpoint/derive/__tests__/viewpointDerivation.test.ts` (new). `9511f745c`: `frontend/src/utils/deriveViewpoint.ts` (new), `frontend/src/view/viewElement/view.tsx` (`appliableToForIRKind` exported). `fead37b48`: `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx` (the menu item). This commit: this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `fead37b48`'s code: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 5644 passed (5607 + 37), 0 failed, the 9 known files red at import; `npm run build` exit 0, only the Sass deprecations and the chunk-size warning; `check:docs` 4/4, `check:addonly` clean, `check:scripts` PASS. Red first: the test failed at collection. Mutation bench 21/21 killed, list in `1eb916bba`.
+**Out-of-scope changes**: no — the four files of the prompt's DOVE and the optional `view.tsx` export it names.
+**Layer Impact Report**: not-required (no `CLAUDE.md` §3.1 file touched; `viewpoint/derive/` only imports from `viewpoint/ir/`)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3042 (`_tmp_viewgen2_probe.ts`, gitignored), light theme: 32/32, one known console error; crops `docs/discovery/harness/_tmp_viewgen_DemoPetri.png` and `_tmp_viewgen_DemoFlowB.png` (gitignored)
+**Notes**: Undo measured: one derivation adds one history entry; one Cmd+Z removes the viewpoint and its views (Petri 4, FlowB 8), leaves every other view byte-identical and keeps the roles' Apply. Unattended: guards against false edges (a kind of an end, a third reference, its own container), Families, Person and Car as controls; names on solid symbols in `--color-text-inverse`, measured unreadable without it. Commit type `feat` chosen, the prompt names none.
+**Prompt document name**: 2026-09-29 01:35
+
+**Ticket** (low, found here): in dark theme `--color-text-inverse` is `#08090a`, so a name on a solid symbol (`#334155`) does not read there. An IR label sits inside the shape at every position, and `StructureSpec.name.position` is declared but not rendered on the IR branch: the fix is an always-light token or an outside label position. Dark theme is out of this phase (decision 4).
