@@ -105,3 +105,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato (Playwright probe on :3002, before and after the deletion: Symbol tab opens the modal, Structure stays active, Esc closes, no `.symbol-card`; 12 rail tab bars identical before/after and equal to the 1826 measures; crops in `frontend/scripts/smoke/_tmp_symcard/`, gitignored)
 **Notes**: The cited block `railSystem.scss:326-354` is 326-348 on this HEAD. Left in place, outside the authorised range: the dead selector `> section.properties-tab.properties-panel.symbol-card` at `:52` (the first selector of the same list covers it) and the SymbolCard mention in the header comment at `:26`. Report §4.3, Q1. No merge.
 **Prompt document name**: 2026-09-29 19:29
+
+## 2026-09-29 — merge: symbolcard-cleanup into alfonso-frontend-jjtl (P-2026-09-29-1947)
+**Prompt**: `claude_2026-09-29_1947_prompt_merge_symbolcard-cleanup.md`, a direct merge by `lane-run merge --direct`, no session: `symbolcard-cleanup` at `dee8746f7` into `alfonso-frontend-jjtl`, merge base `b256abc36`, 4 commits on the branch side.
+**Files touched**: merge `6ada3b757`: 6 files from the branch side (`docs/discovery/discovery_2026-09-29_remove_symbolcard.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-09-29_1929_prompt_remove_symbolcard.md`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolCard.scss`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolCard.tsx`, `frontend/src/components/editors/railSystem.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6ada3b757` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5849 tests in 230 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Merge brings in only the three SymbolCard paths (two deleted files, railSystem.scss); the other frontend/src differences from the branch tip are trunk-side sim files, disjoint. Branch probe P-2026-09-29-1929 on :3002: Symbol tab opens the modal, 12 rail tab bars identical to the 1826 measures; gates green on the merge
+**Notes**: Rollback tag `pre-symbolcard-cleanup` on `7c2539ae9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1947/result.json`.
+**Prompt document name**: 2026-09-29 19:47
