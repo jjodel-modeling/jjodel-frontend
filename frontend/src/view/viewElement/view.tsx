@@ -178,7 +178,7 @@ export type PaletteType = Dictionary<string, PaletteControl | NumberControl | St
  * cade nel ramo undefined insieme a ogni kind sconosciuto, dove il campo NON
  * viene toccato: meglio un valore vecchio di un valore inventato.
  */
-function appliableToForIRKind(kind: unknown): DViewElement['appliableTo'] | undefined {
+export function appliableToForIRKind(kind: unknown): DViewElement['appliableTo'] | undefined {
     switch (kind) {
         case 'vertex': return 'Vertex';
         case 'edge': return 'Edge';
