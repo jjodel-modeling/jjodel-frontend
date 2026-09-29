@@ -323,29 +323,6 @@
             padding: 0;
         }
     }
-    /* ── SymbolCard ───────────────────────────────────────────────────────────
-       Il tab Symbol non è un tab body: `ViewData.tsx:111` lo dirotta su un componente
-       con radice propria (§1 del report). Il sistema lo raggiunge lo stesso — vive in
-       questo contenitore — ma la sua riga d'asse non è un `jj-field`, quindi label e
-       swatch vogliono le due regole che seguono. Nessun cambio strutturale al
-       componente. */
-    .symbol-card__axis {
-        justify-content: space-between;
-
-        > .jj-field-label {
-            font-size: var(--text-sm);
-            font-weight: 400;
-            color: var(--color-form-label);
-            margin-bottom: 0;
-        }
-    }
-
-    .symbol-card__swatch {
-        width: 14px;
-        height: 14px;
-        border-radius: 3px;
-        border-color: var(--color-form-muted);
-    }
 }
 
 /* Le due primitive slate consumate sopra sono invarianti al tema per costruzione
