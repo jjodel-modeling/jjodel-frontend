@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-2320
 Chat: C-2026-09-29-2230
 Lane: discovery (read-only; the view IR, the renderer of vertices and edges, the derivation, the notation catalogue, the role binding). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane discovery viewpoint-notations · report docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md · hard-stop, four decisions and five questions for Alfonso in §0
 Worktree: `~/jjodel-w-notations`, branch `viewpoint-notations` (cut by the chat from `alfonso-frontend-jjtl` at `62f4ac3fc`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-notations`, branch `viewpoint-notations`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
 ## COSA
