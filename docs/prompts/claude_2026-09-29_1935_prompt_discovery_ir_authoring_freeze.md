@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-09-29-1935
 Chat: C-2026-09-29-1840
 Lane: discovery (read-only; viewpoint authoring, IR resolver and interpreter, project save). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane discovery ir-freeze-disc · measured on 9b08350d0; the report is in the commit that carries this line (a commit cannot name its own sha) · Outcome: hard-stop
 Worktree: `~/jjodel-w-irfreeze`, branch `ir-freeze-disc` (cut by the chat from `alfonso-frontend-jjtl` at `f7c5fd910`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-irfreeze`, branch `ir-freeze-disc`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
 ## COSA
