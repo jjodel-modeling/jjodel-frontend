@@ -32,6 +32,7 @@ export type RoleKey =
     | 'simInitialMarking'
     | 'simTerminal'
     | 'simActivityFinal'
+    | 'simAccepting'
     | 'simBound'
     | 'simTransition'
     | 'simGuard'
@@ -50,7 +51,9 @@ export type RoleKey =
     | 'simInhibitorArc'
     | 'simEvent'
     | 'simTrigger'
-    | 'simEventIdentifier';
+    | 'simEventIdentifier'
+    | 'simStateOutput'
+    | 'simTransitionOutput';
 
 /**
  * `number`: a value, not a pointer; written as a digit string (`simBound`, R-SIM-37).
@@ -74,6 +77,8 @@ export const ROLE_SPECS: RoleSpec[] = [
     { key: 'simTerminal', label: 'Terminal', kind: 'class', placeholder: 'Select a metaclass' },
     // R-SIM-53, which the engine reads from lane E1 on: a row, so a key left by a Flowchart Apply is seen and cleared (G6).
     { key: 'simActivityFinal', label: 'Activity final', kind: 'class', placeholder: 'Select a metaclass' },
+    // R-SIM-50, read by the engine since lane S4 (R-SIM-91): a row, so the Reset overlap check sees it (R-SIM-16).
+    { key: 'simAccepting', label: 'Accepting', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simBound', label: 'Bound', kind: 'number', placeholder: '1' },
     { key: 'simTransition', label: 'Transition', kind: 'class', placeholder: 'Select a metaclass' },
     // The Data group (R-SIM-52, R-SIM-69): the guard, and the `Action [0..*]` features by site role.
@@ -99,6 +104,9 @@ export const ROLE_SPECS: RoleSpec[] = [
     { key: 'simEvent', label: 'Event', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simTrigger', label: 'Trigger', kind: 'reference', placeholder: 'Select a reference' },
     { key: 'simEventIdentifier', label: 'Event identifier', kind: 'attribute', placeholder: 'name (default)' },
+    // The role-bound outputs (R-SIM-51, R-SIM-92): Moore's of the marked state, Mealy's of the fired transition.
+    { key: 'simStateOutput', label: 'State output', kind: 'attribute', placeholder: 'Select an attribute' },
+    { key: 'simTransitionOutput', label: 'Transition output', kind: 'attribute', placeholder: 'Select an attribute' },
 ];
 
 /**
@@ -202,11 +210,15 @@ export function staleEventWarning(stored: string | undefined, derived: string | 
 // ---------------------------------------------------------------------------
 
 /**
- * The presets the panel lists, in the order of the memo table (R-SIM-79, A2).
- * DFA, NFA, Moore and Mealy stay hidden until R-SIM-50 and R-SIM-51 are in the
- * engine: nothing reads Accepting or the outputs yet.
+ * The presets the panel's Profile select and the dialog's header select list,
+ * in the order of the memo table (R-SIM-79, A2): the eight system profiles.
+ * DFA, NFA, Moore and Mealy come last, since the engine reads Accepting and the
+ * outputs (R-SIM-91, R-SIM-92) and before the freeze (R-SIM-95). The first-open
+ * picker of the dialog keeps its own shorter list (SimRolesModal.tsx `KINDS`).
  */
-export const PANEL_PROFILE_IDS: readonly SystemProfileId[] = ['petri', 'flowchart', 'stateMachine', 'extendedStateMachine'];
+export const PANEL_PROFILE_IDS: readonly SystemProfileId[] = [
+    'petri', 'flowchart', 'stateMachine', 'extendedStateMachine', 'dfa', 'nfa', 'moore', 'mealy',
+];
 
 /** The `simProfile` key of the bag (R-SIM-55). */
 export const PROFILE_KEY = 'simProfile';

@@ -41,6 +41,7 @@ import { systemProfile } from '../../../../model/simulation/simProfiles';
 import { roleDescriptor } from '../../../../model/simulation/roleCatalog';
 import { encodeProfile } from '../../../../model/simulation/profileCodec';
 import { SKETCH_TYPE } from '../../../../model/simulation/profileBinder';
+import { overlapVerdict } from '../../../../model/simulation/stcFromRoles';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
 import type { MetamodelSketch, ProfileBindings, RoleBinding, SketchAttribute, SketchClass, SketchReference } from '../../../../model/simulation/profileBinder';
 
@@ -249,9 +250,129 @@ const B2NET_BINDINGS: ProfileBindings = {
     arc: bound('C_Arc'), arcSource: bound('R_src'), arcTarget: bound('R_tgt'), arcWeight: none, inhibitorArc: none,
 };
 
-describe('the panel presets (R-SIM-79, A2)', () => {
-    it('lists Petri net, Flowchart / Activity, State machine, Extended state machine; DFA, NFA, Moore, Mealy wait for R-SIM-50/51', () => {
-        expect(PANEL_PROFILE_IDS).toEqual(['petri', 'flowchart', 'stateMachine', 'extendedStateMachine']);
+describe('the panel presets (R-SIM-79, A2; R-SIM-95)', () => {
+    it('lists the eight system presets, DFA, NFA, Moore and Mealy after Extended state machine (killed by dropping the four ids)', () => {
+        // The panel's Profile select and the dialog's header select both map this list.
+        expect(PANEL_PROFILE_IDS).toEqual(['petri', 'flowchart', 'stateMachine', 'extendedStateMachine', 'dfa', 'nfa', 'moore', 'mealy']);
+        expect(PANEL_PROFILE_IDS.map(id => systemProfile(id)?.name)).toEqual([
+            'Petri net (P/T)', 'Flowchart / Activity', 'State machine', 'Extended state machine', 'DFA', 'NFA', 'Moore machine', 'Mealy machine',
+        ]);
+    });
+});
+
+describe('the Accepting and output rows (R-SIM-91, R-SIM-92; P-2026-09-29-0300)', () => {
+    const spec = (key: string) => ROLE_SPECS.find(s => s.key === key);
+
+    it('Accepting is a class row, State output and Transition output attribute rows closing the list, labels from the catalog (killed by dropping a row)', () => {
+        expect(spec('simAccepting')).toEqual({
+            key: 'simAccepting', label: roleDescriptor('accepting').label, kind: 'class', placeholder: 'Select a metaclass',
+        });
+        expect(spec('simStateOutput')).toEqual({
+            key: 'simStateOutput', label: roleDescriptor('stateOutput').label, kind: 'attribute', placeholder: 'Select an attribute',
+        });
+        expect(spec('simTransitionOutput')).toEqual({
+            key: 'simTransitionOutput', label: roleDescriptor('transitionOutput').label, kind: 'attribute', placeholder: 'Select an attribute',
+        });
+        expect(ROLE_SPECS.slice(-2).map(s => s.key)).toEqual(['simStateOutput', 'simTransitionOutput']);
+        // control: Activity final still follows Terminal (the G6 test above), Accepting comes after it
+        const keys = ROLE_SPECS.map(s => s.key);
+        expect(keys.indexOf('simAccepting')).toBe(keys.indexOf('simActivityFinal') + 1);
+    });
+
+    it('the Reset overlap check sees Accepting: the roles the panel copies by ROLE_SPECS key carry it (killed by dropping the row)', () => {
+        const lookup: Record<string, any> = {
+            C_State: { className: 'DClass', extends: [] }, C_Init: { className: 'DClass', extends: ['C_State'] },
+            C_Trans: { className: 'DClass', extends: [] }, C_Event: { className: 'DClass', extends: [] },
+        };
+        const bag: Record<string, string> = {
+            simNode: 'C_State', simInitial: 'C_Init', simTransition: 'C_Trans', simTrigger: 'R_trigger', simEvent: 'C_Event', simAccepting: 'C_Trans',
+        };
+        // mapStateToProps (SimulationPanel.tsx): one role per ROLE_SPECS key, the set ones only
+        const roles = Object.fromEntries(ROLE_SPECS.filter(s => bag[s.key]).map(s => [s.key, bag[s.key]]));
+        expect(overlapVerdict(lookup, roles, ['C_State', 'C_Init', 'C_Trans', 'C_Event']))
+            .toEqual({ overlap: { classId: 'C_Trans', sorts: ['node', 'transition'] }, refuse: true });
+        // control: Accepting on a subclass of State is no overlap
+        expect(overlapVerdict(lookup, { ...roles, simAccepting: 'C_Init' }, ['C_State', 'C_Init', 'C_Trans', 'C_Event'])).toBeNull();
+    });
+
+    it('none of the three is an engine role: missing and invalid are the same with and without them (R-SIM-28 as for Terminal)', () => {
+        for (const bag of [{}, CF, PETRI, { ...CF, simInitial: undefined }]) {
+            const withThree = { ...bag, simAccepting: 'C_Acc', simStateOutput: 'A_out', simTransitionOutput: 'A_tout' };
+            expect(missingEngineRoles(withThree)).toEqual(missingEngineRoles(bag));
+            expect(invalidEngineRoles(withThree)).toEqual(invalidEngineRoles(bag));
+        }
+    });
+});
+
+describe('DFA, NFA, Moore and Mealy on a plain metamodel (P-2026-09-29-0300, discovery §3.6, §3.8)', () => {
+    const { string: ESTRING } = SKETCH_TYPE;
+    const C = (id: string, supers: string[] = []): SketchClass => ({ id, name: id, abstract: false, supers });
+    const A = (owner: string, name: string, type: string): SketchAttribute => ({ id: `${owner}.${name}`, name, owner, type });
+    const R = (owner: string, name: string, type: string, composition = false): SketchReference => (
+        { id: `${owner}.${name}`, name, owner, type, composition, aggregation: false }
+    );
+    const CONTROL = [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State'), R('Transition', 'event', 'Symbol')];
+    /** DemoDFA, its accepting class named `accepting` (the binder's /accept|final/) or `Good` (no match). */
+    const dfaSketch = (accepting: string): MetamodelSketch => ({
+        classes: [C('State'), C('Initial', ['State']), C(accepting, ['State']), C('Transition'), C('Symbol')],
+        attributes: [],
+        references: CONTROL,
+    });
+    /** The turnstile with one EString on State and one on Transition, named `name` (the binder's /^out/ or not). */
+    const turnSketch = (name: string): MetamodelSketch => ({
+        classes: [C('State'), C('Initial', ['State']), C('Transition'), C('Symbol')],
+        attributes: [A('State', name, ESTRING), A('Transition', name, ESTRING)],
+        references: CONTROL,
+    });
+    const text = (id: string, bag: Record<string, unknown>, sketch: MetamodelSketch) => {
+        const p = systemProfile(id) as SimProfile;
+        return profileSummaryText(profileSummary(p, bag, profileBindings(p, sketch, bag), null, sketch), x => x);
+    };
+
+    it('DFA and NFA: «Missing: Accepting.» while no class is named like one; the class picked in the row makes it Checkable (probe C)', () => {
+        for (const [id, name] of [['dfa', 'DFA'], ['nfa', 'NFA']]) {
+            const before = text(id, {}, dfaSketch('Good'));
+            expect(before).toMatchObject({ status: `${name} · Not checkable after Apply`, missing: 'Missing: Accepting.' });
+            const picked = text(id, { simAccepting: 'Good' }, dfaSketch('Good'));
+            expect(picked).toMatchObject({ status: `${name} · Checkable after Apply`, missing: null });
+            // control: a class named like one is proposed by Apply
+            expect(text(id, {}, dfaSketch('Accepting')).proposals).toContain('Accepting → Accepting');
+        }
+    });
+
+    it('Moore and Mealy: «Missing: State output.» / «Missing: Transition output.» on an attribute not named out…; picked, Checkable', () => {
+        const cases: Array<[string, string, string, string]> = [
+            ['moore', 'Moore machine', 'State output', 'simStateOutput'],
+            ['mealy', 'Mealy machine', 'Transition output', 'simTransitionOutput'],
+        ];
+        for (const [id, name, label, key] of cases) {
+            expect(text(id, {}, turnSketch('lamp'))).toMatchObject({ status: `${name} · Not checkable after Apply`, missing: `Missing: ${label}.` });
+            const owner = id === 'moore' ? 'State' : 'Transition';
+            expect(text(id, { [key]: `${owner}.lamp` }, turnSketch('lamp'))).toMatchObject({ status: `${name} · Checkable after Apply`, missing: null });
+            // control: an attribute named out… is proposed by Apply
+            expect(text(id, {}, turnSketch('output')).proposals).toContain(`${label} → ${owner}.output`);
+        }
+    });
+
+    it('the four demo presets propose none of the three keys on a metamodel that offers them all; DFA, Moore and Mealy propose theirs', () => {
+        const sketch: MetamodelSketch = {
+            // `End` for Terminal: a class named Final would match Accepting's /accept|final/ too
+            classes: [C('State'), C('Initial', ['State']), C('End', ['State']), C('Accepting', ['State']), C('Transition'), C('Symbol')],
+            attributes: [A('State', 'output', ESTRING), A('Transition', 'output', ESTRING)],
+            references: CONTROL,
+        };
+        const keysOf = (id: string) => {
+            const p = systemProfile(id) as SimProfile;
+            return profileSummary(p, {}, profileBindings(p, sketch, {}), null, sketch).proposals.map(x => x.key);
+        };
+        const three = ['simAccepting', 'simStateOutput', 'simTransitionOutput'];
+        for (const id of ['petri', 'flowchart', 'stateMachine', 'extendedStateMachine']) {
+            for (const k of three) expect({ id, k, has: keysOf(id).includes(k) }).toEqual({ id, k, has: false });
+        }
+        expect(keysOf('stateMachine')).toContain('simNode');
+        expect(keysOf('dfa')).toContain('simAccepting');
+        expect(keysOf('moore')).toContain('simStateOutput');
+        expect(keysOf('mealy')).toContain('simTransitionOutput');
     });
 });
 

@@ -930,3 +930,31 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: docs only, the demo script declares on the model tab, metamodel fallback kept; runs unchanged
 **Notes**: Rollback tag `pre-demo-script-data-level` on `5aea64657` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0238/result.json`.
 **Prompt document name**: 2026-09-29 02:38
+
+## 2026-09-29 — discovery: the faces of Accepting and outputs, their M2 rows, the four hidden presets (P-2026-09-29-0239)
+**Prompt**: `claude_2026-09-29_0239_prompt_discovery_sim_outputs_faces.md`, read-only discovery on `sim-outputs-faces-disc` in `~/jjodel-w-faces`: the three M2 rows, the three faces, S5 today, the four hidden presets, what the four demo scenes show differently, and a Phase 2 plan before the freeze of 2026-10-01.
+**Files touched**: `docs/discovery/discovery_2026-09-29_sim_outputs_faces.md` (new), this entry, the Status line of the prompt. One docs commit; its sha is in the closing report. Probe `frontend/scripts/smoke/_tmp_faces_probe.ts`, gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — read-only; no file under `frontend/src` written, `git status` clean before the commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The dialog already builds the three rows from the catalog; the four presets are hidden by `PANEL_PROFILE_IDS` and `UNREAD_ROLES`. S5 is covered by R-SIM-86 (measured). Phase 2: one lane, ten files. Two questions and two decisions in §0 of the report.
+**Prompt document name**: 2026-09-29 02:39
+**Ticket** (priority low, opened here). `simAccepting` is still missing from `ROLE_SORTS` (`stcFromRoles.ts:24-25`): a class playing Accepting and Transition passes the overlap check (R-SIM-91's open item, measured again). Owed to the faces lane.
+
+## 2026-09-29 — feat: DFA, NFA, Moore, Mealy in the selects; the faces of Accepting and outputs (P-2026-09-29-0300)
+**Prompt**: `claude_2026-09-29_0300_prompt_sim_outputs_faces_p2.md`, full lane on `sim-outputs-faces` in `~/jjodel-w-faces2` (from `904bab148`): the plan of the discovery of P-2026-09-29-0239, all of it, with its two decisions taken by the chat on Alfonso's delegation (R-SIM-95); tests first, one commit per layer, a lane probe on 3046; no merge.
+**Files touched**: `8240715c3` `frontend/src/model/simulation/stcFromRoles.ts`, `__tests__/events.test.ts`; `1e8051c3e` `frontend/src/components/editor-v2/sim/simRoleStatus.ts`, `simRolesDraft.ts`, `sim/__tests__/simRoleStatus.test.ts`, `simRolesDraft.test.ts`; `d89ecce7b` `sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`; `f255d7d0c` `sim/SimulationPanel.tsx`; `c926d803a` `simBridge.ts`, `simBridge.test.ts`; docs, this commit: `docs/decisions.md` (R-SIM-95, add-only), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates green: typecheck 14, the known set (14 before); vitest `src/model/simulation` and `src/components/editor-v2/sim` 25 files, 839 tests (822 before), each layer red first; full vitest 5681 passed, 9 files red at import (`window is not defined`), the §17 set; build exit 0; `check:scripts` PASS. Unit tests pin the four demo presets (no key written, M1 lines unchanged); the scenes' parity re-run in the browser is the chat's.
+**Out-of-scope changes**: no. 9 of the discovery's 10 files (`simulation-panel.scss` unchanged: no style needed), above Rule 19's five, listed in chat before the first edit; plus `docs/decisions.md`, named in the prompt. No critical-zone file; `RoleKey` +3 literals, additive.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3046 (`lane-run probe`, light), 34/34 DOM checks: eight presets in both selects; DFA `Running · accepting` on q1, gone on q0; Moore `Output: red`/`green` under Marking; Mealy output painted at 120px of 262; ESM fold `3 derived · 11 not used`; no height change from Reset through the steps. Crops `docs/discovery/harness/_tmp_faces_*.png` (gitignored). The chat's GO pending.
+**Notes**: Unattended: Mealy takes the discovery's §3.4 fallback, `coin / unlock: t1 (…) fired`, after the probe measured `, output unlock` cut (304px in 262); Accepting follows Activity final in ROLE_SPECS (the G6 test pins Activity final after Terminal); the accepting mark keeps the status text's colour (the success token is below AA at 11px, light): perceptual, for the GO. Mutants 20/20 killed. The four demo scenes are not re-walked here.
+**Prompt document name**: 2026-09-29 03:00
+**Ticket** (priority low, opened here). `roleSections(profile, bag)` no longer reads `bag` now that `UNREAD_ROLES` is gone; the parameter stays (exported signature, Rule 9).

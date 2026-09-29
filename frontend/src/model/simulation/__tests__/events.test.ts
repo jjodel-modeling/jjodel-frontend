@@ -223,6 +223,18 @@ describe('roleOverlaps: the STC roles are disjoint under "is a" (R-SIM-16)', () 
         expect(roleOverlaps(withFinal, { ...disjoint, simActivityFinal: 'C_Trans' }, concrete)).toEqual({ classId: 'C_Trans', sorts: ['node', 'transition'] });
     });
 
+    it('an accepting state is a node: an Accepting class extending the node class is no overlap (R-SIM-91, P-2026-09-29-0300)', () => {
+        const withAcc = { ...lookup, C_Acc: { className: 'DClass', extends: ['C_Node'] } };
+        expect(roleOverlaps(withAcc, { ...disjoint, simAccepting: 'C_Acc' }, [...concrete, 'C_Acc'])).toBeNull();
+        // an Accepting class that is the transition class overlaps (killed by leaving the key out of the node sort)
+        expect(roleOverlaps(withAcc, { ...disjoint, simAccepting: 'C_Trans' }, concrete)).toEqual({ classId: 'C_Trans', sorts: ['node', 'transition'] });
+        // with the event role the overlap refuses the run, as Terminal's does
+        expect(overlapVerdict(withAcc, { ...disjoint, simTrigger: 'R_trigger', simAccepting: 'C_Trans' }, concrete))
+            .toEqual({ overlap: { classId: 'C_Trans', sorts: ['node', 'transition'] }, refuse: true });
+        // control: the same bag with Terminal on the transition class, the check that already held
+        expect(overlapVerdict(withAcc, { ...disjoint, simTrigger: 'R_trigger', simTerminal: 'C_Trans' }, concrete)?.refuse).toBe(true);
+    });
+
     it('arcs are a sort of their own; an inhibitor arc class extending the arc class is no overlap (step 3b)', () => {
         const withArcs = { ...lookup, C_Arc: { className: 'DClass', extends: [] }, C_Inh: { className: 'DClass', extends: ['C_Arc'] } };
         expect(roleOverlaps(withArcs, { ...disjoint, simArc: 'C_Arc', simInhibitorArc: 'C_Inh' }, [...concrete, 'C_Arc', 'C_Inh'])).toBeNull();

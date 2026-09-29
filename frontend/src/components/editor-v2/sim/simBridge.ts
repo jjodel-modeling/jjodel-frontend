@@ -44,6 +44,11 @@
  * metamodel's, and labels its defects as the model's; `runSignature` covers
  * the model's `sim*` keys, so an edit of them interrupts the run.
  *
+ * The faces of Accepting and the outputs (R-SIM-91, R-SIM-92; P-2026-09-29-0300):
+ * `acceptingMark` for the status row, `outputLine` (Moore) under the marking, and
+ * the output of a fired step (Mealy) after its input in «Last step», `coin / unlock:`,
+ * and in its title, all read from the compiled net, so a role that is off shows nothing.
+ *
  * Derived attributes (lane C2, R-SIM-73..75): their equations are compiled at
  * Reset and, when one is declared, the run gets a `DerivedOracle` that gives
  * the initial σ its derived values and every step its σ′'s; with none the run
@@ -54,7 +59,9 @@
 import type { ExecutionContext } from '../../../jjscript/types';
 import type { JjelValue } from '../../../jjel/evaluator';
 import { compileNet, eventAlphabet, featuresOf, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../../../model/simulation/netCompile';
-import { candidates, netRunStatus, stateAccess, step, terminated, tokens } from '../../../model/simulation/netStep';
+import {
+    candidates, isAccepting, netRunStatus, stateAccess, stateOutputOf, step, terminated, tokens, transitionOutputOf,
+} from '../../../model/simulation/netStep';
 import { buildGuardContext, freezeSnapshot, SimSnapshotError, toJjelStateAccess } from '../../../model/simulation/guardContext';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import { compileGuard, evaluateGuard } from '../../../model/simulation/guardEvaluator';
@@ -803,6 +810,41 @@ export function markingLine(state: SimState, net: Pick<CompiledNet, 'modelId'>, 
 }
 
 /**
+ * The mark of the status row (R-SIM-50, R-SIM-91): `accepting` while some marked
+ * place is a kind of Accepting, whatever the status; `null` otherwise. Read from
+ * the net, never the bag: without the role, or with it off (`runBag`, R-SIM-86),
+ * `net.accepting` is `null` and there is no mark.
+ */
+export function acceptingMark(net: CompiledNet, state: SimState): 'accepting' | null {
+    return isAccepting(net, state) ? 'accepting' : null;
+}
+
+/** Output values as the faces print them: in order, comma-separated. */
+function outputValues(values: readonly SimValue[]): string {
+    return values.map(v => String(v)).join(', ');
+}
+
+/**
+ * Moore's line of the M1 face (R-SIM-51, R-SIM-92), under the marking from Reset
+ * to Stop: the outputs of the marked places (`stateOutputOf`, read on frozen M at
+ * Reset). One such place: `Output: red`, `Output: red, buzz` for two values;
+ * several, each named, in the net's order: `Output: s1 red; s2 amber`; none:
+ * `Output: none`. `null` when the net has no state outputs (no role, or the role
+ * off), so the line is there for the whole run or not at all. The title holds it in full.
+ */
+export function outputLine(state: SimState, net: CompiledNet, lookup: Lookup): { line: string; title: string } | null {
+    if (!net.stateOutputs) return null;
+    const marked = stateOutputOf(net, state);
+    const text = marked.length === 0
+        ? 'none'
+        : marked.length === 1
+            ? outputValues(marked[0].values)
+            : marked.map(o => `${elementName(lookup, o.place)} ${outputValues(o.values)}`).join('; ');
+    const line = `Output: ${text}`;
+    return { line, title: line };
+}
+
+/**
  * The short form of a guard defect (R-SIM-62): the parse position and message,
  * the subset code, the evaluation message without the error class, the type a
  * non-boolean guard returned.
@@ -1166,11 +1208,21 @@ function derivedText(state: SimState, lookup: Lookup): string[] {
     return out;
 }
 
+/** Mealy (R-SIM-51, R-SIM-92): the output of a fired step, its transition's values; `''` when it has none or the net no role. */
+function firedOutput(outcome: StepOutcome, net: CompiledNet): string {
+    if (outcome.kind !== 'fired' || outcome.label.selector === null) return '';
+    return outputValues(transitionOutputOf(net, outcome.label.selector));
+}
+
 function lastStepText(outcome: StepOutcome, net: CompiledNet, lookup: Lookup, input: string, why: string | null = null): string {
     const chosen = outcome.label.selector;
     switch (outcome.kind) {
-        case 'fired':
-            return `${input}: ${candidateLabel(net, chosen ?? '', lookup)} fired`;
+        case 'fired': {
+            // Mealy's input / output first: the line is clamped at the panel's width, so an output at its end was cut
+            // on the discovery's own turnstile (P-2026-09-29-0300 lane probe, 304px needed in 262px).
+            const output = firedOutput(outcome, net);
+            return `${input}${output === '' ? '' : ` / ${output}`}: ${candidateLabel(net, chosen ?? '', lookup)} fired`;
+        }
         case 'halted':
             return `${input}: ${candidateLabel(net, chosen ?? '', lookup)} halted the run`;
         case 'discard':
@@ -1219,8 +1271,10 @@ export function pressInput(
     const assigned = outcome.label.assignments.map(a => `${elementName(lookup, a.element)}.${a.attr} = ${String(a.value)}`);
     const asked = (values ?? []).map(v => `${inputLabel(v, run.net, lookup)} = ${String(v.value)}`);
     const derivedValues = outcome.kind === 'fired' ? derivedText(outcome.next.state, lookup) : [];
+    const output = firedOutput(outcome, run.net);
     const lastStepTitle = [
         lastStep,
+        ...(output === '' ? [] : [`output: ${output}`]),
         ...(assigned.length === 0 ? [] : [`assignments: ${assigned.join(', ')}`]),
         ...(asked.length === 0 ? [] : [`inputs: ${asked.join(', ')}`]),
         ...(derivedValues.length === 0 ? [] : [`derived: ${derivedValues.join(', ')}`]),

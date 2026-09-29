@@ -19,10 +19,11 @@ function pointer(state: Record<string, unknown>, key: string): string | undefine
  * The four sorts of elements the metaclass roles select. Initial, terminal,
  * fork and join are nodes: a subclass of the node metaclass playing them is the
  * norm, not an overlap. An inhibitor arc is an arc (step 3b, R-SIM-37). The
- * activity final is a node too (R-SIM-53, G6).
+ * activity final is a node too (R-SIM-53, G6), and so is an accepting state
+ * (R-SIM-50, R-SIM-91).
  */
 const ROLE_SORTS: ReadonlyArray<{ sort: string; keys: readonly string[] }> = [
-    { sort: 'node', keys: ['simNode', 'simInitial', 'simTerminal', 'simActivityFinal', 'simFork', 'simJoin'] },
+    { sort: 'node', keys: ['simNode', 'simInitial', 'simTerminal', 'simAccepting', 'simActivityFinal', 'simFork', 'simJoin'] },
     { sort: 'transition', keys: ['simTransition'] },
     { sort: 'arc', keys: ['simArc', 'simInhibitorArc'] },
     { sort: 'event', keys: ['simEvent'] },

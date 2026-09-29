@@ -9,24 +9,30 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftPatch, draftProposals, draftStatus, isFirstOpen,
+    bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus, isFirstOpen,
     isModified, matchLine, MULTI_TAGS_SHOWN, multiRow, multiRowLabels, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
     withAdded, withPrimary, withProfileName, withRemoved, withRoleMode,
 } from '../simRolesDraft';
 import type { DraftInput } from '../simRolesDraft';
-import { profilePatch, storedProfile } from '../simRoleStatus';
+import { profileBindings, profilePatch, storedProfile } from '../simRoleStatus';
 import type { BoundEstimate } from '../modelMarkings';
 import { systemProfile, validateProfile } from '../../../../model/simulation/simProfiles';
 import { decodeProfile, encodeProfile } from '../../../../model/simulation/profileCodec';
 import { ROLE_IDS } from '../../../../model/simulation/roleCatalog';
+import type { RoleId } from '../../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
-import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
+import type { MetamodelSketch, ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
+import { bindingVerdicts } from '../../../../model/simulation/bindingCompat';
 import type { RoleCompatibility } from '../../../../model/simulation/bindingCompat';
 
 const SM = systemProfile('stateMachine') as SimProfile;
 const ESM = systemProfile('extendedStateMachine') as SimProfile;
 const FLOW = systemProfile('flowchart') as SimProfile;
 const PETRI = systemProfile('petri') as SimProfile;
+const DFA = systemProfile('dfa') as SimProfile;
+const NFA = systemProfile('nfa') as SimProfile;
+const MOORE = systemProfile('moore') as SimProfile;
+const MEALY = systemProfile('mealy') as SimProfile;
 
 const bound = (value: string): RoleBinding => ({ status: 'bound', value, why: 'test' });
 const none: RoleBinding = { status: 'none', why: 'test' };
@@ -66,7 +72,10 @@ describe('roleSections: Required is requiredRoles (R-SIM-48), dependencies are �
         expect(s.parameters).toEqual([]);
         expect(s.optional).toEqual(['terminal', 'trigger', 'eventIdentifier', 'guard']);
         expect(s.derived).toEqual(['initialMarking', 'bound', 'event']);
-        expect(s.off).toEqual(['activityFinal', 'fork', 'join', 'arc', 'arcSource', 'arcTarget', 'arcWeight', 'inhibitorArc', 'action', 'entry', 'exit']);
+        expect(s.off).toEqual([
+            'accepting', 'activityFinal', 'fork', 'join', 'arc', 'arcSource', 'arcTarget', 'arcWeight', 'inhibitorArc', 'action', 'entry', 'exit',
+            'stateOutput', 'transitionOutput',
+        ]);
         expect(s.neededBy.trigger).toEqual(['event', 'eventIdentifier']);
         expect(s.neededBy.stateAttributes).toBeUndefined();
     });
@@ -94,13 +103,45 @@ describe('roleSections: Required is requiredRoles (R-SIM-48), dependencies are �
         }
     });
 
-    it('Accepting, State output, Transition output are hidden unless set (D8; killed by showing a feature nothing reads)', () => {
-        const s = roleSections(SM, {});
-        for (const r of ['accepting', 'stateOutput', 'transitionOutput'] as const) {
-            expect([...s.optional, ...s.derived, ...s.off]).not.toContain(r);
+    it('Accepting, State output, Transition output are ordinary rows: Not used in the four demo presets, set or not (killed by keeping UNREAD_ROLES)', () => {
+        for (const p of [SM, ESM, FLOW, PETRI]) {
+            const s = roleSections(p, {});
+            for (const r of ['accepting', 'stateOutput', 'transitionOutput'] as const) expect({ p: p.id, r, off: s.off.includes(r) }).toEqual({ p: p.id, r, off: true });
         }
-        // control: a set key shows, under Not used, since the preset turns it off
-        expect(roleSections(SM, { simAccepting: 'C_Acc' }).off).toContain('accepting');
+        // The closed fold of the dialog, «n derived · m not used» (discovery §3.7): three more not used each.
+        const fold = (p: SimProfile) => { const s = roleSections(p, {}); return [s.derived.length, s.off.length]; };
+        expect([SM, ESM, FLOW, PETRI].map(fold)).toEqual([[3, 14], [3, 11], [2, 12], [0, 16]]);
+        // control: a set key reads the same
+        expect(roleSections(SM, { simAccepting: 'C_Acc' }).off).toEqual(roleSections(SM, {}).off);
+    });
+
+    it('DFA, NFA, Moore, Mealy: the role they read is a Required row (probe A of P-2026-09-29-0239)', () => {
+        const cf: RoleId[][] = [['node'], ['initial'], ['transition'], ['ownedTransitions', 'source'], ['nextState'], ['trigger']];
+        const withAccepting = [['node'], ['initial'], ['accepting'], ...cf.slice(2)];
+        expect(roleSections(DFA, {}).required).toEqual(withAccepting);
+        expect(roleSections(NFA, {}).required).toEqual(withAccepting);
+        expect(roleSections(MOORE, {}).required).toEqual([...cf, ['stateOutput']]);
+        expect(roleSections(MEALY, {}).required).toEqual([...cf, ['transitionOutput']]);
+        // the other two are Not used there
+        expect(roleSections(DFA, {}).off).toEqual(expect.arrayContaining(['stateOutput', 'transitionOutput']));
+        expect(roleSections(MOORE, {}).off).toEqual(expect.arrayContaining(['accepting', 'transitionOutput']));
+    });
+
+    it('DFA in the dialog: the Accepting row lists the subclasses of State, and the one picked turns «Missing: Accepting.» into checkable (probe C)', () => {
+        const C = (id: string, supers: string[] = []) => ({ id, name: id, abstract: false, supers });
+        const R = (owner: string, name: string, type: string, composition = false) => ({ id: `${owner}.${name}`, name, owner, type, composition, aggregation: false });
+        const sketch: MetamodelSketch = {
+            classes: [C('State'), C('Initial', ['State']), C('Good', ['State']), C('Transition'), C('Symbol')],
+            attributes: [],
+            references: [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State'), R('Transition', 'event', 'Symbol')],
+        };
+        const base = input({ profile: DFA, bindings: profileBindings(DFA, sketch, {}) });
+        expect(draftStatus(base, sketch)).toEqual({ status: 'notCheckable', missing: ['Accepting'] });
+        const compat = bindingVerdicts(DFA, draftBag(base), sketch).accepting;
+        expect(compatibleOptions(compat, '').map(o => [o.id, o.verdict])).toEqual([['State', 'warn'], ['Initial', 'ok'], ['Good', 'ok']]);
+        const picked = input({ ...base, edits: { simAccepting: 'Good' } });
+        expect(draftStatus(picked, sketch)).toEqual({ status: 'checkable', missing: [] });
+        expect(draftPatch(picked)).toMatchObject({ simAccepting: 'Good', simProfile: 'dfa' });
     });
 
     it('an either-item with both sides edit keeps both; with the other side derived, the edit side alone (killed by dropping the derived filter)', () => {
@@ -236,11 +277,15 @@ describe('boundHelp: the engine reasons (R-SIM-81(1) as amended, D2)', () => {
 // ---------------------------------------------------------------------------
 
 describe('roleSwitch: the dialog offers only switches the validator accepts (R-SIM-47, R-SIM-48)', () => {
-    it('State machine: Terminal and Guard off, Fork on; Trigger (needed), Initial (required), Bound (derived), Arc (other shape), Accepting (unread) none (killed by offering a switch into a defect)', () => {
+    it('State machine: Terminal and Guard off, Fork on; Trigger (needed), Initial (required), Bound (derived), Arc (other shape) none (killed by offering a switch into a defect)', () => {
         expect(roleSwitch(SM, 'terminal')).toBe('off');
         expect(roleSwitch(SM, 'guard')).toBe('off');
         expect(roleSwitch(SM, 'fork')).toBe('on');
-        for (const r of ['trigger', 'initial', 'bound', 'arc', 'accepting', 'event', 'initialMarking'] as const) expect(roleSwitch(SM, r)).toBeNull();
+        for (const r of ['trigger', 'initial', 'bound', 'arc', 'event', 'initialMarking'] as const) expect(roleSwitch(SM, r)).toBeNull();
+        // Accepting and the outputs are read by the engine (R-SIM-91, R-SIM-92): switchable on (killed by keeping UNREAD_ROLES)
+        for (const r of ['accepting', 'stateOutput', 'transitionOutput'] as const) expect(roleSwitch(SM, r)).toBe('on');
+        // control: where the preset requires it, no switch
+        expect(roleSwitch(DFA, 'accepting')).toBeNull();
         // Every offered switch leaves a profile the validator accepts, but for the name.
         for (const r of ROLE_IDS) {
             const s = roleSwitch(SM, r);
