@@ -30,7 +30,10 @@ import {
     SEMANTIC_TYPE_OPTIONS,
     semanticTypeCurrent,
     semanticTypePatch,
+    SIM_ENABLED_KEY,
+    simEnabledPatch,
     simPillVisible,
+    simulationEnabled,
     staleEventWarning,
     storedProfile,
     VERDICT_LABEL,
@@ -406,40 +409,66 @@ describe('storedProfile (R-SIM-55, D6)', () => {
     });
 });
 
-describe('the gate of the Simulation pill (P-2026-09-29-1106, R-SIM-97)', () => {
+describe('the gate of the Simulation pill: the Simulation toggle (P-2026-09-29-1225, R-SIM-99, amends R-SIM-97)', () => {
     // The lookup the panel reads: a metamodel, an M1 of it, and an M1 with no metamodel.
     const lookupWith = (mmState: Record<string, unknown>, m1State: Record<string, unknown> = {}) => ({
         mm: { id: 'mm', _state: mmState },
         m1: { id: 'm1', instanceof: 'mm', _state: m1State },
-        orphan: { id: 'orphan', _state: { simProfile: 'stateMachine' } },
+        orphan: { id: 'orphan', _state: { simEnabled: true, simProfile: 'stateMachine' } },
     });
-    const TYPED = { simProfile: 'stateMachine', simNode: 'State' };
+    const ON = { simEnabled: true };
+    /** A metamodel saved under R-SIM-97: a Semantic type, no toggle. */
+    const LEGACY = { simProfile: 'stateMachine', simNode: 'State' };
 
-    it('Basic mode hides the pill on M2 and on an M1, whatever the bag (killed by dropping the advanced term)', () => {
-        const lookup = lookupWith(TYPED);
-        expect(simPillVisible(false, lookup, 'mm', false)).toBe(false);
-        expect(simPillVisible(false, lookup, 'm1', true)).toBe(false);
-        // control: the same lookup in Advanced shows it
-        expect(simPillVisible(true, lookup, 'mm', false)).toBe(true);
+    it('Basic mode hides the pill on M2 and on an M1, toggle on or legacy (killed by dropping the advanced term)', () => {
+        for (const bag of [ON, LEGACY, { ...LEGACY, simEnabled: true }]) {
+            const lookup = lookupWith(bag);
+            expect(simPillVisible(false, lookup, 'mm', false)).toBe(false);
+            expect(simPillVisible(false, lookup, 'm1', true)).toBe(false);
+            // control: the same lookup in Advanced shows it
+            expect(simPillVisible(true, lookup, 'mm', false)).toBe(true);
+        }
     });
 
-    it('Advanced without a Semantic type hides it, role keys set or not (killed by dropping the bag term)', () => {
-        for (const bag of [{}, { simNode: 'State', simTransition: 'Transition' }, { simProfile: '' }, { simProfile: null }]) {
+    it('Advanced with the toggle off or absent hides it, role keys set or not (killed by dropping the bag term)', () => {
+        for (const bag of [{}, { simEnabled: false }, { simNode: 'State', simTransition: 'Transition' },
+            { simEnabled: false, simNode: 'State' }, { simProfile: '' }, { simProfile: null }]) {
             const lookup = lookupWith(bag);
             expect(simPillVisible(true, lookup, 'mm', false)).toBe(false);
             expect(simPillVisible(true, lookup, 'm1', true)).toBe(false);
         }
     });
 
-    it('Advanced with a Semantic type shows it on the M2 and on an M1 of it, by the metamodel\'s bag (killed by reading the M1\'s own bag)', () => {
-        expect(simPillVisible(true, lookupWith(TYPED), 'mm', false)).toBe(true);
-        expect(simPillVisible(true, lookupWith(TYPED), 'm1', true)).toBe(true);
-        // an M1 bag naming a profile while its metamodel names none: hidden
-        expect(simPillVisible(true, lookupWith({}, { simProfile: 'stateMachine' }), 'm1', true)).toBe(false);
+    it('Advanced with the toggle on shows it on the M2 and on an M1 of it, no Semantic type needed (killed by gating on simProfile, as R-SIM-97 did)', () => {
+        expect(simPillVisible(true, lookupWith(ON), 'mm', false)).toBe(true);
+        expect(simPillVisible(true, lookupWith(ON), 'm1', true)).toBe(true);
+        expect(simulationEnabled(ON)).toBe(true);
+    });
+
+    it('an M1 reads its metamodel\'s toggle, never its own bag (killed by reading the M1\'s own bag)', () => {
+        expect(simPillVisible(true, lookupWith({}, ON), 'm1', true)).toBe(false);
+        expect(simPillVisible(true, lookupWith({ simEnabled: false }, ON), 'm1', true)).toBe(false);
+        expect(simPillVisible(true, lookupWith(ON, { simEnabled: false }), 'm1', true)).toBe(true);
+    });
+
+    it('legacy: simProfile set and no simEnabled keeps the pill, so a project saved under R-SIM-97 keeps it (killed by dropping the fallback)', () => {
+        expect(simPillVisible(true, lookupWith(LEGACY), 'mm', false)).toBe(true);
+        expect(simPillVisible(true, lookupWith(LEGACY), 'm1', true)).toBe(true);
+        expect(simulationEnabled(LEGACY)).toBe(true);
+        expect(simulationEnabled({ simProfile: '' })).toBe(false);
+        expect(simulationEnabled({ simEnabled: null, simProfile: 'petri' })).toBe(true);
+        expect(simulationEnabled(undefined)).toBe(false);
+    });
+
+    it('the toggle wins over the legacy rule: off with a Semantic type hides the pill (killed by reading `simEnabled || simProfile`)', () => {
+        const off = { ...LEGACY, simEnabled: false };
+        expect(simPillVisible(true, lookupWith(off), 'mm', false)).toBe(false);
+        expect(simPillVisible(true, lookupWith(off), 'm1', true)).toBe(false);
+        expect(simulationEnabled(off)).toBe(false);
     });
 
     it('an M1 with no metamodel, or an unknown id, shows nothing', () => {
-        const lookup = lookupWith(TYPED);
+        const lookup = lookupWith(ON);
         expect(simPillVisible(true, lookup, 'orphan', true)).toBe(false);
         expect(simPillVisible(true, lookup, 'nope', false)).toBe(false);
         expect(simPillVisible(true, lookup, 'nope', true)).toBe(false);
@@ -458,6 +487,54 @@ describe('the gate of the Simulation pill (P-2026-09-29-1106, R-SIM-97)', () => 
     });
 });
 
+describe('the Simulation toggle of the Semantic Type Class section (P-2026-09-29-1225, R-SIM-99)', () => {
+    /** The merge of `set_state` (joiner/classes.ts): a key given as undefined is removed, the others merged. */
+    const setState = (bag: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> => {
+        const out: Record<string, unknown> = { ...bag };
+        for (const [k, v] of Object.entries(patch)) {
+            if (v === undefined) delete out[k];
+            else out[k] = v;
+        }
+        return out;
+    };
+    const ROLES = { simNode: 'State', simInitial: 'Initial', simTransition: 'Transition', simNextState: 'Transition.nextState' };
+    const TYPED = { ...ROLES, simProfile: 'stateMachine' };
+
+    it('on writes simEnabled true alone, in one state assignment (killed by the toggle writing simProfile too)', () => {
+        expect(SIM_ENABLED_KEY).toBe('simEnabled');
+        expect(simEnabledPatch(true)).toEqual({ simEnabled: true });
+    });
+
+    it('off writes false, not a removal, so its undo is a value change (killed by removing the key)', () => {
+        // The undo of a removed `_state` key does not restore it (ticket of P-2026-09-29-1106); a value change it does.
+        expect(simEnabledPatch(false)).toEqual({ simEnabled: false });
+        // Removing the key would fall back to the legacy rule and show the pill of a typed metamodel again.
+        const off = setState({ ...TYPED, simEnabled: true }, simEnabledPatch(false));
+        expect(off).toEqual({ ...TYPED, simEnabled: false });
+        expect(simulationEnabled(off)).toBe(false);
+    });
+
+    it('the toggle leaves the roles and the Semantic type alone, both ways (killed by clearing the sim* keys)', () => {
+        const on = setState(TYPED, simEnabledPatch(true));
+        expect(on).toEqual({ ...TYPED, simEnabled: true });
+        expect(setState(on, simEnabledPatch(false))).toEqual({ ...TYPED, simEnabled: false });
+        expect(setState(setState(on, simEnabledPatch(false)), simEnabledPatch(true))).toEqual(on);
+    });
+
+    it('on with no Semantic type: the pill shows, the first-open picker is reachable, the M2 face reads Custom · Not checkable', () => {
+        const bag = setState({}, simEnabledPatch(true));
+        expect(simPillVisible(true, { mm: { id: 'mm', _state: bag } }, 'mm', false)).toBe(true);
+        expect(isFirstOpen(bag)).toBe(true);
+        expect(storedProfile(bag)).toMatchObject({ custom: true, readable: true });
+        const s = profileSummary(storedProfile(bag).profile, bag, null);
+        expect(profileSummaryText(s, nameOf).status).toBe('Custom · Not checkable');
+        // control: a Semantic type chosen in the configuration closes the picker, as before R-SIM-97
+        expect(isFirstOpen({ ...bag, simProfile: 'stateMachine' })).toBe(false);
+    });
+});
+
+// The Semantic type field left the Properties with R-SIM-99 (P-2026-09-29-1225); its pure helpers stay (TODO: cleanup
+// in simRoleStatus.ts) and so do their tests.
 describe('the Semantic type field of the metamodel\'s Properties (P-2026-09-29-1106, R-SIM-97)', () => {
     /** The merge of `set_state` (joiner/classes.ts): a key given as undefined is removed, the others merged. */
     const setState = (bag: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> => {
