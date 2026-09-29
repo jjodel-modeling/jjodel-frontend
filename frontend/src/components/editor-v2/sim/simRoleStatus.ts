@@ -10,7 +10,7 @@
 import { STATE_ATTRIBUTES_KEY, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
 import { ROLE_CATALOG, roleDescriptor, roleValues } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
-import { checkability } from '../../../model/simulation/simProfiles';
+import { checkability, systemProfile } from '../../../model/simulation/simProfiles';
 import type { Checkability, CheckabilityStatus, RequiredItem, SimProfile, SystemProfileId } from '../../../model/simulation/simProfiles';
 import { decodeProfile, encodeProfile, inferCustomProfile } from '../../../model/simulation/profileCodec';
 import { bindProfile } from '../../../model/simulation/profileBinder';
@@ -243,6 +243,65 @@ export function storedProfile(bag: Readonly<Record<string, unknown>>): StoredPro
     return profile
         ? { profile, custom: false, readable: true }
         : { profile: inferCustomProfile(bag).profile, custom: true, readable: false };
+}
+
+// ---------------------------------------------------------------------------
+// The Semantic type and the gate of the pill (P-2026-09-29-1106, R-SIM-97)
+// ---------------------------------------------------------------------------
+
+/**
+ * A bag has a «Semantic type» when its `simProfile` is set: not undefined, null
+ * or '', the first test of `storedProfile` and of `isFirstOpen`. An unreadable
+ * value (D6) and a user profile count as set, so the panel's «not readable»
+ * line stays reachable.
+ */
+export function hasSemanticType(bag: Readonly<Record<string, unknown>> | null | undefined): boolean {
+    const raw = bag?.[PROFILE_KEY];
+    return raw !== undefined && raw !== null && raw !== '';
+}
+
+/**
+ * The Simulation pill is mounted only in Advanced mode (Redux `state.advanced`)
+ * and when the metamodel has a Semantic type: the M2 itself, or the
+ * `instanceof` of an M1, the bag the panel reads (SimulationPanel.tsx
+ * `mapStateToProps`). Read once, at the mount site in EditorV2.tsx, so
+ * unmounting clears a run (the panel's cleanup, `simClear`).
+ */
+export function simPillVisible(
+    advanced: boolean, lookup: Readonly<Record<string, any>>, modelid: string, isModelMode: boolean,
+): boolean {
+    if (!advanced) return false;
+    const dModel = lookup[modelid];
+    const configModelId: string | null = isModelMode
+        ? (typeof dModel?.instanceof === 'string' ? dModel.instanceof : null)
+        : (dModel ? modelid : null);
+    return configModelId !== null && hasSemanticType(lookup[configModelId]?._state);
+}
+
+/** The options of the Semantic type field after None: the panel's presets, in its order and with its names. */
+export const SEMANTIC_TYPE_OPTIONS: ReadonlyArray<{ readonly value: SystemProfileId; readonly label: string }> =
+    PANEL_PROFILE_IDS.map(id => ({ value: id, label: systemProfile(id)?.name ?? id }));
+
+/**
+ * What the field shows for a stored `simProfile`: `null` for None; a preset of
+ * the list; otherwise (a user profile, an unreadable value) the name the
+ * panel's Profile select shows, as a current option off the list.
+ */
+export function semanticTypeCurrent(raw: unknown): { value: string; label: string; listed: boolean } | null {
+    const bag = { [PROFILE_KEY]: raw };
+    if (!hasSemanticType(bag)) return null;
+    const preset = SEMANTIC_TYPE_OPTIONS.find(o => o.value === raw);
+    return preset ? { ...preset, listed: true } : { value: String(raw), label: storedProfile(bag).profile.name, listed: false };
+}
+
+/**
+ * The write of the field: one `state` assignment, so one TRANSACTION and one
+ * undo step (`set_state`, joiner/classes.ts), the key the panel's and the
+ * dialog's Apply write. None (`null`) removes `simProfile` alone and keeps the
+ * role keys (D3), so choosing the preset again restores the bag.
+ */
+export function semanticTypePatch(id: SystemProfileId | null): { simProfile: string | undefined } {
+    return { simProfile: id ?? undefined };
 }
 
 /**

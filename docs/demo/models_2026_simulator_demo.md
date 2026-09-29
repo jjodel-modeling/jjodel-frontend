@@ -11,6 +11,11 @@
 - The G13/G14 polish (`5739b950f`) landed after the report. It changed the choice list header and the Profile
   select only, and its lane measured both. Any later trunk commit to `SimulationPanel.tsx` or `simBridge.ts` needs a
   re-run of the readiness probes before this script holds (report §7, risk 7).
+- The gate (R-SIM-97, P-2026-09-29-1106) changed the setup and the first steps of every scene: the pill shows only
+  in Advanced mode and on a metamodel with a Semantic type. Re-measured by that lane's probe on 3050 (headless,
+  light, 1600×1000, one fresh page per scene): the four scenes give the readings of the reference
+  `trunk_readings_2026-09-29c` but for the §2.1 Undo line and, in the dialog, the focus on open (the dialog itself,
+  no Continue click before it) [M].
 
 ---
 
@@ -20,16 +25,22 @@
   step 2). The measurements ran on 3011, this tree's dev server at `e1cefcfbc`. Under `frontend/src` the trunk
   differs from it by the polish `5739b950f` only (`git diff --stat e1cefcfbc alfonso-frontend-jjtl`, 2 files).
 - **Screen.** Light theme. Viewport 1600×1000.
-- **Panel.** In each editor tab, click the `Simulation` chip [R]. The panel docks at the bottom of the editor. Every
-  scene uses two tabs: the metamodel (M2 face: profile, Apply, Configure…) and the model (M1 face: the run).
+- **Advanced mode.** Before the first scene, click `Advanced` in the app bar. The first time a browser enables it,
+  the tutorial opens: click `Got it`. 2 clicks [M, P-2026-09-29-1106]. In Basic mode no editor shows the pill, and
+  the Properties show no Semantic type [M].
+- **Panel.** The `Simulation` chip shows once the metamodel has a Semantic type (R-SIM-97), on the metamodel's tab and
+  on its models' tabs [M]. It sits at the bottom left of the editor, on Jjodie's centre line, 16 px to its right:
+  Jjodie (216, 903) 48×48, the chip (281, 911) 107×32 [M]. Each scene clicks the chip once in each of its two tabs.
+  The panel docks at the bottom of the editor. Every scene uses two tabs: the metamodel (M2 face: profile, Apply,
+  Configure…) and the model (M1 face: the run).
 - **Projects.** Four projects, one per preset. Each probe built its preset alone, in the RowViewSmoke seed project.
 
 | Preset | Metamodel / model | Prepared before the talk | Live |
 |---|---|---|---|
-| State machine (PEST) | `DemoPEST` / `demoSM` | metamodel and model, as §2.1 | profile, Apply, the run |
-| Petri net (P/T) | `DemoPetri` / `demoNet` | metamodel and model, as §2.2 | profile, Apply, the run |
-| Extended state machine | `DemoESM` / `demoESM` | metamodel and model, as §2.3 | profile, Apply, the declarations, the run |
-| Flowchart B | `DemoFlowB` / `demoFlowB` | metamodel and model, as §2.4 | profile, Apply, the declaration, the run |
+| State machine (PEST) | `DemoPEST` / `demoSM` | metamodel and model, as §2.1 | Semantic type, Apply, the run |
+| Petri net (P/T) | `DemoPetri` / `demoNet` | metamodel and model, as §2.2 | Semantic type, Apply, the run |
+| Extended state machine | `DemoESM` / `demoESM` | metamodel and model, as §2.3 | Semantic type, Apply, the declarations, the run |
+| Flowchart B | `DemoFlowB` / `demoFlowB` | metamodel and model, as §2.4 | Semantic type, Apply, the declaration, the run |
 
 - The builder writes the metamodels and models through the store. No probe drew them on the canvas. Drawing a preset
   live must end in the same names, types, abstract flags and references as §2.
@@ -37,9 +48,9 @@
 - **Save check.** After preparing each project: Cmd+S, reload the page once, check that the metamodel, the model and
   its objects are intact. Without Cmd+S, model edits may be lost on reload although the bar reads `Saved just now`
   (freeze readiness F1, `c6933dded`) [M].
-- **Empty bag.** Set no simulation role before Apply. Every measured path starts from an empty bag. On every preset
-  the M2 face then reads `Custom · Not checkable` and `Missing: Node, Transition, Next state, Initial or Initial
-  marking, Source or Owned transitions.` [M].
+- **Empty bag.** Set no simulation role and no Semantic type before the talk. Every measured path starts from an
+  empty bag, and an empty bag shows no pill [M, P-2026-09-29-1106]. With the Semantic type set and before Apply, the M2
+  face reads the preset `· Checkable after Apply`, e.g. `State machine · Checkable after Apply` [M].
 - **Reset starts the run: before Reset every input is off.** The M1 face reads `Not started` with every event
   button off, e.g. `coin(off)`, `push(off)`, `stop(off)` [M].
 - **Data on the model tab (R-SIM-94).** A model declares its own globals in the `Data…` entry, the first line of the
@@ -74,18 +85,23 @@
 | `t5` | `locked` | `off` | `stop` |
 
 **Apply** (tab `DemoPEST`).
-1. Click `Configure…` [R]. The dialog `Simulation roles` opens on `What kind of model is this?`, with `Continue` off
-   and `Pick a model kind to continue.` [M, P-2026-09-27-2105]. Click `State machine`, then `Continue` [M].
-2. The dialog reads `Checkable` and `7 of 10 roles matched` [M, P-2026-09-27-2105]. Required 5 is open: Node
-   `State`, Initial `Initial`, Transition `Transition`, Owned transitions `State.transitions`, Next state
-   `Transition.nextState`. Optional 4, folded, holds the other two: Terminal `Terminal`, Trigger `Transition.event`
-   [M]. Hover titles, e.g. `Proposed: State.transitions. The composition from State to Transition` [M].
-   **Say** "I say what kind of model this is. The dialog proposes a binding for every role, each with its reason."
+1. Click an empty point of the canvas: the Properties show `DemoPEST`, `METAMODEL`, and under GENERAL the field
+   `Semantic type`, reading `None` [M, P-2026-09-29-1106]. Open it and choose `State machine`: the options are `None`,
+   then the eight presets of the panel [M]. The `Simulation` chip appears beside Jjodie [M].
+   **Say** "I say what kind of model this is."
+2. Click the chip: the M2 face reads `State machine · Checkable after Apply` [M]. Click `Configure…`: the dialog
+   `Simulation roles` opens on its roles, with no model kind to pick, and reads `Checkable` and `7 of 10 roles
+   matched` [M, P-2026-09-29-1106]. Required 5 is open: Node `State`, Initial `Initial`, Transition `Transition`,
+   Owned transitions `State.transitions`, Next state `Transition.nextState`. Optional 4, folded, holds the other two:
+   Terminal `Terminal`, Trigger `Transition.event` [M]. Hover titles, e.g. `Proposed: State.transitions. The
+   composition from State to Transition` [M].
+   **Say** "The dialog proposes a binding for every role, each with its reason."
 3. Apply, in the dialog. It closes, and the summary reads `State machine · Checkable` [M]. The panel is 157.5 px
-   high at top 793.5 [M, P-2026-09-27-2105].
+   high at top 793.5 [M, P-2026-09-29-1106].
    **Say** "One Apply writes the whole binding. It is one undo step."
 
-Count: 4 clicks, no keystroke; the run below, 11 clicks [M, P-2026-09-27-2105].
+Count: 6 clicks, no keystroke (canvas 1, Semantic type 2, chip 1, `Configure…` 1, Apply 1), against 4 with the
+picker; the chip on tab `demoSM`, 1 click; the run below, 11 clicks [M, P-2026-09-29-1106].
 
 **Run** (tab `demoSM`). Before Reset: `Not started`, `coin(off)`, `push(off)`, `stop(off)` [M].
 
@@ -110,10 +126,11 @@ After step 10 the status reads `Terminated` [M].
 **Say** "Each line names the event and the transition by their names in the model."
 
 **Undo, optional** (tab `DemoPEST`, no write since Apply). Click an empty point of the canvas, then Cmd+Z. The M2
-face reads `Custom · Not checkable` [M]; the M1 face reads `Simulation not configured. Missing on DemoPEST:
-Initial or Initial marking, Owned transitions or Source, Next state.` [M]. Measured with Control+z in headless
-Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
-**Say** "Apply was one step, so one undo takes the binding away."
+face reads `State machine · Checkable after Apply`, and the bag holds `simProfile` alone [M, P-2026-09-29-1106]; the
+M1 face reads `Simulation not configured. Missing on DemoPEST: Initial or Initial marking, Owned transitions or
+Source, Next state.` [M]. A second Cmd+Z takes the Semantic type away: the field reads `None` and the pill goes from
+both tabs [M]. Measured with Control+z in headless Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
+**Say** "Apply was one step, so one undo takes the binding away. The kind of model stays."
 
 ### 2.2 Petri net (P/T)
 
@@ -135,8 +152,9 @@ Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
 | `i1` | `InhibitorArc` | `lock` | `t2` | unset |
 
 **Apply** (tab `DemoPetri`).
-1. Click `Configure…`, then `Petri net (P/T)`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads `Checkable`
-   and `9 of 10 roles matched` [M]. Required 6 is open: Node `Place`, Initial marking `Place.tokens`, Transition
+1. Click an empty point of the canvas, open `Semantic type` in the Properties and choose `Petri net (P/T)`; click the
+   chip, then `Configure…` [M, P-2026-09-29-1106]. The dialog reads `Checkable` and `9 of 10 roles matched` [M].
+   Required 6 is open: Node `Place`, Initial marking `Place.tokens`, Transition
    `Transition`, Arc `Arc`, Arc source `Arc.src`, Arc target `Arc.tgt`. Optional 4, folded: Arc weight
    `Arc.weight`, Inhibitor arc `InhibitorArc`, Guard `Transition.guard`, Terminal unset [M].
    **Say** "The binder recognises the net from the shape of the metamodel, the inhibitor and the guard included."
@@ -146,7 +164,8 @@ Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
 3. Apply, in the dialog. The summary reads `Petri net (P/T) · Checkable`, the panel 157.5 px at 793.5 [M]. The bag
    holds Bound `4` [M, P-2026-09-27-2105].
 
-Count: 4 clicks, no keystroke; the run below, 8 clicks: Reset, ▶ four times, three choices [M, P-2026-09-27-2105].
+Count: 6 clicks, no keystroke; the chip on tab `demoNet`, 1 click; the run below, 8 clicks: Reset, ▶ four times,
+three choices [M, P-2026-09-29-1106].
 
 **Run** (tab `demoNet`). Before Reset: `Not started`, ▶ disabled, no line [M, P-2026-09-27-1738].
 
@@ -189,8 +208,9 @@ to 830 [M]. Click it again to close.
 | `ts` | `locked` | `off` | `stop` | | |
 
 **Apply** (tab `DemoESM`).
-1. Click `Configure…`, then `Extended state machine`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads
-   `Checkable` and `10 of 13 roles matched`: the seven of §2.1 plus Guard `Transition.guard`, Action
+1. Click an empty point of the canvas, open `Semantic type` in the Properties and choose `Extended state machine`;
+   click the chip, then `Configure…` [M, P-2026-09-29-1106]. The dialog reads `Checkable` and `10 of 13 roles
+   matched`: the seven of §2.1 plus Guard `Transition.guard`, Action
    `Transition.effect`, Entry `State.entry` [M]. The Data fold reads `Declare the state attributes the actions
    write` [M].
 2. Apply, in the dialog, with no declaration. The summary reads `Extended state machine · Checkable` and the line
@@ -201,8 +221,8 @@ to 830 [M]. Click it again to close.
    write (a model's globals go in its Data…):` in simRoleStatus.ts:495 [R]; the walk of P-2026-09-29-0110 does not
    read it -->
 
-Count: 4 clicks, no keystroke; the optional Reset below, 2 clicks; the declarations on the model tab, 9 interactions
-and 34 keystrokes, 0 scrolls [M, P-2026-09-29-0110]; the run, 11 clicks [M, P-2026-09-27-2105].
+Count: 6 clicks, no keystroke; the chip on tab `demoESM`, 1 click; the optional Reset below, 2 clicks; the
+declarations on the model tab, 9 interactions and 34 keystrokes, 0 scrolls; the run, 11 clicks [M, P-2026-09-29-1106].
 
 **Optional: Reset before declaring** (tab `demoESM`). Reset shows `3 defects: tp guard (undeclared 'paid'); tc action
 (undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M,
@@ -224,7 +244,8 @@ first.
 3. Click `Add attribute`. Row 2 reads `x1`, the name selected: `paid`, Enter; `derived`. Click the equation,
    `model.[coins] >= 2`, Enter [M].
 4. Apply, in the dialog. The dialog closes; the model's bag holds the two records, the metamodel's holds no
-   `simStateAttributes`; the undo stack goes from 1 to 2 [M].
+   `simStateAttributes`; the undo stack goes from 3 to 4 [M, P-2026-09-29-1106]: the Semantic type and the roles'
+   Apply are one step each, and the setup left one (the Advanced switch is an undo step of its own [M]).
 
 Steps 1 to 4 are 9 interactions (7 clicks, 2 select choices) and 34 keystrokes, with no scroll: every target is in
 view, where the metamodel path needs 2 scrolls on this screen [M, P-2026-09-29-0110].
@@ -309,8 +330,9 @@ together. <!-- not measured: abstract ActivityNode with FinalNode and the explic
 | `f9` | `jn` | `fin` | | |
 
 **Apply** (tab `DemoFlowB`).
-1. Click `Configure…`, then `Flowchart / Activity`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads
-   `Checkable` and `10 of 13 roles matched` [M]: Node `ActivityNode`, Initial `InitialNode`, Transition
+1. Click an empty point of the canvas, open `Semantic type` in the Properties and choose `Flowchart / Activity`;
+   click the chip, then `Configure…` [M, P-2026-09-29-1106]. The dialog reads `Checkable` and `10 of 13 roles
+   matched` [M]: Node `ActivityNode`, Initial `InitialNode`, Transition
    `ControlFlow`, Source `ControlFlow.source`, Next state `ControlFlow.target`; in Optional, folded, Terminal
    `FinalNode`, Fork `Fork`, Join `Join`, Guard `ControlFlow.guard`, Action `ControlFlow.effect` [M].
    **Say** "The same binder, on a control-flow shape: fork and join are roles too."
@@ -320,9 +342,9 @@ together. <!-- not measured: abstract ActivityNode with FinalNode and the explic
    actions write (a model's globals go in its Data…):` in simRoleStatus.ts:495 [R]; the walk of P-2026-09-29-0110 does
    not read it -->
 
-Count: 4 clicks, no keystroke; the Reset before declaring, 1 click, the entry of the route below; the declaration
-from the Reset line, 5 interactions and 4 keystrokes, 0 scrolls [M, P-2026-09-29-0110]; the run, 7 clicks [M,
-P-2026-09-27-2105].
+Count: 6 clicks, no keystroke; the chip on tab `demoFlowB`, 1 click; the Reset before declaring, 1 click, the entry
+of the route below; the declaration from the Reset line, 5 interactions and 4 keystrokes, 0 scrolls; the run, 7
+clicks [M, P-2026-09-29-1106].
 
 **Reset before declaring** (tab `demoFlowB`, the model): `3 defects: f3 guard (undeclared 'count'); f4 guard
 (undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023]. Under
@@ -333,7 +355,8 @@ the defects the panel reads `Undeclared: count. Declare in Data…` [M, P-2026-0
 1. Click `Declare in Data…`. The dialog `Data of demoFlowB` opens with row 1 already there, `count · Global · stored ·
    boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110].
 2. Select Domain `range`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter.
-3. Apply, in the dialog. The model's bag holds `count`; the undo stack goes from 1 to 2 [M].
+3. Apply, in the dialog. The model's bag holds `count`; the undo stack goes from 3 to 4 [M, P-2026-09-29-1106], as in
+   §2.3.
 
 5 interactions (4 clicks, 1 select choice) and 4 keystrokes, with no scroll, against 6 interactions, 10 keystrokes and
 1 scroll on the metamodel path [M, P-2026-09-29-0110]. The name is not typed: the line carried it.
@@ -396,11 +419,23 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
   first report's risk 4: with the focus on the page body Control+z does nothing, and after a node click it reverts
   the selection first [M].
 - **Reset starts the run: before Reset every input is off.** From the first report's risk 6 [M].
+- **Undo stops at Apply.** Past the Apply, Cmd+Z takes the Semantic type away (the pill goes), and the Advanced switch
+  is an undo step too [M, P-2026-09-29-1106].
+- **To take back `None`, choose the preset again; never Cmd+Z.** One Cmd+Z after `None` takes a step and leaves the
+  Semantic type unset: the undo of a removed key does not restore it (a core ticket). The preset chosen again restores
+  the whole bag, the roles included [M, P-2026-09-29-1106].
 - **Each preset as the builder draws it (§2), from an empty bag.** Every other shape or order is unmeasured.
 
 ---
 
 ## 4. Risks and what to say if they show
+
+- **No pill.** Basic mode, or a metamodel with no Semantic type (R-SIM-97). Click `Advanced` in the app bar, then
+  choose the Semantic type in the metamodel's Properties [M, P-2026-09-29-1106]. Switching to Basic or choosing `None`
+  in the middle of a run clears the run: Reset again once the pill is back [M].
+  **Say** "The simulator is an advanced tool: it shows once I say what kind of model this is."
+- **The Problems panel still lists simulator defects in Basic mode or with `None`.** The producer does not follow the
+  gate (a ticket) [R].
 
 - **The canvas contradicts the panel on Petri during a run** (G3, canvas side). The `tokens` slots show the model's
   values: after step 4 `p1 : Place` reads `tokens 2` under `Marking: p2 ×2, p3` [M]. Point at the panel line.

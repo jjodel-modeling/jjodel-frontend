@@ -18,7 +18,7 @@ import {FakeStateProps, int, windoww} from '../../joiner/types';
 
 import JsonViewer from '../shared/JsonViewer';
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
-import {connect} from 'react-redux';
+import {connect, useSelector} from 'react-redux';
 import './editors.scss';
 import './info.scss';
 import './info-improvements.scss';
@@ -35,6 +35,7 @@ import { useInterfaceMode } from '../../hooks/useInterfaceMode';
 import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
 import { resolveEntityType, entityLetter } from '../../common/entityMeta';
 import DisplayAnnotations from '../editor-v2/nodes/DisplayAnnotations';
+import { PROFILE_KEY, SEMANTIC_TYPE_OPTIONS, semanticTypeCurrent, semanticTypePatch } from '../editor-v2/sim/simRoleStatus';
 
 // Collapsible section for properties panel grouping
 function CollapsibleSection(props: { title: string; defaultOpen?: boolean; headerRight?: React.ReactNode; children: React.ReactNode }) {
@@ -318,6 +319,39 @@ function TypeSelect(props: { data: LModelElement }) {
     );
 }
 
+// «Semantic type» of a metamodel (P-2026-09-29-1106, R-SIM-97): the simulation preset its bag names, which
+// mounts the Simulation pill in Advanced mode (simPillVisible, simRoleStatus.ts).
+//   - read:  the raw `simProfile` from the store, so a dialog Apply or an undo shows at once
+//   - write: `state = { simProfile }`, one TRANSACTION and one undo step, the key the panel's Apply writes;
+//            None removes `simProfile` alone and keeps the role keys (D3)
+//   - a value off the list (a user profile, an unreadable one) shows as a disabled current option, as in the panel
+function SemanticTypeField(props: { modelId: Pointer }) {
+    const { modelId } = props;
+    const raw = useSelector((s: DState) => (s as any).idlookup?.[modelId]?._state?.[PROFILE_KEY]);
+    const current = semanticTypeCurrent(raw);
+    const none = { value: '', label: 'None' };
+    const offList = current && !current.listed ? [{ value: current.value, label: current.label, isDisabled: true }] : [];
+    const options = [none, ...SEMANTIC_TYPE_OPTIONS, ...offList];
+    const value = current ? options.find(o => o.value === current.value) ?? none : none;
+    return (
+        <div className="jj-field">
+            <label className="jj-field-label">Semantic type</label>
+            <JjSelect
+                aria-label="Semantic type"
+                options={options as any}
+                value={value}
+                isSearchable={false}
+                onChange={(opt: any) => {
+                    if (!opt || opt.value === value.value) return;
+                    const lmm: any = LPointerTargetable.fromPointer(modelId);
+                    if (lmm) lmm.state = semanticTypePatch(opt.value === '' ? null : opt.value);
+                }}
+            />
+            <div className="jj-field-hint">What kind of model this metamodel describes, for the simulator</div>
+        </div>
+    );
+}
+
 // Contents list for Metamodel — classes, enums, packages
 function MetamodelContents(props: { data: LModel; onInternalNavigate?: (sel: { node: string; view: string; modelElement: string }) => void }) {
     const { data } = props;
@@ -480,6 +514,7 @@ class builder {
 
             <CollapsibleSection title="GENERAL">
                 {this.named(data, advanced, true)}
+                {l.isMetamodel && advanced && <SemanticTypeField modelId={l.id} />}
             </CollapsibleSection>
 
             <CollapsibleSection title="DEPENDENCIES">

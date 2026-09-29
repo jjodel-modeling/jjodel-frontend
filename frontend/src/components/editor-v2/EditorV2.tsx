@@ -110,6 +110,7 @@ import { PolymetricView } from '../polymetric';
 import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
+import { simPillVisible } from './sim/simRoleStatus';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -496,6 +497,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // M1/M2 mode detection — resolves metamodel classes, rootable classes, hierarchy
     const modeInfo = useEditorMode(modelid);
     const isModelMode = modeInfo.mode === 'model';
+    // The Simulation pill: Advanced mode and the metamodel's Semantic type (P-2026-09-29-1106, R-SIM-97). A boolean
+    // per dispatch; Redux `advanced`, not isAdvancedMode(), which reads localStorage and is not reactive in this tab.
+    const simPill = useSelector((state: any) => !!modelid && simPillVisible(!!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
 
     // Orphan feature co-evolution: soft-delete + restore by attribute name
     useOrphanFeatures(modelid, nodes);
@@ -4413,7 +4417,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 )}
 
                 {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
-                {modelid && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
+                {/* Gated (R-SIM-97): unmounting clears the run of this model (SimulationPanel's cleanup). */}
+                {modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
 
             </div>
         </EditorContext.Provider>
