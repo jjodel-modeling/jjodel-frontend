@@ -27,6 +27,11 @@
  * opens, replaces or closes its «Choose a transition» list, and only the node
  * overlays (SimNodeRunState.tsx) follow it: ObjectNode and the IR resolvers
  * read the `'mark'` version alone, so a choice never re-renders them.
+ *
+ * R-SIM-100 (P-2026-09-29-1840) adds the minimal trace: the run's seed, its
+ * draw count and its committed steps, each with the origin of a choice among
+ * two or more candidates, `user` or `random`. In memory only; the export is
+ * spec step 5.
  */
 
 import { useSyncExternalStore } from 'react';
@@ -35,6 +40,18 @@ import { choiceElements, nodeStateOf, type SimNodeState } from './simCanvasState
 import type {
     ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, InputRead, NetConfiguration, StepOutcome,
 } from '../../../model/simulation/netTypes';
+
+/** Who chose a step among two or more candidates (R-SIM-100): a click on the list, or a draw. */
+export type SimOrigin = 'user' | 'random';
+
+/** One committed step of a run's trace (R-SIM-100): what its label says, and who chose it. */
+export interface SimTraceStep {
+    readonly event: string | null;
+    readonly selector: string | null;
+    readonly kind: 'fired' | 'halted' | 'discard' | 'quiescence';
+    /** Absent on a forced step, zero or one candidate: nothing was chosen. */
+    readonly origin?: SimOrigin;
+}
 
 /** One started run of one model. */
 export interface SimRun {
@@ -57,6 +74,12 @@ export interface SimRun {
      * folded at Reset over the frozen M; absent when no input is declared. The bridge asks them at a press.
      */
     readonly inputs?: ReadonlyMap<string, readonly InputRead[]>;
+    /** R-SIM-100: the seed of the run's draws, drawn once at Reset; draw i is `uniform(seed, i)` (simRandom.ts). */
+    readonly seed?: number;
+    /** R-SIM-100: the draws consumed so far, so the index of the next one. */
+    readonly draws?: number;
+    /** R-SIM-100: the committed steps, in order; a refused selector is not one. */
+    readonly trace?: readonly SimTraceStep[];
 }
 
 const runs = new Map<string, SimRun>();
@@ -140,26 +163,40 @@ export function simReset(modelId: string, run: SimRun): void {
 }
 
 /**
+ * The trace and the draw count after one committed step (R-SIM-100). The origin
+ * holds only where the label has two or more candidates, so a forced step has
+ * none whatever the caller passed; a random choice among them is one draw.
+ */
+function traced(run: SimRun, outcome: Exclude<StepOutcome, { kind: 'inadmissible' }>, origin?: SimOrigin): Pick<SimRun, 'trace' | 'draws'> {
+    const chosen = outcome.label.candidates.length > 1 ? origin : undefined;
+    const entry: SimTraceStep = {
+        event: outcome.label.event, selector: outcome.label.selector, kind: outcome.kind, ...(chosen ? { origin: chosen } : {}),
+    };
+    return { trace: [...(run.trace ?? []), entry], draws: (run.draws ?? 0) + (chosen === 'random' ? 1 : 0) };
+}
+
+/**
  * Commits the outcome of one step of a model's run. `fired` stores the next
  * configuration, `halted` also the reason; one bump each. A discard or a
  * quiescence stores the configuration with the event consumed and does not bump;
- * a refused selector stores nothing.
+ * a refused selector stores nothing. Every stored step is appended to the trace,
+ * with `origin` when it was chosen among candidates (R-SIM-100).
  */
-export function simCommit(modelId: string, outcome: StepOutcome): void {
+export function simCommit(modelId: string, outcome: StepOutcome, origin?: SimOrigin): void {
     const run = runs.get(modelId);
     if (!run) return;
     switch (outcome.kind) {
         case 'fired':
-            runs.set(modelId, { ...run, config: outcome.next });
+            runs.set(modelId, { ...run, ...traced(run, outcome, origin), config: outcome.next });
             bump();
             return;
         case 'halted':
-            runs.set(modelId, { ...run, config: outcome.next, halt: outcome.reason });
+            runs.set(modelId, { ...run, ...traced(run, outcome, origin), config: outcome.next, halt: outcome.reason });
             bump();
             return;
         case 'discard':
         case 'quiescence':
-            runs.set(modelId, { ...run, config: outcome.next });
+            runs.set(modelId, { ...run, ...traced(run, outcome, origin), config: outcome.next });
             return;
         case 'inadmissible':
             return;

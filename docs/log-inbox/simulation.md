@@ -1193,3 +1193,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: docs only, random choice discovery
 **Notes**: Rollback tag `pre-sim-random-disc` on `7d1b0da4f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1832/result.json`.
 **Prompt document name**: 2026-09-29 18:32
+
+## 2026-09-29 — feat: Random on an ε choice, a seeded draw, the minimal trace, R-SIM-100 (P-2026-09-29-1840)
+**Prompt**: `claude_2026-09-29_1840_prompt_sim_random_l1.md`, full lane (tests first) on `sim-random-l1` in `~/jjodel-w-randl1`, lane L1 of `discovery_2026-09-29_sim_random_choice.md` §8, Part 1 as Alfonso ratified it: `simRandom.ts` (pure mulberry32, `drawTransition`), the seed drawn at Reset with `crypto.getRandomValues`, optional `seed`, `draws`, `trace` with `origin` on `SimRun`, a Random button right of Cancel on ε lists, «Last step» `ε (random): …`, the seed in two titles; R-SIM-100.
+**Files touched**: code `f10af6812`: `frontend/src/model/simulation/simRandom.ts` (new), `__tests__/simRandom.test.ts` (new); `7a00d5af7`: `frontend/src/components/editor-v2/sim/simRunState.ts`, `sim/__tests__/simRunState.test.ts`; `25acfefe6`: `sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`; `3cbfbc15b`: `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`. Docs, this commit: `docs/decisions.md` (R-SIM-100), `docs/demo/models_2026_simulator_demo.md` (:184-187), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `3cbfbc15b`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `editor-v2/sim` and `model/simulation` 898 passed (874 at baseline); `npx vitest run` 5849 passed, the 9 known files red at import (`window is not defined`); `npm run build` exit 0. Red first per layer: the module missing, 5 failed, 7 failed. Mutation benches 7/7, 8/8, 10/10 killed, lists in the commit bodies.
+**Out-of-scope changes**: yes — 8 code files, all in the DOVE, above the Rule 19 five, listed in chat before the first edit (RC-11). No file outside the DOVE; the probe files are gitignored `_tmp_randl1_*`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3057 (`_tmp_randl1_walk.ts`, gitignored), light, 1600×1000, set up by R-SIM-99's path: Petri step 1 list 123.1 px with and without Random, Step 854.5 open and closed; Cancel 294-330.1 and Random 342.1-399.8 at top 804, both 14 px; Reset and drawn-step titles end `seed <n>`; t2's line 262 of 262 px, marker inside; 4 random runs end Deadlock at p2 ×2, p3; sm, esm, flowB run readings 12/12, 12/12, 7/7 identical to 09-29c
+**Notes**: The kit's walk (`probe-kit/simgate`) predates R-SIM-99: the probe's copy takes the toggle and the picker (7 clicks) instead of the removed select. The origin rule lives in the store: kept only where the label has two or more candidates, so a forced step has none whatever the caller passes; the same guard in the bridge was dropped as an equivalent mutant. One console error per run, the baseline kind. Crops `docs/discovery/harness/_tmp_randl1_*.png`, logs `~/.jjodel-lanes/P-2026-09-29-1840/`.
+**Prompt document name**: 2026-09-29 18:40

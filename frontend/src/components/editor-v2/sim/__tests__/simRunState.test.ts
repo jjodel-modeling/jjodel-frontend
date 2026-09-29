@@ -12,7 +12,7 @@ import {
     __resetSimRunsForTests, getSimActiveIds, getSimChoiceVersion, getSimRun, getSimVersion, isSimActive, isSimPending, simClear, simCommit,
     simReset, simSetPending,
 } from '../simRunState';
-import type { SimRun } from '../simRunState';
+import type { SimRun, SimTraceStep } from '../simRunState';
 import { step } from '../../../../model/simulation/netStep';
 import type {
     ActionOracle, CompiledNet, GuardOracle, HaltReason, NetTransition, SimState,
@@ -249,5 +249,77 @@ describe('the choice channel: the open choice list on the canvas, a second count
         simReset('M', mkRun(CHOICE, { a: 1 }));
         expect(isSimPending('t')).toBe(false);
         expect(getSimChoiceVersion()).toBe(0);
+    });
+});
+
+describe('the trace and the draws of a run (R-SIM-100)', () => {
+    /** t and u both take the token of a: a choice; with a on its own place and nothing else, t alone is forced in NET. */
+    const CHOICE = mkNet([tr('t', { a: 1 }, { b: 1 }), tr('u', { a: 1 }, { c: 1 }), tr('back', { b: 1 }, { a: 1 }), tr('back2', { c: 1 }, { a: 1 })]);
+    const seeded = (net: CompiledNet, marking: Record<string, number>): SimRun => ({ ...mkRun(net, marking), seed: 7, draws: 0, trace: [] });
+    const fire = (marking: Record<string, number>, selector: string | null) => step(CHOICE, { state: st(marking), event: null }, selector, TRUE, NONE);
+
+    it('a chosen step records its origin; a forced step none, whatever the caller passed (mutants: origin kept on a forced step; origin dropped)', () => {
+        simReset('M', seeded(CHOICE, { a: 1 }));
+        simCommit('M', fire({ a: 1 }, 'u'), 'user');                // two candidates: chosen
+        simCommit('M', fire({ c: 1 }, 'back2'), 'user');            // one candidate: forced
+        simCommit('M', fire({ a: 1 }, 't'), 'random');              // two candidates: drawn
+        simCommit('M', fire({ b: 1 }, 'back'));                     // one candidate, no origin given
+        const trace = getSimRun('M')!.trace!;
+        expect(trace).toEqual<SimTraceStep[]>([
+            { event: null, selector: 'u', kind: 'fired', origin: 'user' },
+            { event: null, selector: 'back2', kind: 'fired' },
+            { event: null, selector: 't', kind: 'fired', origin: 'random' },
+            { event: null, selector: 'back', kind: 'fired' },
+        ]);
+        expect('origin' in trace[1]).toBe(false);
+        expect('origin' in trace[3]).toBe(false);
+    });
+
+    it('a random choice counts one draw; a user choice, a forced step, a discard count none (mutants: the counter not advanced; advanced on every step)', () => {
+        simReset('M', seeded(CHOICE, { a: 1 }));
+        simCommit('M', fire({ a: 1 }, 't'), 'random');
+        expect(getSimRun('M')!.draws).toBe(1);
+        simCommit('M', fire({ b: 1 }, 'back'), 'random');           // forced: nothing was drawn among one
+        expect(getSimRun('M')!.draws).toBe(1);
+        simCommit('M', fire({ a: 1 }, 'u'), 'user');
+        expect(getSimRun('M')!.draws).toBe(1);
+        simCommit('M', fire({ c: 1 }, 'back2'));
+        simCommit('M', fire({ a: 1 }, 'u'), 'random');
+        expect(getSimRun('M')!.draws).toBe(2);
+        // the seed is the run's, kept by every commit
+        expect(getSimRun('M')!.seed).toBe(7);
+    });
+
+    it('a discard and a quiescence are traced, a refused selector is not (mutant: inadmissible appended)', () => {
+        simReset('M', seeded(NET, { b: 1 }));
+        simCommit('M', out({ b: 1 }, null, 'coin'));                // discard
+        simCommit('M', out({ b: 1 }, null));                        // quiescence
+        const refused = out({ b: 1 }, 't');
+        expect(refused.kind).toBe('inadmissible');
+        simCommit('M', refused, 'user');
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([
+            { event: 'coin', selector: null, kind: 'discard' },
+            { event: null, selector: null, kind: 'quiescence' },
+        ]);
+    });
+
+    it('a halted step is traced with its origin, and a drawn one counts its draw (mutant: halted left out of the trace)', () => {
+        simReset('M', seeded(NET, { b: 1, c: 1 }));
+        simCommit('M', out({ b: 1, c: 1 }, 'merge'), 'random');    // forced: merge is the only candidate at {b, c}
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 'merge', kind: 'halted' }]);
+        const TWO = mkNet([tr('x', { p: 1 }, { q: 1 }), tr('y', { p: 1 }, { q: 1 })]);
+        simReset('M', seeded(TWO, { p: 1, q: 1 }));
+        simCommit('M', step(TWO, { state: st({ p: 1, q: 1 }), event: null }, 'y', TRUE, NONE), 'random');
+        expect(getSimRun('M')!.halt).not.toBeNull();
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 'y', kind: 'halted', origin: 'random' }]);
+        expect(getSimRun('M')!.draws).toBe(1);
+    });
+
+    it('a run without the fields gets them at its first commit: a trace of one, zero draws', () => {
+        simReset('M', mkRun(NET, { a: 1 }));
+        simCommit('M', out({ a: 1 }, 't'));
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 't', kind: 'fired' }]);
+        expect(getSimRun('M')!.draws).toBe(0);
+        expect(getSimRun('M')!.seed).toBeUndefined();
     });
 });

@@ -11,14 +11,16 @@
  * the commit message.
  */
 
-import { beforeEach, describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason,
-    markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
+    markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, pressInput, pressRandom, runSignature, runStatus, startRun, stopReason,
     undeclaredGlobals,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
+import type { SimTraceStep } from '../simRunState';
+import { uniform } from '../../../../model/simulation/simRandom';
 import { candidates, netRunStatus, step } from '../../../../model/simulation/netStep';
 import { encodeProfile } from '../../../../model/simulation/profileCodec';
 import { ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
@@ -2225,5 +2227,140 @@ describe('the faces of Accepting and the outputs (P-2026-09-29-0300, R-SIM-91, R
         const coin = pressInput('M', 'coin', undefined, lookup, 'Coin');
         expect([coin.lastStep, mark(), output(lookup)]).toEqual(['Coin: tCoin (Locked → Unlocked) fired', null, null]);
         expect(markingLine(current().config.state, current().net, lookup).line).toBe('Marking: Unlocked');
+    });
+});
+
+describe('R-SIM-100: Random on an ε list, the seed of the run, the trace (P-2026-09-29-1840)', () => {
+    /** A choice at A every other step: A -t1-> B, A -t2-> C, then B -t3-> A and C -t4-> A, forced. */
+    const CYCLE: Record<string, Obj> = {
+        A: { cls: 'C_Init', slots: { R_out: ['t1', 't2'] } },
+        B: { cls: 'C_State', slots: { R_out: ['t3'] } },
+        C: { cls: 'C_State', slots: { R_out: ['t4'] } },
+        t1: { cls: 'C_Trans', slots: { R_next: ['B'] } },
+        t2: { cls: 'C_Trans', slots: { R_next: ['C'] } },
+        t3: { cls: 'C_Trans', slots: { R_next: ['A'] } },
+        t4: { cls: 'C_Trans', slots: { R_next: ['A'] } },
+    };
+    const empty = () => spyBuilder(() => ({ instances: [] })).build;
+    const reset = (lookup: Lookup, seed?: number) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', empty(), seed);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r.run;
+    };
+    /** k ε presses, every list answered by Random: the run's trace. */
+    const playRandom = (lookup: Lookup, k: number) => {
+        for (let i = 0; i < k; i++) {
+            const p = pressInput('M', null, undefined, lookup, 'ε');
+            if (p.pending) pressRandom('M', p.pending, lookup);
+        }
+        return getSimRun('M')!.trace!;
+    };
+
+    it('Reset draws the seed once with crypto.getRandomValues, never Math.random; a seed given is kept; draws 0, trace empty (mutant: a constant seed)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        const fromCrypto = vi.spyOn(globalThis.crypto, 'getRandomValues');
+        const fromMath = vi.spyOn(Math, 'random');
+        try {
+            const drawn = reset(lookup);
+            expect(fromCrypto).toHaveBeenCalledTimes(1);
+            const seed = drawn.seed!;
+            expect(Number.isInteger(seed) && seed >= 0 && seed < 2 ** 32).toBe(true);
+            expect((fromCrypto.mock.results[0].value as Uint32Array)[0]).toBe(seed);
+            const given = reset(lookup, 3141592653);
+            expect(fromCrypto).toHaveBeenCalledTimes(1);
+            expect([given.seed, given.draws, given.trace]).toEqual([3141592653, 0, []]);
+            playRandom(lookup, 10);
+            expect(fromMath).not.toHaveBeenCalled();
+        } finally {
+            fromCrypto.mockRestore();
+            fromMath.mockRestore();
+        }
+    });
+
+    it('Random fires the drawn candidate: «ε (random)» in Last step, the seed in its title, origin random, one draw (mutants: the marker dropped; the seed line dropped)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 42);
+        const asked = pressInput('M', null, undefined, lookup, 'ε');
+        expect(asked.pending?.map(c => c.transition)).toEqual(['t1', 't2']);
+        const r = pressRandom('M', asked.pending!, lookup, undefined, () => 0.99);
+        expect(r.pending).toBeNull();
+        expect(r.lastStep).toBe('ε (random): t2 (A → C) fired');
+        expect(r.lastStepTitle).toBe('ε (random): t2 (A → C) fired\nseed 42');
+        expect(getSimActiveIds('M')).toEqual(['C']);
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 't2', kind: 'fired', origin: 'random' }]);
+        expect(getSimRun('M')!.draws).toBe(1);
+        // a hand choice keeps its line and its title: no marker, no seed
+        pressInput('M', null, undefined, lookup, 'ε');                 // C -t4-> A, forced
+        pressInput('M', null, undefined, lookup, 'ε');
+        const click = pressInput('M', null, 't1', lookup, 'ε');
+        expect([click.lastStep, click.lastStepTitle]).toEqual(['ε: t1 (A → B) fired', 'ε: t1 (A → B) fired']);
+    });
+
+    it('the list click records user, a forced press no origin, a quiescence none (mutants: a click recorded random; the origin not passed to the store)', () => {
+        const lookup = buildLookup(ROLES, { ...CYCLE, B: { cls: 'C_State' } });
+        reset(lookup, 1);
+        pressInput('M', null, undefined, lookup, 'ε');
+        pressInput('M', null, 't2', lookup, 'ε');
+        pressInput('M', null, undefined, lookup, 'ε');                 // C -t4-> A
+        pressInput('M', null, 't1', lookup, 'ε');
+        pressInput('M', null, undefined, lookup, 'ε');                 // B has no way out
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([
+            { event: null, selector: 't2', kind: 'fired', origin: 'user' },
+            { event: null, selector: 't4', kind: 'fired' },
+            { event: null, selector: 't1', kind: 'fired', origin: 'user' },
+            { event: null, selector: null, kind: 'quiescence' },
+        ]);
+        expect(getSimRun('M')!.draws).toBe(0);
+    });
+
+    it('without a stub the run\'s seed decides: draw k picks floor(uniform(seed, k) · 2); forced steps draw nothing (mutants: the stream restarted at every press; the pick of another seed)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 2026);
+        const trace = playRandom(lookup, 20);
+        const drawn = trace.filter(t => t.origin === 'random').map(t => t.selector);
+        expect(drawn).toEqual(Array.from({ length: 10 }, (_, k) => ['t1', 't2'][Math.floor(uniform(2026, k) * 2)]));
+        expect(trace.filter(t => t.origin === undefined)).toHaveLength(10);
+        expect(getSimRun('M')!.draws).toBe(10);
+        // control: the stream has both picks, so a pick that ignores the draw cannot pass
+        expect(new Set(drawn).size).toBe(2);
+    });
+
+    it('two runs with one seed give one trace; seed + 1 another (mutant: the seed ignored)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 2026);
+        const first = playRandom(lookup, 20);
+        reset(lookup, 2026);
+        const again = playRandom(lookup, 20);
+        expect(again).toEqual(first);
+        reset(lookup, 2027);
+        expect(playRandom(lookup, 20)).not.toEqual(first);
+    });
+
+    it('an event press is never random: Random fed an event\'s list commits nothing, the click on that list is the user\'s (mutants: a click recorded random; the origin not passed to the store)', () => {
+        const TWO_PUSH: Record<string, Obj> = {
+            ...TURNSTILE,
+            Locked: { cls: 'C_Init', slots: { R_out: ['tCoin', 'tPushL', 'tPushX'] } },
+            tPushX: { cls: 'C_Trans', slots: { R_next: ['Unlocked'], R_trigger: ['push'] } },
+        };
+        const lookup = buildLookup(ROLES, TWO_PUSH);
+        reset(lookup, 7);
+        const asked = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect(asked.pending?.map(c => c.transition).sort()).toEqual(['tPushL', 'tPushX']);
+        const drawn = pressRandom('M', asked.pending!, lookup);
+        expect(drawn.outcome?.kind).toBe('inadmissible');
+        expect([getSimRun('M')!.trace, getSimRun('M')!.draws]).toEqual([[], 0]);
+        pressInput('M', 'push', 'tPushX', lookup, 'Push');
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: 'push', selector: 'tPushX', kind: 'fired', origin: 'user' }]);
+    });
+
+    it('fewer than two candidates is not a list: Random draws nothing and commits nothing; no run, nothing', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 5);
+        const one = pressRandom('M', [{ transition: 't1', unsafe: null }], lookup, undefined, () => 0);
+        expect(one).toEqual({ pending: null, lastStep: null, outcome: null });
+        expect([getSimRun('M')!.trace, getSimRun('M')!.draws, getSimActiveIds('M')]).toEqual([[], 0, ['A']]);
+        __resetSimRunsForTests();
+        expect(pressRandom('M', [{ transition: 't1', unsafe: null }, { transition: 't2', unsafe: null }], lookup)).toEqual({ pending: null, lastStep: null, outcome: null });
     });
 });

@@ -182,9 +182,9 @@ Reset: `Marking: lock, p1 ×2`, `Last step: Reset`, `Running` [M].
 **Say** "Two tokens on p1, one on lock. The panel shows the marking of the run."
 
 On a conflict ▶ opens a list above the Marking line, headed `NONDETERMINISTIC CHOICE (ε)` (U+03B5), with the line
-`Choose a transition` under the heading and `Cancel` under the options (R-SIM-98, measured by P-2026-09-29-1221 on
-3051). While it is open, `Last step:` still shows the previous step and the buttons do not move (Step's top 854.5)
-[M].
+`Choose a transition` under the heading, `Cancel` under the options and `Random` right of it (R-SIM-98 on 3051,
+R-SIM-100 on 3057). While it is open, `Last step:` still shows the previous step and the buttons do not move (Step's
+top 854.5) [M]. Random fires one option, drawn: `Last step: ε (random): t1 (p1 → p2 ×2) fired`, the seed in its title [M].
 
 | # | Click | List offered [M] | `Marking:` line after [M] | `Last step:` line [M] | Say |
 |---|---|---|---|---|---|

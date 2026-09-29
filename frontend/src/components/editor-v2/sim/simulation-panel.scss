@@ -498,6 +498,42 @@
         }
     }
 
+    // Cancel and Random in one row, Random right of Cancel (R-SIM-100): no taller than Cancel, so the list keeps its height.
+    &__choice-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    // Random draws one of the options (R-SIM-100): a text button in Cancel's vocabulary, its icon at the text's 11 px.
+    &__random {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 11px;
+        text-decoration: underline;
+        cursor: pointer;
+
+        i {
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
     // A refused role write or run start: the reason, in the error text token.
     &__hint--error {
         color: var(--color-error-text);
