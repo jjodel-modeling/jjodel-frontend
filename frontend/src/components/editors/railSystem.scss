@@ -23,9 +23,9 @@
    pareggiare quello della famiglia.
 
    COSA RAGGIUNGE — tutto ciò che il rail monta dentro il tab content: i sei
-   `ir-tab-body` dei tre pannelli di authoring, la `SymbolCard` (che tab body non è,
-   §1 del report) e — conseguenza dichiarata — i sotto-tab legacy di una view senza
-   IR, che vivono nello stesso contenitore. NON raggiunge la card della sintassi
+   `ir-tab-body` dei tre pannelli di authoring e — conseguenza dichiarata — i
+   sotto-tab legacy di una view senza IR, che vivono nello stesso contenitore. NON
+   raggiunge la card della sintassi
    astratta né l'editor dei viewpoint, che sono i due controlli negativi.
 
    VALORI — l'artboard 7a di `Instance Node Proposal.dc.html`, e il tab Structure in
@@ -48,8 +48,7 @@
        con `!important`, e resta viva per le sei superfici fuori dal rail: qui la si
        pareggia sul solo pannello di questo contenitore. È l'unico `!important` del
        foglio. */
-    > section.properties-tab.properties-panel,
-    > section.properties-tab.properties-panel.symbol-card {
+    > section.properties-tab.properties-panel {
         background-color: var(--color-form-surface) !important;
     }
 
