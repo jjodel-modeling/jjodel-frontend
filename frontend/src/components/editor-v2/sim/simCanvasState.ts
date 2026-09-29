@@ -18,13 +18,13 @@
  * elements of the transitions the panel's open choice list offers.
  */
 
-import { candidates, tokens } from '../../../model/simulation/netStep';
+import { candidates, terminated, tokens } from '../../../model/simulation/netStep';
 import { netStcFromRoles } from '../../../model/simulation/netCompile';
 import type { SimState, SimValue } from '../../../model/simulation/netTypes';
 import type { SimRun } from './simRunState';
 
 /** The part of a run the canvas reads. */
-export type SimCanvasRun = Pick<SimRun, 'net' | 'config' | 'guards' | 'alphabet' | 'halt'>;
+export type SimCanvasRun = Pick<SimRun, 'net' | 'config' | 'guards' | 'alphabet' | 'halt' | 'inputs'>;
 
 /** One semantic attribute of an element in σ, as text. */
 export interface SimSigmaRow {
@@ -55,6 +55,12 @@ const enabledCache = new WeakMap<SimCanvasRun, ReadonlySet<string>>();
  * from. Empty on a halted run: `candidates` does not read the halt, the panel
  * gates on the status, and so must the canvas. A terminated configuration has
  * no candidate by definition (R-SIM-27).
+ *
+ * A transition waiting for an input counts too (R-SIM-88): its guards read no
+ * value until the press asks it, so `candidates` never lists it. The rule is
+ * `inputAsks`' (simBridge.ts), the one `runStatus` keeps a run Running by: an
+ * input the run can give accepts it, its preset is marked, no inhibitor blocks
+ * it, and its guards or actions read an input.
  */
 export function enabledElements(run: SimCanvasRun): ReadonlySet<string> {
     const cached = enabledCache.get(run);
@@ -65,6 +71,16 @@ export function enabledElements(run: SimCanvasRun): ReadonlySet<string> {
         for (const event of [null, ...run.alphabet]) {
             const cs = candidates(run.net, { state: run.config.state, event }, run.guards);
             for (const c of cs.candidates) for (const element of byId.get(c.transition)?.origin ?? []) out.add(element);
+        }
+        const state = run.config.state;
+        if (run.inputs && !terminated(run.net, state)) {
+            for (const t of run.net.transitions) {
+                if (!(run.inputs.get(t.id)?.length)) continue;
+                if (t.triggers.length > 0 && !t.triggers.some(e => run.alphabet.includes(e))) continue;
+                if (!t.preset.every(a => tokens(state, a.place) >= a.weight)) continue;
+                if (t.inhibitors.some(a => tokens(state, a.place) >= a.weight)) continue;
+                for (const element of t.origin) out.add(element);
+            }
         }
     }
     enabledCache.set(run, out);
