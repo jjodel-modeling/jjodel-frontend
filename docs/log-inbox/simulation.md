@@ -998,3 +998,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: four demo scenes re-run on f573ac1e3 port 3045 with the probe kit on the new Form label: 73 readings identical to 09-29b; tickets 1,2,3,5 fixed, 4 a question for Alfonso
 **Notes**: Rollback tag `pre-sim-ui-tickets` on `1430054fe` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0425/result.json`.
 **Prompt document name**: 2026-09-29 04:25
+
+## 2026-09-29 — discovery: a reported false deadlock on a DemoPetri-like net is the guard (P-2026-09-29-0955)
+**Prompt**: `claude_2026-09-29_0948_prompt_discovery_petri_false_deadlock.md`, read-only discovery on `petri-deadlock-disc` in `~/jjodel-w-petridl`: decide with measurements whether the Deadlock at `(0,2,1,0)` after `t1, t1, t3, t2` is a bug or DemoPetri's guard `p3.[tokens] < 1` on `t2`, and check the three candidate causes against the code.
+**Files touched**: `docs/discovery/discovery_2026-09-29_petri_false_deadlock.md` (new), this entry, the Status line of the prompt. One docs commit; its sha is in the closing report. Probes `frontend/scripts/smoke/_tmp_petri_deadlock.ts` and `_tmp_petri_demo_read.mjs`, gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — read-only; no file under `frontend/src` written, `git status` clean before the commit; `netStep.test.ts` and `simBridge.test.ts` 174 passed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Not a bug: 12 bridge runs plus 2 controls reproduce the symptom only with the guard at k = 4; without it t2 fires to (0,0,2,0). Weight check is `>=`, capacity halts and never deadlocks, status is recomputed per press. k < 4 cannot give the reported steps 1-4. One question in §0: add «guard» to the reason text (`ε: t2 guard false`), amending R-SIM-58's example.
+**Prompt document name**: 2026-09-29 09:48
