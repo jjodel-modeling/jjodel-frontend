@@ -4202,6 +4202,23 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   (the name of R-VP-15 (1), the option discovery §6 lane 3 names; the IR has no size field), 48×12 at a fixed
   size, the name centred and drawn over it with a halo in the surface colour; no catalogue row and no Shape
   select option until after the freeze. Prompt P-2026-09-29-1021, commits `449c583b6`, `7a254a52f`.
+- **R-VP-17** (2026-09-29, ratified by Alfonso 2026-09-29, evidence: measured, verified: none, reversible: branch).
+  **The derived control-flow views (state machine, extended state machine, activity) draw closer to the textbook,
+  from IR data only, keyed on the roles.** Source: `docs/discovery/discovery_2026-09-29_visual_concrete_syntax.md`
+  (P-2026-09-29-1227, branch `visual-syntax-disc`, §0, §5 lane V1). Alfonso approved V1 before the freeze and
+  ratified its recommendations. Under the `controlFlow` shape with the Node role bound: (1) a transition is a 1 px
+  line in `var(--color-inode-name)`, as Petri (R-VP-15 (4)); (2) its label is the event (`simTrigger`,
+  `$event.value`, measured on the lproxy backend to print the event's name), else the guard (`simGuard`) as raw
+  text, one part only; (3) a box with no compartment has its name centred; (4) fork and join are the nameless
+  `bar`. A binding with a Trigger is a state machine, one without is an activity. (5) State machines keep the named
+  box (Alfonso: «Box with name»): the Terminal is a state box with the `double` border, no compartment; the Initial
+  is unchanged. (6) Activities: the Initial is the nameless disc, the Terminal and an Activity final the nameless
+  bull's-eye in the name ink. Lane choices inside that list: the Trigger as the state machine test (the profile id
+  is not read), the double border 3 px (the CSS minimum for two lines) in the name ink, no compartment on the
+  Terminal box (a UML final state has no behaviour). No role bound: today's boxes; Petri views unchanged (R-VP-16).
+  Left for V4 (IR, §3.1): the `event [guard] / effect` and `entry / a` template, the dot badge on the Initial box,
+  a small dot and bull's-eye (no size field; a circle is at least 64 px), the edge-label text style; for V5 the
+  hidden Event nodes, the decision diamond, the choice per profile. Prompt P-2026-09-29-1331, commit `b2f3548a0`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)

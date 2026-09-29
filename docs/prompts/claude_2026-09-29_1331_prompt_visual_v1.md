@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1331
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2 of the visual concrete syntax discovery, lane V1; derivation only; tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane visual-v1 · b2f3548a0 · non fuso: hard-stop, lane probe on 3054 (light), SM 7/10, ESM 7/11, activity 7/10 measured, `$event.value` prints the event's name, crop in docs/discovery/harness/_tmp_v1_*.png (gitignored), R-VP-17 nel commit docs, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-v1`, branch `visual-v1` (cut by the chat from `alfonso-frontend-jjtl` at `afa951c64`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-v1`, branch `visual-v1`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
