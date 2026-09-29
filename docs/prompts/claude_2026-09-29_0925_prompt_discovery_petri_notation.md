@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0925
 Chat: C-2026-09-28-1936
 Lane: discovery (read-only; the viewpoint derivation, the view IR, the symbol renderer). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane discovery petri-notation-disc · report docs/discovery/discovery_2026-09-29_petri_notation.md · hard-stop, two decisions and five questions for Alfonso in §0
 
 Worktree: `~/jjodel-w-petrinot`, branch `petri-notation-disc` (cut by the chat from `alfonso-frontend-jjtl` at `385807485`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-petrinot`, branch `petri-notation-disc`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
