@@ -195,3 +195,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-09-29 09:39
 
 **Ticket** (low, observations for lanes 2 and 3, not tickets of their own): (1) with every arc straight, `i1` (lock → t2) crosses the bar `t1` on the demo layout, measured `M 120,383 L 886,378` through t1's box; routing is per view, so no per-arc detour. (2) On `lock` the single `dot` (radius 16 of 100, 22..42 px on a 64 px circle) touches the inside name label (top at 38 px); the outside label of lane 2 removes the overlap. (3) The transition measures 198×40 and the place 64×64, as the discovery inferred.
+
+## 2026-09-29 — merge: petri-notation-l1 into alfonso-frontend-jjtl (P-2026-09-29-1006)
+**Prompt**: `claude_2026-09-29_1006_prompt_merge_petri-notation-l1.md`, a direct merge by `lane-run merge --direct`, no session: `petri-notation-l1` at `a6372cdf7` into `alfonso-frontend-jjtl`, merge base `385807485`, 6 commits on the branch side.
+**Files touched**: merge `0fbb550ea`: 9 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-29_petri_notation.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_0925_prompt_discovery_petri_notation.md`, `docs/prompts/claude_2026-09-29_0939_prompt_petri_notation_l1.md`, `frontend/src/components/editor-v2/viewpoint/derive/__tests__/viewpointDerivation.test.ts`, `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/markerRegistry.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0fbb550ea` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5709 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: four demo scenes re-run on 0fbb550ea port 3045: 73 readings identical to 09-29b; derived DemoPetri 11/19 traits (lane probe)
+**Notes**: Rollback tag `pre-petri-notation-l1` on `385807485` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1006/result.json`.
+**Prompt document name**: 2026-09-29 10:06
