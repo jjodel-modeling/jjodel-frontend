@@ -563,7 +563,9 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
 
     .view-editor-tab {
         font-size: 14px;
-        padding: 12px 10px;
+        // 8px, was 10px (P-2026-09-29-1826): the vertex bar in Advanced, with the
+        // Symbol tab's dialog icon, fits the default 400px rail again.
+        padding: 12px 8px;
         color: $pc-slate-500;
         border-bottom: 2px solid transparent;
 
