@@ -51,4 +51,8 @@ describe('captionForBox', () => {
     it('rounds fractional dimensions for display', () => {
         expect(captionForBox({ w: 190.4, h: 57.6 }, 'derived')).toBe('190 × 58 px · derived from ink (D8)');
     });
+
+    it('declares the default size when the view default owns the box (P-2026-09-29-1230)', () => {
+        expect(captionForBox({ w: 120, h: 60 }, 'default')).toBe('120 × 60 px · default size');
+    });
 });

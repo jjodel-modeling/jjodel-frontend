@@ -452,6 +452,24 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     };
 
     /**
+     * One axis of the default size (P-2026-09-29-1230). An empty field removes the axis,
+     * and with both gone the key is dropped (rest/spread, as above), so the view
+     * round-trips byte-identical to one that never had it. A value that is not usable is
+     * kept as typed and refused by validateIR, which shows the error line.
+     */
+    const patchDefaultSize = (axis: 'width' | 'height', raw: string) => {
+        const next: NonNullable<VertexViewIR['defaultSize']> = { ...(draft.defaultSize ?? {}) };
+        if (raw.trim() === '') delete next[axis];
+        else next[axis] = Math.round(Number(raw));
+        if (Object.keys(next).length > 0) {
+            patch({ ...draft, defaultSize: next });
+            return;
+        }
+        const { defaultSize: _dropped, ...rest } = draft;
+        patch(rest);
+    };
+
+    /**
      * Drop the `form` key from the draft. Rest/spread and not `form: undefined`: the key
      * must be ABSENT, so a view whose FormSpec was set and then emptied round-trips
      * byte-identical to one that never carried it. Same idiom as `withChildFilter`.
@@ -884,6 +902,35 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     >
                         Propagate size
                     </Button>
+                </div>
+                {/* Default size (P-2026-09-29-1230): the box of every instance with no
+                    manual size. Empty = that side stays derived from content. */}
+                <div className="jj-field">
+                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <label className="jj-field-label">Width</label>
+                            <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                placeholder="auto"
+                                value={draft.defaultSize?.width ?? ''}
+                                onChange={(e) => patchDefaultSize('width', e.target.value)}
+                            />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <label className="jj-field-label">Height</label>
+                            <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                placeholder="auto"
+                                value={draft.defaultSize?.height ?? ''}
+                                onChange={(e) => patchDefaultSize('height', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <HelpText icon={false}>Size in px of every instance not resized by hand. Empty follows the content.</HelpText>
                 </div>
             </FormSection>
             </div>

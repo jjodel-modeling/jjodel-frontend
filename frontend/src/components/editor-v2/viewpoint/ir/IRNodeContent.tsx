@@ -220,7 +220,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // take the size their ink needs inside the outline. Inert on the shapes that
     // fill their box and on a vertex resized by hand. See useContentSize.ts.
     const contentRef = useRef<HTMLDivElement>(null);
-    useContentDrivenSize(vertexId, form, contentRef);
+    useContentDrivenSize(vertexId, form, contentRef, 'defaultSize' in compiled.ir ? compiled.ir.defaultSize : undefined);
 
     // Compartment rows come from the object's D-layer features (name/type/value).
     const compartmentSig = useSelector((state: any) => {

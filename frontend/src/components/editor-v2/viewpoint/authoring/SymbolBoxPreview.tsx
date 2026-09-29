@@ -63,10 +63,11 @@ export function fitScale(box: PreviewBox, maxW: number, maxH: number): number {
 /**
  * Caption of the strip, per the approved mockup translated to the English UI:
  * `W × H px · derived from ink (D8)`, or `· manual size` when a manual resize
- * owns the box. Numbers are rounded for display only.
+ * owns the box, or `· default size` when the view's defaultSize does
+ * (P-2026-09-29-1230). Numbers are rounded for display only.
  */
-export function captionForBox(box: PreviewBox, source: 'derived' | 'manual'): string {
-    const tail = source === 'manual' ? 'manual size' : 'derived from ink (D8)';
+export function captionForBox(box: PreviewBox, source: 'derived' | 'manual' | 'default'): string {
+    const tail = source === 'manual' ? 'manual size' : source === 'default' ? 'default size' : 'derived from ink (D8)';
     return `${Math.round(box.w)} × ${Math.round(box.h)} px · ${tail}`;
 }
 

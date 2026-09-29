@@ -294,6 +294,64 @@ describe('validateIR: shape.cornerRadius numeric guard (slice 3, D5)', () => {
     });
 });
 
+describe('validateIR: defaultSize numeric guard (P-2026-09-29-1230)', () => {
+    /** Written through `unknown` for the same reason as the radius above. */
+    const vertexWithDefaultSize = (defaultSize: unknown): VertexViewIR =>
+        ({ ...defaultObjectViewIR(), defaultSize } as VertexViewIR);
+
+    it('accepts a vertex with NO defaultSize key (unset: size derived from content)', () => {
+        clearCompileCache();
+        const ir = defaultObjectViewIR();
+        expect('defaultSize' in ir).toBe(false);
+        expect(validateIR('v-dsize-absent', ir)).toEqual({ ok: true });
+    });
+
+    it('accepts both axes set, one axis set, and an empty object', () => {
+        for (const [name, value] of [
+            ['both', { width: 120, height: 60 }],
+            ['width only', { width: 120 }],
+            ['height only', { height: 60 }],
+            ['fractional', { width: 120.5 }],
+            ['empty', {}],
+        ] as const) {
+            clearCompileCache();
+            expect(validateIR(`v-dsize-${name}`, vertexWithDefaultSize(value)), name).toEqual({ ok: true });
+        }
+    });
+
+    it('does not clamp: a value below the render floor is valid (the floor depends on the form)', () => {
+        clearCompileCache();
+        expect(validateIR('v-dsize-tiny', vertexWithDefaultSize({ width: 3, height: 2 }))).toEqual({ ok: true });
+    });
+
+    it('rejects zero, a negative, a non-finite and a non-number axis, naming the axis and the value read', () => {
+        for (const [axis, value, printed] of [
+            ['width', 0, '0'], ['height', -5, '-5'], ['width', NaN, 'NaN'],
+            ['height', Infinity, 'Infinity'], ['width', '120', '"120"'], ['height', null, 'null'],
+        ] as const) {
+            clearCompileCache();
+            const r = validateIR(`v-dsize-bad-${axis}-${printed}`, vertexWithDefaultSize({ [axis]: value }));
+            expect(r.ok, `${axis} ${printed}`).toBe(false);
+            if (!r.ok) {
+                expect(r.error).toContain(`defaultSize.${axis}`);
+                expect(r.error).toContain(`read ${printed}`);
+            }
+        }
+    });
+
+    it('rejects a defaultSize that is not an object', () => {
+        for (const [value, printed] of [[120, '120'], ['120x60', '"120x60"'], [null, 'null'], [[120, 60], '[120,60]']] as const) {
+            clearCompileCache();
+            const r = validateIR(`v-dsize-shape-${printed}`, vertexWithDefaultSize(value));
+            expect(r.ok, printed).toBe(false);
+            if (!r.ok) {
+                expect(r.error).toContain('defaultSize must be an object');
+                expect(r.error).toContain(`read ${printed}`);
+            }
+        }
+    });
+});
+
 
 /**
  * FormSpec (Slice 1a, 2026-08-26).

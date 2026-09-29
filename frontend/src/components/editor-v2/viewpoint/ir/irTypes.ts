@@ -470,6 +470,12 @@ export interface VertexViewIR {
     exclusive?: boolean;             // spike: only exclusive views are rendered; decorative ones are ignored
     label?: string;
     resizable?: boolean;             // v1: override esplicito del gate resize (undefined = default per forma)
+    /**
+     * Default box of the instances with no manual size (P-2026-09-29-1230), px per axis.
+     * An absent axis stays derived from content. Absent key = no default. Additive
+     * optional field: no irVersion bump, no migration.
+     */
+    defaultSize?: { width?: number; height?: number };
     shape: ShapeSpec;
     /**
      * Level-2 structure supplement (2026-08-29, Turno 7). Absent = every field at its

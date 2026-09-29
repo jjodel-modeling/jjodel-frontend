@@ -14,8 +14,9 @@ import { compileView, compileEdgeView, compileRowView } from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
 import { isUsableEndpointExpr } from './edgeEndpoints';
 import { authoredCornerRadius } from './shapeRegistry';
+import { usableSizeAxis } from '../../nodes/nodeSizing';
 import { isConditionalValue } from '../../../ui/ConditionalEditor/conditional';
-import type { AnyViewIR, EdgeViewIR, NodeViewIR, PaddingToken, Predicate, RowViewIR } from './irTypes';
+import type { AnyViewIR, EdgeViewIR, NodeViewIR, PaddingToken, Predicate, RowViewIR, VertexViewIR } from './irTypes';
 
 /**
  * Closed vocabulary of `edge.routing` (R-B9, 2026-08-03): the persisted identifiers,
@@ -140,6 +141,30 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
                 ok: false,
                 error: `[ir] shape.cornerRadius must be a finite number >= 0 (px), or absent for the form's base radius, read ${read}`,
             };
+        }
+
+        // Default size (P-2026-09-29-1230): same criterion as the radius, through the same
+        // function the render reads with (usableSizeAxis), so the two agree on "usable".
+        // No clamp here: the floor depends on the form, which can change per instance, so
+        // it is applied at render (defaultBoxFor). An absent axis is legal (stays derived).
+        const defaultSize: unknown = (ir as VertexViewIR).defaultSize;
+        if (defaultSize !== undefined) {
+            if (!defaultSize || typeof defaultSize !== 'object' || Array.isArray(defaultSize)) {
+                return {
+                    ok: false,
+                    error: `[ir] defaultSize must be an object { width?, height? }, or absent for the size derived from content, read ${JSON.stringify(defaultSize)}`,
+                };
+            }
+            for (const axis of ['width', 'height'] as const) {
+                const v: unknown = (defaultSize as Record<string, unknown>)[axis];
+                if (v !== undefined && usableSizeAxis(v) === undefined) {
+                    const read = typeof v === 'number' ? String(v) : JSON.stringify(v);
+                    return {
+                        ok: false,
+                        error: `[ir] defaultSize.${axis} must be a finite number > 0 (px), or absent for the size derived from content, read ${read}`,
+                    };
+                }
+            }
         }
     }
 
