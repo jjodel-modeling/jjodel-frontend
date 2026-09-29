@@ -65,8 +65,11 @@
   the default of every model that does not declare its own [M, P-2026-09-29-0110,
   `docs/discovery/discovery_2026-09-29_sim_data_level.md` §8]. §2.3 and §2.4 declare on this route and keep the
   metamodel path as the fallback (§4).
-- **Buttons** [R]: ⏮ Reset, ▶ Step, ■ Stop. During a run the M1 face reads, top to bottom: the choice list (Petri,
-  on a conflict), the `Marking:` line, the buttons, `Events` (SM, ESM), `Last step:`, the status [M].
+- **Buttons** [R]: ⏮ Reset, ▶ Step, ⏩ Play, ■ Stop. Above them, from the panel's first open, one row: `Choices`
+  (`Ask` | `Random`, Ask by default) and Play's step limit `100` (R-SIM-101) [M, P-2026-09-29-1943]. During a run the
+  M1 face reads, top to bottom: `Data…` where the profile keeps it, the `Choices` row, the choice list (Petri, on a
+  conflict), the `Marking:` line, the buttons, `Events` (SM, ESM), `Last step:`, the status [M]. Play fires one ε step
+  every 500 ms until the run stops; under `Ask` it stops at the first list, as ▶ does [M].
 
 ---
 
@@ -174,7 +177,8 @@ Control+z in headless Chromium; Cmd+Z is Alfonso's check on 3001 (first report �
    holds Bound `4` [M, P-2026-09-27-2105].
 
 Count: 7 clicks, no keystroke; the chip on tab `demoNet`, 1 click; the run below, 8 clicks: Reset, ▶ four times,
-three choices [M, P-2026-09-29-1225].
+three choices [M, P-2026-09-29-1225]; the optional Random beat after it, 4 more: Reset, the `Choices` select and its
+option, ⏩ [M, P-2026-09-29-1943].
 
 **Run** (tab `demoNet`). Before Reset: `Not started`, ▶ disabled, no line [M, P-2026-09-27-1738].
 
@@ -197,6 +201,12 @@ After step 4 the status reads `Deadlock · ε: t2 guard false`, with the title `
 [p3.[tokens] < 1]` [M, P-2026-09-29-1022, R-SIM-96]. ▶ is disabled [M]. The table and this status read the same line for line after the dialog's Apply
 [M, P-2026-09-27-2105].
 **Say** "Deadlock. The panel names the transition and the guard that stops it."
+
+Optional, Random (R-SIM-101): Reset, `Choices` → `Random`, then ⏩. Play fires one ε step every 500 ms and draws every
+choice, its glyph ⏸ while it plays; it stops by itself in `Deadlock` at `Marking: p2 ×2, p3` after 4 steps, whatever
+it draws, Step's top still 854.5 [M, P-2026-09-29-1943, three seeds]. A drawn step reads `Last step: ε (random): …`.
+`Choices` stays `Random` for this model until set back, and under it ▶ draws too.
+**Say** "Now the simulator chooses. Whatever it draws, this net ends in the same deadlock."
 
 Optional: click the status row. The reasons list reads `ε: t2 (p2 ×2 → p3) false` and moves Step's top from 854.5
 to 830 [M]. Click it again to close.
@@ -479,3 +489,5 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
 - The `.smv` exporter.
 - The modal lane is no longer out: the demo walks the Simulation roles dialog (R-SIM-85).
 - The outputs profiles (Moore, Mealy).
+- A seed typed by hand, and the export of the trace (spec step 5): the seed is in two titles only (R-SIM-100).
+- Play on events and inputs: Play never presses an event nor answers an input; it stops and says it waits (R-SIM-101).

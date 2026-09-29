@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1943
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2 of `discovery_2026-09-29_sim_random_choice.md`, lane L2; tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-random-l2 · 0d1e8ed94, 15fdc7363, 6f1bcea1d · non fuso: hard-stop, lane probe on 3058 (light), Choices row with k, Step 854.5 under Ask and Random, Play between Step and Stop, Petri Random + Play Deadlock at p2 ×2, p3 in 4 steps (three seeds), Flow B Terminated in 6, SM «Play waits for an event», pause and Stop mid-play, Ask + Play stops at the first list, hand runs identical to 09-29c, crop in docs/discovery/harness/_tmp_randl2_*.png (gitignored), R-SIM-101 nel commit docs, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-randl2`, branch `sim-random-l2` (cut by the chat from `alfonso-frontend-jjtl` at `7c2539ae9`, which contains lane L1, R-SIM-100; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-randl2`, branch `sim-random-l2`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

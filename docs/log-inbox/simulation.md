@@ -1219,3 +1219,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: R-SIM-100 Random button, seeded draw, minimal trace; list 123.1, Step 854.5 unchanged
 **Notes**: Rollback tag `pre-sim-random-l1` on `b256abc36` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1933/result.json`.
 **Prompt document name**: 2026-09-29 19:33
+
+## 2026-09-29 — feat: the Ask | Random run policy and Play, R-SIM-101 (P-2026-09-29-1943)
+**Prompt**: `claude_2026-09-29_1943_prompt_sim_random_l2.md`, full lane (tests first) on `sim-random-l2` in `~/jjodel-w-randl2`, lane L2 of `discovery_2026-09-29_sim_random_choice.md` §7-§8, Part 2 as Alfonso ratified it with A1-A4: the policy map per model (`{ ask, 100 }`), the pure `playTick`, `pressStep` and `playPress` in the bridge, the Choices row with k, Play between Step and Stop on a 500 ms `setTimeout` chain reading the store; R-SIM-101.
+**Files touched**: code `0d1e8ed94`: `frontend/src/components/editor-v2/sim/simRunState.ts`, `sim/__tests__/simRunState.test.ts`; `15fdc7363`: `sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`; `6f1bcea1d`: `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`. Docs, this commit: `docs/decisions.md` (R-SIM-101), `docs/demo/models_2026_simulator_demo.md` (:68-69, :176-177, the beat after :199, §5), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `6f1bcea1d`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `editor-v2/sim` and `model/simulation` 916 passed (898 at baseline); `npx vitest run` 5867 passed, the 9 known files red at import (`window is not defined`); `npm run build` exit 0. Red first per layer: 6 failed, 11 failed. Mutation benches 8/8 and 17/17 killed, lists in the commit bodies.
+**Out-of-scope changes**: yes — 6 code files, all in the DOVE, above the Rule 19 five, listed in chat before the first edit (RC-11). No file outside the DOVE; the probe files are gitignored `_tmp_randl2_*`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3058 (`_tmp_randl2_walk.ts`, gitignored), light, 1600×1000: Choices row 24 px, Step 854.5 under Ask and Random, panel top 748 in the editor; Ask + Play stops at the first list; Random + Play Deadlock at p2 ×2, p3 in 4 steps, three seeds; pause, Stop mid-play; k 2 note; Flow B Terminated in 6; SM waits for an event at 0; sm, esm, flowB run readings 12/12, 12/12, 7/7 identical to 09-29c
+**Notes**: Play is on while the run is Running with ε off, so SM can say it waits for an event; the first tick falls at the press. playTick takes `steps` besides (run, policy): the k counter lives in the bridge, where the bench reaches it. Petri hand-run RUN 1-3 differ from 09-29c only in `paint`, a reader of the pre-R-SIM-98 heading (readings 11:03, f5dd73fe4 12:37). One console error per run, the baseline kind. Logs `~/.jjodel-lanes/P-2026-09-29-1943/`.
+**Prompt document name**: 2026-09-29 19:43
