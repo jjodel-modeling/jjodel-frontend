@@ -9,10 +9,10 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    __resetSimRunsForTests, getSimActiveIds, getSimChoiceVersion, getSimRun, getSimVersion, isSimActive, isSimPending, simClear, simCommit,
-    simReset, simSetPending,
+    __resetSimRunsForTests, DEFAULT_SIM_POLICY, getSimActiveIds, getSimChoiceVersion, getSimPolicy, getSimRun, getSimVersion, isSimActive,
+    isSimPending, MAX_PLAY_STEPS, setSimPolicy, simClear, simCommit, simReset, simSetPending,
 } from '../simRunState';
-import type { SimRun, SimTraceStep } from '../simRunState';
+import type { SimPolicy, SimRun, SimTraceStep } from '../simRunState';
 import { step } from '../../../../model/simulation/netStep';
 import type {
     ActionOracle, CompiledNet, GuardOracle, HaltReason, NetTransition, SimState,
@@ -321,5 +321,53 @@ describe('the trace and the draws of a run (R-SIM-100)', () => {
         expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 't', kind: 'fired' }]);
         expect(getSimRun('M')!.draws).toBe(0);
         expect(getSimRun('M')!.seed).toBeUndefined();
+    });
+});
+
+describe('the run policy of a model (R-SIM-101)', () => {
+    it('a model without a policy reads the default: Ask, k = 100, at most 1000 (mutant: another default)', () => {
+        expect(getSimPolicy('M')).toEqual<SimPolicy>({ choices: 'ask', k: 100 });
+        expect(DEFAULT_SIM_POLICY).toEqual<SimPolicy>({ choices: 'ask', k: 100 });
+        expect(MAX_PLAY_STEPS).toBe(1000);
+    });
+
+    it('per model: a change of one model leaves another at the default (mutant: one policy for every model)', () => {
+        setSimPolicy('M1', { choices: 'random', k: 7 });
+        expect(getSimPolicy('M1')).toEqual<SimPolicy>({ choices: 'random', k: 7 });
+        expect(getSimPolicy('M2')).toEqual<SimPolicy>({ choices: 'ask', k: 100 });
+    });
+
+    it('a change keeps what it does not name, and returns the policy stored (mutant: a change replaces the whole policy)', () => {
+        setSimPolicy('M', { k: 12 });
+        expect(setSimPolicy('M', { choices: 'random' })).toEqual<SimPolicy>({ choices: 'random', k: 12 });
+        expect(setSimPolicy('M', { k: 30 })).toEqual<SimPolicy>({ choices: 'random', k: 30 });
+        expect(getSimPolicy('M')).toEqual<SimPolicy>({ choices: 'random', k: 30 });
+    });
+
+    it('kept across Reset, a commit, Stop and a clear: the run primitives never touch it (mutant: simReset or simClear drop the policy)', () => {
+        setSimPolicy('M', { choices: 'random', k: 5 });
+        simReset('M', mkRun(NET, { a: 1 }));
+        simCommit('M', out({ a: 1 }, 't'));
+        simClear('M');
+        expect(getSimRun('M')).toBeUndefined();
+        expect(getSimPolicy('M')).toEqual<SimPolicy>({ choices: 'random', k: 5 });
+        simReset('M', mkRun(NET, { a: 1 }));
+        expect(getSimPolicy('M')).toEqual<SimPolicy>({ choices: 'random', k: 5 });
+    });
+
+    it('the test reset drops every policy (mutant: the policies outlive __resetSimRunsForTests)', () => {
+        setSimPolicy('M', { choices: 'random', k: 5 });
+        __resetSimRunsForTests();
+        expect(getSimPolicy('M')).toEqual<SimPolicy>({ choices: 'ask', k: 100 });
+    });
+
+    it('k is an integer in 1..1000: below clamps to 1, above to 1000, a fraction rounds, not a number keeps the old (mutants: no clamp; NaN stored)', () => {
+        expect(setSimPolicy('M', { k: 0 }).k).toBe(1);
+        expect(setSimPolicy('M', { k: -40 }).k).toBe(1);
+        expect(setSimPolicy('M', { k: 5000 }).k).toBe(1000);
+        expect(setSimPolicy('M', { k: 7.6 }).k).toBe(8);
+        expect(setSimPolicy('M', { k: Number.NaN }).k).toBe(8);
+        expect(setSimPolicy('M', { k: Number.POSITIVE_INFINITY }).k).toBe(8);
+        expect(getSimPolicy('M').k).toBe(8);
     });
 });

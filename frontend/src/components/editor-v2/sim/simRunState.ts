@@ -32,6 +32,12 @@
  * draw count and its committed steps, each with the origin of a choice among
  * two or more candidates, `user` or `random`. In memory only; the export is
  * spec step 5.
+ *
+ * R-SIM-101 (P-2026-09-29-1943) adds the run policy of each model, in a map
+ * beside the runs: how an ε choice is resolved, `ask` (the list) or `random`
+ * (a draw), and Play's step limit k. Default `{ ask, 100 }`; lost on reload,
+ * kept across Reset, Stop, a clear and a model switch, since no run primitive
+ * touches it. It is not in the model and never enters a run record.
  */
 
 import { useSyncExternalStore } from 'react';
@@ -81,6 +87,22 @@ export interface SimRun {
     /** R-SIM-100: the committed steps, in order; a refused selector is not one. */
     readonly trace?: readonly SimTraceStep[];
 }
+
+/** How a run resolves an ε choice among two or more candidates (R-SIM-101): the list asks, or a draw decides. */
+export type SimChoices = 'ask' | 'random';
+
+/** The run policy of one model (R-SIM-101): how ε choices are resolved, and the steps of one Play press at most. */
+export interface SimPolicy {
+    readonly choices: SimChoices;
+    readonly k: number;
+}
+
+export const DEFAULT_SIM_POLICY: SimPolicy = { choices: 'ask', k: 100 };
+
+/** The largest k the panel's input accepts; the smallest is 1. */
+export const MAX_PLAY_STEPS = 1000;
+
+const policies = new Map<string, SimPolicy>();
 
 const runs = new Map<string, SimRun>();
 let version = 0;
@@ -231,6 +253,25 @@ export function isSimPending(objectId: string): boolean {
     return false;
 }
 
+/** The run policy of a model: its own when one was set, the default otherwise (R-SIM-101). */
+export function getSimPolicy(modelId: string): SimPolicy {
+    return policies.get(modelId) ?? DEFAULT_SIM_POLICY;
+}
+
+/**
+ * Changes a model's run policy and returns it (R-SIM-101); what the change does
+ * not name is kept. k is stored as an integer in 1..MAX_PLAY_STEPS, and a k
+ * that is not a finite number keeps the old one. No version bump: the canvas
+ * does not read the policy, and the panel re-reads it after its own change.
+ */
+export function setSimPolicy(modelId: string, change: Partial<SimPolicy>): SimPolicy {
+    const old = getSimPolicy(modelId);
+    const k = change.k === undefined || !Number.isFinite(change.k) ? old.k : Math.min(MAX_PLAY_STEPS, Math.max(1, Math.round(change.k)));
+    const next: SimPolicy = { choices: change.choices ?? old.choices, k };
+    policies.set(modelId, next);
+    return next;
+}
+
 /** Removes one model's run (Stop, interruption, and reset on model change or unmount). */
 export function simClear(modelId: string): void {
     if (!runs.has(modelId)) return;
@@ -272,4 +313,5 @@ export function __resetSimRunsForTests(): void {
     version = 0;
     pendings.clear();
     choiceVersion = 0;
+    policies.clear();
 }
