@@ -225,12 +225,13 @@ $editor-v2-theme-light: (
   'package-body-bg': rgba(241, 245, 249, 0.8),
   'package-body-border': rgba(0, 0, 0, 0.15),
 
-  // Header text
-  'node-header-text': #ffffff,
+  // Header text. Dark on the pastel fills, the map's own primary text: white read
+  // 2.35:1 on the class blue and 2.09:1 on the abstract grey (R-VP-18).
+  'node-header-text': var(--text-primary),
   'package-header-text': #334155,
   'header-badge-bg': rgba(0, 0, 0, 0.2),
   'header-badge-color': rgba(255, 255, 255, 0.85),
-  'stereotype-color': rgba(255, 255, 255, 0.7),
+  'stereotype-color': var(--text-primary),
 
   // Color coding for fields
   'field-name-color': #1e293b,
@@ -248,12 +249,13 @@ $editor-v2-theme-light: (
   // Package
   'package-accent': #059669,
 
-  // Edges
-  'edge-color': #94a3b8,
+  // Edges. The Petri ink, arrowheads with the line: slate-400 read 2.34:1 on the
+  // canvas (R-VP-18).
+  'edge-color': var(--color-inode-name),
   'edge-selected': #0284c7,
   'edge-label-bg': #ffffff,
   'edge-marker-fill': #f8fafc,
-  'edge-marker-stroke': #94a3b8,
+  'edge-marker-stroke': var(--color-inode-name),
 
   // Input
   'input-bg': #ffffff,
