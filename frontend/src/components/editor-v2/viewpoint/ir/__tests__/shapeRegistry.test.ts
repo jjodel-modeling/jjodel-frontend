@@ -17,11 +17,15 @@ import {
     contentRect, boxForContent, boxForContentNumeric,
     boxFromIntrinsic, hasSizeSupplement, MEASURE_SLACK,
     baseCornerRadius, clampCornerRadius, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
+    BAR_SIZE,
 } from '../shapeRegistry';
+import { ensureViewCss } from '../irStyle';
+import type { NodeViewIR } from '../irTypes';
+import { createHash } from 'node:crypto';
 
 const ALL_FORMS: ShapeForm[] = [
     'rect', 'rounded', 'ellipse', 'circle', 'diamond',
-    'stadium', 'hexagon', 'parallelogram', 'cylinder', 'cloud',
+    'stadium', 'hexagon', 'parallelogram', 'cylinder', 'cloud', 'bar',
 ];
 /**
  * Le cinque forme che esistevano prima del registry. I tre test di equivalenza
@@ -706,5 +710,104 @@ describe('shapeRegistry: raggio compilato', () => {
         for (const bad of [undefined, NaN, -1, Infinity, '6', null]) {
             expect(resolveCompiledCornerRadius(compiled(() => bad), CTX, 'o1'), String(bad)).toBeUndefined();
         }
+    });
+});
+
+/**
+ * The bar (R-VP-16, P-2026-09-29-1021): the Petri transition as a thin solid box drawn at a
+ * fixed size. The CSS is read as irStyle.ts injects it, through a stand-in `document` (the
+ * bench has no DOM): the rules are its output, not its source.
+ */
+describe('shapeRegistry: the bar (R-VP-16)', () => {
+    /** The text irStyle.ts puts in its <style> tag: BASE_CSS, then the per-view parts. */
+    function injectedCss(): string {
+        const texts: string[] = [];
+        const g = globalThis as { document?: unknown };
+        const saved = g.document;
+        g.document = {
+            getElementById: () => null,
+            createElement: () => ({ appendChild: (n: { data: string }) => { texts.push(n.data); return n; } }),
+            createTextNode: (data: string) => ({ data, remove() { /* stand-in */ } }),
+            head: { appendChild: () => undefined },
+        };
+        try {
+            ensureViewCss(`bar-css-${texts.length}-${Date.now()}`, {} as NodeViewIR);
+        } finally {
+            if (saved === undefined) delete g.document; else g.document = saved;
+        }
+        return texts[0];
+    }
+
+    /** selector -> declarations, comments dropped, later declarations winning. */
+    function rulesOf(css: string): Map<string, Record<string, string>> {
+        const out = new Map<string, Record<string, string>>();
+        for (const m of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+            const decls: Record<string, string> = {};
+            for (const d of m[2].split(';')) {
+                const i = d.indexOf(':');
+                if (i > 0) decls[d.slice(0, i).trim()] = d.slice(i + 1).trim();
+            }
+            for (const sel of m[1].split(',').map(x => x.trim().replace(/\s+/g, ' '))) {
+                out.set(sel, { ...(out.get(sel) ?? {}), ...decls });
+            }
+        }
+        return out;
+    }
+
+    it('is drawn by the CSS box, never resized after its content, with no inset and no corner radius', () => {
+        const bar = SHAPE_REGISTRY.bar;
+        expect(bar.id).toBe('bar');
+        expect(bar.painter.kind).toBe('css');
+        expect(bar.defaultResizable).toBe(false);
+        expect(bar.keepAspectRatio).toBe(false);
+        for (let i = 0; i <= 10; i++) expect(bar.insetFractionAt(i / 10)).toBe(0);
+        expect(hasSizeSupplement(bar)).toBe(false);
+        expect(honorsCornerRadius('bar')).toBe(false);
+        expect(baseCornerRadius('bar')).toBe(0);
+        // The sizing reproduces the CSS box, as rect's 140x40 does: the box for no content is the bar.
+        expect(boxForContent(bar, 0, 0)).toEqual(BAR_SIZE);
+    });
+
+    it('is a thin box of about 4:1, shorter than a line of text and smaller than the smallest circle', () => {
+        expect(BAR_SIZE.w / BAR_SIZE.h).toBeGreaterThanOrEqual(3.5);
+        expect(BAR_SIZE.w / BAR_SIZE.h).toBeLessThanOrEqual(4.5);
+        expect(BAR_SIZE.h).toBeLessThanOrEqual(16);
+        const circle = boxForContent(getShapeDescriptor('circle'), 0, 0);
+        expect(BAR_SIZE.w).toBeLessThan(circle.w);
+        expect(BAR_SIZE.w * BAR_SIZE.h).toBeLessThanOrEqual((circle.w * circle.h) / 4);
+    });
+
+    it('the CSS: the fixed box with the floors lifted, on the box and on the wrapper, and nothing clipped', () => {
+        const rules = rulesOf(injectedCss());
+        expect(rules.get('.ir-node-content.ir-shape--bar')).toMatchObject({
+            width: `${BAR_SIZE.w}px`, height: `${BAR_SIZE.h}px`, 'min-width': '0', 'min-height': '0',
+            'border-radius': '0', overflow: 'visible',
+        });
+        // instanceNode.scss: .mm-node.mm-object { min-width: 200px; overflow: hidden }.
+        expect(rules.get('.mm-node:has(> .ir-node-content.ir-shape--bar)')).toMatchObject({
+            'min-width': '0', 'min-height': '0', overflow: 'visible',
+        });
+        // An explicit size (a manual resize) fills the box, as on every other form.
+        expect(rules.get('.mm-node.ir-sized > .ir-node-content.ir-shape--bar')).toMatchObject({ width: '100%', height: '100%' });
+    });
+
+    it('the CSS: the label centred on the bar, unclipped, with a halo in the surface colour', () => {
+        const label = rulesOf(injectedCss()).get('.ir-node-content.ir-shape--bar > .ir-label');
+        expect(label).toMatchObject({
+            position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+            'max-width': 'none', overflow: 'visible', margin: '0', padding: '0',
+        });
+        expect(label?.['text-shadow']).toContain('var(--color-inode-surface)');
+    });
+
+    it('every rule written before the bar is byte-identical: the bar only appends', () => {
+        const css = injectedCss();
+        // Measured on irStyle.ts at 22efe0670, before this lane: 16743 characters.
+        const BEFORE = { length: 16743, sha16: 'a2877becf5934b70' };
+        const prefix = css.slice(0, BEFORE.length);
+        expect(createHash('sha256').update(prefix).digest('hex').slice(0, 16)).toBe(BEFORE.sha16);
+        const added = [...rulesOf(css.slice(BEFORE.length)).keys()];
+        expect(added.length).toBeGreaterThan(0);
+        for (const sel of added) expect(sel, sel).toContain('ir-shape--bar');
     });
 });

@@ -23,13 +23,14 @@
  *   catalogue ink so the Symbol Editor still recognizes the preset (decision 4
  *   of the prompt); its name takes the text-on-dark token, light theme only.
  * - **The Petri notation** (P-2026-09-29-0939, lane 1 of
- *   docs/discovery/discovery_2026-09-29_petri_notation.md §6, R-VP-15), under
- *   the `petri` shape and on the bound roles only: a place has the name ink as
- *   border and an italic name, and draws its initial marking as dots up to four
- *   (a marker) and as a number from five (a centre label); an arc and an
- *   inhibitor arc are a 1 px line in the same ink, straight, the arc ending in
- *   the filled arrowhead. The transition bar is unchanged, and with no role
- *   bound every class keeps the structure's box.
+ *   docs/discovery/discovery_2026-09-29_petri_notation.md §6, R-VP-15, amended
+ *   by R-VP-16, P-2026-09-29-1021), under the `petri` shape and on the bound
+ *   roles only: a place has the name ink as border and its name centred, in
+ *   italic, and draws no token marks; a transition is a `bar` in the catalogue
+ *   ink with its name centred in the name ink, drawn over the bar where it does
+ *   not fit; an arc and an inhibitor arc are a 1 px line in the same ink, on the
+ *   default (orthogonal) router, the arc ending in the filled arrowhead. With no
+ *   role bound every class keeps the structure's box.
  * - **No priority**: the list comes deepest class first and the resolver ranks
  *   an exact match above an inherited one (irResolveCore.ts), so the creation
  *   order settles every tie (decision 1).
@@ -73,8 +74,6 @@ const BORDER = 'var(--color-inode-border)';
 const INVERSE_TEXT = 'var(--color-text-inverse)';
 /** The theme's ink for names: slate-900 in light, near-white in dark. The Petri stroke and line. */
 const NAME_INK = 'var(--color-inode-name)';
-/** The marker of 1..4 tokens, by index (markerRegistry.ts); from 5 the place shows the number. */
-const TOKEN_MARKERS: readonly string[] = ['dot', 'dots-2', 'dots-3', 'dots-4'];
 
 /** The class roles, most specific first: a subclass of Node bound as Initial is an initial state. */
 const CLASS_ROLES: ReadonlyArray<{ role: string; key: string }> = [
@@ -183,6 +182,7 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         return id ? referencesOf(c).find(r => r.id === id)?.name : undefined;
     };
     /** The name of a bound attribute, when it is an attribute `c` holds. */
+    // TODO: cleanup, unused since R-VP-16 dropped the token marks.
     const boundAttribute = (key: string, c: string): string | undefined => {
         const id = roleValue(key);
         return id ? attributesOf(c).find(a => a.id === id)?.name : undefined;
@@ -253,9 +253,9 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
             if (stringAttr) edge.labels = { center: { from: 'path', expr: path(stringAttr.name) } };
             if (shape === 'petri' && (role === 'arc' || role === 'inhibitorArc')) {
                 // The inhibitor keeps the open arrowhead until a circle termination exists (lane 3).
+                // No routing: the default orthogonal router (R-VP-16).
                 if (role === 'arc') edge.terminations = { sourceEnd: 'none', targetEnd: 'closedArrow' };
                 edge.line = { color: NAME_INK, width: 1 };
-                edge.routing = 'straight';
             }
             out.push({
                 classId: c.id, className: c.name, rule: e.rule,
@@ -267,9 +267,12 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         const presetId = role ? ROLE_PRESET[shape][role] : undefined;
         const preset = presetId ? getCatalogPreset(presetId) : undefined;
         const petriPlace = shape === 'petri' && role === 'node';
+        const petriTransition = shape === 'petri' && role === 'transition';
         // The border token goes in first: applyPresetToShape keeps the author's border colour.
         let shapeSpec: ShapeSpec = { form: 'rounded', fill: SURFACE, border: { color: petriPlace ? NAME_INK : BORDER, width: 1, style: 'solid' } };
         if (preset) shapeSpec = applyPresetToShape(shapeSpec, preset);
+        // The Petri transition keeps the catalogue fill as a `bar`, a fixed small box (R-VP-16).
+        if (petriTransition) shapeSpec.form = 'bar';
         const form = shapeSpec.form as string;
         const solid = preset?.values.fill !== undefined;
         const boxed = !NO_COMPARTMENT.has(form) && !solid;
@@ -277,23 +280,11 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         // A label sits inside the shape at every position, so on the ink it takes the
         // text-on-dark token (measured on the lane probe: the default text did not read).
         if (solid) shapeSpec.labels[0].style = { color: INVERSE_TEXT };
-        if (petriPlace) {
-            shapeSpec.labels[0].style = { fontStyle: 'italic' };
-            // The initial marking: the marker draws 1..4 tokens as dots, the centre label the
-            // number from 5, so exactly one of the two shows for a marked place.
-            const tokens = boundAttribute('simInitialMarking', c.id);
-            if (tokens) {
-                const t = path(tokens);
-                shapeSpec.marker = {
-                    rules: TOKEN_MARKERS.map((id, i) => ({ when: { op: 'eq' as const, left: t, right: { kind: 'number' as const, value: i + 1 } }, then: id })),
-                    default: '',
-                };
-                shapeSpec.labels.push({
-                    position: 'center', source: { from: 'path', expr: t },
-                    visible: { when: { op: 'gt', left: t, right: { kind: 'number', value: TOKEN_MARKERS.length } }, then: true, else: false },
-                });
-            }
-        }
+        // The Petri names sit centred on the shape (R-VP-16), in the regular weight the
+        // centre position would otherwise make bold (irStyle.ts). The place's is italic;
+        // the transition's takes the name ink, since it is drawn over the bar and past it.
+        if (petriPlace) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { fontStyle: 'italic', fontWeight: 'normal' } };
+        if (petriTransition) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { color: NAME_INK, fontWeight: 'normal' } };
 
         const ir: VertexViewIR = {
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label,

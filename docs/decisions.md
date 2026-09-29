@@ -4177,6 +4177,18 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   (4) Ink `var(--color-inode-name)` for place borders, arcs and arrowheads; the bar keeps `#334155`. (5) With no
   role binding the derivation keeps today's boxes. Lane 1 (P-2026-09-29-0939) implements (2) to (5) and the three
   markers of (1); lane 2 the outside label and serif, lanes 3 and 4 the bar, the circle and the switch-over.
+- **R-VP-16** (2026-09-29, ratified by Alfonso 2026-09-29, evidence: read, verified: none, reversible: branch).
+  **The derived Petri views drop the token marks, centre the names, shrink the transition to a bar and route
+  the arcs Manhattan; amends R-VP-15.** Alfonso, on lane 1's result (verbatim): «2. remove the initial markers
+  (eg in p1 and lock) 3. the text must be always centered 4. the transition must be much smaller in size 5. the
+  edges should be using manhattan». Replaces in R-VP-15: (2) the initial marking as dots and a number (no token
+  marks now; the rows `dots-2..4` stay in the registry, persisted vocabulary); (3) every arc `straight` (no
+  routing now, the default orthogonal router); the planned outside label and serif of lane 2 (dropped: names
+  centred on the shape, place italic, regular weight, never clipped). Kept: the ink of (4), the Place circle,
+  the filled arrowhead, the inhibitor's termination, today's boxes without roles. Point 3: a `ShapeForm 'bar'`
+  (the name of R-VP-15 (1), the option discovery §6 lane 3 names; the IR has no size field), 48×12 at a fixed
+  size, the name centred and drawn over it with a halo in the surface colour; no catalogue row and no Shape
+  select option until after the freeze. Prompt P-2026-09-29-1021, commits `449c583b6`, `7a254a52f`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)

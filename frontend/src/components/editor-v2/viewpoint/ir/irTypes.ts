@@ -52,8 +52,9 @@ export type Conditional<T> =
     | { when: Predicate; then: T; else?: T }
     | { rules: { when: Predicate; then: T }[]; default?: T };
 
+/** `bar` (R-VP-16): a thin solid box at a fixed size, the Petri transition. Persisted, never renamed (R-B9). */
 export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
-    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud';
+    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud' | 'bar';
 export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
