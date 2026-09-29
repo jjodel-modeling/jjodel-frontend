@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1227
 Chat: C-2026-09-28-1936
 Lane: discovery (read-only; the view IR, the renderer, the default notation, the derived viewpoints). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane discovery visual-syntax-disc · report docs/discovery/discovery_2026-09-29_visual_concrete_syntax.md · hard-stop, four decisions and three questions for Alfonso in §0
 
 Worktree: `~/jjodel-w-visual`, branch `visual-syntax-disc` (cut by the chat from `alfonso-frontend-jjtl` at `12ac29f74`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-visual`, branch `visual-syntax-disc`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

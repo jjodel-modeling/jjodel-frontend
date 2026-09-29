@@ -239,3 +239,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: four demo scenes re-run on faa3cd66f port 3045: 73 readings identical to 09-29c; derived DemoPetri: no token marks, centred names, 48x12 bar, orthogonal arcs
 **Notes**: Rollback tag `pre-petri-notation-l2b` on `cd2b5fec9` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1103/result.json`.
 **Prompt document name**: 2026-09-29 11:03
+
+## 2026-09-29 — docs(views): discovery, how far the concrete syntax can improve visually (P-2026-09-29-1227)
+**Prompt**: `claude_2026-09-29_1227_prompt_discovery_visual_concrete_syntax.md`, read-only discovery on `~/jjodel-w-visual` branch `visual-syntax-disc`: a measured picture of the visual quality of the default M2/M1 notation and of the derived viewpoints of the four demo scenes (state machine, ESM, activity, Petri), trait tables against the textbook, and a ranked list of improvements by cost and kind (IR data, renderer, IR change).
+**Files touched**: this commit only: `docs/discovery/discovery_2026-09-29_visual_concrete_syntax.md` (new), this entry, the prompt's Status line. Probes gitignored under `frontend/scripts/smoke/_tmp_visual_*`, crops under `docs/discovery/harness/_tmp_visual_*.png`, data in `/tmp/visual/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no product code written; `git status` shows only the three docs files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — read-only; no §3.1 file written
+**Smoke visivo**: non applicabile — read-only; the lane probe on 3053 (light, 1600×1000) is the measurement, `EXIT=0` on all five runs
+**Notes**: Derived today: SM 4.5/10, ESM 5/11, activity 4.5/10; M2 4/9, M1 1.5/5. 0 of 18 derived transitions labelled; contrast fails on M2 headers (2.4:1), edges (2.34:1), M1 quiet text (1.48:1); generalization paints as a downward V; M1 underline not painted. V1 (derivation only) projected to 7/10 before the freeze. Four decisions, three questions in report §0. Scenes built by the kit's builder, not imported.
+**Prompt document name**: 2026-09-29 12:27
