@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0300
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2, simulation panel and roles dialog, tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-outputs-faces · 8240715c3, 1e8051c3e, d89ecce7b, f255d7d0c, c926d803a · non fuso: hard-stop, crop in docs/discovery/harness/_tmp_faces_*.png (gitignored), R-SIM-95 nel commit docs, le quattro scene le sonda la chat
 
 Worktree: `~/jjodel-w-faces2`, branch `sim-outputs-faces` (cut by the chat from `sim-outputs-faces-disc` at `904bab148`, which is the trunk `c2560b69e` plus the discovery of P-2026-09-29-0239; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-faces2`, branch `sim-outputs-faces`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
