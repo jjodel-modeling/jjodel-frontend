@@ -1037,3 +1037,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: pending — chat, RC-23; lane probe on 3049 (`_tmp_guardword_probe.ts` over `_tmp_guardword_walk.ts`, gitignored), light: Petri FINAL `Deadlock · ε: t2 guard false`, title `ε: t2 (p2 ×2 → p3) false [p3.[tokens] < 1]`, not clamped (173 px), list `ε: t2 (p2 ×2 → p3) false`, Step 854.5 to 830; SM, ESM, Flow B FINAL identical to P-2026-09-29-0110; 1 console error per scene, the baseline kind
 **Notes**: Order when a guard and something else block t2: the preset is checked first (a short preset leaves no entry, `nothing enabled`), then the inhibitor (`inhibited by lock`, the guard not evaluated), then the guard. Unchanged: `defect, ...`, the `else` wording, and the unreachable fallback when no guard site fails (`t2 false`). ESM declared by the metamodel fallback; the model-tab route not re-run. Probe log `~/.jjodel-lanes/P-2026-09-29-1022/`.
 **Prompt document name**: 2026-09-29 10:22
+
+## 2026-09-29 — merge: sim-guard-word into alfonso-frontend-jjtl (P-2026-09-29-1045)
+**Prompt**: `claude_2026-09-29_1045_prompt_merge_sim-guard-word.md`, a direct merge by `lane-run merge --direct`, no session: `sim-guard-word` at `423e3a021` into `alfonso-frontend-jjtl`, merge base `0fbb550ea`, 3 commits on the branch side.
+**Files touched**: merge `7fec9c966`: 6 files from the branch side (`docs/decisions.md`, `docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_1022_prompt_sim_guard_word.md`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7fec9c966` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5711 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: four demo scenes re-run on 7fec9c966 port 3045: 73 readings, only 4 differ as expected (Petri RUN 4 and FINAL: t2 guard false; ESM RUN 1 and 3: tp guard false); new reference 09-29c
+**Notes**: Rollback tag `pre-sim-guard-word` on `b5680b43f` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1045/result.json`.
+**Prompt document name**: 2026-09-29 10:45
