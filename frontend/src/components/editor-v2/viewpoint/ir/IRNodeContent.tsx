@@ -15,7 +15,7 @@ import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import { useEditorContextSafe } from '../../contexts/EditorContext';
 import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
-import type { CompiledView, CompiledTextStyle } from './irTypes';
+import type { BadgePosition, CompiledView, CompiledTextStyle, ShapeForm } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
@@ -174,6 +174,40 @@ export interface IRNodeContentProps {
      * in the authoring preview, which has no live object to read.
      */
     renderRowValue?: (featureName: string) => React.ReactNode | null;
+    /**
+     * The container is collapsed (F3, P-2026-09-29-2122): a graphVertex then paints its
+     * `containment.collapsed` form, fill and badge where the view declares them. The host
+     * decides it, with the predicate of its expand chip. Absent = expanded, as in the
+     * authoring preview.
+     */
+    collapsed?: boolean;
+}
+
+/**
+ * Form of the node as painted (F3, P-2026-09-29-2122). Collapsed, a graphVertex takes
+ * `containment.collapsed.form` when the view declares one; otherwise the shape's form.
+ * ObjectNode reads the same function for handles and resizer, so the outline and the
+ * anchors cannot disagree.
+ */
+export function resolveNodeForm(compiled: CompiledView, readCtx: ReadCtx, objectId: string, collapsed: boolean): ShapeForm {
+    const collapsedForm = collapsed ? compiled.containment?.collapsedForm : null;
+    return (collapsedForm ?? compiled.form)(readCtx, objectId);
+}
+
+/**
+ * The declared collapsed badge, resolved (F3): null when the node is expanded, when the
+ * view declares none, or when it resolves invisible or to no icon. Non-null, it replaces
+ * the count of the expand chip in ObjectNode (spec v1.2 sez. 8: the badge defaults to a
+ * child count). It replaces the count and not the chip: the chip is the only way to
+ * expand a collapsed container.
+ */
+export function resolveCollapsedBadge(
+    compiled: CompiledView, readCtx: ReadCtx, objectId: string, collapsed: boolean,
+): { icon: string; position: BadgePosition; tooltip?: string } | null {
+    const badge = collapsed ? compiled.containment?.collapsedBadge : null;
+    if (!badge || !badge.visible(readCtx, objectId)) return null;
+    const icon = badge.icon(readCtx, objectId);
+    return icon ? { icon, position: badge.position, tooltip: badge.tooltip } : null;
 }
 
 interface CompartmentRowData {
@@ -202,9 +236,14 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue }: IRNodeContentProps) {
-    const form = compiled.form(readCtx, objectId);
-    const fill = compiled.fill ? compiled.fill(readCtx, objectId) : '';
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false }: IRNodeContentProps) {
+    const form = resolveNodeForm(compiled, readCtx, objectId, collapsed);
+    // A collapsed fill that resolves empty (a conditional with no match) falls back to the
+    // expanded fill, the same convention as an empty fill falling back to the box colour.
+    const collapsedFill = collapsed && compiled.containment?.collapsedFill
+        ? compiled.containment.collapsedFill(readCtx, objectId) : '';
+    const fill = collapsedFill || (compiled.fill ? compiled.fill(readCtx, objectId) : '');
+    const collapsedBadge = resolveCollapsedBadge(compiled, readCtx, objectId, collapsed);
 
     // In-place editing state
     const [editingRow, setEditingRow] = useState<{ key: string; name: string } | null>(null);
@@ -528,6 +567,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     </span>
                 );
             })}
+            {collapsedBadge && (
+                <span className={`ir-badge ir-badge--${collapsedBadge.position}`} title={collapsedBadge.tooltip}>
+                    <i className={`bi ${collapsedBadge.icon}`} />
+                </span>
+            )}
             {compiled.labels.map((l, i) => {
                 if (!l.visible(readCtx, objectId)) return null;
                 const raw = l.text(readCtx, objectId);

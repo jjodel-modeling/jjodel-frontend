@@ -34,7 +34,7 @@ import { useIRView, useIRViewpointActive } from '../viewpoint/ir/irResolve';
 import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
 import { rendererForWidget } from '../viewpoint/ir/widgetRenderer';
 import type { VertexViewIR } from '../viewpoint/ir/irTypes';
-import IRNodeContent from '../viewpoint/ir/IRNodeContent';
+import IRNodeContent, { resolveCollapsedBadge, resolveNodeForm } from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
 import { getSimNodeState, isSimActive, useSimVersion } from '../sim/simRunState';
@@ -909,7 +909,16 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         // per-form default; `resizable: false` blocks resize on any shape (false is
         // not nullish → it wins the ??). `ir-resizable` marks the wrapper so the
         // scoped CSS neutralizer (irStyle.ts) lets rect/rounded shrink to the floor.
-        const shapeForm = irResolution.compiled.form(irResolution.readCtx, irResolution.objectId);
+        // Collapsed as the expand chip below shows it (F3, P-2026-09-29-2122): a collapsible
+        // container holding children, in the collapsed set. Only then does the node paint the
+        // view's `containment.collapsed`; a container with nothing to expand keeps its look.
+        const collapsedLook = irResolution.compiled.kind === 'graphVertex'
+            && !!irResolution.compiled.containment?.collapsible
+            && irChildCount > 0
+            && isCollapsed(irResolution.objectId);
+        const shapeForm = resolveNodeForm(irResolution.compiled, irResolution.readCtx, irResolution.objectId, collapsedLook);
+        // A declared, visible badge replaces the chip's count, never the chip (the only way to expand).
+        const collapsedBadge = resolveCollapsedBadge(irResolution.compiled, irResolution.readCtx, irResolution.objectId, collapsedLook);
         const hasGeometricShape = defaultResizableForForm(shapeForm);
         const resolvedResizable = (irResolution.compiled.ir as VertexViewIR).resizable;
         const canResize = resolvedResizable ?? hasGeometricShape;
@@ -938,6 +947,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     readCtx={irResolution.readCtx}
                     onInspectFeature={openInspectorByFeatureName}
                     renderRowValue={renderRowValue}
+                    collapsed={collapsedLook}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'
@@ -958,7 +968,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         }}
                     >
                         <i className={`bi ${isCollapsed(irResolution.objectId) ? 'bi-chevron-expand' : 'bi-chevron-contract'}`} />
-                        {isCollapsed(irResolution.objectId) ? String(irChildCount) : null}
+                        {isCollapsed(irResolution.objectId) && !collapsedBadge ? String(irChildCount) : null}
                     </button>
                 )}
                 {/* Same panel as the native branch. It portals to `body`, so sitting
