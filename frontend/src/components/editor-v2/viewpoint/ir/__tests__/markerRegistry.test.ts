@@ -76,6 +76,57 @@ describe('markerRegistry', () => {
     });
 });
 
+/**
+ * Token dots of a Petri place (P-2026-09-29-0939, lane 1 of
+ * docs/discovery/discovery_2026-09-29_petri_notation.md): `dots-n` draws n
+ * filled dots, smaller than the single `dot`, inside the glyph box, apart, and
+ * centred as a group. The geometry is read from the path data, so a moved or
+ * dropped dot fails here, not only on screen.
+ */
+describe('markerRegistry: token dots', () => {
+    /** One filled circle per path, written `M x-r,y A r,r 0 1,0 x+r,y A r,r 0 1,0 x-r,y`. */
+    const CIRCLE = /^M([\d.]+),([\d.]+) A([\d.]+),([\d.]+) 0 1,0 ([\d.]+),([\d.]+) A([\d.]+),([\d.]+) 0 1,0 ([\d.]+),([\d.]+)$/;
+    function circle(d: string): { cx: number; cy: number; r: number } {
+        const m = CIRCLE.exec(d);
+        if (!m) throw new Error(`not a circle path: ${d}`);
+        const [x0, y0, r1, r2, x1, y1, r3, r4, x2, y2] = m.slice(1).map(Number);
+        expect([r2, r3, r4]).toEqual([r1, r1, r1]);
+        expect(y1).toBe(y0);
+        expect([x2, y2]).toEqual([x0, y0]);
+        expect(x1 - x0).toBe(2 * r1);
+        return { cx: x0 + r1, cy: y0, r: r1 };
+    }
+    const dotRadius = circle(MARKER_REGISTRY.dot.paths[0].d).r;
+
+    for (const n of [2, 3, 4]) {
+        it(`dots-${n}: ${n} filled dots, smaller than dot, inside 26..74, apart, centred on (50,50)`, () => {
+            const def = getMarkerDef(`dots-${n}`);
+            expect(def).toBeDefined();
+            expect(def!.paths).toHaveLength(n);
+            const dots = def!.paths.map(p => {
+                expect(p.fill).toBe(true);
+                return circle(p.d);
+            });
+            for (const { cx, cy, r } of dots) {
+                expect(r).toBeLessThan(dotRadius);
+                expect(cx - r).toBeGreaterThanOrEqual(26);
+                expect(cx + r).toBeLessThanOrEqual(74);
+                expect(cy - r).toBeGreaterThanOrEqual(26);
+                expect(cy + r).toBeLessThanOrEqual(74);
+            }
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const gap = Math.hypot(dots[i].cx - dots[j].cx, dots[i].cy - dots[j].cy) - dots[i].r - dots[j].r;
+                    expect(gap, `dots ${i} and ${j} of dots-${n}`).toBeGreaterThan(0);
+                }
+            }
+            const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+            expect(Math.abs(mean(dots.map(d => d.cx)) - 50)).toBeLessThanOrEqual(1);
+            expect(Math.abs(mean(dots.map(d => d.cy)) - 50)).toBeLessThanOrEqual(2);
+        });
+    }
+});
+
 describe('asse bordo: double', () => {
     it('double sta nella mappa dash come tratto pieno (il raddoppio e overdraw)', () => {
         expect('double' in SVG_BORDER_DASH).toBe(true);
