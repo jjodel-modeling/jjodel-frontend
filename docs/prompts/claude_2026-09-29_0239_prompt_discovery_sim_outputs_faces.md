@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0239
 Chat: C-2026-09-28-1936
 Lane: discovery (read-only; the simulation panel, the roles dialog, the profiles). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane discovery sim-outputs-faces-disc · measured on 07dd278e3; the report is in the commit that carries this line (a commit cannot name its own sha) · Outcome: hard-stop
 
 Worktree: `~/jjodel-w-faces`, branch `sim-outputs-faces-disc` (cut by the chat from `alfonso-frontend-jjtl` at `c2560b69e`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-faces`, branch `sim-outputs-faces-disc`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

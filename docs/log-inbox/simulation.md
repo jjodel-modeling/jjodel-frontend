@@ -917,3 +917,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: The M2 hint reads differently in code (`simRoleStatus.ts:495`, «(a model's globals go in its Data…):») than Apply step 2 of both scenes; left verbatim, flagged by a comment, to re-measure. The ESM `Undeclared` line was not walked (§8). Flow B's Reset is now the entry of the route, no longer optional.
 **Prompt document name**: 2026-09-29 02:19
+
+## 2026-09-29 — discovery: the faces of Accepting and outputs, their M2 rows, the four hidden presets (P-2026-09-29-0239)
+**Prompt**: `claude_2026-09-29_0239_prompt_discovery_sim_outputs_faces.md`, read-only discovery on `sim-outputs-faces-disc` in `~/jjodel-w-faces`: the three M2 rows, the three faces, S5 today, the four hidden presets, what the four demo scenes show differently, and a Phase 2 plan before the freeze of 2026-10-01.
+**Files touched**: `docs/discovery/discovery_2026-09-29_sim_outputs_faces.md` (new), this entry, the Status line of the prompt. One docs commit; its sha is in the closing report. Probe `frontend/scripts/smoke/_tmp_faces_probe.ts`, gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — read-only; no file under `frontend/src` written, `git status` clean before the commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The dialog already builds the three rows from the catalog; the four presets are hidden by `PANEL_PROFILE_IDS` and `UNREAD_ROLES`. S5 is covered by R-SIM-86 (measured). Phase 2: one lane, ten files. Two questions and two decisions in §0 of the report.
+**Prompt document name**: 2026-09-29 02:39
+**Ticket** (priority low, opened here). `simAccepting` is still missing from `ROLE_SORTS` (`stcFromRoles.ts:24-25`): a class playing Accepting and Transition passes the overlap check (R-SIM-91's open item, measured again). Owed to the faces lane.
