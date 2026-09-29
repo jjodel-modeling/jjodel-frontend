@@ -917,3 +917,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: The M2 hint reads differently in code (`simRoleStatus.ts:495`, «(a model's globals go in its Data…):») than Apply step 2 of both scenes; left verbatim, flagged by a comment, to re-measure. The ESM `Undeclared` line was not walked (§8). Flow B's Reset is now the entry of the route, no longer optional.
 **Prompt document name**: 2026-09-29 02:19
+
+## 2026-09-29 — merge: demo-script-data-level into alfonso-frontend-jjtl (P-2026-09-29-0238)
+**Prompt**: `claude_2026-09-29_0238_prompt_merge_demo-script-data-level.md`, a direct merge by `lane-run merge --direct`, no session: `demo-script-data-level` at `072c37bc9` into `alfonso-frontend-jjtl`, merge base `04c81327d`, 2 commits on the branch side.
+**Files touched**: merge `c2560b69e`: 3 files from the branch side (`docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_0219_prompt_demo_script_data_level.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c2560b69e` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5664 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, the demo script declares on the model tab, metamodel fallback kept; runs unchanged
+**Notes**: Rollback tag `pre-demo-script-data-level` on `5aea64657` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0238/result.json`.
+**Prompt document name**: 2026-09-29 02:38
