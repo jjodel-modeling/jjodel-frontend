@@ -1449,6 +1449,13 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   compilato, che D1 rimuove. Stesso comportamento, una sola fonte per il colore del bordo.
   (Ratified on question 2 of section 10 of the same gate report.)
 
+- **R-IRN-37** (2026-09-29): **Il collasso di un graphVertex si dichiara con campi piatti.**
+  `containment.collapsed` ha `form`, `fill` e `badge` (come in `irTypes.ts` e nel validatore), non
+  `shape: Partial<Shape>` della spec v1.2 §8, che viene emendata. Ogni campo assente ricade sul valore
+  espanso; un badge dichiarato e visibile sostituisce il conteggio del chip, che resta come toggle.
+  Nessun cambio di schema, nessuna migrazione. Implementato in P-2026-09-29-2122 (`04acac227`,
+  `61a45540e`), fuso in `889906e43`. (Ratified by Alfonso on 2026-09-29, §5 of the Layer Impact Report.)
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con

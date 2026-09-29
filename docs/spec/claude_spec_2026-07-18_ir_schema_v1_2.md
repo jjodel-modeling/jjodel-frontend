@@ -161,11 +161,14 @@ interface Containment {
   childFilter?: Predicate;
   collapsible?: boolean;                        // NUOVO: il nodo offre il toggle di collasso
   collapsed?: {                                 // NUOVO: rappresentazione collassata
-    shape?: Partial<Shape>;                     // override della shape quando collassato
-    badge?: BadgeSpec;                          // indicatore "contiene N elementi"
+    form?: Conditional<ShapeForm>;              // forma quando collassato (assente: quella espansa)
+    fill?: Conditional<string>;                 // riempimento quando collassato (assente: quello espanso)
+    badge?: BadgeSpec;                          // se dichiarato e visibile, sostituisce il conteggio del chip
   };
 }
 ```
+
+**Emendamento 2026-09-29 (R-IRN-37)**: i campi piatti `form`, `fill`, `badge` sono il contratto, come in `irTypes.ts`, nel validatore e nel compilatore; sostituiscono `shape?: Partial<Shape>`, mai implementato. Ogni campo assente ricade sul valore espanso; il badge dichiarato e visibile sostituisce il conteggio del chip di espansione, che resta come toggle. Nessun cambio di schema, nessuna migrazione.
 
 La policy lift-to-ancestor (sez. 7) è la semantica fissa del collasso; non è configurabile per view. Coordinate dei figli: relative al contenitore (sistema RF parentNode); clipping e routing al bordo sono responsabilità dell'interprete (aperture implementative della Fase 2b, non dello schema). **Persistenza del collasso (2026-07-19)**: campo opzionale `DVertex.irCollapsed` sul vertex del contenitore, condiviso tra viewpoint come le posizioni; non governato da `persistWaypoints`.
 
