@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-2253
 Chat: C-2026-09-29-1826
 Lane: fast (dead selector and stale comment, no visible change)
-Status: to execute
+Status: eseguito 2026-09-29 · lane railsystem-leftovers · 26b29ae57
 Model: claude-sonnet-5-5 (light tier)
 
 ## COSA
