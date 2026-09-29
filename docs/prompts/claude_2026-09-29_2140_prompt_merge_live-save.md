@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-2140
 Chat: C-2026-09-29-1840
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane merge · 9ef223452 · verifica visiva passata 2026-09-29 (Non-visual persistence fix (save reads the live project). Chat checked result.json: all 8 gates green on 9ef223452 (typecheck 14 at the tip set, vitest 5872 tests 0 failed, build ok, check:docs/agents/scripts/addonly ok), 3001 up. Branch lane proved it with projectsSaveLive.test.ts (5 tests) and the side-finding probe 6/6. Unattended GO by the chat under Alfonso standing approval of F2 (2026-09-29 21:15).)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-2140 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

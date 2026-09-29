@@ -24,3 +24,15 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-09-29-2120
 
+## 2026-09-29 — merge: live-save into alfonso-frontend-jjtl (P-2026-09-29-2140)
+**Prompt**: `claude_2026-09-29_2140_prompt_merge_live-save.md`, a direct merge by `lane-run merge --direct`, no session: `live-save` at `d15c657c7` into `alfonso-frontend-jjtl`, merge base `5626b3364`, 3 commits on the branch side.
+**Files touched**: merge `9ef223452`: 4 files from the branch side (`docs/log-inbox/versionfixer.md`, `docs/prompts/claude_2026-09-29_2120_prompt_live_save.md`, `frontend/src/api/__tests__/projectsSaveLive.test.ts`, `frontend/src/api/persistance/projects.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9ef223452` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5872 tests in 231 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Non-visual persistence fix (save reads the live project). Chat checked result.json: all 8 gates green on 9ef223452 (typecheck 14 at the tip set, vitest 5872 tests 0 failed, build ok, check:docs/agents/scripts/addonly ok), 3001 up. Branch lane proved it with projectsSaveLive.test.ts (5 tests) and the side-finding probe 6/6. Unattended GO by the chat under Alfonso standing approval of F2 (2026-09-29 21:15).
+**Notes**: Rollback tag `pre-live-save` on `5626b3364` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2140/result.json`.
+**Prompt document name**: 2026-09-29 21:40
