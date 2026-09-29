@@ -1087,3 +1087,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: lane probe on 3050: gate 8/8, Jjodie (216,903) 48x48 and chip (281,911) on y 927; four scenes vs 09-29c identical except dialog focus on open and 2.1 Undo; demo script re-measured; old probe kit superseded by probe-kit/simgate
 **Notes**: Rollback tag `pre-sim-gate` on `dc150224f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1200/result.json`.
 **Prompt document name**: 2026-09-29 12:00
+
+## 2026-09-29 — discovery: the Simulation pill behind Advanced and a Semantic type, Jjodie placement (P-2026-09-29-1040)
+**Prompt**: `claude_2026-09-29_1040_prompt_discovery_sim_gate_and_placement.md`, read-only on `sim-gate-disc` in `~/jjodel-w-simgate` (from `0fbb550ea`): positions of Jjodie and the pill, the gate, a «Semantic type» field in the metamodel's Properties writing `simProfile`, what `None` does, the demo steps, a Phase 2 plan.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-29_sim_gate_and_placement.md`, this entry, the prompt's Status. Probes `frontend/scripts/smoke/_tmp_simgate_*` gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: No dev server (prompt): pixels are CSS reads over the editor box measured 09-24/09-27. Probe [M]: on the four demo metamodels the dialog on a Properties-stored preset proposes what the picker path does (4/4, match lines equal the script's). Phase 2: 6 code files, no critical zone, no `simBridge.ts`; `sim-guard-word` merged at `7fec9c966`. Four decisions, two questions in §0.
+**Prompt document name**: 2026-09-29 10:40
