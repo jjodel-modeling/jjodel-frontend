@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1225
 Chat: C-2026-09-28-1936
 Lane: full (amends R-SIM-97 just merged; Properties field, gate predicate, tests, demo script). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-toggle · 49dd45056, 59a1baf99 · non fuso: hard-stop, lane probe on 3052 (light), gate 8/8 and four scenes (64/71 readings identical, 7 bags + simEnabled), crop in docs/discovery/harness/_tmp_simtoggle_*.png (gitignored), R-SIM-99 nel commit docs, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-simtoggle`, branch `sim-toggle` (cut by the chat from `alfonso-frontend-jjtl` at `12ac29f74`, which contains R-SIM-97; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-simtoggle`, branch `sim-toggle`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

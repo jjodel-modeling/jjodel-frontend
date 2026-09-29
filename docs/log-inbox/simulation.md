@@ -1113,3 +1113,18 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: docs only, the sim gate and placement discovery report
 **Notes**: Rollback tag `pre-sim-gate-disc` on `41b54938f` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1209/result.json`.
 **Prompt document name**: 2026-09-29 12:09
+
+## 2026-09-29 — feat: the Simulation toggle of Semantic Type Class gates the pill, R-SIM-99 (P-2026-09-29-1225)
+**Prompt**: `claude_2026-09-29_1225_prompt_sim_toggle.md`, full lane on `sim-toggle` in `~/jjodel-w-simtoggle`: Alfonso's revision of R-SIM-97, a section «Semantic Type Class» in the metamodel's Properties with a `Simulation` toggle that gates the pill, the simulation model chosen in the configuration again (first-open picker reachable), the legacy rule for bags saved under R-SIM-97, the demo script re-measured, R-SIM-99.
+**Files touched**: code `49dd45056`: `frontend/src/components/editor-v2/sim/simRoleStatus.ts`, `sim/__tests__/simRoleStatus.test.ts`; `59a1baf99`: `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx` (two comments of the gate call). Docs, this commit: `docs/decisions.md` (R-SIM-99), `docs/demo/models_2026_simulator_demo.md`, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-29 11:06
+**Causa**: (f)
+**Regressions**: no. On `59a1baf99`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `editor-v2/sim` and `model/simulation` 871 passed; `npx vitest run` 5735 passed, the 9 known files red at import plus 2 timeouts in `scripts/hooks/__tests__/laneRun.test.ts`, 84/84 green alone (ticket below); `npm run build` exit 0. Red first: 9 failed. Mutation bench 9/9 killed, list in the body of `49dd45056`.
+**Out-of-scope changes**: yes — 8 files, all in the DOVE, above the Rule 19 five, listed in chat before the first edit (RC-11). In the demo script, beyond «the setup and first-steps lines»: the header note, two bullets of §3 and two of §4, because they named the removed select and would read false. The «Choose a transition» lines are untouched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3052 (`_tmp_simtoggle_walk.ts`, gitignored), light, 1600×1000: gate 8/8 (Basic or Advanced × toggle off or on × M2 and M1); on and off one undo step each, the undo of off brings the pill back; legacy bag shows the pill; the four scenes against 09-29c 16/18, 11/12, 21/23, 16/18 identical, the rest the bags with `simEnabled: true`; 1 console error per run, the baseline kind
+**Notes**: Off writes `false`, not a removal: the undo of a removed key does not restore it (ticket of P-2026-09-29-1106), and a removed key would fall back to the legacy rule. Per scene on the metamodel 7 clicks (canvas, toggle, chip, Configure…, kind, Continue, Apply) against 6 under R-SIM-97. The §2.1 Undo reads `Custom · Not checkable` again, a second undo turns the toggle off. R-SIM-98 is reserved by `sim-nondet-label`. Logs `~/.jjodel-lanes/P-2026-09-29-1225/`.
+**Prompt document name**: 2026-09-29 12:25
+
+**Ticket** (P-2026-09-29-1225): in the full `npx vitest run`, two `lane-run merge` tests of `frontend/scripts/hooks/__tests__/laneRun.test.ts` (`:844`, `:893`) time out at the default 5000 ms; the file alone is 84/84 green. Load-dependent (git fixtures under a 226-file run, other lanes' servers up on the Mac), not reached by this lane's change. Not the `checkRange` timing ticket of RC-34.
