@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1200
 Chat: C-2026-09-28-1936
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane merge · 131701a16 · verifica visiva passata 2026-09-29 (lane probe on 3050: gate 8/8, Jjodie (216,903) 48x48 and chip (281,911) on y 927; four scenes vs 09-29c identical except dialog focus on open and 2.1 Undo; demo script re-measured; old probe kit superseded by probe-kit/simgate)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-1200 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

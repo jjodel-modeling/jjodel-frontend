@@ -1074,3 +1074,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Ticket**: `lobj.state = { k: undefined }` (the `-=` branch of `set_state`, `joiner/classes.ts:2380-2401`) is one undo step, but Control+z takes that step and leaves `k` removed. Measured on 3050 (`_tmp_simgate_undo.ts`, gitignored, log in `~/.jjodel-lanes/P-2026-09-29-1106/`): `simProfile` removed, then undone, stays absent (stack 2 to 1); `simNode` the same (4 to 3); the control, a key added and undone, is removed (1 to 0). So the undo of `None` in the Semantic type field does not bring the type back (the demo script says to choose the preset again); the dialog's edit cleared to undefined goes through the same branch (read, not measured). The undo is the delta machinery of `redux/reducer/reducer.ts` (`undo`, `Uobj.objectDelta`), core.
 **Priority**: medium
 **Found in**: P-2026-09-29-1106
+
+## 2026-09-29 — merge: sim-gate into alfonso-frontend-jjtl (P-2026-09-29-1200)
+**Prompt**: `claude_2026-09-29_1200_prompt_merge_sim-gate.md`, a direct merge by `lane-run merge --direct`, no session: `sim-gate` at `accc6f182` into `alfonso-frontend-jjtl`, merge base `cd2b5fec9`, 5 commits on the branch side.
+**Files touched**: merge `131701a16`: 10 files from the branch side (`docs/decisions.md`, `docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_1106_prompt_sim_gate_p2.md`, `frontend/src/components/Jodie/JodieWindow.css`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simRoleStatus.test.ts`, `frontend/src/components/editor-v2/sim/simRoleStatus.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `131701a16` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5730 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: lane probe on 3050: gate 8/8, Jjodie (216,903) 48x48 and chip (281,911) on y 927; four scenes vs 09-29c identical except dialog focus on open and 2.1 Undo; demo script re-measured; old probe kit superseded by probe-kit/simgate
+**Notes**: Rollback tag `pre-sim-gate` on `dc150224f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1200/result.json`.
+**Prompt document name**: 2026-09-29 12:00
