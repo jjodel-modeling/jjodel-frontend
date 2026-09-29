@@ -14,5 +14,6 @@ export default defineConfig({
         environment: 'node',
         globals: true,
         include: ['src/**/__tests__/**/*.test.ts', 'scripts/gates/__tests__/**/*.test.ts', 'scripts/hooks/__tests__/**/*.test.ts'],
+        testTimeout: 15000,
     },
 });

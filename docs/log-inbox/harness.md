@@ -373,3 +373,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: passato — chat, unattended: docs only, the trace monitor stage 2 discovery; Phase 2 parked after MODELS (A1 Alfonso, Q1, Q2)
 **Notes**: Rollback tag `pre-trace-stage2-disc` on `08a67ed28` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0438/result.json`.
 **Prompt document name**: 2026-09-29 04:38
+
+## 2026-09-29 — fix: raise the vitest testTimeout to 15000ms (P-2026-09-29-1306)
+**Prompt**: `P-2026-09-29-1306.md`, fast lane launched by `lane-run` in `~/jjodel-w-vitesttimeout` (branch `vitest-timeout`, cut at `d50450972` plus the prompt commit). The `lane-run merge` tests of `laneRun.test.ts` time out at vitest's default 5000ms under parallel-lane load: add `testTimeout: 15000` to the `test` block of `frontend/vitest.config.ts`.
+**Files touched**: code `f8051b5e2`: `frontend/vitest.config.ts` (one line). This commit: `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. At load average 33: `laneRun.test.ts` 84/84 in 74.8s. Full vitest 5733/5733 tests, 217 of 226 files, the 9 known `window is not defined` import reds, no timeout. Typecheck 14, the baseline set by file and code. Build exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Preflight: `git log -1` was the prompt commit `7faa9eac9`, not `d50450972`; its parent is `d50450972` and it adds only the prompt file, so the lane ran and declares it. The check as written cannot pass when the prompt is committed on the lane branch (RC-20). The dictated subject is 89 characters; the commit uses a 72-character subject (§6.2) and moves the rest into the body. The prompt says Tier: light; the session ran Opus 5.5.
+**Prompt document name**: 2026-09-29 13:06
