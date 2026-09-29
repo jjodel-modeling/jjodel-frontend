@@ -43,8 +43,8 @@ import {
     profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView, markingLine,
-    panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
+    acceptingMark, candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView,
+    markingLine, outputLine, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
 } from './simBridge';
 import type { InputLabel, InputValue, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -386,6 +386,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as { line: string; title: string } | null,
                 reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(),
                 marking: null as { line: string; title: string } | null,
+                accepting: null as 'accepting' | null, output: null as { line: string; title: string } | null,
             };
         }
         // A run waiting for an input is Running, not Deadlock (R-SIM-88).
@@ -418,6 +419,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             asks,
             // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3).
             marking: markingLine(r.config.state, r.net, lookup),
+            // R-SIM-91, R-SIM-92: the accepting mark of the status row, and Moore's line, there from Reset to Stop or never.
+            accepting: acceptingMark(r.net, r.config.state),
+            output: outputLine(r.config.state, r.net, lookup),
         };
         // tick is the real input of this memo: the run changes only through this panel.
     }, [isModelMode, rolesComplete, modelid, tick, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit]);
@@ -712,7 +716,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {/* The lines that add to the others sit above the buttons: the panel is anchored at the
                             bottom and grows upward, so they never move the buttons (R-SIM-65, R-SIM-66). One row
                             each, the full text in the title (R-SIM-63). The choice list opens above them too, so Step
-                            stays where it is (R-SIM-82, G8); the marking line sits last, for the run's whole lifetime. */}
+                            stays where it is (R-SIM-82, G8); the marking line sits last, for the run's whole lifetime,
+                            with Moore's Output line under it when the net has state outputs (R-SIM-92). */}
                         {pending && run && (
                             <>
                                 <div className="sim-panel__section">Choose a transition (<span className="sim-panel__section-input">{pending.input}</span>)</div>
@@ -759,6 +764,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line sim-panel__hint--halt" title={view.halt.title}>{view.halt.line}</div>}
                         {view?.marking && (
                             <div className="sim-panel__hint sim-panel__hint--line sim-panel__hint--marking" title={view.marking.title}>{view.marking.line}</div>
+                        )}
+                        {view?.output && (
+                            <div className="sim-panel__hint sim-panel__hint--line sim-panel__hint--marking" title={view.output.title}>{view.output.line}</div>
                         )}
                         <div className="sim-panel__actions">
                             <button type="button" className="sim-panel__btn" title="Reset" onClick={onReset}>
@@ -829,6 +837,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         >
                             <span className={`sim-panel__dot sim-panel__dot--${(status ?? 'not started').toLowerCase().replace(' ', '-')}`} />
                             <span className="sim-panel__status-text">{status}</span>
+                            {/* R-SIM-91: on the row's one line, in the status text's style; the run goes on. */}
+                            {view?.accepting && <span className="sim-panel__status-text sim-panel__status-accepting">{`· ${view.accepting}`}</span>}
                             {reason && <span className="sim-panel__status-reason">{`· ${reason.line}`}</span>}
                             {reason && <i className={`bi bi-chevron-${reasonsOpen ? 'down' : 'up'} sim-panel__status-toggle`} />}
                         </div>
@@ -861,7 +871,7 @@ interface StateProps {
     /** Name of that model, for the messages that say where a role is missing; '' when unknown. */
     configModelName: string;
     /**
-     * JSON of the role values (the twenty `sim*` keys of ROLE_SPECS, `simEvent`
+     * JSON of the role values (the twenty-seven `sim*` keys of ROLE_SPECS, `simEvent`
      * derived from the Trigger, R-SIM-38) — a primitive, so shallow compare works.
      */
     roleSig: string;
