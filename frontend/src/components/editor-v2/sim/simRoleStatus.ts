@@ -260,9 +260,35 @@ export function hasSemanticType(bag: Readonly<Record<string, unknown>> | null | 
     return raw !== undefined && raw !== null && raw !== '';
 }
 
+/** The `simEnabled` key of the metamodel's bag: the Simulation toggle of the Semantic Type Class section (R-SIM-99). */
+export const SIM_ENABLED_KEY = 'simEnabled';
+
+/**
+ * The Simulation toggle of a metamodel's bag (P-2026-09-29-1225, R-SIM-99):
+ * `simEnabled` when it is a boolean; otherwise, a bag saved under R-SIM-97 with
+ * no toggle, on when it has a Semantic type (`simEnabled ?? !!simProfile`), so a
+ * project saved then keeps its pill. `false` wins over a Semantic type.
+ */
+export function simulationEnabled(bag: Readonly<Record<string, unknown>> | null | undefined): boolean {
+    const raw = bag?.[SIM_ENABLED_KEY];
+    return typeof raw === 'boolean' ? raw : hasSemanticType(bag);
+}
+
+/**
+ * The write of the toggle: one `state` assignment, so one TRANSACTION and one
+ * undo step (`set_state`, joiner/classes.ts), `simEnabled` alone. Off writes
+ * `false` rather than removing the key: the undo of a removed `_state` key does
+ * not restore it (the ticket of P-2026-09-29-1106), and a removed key would
+ * fall back to the legacy rule.
+ */
+export function simEnabledPatch(on: boolean): { simEnabled: boolean } {
+    return { simEnabled: on };
+}
+
 /**
  * The Simulation pill is mounted only in Advanced mode (Redux `state.advanced`)
- * and when the metamodel has a Semantic type: the M2 itself, or the
+ * and when the metamodel's Simulation toggle is on (R-SIM-99, amending
+ * R-SIM-97, which gated on the Semantic type): the M2 itself, or the
  * `instanceof` of an M1, the bag the panel reads (SimulationPanel.tsx
  * `mapStateToProps`). Read once, at the mount site in EditorV2.tsx, so
  * unmounting clears a run (the panel's cleanup, `simClear`).
@@ -275,8 +301,11 @@ export function simPillVisible(
     const configModelId: string | null = isModelMode
         ? (typeof dModel?.instanceof === 'string' ? dModel.instanceof : null)
         : (dModel ? modelid : null);
-    return configModelId !== null && hasSemanticType(lookup[configModelId]?._state);
+    return configModelId !== null && simulationEnabled(lookup[configModelId]?._state);
 }
+
+// TODO: cleanup — the Semantic type field left the Properties with R-SIM-99 (P-2026-09-29-1225): the three helpers
+// below have no reader in the app, only their tests.
 
 /** The options of the Semantic type field after None: the panel's presets, in its order and with its names. */
 export const SEMANTIC_TYPE_OPTIONS: ReadonlyArray<{ readonly value: SystemProfileId; readonly label: string }> =
