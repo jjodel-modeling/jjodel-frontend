@@ -42,6 +42,12 @@
   marking, Source or Owned transitions.` [M].
 - **Reset starts the run: before Reset every input is off.** The M1 face reads `Not started` with every event
   button off, e.g. `coin(off)`, `push(off)`, `stop(off)` [M].
+- **Data on the model tab (R-SIM-94).** A model declares its own globals in the `Data…` entry, the first line of the
+  M1 face, which opens the dialog `Data of <model>`; one Apply is one undo step, and an edit interrupts a running
+  simulation (`Run interrupted: the model changed. Reset to run again.`). A global declared in the metamodel stays
+  the default of every model that does not declare its own [M, P-2026-09-29-0110,
+  `docs/discovery/discovery_2026-09-29_sim_data_level.md` §8]. §2.3 and §2.4 declare on this route and keep the
+  metamodel path as the fallback (§4).
 - **Buttons** [R]: ⏮ Reset, ▶ Step, ■ Stop. During a run the M1 face reads, top to bottom: the choice list (Petri,
   on a conflict), the `Marking:` line, the buttons, `Events` (SM, ESM), `Last step:`, the status [M].
 
@@ -191,19 +197,44 @@ to 830 [M]. Click it again to close.
    `Declare the state attributes the actions write: Add attribute`, its `Add attribute` in view [M]. The panel is
    198.5 px at 752.5 [M, P-2026-09-27-2105].
    **Say** "The binding is complete. The actions write state attributes, and the panel asks me to declare them."
+   <!-- not re-measured since R-SIM-94: the label of this line now reads `Declare the state attributes the actions
+   write (a model's globals go in its Data…):` in simRoleStatus.ts:495 [R]; the walk of P-2026-09-29-0110 does not
+   read it -->
 
-Count: 4 clicks, no keystroke; the optional Reset below, 2 clicks; the declarations, 9 interactions and 34
-keystrokes; the run, 11 clicks [M, P-2026-09-27-2105].
+Count: 4 clicks, no keystroke; the optional Reset below, 2 clicks; the declarations on the model tab, 9 interactions
+and 34 keystrokes, 0 scrolls [M, P-2026-09-29-0110]; the run, 11 clicks [M, P-2026-09-27-2105].
 
 **Optional: Reset before declaring** (tab `demoESM`). Reset shows `3 defects: tp guard (undeclared 'paid'); tc action
 (undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M,
 P-2026-09-28-0023]. `coin` then shows `Halted: the
 transition action of tc failed: 'coins' is not a state attribute of demoESM.` and `Last step: coin: tc (locked →
 locked) halted the run` [M]. The halt line reads whole on two lines [M, P-2026-09-27-2225]; the defects line is
-cut on screen, its title holds the whole text [M, P-2026-09-27-2105].
+cut on screen, its title holds the whole text [M, P-2026-09-27-2105]. Under the defects the panel reads `Undeclared:
+paid, coins. Declare in Data…` [M, P-2026-09-29-0110]. <!-- not measured: the ESM `Undeclared` line clicked through;
+the walk reads it and declares through the `Data…` entry -->
 **Say** "Without the declarations the run names the missing attribute and stops at the first action."
 
-**Declarations** (tab `DemoESM`).
+**Declarations on the model tab** (tab `demoESM`, the model). The tab switch to `demoESM` that the run needs comes
+first.
+1. Click `Data…`, the first line of the M1 face; no Reset is needed first. The dialog `Data of demoESM` opens, its
+   `Add attribute` focused. The dialog's Apply is off, `Nothing to write` [M, P-2026-09-29-0110].
+2. Click `Add attribute`. Row 1 reads `x1 · Global · stored`, the name selected: type `coins`, Enter. Domain `range`:
+   the minimum reads `0`, the maximum `1`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter. Row 1
+   reads `coins · Global · stored · semantic · range 0..3 · 0` [M]. The metaclass select offers `Global` only [M].
+3. Click `Add attribute`. Row 2 reads `x1`, the name selected: `paid`, Enter; `derived`. Click the equation,
+   `model.[coins] >= 2`, Enter [M].
+4. Apply, in the dialog. The dialog closes; the model's bag holds the two records, the metamodel's holds no
+   `simStateAttributes`; the undo stack goes from 1 to 2 [M].
+
+Steps 1 to 4 are 9 interactions (7 clicks, 2 select choices) and 34 keystrokes, with no scroll: every target is in
+view, where the metamodel path needs 2 scrolls on this screen [M, P-2026-09-29-0110].
+**Say** "The data belongs to the model, not to the metamodel. coins is stored, with the domain 0 to 3. paid is derived
+from coins."
+
+**Fallback: declarations in the metamodel** (tab `DemoESM`). Use it if the `Data…` route misbehaves (§4). A global
+declared in the metamodel is the default of every model that does not declare its own (R-SIM-94), and the four demo
+exports carry an empty model bag [M, P-2026-09-29-0011]. Declared this way the four scenes run to their final readings
+as before [M, P-2026-09-29-0110].
 1. Click `Add attribute` in the summary line. The dialog opens on Data, its own `Add attribute` in view and focused
    [M, P-2026-09-27-2105: 645.5-673.5, body 338-735]. The dialog's Apply is off, `Nothing to write` [M].
 2. Click `Add attribute`. Row 1 reads `x1`, the name selected: type `coins`, Enter [M]. Scroll the dialog body to
@@ -222,7 +253,9 @@ The labels `range`, `derived`, `stored` are the options of the dialog's selects 
 **Run** (tab `demoESM`). After the optional Reset above, the M1 face reads `Run interrupted: the model changed.
 Reset to run again.` [M].
 
-Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M].
+Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M]. Declared on the model tab, Reset reads
+the same with no defect, and the ten events below give the table line for line, to `Halted: coins of demoESM would be
+4, outside its domain.` with `Marking: locked · coins = 3, paid = true` [M, P-2026-09-29-0110].
 **Say** "After the dot, the state attributes: σ."
 
 | # | Click | `Marking:` line after [M] | `Last step:` line [M] | Say |
@@ -281,12 +314,33 @@ together. <!-- not measured: abstract ActivityNode with FinalNode and the explic
    **Say** "The same binder, on a control-flow shape: fork and join are roles too."
 2. Apply, in the dialog, with no declaration. The summary reads `Flowchart / Activity · Checkable`, the declarations
    line in view [M]. The panel is 198.5 px at 752.5 [M, P-2026-09-27-2105].
+   <!-- not re-measured since R-SIM-94: the label of the declarations line now reads `Declare the state attributes the
+   actions write (a model's globals go in its Data…):` in simRoleStatus.ts:495 [R]; the walk of P-2026-09-29-0110 does
+   not read it -->
 
-Count: 4 clicks, no keystroke; the optional Reset below, 1 click; the declaration, 6 interactions and 10
-keystrokes; the run, 7 clicks [M, P-2026-09-27-2105].
+Count: 4 clicks, no keystroke; the Reset before declaring, 1 click, the entry of the route below; the declaration
+from the Reset line, 5 interactions and 4 keystrokes, 0 scrolls [M, P-2026-09-29-0110]; the run, 7 clicks [M,
+P-2026-09-27-2105].
 
-**Optional: Reset before declaring** (tab `demoFlowB`): `3 defects: f3 guard (undeclared 'count'); f4 guard
-(undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023].
+**Reset before declaring** (tab `demoFlowB`, the model): `3 defects: f3 guard (undeclared 'count'); f4 guard
+(undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023]. Under
+the defects the panel reads `Undeclared: count. Declare in Data…` [M, P-2026-09-29-0110].
+**Say** "The panel names what the model leaves undeclared, and takes me to the data of the model."
+
+**Declaration on the model tab** (tab `demoFlowB`, from the Reset line).
+1. Click `Declare in Data…`. The dialog `Data of demoFlowB` opens with row 1 already there, `count · Global · stored ·
+   boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110].
+2. Select Domain `range`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter.
+3. Apply, in the dialog. The model's bag holds `count`; the undo stack goes from 1 to 2 [M].
+
+5 interactions (4 clicks, 1 select choice) and 4 keystrokes, with no scroll, against 6 interactions, 10 keystrokes and
+1 scroll on the metamodel path [M, P-2026-09-29-0110]. The name is not typed: the line carried it.
+**Say** "count, from 0 to 3, starts at 0."
+
+**Fallback: declaration in the metamodel** (tab `DemoFlowB`). Use it if the `Data…` route misbehaves (§4). A global
+declared in the metamodel is the default of every model that does not declare its own (R-SIM-94), and the four demo
+exports carry an empty model bag [M, P-2026-09-29-0011]. Declared this way the four scenes run to their final readings
+as before [M, P-2026-09-29-0110]. The Reset above stays optional on this path.
 
 **Declaration** (tab `DemoFlowB`). Click `Add attribute` in the summary line: the dialog opens on Data, its own `Add
 attribute` in view and focused [M, P-2026-09-27-2105]. Click it; row 1's name is selected: `count`, Enter. Scroll
@@ -350,11 +404,21 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
   values: after step 4 `p1 : Place` reads `tokens 2` under `Marking: p2 ×2, p3` [M]. Point at the panel line.
   **Say** "The panel shows the run. The canvas shows the model; the run on the canvas comes after MODELS."
 - **`∅` reads like `ø` at 11-12 px** in `t3 (lock → ∅)` [M]. **Say** "t3 has an empty postset."
-- **Declaration targets below the dialog body's fold** at 1600×1000: row 1's second line, 728-760 against the
-  body's 735, on ESM and Flow B, and row 2's second line, 743-775, on ESM [M, P-2026-09-27-2105]. Scroll the dialog
-  body to its end before Domain and before the equation, as §2.3 and §2.4 say. The summary line's `Add attribute`
-  brings the dialog's own button into view and focuses it [M].
-- **The hint path through the dialog is measured on ESM and on Flow B** by P-2026-09-27-2105 on 3024 (headless,
+- **The `Data…` route is the primary path; the metamodel path is the fallback.** If the route misbehaves (the dialog
+  does not open, Apply stays off, the Reset line still reads `Undeclared` after Apply), declare in the metamodel as
+  before, with the Fallback blocks of §2.3 and §2.4. Both routes give the same runs [M, P-2026-09-29-0110]. The model's
+  record overrides a metamodel record of the same name, by name and with no defect, so a demo project that holds both
+  reads the model's (R-SIM-94).
+- **Not measured on the `Data…` route:** Save and reload of a non-empty model key, the collaborative sync of the
+  model's bag, the dark theme (discovery §8). The §1 Save check covers the first on rehearsal: declare, Cmd+S, reload
+  once, Reset. Every run logs one console error at load, `failed to get project {project: null}`, a known ticket, not a
+  demo defect [M, P-2026-09-29-0110].
+- **Declaration targets below the dialog body's fold, on the metamodel path only** (the Fallback blocks) at
+  1600×1000: row 1's second line, 728-760 against the body's 735, on ESM and Flow B, and row 2's second line, 743-775,
+  on ESM [M, P-2026-09-27-2105]. Scroll the dialog body to its end before Domain and before the equation, as the
+  Fallback blocks say. The summary line's `Add attribute` brings the dialog's own button into view and focuses it [M].
+  The `Data…` dialog needed 0 scrolls on ESM and on Flow B [M, P-2026-09-29-0110].
+- **The hint path through the dialog (the Fallback blocks) is measured on ESM and on Flow B** by P-2026-09-27-2105 on 3024 (headless,
   1600×1000, one fresh page per scene): every value of §2.3 and §2.4 holds [M]. The RC-23 browser check re-reads the
   below-the-fold positions before the freeze. Rehearse §2.3 and §2.4 on 3001 before the freeze. If a target is out
   of view, scroll the dialog body.
