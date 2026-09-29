@@ -122,7 +122,14 @@ class ProjectsApi {
             Log.ww('ProjectsApi.save: not saving a project whose open failed', {id: project.id, loadError: failed});
             return {...project.__raw} as DProject;
         }
-        const dProject = {...project.__raw} as DProject;
+        // F2. Copy the live project, not `project.__raw`. The Cmd+S handler holds the
+        // `LProject` of Navbar's last render, and once the reducer has copied the project
+        // along the path that proxy's target is a detached object: `compressedState`
+        // wrote it over the live entry, and a viewpoint added in between was lost
+        // (P-2026-09-29-2120). `__raw` remains the fallback for a project that is not in
+        // `idlookup`.
+        const liveProject = (store.getState() as GObject).idlookup?.[project.id] as DProject | undefined;
+        const dProject = {...(liveProject ?? project.__raw)} as DProject;
         dProject.lastModified = Date.now();
         dProject.viewpointsNumber = project.viewpoints.length;
         dProject.metamodelsNumber = project.metamodels.length;
