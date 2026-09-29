@@ -92,3 +92,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Code under frontend/src on the trunk equals the branch tip a4d9c7ab3 (merge conflict only in docs/log-inbox); visual checks a-e and all rail tab bars passed on the branch with Playwright probes on :3002 (P-2026-09-29-1826); gates green on the merge
 **Notes**: Rollback tag `pre-symbol-tab-modal` on `70b580af4` (RC-31). Union: `docs/log-inbox/symbol-editor.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1925/result.json`.
 **Prompt document name**: 2026-09-29 19:25
+
+## 2026-09-29 — refactor(authoring): remove the dead SymbolCard and its styles (P-2026-09-29-1929)
+**Prompt**: `claude_2026-09-29_1929_prompt_remove_symbolcard.md`, `Lane: fast`, on `~/jjodel-w-symcard` branch `symbolcard-cleanup`. Delete `SymbolCard.tsx`, `SymbolCard.scss` and the SymbolCard rules of `railSystem.scss`, dead since P-2026-09-29-1826; discovery first, STOP on any outside user.
+**Files touched**: report `959601170`: `docs/discovery/discovery_2026-09-29_remove_symbolcard.md`. Code `89bed3547`: `frontend/src/components/editor-v2/viewpoint/authoring/SymbolCard.tsx` and `SymbolCard.scss` (deleted), `frontend/src/components/editors/railSystem.scss` (-23 lines). This commit: this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14 (baseline, same files and codes), build exit 0, vitest 5825/5825 with the 9 known import reds (`window is not defined`).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Playwright probe on :3002, before and after the deletion: Symbol tab opens the modal, Structure stays active, Esc closes, no `.symbol-card`; 12 rail tab bars identical before/after and equal to the 1826 measures; crops in `frontend/scripts/smoke/_tmp_symcard/`, gitignored)
+**Notes**: The cited block `railSystem.scss:326-354` is 326-348 on this HEAD. Left in place, outside the authorised range: the dead selector `> section.properties-tab.properties-panel.symbol-card` at `:52` (the first selector of the same list covers it) and the SymbolCard mention in the header comment at `:26`. Report §4.3, Q1. No merge.
+**Prompt document name**: 2026-09-29 19:29

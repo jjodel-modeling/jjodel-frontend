@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1929
 Chat: C-2026-09-29-1826
 Lane: fast (deletion of dead code, no behaviour change)
-Status: to execute
+Status: eseguito 2026-09-29 · lane symbolcard-cleanup · 89bed3547 · verifica visiva passata 2026-09-29 (lane Playwright probe on :3002, before and after: Symbol tab opens the modal, 12 rail tab bars identical and equal to the 1826 measures; crops in frontend/scripts/smoke/_tmp_symcard/, gitignored) · non fuso
 Model: claude-opus-5-5 (default from .claude/settings.json)
 
 ## COSA
