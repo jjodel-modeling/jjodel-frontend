@@ -2120,21 +2120,21 @@ describe('the faces of Accepting and the outputs (P-2026-09-29-0300, R-SIM-91, R
         expect(output(off)).toBeNull();
     });
 
-    it('Mealy: «Last step» ends with the fired transition\'s output, its title has an output line (killed by dropping the suffix)', () => {
+    it('Mealy: «Last step» reads input / output first, so the clamp never hides it; its title has an output line (killed by dropping the output)', () => {
         const lookup = outLookup(MEALY_BAG, { tCoin: ['unlock'], tPushU: ['lock', 'beep'] });
         reset(lookup);
         const coin = pressInput('M', 'coin', undefined, lookup, 'Coin');
-        expect(coin.lastStep).toBe('Coin: tCoin (Locked → Unlocked) fired, output unlock');
-        expect(coin.lastStepTitle).toBe('Coin: tCoin (Locked → Unlocked) fired, output unlock\noutput: unlock');
+        expect(coin.lastStep).toBe('Coin / unlock: tCoin (Locked → Unlocked) fired');
+        expect(coin.lastStepTitle).toBe('Coin / unlock: tCoin (Locked → Unlocked) fired\noutput: unlock');
         const push = pressInput('M', 'push', undefined, lookup, 'Push');
-        expect(push.lastStep).toBe('Push: tPushU (Unlocked → Locked) fired, output lock, beep');
-        expect(push.lastStepTitle).toBe('Push: tPushU (Unlocked → Locked) fired, output lock, beep\noutput: lock, beep');
+        expect(push.lastStep).toBe('Push / lock, beep: tPushU (Unlocked → Locked) fired');
+        expect(push.lastStepTitle).toBe('Push / lock, beep: tPushU (Unlocked → Locked) fired\noutput: lock, beep');
         // tPushL has no value: no suffix, no line
         const bare = pressInput('M', 'push', undefined, lookup, 'Push');
         expect([bare.lastStep, bare.lastStepTitle]).toEqual(['Push: tPushL (Locked → Locked) fired', 'Push: tPushL (Locked → Locked) fired']);
     });
 
-    it('Mealy: no suffix on a halted step (killed by the suffix on halted), nor without the role or with it off', () => {
+    it('Mealy: no output on a halted step (killed by the output on halted), nor without the role or with it off', () => {
         const MERGE: Record<string, Obj> = {
             A: { cls: 'C_Init', slots: { R_out: ['ta'] } },
             B: { cls: 'C_Init', slots: { R_out: ['tb'] } },
@@ -2144,7 +2144,7 @@ describe('the faces of Accepting and the outputs (P-2026-09-29-0300, R-SIM-91, R
         };
         const lookup = buildLookup({ ...ROLES, simTransitionOutput: 'A_out' }, MERGE);
         reset(lookup);
-        expect(pressInput('M', null, 'ta', lookup, 'ε').lastStep).toBe('ε: ta (A → C) fired, output unlock');
+        expect(pressInput('M', null, 'ta', lookup, 'ε').lastStep).toBe('ε / unlock: ta (A → C) fired');
         const halted = pressInput('M', null, undefined, lookup, 'ε');
         expect(halted.outcome?.kind).toBe('halted');
         expect([halted.lastStep, halted.lastStepTitle]).toEqual(['ε: tb (B → C) halted the run', 'ε: tb (B → C) halted the run']);

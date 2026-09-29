@@ -46,8 +46,8 @@
  *
  * The faces of Accepting and the outputs (R-SIM-91, R-SIM-92; P-2026-09-29-0300):
  * `acceptingMark` for the status row, `outputLine` (Moore) under the marking, and
- * the output of a fired step (Mealy) at the end of «Last step» and in its title,
- * all read from the compiled net, so a role that is off shows nothing.
+ * the output of a fired step (Mealy) after its input in «Last step», `coin / unlock:`,
+ * and in its title, all read from the compiled net, so a role that is off shows nothing.
  *
  * Derived attributes (lane C2, R-SIM-73..75): their equations are compiled at
  * Reset and, when one is declared, the run gets a `DerivedOracle` that gives
@@ -1218,8 +1218,10 @@ function lastStepText(outcome: StepOutcome, net: CompiledNet, lookup: Lookup, in
     const chosen = outcome.label.selector;
     switch (outcome.kind) {
         case 'fired': {
+            // Mealy's input / output first: the line is clamped at the panel's width, so an output at its end was cut
+            // on the discovery's own turnstile (P-2026-09-29-0300 lane probe, 304px needed in 262px).
             const output = firedOutput(outcome, net);
-            return `${input}: ${candidateLabel(net, chosen ?? '', lookup)} fired${output === '' ? '' : `, output ${output}`}`;
+            return `${input}${output === '' ? '' : ` / ${output}`}: ${candidateLabel(net, chosen ?? '', lookup)} fired`;
         }
         case 'halted':
             return `${input}: ${candidateLabel(net, chosen ?? '', lookup)} halted the run`;
