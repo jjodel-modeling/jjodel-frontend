@@ -303,7 +303,7 @@ export function Declarations({ rows, classes, onChange, focusRow, onFocused, glo
                             </select>
                             <select
                                 className="sim-roles-modal__select"
-                                aria-label={`Stored or derived, state attribute ${n}`}
+                                aria-label={`Form of state attribute ${n}`}
                                 value={form}
                                 onChange={e => choose(i, 'form', e.target.value)}
                             >
