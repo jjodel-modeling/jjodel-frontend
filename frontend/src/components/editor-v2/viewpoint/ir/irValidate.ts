@@ -10,12 +10,13 @@
  * is a cache hit.
  */
 
-import { compileView, compileEdgeView, compileRowView } from './irCompile';
+import { compileView, compileEdgeView, compileRowView, LABEL_ANCHORS } from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
 import { isUsableEndpointExpr } from './edgeEndpoints';
 import { authoredCornerRadius } from './shapeRegistry';
+import { usableSizeAxis } from '../../nodes/nodeSizing';
 import { isConditionalValue } from '../../../ui/ConditionalEditor/conditional';
-import type { AnyViewIR, EdgeViewIR, NodeViewIR, PaddingToken, Predicate, RowViewIR } from './irTypes';
+import type { AnyViewIR, EdgeViewIR, LabelPosition, NodeViewIR, PaddingToken, Predicate, RowViewIR, VertexViewIR } from './irTypes';
 
 /**
  * Closed vocabulary of `edge.routing` (R-B9, 2026-08-03): the persisted identifiers,
@@ -39,6 +40,16 @@ export const VALID_ROUTING_VALUES: ReadonlyArray<NonNullable<EdgeViewIR['edge'][
  * instead of writing 'normal'). Only a PRESENT out-of-vocabulary value is an error.
  */
 export const VALID_PADDING_VALUES: ReadonlyArray<PaddingToken> = ['small', 'normal', 'large'];
+
+/**
+ * Closed vocabulary of `LabelSpec.position` (P-2026-09-29-1245): the four inside positions and
+ * `outside` (R-VP-15 (1)). A Record keyed on the union, for the reason given below for the
+ * predicate operators. The anchor of an `outside` label has its own vocabulary, LABEL_ANCHORS,
+ * next to the compile that resolves it.
+ */
+export const VALID_LABEL_POSITIONS: Record<LabelPosition, true> = {
+    top: true, center: true, inside: true, bottom: true, outside: true,
+};
 
 /**
  * Closed vocabulary of `Predicate.op` (R-MK-11, 2026-08-18).
@@ -140,6 +151,56 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
                 ok: false,
                 error: `[ir] shape.cornerRadius must be a finite number >= 0 (px), or absent for the form's base radius, read ${read}`,
             };
+        }
+
+        // Default size (P-2026-09-29-1230): same criterion as the radius, through the same
+        // function the render reads with (usableSizeAxis), so the two agree on "usable".
+        // No clamp here: the floor depends on the form, which can change per instance, so
+        // it is applied at render (defaultBoxFor). An absent axis is legal (stays derived).
+        const defaultSize: unknown = (ir as VertexViewIR).defaultSize;
+        if (defaultSize !== undefined) {
+            if (!defaultSize || typeof defaultSize !== 'object' || Array.isArray(defaultSize)) {
+                return {
+                    ok: false,
+                    error: `[ir] defaultSize must be an object { width?, height? }, or absent for the size derived from content, read ${JSON.stringify(defaultSize)}`,
+                };
+            }
+            for (const axis of ['width', 'height'] as const) {
+                const v: unknown = (defaultSize as Record<string, unknown>)[axis];
+                if (v !== undefined && usableSizeAxis(v) === undefined) {
+                    const read = typeof v === 'number' ? String(v) : JSON.stringify(v);
+                    return {
+                        ok: false,
+                        error: `[ir] defaultSize.${axis} must be a finite number > 0 (px), or absent for the size derived from content, read ${read}`,
+                    };
+                }
+            }
+        }
+
+        // Label position and anchor (P-2026-09-29-1245): authoring-time by the R-B9-bis
+        // criterion, like padding. The render stays permissive (an unknown anchor draws 's',
+        // resolveLabelAnchor; an unknown position gets no rule and stays in the flow), the
+        // authoring surface applies the vocabulary. Read as unknown for the same reason as
+        // routing. A present anchor is checked on every position: the label editor never
+        // writes one on an inside position, so one there came from somewhere else.
+        const labels: unknown = (ir as NodeViewIR).shape?.labels;
+        if (Array.isArray(labels)) {
+            for (let i = 0; i < labels.length; i++) {
+                const position: unknown = labels[i]?.position;
+                if (typeof position !== 'string' || !Object.prototype.hasOwnProperty.call(VALID_LABEL_POSITIONS, position)) {
+                    return {
+                        ok: false,
+                        error: `[ir] shape.labels[${i}].position must be one of ${Object.keys(VALID_LABEL_POSITIONS).join(' | ')}, read ${JSON.stringify(position)}`,
+                    };
+                }
+                const anchor: unknown = labels[i]?.anchor;
+                if (anchor !== undefined && (typeof anchor !== 'string' || !Object.prototype.hasOwnProperty.call(LABEL_ANCHORS, anchor))) {
+                    return {
+                        ok: false,
+                        error: `[ir] shape.labels[${i}].anchor must be one of ${Object.keys(LABEL_ANCHORS).join(' | ')}, or absent for 's' (below), read ${JSON.stringify(anchor)}`,
+                    };
+                }
+            }
         }
     }
 

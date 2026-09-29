@@ -4,7 +4,7 @@
 // plumbing R6, decisione D4). Quando il sizing passera' nell'IR, QUESTA mappa e'
 // il punto unico da sostituire.
 import type { ShapeForm } from '../viewpoint/ir/irTypes';
-import { getShapeDescriptor } from '../viewpoint/ir/shapeRegistry';
+import { getShapeDescriptor, type Size } from '../viewpoint/ir/shapeRegistry';
 
 export interface NodeSizing { adaptWidth: boolean; adaptHeight: boolean; }
 
@@ -42,4 +42,52 @@ export function defaultResizableForForm(form: ShapeForm | undefined): boolean {
 // verita' del gate sopra, cosi' ObjectNode non ricabla il caso a mano.
 export function keepAspectRatioForForm(form: ShapeForm | undefined): boolean {
     return getShapeDescriptor(form).keepAspectRatio;
+}
+
+// Taglia di default della view (`VertexViewIR.defaultSize`, P-2026-09-29-1230). Un asse
+// e' usabile solo se e' un numero finito > 0: la stessa funzione fa da regola di
+// authoring (irValidate) e da lettura permissiva del render, cosi' i due non possono
+// dissentire su cosa sia "usabile" (stesso criterio di authoredCornerRadius).
+export interface DefaultSizeAxes { width?: number; height?: number; }
+
+export function usableSizeAxis(v: unknown): number | undefined {
+    return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : undefined;
+}
+
+// Gli assi usabili di `defaultSize`, o undefined se non ce n'e' nessuno (chiave
+// assente, oggetto vuoto, valori invalidi persistiti): allora la view non ha default.
+export function authoredDefaultSize(v: unknown): DefaultSizeAxes | undefined {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+    const width = usableSizeAxis((v as DefaultSizeAxes).width);
+    const height = usableSizeAxis((v as DefaultSizeAxes).height);
+    if (width === undefined && height === undefined) return undefined;
+    return { ...(width !== undefined ? { width } : {}), ...(height !== undefined ? { height } : {}) };
+}
+
+// Box di un vertex disegnato alla taglia di default. Ogni asse autorato ha il pavimento
+// del resize a mano (SHAPE_MIN_SIZE), non quello della derivazione (minBox*, che
+// .mm-node.ir-sized neutralizza per qualunque taglia esplicita); l'asse assente resta
+// quello derivato. Forma a rapporto fisso (circle): lato = il maggiore degli assi
+// autorati, come fa il NodeResizer con keepAspectRatio.
+export function defaultBoxFor(defaults: DefaultSizeAxes, derived: Size, keepAspect: boolean): Size {
+    const w = defaults.width !== undefined ? Math.max(SHAPE_MIN_SIZE, defaults.width) : undefined;
+    const h = defaults.height !== undefined ? Math.max(SHAPE_MIN_SIZE, defaults.height) : undefined;
+    if (keepAspect) {
+        const s = Math.max(w ?? 0, h ?? 0);
+        return { w: s, h: s };
+    }
+    return { w: w ?? derived.w, h: h ?? derived.h };
+}
+
+// Chi possiede la taglia di un vertex IR, in ordine di precedenza: la taglia manuale del
+// layout in vigore (slice 1c), poi il default della view, poi la derivazione dal
+// contenuto (solo forme con supplemento). null = content-hug CSS, nessuno la scrive.
+export type SizeSource = 'manual' | 'default' | 'derived';
+
+export function sizeSourceOf(
+    isResized: boolean, hasSupplement: boolean, defaults: DefaultSizeAxes | undefined,
+): SizeSource | null {
+    if (isResized) return 'manual';
+    if (defaults) return 'default';
+    return hasSupplement ? 'derived' : null;
 }

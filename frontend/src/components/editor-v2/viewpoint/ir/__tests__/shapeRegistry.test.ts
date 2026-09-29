@@ -713,47 +713,51 @@ describe('shapeRegistry: raggio compilato', () => {
     });
 });
 
+/** The text irStyle.ts puts in its <style> tag: BASE_CSS, then the per-view parts. */
+function injectedCss(): string {
+    const texts: string[] = [];
+    const g = globalThis as { document?: unknown };
+    const saved = g.document;
+    g.document = {
+        getElementById: () => null,
+        createElement: () => ({ appendChild: (n: { data: string }) => { texts.push(n.data); return n; } }),
+        createTextNode: (data: string) => ({ data, remove() { /* stand-in */ } }),
+        head: { appendChild: () => undefined },
+    };
+    try {
+        ensureViewCss(`bar-css-${texts.length}-${Date.now()}`, {} as NodeViewIR);
+    } finally {
+        if (saved === undefined) delete g.document; else g.document = saved;
+    }
+    return texts[0];
+}
+
+/** selector -> declarations, comments dropped, later declarations winning. */
+function rulesOf(css: string): Map<string, Record<string, string>> {
+    const out = new Map<string, Record<string, string>>();
+    for (const m of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const decls: Record<string, string> = {};
+        for (const d of m[2].split(';')) {
+            const i = d.indexOf(':');
+            if (i > 0) decls[d.slice(0, i).trim()] = d.slice(i + 1).trim();
+        }
+        for (const sel of m[1].split(',').map(x => x.trim().replace(/\s+/g, ' '))) {
+            out.set(sel, { ...(out.get(sel) ?? {}), ...decls });
+        }
+    }
+    return out;
+}
+
+/** Length of the injected CSS before the outside-label rules, measured at ca59e317e
+ *  (P-2026-09-29-1245): where the bar's section ends and the outside label's begins. */
+const OUTSIDE_LABEL_CSS_START = 17954;
+
 /**
  * The bar (R-VP-16, P-2026-09-29-1021): the Petri transition as a thin solid box drawn at a
  * fixed size. The CSS is read as irStyle.ts injects it, through a stand-in `document` (the
  * bench has no DOM): the rules are its output, not its source.
  */
 describe('shapeRegistry: the bar (R-VP-16)', () => {
-    /** The text irStyle.ts puts in its <style> tag: BASE_CSS, then the per-view parts. */
-    function injectedCss(): string {
-        const texts: string[] = [];
-        const g = globalThis as { document?: unknown };
-        const saved = g.document;
-        g.document = {
-            getElementById: () => null,
-            createElement: () => ({ appendChild: (n: { data: string }) => { texts.push(n.data); return n; } }),
-            createTextNode: (data: string) => ({ data, remove() { /* stand-in */ } }),
-            head: { appendChild: () => undefined },
-        };
-        try {
-            ensureViewCss(`bar-css-${texts.length}-${Date.now()}`, {} as NodeViewIR);
-        } finally {
-            if (saved === undefined) delete g.document; else g.document = saved;
-        }
-        return texts[0];
-    }
-
-    /** selector -> declarations, comments dropped, later declarations winning. */
-    function rulesOf(css: string): Map<string, Record<string, string>> {
-        const out = new Map<string, Record<string, string>>();
-        for (const m of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-            const decls: Record<string, string> = {};
-            for (const d of m[2].split(';')) {
-                const i = d.indexOf(':');
-                if (i > 0) decls[d.slice(0, i).trim()] = d.slice(i + 1).trim();
-            }
-            for (const sel of m[1].split(',').map(x => x.trim().replace(/\s+/g, ' '))) {
-                out.set(sel, { ...(out.get(sel) ?? {}), ...decls });
-            }
-        }
-        return out;
-    }
-
     it('is drawn by the CSS box, never resized after its content, with no inset and no corner radius', () => {
         const bar = SHAPE_REGISTRY.bar;
         expect(bar.id).toBe('bar');
@@ -806,8 +810,70 @@ describe('shapeRegistry: the bar (R-VP-16)', () => {
         const BEFORE = { length: 16743, sha16: 'a2877becf5934b70' };
         const prefix = css.slice(0, BEFORE.length);
         expect(createHash('sha256').update(prefix).digest('hex').slice(0, 16)).toBe(BEFORE.sha16);
-        const added = [...rulesOf(css.slice(BEFORE.length)).keys()];
+        // The bar's section ends where the outside label's begins (P-2026-09-29-1245): it
+        // appends after the bar, so this check is bounded to the bar's own rules.
+        const added = [...rulesOf(css.slice(BEFORE.length, OUTSIDE_LABEL_CSS_START)).keys()];
         expect(added.length).toBeGreaterThan(0);
         for (const sel of added) expect(sel, sel).toContain('ir-shape--bar');
+    });
+});
+
+/**
+ * The outside label (R-VP-15 (1), P-2026-09-29-1245). Read as irStyle.ts injects it, as the bar
+ * above. What these rules do to the layout (the label past the box, 8px off, centred, out of the
+ * size, unclipped under hl-dimmed, winning on diamond and bar) was measured in headless Chromium
+ * against this same CSS: docs/discovery/discovery_2026-09-29_label_outside_positions.md §3.
+ */
+describe('irStyle: the outside label (P-2026-09-29-1245)', () => {
+    const LABEL = '.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-';
+
+    it('every rule written before it is byte-identical: the outside label only appends', () => {
+        const css = injectedCss();
+        const BEFORE = { length: OUTSIDE_LABEL_CSS_START, sha16: '063ce686b2d24781' };
+        expect(createHash('sha256').update(css.slice(0, BEFORE.length)).digest('hex').slice(0, 16)).toBe(BEFORE.sha16);
+        const added = [...rulesOf(css.slice(BEFORE.length)).keys()];
+        expect(added.length).toBeGreaterThan(0);
+        for (const sel of added) expect(sel, sel).toContain('ir-label--outside');
+    });
+
+    it('lifts the two clips, the shape\'s and the wrapper\'s, only on a node that carries one', () => {
+        const rules = rulesOf(injectedCss());
+        expect(rules.get('.ir-node-content:has(> .ir-label--outside)')).toEqual({ overflow: 'visible' });
+        expect(rules.get('.mm-node:has(> .ir-node-content > .ir-label--outside)')).toEqual({ overflow: 'visible' });
+    });
+
+    it('takes the label out of the flow, unclipped, over the shape, with a halo in the canvas colour', () => {
+        const rules = rulesOf(injectedCss());
+        for (const a of ['n', 's', 'w', 'e']) {
+            const r = rules.get(LABEL + a);
+            expect(r, a).toMatchObject({
+                position: 'absolute', 'z-index': '1', margin: '0', padding: '0', 'max-width': 'none', overflow: 'visible',
+            });
+            expect(r?.['text-shadow'], a).toContain('var(--canvas-bg)');
+        }
+    });
+
+    it('places each side 8px past the box, centred on it, and sets all four offsets (the bar sets two)', () => {
+        const rules = rulesOf(injectedCss());
+        const PAST = 'calc(100% + 8px)';
+        expect(rules.get(LABEL + 'n')).toMatchObject({ top: 'auto', bottom: PAST, left: '50%', right: 'auto', transform: 'translateX(-50%)' });
+        expect(rules.get(LABEL + 's')).toMatchObject({ top: PAST, bottom: 'auto', left: '50%', right: 'auto', transform: 'translateX(-50%)' });
+        expect(rules.get(LABEL + 'w')).toMatchObject({ top: '50%', bottom: 'auto', left: 'auto', right: PAST, transform: 'translateY(-50%)' });
+        expect(rules.get(LABEL + 'e')).toMatchObject({ top: '50%', bottom: 'auto', left: PAST, right: 'auto', transform: 'translateY(-50%)' });
+    });
+
+    it('is written at (0,4,0), after the rules it must beat: the SVG forms\' in-flow child (0,4,0) and the bar\'s label (0,3,0)', () => {
+        const css = injectedCss();
+        const classes = (sel: string) => (sel.match(/\.[a-zA-Z_-][\w-]*/g) ?? []).length;
+        for (const a of ['n', 's', 'w', 'e']) expect(classes(LABEL + a), a).toBe(4);
+        expect(classes('.ir-node-content.ir-shape--bar > .ir-label')).toBe(3);
+        const firstOutside = css.indexOf(LABEL);
+        expect(firstOutside).toBeGreaterThan(css.lastIndexOf(':not(.ir-marker-svg) { position: relative'));
+        expect(firstOutside).toBeGreaterThan(css.indexOf('.ir-node-content.ir-shape--bar > .ir-label {'));
+    });
+
+    it('gives the inline editor of an outside label its own width, not 90% of the box', () => {
+        expect(rulesOf(injectedCss()).get('.ir-node-content > .ir-label__input.ir-label--outside'))
+            .toEqual({ width: 'auto', 'min-width': '80px' });
     });
 });

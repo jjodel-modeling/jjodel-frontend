@@ -55,7 +55,12 @@ export type Conditional<T> =
 /** `bar` (R-VP-16): a thin solid box at a fixed size, the Petri transition. Persisted, never renamed (R-B9). */
 export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
     | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud' | 'bar';
-export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
+/** `outside` (R-VP-15 (1), P-2026-09-29-1245): the label is drawn outside the box, on the
+ *  side its `anchor` names, and does not enter the box size. Persisted, never renamed (R-B9). */
+export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom' | 'outside';
+/** Side of the box an `outside` label sits on, as a compass point: n above, s below, w left,
+ *  e right. Absent = 's'. Persisted, never renamed (R-B9); diagonals would be an additive widening. */
+export type LabelAnchor = 'n' | 'e' | 's' | 'w';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
 /** Spacing preset of the symbol (header, compartments, inside label). Absent = 'normal'. */
@@ -104,6 +109,9 @@ export interface LabelSpec {
     editable?: boolean | { widget: 'text' | 'textarea' | 'select' | 'checkbox' | 'color' };
     /** spec ir-1.3 addendum sez. 3.1 — typographic style (TS1). Absent = CSS default. */
     style?: TextStyle;
+    /** Side of an `outside` label (R-VP-15 (1)). Absent = 's'; ignored on the inside positions,
+     *  and never written for them (the label editor drops it). */
+    anchor?: LabelAnchor;
 }
 
 export interface BadgeSpec {
@@ -470,6 +478,12 @@ export interface VertexViewIR {
     exclusive?: boolean;             // spike: only exclusive views are rendered; decorative ones are ignored
     label?: string;
     resizable?: boolean;             // v1: override esplicito del gate resize (undefined = default per forma)
+    /**
+     * Default box of the instances with no manual size (P-2026-09-29-1230), px per axis.
+     * An absent axis stays derived from content. Absent key = no default. Additive
+     * optional field: no irVersion bump, no migration.
+     */
+    defaultSize?: { width?: number; height?: number };
     shape: ShapeSpec;
     /**
      * Level-2 structure supplement (2026-08-29, Turno 7). Absent = every field at its
@@ -821,6 +835,9 @@ export interface CompiledLabel {
     editsName: boolean;
     /** Compiled typographic style (ir-1.3 TS1); undefined when the label has no style. */
     style?: CompiledTextStyle;
+    /** Resolved side of an `outside` label, always set for it ('s' when absent or unknown);
+     *  undefined on the inside positions. */
+    anchor?: LabelAnchor;
 }
 
 export interface CompiledBadge {
