@@ -335,3 +335,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `frontend/scripts/hooks/__tests__/criticalZone.test.ts` inherits `JJODEL_CRITICAL_ZONE_GOAHEAD` from a session started with `--critical-zone-goahead`. With the variable set, four tests red: the two «bypass not read» and the two «deny limited to the six files». With it unset, the same file is 70/70. Measured at `361eadedd`: full vitest 4 failed of 5867, then 70/70 with `env -u JJODEL_CRITICAL_ZONE_GOAHEAD`. A lane that reads those reds as its own, or as pre-existing, misreports its gate. Fix: the test deletes the variable from the environment it passes to the hook.
 **Priority**: low
 **Found in**: P-2026-09-29-2121
+
+## 2026-09-29 — merge: no-proxy-ir into alfonso-frontend-jjtl (P-2026-09-29-2158)
+**Prompt**: `claude_2026-09-29_2158_prompt_merge_no-proxy-ir.md`, a direct merge by `lane-run merge --direct`, no session: `no-proxy-ir` at `18ec08e9b` into `alfonso-frontend-jjtl`, merge base `5626b3364`, 4 commits on the branch side.
+**Files touched**: merge `3573b0029`: 8 files from the branch side (`docs/discovery/discovery_2026-09-29_no_proxy_ir_layer_impact.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_2121_prompt_no_proxy_ir.md`, `frontend/src/common/U.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/irCompile.ts`, `frontend/src/model/__tests__/unproxy.test.ts`, `frontend/src/model/unproxy.ts`, `frontend/src/view/viewElement/view.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3573b0029` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5888 tests in 232 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Non-visual fix: set_ir unproxies nested L objects (unproxyDeep) and irHash/compressedState stringify with proxyToIdReplacer. Chat checked result.json: all 8 gates green on 3573b0029 (typecheck 14 at the tip set, vitest 5888 tests 0 failed, build ok, check:docs/agents/scripts/addonly ok), 3001 up. Branch proved by unproxy.test.ts and the save probe on 3059. Unattended GO by the chat under Alfonso critical-zone go-ahead of 2026-09-29 21:15.
+**Notes**: Rollback tag `pre-no-proxy-ir` on `591504f57` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2158/result.json`.
+**Prompt document name**: 2026-09-29 21:58
