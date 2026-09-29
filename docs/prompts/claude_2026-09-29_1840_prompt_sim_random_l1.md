@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1840
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2 of `discovery_2026-09-29_sim_random_choice.md`, lane L1; tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-random-l1 · f10af6812, 7a00d5af7, 25acfefe6, 3cbfbc15b · non fuso: hard-stop, lane probe on 3057 (light), Petri step 1 list 123.1 px and Step 854.5 open and closed, Random right of Cancel, «Last step: ε (random): …» with the seed in its title, t2's line unclamped, sm/esm/flowB run readings identical to 09-29c, crop in docs/discovery/harness/_tmp_randl1_*.png (gitignored), R-SIM-100 nel commit docs, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-randl1`, branch `sim-random-l1` (cut by the chat from `alfonso-frontend-jjtl` at `70b580af4`, which contains the discovery; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-randl1`, branch `sim-random-l1`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
