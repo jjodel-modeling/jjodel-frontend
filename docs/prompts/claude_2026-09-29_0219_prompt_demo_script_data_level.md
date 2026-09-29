@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0219
 Chat: C-2026-09-28-1936
 Lane: fast (docs only: one file). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane demo-script-data-level · docs-only, the sha is that of this closure commit (the script, the inbox entry and this line ride in it) · non fuso: hard-stop
 
 Worktree: `~/jjodel-w-demoscript`, branch `demo-script-data-level` (cut by the chat from `alfonso-frontend-jjtl` at `04c81327d`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-demoscript`, branch `demo-script-data-level`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

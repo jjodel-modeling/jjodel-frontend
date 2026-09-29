@@ -904,3 +904,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: chat: four demo scenes probed on the branch, light theme, port 3043: FINAL and RUN readings identical to the trunk; 12 M2 lines differ only by the added R-SIM-94 texts (a model globals go in its Data..., default for models); lane measured the model-tab route (ESM 9/34, Flow B 5/4) and undo in one step; Alfonso walk on 3001 still due
 **Notes**: Rollback tag `pre-sim-data-level-p2` on `174f6c58a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0214/result.json`.
 **Prompt document name**: 2026-09-29 02:14
+
+## 2026-09-29 — docs: the demo script declares data on the model tab, metamodel path as fallback (P-2026-09-29-0219)
+**Prompt**: `claude_2026-09-29_0219_prompt_demo_script_data_level.md`, fast lane, docs only, on `demo-script-data-level` in `~/jjodel-w-demoscript`, bound by R-SIM-94. §2.3 (ESM) and §2.4 (Flow B) declare on the model tab with the texts and counts of discovery §8 (ESM through `Data…`, 9 interactions, 34 keystrokes, 0 scrolls; Flow B from the Reset line, 5 and 4), tagged P-2026-09-29-0110; the metamodel steps kept verbatim under a Fallback block; §1 one line on `Data…`; §4 the fallback rule.
+**Files touched**: `docs/demo/models_2026_simulator_demo.md`, this entry, the Status line of the prompt. One docs commit, this one; the sha is in the closing report of the session.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — docs only; this lane ran no probe. Every new count and reading is quoted from §8, none re-measured. The rehearsal on 3001 is the check.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The M2 hint reads differently in code (`simRoleStatus.ts:495`, «(a model's globals go in its Data…):») than Apply step 2 of both scenes; left verbatim, flagged by a comment, to re-measure. The ESM `Undeclared` line was not walked (§8). Flow B's Reset is now the entry of the route, no longer optional.
+**Prompt document name**: 2026-09-29 02:19
