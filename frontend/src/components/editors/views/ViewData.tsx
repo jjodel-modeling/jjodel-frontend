@@ -31,6 +31,7 @@ import {HelpText} from "../../ui";
 import {JjodelEvents} from "../../../events/registry";
 import {
     IR_TAB_LABELS,
+    IR_TAB_TOOLTIPS,
     irTabsForKind,
     type IRAuthoringKind,
     type IRTabId
@@ -42,6 +43,8 @@ interface TabDescriptor {
     id: TabId;
     label: string;
     render: () => ReactElement;
+    /** Native tooltip of the tab button, where the label alone is ambiguous. */
+    tooltip?: string;
     /** Set on a trigger tab: clicking it runs this instead of activating the tab. */
     onActivate?: () => void;
 }
@@ -111,6 +114,7 @@ function ViewDataComponent(props: AllProps) {
     const tabs: TabDescriptor[] = irKind ? irTabsForKind(irKind, props.advanced).map((id) => ({
         id,
         label: IR_TAB_LABELS[id],
+        tooltip: IR_TAB_TOOLTIPS[id],
         // The Symbol tab is a trigger (P-2026-09-29-1826): it opens SymbolEditorModal,
         // which re-hosts the anatomy on the same panel, and never becomes the active
         // tab, so closing the modal leaves the author on the tab they were on.
@@ -264,6 +268,7 @@ function ViewDataComponent(props: AllProps) {
                             role="tab"
                             aria-selected={activeDescriptor.id === tab.id}
                             aria-haspopup={tab.onActivate ? 'dialog' : undefined}
+                            title={tab.tooltip}
                             className={`view-editor-tab${activeDescriptor.id === tab.id ? ' active' : ''}`}
                             onClick={() => tab.onActivate ? tab.onActivate() : setActiveTab(tab.id)}
                         >
