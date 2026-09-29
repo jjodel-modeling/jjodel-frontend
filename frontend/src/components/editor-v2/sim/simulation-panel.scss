@@ -45,16 +45,23 @@
 .sim-panel {
     position: absolute;
     // Clear of the 200px palette rail (EditorV2.scss .editor-v2-palette) AND of the
-    // minimized Jodie button: 200px rail + 30px Jodie offset + 58px Jodie width +
-    // 16px gutter (Jodie/JodieWindow.css:871-878 and :918-923, `.jodie-minimized`,
-    // fixed at bottom 100px, z-index 10000). Jodie sits outside the dock, and the
-    // dock is a stacking context (`.pinnable-dock-root`, `transform-style:
-    // preserve-3d`, DockManagerStyles.scss:133), so no z-index here can lift the
-    // panel over it: at `200px + 16px` the button covered the Reset button of the
-    // open panel. Moving the Jodie geometry means moving this offset too.
-    left: calc(200px + 30px + 58px + 16px);
+    // minimized Jodie button: 200px rail + 16px Jodie offset + 48px Jodie width +
+    // 16px gutter (Jodie/JodieWindow.css, the editor rule of `.jodie-minimized`,
+    // fixed, its bottom 16px above the editor's bottom edge, z-index 10000). Jodie
+    // sits outside the dock, and the dock is a stacking context (`.pinnable-dock-root`,
+    // `transform-style: preserve-3d`, DockManagerStyles.scss:133), so no z-index here
+    // can lift the panel over it: at `200px + 16px` the button covered the Reset
+    // button of the open panel. Moving the Jodie geometry means moving this offset too.
+    left: calc(200px + 16px + 48px + 16px);
     bottom: 16px;
     z-index: 850;
+
+    // The closed chip (32px) on Jodie's centre line: 24px up puts both centres 40px
+    // above the editor's bottom edge (P-2026-09-29-1106, R-SIM-97, D1). The open
+    // panel keeps bottom 16px.
+    &--closed {
+        bottom: 24px;
+    }
     font-family: inherit;
     color: var(--color-text-primary);
 

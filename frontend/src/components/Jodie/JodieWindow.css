@@ -916,10 +916,22 @@
 }
 
 /* Editor tabs: no .leftbar, but a 200px palette rail whose hint block sits at the
-   very bottom of the column. Same shape as the rule above, different rail width. */
+   very bottom of the column. Same shape as the rule above, different rail width.
+   Smaller here, 48px with a 24px glyph, 16px right of the rail, its bottom 16px
+   above the editor's bottom edge (the status bar plus the editor's 1px frame):
+   the closed Simulation pill sits on its centre line, 16px to its right
+   (editor-v2/sim/simulation-panel.scss `.sim-panel`, P-2026-09-29-1106, R-SIM-97).
+   Moving this geometry means moving the pill's offset too. */
 @media (min-width: 769px) {
     body:has(.editor-v2-palette) .jodie-minimized {
-        left: calc(200px + 30px);
+        left: calc(200px + 16px);
+        bottom: calc(var(--jj-statusbar-height) + 17px);
+        width: 48px;
+        height: 48px;
+    }
+
+    body:has(.editor-v2-palette) .jodie-minimized i {
+        font-size: 24px;
     }
 }
 
