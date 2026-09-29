@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1700
 Chat: C-2026-09-28-1936
 Lane: discovery (read-only; the simulation panel, the pure stepping core, Play, the trace). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane discovery sim-random-disc · report docs/discovery/discovery_2026-09-29_sim_random_choice.md, measured on 5d18f1581 · hard-stop, four decisions and three answered questions for Alfonso in §0
 
 Worktree: `~/jjodel-w-randdisc`, branch `sim-random-disc` (cut by the chat from `alfonso-frontend-jjtl` at `8f972410f`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-randdisc`, branch `sim-random-disc`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

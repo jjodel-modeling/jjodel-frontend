@@ -1167,3 +1167,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: lane probe on 3052: gate 8/8 with the Semantic Type Class toggle; undo of on/off one step each; legacy simProfile bags keep the pill; four scenes 64/71 identical, the 7 others differ only by simEnabled true in the bag; demo script re-measured
 **Notes**: Rollback tag `pre-sim-toggle` on `d50450972` (RC-31). Union: `docs/decisions.md`, `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1319/result.json`.
 **Prompt document name**: 2026-09-29 13:19
+
+## 2026-09-29 — discovery: random resolution of nondeterminism, Random button and Ask | Random policy (P-2026-09-29-1700)
+**Prompt**: `claude_2026-09-29_1700_prompt_discovery_sim_random_choice.md`, read-only on `sim-random-disc` in `~/jjodel-w-randdisc` (from `8f972410f`): Alfonso's ratified proposal, Part 1 (Random next to Cancel, seeded RNG, origin and seed in the trace) and Part 2 (Choices: Ask | Random, Play to k); the injection point, the trace, Play's loop, three open questions, a Phase 2 plan for R-SIM-100 and R-SIM-101.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-29_sim_random_choice.md`, this entry, the prompt's Status. Probe `frontend/scripts/smoke/_tmp_p1700_random.ts` gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: No Play (▶ is Step) and no trace exist [M]: Part 2 adds a button, Part 1 a minimal trace. Probe on the pure core [M]: Petri's 5 ε paths all Deadlock at p2 ×2, p3 in 4 steps; Flow B no choice; SM no ε. Mulberry32 pure form, χ² passes. No lane probe (Q1 needed none). Two lanes, 8 and 6 files, no critical zone. Four decisions for Alfonso (A1-A4), Q1-Q3 answered in §0. One docs commit (RC-17), not the report alone.
+**Prompt document name**: 2026-09-29 17:00
