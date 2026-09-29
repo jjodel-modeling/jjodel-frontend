@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1319
 Chat: C-2026-09-28-1936
 Lane: full (merge; 2 conflicts: `docs/decisions.md`, `docs/log-inbox/simulation.md` measured)
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane merge · aa21c3668 · verifica visiva passata 2026-09-29 (lane probe on 3052: gate 8/8 with the Semantic Type Class toggle; undo of on/off one step each; legacy simProfile bags keep the pill; four scenes 64/71 identical, the 7 others differ only by simEnabled true in the bag; demo script re-measured)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-1319 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

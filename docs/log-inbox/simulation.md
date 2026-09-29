@@ -1154,3 +1154,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Prompt document name**: 2026-09-29 12:25
 
 **Ticket** (P-2026-09-29-1225): in the full `npx vitest run`, two `lane-run merge` tests of `frontend/scripts/hooks/__tests__/laneRun.test.ts` (`:844`, `:893`) time out at the default 5000 ms; the file alone is 84/84 green. Load-dependent (git fixtures under a 226-file run, other lanes' servers up on the Mac), not reached by this lane's change. Not the `checkRange` timing ticket of RC-34.
+
+## 2026-09-29 — merge: sim-toggle into alfonso-frontend-jjtl (P-2026-09-29-1319)
+**Prompt**: `claude_2026-09-29_1319_prompt_merge_sim-toggle.md`, a direct merge by `lane-run merge --direct`, no session: `sim-toggle` at `411048e10` into `alfonso-frontend-jjtl`, merge base `12ac29f74`, 4 commits on the branch side.
+**Files touched**: merge `aa21c3668`: 8 files from the branch side (`docs/decisions.md`, `docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_1225_prompt_sim_toggle.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simRoleStatus.test.ts`, `frontend/src/components/editor-v2/sim/simRoleStatus.ts`, `frontend/src/components/editors/Info.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `aa21c3668` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5740 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: lane probe on 3052: gate 8/8 with the Semantic Type Class toggle; undo of on/off one step each; legacy simProfile bags keep the pill; four scenes 64/71 identical, the 7 others differ only by simEnabled true in the bag; demo script re-measured
+**Notes**: Rollback tag `pre-sim-toggle` on `d50450972` (RC-31). Union: `docs/decisions.md`, `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1319/result.json`.
+**Prompt document name**: 2026-09-29 13:19
