@@ -1100,3 +1100,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: No dev server (prompt): pixels are CSS reads over the editor box measured 09-24/09-27. Probe [M]: on the four demo metamodels the dialog on a Properties-stored preset proposes what the picker path does (4/4, match lines equal the script's). Phase 2: 6 code files, no critical zone, no `simBridge.ts`; `sim-guard-word` merged at `7fec9c966`. Four decisions, two questions in §0.
 **Prompt document name**: 2026-09-29 10:40
+
+## 2026-09-29 — merge: sim-gate-disc into alfonso-frontend-jjtl (P-2026-09-29-1209)
+**Prompt**: `claude_2026-09-29_1209_prompt_merge_sim-gate-disc.md`, a direct merge by `lane-run merge --direct`, no session: `sim-gate-disc` at `19d2277d7` into `alfonso-frontend-jjtl`, merge base `0fbb550ea`, 2 commits on the branch side.
+**Files touched**: merge `a26e5cb15`: 3 files from the branch side (`docs/discovery/discovery_2026-09-29_sim_gate_and_placement.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_1040_prompt_discovery_sim_gate_and_placement.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a26e5cb15` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5730 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, the sim gate and placement discovery report
+**Notes**: Rollback tag `pre-sim-gate-disc` on `41b54938f` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1209/result.json`.
+**Prompt document name**: 2026-09-29 12:09
