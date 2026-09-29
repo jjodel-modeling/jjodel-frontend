@@ -14,14 +14,15 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason,
-    markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, pressInput, pressRandom, runSignature, runStatus, startRun, stopReason,
-    undeclaredGlobals,
+    markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput, pressRandom,
+    pressStep, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
 } from '../simBridge';
-import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
-import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
+import type { ContextBuilder, PanelInputs, PlayStop, RunStart } from '../simBridge';
+import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, setSimPolicy, simClear, simReset } from '../simRunState';
 import type { SimTraceStep } from '../simRunState';
 import { uniform } from '../../../../model/simulation/simRandom';
 import { candidates, netRunStatus, step } from '../../../../model/simulation/netStep';
+import * as netStepModule from '../../../../model/simulation/netStep';
 import { encodeProfile } from '../../../../model/simulation/profileCodec';
 import { ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../../model/simulation/roleCatalog';
@@ -2362,5 +2363,303 @@ describe('R-SIM-100: Random on an ε list, the seed of the run, the trace (P-202
         expect([getSimRun('M')!.trace, getSimRun('M')!.draws, getSimActiveIds('M')]).toEqual([[], 0, ['A']]);
         __resetSimRunsForTests();
         expect(pressRandom('M', [{ transition: 't1', unsafe: null }, { transition: 't2', unsafe: null }], lookup)).toEqual({ pending: null, lastStep: null, outcome: null });
+    });
+});
+
+describe('R-SIM-101: the run policy, Step under Random and Play (P-2026-09-29-1943)', () => {
+    /** A choice at A every other step: A -t1-> B, A -t2-> C, then B -t3-> A and C -t4-> A, forced. */
+    const CYCLE: Record<string, Obj> = {
+        A: { cls: 'C_Init', slots: { R_out: ['t1', 't2'] } },
+        B: { cls: 'C_State', slots: { R_out: ['t3'] } },
+        C: { cls: 'C_State', slots: { R_out: ['t4'] } },
+        t1: { cls: 'C_Trans', slots: { R_next: ['B'] } },
+        t2: { cls: 'C_Trans', slots: { R_next: ['C'] } },
+        t3: { cls: 'C_Trans', slots: { R_next: ['A'] } },
+        t4: { cls: 'C_Trans', slots: { R_next: ['A'] } },
+    };
+
+    /** Petri roles with inhibitor, weight and guard, k = 4, as DemoPetri is configured (demo script §2.2). */
+    const PETRI = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simInhibitorArc: 'C_Inh', simArcSource: 'R_src',
+        simArcTarget: 'R_tgt', simInitialMarking: 'A_tokens', simArcWeight: 'A_w', simBound: '4', simGuard: 'A_guard',
+    };
+    function petri(objects: Record<string, Obj>, bound = '4'): Lookup {
+        const lookup = buildLookup({ ...PETRI, simBound: bound }, objects);
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc', 'C_Inh']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        lookup.A_w = { className: 'DAttribute', id: 'A_w', name: 'w' };
+        return lookup;
+    }
+    /** DemoPetri: p1 (2) -a1-> t1 -a2 ×2-> p2 -a3 ×2-> t2 -a4-> p3; lock (1) -a5-> t3; lock -i1-o t2; t2 `p3.[tokens] < 1`. */
+    const demoPetri = () => petri({
+        p1: { cls: 'C_Place', slots: { A_tokens: [2] } },
+        p2: { cls: 'C_Place' },
+        p3: { cls: 'C_Place' },
+        lock: { cls: 'C_Place', slots: { A_tokens: [1] } },
+        t1: { cls: 'C_PTr' },
+        t2: { cls: 'C_PTr', slots: { A_guard: ['p3.[tokens] < 1'] } },
+        t3: { cls: 'C_PTr' },
+        a1: { cls: 'C_Arc', slots: { R_src: ['p1'], R_tgt: ['t1'] } },
+        a2: { cls: 'C_Arc', slots: { R_src: ['t1'], R_tgt: ['p2'], A_w: [2] } },
+        a3: { cls: 'C_Arc', slots: { R_src: ['p2'], R_tgt: ['t2'], A_w: [2] } },
+        a4: { cls: 'C_Arc', slots: { R_src: ['t2'], R_tgt: ['p3'] } },
+        a5: { cls: 'C_Arc', slots: { R_src: ['lock'], R_tgt: ['t3'] } },
+        i1: { cls: 'C_Inh', slots: { R_src: ['lock'], R_tgt: ['t2'] } },
+    });
+
+    /** Flow B of the demo (§2.4): i0 -f1-> work -f2 {count += 1}-> d1, d1 -f3 [count < 2]-> work, d1 -f4 [count >= 2]-> fk, the fork, the join, fin. */
+    function flowB(): Lookup {
+        const COUNT = JSON.stringify({ v: 1, attrs: [{ name: 'count', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' }] });
+        const wires: Array<[string, string, string]> = [['f1', 'i0', 'work'], ['f2', 'work', 'd1'], ['f3', 'd1', 'work'], ['f4', 'd1', 'fk'],
+            ['f5', 'fk', 'left'], ['f6', 'fk', 'right'], ['f7', 'left', 'jn'], ['f8', 'right', 'jn'], ['f9', 'jn', 'fin']];
+        const guards: Record<string, string> = { f3: 'model.[count] < 2', f4: 'model.[count] >= 2' };
+        const objects: Record<string, Obj> = {
+            i0: { cls: 'C_IN' }, work: { cls: 'C_Act' }, d1: { cls: 'C_Dec' }, fk: { cls: 'C_Fork' }, left: { cls: 'C_Act' },
+            right: { cls: 'C_Act' }, jn: { cls: 'C_Join' }, fin: { cls: 'C_Fin' },
+        };
+        for (const [e, src, tgt] of wires) {
+            objects[e] = { cls: 'C_CF', slots: {
+                R_source: [src], R_target: [tgt], ...(guards[e] ? { A_guard: [guards[e]] } : {}),
+                ...(e === 'f2' ? { A_effect: ['model.[count] := model.[count] + 1'] } : {}),
+            } };
+        }
+        const lookup = buildLookup({
+            simNode: 'C_AN', simTransition: 'C_CF', simSource: 'R_source', simNextState: 'R_target', simInitial: 'C_IN', simFork: 'C_Fork',
+            simJoin: 'C_Join', simTerminal: 'C_Fin', simGuard: 'A_guard', simAction: 'A_effect', simStateAttributes: COUNT, simProfile: 'flowchart',
+        }, objects);
+        lookup.C_AN = { className: 'DClass', id: 'C_AN', name: 'ActivityNode', extends: [] };
+        for (const [id, name] of [['C_IN', 'InitialNode'], ['C_Act', 'Activity'], ['C_Dec', 'Decision'], ['C_Fork', 'Fork'], ['C_Join', 'Join'], ['C_Fin', 'FinalNode']]) {
+            lookup[id] = { className: 'DClass', id, name, extends: ['C_AN'] };
+        }
+        lookup.C_CF = { className: 'DClass', id: 'C_CF', name: 'ControlFlow', extends: [] };
+        for (const id of ['R_source', 'R_target']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        return lookup;
+    }
+
+    /** S -e1-> D; D -e2 [D.[decision]]-> A, D -e3 [else]-> B; `decision` an input of every State (R-SIM-88). */
+    function decision(): Lookup {
+        const DECISION = { name: 'decision', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+        return buildLookup({ ...ROLES, simGuard: 'A_guard', simTerminal: 'C_Final', simStateAttributes: JSON.stringify({ v: 1, attrs: [DECISION] }) }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+            D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+            A: { cls: 'C_Final' },
+            B: { cls: 'C_Final' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['D'] } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: ['D.[decision]'] } },
+            e3: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: ['else'] } },
+        });
+    }
+
+    /** The record of `buildEvalContext`: one handle per object of the model, instance names bound at the top. */
+    const recordOf = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup, seed?: number, record: () => Record<string, any> = recordOf(lookup)) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record).build, seed);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r.run;
+    };
+    const marking = (lookup: Lookup) => markingLine(getSimRun('M')!.config.state, getSimRun('M')!.net, lookup).line;
+    const status = () => runStatus(getSimRun('M')!);
+
+    /** One Play press as the panel runs it: a tick at a time, the steps carried to the next, until it stops (at most `cap` ticks). */
+    function play(lookup: Lookup, cap = 5000) {
+        let steps = 0;
+        for (let tick = 0; tick < cap; tick++) {
+            const r = playPress('M', lookup, steps);
+            steps = r.steps;
+            if (r.stop !== null) return { stop: r.stop, steps, press: r.press, ticks: tick + 1 };
+        }
+        throw new Error(`Play did not stop in ${cap} ticks`);
+    }
+
+    it('Step under Random opens no list: the drawn candidate fires, origin random, one draw; under Ask the list opens and nothing is committed (mutants: the policy not read; the draw applied under Ask)', () => {
+        const lookup = demoPetri();
+        reset(lookup, 2026);
+        const asked = pressStep('M', lookup);
+        expect(asked.pending?.map(c => c.transition)).toEqual(['t1', 't3']);
+        expect([asked.lastStep, getSimRun('M')!.trace]).toEqual([null, []]);
+        setSimPolicy('M', { choices: 'random' });
+        const drawn = pressStep('M', lookup, undefined, () => 0.99);
+        expect(drawn.pending).toBeNull();
+        expect(drawn.lastStep).toBe('ε (random): t3 (lock → ∅) fired');
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 't3', kind: 'fired', origin: 'random' }]);
+        expect(getSimRun('M')!.draws).toBe(1);
+        // a forced ε press under Random is today's: no marker, no draw
+        const flow = flowB();
+        reset(flow, 5);
+        setSimPolicy('M', { choices: 'random' });
+        expect(pressStep('M', flow).lastStep).toBe('ε: f1 (i0 → work) fired');
+        expect(getSimRun('M')!.draws).toBe(0);
+    });
+
+    it('the policy applies to ε only: under Random an event\'s list still opens (A3; mutant: the draw applied to every press)', () => {
+        const TWO_PUSH: Record<string, Obj> = {
+            ...TURNSTILE,
+            Locked: { cls: 'C_Init', slots: { R_out: ['tCoin', 'tPushL', 'tPushX'] } },
+            tPushX: { cls: 'C_Trans', slots: { R_next: ['Unlocked'], R_trigger: ['push'] } },
+        };
+        const lookup = buildLookup(ROLES, TWO_PUSH);
+        reset(lookup, 7, turnstileRecord);
+        setSimPolicy('M', { choices: 'random' });
+        const asked = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect(asked.pending?.map(c => c.transition).sort()).toEqual(['tPushL', 'tPushX']);
+        expect(getSimRun('M')!.trace).toEqual([]);
+    });
+
+    it('playTick is pure and orders its stops: no run, the stopped statuses, k, an input, no ε candidate, a list under Ask, else press (mutants: k by >, each stop dropped)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        const run = reset(lookup, 1);
+        expect(playTick(undefined, { choices: 'random', k: 5 }, 0)).toEqual({ kind: 'stop', reason: 'cleared' });
+        expect(playTick(run, { choices: 'random', k: 3 }, 2)).toEqual({ kind: 'press' });
+        expect(playTick(run, { choices: 'random', k: 3 }, 3)).toEqual({ kind: 'stop', reason: 'limit' });
+        expect(playTick(run, { choices: 'ask', k: 3 }, 0)).toEqual({ kind: 'stop', reason: 'choice' });
+        // pure: the store is untouched
+        expect([getSimRun('M'), getSimRun('M')!.trace]).toEqual([run, []]);
+    });
+
+    it('at k Play stops, exactly k steps, the run still Running, «Play stopped at 100 steps»; a second press goes on (cyclic net; mutants: the counter not advanced; k by >)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 2026);
+        setSimPolicy('M', { choices: 'random' });
+        const first = play(lookup);
+        expect([first.stop, first.steps, first.press]).toEqual<[PlayStop, number, null]>(['limit', 100, null]);
+        expect(getSimRun('M')!.trace).toHaveLength(100);
+        expect(getSimRun('M')!.draws).toBe(50);
+        expect(status()).toBe('Running');
+        expect(playStopLine(first.stop, first.steps)).toBe('Play stopped at 100 steps');
+        const again = play(lookup);
+        expect([again.stop, again.steps]).toEqual(['limit', 100]);
+        expect(getSimRun('M')!.trace).toHaveLength(200);
+        // k is read from the policy: 7 stops at 7
+        reset(lookup, 2026);
+        setSimPolicy('M', { k: 7 });
+        expect(play(lookup)).toMatchObject({ stop: 'limit', steps: 7 });
+        expect(getSimRun('M')!.trace).toHaveLength(7);
+        expect(playStopLine('limit', 1)).toBe('Play stopped at 1 step');
+    });
+
+    it('Petri under Random ends in Deadlock at p2 ×2, p3 in 4 steps, three seeds (mutant: the stopped statuses not checked)', () => {
+        const lookup = demoPetri();
+        const traces: string[][] = [];
+        for (const seed of [1, 99, 2026]) {
+            reset(lookup, seed);
+            setSimPolicy('M', { choices: 'random' });
+            const r = play(lookup);
+            expect([r.stop, r.steps, r.press]).toEqual<[PlayStop, number, null]>(['Deadlock', 4, null]);
+            expect([status(), marking(lookup)]).toEqual(['Deadlock', 'Marking: p2 ×2, p3']);
+            expect(getSimRun('M')!.trace!.some(t => t.origin === 'random')).toBe(true);
+            expect(playStopLine(r.stop, r.steps)).toBeNull();
+            traces.push(getSimRun('M')!.trace!.map(t => t.selector ?? ''));
+        }
+        // control: the seeds draw different paths, so the four steps are not one fixed path
+        expect(new Set(traces.map(t => t.join())).size).toBeGreaterThan(1);
+    });
+
+    it('Flow B ends Terminated in 6 steps, under Ask as under Random, with no draw (mutant: the stopped statuses not checked)', () => {
+        for (const choices of ['ask', 'random'] as const) {
+            const lookup = flowB();
+            reset(lookup, 3);
+            setSimPolicy('M', { choices });
+            const r = play(lookup);
+            expect([r.stop, r.steps]).toEqual(['Terminated', 6]);
+            expect([status(), getSimRun('M')!.draws]).toEqual(['Terminated', 0]);
+        }
+    });
+
+    it('a halted run stops Play at the next tick: a drawn or forced step over the bound halts (mutant: Halted left out of the stops)', () => {
+        const lookup = petri({
+            p: { cls: 'C_Place', slots: { A_tokens: [1] } },
+            q: { cls: 'C_Place', slots: { A_tokens: [1] } },
+            tx: { cls: 'C_PTr' },
+            a1: { cls: 'C_Arc', slots: { R_src: ['p'], R_tgt: ['tx'] } },
+            a2: { cls: 'C_Arc', slots: { R_src: ['tx'], R_tgt: ['q'] } },
+            ty: { cls: 'C_PTr' },
+            a3: { cls: 'C_Arc', slots: { R_src: ['q'], R_tgt: ['ty'] } },
+            a4: { cls: 'C_Arc', slots: { R_src: ['ty'], R_tgt: ['q'] } },
+        }, '1');
+        reset(lookup, 4);
+        setSimPolicy('M', { choices: 'random' });
+        const r = play(lookup);
+        expect(getSimRun('M')!.halt).not.toBeNull();
+        expect([r.stop, status()]).toEqual(['Halted', 'Halted']);
+        expect(r.steps).toBe(getSimRun('M')!.trace!.length);
+    });
+
+    it('SM: no ε candidate while an event has one, Play waits for an event at 0 steps and commits nothing (mutant: the no-candidate stop dropped)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        reset(lookup, 8, turnstileRecord);
+        setSimPolicy('M', { choices: 'random' });
+        const r = play(lookup);
+        expect([r.stop, r.steps, r.press, r.ticks]).toEqual<[PlayStop, number, null, number]>(['event', 0, null, 1]);
+        expect([status(), getSimRun('M')!.trace]).toEqual(['Running', []]);
+        expect(playStopLine(r.stop, r.steps)).toBe('Play waits for an event');
+    });
+
+    it('an ε press that asks an input stops Play with the asks, nothing committed; Play never answers it (mutant: the input stop dropped)', () => {
+        const lookup = decision();
+        reset(lookup, 9);
+        setSimPolicy('M', { choices: 'random' });
+        const r = play(lookup);
+        expect([r.stop, r.steps]).toEqual(['input', 1]);
+        expect(r.press?.asks).toEqual([{ element: 'D', attr: 'decision', domain: { kind: 'boolean' } }]);
+        expect([r.press?.pending, r.press?.outcome]).toEqual([null, null]);
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 'e1', kind: 'fired' }]);
+        expect(playStopLine(r.stop, r.steps)).toBe('Play waits for an input');
+    });
+
+    it('under Ask Play stops at the first list and opens it, nothing committed (mutant: the list drawn under Ask)', () => {
+        const lookup = demoPetri();
+        reset(lookup, 10);
+        const r = play(lookup);
+        expect([r.stop, r.steps]).toEqual(['choice', 0]);
+        expect(r.press?.pending?.map(c => c.transition)).toEqual(['t1', 't3']);
+        expect([getSimRun('M')!.trace, marking(lookup)]).toEqual([[], 'Marking: lock, p1 ×2']);
+        expect(playStopLine(r.stop, r.steps)).toBeNull();
+    });
+
+    it('a cleared run stops Play at the next tick, nothing pressed (Stop, the R-SIM-34 interruption; mutant: the no-run stop dropped)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 11);
+        setSimPolicy('M', { choices: 'random' });
+        let steps = 0;
+        for (let i = 0; i < 3; i++) steps = playPress('M', lookup, steps).steps;
+        expect(steps).toBe(3);
+        simClear('M');
+        expect(playPress('M', lookup, steps)).toEqual({ stop: 'cleared', press: null, steps: 3 });
+        expect(getSimRun('M')).toBeUndefined();
+    });
+
+    it('every press of Play is ε: a spy on step sees event null on every call, and no call where only an event has a candidate (mutant: an event pressed)', () => {
+        const spy = vi.spyOn(netStepModule, 'step');
+        try {
+            // Locked -ε-> Unlocked -ε-> Locked beside the turnstile's coin and push: both kinds of input have candidates
+            const MIX: Record<string, Obj> = {
+                ...TURNSTILE,
+                Locked: { cls: 'C_Init', slots: { R_out: ['tCoin', 'tPushL', 'tGo'] } },
+                Unlocked: { cls: 'C_State', slots: { R_out: ['tPushU', 'tBack'] } },
+                tGo: { cls: 'C_Trans', slots: { R_next: ['Unlocked'] } },
+                tBack: { cls: 'C_Trans', slots: { R_next: ['Locked'] } },
+            };
+            const mix = buildLookup(ROLES, MIX);
+            reset(mix, 12, turnstileRecord);
+            setSimPolicy('M', { choices: 'random', k: 6 });
+            expect(play(mix)).toMatchObject({ stop: 'limit', steps: 6 });
+            // control: the spy sees the bridge's calls, one per step
+            expect(spy).toHaveBeenCalledTimes(6);
+            expect(spy.mock.calls.map(c => c[1].event)).toEqual([null, null, null, null, null, null]);
+            spy.mockClear();
+            const sm = buildLookup(ROLES, TURNSTILE);
+            reset(sm, 13, turnstileRecord);
+            expect(play(sm).stop).toBe('event');
+            expect(spy).not.toHaveBeenCalled();
+        } finally {
+            spy.mockRestore();
+        }
     });
 });
