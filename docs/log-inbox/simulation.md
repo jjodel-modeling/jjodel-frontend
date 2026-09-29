@@ -1180,3 +1180,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: No Play (▶ is Step) and no trace exist [M]: Part 2 adds a button, Part 1 a minimal trace. Probe on the pure core [M]: Petri's 5 ε paths all Deadlock at p2 ×2, p3 in 4 steps; Flow B no choice; SM no ε. Mulberry32 pure form, χ² passes. No lane probe (Q1 needed none). Two lanes, 8 and 6 files, no critical zone. Four decisions for Alfonso (A1-A4), Q1-Q3 answered in §0. One docs commit (RC-17), not the report alone.
 **Prompt document name**: 2026-09-29 17:00
+
+## 2026-09-29 — merge: sim-random-disc into alfonso-frontend-jjtl (P-2026-09-29-1832)
+**Prompt**: `claude_2026-09-29_1832_prompt_merge_sim-random-disc.md`, a direct merge by `lane-run merge --direct`, no session: `sim-random-disc` at `70176c95c` into `alfonso-frontend-jjtl`, merge base `8f972410f`, 2 commits on the branch side.
+**Files touched**: merge `7b5c807b8`: 3 files from the branch side (`docs/discovery/discovery_2026-09-29_sim_random_choice.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_1700_prompt_discovery_sim_random_choice.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7b5c807b8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5825 tests in 229 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, random choice discovery
+**Notes**: Rollback tag `pre-sim-random-disc` on `7d1b0da4f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1832/result.json`.
+**Prompt document name**: 2026-09-29 18:32
