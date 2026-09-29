@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus, isFirstOpen,
-    isModified, matchLine, MULTI_TAGS_SHOWN, multiRow, multiRowLabels, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
+    isModified, matchLine, MULTI_TAGS_SHOWN, multiRow, multiRowLabels, pillTitle, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
     withAdded, withPrimary, withProfileName, withRemoved, withRoleMode,
 } from '../simRolesDraft';
 import type { DraftInput } from '../simRolesDraft';
@@ -23,7 +23,7 @@ import type { RoleId } from '../../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
 import type { MetamodelSketch, ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
 import { bindingVerdicts } from '../../../../model/simulation/bindingCompat';
-import type { RoleCompatibility } from '../../../../model/simulation/bindingCompat';
+import type { BindingVerdicts, RoleCompatibility } from '../../../../model/simulation/bindingCompat';
 
 const SM = systemProfile('stateMachine') as SimProfile;
 const ESM = systemProfile('extendedStateMachine') as SimProfile;
@@ -254,6 +254,42 @@ describe('draftStatus and the rows', () => {
     it('matchLine counts the roles the binder bound among those it judged', () => {
         expect(matchLine(TURN)).toEqual({ matched: 6, total: 10 });
         expect(matchLine(null)).toBeNull();
+    });
+});
+
+describe('pillTitle: the pill says why its verdict is what it is (ticket of P-2026-09-28-0140)', () => {
+    const judged = (verdict: 'ok' | 'warn' | 'incompatible', why: string): RoleCompatibility => ({ candidates: [], current: { id: 'X', verdict, why } });
+
+    it('nothing missing and every bound value ok, or no sketch: every required role is bound', () => {
+        expect(pillTitle({ status: 'checkable', missing: [] }, null)).toBe('Every required role is bound.');
+        expect(pillTitle({ status: 'checkable', missing: [] }, { node: judged('ok', '') })).toBe('Every required role is bound.');
+    });
+
+    it('an incompatible binding is named with its why (killed by the old title, «Every required role is bound.»)', () => {
+        const verdicts: BindingVerdicts = { node: judged('ok', ''), initial: judged('incompatible', 'Transition is not a kind of State') };
+        expect(pillTitle({ status: 'notCheckable', missing: [] }, verdicts)).toBe('Incompatible: Initial (Transition is not a kind of State).');
+    });
+
+    it('the warnings follow the incompatible ones, whatever the order of the roles (killed by one list in role order)', () => {
+        const verdicts: BindingVerdicts = {
+            node: judged('warn', 'every State would be Accepting'),
+            initial: judged('incompatible', 'Transition is not a kind of State'),
+            terminal: judged('incompatible', 'Event is not a kind of State'),
+        };
+        expect(pillTitle({ status: 'notCheckable', missing: [] }, verdicts)).toBe(
+            'Incompatible: Initial (Transition is not a kind of State); Terminal (Event is not a kind of State). Warning: Node (every State would be Accepting).',
+        );
+        expect(pillTitle({ status: 'warnings', missing: [] }, { node: judged('warn', 'w') })).toBe('Warning: Node (w).');
+    });
+
+    it('a role with no bound value is not judged: its candidates say nothing (killed by reading the candidates)', () => {
+        const verdicts: BindingVerdicts = { initial: { candidates: [{ id: 'C', verdict: 'incompatible', why: 'no' }], current: null } };
+        expect(pillTitle({ status: 'checkable', missing: [] }, verdicts)).toBe('Every required role is bound.');
+    });
+
+    it('what is missing comes first, then the verdicts (killed by dropping either)', () => {
+        expect(pillTitle({ status: 'notCheckable', missing: ['Node', 'Initial or Initial marking'] }, null)).toBe('Missing: Node, Initial or Initial marking.');
+        expect(pillTitle({ status: 'notCheckable', missing: ['Node'] }, { initial: judged('incompatible', 'i') })).toBe('Missing: Node. Incompatible: Initial (i).');
     });
 });
 

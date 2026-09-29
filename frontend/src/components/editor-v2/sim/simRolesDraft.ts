@@ -39,7 +39,7 @@ import {
     EVENT_FROM_TRIGGER, OTHER_SHAPE_GROUP, isSystemProfileId, requiredRoles, systemProfile,
 } from '../../../model/simulation/simProfiles';
 import type { BindingVerdict, ProfileDefect, RequiredItem, RoleMode, SimProfile } from '../../../model/simulation/simProfiles';
-import type { RoleCompatibility } from '../../../model/simulation/bindingCompat';
+import type { BindingVerdicts, RoleCompatibility } from '../../../model/simulation/bindingCompat';
 import { encodeProfile } from '../../../model/simulation/profileCodec';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
@@ -254,6 +254,25 @@ export interface DraftStatus {
 export function draftStatus(input: DraftInput, sketch?: MetamodelSketch | null): DraftStatus {
     const c = profileVerdict(input.profile, draftBag(input), sketch);
     return { status: c.status, missing: c.missing.map(itemLabel) };
+}
+
+/**
+ * The pill's title: what is missing, then every bound value S11a does not judge
+ * ok, with its why, the incompatible ones first; «Every required role is
+ * bound.» only when neither. The same bound values `checkability` reads
+ * (`currentVerdicts`); `verdicts` is `null` without a sketch.
+ */
+export function pillTitle(status: DraftStatus, verdicts: BindingVerdicts | null): string {
+    const named = (verdict: BindingVerdict): string[] => (Object.entries(verdicts ?? {}) as Array<[RoleId, RoleCompatibility | undefined]>)
+        .flatMap(([role, v]) => (v?.current?.verdict === verdict ? [`${roleDescriptor(role).label} (${v.current.why})`] : []));
+    const incompatible = named('incompatible');
+    const warn = named('warn');
+    const parts = [
+        ...(status.missing.length > 0 ? [`Missing: ${status.missing.join(', ')}.`] : []),
+        ...(incompatible.length > 0 ? [`Incompatible: ${incompatible.join('; ')}.`] : []),
+        ...(warn.length > 0 ? [`Warning: ${warn.join('; ')}.`] : []),
+    ];
+    return parts.length > 0 ? parts.join(' ') : 'Every required role is bound.';
 }
 
 export interface RowValue {
