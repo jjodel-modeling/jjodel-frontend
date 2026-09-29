@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1230
 Chat: C-2026-09-29-1230
 Lane: full (two-phase: a short discovery, then Phase 2 in the same session after the chat's GO; view IR field, Sizing section UI, the instance creation path, tests). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane symbol-default-size · 6955e5c6d (report), 34c0ac422 · non fuso: hard-stop, verifica visiva alla chat
 Worktree: `~/jjodel-w-symsize`, branch `symbol-default-size` (cut by the chat from `alfonso-frontend-jjtl` at `12ac29f74`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-symsize`, branch `symbol-default-size`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
 ## COSA
