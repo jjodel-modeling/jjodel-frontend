@@ -54,6 +54,13 @@
  * the initial σ its derived values and every step its σ′'s; with none the run
  * has no oracle. What the equations or their first values say wrong is listed
  * with the declarations; an action on a derived target is `read-only`.
+ *
+ * Random (R-SIM-100, P-2026-09-29-1840): `startRun` draws the run's seed once
+ * with `crypto.getRandomValues`, or takes the one it is given; `pressRandom`
+ * fires one of an ε list's candidates drawn with the run's next draw
+ * (simRandom.ts), as a click on it would, the input marked `ε (random)` in
+ * «Last step» and the seed in its title. Every commit carries its origin to
+ * the run's trace: `user` for a click on the list, `random` for a draw.
  */
 
 import type { ExecutionContext } from '../../../jjscript/types';
@@ -78,12 +85,14 @@ import type { StcDefect, StcScope } from '../../../model/simulation/stcChecks';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../../../model/simulation/objectSlots';
 import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
+import { drawTransition, seededRng } from '../../../model/simulation/simRandom';
+import type { SimRng } from '../../../model/simulation/simRandom';
 import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, GuardOracle, HaltReason,
     InputRead, NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import { getSimRun, simCommit } from './simRunState';
-import type { SimRun } from './simRunState';
+import type { SimOrigin, SimRun } from './simRunState';
 import { storedProfile } from './simRoleStatus';
 
 type Lookup = Record<string, any>;
@@ -555,14 +564,21 @@ function inputReadTable(
     return out;
 }
 
+/** R-SIM-100: the seed of a run, a uniform 32-bit integer; drawn at Reset only, never by the core. */
+function freshSeed(): number {
+    return crypto.getRandomValues(new Uint32Array(1))[0];
+}
+
 /**
  * The run of an M1 model at Reset. `configModelId` is the metamodel whose bag
  * holds the roles. Refused when the roles do not make an STC or the snapshot
  * cannot be frozen; the overlap check of the roles stays with the panel, which
- * has the metamodel's class list.
+ * has the metamodel's class list. `seed` is the seed of the run's draws
+ * (R-SIM-100), drawn here when not given; a test gives it.
  */
 export function startRun(
     lookup: Lookup, modelId: string, configModelId: string | null, projectId: string, build: ContextBuilder,
+    seed: number = freshSeed(),
 ): RunStart {
     const raw = configModelId ? lookup[configModelId]?._state : undefined;
     // The keys of the roles the profile turns off are not read (R-SIM-78); the event class is
@@ -612,6 +628,9 @@ export function startRun(
             alphabet: eventAlphabet(stc, view, ids).map(e => e.id),
             signature: runSignature(lookup, modelId, configModelId),
             ...(inputs ? { inputs } : {}),
+            seed,
+            draws: 0,
+            trace: [],
         },
         compileDefects: [
             ...guardDefectsOf(guards, scope),
@@ -1258,6 +1277,34 @@ export function pressInput(
     modelId: string, event: string | null, selector: string | undefined, lookup: Lookup, input: string,
     values?: readonly InputValue[],
 ): InputPress {
+    return press(modelId, event, selector, lookup, input, values, 'user');
+}
+
+/** R-SIM-100: the input of a drawn step as «Last step» names it; the marker after the input, so the clamp cuts `fired` first. */
+const RANDOM_INPUT = 'ε (random)';
+
+/**
+ * R-SIM-100: Random on an ε list. One of `candidates`, the list the panel
+ * shows, is drawn with the run's next draw (`rng` replaces the run's stream in
+ * a test) and fired as a click on it would be: recorded `random`, «Last step»
+ * reads `ε (random): …`, its title ends with the run's seed. ε only: an
+ * event's list has no Random (A3), so an event press is never drawn. Fewer
+ * than two candidates is not a list: nothing is drawn, nothing committed.
+ */
+export function pressRandom(
+    modelId: string, candidates: readonly Candidate[], lookup: Lookup, values?: readonly InputValue[], rng?: SimRng,
+): InputPress {
+    const run = getSimRun(modelId);
+    if (!run || candidates.length < 2) return { pending: null, lastStep: null, outcome: null };
+    const drawn = drawTransition(candidates, rng ?? seededRng(run.seed ?? 0, run.draws ?? 0)) as Candidate;
+    return press(modelId, null, drawn.transition, lookup, RANDOM_INPUT, values, 'random');
+}
+
+/** One press; `origin` says who chose `selector` when one is given: the list's click or Random's draw. */
+function press(
+    modelId: string, event: string | null, selector: string | undefined, lookup: Lookup, input: string,
+    values: readonly InputValue[] | undefined, origin: SimOrigin,
+): InputPress {
     const run = getSimRun(modelId);
     if (!run) return { pending: null, lastStep: null, outcome: null };
     // R-SIM-88: what the press reads is asked first; nothing is committed before the answer.
@@ -1276,7 +1323,8 @@ export function pressInput(
         chosen = selector;
     }
     const outcome = step(run.net, cfg, chosen, live.guards, live.actions, run.derived);
-    simCommit(modelId, outcome);
+    // The store keeps the origin only among two or more candidates: a press without a selector was forced.
+    simCommit(modelId, outcome, origin);
     const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(live, outcome, lookup) : null;
     const lastStep = lastStepText(outcome, run.net, lookup, input, why);
     const assigned = outcome.label.assignments.map(a => `${elementName(lookup, a.element)}.${a.attr} = ${String(a.value)}`);
@@ -1289,6 +1337,7 @@ export function pressInput(
         ...(assigned.length === 0 ? [] : [`assignments: ${assigned.join(', ')}`]),
         ...(asked.length === 0 ? [] : [`inputs: ${asked.join(', ')}`]),
         ...(derivedValues.length === 0 ? [] : [`derived: ${derivedValues.join(', ')}`]),
+        ...(origin === 'random' && outcome.kind !== 'inadmissible' ? [`seed ${run.seed}`] : []),
     ].join('\n');
     return { pending: null, lastStep, lastStepTitle, outcome };
 }
