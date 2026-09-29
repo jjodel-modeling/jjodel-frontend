@@ -958,3 +958,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Unattended: Mealy takes the discovery's §3.4 fallback, `coin / unlock: t1 (…) fired`, after the probe measured `, output unlock` cut (304px in 262); Accepting follows Activity final in ROLE_SPECS (the G6 test pins Activity final after Terminal); the accepting mark keeps the status text's colour (the success token is below AA at 11px, light): perceptual, for the GO. Mutants 20/20 killed. The four demo scenes are not re-walked here.
 **Prompt document name**: 2026-09-29 03:00
 **Ticket** (priority low, opened here). `roleSections(profile, bag)` no longer reads `bag` now that `UNREAD_ROLES` is gone; the parameter stays (exported signature, Rule 9).
+
+## 2026-09-29 — merge: sim-outputs-faces into alfonso-frontend-jjtl (P-2026-09-29-0348)
+**Prompt**: `claude_2026-09-29_0348_prompt_merge_sim-outputs-faces.md`, a direct merge by `lane-run merge --direct`, no session: `sim-outputs-faces` at `0a84308a6` into `alfonso-frontend-jjtl`, merge base `c2560b69e`, 9 commits on the branch side.
+**Files touched**: merge `42d7a08dd`: 14 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-29_sim_outputs_faces.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_0239_prompt_discovery_sim_outputs_faces.md`, `docs/prompts/claude_2026-09-29_0300_prompt_sim_outputs_faces_p2.md`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRoleStatus.test.ts`, and 6 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `42d7a08dd` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5685 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: four demo scenes re-run on 42d7a08dd port 3045: 65 run/panel readings identical to the 09-29 reference; dialog not-used folds +3 (Accepting, State output, Transition output) as the discovery predicted
+**Notes**: Rollback tag `pre-sim-outputs-faces` on `91257e719` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0348/result.json`.
+**Prompt document name**: 2026-09-29 03:48
