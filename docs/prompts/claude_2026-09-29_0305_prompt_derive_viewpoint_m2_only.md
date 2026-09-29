@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0305
 Chat: C-2026-09-28-1936
 Lane: fast (one file, one test). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane derive-viewpoint-m2-only · f2e5b086e · non fuso: hard-stop, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-derivem1`, branch `derive-viewpoint-m2-only` (cut by the chat from `alfonso-frontend-jjtl` at `76c7b4f7f`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-derivem1`, branch `derive-viewpoint-m2-only`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
