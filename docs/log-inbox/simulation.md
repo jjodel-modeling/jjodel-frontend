@@ -985,3 +985,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: T4 left out, a question: its origin states today's by-name rule (derivedEvaluator.ts:428-462, as the presentation check), no decision row asks another. T5 reproduces on every dashboard load (3 messages), not only the ticket's sequence. Scenes: 36/36 RUN and FINAL lines equal to the chat's trunk_readings_2026-09-29; 11 dialog lines differ only by the 3 roles R-SIM-95 unhid. Logs: ~/.jjodel-lanes/P-2026-09-29-0356/.
 **Prompt document name**: 2026-09-29 03:56
 **Ticket** (priority low, opened here). The chat's probe kit selects the Data form select by its old name (`~/.jjodel-lanes/probe-kit/_tmp_input_walk.ts:460-461`, `_tmp_input_dialog.ts:58`, `:94`, `:102`); once this branch merges it must use «Form of state attribute n». This lane's copies accept both names.
+
+## 2026-09-29 — merge: sim-ui-tickets into alfonso-frontend-jjtl (P-2026-09-29-0425)
+**Prompt**: `claude_2026-09-29_0425_prompt_merge_sim-ui-tickets.md`, a direct merge by `lane-run merge --direct`, no session: `sim-ui-tickets` at `ca0f659f8` into `alfonso-frontend-jjtl`, merge base `42d7a08dd`, 6 commits on the branch side.
+**Files touched**: merge `f573ac1e3`: 8 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_0356_prompt_sim_ui_tickets.md`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simCanvasState.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRolesDraft.test.ts`, `frontend/src/components/editor-v2/sim/simCanvasState.ts`, `frontend/src/components/editor-v2/sim/simRolesDraft.ts`, `frontend/src/pages/components/Navbar.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f573ac1e3` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5695 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: four demo scenes re-run on f573ac1e3 port 3045 with the probe kit on the new Form label: 73 readings identical to 09-29b; tickets 1,2,3,5 fixed, 4 a question for Alfonso
+**Notes**: Rollback tag `pre-sim-ui-tickets` on `1430054fe` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0425/result.json`.
+**Prompt document name**: 2026-09-29 04:25
