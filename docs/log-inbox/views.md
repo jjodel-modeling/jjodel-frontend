@@ -239,3 +239,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: four demo scenes re-run on faa3cd66f port 3045: 73 readings identical to 09-29c; derived DemoPetri: no token marks, centred names, 48x12 bar, orthogonal arcs
 **Notes**: Rollback tag `pre-petri-notation-l2b` on `cd2b5fec9` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1103/result.json`.
 **Prompt document name**: 2026-09-29 11:03
+
+## 2026-09-29 — fix(editor-v2): the default notation legible, lane V2 (P-2026-09-29-1332)
+**Prompt**: `claude_2026-09-29_1332_prompt_visual_v2.md`, lane V2 of the visual concrete syntax discovery (§5), branch `visual-v2`, heavy tier. Five defects of the default M2/M1 notation in the light theme, measured before and after by the lane probe on 3055 on the four demo scenes; R-VP-18.
+**Files touched**: `c3b328dc3`: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/styles/tokens/_colors-light.scss`, `frontend/src/components/editor-v2/nodes/instanceNode.scss`, `frontend/src/components/editor-v2/__tests__/lightThemeLegibility.test.ts` (new). `8d63170e3`: `frontend/src/components/editor-v2/utils/edgeUtils.ts`, `frontend/src/components/editor-v2/hooks/useTreeLayout.ts`, `frontend/src/components/editor-v2/utils/__tests__/treeConnector.test.ts`. This commit: `docs/decisions.md` (R-VP-18), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `npx vitest run src/components/editor-v2` 84 files, 2051 passed before the last two tests; full vitest 5755 passed, the 9 known files red at import; `npm run build` exit 0; walks of the four scenes vs the sim-toggle lane's readings (P-2026-09-29-1225): 68/71 identical, the 3 others (Petri RUN 1-3) only the kit reader's section title, renamed by R-SIM-98 after that reference.
+**Out-of-scope changes**: yes: `edgeUtils.ts` and `useTreeLayout.ts` instead of the `UnifiedEdge.tsx` the report named for the marker; one committed test changed, it pinned the defect.
+**Layer Impact Report**: not-required (no §3.2 file touched)
+**Smoke visivo**: non applicabile (lane probe on 3055, light; the visual GO is the chat's)
+**Notes**: Ratios: header 2.35→6.22 and 2.09→7.02; edges 2.34→16.3; quiet 1.48→4.76; underline 0→312-436 px; triangle tip 5 px outside pointing away, 41% hidden → 1 px inside, 0%. Also reached, declared in R-VP-18: derived SM/ESM/activity edges without authored colour, the ESM derived dash, the classic object header. Derived Petri unchanged. The first after-probe missed the FlowB tree once, not reproduced; hardened against a NaN bottom.
+**Prompt document name**: 2026-09-29 13:32
