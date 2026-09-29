@@ -12,9 +12,10 @@
  * The sections say what the code says and nothing more (report §5, D1): the
  * Required items are `requiredRoles` (R-SIM-48), the rule of «Checkable»; a
  * role another active role depends on is «Needed by» it, the validator's
- * `dependencyOff`, not Required. Bound is a parameter (R-SIM-49, D2). The
- * three roles nothing reads (Accepting, State output, Transition output)
- * show only when their key is set (D8).
+ * `dependencyOff`, not Required. Bound is a parameter (R-SIM-49, D2).
+ * Accepting, State output and Transition output are rows as every other role
+ * since the engine reads them (R-SIM-91, R-SIM-92; P-2026-09-29-0300): the
+ * rule of D8 that showed them only when set is gone.
  *
  * User profiles (S11c, R-SIM-47): a mode changed or a name given makes a user
  * copy of the profile, «modified» until named; the switches offered are the
@@ -53,9 +54,6 @@ import type { BoundEstimate } from './modelMarkings';
 // Sections
 // ---------------------------------------------------------------------------
 
-/** The roles nothing reads yet (roleCatalog.ts header): shown only when their key is set (D8). */
-const UNREAD_ROLES: ReadonlySet<RoleId> = new Set<RoleId>(['accepting', 'stateOutput', 'transitionOutput']);
-
 /** A role value: a non-empty string, the filter of stcFromRoles.ts. */
 function isSetValue(value: unknown): boolean {
     return typeof value === 'string' && value !== '';
@@ -87,8 +85,7 @@ export interface RoleSections {
  */
 export function roleSections(profile: SimProfile, bag: Readonly<Record<string, unknown>>): RoleSections {
     const mode = (r: RoleId) => profile.modes[r].mode;
-    const shown = (r: RoleId) => r !== 'stateAttributes'
-        && (!UNREAD_ROLES.has(r) || mode(r) !== 'off' || isSetValue(bag[roleDescriptor(r).key ?? '']));
+    const shown = (r: RoleId) => r !== 'stateAttributes';
 
     const placed = new Set<RoleId>();
     const required: RoleId[][] = [];
@@ -324,8 +321,8 @@ const CUSTOM_ID = 'custom';
 /**
  * Whether the dialog offers to turn `role` on (`'on'`) or off (`'off'`), or
  * neither. On: an `off` role of the profile's shape that the engine reads (not
- * the other shape's group, not Initial in Petri, not the three roles nothing
- * reads, not Event, which is derived). Off: an `edit` role that is no side of a
+ * the other shape's group, not Initial in Petri, not Event, which is derived).
+ * Off: an `edit` role that is no side of a
  * required item, no parameter, not needed by an active role (`dependencyOff`)
  * and not the source of an active derived role (`derivedFromOff`). The rule is
  * the validator's, so a switch the dialog offers never makes a defect.
@@ -334,7 +331,7 @@ export function roleSwitch(profile: SimProfile, role: RoleId): 'on' | 'off' | nu
     const d = roleDescriptor(role);
     const mode = profile.modes[role].mode;
     if (mode === 'off') {
-        if (role === 'event' || UNREAD_ROLES.has(role) || d.group === OTHER_SHAPE_GROUP[profile.shape]) return null;
+        if (role === 'event' || d.group === OTHER_SHAPE_GROUP[profile.shape]) return null;
         if (profile.shape === 'petri' && role === 'initial') return null;
         return 'on';
     }
