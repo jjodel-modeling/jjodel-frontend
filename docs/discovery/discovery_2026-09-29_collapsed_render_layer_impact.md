@@ -133,3 +133,48 @@ amendment line, not applied:
 > stays as the toggle.
 
 Recommended: adopt the line as written.
+
+## 6. After the diff: probe on 3060, 11/12 (added 2026-09-29)
+
+Code commit `04acac227`. Probe `frontend/scripts/smoke/_tmp_p2122_collapsed.ts` (gitignored; fixture copied
+from the discovery's `_tmp_irfreeze_common.ts`, plus a `Control` viewpoint: B collapsible without
+`collapsed`), run by `lane-run probe --port 3060`; log
+`~/.jjodel-lanes/P-2026-09-29-2122/probe-_tmp_p2122_collapsed.log`, crops in
+`~/.jjodel-lanes/P-2026-09-29-2122/crops/`. Every item read from the DOM.
+
+| Item | Measured |
+|---|---|
+| Collapsed B, form | `ir-node-content ir-shape--cylinder` (PASS) |
+| Collapsed B, fill | outline path `fill="#e2e8f0"` (PASS) |
+| Collapsed B, chip | chevron-expand, no count (PASS); children hidden, 10 → 6 visible nodes, hull gone |
+| Collapsed B, wrapper | `ir-resizable` (PASS: handles and resizer follow the cylinder) |
+| Collapsed B, badge | one `ir-badge ir-badge--tr` with `bi-box-seam`, **computed `position: relative`, not top right (FAIL)** |
+| Expanded again | rounded, `rgb(255, 255, 255)`, no badge, hull back (PASS); **box 54×66 with `ir-sized`, was 200×42** |
+| Control collapsed | rounded, chip «4», no badge, fill unchanged (PASS), light and dark |
+| Dark | collapsed B cylinder, `#e2e8f0`, badge, no count (PASS) |
+| Page errors | none |
+
+**Finding A, badge position: a pre-existing defect of `irStyle.ts`, not of this diff.** The five
+SVG-painted forms (diamond, hexagon, parallelogram, cylinder, cloud) carry
+`.ir-node-content.ir-shape--<form> > :not(.ir-<form>-svg):not(.ir-marker-svg) { position: relative; z-index: 1; }`
+(`irStyle.ts:113,129-132`, specificity 0,4,0). It beats `.ir-node-content .ir-badge { position: absolute }`
+(`irStyle.ts:48`, 0,2,0), so any badge becomes a flex item, centred at the top of the column. Control in
+the same run: a `shape.badges` entry on a diamond (A2 «gw») computes `position: relative`, not top right; on
+an ellipse (A1 «root», a CSS form) `absolute`, top right. The marker had the same collision and was fixed
+by its `:not(.ir-marker-svg)` (comment at `irStyle.ts:109-112`). Proposed fix: add `:not(.ir-badge)` to
+those five selectors. The comment at `irStyle.ts:105-106` already says badges (z 2) sit above the content.
+
+**Finding B, the derived size on expand (§4): confirmed.** The inactive branch of `useContentDrivenSize`
+drops a size it wrote only when that size came from `defaultSize` (`useContentSize.ts:159`,
+`if (fromDefault.current && !isResized && mine !== null)`). Collapse makes the cylinder's derived 54×66
+the React Flow size, and expand leaves it on the rounded node, for the session, in every viewpoint that
+renders the vertex (the Control B read 54×66 too). Nothing persisted. Proposed fix: drop the condition
+`fromDefault.current &&`, so a size the hook wrote is dropped whenever it goes inactive and no manual size
+owns the vertex (`!isResized`, the size still equal to the one written).
+
+Both fixes are in `viewpoint/ir/` (critical zone, go-ahead given for this lane) but outside the prompt's
+DOVE list, so they wait for Alfonso (Rule 1, RC-21).
+
+**Harness note.** Under this lane's go-ahead the full vitest run has 4 failures, all in
+`scripts/hooks/__tests__/criticalZone.test.ts`: the session's `JJODEL_CRITICAL_ZONE_GOAHEAD` reaches the
+hook tests. With the variable unset, the file is 70/70 and the suite 5877/5877.
