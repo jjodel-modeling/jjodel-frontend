@@ -277,7 +277,9 @@ function ViewDataComponent(props: AllProps) {
                                 <i
                                     className="bi bi-box-arrow-up-right"
                                     aria-hidden="true"
-                                    style={{ fontSize: 11, lineHeight: 1, marginLeft: 4 }}
+                                    // `inherit` against the global `i.bi` colour (style.scss):
+                                    // the icon reads as part of the label, active or not.
+                                    style={{ fontSize: 11, lineHeight: 1, marginLeft: 4, color: 'inherit' }}
                                 />
                             )}
                         </button>
