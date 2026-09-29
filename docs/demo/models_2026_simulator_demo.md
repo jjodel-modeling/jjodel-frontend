@@ -164,8 +164,8 @@ the buttons do not move (Step's top 854.5) [M].
 | 3 | ▶, then `t2 (p2 ×2 → p3)` | `t1 (p1 → p2 ×2)`, `t2 (p2 ×2 → p3)` | `Marking: p1, p3` | `Last step: ε: t2 (p2 ×2 → p3) fired` | "t2 takes two tokens from p2." |
 | 4 | ▶ | none | `Marking: p2 ×2, p3` | `Last step: ε: t1 (p1 → p2 ×2) fired` | "t1 is the only enabled transition. t2 has its tokens, but its guard is false." |
 
-After step 4 the status reads `Deadlock · ε: t2 false`, with the title `ε: t2 (p2 ×2 → p3) false [p3.[tokens] <
-1]` [M]. ▶ is disabled [M]. The table and this status read the same line for line after the dialog's Apply
+After step 4 the status reads `Deadlock · ε: t2 guard false`, with the title `ε: t2 (p2 ×2 → p3) false
+[p3.[tokens] < 1]` [M, P-2026-09-29-1022, R-SIM-96]. ▶ is disabled [M]. The table and this status read the same line for line after the dialog's Apply
 [M, P-2026-09-27-2105].
 **Say** "Deadlock. The panel names the transition and the guard that stops it."
 
@@ -260,9 +260,9 @@ the same with no defect, and the ten events below give the table line for line, 
 
 | # | Click | `Marking:` line after [M] | `Last step:` line [M] | Say |
 |---|---|---|---|---|
-| 1 | `push` | `Marking: locked · coins = 0, paid = false` | `Last step: push: discarded, tp false` | "push is discarded: the guard of tp reads paid, and paid is false." |
+| 1 | `push` | `Marking: locked · coins = 0, paid = false` | `Last step: push: discarded, tp guard false` [M, P-2026-09-29-1022] | "push is discarded: the guard of tp reads paid, and paid is false." |
 | 2 | `coin` | `Marking: locked · coins = 1, paid = false` | `Last step: coin: tc (locked → locked) fired` | "The action adds one coin." |
-| 3 | `push` | `Marking: locked · coins = 1, paid = false` | `Last step: push: discarded, tp false` | |
+| 3 | `push` | `Marking: locked · coins = 1, paid = false` | `Last step: push: discarded, tp guard false` [M, P-2026-09-29-1022] | |
 | 4 | `coin` | `Marking: locked · coins = 2, paid = true` | `Last step: coin: tc (locked → locked) fired` | "Two coins. paid becomes true through its equation." |
 | 5 | `push` | `Marking: unlocked · coins = 0, paid = false` | `Last step: push: tp (locked → unlocked) fired` | "tp fires and resets coins." |
 | 6 | `push` | `Marking: locked · coins = 0, paid = false` | `Last step: push: tu (unlocked → locked) fired` | |
@@ -271,6 +271,8 @@ the same with no defect, and the ten events below give the table line for line, 
 | 9 | `coin` | `Marking: locked · coins = 3, paid = true` | `Last step: coin: tc (locked → locked) fired` | |
 | 10 | `coin` | `Marking: locked · coins = 3, paid = true` | `Last step: coin: tc (locked → locked) halted the run` | "A fourth coin leaves the domain. The run halts on the last good state." |
 
+- Steps 1 and 3 read `guard false` since R-SIM-96 [M, P-2026-09-29-1022, declared through the metamodel fallback;
+  the model-tab route not re-run]. The other eight lines and the final readings are unchanged [M].
 - After step 5 only `push` is on: `coin(off)`, `stop(off)` [M].
 - After step 10 the halt line reads `Halted: coins of demoESM would be 4, outside its domain.` and every event is
   off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; `Last step:` is cut at `halted the r…`,

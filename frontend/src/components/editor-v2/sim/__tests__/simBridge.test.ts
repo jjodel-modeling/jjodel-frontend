@@ -543,7 +543,7 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         if (r) expect(r.inputs.map(i => i.event)).toEqual([null, ...run.alphabet]);
     }
 
-    it('b2net `p2.[tokens] < 2`: no reason while t1 fires; after two firings the reason is t1 false on the current marking (mutant: the configuration of the last label)', () => {
+    it('b2net `p2.[tokens] < 2`: no reason while t1 fires; after two firings the reason is t1 guard false on the current marking (mutant: the configuration of the last label)', () => {
         const lookup = b2net('p2.[tokens] < 2');
         reset(lookup);
         agrees(lookup);
@@ -553,8 +553,8 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         eps(lookup);
         agrees(lookup);
         const r = why(lookup)!;
-        expect(r.line).toBe('ε: t1 false');
-        expect(r.inputs.map(i => i.short)).toEqual(['ε: t1 false']);
+        expect(r.line).toBe('ε: t1 guard false');
+        expect(r.inputs.map(i => i.short)).toEqual(['ε: t1 guard false']);
         expect(r.title).toBe('ε: t1 (p1 → p2) false [p2.[tokens] < 2]');
         expect(r.inputs[0].detail).toBe('ε: t1 (p1 → p2) false');
     });
@@ -589,7 +589,7 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         reset(lookup);
         agrees(lookup);
         const r = why(lookup)!;
-        expect(r.line).toBe('ε: e2 false');
+        expect(r.line).toBe('ε: e2 guard false');
         expect(r.title).toBe('ε: F (S → A, B): e2 false [false]');
     });
 
@@ -641,7 +641,7 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         eps(lookup);
         agrees(lookup);
         const r = why(lookup)!;
-        expect(r.line).toBe('ε: e2 false; e4 false');
+        expect(r.line).toBe('ε: e2 guard false; e4 guard false');
         expect(r.title).toBe('ε: e2 (D → A) false [false]; F (D → B, C): e4 false [false]');
     });
 
@@ -663,6 +663,49 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         expect(r.title).toBe('ε: tq (pb → pc) inhibited by Alpha');
     });
 
+    /** t2 of DemoPetri (demo script §2.2) at a marking of p2, p3 and lock, k = 4: p2 -a3 ×2-> t2 -a4-> p3, lock -i1-o t2. */
+    const demoT2 = (p2: number, p3: number, lock: number) => {
+        const lookup = petri({
+            p2: { cls: 'C_Place', slots: { A_tokens: [p2] } },
+            p3: { cls: 'C_Place', slots: { A_tokens: [p3] } },
+            lock: { cls: 'C_Place', slots: { A_tokens: [lock] } },
+            t2: { cls: 'C_PTr', slots: { A_guard: ['p3.[tokens] < 1'] } },
+            a3: { cls: 'C_Arc', slots: { R_src: ['p2'], R_tgt: ['t2'], A_w: [2] } },
+            a4: { cls: 'C_Arc', slots: { R_src: ['t2'], R_tgt: ['p3'] } },
+            i1: { cls: 'C_Inh', slots: { R_src: ['lock'], R_tgt: ['t2'] } },
+        });
+        lookup.MM._state.simArcWeight = 'A_w';
+        lookup.MM._state.simBound = '4';
+        lookup.A_w = { className: 'DAttribute', id: 'A_w', name: 'w' };
+        return lookup;
+    };
+
+    it('DemoPetri t2 at (p2, p3, lock) = (2, 1, 0): the line says guard false, the title and the detail keep their text (mutants: the old `t2 false`; guard in the title)', () => {
+        const lookup = demoT2(2, 1, 0);
+        reset(lookup);
+        agrees(lookup);
+        const r = why(lookup)!;
+        expect(r.line).toBe('ε: t2 guard false');
+        expect(r.title).toBe('ε: t2 (p2 ×2 → p3) false [p3.[tokens] < 1]');
+        expect(r.inputs[0].detail).toBe('ε: t2 (p2 ×2 → p3) false');
+    });
+
+    it('DemoPetri t2 blocked by its guard and by something else: the inhibitor is checked first and names lock, a short preset leaves nothing enabled (mutant: the inhibitor reason reads guard false)', () => {
+        const inhibited = demoT2(2, 1, 1);
+        reset(inhibited);
+        agrees(inhibited);
+        const r = why(inhibited)!;
+        expect(r.line).toBe('ε: t2 inhibited by lock');
+        expect(r.title).toBe('ε: t2 (p2 ×2 → p3) inhibited by lock');
+
+        const short = demoT2(1, 1, 0);
+        reset(short);
+        agrees(short);
+        const s = why(short)!;
+        expect(s.line).toBe('nothing enabled');
+        expect(s.title).toBe('ε: nothing enabled');
+    });
+
     it('turnstile in Running: Push has no candidate and says why; Coin has one and says nothing; pressing Push names the false guard (mutants: a reason for an input with a candidate; the old discard wording)', () => {
         const lookup = buildLookup({ ...ROLES, simGuard: 'A_guard' }, TURNSTILE);
         reset(lookup, turnstileRecord);
@@ -670,13 +713,13 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         const run = getSimRun('M');
         expect(inputReason(run, 'coin', lookup, label)).toBeNull();
         expect(inputReason(run, 'push', lookup, label, 'A_guard')).toEqual({
-            event: 'push', short: 'Push: tPushL false', detail: 'Push: tPushL (Locked → Locked) false',
+            event: 'push', short: 'Push: tPushL guard false', detail: 'Push: tPushL (Locked → Locked) false',
             full: 'Push: tPushL (Locked → Locked) false [false]',
         });
         expect(why(lookup)).toBeNull();
         const pressed = pressInput('M', 'push', undefined, lookup, 'Push');
         expect(pressed.outcome?.kind).toBe('discard');
-        expect(pressed.lastStep).toBe('Push: discarded, tPushL false');
+        expect(pressed.lastStep).toBe('Push: discarded, tPushL guard false');
     });
 
     it('turnstile in Deadlock: an input with nothing enabled says so, never a defect; the defective one comes first in the line (mutant: an empty list reported as a defect)', () => {

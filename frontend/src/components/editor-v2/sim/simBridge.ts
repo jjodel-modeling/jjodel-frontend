@@ -1026,7 +1026,8 @@ function blocked(
     if (failing.length === 0) return { short: `${own} ${out.kind}`, detail: `${label} ${out.kind}`, full: `${label} ${out.kind}` };
     const g = failing[0].g;
     const names = failing.map(s => elementName(lookup, s.site)).join(', ');
-    const short = g.kind === 'defect' ? `defect, ${defectShort(g.reason, g.detail)}` : 'false';
+    // R-SIM-96: the line names the guard, as an inhibitor names its place; the title keeps `false` and the source.
+    const short = g.kind === 'defect' ? `defect, ${defectShort(g.reason, g.detail)}` : 'guard false';
     const full = g.kind === 'defect' ? `defect, ${g.reason === 'exception' ? defectShort(g.reason, g.detail) : g.detail}` : 'false';
     // R-SIM-90: every guard text of a failing site, as the oracle conjoined them.
     const sources = failing.flatMap(s => guardTexts(lookup, s.site, features));
