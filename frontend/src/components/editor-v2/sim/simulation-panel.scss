@@ -267,8 +267,8 @@
         }
     }
 
-    // TODO: cleanup — unused since the roles moved into SimRolesModal (P-2026-09-27-1740).
-    // The bound (k): the one role that is a value, not a pointer. Same box as the select.
+    // The panel's number box: Play's step limit k in the Choices row (R-SIM-101); before the roles moved into
+    // SimRolesModal (P-2026-09-27-1740) it held the bound (k), the one role that is a value. Same box as the select.
     &__input {
         flex: 1 1 auto;
         min-width: 0;
@@ -322,6 +322,18 @@
     // measured 2026-09-27. Light computes `none`, so restating it at (0,2,0) changes dark only.
     & &__select {
         background-image: none;
+    }
+
+    // -- open: the run policy (M1, R-SIM-101) --------------------------------
+    // Choices and Play's step limit k in one row. The global number-input rule (styles/components/_form-system.scss,
+    // `input[type="number"]`, specificity 0,1,1) outranks `__input` (0,1,0) and makes it 36px with a 14px font, as it
+    // did in the declarations table: inside the row the box is restated at (0,2,0), 24px as the select beside it.
+    &__policy &__input {
+        flex: 0 0 56px;
+        height: 24px;
+        padding: 0 4px;
+        font-size: 11px;
+        line-height: normal;
     }
 
     // -- open: run controls (M1) --------------------------------------------

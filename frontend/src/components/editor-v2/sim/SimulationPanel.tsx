@@ -22,6 +22,9 @@
  *   «Data…» opens the model's own data dialog (SimDataModal.tsx, R-SIM-94): the
  *   globals of the model in its bag's `simStateAttributes`, authoring as the M2
  *   face is, never the run; the undeclared globals of the Reset line lead to it.
+ *   The Choices row sets the model's run policy (R-SIM-101): Ask opens an ε
+ *   list, Random draws it; Play, between Step and Stop, presses ε every 500 ms
+ *   on a timer that reads the store at each tick (simBridge.ts `playPress`).
  *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
@@ -33,20 +36,22 @@
  * re-renders instead of firing one per dispatched action.
  */
 
-import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
+import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
-import { getSimRun, simClear, simReset, simSetPending } from './simRunState';
+import { getSimPolicy, getSimRun, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending } from './simRunState';
+import type { SimChoices } from './simRunState';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
     profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView,
-    markingLine, outputLine, panelInputs, pressInput, pressRandom, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
+    markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep, runSignature, runStatus, startRun, stopReason,
+    undeclaredGlobals,
 } from './simBridge';
-import type { InputLabel, InputValue, StopReason } from './simBridge';
+import type { InputLabel, InputPress, InputValue, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
 import { sketchOfMetamodel } from './metamodelSketch';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
@@ -78,6 +83,9 @@ const PANEL_PROFILES: SimProfile[] = PANEL_PROFILE_IDS.map(id => systemProfile(i
 /** The title of the summary while Apply has something to write (R-SIM-78, R-SIM-34). */
 const APPLY_NOTE = 'Apply writes the proposed bindings and the profile in one step; one undo reverts it. '
     + 'A run on a model of this metamodel is interrupted.';
+
+/** Play's pace (R-SIM-101, A1): one ε step every 500 ms. */
+const PLAY_INTERVAL_MS = 500;
 
 interface MetaOption { id: string; name: string }
 interface MetaOptions {
@@ -249,6 +257,13 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const [modal, setModal] = useState<{ onData: boolean } | null>(null);
     useEffect(() => { setChosen(null); setModal(null); }, [configModelId]);
     useEffect(() => { setDataModal(null); setUndeclared([]); }, [modelid]);
+    // R-SIM-101: the model Play runs on, null when it does not; why it stopped, for the status row; the k field while typed.
+    const [playing, setPlaying] = useState<string | null>(null);
+    const [playNote, setPlayNote] = useState<string | null>(null);
+    const [kDraft, setKDraft] = useState<string | null>(null);
+    // The steps of the current Play press: written by its timer only, never read by a render.
+    const playSteps = useRef(0);
+    useEffect(() => { setPlaying(null); setPlayNote(null); setKDraft(null); }, [modelid]);
 
     const roles: Roles = useMemo(() => {
         try { return JSON.parse(roleSig) as Roles; } catch { return {}; }
@@ -362,6 +377,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const current = getSimRun(modelid);
         if (!current || liveSignature === '' || liveSignature === current.signature) return;
         simClear(modelid);
+        setPlaying(null);
+        setPlayNote(null);
         setPending(null);
         setAsking(null);
         simSetPending(modelid, null);
@@ -428,6 +445,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
 
     const onReset = useCallback((): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
+        setPlaying(null);
+        setPlayNote(null);
         setPending(null);
         setAsking(null);
         simSetPending(modelid, null);
@@ -474,6 +493,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     }, [modelid, roles, configModelId, modelDataOff]);
 
     const onStop = useCallback((): void => {
+        setPlaying(null);
+        setPlayNote(null);
         setRunError(null);
         setRunWarning(null);
         setPending(null);
@@ -489,17 +510,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     }, [modelid]);
 
     /**
-     * One input: `event` an event instance id, `null` for ε; `selector` the
-     * transition the user chose from the list; `drawFrom` the ε list Random
-     * draws among (R-SIM-100). The bridge commits the step and gives back the
-     * lines to show (R-SIM-35, R-SIM-36).
+     * The outcome of one press, a hand's or Play's (R-SIM-35, R-SIM-36): the
+     * input dialog, the list, «Last step», as the bridge gives them back.
      */
-    const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[], drawFrom?: readonly Candidate[]): void => {
-        const lookup: any = (store.getState() as any).idlookup ?? {};
-        const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
-        const pressed = drawFrom
-            ? pressRandom(modelid, drawFrom, lookup, values)
-            : pressInput(modelid, event, selector, lookup, input, values);
+    const show = useCallback((pressed: InputPress, event: string | null, input: string, values?: readonly InputValue[]): void => {
         // The press reads inputs (R-SIM-88): the dialog asks them; nothing was committed, the lines stay.
         if (pressed.asks) {
             setPending(null);
@@ -514,9 +528,62 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (pressed.lastStep !== null) setLastStep({ text: pressed.lastStep, title: pressed.lastStepTitle ?? pressed.lastStep });
         setReasonsOpen(false);
         setTick(t => t + 1);
-    }, [modelid, events]);
+    }, [modelid]);
+
+    /**
+     * One input by hand: `event` an event instance id, `null` for ε; `selector`
+     * the transition the user chose from the list; `drawFrom` the ε list Random
+     * draws among (R-SIM-100). Step reads the model's policy, so under Random no
+     * ε list opens (R-SIM-101); a hand press stops Play. The bridge commits the
+     * step and gives back the lines to show.
+     */
+    const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[], drawFrom?: readonly Candidate[]): void => {
+        const lookup: any = (store.getState() as any).idlookup ?? {};
+        const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
+        setPlaying(null);
+        setPlayNote(null);
+        const pressed = drawFrom
+            ? pressRandom(modelid, drawFrom, lookup, values)
+            : event === null && selector === undefined
+                ? pressStep(modelid, lookup, values)
+                : pressInput(modelid, event, selector, lookup, input, values);
+        show(pressed, event, input, values);
+    }, [modelid, events, show]);
 
     const onStep = useCallback((): void => { fire(null); }, [fire]);
+
+    /** Play and Pause (R-SIM-101): Play starts a new count of k steps; Pause stops the timer, the run as it is. */
+    const onPlay = useCallback((): void => {
+        setPlayNote(null);
+        if (playing === modelid) {
+            setPlaying(null);
+            return;
+        }
+        playSteps.current = 0;
+        setPlaying(modelid);
+    }, [playing, modelid]);
+
+    // R-SIM-101: Play, a setTimeout chain, the first tick at the press. Each tick reads the run and the policy from
+    // the store (playPress), never this component's state, so Stop, Reset, an interruption or a change of the
+    // Choices row reaches the next tick; the cleanup clears the timer when Play stops, the model changes or the pill
+    // unmounts. `show` changes with the model only, as this effect does.
+    useEffect(() => {
+        if (playing === null || playing !== modelid) return undefined;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const tick = (): void => {
+            const r = playPress(modelid, (store.getState() as any).idlookup ?? {}, playSteps.current);
+            playSteps.current = r.steps;
+            if (r.press) show(r.press, null, 'ε');
+            if (r.stop === null) {
+                timer = setTimeout(tick, PLAY_INTERVAL_MS);
+                return;
+            }
+            setPlaying(null);
+            setPlayNote(playStopLine(r.stop, r.steps));
+        };
+        tick();
+        return () => { if (timer !== undefined) clearTimeout(timer); };
+    }, [playing, modelid, show]);
 
     /** A class or feature by id, with the labels of the selects: `Class.feature` for a feature. */
     const nameOf = (id: string): string => {
@@ -573,6 +640,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
 
     const status: NetRunStatus | null = view?.status ?? null;
     const reason: StopReason | null = view?.reason ?? null;
+    const policy = getSimPolicy(modelid);
+    const isPlaying = playing === modelid;
     /** A button's title, and why its input has no candidate when it is on without one (R-SIM-60). */
     const inputTitle = (base: string, event: string | null): string => {
         const why = view?.noCandidate.get(event);
@@ -718,6 +787,38 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 onApplied={() => setDataModal(null)}
                             />
                         )}
+                        {/* The run policy (R-SIM-101): how Step and Play resolve an ε choice, and Play's step limit k. One
+                            row, always there, above the lines and the buttons, so Step keeps its top. */}
+                        <div className="sim-panel__row sim-panel__policy">
+                            <span className="sim-panel__label">Choices</span>
+                            <select
+                                className="sim-panel__select"
+                                aria-label="Choices"
+                                title="How Step and Play resolve a choice among ε transitions: Ask opens the list, Random draws one"
+                                value={policy.choices}
+                                onChange={e => { setSimPolicy(modelid, { choices: e.target.value as SimChoices }); setTick(t => t + 1); }}
+                            >
+                                <option value="ask">Ask</option>
+                                <option value="random">Random</option>
+                            </select>
+                            <input
+                                type="number"
+                                className="sim-panel__input"
+                                aria-label="Play step limit"
+                                title={`Play stops after this many steps, 1 to ${MAX_PLAY_STEPS}`}
+                                min={1}
+                                max={MAX_PLAY_STEPS}
+                                step={1}
+                                value={kDraft ?? String(policy.k)}
+                                onChange={e => {
+                                    const text = e.target.value;
+                                    const k = Number(text);
+                                    setKDraft(text);
+                                    if (text.trim() !== '' && Number.isInteger(k) && k >= 1 && k <= MAX_PLAY_STEPS) setSimPolicy(modelid, { k });
+                                }}
+                                onBlur={() => setKDraft(null)}
+                            />
+                        </div>
                         {/* The lines that add to the others sit above the buttons: the panel is anchored at the
                             bottom and grows upward, so they never move the buttons (R-SIM-65, R-SIM-66). One row
                             each, the full text in the title (R-SIM-63). The choice list opens above them too, so Step
@@ -801,6 +902,16 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             >
                                 <i className="bi bi-play-fill" />
                             </button>
+                            {/* Play (R-SIM-101): on while the run is Running, ε off included, so it can say it waits for an event. */}
+                            <button
+                                type="button"
+                                className="sim-panel__btn"
+                                title={isPlaying ? 'Pause' : 'Play'}
+                                onClick={onPlay}
+                                disabled={!isPlaying && status !== 'Running'}
+                            >
+                                <i className={`bi ${isPlaying ? 'bi-pause-fill' : 'bi-fast-forward-fill'}`} />
+                            </button>
                             <button type="button" className="sim-panel__btn" title="Stop" onClick={onStop}>
                                 <i className="bi bi-stop-fill" />
                             </button>
@@ -859,6 +970,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             <span className="sim-panel__status-text">{status}</span>
                             {/* R-SIM-91: on the row's one line, in the status text's style; the run goes on. */}
                             {view?.accepting && <span className="sim-panel__status-text sim-panel__status-accepting">{`· ${view.accepting}`}</span>}
+                            {/* R-SIM-101: why Play stopped while the run goes on; a status, a list or no run say it themselves. */}
+                            {playNote && status === 'Running' && <span className="sim-panel__status-reason" title={playNote}>{`· ${playNote}`}</span>}
                             {reason && <span className="sim-panel__status-reason">{`· ${reason.line}`}</span>}
                             {reason && <i className={`bi bi-chevron-${reasonsOpen ? 'down' : 'up'} sim-panel__status-toggle`} />}
                         </div>

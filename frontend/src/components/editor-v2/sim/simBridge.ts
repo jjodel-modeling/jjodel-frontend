@@ -61,6 +61,13 @@
  * (simRandom.ts), as a click on it would, the input marked `ε (random)` in
  * «Last step» and the seed in its title. Every commit carries its origin to
  * the run's trace: `user` for a click on the list, `random` for a draw.
+ *
+ * The run policy and Play (R-SIM-101, P-2026-09-29-1943): `pressStep` is Step
+ * under the model's policy (simRunState.ts), which under Random draws an ε list
+ * at once instead of opening it; `playTick` decides, purely, what one tick of
+ * Play does, and `playPress` runs one tick against the store, so the panel's
+ * timer reads the run and the policy afresh at every tick. Play presses ε only:
+ * it never chooses an event nor the value of an input.
  */
 
 import type { ExecutionContext } from '../../../jjscript/types';
@@ -91,8 +98,8 @@ import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, GuardOracle, HaltReason,
     InputRead, NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
-import { getSimRun, simCommit } from './simRunState';
-import type { SimOrigin, SimRun } from './simRunState';
+import { getSimPolicy, getSimRun, simCommit } from './simRunState';
+import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
 import { storedProfile } from './simRoleStatus';
 
 type Lookup = Record<string, any>;
@@ -1298,6 +1305,92 @@ export function pressRandom(
     if (!run || candidates.length < 2) return { pending: null, lastStep: null, outcome: null };
     const drawn = drawTransition(candidates, rng ?? seededRng(run.seed ?? 0, run.draws ?? 0)) as Candidate;
     return press(modelId, null, drawn.transition, lookup, RANDOM_INPUT, values, 'random');
+}
+
+// ---------------------------------------------------------------------------
+// The run policy and Play (R-SIM-101)
+// ---------------------------------------------------------------------------
+
+/**
+ * R-SIM-101: Step, the ε press of the panel under the model's policy. Under
+ * Ask it is `pressInput`; under Random a list of two or more candidates is not
+ * shown but drawn at once through `pressRandom`, so no ε list opens. A forced
+ * press is the same under both. An event's press never reads the policy (A3).
+ */
+export function pressStep(modelId: string, lookup: Lookup, values?: readonly InputValue[], rng?: SimRng): InputPress {
+    const pressed = pressInput(modelId, null, undefined, lookup, 'ε', values);
+    if (pressed.pending === null || getSimPolicy(modelId).choices !== 'random') return pressed;
+    return pressRandom(modelId, pressed.pending, lookup, values, rng);
+}
+
+/** Why Play stops (R-SIM-101): no run, a status that stops the run, k steps, an input asked, no ε candidate, a list under Ask. */
+export type PlayStop = 'cleared' | 'Terminated' | 'Deadlock' | 'Halted' | 'limit' | 'input' | 'event' | 'choice';
+
+/** What one tick of Play does: one ε press, or stop and say why. */
+export type PlayTick = { readonly kind: 'press' } | { readonly kind: 'stop'; readonly reason: PlayStop };
+
+/**
+ * R-SIM-101: one tick of Play, from the run as the store holds it, the model's
+ * policy and the steps this Play press has made. Pure. The stops, in order: no
+ * run (Stop, the R-SIM-34 interruption); `Terminated`, `Deadlock`, `Halted`; k
+ * steps made; an ε press that asks an input (R-SIM-88); no ε candidate while
+ * the run is `Running`, so an event has one or asks (A2); two or more
+ * candidates under Ask. Otherwise one ε press.
+ */
+export function playTick(run: SimRun | undefined, policy: SimPolicy, steps: number): PlayTick {
+    if (!run) return { kind: 'stop', reason: 'cleared' };
+    const status = runStatus(run);
+    if (status === 'Terminated' || status === 'Deadlock' || status === 'Halted') return { kind: 'stop', reason: status };
+    if (steps >= policy.k) return { kind: 'stop', reason: 'limit' };
+    if (inputAsks(run, null).length > 0) return { kind: 'stop', reason: 'input' };
+    const found = candidates(run.net, { state: run.config.state, event: null }, run.guards).candidates.length;
+    if (found === 0) return { kind: 'stop', reason: 'event' };
+    if (found > 1 && policy.choices === 'ask') return { kind: 'stop', reason: 'choice' };
+    return { kind: 'press' };
+}
+
+/** One tick of Play as the panel runs it (R-SIM-101). */
+export interface PlayPress {
+    /** Why Play stops at this tick; `null` while it goes on. */
+    readonly stop: PlayStop | null;
+    /** The tick's ε press, whose lines the panel shows as Step's; `null` when nothing was pressed. */
+    readonly press: InputPress | null;
+    /** The steps of this Play press after the tick: one more when the press committed a step. */
+    readonly steps: number;
+}
+
+/**
+ * R-SIM-101: one tick of Play on a model's run: `playTick` on the run and the
+ * policy the store holds now, so a Stop, a Reset, an interruption or a change
+ * of the policy between two ticks is read by the next one. A `press` is Step's
+ * (`pressStep`). A list under Ask and an input ask are pressed as Step presses
+ * them, committing nothing, so the panel opens the list or the dialog where
+ * Play stops.
+ */
+export function playPress(modelId: string, lookup: Lookup, steps: number, rng?: SimRng): PlayPress {
+    const tick = playTick(getSimRun(modelId), getSimPolicy(modelId), steps);
+    if (tick.kind === 'press') {
+        const press = pressStep(modelId, lookup, undefined, rng);
+        return { stop: null, press, steps: press.outcome === null ? steps : steps + 1 };
+    }
+    if (tick.reason === 'choice' || tick.reason === 'input') {
+        return { stop: tick.reason, press: pressInput(modelId, null, undefined, lookup, 'ε'), steps };
+    }
+    return { stop: tick.reason, press: null, steps };
+}
+
+/** The status row's note after Play stops (R-SIM-101); `null` where the panel already shows why: a status, a list, no run. */
+export function playStopLine(stop: PlayStop | null, steps: number): string | null {
+    switch (stop) {
+        case 'limit':
+            return `Play stopped at ${steps} step${steps === 1 ? '' : 's'}`;
+        case 'event':
+            return 'Play waits for an event';
+        case 'input':
+            return 'Play waits for an input';
+        default:
+            return null;
+    }
 }
 
 /** One press; `origin` says who chose `selector` when one is given: the list's click or Random's draw. */
