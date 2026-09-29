@@ -1113,3 +1113,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: docs only, the sim gate and placement discovery report
 **Notes**: Rollback tag `pre-sim-gate-disc` on `41b54938f` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1209/result.json`.
 **Prompt document name**: 2026-09-29 12:09
+
+## 2026-09-29 — feat: the choice list is a nondeterministic choice, R-SIM-98 (P-2026-09-29-1221)
+**Prompt**: `claude_2026-09-29_1221_prompt_sim_nondet_label.md`, fast lane on `sim-nondet-label` in `~/jjodel-w-nondet`, asked by Alfonso: the choice list headed `Nondeterministic choice (<input>)`, painted `NONDETERMINISTIC CHOICE (ε)`, with one line `Choose a transition` under it; options and Cancel unchanged; the list's growth measured.
+**Files touched**: code `f5dd73fe4`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (heading and subline), `simBridge.ts` (`choiceHead`), `sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-98), `docs/demo/models_2026_simulator_demo.md` (§2.2, the list's heading), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `f5dd73fe4`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; sim folders 867 passed; `npx vitest run` 5733 passed, the 9 known files red at import (`window is not defined`); `npm run build` exit 0. Red first: 3 failed. Mutation bench 4/4 killed, list in the commit body.
+**Out-of-scope changes**: yes — `simBridge.ts` and its test are not the component of DOVE: the panel does not import under the node bench (probed again, `window is not defined` via monaco), so the texts moved to the panel's text module (CLAUDE.md §5). 7 files, above the Rule 19 five, declared (RC-11). No SCSS: the subline reuses `sim-panel__hint sim-panel__hint--line`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3051 (`_tmp_nondet_walk.ts`, gitignored), light, Petri step 1: heading `NONDETERMINISTIC CHOICE (ε)` U+03B5, subline `Choose a transition` 11 px not clamped, options `t1 (p1 → p2 ×2)`, `t3 (lock → ∅)`, `Cancel`; open list 98.6 to 123.1 px (+24.5), Step 854.5 and status 915 unmoved
+**Notes**: No class named «secondary» exists in the panel: the subline takes the panel's 11 px hint line, painted with `--color-text-tertiary` (rgb(71, 85, 105) in light), the heading's colour. The open panel grows upward from 273.6 to 298.1 px (top 677.4 to 652.9); nothing below the list moves, closed or open, before or after. The list's JSX (options, Cancel) is measured by the probe, not by the bench. Crops `docs/discovery/harness/_tmp_nondet_*.png`.
+**Prompt document name**: 2026-09-29 12:21

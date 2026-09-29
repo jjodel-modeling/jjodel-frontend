@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1221
 Chat: C-2026-09-28-1936
 Lane: fast (one component, its style if needed, its tests, the demo script lines). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-nondet-label · f5dd73fe4 · non fuso: hard-stop, lane probe on 3051 (light), Petri step 1 `NONDETERMINISTIC CHOICE (ε)` + `Choose a transition`, list +24.5 px, Step and status unmoved, crop in docs/discovery/harness/_tmp_nondet_*.png (gitignored), R-SIM-98 nel commit docs, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-nondet`, branch `sim-nondet-label` (cut by the chat from `alfonso-frontend-jjtl` at `12ac29f74`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-nondet`, branch `sim-nondet-label`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

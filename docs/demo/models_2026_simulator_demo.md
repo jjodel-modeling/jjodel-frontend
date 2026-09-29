@@ -172,9 +172,10 @@ three choices [M, P-2026-09-29-1106].
 Reset: `Marking: lock, p1 ×2`, `Last step: Reset`, `Running` [M].
 **Say** "Two tokens on p1, one on lock. The panel shows the marking of the run."
 
-On a conflict ▶ opens a list above the Marking line, headed `CHOOSE A TRANSITION (ε)` (U+03B5, measured by the
-polish lane `5739b950f`), with `Cancel` under it. While it is open, `Last step:` still shows the previous step and
-the buttons do not move (Step's top 854.5) [M].
+On a conflict ▶ opens a list above the Marking line, headed `NONDETERMINISTIC CHOICE (ε)` (U+03B5), with the line
+`Choose a transition` under the heading and `Cancel` under the options (R-SIM-98, measured by P-2026-09-29-1221 on
+3051). While it is open, `Last step:` still shows the previous step and the buttons do not move (Step's top 854.5)
+[M].
 
 | # | Click | List offered [M] | `Marking:` line after [M] | `Last step:` line [M] | Say |
 |---|---|---|---|---|---|
