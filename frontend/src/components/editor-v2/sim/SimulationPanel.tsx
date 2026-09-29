@@ -44,7 +44,7 @@ import {
 } from './simRoleStatus';
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView,
-    markingLine, outputLine, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
+    markingLine, outputLine, panelInputs, pressInput, pressRandom, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
 } from './simBridge';
 import type { InputLabel, InputValue, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -468,7 +468,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setDefects(line === null ? null : { line, title: defectsTitle(started.run.net, lookup, started.compileDefects) ?? line });
         // The globals no declaration has lead to the model's Data dialog (R-SIM-94), unless the profile turns the declarations off.
         setUndeclared(modelDataOff ? [] : undeclaredGlobals(started.compileDefects ?? [], lookup, modelid));
-        setLastStep({ text: 'Reset', title: 'Reset' });
+        // The run's seed in the Reset line's title only (R-SIM-100): no visible line.
+        setLastStep({ text: 'Reset', title: `Reset\nseed ${started.run.seed}` });
         setTick(t => t + 1);
     }, [modelid, roles, configModelId, modelDataOff]);
 
@@ -489,13 +490,16 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
 
     /**
      * One input: `event` an event instance id, `null` for ε; `selector` the
-     * transition the user chose from the list. The bridge commits the step and
-     * gives back the lines to show (R-SIM-35, R-SIM-36).
+     * transition the user chose from the list; `drawFrom` the ε list Random
+     * draws among (R-SIM-100). The bridge commits the step and gives back the
+     * lines to show (R-SIM-35, R-SIM-36).
      */
-    const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[]): void => {
+    const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[], drawFrom?: readonly Candidate[]): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
-        const pressed = pressInput(modelid, event, selector, lookup, input, values);
+        const pressed = drawFrom
+            ? pressRandom(modelid, drawFrom, lookup, values)
+            : pressInput(modelid, event, selector, lookup, input, values);
         // The press reads inputs (R-SIM-88): the dialog asks them; nothing was committed, the lines stay.
         if (pressed.asks) {
             setPending(null);
@@ -737,9 +741,23 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                             )}
                                         </button>
                                     ))}
-                                    <button type="button" className="sim-panel__cancel" onClick={() => { setPending(null); simSetPending(modelid, null); }}>
-                                        Cancel
-                                    </button>
+                                    {/* Cancel, and Random right of it on an ε list (R-SIM-100), in one row of Cancel's height. */}
+                                    <div className="sim-panel__choice-actions">
+                                        <button type="button" className="sim-panel__cancel" onClick={() => { setPending(null); simSetPending(modelid, null); }}>
+                                            Cancel
+                                        </button>
+                                        {pending.event === null && (
+                                            <button
+                                                type="button"
+                                                className="sim-panel__random"
+                                                title="Fire one of these transitions, drawn at random"
+                                                onClick={() => fire(null, undefined, pending.values, pending.candidates)}
+                                            >
+                                                <i className="bi bi-shuffle" />
+                                                <span>Random</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </>
                         )}
