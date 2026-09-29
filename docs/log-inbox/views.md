@@ -265,3 +265,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs only, the visual concrete syntax discovery
 **Notes**: Rollback tag `pre-visual-syntax-disc` on `1d940e825` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1359/result.json`.
 **Prompt document name**: 2026-09-29 13:59
+
+## 2026-09-29 — feat(views): control-flow notation in the derived viewpoint, lane V1 (P-2026-09-29-1331)
+**Prompt**: `claude_2026-09-29_1331_prompt_visual_v1.md`, lane V1 of the visual concrete syntax discovery (§5), `Lane: full`, on `~/jjodel-w-v1` branch `visual-v1`: the derived state machine, ESM and activity views closer to the textbook, IR data only, tests first; the row R-VP-17.
+**Files touched**: code `b2f3548a0`: `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`, `frontend/src/components/editor-v2/viewpoint/derive/__tests__/viewpointDerivation.test.ts`. This commit: `docs/decisions.md` (R-VP-17), this entry, the Status line of the prompt file. Probes `frontend/scripts/smoke/_tmp_v1_*` and crops `docs/discovery/harness/_tmp_v1_*.png` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `b2f3548a0`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; derive folder 70 passed (53 before; 14 red first); full `npx vitest run` 5755 passed, 2 failed, 10 files red: the 9 known import reds and `laneRun.test.ts` (two 5 s timeouts under load), 84/84 alone; `npm run build` exit 0, Sass deprecations and the chunk-size warning only; `check:docs` 4/4. Mutation bench 22/22 killed. Structure-only and Petri documents byte-equal (digests).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 file: `viewpoint/derive/` is outside `viewpoint/ir/` and `viewpoint/authoring/`)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3054 (light, 1600×1000) EXIT=0, crops `docs/discovery/harness/_tmp_v1_{sm,esm,flowB}_derived.png`
+**Notes**: Measured: on the lproxy backend `$event.value` is the event's L proxy, printed as its DObject name (coin, push, stop); used as is. Re-scored: SM 7/10, ESM 7/11, activity 7/10 (was 4.5, 5, 4.5). Not reached: a small dot and bull's-eye (64 px), `[guard] / effect`, Events as nodes, the diamond, routing (t5, ts cross `unlocked`). An empty guard mounts a transparent 12×4 label box. One docs commit as the prompt asks, not the inbox alone.
+**Prompt document name**: 2026-09-29 13:31

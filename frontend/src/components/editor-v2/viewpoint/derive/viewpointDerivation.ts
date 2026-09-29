@@ -31,6 +31,16 @@
  *   not fit; an arc and an inhibitor arc are a 1 px line in the same ink, on the
  *   default (orthogonal) router, the arc ending in the filled arrowhead. With no
  *   role bound every class keeps the structure's box.
+ * - **The control-flow notation** (P-2026-09-29-1331, lane V1 of
+ *   docs/discovery/discovery_2026-09-29_visual_concrete_syntax.md §5, R-VP-17),
+ *   under the `controlFlow` shape with the Node role bound: a transition is a
+ *   1 px line in the name ink, labelled with its event (the Trigger role), else
+ *   with its guard as raw text; a box with no compartment has its name centred;
+ *   a fork and a join are nameless bars. A binding with a Trigger is a state
+ *   machine: its Terminal is a named state box with a double border in the name
+ *   ink, and no compartment; its Initial is unchanged. Without one it is an
+ *   activity: its Initial is the nameless disc, its Terminal (and an activity
+ *   final) the nameless bull's-eye in the name ink.
  * - **No priority**: the list comes deepest class first and the resolver ranks
  *   an exact match above an inherited one (irResolveCore.ts), so the creation
  *   order settles every tie (decision 1).
@@ -182,7 +192,6 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         return id ? referencesOf(c).find(r => r.id === id)?.name : undefined;
     };
     /** The name of a bound attribute, when it is an attribute `c` holds. */
-    // TODO: cleanup, unused since R-VP-16 dropped the token marks.
     const boundAttribute = (key: string, c: string): string | undefined => {
         const id = roleValue(key);
         return id ? attributesOf(c).find(a => a.id === id)?.name : undefined;
@@ -194,6 +203,10 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         }
         return undefined;
     };
+    /** The control-flow notation (V1) is keyed on the roles: the Node role bound under the shape. */
+    const flow = shape === 'controlFlow' && roleValue('simNode') !== undefined;
+    /** Transitions fired by events make a state machine; without a Trigger it is an activity. */
+    const stateMachine = flow && roleValue('simTrigger') !== undefined;
 
     /** The endpoints of `c` when it is a connection, with the rule that says so. */
     const edgeOf = (c: string, role: string | undefined): { source: string; target: string; rule: string } | null => {
@@ -257,6 +270,12 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
                 if (role === 'arc') edge.terminations = { sourceEnd: 'none', targetEnd: 'closedArrow' };
                 edge.line = { color: NAME_INK, width: 1 };
             }
+            if (flow && role === 'transition') {
+                // One part only: `event [guard] / action` needs a template the IR lacks (V4).
+                const labelled = boundReference('simTrigger', c.id) ?? boundAttribute('simGuard', c.id);
+                if (labelled) edge.labels = { center: { from: 'path', expr: path(labelled) } };
+                edge.line = { color: NAME_INK, width: 1 };
+            }
             out.push({
                 classId: c.id, className: c.name, rule: e.rule,
                 ir: { irVersion: IR_VERSION, kind: 'edge', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label, edge },
@@ -264,19 +283,31 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
             continue;
         }
 
-        const presetId = role ? ROLE_PRESET[shape][role] : undefined;
+        // V1 (R-VP-17): the state machine's Terminal is a named state box, the activity's final
+        // the bull's-eye; the activity's Initial, the fork and the join lose their name.
+        const terminalBox = stateMachine && role === 'terminal';
+        const bullseye = flow && (role === 'activityFinal' || (role === 'terminal' && !stateMachine));
+        const bar = flow && (role === 'fork' || role === 'join');
+        const nameless = bullseye || bar || (flow && role === 'initial' && !stateMachine);
+        const presetId = terminalBox ? 'uml-state' : role ? ROLE_PRESET[shape][role] : undefined;
         const preset = presetId ? getCatalogPreset(presetId) : undefined;
         const petriPlace = shape === 'petri' && role === 'node';
         const petriTransition = shape === 'petri' && role === 'transition';
         // The border token goes in first: applyPresetToShape keeps the author's border colour.
-        let shapeSpec: ShapeSpec = { form: 'rounded', fill: SURFACE, border: { color: petriPlace ? NAME_INK : BORDER, width: 1, style: 'solid' } };
+        // The bull's-eye's dot is drawn in the border colour (IRNodeContent), so both take the ink.
+        let shapeSpec: ShapeSpec = { form: 'rounded', fill: SURFACE, border: { color: petriPlace || bullseye ? NAME_INK : BORDER, width: 1, style: 'solid' } };
         if (preset) shapeSpec = applyPresetToShape(shapeSpec, preset);
         // The Petri transition keeps the catalogue fill as a `bar`, a fixed small box (R-VP-16).
         if (petriTransition) shapeSpec.form = 'bar';
+        if (bar) shapeSpec.form = 'bar';
+        // A CSS double border draws two lines from a width of 3 (irTypes.ts).
+        if (terminalBox) shapeSpec.border = { color: NAME_INK, width: 3, style: 'double' };
         const form = shapeSpec.form as string;
         const solid = preset?.values.fill !== undefined;
         const boxed = !NO_COMPARTMENT.has(form) && !solid;
-        shapeSpec.labels = [{ position: boxed ? 'top' : 'bottom', source: { from: 'intrinsic', prop: 'name' } }];
+        // A final state holds no behaviour (UML), so the Terminal box takes no compartment.
+        const compartment = boxed && !terminalBox && attributesOf(c.id).length > 0;
+        shapeSpec.labels = [{ position: boxed ? (flow && !compartment ? 'center' : 'top') : 'bottom', source: { from: 'intrinsic', prop: 'name' } }];
         // A label sits inside the shape at every position, so on the ink it takes the
         // text-on-dark token (measured on the lane probe: the default text did not read).
         if (solid) shapeSpec.labels[0].style = { color: INVERSE_TEXT };
@@ -285,12 +316,13 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         // the transition's takes the name ink, since it is drawn over the bar and past it.
         if (petriPlace) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { fontStyle: 'italic', fontWeight: 'normal' } };
         if (petriTransition) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { color: NAME_INK, fontWeight: 'normal' } };
+        if (nameless) shapeSpec.labels = [];
 
         const ir: VertexViewIR = {
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label,
             shape: shapeSpec,
         };
-        if (boxed && attributesOf(c.id).length > 0) ir.fieldCompartments = [attributesCompartment()];
+        if (compartment) ir.fieldCompartments = [attributesCompartment()];
         out.push({ classId: c.id, className: c.name, rule: preset ? `role:${role}` : 'structure:default', ir });
     }
     return out;

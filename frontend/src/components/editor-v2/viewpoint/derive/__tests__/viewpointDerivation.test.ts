@@ -375,11 +375,11 @@ describe('deriveViewpointIRs — the edge classes are edges with source and targ
         expect(link.edge).toMatchObject({ source: '$source.value', target: '$target.value' });
     });
 
-    it('every edge outside the Petri notation is directed and carries no line colour of its own', () => {
-        // The Petri arcs with their roles bound are the notation's (P-2026-09-29-0939), pinned below.
-        for (const [, mm, profile] of DEMOS) {
-            if (profile === 'petri') continue;
-            for (const v of deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile))) {
+    it('without roles every edge is directed and carries no line colour of its own', () => {
+        // With the roles bound the Petri arcs (P-2026-09-29-0939) and the control-flow
+        // transitions (V1, P-2026-09-29-1331) carry the notation's ink, pinned below.
+        for (const [, mm] of DEMOS) {
+            for (const v of deriveViewpointIRs(mm.lookup, mm.id, null)) {
                 if (v.ir.kind !== 'edge') continue;
                 expect(edge(v).edge.terminations).toEqual({ sourceEnd: 'none', targetEnd: 'openArrow' });
                 expect(edge(v).edge.line).toBeUndefined();
@@ -431,19 +431,24 @@ describe('deriveViewpointIRs — forms from the roles, colours from the tokens',
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PEST.Transition' },
             exclusive: true, label: 'View for Transition',
-            edge: { source: 'container', target: '$nextState.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' } },
+            edge: {
+                source: 'container', target: '$nextState.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
+                // V1 (P-2026-09-29-1331): the event from the Trigger role, the line in the name ink.
+                labels: { center: { from: 'path', expr: '$event.value' } },
+                line: { color: 'var(--color-inode-name)', width: 1 },
+            },
         });
     });
 
-    it('the solid symbols get the catalogue ink, keep their catalogue match, and name in the text-on-dark token', () => {
-        const flow = deriveViewpointIRs(FLOWB.lookup, FLOWB.id, boundRoles(FLOWB, 'flowchart'));
-        // The Petri transition is the bar of R-VP-16, pinned in the Petri notation block below.
-        const solids: [DerivedView, string][] = [
-            [byClass(flow, 'InitialNode'), 'uml-initial-state'],
-            [byClass(flow, 'Fork'), 'uml-fork-join'],
-            [byClass(flow, 'Join'), 'uml-fork-join'],
+    it('the state machine initial keeps the catalogue ink, its catalogue match, and its name in the text-on-dark token', () => {
+        // V1 leaves the state machine Initial as it was (R-VP-17); the activity's solid symbols
+        // lose their name and the fork and join become bars, pinned in the control-flow block below.
+        const solids: DerivedView[] = [
+            byClass(deriveViewpointIRs(PEST.lookup, PEST.id, boundRoles(PEST, 'stateMachine')), 'Initial'),
+            byClass(deriveViewpointIRs(ESM.lookup, ESM.id, boundRoles(ESM, 'extendedStateMachine')), 'Initial'),
         ];
-        for (const [v, preset] of solids) {
+        for (const v of solids) {
+            const preset = 'uml-initial-state';
             expect(vertex(v).shape.fill).toBe(INK);
             expect(recognizeSymbol(vertex(v).shape).map(p => p.id)).toContain(preset);
             expect(vertex(v).shape.labels).toEqual([{ position: 'bottom', source: { from: 'intrinsic', prop: 'name' }, style: { color: 'var(--color-text-inverse)' } }]);
@@ -456,8 +461,8 @@ describe('deriveViewpointIRs — forms from the roles, colours from the tokens',
         const petri = deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri'));
         expect(recognizeSymbol(vertex(byClass(flow, 'FinalNode')).shape).map(p => p.id)).toContain('uml-final-state');
         expect(vertex(byClass(flow, 'FinalNode')).shape.marker).toBe('dot');
-        // A hollow symbol keeps the default text colour: no style on its label.
-        expect(vertex(byClass(flow, 'FinalNode')).shape.labels).toEqual([{ position: 'bottom', source: { from: 'intrinsic', prop: 'name' } }]);
+        // The activity's final node is a nameless bull's-eye (V1), pinned in the control-flow block below.
+        expect(vertex(byClass(flow, 'FinalNode')).shape.labels).toEqual([]);
         // The Petri place draws no token marks (R-VP-16), so it is the catalogue's Place again.
         expect(recognizeSymbol(vertex(byClass(petri, 'Place')).shape).map(p => p.id)).toContain('petri-place');
         expect(vertex(byClass(petri, 'Place')).shape.form).toBe('circle');
@@ -556,8 +561,10 @@ describe('deriveViewpointIRs — pure: nothing it reads is touched', () => {
 /** 16 hex of the sha256 of the list, as JSON: documents, rules and ids, in derivation order. */
 const digest = (views: DerivedView[]) => createHash('sha256').update(JSON.stringify(views)).digest('hex').slice(0, 16);
 
-describe('deriveViewpointIRs — outside the Petri profile the documents are byte-equal to before the notation', () => {
+describe('deriveViewpointIRs — without roles the documents are byte-equal to before the notations', () => {
     // Measured on the derivation of e5010856c, before lane 1 of the Petri notation touched it.
+    // The three control-flow demos with their roles were pinned here too, until V1 drew their
+    // notation (P-2026-09-29-1331); their documents are pinned in the control-flow block below.
     const BEFORE: Record<string, string> = {
         'DemoPEST, structure only': '8e32f9410c28c283',
         'DemoPetri, structure only': 'efca0aebb7252be6',
@@ -569,12 +576,9 @@ describe('deriveViewpointIRs — outside the Petri profile the documents are byt
         'Composite, structure only': '6a6854ef45e31b7c',
         'Cars, structure only': 'e4c9e39d921875d2',
         'Graph, structure only': 'ddc40a8c323eb1e1',
-        'DemoPEST, roles bound': '259677ee57d18668',
-        'DemoESM, roles bound': 'a023d74e549f3482',
-        'DemoFlowB, roles bound': '7ddbc5153f8c905a',
     };
 
-    it('structure only on every metamodel, and the control-flow demos with their roles', () => {
+    it('structure only on every metamodel', () => {
         const got: Record<string, string> = {};
         for (const [name, mm] of [
             ['DemoPEST', PEST], ['DemoPetri', PETRI], ['DemoESM', ESM], ['DemoFlowB', FLOWB], ['ERD', ERD],
@@ -582,11 +586,19 @@ describe('deriveViewpointIRs — outside the Petri profile the documents are byt
         ] as [string, Fixture][]) {
             got[`${name}, structure only`] = digest(deriveViewpointIRs(mm.lookup, mm.id, null));
         }
-        for (const [name, mm, profile] of DEMOS) {
-            if (profile === 'petri') continue;
-            got[`${name}, roles bound`] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
-        }
         expect(got).toEqual(BEFORE);
+    });
+
+    it('the Petri documents with their roles are byte-equal to before V1', () => {
+        // Measured on the derivation of f8e041498, before V1 (P-2026-09-29-1331) touched it (R-VP-16).
+        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('d43f9d79bf78f9f4');
+    });
+
+    it('a control-flow shape with no role bound keeps the boxes: the notation is keyed on the roles, not the shape', () => {
+        for (const mm of [PEST, ESM, FLOWB]) {
+            expect(deriveViewpointIRs(mm.lookup, mm.id, { bag: {}, shape: 'controlFlow' }))
+                .toEqual(deriveViewpointIRs(mm.lookup, mm.id, null));
+        }
     });
 
     it('the Petri profile with no role bound keeps the boxes: the notation is keyed on the roles, not the profile', () => {
@@ -758,6 +770,173 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         expect(deriveViewpointIRs(PETRI.lookup, PETRI.id, { bag: elsewhere, shape: 'petri' })).toEqual(bound);
         // The place is the catalogue's Place for the Symbol Editor.
         expect(recognizeSymbol(vertex(byClass(bound, 'Place')).shape).map(p => p.id)).toContain('petri-place');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The control-flow notation (V1, P-2026-09-29-1331, R-VP-17)
+// ---------------------------------------------------------------------------
+
+const SURFACE = 'var(--color-inode-surface)';
+const BORDER = 'var(--color-inode-border)';
+const INK_LINE = { color: NAME_INK, width: 1 };
+const CENTRED = [{ position: 'center', source: NAME }];
+
+describe('deriveViewpointIRs — the state machine notation with the roles bound (DemoPEST, DemoESM)', () => {
+    const pest = () => deriveViewpointIRs(PEST.lookup, PEST.id, boundRoles(PEST, 'stateMachine'));
+    const esm = () => deriveViewpointIRs(ESM.lookup, ESM.id, boundRoles(ESM, 'extendedStateMachine'));
+
+    it('Terminal, as a whole document: a named state box with the double border in the name ink', () => {
+        const t = byClass(pest(), 'Terminal');
+        expect(t.rule).toBe('role:terminal');
+        expect(t.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Terminal'], authoringMetaclassPins: { Terminal: 'PEST.Terminal' },
+            exclusive: true, label: 'View for Terminal',
+            shape: { form: 'rounded', fill: SURFACE, border: { color: NAME_INK, width: 3, style: 'double' }, labels: CENTRED },
+        });
+    });
+
+    it('the ESM Terminal is the same box, with no compartment though it inherits entry (a final state has no behaviour)', () => {
+        const t = vertex(byClass(esm(), 'Terminal'));
+        expect(t.shape).toEqual({ form: 'rounded', fill: SURFACE, border: { color: NAME_INK, width: 3, style: 'double' }, labels: CENTRED });
+        expect(t.fieldCompartments).toBeUndefined();
+    });
+
+    it('Initial is unchanged: the same document with and without V1, in both demos', () => {
+        // The dot badge on a named box needs an IR change (V4); V1 keeps today's disc.
+        for (const views of [pest(), esm()]) {
+            expect(vertex(byClass(views, 'Initial')).shape).toEqual({
+                form: 'circle', fill: INK, border: { color: BORDER, width: 1, style: 'solid' },
+                labels: [{ position: 'bottom', source: NAME, style: { color: 'var(--color-text-inverse)' } }],
+            });
+        }
+    });
+
+    it('the transition is labelled with its event (the Trigger role), not its guard, on a line in the name ink', () => {
+        for (const views of [pest(), esm()]) {
+            expect(edge(byClass(views, 'Transition')).edge).toEqual({
+                source: 'container', target: '$nextState.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
+                labels: { center: { from: 'path', expr: '$event.value' } }, line: INK_LINE,
+            });
+        }
+    });
+
+    it('a box with no compartment has its name centred; a box with one keeps the name on top', () => {
+        // DemoPEST: State and Event hold no attribute.
+        for (const n of ['State', 'Event']) {
+            expect(vertex(byClass(pest(), n)).shape.labels, n).toEqual(CENTRED);
+            expect(vertex(byClass(pest(), n)).fieldCompartments, n).toBeUndefined();
+        }
+        // DemoESM: State holds entry, Event holds name.
+        for (const n of ['State', 'Event']) {
+            expect(vertex(byClass(esm(), n)).shape.labels, n).toEqual([{ position: 'top', source: NAME }]);
+            expect(vertex(byClass(esm(), n)).fieldCompartments, n).toHaveLength(1);
+        }
+    });
+});
+
+describe('deriveViewpointIRs — the activity notation with the roles bound (DemoFlowB)', () => {
+    const flow = () => deriveViewpointIRs(FLOWB.lookup, FLOWB.id, boundRoles(FLOWB, 'flowchart'));
+
+    it('InitialNode: the nameless solid disc, still the catalogue initial', () => {
+        const v = vertex(byClass(flow(), 'InitialNode'));
+        expect(v.shape).toEqual({ form: 'circle', fill: INK, border: { color: BORDER, width: 1, style: 'solid' }, labels: [] });
+        expect(recognizeSymbol(v.shape).map(p => p.id)).toContain('uml-initial-state');
+    });
+
+    it('FinalNode: the nameless bull\'s-eye, ring and dot in the name ink, still the catalogue final state', () => {
+        const v = vertex(byClass(flow(), 'FinalNode'));
+        expect(byClass(flow(), 'FinalNode').rule).toBe('role:terminal');
+        expect(v.shape).toEqual({ form: 'circle', fill: SURFACE, border: { color: NAME_INK, width: 1, style: 'solid' }, marker: 'dot', labels: [] });
+        expect(recognizeSymbol(v.shape).map(p => p.id)).toContain('uml-final-state');
+    });
+
+    it('Fork and Join: nameless bars in the catalogue ink', () => {
+        for (const n of ['Fork', 'Join']) {
+            expect(byClass(flow(), n).rule, n).toBe(`role:${n.toLowerCase()}`);
+            expect(vertex(byClass(flow(), n)).shape, n).toEqual({ form: 'bar', fill: INK, border: { color: BORDER, width: 1, style: 'solid' }, labels: [] });
+            expect(vertex(byClass(flow(), n)).fieldCompartments, n).toBeUndefined();
+        }
+    });
+
+    it('the activity boxes have their name centred', () => {
+        for (const n of ['ActivityNode', 'Activity', 'Decision']) {
+            expect(vertex(byClass(flow(), n)).shape, n).toEqual({ form: 'rounded', fill: SURFACE, border: { color: BORDER, width: 1, style: 'solid' }, labels: CENTRED });
+        }
+    });
+
+    it('ControlFlow is labelled with its guard as raw text, on a line in the name ink', () => {
+        expect(edge(byClass(flow(), 'ControlFlow')).edge).toEqual({
+            source: '$source.value', target: '$target.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
+            labels: { center: { from: 'path', expr: '$guard.value' } }, line: INK_LINE,
+        });
+    });
+});
+
+describe('deriveViewpointIRs — the control-flow notation reads the roles', () => {
+    it('without the Trigger a state machine binding draws the activity\'s nameless symbols', () => {
+        const roles = boundRoles(PEST, 'stateMachine');
+        const bag = { ...roles.bag };
+        delete bag.simTrigger;
+        const views = deriveViewpointIRs(PEST.lookup, PEST.id, { bag, shape: 'controlFlow' });
+        expect(vertex(byClass(views, 'Initial')).shape.labels).toEqual([]);
+        expect(vertex(byClass(views, 'Terminal')).shape).toMatchObject({ form: 'circle', marker: 'dot', border: { color: NAME_INK }, labels: [] });
+        // No trigger and no guard: the transition has no label, and keeps the ink.
+        expect(edge(byClass(views, 'Transition')).edge.labels).toBeUndefined();
+        expect(edge(byClass(views, 'Transition')).edge.line).toEqual(INK_LINE);
+    });
+
+    it('with a Trigger bound an activity binding keeps its names and draws the state machine\'s terminal box', () => {
+        const roles = boundRoles(FLOWB, 'flowchart');
+        // Any reference of the flow class stands in for the trigger: the rule reads the role, not the profile.
+        const bag = { ...roles.bag, simTrigger: FLOWB.classId('ControlFlow') + '.source' };
+        const views = deriveViewpointIRs(FLOWB.lookup, FLOWB.id, { bag, shape: 'controlFlow' });
+        expect(vertex(byClass(views, 'InitialNode')).shape.labels).toHaveLength(1);
+        expect(vertex(byClass(views, 'FinalNode')).shape).toMatchObject({ form: 'rounded', border: { style: 'double' } });
+        expect(edge(byClass(views, 'ControlFlow')).edge.labels).toEqual({ center: { from: 'path', expr: '$source.value' } });
+        // The fork and join are bars whatever the binding.
+        expect(vertex(byClass(views, 'Fork')).shape.form).toBe('bar');
+    });
+
+    it('an Activity final is the nameless bull\'s-eye in the ink, in an activity and in a state machine', () => {
+        const roles = boundRoles(FLOWB, 'flowchart');
+        const bag: Record<string, unknown> = { ...roles.bag, simActivityFinal: FLOWB.classId('FinalNode') };
+        delete bag.simTerminal;
+        for (const b of [bag, { ...bag, simTrigger: FLOWB.classId('ControlFlow') + '.source' }]) {
+            const fin = byClass(deriveViewpointIRs(FLOWB.lookup, FLOWB.id, { bag: b, shape: 'controlFlow' }), 'FinalNode');
+            expect(fin.rule).toBe('role:activityFinal');
+            expect(vertex(fin).shape).toEqual({ form: 'circle', fill: SURFACE, border: { color: NAME_INK, width: 1, style: 'solid' }, marker: 'dot', labels: [] });
+        }
+    });
+
+    it('a bound role on a class that does not hold it labels nothing', () => {
+        const roles = boundRoles(FLOWB, 'flowchart');
+        const bag = { ...roles.bag, simGuard: ESM.classId('Transition') + '.guard' };
+        const views = deriveViewpointIRs(FLOWB.lookup, FLOWB.id, { bag, shape: 'controlFlow' });
+        expect(edge(byClass(views, 'ControlFlow')).edge.labels).toBeUndefined();
+    });
+
+    it('the compiled views: the bull\'s-eye takes the ink the marker is drawn in, the guard reads as its raw text', () => {
+        clearCompileCache();
+        const lookup: Lookup = { ...FLOWB.lookup };
+        const object = (id: string, c: string, slots: Record<string, unknown[]>) => {
+            lookup[id] = { id, name: id, className: 'DObject', instanceof: FLOWB.classId(c), features: Object.keys(slots).map(f => `${id}.${f}`) };
+            for (const [f, values] of Object.entries(slots)) {
+                lookup[`${id}.${f}`] = { id: `${id}.${f}`, className: 'DValue', instanceof: `${FLOWB.classId('ControlFlow')}.${f}`, values };
+            }
+        };
+        object('a1', 'Activity', {});
+        object('f1', 'FinalNode', {});
+        object('c1', 'ControlFlow', { source: ['a1'], target: ['f1'], guard: ['x > 0'], effect: [] });
+        const ctx = makeDrawReadCtx(lookup);
+        const views = deriveViewpointIRs(FLOWB.lookup, FLOWB.id, boundRoles(FLOWB, 'flowchart'));
+        const fin = compileView('derived:FinalNode', vertex(byClass(views, 'FinalNode')));
+        // IRNodeContent draws the marker in the border colour (markerColor = borderColorV).
+        expect(fin.borderColor!(ctx, 'f1')).toBe(NAME_INK);
+        expect(fin.labels).toEqual([]);
+        const cf = compileEdgeView('derived:ControlFlow', edge(byClass(views, 'ControlFlow')));
+        expect(String(cf.labelText!(ctx, 'c1'))).toBe('x > 0');
+        expect(cf.lineColor!(ctx, 'c1')).toBe(NAME_INK);
     });
 });
 
