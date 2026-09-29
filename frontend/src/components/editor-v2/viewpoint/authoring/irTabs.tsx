@@ -34,10 +34,19 @@ export const IR_TAB_LABELS: Record<IRTabId, string> = {
     'ir-applies-to': 'Applies to',
     'ir-structure': 'Structure',
     'ir-symbol': 'Symbol',
-    'ir-form': 'Form',
+    'ir-form': 'Layout',
     'ir-appearance': 'Appearance',
     'ir-text': 'Text',
     'ir-source': 'Source',
+};
+
+/**
+ * Tab tooltips, where the label alone is ambiguous. «Layout» also names the canvas
+ * auto-layout and the IR layout defaults, so the tab that edits the FormSpec says
+ * which layout it means (P-2026-09-29-1826).
+ */
+export const IR_TAB_TOOLTIPS: Partial<Record<IRTabId, string>> = {
+    'ir-form': 'How the element appears in forms',
 };
 
 /**
