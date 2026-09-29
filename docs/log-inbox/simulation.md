@@ -1011,3 +1011,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: Not a bug: 12 bridge runs plus 2 controls reproduce the symptom only with the guard at k = 4; without it t2 fires to (0,0,2,0). Weight check is `>=`, capacity halts and never deadlocks, status is recomputed per press. k < 4 cannot give the reported steps 1-4. One question in §0: add «guard» to the reason text (`ε: t2 guard false`), amending R-SIM-58's example.
 **Prompt document name**: 2026-09-29 09:48
+
+## 2026-09-29 — merge: petri-deadlock-disc into alfonso-frontend-jjtl (P-2026-09-29-1030)
+**Prompt**: `claude_2026-09-29_1030_prompt_merge_petri-deadlock-disc.md`, a direct merge by `lane-run merge --direct`, no session: `petri-deadlock-disc` at `315ed2377` into `alfonso-frontend-jjtl`, merge base `385807485`, 2 commits on the branch side.
+**Files touched**: merge `2cffb33a4`: 3 files from the branch side (`docs/discovery/discovery_2026-09-29_petri_false_deadlock.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_0948_prompt_discovery_petri_false_deadlock.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2cffb33a4` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5709 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, the false-deadlock discovery: not a bug, the guard; its prompt file is named _0948_ and carries ID P-2026-09-29-0955
+**Notes**: Rollback tag `pre-petri-deadlock-disc` on `694049a1e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1030/result.json`.
+**Prompt document name**: 2026-09-29 10:30
