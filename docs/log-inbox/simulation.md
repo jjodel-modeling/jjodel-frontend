@@ -998,3 +998,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: four demo scenes re-run on f573ac1e3 port 3045 with the probe kit on the new Form label: 73 readings identical to 09-29b; tickets 1,2,3,5 fixed, 4 a question for Alfonso
 **Notes**: Rollback tag `pre-sim-ui-tickets` on `1430054fe` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0425/result.json`.
 **Prompt document name**: 2026-09-29 04:25
+
+## 2026-09-29 — discovery: the Simulation pill behind Advanced and a Semantic type, Jjodie placement (P-2026-09-29-1040)
+**Prompt**: `claude_2026-09-29_1040_prompt_discovery_sim_gate_and_placement.md`, read-only on `sim-gate-disc` in `~/jjodel-w-simgate` (from `0fbb550ea`): positions of Jjodie and the pill, the gate, a «Semantic type» field in the metamodel's Properties writing `simProfile`, what `None` does, the demo steps, a Phase 2 plan.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-29_sim_gate_and_placement.md`, this entry, the prompt's Status. Probes `frontend/scripts/smoke/_tmp_simgate_*` gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: No dev server (prompt): pixels are CSS reads over the editor box measured 09-24/09-27. Probe [M]: on the four demo metamodels the dialog on a Properties-stored preset proposes what the picker path does (4/4, match lines equal the script's). Phase 2: 6 code files, no critical zone, no `simBridge.ts`; `sim-guard-word` merged at `7fec9c966`. Four decisions, two questions in §0.
+**Prompt document name**: 2026-09-29 10:40
