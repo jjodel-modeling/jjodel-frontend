@@ -1206,3 +1206,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: pending — chat, RC-23; lane probe on 3057 (`_tmp_randl1_walk.ts`, gitignored), light, 1600×1000, set up by R-SIM-99's path: Petri step 1 list 123.1 px with and without Random, Step 854.5 open and closed; Cancel 294-330.1 and Random 342.1-399.8 at top 804, both 14 px; Reset and drawn-step titles end `seed <n>`; t2's line 262 of 262 px, marker inside; 4 random runs end Deadlock at p2 ×2, p3; sm, esm, flowB run readings 12/12, 12/12, 7/7 identical to 09-29c
 **Notes**: The kit's walk (`probe-kit/simgate`) predates R-SIM-99: the probe's copy takes the toggle and the picker (7 clicks) instead of the removed select. The origin rule lives in the store: kept only where the label has two or more candidates, so a forced step has none whatever the caller passes; the same guard in the bridge was dropped as an equivalent mutant. One console error per run, the baseline kind. Crops `docs/discovery/harness/_tmp_randl1_*.png`, logs `~/.jjodel-lanes/P-2026-09-29-1840/`.
 **Prompt document name**: 2026-09-29 18:40
+
+## 2026-09-29 — merge: sim-random-l1 into alfonso-frontend-jjtl (P-2026-09-29-1933)
+**Prompt**: `claude_2026-09-29_1933_prompt_merge_sim-random-l1.md`, a direct merge by `lane-run merge --direct`, no session: `sim-random-l1` at `69b370973` into `alfonso-frontend-jjtl`, merge base `70b580af4`, 6 commits on the branch side.
+**Files touched**: merge `2d5a702b2`: 12 files from the branch side (`docs/decisions.md`, `docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_1840_prompt_sim_random_l1.md`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRunState.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2d5a702b2` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5849 tests in 230 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: R-SIM-100 Random button, seeded draw, minimal trace; list 123.1, Step 854.5 unchanged
+**Notes**: Rollback tag `pre-sim-random-l1` on `b256abc36` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1933/result.json`.
+**Prompt document name**: 2026-09-29 19:33
