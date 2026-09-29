@@ -24,6 +24,7 @@ import type {
     Conditional,
     FontFamilyToken,
     FontWeightToken,
+    LabelAnchor,
     Literal,
     PathExpr,
     TextStyle,
@@ -314,6 +315,21 @@ function compileTextStyle(style: TextStyle | undefined, deps: Set<string>): Comp
     return out;
 }
 
+/**
+ * Closed vocabulary of `LabelSpec.anchor` (R-VP-15 (1), P-2026-09-29-1245). A Record keyed on
+ * the union, as VALID_PREDICATE_OPS is: an anchor added to the type without being added here
+ * fails to compile. irValidate reads it for the authoring-time rule (R-B9-bis).
+ */
+export const LABEL_ANCHORS: Record<LabelAnchor, true> = { n: true, e: true, s: true, w: true };
+
+/** The render side of the anchor: permissive towards what is persisted, so an absent or
+ *  unknown anchor draws below ('s') instead of dropping the label (R-B9-bis). */
+export function resolveLabelAnchor(anchor: unknown): LabelAnchor {
+    return typeof anchor === 'string' && Object.prototype.hasOwnProperty.call(LABEL_ANCHORS, anchor)
+        ? anchor as LabelAnchor
+        : 's';
+}
+
 /** Cheap structural hash for the compile cache (djb2 over JSON). Also reused by
  * irDefaults.isMigratedDefaultView for the factory-equality comparison. */
 export function irHash(ir: AnyViewIR): string {
@@ -398,7 +414,11 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         const editsName = l.source.from === 'intrinsic'
             && (l.source.prop === 'name' || l.source.prop === 'qualifiedName')
             && l.editable !== false;
-        return { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName, style: compileTextStyle(l.style, deps) };
+        const compiled: CompiledLabel = { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName, style: compileTextStyle(l.style, deps) };
+        // Outside label (R-VP-15 (1)): the side is resolved here, once, so the render only
+        // reads it. An inside label carries no anchor, even a stray persisted one.
+        if (l.position === 'outside') compiled.anchor = resolveLabelAnchor(l.anchor);
+        return compiled;
     });
 
     const badges: CompiledBadge[] = (ir.shape.badges ?? []).map(b => ({

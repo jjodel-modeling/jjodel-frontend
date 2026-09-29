@@ -9,7 +9,7 @@
  * All fixtures are plain D-layer shapes (idlookup records); no store, no React.
  */
 import { describe, it, expect } from 'vitest';
-import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash } from '../irCompile';
+import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash, resolveLabelAnchor } from '../irCompile';
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
@@ -1940,5 +1940,68 @@ describe('defaultSize round-trip (P-2026-09-29-1230)', () => {
         const { defaultSize: _dropped, ...rest } = vertexIR({ defaultSize: { width: 120, height: 60 } });
         expect('defaultSize' in rest).toBe(false);
         expect(irHash(rest as VertexViewIR)).toBe(irHash(vertexIR({})));
+    });
+});
+
+describe('outside label: compile per position and anchor (P-2026-09-29-1245)', () => {
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+    /** One literal label at `position`, the anchor written only when given. */
+    const withLabel = (position: string, anchor?: unknown): VertexViewIR => vertexIR({
+        shape: {
+            form: 'circle',
+            labels: [{ position, ...(anchor !== undefined ? { anchor } : {}), source: { from: 'literal', text: 'p1' } }],
+        } as unknown as VertexViewIR['shape'],
+    });
+
+    it('an inside position compiles as before: the position verbatim and no anchor key at all', () => {
+        for (const position of ['top', 'center', 'inside', 'bottom']) {
+            clearCompileCache();
+            const l = compileView(`v_lout_${position}`, withLabel(position)).labels[0];
+            expect(l.position, position).toBe(position);
+            expect(Object.keys(l).sort(), position).toEqual(['editsName', 'position', 'style', 'text', 'visible']);
+        }
+    });
+
+    it('an inside position drops a stray anchor: only outside carries one', () => {
+        clearCompileCache();
+        expect('anchor' in compileView('v_lout_stray', withLabel('top', 'e')).labels[0]).toBe(false);
+    });
+
+    it('outside with no anchor compiles below (s)', () => {
+        clearCompileCache();
+        const l = compileView('v_lout_default', withLabel('outside')).labels[0];
+        expect(l.position).toBe('outside');
+        expect(l.anchor).toBe('s');
+    });
+
+    it('outside with each anchor compiles that anchor, and the text is untouched', () => {
+        for (const anchor of ['n', 'e', 's', 'w']) {
+            clearCompileCache();
+            const l = compileView(`v_lout_${anchor}`, withLabel('outside', anchor)).labels[0];
+            expect(l.anchor, anchor).toBe(anchor);
+            expect(l.text(makeDrawReadCtx({}), 'x'), anchor).toBe('p1');
+        }
+    });
+
+    it('the render is permissive: an unknown anchor draws below instead of dropping the label (R-B9-bis)', () => {
+        for (const bad of ['nw', 'north', '', null, 3]) {
+            clearCompileCache();
+            expect(compileView(`v_lout_bad_${String(bad)}`, withLabel('outside', bad)).labels[0].anchor, String(bad)).toBe('s');
+            expect(resolveLabelAnchor(bad), String(bad)).toBe('s');
+        }
+        expect(resolveLabelAnchor(undefined)).toBe('s');
+        expect(resolveLabelAnchor('w')).toBe('w');
+    });
+
+    it('survives a save (JSON round trip) byte-identical, and each anchor moves the irHash', () => {
+        const ir = withLabel('outside', 'e');
+        const saved = persisted(ir);
+        expect(JSON.stringify(saved)).toBe(JSON.stringify(ir));
+        clearCompileCache();
+        expect(compileView('v_lout_rt', saved).labels[0].anchor).toBe('e');
+        const hashes = new Set(['n', 'e', 's', 'w'].map(a => irHash(withLabel('outside', a))));
+        expect(hashes.size).toBe(4);
+        // Below written explicitly and below by absence render the same, but are two IRs.
+        expect(irHash(withLabel('outside', 's'))).not.toBe(irHash(withLabel('outside')));
     });
 });

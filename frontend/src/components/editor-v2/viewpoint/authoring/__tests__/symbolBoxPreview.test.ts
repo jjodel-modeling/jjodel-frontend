@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { captionForBox, fitScale } from '../SymbolBoxPreview';
+import { captionForBox, fitScale, outsideAnchorOf, outsideLabelRoom } from '../SymbolBoxPreview';
 
 describe('fitScale', () => {
     it('renders 1:1 when the box already fits the stage', () => {
@@ -54,5 +54,30 @@ describe('captionForBox', () => {
 
     it('declares the default size when the view default owns the box (P-2026-09-29-1230)', () => {
         expect(captionForBox({ w: 120, h: 60 }, 'default')).toBe('120 × 60 px · default size');
+    });
+});
+
+describe('outside label in a tile (P-2026-09-29-1245)', () => {
+    it('only an outside label has a side, resolved as the canvas resolves it', () => {
+        for (const p of ['top', 'center', 'inside', 'bottom'] as const) expect(outsideAnchorOf(p, 'e'), p).toBeNull();
+        expect(outsideAnchorOf(undefined, undefined)).toBeNull();
+        expect(outsideAnchorOf('outside', undefined)).toBe('s');
+        expect(outsideAnchorOf('outside', 'w')).toBe('w');
+        expect(outsideAnchorOf('outside', 'nw' as unknown as 'n')).toBe('s');
+    });
+
+    it('takes one line and the 8px gap above or below, the 80px cap and the gap left or right, nothing otherwise', () => {
+        expect(outsideLabelRoom('n')).toEqual({ w: 0, h: 24 });
+        expect(outsideLabelRoom('s')).toEqual({ w: 0, h: 24 });
+        expect(outsideLabelRoom('w')).toEqual({ w: 88, h: 0 });
+        expect(outsideLabelRoom('e')).toEqual({ w: 88, h: 0 });
+        expect(outsideLabelRoom(null)).toEqual({ w: 0, h: 0 });
+    });
+
+    it('the room shrinks the fit, so the box and its label stay inside the strip bounds', () => {
+        const box = { w: 100, h: 88 };
+        const r = outsideLabelRoom('s');
+        const s = fitScale(box, 560 - r.w, 88 - r.h);
+        expect(box.h * s + r.h).toBeLessThanOrEqual(88);
     });
 });

@@ -532,13 +532,16 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 if (!l.visible(readCtx, objectId)) return null;
                 const raw = l.text(readCtx, objectId);
                 const text = raw == null ? '' : String(raw);
+                // Outside label (R-VP-15 (1)): the side rides on a class of its own, so an
+                // inside label keeps exactly the class list it had (irStyle.ts places it).
+                const anchorClass = l.anchor ? ` ir-label--anchor-${l.anchor}` : '';
                 // Editable: intrinsic name/qualifiedName labels edit the element
                 // name unless the IR opts out (spec v1.2 sez. 5).
                 if (l.editsName && editingLabel === i) {
                     return (
                         <input
                             key={`label_${i}`}
-                            className={`ir-label ir-label--${l.position} ir-label__input`}
+                            className={`ir-label ir-label--${l.position}${anchorClass} ir-label__input`}
                             // Same authored style as the span it replaces: the node-level
                             // style already reaches the field by inheritance, this carries
                             // the label's own one, so the text does not change face on
@@ -556,7 +559,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 return (
                     <span
                         key={`label_${i}`}
-                        className={`ir-label ir-label--${l.position}`}
+                        className={`ir-label ir-label--${l.position}${anchorClass}`}
                         style={resolveTextStyle(l.style, readCtx, objectId)}
                         onDoubleClick={l.editsName ? () => {
                             setEditingLabel(i);

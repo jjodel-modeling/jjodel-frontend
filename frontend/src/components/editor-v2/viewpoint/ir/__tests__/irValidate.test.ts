@@ -3,8 +3,8 @@
  * Pure: no store, no React — irValidate -> irCompile is joiner-free.
  */
 import { describe, it, expect } from 'vitest';
-import { validateIR, VALID_PADDING_VALUES, VALID_ROUTING_VALUES } from '../irValidate';
-import { clearCompileCache, compileView, irHash } from '../irCompile';
+import { validateIR, VALID_LABEL_POSITIONS, VALID_PADDING_VALUES, VALID_ROUTING_VALUES } from '../irValidate';
+import { clearCompileCache, compileView, irHash, LABEL_ANCHORS } from '../irCompile';
 import { defaultObjectViewIR, defaultEdgeViewIR } from '../irDefaults';
 import { CONTAINER_ENDPOINT } from '../irTypes';
 import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
@@ -352,6 +352,78 @@ describe('validateIR: defaultSize numeric guard (P-2026-09-29-1230)', () => {
     });
 });
 
+
+describe('validateIR: label position and anchor vocabulary (P-2026-09-29-1245)', () => {
+    /** Written through `unknown`: the values under test sit outside the declared union. */
+    const vertexWithLabels = (labels: unknown[]): VertexViewIR => ({
+        ...defaultObjectViewIR(),
+        shape: { form: 'rect', labels } as unknown as VertexViewIR['shape'],
+    });
+    const lit = (text: string) => ({ from: 'literal', text });
+
+    it('the vocabularies are exactly the four inside positions plus outside, and the four compass anchors', () => {
+        expect(Object.keys(VALID_LABEL_POSITIONS).sort()).toEqual(['bottom', 'center', 'inside', 'outside', 'top']);
+        expect(Object.keys(LABEL_ANCHORS).sort()).toEqual(['e', 'n', 's', 'w']);
+    });
+
+    it('still accepts each of the four inside positions, with no anchor', () => {
+        for (const position of ['top', 'center', 'inside', 'bottom']) {
+            clearCompileCache();
+            expect(validateIR(`v-lpos-${position}`, vertexWithLabels([{ position, source: lit('x') }])), position).toEqual({ ok: true });
+        }
+    });
+
+    it('accepts outside with no anchor (below) and with each of n, e, s, w', () => {
+        clearCompileCache();
+        expect(validateIR('v-lpos-outside', vertexWithLabels([{ position: 'outside', source: lit('x') }]))).toEqual({ ok: true });
+        for (const anchor of ['n', 'e', 's', 'w']) {
+            clearCompileCache();
+            expect(validateIR(`v-lpos-outside-${anchor}`, vertexWithLabels([{ position: 'outside', anchor, source: lit('x') }])), anchor)
+                .toEqual({ ok: true });
+        }
+    });
+
+    it('rejects a position outside the vocabulary, naming the label index and the value read', () => {
+        for (const [position, printed] of [['left', '"left"'], ['outside-top', '"outside-top"'], ['', '""'], [undefined, 'undefined']] as const) {
+            clearCompileCache();
+            const r = validateIR(`v-lpos-bad-${printed}`, vertexWithLabels([{ position: 'top', source: lit('a') }, { position, source: lit('b') }]));
+            expect(r.ok, printed).toBe(false);
+            if (!r.ok) {
+                expect(r.error).toContain('shape.labels[1].position');
+                expect(r.error).toContain(`read ${printed}`);
+            }
+        }
+    });
+
+    it('rejects an anchor outside the vocabulary, on an outside label and on an inside one', () => {
+        for (const [position, anchor, printed] of [
+            ['outside', 'nw', '"nw"'], ['outside', 'north', '"north"'], ['outside', '', '""'],
+            ['outside', null, 'null'], ['outside', 1, '1'], ['top', 'x', '"x"'],
+        ] as const) {
+            clearCompileCache();
+            const r = validateIR(`v-lanchor-bad-${position}-${printed}`, vertexWithLabels([{ position, anchor, source: lit('a') }]));
+            expect(r.ok, `${position} ${printed}`).toBe(false);
+            if (!r.ok) {
+                expect(r.error).toContain('shape.labels[0].anchor');
+                expect(r.error).toContain(`read ${printed}`);
+            }
+        }
+    });
+
+    it('applies to a graphVertex as well', () => {
+        clearCompileCache();
+        const gv = {
+            irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Pkg'],
+            shape: { form: 'rect', labels: [{ position: 'aside', source: lit('p') }] },
+        } as unknown as GraphVertexViewIR;
+        const r = validateIR('gv-lpos-bad', gv);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('shape.labels[0].position');
+        clearCompileCache();
+        const ok = { ...gv, shape: { form: 'rect', labels: [{ position: 'outside', anchor: 'e', source: lit('p') }] } } as unknown as GraphVertexViewIR;
+        expect(validateIR('gv-lpos-ok', ok)).toEqual({ ok: true });
+    });
+});
 
 /**
  * FormSpec (Slice 1a, 2026-08-26).

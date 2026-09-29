@@ -35,6 +35,8 @@ import React from 'react';
 import { MARKER_STROKE_WIDTH, MARKER_VIEWBOX, getMarkerDef } from '../ir/markerRegistry';
 import { SVG_BORDER_DASH, getShapeDescriptor, resolveCornerRadius, roundedPolygonPath } from '../ir/shapeRegistry';
 import type { SymbolPreset } from '../ir/notationCatalog';
+import { resolveLabelAnchor } from '../ir/irCompile';
+import type { LabelAnchor, LabelPosition } from '../ir/irTypes';
 
 /**
  * Width of the box border `.ir-node-content` always carries (irStyle.ts, `border: 1px
@@ -58,6 +60,28 @@ export interface PreviewBox {
 export function fitScale(box: PreviewBox, maxW: number, maxH: number): number {
     if (!(box.w > 0) || !(box.h > 0)) return 1;
     return Math.min(1, maxW / box.w, maxH / box.h);
+}
+
+/**
+ * Room an outside label takes beside the box in a tile (P-2026-09-29-1245), px: one 11px line
+ * plus the 8px gap above or below, the label's 80px cap plus the gap on the left or right.
+ * Taken off the stage bounds before the fit, so the box shrinks to make room instead of the
+ * label spilling out of the fixed strip.
+ */
+const OUTSIDE_LABEL_ROOM_V = 24;
+const OUTSIDE_LABEL_ROOM_H = 88;
+
+/** The side of an outside label, resolved as the canvas resolves it; null for every other
+ *  position, and when no position is given (the preview then keeps its centred label). */
+export function outsideAnchorOf(position: LabelPosition | undefined, anchor: LabelAnchor | undefined): LabelAnchor | null {
+    return position === 'outside' ? resolveLabelAnchor(anchor) : null;
+}
+
+/** Stage room taken by an outside label on `anchor`'s side; none without one. */
+export function outsideLabelRoom(anchor: LabelAnchor | null): PreviewBox {
+    if (anchor === 'n' || anchor === 's') return { w: 0, h: OUTSIDE_LABEL_ROOM_V };
+    if (anchor === 'w' || anchor === 'e') return { w: OUTSIDE_LABEL_ROOM_H, h: 0 };
+    return { w: 0, h: 0 };
 }
 
 /**
@@ -98,9 +122,16 @@ export interface SymbolBoxPreviewProps {
      * and the tile is exactly the scaled box, as before.
      */
     caption?: string;
+    /**
+     * Position and anchor of the view's primary label (`shape.labels[0]`), P-2026-09-29-1245.
+     * Only `outside` changes the tile: the label is drawn beside the box on its side, as on the
+     * canvas. Any other position, or none, keeps the centred label of before.
+     */
+    labelPosition?: LabelPosition;
+    labelAnchor?: LabelAnchor;
 }
 
-export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, cornerRadius, maxW, maxH, caption }) => {
+export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, cornerRadius, maxW, maxH, caption, labelPosition, labelAnchor }) => {
     const v = preset.values;
     const desc = getShapeDescriptor(v.form);
     // Entrambi i painter SVG, con la stessa narrowing di IRNodeContent: una forma
@@ -111,7 +142,9 @@ export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box,
     const svgPainter = painter.kind === 'svg' || painter.kind === 'svgPath' ? painter : null;
     const markerDef = getMarkerDef(v.marker);
 
-    const s = fitScale(box, maxW, maxH);
+    const outside = outsideAnchorOf(labelPosition, labelAnchor);
+    const room = outsideLabelRoom(outside);
+    const s = fitScale(box, Math.max(1, maxW - room.w), Math.max(1, maxH - room.h));
     const dw = Math.max(1, Math.round(box.w * s));
     const dh = Math.max(1, Math.round(box.h * s));
 
@@ -161,7 +194,7 @@ export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box,
     };
 
     return (
-        <div className="symbol-box-preview">
+        <div className={outside ? `symbol-box-preview symbol-box-preview--outside symbol-box-preview--outside-${outside}` : 'symbol-box-preview'}>
             <div className="symbol-box-preview__stage" style={{ width: dw, height: dh }} aria-hidden="true">
                 <div className={`ir-node-content ir-shape--${v.form}`} style={replicaStyle}>
                     {svgPainter && (
@@ -204,9 +237,10 @@ export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box,
                             ))}
                         </svg>
                     )}
-                    {label ? <span className="ir-label ir-label--center">{label}</span> : null}
+                    {label && !outside ? <span className="ir-label ir-label--center">{label}</span> : null}
                 </div>
             </div>
+            {label && outside ? <span className="symbol-box-preview__outside-label">{label}</span> : null}
             {caption ? <span className="symbol-box-preview__caption">{caption}</span> : null}
         </div>
     );

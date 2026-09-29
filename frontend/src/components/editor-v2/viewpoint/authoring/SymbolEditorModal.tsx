@@ -45,7 +45,7 @@ import { VertexAuthoringPanel } from './VertexAuthoringPanel';
 import { SymbolCatalogPicker } from './SymbolCatalogPicker';
 import { borderOverrideRows } from './borderOverrides';
 import SymbolPreview from './SymbolPreview';
-import { SymbolBoxPreview, captionForBox } from './SymbolBoxPreview';
+import { SymbolBoxPreview, captionForBox, outsideAnchorOf } from './SymbolBoxPreview';
 import { resolvePreviewInstances, thumbnailCornerRadius, type ResolvedPreviewInstance } from './previewInstances';
 import { makeReadCtx } from '../ir/irReadCtxLproxy';
 import { useCanvasNodeBoxes } from './useCanvasNodeBox';
@@ -345,6 +345,12 @@ export const SymbolEditorModal: React.FC = () => {
     // The strip resolves the radius per instance instead, through `tiles` below.
     const cornerRadius = thumbnailCornerRadius(ir.shape.cornerRadius);
     const previewLabel = (typeof ir.label === 'string' && ir.label !== '') ? ir.label : (view.name as string);
+    // Outside label (P-2026-09-29-1245): both previews place the text as the canvas places the
+    // view's primary label when that label is outside; every other position keeps the centred
+    // text of before. The symbolic preview narrows to 132 (88 high) for a label above or below,
+    // so the pair still fits the 132px strip.
+    const primaryLabel = ir.shape.labels?.[0];
+    const previewOutside = outsideAnchorOf(primaryLabel?.position, primaryLabel?.anchor);
 
     const navEntries: NavEntry[] = [
         ...NAV_SECTIONS
@@ -534,15 +540,26 @@ export const SymbolEditorModal: React.FC = () => {
                                             maxW={tileMaxW}
                                             maxH={PREVIEW_MAX_H}
                                             caption={t.caption}
+                                            labelPosition={primaryLabel?.position}
+                                            labelAnchor={primaryLabel?.anchor}
                                         />
                                     ))}
                                 </div>
                             ) : (
                                 <>
                                     <div className="symbol-editor-modal__preview-stage">
-                                        <SymbolPreview preset={previewPreset} width={168} cornerRadius={cornerRadius} />
+                                        <SymbolPreview
+                                            preset={previewPreset}
+                                            width={previewOutside === 'n' || previewOutside === 's' ? 132 : 168}
+                                            cornerRadius={cornerRadius}
+                                        />
                                         {previewLabel ? (
-                                            <span className="symbol-editor-modal__preview-label">{previewLabel}</span>
+                                            <span className={previewOutside
+                                                ? `symbol-editor-modal__preview-label symbol-editor-modal__preview-label--outside symbol-editor-modal__preview-label--outside-${previewOutside}`
+                                                : 'symbol-editor-modal__preview-label'}
+                                            >
+                                                {previewLabel}
+                                            </span>
                                         ) : null}
                                     </div>
                                     <span className="symbol-editor-modal__preview-caption">

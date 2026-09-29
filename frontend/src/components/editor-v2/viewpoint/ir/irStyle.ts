@@ -213,6 +213,29 @@ const BASE_CSS = `
 .mm-node.ir-sized > .ir-node-content.ir-shape--bar { width: 100%; height: 100%; }
 .mm-node:has(> .ir-node-content.ir-shape--bar) { min-width: 0; min-height: 0; overflow: visible; }
 .ir-node-content.ir-shape--bar > .ir-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: none; overflow: visible; margin: 0; padding: 0; text-shadow: 0 0 2px var(--color-inode-surface), 0 0 2px var(--color-inode-surface), 0 0 3px var(--color-inode-surface); }
+/* Outside label (R-VP-15 (1), P-2026-09-29-1245): position 'outside' draws the label past the
+   box, on the side its anchor names (n above, s below, w left, e right; IRNodeContent emits
+   ir-label--anchor-*), 8px from the edge and centred on it. Absolute, so it enters neither the
+   content-hug box nor the max-content measure of useContentSize: the symbol keeps its size and
+   edges, handles and selection keep the box. It stays a child of the shape, so it dims, hides
+   and moves with it. The two clips it would meet, the shape's own and the wrapper's
+   (instanceNode.scss: .mm-node.mm-object overflow hidden), are lifted only on a node that
+   carries one; every other node keeps both. The label rules sit at (0,4,0) and come last: they
+   must beat the in-flow rule of the SVG-painted forms (0,4,0, by order) and the bar's centred
+   label (0,3,0), so each sets all four offsets. The halo is the bar's, in the colour of the
+   canvas the label now sits on. The inline editor takes its own width, not 90% of the box.
+   Appended after every other rule, so the rules above stay byte-identical. */
+.ir-node-content:has(> .ir-label--outside) { overflow: visible; }
+.mm-node:has(> .ir-node-content > .ir-label--outside) { overflow: visible; }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-n,
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-s,
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-w,
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-e { position: absolute; z-index: 1; margin: 0; padding: 0; max-width: none; overflow: visible; text-shadow: 0 0 2px var(--canvas-bg), 0 0 2px var(--canvas-bg), 0 0 3px var(--canvas-bg); }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-n { top: auto; bottom: calc(100% + 8px); left: 50%; right: auto; transform: translateX(-50%); text-align: center; }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-s { top: calc(100% + 8px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%); text-align: center; }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-w { top: 50%; bottom: auto; left: auto; right: calc(100% + 8px); transform: translateY(-50%); text-align: right; }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-e { top: 50%; bottom: auto; left: calc(100% + 8px); right: auto; transform: translateY(-50%); text-align: left; }
+.ir-node-content > .ir-label__input.ir-label--outside { width: auto; min-width: 80px; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {
