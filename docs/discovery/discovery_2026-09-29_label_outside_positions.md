@@ -81,3 +81,21 @@ Every label computed `font-size: 13px`, inherited. Injected CSS today [M, `_tmp_
 1. Keep R-VP-15's `'outside'` + `anchor` rather than the four flat values? Recommended: yes, it is the ratified name.
 2. Four anchors now, diagonals later? Recommended: yes, a ticket for `ne/nw/se/sw` (the Petri Place's `nw`).
 3. File the ring-clip ticket? Recommended: yes, low, after a live-app check.
+
+## 6. Addendum 2026-09-29, Phase 2: the probe re-run on the shipped CSS (`9cca484ae`)
+
+The §3 probe re-run on the base `ca59e317e` plus the code commit. This time it reads the real injected `BASE_CSS`, outside rules included, rather than candidate rules, and the DOM carries the classes `IRNodeContent` now emits, `ir-label ir-label--outside ir-label--anchor-<a>` [M]. The controls strip the two `:has()` lifts from that same CSS.
+
+| case | shape/wrapper overflow | gap | centre Δ on the other axis | intrinsic | RF node | visible |
+|---|---|---|---|---|---|---|
+| rect, no label | hidden/hidden | — | — | 28×17 | 200×40 | — |
+| rect, in-flow `bottom` (old IR) | hidden/hidden | — | — | 92×42 | 200×42 | yes |
+| CONTROL s, lifts removed | hidden/hidden | 8 | 0 | 28×17 | 200×40 | **no** |
+| CONTROL s, wrapper lift removed | visible/hidden | 8 | 0 | 28×17 | 200×40 | **no** |
+| rect n, s, w, e | visible/visible | 8 each | 0 | 28×17 | 200×40 | yes |
+| rect s, `hl-dimmed` | visible/visible | 8 | 0 | 28×17 | 200×40 | yes |
+| circle s, ellipse e, diamond n, hexagon w | visible/visible | 8 | 0 | 28×17 | unchanged | yes |
+| bar n, s, e | visible/visible | 8 | 0 | 0×0 | 48×12 | yes |
+| rect s, inline editor | visible/visible | 8 | 0 | 28×17 | 200×40 | yes (147 px wide) |
+
+Bar `n` is the case `top: auto` exists for: the bar's own rule sets `top: 50%`. Old IR keeps both clips, because the lifts do not match without an outside label.

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1245
 Chat: C-2026-09-29-1230
 Lane: full (two-phase: discovery now, Phase 2 in the same session after the chat's GO; label position type, compile, renderer, label editor, tests). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane label-outside-pos · 21c0d6ede (report), 9cca484ae · non fuso: hard-stop, verifica visiva alla chat
 Worktree: `~/jjodel-w-labelout`, branch `label-outside-pos` (cut by the chat from `alfonso-frontend-jjtl` at `12ac29f74`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-labelout`, branch `label-outside-pos`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
 ## COSA
