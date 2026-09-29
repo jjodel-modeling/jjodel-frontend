@@ -52,6 +52,7 @@ import {computeCreationSeed} from "../../components/editor-v2/viewpoint/ir/irCre
 import type {AnyViewIR} from "../../components/editor-v2/viewpoint/ir/irTypes";
 import type {FormThemeName} from "../../jjform/themes";
 import type {FormPaletteName} from "../../jjform/palettes";
+import {unproxyDeep} from "../../model/unproxy";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -649,6 +650,17 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         // il discriminatore legacy contraddice l'ir. La scrittura NON passa dal setter L
         // `set_appliableTo`, che accoppierebbe anche `forceNodeType` (letto solo da
         // DefaultNode, cioè dal canvas classico non più montato da Fase 5a).
+        // Un oggetto L annidato nel draft (`pins.A1 = A1` invece di `A1.id`) verrebbe salvato
+        // così com'è: Action.fire rifiuta solo un proxy al primo livello, e JSON.stringify
+        // dell'ir percorre poi il grafo L costruito pigramente, bloccando la pagina
+        // (P-2026-09-29-2121). Qui diventa il suo id; un valore non riducibile non si scrive.
+        const clean = unproxyDeep(val);
+        if (!clean.ok) {
+            Log.ee('set_ir refused for view "' + this.get_name(c) + '": ' + clean.reason
+                + (clean.path ? ' at ' + clean.path : '') + '. Nothing was stored.', {view: c.data.id, value: val});
+            return false;
+        }
+        val = clean.value;
         const derived = appliableToForIRKind((val as any)?.kind);
         TRANSACTION('change '+this.get_name(c)+'.ir', ()=>{
             SetFieldAction.new(c.data, "ir", val as any, '', false);

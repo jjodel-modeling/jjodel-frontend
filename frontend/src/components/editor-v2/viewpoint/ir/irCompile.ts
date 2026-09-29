@@ -34,6 +34,7 @@ import type {
 } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { parsePathExpr } from './pathExpr';
+import { proxyToIdReplacer } from '../../../../model/unproxy';
 
 /**
  * Multi-hop cross-object paths collected during a single compileView /
@@ -331,9 +332,11 @@ export function resolveLabelAnchor(anchor: unknown): LabelAnchor {
 }
 
 /** Cheap structural hash for the compile cache (djb2 over JSON). Also reused by
- * irDefaults.isMigratedDefaultView for the factory-equality comparison. */
+ * irDefaults.isMigratedDefaultView for the factory-equality comparison. An L object
+ * stored in the ir is hashed as its id instead of walked (P-2026-09-29-2121); on an ir
+ * without one the string is byte-identical to a plain stringify. */
 export function irHash(ir: AnyViewIR): string {
-    const s = JSON.stringify(ir);
+    const s = JSON.stringify(ir, proxyToIdReplacer);
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
     return String(h);
