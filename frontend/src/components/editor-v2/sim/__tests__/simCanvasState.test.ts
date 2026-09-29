@@ -14,7 +14,7 @@ import { __resetSimRunsForTests, getSimNodeState, simCommit, simReset } from '..
 import type { SimRun } from '../simRunState';
 import { step } from '../../../../model/simulation/netStep';
 import type {
-    ActionOracle, CompiledNet, DerivedValues, GuardOracle, HaltReason, NetTransition, SimState, SimValue,
+    ActionOracle, CompiledNet, DerivedValues, GuardOracle, HaltReason, InputRead, NetTransition, SimState, SimValue,
 } from '../../../../model/simulation/netTypes';
 
 const TRUE: GuardOracle = () => ({ kind: 'true' });
@@ -120,6 +120,52 @@ describe('enabledElements: the origins of the candidates of some input, while th
         const run = mkRun(net, st({ a: 1 }));
         expect(nodeStateOf(run, 't')?.enabled).toBe(true);
         expect(nodeStateOf(run, 'u')).toBeNull();
+    });
+});
+
+describe('enabledElements: a transition waiting for an input is ringed, as runStatus keeps its run Running (R-SIM-88)', () => {
+    const DECISION: InputRead = { element: 'D', attr: 'decision', domain: { kind: 'boolean' } };
+    // The DecisionNode of Flow B: both edges read the input, so no guard is true before it is answered.
+    const unanswered: GuardOracle = () => ({ kind: 'false' });
+    const waiting = (run: SimRun, reads: Record<string, InputRead[]>): SimRun => ({ ...run, inputs: new Map(Object.entries(reads)) });
+
+    it('the edges of a decision that wait for an input are ringed (killed by reading the candidates alone)', () => {
+        const net = mkNet([
+            tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'], guardSites: ['Flow_1'] }),
+            tr('f2', { d: 1 }, { b: 1 }, { origin: ['Flow_2'], guardSites: ['Flow_2'] }),
+        ]);
+        const run = waiting(mkRun(net, st({ d: 1 }), { guards: unanswered }), { f1: [DECISION], f2: [DECISION] });
+        expect([...enabledElements(run)].sort()).toEqual(['Flow_1', 'Flow_2']);
+        expect(nodeStateOf(run, 'Flow_1')?.enabled).toBe(true);
+    });
+
+    it('a transition that reads no input keeps the guard\'s reading (killed by ringing every structurally enabled transition)', () => {
+        const net = mkNet([
+            tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'], guardSites: ['Flow_1'] }),
+            tr('f3', { d: 1 }, { c: 1 }, { origin: ['Flow_3'], guardSites: ['Flow_3'] }),
+        ]);
+        const run = waiting(mkRun(net, st({ d: 1 }), { guards: unanswered }), { f1: [DECISION], f3: [] });
+        expect([...enabledElements(run)]).toEqual(['Flow_1']);
+    });
+
+    it('its preset unmarked, or an inhibitor marked, it does not wait (killed by skipping either structural check)', () => {
+        const unmarked = mkNet([tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'] })]);
+        expect(enabledElements(waiting(mkRun(unmarked, st({ a: 1 }), { guards: unanswered }), { f1: [DECISION] })).size).toBe(0);
+        const inhibited = mkNet([{ ...tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'] }), inhibitors: [{ place: 'x', weight: 1 }] }]);
+        expect(enabledElements(waiting(mkRun(inhibited, st({ d: 1, x: 1 }), { guards: unanswered }), { f1: [DECISION] })).size).toBe(0);
+    });
+
+    it('it waits only for an input the run can give: ε, or an event of the alphabet (killed by skipping the trigger check)', () => {
+        const net = mkNet([tr('tc', { d: 1 }, { a: 1 }, { origin: ['Tc'], triggers: ['coin'] })]);
+        expect(enabledElements(waiting(mkRun(net, st({ d: 1 }), { guards: unanswered }), { tc: [DECISION] })).size).toBe(0);
+        expect([...enabledElements(waiting(mkRun(net, st({ d: 1 }), { guards: unanswered, alphabet: ['coin'] }), { tc: [DECISION] }))]).toEqual(['Tc']);
+    });
+
+    it('a halted or terminated run waits for nothing (killed by dropping either gate)', () => {
+        const net = mkNet([tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'] })]);
+        expect(enabledElements(waiting(mkRun(net, st({ d: 1 }), { guards: unanswered, halt: UNSAFE }), { f1: [DECISION] })).size).toBe(0);
+        const ended: CompiledNet = { ...net, final: new Set(['d']) };
+        expect(enabledElements(waiting(mkRun(ended, st({ d: 1 }), { guards: unanswered }), { f1: [DECISION] })).size).toBe(0);
     });
 });
 

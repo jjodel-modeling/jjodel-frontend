@@ -47,7 +47,7 @@ import {
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import {
     bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus,
-    isFirstOpen, isModified, matchLine, multiRow, multiRowLabels, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
+    isFirstOpen, isModified, matchLine, multiRow, multiRowLabels, pillTitle, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
     withAdded, withPrimary, withProfileName, withRemoved, withRoleMode,
 } from './simRolesDraft';
 import type { DraftEdits, DraftInput, MultiRow, RoleBadge, RowValue } from './simRolesDraft';
@@ -303,7 +303,7 @@ export function Declarations({ rows, classes, onChange, focusRow, onFocused, glo
                             </select>
                             <select
                                 className="sim-roles-modal__select"
-                                aria-label={`Stored or derived, state attribute ${n}`}
+                                aria-label={`Form of state attribute ${n}`}
                                 value={form}
                                 onChange={e => choose(i, 'form', e.target.value)}
                             >
@@ -697,7 +697,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const presetValue = preset ?? (PANEL_PROFILE_IDS.some(id => id === base) ? base : '');
     const modified = isModified(profile);
     const statusText = VERDICT_LABEL[status.status];
-    const statusTitle = status.missing.length > 0 ? `Missing: ${status.missing.join(', ')}.` : 'Every required role is bound.';
+    const statusTitle = pillTitle(status, verdicts);
     const dataMode = profile.modes.stateAttributes;
     const dataOff = dataMode.mode === 'off';
     const dataOffReason = dataMode.mode === 'off' ? dataMode.reason : '';
