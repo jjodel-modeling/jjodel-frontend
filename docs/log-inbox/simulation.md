@@ -958,3 +958,17 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Unattended: Mealy takes the discovery's §3.4 fallback, `coin / unlock: t1 (…) fired`, after the probe measured `, output unlock` cut (304px in 262); Accepting follows Activity final in ROLE_SPECS (the G6 test pins Activity final after Terminal); the accepting mark keeps the status text's colour (the success token is below AA at 11px, light): perceptual, for the GO. Mutants 20/20 killed. The four demo scenes are not re-walked here.
 **Prompt document name**: 2026-09-29 03:00
 **Ticket** (priority low, opened here). `roleSections(profile, bag)` no longer reads `bag` now that `UNREAD_ROLES` is gone; the parameter stays (exported signature, Rule 9).
+
+## 2026-09-29 — fix: the low UI tickets of the simulator, four fixed, one question (P-2026-09-29-0356)
+**Prompt**: `claude_2026-09-29_0356_prompt_sim_ui_tickets.md`, full lane on `sim-ui-tickets` in `~/jjodel-w-uitickets` (from the trunk at `42d7a08dd`): five low tickets of 2026-09-27..29, tests first, one commit each; T4 only if a decision or its origin states the wanted behaviour; a lane probe on 3047; no merge.
+**Files touched**: T1 `bbfc3b54b` `frontend/src/components/editor-v2/sim/simRolesDraft.ts` (`pillTitle`), `sim/SimRolesModal.tsx`, `sim/__tests__/simRolesDraft.test.ts`; T2 `6bedfe1c2` `sim/simCanvasState.ts`, `sim/__tests__/simCanvasState.test.ts`; T3 `15f4fb1ae` `sim/SimRolesModal.tsx`; T5 `287461f8c` `frontend/src/pages/components/Navbar.tsx`; docs, this commit: this entry, the prompt's Status. Probes `frontend/scripts/smoke/_tmp_uitickets_*`, `_tmp_input_*` gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the known set (14 before); vitest `src/model/simulation` and `src/components/editor-v2/sim` 25 files, 849 passed (839 before); full vitest 5695 passed, 9 files red at import (`window is not defined`), the §17 set; build exit 0. Red first: T1 5 tests, T2 2 (3 more guard the fix), T3 and T5 in the browser. Mutants: T1 6/6, T2 7/7 killed.
+**Out-of-scope changes**: yes. 6 code files, above five, listed in chat before the first edit: `simRolesDraft.ts` and its test are not named by T1's origin (`SimRolesModal.tsx:594`); the pure `pillTitle` lives there so the node bench runs it (P11). No critical-zone file.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3047 (`lane-run probe`, light), 5/5 DOM checks, T3 and T5 red before: pill «Incompatible: Initial (Flow is not a kind of Node).»; Flow_1 and Flow_2 ringed at the DecisionNode; «Form of state attribute n»; 0 navbar messages (6 before). Crop `docs/discovery/harness/_tmp_uitickets_after_ring_waiting.png` (gitignored). The chat's GO pending.
+**Notes**: T4 left out, a question: its origin states today's by-name rule (derivedEvaluator.ts:428-462, as the presentation check), no decision row asks another. T5 reproduces on every dashboard load (3 messages), not only the ticket's sequence. Scenes: 36/36 RUN and FINAL lines equal to the chat's trunk_readings_2026-09-29; 11 dialog lines differ only by the 3 roles R-SIM-95 unhid. Logs: ~/.jjodel-lanes/P-2026-09-29-0356/.
+**Prompt document name**: 2026-09-29 03:56
+**Ticket** (priority low, opened here). The chat's probe kit selects the Data form select by its old name (`~/.jjodel-lanes/probe-kit/_tmp_input_walk.ts:460-461`, `_tmp_input_dialog.ts:58`, `:94`, `:102`); once this branch merges it must use «Form of state attribute n». This lane's copies accept both names.

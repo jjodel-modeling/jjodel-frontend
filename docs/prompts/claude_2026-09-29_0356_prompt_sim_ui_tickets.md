@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0356
 Chat: C-2026-09-28-1936
 Lane: full (five small tickets, tests first, each its own commit). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-ui-tickets · bbfc3b54b, 6bedfe1c2, 15f4fb1ae, 287461f8c · T4 non fatto: domanda · non fuso: hard-stop, crop in docs/discovery/harness/_tmp_uitickets_*.png (gitignored)
 
 Worktree: `~/jjodel-w-uitickets`, branch `sim-ui-tickets` (cut by the chat from `alfonso-frontend-jjtl` at `42d7a08dd`, after the merge of `sim-outputs-faces`; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-uitickets`, branch `sim-ui-tickets`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
