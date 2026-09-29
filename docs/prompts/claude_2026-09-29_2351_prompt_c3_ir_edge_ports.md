@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-2351
 Chat: C-2026-09-29-2230
 Lane: Phase 2 (critical zone: `irEdgeViews.ts`, §3.1, Layer Impact Report required). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane ir-edge-ports · f83d6bc81 · closed without code: hypothesis falsified on the reproduction (report docs/discovery/discovery_2026-09-29_ir_edge_ports.md), latent freeHandleIndex count and per-side cap ticketed in docs/log-inbox/views.md, self-loop and snap causes moved to slice A1 (chat decision, RC-21)
 Worktree: `~/jjodel-w-irports`, branch `ir-edge-ports` (cut by the chat from `alfonso-frontend-jjtl` at `62f4ac3fc`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-irports`, branch `ir-edge-ports`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA

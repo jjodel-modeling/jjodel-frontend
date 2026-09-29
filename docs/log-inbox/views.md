@@ -380,3 +380,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Visual evidence from the lane itself (P-2026-09-29-2122): 7 crops expanded/collapsed/re-expanded/control in light and dark with DOM measures, tests irCollapsedRender and useContentSizeDrop; merge gates green. Dark-mode contrast of the fixture fill is an authoring colour, not a renderer defect. Merge taken over by chat C-2026-09-29-1826 on Alfonso request.
 **Notes**: Rollback tag `pre-ir-collapsed-render` on `cf8c031f6` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2243/result.json`.
 **Prompt document name**: 2026-09-29 22:43
+
+## 2026-09-30 — docs(views): slice C3, IR edge ports, closed without code (P-2026-09-29-2351)
+**Prompt**: `claude_2026-09-29_2351_prompt_c3_ir_edge_ports.md`, Phase 2 slice C3 on `~/jjodel-w-irports` branch `ir-edge-ports`: reproduce rows 11-12 of discovery `ee7206d0c` (arrowheads on one point of `locked`, a grey dot on `off`) on a derived turnstile, and fix `freeHandleIndex` to the first free index with the per-side cap only if the reproduction confirms the hypothesis.
+**Files touched**: `f83d6bc81`: `docs/discovery/discovery_2026-09-29_ir_edge_ports.md` (new). This commit: the report's §0 resolution, the Status line of the prompt file, this entry and one ticket. No file under `frontend/` tracked by git; probes `frontend/scripts/smoke/_tmp_irports_*` gitignored, left on disk.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — docs only; `git status --porcelain` clean before and after the probes; vite on 3061 started and stopped by `lane-run probe`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no diff written; the report §5 records the one the follow-up owes)
+**Smoke visivo**: non applicabile
+**Notes**: DOM probe on 3061 (derived turnstile, light, DPR 2) and a headless `assignGeometricHandles` agree: 5 distinct handles, max index 2, 5 edges drawn, no coincident arrowheads. Seen instead: the self-loop drawn on the bounding-box corner beside the start of `stop`, its two untouched handles, the 8 px snap leaving the hovered anchor 3.9 px off the arrow tip. Chat decision (RC-21): no code, a ticket, those causes to slice A1.
+**Prompt document name**: 2026-09-29 23:51
+
+## 2026-09-30 — ticket: freeHandleIndex returns a count, not the first free index, and has no per-side cap
+**Ticket**: `freeHandleIndex` (`irEdgeViews.ts:82-91`) is documented «First free handle index for (node, side, role)» but returns how many handles on that side are taken. With a hole in the taken indices it returns a taken one: synthetic control, one assigned edge on `off.left-1` only, `freeHandleIndex('off', 'left', 'target', …) = 1` where the first free index is 0, so two edges share an anchor. It has no cap: five edges on one (node, side, role) get `right-4/left-4` (control `CAP fifth edge`), while DynamicHandles renders indices 0..3 (`MAX_HANDLES_PER_SIDE = 4`, `portDistribution.ts:520`) and xyflow drops an edge whose handle is missing (error 008). Read, not measured: anchor overrides (the reconnect gesture) and `decorateEdges` (`irContainment.ts:328`, counting over a partial `out`) can reach it. The derived turnstile does not: 5 distinct handles, max index 2. Fix when a scene shows it: first free index, capped, a §3.1 edit with its Layer Impact Report.
+**Priority**: low
+**Found in**: P-2026-09-29-2351
+**Detail**: docs/discovery/discovery_2026-09-29_ir_edge_ports.md (§1 H1-H2, §2)
