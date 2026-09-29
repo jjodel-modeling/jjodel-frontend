@@ -4163,6 +4163,18 @@ ma non si costruisce più nulla sopra, l'authoring futuro scrive nel `FormSpec` 
 `FormHost` e la prop `host` non si toccano in questa rimozione (pulizia a un fronte R-DEAD
 successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rail_form_tab_removal.md`.
 
+- **R-VP-15** (2026-09-29, ratified by Alfonso 2026-09-29, evidence: measured, verified: none, reversible: branch).
+  **The derived viewpoint draws the textbook Petri net notation, keyed on the Petri profile.** Source:
+  `docs/discovery/discovery_2026-09-29_petri_notation.md` (P-2026-09-29-0925, §0, §5, §6). Alfonso ratified every
+  recommendation of the report («Sì, tutte») and approved lanes 1 and 2 before the freeze, lanes 3 and 4 only if
+  lane 2 is on the trunk by 2026-10-01 12:00. (1) The persisted names, permanent once saved (R-B9):
+  `LabelPosition 'outside'` with `LabelSpec.anchor` (Place `nw`, Transition `e`), `FontFamilyToken 'serif'`,
+  `ShapeForm 'bar'`, `EdgeTermination 'hollowCircle'`, markers `dots-2`, `dots-3`, `dots-4`. (2) The tokens of the
+  initial marking as dots up to 4, a number from 5; the run's badge unchanged. (3) Every Petri arc `straight`.
+  (4) Ink `var(--color-inode-name)` for place borders, arcs and arrowheads; the bar keeps `#334155`. (5) With no
+  role binding the derivation keeps today's boxes. Lane 1 (P-2026-09-29-0939) implements (2) to (5) and the three
+  markers of (1); lane 2 the outside label and serif, lanes 3 and 4 the bar, the circle and the switch-over.
+
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
 

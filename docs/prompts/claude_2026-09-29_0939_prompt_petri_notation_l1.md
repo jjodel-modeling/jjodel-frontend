@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-0939
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2, lane 1 of the Petri notation plan; tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane petri-notation-l1 · 1cee1e7e4, 3a1753b73 · non fuso: hard-stop, lane probe 11/11 on 3048 (light), traits 11/19, run readings equal to the trunk's, crop in docs/discovery/harness/_tmp_petri1_canvas.png (gitignored), verifica visiva alla chat
 
 Worktree: `~/jjodel-w-petri1`, branch `petri-notation-l1` (cut by the chat from `petri-notation-disc` at `f9c1b8d52`, which is the trunk `385807485` plus the discovery; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-petri1`, branch `petri-notation-l1`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
