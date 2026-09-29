@@ -2398,6 +2398,9 @@ Evidence: `docs/discovery/discovery_2026-09-29_sim_data_level.md` (P-2026-09-29-
   Placement, editor tabs only (D2): Jjodie 48×48 with a 24 px glyph at left 216, its bottom 16 px above the editor's; the closed pill on Jjodie's centre line (D1), 16 px to its right; the open panel keeps bottom 16; the dashboard's Jjodie unchanged. Measured at 1600×1000: both centres at y 927, 17 px apart with the editor's frame.
   The demo sets the Semantic type live in each scene (D4, «I say what kind of model this is»). The Problems producer does not follow the gate (a ticket).
   Evidence: `docs/discovery/discovery_2026-09-29_sim_gate_and_placement.md` (P-2026-09-29-1040, branch `sim-gate-disc`), its recommendations ratified by Alfonso «Yes, all» on 2026-09-29; built by P-2026-09-29-1106.
+- **R-SIM-98** (2026-09-29, ratified by Alfonso 2026-09-29, evidence: read, verified: none, reversible: branch).
+  **The choice list is named a nondeterministic choice.** When more than one transition is enabled, the list that opens above the Marking line is headed `Nondeterministic choice (<input>)`, the input being `ε` or the event pressed, where it read `Choose a transition (<input>)`; the section style paints it `NONDETERMINISTIC CHOICE (ε)`, the input in its own case (G13). Under the heading one line, `Choose a transition`, in the panel's 11 px hint line (`sim-panel__hint sim-panel__hint--line`, the text in its title, R-SIM-63). The options and Cancel are unchanged. The texts are `choiceHead` in `simBridge.ts`.
+  The open list is one row taller, +24.5 px at 1600×1000 (98.6 to 123.1 on the Petri scene at step 1); it opens above the Marking line, so Step (top 854.5) and the status row (top 915) do not move, closed or open (R-SIM-82, G8). Asked by Alfonso on 2026-09-29; built by P-2026-09-29-1221.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 

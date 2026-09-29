@@ -782,6 +782,16 @@ export function candidateLabel(net: CompiledNet, transitionId: string, lookup: L
 }
 
 /**
+ * The head of the choice list (R-SIM-98): named for what it is, a
+ * nondeterministic choice on the input pressed, `ε` or an event, then one
+ * line that says what to do. The panel's section style uppercases the heading
+ * and leaves the input in its own case (G13): `NONDETERMINISTIC CHOICE (ε)`.
+ */
+export function choiceHead(input: string): { heading: string; input: string; subline: string } {
+    return { heading: 'Nondeterministic choice', input, subline: 'Choose a transition' };
+}
+
+/**
  * The run's σ in one line of the M1 face, for the whole run (R-SIM-82, G3): the
  * marking, places by name with `×n` above one and none at 0, `∅` when empty;
  * then, after ` · `, the stored semantic attributes and the derived semantic
