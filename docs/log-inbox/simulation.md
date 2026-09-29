@@ -1232,3 +1232,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: pending — chat, RC-23; lane probe on 3058 (`_tmp_randl2_walk.ts`, gitignored), light, 1600×1000: Choices row 24 px, Step 854.5 under Ask and Random, panel top 748 in the editor; Ask + Play stops at the first list; Random + Play Deadlock at p2 ×2, p3 in 4 steps, three seeds; pause, Stop mid-play; k 2 note; Flow B Terminated in 6; SM waits for an event at 0; sm, esm, flowB run readings 12/12, 12/12, 7/7 identical to 09-29c
 **Notes**: Play is on while the run is Running with ε off, so SM can say it waits for an event; the first tick falls at the press. playTick takes `steps` besides (run, policy): the k counter lives in the bridge, where the bench reaches it. Petri hand-run RUN 1-3 differ from 09-29c only in `paint`, a reader of the pre-R-SIM-98 heading (readings 11:03, f5dd73fe4 12:37). One console error per run, the baseline kind. Logs `~/.jjodel-lanes/P-2026-09-29-1943/`.
 **Prompt document name**: 2026-09-29 19:43
+
+## 2026-09-29 — merge: sim-random-l2 into alfonso-frontend-jjtl (P-2026-09-29-2034)
+**Prompt**: `claude_2026-09-29_2034_prompt_merge_sim-random-l2.md`, a direct merge by `lane-run merge --direct`, no session: `sim-random-l2` at `8628bad4f` into `alfonso-frontend-jjtl`, merge base `7c2539ae9`, 5 commits on the branch side.
+**Files touched**: merge `6bf2c7a3d`: 10 files from the branch side (`docs/decisions.md`, `docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-29_1943_prompt_sim_random_l2.md`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRunState.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6bf2c7a3d` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5867 tests in 230 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: R-SIM-101 Choices Ask|Random, Play, k; Step 854.5; Petri Deadlock in 4, FlowB Terminated 6, SM waits for an event
+**Notes**: Rollback tag `pre-sim-random-l2` on `6c460f998` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2034/result.json`.
+**Prompt document name**: 2026-09-29 20:34
