@@ -13,8 +13,9 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, markingLine,
-    modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
+    acceptingMark, candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason,
+    markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
+    undeclaredGlobals,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
@@ -2023,5 +2024,146 @@ describe('R-SIM-94: the globals of a model are declared in its bag (P-2026-09-29
         expect(runSignature(lookup, 'M', 'MM')).toBe(r.run.signature);
         lookup.M._state = { ...lookup.M._state, ...modelDataPatch([{ ...COUNT_REC, domain: { kind: 'range', min: 0, max: 5 } } as any]) };
         expect(runSignature(lookup, 'M', 'MM')).not.toBe(r.run.signature);
+    });
+});
+
+describe('the faces of Accepting and the outputs (P-2026-09-29-0300, R-SIM-91, R-SIM-92)', () => {
+    const EMPTY_RECORD = () => spyBuilder(() => ({ instances: [], classes: [] })).build;
+    const reset = (lookup: Lookup) => simReset('M', started(lookup, EMPTY_RECORD()));
+    const current = () => getSimRun('M')!;
+    const mark = () => acceptingMark(current().net, current().config.state);
+    const output = (lookup: Lookup) => outputLine(current().config.state, current().net, lookup);
+
+    /** DemoDFA of the discovery §3.8 on the test metamodel: strings over {a, b} ending in b. */
+    function dfaLookup(bag: Record<string, unknown>): Lookup {
+        const lookup = buildLookup(bag, {
+            q0: { cls: 'C_Init', slots: { R_out: ['t00', 't01'] } },
+            q1: { cls: 'C_Acc', slots: { R_out: ['t10', 't11'] } },
+            a: { cls: 'C_Event', slots: { A_label: ['a'] } },
+            b: { cls: 'C_Event', slots: { A_label: ['b'] } },
+            t00: { cls: 'C_Trans', slots: { R_next: ['q0'], R_trigger: ['a'] } },
+            t01: { cls: 'C_Trans', slots: { R_next: ['q1'], R_trigger: ['b'] } },
+            t10: { cls: 'C_Trans', slots: { R_next: ['q0'], R_trigger: ['a'] } },
+            t11: { cls: 'C_Trans', slots: { R_next: ['q1'], R_trigger: ['b'] } },
+        });
+        lookup.C_Acc = { className: 'DClass', id: 'C_Acc', name: 'Accepting', extends: ['C_State'] };
+        return lookup;
+    }
+    const DFA_BAG = { ...ROLES, simAccepting: 'C_Acc', simProfile: 'dfa' };
+
+    /** The turnstile of step 1 with an `out` slot on its states (Moore) or on its transitions (Mealy). */
+    function outLookup(bag: Record<string, unknown>, outs: Record<string, unknown[]>, extra: Record<string, Obj> = {}): Lookup {
+        const objects: Record<string, Obj> = { ...TURNSTILE, ...extra };
+        for (const [id, values] of Object.entries(outs)) objects[id] = { ...objects[id], slots: { ...objects[id].slots, A_out: values } };
+        const lookup = buildLookup(bag, objects);
+        lookup.A_out = { className: 'DAttribute', id: 'A_out', name: 'out' };
+        return lookup;
+    }
+    const MOORE_BAG = { ...ROLES, simStateOutput: 'A_out', simProfile: 'moore' };
+    const MEALY_BAG = { ...ROLES, simTransitionOutput: 'A_out', simProfile: 'mealy' };
+
+    it('the status mark reads `accepting` on the accepting state only, the run going on (killed by a mark that ignores σ, or none)', () => {
+        const lookup = dfaLookup(DFA_BAG);
+        reset(lookup);
+        expect(mark()).toBeNull();
+        pressInput('M', 'b', undefined, lookup, 'b');
+        expect(getSimActiveIds('M')).toEqual(['q1']);
+        expect(runStatus(current())).toBe('Running');
+        expect(mark()).toBe('accepting');
+        pressInput('M', 'b', undefined, lookup, 'b');
+        expect(mark()).toBe('accepting');
+        pressInput('M', 'a', undefined, lookup, 'a');
+        expect(mark()).toBeNull();
+    });
+
+    it('no mark without the role, or with the role off; SM then DFA reads Running · accepting, not Terminated (S5, R-SIM-86)', () => {
+        const pressB = (lookup: Lookup) => { reset(lookup); pressInput('M', 'b', undefined, lookup, 'b'); };
+        pressB(dfaLookup(ROLES));
+        expect(getSimActiveIds('M')).toEqual(['q1']);
+        expect(mark()).toBeNull();
+        // State machine turns Accepting off: the key is set and never reaches the net
+        pressB(dfaLookup({ ...ROLES, simAccepting: 'C_Acc', simTerminal: 'C_Acc', simProfile: 'stateMachine' }));
+        expect([runStatus(current()), mark()]).toEqual(['Terminated', null]);
+        // DFA after State machine: Terminal left in the bag, off under DFA
+        pressB(dfaLookup({ ...DFA_BAG, simTerminal: 'C_Acc' }));
+        expect([runStatus(current()), mark()]).toEqual(['Running', 'accepting']);
+    });
+
+    it('Moore: the Output line from Reset, the marked state\'s value, then the next one (killed by listing every place)', () => {
+        const lookup = outLookup(MOORE_BAG, { Locked: ['red'], Unlocked: ['green'] });
+        reset(lookup);
+        expect(output(lookup)).toEqual({ line: 'Output: red', title: 'Output: red' });
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect(output(lookup)).toEqual({ line: 'Output: green', title: 'Output: green' });
+    });
+
+    it('Moore: `Output: none` on a marked state with no value; two values joined; several marked states named (killed by dropping the none)', () => {
+        const none = outLookup(MOORE_BAG, { Locked: ['red'] });
+        reset(none);
+        pressInput('M', 'coin', undefined, none, 'Coin');
+        expect(output(none)?.line).toBe('Output: none');
+        const two = outLookup(MOORE_BAG, { Locked: ['red', 'buzz'] });
+        reset(two);
+        expect(output(two)?.line).toBe('Output: red, buzz');
+        // Two Init states hold a token each: each output is named after its state
+        const both = outLookup(MOORE_BAG, { Locked: ['red'], Locked2: ['amber'] }, { Locked2: { cls: 'C_Init' } });
+        reset(both);
+        expect(output(both)?.line).toBe('Output: Locked red; Locked2 amber');
+    });
+
+    it('Moore: no Output line without the role, or with the role off (killed by a line on every run)', () => {
+        const plain = outLookup(ROLES, { Locked: ['red'] });
+        reset(plain);
+        expect(output(plain)).toBeNull();
+        const off = outLookup({ ...MOORE_BAG, simProfile: 'stateMachine' }, { Locked: ['red'] });
+        reset(off);
+        expect(output(off)).toBeNull();
+    });
+
+    it('Mealy: «Last step» ends with the fired transition\'s output, its title has an output line (killed by dropping the suffix)', () => {
+        const lookup = outLookup(MEALY_BAG, { tCoin: ['unlock'], tPushU: ['lock', 'beep'] });
+        reset(lookup);
+        const coin = pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect(coin.lastStep).toBe('Coin: tCoin (Locked → Unlocked) fired, output unlock');
+        expect(coin.lastStepTitle).toBe('Coin: tCoin (Locked → Unlocked) fired, output unlock\noutput: unlock');
+        const push = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect(push.lastStep).toBe('Push: tPushU (Unlocked → Locked) fired, output lock, beep');
+        expect(push.lastStepTitle).toBe('Push: tPushU (Unlocked → Locked) fired, output lock, beep\noutput: lock, beep');
+        // tPushL has no value: no suffix, no line
+        const bare = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect([bare.lastStep, bare.lastStepTitle]).toEqual(['Push: tPushL (Locked → Locked) fired', 'Push: tPushL (Locked → Locked) fired']);
+    });
+
+    it('Mealy: no suffix on a halted step (killed by the suffix on halted), nor without the role or with it off', () => {
+        const MERGE: Record<string, Obj> = {
+            A: { cls: 'C_Init', slots: { R_out: ['ta'] } },
+            B: { cls: 'C_Init', slots: { R_out: ['tb'] } },
+            C: { cls: 'C_State' },
+            ta: { cls: 'C_Trans', slots: { R_next: ['C'], A_out: ['unlock'] } },
+            tb: { cls: 'C_Trans', slots: { R_next: ['C'], A_out: ['lock'] } },
+        };
+        const lookup = buildLookup({ ...ROLES, simTransitionOutput: 'A_out' }, MERGE);
+        reset(lookup);
+        expect(pressInput('M', null, 'ta', lookup, 'ε').lastStep).toBe('ε: ta (A → C) fired, output unlock');
+        const halted = pressInput('M', null, undefined, lookup, 'ε');
+        expect(halted.outcome?.kind).toBe('halted');
+        expect([halted.lastStep, halted.lastStepTitle]).toEqual(['ε: tb (B → C) halted the run', 'ε: tb (B → C) halted the run']);
+        for (const bag of [ROLES, { ...MEALY_BAG, simProfile: 'stateMachine' }]) {
+            const l = outLookup(bag, { tCoin: ['unlock'] });
+            reset(l);
+            expect(pressInput('M', 'coin', undefined, l, 'Coin').lastStep).toBe('Coin: tCoin (Locked → Unlocked) fired');
+        }
+    });
+
+    it('the demo presets: every key of the three set, no face on the M1 lines (State machine reads none of them)', () => {
+        const lookup = outLookup(
+            { ...ROLES, simAccepting: 'C_Init', simStateOutput: 'A_out', simTransitionOutput: 'A_out', simProfile: 'stateMachine' },
+            { Locked: ['red'], Unlocked: ['green'], tCoin: ['unlock'] },
+        );
+        reset(lookup);
+        expect([mark(), output(lookup)]).toEqual([null, null]);
+        const coin = pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect([coin.lastStep, mark(), output(lookup)]).toEqual(['Coin: tCoin (Locked → Unlocked) fired', null, null]);
+        expect(markingLine(current().config.state, current().net, lookup).line).toBe('Marking: Unlocked');
     });
 });
