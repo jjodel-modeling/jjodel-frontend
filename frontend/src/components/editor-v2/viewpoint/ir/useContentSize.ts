@@ -32,6 +32,7 @@ import { useReactFlow } from '@xyflow/react';
 import { boxFromIntrinsic, getShapeDescriptor, hasSizeSupplement, type IntrinsicMeasure, type Size } from './shapeRegistry';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
 import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
+import { authoredDefaultSize, defaultBoxFor, sizeSourceOf } from '../../nodes/nodeSizing';
 import type { ShapeForm } from './irTypes';
 
 const px = (v: string): number => {
@@ -101,11 +102,17 @@ const MAX_UNACCEPTED_WRITES = 3;
  * through the resolver also makes this hook the exact complement of `manualSizeOf`
  * (jjomTransformers.ts), which gates on the same record: at most one of the two owns a
  * vertex's size under a given layout, never both.
+ *
+ * `defaultSize` is the view's `VertexViewIR.defaultSize` (P-2026-09-29-1230). When it has
+ * a usable axis the hook also runs on the shapes with no supplement, and the box it writes
+ * is the default one (`defaultBoxFor`), the missing axis derived. Same channel, same
+ * precedence: a manual size of the layout in force still wins (`sizeSourceOf`).
  */
 export function useContentDrivenSize(
     vertexId: string,
     form: ShapeForm | undefined,
     ref: RefObject<HTMLDivElement | null>,
+    defaultSize?: unknown,
 ): void {
     const { getNode, setNodes } = useReactFlow();
     // Reading the layout key inside the selector is what makes it re-run at a layout change:
@@ -113,9 +120,13 @@ export function useContentDrivenSize(
     const isResized = useSelector((s: any) => !!readVertexLayout(
         (s?.idlookup?.[vertexId] ?? {}) as VertexLayoutSource, getLayoutKeyOf(s)).isResized);
     const desc = getShapeDescriptor(form);
-    const active = hasSizeSupplement(desc) && !isResized;
+    const defaults = authoredDefaultSize(defaultSize);
+    const source = sizeSourceOf(isResized, hasSizeSupplement(desc), defaults);
+    const active = source === 'default' || source === 'derived';
     /** The last size this hook wrote, to tell our own size from somebody else's. */
     const written = useRef<Size | null>(null);
+    /** Whether that size came from the view's default, see the deactivation below. */
+    const fromDefault = useRef(false);
     /**
      * Consecutive commits in which the store did NOT come back with the size this
      * hook wrote, while the measurement had not moved. See the budget below.
@@ -139,6 +150,25 @@ export function useContentDrivenSize(
     // commit that changes nothing costs one style write and one layout read.
     useLayoutEffect(() => {
         if (!active) {
+            // A default removed (or the view no longer carrying one) on a shape with no
+            // supplement: nobody would write this node's size again, and the default box
+            // would stay for the session. Drop it, the same keys "Reset size" drops, but
+            // only while it is still ours and no manual size owns the vertex: a
+            // propagation can land on the very numbers this hook wrote.
+            const mine = written.current;
+            if (fromDefault.current && !isResized && mine !== null) {
+                setNodes(nds => {
+                    let changed = false;
+                    const next = nds.map(n => {
+                        if (n.id !== vertexId || n.width !== mine.w || n.height !== mine.h) return n;
+                        changed = true;
+                        const { width: _w, height: _h, measured: _m, ...rest } = n;
+                        return rest as typeof n;
+                    });
+                    return changed ? next : nds;
+                });
+            }
+            fromDefault.current = false;
             written.current = null;
             unaccepted.current = 0;
             return;
@@ -170,11 +200,13 @@ export function useContentDrivenSize(
             return;
         }
 
-        const size = boxFromIntrinsic(desc, measureIntrinsic(el));
+        const derived = boxFromIntrinsic(desc, measureIntrinsic(el));
+        const size = defaults ? defaultBoxFor(defaults, derived, desc.keepAspectRatio) : derived;
         // Same answer as last commit: the measurement has not moved, so if the
         // store still disagrees it is not going to start agreeing.
         const sameTarget = mine !== null && mine.w === size.w && mine.h === size.h;
         written.current = size;
+        fromDefault.current = defaults !== undefined;
         if (curW === size.w && curH === size.h) {
             unaccepted.current = 0;
             return;

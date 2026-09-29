@@ -1912,3 +1912,33 @@ describe('compile di TS2, stile tipografico delle righe (2026-08-25)', () => {
         expect(compileView('v_same_id', without).fieldCompartments[0].rowStyle).toBeUndefined();
     });
 });
+
+describe('defaultSize round-trip (P-2026-09-29-1230)', () => {
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+    it('survives a save (JSON round trip) and reaches compiled.ir verbatim', () => {
+        clearCompileCache();
+        const ir = persisted(vertexIR({ defaultSize: { width: 120, height: 60 } }));
+        expect(ir.defaultSize).toEqual({ width: 120, height: 60 });
+        expect((compileView('v_dsize_rt', ir).ir as VertexViewIR).defaultSize).toEqual({ width: 120, height: 60 });
+    });
+
+    it('keeps a single axis as a single axis: the other is not materialized', () => {
+        const ir = persisted(vertexIR({ defaultSize: { width: 120 } }));
+        expect(ir.defaultSize).toEqual({ width: 120 });
+        expect('height' in (ir.defaultSize as object)).toBe(false);
+    });
+
+    it('moves the irHash, so an edit recompiles instead of hitting the cache', () => {
+        const a = vertexIR({ defaultSize: { width: 120, height: 60 } });
+        const b = vertexIR({ defaultSize: { width: 200, height: 60 } });
+        expect(irHash(a)).not.toBe(irHash(vertexIR({})));
+        expect(irHash(a)).not.toBe(irHash(b));
+    });
+
+    it('a view whose default was set and then dropped hashes as one that never had it', () => {
+        const { defaultSize: _dropped, ...rest } = vertexIR({ defaultSize: { width: 120, height: 60 } });
+        expect('defaultSize' in rest).toBe(false);
+        expect(irHash(rest as VertexViewIR)).toBe(irHash(vertexIR({})));
+    });
+});

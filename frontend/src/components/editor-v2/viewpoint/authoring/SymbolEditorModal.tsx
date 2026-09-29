@@ -51,6 +51,7 @@ import { makeReadCtx } from '../ir/irReadCtxLproxy';
 import { useCanvasNodeBoxes } from './useCanvasNodeBox';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
 import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
+import { authoredDefaultSize } from '../../nodes/nodeSizing';
 import { IR_SECTION_LABELS, IR_TAB_LABELS, type IRSectionId, type IRTabId } from './irTabs';
 import './SymbolEditorModal.scss';
 
@@ -253,6 +254,9 @@ export const SymbolEditorModal: React.FC = () => {
     // DOM order, active pane only, read from the DOM (the canvas stays mounted under
     // the modal). Up to three — the strip draws one tile each.
     const boxes = useCanvasNodeBoxes(viewId, PREVIEW_MAX_INSTANCES);
+    // A view default (P-2026-09-29-1230) owns the box of every instance with no manual
+    // size, so the caption must not call that box derived. Same reading as the canvas.
+    const hasDefaultSize = authoredDefaultSize(ir?.defaultSize) !== undefined;
     // Per-vertex facts, as ONE primitive signature (D8-d): the subscription must not
     // re-render the modal on unrelated store updates, and an object is not a
     // signature. Per vertex it joins the manual size of the layout in force (slice 1c:
@@ -314,10 +318,10 @@ export const SymbolEditorModal: React.FC = () => {
                 && typeof eff.w === 'number' && eff.w > 0
                 && typeof eff.h === 'number' && eff.h > 0;
             const box = manualValid ? { w: eff.w as number, h: eff.h as number } : { w: b.w, h: b.h };
-            inputs.push({ objectId, box, sizeCaption: captionForBox(box, eff.isResized ? 'manual' : 'derived') });
+            inputs.push({ objectId, box, sizeCaption: captionForBox(box, eff.isResized ? 'manual' : hasDefaultSize ? 'default' : 'derived') });
         }
         return { readCtx, inputs };
-    }, [instanceSig, boxes]);
+    }, [instanceSig, boxes, hasDefaultSize]);
 
     if (!viewId) return null;
 
