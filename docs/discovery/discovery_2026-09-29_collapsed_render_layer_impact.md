@@ -178,3 +178,46 @@ DOVE list, so they wait for Alfonso (Rule 1, RC-21).
 **Harness note.** Under this lane's go-ahead the full vitest run has 4 failures, all in
 `scripts/hooks/__tests__/criticalZone.test.ts`: the session's `JJODEL_CRITICAL_ZONE_GOAHEAD` reaches the
 hook tests. With the variable unset, the file is 70/70 and the suite 5877/5877.
+
+## 7. Addendum before the second diff: findings A and B (added 2026-09-29)
+
+Chat answer (RC-21, `[P-2026-09-29-2122]`, 2026-09-29): extend the lane with `irStyle.ts` (`:not(.ir-badge)` on
+the five SVG-form child selectors) and `useContentSize.ts:159` (drop `fromDefault.current &&`), one regression
+test each, under Alfonso's critical-zone go-ahead of 2026-09-29.
+
+**Finding A: the approved CSS edit is not applied; the badge is fixed inline in `IRNodeContent.tsx`.**
+Measured before any edit, in headless Chromium on the CSS `irStyle.ts` injects (`ensureViewCss` through a
+stand-in `document`), a badge and an outside label on each of the five SVG forms and on an ellipse
+(probe `frontend/scripts/smoke/_tmp_p2122_cascade.ts`, gitignored):
+
+| Variant | Badge on the 5 SVG forms | Outside label on the 5 SVG forms | Ellipse |
+|---|---|---|---|
+| today | `relative`, z 1, not in its corner | `absolute` | badge `absolute` z 2 in its corner |
+| `:not(.ir-badge)` added | `absolute`, z 2, in its corner | **`relative`** | unchanged |
+| badge inline `position:absolute; z-index:2` | `absolute`, z 2, in its corner | `absolute` | unchanged |
+
+`:not(.ir-badge)` lifts the in-flow child rule from (0,4,0) to (0,5,0). The outside label of
+P-2026-09-29-1245 is written at (0,4,0) to beat exactly that rule (`shapeRegistry.test.ts`, «is written at
+(0,4,0), after the rules it must beat»), so it would lose on every SVG form. The edit would also break the
+two byte-identity guards of `shapeRegistry.test.ts` (prefix sha at 16743 and at 17954 characters). Rule 3
+forbids it. The inline variant reaches the approved behaviour, every badge in its corner on every form,
+with no CSS edit: the values are the class rule's own (`irStyle.ts:48`), so on the CSS forms nothing
+changes. `irStyle.ts` stays untouched; the lane's files shrink rather than grow. Declared as a deviation from
+the chat's instruction, for the digest.
+
+Layers for A: canvas v2-flow only. What changes: every `.ir-badge` span IRNodeContent emits (shape badges
+and the collapsed badge) carries `style="position:absolute;z-index:2"`. On the five SVG forms the badge
+leaves the flex column for its corner, so it no longer adds a row to the content the derived size measures:
+an SVG form with a badge can get a smaller derived box. What does not change: CSS forms (same values as the
+class rule), labels, compartments, the marker layer, the outside label.
+
+**Finding B: `useContentSize.ts:159`, applied as approved.** Layers: canvas v2-flow only. What changes:
+when the hook goes inactive, it drops the React Flow width and height it wrote, whatever their source
+(before: only a `defaultSize` one), under the same two guards: no manual size owns the vertex under the
+layout in force (`!isResized`), and the node still carries exactly the size the hook wrote. The keys dropped
+are the ones «Reset size» and the default drop already drop (`width`, `height`, `measured`). What does not
+change: the D-layer (the hook never calls `syncSizeToJjom`; persistence keys on `resizing`, which a
+programmatic write never sets), a manual size (kept by `!isResized`), the active branch.
+Scenarios: collapse then expand (the rounded node returns to its CSS box, not 54×66); a conditional form
+switching from a supplemented form to a plain one (the same path, also fixed); a manual resize while
+collapsed, then expand (kept: `isResized`).
