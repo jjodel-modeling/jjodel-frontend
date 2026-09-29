@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1826
 Chat: C-2026-09-29-1826
 Lane: fast (UI behaviour + one label, no IR change, no critical zone)
-Status: to execute
+Status: eseguito 2026-09-29 · lane symbol-tab-modal · f8bd58ae0, 90e41df6a, 25d350167, 6e606fa3d · verifica visiva passata 2026-09-29 (lane Playwright probes on :3002, checks a-e and every rail tab bar; crops in frontend/scripts/smoke/_tmp_symtab/, gitignored) · non fuso
 Model: claude-opus-5-5 (default from .claude/settings.json)
 
 ## COSA
