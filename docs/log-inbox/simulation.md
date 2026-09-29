@@ -1126,3 +1126,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: pending — chat, RC-23; lane probe on 3051 (`_tmp_nondet_walk.ts`, gitignored), light, Petri step 1: heading `NONDETERMINISTIC CHOICE (ε)` U+03B5, subline `Choose a transition` 11 px not clamped, options `t1 (p1 → p2 ×2)`, `t3 (lock → ∅)`, `Cancel`; open list 98.6 to 123.1 px (+24.5), Step 854.5 and status 915 unmoved
 **Notes**: No class named «secondary» exists in the panel: the subline takes the panel's 11 px hint line, painted with `--color-text-tertiary` (rgb(71, 85, 105) in light), the heading's colour. The open panel grows upward from 273.6 to 298.1 px (top 677.4 to 652.9); nothing below the list moves, closed or open, before or after. The list's JSX (options, Cancel) is measured by the probe, not by the bench. Crops `docs/discovery/harness/_tmp_nondet_*.png`.
 **Prompt document name**: 2026-09-29 12:21
+
+## 2026-09-29 — merge: sim-nondet-label into alfonso-frontend-jjtl (P-2026-09-29-1239)
+**Prompt**: `claude_2026-09-29_1239_prompt_merge_sim-nondet-label.md`, a direct merge by `lane-run merge --direct`, no session: `sim-nondet-label` into `alfonso-frontend-jjtl`; the worker stopped `blocked` on one red vitest gate and left the merge commit `4c55ce847`; closed by hand by the chat (P9).
+**Files touched**: merge `4c55ce847` from the branch side (`simBridge.ts`, its test, the panel, `docs/decisions.md` R-SIM-98, the demo script §2.2 line, the log entry, the prompt Status); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4c55ce847` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5733 tests in 226 files, 9 red at import, 1 failed in `scripts/hooks/__tests__/laneRun.test.ts` (a 5 s timeout while two other lanes ran on the machine); build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0. Re-run of `laneRun.test.ts` alone by the chat: 83/84, a different test timed out at 5 s (`--governance-goahead lifts neither…`), so the red is load-induced and unrelated: the merge touches no file under `scripts/`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, lane probe on 3051: heading NONDETERMINISTIC CHOICE (ε) and subline Choose a transition; list +24.5 px upward, Step and status rows unchanged; options unchanged
+**Notes**: Rollback tag `pre-sim-nondet-label` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1239/result.json`. Ticket: `laneRun.test.ts` tests time out at 5 s under load; raise their timeout or run the file serially in the merge gate.
+**Prompt document name**: 2026-09-29 12:39
