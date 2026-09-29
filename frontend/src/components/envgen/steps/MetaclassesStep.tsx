@@ -21,15 +21,20 @@ export const MetaclassesStep: React.FC = () => {
 
     const config: any = findEnvironmentConfig(idlookup, projectId);
     const project = LProject.getProject();
-    // One entry per metaclass, qualified as `metamodel:metaclass` so homonymous classes from
-    // different metamodels (e.g. two `iSQD_Profile`) are distinguishable.
-    const items: Array<{ id: string; label: string }> = [];
+    // R6 (#157): one group per metamodel, with the metamodel name carried by the group heading
+    // instead of repeated on every row. The flat `metamodel:metaclass` list was reported as hard to
+    // scan when several metamodels contribute classes; homonymous classes stay distinguishable
+    // because each one sits under its own metamodel.
+    const groups: Array<{ mmId: string; mmName: string; items: Array<{ id: string; label: string }> }> = [];
     for (const mm of (((project as any)?.metamodels ?? []) as any[])) {
         const mmName: string = mm?.name || 'metamodel';
+        const items: Array<{ id: string; label: string }> = [];
         for (const c of ((mm?.classes ?? []) as Array<{ id: string; name: string }>)) {
-            if (c && c.id) items.push({ id: c.id, label: `${mmName}:${c.name || c.id}` });
+            if (c && c.id) items.push({ id: c.id, label: c.name || c.id });
         }
+        if (items.length) groups.push({ mmId: mm?.id || mmName, mmName, items });
     }
+    const totalClasses = groups.reduce((n, g) => n + g.items.length, 0);
     const topLevel: string[] = config && Array.isArray(config.topLevelTypes) ? config.topLevelTypes : [];
 
     const toggle = (classId: string, on: boolean) => {
@@ -48,22 +53,27 @@ export const MetaclassesStep: React.FC = () => {
                 </p>
             </div>
 
-            {items.length === 0 ? (
+            {totalClasses === 0 ? (
                 <p className="envgen-empty-hint">
                     This project has no metaclasses yet. Define a metamodel first.
                 </p>
             ) : (
-                <ul className="envgen-checklist">
-                    {items.map((it) => (
-                        <li key={it.id}>
-                            <Checkbox
-                                checked={topLevel.includes(it.id)}
-                                onChange={(on) => toggle(it.id, on)}
-                                label={it.label}
-                            />
-                        </li>
-                    ))}
-                </ul>
+                groups.map((g) => (
+                    <div className="envgen-mm-group" key={g.mmId}>
+                        <div className="envgen-mm-group__title">{g.mmName}</div>
+                        <ul className="envgen-checklist">
+                            {g.items.map((it) => (
+                                <li key={it.id}>
+                                    <Checkbox
+                                        checked={topLevel.includes(it.id)}
+                                        onChange={(on) => toggle(it.id, on)}
+                                        label={it.label}
+                                    />
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))
             )}
         </div>
     );

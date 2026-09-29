@@ -33,7 +33,10 @@ import { resolve } from 'node:path';
 import type { ClassShape, MetamodelShape, RefShape } from '../../../../jjform/shape';
 import { newDraft } from '../../../../jjform';
 
-const TSX = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8');
+// 2026-09-28 — the detail panel moved to `InstanceDetail.tsx`, shared with the stand-alone
+// environment (#157): the tab's source is the two files, read together.
+const TSX = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8')
+    + '\n' + readFileSync(resolve(__dirname, '../InstanceDetail.tsx'), 'utf8');
 const SCSS = readFileSync(resolve(__dirname, '../instanceManagerTab.scss'), 'utf8');
 
 /* Lo stesso fixture State Machine di `jjform/__tests__/outline.test.ts`, ridotto
@@ -105,7 +108,10 @@ describe('10b — un solo evento di create, e il motore non sa da dove viene', (
     it('nel tab le tre superfici passano tutte per `openCreate`', () => {
         // Catalogo (toolbar della tabella), barra dei figli, e nodo dell'outline.
         expect(TSX).toContain('onClick={() => openCreate(classShape.key, null, null)}');
-        expect(TSX).toContain('onClick={() => openCreate(child.of, subjectId, child.key)}');
+        // 2026-09-28 — la barra dei figli vive in `InstanceDetail` ed emette `onCreate`,
+        // che il tab collega a `openCreate`: la porta resta una.
+        expect(TSX).toContain('onClick={() => onCreate(child.of, subjectId, child.key)}');
+        expect(TSX).toContain('onCreate={openCreate}');
         const outlineCreate = TSX.slice(TSX.indexOf('const outlineCreate'));
         expect(outlineCreate.slice(0, outlineCreate.indexOf('\n    };')))
             .toContain("openCreate(entry.cls, node.kind === 'model' ? null : node.id, entry.childKey)");

@@ -28,7 +28,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const TSX = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8');
+// 2026-09-28 — the detail panel moved to `InstanceDetail.tsx`, shared with the stand-alone
+// environment (#157): the tab's source is the two files, read together.
+const TSX = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8')
+    + '\n' + readFileSync(resolve(__dirname, '../InstanceDetail.tsx'), 'utf8');
 const SCSS = readFileSync(resolve(__dirname, '../instanceManagerTab.scss'), 'utf8');
 
 describe('FL6 — la form sotto la tabella', () => {
@@ -59,6 +62,16 @@ describe('FL6 — la form sotto la tabella', () => {
         expect(TSX).toContain('instance-manager__form-inner');
         expect(SCSS).toMatch(/&__form-inner\s*\{[^}]*max-width:\s*1300px/);
         expect(SCSS).toMatch(/&__form-inner\s*\{[^}]*margin:\s*0 auto/);
+    });
+
+    it('il tab MONTA il pannello condiviso, e gli passa navigazione e scroll', () => {
+        // Il file del pannello e' letto insieme al tab (sopra): senza questo asserto,
+        // un tab che smettesse di montarlo passerebbe ogni altro test di questo file.
+        const TAB = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8');
+        expect(TAB).toContain('<InstanceDetail');
+        for (const prop of ['nav={nav}', 'setNav={setNav}', 'scrollRef={formPaneRef}', 'openDelete={openDelete}', 'onCreate={openCreate}', 'onCreateAndLink={openCreateAndLink}']) {
+            expect(TAB).toContain(prop);
+        }
     });
 
     it('la form montata e\' UNA, quella di FL4, e non una form parallela', () => {
@@ -211,9 +224,12 @@ describe('FL6 — il fallback a larghezza stretta', () => {
 
 describe('FL6 — l\'header della form', () => {
     it('nome dell\'istanza e metaclasse', () => {
+        // 2026-09-28 — letti da `navStepOf` in `InstanceDetail` e non piu' dal nastro:
+        // il pannello e' condiviso con lo stand-alone, che il nastro non ce l'ha. Stessa
+        // regola di nome (`makeDrawReadCtx`), quindi lo stesso testo a schermo.
         expect(TSX).toContain('instance-manager__form-head');
-        expect(TSX).toContain('{ego?.subject.name ||');
-        expect(TSX).toContain('{ego.subject.cls}');
+        expect(TSX).toContain('{subjectStep?.name ||');
+        expect(TSX).toContain('{subjectStep.cls}');
     });
 
     it('il badge «Unsaved changes» e\' andato via con 10c (deviazione A3)', () => {

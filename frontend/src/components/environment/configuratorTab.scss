@@ -140,10 +140,25 @@
         }
     }
 
+    // No padding of its own since the detail is the Data Manager's panel (2026-09-28): its
+    // `instance-manager__form-inner` insets by 14px and the header band's negative margins
+    // are computed on that inset — a second padding here would stop the band short of the
+    // column's edges. The hint below keeps its own padding.
     &__detail {
         overflow-y: auto;
         min-height: 0;
-        padding: var(--space-4, 16px);
+        padding: 0;
+    }
+
+    // The detail's wrapper carries the Data Manager's root class for its palette
+    // (`.instance-manager[data-palette]`) and tokens — and so its root LAYOUT, which is a
+    // full-height flex row with `overflow: hidden`. Undone here: this wrapper is a block in
+    // a column that scrolls, and `overflow: hidden` on it would also make it the sticky
+    // breadcrumb's scroll container, pinning the way back to a box that never scrolls.
+    &__dm.instance-manager {
+        display: block;
+        height: auto;
+        overflow: visible;
     }
 
     &__empty,
@@ -159,6 +174,29 @@
         line-height: 1.6;
     }
 
+    // R2 (#157) — a loud, legible reason when the `?profile=` in the URL resolves to no profile.
+    // That case used to be silent: permissions were skipped and the panel looked merely empty.
+    // Tokens: --color-warning / --color-warning-muted exist in both the light and the dark set.
+    &__warn {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--color-text-primary, #0f172a);
+        background: var(--color-warning-muted, rgba(245, 158, 11, 0.12));
+        border: 1px solid var(--color-warning, #f59e0b);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: 0 var(--space-4, 16px) var(--space-3, 12px);
+
+        i { flex: 0 0 auto; margin-top: 1px; color: var(--color-warning, #f59e0b); }
+        code { font-size: 11px; word-break: break-all; }
+    }
+
+    // TODO: cleanup — `&__ro-banner` and `&__ro-body` have no markup since 2026-09-28: the
+    // read-only gate moved into the shared detail (`InstanceDetail`'s `ReadOnlyGate`, styled
+    // as `instance-manager__ro-*`). Kept per Rule 9.
     // F2 — read-only gate for a profile that may view but not edit a type.
     &__ro-banner {
         display: flex;

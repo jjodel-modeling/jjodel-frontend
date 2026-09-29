@@ -49,11 +49,28 @@ export const ProfilesStep: React.FC = () => {
     // classId → `metamodel:metaclass`, so the permission rows read like the metaclasses step.
     const project = LProject.getProject();
     const classNameById: Record<string, string> = {};
+    // R6 (#157): keep the metamodel name and the bare class name too, so the permission rows can be
+    // grouped per metamodel like the metaclasses step — the heading carries the qualification
+    // instead of every row repeating it. `classNameById` stays the qualified label, used for a11y.
+    const mmNameById: Record<string, string> = {};
+    const shortNameById: Record<string, string> = {};
     for (const mm of (((project as any)?.metamodels ?? []) as any[])) {
         const mmName: string = mm?.name || 'metamodel';
         for (const c of ((mm?.classes ?? []) as Array<{ id: string; name: string }>)) {
-            if (c && c.id) classNameById[c.id] = `${mmName}:${c.name || c.id}`;
+            if (c && c.id) {
+                classNameById[c.id] = `${mmName}:${c.name || c.id}`;
+                mmNameById[c.id] = mmName;
+                shortNameById[c.id] = c.name || c.id;
+            }
         }
+    }
+    // Groups in first-appearance order, preserving the developer's stored order inside each group.
+    const permGroups: Array<{ mmName: string; ids: string[] }> = [];
+    for (const cid of topLevel) {
+        const mmName = mmNameById[cid] || 'metamodel';
+        let g = permGroups.find((x) => x.mmName === mmName);
+        if (!g) { g = { mmName, ids: [] }; permGroups.push(g); }
+        g.ids.push(cid);
     }
     const profiles = profilesOfConfig(idlookup, config);
     const selectedProfile: any = selectedProfileId ? idlookup[selectedProfileId] : null;
@@ -157,15 +174,20 @@ export const ProfilesStep: React.FC = () => {
                             {topLevel.length === 0 ? (
                                 <p className="envgen-empty-hint">Mark some editable metaclasses first.</p>
                             ) : (
-                                topLevel.map((cid) => (
-                                    <div key={cid} className="envgen-perm-row">
-                                        <span className="envgen-perm-row__name">{classNameById[cid] || cid}</span>
-                                        <SegmentedControl
-                                            options={PERMISSION_OPTIONS}
-                                            value={resolveTypePermission(selectedProfile, cid)}
-                                            onChange={(v) => setPermission(selectedProfile, cid, v as EnvPermission)}
-                                            ariaLabel={`Permission for ${classNameById[cid] || cid}`}
-                                        />
+                                permGroups.map((g) => (
+                                    <div className="envgen-mm-group" key={g.mmName}>
+                                        <div className="envgen-mm-group__title">{g.mmName}</div>
+                                        {g.ids.map((cid) => (
+                                            <div key={cid} className="envgen-perm-row">
+                                                <span className="envgen-perm-row__name">{shortNameById[cid] || cid}</span>
+                                                <SegmentedControl
+                                                    options={PERMISSION_OPTIONS}
+                                                    value={resolveTypePermission(selectedProfile, cid)}
+                                                    onChange={(v) => setPermission(selectedProfile, cid, v as EnvPermission)}
+                                                    ariaLabel={`Permission for ${classNameById[cid] || cid}`}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
                                 ))
                             )}
