@@ -12,11 +12,15 @@
  * references into one hierarchy, or sit inside their own container, and are nodes.
  */
 
+import { createHash } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
 import { deriveViewpointIRs, isDerivableMetamodel } from '../viewpointDerivation';
 import type { DerivationRoles, DerivedView } from '../viewpointDerivation';
 import { validateIR } from '../../ir/irValidate';
 import { recognizeSymbol } from '../../ir/symbolRecognition';
+import { compileView, compileEdgeView, clearCompileCache } from '../../ir/irCompile';
+import { makeDrawReadCtx } from '../../ir/irReadCtx';
+import { getMarkerDef } from '../../ir/markerRegistry';
 import type { EdgeViewIR, VertexViewIR } from '../../ir/irTypes';
 import { sketchOfMetamodel } from '../../../sim/metamodelSketch';
 import { bindProfile } from '../../../../../model/simulation/profileBinder';
@@ -371,8 +375,10 @@ describe('deriveViewpointIRs — the edge classes are edges with source and targ
         expect(link.edge).toMatchObject({ source: '$source.value', target: '$target.value' });
     });
 
-    it('every edge is directed and carries no line colour of its own', () => {
+    it('every edge outside the Petri notation is directed and carries no line colour of its own', () => {
+        // The Petri arcs with their roles bound are the notation's (P-2026-09-29-0939), pinned below.
         for (const [, mm, profile] of DEMOS) {
+            if (profile === 'petri') continue;
             for (const v of deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile))) {
                 if (v.ir.kind !== 'edge') continue;
                 expect(edge(v).edge.terminations).toEqual({ sourceEnd: 'none', targetEnd: 'openArrow' });
@@ -453,7 +459,10 @@ describe('deriveViewpointIRs — forms from the roles, colours from the tokens',
         expect(vertex(byClass(flow, 'FinalNode')).shape.marker).toBe('dot');
         // A hollow symbol keeps the default text colour: no style on its label.
         expect(vertex(byClass(flow, 'FinalNode')).shape.labels).toEqual([{ position: 'bottom', source: { from: 'intrinsic', prop: 'name' } }]);
-        expect(recognizeSymbol(vertex(byClass(petri, 'Place')).shape).map(p => p.id)).toContain('petri-place');
+        // The Petri place: its token marker is conditional, and a conditional marker matches no
+        // preset (symbolRecognition.ts), so the catalogue match is asserted with the marking
+        // unbound, in the Petri notation block below.
+        expect(vertex(byClass(petri, 'Place')).shape.form).toBe('circle');
         // A circle holds no compartment, even when the class has attributes (Place.tokens).
         expect(vertex(byClass(petri, 'Place')).fieldCompartments).toBeUndefined();
         for (const n of ['ActivityNode', 'Activity', 'Decision']) {
@@ -514,16 +523,19 @@ describe('deriveViewpointIRs — pure: nothing it reads is touched', () => {
     });
 
     it('no object is shared between two documents', () => {
-        for (const [, mm] of DEMOS) {
-            const owner = new Map<object, string>();
-            const walk = (node: unknown, doc: string) => {
-                if (!node || typeof node !== 'object') return;
-                const seen = owner.get(node);
-                expect(seen === undefined || seen === doc, `${doc} shares an object with ${seen}`).toBe(true);
-                owner.set(node, doc);
-                for (const v of Object.values(node as object)) walk(v, doc);
-            };
-            for (const v of deriveViewpointIRs(mm.lookup, mm.id, null)) walk(v.ir, v.className);
+        for (const [, mm, profile] of DEMOS) {
+            // With the roles too: the Petri token rules are built per document, never shared.
+            for (const roles of [null, boundRoles(mm, profile)]) {
+                const owner = new Map<object, string>();
+                const walk = (node: unknown, doc: string) => {
+                    if (!node || typeof node !== 'object') return;
+                    const seen = owner.get(node);
+                    expect(seen === undefined || seen === doc, `${doc} shares an object with ${seen}`).toBe(true);
+                    owner.set(node, doc);
+                    for (const v of Object.values(node as object)) walk(v, doc);
+                };
+                for (const v of deriveViewpointIRs(mm.lookup, mm.id, roles)) walk(v.ir, v.className);
+            }
         }
     });
 
@@ -534,6 +546,226 @@ describe('deriveViewpointIRs — pure: nothing it reads is touched', () => {
 
     it('an unknown metamodel id gives no view', () => {
         expect(deriveViewpointIRs(PEST.lookup, 'nope', null)).toEqual([]);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// What the Petri notation leaves alone (P-2026-09-29-0939)
+// ---------------------------------------------------------------------------
+
+/** 16 hex of the sha256 of the list, as JSON: documents, rules and ids, in derivation order. */
+const digest = (views: DerivedView[]) => createHash('sha256').update(JSON.stringify(views)).digest('hex').slice(0, 16);
+
+describe('deriveViewpointIRs — outside the Petri profile the documents are byte-equal to before the notation', () => {
+    // Measured on the derivation of e5010856c, before lane 1 of the Petri notation touched it.
+    const BEFORE: Record<string, string> = {
+        'DemoPEST, structure only': '8e32f9410c28c283',
+        'DemoPetri, structure only': 'efca0aebb7252be6',
+        'DemoESM, structure only': 'ed94b7c91af53994',
+        'DemoFlowB, structure only': 'aced3058b1d1d8e7',
+        'ERD, structure only': '12424010412fddd8',
+        'Families, structure only': 'b2e49ba38211ad25',
+        'Persons, structure only': 'c149f74b4ff3fbc6',
+        'Composite, structure only': '6a6854ef45e31b7c',
+        'Cars, structure only': 'e4c9e39d921875d2',
+        'Graph, structure only': 'ddc40a8c323eb1e1',
+        'DemoPEST, roles bound': '259677ee57d18668',
+        'DemoESM, roles bound': 'a023d74e549f3482',
+        'DemoFlowB, roles bound': '7ddbc5153f8c905a',
+    };
+
+    it('structure only on every metamodel, and the control-flow demos with their roles', () => {
+        const got: Record<string, string> = {};
+        for (const [name, mm] of [
+            ['DemoPEST', PEST], ['DemoPetri', PETRI], ['DemoESM', ESM], ['DemoFlowB', FLOWB], ['ERD', ERD],
+            ['Families', FAMILIES], ['Persons', PERSONS], ['Composite', COMPOSITE], ['Cars', CARS], ['Graph', GRAPH],
+        ] as [string, Fixture][]) {
+            got[`${name}, structure only`] = digest(deriveViewpointIRs(mm.lookup, mm.id, null));
+        }
+        for (const [name, mm, profile] of DEMOS) {
+            if (profile === 'petri') continue;
+            got[`${name}, roles bound`] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
+        }
+        expect(got).toEqual(BEFORE);
+    });
+
+    it('the Petri profile with no role bound keeps the boxes: the notation is keyed on the roles, not the profile', () => {
+        expect(deriveViewpointIRs(PETRI.lookup, PETRI.id, { bag: {}, shape: 'petri' }))
+            .toEqual(deriveViewpointIRs(PETRI.lookup, PETRI.id, null));
+    });
+
+    it('the Petri roles on a control-flow shape draw no Petri notation', () => {
+        const petri = boundRoles(PETRI, 'petri');
+        const views = deriveViewpointIRs(PETRI.lookup, PETRI.id, { bag: petri.bag, shape: 'controlFlow' });
+        for (const v of views) {
+            if (v.ir.kind === 'edge') {
+                expect(edge(v).edge.terminations).toEqual({ sourceEnd: 'none', targetEnd: 'openArrow' });
+                expect(edge(v).edge.line).toBeUndefined();
+                expect(edge(v).edge.routing).toBeUndefined();
+            } else {
+                expect(vertex(v).shape.border?.color).toBe('var(--color-inode-border)');
+                expect(vertex(v).shape.marker).toBeUndefined();
+            }
+        }
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The Petri notation, lane 1 (P-2026-09-29-0939; discovery P-2026-09-29-0925 §5, §6)
+// ---------------------------------------------------------------------------
+
+const NAME_INK = 'var(--color-inode-name)';
+const NAME = { from: 'intrinsic', prop: 'name' } as const;
+const tokensEq = (n: number) => ({ op: 'eq', left: '$tokens.value', right: { kind: 'number', value: n } });
+
+/**
+ * DemoPetri's objects in the draw backend's shape: one place per marking 0..7, one place whose
+ * `tokens` slot holds no value, a transition and one arc of each kind.
+ */
+function petriWorld() {
+    const lookup: Lookup = { ...PETRI.lookup };
+    const object = (id: string, cls: string, slots: Record<string, unknown[]>) => {
+        lookup[id] = { id, name: id, className: 'DObject', instanceof: PETRI.classId(cls), features: Object.keys(slots).map(f => `${id}.${f}`) };
+        for (const [f, values] of Object.entries(slots)) {
+            const owner = f === 'tokens' ? 'Place' : f === 'guard' ? 'Transition' : 'Arc';
+            lookup[`${id}.${f}`] = { id: `${id}.${f}`, className: 'DValue', instanceof: `${PETRI.classId(owner)}.${f}`, values };
+        }
+    };
+    for (let n = 0; n <= 7; n++) object(`p${n}`, 'Place', { tokens: [n] });
+    object('pEmpty', 'Place', { tokens: [] });
+    object('t1', 'Transition', { guard: [] });
+    object('a1', 'Arc', { src: ['p1'], tgt: ['t1'], weight: [1] });
+    object('i1', 'InhibitorArc', { src: ['p2'], tgt: ['t1'], weight: [1] });
+    return { lookup, ctx: makeDrawReadCtx(lookup) };
+}
+
+describe('deriveViewpointIRs — the Petri notation with the roles bound (lane 1)', () => {
+    const views = () => deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri'));
+
+    it('Place, as a whole document: ink border, italic name, tokens as dots up to 4 and a number from 5', () => {
+        const place = byClass(views(), 'Place');
+        expect(place.rule).toBe('role:node');
+        expect(place.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Place'], authoringMetaclassPins: { Place: 'PETRI.Place' },
+            exclusive: true, label: 'View for Place',
+            shape: {
+                form: 'circle', fill: 'var(--color-inode-surface)',
+                border: { color: NAME_INK, width: 1, style: 'solid' },
+                marker: {
+                    rules: [
+                        { when: tokensEq(1), then: 'dot' }, { when: tokensEq(2), then: 'dots-2' },
+                        { when: tokensEq(3), then: 'dots-3' }, { when: tokensEq(4), then: 'dots-4' },
+                    ],
+                    default: '',
+                },
+                labels: [
+                    { position: 'bottom', source: NAME, style: { fontStyle: 'italic' } },
+                    {
+                        position: 'center', source: { from: 'path', expr: '$tokens.value' },
+                        visible: { when: { op: 'gt', left: '$tokens.value', right: { kind: 'number', value: 4 } }, then: true, else: false },
+                    },
+                ],
+            },
+        });
+    });
+
+    it('Transition, as a whole document: the bar is unchanged, catalogue ink and the name in the text-on-dark token', () => {
+        const t = byClass(views(), 'Transition');
+        expect(t.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
+            exclusive: true, label: 'View for Transition',
+            shape: {
+                form: 'rect', fill: INK,
+                border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' },
+                labels: [{ position: 'bottom', source: NAME, style: { color: 'var(--color-text-inverse)' } }],
+            },
+        });
+    });
+
+    it('Arc: a 1 px ink line, straight, ending in the filled arrowhead', () => {
+        expect(edge(byClass(views(), 'Arc')).edge).toEqual({
+            source: '$src.value', target: '$tgt.value',
+            terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' },
+            line: { color: NAME_INK, width: 1 },
+            routing: 'straight',
+        });
+    });
+
+    it('InhibitorArc: the same line and routing, the open arrowhead kept until the circle termination (lane 3)', () => {
+        expect(edge(byClass(views(), 'InhibitorArc')).edge).toEqual({
+            source: '$src.value', target: '$tgt.value',
+            terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
+            line: { color: NAME_INK, width: 1 },
+            routing: 'straight',
+        });
+    });
+
+    it('tokens on the objects: nothing for 0 or no value, dot for 1, dots-2..4, then the number from 5', () => {
+        clearCompileCache();
+        const { lookup, ctx } = petriWorld();
+        const cv = compileView('derived:Place', vertex(byClass(views(), 'Place')));
+        const count = cv.labels.find(l => l.position === 'center')!;
+        const name = cv.labels.find(l => l.position === 'bottom')!;
+        const read = (id: string) => ({
+            marker: String(cv.marker!(ctx, id) ?? ''),
+            number: count.visible(ctx, id) ? String(count.text(ctx, id)) : null,
+            name: name.visible(ctx, id) ? String(name.text(ctx, id)) : null,
+        });
+        const expected: Record<string, { marker: string; number: string | null }> = {
+            pEmpty: { marker: '', number: null },
+            p0: { marker: '', number: null },
+            p1: { marker: 'dot', number: null },
+            p2: { marker: 'dots-2', number: null },
+            p3: { marker: 'dots-3', number: null },
+            p4: { marker: 'dots-4', number: null },
+            p5: { marker: '', number: '5' },
+            p6: { marker: '', number: '6' },
+            p7: { marker: '', number: '7' },
+        };
+        for (const [id, want] of Object.entries(expected)) {
+            expect(read(id), id).toEqual({ ...want, name: lookup[id].name });
+            // Every id the view writes is a row of the registry: an id outside it would draw nothing.
+            if (want.marker) expect(getMarkerDef(want.marker), want.marker).toBeDefined();
+        }
+    });
+
+    it('the ink: place border, arc lines and so their arrowheads; the bar keeps the catalogue hex', () => {
+        clearCompileCache();
+        const { ctx } = petriWorld();
+        const all = views();
+        const place = compileView('derived:Place', vertex(byClass(all, 'Place')));
+        expect(place.borderColor!(ctx, 'p1')).toBe(NAME_INK);
+        expect(place.borderWidth!(ctx, 'p1')).toBe(1);
+        expect(place.labels[0].style!.fontStyle!(ctx, 'p1')).toBe('italic');
+        for (const [n, id] of [['Arc', 'a1'], ['InhibitorArc', 'i1']]) {
+            const ce = compileEdgeView(`derived:${n}`, edge(byClass(all, n)));
+            // UnifiedEdge paints the arrowhead with the authored line colour (irMarkerFillStyle).
+            expect(ce.lineColor!(ctx, id), n).toBe(NAME_INK);
+            expect(ce.lineWidth!(ctx, id), n).toBe(1);
+            expect(ce.routing, n).toBe('straight');
+        }
+        const bar = compileView('derived:Transition', vertex(byClass(all, 'Transition')));
+        expect(bar.fill!(ctx, 't1')).toBe(INK);
+    });
+
+    it('the marking role unbound: the place keeps the ink and the italic name, and draws no tokens', () => {
+        const roles = boundRoles(PETRI, 'petri');
+        const bag = { ...roles.bag };
+        delete bag.simInitialMarking;
+        const place = vertex(byClass(deriveViewpointIRs(PETRI.lookup, PETRI.id, { bag, shape: 'petri' }), 'Place'));
+        expect(place.shape.border?.color).toBe(NAME_INK);
+        expect(place.shape.marker).toBeUndefined();
+        expect(place.shape.labels).toEqual([{ position: 'bottom', source: NAME, style: { fontStyle: 'italic' } }]);
+        // With no marker the place is still the catalogue's Place for the Symbol Editor.
+        expect(recognizeSymbol(place.shape).map(p => p.id)).toContain('petri-place');
+    });
+
+    it('the marking bound to an attribute of another class draws no tokens', () => {
+        const roles = boundRoles(PETRI, 'petri');
+        const bag = { ...roles.bag, simInitialMarking: PETRI.classId('Arc') + '.weight' };
+        const place = vertex(byClass(deriveViewpointIRs(PETRI.lookup, PETRI.id, { bag, shape: 'petri' }), 'Place'));
+        expect(place.shape.marker).toBeUndefined();
+        expect(place.shape.labels).toHaveLength(1);
     });
 });
 

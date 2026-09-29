@@ -167,3 +167,31 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: tree menu: Derive viewpoint only on metamodel rows, shared predicate with createDerivedViewpoint; demo scenes untouched
 **Notes**: Rollback tag `pre-derive-viewpoint-m2-only` on `76c7b4f7f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0315/result.json`.
 **Prompt document name**: 2026-09-29 03:15
+
+## 2026-09-29 — docs(views): discovery, the classic Petri net notation in the derived viewpoint (P-2026-09-29-0925)
+**Prompt**: `claude_2026-09-29_0925_prompt_discovery_petri_notation.md`, read-only discovery on `~/jjodel-w-petrinot` branch `petri-notation-disc`. Question: what the view IR and the renderer can already express of the textbook Petri notation that «Derive viewpoint» should produce (places, transition bars, arcs, the inhibitor, tokens), and a Phase 2 plan.
+**Files touched**: this commit only: `docs/discovery/discovery_2026-09-29_petri_notation.md` (new), this entry, the prompt's Status line. Probes gitignored under `frontend/scripts/smoke/_tmp_petrinot_*`, data in `/tmp/petrinot/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no product code written; `git status` shows only the three docs files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — read-only; no §3.1 file written
+**Smoke visivo**: non applicabile
+**Notes**: DemoPetri derived today matches 4/19 reference traits with roles, 1/19 without (validateIR 8/8). The derivation alone reaches ink stroke and line, filled arrowhead, straight arcs, italics, 1-dot tokens; outside name, serif, thin bar and the inhibitor circle need additive IR changes in §3.1 files. Plan: four lanes, two before the freeze. Two decisions and five questions for Alfonso in report §0. Sizes inferred, no dev server.
+**Prompt document name**: 2026-09-29 09:25
+
+## 2026-09-29 — feat(views): the Petri notation in the derived viewpoint, lane 1 (P-2026-09-29-0939)
+**Prompt**: `claude_2026-09-29_0939_prompt_petri_notation_l1.md`, lane 1 of the Petri notation plan (discovery P-2026-09-29-0925 §6), `Lane: full`, on `~/jjodel-w-petri1` branch `petri-notation-l1`: under the Petri roles, place border and arcs in `var(--color-inode-name)`, italic place names, the initial marking as dots up to 4 and a number from 5, straight arcs, the filled arrowhead on arcs; markers `dots-2..4`; no role, today's boxes. One R-VP row for both lanes. Tests first.
+**Files touched**: code `1cee1e7e4`: `frontend/src/components/editor-v2/viewpoint/ir/markerRegistry.ts` (rows `dots-2`, `dots-3`, `dots-4`), `frontend/src/components/editor-v2/viewpoint/ir/__tests__/markerRegistry.test.ts`. `3a1753b73`: `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`, `frontend/src/components/editor-v2/viewpoint/derive/__tests__/viewpointDerivation.test.ts`. This commit: `docs/decisions.md` (R-VP-15), this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `3a1753b73`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 5709 passed, 0 failed, the 9 known files red at import (`window is not defined`); touched folders 716 passed (702 + 14); `npm run build` exit 0. Red first: 10 failed on the untouched code. Mutation bench 20/20 killed (6 registry, 14 derivation), lists in the two commits. Documents outside the Petri roles byte-equal to `e5010856c` by 13 pinned sha256 digests.
+**Out-of-scope changes**: no — 7 files, all in the prompt's DOVE: the four of report §6 lane 1, `docs/decisions.md`, this inbox, the prompt's Status. Above five, declared (RC-11).
+**Layer Impact Report**: not-required (no §3.2 file; the one §3.1 file, `viewpoint/ir/markerRegistry.ts`, is three data rows under Alfonso's go-ahead)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3048 (`_tmp_petri1_probe.ts`, gitignored), light: 11/11 checks, traits 11/19 measured; demo run with the derived view on, RUN 1-4 and FINAL equal to the trunk's; walk 12/12 trunk readings identical; crops `docs/discovery/harness/_tmp_petri1_canvas.png`, `_tmp_petri1_canvas_midrun.png` (gitignored)
+**Notes**: Unattended: DemoPetri built by the demo's builder (the probe kit's scenario), not imported from the export file, same objects; commit type feat. With the marking bound the derived Place reads «Custom» in the Symbol Editor: a conditional marker matches no preset (symbolRecognition.ts), asserted instead with the marking unbound. Mid-run the dots keep the initial marking beside the run badge, as ratified. Other three demo scenes not re-run.
+**Prompt document name**: 2026-09-29 09:39
+
+**Ticket** (low, observations for lanes 2 and 3, not tickets of their own): (1) with every arc straight, `i1` (lock → t2) crosses the bar `t1` on the demo layout, measured `M 120,383 L 886,378` through t1's box; routing is per view, so no per-arc detour. (2) On `lock` the single `dot` (radius 16 of 100, 22..42 px on a 64 px circle) touches the inside name label (top at 38 px); the outside label of lane 2 removes the overlap. (3) The transition measures 198×40 and the place 64×64, as the discovery inferred.

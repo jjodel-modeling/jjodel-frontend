@@ -81,6 +81,33 @@ export const MARKER_REGISTRY: Readonly<Record<string, MarkerDef>> = {
     bars: { id: 'bars', label: 'Bars (multi-instance)', paths: [{ d: 'M42,34 L42,66 M50,34 L50,66 M58,34 L58,66' }] },
     // Statechart UML (dentro il cerchio)
     dot: { id: 'dot', label: 'Dot (final state, token)', paths: [{ d: 'M34,50 A16,16 0 1,0 66,50 A16,16 0 1,0 34,50', fill: true }] },
+    // Token di Petri da 2 a 4 (P-2026-09-29-0939): pallini di raggio 8, meta' di
+    // `dot`, disgiunti e centrati come gruppo su (50,50). Da 5 token la view
+    // derivata mostra il numero, non un marker.
+    'dots-2': {
+        id: 'dots-2', label: 'Two dots (tokens)',
+        paths: [
+            { d: 'M30,50 A8,8 0 1,0 46,50 A8,8 0 1,0 30,50', fill: true },
+            { d: 'M54,50 A8,8 0 1,0 70,50 A8,8 0 1,0 54,50', fill: true },
+        ],
+    },
+    'dots-3': {
+        id: 'dots-3', label: 'Three dots (tokens)',
+        paths: [
+            { d: 'M42,37 A8,8 0 1,0 58,37 A8,8 0 1,0 42,37', fill: true },
+            { d: 'M31,57 A8,8 0 1,0 47,57 A8,8 0 1,0 31,57', fill: true },
+            { d: 'M53,57 A8,8 0 1,0 69,57 A8,8 0 1,0 53,57', fill: true },
+        ],
+    },
+    'dots-4': {
+        id: 'dots-4', label: 'Four dots (tokens)',
+        paths: [
+            { d: 'M31,39 A8,8 0 1,0 47,39 A8,8 0 1,0 31,39', fill: true },
+            { d: 'M53,39 A8,8 0 1,0 69,39 A8,8 0 1,0 53,39', fill: true },
+            { d: 'M31,61 A8,8 0 1,0 47,61 A8,8 0 1,0 31,61', fill: true },
+            { d: 'M53,61 A8,8 0 1,0 69,61 A8,8 0 1,0 53,61', fill: true },
+        ],
+    },
     history: { id: 'history', label: 'H (history)', paths: [{ d: 'M38,32 L38,68 M62,32 L62,68 M38,50 L62,50' }] },
     'history-deep': {
         id: 'history-deep', label: 'H* (deep history)',

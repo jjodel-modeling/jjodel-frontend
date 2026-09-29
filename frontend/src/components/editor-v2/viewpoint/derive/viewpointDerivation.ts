@@ -22,6 +22,14 @@
  *   Colours are CSS tokens, except the fill of a solid symbol, which keeps the
  *   catalogue ink so the Symbol Editor still recognizes the preset (decision 4
  *   of the prompt); its name takes the text-on-dark token, light theme only.
+ * - **The Petri notation** (P-2026-09-29-0939, lane 1 of
+ *   docs/discovery/discovery_2026-09-29_petri_notation.md §6, R-VP-15), under
+ *   the `petri` shape and on the bound roles only: a place has the name ink as
+ *   border and an italic name, and draws its initial marking as dots up to four
+ *   (a marker) and as a number from five (a centre label); an arc and an
+ *   inhibitor arc are a 1 px line in the same ink, straight, the arc ending in
+ *   the filled arrowhead. The transition bar is unchanged, and with no role
+ *   bound every class keeps the structure's box.
  * - **No priority**: the list comes deepest class first and the resolver ranks
  *   an exact match above an inherited one (irResolveCore.ts), so the creation
  *   order settles every tie (decision 1).
@@ -63,6 +71,10 @@ const IR_VERSION = 'ir-1.2';
 const SURFACE = 'var(--color-inode-surface)';
 const BORDER = 'var(--color-inode-border)';
 const INVERSE_TEXT = 'var(--color-text-inverse)';
+/** The theme's ink for names: slate-900 in light, near-white in dark. The Petri stroke and line. */
+const NAME_INK = 'var(--color-inode-name)';
+/** The marker of 1..4 tokens, by index (markerRegistry.ts); from 5 the place shows the number. */
+const TOKEN_MARKERS: readonly string[] = ['dot', 'dots-2', 'dots-3', 'dots-4'];
 
 /** The class roles, most specific first: a subclass of Node bound as Initial is an initial state. */
 const CLASS_ROLES: ReadonlyArray<{ role: string; key: string }> = [
@@ -170,6 +182,11 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         const id = roleValue(key);
         return id ? referencesOf(c).find(r => r.id === id)?.name : undefined;
     };
+    /** The name of a bound attribute, when it is an attribute `c` holds. */
+    const boundAttribute = (key: string, c: string): string | undefined => {
+        const id = roleValue(key);
+        return id ? attributesOf(c).find(a => a.id === id)?.name : undefined;
+    };
     const roleOf = (c: string): string | undefined => {
         for (const { role, key } of CLASS_ROLES) {
             const v = roleValue(key);
@@ -234,6 +251,12 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
                 terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
             };
             if (stringAttr) edge.labels = { center: { from: 'path', expr: path(stringAttr.name) } };
+            if (shape === 'petri' && (role === 'arc' || role === 'inhibitorArc')) {
+                // The inhibitor keeps the open arrowhead until a circle termination exists (lane 3).
+                if (role === 'arc') edge.terminations = { sourceEnd: 'none', targetEnd: 'closedArrow' };
+                edge.line = { color: NAME_INK, width: 1 };
+                edge.routing = 'straight';
+            }
             out.push({
                 classId: c.id, className: c.name, rule: e.rule,
                 ir: { irVersion: IR_VERSION, kind: 'edge', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label, edge },
@@ -243,8 +266,9 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
 
         const presetId = role ? ROLE_PRESET[shape][role] : undefined;
         const preset = presetId ? getCatalogPreset(presetId) : undefined;
+        const petriPlace = shape === 'petri' && role === 'node';
         // The border token goes in first: applyPresetToShape keeps the author's border colour.
-        let shapeSpec: ShapeSpec = { form: 'rounded', fill: SURFACE, border: { color: BORDER, width: 1, style: 'solid' } };
+        let shapeSpec: ShapeSpec = { form: 'rounded', fill: SURFACE, border: { color: petriPlace ? NAME_INK : BORDER, width: 1, style: 'solid' } };
         if (preset) shapeSpec = applyPresetToShape(shapeSpec, preset);
         const form = shapeSpec.form as string;
         const solid = preset?.values.fill !== undefined;
@@ -253,6 +277,23 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         // A label sits inside the shape at every position, so on the ink it takes the
         // text-on-dark token (measured on the lane probe: the default text did not read).
         if (solid) shapeSpec.labels[0].style = { color: INVERSE_TEXT };
+        if (petriPlace) {
+            shapeSpec.labels[0].style = { fontStyle: 'italic' };
+            // The initial marking: the marker draws 1..4 tokens as dots, the centre label the
+            // number from 5, so exactly one of the two shows for a marked place.
+            const tokens = boundAttribute('simInitialMarking', c.id);
+            if (tokens) {
+                const t = path(tokens);
+                shapeSpec.marker = {
+                    rules: TOKEN_MARKERS.map((id, i) => ({ when: { op: 'eq' as const, left: t, right: { kind: 'number' as const, value: i + 1 } }, then: id })),
+                    default: '',
+                };
+                shapeSpec.labels.push({
+                    position: 'center', source: { from: 'path', expr: t },
+                    visible: { when: { op: 'gt', left: t, right: { kind: 'number', value: TOKEN_MARKERS.length } }, then: true, else: false },
+                });
+            }
+        }
 
         const ir: VertexViewIR = {
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label,
