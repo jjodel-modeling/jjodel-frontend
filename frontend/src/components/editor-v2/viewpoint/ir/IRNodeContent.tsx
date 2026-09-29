@@ -114,6 +114,16 @@ const FONT_FAMILY_VAR: Record<string, string> = { sans: 'var(--font-sans)', mono
 const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semibold: 600, bold: 700 };
 
 /**
+ * A badge sits in its corner on every form (P-2026-09-29-2122). On the five SVG-painted forms
+ * the in-flow child rule of irStyle.ts (`> :not(.ir-<form>-svg):not(.ir-marker-svg)`, 0,4,0)
+ * beats `.ir-node-content .ir-badge` (0,2,0) and made the badge a flex item, top centre.
+ * Inline, and not one more `:not()` there: that would lift the rule to (0,5,0), above the
+ * outside label (0,4,0) written to beat it (measured in Chromium). The values are the class
+ * rule's own, so the CSS forms do not move.
+ */
+const BADGE_STYLE: React.CSSProperties = { position: 'absolute', zIndex: 2 };
+
+/**
  * Resolve a CompiledTextStyle into an inline style for the current element
  * (ir-1.3 TS1). Only authored axes with a non-empty resolved value are emitted,
  * so an absent axis — or a conditional axis whose branch does not match — inherits
@@ -562,13 +572,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 const icon = b.icon(readCtx, objectId);
                 if (!icon) return null;
                 return (
-                    <span key={`badge_${i}`} className={`ir-badge ir-badge--${b.position}`} title={b.tooltip}>
+                    <span key={`badge_${i}`} className={`ir-badge ir-badge--${b.position}`} style={BADGE_STYLE} title={b.tooltip}>
                         <i className={`bi ${icon}`} />
                     </span>
                 );
             })}
             {collapsedBadge && (
-                <span className={`ir-badge ir-badge--${collapsedBadge.position}`} title={collapsedBadge.tooltip}>
+                <span className={`ir-badge ir-badge--${collapsedBadge.position}`} style={BADGE_STYLE} title={collapsedBadge.tooltip}>
                     <i className={`bi ${collapsedBadge.icon}`} />
                 </span>
             )}

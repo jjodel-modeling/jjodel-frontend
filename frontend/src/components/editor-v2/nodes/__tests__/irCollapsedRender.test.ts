@@ -15,11 +15,12 @@
  * node a view compiled by the real `compileView`, read through the real draw ReadCtx.
  * The collapse state is the real module singleton, reset in `beforeEach`.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
 import { ReactFlowProvider } from '@xyflow/react';
+import { chromium, type Browser } from '@playwright/test';
 
 const state: { idlookup: Record<string, any> } = { idlookup: {} };
 
@@ -50,7 +51,8 @@ import ObjectNode from '../ObjectNode';
 import { compileView } from '../../viewpoint/ir/irCompile';
 import { makeDrawReadCtx } from '../../viewpoint/ir/irReadCtx';
 import { isCollapsed, toggleCollapsed } from '../../viewpoint/ir/irCollapseState';
-import type { GraphVertexViewIR } from '../../viewpoint/ir/irTypes';
+import { ensureViewCss } from '../../viewpoint/ir/irStyle';
+import type { GraphVertexViewIR, NodeViewIR, VertexViewIR } from '../../viewpoint/ir/irTypes';
 
 /** B contains four C through a composition reference, as in the discovery's fixture. */
 function fixture(childCount = 4): Record<string, any> {
@@ -90,7 +92,7 @@ const DECLARED = {
     badge: { icon: 'bi-box-seam', position: 'tr' as const, visible: true },
 };
 
-function render(ir: GraphVertexViewIR, childCount = 4): string {
+function render(ir: NodeViewIR, childCount = 4): string {
     state.idlookup = fixture(childCount);
     resolution.current = {
         compiled: compileView('vp_B', ir),
@@ -139,7 +141,7 @@ describe('collapsed graphVertex, declared collapsed appearance', () => {
         expect(wrapperClass(html)).toContain('ir-resizable');
         // cylinder is painted by the SVG layer, so the fill goes on its outline
         expect(html).toMatch(/<path[^>]*fill="#e2e8f0"/);
-        expect(html).toContain('<span class="ir-badge ir-badge--tr"><i class="bi bi-box-seam"></i></span>');
+        expect(html).toContain('<span class="ir-badge ir-badge--tr" style="position:absolute;z-index:2"><i class="bi bi-box-seam"></i></span>');
         // the chip stays as the expand toggle, without the count
         expect(chip(html)).toBe('<i class="bi bi-chevron-expand"></i>');
     });
@@ -212,5 +214,87 @@ describe('collapsed graphVertex, declared collapsed appearance', () => {
         const html = render(graphVertexIR({ badge: { ...DECLARED.badge, icon } }));
         expect(html).not.toContain('ir-badge');
         expect(chip(html)).toBe('<i class="bi bi-chevron-expand"></i>4');
+    });
+});
+
+/**
+ * The CSS irStyle.ts injects: BASE_CSS, then the per-view parts, read through a stand-in
+ * `document` (the bench has no DOM), as `viewpoint/ir/__tests__/shapeRegistry.test.ts` does.
+ */
+function injectedCss(): string {
+    const texts: string[] = [];
+    const g = globalThis as { document?: unknown };
+    const saved = g.document;
+    g.document = {
+        getElementById: () => null,
+        createElement: () => ({ appendChild: (n: { data: string }) => { texts.push(n.data); return n; } }),
+        createTextNode: (data: string) => ({ data, remove() { /* stand-in */ } }),
+        head: { appendChild: () => undefined },
+    };
+    try {
+        ensureViewCss(`p2122-css-${Date.now()}`, {} as NodeViewIR);
+    } finally {
+        if (saved === undefined) delete g.document; else g.document = saved;
+    }
+    return texts[0];
+}
+
+/**
+ * Badge position on an SVG form (F3 finding A). The node's markup, rendered as above, and the
+ * CSS as irStyle.ts injects it, laid out by headless Chromium: the pixel, not the style sheet
+ * (P11). Before the fix the five SVG forms' in-flow child rule (0,4,0) beat
+ * `.ir-node-content .ir-badge` (0,2,0) and the badge sat in the column, top centre.
+ */
+describe('a badge sits in its corner on an SVG form (laid out in Chromium)', () => {
+    let browser: Browser;
+    beforeAll(async () => { browser = await chromium.launch(); });
+    afterAll(async () => { await browser?.close(); });
+
+    /** Each badge of the node: computed position, and whether it sits in the quadrant its class names. */
+    async function badgesOf(html: string) {
+        const page = await browser.newPage();
+        try {
+            await page.setContent(`<style>${injectedCss()}</style>`
+                + `<div style="position:absolute;left:40px;top:40px;width:120px;height:90px">${html}</div>`);
+            return await page.evaluate(() => {
+                const c = document.querySelector('.ir-node-content') as HTMLElement;
+                const cr = c.getBoundingClientRect();
+                return Array.from(c.querySelectorAll(':scope > .ir-badge')).map((b) => {
+                    const r = b.getBoundingClientRect();
+                    const right = r.left + r.width / 2 > cr.left + cr.width / 2;
+                    const top = r.top + r.height / 2 < cr.top + cr.height / 2;
+                    const corner = `${top ? 't' : 'b'}${right ? 'r' : 'l'}`;
+                    return { cls: b.className, position: getComputedStyle(b).position, inItsCorner: b.classList.contains(`ir-badge--${corner}`) };
+                });
+            });
+        } finally {
+            await page.close();
+        }
+    }
+
+    it('collapsed cylinder: the declared badge and a shape badge, each in its corner', async () => {
+        toggleCollapsed('objB');
+        const ir = graphVertexIR(DECLARED);
+        ir.shape.badges = [{ icon: 'bi-star', position: 'bl', visible: true }];
+        const badges = await badgesOf(render(ir));
+        expect(badges.map(b => b.cls).sort()).toEqual(['ir-badge ir-badge--bl', 'ir-badge ir-badge--tr']);
+        for (const b of badges) expect(b, b.cls).toMatchObject({ position: 'absolute', inItsCorner: true });
+    });
+
+    it('diamond vertex: a shape badge in its corner', async () => {
+        const ir: VertexViewIR = {
+            irVersion: '1.2', kind: 'vertex', metaclasses: ['B'],
+            shape: { form: 'diamond', badges: [{ icon: 'bi-star', position: 'tl', visible: true }],
+                labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'name' } }] },
+        };
+        const badges = await badgesOf(render(ir));
+        expect(badges).toEqual([{ cls: 'ir-badge ir-badge--tl', position: 'absolute', inItsCorner: true }]);
+    });
+
+    it('control, a CSS form (rounded, expanded): the badge already sat in its corner', async () => {
+        const ir = graphVertexIR(DECLARED);
+        ir.shape.badges = [{ icon: 'bi-star', position: 'br', visible: true }];
+        const badges = await badgesOf(render(ir));
+        expect(badges).toEqual([{ cls: 'ir-badge ir-badge--br', position: 'absolute', inItsCorner: true }]);
     });
 });

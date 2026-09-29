@@ -125,8 +125,9 @@ export function useContentDrivenSize(
     const active = source === 'default' || source === 'derived';
     /** The last size this hook wrote, to tell our own size from somebody else's. */
     const written = useRef<Size | null>(null);
-    /** Whether that size came from the view's default, see the deactivation below. */
-    const fromDefault = useRef(false);
+    /** Whether that size came from the view's default. Not read since F3 (P-2026-09-29-2122):
+     *  the deactivation below drops a derived size too. */
+    const fromDefault = useRef(false); // TODO: cleanup
     /**
      * Consecutive commits in which the store did NOT come back with the size this
      * hook wrote, while the measurement had not moved. See the budget below.
@@ -155,8 +156,11 @@ export function useContentDrivenSize(
             // would stay for the session. Drop it, the same keys "Reset size" drops, but
             // only while it is still ours and no manual size owns the vertex: a
             // propagation can land on the very numbers this hook wrote.
+            // A derived box goes the same way (F3, P-2026-09-29-2122): a form that turns
+            // plain (a collapsed cylinder expanded back to rounded, a conditional form)
+            // left the supplemented box on the node for the session.
             const mine = written.current;
-            if (fromDefault.current && !isResized && mine !== null) {
+            if (!isResized && mine !== null) {
                 setNodes(nds => {
                     let changed = false;
                     const next = nds.map(n => {
