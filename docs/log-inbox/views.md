@@ -304,3 +304,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (lane probe on 3055, light; the visual GO is the chat's)
 **Notes**: Ratios: header 2.35→6.22 and 2.09→7.02; edges 2.34→16.3; quiet 1.48→4.76; underline 0→312-436 px; triangle tip 5 px outside pointing away, 41% hidden → 1 px inside, 0%. Also reached, declared in R-VP-18: derived SM/ESM/activity edges without authored colour, the ESM derived dash, the classic object header. Derived Petri unchanged. The first after-probe missed the FlowB tree once, not reproduced; hardened against a NaN bottom.
 **Prompt document name**: 2026-09-29 13:32
+
+## 2026-09-29 — merge: visual-v2 into alfonso-frontend-jjtl (P-2026-09-29-1450)
+**Prompt**: `claude_2026-09-29_1450_prompt_merge_visual-v2.md`, a direct merge by `lane-run merge --direct`, no session: `visual-v2` at `ee0b05bdf` into `alfonso-frontend-jjtl`, merge base `afa951c64`, 4 commits on the branch side.
+**Files touched**: merge `5b51fbe34`: 10 files from the branch side (`docs/decisions.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_1332_prompt_visual_v2.md`, `frontend/src/components/editor-v2/__tests__/lightThemeLegibility.test.ts`, `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/hooks/useTreeLayout.ts`, `frontend/src/components/editor-v2/nodes/instanceNode.scss`, `frontend/src/components/editor-v2/utils/__tests__/treeConnector.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5b51fbe34` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5772 tests in 227 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: V2 legible default notation: M2 header 6.22:1, edges 16.3:1, M1 quiet 4.76:1, underline painted, generalization triangle up
+**Notes**: Rollback tag `pre-visual-v2` on `96360e0b7` (RC-31). Union: `docs/decisions.md`, `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1450/result.json`.
+**Prompt document name**: 2026-09-29 14:50
