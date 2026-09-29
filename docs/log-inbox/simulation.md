@@ -1050,3 +1050,27 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: four demo scenes re-run on 7fec9c966 port 3045: 73 readings, only 4 differ as expected (Petri RUN 4 and FINAL: t2 guard false; ESM RUN 1 and 3: tp guard false); new reference 09-29c
 **Notes**: Rollback tag `pre-sim-guard-word` on `b5680b43f` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1045/result.json`.
 **Prompt document name**: 2026-09-29 10:45
+
+## 2026-09-29 — feat: the pill behind Advanced and a Semantic type, Jjodie aligned, R-SIM-97 (P-2026-09-29-1106)
+**Prompt**: `claude_2026-09-29_1106_prompt_sim_gate_p2.md`, Phase 2 on `sim-gate` in `~/jjodel-w-simgate2`, full lane, §6 of the sim-gate discovery (P-2026-09-29-1040) ratified «Yes, all»: the pill mounted only in Advanced mode and on a metamodel with `simProfile`, the «Semantic type» field in the metamodel's Properties, Jjodie 48 px in editor tabs with the closed pill on its centre line, the demo script re-measured, R-SIM-97.
+**Files touched**: code `9f32ed9e0`: `frontend/src/components/editor-v2/sim/simRoleStatus.ts`, `sim/__tests__/simRoleStatus.test.ts`; `381353f75`: `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`; `ea326ef6a`: `frontend/src/components/Jodie/JodieWindow.css`, `frontend/src/components/editor-v2/sim/simulation-panel.scss`. Docs, this commit: `docs/decisions.md` (R-SIM-97), `docs/demo/models_2026_simulator_demo.md` (header, §1, the Apply steps and counts of §2.1 to §2.4, the §2.1 Undo, the §2.3 and §2.4 undo stack, §3, §4), this entry and two tickets, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. On `ea326ef6a`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; sim and model/simulation folders 864 passed; `npx vitest run` 5724 passed, the 9 known files red at import (`window is not defined`); `npm run build` exit 0. Red first: 13 failed. Mutation bench 5/5 killed, list in the body of `9f32ed9e0`.
+**Out-of-scope changes**: no — 10 files, all in the prompt's DOVE, above the Rule 19 five, listed in chat before the first edit (RC-11). Not done, and the reason for ⚠️: the `// TODO: cleanup` marks on `KINDS` and `isFirstOpen` asked by the COSA, because their files (`SimRolesModal.tsx`, `simRolesDraft.ts`) are outside the DOVE's six (RC-21: a file outside DOVE is Alfonso's).
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3050 (`_tmp_simgate_walk.ts`, gitignored), light, 1600×1000: Basic and Advanced without a type show no pill on either tab, the type shows the chip on both; Jjodie (216, 903) 48×48 and the chip (281, 911) 107.1×32, centres at y 927, gap 17; the open panel 793.5/157.5, no overlap; the four scenes against 09-29c 16/18, 11/12, 22/23, 17/18 identical, the rest the dialog's focus on open and the §2.1 Undo line; 1 console error per scene, the baseline kind
+**Notes**: The field shows only after a click on the empty canvas: 6 clicks per scene against 4, plus the M1 chip; setup 2 clicks against 8 chips. Measured, not as the report predicted: the §2.1 Undo reads `State machine · Checkable after Apply`, and the Data undo stack goes 3 to 4, since the Advanced switch is an undo step. The gate probe: 8 cells as specified, None keeps the roles, None or Basic mid-run clear the run. Logs `~/.jjodel-lanes/P-2026-09-29-1106/`.
+**Prompt document name**: 2026-09-29 11:06
+
+## 2026-09-29 — ticket: the Problems producer does not follow the pill's gate
+**Ticket**: In Basic mode, or on a metamodel whose Semantic type is `None`, the Simulation pill is not mounted (R-SIM-97), but `SimCheckProblemSync` keeps reporting the simulator's guard and action defects: `simCheckSignature` keys on the role keys, not on `simProfile` (`simCheckToProblems.ts:90-96`), and the run bag reads the profile as «Custom» (`simBridge.ts:145`). `editor-v2/problems/` is critical zone and stayed out of P-2026-09-29-1106 (Question 1 of the discovery, answered as recommended). Read, not measured in the probe.
+**Priority**: low
+**Found in**: P-2026-09-29-1040
+**Detail**: docs/discovery/discovery_2026-09-29_sim_gate_and_placement.md (§0 Question 1, §5; branch `sim-gate-disc`)
+
+## 2026-09-29 — ticket: an undo does not restore a key removed from a state bag
+**Ticket**: `lobj.state = { k: undefined }` (the `-=` branch of `set_state`, `joiner/classes.ts:2380-2401`) is one undo step, but Control+z takes that step and leaves `k` removed. Measured on 3050 (`_tmp_simgate_undo.ts`, gitignored, log in `~/.jjodel-lanes/P-2026-09-29-1106/`): `simProfile` removed, then undone, stays absent (stack 2 to 1); `simNode` the same (4 to 3); the control, a key added and undone, is removed (1 to 0). So the undo of `None` in the Semantic type field does not bring the type back (the demo script says to choose the preset again); the dialog's edit cleared to undefined goes through the same branch (read, not measured). The undo is the delta machinery of `redux/reducer/reducer.ts` (`undo`, `Uobj.objectDelta`), core.
+**Priority**: medium
+**Found in**: P-2026-09-29-1106

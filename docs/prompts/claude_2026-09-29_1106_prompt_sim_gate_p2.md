@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1106
 Chat: C-2026-09-28-1936
 Lane: full (Phase 2; six code files plus the demo script; tests first). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-gate · 9f32ed9e0, 381353f75, ea326ef6a · non fuso: hard-stop, lane probe on 3050 (light), four scenes and the gate, crop in docs/discovery/harness/_tmp_simgate_*.png (gitignored), R-SIM-97 nel commit docs, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-simgate2`, branch `sim-gate` (cut by the chat from `alfonso-frontend-jjtl` at `cd2b5fec9`, which contains R-SIM-96; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-simgate2`, branch `sim-gate`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 
