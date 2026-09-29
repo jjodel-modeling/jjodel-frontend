@@ -16,6 +16,7 @@ import {
     boundProposalInputs,
     ENGINE_ROLE_KEYS,
     eventRoleWarning,
+    hasSemanticType,
     incompleteConfigurationMessage,
     invalidEngineRoles,
     missingEngineRoles,
@@ -26,12 +27,16 @@ import {
     profileSummaryText,
     profileVerdict,
     ROLE_SPECS,
+    SEMANTIC_TYPE_OPTIONS,
+    semanticTypeCurrent,
+    semanticTypePatch,
+    simPillVisible,
     staleEventWarning,
     storedProfile,
     VERDICT_LABEL,
 } from '../simRoleStatus';
 import type { ProfileSummary, Roles } from '../simRoleStatus';
-import { draftPatch, draftStatus, withProfileName, withRoleMode } from '../simRolesDraft';
+import { draftPatch, draftProposals, draftStatus, isFirstOpen, matchLine, withProfileName, withRoleMode } from '../simRolesDraft';
 import type { DraftInput } from '../simRolesDraft';
 import { largestInitialMarking } from '../modelMarkings';
 import type { BoundEstimate } from '../modelMarkings';
@@ -399,6 +404,165 @@ describe('storedProfile (R-SIM-55, D6)', () => {
             expect(s.profile.name).toBe('Custom');
         }
     });
+});
+
+describe('the gate of the Simulation pill (P-2026-09-29-1106, R-SIM-97)', () => {
+    // The lookup the panel reads: a metamodel, an M1 of it, and an M1 with no metamodel.
+    const lookupWith = (mmState: Record<string, unknown>, m1State: Record<string, unknown> = {}) => ({
+        mm: { id: 'mm', _state: mmState },
+        m1: { id: 'm1', instanceof: 'mm', _state: m1State },
+        orphan: { id: 'orphan', _state: { simProfile: 'stateMachine' } },
+    });
+    const TYPED = { simProfile: 'stateMachine', simNode: 'State' };
+
+    it('Basic mode hides the pill on M2 and on an M1, whatever the bag (killed by dropping the advanced term)', () => {
+        const lookup = lookupWith(TYPED);
+        expect(simPillVisible(false, lookup, 'mm', false)).toBe(false);
+        expect(simPillVisible(false, lookup, 'm1', true)).toBe(false);
+        // control: the same lookup in Advanced shows it
+        expect(simPillVisible(true, lookup, 'mm', false)).toBe(true);
+    });
+
+    it('Advanced without a Semantic type hides it, role keys set or not (killed by dropping the bag term)', () => {
+        for (const bag of [{}, { simNode: 'State', simTransition: 'Transition' }, { simProfile: '' }, { simProfile: null }]) {
+            const lookup = lookupWith(bag);
+            expect(simPillVisible(true, lookup, 'mm', false)).toBe(false);
+            expect(simPillVisible(true, lookup, 'm1', true)).toBe(false);
+        }
+    });
+
+    it('Advanced with a Semantic type shows it on the M2 and on an M1 of it, by the metamodel\'s bag (killed by reading the M1\'s own bag)', () => {
+        expect(simPillVisible(true, lookupWith(TYPED), 'mm', false)).toBe(true);
+        expect(simPillVisible(true, lookupWith(TYPED), 'm1', true)).toBe(true);
+        // an M1 bag naming a profile while its metamodel names none: hidden
+        expect(simPillVisible(true, lookupWith({}, { simProfile: 'stateMachine' }), 'm1', true)).toBe(false);
+    });
+
+    it('an M1 with no metamodel, or an unknown id, shows nothing', () => {
+        const lookup = lookupWith(TYPED);
+        expect(simPillVisible(true, lookup, 'orphan', true)).toBe(false);
+        expect(simPillVisible(true, lookup, 'nope', false)).toBe(false);
+        expect(simPillVisible(true, lookup, 'nope', true)).toBe(false);
+    });
+
+    it('\'\' is no Semantic type; an unreadable value and a user profile are (killed by treating \'\' as set)', () => {
+        expect(hasSemanticType({ simProfile: '' })).toBe(false);
+        expect(hasSemanticType({ simProfile: null })).toBe(false);
+        expect(hasSemanticType({ simProfile: undefined })).toBe(false);
+        expect(hasSemanticType({})).toBe(false);
+        expect(hasSemanticType(undefined)).toBe(false);
+        // D6: the panel's «not readable» line stays reachable
+        expect(hasSemanticType({ simProfile: '{not json' })).toBe(true);
+        expect(hasSemanticType({ simProfile: encodeProfile(withProfileName(SM, 'Mine')) })).toBe(true);
+        expect(hasSemanticType({ simProfile: 'petri' })).toBe(true);
+    });
+});
+
+describe('the Semantic type field of the metamodel\'s Properties (P-2026-09-29-1106, R-SIM-97)', () => {
+    /** The merge of `set_state` (joiner/classes.ts): a key given as undefined is removed, the others merged. */
+    const setState = (bag: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> => {
+        const out: Record<string, unknown> = { ...bag };
+        for (const [k, v] of Object.entries(patch)) {
+            if (v === undefined) delete out[k];
+            else out[k] = v;
+        }
+        return out;
+    };
+    const ROLES = { simNode: 'State', simInitial: 'Initial', simTransition: 'Transition', simNextState: 'Transition.nextState' };
+
+    it('lists the eight presets of the panel\'s Profile select, in its order and with its names', () => {
+        expect(SEMANTIC_TYPE_OPTIONS.map(o => o.value)).toEqual([...PANEL_PROFILE_IDS]);
+        expect(SEMANTIC_TYPE_OPTIONS.map(o => o.label)).toEqual(PANEL_PROFILE_IDS.map(id => systemProfile(id)?.name));
+    });
+
+    it('a preset writes simProfile alone, in one state assignment, the value the panel\'s Apply writes', () => {
+        const patch = semanticTypePatch('stateMachine');
+        expect(patch).toEqual({ simProfile: 'stateMachine' });
+        expect(patch.simProfile).toBe(encodeProfile(systemProfile('stateMachine') as SimProfile));
+        expect(setState(ROLES, patch)).toEqual({ ...ROLES, simProfile: 'stateMachine' });
+    });
+
+    it('None removes simProfile only and keeps the role bag (D3; killed by clearing every sim* key)', () => {
+        const patch = semanticTypePatch(null);
+        expect(Object.keys(patch)).toEqual(['simProfile']);
+        expect(patch.simProfile).toBeUndefined();
+        const typed = { ...ROLES, simProfile: 'stateMachine' };
+        const none = setState(typed, patch);
+        expect(none).toEqual(ROLES);
+        expect(hasSemanticType(none)).toBe(false);
+        // choosing the preset again restores the bag
+        expect(setState(none, semanticTypePatch('stateMachine'))).toEqual(typed);
+    });
+
+    it('shows None, a listed preset, or the panel\'s name of a value off the list (a user profile, an unreadable one)', () => {
+        expect(semanticTypeCurrent(undefined)).toBeNull();
+        expect(semanticTypeCurrent('')).toBeNull();
+        expect(semanticTypeCurrent('petri')).toEqual({ value: 'petri', label: 'Petri net (P/T)', listed: true });
+        expect(semanticTypeCurrent(encodeProfile(withProfileName(SM, 'Mine')))).toMatchObject({ label: 'Mine', listed: false });
+        expect(semanticTypeCurrent('{not json')).toMatchObject({ label: 'Custom', listed: false });
+    });
+});
+
+describe('the dialog opened on a Semantic type proposes what the picker path proposes (discovery 2026-09-29 §5)', () => {
+    // The four demo metamodels (demo script §2), as the discovery's probe sketched them.
+    const C = (id: string, supers: string[] = [], abstract = false): SketchClass => ({ id, name: id, abstract, supers });
+    const A = (owner: string, name: string, type: string): SketchAttribute => ({ id: `${owner}.${name}`, name, owner, type });
+    const R = (owner: string, name: string, type: string, composition = false): SketchReference => (
+        { id: `${owner}.${name}`, name, owner, type, composition, aggregation: false }
+    );
+    const PEST: MetamodelSketch = {
+        classes: [C('State'), C('Initial', ['State']), C('Terminal', ['State']), C('Transition'), C('Event')],
+        attributes: [],
+        references: [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State'), R('Transition', 'event', 'Event')],
+    };
+    const PETRI_NET: MetamodelSketch = {
+        classes: [C('PNode', [], true), C('Place', ['PNode']), C('Transition', ['PNode']), C('Arc'), C('InhibitorArc', ['Arc'])],
+        attributes: [A('Place', 'tokens', SKETCH_TYPE.int), A('Transition', 'guard', SKETCH_TYPE.expression), A('Arc', 'weight', SKETCH_TYPE.int)],
+        references: [R('Arc', 'src', 'PNode'), R('Arc', 'tgt', 'PNode')],
+    };
+    const ESM_MM: MetamodelSketch = {
+        classes: PEST.classes,
+        attributes: [A('Event', 'name', SKETCH_TYPE.string), A('Transition', 'guard', SKETCH_TYPE.expression),
+            A('Transition', 'effect', SKETCH_TYPE.action), A('State', 'entry', SKETCH_TYPE.action)],
+        references: PEST.references,
+    };
+    const FLOW_B: MetamodelSketch = {
+        classes: [C('ActivityNode'), ...['InitialNode', 'Activity', 'Decision', 'Fork', 'Join', 'FinalNode'].map(n => C(n, ['ActivityNode'])), C('ControlFlow')],
+        attributes: [A('ControlFlow', 'guard', SKETCH_TYPE.expression), A('ControlFlow', 'effect', SKETCH_TYPE.action)],
+        references: [R('ControlFlow', 'source', 'ActivityNode'), R('ControlFlow', 'target', 'ActivityNode')],
+    };
+    const SCENES: Array<[string, 'stateMachine' | 'petri' | 'extendedStateMachine' | 'flowchart', MetamodelSketch, string]> = [
+        ['2.1 PEST', 'stateMachine', PEST, '7 of 10'],
+        ['2.2 Petri', 'petri', PETRI_NET, '9 of 10'],
+        ['2.3 ESM', 'extendedStateMachine', ESM_MM, '10 of 13'],
+        ['2.4 Flow B', 'flowchart', FLOW_B, '10 of 13'],
+    ];
+    // The dialog's input (SimRolesModal.tsx): today the picker sets the preset; after Properties, the stored profile.
+    const input = (profile: SimProfile, bag: Record<string, unknown>, sketch: MetamodelSketch, writeProfile: boolean): DraftInput => ({
+        profile, bag, bindings: profileBindings(profile, sketch, bag), edits: {}, declarations: null, matchOff: false, writeProfile,
+    });
+    const line = (i: DraftInput) => { const m = matchLine(i.bindings); return m ? `${m.matched} of ${m.total}` : null; };
+
+    for (const [label, id, sketch, match] of SCENES) {
+        it(`${label}: ${match}, the same proposals and the same patch but for simProfile, no picker`, () => {
+            const today = input(systemProfile(id) as SimProfile, {}, sketch, true);
+            const bag = semanticTypePatch(id);
+            const stored = storedProfile(bag);
+            const next = input(stored.profile, bag, sketch, !stored.custom);
+            expect(isFirstOpen({})).toBe(true);
+            expect(isFirstOpen(bag)).toBe(false);
+            expect(line(today)).toBe(match);
+            expect(line(next)).toBe(match);
+            expect(draftProposals(next)).toEqual(draftProposals(today));
+            expect(draftStatus(next, sketch).status).toBe('checkable');
+            const { simProfile, ...rest } = draftPatch(today);
+            expect(simProfile).toBe(id);
+            expect(draftPatch(next)).toEqual(rest);
+            // the M2 face before Apply: the preset, pending, not «Custom · Not checkable»
+            const summary = profileSummary(stored.profile, bag, next.bindings, null, sketch);
+            expect(summary).toMatchObject({ name: systemProfile(id)?.name, status: 'checkable', pending: true });
+        });
+    }
 });
 
 describe('profileSummary and its text (R-SIM-77, R-SIM-79)', () => {
