@@ -367,3 +367,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-09-29-2122
 **Detail**: docs/discovery/discovery_2026-09-29_collapsed_render_layer_impact.md (§6, harness note)
+
+## 2026-09-29 — merge: ir-collapsed-render into alfonso-frontend-jjtl (P-2026-09-29-2243)
+**Prompt**: `claude_2026-09-29_2243_prompt_merge_ir-collapsed-render.md`, a direct merge by `lane-run merge --direct`, no session: `ir-collapsed-render` at `f601f70ff` into `alfonso-frontend-jjtl`, merge base `5626b3364`, 7 commits on the branch side.
+**Files touched**: merge `889906e43`: 8 files from the branch side (`docs/discovery/discovery_2026-09-29_collapsed_render_layer_impact.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_2122_prompt_ir_collapsed_render.md`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/nodes/__tests__/irCollapsedRender.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/useContentSizeDrop.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `889906e43` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5905 tests in 234 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Visual evidence from the lane itself (P-2026-09-29-2122): 7 crops expanded/collapsed/re-expanded/control in light and dark with DOM measures, tests irCollapsedRender and useContentSizeDrop; merge gates green. Dark-mode contrast of the fixture fill is an authoring colour, not a renderer defect. Merge taken over by chat C-2026-09-29-1826 on Alfonso request.
+**Notes**: Rollback tag `pre-ir-collapsed-render` on `cf8c031f6` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2243/result.json`.
+**Prompt document name**: 2026-09-29 22:43
