@@ -226,3 +226,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `ShapeForm 'bar'` (`449c583b6`) has no row in `notationCatalog.ts` and no entry in `FORM_OPTIONS` (`VertexAuthoringPanel.tsx`), both left out as authoring surfaces outside R-VP-16. A derived Petri Transition opened in the Symbol Editor is recognized as no preset («Custom»), and its Shape select has no `bar` option (what it displays instead was not measured); picking a form there rewrites the bar. Discovery §6 lane 3 proposed the row `petri-transition-bar`; with it, `NOTATION_CATALOG` goes from 56 to 57 and the Petri section test changes.
 **Priority**: low
 **Found in**: P-2026-09-29-1021
+
+## 2026-09-29 — merge: petri-notation-l2b into alfonso-frontend-jjtl (P-2026-09-29-1103)
+**Prompt**: `claude_2026-09-29_1103_prompt_merge_petri-notation-l2b.md`, a direct merge by `lane-run merge --direct`, no session: `petri-notation-l2b` at `59b4245c0` into `alfonso-frontend-jjtl`, merge base `0fbb550ea`, 4 commits on the branch side.
+**Files touched**: merge `faa3cd66f`: 11 files from the branch side (`docs/decisions.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_1021_prompt_petri_notation_l2b.md`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/structureCapabilities.test.ts`, `frontend/src/components/editor-v2/viewpoint/derive/__tests__/viewpointDerivation.test.ts`, `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/shapeRegistry.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `faa3cd66f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5717 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: four demo scenes re-run on faa3cd66f port 3045: 73 readings identical to 09-29c; derived DemoPetri: no token marks, centred names, 48x12 bar, orthogonal arcs
+**Notes**: Rollback tag `pre-petri-notation-l2b` on `cd2b5fec9` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1103/result.json`.
+**Prompt document name**: 2026-09-29 11:03
