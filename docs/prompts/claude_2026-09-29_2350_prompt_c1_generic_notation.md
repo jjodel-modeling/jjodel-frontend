@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-2350
 Chat: C-2026-09-29-2230
 Lane: Phase 2 (derivation data only; no §3.1 file). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane viewpoint-notations · 3ed86119f · non fuso: hard-stop, lane probe on 3071 (light) 50/50, crops in frontend/scripts/smoke/_tmp_c1_crops/ (gitignored), mutation bench 42/43 (one equivalent mutant), R-VP-19 nel commit docs, verifica visiva alla chat
 Worktree: `~/jjodel-w-notations`, branch `viewpoint-notations`, the same session tree as the discovery P-2026-09-29-2320 (report committed at `ee7206d0c`), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-notations`, branch `viewpoint-notations`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA

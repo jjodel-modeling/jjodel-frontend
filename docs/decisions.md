@@ -4260,6 +4260,34 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   edges with no authored colour (SM, ESM, activity) take the new ink, 2.34:1 to 16.3:1, and the ESM derived `—` 1.48:1
   to 4.76:1; derived Petri views unchanged (`#0f172a` before and after); `--node-header-text` also colours the classic
   object view's header. Dark theme untouched. Prompt P-2026-09-29-1332.
+- **R-VP-19** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **The derived viewpoint draws the generic structural notation (variant C) when no role is bound.** Source:
+  `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §0 questions 1 and 2,
+  §1 rows 13, 14, 15, 17, §4, §5 C1) and the mockups `docs/mockups/derived-viewpoints/*-C-generic.svg`. Alfonso chose
+  «Derive viewpoint» opening a dialog whose notation select defaults to Generic, and «C first»; the dialog is slice D.
+  Amends R-VP-15 (5) and the last clause of R-VP-17 («no role bound: today's boxes»): with no role bound the
+  derivation draws variant C; with a binding the role-keyed path of R-VP-15..18 is unchanged, byte for byte. (1) Where:
+  `deriveViewpointForBinding`, called by `createDerivedViewpoint`. (2) Edges: today's recognition (5/5 demo edge
+  classes, 41 M1 edges on the corpus), a 1 px line in `var(--color-inode-name)` with the filled arrowhead; an edge
+  whose label needs a template (`weight = 2`, `guard = true`, `«InhibitorArc» weight = 3`) stays unlabelled until C2.
+  (3) Rows (question 2, Recommended adopted): a class held by a node's multi-valued composition is a row of that node,
+  `children` compartment, `rowFormat` mono 11 px, `name : type` where a `type` feature exists, unless it types a plain
+  reference. (4) Eyebrow: the metaclass name as a literal, uppercased in the literal, 10 px, 600,
+  `var(--color-inode-quiet)`; letter spacing with C2. (5) Subclass mark (question 1, Recommended adopted): name signals
+  only, `initial|start` a 2 px border in the name ink, `final|terminal|end|accept` the `double` border (3 px, as
+  R-VP-17); otherwise the eyebrow alone. (6) Look: white fill (`--color-inode-surface`), 1 px `--color-inode-border`
+  (slate-300), radius 10 (`.ir-shape--rounded`), name 14 px 600 in the name ink, size from content; the mockups'
+  `#334155` at 1.5 px is not adopted. Lane choices inside that list: the words of the name are matched (camel case and
+  `_` split, so `Legend`, `Endpoint`, `Restart` are not marked), on a class with any superclass; a row with no `type`
+  feature is its name alone; the slot rows in mono 11 px quiet (the mockups' `.at`), and only on a class holding a slot
+  other than the name, since the name slot is listed too until C2's `exclude`; a composition into the holder's own
+  hierarchy, a holder the class is a kind of, and a holder that is itself a row or an edge make no row; the children
+  filter is `isKind` over the held row classes, less the classes that are kinds of them and not rows. Measured: the
+  nine corpus metamodels give 39 views (25 vertex, 9 edge, 5 row), 6 marks, 5 labelled edges, M1 66 eyebrows and 13
+  rows, from the fixtures and from the exports; the derived box on the turnstile is 198 px wide, the 200 px floor of
+  `.mm-node.mm-object` (`nodes/instanceNode.scss:35`), not the 140 px of `irStyle.ts:82`. Prompt P-2026-09-29-2350,
+  commit `3ed86119f`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)

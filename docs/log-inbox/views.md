@@ -395,3 +395,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-09-29 23:20
 
 **Ticket** (observations, low, in the report's §1): `freeHandleIndex` (`irEdgeViews.ts:81-91`) is documented as the first free index and returns a count, a candidate cause of arrowheads on one point, not reproduced; `validateIR` does not check `edge.terminations`, so an unknown value (e.g. `hollowCircle`) passes and draws no marker.
+
+## 2026-09-30 — feat(views): the generic structural notation (variant C) derived with no role bound, slice C1 (P-2026-09-29-2350)
+**Prompt**: `claude_2026-09-29_2350_prompt_c1_generic_notation.md`, Phase 2 slice C1 of the notation discovery, heavy, on `~/jjodel-w-notations` branch `viewpoint-notations`: variant C as derivation data with no role bound (rules 1-6), tests first, mutation bench, lane probe, R-VP-19.
+**Files touched**: code `3ed86119f`: `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`, its test `derive/__tests__/viewpointDerivation.test.ts`, `frontend/src/utils/deriveViewpoint.ts`. This commit: `docs/decisions.md` (R-VP-19), this entry, the Status line of the prompt file. Probes `frontend/scripts/smoke/_tmp_c1_*` and crops `_tmp_c1_crops/` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `3ed86119f`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; derive file 107 passed (36 red first); full `npx vitest run` 5942 passed, the 9 known files red at import; `npm run build` exit 0, chunk-size warning only. Role-keyed digests pinned on `58aa78ba9`, structure-only pins unchanged. Mutation bench 42/43, the survivor an equivalent mutant.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 file: `viewpoint/derive/` is outside `viewpoint/ir/` and `viewpoint/authoring/`)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3071 (light, 1600×1000) 50/50 EXIT=0, crops `frontend/scripts/smoke/_tmp_c1_crops/c1_{sm,petri,esm,flowB,erd}_derived_600.png`
+**Notes**: Turnstile box 198 px: the 200 px floor of `.mm-node.mm-object` (`instanceNode.scss:35`), not `irStyle.ts:82`. The session stopped at 00:25 on ENOTFOUND (network) and was resumed; nothing lost. Default canvas: an empty-viewpoint round-trip leaves it byte-identical; any derived viewpoint round-trip re-routes M1 reference edges, the trunk's boxes too; after C it equals the boxes case byte for byte, 5/5.
+**Prompt document name**: 2026-09-29 23:50
+
+**Ticket** (observation, low, not a ticket of its own): visiting a derived viewpoint and returning to the default one re-routes some M1 reference edges of the default canvas (DemoPEST `coin`↔`t1`, `push`↔`t2`), with the trunk's own derived boxes as well; an empty viewpoint does not. Not investigated; a candidate for slice C3's edge-port work.
