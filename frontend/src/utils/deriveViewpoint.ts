@@ -21,7 +21,7 @@ import { DViewElement, DViewPoint, U, store } from '../joiner';
 import DockManager from '../components/abstract/DockManager';
 import { toast } from '../components/Toast/toastDispatch';
 import { appliableToForIRKind } from '../view/viewElement/view';
-import { deriveViewpointIRs } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
+import { deriveViewpointIRs, isDerivableMetamodel } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
 import { runBag } from '../components/editor-v2/sim/simBridge';
 import { storedProfile } from '../components/editor-v2/sim/simRoleStatus';
 import { ROLE_CATALOG } from '../model/simulation/roleCatalog';
@@ -42,7 +42,7 @@ function storedRoles(lookup: Record<string, any>, metamodelId: string): Derivati
 export function createDerivedViewpoint(metamodelId: string): DViewPoint | null {
     const lookup: Record<string, any> = (store.getState() as any).idlookup ?? {};
     const metamodel = lookup[metamodelId];
-    if (!metamodel || metamodel.className !== 'DModel' || !metamodel.isMetamodel) return null;
+    if (!isDerivableMetamodel(metamodel)) return null;
 
     const views = deriveViewpointIRs(lookup, metamodelId, storedRoles(lookup, metamodelId));
     if (views.length === 0) {

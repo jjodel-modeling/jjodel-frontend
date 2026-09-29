@@ -104,6 +104,15 @@ const attributesCompartment = (): FieldCompartmentSpec => ({
 const path = (featureName: string) => `$${featureName}.value`;
 
 /**
+ * True when `entity` (a D-layer element from the store lookup) is a metamodel, the only kind
+ * a viewpoint is derived from. The one test both `createDerivedViewpoint` and the tree row's
+ * «Derive viewpoint» item use.
+ */
+export function isDerivableMetamodel(entity: any): boolean {
+    return !!entity && entity.className === 'DModel' && !!entity.isMetamodel;
+}
+
+/**
  * The IR documents of the metamodel `metamodelId`, one per concrete class,
  * deepest class first (declaration order within a depth). `roles` null or
  * absent: structure only. An unknown metamodel gives `[]`.

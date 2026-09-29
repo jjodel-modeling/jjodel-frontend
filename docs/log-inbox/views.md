@@ -141,3 +141,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs only, the viewpoint derivation discovery report and its log entry; no code
 **Notes**: Rollback tag `pre-viewpoint-derivation` on `1d707831f` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0259/result.json`.
 **Prompt document name**: 2026-09-29 02:59
+
+## 2026-09-29 — fix(tree): «Derive viewpoint» only on metamodel rows (P-2026-09-29-0305)
+**Prompt**: `claude_2026-09-29_0305_prompt_derive_viewpoint_m2_only.md`, fast lane on `~/jjodel-w-derivem1` branch `derive-viewpoint-m2-only`: show the tree menu's «Derive viewpoint» only when the row is a metamodel, by the test `createDerivedViewpoint` uses, and let `menuHeight` follow it.
+**Files touched**: code `f2e5b086e`: `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts` (`isDerivableMetamodel`, additive export), `frontend/src/components/editor-v2/viewpoint/derive/__tests__/viewpointDerivation.test.ts` (one describe, 4 tests), `frontend/src/utils/deriveViewpoint.ts` (the inline guard calls the export), `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx` (`canDerive` in the menu state, `store` added to the joiner import). This commit: this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-29 01:35
+**Causa**: (c)
+**Regressions**: unknown — gates on `f2e5b086e`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` on `editor-v2/viewpoint`, `TreeViewSidebar`, `utils` 1035 passed, 1 file red at import (`UDComparator`, on the known list); `npm run build` exit 0; `check:docs` 4/4; `check:addonly` 0 rewrites. Red first: 4 failed, 37 passed, then 41 passed. Mutation bench on the predicate 4/4 killed (drop isMetamodel, drop className, drop null guard, invert). The tree hook was not run.
+**Out-of-scope changes**: yes — `viewpointDerivation.ts` and its test are not in the prompt's DOVE: `deriveViewpoint.ts` does not import in the bench (monaco, `window is not defined`, measured), so an export there could not be executed; CLAUDE.md §5 says move the pure logic to a module the bench imports. 4 files, under Rule 19.
+**Layer Impact Report**: not-required (no §3.1 file touched)
+**Smoke visivo**: pending — chat, Advanced mode: right-click a metamodel row shows Create View and Derive viewpoint; a class or package row shows Create View only; an M1 model row opens no menu.
+**Notes**: Read, not reproduced: the prompt says M1 rows show the item, but `MetamodelNode` (fed by `state.m2models`) is the only `'DModel'` caller of the hook and `ModelNode` has no menu. No M1 path found, so a metamodel row shows what it showed; «click does nothing» is unexplained.
+**Prompt document name**: 2026-09-29 03:05
