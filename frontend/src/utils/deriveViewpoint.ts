@@ -2,10 +2,12 @@
  * deriveViewpoint — «Derive viewpoint» on a metamodel (P-2026-09-29-0135).
  *
  * Creates a NEW viewpoint named `<metamodel> (derived)` with one IR view per
- * concrete class, the documents of `deriveViewpointIRs`, created in its order
- * (deepest class first). The structure always feeds it; the simulation role
- * binding stored on the metamodel feeds it when there is one, read as a run
- * reads it (`runBag`, the keys of the roles its profile turns off dropped).
+ * concrete class, the documents of `deriveViewpointForBinding`, created in its
+ * order (deepest class first). The simulation role binding stored on the
+ * metamodel, read as a run reads it (`runBag`, the keys of the roles its profile
+ * turns off dropped), picks the notation: with a role bound, the role-keyed ones
+ * (R-VP-15..17); with none, the generic structural notation (R-VP-19,
+ * P-2026-09-29-2350), whose contained objects are row views.
  *
  * - The default viewpoint and every existing view are never touched: the
  *   father of every view is the new viewpoint.
@@ -21,7 +23,7 @@ import { DViewElement, DViewPoint, U, store } from '../joiner';
 import DockManager from '../components/abstract/DockManager';
 import { toast } from '../components/Toast/toastDispatch';
 import { appliableToForIRKind } from '../view/viewElement/view';
-import { deriveViewpointIRs, isDerivableMetamodel } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
+import { deriveViewpointForBinding, isDerivableMetamodel } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
 import { runBag } from '../components/editor-v2/sim/simBridge';
 import { storedProfile } from '../components/editor-v2/sim/simRoleStatus';
 import { ROLE_CATALOG } from '../model/simulation/roleCatalog';
@@ -44,7 +46,7 @@ export function createDerivedViewpoint(metamodelId: string): DViewPoint | null {
     const metamodel = lookup[metamodelId];
     if (!isDerivableMetamodel(metamodel)) return null;
 
-    const views = deriveViewpointIRs(lookup, metamodelId, storedRoles(lookup, metamodelId));
+    const views = deriveViewpointForBinding(lookup, metamodelId, storedRoles(lookup, metamodelId));
     if (views.length === 0) {
         toast.warning(`"${metamodel.name}" has no concrete class to derive a view for.`, 'Nothing to derive');
         return null;

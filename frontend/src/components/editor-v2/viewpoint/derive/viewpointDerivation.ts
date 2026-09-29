@@ -41,6 +41,16 @@
  *   ink, and no compartment; its Initial is unchanged. Without one it is an
  *   activity: its Initial is the nameless disc, its Terminal (and an activity
  *   final) the nameless bull's-eye in the name ink.
+ * - **The generic structural notation** (variant C, P-2026-09-29-2350, R-VP-19,
+ *   mockups docs/mockups/derived-viewpoints/*-C-generic.svg), what «Derive
+ *   viewpoint» draws when no role is bound (`deriveGenericViewpointIRs`): the
+ *   edges of the structure-only derivation, in the name ink with the filled
+ *   arrowhead, labelled only where one text source says it; every node a white
+ *   rounded box with the metaclass name as an eyebrow over its name, the
+ *   subclasses named initial or final marked on the border; a class held by a
+ *   node's multi-valued composition a row of that node. What needs an IR key
+ *   (letter spacing, a label template, the name slot kept out of the slot rows)
+ *   waits for slice C2.
  * - **No priority**: the list comes deepest class first and the resolver ranks
  *   an exact match above an inherited one (irResolveCore.ts), so the creation
  *   order settles every tie (decision 1).
@@ -54,10 +64,12 @@
 
 import { applyPresetToShape, getCatalogPreset } from '../ir/notationCatalog';
 import { CONTAINER_ENDPOINT } from '../ir/irTypes';
-import type { EdgeViewIR, FieldCompartmentSpec, ShapeSpec, VertexViewIR } from '../ir/irTypes';
+import type {
+    EdgeViewIR, FieldCompartmentSpec, LabelSpec, Predicate, RowViewIR, ShapeSpec, TextSource, VertexViewIR,
+} from '../ir/irTypes';
 import { sketchOfMetamodel } from '../../sim/metamodelSketch';
 import { SKETCH_TYPE } from '../../../../model/simulation/profileBinder';
-import type { SketchClass, SketchReference } from '../../../../model/simulation/profileBinder';
+import type { SketchAttribute, SketchClass, SketchReference } from '../../../../model/simulation/profileBinder';
 import type { ProfileShape } from '../../../../model/simulation/simProfiles';
 
 type Lookup = Record<string, any>;
@@ -77,6 +89,14 @@ export interface DerivedView {
     readonly rule: string;
     readonly ir: VertexViewIR | EdgeViewIR;
 }
+
+/** A row document of the generic notation: a contained object drawn as a row of its holder. */
+export interface DerivedRowView extends Omit<DerivedView, 'ir'> {
+    readonly ir: RowViewIR;
+}
+
+/** Any document a derivation returns: the generic notation adds rows to vertices and edges. */
+export type AnyDerivedView = DerivedView | DerivedRowView;
 
 const IR_VERSION = 'ir-1.2';
 const SURFACE = 'var(--color-inode-surface)';
@@ -326,4 +346,191 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         out.push({ classId: c.id, className: c.name, rule: preset ? `role:${role}` : 'structure:default', ir });
     }
     return out;
+}
+
+// ---------------------------------------------------------------------------
+// The generic structural notation (variant C, R-VP-19)
+// ---------------------------------------------------------------------------
+
+/** The quiet text token: the eyebrow and the slot rows (`#64748b` in light, R-VP-18 (3)). */
+const QUIET = 'var(--color-inode-quiet)';
+
+/** The words of a class name, lower case: `FinalNode` and `final_state` both start with `final`. */
+const nameWords = (name: string): string[] =>
+    name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(w => w !== '');
+const INITIAL_WORDS: ReadonlySet<string> = new Set(['initial', 'start']);
+const FINAL_WORDS: ReadonlySet<string> = new Set(['final', 'terminal', 'end', 'accept']);
+
+/** The identity slot (model/CLAUDE.md §3.12): the name label already shows it. */
+const isIdentity = (a: SketchAttribute): boolean => a.name === 'name' && a.type === SKETCH_TYPE.string;
+
+const NAME_SOURCE = (): TextSource => ({ from: 'intrinsic', prop: 'name' });
+const isKindOf = (className: string): Predicate => ({ op: 'isKind', class: className });
+const anyKindOf = (names: string[]): Predicate => (names.length === 1 ? isKindOf(names[0]) : { op: 'or', args: names.map(isKindOf) });
+
+/**
+ * The generic structural notation (variant C) of the metamodel `metamodelId`: one document
+ * per concrete class, in the order of the structure-only derivation, the roles never read.
+ * An unknown metamodel gives `[]`.
+ *
+ * - **Edges** are the edges of `deriveViewpointIRs(…, null)`, endpoints unchanged: a 1 px
+ *   line in the name ink ending in the filled arrowhead. The label is the first plain
+ *   single reference that is not an endpoint (the event of a transition), else the name
+ *   slot; a sub-edge is labelled by its stereotype `«Name»`. Where the label would need
+ *   two parts (`weight = 2`, `«InhibitorArc» weight = 3`) the edge stays unlabelled
+ *   until the label template of slice C2.
+ * - **Rows**: a class held by a node through a multi-valued composition (its own or
+ *   inherited, not into the holder's own hierarchy) is a row of that node, `name` or
+ *   `name : type` in mono 11 px, unless it is the type of a plain reference, which needs
+ *   it as a node. A class held only by another row, or by an edge, stays a node.
+ * - **Nodes**: a white rounded box, 1 px in the node border token, sized from its content;
+ *   the metaclass name, uppercased in the literal, in 10 px 600 quiet ink over the name in
+ *   14 px 600 name ink. A subclass whose name holds the word initial or start takes a
+ *   2 px ink border, one holding final, terminal, end or accept the double border.
+ *   The slots other than the name in mono 11 px quiet rows; the name slot is listed too
+ *   until the `exclude` key of slice C2, so a class whose only slot is the name has none.
+ */
+export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): AnyDerivedView[] {
+    // The order and the edges are today's structure-only derivation (rule 2 of the prompt).
+    const structure = deriveViewpointIRs(lookup, metamodelId, null);
+    const sketch = sketchOfMetamodel(lookup, metamodelId);
+    const byId = new Map<string, SketchClass>(sketch.classes.map(c => [c.id, c]));
+
+    const lineageMemo = new Map<string, string[]>();
+    /** `id` and its superclasses, transitively, cycle-safe, `id` first. */
+    const lineage = (id: string): string[] => {
+        const hit = lineageMemo.get(id);
+        if (hit) return hit;
+        const out: string[] = [];
+        const queue = [id];
+        while (queue.length > 0) {
+            const c = queue.shift() as string;
+            if (out.includes(c)) continue;
+            out.push(c);
+            for (const s of byId.get(c)?.supers ?? []) queue.push(s);
+        }
+        lineageMemo.set(id, out);
+        return out;
+    };
+    const isKind = (c: string, of: string) => lineage(c).includes(of);
+    const upper = (refId: string): number => {
+        const u = lookup[refId]?.upperBound;
+        return typeof u === 'number' ? u : 1;
+    };
+    const referencesOf = (c: string): SketchReference[] => sketch.references.filter(r => lineage(c).includes(r.owner));
+    const attributesOf = (c: string) => sketch.attributes.filter(a => lineage(c).includes(a.owner));
+    const nameOf = (c: string) => byId.get(c)?.name ?? c;
+
+    const edges = new Set(structure.filter(v => v.ir.kind === 'edge').map(v => v.classId));
+    const nodes = structure.filter(v => v.ir.kind !== 'edge').map(v => v.classId);
+
+    // Rows (rule 3). Held through a multi-valued composition that does not run into the
+    // holder's own hierarchy (a State in a State is a tree of nodes), by a holder the
+    // class is not itself a kind of (a SubPackage is a Package and an Element).
+    const holdings = (n: string) => referencesOf(n).filter(r => r.composition && upper(r.id) !== 1 && !isKind(n, r.type));
+    const heldBy = (c: string, n: string) => !isKind(c, n) && holdings(n).some(r => isKind(c, r.type));
+    const typesPlainReference = (c: string) => sketch.references.some(r => !r.composition && isKind(c, r.type));
+    const candidates = nodes.filter(c => !typesPlainReference(c) && nodes.some(n => heldBy(c, n)));
+    // Held by a node: a candidate held only by other candidates stays a node, since its
+    // holders are rows and a row draws no rows of its own.
+    const rows = new Set(candidates.filter(c => nodes.some(n => !candidates.includes(n) && heldBy(c, n))));
+
+    /** Only the row classes `n` holds: its edges and its node children keep their own drawing. */
+    const childFilter = (n: string): Predicate | null => {
+        const held = [...rows].filter(r => heldBy(r, n));
+        if (held.length === 0) return null;
+        const kept = anyKindOf(held.map(nameOf));
+        // A class that is a kind of a row class and not a row itself is excluded by name.
+        const apart = structure.map(v => v.classId).filter(x => !rows.has(x) && held.some(r => isKind(x, r)));
+        return apart.length === 0 ? kept : { op: 'and', args: [kept, { op: 'not', arg: anyKindOf(apart.map(nameOf)) }] };
+    };
+
+    const markOf = (c: string): 'initial' | 'final' | undefined => {
+        if ((byId.get(c)?.supers.length ?? 0) === 0) return undefined;
+        const words = nameWords(nameOf(c));
+        if (words.some(w => INITIAL_WORDS.has(w))) return 'initial';
+        if (words.some(w => FINAL_WORDS.has(w))) return 'final';
+        return undefined;
+    };
+
+    /** One text source only: what needs a template (a slot `name = value`, a stereotype and more) is left out. */
+    const edgeLabel = (c: string, ends: ReadonlyArray<string | undefined>): TextSource | undefined => {
+        const extra = referencesOf(c).find(r => !r.composition && upper(r.id) === 1 && !ends.includes(path(r.name)));
+        const slot = attributesOf(c).find(a => !isIdentity(a));
+        if (lineage(c).slice(1).some(s => edges.has(s))) {
+            return extra || slot ? undefined : { from: 'literal', text: `«${nameOf(c)}»` };
+        }
+        if (extra) return { from: 'path', expr: path(extra.name) };
+        if (slot) return undefined;
+        return attributesOf(c).some(isIdentity) ? NAME_SOURCE() : undefined;
+    };
+
+    return structure.map((v): AnyDerivedView => {
+        const pins = { [v.className]: v.classId };
+        const label = `View for ${v.className}`;
+
+        if (v.ir.kind === 'edge') {
+            const { source, target } = v.ir.edge;
+            const edge: EdgeViewIR['edge'] = { source, target, terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' } };
+            const center = edgeLabel(v.classId, [source, target]);
+            if (center) edge.labels = { center };
+            edge.line = { color: NAME_INK, width: 1 };
+            return {
+                classId: v.classId, className: v.className, rule: v.rule,
+                ir: { irVersion: IR_VERSION, kind: 'edge', metaclasses: [v.className], authoringMetaclassPins: pins, exclusive: true, label, edge },
+            };
+        }
+
+        if (rows.has(v.classId)) {
+            const type = attributesOf(v.classId).find(a => a.name.toLowerCase() === 'type')
+                ?? referencesOf(v.classId).find(r => r.name.toLowerCase() === 'type' && !r.composition && upper(r.id) === 1);
+            const template: TextSource[] = type
+                ? [NAME_SOURCE(), { from: 'literal', text: ' : ' }, { from: 'path', expr: path(type.name) }]
+                : [NAME_SOURCE()];
+            const ir: RowViewIR = { irVersion: 'ir-1.0', kind: 'row', metaclasses: [v.className], authoringMetaclassPins: pins, label, template };
+            return { classId: v.classId, className: v.className, rule: 'generic:row', ir };
+        }
+
+        const mark = markOf(v.classId);
+        const eyebrow: LabelSpec = {
+            position: 'top', source: { from: 'literal', text: v.className.toUpperCase() },
+            style: { fontSize: 10, fontWeight: 'semibold', color: QUIET },
+        };
+        const name: LabelSpec = { position: 'top', source: NAME_SOURCE(), style: { fontSize: 14, fontWeight: 'semibold', color: NAME_INK } };
+        const shape: ShapeSpec = {
+            form: 'rounded', fill: SURFACE,
+            // A CSS double border draws two lines from a width of 3 (irTypes.ts), as R-VP-17.
+            border: mark === 'initial' ? { color: NAME_INK, width: 2, style: 'solid' }
+                : mark === 'final' ? { color: NAME_INK, width: 3, style: 'double' }
+                    : { color: BORDER, width: 1, style: 'solid' },
+            labels: [eyebrow, name],
+        };
+        const ir: VertexViewIR = {
+            irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: pins, exclusive: true, label, shape,
+        };
+        const compartments: FieldCompartmentSpec[] = [];
+        if (attributesOf(v.classId).some(a => !isIdentity(a))) {
+            const slots = attributesCompartment();
+            slots.rowFormat.style = { fontFamily: 'mono', fontSize: 11, color: QUIET };
+            compartments.push(slots);
+        }
+        const filter = childFilter(v.classId);
+        if (filter) {
+            compartments.push({
+                id: 'children', source: { from: 'children', filter },
+                rowFormat: { segments: [{ kind: 'name' }], style: { fontFamily: 'mono', fontSize: 11 } }, separator: true,
+            });
+        }
+        if (compartments.length > 0) ir.fieldCompartments = compartments;
+        return { classId: v.classId, className: v.className, rule: mark ? `generic:${mark}` : 'generic:node', ir };
+    });
+}
+
+/**
+ * The documents «Derive viewpoint» creates (R-VP-19): with a role bound, the role-keyed
+ * notations of R-VP-15..17, byte for byte; with none, the generic structural notation.
+ * The notation dialog of slice D will make the choice explicit.
+ */
+export function deriveViewpointForBinding(lookup: Lookup, metamodelId: string, roles: DerivationRoles | null): AnyDerivedView[] {
+    return roles ? deriveViewpointIRs(lookup, metamodelId, roles) : deriveGenericViewpointIRs(lookup, metamodelId);
 }
