@@ -118,3 +118,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Merge brings in only the three SymbolCard paths (two deleted files, railSystem.scss); the other frontend/src differences from the branch tip are trunk-side sim files, disjoint. Branch probe P-2026-09-29-1929 on :3002: Symbol tab opens the modal, 12 rail tab bars identical to the 1826 measures; gates green on the merge
 **Notes**: Rollback tag `pre-symbolcard-cleanup` on `7c2539ae9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1947/result.json`.
 **Prompt document name**: 2026-09-29 19:47
+
+## 2026-09-29 — style(editors): drop SymbolCard leftovers in railSystem.scss (P-2026-09-29-2253)
+**Prompt**: `claude_2026-09-29_2253_prompt_railsystem_symbolcard_leftovers.md`, `Lane: fast`, on `~/jjodel-w-railleft` branch `railsystem-leftovers`. Remove the two invisible leftovers reported by P-2026-09-29-1929 in `railSystem.scss`: the dead `.symbol-card` selector in the background list and the SymbolCard mention in the header comment. Not merged, as asked.
+**Files touched**: code `26b29ae57`: `frontend/src/components/editors/railSystem.scss` (the `.symbol-card` selector and its comma, three lines of the header comment reflowed). Closure commit: this entry and the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-29 19:29 claude_2026-09-29_1929_prompt_remove_symbolcard.md (it reported these two leftovers)
+**Causa**: (c)
+**Regressions**: no. `npm run build` exit 0, only the chunk-size warning; `npm run typecheck` exit 2 with 14 errors, the baseline count; `npm run check:docs` 4/4 passed. No visual probe, as the prompt states.
+**Out-of-scope changes**: no, one source file, the one the prompt lists.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile. Evidence in place of a probe: `command grep -rniE 'symbol-card|SymbolCard' frontend/src` returned exactly the two lines named (26 and 52) before the edit (control on `properties-panel` in the same file found hits) and returned nothing, exit 1, after it. The removed selector matched no element and `> section.properties-tab.properties-panel` already covers the same sections.
+**Notes**: Rollback is `git revert 26b29ae57`. The Status flip is a plain edit of the prompt file, made by hand because the `status-flip` skill is user-invoked only.
+**Prompt document name**: 2026-09-29 22:53
