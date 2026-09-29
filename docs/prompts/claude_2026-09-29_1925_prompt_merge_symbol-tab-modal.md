@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1925
 Chat: C-2026-09-29-1826
 Lane: full (merge; 1 conflict: `docs/log-inbox/symbol-editor.md` measured)
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane merge · f7c5fd910 · verifica visiva passata 2026-09-29 (Code under frontend/src on the trunk equals the branch tip a4d9c7ab3 (merge conflict only in docs/log-inbox); visual checks a-e and all rail tab bars passed on the branch with Playwright probes on :3002 (P-2026-09-29-1826); gates green on the merge)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-1925 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

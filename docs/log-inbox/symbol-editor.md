@@ -79,3 +79,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato (Playwright probes on :3002: checks a-e, 4 closers, arrows inert with Enter/Space as control; row, edge and legacy view bars 4px narrower per tab, no label cut; crops in `frontend/scripts/smoke/_tmp_symtab/`, gitignored)
 **Notes**: At 360px Advanced the vertex bar still overflows: 381/343, Source hidden 29.8px, against 24.2px before the lane. Edge and legacy bars overflow less than before at every width. The hover-colour FAIL of probe2 is the probe's premise: the rail label does not change colour on hover; icon equals label idle and on hover. No tag, no merge.
 **Prompt document name**: 2026-09-29 18:26
+
+## 2026-09-29 — merge: symbol-tab-modal into alfonso-frontend-jjtl (P-2026-09-29-1925)
+**Prompt**: `claude_2026-09-29_1925_prompt_merge_symbol-tab-modal.md`, a direct merge by `lane-run merge --direct`, no session: `symbol-tab-modal` at `a4d9c7ab3` into `alfonso-frontend-jjtl`, merge base `7b5c807b8`, 7 commits on the branch side.
+**Files touched**: merge `f7c5fd910`: 7 files from the branch side (`docs/discovery/discovery_2026-09-29_symbol_tab_opens_modal.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-09-29_1826_prompt_symbol_tab_opens_modal.md`, `frontend/src/components/editor-v2/nodes/RendererInspector.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/irTabs.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editors/views/ViewData.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f7c5fd910` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5825 tests in 229 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Code under frontend/src on the trunk equals the branch tip a4d9c7ab3 (merge conflict only in docs/log-inbox); visual checks a-e and all rail tab bars passed on the branch with Playwright probes on :3002 (P-2026-09-29-1826); gates green on the merge
+**Notes**: Rollback tag `pre-symbol-tab-modal` on `70b580af4` (RC-31). Union: `docs/log-inbox/symbol-editor.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1925/result.json`.
+**Prompt document name**: 2026-09-29 19:25
