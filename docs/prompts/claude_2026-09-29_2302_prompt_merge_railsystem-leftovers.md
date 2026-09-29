@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-2302
 Chat: C-2026-09-29-1826
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane merge · e42e5d7f5 · verifica visiva passata 2026-09-29 (No visual change by construction: the removed selector targeted .symbol-card, which no element carries (grep of symbol-card/SymbolCard in frontend/src: 0 hits after merge); the remaining selector covers the same section; the other change is a comment. Gates green.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-2302 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

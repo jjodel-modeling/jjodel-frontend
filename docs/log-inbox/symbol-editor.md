@@ -131,3 +131,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile. Evidence in place of a probe: `command grep -rniE 'symbol-card|SymbolCard' frontend/src` returned exactly the two lines named (26 and 52) before the edit (control on `properties-panel` in the same file found hits) and returned nothing, exit 1, after it. The removed selector matched no element and `> section.properties-tab.properties-panel` already covers the same sections.
 **Notes**: Rollback is `git revert 26b29ae57`. The Status flip is a plain edit of the prompt file, made by hand because the `status-flip` skill is user-invoked only.
 **Prompt document name**: 2026-09-29 22:53
+
+## 2026-09-29 — merge: railsystem-leftovers into alfonso-frontend-jjtl (P-2026-09-29-2302)
+**Prompt**: `claude_2026-09-29_2302_prompt_merge_railsystem-leftovers.md`, a direct merge by `lane-run merge --direct`, no session: `railsystem-leftovers` at `5555a3619` into `alfonso-frontend-jjtl`, merge base `313a84663`, 3 commits on the branch side.
+**Files touched**: merge `e42e5d7f5`: 3 files from the branch side (`docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-09-29_2253_prompt_railsystem_symbolcard_leftovers.md`, `frontend/src/components/editors/railSystem.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e42e5d7f5` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5905 tests in 234 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: No visual change by construction: the removed selector targeted .symbol-card, which no element carries (grep of symbol-card/SymbolCard in frontend/src: 0 hits after merge); the remaining selector covers the same section; the other change is a comment. Gates green.
+**Notes**: Rollback tag `pre-railsystem-leftovers` on `313a84663` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2302/result.json`.
+**Prompt document name**: 2026-09-29 23:02
