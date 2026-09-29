@@ -347,3 +347,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: passato — chat, unattended: chat: scripts-only merge, no UI change; the six known vitest reds are gone
 **Notes**: Rollback tag `pre-harness-reds-repairs` on `024d95345` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0029/result.json`.
 **Prompt document name**: 2026-09-29 00:29
+
+## 2026-09-29 — discovery: trace monitor stage 2, REQ files and the T6 rules (P-2026-09-29-0404)
+**Prompt**: `claude_2026-09-29_0404_prompt_discovery_trace_monitor_stage2.md`, read-only discovery launched by `lane-run` in `~/jjodel-w-trace2` (branch `trace-stage2-disc`, trunk `1430054fe` plus the prompt): the REQ file format, the `Requirement:` header, the four T6 changes as rules with tests, the effect on the gates, a Phase 2 plan.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-29_trace_monitor_stage2.md` (new), `docs/log-inbox/harness.md` (this entry), the prompt's Status line. Probe `frontend/scripts/smoke/_tmp_trace_stage2_probe.ts`, gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only on code; stage 1 tests `traceIndex` and `traceMonitor` 29 passed; `check:docs` run on this commit's tree.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Indexer on the trunk: 2991 nodes, 1839 edges, 284 misses. Freshness must exclude docs-only commits (20 of 28 checks stale otherwise, 7 of 25 without); every probe run names an untracked script. Phase 2: seven files, `head=`/`dirty=` in the probe log first. Awaiting Alfonso: A1, which requirements exist and who writes them. Detail in the report §0.
+**Prompt document name**: 2026-09-29 04:04
