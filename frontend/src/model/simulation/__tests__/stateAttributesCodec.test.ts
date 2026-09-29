@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    decodeStateAttributes, encodeStateAttributes, parseInitialLiteral, stateAttributeRows, STATE_ATTRIBUTES_KEY,
+    decodeStateAttributes, encodeStateAttributes, mergeDeclarations, parseInitialLiteral, stateAttributeRows, STATE_ATTRIBUTES_KEY,
 } from '../stateAttributesCodec';
 import type { StateAttributeRecord } from '../stateAttributesCodec';
 
@@ -269,5 +269,66 @@ describe('R-SIM-88: an input record, neither initial nor equation (P-2026-09-28-
         expect(rows[1]).toEqual(DECISION);
         expect(rows[0]).not.toHaveProperty('input');
         expect(encodeStateAttributes(rows)).toBe(raw);
+    });
+});
+
+describe("R-SIM-94: the model's globals merged over the metamodel's (P-2026-09-29-0110)", () => {
+    const COUNT: StateAttributeRecord = { name: 'count', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' };
+    const COUNT5: StateAttributeRecord = { ...COUNT, domain: { kind: 'range', min: 0, max: 5 } };
+    const decoded = (records: unknown[] | undefined) => decodeStateAttributes(records === undefined ? undefined : stored(records));
+
+    it("no model key: the metamodel's declarations as they are, the same objects in the same order (the demo's fallback)", () => {
+        const mm = decoded([VISITS, F, MODE]);
+        const out = mergeDeclarations(mm, decoded(undefined));
+        expect(out.decls).toEqual(mm.decls);
+        expect(out.decls.map(d => d.name)).toEqual(['visits', 'f', 'mode']);
+        expect(out.defects).toEqual([]);
+    });
+
+    it("a metamodel global is the default of a model that does not declare it: both lists kept, the model's after (mutant: the model's list dropped)", () => {
+        const out = mergeDeclarations(decoded([F]), decoded([COUNT]));
+        expect(out.decls.map(d => [d.name, d.metaclass])).toEqual([['f', null], ['count', null]]);
+        expect(out.defects).toEqual([]);
+    });
+
+    it("the model's record shadows the metamodel's global of the same name, with no defect (mutant: no shadow, both kept and compileNet says twice)", () => {
+        const out = mergeDeclarations(decoded([COUNT5, F]), decoded([COUNT]));
+        expect(out.decls.map(d => d.name)).toEqual(['f', 'count']);
+        expect(out.decls.find(d => d.name === 'count')?.domain).toEqual({ kind: 'range', min: 0, max: 3 });
+        expect(out.defects).toEqual([]);
+    });
+
+    it('a metaclass-bound metamodel record is never shadowed by a model global of the same name (mutant: shadowing by name alone)', () => {
+        const bound = { ...VISITS, name: 'count' };
+        const out = mergeDeclarations(decoded([bound]), decoded([COUNT]));
+        expect(out.decls.map(d => [d.name, d.metaclass])).toEqual([['count', 'C_Place'], ['count', null]]);
+    });
+
+    it("a model record naming a metaclass is a record defect at its index in the model's key, left out (mutant: kept as a declaration)", () => {
+        const out = mergeDeclarations(decoded([F]), decoded([COUNT, VISITS]));
+        expect(out.decls.map(d => d.name)).toEqual(['f', 'count']);
+        expect(out.defects).toEqual([{ index: 1, name: 'visits', code: 'record', message: 'a model declares globals only' }]);
+    });
+
+    it('the record index skips the records the decoder already dropped (mutant: the index of the decoded list)', () => {
+        const model = decoded([{ name: 'broken' }, COUNT, { ...VISITS, name: 'v' }]);
+        expect(model.defects.map(d => d.index)).toEqual([0]);
+        const out = mergeDeclarations(decoded(undefined), model);
+        expect(out.defects).toEqual([{ index: 2, name: 'v', code: 'record', message: 'a model declares globals only' }]);
+    });
+
+    it("a model key that is not readable merges nothing and shadows nothing: its defect stays the decoder's", () => {
+        const model = decodeStateAttributes('not json');
+        const out = mergeDeclarations(decoded([COUNT5]), model);
+        expect(out.decls.map(d => d.domain)).toEqual([{ kind: 'range', min: 0, max: 5 }]);
+        expect(out.defects).toEqual([]);
+    });
+
+    it('pure: neither input is mutated', () => {
+        const mm = decoded([COUNT5, F]);
+        const model = decoded([COUNT, VISITS]);
+        const before = JSON.stringify([mm, model]);
+        mergeDeclarations(mm, model);
+        expect(JSON.stringify([mm, model])).toBe(before);
     });
 });

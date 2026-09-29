@@ -14,7 +14,7 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
     candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, markingLine,
-    NO_SIM_ACTIONS, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason,
+    modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, panelInputs, pressInput, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
 import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
@@ -1853,5 +1853,175 @@ describe('R-SIM-90: Guard, Action, Entry and Exit hold a list of attributes (P-2
         const lookup = line({ simGuard: GUARDS }, { A_cond: [' else '] });
         const r = reset(lookup);
         expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['t1', 'guard', 'else-alone', ' else ']]);
+    });
+});
+
+describe('R-SIM-94: the globals of a model are declared in its bag (P-2026-09-29-0110)', () => {
+    const COUNT_REC = { name: 'count', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' };
+    const COUNT = JSON.stringify({ v: 1, attrs: [COUNT_REC] });
+    const COUNT5 = JSON.stringify({ v: 1, attrs: [{ ...COUNT_REC, domain: { kind: 'range', min: 0, max: 5 } }] });
+    const FLOW_B = {
+        simNode: 'C_AN', simTransition: 'C_CF', simSource: 'R_source', simNextState: 'R_target', simInitial: 'C_IN', simFork: 'C_Fork',
+        simJoin: 'C_Join', simTerminal: 'C_Fin', simGuard: 'A_guard', simAction: 'A_effect', simProfile: 'flowchart',
+    };
+
+    /**
+     * Flow B of the demo (docs/demo/models_2026_simulator_demo.md §2.4), the fixture of the discovery's probe
+     * (P-2026-09-29-0011 §4): `count` declared in the metamodel's bag (`m2`), in the model's (`m1`), in both or in neither.
+     */
+    function flowB(m2: string | undefined, m1: string | undefined, bag: Record<string, unknown> = FLOW_B): Lookup {
+        const objects: Record<string, Obj> = {
+            i0: { cls: 'C_IN' }, work: { cls: 'C_Act' }, d1: { cls: 'C_Dec' }, fk: { cls: 'C_Fork' }, left: { cls: 'C_Act' },
+            right: { cls: 'C_Act' }, jn: { cls: 'C_Join' }, fin: { cls: 'C_Fin' },
+        };
+        const wires: Array<[string, string, string]> = [['f1', 'i0', 'work'], ['f2', 'work', 'd1'], ['f3', 'd1', 'work'], ['f4', 'd1', 'fk'],
+            ['f5', 'fk', 'left'], ['f6', 'fk', 'right'], ['f7', 'left', 'jn'], ['f8', 'right', 'jn'], ['f9', 'jn', 'fin']];
+        const guards: Record<string, string> = { f3: 'model.[count] < 2', f4: 'model.[count] >= 2' };
+        for (const [e, src, tgt] of wires) {
+            objects[e] = { cls: 'C_CF', slots: {
+                R_source: [src], R_target: [tgt], ...(guards[e] ? { A_guard: [guards[e]] } : {}),
+                ...(e === 'f2' ? { A_effect: ['model.[count] := model.[count] + 1'] } : {}),
+            } };
+        }
+        const lookup = buildLookup({ ...bag, ...(m2 !== undefined ? { simStateAttributes: m2 } : {}) }, objects);
+        lookup.C_AN = { className: 'DClass', id: 'C_AN', name: 'ActivityNode', extends: [], abstract: true };
+        for (const [id, name] of [['C_IN', 'InitialNode'], ['C_Act', 'Activity'], ['C_Dec', 'Decision'], ['C_Fork', 'Fork'], ['C_Join', 'Join'], ['C_Fin', 'FinalNode']]) {
+            lookup[id] = { className: 'DClass', id, name, extends: ['C_AN'] };
+        }
+        lookup.C_CF = { className: 'DClass', id: 'C_CF', name: 'ControlFlow', extends: [] };
+        for (const id of ['R_source', 'R_target']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        lookup.MM.name = 'DemoFlowB';
+        lookup.M.name = 'demoFlowB';
+        lookup.M._state = m1 !== undefined ? { simStateAttributes: m1 } : {};
+        return lookup;
+    }
+
+    const recordOf = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(recordOf(lookup)).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    /** Reset, then ε until the run stops (at most 12): the readings of the demo script. */
+    const scene = (lookup: Lookup) => {
+        const r = reset(lookup);
+        const first = markingLine(r.run.net.initial, r.run.net, lookup).line;
+        const lines: string[] = [];
+        let status = 'Running';
+        for (let i = 0; i < 12; i++) {
+            const run = getSimRun('M')!;
+            status = netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+            if (status !== 'Running') break;
+            lines.push(pressInput('M', null, undefined, lookup, 'ε').lastStep ?? '');
+        }
+        const run = getSimRun('M')!;
+        return {
+            defects: defectsLine(r.run.net, lookup, r.compileDefects), first, steps: lines.length, status,
+            final: markingLine(run.config.state, run.net, lookup).line,
+        };
+    };
+    const S1 = { defects: null, first: 'Marking: i0 · count = 0', steps: 6, status: 'Terminated', final: 'Marking: fin · count = 2' };
+
+    it("S1, the metamodel's key (the demo today): unchanged, 6 steps to Terminated with count = 2 (control)", () => {
+        expect(scene(flowB(COUNT, undefined))).toEqual(S1);
+    });
+
+    it("S2, the model's key only: the same readings as S1, no undeclared count (mutant: the model's key not read)", () => {
+        expect(scene(flowB(undefined, COUNT))).toEqual(S1);
+    });
+
+    it("both keys: the model's record shadows the metamodel's, no twice, the model's domain held (mutant: no shadow)", () => {
+        const lookup = flowB(COUNT5, COUNT);
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        expect(r.run.net.declared.get('M')?.get('count')?.domain).toEqual({ kind: 'range', min: 0, max: 3 });
+        expect(scene(flowB(COUNT5, COUNT))).toEqual(S1);
+    });
+
+    it("a model record naming a metaclass is a record defect, named and said to be the model's; the rest runs", () => {
+        const bound = JSON.stringify({ v: 1, attrs: [COUNT_REC, { ...COUNT_REC, name: 'visits', metaclass: 'C_Act' }] });
+        const r = reset(flowB(undefined, bound));
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.detail])).toEqual([['visits', 'declaration', 'a model declares globals only']]);
+        expect(r.run.net.attributes.map(d => d.name)).toEqual(['count']);
+    });
+
+    it("the model's key defects say which bag: model state attributes, model record N (mutant: labelled as the metamodel's)", () => {
+        const unreadable = reset(flowB(COUNT, 'not json'));
+        expect(unreadable.compileDefects?.map(d => [d.element, d.detail])).toEqual([['model state attributes', 'not JSON']]);
+        const nameless = reset(flowB(COUNT, JSON.stringify({ v: 1, attrs: [{ space: 'semantic' }] })));
+        expect(nameless.compileDefects?.map(d => [d.element, d.detail])).toEqual([['model record 1', 'no name']]);
+        // control: the metamodel's own keep their words
+        const m2 = reset(flowB('not json', COUNT));
+        expect(m2.compileDefects?.map(d => d.element)).toEqual(['state attributes']);
+    });
+
+    it("a profile with the declarations off drops the model's key too, as the metamodel's (R-SIM-78) (mutant: the model's key read when off)", () => {
+        const sm = buildLookup({ ...ROLES, simProfile: 'stateMachine', simStateAttributes: COUNT }, TURNSTILE);
+        sm.M._state = { simStateAttributes: COUNT };
+        const r = startRun(sm, 'M', 'MM', 'P', spyBuilder().build);
+        expect(r.kind === 'started' && r.run.net.attributes).toEqual([]);
+    });
+
+    it("S5, runSignature moves on an edit of the model's sim key, not on its other keys (mutant: the model's term dropped)", () => {
+        const base = runSignature(flowB(COUNT, COUNT), 'M', 'MM');
+        expect(runSignature(flowB(COUNT, COUNT5), 'M', 'MM')).not.toBe(base);
+        // control: an edit of the metamodel's key moves it, as before
+        expect(runSignature(flowB(COUNT5, COUNT), 'M', 'MM')).not.toBe(base);
+        const other = flowB(COUNT, COUNT);
+        other.M._state.generatedBy = 'jjtl';
+        expect(runSignature(other, 'M', 'MM')).toBe(base);
+    });
+
+    it("with the declarations off an edit of the model's key leaves the signature, as an off key of the metamodel does", () => {
+        const sm = (m1: string) => {
+            const l = buildLookup({ ...ROLES, simProfile: 'stateMachine' }, TURNSTILE);
+            l.M._state = { simStateAttributes: m1 };
+            return runSignature(l, 'M', 'MM');
+        };
+        expect(sm(COUNT5)).toBe(sm(COUNT));
+    });
+
+    it("the Reset line's undeclared globals: count, named once, from guards and actions; a name undeclared on an element is not the model's (mutant: every undeclared name)", () => {
+        const lookup = flowB(undefined, undefined);
+        const r = reset(lookup);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe(
+            "3 defects: f3 guard (undeclared 'count'); f4 guard (undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).");
+        expect(undeclaredGlobals(r.compileDefects ?? [], lookup, 'M')).toEqual(['count']);
+        expect(undeclaredGlobals([
+            { element: 'f2', role: 'action', reason: 'undeclared', detail: "'x' is not declared on work", source: '', short: "undeclared 'x' on work" },
+        ], lookup, 'M')).toEqual([]);
+        // declared in the model, nothing left to declare
+        expect(undeclaredGlobals(reset(flowB(undefined, COUNT)).compileDefects ?? [], lookup, 'M')).toEqual([]);
+    });
+
+    it("the Data dialog is globals only: its new rows, typed or taken from the Reset line, have no metaclass (mutant: a new row bound)", () => {
+        expect(newGlobalRow([])).toEqual({ name: 'x1', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' });
+        expect(newGlobalRow([newGlobalRow([])]).name).toBe('x2');
+        const stored = [{ ...COUNT_REC } as any];
+        const rows = modelDataRows(stored, ['count', 'paid']);
+        expect(rows.map(r => [r.name, r.metaclass])).toEqual([['count', null], ['paid', null]]);
+        expect(rows[0]).toBe(stored[0]);
+        expect(modelDataRows(stored, [])).toEqual(stored);
+    });
+
+    it("the Data dialog's Apply is one state assignment of the model's key alone: one set_state, one undo step (mutant: the key and the profile written)", () => {
+        const rows = modelDataRows([], ['count']);
+        const patch = modelDataPatch(rows);
+        expect(Object.keys(patch)).toEqual(['simStateAttributes']);
+        expect(patch.simStateAttributes).toBe('{"v":1,"attrs":[{"name":"count","metaclass":null,"space":"semantic","domain":{"kind":"boolean"},"initial":"false"}]}');
+    });
+
+    it("the Data dialog's Apply interrupts a run of the model: the patch, merged into the model's bag as set_state merges it, moves the signature (mutant: the signature term dropped)", () => {
+        const lookup = flowB(undefined, COUNT);
+        const r = reset(lookup);
+        expect(runSignature(lookup, 'M', 'MM')).toBe(r.run.signature);
+        lookup.M._state = { ...lookup.M._state, ...modelDataPatch([{ ...COUNT_REC, domain: { kind: 'range', min: 0, max: 5 } } as any]) };
+        expect(runSignature(lookup, 'M', 'MM')).not.toBe(r.run.signature);
     });
 });

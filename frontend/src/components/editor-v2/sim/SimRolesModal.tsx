@@ -188,13 +188,18 @@ function patchOf(row: StateAttributeRecord, field: DeclField, typed: string): Pa
     }
 }
 
-interface DeclarationsProps {
+export interface DeclarationsProps {
     rows: StateAttributeRecord[];
     classes: SimRoleOption[];
     onChange: (rows: StateAttributeRecord[]) => void;
     /** The row whose name takes the focus after Add attribute. */
     focusRow: number | null;
     onFocused: () => void;
+    /**
+     * A model's table (R-SIM-94, SimDataModal.tsx): the metaclass select offers Global only, and a row a stored
+     * record binds to a metaclass shows it as not allowed, so the user can set it back to Global.
+     */
+    globalsOnly?: boolean;
 }
 
 /**
@@ -202,9 +207,11 @@ interface DeclarationsProps {
  * derived or input (R-SIM-88), remove; space, domain, its bounds or literals,
  * then the initial value, the equation, or for an input a void cell. A text cell commits into the draft on blur or Enter,
  * a select on change; Escape drops the cell's edit; focusing a text cell
- * selects its text, so a prefilled cell is replaced by typing.
+ * selects its text, so a prefilled cell is replaced by typing. Exported for the
+ * model's Data dialog (R-SIM-94), which shows it with `globalsOnly`; on the
+ * metamodel's, `Global` is the default of every model that declares none.
  */
-function Declarations({ rows, classes, onChange, focusRow, onFocused }: DeclarationsProps): ReactElement {
+export function Declarations({ rows, classes, onChange, focusRow, onFocused, globalsOnly = false }: DeclarationsProps): ReactElement {
     const [cells, setCells] = useState<Record<string, string>>({});
     const ref = useRef<HTMLDivElement>(null);
     const keyOf = (i: number, f: DeclField) => `${i}:${f}`;
@@ -253,7 +260,13 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
     const choose = (i: number, f: DeclField, value: string) => commit(i, f, value);
 
     if (rows.length === 0) {
-        return <div className="sim-roles-modal__empty">No attributes. Add one to use it in guards, actions and equations.</div>;
+        return (
+            <div className="sim-roles-modal__empty">
+                {globalsOnly
+                    ? 'No globals. Add one to read it as model.[name] in guards, actions and equations.'
+                    : 'No attributes. Add one to use it in guards, actions and equations.'}
+            </div>
+        );
     }
     return (
         <div ref={ref}>
@@ -271,12 +284,22 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
                             <select
                                 className="sim-roles-modal__select"
                                 aria-label={`Metaclass of state attribute ${n}`}
+                                title={globalsOnly ? 'A model declares globals only; an attribute of a metaclass is declared in the metamodel' : undefined}
                                 value={r.metaclass ?? ''}
                                 onChange={e => choose(i, 'metaclass', e.target.value)}
                             >
-                                <option value="">Global</option>
-                                {r.metaclass && !classes.some(c => c.id === r.metaclass) && <option value={r.metaclass}>Unknown metaclass</option>}
-                                {classes.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}
+                                {globalsOnly ? (
+                                    <>
+                                        <option value="">Global</option>
+                                        {r.metaclass && <option value={r.metaclass}>A metaclass: not in a model</option>}
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="">Global (default for models)</option>
+                                        {r.metaclass && !classes.some(c => c.id === r.metaclass) && <option value={r.metaclass}>Unknown metaclass</option>}
+                                        {classes.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}
+                                    </>
+                                )}
                             </select>
                             <select
                                 className="sim-roles-modal__select"
@@ -894,7 +917,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                             <span className="sim-roles-modal__fold-title">Data</span>
                             <span className="sim-roles-modal__count">{rows.length}</span>
                             <span className="sim-roles-modal__data-note">
-                                {declareHint ? 'Declare the state attributes the actions write' : dataNeeded ?? (dataOff ? dataOffReason : '')}
+                                {declareHint ? "Declare the state attributes the actions write (a model's globals go in its Data…)" : dataNeeded ?? (dataOff ? dataOffReason : '')}
                             </span>
                         </button>
                         {dataOff && roleSwitch(profile, 'stateAttributes') === 'on' && (

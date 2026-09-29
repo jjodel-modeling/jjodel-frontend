@@ -2379,6 +2379,13 @@ R-SIM-86..88» di `docs/log-inbox/simulation.md`); rinumerate R-SIM-91..93 il 20
   misurata (report §5.4: dopo State machine e poi DFA, il `simTerminal` rimasto chiude il run sullo stato che
   accetta).
 
+### Decisions 2026-09-29 (night): the globals of a system live in its model (R-SIM-94)
+
+Evidence: `docs/discovery/discovery_2026-09-29_sim_data_level.md` (P-2026-09-29-0011, branch `sim-data-level`, `8db7cf475`). Alfonso, 2026-09-28 evening: «the data should be specified in the model, not in the metamodel» (a vending machine uses `coins`, a calculator the value of the display); on 2026-09-29 about 00:15 he delegated the choice and the timing to the chat, under the conditions the chat stated (option B, no destructive migration, the four demo scenes reach the same final readings, Phase 2 merged by 2026-09-30 evening).
+
+- **R-SIM-94** (2026-09-29, decided by the chat on Alfonso's delegation 2026-09-29, evidence: measured, verified: agent, reversible: branch).
+  **Globals are declared in the model; declarations bound to a metaclass stay in the metamodel. Amends R-SIM-67, R-SIM-19, R-SIM-52.** A model (M1) carries its own `simStateAttributes` key in its bag, with the record form of R-SIM-67. The five points of the discovery, all adopted as recommended: (1) option B; (2) a model declares globals only, a model record naming a metaclass is a record defect; (3) the same global declared in both places: the model's record overrides the metamodel's, by name, with no defect, so a global declared today in the metamodel is the default of every model that does not declare its own (no migration: the four demo exports carry an empty model bag); (4) the model tab of the simulation panel is where a model's data is declared (a `Data…` entry opening its own dialog, one undo step, an edit interrupts a running simulation through `runSignature`); (5) before the freeze, after the R-SIM-90 Phase 2 merge. The engine (`netCompile.ts`, `netStep.ts`, `stcChecks.ts`) does not change: it receives the merged list. The demo script moves the declaration steps of ESM and Flow B to the model tab once they are re-measured; until then it keeps declaring in the metamodel, which stays supported. R-SIM-67 stays provisional until Alfonso reads this row.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
