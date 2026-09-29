@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-29-1022
 Chat: C-2026-09-28-1936
 Lane: fast (one function, its tests, the demo script lines). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane sim-guard-word · 6964c1511 · non fuso: hard-stop, lane probe on 3049 (light), four scenes, Petri FINAL `Deadlock · ε: t2 guard false`, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-guardword`, branch `sim-guard-word` (cut by the chat from `alfonso-frontend-jjtl` at `0fbb550ea`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-guardword`, branch `sim-guard-word`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked` and say which.
 

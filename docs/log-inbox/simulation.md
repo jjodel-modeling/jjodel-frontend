@@ -998,3 +998,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: four demo scenes re-run on f573ac1e3 port 3045 with the probe kit on the new Form label: 73 readings identical to 09-29b; tickets 1,2,3,5 fixed, 4 a question for Alfonso
 **Notes**: Rollback tag `pre-sim-ui-tickets` on `1430054fe` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0425/result.json`.
 **Prompt document name**: 2026-09-29 04:25
+
+## 2026-09-29 — fix: the deadlock reason names the guard, R-SIM-96 (P-2026-09-29-1022)
+**Prompt**: `claude_2026-09-29_1022_prompt_sim_guard_word.md`, fast lane on `sim-guard-word` in `~/jjodel-w-guardword`, Question 1 of the false-deadlock discovery (P-2026-09-29-0955) answered «yes» by Alfonso: a guard-blocked transition reads `<id> guard false` in the line, the title keeps `false` and the source (R-SIM-62).
+**Files touched**: code `6964c1511`: `frontend/src/components/editor-v2/sim/simBridge.ts` (`blocked()`, the short form), `sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-96), `docs/demo/models_2026_simulator_demo.md` (§2.2 status line, §2.3 steps 1 and 3 and one bullet), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `6964c1511`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; sim folders 851 passed; `npx vitest run` 5711 passed, the 9 known files red at import (`window is not defined`); `npm run build` exit 0. Red first: 5 failed. Mutation bench 3/3 killed, list in the commit body.
+**Out-of-scope changes**: no — 6 files, all in the prompt's DOVE, above the Rule 19 five, declared (RC-11). The short form also feeds the discard text (R-SIM-57): ESM steps 1 and 3 now read `push: discarded, tp guard false`, re-measured and written in the script.
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3049 (`_tmp_guardword_probe.ts` over `_tmp_guardword_walk.ts`, gitignored), light: Petri FINAL `Deadlock · ε: t2 guard false`, title `ε: t2 (p2 ×2 → p3) false [p3.[tokens] < 1]`, not clamped (173 px), list `ε: t2 (p2 ×2 → p3) false`, Step 854.5 to 830; SM, ESM, Flow B FINAL identical to P-2026-09-29-0110; 1 console error per scene, the baseline kind
+**Notes**: Order when a guard and something else block t2: the preset is checked first (a short preset leaves no entry, `nothing enabled`), then the inhibitor (`inhibited by lock`, the guard not evaluated), then the guard. Unchanged: `defect, ...`, the `else` wording, and the unreachable fallback when no guard site fails (`t2 false`). ESM declared by the metamodel fallback; the model-tab route not re-run. Probe log `~/.jjodel-lanes/P-2026-09-29-1022/`.
+**Prompt document name**: 2026-09-29 10:22
