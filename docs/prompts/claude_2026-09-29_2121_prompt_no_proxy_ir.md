@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-09-29-2121
 Chat: C-2026-09-29-1840
 Lane: full (Phase 2; critical zone `viewpoint/ir/`, go-ahead given). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-29 · lane no-proxy-ir · 719703ef6 · non fuso
 Worktree: `~/jjodel-w-noproxy`, branch `no-proxy-ir` (cut by the chat from `alfonso-frontend-jjtl` at `5626b3364`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run` with `--critical-zone-goahead P-2026-09-29-2121`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-noproxy`, branch `no-proxy-ir`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-29-2121 · session <id>]` and ends with an `Outcome:` line (P16).
 
 ## COSA

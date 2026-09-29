@@ -317,3 +317,21 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: V2 legible default notation: M2 header 6.22:1, edges 16.3:1, M1 quiet 4.76:1, underline painted, generalization triangle up
 **Notes**: Rollback tag `pre-visual-v2` on `96360e0b7` (RC-31). Union: `docs/decisions.md`, `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1450/result.json`.
 **Prompt document name**: 2026-09-29 14:50
+
+## 2026-09-29 — fix(ir): never store an L-proxy inside a view IR (P-2026-09-29-2121)
+**Prompt**: `claude_2026-09-29_2121_prompt_no_proxy_ir.md`, lane F1 of the discovery `a50fa6607` (H1), `Lane: full`, critical zone `viewpoint/ir/` with the RC-30 go-ahead, on `~/jjodel-w-noproxy` branch `no-proxy-ir`. Local guard only, `Action.fire` untouched: `set_ir` deep-maps a nested L object to its id or refuses; `irHash` and `compressedState` stringify with a replacer that writes a proxy as its id.
+**Files touched**: LIR `e2e2195c6`: `docs/discovery/discovery_2026-09-29_no_proxy_ir_layer_impact.md` (new). Code `719703ef6`: `frontend/src/model/unproxy.ts` (new), `frontend/src/model/__tests__/unproxy.test.ts` (new), `frontend/src/view/viewElement/view.tsx` (`set_ir`, one import), `frontend/src/components/editor-v2/viewpoint/ir/irCompile.ts` (`irHash`, one import), `frontend/src/common/U.tsx` (`compressedState`, one import). This commit: this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `719703ef6`: typecheck exit 2, 14 errors, the §17 set by file and code; typecheck:scripts exit 0; check:scripts PASS; vitest 5883 passed of 5883 (5867 at the tip + 16, stated before the run), the 9 files red at import; build exit 0. Red first: 2 failed of 16 on the tip's `irHash`. Mutation bench 17/17 killed, list in `719703ef6`. Probe on 3059, discovery fixture: 5/10 before, 12/12 after; id control saves in 331 ms before, 346 ms after.
+**Out-of-scope changes**: no — eight files across the lane, all in the prompt's DOVE: the five of `719703ef6`, the LIR, this inbox, the prompt file.
+**Layer Impact Report**: produced (`e2e2195c6`, committed before the diff)
+**Smoke visivo**: non applicabile
+**Notes**: No rendering changed; the probe is functional (store, localStorage, toasts). The LIR sits in `docs/discovery/` as the prompt names, not in `docs/lir/` as RC-30 says. The direct D writers of `ir` stay unguarded, listed in LIR §1; the replacer is their backstop. Logs: `~/.jjodel-lanes/P-2026-09-29-2121/probe-noproxy-{prefix,postfix,postfix-refusals}.log`.
+**Prompt document name**: 2026-09-29 21:21
+
+## 2026-09-29 — ticket: a critical-zone lane sees four red hook tests in its own vitest run
+**Ticket**: `frontend/scripts/hooks/__tests__/criticalZone.test.ts` inherits `JJODEL_CRITICAL_ZONE_GOAHEAD` from a session started with `--critical-zone-goahead`. With the variable set, four tests red: the two «bypass not read» and the two «deny limited to the six files». With it unset, the same file is 70/70. Measured at `361eadedd`: full vitest 4 failed of 5867, then 70/70 with `env -u JJODEL_CRITICAL_ZONE_GOAHEAD`. A lane that reads those reds as its own, or as pre-existing, misreports its gate. Fix: the test deletes the variable from the environment it passes to the hook.
+**Priority**: low
+**Found in**: P-2026-09-29-2121
