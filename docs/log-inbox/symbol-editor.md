@@ -47,3 +47,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: both previews honour only `outside` for the primary label; `top`, `inside` and `bottom` still draw centred, as before this lane. Passing the inside position to the replica is a one-line change, kept out to leave committed preview behaviour untouched.
 **Priority**: low
 **Found in**: P-2026-09-29-1245
+
+## 2026-09-29 — merge: label-outside-pos into alfonso-frontend-jjtl (P-2026-09-29-1827)
+**Prompt**: `claude_2026-09-29_1827_prompt_merge_label-outside-pos.md`, a direct merge by `lane-run merge --direct`, no session: `label-outside-pos` at `e3d96cb9c` into `alfonso-frontend-jjtl`, merge base `12ac29f74`, 9 commits on the branch side.
+**Files touched**: merge `7d1b0da4f`: 23 files from the branch side (`docs/discovery/discovery_2026-09-29_label_outside_positions.md`, `docs/discovery/discovery_2026-09-29_symbol_default_size.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-09-29_1230_prompt_symbol_default_size.md`, `docs/prompts/claude_2026-09-29_1245_prompt_label_outside_positions.md`, `frontend/src/components/editor-v2/nodes/__tests__/nodeSizing.test.ts`, `frontend/src/components/editor-v2/nodes/nodeSizing.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/LabelEntryEditor.tsx`, and 15 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7d1b0da4f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5825 tests in 229 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Alfonso asked for the merge without the visual check; gates green on the merge
+**Notes**: Rollback tag `pre-label-outside-pos` on `8f972410f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1827/result.json`.
+**Prompt document name**: 2026-09-29 18:27
