@@ -25,6 +25,7 @@ import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
 import { hasCreatableViewpoint, resolveParentViewpoint, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
+import { createDerivedViewpoint } from '../../utils/deriveViewpoint';
 import { NewViewDialog, type NewViewClassOption, type NewViewTarget } from '../project/NewViewDialog';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
@@ -612,6 +613,8 @@ function renderHighlightedName(name: string, query?: string): ReactNode {
  * Hook that returns context-menu state + handlers for a classifier (DClass,
  * DEnumerator, DModel, DPackage). Right-click on the row opens the popup;
  * "Create View" calls createViewInWorkbench on the last-edited viewpoint.
+ * On a metamodel row, "Derive viewpoint" creates a new viewpoint from it
+ * (createDerivedViewpoint, P-2026-09-29-0135).
  */
 function useClassifierContextMenu(elementId: string, name: string, className: string) {
     const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
@@ -642,16 +645,16 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        // The only entry (Create View) is view authoring: Advanced mode only
+        // Every entry (Create View, Derive viewpoint) is view authoring: Advanced mode only
         if (!isAdvancedMode()) return;
         const menuWidth = 200;
-        const menuHeight = 40;
+        const menuHeight = className === 'DModel' ? 80 : 40;
         let x = e.clientX;
         let y = e.clientY;
         if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 8;
         if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 8;
         setCtxMenu({ x, y });
-    }, []);
+    }, [className]);
 
     const handleAddView = useCallback(() => {
         // Resolve ONCE and pass the id (2026-09-16). The gate below answers at render and the
@@ -664,6 +667,11 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
         createViewInWorkbench(elementId, name, className, resolved.dViewpoint.id);
         setCtxMenu(null);
     }, [elementId, name, className]);
+
+    const handleDeriveViewpoint = useCallback(() => {
+        createDerivedViewpoint(elementId);
+        setCtxMenu(null);
+    }, [elementId]);
 
     const hasWorkbenchVP = hasCreatableViewpoint();
 
@@ -680,6 +688,12 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
                 <i className="bi bi-eye" />
                 <span>{hasWorkbenchVP ? 'Create View' : 'Create View: open a viewpoint first'}</span>
             </div>
+            {className === 'DModel' && (
+                <div className="tree-node__context-item" onClick={handleDeriveViewpoint}>
+                    <i className="bi bi-magic" />
+                    <span>Derive viewpoint</span>
+                </div>
+            )}
         </div>
     ) : null;
 
