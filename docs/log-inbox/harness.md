@@ -360,3 +360,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: Indexer on the trunk: 2991 nodes, 1839 edges, 284 misses. Freshness must exclude docs-only commits (20 of 28 checks stale otherwise, 7 of 25 without); every probe run names an untracked script. Phase 2: seven files, `head=`/`dirty=` in the probe log first. Awaiting Alfonso: A1, which requirements exist and who writes them. Detail in the report §0.
 **Prompt document name**: 2026-09-29 04:04
+
+## 2026-09-29 — merge: trace-stage2-disc into alfonso-frontend-jjtl (P-2026-09-29-0438)
+**Prompt**: `claude_2026-09-29_0438_prompt_merge_trace-stage2-disc.md`, a direct merge by `lane-run merge --direct`, no session: `trace-stage2-disc` at `9691486a6` into `alfonso-frontend-jjtl`, merge base `1430054fe`, 2 commits on the branch side.
+**Files touched**: merge `d7dfdbee0`: 3 files from the branch side (`docs/discovery/discovery_2026-09-29_trace_monitor_stage2.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-09-29_0404_prompt_discovery_trace_monitor_stage2.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d7dfdbee0` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5695 tests in 226 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, the trace monitor stage 2 discovery; Phase 2 parked after MODELS (A1 Alfonso, Q1, Q2)
+**Notes**: Rollback tag `pre-trace-stage2-disc` on `08a67ed28` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-0438/result.json`.
+**Prompt document name**: 2026-09-29 04:38
