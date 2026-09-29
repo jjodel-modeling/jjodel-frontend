@@ -10,6 +10,7 @@
  */
 
 import type { NodeViewIR } from './irTypes';
+import { BAR_SIZE } from './shapeRegistry';
 
 const STYLE_TAG_ID = 'ir-views-css';
 
@@ -201,6 +202,17 @@ const BASE_CSS = `
 /* Keyboard reachability is not a hover state: an icon focused by Tab has to be visible,
    or the affordance exists only for a pointer. Same rule as the native branch. */
 .ir-node-content .ir-row__inspect:focus-visible { opacity: 1; outline: 1px solid #0ea5e9; outline-offset: 1px; }
+/* bar (R-VP-16, the Petri transition): a thin solid box at a fixed size (BAR_SIZE,
+   shapeRegistry.ts), not after its content. The floors are lifted on the box and on the
+   wrapper (instanceNode.scss: min-width 200px, overflow hidden), and nothing clips: the
+   label is centred on the bar and, when the bar is too small to hold it, drawn over it
+   and past its ends, with a halo in the surface colour so it reads on the bar and off
+   it. An explicit size (ir-sized, a manual resize) fills the box as on every form.
+   Appended after every other rule, so the rules above stay byte-identical. */
+.ir-node-content.ir-shape--bar { width: ${BAR_SIZE.w}px; height: ${BAR_SIZE.h}px; min-width: 0; min-height: 0; border-radius: 0; overflow: visible; }
+.mm-node.ir-sized > .ir-node-content.ir-shape--bar { width: 100%; height: 100%; }
+.mm-node:has(> .ir-node-content.ir-shape--bar) { min-width: 0; min-height: 0; overflow: visible; }
+.ir-node-content.ir-shape--bar > .ir-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: none; overflow: visible; margin: 0; padding: 0; text-shadow: 0 0 2px var(--color-inode-surface), 0 0 2px var(--color-inode-surface), 0 0 3px var(--color-inode-surface); }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

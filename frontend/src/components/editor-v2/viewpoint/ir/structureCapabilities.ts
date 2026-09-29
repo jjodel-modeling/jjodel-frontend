@@ -62,6 +62,7 @@ export const SHAPE_LABEL: Readonly<Record<ShapeForm, string>> = {
     parallelogram: 'Parallelogram',
     cylinder: 'Cylinder',
     cloud: 'Cloud',
+    bar: 'Bar',
 };
 
 /** The three geometric facts the capabilities are derived from. One row per shape. */
@@ -97,6 +98,8 @@ const GEOMETRY: Readonly<Record<ShapeForm, ShapeGeometry>> = {
     // Bumps on every side: no straight edge anywhere, and the interior width
     // changes at every height. The ellipse's row, for the ellipse's reasons.
     cloud: { flatTopEdge: false, straightLeftEdge: false, roomForRows: false },
+    // A 48x12 bar (R-VP-16): straight edges, none long enough for a header, an accent or rows.
+    bar: { flatTopEdge: false, straightLeftEdge: false, roomForRows: false },
 };
 
 /** Every value of each vocabulary, in the order the controls offer them. */
