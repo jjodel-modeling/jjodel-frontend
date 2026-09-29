@@ -386,3 +386,16 @@ Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, con
 **Smoke visivo**: non applicabile
 **Notes**: Preflight: `git log -1` was the prompt commit `7faa9eac9`, not `d50450972`; its parent is `d50450972` and it adds only the prompt file, so the lane ran and declares it. The check as written cannot pass when the prompt is committed on the lane branch (RC-20). The dictated subject is 89 characters; the commit uses a 72-character subject (§6.2) and moves the rest into the body. The prompt says Tier: light; the session ran Opus 5.5.
 **Prompt document name**: 2026-09-29 13:06
+
+## 2026-09-29 — merge: vitest-timeout into alfonso-frontend-jjtl (P-2026-09-29-1322)
+**Prompt**: `claude_2026-09-29_1322_prompt_merge_vitest-timeout.md`, a merge session by `lane-run merge` (`--direct` fell back: P-2026-09-29-1319 was running in this tree): `vitest-timeout` at `57843a290` into `alfonso-frontend-jjtl`, merge base `d50450972`, 3 commits on the branch side.
+**Files touched**: merge `8cd75c62b`: 3 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/P-2026-09-29-1306.md`, `frontend/vitest.config.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `8cd75c62b` in this session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 5740 tests in 226 files, 9 red at import, the trunk tip's set, hooks 344; build exit 0; check:docs 4/4; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended; Alfonso in the morning digest
+**Notes**: Rollback tag `pre-vitest-timeout` on `afa951c64` (RC-31), set by the session: the fallback path does not tag. The tip had moved: `afa951c64` (docs only) under the prompt commit, accepted; the reset target of step 6, `aa21c3668`, would have dropped it (unused, addonly green). Union: none. Expected vitest total 5740 + 0: the branch adds no test.
+**Prompt document name**: 2026-09-29 13:22
