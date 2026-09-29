@@ -1359,6 +1359,9 @@ export interface TreeBranch {
     childX: number;
     /** Y coordinate of child node's source handle */
     childY: number;
+    /** Y of the child's bottom edge. Read only for a child not below the parent's
+     *  handle: the bus then runs under it (see TREE_BUS_DROP). */
+    childBottom?: number;
     /** Edge ID for this branch */
     edgeId: string;
 }
@@ -1434,6 +1437,12 @@ export interface TreeConnectorGeometry {
 export const TREE_BUS_CORNER_RADIUS = 4;
 
 /**
+ * How far the bus runs under the parent's handle, and under the bottom of every child
+ * that is not below that handle, when the children do not sit below the parent.
+ */
+export const TREE_BUS_DROP = 16;
+
+/**
  * Radius to round one bus sub-path with: the nominal one, clamped to half of its
  * shortest segment.
  *
@@ -1501,9 +1510,18 @@ export function computeTreeConnectorPath(
 
     const sorted = [...branches].sort((a, b) => a.childX - b.childX);
 
-    // barY = midpoint between parent handle and closest child handle
+    // barY = midpoint between parent handle and closest child handle, when the children
+    // sit below the parent. When one sits beside it or above (the default placement puts
+    // a class and its subclasses on one row), that midpoint lies above the parent's bottom
+    // handle: the trunk reached the handle moving down, and the triangle turned away from
+    // the parent with its base under the box (measured 2026-09-29, R-VP-18). The bus then
+    // drops under the parent and under those children, and their branches run down
+    // through their own boxes, which paint over them.
     const closestChildY = Math.min(...sorted.map(b => b.childY));
-    const defaultBarY = parentY + (closestChildY - parentY) / 2;
+    const notBelow = sorted.filter(b => b.childY <= parentY);
+    const defaultBarY = notBelow.length === 0
+        ? parentY + (closestChildY - parentY) / 2
+        : Math.max(parentY, ...notBelow.map(b => (Number.isFinite(b.childBottom) ? b.childBottom as number : b.childY))) + TREE_BUS_DROP;
 
     // Single child: straight line (no bar needed)
     if (sorted.length === 1) {

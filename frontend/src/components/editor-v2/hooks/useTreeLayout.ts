@@ -152,7 +152,7 @@ export function useTreeLayout(
             });
             const anchor = treeBranchAnchor(box, sourceSide);
 
-            branches.push({ childX: anchor.x, childY: anchor.y, edgeId: edge.id });
+            branches.push({ childX: anchor.x, childY: anchor.y, childBottom: box.y + box.height, edgeId: edge.id });
         }
 
         return computeTreeConnectorPath(targetX, targetY, branches, [], treeExcludeIds);

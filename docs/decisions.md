@@ -4219,6 +4219,28 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   Left for V4 (IR, §3.1): the `event [guard] / effect` and `entry / a` template, the dot badge on the Initial box,
   a small dot and bull's-eye (no size field; a circle is at least 64 px), the edge-label text style; for V5 the
   hidden Event nodes, the decision diamond, the choice per profile. Prompt P-2026-09-29-1331, commit `b2f3548a0`.
+- **R-VP-18** (2026-09-29, ratified by Alfonso 2026-09-29, evidence: measured, verified: none, reversible: branch).
+  **The default notation is legible in the light theme: dark header text, ink edges, quiet text at 4.76:1, the M1
+  underline painted, the generalization triangle at the parent's edge.** Lane V2 of
+  `docs/discovery/discovery_2026-09-29_visual_concrete_syntax.md` §5 (branch `visual-syntax-disc`), approved by Alfonso
+  before the freeze knowing it changes every demo screenshot. Measured by the lane probe on 3055 on the four demo
+  scenes (DemoPEST, DemoPetri, DemoESM, DemoFlowB), light theme, before and after. (1) M2 header text, the light map's
+  `node-header-text` and `stereotype-color` to `var(--text-primary)` (`#1e293b`): concrete `#ffffff` on `#7bafd4`
+  2.35:1 to 6.22:1, abstract on `#a8b5c4` 2.09:1 to 7.02:1; slate-700 would reach only 4.40:1 on the class blue.
+  (2) Edge ink, `edge-color` and `edge-marker-stroke` to `var(--color-inode-name)`, the Petri ink: `#94a3b8` on the
+  `#f1f5f9` canvas 2.34:1 to `#0f172a` 16.3:1, lines and arrowheads; the hollow fills stay `#f8fafc`. (3) M1 quiet
+  text, `--color-inode-quiet` slate-300 to slate-500: `[k]` and `—` on white 1.48:1 to 4.76:1, equal to the labels.
+  (4) The underline of `name : Class`: `.mm-object__name` clipped it with its `overflow: hidden` (17 px box, the line
+  3 px under the baseline); 4 px of bottom padding, given back by a negative margin: 0 pixels painted to 312-436
+  (DPR 2), across the whole `name : Class`. (5) The generalization: a tree bus whose children sit beside the parent
+  (the default placement) ran at mid-row above the parent's bottom handle, so the trunk reached it moving down and the
+  triangle pointed away, tip 5 px under the box, 41% hidden, on all four scenes; the bus now drops `TREE_BUS_DROP`
+  (16 px) under the parent handle and the bottoms of those children (`computeTreeConnectorPath`, `edgeUtils.ts`; no
+  §3.1 file): triangle rising, tip 1 px inside the parent's edge, 0% hidden. A single inheritance edge (`Arc ←
+  InhibitorArc`) was already right and is unchanged. Consequences outside the default notation, measured: derived
+  edges with no authored colour (SM, ESM, activity) take the new ink, 2.34:1 to 16.3:1, and the ESM derived `—` 1.48:1
+  to 4.76:1; derived Petri views unchanged (`#0f172a` before and after); `--node-header-text` also colours the classic
+  object view's header. Dark theme untouched. Prompt P-2026-09-29-1332.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
