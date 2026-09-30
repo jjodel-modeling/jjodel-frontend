@@ -4353,6 +4353,42 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   byte-identical before and after a derivation and its undo; one undo removes the viewpoint and its views; the lane
   probe on 3074 58/58, the four demo scenes in the default viewpoint byte-identical to the C2 tip (12 of 12);
   mutation bench 44/45, the survivor equivalent. Prompt P-2026-09-30-0255, commit `64ea9f216`.
+- **R-VP-22** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **Two notations beside their siblings, Statechart (UML) and Flowchart (ISO 5807), and two optional IR keys, the entry
+  mark and the arc.** Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320,
+  §1 rows 1, 2, 7, 19, 20, §5 A1 and A3), the C3 report (`fb8944688`, causes 1-3) and
+  `docs/discovery/discovery_2026-09-30_a1_a3_notations.md` (the Layer Impact Report and the measures); mockups
+  `docs/mockups/derived-viewpoints/statechart-A.svg`, `flowchart-A-iso5807.svg`. No earlier row is amended: «State
+  machine» (R-VP-17, the solid Initial disc) and «Flowchart» stay as they are, byte for byte; Alfonso chooses which of
+  each pair the demo uses. (1) The dialog of R-VP-21 lists six notations: Generic, State machine, **Statechart (UML)**,
+  Petri net, Flowchart, **Flowchart (ISO 5807)**; the two new ones on the profiles, roles and prefill of their siblings
+  (`stateMachine`, `flowchart`); a stored simulation binding still opens on the sibling. (2) Statechart (UML): a state,
+  the Initial and the Terminal a white rounded box, 1 px in `var(--color-inode-name)`, the name centred 14 px 600 in the
+  ink; the Initial with the entry dot, the Terminal with the double border of R-VP-17; the drawing follows the notation
+  picked, not the presence of a Trigger (D's question 1, Recommended adopted); a transition an arc in the ink, 1 px, the
+  filled arrowhead, labelled by its event, else its guard (R-VP-17 (2)), in the label style of R-VP-20 (5). (3) Flowchart
+  (ISO 5807), data only: the Initial, the Terminal and an Activity final a stadium, then the words of the class name
+  (`start|end|initial|final|terminal` stadium, `input|output|read|write|print|io` parallelogram,
+  `decision|choice|if|branch` diamond), a rectangle with the form's 4 px radius otherwise; white, 1 px in the ink, the
+  name centred 13 px 500 in the ink; flows on today's orthogonal router, their guard the label through an R-VP-20
+  template, `yes`/`no` when the guard is literally `true`/`false` (two more documents per flow class, a predicate on the
+  guard and priority 1). (4) The persisted names, permanent once saved (R-B9): `ShapeSpec.entry?: 'dot' | 'arrow'`
+  (`arrow` without the dot, for the Automaton notation), `EdgeViewIR.edge.curve?: 'arc'`; the `_state` value
+  `derivedNotation` and `ir.generated.notation` gain `statechart` and `flowchartIso`. Both keys optional; absent renders
+  as before (Rule 11, R-IRN-32: no `irVersion` bump, no migration); a value outside the vocabulary renders as absent and
+  is refused by the validator. (5) The three edge fixes of C3, for edges with `curve: 'arc'` only: an arc runs between
+  the centres of its two handles, off the router (no snap, cause 3); an arc self-loop is a cubic over the top edge on two
+  top handles, so no untouched handle takes a slot (causes 1 and 2); an edge without the key keeps today's behaviour byte
+  for byte. Lane choices inside that list: the two drawings post-process the sibling's documents, a class with no role
+  keeping the sibling's drawing; a state with slots other than its name keeps R-VP-17's rows, its name then on top; the
+  pair bows away from the opposite chord, whichever slot each got; the entry mark 40×14 in the border colour, placed
+  inline past the box, the two clips lifted as for the outside label; there is no Decision role in the catalogue, so
+  the diamond comes from the name. Measured: State machine, Flowchart, Petri net and Generic derive the D tip's documents
+  (16 digests with provenance); the markup of nodes and edges without the keys pinned on the D tip; on the turnstile no
+  two line ends on `locked` within 6 px (minimum 10.5), arrow tips 1.00 to 1.01 px from the visible border (the handle
+  centre, on the RF box, 1 px outside it); the four demo scenes in the default viewpoint 0 px from the D tip left of the
+  rail; mutation bench 46/46. Prompt P-2026-09-30-0355, commit `74995f429`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)

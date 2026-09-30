@@ -436,3 +436,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: pending — chat, RC-23; lane probe on 3074 (light, 1600×1000) 58/58 EXIT=0, crops `frontend/scripts/smoke/_tmp_d_crops/d_{sm,petri,esm,flowB}_dialog_600.png`, `d_sm_dialog_generic_600.png`, `d_sm_derived_{stateMachine,generic}_600.png`
 **Notes**: Rule 19: 14 files, listed in report §4 (9). A first probe run (43/58) failed on the probe's own fixture and undo call, not the code; kept as `probe-_tmp_d_probe.run1.log`. Delete-time console warnings measured as pre-existing by a control (report §3). Two questions with Recommended answers in report §0.
 **Prompt document name**: 2026-09-30 02:55
+
+## 2026-09-30 — feat(views): Statechart (UML) and Flowchart (ISO 5807) notations, slices A1 and A3 (P-2026-09-30-0355)
+**Prompt**: `claude_2026-09-30_0355_prompt_a1_a3_notations.md`, Phase 2 slices A1 and A3 of the notation discovery, heavy, critical zone (LIR first), on `~/jjodel-w-notations` branch `viewpoint-notations`: two notations beside State machine and Flowchart, two optional IR keys (`shape.entry`, `edge.curve: 'arc'`), the three C3 edge causes fixed for arc edges only, R-VP-22.
+**Files touched**: code `74995f429`: `viewpoint/ir/irTypes.ts`, `irCompile.ts`, `irValidate.ts`, `irEdgeViews.ts`, `IRNodeContent.tsx`, `irStyle.ts`, `edges/UnifiedEdge.tsx`, `utils/edgeUtils.ts`, `viewpoint/derive/viewpointDerivation.ts`, `notations.ts`; tests `irA1Keys.test.ts`, `irA1Render.test.ts` (new), `notations.test.ts`, `DeriveViewpointDialog.test.ts`, `shapeRegistry.test.ts`. This commit: the report, R-VP-22, this entry, the Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (d)
+**Regressions**: no — on `74995f429`: typecheck exit 2, 14 errors, the §17 set; vitest 6093 passed (6049 + 44), the 9 known files red at import; build exit 0. Red first on the D tip, pins read there. Mutation bench 46/46.
+**Out-of-scope changes**: no — the DOVE files and their tests; two existing tests changed with the list and the CSS (report §1, §4).
+**Layer Impact Report**: produced (report §1, written before the first source edit; committed with the docs)
+**Smoke visivo**: fallito (probe 15/23 on 3076: 7 are the procedure, rail and bag, read in report §2; 1 is a tip at 1.01 px against ≤ 1) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_a1a3_crops/a1a3_{sm_statechart,sm_stateMachine,flowB_flowchartIso,flowB_flowchart}_600.png`
+**Notes**: Rule 19: 15 files, listed in report §4. Default scenes 0 px from the D tip left of the rail (4 of 4). Arrow tips 1.00-1.01 px from the visible border: the wrapper's transparent 1 px border. `stop` crosses `unlocked` on the demo layout; the ISO diamond is content-sized. No Decision role in the catalogue. Detail in `docs/discovery/discovery_2026-09-30_a1_a3_notations.md`.
+**Prompt document name**: 2026-09-30 03:55
