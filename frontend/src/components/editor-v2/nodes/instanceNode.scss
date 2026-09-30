@@ -679,6 +679,16 @@
         }
     }
 
+    // An IR-rendered node wears this wrapper too, but paints its ring and band on
+    // the shape inside it (`.ir-node-content`, irStyle.ts), up to 5px outside the
+    // shape's box — and the shape fills the wrapper, so the `overflow: hidden`
+    // above cut every ring pixel. The IR branch mounts no accent bar, so there is
+    // nothing to clip. Lifted only while selected: idle, the clip still holds the
+    // shape's resting shadow and corners exactly as before. (0,4,0) beats (0,2,0).
+    &.selected:has(> .ir-node-content) {
+        overflow: visible;
+    }
+
     // ── Singleton ────────────────────────────────────────────────────────────
     // A singleton is the only member of its class and is born with that class's
     // name, so `Red : Red` says nothing twice and the compartment under it says
