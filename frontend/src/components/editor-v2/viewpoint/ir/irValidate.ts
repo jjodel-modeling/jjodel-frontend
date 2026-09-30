@@ -195,9 +195,28 @@ function c2KeysError(ir: AnyViewIR): string | null {
             }
             const style = textStyleKeyError(labels.style, 'edge.labels.style');
             if (style) return style;
+            // R-VP-23: an end label is a text source, or absent; the compile reads anything else as absent.
+            for (const end of ['sourceEnd', 'targetEnd'] as const) {
+                const bad = endLabelError(labels[end], `edge.labels.${end}`);
+                if (bad) return bad;
+            }
         }
     }
     return null;
+}
+
+/** The intrinsic props a text source may read (irTypes.ts `TextSource`). */
+const INTRINSIC_PROPS: Readonly<Record<string, true>> = { name: true, metaclassName: true, qualifiedName: true };
+
+/** An end label (R-VP-23): absent, or a text source whose own field has its type. */
+function endLabelError(src: unknown, where: string): string | null {
+    if (src === undefined) return null;
+    const ok = isPlainObject(src) && (
+        (src.from === 'literal' && typeof src.text === 'string')
+        || (src.from === 'path' && typeof src.expr === 'string')
+        || (src.from === 'intrinsic' && typeof src.prop === 'string' && Object.prototype.hasOwnProperty.call(INTRINSIC_PROPS, src.prop))
+    );
+    return ok ? null : `[ir] ${where} must be a text source ({from: 'literal', text} | {from: 'path', expr} | {from: 'intrinsic', prop}), or absent for no end label, read ${readOf(src)}`;
 }
 
 export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: false; error: string } {

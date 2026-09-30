@@ -28,9 +28,8 @@ import { sketchOfMetamodel } from './metamodelSketch';
 import {
     DERIVED_NOTATIONS, canDerive, dialogPrefill, initialNotation, notationRoles, roleLabel,
 } from '../viewpoint/derive/notations';
-import type { ClassRoles, DerivedNotationId, DialogPrefill } from '../viewpoint/derive/notations';
+import type { ClassRoles, DerivedNotationId, DialogPrefill, NotationRoleId } from '../viewpoint/derive/notations';
 import { isDerivableMetamodel, rolesFromTable } from '../viewpoint/derive/viewpointDerivation';
-import type { RoleId } from '../../../model/simulation/roleCatalog';
 import type { SketchClass } from '../../../model/simulation/profileBinder';
 import './SimRolesModal.scss';
 import './DeriveViewpointDialog.scss';
@@ -49,7 +48,7 @@ export interface DeriveViewpointFormProps {
     effective: ReadonlyMap<string, string>;
     prefillFrom: DialogPrefill['from'];
     onNotation: (notation: DerivedNotationId) => void;
-    onRole: (classId: string, role: RoleId | '') => void;
+    onRole: (classId: string, role: NotationRoleId | '') => void;
     onCancel: () => void;
     onConfirm: () => void;
 }
@@ -72,7 +71,7 @@ export function DeriveViewpointForm(props: DeriveViewpointFormProps): ReactEleme
     const ready = canDerive({ notation, classRoles: roles });
     const emptyOption = (classId: string): string => {
         const inherited = roles[classId] ? undefined : effective.get(classId);
-        return inherited ? `— (${roleLabel(notation, inherited as RoleId)}, inherited)` : '—';
+        return inherited ? `— (${roleLabel(notation, inherited as NotationRoleId)}, inherited)` : '—';
     };
 
     return (
@@ -119,7 +118,7 @@ export function DeriveViewpointForm(props: DeriveViewpointFormProps): ReactEleme
                                         id={id}
                                         className="sim-roles-modal__select"
                                         value={roles[c.id] ?? ''}
-                                        onChange={e => onRole(c.id, e.target.value as RoleId | '')}
+                                        onChange={e => onRole(c.id, e.target.value as NotationRoleId | '')}
                                     >
                                         <option value="">{emptyOption(c.id)}</option>
                                         {offered.map(r => <option value={r} key={r}>{roleLabel(notation, r)}</option>)}
@@ -217,8 +216,8 @@ export function DeriveViewpointDialog(): ReactElement | null {
         setRoles(prefill.roles);
         setFrom(prefill.from);
     };
-    const onRole = (classId: string, role: RoleId | '') => setRoles(prev => {
-        const next: Record<string, RoleId> = { ...prev };
+    const onRole = (classId: string, role: NotationRoleId | '') => setRoles(prev => {
+        const next: Record<string, NotationRoleId> = { ...prev };
         if (role) next[classId] = role; else delete next[classId];
         return next;
     });

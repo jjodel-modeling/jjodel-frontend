@@ -145,6 +145,10 @@ function UnifiedEdge(props: EdgeProps) {
     // arc replaces the whole Manhattan pipeline, self-loops included; every condition below that
     // reads it is `|| isArcIR`, false for every other edge, which therefore renders as before.
     const isArcIR = isIREdge && irData.irCurve === 'arc';
+    // R-VP-23: an authored label at each end (irEdgeViews writes each only when declared), read on an
+    // IR-decorated edge only. An empty text draws nothing, so an edge without the keys renders as before.
+    const irSourceEndText = isIREdge ? (irData.irSourceEndText as string | undefined) || undefined : undefined;
+    const irTargetEndText = isIREdge ? (irData.irTargetEndText as string | undefined) || undefined : undefined;
     // The label of an IR-authored edge has no write-back path yet. Its text comes from
     // the compiled view (irEdgeViews.applyEdgeStyle re-seeds e.label on every recompute)
     // and commitLabel's syncEdgeRefProperty cannot reach it: a synthetic object-as-edge
@@ -490,6 +494,22 @@ function UnifiedEdge(props: EdgeProps) {
         return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift, drawnPoints);
     }, [isSelfLoop, selfLoopGeom, spreadPath, drawnPoints, targetX, targetY, targetSide, cardinalityShift]);
 
+    // ─── End labels (R-VP-23) ───
+    // Anchored as the cardinality badge is (computeCardinalityAnchor), one at each end: an arc at its
+    // two ends (the handle centres) with its chord as the path, any other edge at the handle point with
+    // the drawn polyline; the source end reads the path backwards, so its label also takes the side the
+    // line does not come from.
+    const endLabelTransforms = useMemo(() => {
+        if (!irSourceEndText && !irTargetEndText) return null;
+        const start = arcGeom ? arcGeom.start : { x: sourceX, y: sourceY };
+        const end = arcGeom ? arcGeom.end : { x: targetX, y: targetY };
+        const points = arcGeom ? [arcGeom.start, arcGeom.end] : drawnPoints;
+        return {
+            source: irSourceEndText ? computeCardinalityAnchor(start.x, start.y, sourceSide, CARD_BOX_GAP, 0, [...points].reverse()) : '',
+            target: irTargetEndText ? computeCardinalityAnchor(end.x, end.y, targetSide, CARD_BOX_GAP, 0, points) : '',
+        };
+    }, [irSourceEndText, irTargetEndText, arcGeom, drawnPoints, sourceX, sourceY, targetX, targetY, sourceSide, targetSide]);
+
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
         const pts = parsePathPoints(spreadPath);
@@ -786,7 +806,9 @@ function UnifiedEdge(props: EdgeProps) {
     );
     const cardinalityVisible = showCardinality && !!cardinality;
     const isaLabelVisible = isInheritance && isERNotation;
-    const showLabelPortal = refLabelVisible || cardinalityVisible || isaLabelVisible;
+    // R-VP-23: an authored end label mounts it too; false on every edge without one.
+    const endLabelsVisible = endLabelTransforms !== null;
+    const showLabelPortal = refLabelVisible || cardinalityVisible || isaLabelVisible || endLabelsVisible;
 
     return (
         <>
@@ -1025,6 +1047,23 @@ function UnifiedEdge(props: EdgeProps) {
                         {cardinality}
                     </div>
                 )}
+
+                {/* End labels (R-VP-23): the halo of the centre label when a label style is authored, else the cardinality badge */}
+                {endLabelTransforms && ([['source', irSourceEndText], ['target', irTargetEndText]] as const).map(([end, text]) => text && (
+                    <div
+                        key={end}
+                        className={`edge-end-label${irLabelStyle ? '' : ' edge-cardinality'} ${hlClass}`}
+                        style={{
+                            position: 'absolute',
+                            transform: endLabelTransforms[end],
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        {irLabelStyle
+                            ? <span className="edge-label__text edge-label__text--halo" style={{ ...(irStroke ? { color: irStroke } : {}), ...irLabelStyle }}>{text}</span>
+                            : text}
+                    </div>
+                ))}
 
                 {/* ISA label for ER notation (inheritance only) */}
                 {isInheritance && isERNotation && (

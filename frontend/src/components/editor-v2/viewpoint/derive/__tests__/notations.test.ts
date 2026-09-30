@@ -171,7 +171,7 @@ function derivedVp(id: string, state: Record<string, unknown>) {
 // ---------------------------------------------------------------------------
 
 describe('the notations offered in slice D', () => {
-    it('Generic first, then State machine, Statechart (UML), Petri net, Flowchart and Flowchart (ISO 5807), each on its system profile', () => {
+    it('Generic first, then State machine, Statechart (UML), Petri net, Flowchart, Flowchart (ISO 5807), each on its system profile, and ER (Chen)', () => {
         // A1 and A3 (P-2026-09-30-0355, R-VP-22): the two new notations beside their siblings, which stay.
         expect(DERIVED_NOTATIONS.map(n => [n.id, n.label, n.profile])).toEqual([
             ['generic', 'Generic', null],
@@ -180,6 +180,8 @@ describe('the notations offered in slice D', () => {
             ['petri', 'Petri net', 'petri'],
             ['flowchart', 'Flowchart', 'flowchart'],
             ['flowchartIso', 'Flowchart (ISO 5807)', 'flowchart'],
+            // A4 (P-2026-09-30-0440, R-VP-23): ER (Chen), no profile (erChen.test.ts).
+            ['erChen', 'ER (Chen)', null],
         ]);
     });
 

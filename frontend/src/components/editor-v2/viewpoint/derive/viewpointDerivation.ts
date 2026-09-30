@@ -76,6 +76,7 @@ import { sketchOfMetamodel } from '../../sim/metamodelSketch';
 import { SKETCH_TYPE } from '../../../../model/simulation/profileBinder';
 import type { SketchAttribute, SketchClass, SketchReference } from '../../../../model/simulation/profileBinder';
 import type { ProfileShape } from '../../../../model/simulation/simProfiles';
+import { cardinalityOf, keyFlagOf, relationshipEnds } from './erSignals';
 
 type Lookup = Record<string, any>;
 
@@ -734,6 +735,133 @@ export function deriveIsoFlowchartViewpointIRs(lookup: Lookup, metamodelId: stri
             },
         };
         out.push({ ...v, ir });
+    }
+    return out;
+}
+
+// ---------------------------------------------------------------------------
+// ER (Chen) (slice A4, R-VP-23)
+// ---------------------------------------------------------------------------
+
+/** A plain line, the drawing of every Chen connection: no termination, 1 px in the ink, between the handle centres. */
+const chenLineEdge = (): EdgeViewIR['edge'] => ({ terminations: { sourceEnd: 'none', targetEnd: 'none' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' });
+const eqLiteral = (slot: string, value: string): Predicate => ({ op: 'eq', left: path(slot), right: { kind: 'string', value } });
+const anyOf = (preds: Predicate[]): Predicate => (preds.length === 1 ? preds[0] : { op: 'or', args: preds });
+/** A slot that holds a value other than 1: a many side. */
+const manySlot = (slot: string): Predicate => ({ op: 'and', args: [{ op: 'exists', path: path(slot) }, { op: 'neq', left: path(slot), right: { kind: 'number', value: 1 } }] });
+
+/**
+ * ER (Chen), slice A4 (R-VP-23, mockup docs/mockups/derived-viewpoints/er-A-chen.svg): the dialog's
+ * table (entity, relationship, attribute, key; erSignals.ts prefills it) over the Generic documents.
+ *
+ * - An entity: a white rectangle (the `rect`'s own 4 px radius), 1 px in the ink, its name centred in
+ *   14 px 600 in the ink; the Generic compartments kept (its contained attribute rows, its slots other
+ *   than the name), its name then on top.
+ * - A relationship: a `diamond` node, its name inside in 13 px 500, whatever its references; each of
+ *   its references into a Chen node is a plain line (a reference-as-edge view on the reference: no
+ *   termination, the `arc` of R-VP-22, so straight between the two anchors). Its two references into
+ *   entities carry the marks at the entity's end (`edge.labels.targetEnd`, R-VP-23) from the
+ *   cardinality (`cardinalityOf`): per reference, one more document per mark, with a predicate over the
+ *   slot and priority 1 (priority 2 for `M`), so the resolver picks the one that holds; `1` stays `1`,
+ *   a many side is `N`, the second many side of the same relationship `M`.
+ * - An attribute that is a node (ERDLanguage): an `ellipse`, its name centred in 13 px 500, underlined
+ *   when the key flag holds (`keyFlagOf`, the ir-1.3 `underline`); a key, always underlined. Its owner's
+ *   reference to it is a plain line. An attribute the Generic notation draws as a row (MDE ERD, held by
+ *   composition) stays that row: Chen's ellipses for contained attributes are out of this slice.
+ * - A class with no role keeps its Generic document, so does a class Generic draws as a row.
+ */
+export function deriveChenViewpointIRs(lookup: Lookup, metamodelId: string, classRoles: Readonly<Record<string, string>>): AnyDerivedView[] {
+    const generic = deriveGenericViewpointIRs(lookup, metamodelId);
+    const table = rolesFromTable(lookup, metamodelId, classRoles);
+    const sketch = sketchOfMetamodel(lookup, metamodelId);
+    const byId = new Map<string, SketchClass>(sketch.classes.map(c => [c.id, c]));
+    const lineage = (id: string): string[] => {
+        const out: string[] = [];
+        const queue = [id];
+        while (queue.length > 0) {
+            const c = queue.shift() as string;
+            if (out.includes(c)) continue;
+            out.push(c);
+            for (const s of byId.get(c)?.supers ?? []) queue.push(s);
+        }
+        return out;
+    };
+    const referencesOf = (c: string): SketchReference[] => sketch.references.filter(r => lineage(c).includes(r.owner));
+
+    const rows = new Set(generic.filter(v => v.ir.kind === 'row').map(v => v.classId));
+    const roleOf = (c: string): string | undefined => (rows.has(c) ? undefined : table.get(c));
+    const entities = sketch.classes.map(c => c.id).filter(c => roleOf(c) === 'entity');
+    /** A reference drawn as a Chen line: into a class Chen draws as a node, any kind of it included. */
+    const isChenNode = (c: string) => roleOf(c) === 'entity' || roleOf(c) === 'relationship' || roleOf(c) === 'attribute' || roleOf(c) === 'key';
+    const typeIsNode = (r: SketchReference) => byId.has(r.type) && sketch.classes.some(k => lineage(k.id).includes(r.type) && isChenNode(k.id));
+
+    const out: AnyDerivedView[] = [];
+    for (const v of generic) {
+        const role = roleOf(v.classId);
+        if (!role || v.ir.kind === 'row') { out.push(v); continue; }
+        const pins = { [v.className]: v.classId };
+        const vertex = (shape: ShapeSpec): VertexViewIR => ({
+            irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: pins, exclusive: true,
+            label: `View for ${v.className}`, shape,
+        });
+        const lineDoc = (reference: string, over: Partial<EdgeViewIR> = {}, suffix = ''): EdgeViewIR => ({
+            irVersion: IR_VERSION, kind: 'edge', metaclasses: [v.className], authoringMetaclassPins: pins, exclusive: true,
+            label: `View for ${v.className}.${reference}${suffix}`, reference, ...over, edge: over.edge ?? chenLineEdge(),
+        });
+        const border = { color: NAME_INK, width: 1, style: 'solid' as const };
+
+        if (role === 'entity') {
+            const compartments = v.ir.kind === 'vertex' ? v.ir.fieldCompartments : undefined;
+            const name = centredName(14, 'semibold');
+            if (compartments) name.position = 'top';
+            const ir = vertex({ form: 'rect', fill: SURFACE, border, labels: [name] });
+            if (compartments) ir.fieldCompartments = compartments;
+            out.push({ classId: v.classId, className: v.className, rule: 'chen:entity', ir });
+        } else if (role === 'relationship') {
+            out.push({ classId: v.classId, className: v.className, rule: 'chen:relationship', ir: vertex({ form: 'diamond', fill: SURFACE, border, labels: [centredName(13, 'medium')] }) });
+        } else {
+            const label = centredName(13, 'medium');
+            const flag = role === 'attribute' ? keyFlagOf(lookup, metamodelId, v.classId) : undefined;
+            if (role === 'key') label.style = { ...label.style, underline: true };
+            else if (flag) label.style = { ...label.style, underline: { when: { op: 'eq', left: path(flag), right: { kind: 'boolean', value: true } }, then: true } };
+            out.push({ classId: v.classId, className: v.className, rule: `chen:${role}`, ir: vertex({ form: 'ellipse', fill: SURFACE, border, labels: [label] }) });
+        }
+
+        // The lines: every reference of an entity or a relationship into a Chen node.
+        if (role !== 'entity' && role !== 'relationship') continue;
+        const ends = role === 'relationship' ? relationshipEnds(lookup, metamodelId, v.classId, entities) : null;
+        const cardinality = ends ? cardinalityOf(lookup, metamodelId, v.classId, ends) : null;
+        /** Per end: [mark, predicate, priority], in the order the marks first appear. */
+        const marksOf = (i: 0 | 1): [string, Predicate, number][] => {
+            if (!cardinality) return [];
+            if (cardinality.kind === 'ends') {
+                const own = cardinality.slots[i];
+                if (!own) return [];
+                const one: [string, Predicate, number] = ['1', { op: 'eq', left: path(own), right: { kind: 'number', value: 1 } }, 1];
+                const other = cardinality.slots[0];
+                if (i === 0 || !other) return [one, ['N', manySlot(own), 1]];
+                // `M` holds where `N` does too: its priority, not its place, puts it first.
+                return [one, ['N', manySlot(own), 1], ['M', { op: 'and', args: [manySlot(own), manySlot(other)] }, 2]];
+            }
+            const marks = new Map<string, string[]>();
+            for (const l of cardinality.literals) {
+                const side = l.ends[i];
+                if (!side) continue;
+                const mark = side === 'one' ? '1' : i === 1 && l.ends[0] === 'many' ? 'M' : 'N';
+                marks.set(mark, [...(marks.get(mark) ?? []), l.name]);
+            }
+            return [...marks].map(([mark, names]) => [mark, anyOf(names.map(n => eqLiteral(cardinality.slot, n))), 1]);
+        };
+        for (const r of referencesOf(v.classId)) {
+            if (!typeIsNode(r)) continue;
+            out.push({ classId: v.classId, className: v.className, rule: 'chen:line', ir: lineDoc(r.name) });
+            const i = ends ? ends.findIndex(e => e.id === r.id) : -1;
+            if (i < 0) continue;
+            for (const [mark, predicate, priority] of marksOf(i as 0 | 1)) {
+                const edge: EdgeViewIR['edge'] = { ...chenLineEdge(), labels: { targetEnd: { from: 'literal', text: mark }, style: EDGE_LABEL_STYLE() } };
+                out.push({ classId: v.classId, className: v.className, rule: 'chen:cardinality', ir: lineDoc(r.name, { priority, predicate, edge }, ` (${mark})`) });
+            }
+        }
     }
     return out;
 }

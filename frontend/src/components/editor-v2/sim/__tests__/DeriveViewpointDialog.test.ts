@@ -54,13 +54,14 @@ describe('DeriveViewpointForm — the notation select and the table', () => {
         expect(html).toMatch(new RegExp(`id="${title}"[^>]*>Derive viewpoint — DemoPEST<`));
     });
 
-    it('the notation select lists the six notations, the chosen one selected, with a real label', () => {
+    it('the notation select lists the seven notations, the chosen one selected, with a real label', () => {
         const html = render({ notation: 'petri' });
         const [notation] = selects(html);
         // A1 and A3 (P-2026-09-30-0355, R-VP-22): Statechart (UML) and Flowchart (ISO 5807) beside their siblings.
+        // A4 (P-2026-09-30-0440, R-VP-23): ER (Chen) last.
         expect(notation.options.map(o => [o.value, o.text])).toEqual([
             ['generic', 'Generic'], ['stateMachine', 'State machine'], ['statechart', 'Statechart (UML)'],
-            ['petri', 'Petri net'], ['flowchart', 'Flowchart'], ['flowchartIso', 'Flowchart (ISO 5807)'],
+            ['petri', 'Petri net'], ['flowchart', 'Flowchart'], ['flowchartIso', 'Flowchart (ISO 5807)'], ['erChen', 'ER (Chen)'],
         ]);
         expect(notation.options.filter(o => o.selected).map(o => o.value)).toEqual(['petri']);
         expect(labelsFor(html)).toContainEqual([notation.id, 'Notation']);

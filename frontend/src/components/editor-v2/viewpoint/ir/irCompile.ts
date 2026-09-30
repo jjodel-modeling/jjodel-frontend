@@ -630,6 +630,17 @@ function compileLabelText(labels: EdgeViewIR['edge']['labels'], deps: Set<string
     };
 }
 
+/** The TextSource kinds an end label may take (R-VP-23); anything else renders as absent (R-B9-bis). */
+const END_LABEL_SOURCES: Readonly<Record<string, true>> = { path: true, literal: true, intrinsic: true };
+
+/** An end label (R-VP-23): a text source compiled as a centre `center` is, or null when it is not one. */
+function compileEndLabel(src: unknown, deps: Set<string>): CompiledAccessor | null {
+    if (!src || typeof src !== 'object' || Array.isArray(src)) return null;
+    const from = (src as { from?: unknown }).from;
+    if (typeof from !== 'string' || !Object.prototype.hasOwnProperty.call(END_LABEL_SOURCES, from)) return null;
+    return compileTextSource(src as TextSource, deps);
+}
+
 const edgeCompileCache = new Map<string, CompiledEdgeView>();
 
 export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeView {
@@ -695,6 +706,12 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
     if (labelStyleIR && typeof labelStyleIR === 'object' && !Array.isArray(labelStyleIR)) {
         compiled.labelStyle = compileTextStyle(labelStyleIR, deps);
     }
+    // R-VP-23: the end labels, each compiled only when it is a text source of the vocabulary, so an
+    // edge view without them compiles to the shape it had and irEdgeViews writes no end text.
+    const sourceEnd = compileEndLabel(e.labels?.sourceEnd, deps);
+    if (sourceEnd) compiled.sourceEndText = sourceEnd;
+    const targetEnd = compileEndLabel(e.labels?.targetEnd, deps);
+    if (targetEnd) compiled.targetEndText = targetEnd;
     compiled.dependencySet = Array.from(deps);
     compiled.crossPaths = dedupeCrossPaths(crossPathSink ?? []);
     const channels = harvestChannels();

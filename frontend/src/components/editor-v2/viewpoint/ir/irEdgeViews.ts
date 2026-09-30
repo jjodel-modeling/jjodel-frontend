@@ -76,6 +76,10 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             // R-VP-22: the arc, read by UnifiedEdge and by assignGeometricHandles below. Written
             // only when declared, like the label style.
             ...(cv.curve ? { irCurve: cv.curve } : {}),
+            // R-VP-23: the end labels, resolved here as the centre label is; each written only when
+            // declared, so an edge view without them decorates the edge as before.
+            ...(cv.sourceEndText ? { irSourceEndText: String(cv.sourceEndText(ctx, evalId) ?? '') } : {}),
+            ...(cv.targetEndText ? { irTargetEndText: String(cv.targetEndText(ctx, evalId) ?? '') } : {}),
         },
     };
 }

@@ -7,7 +7,9 @@
  *   the stored simulation binding no longer picks them (amends R-VP-15 (5) and R-VP-17). ER and UML
  *   come with their own slices. Slices A1 and A3 (P-2026-09-30-0355, R-VP-22) add Statechart (UML)
  *   and Flowchart (ISO 5807) beside their siblings, on the same profiles; a stored binding still
- *   opens on the sibling.
+ *   opens on the sibling. Slice A4 (P-2026-09-30-0440, R-VP-23) adds ER (Chen), with no simulation
+ *   profile: its table offers the four ER class roles (erSignals.ts), prefilled by the name and
+ *   structure signals.
  * - **The table**: a metaclass → role map over the class roles the notation's system profile edits
  *   and the derivation draws. Its prefill is the binder's (`bindProfile`), with the metamodel's stored
  *   simulation binding as bag, inverted per class; when the metamodel already has a derived viewpoint
@@ -30,12 +32,17 @@ import { sketchOfMetamodel } from '../../sim/metamodelSketch';
 import { storedProfile } from '../../sim/simRoleStatus';
 import { structuralHash } from '../ir/irDefaults';
 import type { GeneratedProvenance } from '../ir/irTypes';
-import { DERIVATION_CLASS_ROLES, deriveViewpointForBinding, rolesFromTable } from './viewpointDerivation';
+import { DERIVATION_CLASS_ROLES, deriveChenViewpointIRs, deriveViewpointForBinding, rolesFromTable } from './viewpointDerivation';
 import type { AnyDerivedView, DerivationRoles } from './viewpointDerivation';
+import { ER_ROLE_IDS, ER_ROLE_LABELS, erSignalRoles, isErRole } from './erSignals';
+import type { ErRoleId } from './erSignals';
 
 type Lookup = Record<string, any>;
 
-export type DerivedNotationId = 'generic' | 'stateMachine' | 'statechart' | 'petri' | 'flowchart' | 'flowchartIso';
+export type DerivedNotationId = 'generic' | 'stateMachine' | 'statechart' | 'petri' | 'flowchart' | 'flowchartIso' | 'erChen';
+
+/** A role of a notation's table: a simulation class role, or an ER one (A4, R-VP-23). */
+export type NotationRoleId = RoleId | ErRoleId;
 
 export interface DerivedNotation {
     readonly id: DerivedNotationId;
@@ -44,6 +51,8 @@ export interface DerivedNotation {
     readonly profile: SystemProfileId | null;
     /** How the table names the Node role. */
     readonly nodeLabel: string;
+    /** The class roles of a notation with no simulation profile (A4: ER (Chen)); its table offers these. */
+    readonly roles?: readonly ErRoleId[];
 }
 
 /** The notations of the dialog's select, in its order; Generic is the default. */
@@ -56,6 +65,8 @@ export const DERIVED_NOTATIONS: readonly DerivedNotation[] = [
     { id: 'flowchart', label: 'Flowchart', profile: 'flowchart', nodeLabel: 'Node' },
     // A3 (P-2026-09-30-0355, R-VP-22): beside Flowchart, on its profile and prefill.
     { id: 'flowchartIso', label: 'Flowchart (ISO 5807)', profile: 'flowchart', nodeLabel: 'Node' },
+    // A4 (P-2026-09-30-0440, R-VP-23): no profile; the four ER roles, prefilled by erSignals.ts.
+    { id: 'erChen', label: 'ER (Chen)', profile: null, nodeLabel: 'Entity', roles: ER_ROLE_IDS },
 ];
 
 /** The keys of a derived viewpoint's `_state` (R-VP-21, persisted names, R-B9). */
@@ -67,7 +78,7 @@ export const DERIVED_ROLE_PREFIX = 'derivedRole_';
 export const DERIVATION_ID = 'derive-2';
 
 /** The dialog's table: class id → role. */
-export type ClassRoles = Readonly<Record<string, RoleId>>;
+export type ClassRoles = Readonly<Record<string, NotationRoleId>>;
 
 /** What the dialog confirms. */
 export interface DeriveChoice {
@@ -91,7 +102,10 @@ const profileOf = (id: unknown): SimProfile | undefined => {
 };
 
 /** The class roles the notation's table offers: its profile edits them and the derivation draws them. Catalog order. */
-export function notationRoles(id: DerivedNotationId): RoleId[] {
+export function notationRoles(id: DerivedNotationId): NotationRoleId[] {
+    // A4: a notation with roles of its own offers those.
+    const own = notationOf(id)?.roles;
+    if (own) return [...own];
     const profile = profileOf(id);
     if (!profile) return [];
     return ROLE_CATALOG
@@ -100,13 +114,14 @@ export function notationRoles(id: DerivedNotationId): RoleId[] {
 }
 
 /** A role as the notation's table names it: Node by the notation's own word, the others as the catalog does. */
-export function roleLabel(id: DerivedNotationId, role: RoleId): string {
+export function roleLabel(id: DerivedNotationId, role: NotationRoleId): string {
+    if (isErRole(role)) return ER_ROLE_LABELS[role];
     return role === 'node' ? (notationOf(id)?.nodeLabel ?? roleDescriptor(role).label) : roleDescriptor(role).label;
 }
 
 /** Generic always; a role notation once a class has a role (with none it would draw no notation). */
 export function canDerive(choice: DeriveChoice): boolean {
-    return !profileOf(choice.notation) || Object.values(choice.classRoles).some(r => !!r);
+    return notationRoles(choice.notation).length === 0 || Object.values(choice.classRoles).some(r => !!r);
 }
 
 // ---------------------------------------------------------------------------
@@ -137,11 +152,11 @@ function notationOfBinding(bag: Readonly<Record<string, unknown>>): DerivedNotat
 }
 
 /** The table kept to what the notation offers, on classes of the metamodel. */
-function cleanTable(lookup: Lookup, metamodelId: string, notation: DerivedNotationId, entries: Iterable<[string, unknown]>): Record<string, RoleId> {
+function cleanTable(lookup: Lookup, metamodelId: string, notation: DerivedNotationId, entries: Iterable<[string, unknown]>): Record<string, NotationRoleId> {
     const classes = new Set(sketchOfMetamodel(lookup, metamodelId).classes.map(c => c.id));
     const offered = new Set<string>(notationRoles(notation));
-    const out: Record<string, RoleId> = {};
-    for (const [id, role] of entries) if (classes.has(id) && typeof role === 'string' && offered.has(role)) out[id] = role as RoleId;
+    const out: Record<string, NotationRoleId> = {};
+    for (const [id, role] of entries) if (classes.has(id) && typeof role === 'string' && offered.has(role)) out[id] = role as NotationRoleId;
     return out;
 }
 
@@ -166,6 +181,8 @@ function binderRoles(lookup: Lookup, metamodelId: string, notation: DerivedNotat
     const bindings = bindProfile(profile, sketchOfMetamodel(lookup, metamodelId), bag);
     const out: Record<string, RoleId> = {};
     for (const role of notationRoles(notation)) {
+        // A profile's table holds simulation roles only; an ER role is never one of them.
+        if (isErRole(role)) continue;
         const b = bindings[role];
         if (b?.status === 'bound' && !(b.value in out)) out[b.value] = role;
     }
@@ -186,7 +203,7 @@ export function initialNotation(lookup: Lookup, metamodelId: string, viewpointId
 
 /** The table of `notation` as the dialog shows it on open or on a change of the select. Generic has none. */
 export function dialogPrefill(lookup: Lookup, metamodelId: string, notation: DerivedNotationId, viewpointIds: readonly string[]): DialogPrefill {
-    if (!profileOf(notation)) return { roles: {}, from: 'none' };
+    if (notationRoles(notation).length === 0) return { roles: {}, from: 'none' };
     const latest = latestDerived(lookup, metamodelId, viewpointIds);
     if (latest && latest.notation === notation) {
         const entries = Object.entries(latest.state)
@@ -194,6 +211,8 @@ export function dialogPrefill(lookup: Lookup, metamodelId: string, notation: Der
             .map(([k, v]): [string, unknown] => [k.slice(DERIVED_ROLE_PREFIX.length), v]);
         return { roles: cleanTable(lookup, metamodelId, notation, entries), from: 'derived' };
     }
+    // A4: no profile, so no binder and no stored binding: the name and structure signals.
+    if (!profileOf(notation)) return { roles: cleanTable(lookup, metamodelId, notation, Object.entries(erSignalRoles(lookup, metamodelId))), from: 'signals' };
     const bag = storedBinding(lookup, metamodelId);
     return { roles: binderRoles(lookup, metamodelId, notation, bag ?? undefined), from: bag ? 'binding' : 'signals' };
 }
@@ -246,9 +265,12 @@ export function derivedViewpointState(lookup: Lookup, metamodelId: string, choic
 
 /** The documents of a choice, in the derivation's order, each with its provenance (`ir.generated`). */
 export function derivedDocuments(lookup: Lookup, metamodelId: string, choice: DeriveChoice): AnyDerivedView[] {
-    const roles = derivationRolesOf(lookup, metamodelId, choice);
-    const table = roles?.classRoles ? rolesFromTable(lookup, metamodelId, roles.classRoles) : null;
-    return deriveViewpointForBinding(lookup, metamodelId, roles).map((v): AnyDerivedView => {
+    // A4 (R-VP-23): ER (Chen) reads its table alone, over the Generic documents.
+    const chen = choice.notation === 'erChen' ? cleanTable(lookup, metamodelId, choice.notation, Object.entries(choice.classRoles)) : null;
+    const roles = chen ? null : derivationRolesOf(lookup, metamodelId, choice);
+    const table = chen ? rolesFromTable(lookup, metamodelId, chen) : roles?.classRoles ? rolesFromTable(lookup, metamodelId, roles.classRoles) : null;
+    const views = chen ? deriveChenViewpointIRs(lookup, metamodelId, chen) : deriveViewpointForBinding(lookup, metamodelId, roles);
+    return views.map((v): AnyDerivedView => {
         const role = table?.get(v.classId);
         const generated: GeneratedProvenance = { by: DERIVATION_ID, notation: choice.notation, ...(role ? { role } : {}), hash: structuralHash(v.ir) };
         return { ...v, ir: { ...v.ir, generated } } as AnyDerivedView;

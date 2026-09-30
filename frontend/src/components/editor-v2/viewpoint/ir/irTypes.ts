@@ -698,6 +698,18 @@ export interface EdgeViewIR {
              * for the text only, the terminations keep the line colour. Absent = the label box.
              */
             style?: TextStyle;
+            /**
+             * R-VP-23 (P-2026-09-30-0440): a label at the source end and one at the target end, the
+             * multiplicities of a relationship line (Chen's `1`, `N`, `M`) or a UML role. Each is read
+             * on the edge's evaluation object (the source object of a reference edge, the edge-object
+             * of an object-as-edge) and drawn just outside the node at that end, beside the line, where
+             * the classic cardinality badge sits (edgeUtils `computeCardinalityAnchor`); in the style
+             * of `style` above when declared (the halo), else as that badge. An empty text draws
+             * nothing. Absent = no end label, as before. Persisted, never renamed (R-B9); additive, no
+             * migration.
+             */
+            sourceEnd?: TextSource;
+            targetEnd?: TextSource;
         };
         /** spec v1.2 sez. 7 (extended reading, 2026-07-19): default true; false =
          *  the whole layout override (waypoints AND side pins) stays session-only. */
@@ -808,6 +820,9 @@ export interface CompiledEdgeView {
     labelPlacement: 'auto' | 'above' | 'below';
     /** Compiled `edge.labels.style` (R-VP-20); absent when the view declares none. */
     labelStyle?: CompiledTextStyle;
+    /** Compiled `edge.labels.sourceEnd` / `targetEnd` (R-VP-23); each absent when the view declares none, or not a text source. */
+    sourceEndText?: CompiledAccessor;
+    targetEndText?: CompiledAccessor;
     /** persistWaypoints ?? true — gates persistence/hydration of layout overrides. */
     persistWaypoints: boolean;
 }
