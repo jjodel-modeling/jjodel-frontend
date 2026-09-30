@@ -127,3 +127,24 @@ R-VP-15..26, `docs/discovery/discovery_2026-09-30_activity_uml_notation.md` §0 
     `actsize_flowB_activityUml_bars.png`, `_initial.png`, `_final_dot.png`, `_final_dotlarge.png`, `actsize_petri_classic_bar.png`.
 - **Open**, for the chat: (a) switch the Activity final to `dot-large` (question 2); (b) the bar paints 3 px at the declared 5
   (the wrapper's 1 px each side, question in the hard stop): a 5 px painted bar is `defaultSize` 7, a derivation change.
+
+## 7. Addendum 2026-09-30, the resume (measured on `ea4a7ae19`)
+- **Adopted** (RC-21, the chat, unattended): question 1 of the hard stop, the Activity final on `dot-large`, the scope extended to
+  `viewpointDerivation.ts` (the marker and the stale comments) and `activityUml.test.ts`. The bar stays declared 5 (painted 3):
+  question 2 goes to Alfonso with the crops.
+- **Code** `ea4a7ae19`: `viewpointDerivation.ts:837` `marker: 'dot'` to `'dot-large'` and the comments (lines of `3805796be`) at `:768`, `:770`, `:775-777`,
+  `:779`, `:793-794`, `:871-873`; `activityUml.test.ts` (the two pins, and the Flowchart's final still `dot`); `nodeSizing.test.ts`
+  (the DemoFlowB bull's-eye test reads the document's own marker). Tests first: 3 of 47 red (`_tmp_actsize_red2.log`), 273/273
+  after on the derive and sizing tests.
+- **Documents** [M] (`_tmp_actuml_dump.ts --out actsize`, the 81 lists): 78 identical to `ca3e41a92`'s, the 3 Activity lists equal
+  to them with `"marker":"dot"` read `"marker":"dot-large"`; no other notation moved. Viewpoints already derived keep `dot`.
+- **Gates** [M]: typecheck exit 2, the known 14; vitest 6213 tests, 6209 passed, the 9 known files at import and 4 in
+  `criticalZone.test.ts` (70/70 with the go-ahead unset); build exit 0. **Mutation bench 19/19** (the 16 above plus the final back
+  on `dot`, with no marker, on `dots-2`), controls 323/323.
+- **Lane probe** [M] (`_tmp_actsize_probe2.ts`, 3087, light, log `probe-_tmp_actsize_probe2.log`) **19/19**: the four default scenes
+  0 px from `21345bbba` left of the rail (462 px inside the Jodie launcher, masked); DemoFlowB's bull's-eye as derived: node 24×24,
+  painted 22, the disc 14×14 px on the 20 px layer in the ink; bars 5×120, initial 20, radius 14, decision 36 as in §6; DemoPetri's
+  bars 10×44. Crops `actsize2_flowB_activityUml_final.png` (the bull's-eye, full size), `actsize2_flowB_activityUml_600.png`,
+  `actsize2_petri_classic_600.png`, in `frontend/scripts/smoke/_tmp_actsize_crops/`.
+- A side effect read, not measured on screen: the Symbol Editor's recognizer matches the catalogue's `uml-final-state` on
+  `marker: 'dot'` (`symbolRecognition.test.ts:70`), so the Activity final no longer names that preset in the editor.

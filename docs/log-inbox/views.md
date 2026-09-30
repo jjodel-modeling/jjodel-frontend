@@ -527,3 +527,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-09-30 17:20
 
 **Ticket** (observations, low): (1) the bar paints 3 px at the declared 5: the wrapper's transparent 1 px each side, as every IR node; a painted 5 is `defaultSize` 7. (2) Flows stop 5 px short of every symbol (the router's end offset), more visible on the thin bars. (3) `viewpointDerivation.ts:768`, `:775-777`, `:871-873` still describe the 24 px floor.
+
+## 2026-09-30 — fix(views): the Activity final draws the dot-large disc (P-2026-09-30-1720, resume)
+**Prompt**: the chat's resume of P-2026-09-30-1720: question 1 of the hard stop adopted (RC-21), scope extended to `viewpointDerivation.ts` (the Activity final's marker, the stale floor comments) and `activityUml.test.ts`; question 2 (the bar painted 3 px) to Alfonso.
+**Files touched**: code `ea4a7ae19`: `viewpoint/derive/viewpointDerivation.ts`, `derive/__tests__/activityUml.test.ts`, `nodes/__tests__/nodeSizing.test.ts`. This commit: the report's §7, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-30 15:52 claude_2026-09-30_1552_prompt_activity_uml_notation.md
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no — the two files the GO added and `nodeSizing.test.ts` of the first DOVE.
+**Layer Impact Report**: produced
+**Smoke visivo**: lane probe on 3087 19/19, light; the visual GO is the chat's, the bar's 3 px Alfonso's (pending)
+**Notes**: Bull's-eye as derived: disc 14 px on the 24 px node. Documents: 78 of 81 lists identical to ca3e41a92, the 3 Activity lists equal with dot -> dot-large. Gates: typecheck 14; vitest 6209/6213 (known 9 + 4 criticalZone, 70/70 unset); build 0; bench 19/19. The earlier entry of this lane stays as written (add-only, RC-34): this one completes it. Report §7.
+**Prompt document name**: 2026-09-30 17:20
