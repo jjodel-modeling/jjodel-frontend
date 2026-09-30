@@ -438,3 +438,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs only, the C3 ir-edge-ports discovery (hypothesis falsified); no code, 8 gates green on e7dec63bb; GO by the chat C-2026-09-30 release-3.1
 **Notes**: Rollback tag `pre-ir-edge-ports` on `cab8a535d` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1509/result.json`.
 **Prompt document name**: 2026-09-30 15:09
+
+## 2026-09-30 — fix(ir): the derived size goes back when its node leaves the IR view (P-2026-09-30-1625)
+**Prompt**: `claude_2026-09-30_1625_prompt_derived_size_leak.md`, Phase 1 then 2 in cascade on `~/jjodel-w-sizeleak` branch `derived-size-leak` (RC-30 go-ahead). A2's finding: after a derived viewpoint, back in the default one, nodes kept the derived size. Reproduce on the trunk with R-VP-16 Petri, find the cause, fix without touching what is persisted.
+**Files touched**: docs `580f75377`: `docs/discovery/discovery_2026-09-30_derived_size_leak.md` (new, Layer Impact Report §6). Code `92d0d5f0a`: `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts` (unmount-only cleanup, `store` import), `frontend/src/components/editor-v2/viewpoint/ir/__tests__/useContentSizeUnmount.test.ts` (new). This commit: this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `92d0d5f0a`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 5907 passed, 4 failed, 11 files red: the 9 known at import, `criticalZone.test.ts` (4, reads this session's RC-30 variable; 70/70 with it unset), `irCollapsedRender.test.ts` (`afterAll` Chromium close timed out under load; 13/13 alone); `npm run build` exit 0. Mutation bench 9/9 killed (commit body).
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3081 (light): 12/17 on `ee5cd0792`, the 5 reds the leak, 22/22 after; the four demo scenes 0 px left of the rail; crops `frontend/scripts/smoke/_tmp_sizeleak_crops/sl_{before,after}_*_600.png`
+**Notes**: Cause: `useContentDrivenSize` gave the size back only while mounted; the sync never sees a derived size. Adopted as recommended (RC-21), report §0: Q1 option A, Q2 the isResized read in the cleanup, Q3 no ISO-diamond check here. Native object cards mount no resizer, so the default-layout hand size is written as data (`syncSizeToJjom`). Not in `decisions.md`: outside this lane's DOVE.
+**Prompt document name**: 2026-09-30 16:25
+
+**Ticket** (low, two observations, not tickets of their own): (1) `scripts/hooks/__tests__/criticalZone.test.ts` reads `JJODEL_CRITICAL_ZONE_GOAHEAD` from the environment, so the full suite run inside a lane launched with the RC-30 go-ahead shows four false reds; the test could unset it. (2) `irCollapsedRender.test.ts`'s `afterAll` (`browser.close()`) has the 10 s default hook timeout, exceeded once under the full suite's load.

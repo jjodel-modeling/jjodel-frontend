@@ -30,6 +30,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 're
 import { useSelector } from 'react-redux';
 import { useReactFlow } from '@xyflow/react';
 import { boxFromIntrinsic, getShapeDescriptor, hasSizeSupplement, type IntrinsicMeasure, type Size } from './shapeRegistry';
+import { store } from '../../../../joiner';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
 import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
 import { authoredDefaultSize, defaultBoxFor, sizeSourceOf } from '../../nodes/nodeSizing';
@@ -247,4 +248,31 @@ export function useContentDrivenSize(
             return changed ? next : nds;
         });
     });
+
+    // Unmount (P-2026-09-30-1625): the host stops calling this hook when the viewpoint in
+    // force no longer renders the vertex through IRNodeContent (ObjectNode's native card in
+    // the default viewpoint), so the branch above that gives the size back never runs again.
+    // Nobody else does: the sync patches a size only when its transformer's output moves, and
+    // a derived size never reaches it. Left on the node, a derived Petri place stayed a 66x66
+    // circle's box in the default viewpoint. Same drop as above, only while the size is still
+    // ours, and never over a size chosen by hand under the layout in force at the unmount: the
+    // sync may already have patched it on with the very numbers this hook wrote. Mount-only on
+    // purpose: a cleanup per commit would drop the size and the effect above would rewrite it.
+    useLayoutEffect(() => () => {
+        const mine = written.current;
+        if (mine === null) return;
+        const state = store.getState() as any;
+        const src = (state?.idlookup?.[vertexId] ?? {}) as VertexLayoutSource;
+        if (readVertexLayout(src, getLayoutKeyOf(state)).isResized) return;
+        setNodes(nds => {
+            let changed = false;
+            const next = nds.map(n => {
+                if (n.id !== vertexId || n.width !== mine.w || n.height !== mine.h) return n;
+                changed = true;
+                const { width: _w, height: _h, measured: _m, ...rest } = n;
+                return rest as typeof n;
+            });
+            return changed ? next : nds;
+        });
+    }, []);
 }
