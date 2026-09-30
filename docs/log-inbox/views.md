@@ -462,3 +462,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato (lane probe 27/27 on 3078, light; the four demo scenes 0 px from the A1+A3 tip left of the rail) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_a4_crops/a4_{erdl,mde}_{erChen,generic}{,_all}_600.png`
 **Notes**: Rule 19: 14 files (report §4). MDE ERD's contained attributes keep the C rows (R-VP-23 (5)). The enum is compared by literal name, as the L-proxy backend reads it. The M1 grid placement makes the lines cross (report §0, question 1). Detail in `docs/discovery/discovery_2026-09-30_a4_er_chen.md`.
 **Prompt document name**: 2026-09-30 04:40
+
+## 2026-09-30 — feat(views): Petri net (classic) and open arrowheads in the derived notations, slice A2 (P-2026-09-30-1521)
+**Prompt**: `claude_2026-09-30_1521_prompt_a2_petri_classic_open_arrows.md`, Phase 1 then Phase 2 in cascade, heavy, critical zone (LIR first, go-ahead), on `~/jjodel-w-notations` branch `viewpoint-notations`: after Alfonso's review of 2026-09-30, «Petri net (classic)» after mockup A beside R-VP-16 with `EdgeTermination 'hollowCircle'`, DemoPetri preselecting it (R-VP-24); open arrowheads in every derived notation (R-VP-25); the ratification line of R-VP-21.
+**Files touched**: docs `618e4e958`: the Phase 1 report. Code `f603f28e8` (12 files): `viewpoint/ir/irTypes.ts`, `irValidate.ts`, `edges/UnifiedEdge.tsx`, `viewpoint/authoring/EdgeAuthoringPanel.tsx`, `viewpoint/derive/viewpointDerivation.ts`, `notations.ts`; tests `irValidate.test.ts`, `irA2Render.test.ts` (new), `notations.test.ts`, `viewpointDerivation.test.ts`, `erChen.test.ts`, `DeriveViewpointDialog.test.ts`. This commit: the report's §6, `docs/decisions.md` (R-VP-24, R-VP-25, the R-VP-21 line), this entry and two tickets, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `f603f28e8`: typecheck exit 2, 14 errors, the §17 set; vitest 6173 (6144 + 29), the 9 known files red at import and 4 hook tests red from the lane's go-ahead variable (70/70 unset, ticket of P-2026-09-29-2122); build exit 0. Red first: 39 of 297. Moved pins predicted on `2cde09984`'s code, 25/25 equal. Mutation bench 36/36.
+**Out-of-scope changes**: no — the 12 files of `f603f28e8` are the prompt's DOVE and their tests; `irCompile`, `irEdgeViews` and `DeriveViewpointDialog.tsx` needed no change.
+**Layer Impact Report**: produced (report §1, committed in `618e4e958` before the first source edit)
+**Smoke visivo**: passato (lane probe 29/31 on 3081, light: the four demo scenes byte-identical to the A4 tip's shots; the 2 FAIL are the default scenes after a derived-viewpoint round trip, the size ticket below) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_a2_crops/a2_{petri_classic,petri_rvp16,sm_statechart,flowB_flowchartIso,esm_generic}_600.png`
+**Notes**: The bar draws 24×44, not 10×44: `defaultSize` is floored at 24 (ticket). DemoPEST and DemoFlowB still open on State machine and Flowchart (R-VP-22), not on the notations the demo uses: awaiting Alfonso (report §0). The panel's «Hollow circle» option has no executed test (monaco in the bench). Two logs went to `/tmp`, moved into the tree (report §6). Report, rows, entry and Status in one docs commit, as the prompt asks.
+**Prompt document name**: 2026-09-30 15:21
+
+## 2026-09-30 — ticket: a derived viewpoint's node size outlives it on the default canvas
+**Ticket**: After a derived viewpoint is shown and the default viewpoint is activated again, the M1 nodes keep the size the derived view's size hook wrote on the React Flow node: DemoPetri's places 66×66 (the R-VP-16 circle) instead of 200×78, DemoFlowB's `d1` 54×66 (the ISO diamond) instead of 200×50; positions, edges and markers unchanged. Measured on 3081 by the A2 probe; both notations predate A2, which changes only their arrowhead. `useContentDrivenSize` (`useContentSize.ts`) drops its size only while its IRNodeContent is mounted, which the default view is not. Visible in the demo when a presenter derives a viewpoint and goes back.
+**Priority**: high
+**Found in**: P-2026-09-30-1521
+**Detail**: docs/discovery/discovery_2026-09-30_a2_petri_classic_open_arrows.md
+
+## 2026-09-30 — ticket: the classic Petri bar draws 24 px wide, the defaultSize floor
+**Ticket**: «Petri net (classic)» writes `defaultSize: { width: 10, height: 44 }` on the transition bar (mockup A); `defaultBoxFor` (`nodes/nodeSizing.ts:73`) floors every authored axis at `SHAPE_MIN_SIZE` (24), so the bar draws 24×44 (visible 22×42). A per-form floor (the bar: none) is one line in a file outside A2's DOVE; the IR has no orientation, so every classic bar is upright.
+**Priority**: medium
+**Found in**: P-2026-09-30-1521
+**Detail**: docs/discovery/discovery_2026-09-30_a2_petri_classic_open_arrows.md

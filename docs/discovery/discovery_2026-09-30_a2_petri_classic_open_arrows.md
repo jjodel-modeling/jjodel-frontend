@@ -125,3 +125,41 @@ The corpus dump (`_tmp_a2_dump.ts`, 63 lists) is kept as `_tmp_a2_docs_base.json
 §0-§1, `docs/sessioni/sessione_2026-09-30.md`, `docs/log-inbox/views.md` (the C1..A4 entries), `docs/mockups/derived-viewpoints/petri-A.svg`;
 `frontend/src/components/editor-v2/viewpoint/derive/notations.ts` and `viewpointDerivation.ts` whole; the windows of §1; the diffs of
 `3a1753b73` and `7a254a52f` (the lane-1 marking and its removal); `model/simulation/roleCatalog.ts` ids, `simProfiles.ts:140`.
+
+## 6. Addendum 2026-09-30, Phase 2 (measured on `f603f28e8`)
+- **Adopted as recommended** (RC-21): questions 1-6 of §0, as written. The decision awaiting Alfonso (DemoPEST and DemoFlowB
+  preselection) is left as R-VP-22 has it: the probe measured the Petri dialog on «Petri net (classic)», the others unchanged.
+- **Code** `f603f28e8`, the six files of §3 and six test files. Tests first: 39 red of 297 on the unchanged source [M].
+- **Pins** [M]. The prediction of §4 held for the pins without provenance (the R-VP-16 Petri pin, `997f12afe5b58db0`); the 24
+  pins with provenance moved further, since `generated.hash` is the view's structural hash and changes with the arrowhead.
+  Re-predicted on `2cde09984`'s code (temporary copies of `viewpointDerivation.ts`, `notations.ts` and two test files, run and
+  deleted; `_tmp_a2_pred2.log`) with the hash recomputed: 24 of 24 equal to the measured digests. Corpus exports
+  (`_tmp_a2_dump.ts`, `_tmp_a2_docs_{base,after}.jsonl`): 63/63 lists equal the tip's with the substitution, 24 moved,
+  0 `closedArrow` left (control: 24 before); the nine new `petriClassic` lists, DemoPetri 6 documents, 2 `hollowCircle`.
+- **Gates** [M]: typecheck exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 6173 tests (6144 + 29), 6169
+  passed, the 9 known files red at import, and 4 red in `scripts/hooks/__tests__/criticalZone.test.ts` from this lane's
+  `JJODEL_CRITICAL_ZONE_GOAHEAD` (70/70 with it unset: the open ticket of P-2026-09-29-2122); build exit 0.
+- **Mutation bench** [M] (`_tmp_a2_bench.mjs`): 35/36 on the first run, the survivor `edge-circle-target-only` (the source
+  test read the url only); the test now reads the marker too, 1/1 on the rerun: **36/36**, controls 332/332 before and after.
+- **Lane probe** [M] (`lane-run probe`, 3081, light, 1600×1000, DPR 2; `_tmp_a2_probe.ts`, log
+  `~/.jjodel-lanes/P-2026-09-30-1521/probe-_tmp_a2_probe.log`, third run 29/31). The A4 procedure (the three ERD models built
+  before the shots; a first run without them differed by 18589 px on ESM's canvas and is not counted).
+  - Default scenes `first`: sm, petri, esm, flowB **byte-identical** to the A4 tip's shots (`_tmp_a4_crops/a4_*_default_first.png`).
+  - DemoPetri with the binding written as Apply writes it: the dialog lists eight notations and opens on «Petri net (classic)»,
+    table Place, Transition, Arc, Inhibitor arc. Classic: places node 44×44, visible 42, white, `1px rgb(15, 23, 42)`; names
+    below the circle, 13 px 500 ink; `p1` 2 dots and `lock` 1, in the ink; bars node 24×44 (visible 22×42), `rgb(51, 65, 85)`;
+    names right of the bar, 12 px 500 `rgb(100, 116, 139)`; 5 open heads (`fill: none`), 1 hollow circle (stroke the ink,
+    fill the light marker token); every arc one segment, 1 px ink; the weight `2` on `a2` and `a3` only, halo 12 px.
+  - DemoPetri as «Petri net»: 6 open heads, names centred, no dots. DemoPEST as Statechart (UML), DemoFlowB as Flowchart
+    (ISO 5807), DemoESM as Generic: every head open.
+  - Default scenes `after` (not required by the prompt): sm and esm same nodes, boxes, edges and markers, edge paths re-routed
+    (C1's observation); **petri and flowB FAIL**: after the round trip DemoPetri's four places are 66×66 (the R-VP-16 circle, the
+    last derived viewpoint visited) and DemoFlowB's `d1` 54×66 (the ISO diamond), where the default box is 200×78 and 200×50.
+    Both notations predate A2, which changes only their arrowhead; the size is the RF node's, written by the derived view's
+    size hook (`useContentSize.ts`) and never taken back when the default view renders. Ticket in the log entry.
+  - Crops: `frontend/scripts/smoke/_tmp_a2_crops/a2_{petri_classic,petri_rvp16,sm_statechart,flowB_flowchartIso,esm_generic}_600.png`,
+    and `a2_petri_classic_t2_zoom.png` (the hollow circle on `t2`).
+- **Not covered by an executed test**: the Edge authoring panel's «Hollow circle» option (the panel does not import in the
+  node bench: joiner → monaco); stated here, not filled with a source-text test (CLAUDE.md §5).
+- **Incident**: two logs of this lane were written under `/tmp` (`a2_pred.log`, `a2_probe_run.txt`), against the prompt's
+  «never writes outside this worktree»; both copied into `frontend/scripts/smoke/` and removed from `/tmp`.

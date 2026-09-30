@@ -4353,6 +4353,8 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   byte-identical before and after a derivation and its undo; one undo removes the viewpoint and its views; the lane
   probe on 3074 58/58, the four demo scenes in the default viewpoint byte-identical to the C2 tip (12 of 12);
   mutation bench 44/45, the survivor equivalent. Prompt P-2026-09-30-0255, commit `64ea9f216`.
+  - Ratified by Alfonso on 2026-09-30 (review of the crops of C1, C2, D, A1+A3, A4, verbatim «Q2: ratificato ma con frecce
+    aperte»); the open arrowheads are R-VP-25. Recorded by P-2026-09-30-1521.
 - **R-VP-22** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
   evidence: measured, verified: none, reversible: branch).
   **Two notations beside their siblings, Statechart (UML) and Flowchart (ISO 5807), and two optional IR keys, the entry
@@ -4423,6 +4425,45 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   ERD: 3 rectangles, 2 diamonds, 7 ellipses, `id2`, `id3` underlined, 11 lines without markers, marks `1 N` and `N M` beside
   their entities; MDE ERD: rows kept, 2 diamonds); the four demo scenes in the default viewpoint 0 px from the A1+A3 tip left of
   the rail; mutation bench 56/57, the survivor equivalent. Prompt P-2026-09-30-0440, commit `7c2593c85`.
+- **R-VP-24** (2026-09-30, ratified by Alfonso 2026-09-30, evidence: measured, verified: none, reversible: branch).
+  **A notation «Petri net (classic)» after mockup A, beside the Petri net of R-VP-16, with the persisted termination
+  `hollowCircle`; DemoPetri preselects it.** Alfonso's review of 2026-09-30 (verbatim): «Q1: Mockup A». Source:
+  `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` §5 row A2, `docs/discovery/discovery_2026-09-30_a2_petri_classic_open_arrows.md`
+  (the Layer Impact Report and the measures); mockup `docs/mockups/derived-viewpoints/petri-A.svg`. No earlier row is amended:
+  «Petri net» (R-VP-15 as amended by R-VP-16) derives its documents byte for byte, but for the arrowhead of R-VP-25. (1) The
+  dialog lists eight notations, «Petri net (classic)» after «Petri net», on the `petri` profile, its roles and prefill; a
+  stored Petri binding (the system profile, a user profile based on it, a Custom Petri shape) opens the dialog on it, the
+  latest derived viewpoint still first; the State machine and Flowchart bindings still open on their siblings (R-VP-22).
+  (2) Place: a white circle, `defaultSize` 44×44 (node 44, visible 42 inside the wrapper's 1 px border), 1 px in
+  `var(--color-inode-name)`, its name `outside`, anchor `s`, 13 px 500 in the ink; the initial marking (the Initial marking
+  role) as `dot`, `dots-2`, `dots-3`, `dots-4` in the border ink, from 5 the number 15 px 600 in the ink, nothing at 0 or unset.
+  (3) Transition: a `bar` upright, `defaultSize` 10×44, drawn 24×44 while `defaultBoxFor` floors every axis at 24 px
+  (`nodes/nodeSizing.ts:73`, outside this lane); the catalogue ink `#334155` on fill and border (R-VP-15 (4)); its name
+  `outside`, anchor `e`, in the C2 label style (12 px 500, `var(--color-inode-quiet)`). The IR has no orientation: every bar
+  is upright. (4) Arc and inhibitor arc: `curve: 'arc'` (R-VP-22), 1 px in the ink, the arc ending in the open arrowhead
+  (R-VP-25), the inhibitor in the hollow circle; a weight above 1 (the Arc weight role) is the arc's label in the C2 label
+  style, through a second document per arc class with `gt $weight.value 1` and priority 1. (5) The persisted names,
+  permanent once saved (R-B9): `EdgeTermination 'hollowCircle'` (the name of R-VP-15 (1)); the `_state` value
+  `derivedNotation` and `ir.generated.notation` gain `petriClassic`. Additive (Rule 11, R-IRN-32: no `irVersion` bump, no
+  migration); `validateIR` gains the closed vocabulary of the terminations (a Record on the union), the render stays
+  permissive. Lane choices inside that list: the marker circle drawn only on an edge that uses it (every other IR edge keeps
+  its markup), `orient="auto-start-reverse"`; the Edge authoring panel lists «Hollow circle»; one token the registry's `dot`
+  (radius 16 of 100, larger than the mockup's), the markers file being outside the lane. Measured: 63/63 document lists of
+  the seven existing notations on the seven decoded exports equal the tip's with every `closedArrow` an `openArrow`; the lane
+  probe on 3081 29/31 (DemoPetri classic: 4 circles, 3 bars, dots 2 and 1, names outside, 5 open heads, 1 hollow circle, the
+  weight `2` twice), the four demo scenes in the default viewpoint byte-identical to the A4 tip's shots; the 2 failures a
+  size that outlives a derived viewpoint (ticket of this lane); mutation bench 36/36. Prompt P-2026-09-30-1521, commit
+  `f603f28e8`.
+- **R-VP-25** (2026-09-30, ratified by Alfonso 2026-09-30, evidence: measured, verified: none, reversible: branch).
+  **Every derived notation that draws an arrowhead draws the open one; amends the «filled arrowhead» R-VP-16 kept and the
+  arrowheads of R-VP-17, R-VP-19 and R-VP-22.** Alfonso's review of 2026-09-30 (verbatim): «Q2: ratificato ma con frecce
+  aperte». `EdgeTermination 'openArrow'` where the derivation wrote `'closedArrow'`: Generic (R-VP-19 (2)), Statechart (UML)
+  and Flowchart (ISO 5807) (R-VP-22 (2), (3)), the Petri arc of R-VP-16; State machine and Flowchart (R-VP-17) already ended in
+  it, the structure default their transitions keep; «Petri net (classic)» uses it on its arcs (R-VP-24). Chen lines keep no
+  arrowhead (R-VP-23); the default viewpoint (M2 and M1 native views) is not touched, its generalization triangle and UML ends
+  stay. Viewpoints already derived keep what they saved. Measured on the corpus: 24 of 63 document lists moved, each equal to
+  the tip's with the substitution (the provenance hash recomputed), none else; no `closedArrow` left in any derived document.
+  Prompt P-2026-09-30-1521, commit `f603f28e8`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
