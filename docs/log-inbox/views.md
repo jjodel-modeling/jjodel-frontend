@@ -573,3 +573,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat verification: lane probe 57/57 on 3091, text contrast 5.15-12.19, selected white-text node 7.54:1, 0 px with coloring off, node boxes 0 px, four demo scenes byte-identical to 45ff6c290; GO by Alfonso (ok alle raccomandazioni, 19:24)
 **Notes**: Rollback tag `pre-viewpoint-metaclass-colors` on `45ff6c290` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2000/result.json`.
 **Prompt document name**: 2026-09-30 20:00
+
+## 2026-09-30 — fix(editor-v2): an edge click shows the element the edge represents (P-2026-09-30-1940)
+**Prompt**: `claude_2026-09-30_1940_prompt_edge_click_properties.md`, full lane, Phase 1 then Phase 2 in cascade on `~/jjodel-w-edgesel` branch `edge-click-properties`. Clicking a canvas edge must show in Properties the reference, the reference slot or the object-as-edge the edge represents, on M2 and M1, native and IR views.
+**Files touched**: report `371804cf0`: `docs/discovery/discovery_2026-09-30_edge_click_properties.md`. Code `bb0fd90c9`: `frontend/src/components/editor-v2/utils/edgeSelectionTarget.ts` (new), `utils/__tests__/edgeSelectionTarget.test.ts` (new), `hooks/useJjomSelection.ts`, `EditorV2.tsx` (2 lines). This commit: `docs/decisions.md` (R-ESEL-1..5), this entry and ticket, the report's addendum, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `bb0fd90c9`: typecheck exit 2, 14 errors, the §17 set by file and code, same as before the change; vitest 5960 passed, the 9 §17 files red at import, plus 4 `criticalZone.test.ts` (this session's `JJODEL_CRITICAL_ZONE_GOAHEAD`) and 2 Chromium `beforeAll` timeouts, 88/88 in isolation with the variable unset; build exit 0. Tests 15, red before the module, green after; mutation bench 12/12 killed. Probe on 3097 (light) 50/51; four demo scenes 8/8 panes 0 px from the `before` run; node and pane click Properties text identical before and after.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 file touched; the selection TRANSACTION holds no creator and none is added)
+**Smoke visivo**: pending — chat (RC-23); lane probe 50/51, crops in `frontend/scripts/smoke/_tmp_edgesel_crops/es_after_*_600.png` (gitignored)
+**Notes**: Before: M1 reference and composition edges showed the metamodel's DReference, object-as-edges left the previous selection. After: the M1 slot (DValue), the object. The one probe red is the gesture, not the code: t1's visible line in derived demoSM lies under a sibling's 20 px hit path for its whole length (no point, as in the `before` run); the native object-as-edge route is covered by f2. Decisions R-ESEL-1..5 adopted unattended (RC-25).
+**Prompt document name**: 2026-09-30 19:40
+
+## 2026-09-30 — ticket: an inheritance edge click shows the empty panel, a lifted edge click shows nothing
+**Ticket**: After R-ESEL-2 an inheritance edge still writes `_lastSelected.modelElement = ''` (the DEdge has no `model`) and the Properties panel reads «No element selected»; an IR-lifted edge `<id>__irlift` (collapsed container) has no D-object behind it and a click changes nothing. Options: inheritance → the subclass (its INHERITANCE section); lifted → the slot of the original source (`data.irSourceObjectId`), first of a deduplicated bundle. Also: an M1 edge is pair-keyed, so two references of one object to the same target show the first slot.
+**Priority**: low
+**Found in**: P-2026-09-30-1940
+**Detail**: docs/discovery/discovery_2026-09-30_edge_click_properties.md
