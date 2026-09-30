@@ -623,18 +623,27 @@ describe('shapeRegistry: raggio degli spigoli', () => {
         expect(resolveCornerRadius('diamond', 0, { w: 160, h: 64 })).toEqual({ kind: 'none' });
     });
 
-    it('clamp di render a min(w, h) / 4 su entrambi i painter', () => {
-        expect(clampCornerRadius(30, 200, 40)).toBe(10);
+    it('clamp di render a min(w, h) / 2 su entrambi i painter (P-2026-09-30-1720)', () => {
+        expect(clampCornerRadius(30, 200, 40)).toBe(20);
         expect(clampCornerRadius(6, 200, 40)).toBe(6);
-        expect(resolveCornerRadius('rect', 30, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 10 });
+        // L'azione di Activity (UML): raggio 14 sul box dipinto 140x42, prima 10.5.
+        expect(clampCornerRadius(14, 140, 42)).toBe(14);
+        expect(clampCornerRadius(14, 140, 20)).toBe(10);
+        expect(resolveCornerRadius('rect', 30, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 20 });
         expect(resolveCornerRadius('rounded', 6, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 6 });
-        expect(resolveCornerRadius('diamond', 30, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 15, w: 100, h: 60 });
+        expect(resolveCornerRadius('diamond', 30, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 30, w: 100, h: 60 });
+        expect(resolveCornerRadius('diamond', 40, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 30, w: 100, h: 60 });
         expect(resolveCornerRadius('hexagon', 8, { w: 160, h: 64 })).toEqual({ kind: 'path', r: 8, w: 160, h: 64 });
         // senza box la forma CSS tiene il numero scritto: non e' una taglia indovinata
         expect(resolveCornerRadius('rect', 30, null)).toEqual({ kind: 'css', px: 30 });
         for (const [r, w, h] of [[NaN, 10, 10], [6, 0, 10], [6, 10, -1], [-2, 10, 10]]) {
             expect(clampCornerRadius(r, w, h), `${r} ${w} ${h}`).toBe(0);
         }
+    });
+
+    it('il raggio salvato del corpus (8, viste rect utente) non cambia: su un box alto almeno 40 passava gia\'', () => {
+        for (const h of [40, 64, 120]) expect(clampCornerRadius(8, 200, h), String(h)).toBe(8);
+        expect(resolveCornerRadius('rect', 8, { w: 140, h: 40 })).toEqual({ kind: 'css', px: 8 });
     });
 
     it('un poligono senza box misurato resta spigoloso', () => {
