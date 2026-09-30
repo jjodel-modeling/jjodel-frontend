@@ -453,3 +453,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-09-30 16:25
 
 **Ticket** (low, two observations, not tickets of their own): (1) `scripts/hooks/__tests__/criticalZone.test.ts` reads `JJODEL_CRITICAL_ZONE_GOAHEAD` from the environment, so the full suite run inside a lane launched with the RC-30 go-ahead shows four false reds; the test could unset it. (2) `irCollapsedRender.test.ts`'s `afterAll` (`browser.close()`) has the 10 s default hook timeout, exceeded once under the full suite's load.
+
+## 2026-09-30 — merge: derived-size-leak into alfonso-frontend-jjtl (P-2026-09-30-1658)
+**Prompt**: `claude_2026-09-30_1658_prompt_merge_derived-size-leak.md`, a direct merge by `lane-run merge --direct`, no session: `derived-size-leak` at `345759408` into `alfonso-frontend-jjtl`, merge base `ecbc0e92c`, 4 commits on the branch side.
+**Files touched**: merge `f031d4948`: 5 files from the branch side (`docs/discovery/discovery_2026-09-30_derived_size_leak.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1625_prompt_derived_size_leak.md`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/useContentSizeUnmount.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f031d4948` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5930 tests in 237 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: derived size released on unmount; lane probe 3081 22/22, DemoPetri p1 p3 and DemoFlowB i0 fin back to 200x78 and 200x50 in default; hand sizes kept; four demo scenes 0 px; 8 gates green on f031d4948; GO by the chat C-2026-09-30-1458, unattended
+**Notes**: Rollback tag `pre-derived-size-leak` on `f43fe429e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1658/result.json`.
+**Prompt document name**: 2026-09-30 16:58
