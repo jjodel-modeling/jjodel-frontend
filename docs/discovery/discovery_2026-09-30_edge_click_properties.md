@@ -184,3 +184,24 @@ per R-UNDO-7) and the `isSelected` flags, exactly the writes of today; no L-laye
   the same target, the edge carries the first `DReference` and the panel shows that slot. Accepted, noted.
 - The mirrored route passes no `data`; a resolver reading `edge.data` would split the two routes. Hence the D-layer read.
 - Ticket candidates (not in this lane): inheritance edge → the subclass; lifted edge → the slot of its original source.
+
+## Addendum 2026-09-30, Phase 2 (after `bb0fd90c9`)
+
+Measured by the same probe with `ES_TAG=after` on 3097 (light), 50/51, 0 page errors
+(`~/.jjodel-lanes/P-2026-09-30-1940/probe-_tmp_edgesel_probe.log`, crops `es_after_<case>_<route>_props_600.png`):
+
+| Case | `_lastSelected` after, both routes | RF selection | Properties header |
+|---|---|---|---|
+| DemoPEST `nextState`, `transitions`, DemoFlowB `target` (M2) | node = edge, me = the `DReference` | the edge | unchanged from §3 |
+| demoSM `t1 -nextState->` (M1) | node = edge, me = `DValue nextState`, father `t1`, values `[unlocked]` | the edge | `nextState` / `VALUE`, `transitions›t1` |
+| demoSM `locked -transitions-> t1` (M1 composition) | me = `DValue transitions`, father `locked`, values `[t1, t3, t5]` | the edge | `transitions` / `VALUE` |
+| demoFlowB `f2 -source->` (M1) | me = `DValue source`, father `f2`, values `[work]` | the edge | `source` / `VALUE` |
+| derived demoFlowB `irobj_<f2>` | node = `''`, me = `DObject f2` | the edge only | `f2` / `Object`, text identical to the node click of `f2` |
+| derived demoSM `irobj_<t1>` (hit route) | node = `''`, me = `DObject t1` | the edge only | `t1` / `Object`, `locked›transitions` |
+| DemoFlowB `Fork→ActivityNode` (inheritance) | node = edge, me = `''` | the edge | «No element selected», as before |
+
+The one red: `oae_sm_t1 line`, no point where t1's visible line is on top (a sibling's 20 px hit path covers it for its
+whole length), exactly as in the `before` run; the native route of an object-as-edge is covered by f2. Unchanged, by
+the same measures: node click `State`, `work`, `f2` and pane click on M2 and M1 (Properties text identical to the
+`before` run); highlight on an M1 edge assigns colour 1 and leaves `_lastSelected`; highlight on `irobj_<f2>` changes
+neither. The four demo scenes, M1 and M2 tabs: 8/8 idle panes 0 px from the `before` run.

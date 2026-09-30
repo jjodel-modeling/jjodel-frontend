@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1940
 Chat: C-2026-09-30-1940
 Lane: full (selection path of editor-v2, root cause not yet known, Phase 1 then Phase 2 in cascade; critical zone only if the report proves it necessary, Layer Impact Report first, go-ahead RC-30 given at launch). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane edge-click-properties · bb0fd90c9 · non fuso: hard-stop, lane probe on 3097 (light) 50/51 (the red: no clickable point on t1's visible line, as in the before run), four demo scenes 0 px, mutation bench 12/12, crops in frontend/scripts/smoke/_tmp_edgesel_crops/ (gitignored), verifica visiva alla chat
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
 Worktree: `~/jjodel-w-edgesel`, branch `edge-click-properties`, created from the trunk `alfonso-frontend-jjtl` at `45ff6c290`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-edgesel`, branch `edge-click-properties`, `git log -1` is the docs commit that added this prompt, `git status` clean; if any differs, stop with `Outcome: blocked`.

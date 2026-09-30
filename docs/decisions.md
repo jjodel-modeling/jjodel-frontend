@@ -303,6 +303,37 @@ per la C2). Alfonso riceve il digest alla chiusura della corsia.
   D (la caduta classe→enum crea un attributo di quel tipo) è rinviata: comodità a bassa scopribilità che tocca
   l'unione esportata `EdgeTypeChoice`.
 
+## Serie R-ESEL — the edge click and the Properties panel (decisions 2026-09-30)
+
+Evidence: `docs/discovery/discovery_2026-09-30_edge_click_properties.md` (`371804cf0`), measured on 3097. Decided by
+the chat `C-2026-09-30-1940` in the prompt `P-2026-09-30-1940` under RC-25, adopted by the lane as written; code
+`bb0fd90c9`. Alfonso receives the digest at the close of the lane.
+
+- **R-ESEL-1** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **One pure resolver maps a clicked edge to the element the Properties panel shows.**
+  `resolveEdgeSelectionTarget(edgeId, idlookup)` in `editor-v2/utils/edgeSelectionTarget.ts` reads the D-layer from
+  the edge id, never the React Flow `data` (the mirrored click passes `{ id }` only, `EditorV2.tsx:2845`). An edge
+  kind it does not know returns `null` and the click keeps its previous path exactly. The prompt's `viewId` is
+  dropped: a view id in `_lastSelected.view` turns the panel into the view editor (`Info.tsx:1591`).
+- **R-ESEL-2** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **What each edge shows.** M2 reference and M2 composition: the `DReference` (as before). M1 reference and M1
+  composition: the reference slot, the `DValue` of the source object whose `instanceof` is the edge's `DReference`
+  (before: the metamodel's `DReference`, whose editor then opened inside the model tab); the slot, not the feature,
+  because the panel has a slot view that names the owner and edits the value. Object-as-edge `irobj_<id>`: the
+  `DObject`, as its node click shows it (before: nothing changed). Inheritance and IR-lifted `<id>__irlift`: `null`,
+  today's behaviour (the empty panel, respectively nothing); a follow-up is ticketed.
+- **R-ESEL-3** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The clicked edge stays the canvas selection.** Only `_lastSelected.modelElement` changes. An object-as-edge has no
+  D-element behind its id: nothing is `select()`ed, every graph element is deselected as for any selection, and
+  `_lastSelected.node` is `''`; the object's node, hidden or absent, is not selected.
+- **R-ESEL-4** (2026-09-30, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Native and mirrored edge clicks take the same path.** `EditorV2.onEdgeClick` and `EditorV2.selectEdge` call the
+  same hook handlers: `jjomSelection.onEdgeClick` for D-edges, `jjomSelection.onObjectAsEdgeClick` in their two
+  `irobj_` branches; both end in the resolver.
+- **R-ESEL-5** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Highlight mode, node click and pane click are unchanged.** In highlight mode a D-edge click assigns the colour
+  and does not select; an object-as-edge click neither assigns nor selects, as before it had a handler.
+
 ## Arco A — barra a tab e capi degli edge
 
 - **R-A** (2026-08-05) — Strada B per la barra: tutti i tab montati, gli inattivi nascosti con
