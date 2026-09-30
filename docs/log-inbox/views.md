@@ -507,6 +507,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Notes**: Rollback tag `pre-reference-delete` on `c6243eed9` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1736/result.json`.
 **Prompt document name**: 2026-09-30 17:36
 
+## 2026-09-30 — feat(views): viewpoint option «Color by metaclass», palette, text contrast, border on/off (P-2026-09-30-1815)
+**Prompt**: `claude_2026-09-30_1815_prompt_viewpoint_metaclass_colors.md`, Phase 1 then 2 in cascade on `~/jjodel-w-vpcolor` branch `viewpoint-metaclass-colors` (RC-30 go-ahead). A switch in the viewpoint panel, with Base color and Border; M1 object nodes filled per metaclass from a palette of the base, black or white text by contrast, border shade or none.
+**Files touched**: docs `c29280962`: `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md` (new, Layer Impact Report §6). Code `fa0b20de1`: `frontend/src/view/viewPoint/metaclassPalette.ts` (new), `frontend/src/view/viewPoint/__tests__/metaclassPalette.test.ts` (new), `frontend/src/view/viewElement/view.tsx` (optional field), `ViewpointProperties.tsx`, `properties.scss`, `editor-v2/nodes/ObjectNode.tsx`, `editor-v2/viewpoint/ir/IRNodeContent.tsx`. This commit: `docs/decisions.md` (R-VP-27..31), this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `fa0b20de1`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` (GOAHEAD unset) 5974 passed, 0 failed, the 9 known files red at import; `npm run build` exit 0. metaclassPalette 30/30; mutation bench 29/31 killed (commit body). Lane probe on 3091, light: 51/51, the four demo scenes 0 px from the before run on the untouched tree.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3091 (light) 51/51: DemoESM native and DemoFlowB derived (IR), toggle off/on/#f59e0b/border off, fill, text, stroke per node against the resolver, boxes 0 px, toggle off 0 px; crops `frontend/scripts/smoke/_tmp_vpcolor_crops/vpc_after_*_600.png`
+**Notes**: «Fresh viewpoint» tested on a fixture: `Constructors` does not import under vitest (`window is not defined`); the probe runs the live save serializer, JSON.parse and VersionFixer.update. RC-27 second agent: HOLDS (R-VP-28). A selected white-text native node reads its name 1.11:1 on the untouched #e0f7fa selection header (R-VP-30, for the GO). Scratch files in /tmp (gate outputs).
+**Prompt document name**: 2026-09-30 18:15
+
 ## 2026-09-30 — fix(editor-v2): the selection ring of an IR node is no longer clipped (P-2026-09-30-1808)
 **Prompt**: `claude_2026-09-30_1808_prompt_selection_outline.md`, fast lane, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-selring` branch `selection-outline`. A selected IR-rendered node (DemoFlowB `work`, derived viewpoint) showed its handles but no selection outline, only a faint halo.
 **Files touched**: report `ca2cfb8a8`: `docs/discovery/discovery_2026-09-30_selection_outline.md`. Code `27a6b2d69`: `frontend/src/components/editor-v2/nodes/instanceNode.scss` (one rule), `frontend/src/components/editor-v2/nodes/__tests__/irSelectionRing.test.ts` (new). This commit: this entry, the report's addendum, the Status line of the prompt file.
@@ -534,3 +547,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: IR ring painted cyan, box 0 px; Alfonso authorised the merge (fondi)
 **Notes**: Rollback tag `pre-selection-outline` on `c1e0376dc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1846/result.json`.
 **Prompt document name**: 2026-09-30 18:46
+
+## 2026-09-30 — feat(views): «Color by metaclass» rework, analogous palette, coloured selected header (P-2026-09-30-1815)
+**Prompt**: resumed lane P-2026-09-30-1815, rework after the hard stop (Alfonso accepted the chat's recommendations, 19:20): merge the trunk (selection-outline), an analogous palette instead of the golden angle, a selected coloured native node keeping its fill, the rows renumbered R-VP-19..23 to R-VP-27..31.
+**Files touched**: merge `c76656bbc` (trunk `45ff6c290`; union in `docs/log-inbox/views.md`). Code `390bcaddd`: `frontend/src/view/viewPoint/metaclassPalette.ts`, its test, and the R-VP comments of `ObjectNode.tsx`, `IRNodeContent.tsx`, `ViewpointProperties.tsx`, `properties.scss`, `view.tsx`. `ce5e70027`: this lane's first entry, three references (`Log-Repair`). This commit: `docs/decisions.md` (R-VP-27..31), the report's addendum, this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-30 18:15
+**Causa**: (a)
+**Regressions**: no — on `390bcaddd`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set; `npx vitest run` (GOAHEAD unset) 5982 passed, the 9 known files red at import; `npm run build` exit 0. metaclassPalette 33/33; mutation bench 37/38 (the unreachable tie). Lane probe 3091, light, 57/57; the four demo scenes identical bytes to the trunk tip `45ff6c290`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (the §6 report of the first pass covers `IRNodeContent.tsx`; this pass changes only its comment)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3091 (light) 57/57: palette with #0ea5e9 and #f59e0b on DemoESM and DemoFlowB, selected white-text node 7.54:1 on its fill, option off 0 px from the trunk tip; crops `frontend/scripts/smoke/_tmp_vpcolor_crops/vpc_after2_*_600.png`
+**Notes**: The 15° floor on the palette step is this lane's (R-VP-29): at count 10 the literal 13.3° gave neighbours ΔE76 7.4 apart at equal lightness. The trunk-tip baseline ran on `45ff6c290`'s five files checked out in this tree and restored from HEAD; the tree was clean after. Causa (a): the palette rule was respecified after the first review.
+**Prompt document name**: 2026-09-30 18:15

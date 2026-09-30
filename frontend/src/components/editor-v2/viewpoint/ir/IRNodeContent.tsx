@@ -19,6 +19,7 @@ import type { BadgePosition, CompiledView, CompiledTextStyle, ShapeForm } from '
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
+import { metaclassColoringVars, type MetaclassColorOverride } from '../../../../view/viewPoint/metaclassPalette';
 import {
     getShapeDescriptor, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
     SVG_BORDER_DASH, type ShapePainter, type Size,
@@ -191,6 +192,14 @@ export interface IRNodeContentProps {
      * authoring preview.
      */
     collapsed?: boolean;
+    /**
+     * «Color by metaclass» of the active viewpoint (R-VP-27..31), resolved by the host, which
+     * knows the metaclass (`ObjectNode`). Present, it wins over the view's fill, border colour
+     * and text colour; the border keeps the view's width and style (transparent when the
+     * option's Border is off), and an outside label keeps its ink. Absent = the view paints
+     * alone, as before and as in the authoring preview.
+     */
+    colorOverride?: MetaclassColorOverride;
 }
 
 /**
@@ -246,13 +255,13 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false }: IRNodeContentProps) {
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride }: IRNodeContentProps) {
     const form = resolveNodeForm(compiled, readCtx, objectId, collapsed);
     // A collapsed fill that resolves empty (a conditional with no match) falls back to the
     // expanded fill, the same convention as an empty fill falling back to the box colour.
     const collapsedFill = collapsed && compiled.containment?.collapsedFill
         ? compiled.containment.collapsedFill(readCtx, objectId) : '';
-    const fill = collapsedFill || (compiled.fill ? compiled.fill(readCtx, objectId) : '');
+    const fill = colorOverride?.fill || collapsedFill || (compiled.fill ? compiled.fill(readCtx, objectId) : '');
     const collapsedBadge = resolveCollapsedBadge(compiled, readCtx, objectId, collapsed);
 
     // In-place editing state
@@ -439,8 +448,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     const borderWidthV = compiled.borderWidth ? compiled.borderWidth(readCtx, objectId) : undefined;
     const borderStyleV = compiled.borderStyle ? compiled.borderStyle(readCtx, objectId) : undefined;
     const hasAuthoredBorder = borderColorV !== undefined || borderWidthV !== undefined || borderStyleV !== undefined;
+    // «Color by metaclass»: every line drawn in the border colour (outline, separators) takes the
+    // shade, or transparent with Border off; width and style stay the view's, so no size moves.
+    const outlineColor = colorOverride ? (colorOverride.border ? colorOverride.stroke : 'transparent') : borderColorV;
     if (hasAuthoredBorder && !svgPainter) {
-        inlineStyle.border = `${borderWidthV ?? 1}px ${borderStyleV ?? 'solid'} ${borderColorV || 'var(--border-default)'}`;
+        inlineStyle.border = `${borderWidthV ?? 1}px ${borderStyleV ?? 'solid'} ${outlineColor || 'var(--border-default)'}`;
+    } else if (colorOverride && !svgPainter) {
+        inlineStyle.borderColor = outlineColor;
     }
 
     // Corner radius (slice 3, D5; Conditional by R-IRN-35). Resolved per instance from
@@ -463,7 +477,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // undefined when the view declares no colour axis, or when a conditional resolves to
     // the empty fallback: both keep the CSS default (irStyle.ts) and leave the separator
     // unaffected, same fallback discipline as `border` above.
-    const separatorColorStyle: React.CSSProperties | undefined = borderColorV ? { borderTopColor: borderColorV } : undefined;
+    const separatorColorStyle: React.CSSProperties | undefined = outlineColor ? { borderTopColor: outlineColor } : undefined;
     // Node-level text style (ir-1.3 cascade root): inline on the root so every
     // text surface inherits it (irStyle.ts uses `inherit` on labels, rows and
     // inline editors). A label's own style, inline on its span, still wins.
@@ -474,12 +488,17 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // resolveTextStyle returns undefined when there is nothing to emit, and
     // Object.assign with undefined is a no-op: no guard needed.
     Object.assign(inlineStyle, resolveTextStyle(compiled.text, readCtx, objectId));
+    // «Color by metaclass»: the text colour on the root, and the node tokens the row values
+    // (RowValue) and the bar's halo paint with. Labels and compartments restate it below.
+    if (colorOverride) Object.assign(inlineStyle, { color: colorOverride.text }, metaclassColoringVars(colorOverride));
+    const overText = (st: React.CSSProperties | undefined, position?: string): React.CSSProperties | undefined =>
+        colorOverride && position !== 'outside' ? { ...st, color: colorOverride.text } : st;
 
     // The SVG layer paints the same resolved fill/border, with the box-base
     // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
     // to any aspect ratio; non-scaling-stroke keeps the border a constant width.
     const svgFill = fill || 'var(--node-bg)';
-    const svgStroke = borderColorV || 'var(--border-default)';
+    const svgStroke = outlineColor || 'var(--border-default)';
     const svgStrokeWidth = borderWidthV ?? 1;
     const svgDash = SVG_BORDER_DASH[borderStyleV ?? 'solid'];
     // double (asse bordo, 2026-08-15). CSS shapes get it for free from the
@@ -498,7 +517,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // preserveAspectRatio="meet" (irStyle.ts positions the layer).
     const markerId = compiled.marker ? compiled.marker(readCtx, objectId) : '';
     const markerDef = getMarkerDef(markerId ? String(markerId) : undefined);
-    const markerColor = borderColorV || 'var(--border-default)';
+    const markerColor = colorOverride ? colorOverride.text : (borderColorV || 'var(--border-default)');
 
     // Spacing preset (2026-08-25): 'normal' carries no class, so the tokens declared on
     // .ir-node-content itself apply and the markup of an unauthored view is unchanged.
@@ -600,7 +619,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                             // style already reaches the field by inheritance, this carries
                             // the label's own one, so the text does not change face on
                             // entering the edit.
-                            style={resolveTextStyle(l.style, readCtx, objectId)}
+                            style={overText(resolveTextStyle(l.style, readCtx, objectId), l.position)}
                             autoFocus
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
@@ -614,7 +633,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     <span
                         key={`label_${i}`}
                         className={`ir-label ir-label--${l.position}${anchorClass}`}
-                        style={resolveTextStyle(l.style, readCtx, objectId)}
+                        style={overText(resolveTextStyle(l.style, readCtx, objectId), l.position)}
                         onDoubleClick={l.editsName ? () => {
                             setEditingLabel(i);
                             setEditValue(readCtx.getName(objectId) ?? '');
@@ -640,7 +659,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                             // the rows inherit it (irStyle.ts gives .ir-row font-size:
                             // inherit and declares no other text axis), and a dispatched
                             // row view can still override it inline on its own .ir-row.
-                            style={{ ...resolveTextStyle(fc.rowStyle, readCtx, objectId), ...(fc.separator ? separatorColorStyle : undefined) }}
+                            style={{ ...overText(resolveTextStyle(fc.rowStyle, readCtx, objectId)), ...(fc.separator ? separatorColorStyle : undefined) }}
                         >
                             {rowChildIds.map(childId => (
                                 <IRRow key={childId} childObjectId={childId} />
@@ -655,7 +674,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     <div
                         key={fc.id}
                         className={`ir-compartment${fc.separator ? '' : ' ir-compartment--no-separator'}`}
-                        style={{ ...resolveTextStyle(fc.rowStyle, readCtx, objectId), ...(fc.separator ? separatorColorStyle : undefined) }}
+                        style={{ ...overText(resolveTextStyle(fc.rowStyle, readCtx, objectId)), ...(fc.separator ? separatorColorStyle : undefined) }}
                     >
                         {source.map(row => (
                             <div

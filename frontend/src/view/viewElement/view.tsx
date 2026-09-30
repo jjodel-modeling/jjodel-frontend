@@ -52,6 +52,7 @@ import {computeCreationSeed} from "../../components/editor-v2/viewpoint/ir/irCre
 import type {AnyViewIR} from "../../components/editor-v2/viewpoint/ir/irTypes";
 import type {FormThemeName} from "../../jjform/themes";
 import type {FormPaletteName} from "../../jjform/palettes";
+import type {MetaclassColoring} from "../viewPoint/metaclassPalette";
 import {unproxyDeep} from "../../model/unproxy";
 
 let CSS_Units0 = {'Local-font relative':{
@@ -274,6 +275,18 @@ export class DViewElement extends DPointerTargetable {
      * the singleton on first write (R-DMV-6).
      */
     formPalette?: FormPaletteName;
+    /**
+     * «Color by metaclass» of a VIEWPOINT (P-2026-09-30-1815, R-VP-28): `{ enabled, baseColor,
+     * border }`. ABSENT IS A VALUE, as for `formTheme` above: it reads as off, so a saved project
+     * has no such key and renders as it did, and no VersionFixer migration accompanies it.
+     * Written whole (the default setter replaces it), `enabled: false` to turn it off so the
+     * other two survive. Declared HERE and not on `DViewPoint`, for the reason stated above.
+     *
+     * READ BY: `resolveMetaclassColoring` (`metaclassPalette.ts`), from the ACTIVE viewpoint
+     * (`state.viewpoint`), in `ObjectNode.tsx`. WRITTEN BY: the «Color by metaclass» controls of
+     * `ViewpointProperties.tsx`.
+     */
+    metaclassColoring?: MetaclassColoring;
 
     // processate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;
