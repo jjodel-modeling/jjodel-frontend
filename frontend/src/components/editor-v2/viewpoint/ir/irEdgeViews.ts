@@ -68,8 +68,9 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             irStroke: color || undefined,
             irStrokeWidth: width,
             irStrokeDasharray: dash,
-            irSourceTermination: cv.terminations.sourceEnd,
-            irTargetTermination: cv.terminations.targetEnd,
+            // Slice E: a Conditional end resolved on this instance; a plain one is the view's, as before.
+            irSourceTermination: cv.sourceEndTermination ? cv.sourceEndTermination(ctx, evalId) : cv.terminations.sourceEnd,
+            irTargetTermination: cv.targetEndTermination ? cv.targetEndTermination(ctx, evalId) : cv.terminations.targetEnd,
             irLabelText: labelText,
             irLabelAlwaysVisible: labelText !== undefined,
             ...(labelStyle ? { irLabelStyle: labelStyle } : {}),
@@ -80,6 +81,9 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             // declared, so an edge view without them decorates the edge as before.
             ...(cv.sourceEndText ? { irSourceEndText: String(cv.sourceEndText(ctx, evalId) ?? '') } : {}),
             ...(cv.targetEndText ? { irTargetEndText: String(cv.targetEndText(ctx, evalId) ?? '') } : {}),
+            // Slice E: the role at each end, the same way.
+            ...(cv.sourceEndRole ? { irSourceEndRole: String(cv.sourceEndRole(ctx, evalId) ?? '') } : {}),
+            ...(cv.targetEndRole ? { irTargetEndRole: String(cv.targetEndRole(ctx, evalId) ?? '') } : {}),
         },
     };
 }

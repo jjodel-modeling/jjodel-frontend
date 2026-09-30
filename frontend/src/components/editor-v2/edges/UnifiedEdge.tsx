@@ -37,6 +37,7 @@ import {
     computeArcEdgeGeometry,
     computeArcSelfLoopGeometry,
     topLoopEnds,
+    trimPathEnds,
     type Side,
 } from '../utils/edgeUtils';
 import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
@@ -47,6 +48,7 @@ import { useEdgeHighlightClass } from '../contexts/HighlightContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
 import { SegmentHandles } from './SegmentHandles';
 import { EndpointHandles } from './EndpointHandles';
+import { endGlyphOf, endGlyphMarker, glyphPathD, glyphCircles } from './edgeEndGlyphs';
 
 // Bundle spread lives in ./bundleSpread (pure, testable). It fans the middle
 // corridor of parallel same-pair edges by physical anchor order (see that module).
@@ -149,6 +151,14 @@ function UnifiedEdge(props: EdgeProps) {
     // IR-decorated edge only. An empty text draws nothing, so an edge without the keys renders as before.
     const irSourceEndText = isIREdge ? (irData.irSourceEndText as string | undefined) || undefined : undefined;
     const irTargetEndText = isIREdge ? (irData.irTargetEndText as string | undefined) || undefined : undefined;
+    // Slice E: the role at each end (irEdgeViews writes each only when declared), on the other side of the line.
+    const irSourceEndRole = isIREdge ? (irData.irSourceEndRole as string | undefined) || undefined : undefined;
+    const irTargetEndRole = isIREdge ? (irData.irTargetEndRole as string | undefined) || undefined : undefined;
+    // Slice E: the glyph of a new end (edgeEndGlyphs), null for the seven ends of before, which keep their
+    // markers below byte for byte. Its stroke is the line's resolved width, 1 when none is authored.
+    const irSourceGlyph = isIREdge ? endGlyphOf(irSourceTermination) : null;
+    const irTargetGlyph = isIREdge ? endGlyphOf(irTargetTermination) : null;
+    const irGlyphWidth = irStrokeWidth !== undefined && irStrokeWidth > 0 ? irStrokeWidth : 1;
     // The label of an IR-authored edge has no write-back path yet. Its text comes from
     // the compiled view (irEdgeViews.applyEdgeStyle re-seeds e.label on every recompute)
     // and commitLabel's syncEdgeRefProperty cannot reach it: a synthetic object-as-edge
@@ -498,17 +508,31 @@ function UnifiedEdge(props: EdgeProps) {
     // Anchored as the cardinality badge is (computeCardinalityAnchor), one at each end: an arc at its
     // two ends (the handle centres) with its chord as the path, any other edge at the handle point with
     // the drawn polyline; the source end reads the path backwards, so its label also takes the side the
-    // line does not come from.
+    // line does not come from. Slice E: the role on the other side of the line (the anchor's mirror);
+    // beside a new glyph both are pushed along the axis by its back, 0 for every other end.
     const endLabelTransforms = useMemo(() => {
-        if (!irSourceEndText && !irTargetEndText) return null;
+        if (!irSourceEndText && !irTargetEndText && !irSourceEndRole && !irTargetEndRole) return null;
         const start = arcGeom ? arcGeom.start : { x: sourceX, y: sourceY };
         const end = arcGeom ? arcGeom.end : { x: targetX, y: targetY };
         const points = arcGeom ? [arcGeom.start, arcGeom.end] : drawnPoints;
+        const reversed = [...points].reverse();
+        const sourceDepth = irSourceGlyph ? irSourceGlyph.back : 0;
+        const targetDepth = irTargetGlyph ? irTargetGlyph.back : 0;
         return {
-            source: irSourceEndText ? computeCardinalityAnchor(start.x, start.y, sourceSide, CARD_BOX_GAP, 0, [...points].reverse()) : '',
-            target: irTargetEndText ? computeCardinalityAnchor(end.x, end.y, targetSide, CARD_BOX_GAP, 0, points) : '',
+            source: irSourceEndText ? computeCardinalityAnchor(start.x, start.y, sourceSide, CARD_BOX_GAP, sourceDepth, reversed) : '',
+            target: irTargetEndText ? computeCardinalityAnchor(end.x, end.y, targetSide, CARD_BOX_GAP, targetDepth, points) : '',
+            sourceRole: irSourceEndRole ? computeCardinalityAnchor(start.x, start.y, sourceSide, CARD_BOX_GAP, sourceDepth, reversed, true) : '',
+            targetRole: irTargetEndRole ? computeCardinalityAnchor(end.x, end.y, targetSide, CARD_BOX_GAP, targetDepth, points, true) : '',
         };
-    }, [irSourceEndText, irTargetEndText, arcGeom, drawnPoints, sourceX, sourceY, targetX, targetY, sourceSide, targetSide]);
+    }, [irSourceEndText, irTargetEndText, irSourceEndRole, irTargetEndRole, irSourceGlyph, irTargetGlyph, arcGeom, drawnPoints, sourceX, sourceY, targetX, targetY, sourceSide, targetSide]);
+
+    // ─── Edge ends (slice E) ───
+    // The visible line stops at the back of each new end's glyph (edgeUtils trimPathEnds); the hit path keeps
+    // the whole route. No new end: no trim, the path as before.
+    const trimmedPath = useMemo(
+        () => (irSourceGlyph || irTargetGlyph ? trimPathEnds(path, irSourceGlyph?.back ?? 0, irTargetGlyph?.back ?? 0) : null),
+        [path, irSourceGlyph, irTargetGlyph],
+    );
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
@@ -579,6 +603,9 @@ function UnifiedEdge(props: EdgeProps) {
     const markerIRHollowDiamondId = `ir-diamond-hollow-${id}`;
     // R-VP-24 (P-2026-09-30-1521): the inhibitor arc's end, mounted only where an end uses it.
     const markerIRHollowCircleId = `ir-circle-hollow-${id}`;
+    // Slice E: one marker per end whose glyph is new, its reference and orientation that end's own.
+    const markerIREndSourceId = `ir-end-source-${id}`;
+    const markerIREndTargetId = `ir-end-target-${id}`;
     // Map an EdgeTermination to its IR-only per-edge marker (all defined below,
     // gated on isIREdge, and colored inline from irStroke).
     const irMarkerUrl = (t: string | undefined): string | undefined => {
@@ -757,13 +784,13 @@ function UnifiedEdge(props: EdgeProps) {
 
     // Determine which markers to use. IR edges (E0) derive both ends from the
     // authored EdgeTerminations; classic edges keep their kind-driven markers.
-    const markerStart = isIREdge ? irMarkerUrl(irSourceTermination)
+    const markerStart = isIREdge ? (irSourceGlyph ? `url(#${markerIREndSourceId})` : irMarkerUrl(irSourceTermination))
         : isInheritance ? undefined
         : showDiamonds && kind === 'composition' ? `url(#${markerFilledId})`
         : showDiamonds && kind === 'aggregation' ? `url(#${markerEmptyId})`
         : undefined;
 
-    const markerEnd = isIREdge ? irMarkerUrl(irTargetTermination)
+    const markerEnd = isIREdge ? (irTargetGlyph ? `url(#${markerIREndTargetId})` : irMarkerUrl(irTargetTermination))
         : isInheritance
         ? (isERNotation ? undefined : `url(#${markerTriangleId})`)
         : `url(#${markerArrowId})`;
@@ -959,6 +986,40 @@ function UnifiedEdge(props: EdgeProps) {
                                 <circle cx="5" cy="5" r="4" className="reference-marker hollow" style={irMarkerStrokeStyle} />
                             </marker>
                         )}
+                        {/* Slice E: the seven new ends (edgeEndGlyphs), a marker per end that uses one, in user space,
+                            its reference the cut the line stops at. Line work in the ink, a zero's circle on the canvas
+                            background, the filled disc in the ink; the stroke the line's resolved width and colour. */}
+                        {([['source', irSourceGlyph, trimmedPath?.start ?? null, markerIREndSourceId], ['target', irTargetGlyph, trimmedPath?.end ?? null, markerIREndTargetId]] as const).map(([role, glyph, cut, markerId]) => {
+                            if (!glyph) return null;
+                            const m = endGlyphMarker(glyph, irGlyphWidth, cut, role);
+                            const lineWork = glyphPathD(glyph);
+                            return (
+                                <marker
+                                    key={role}
+                                    id={markerId}
+                                    viewBox={m.viewBox}
+                                    refX={m.refX}
+                                    refY={m.refY}
+                                    markerWidth={m.markerWidth}
+                                    markerHeight={m.markerHeight}
+                                    markerUnits="userSpaceOnUse"
+                                    orient={m.orient}
+                                >
+                                    {lineWork && <path d={lineWork} className="ir-end-glyph" strokeWidth={irGlyphWidth} style={irMarkerStrokeStyle} />}
+                                    {glyphCircles(glyph).map((c, i) => (
+                                        <circle
+                                            key={i}
+                                            cx={c.cx}
+                                            cy={c.cy}
+                                            r={c.r}
+                                            className={`ir-end-glyph ir-end-glyph--${c.fill === 'ink' ? 'filled' : 'hollow'}`}
+                                            strokeWidth={irGlyphWidth}
+                                            style={c.fill === 'ink' ? irMarkerFillStyle : irMarkerStrokeStyle}
+                                        />
+                                    ))}
+                                </marker>
+                            );
+                        })}
                     </>
                 )}
             </defs>
@@ -978,9 +1039,9 @@ function UnifiedEdge(props: EdgeProps) {
                 onClick={(e) => { e.stopPropagation(); selectEdge?.(id); }}
             />
 
-            {/* Visible edge path */}
+            {/* Visible edge path (slice E: cut at the back of a new end's glyph) */}
             <path
-                d={path}
+                d={trimmedPath ? trimmedPath.d : path}
                 fill="none"
                 className={edgeClassName}
                 style={irPathStyle}
@@ -1083,6 +1144,23 @@ function UnifiedEdge(props: EdgeProps) {
                             : text}
                     </div>
                 ))}
+
+                {/* Slice E: the role at each end, the same label on the other side of the line */}
+                {endLabelTransforms && ([['sourceRole', irSourceEndRole], ['targetRole', irTargetEndRole]] as const).map(([end, text]) => (text ? (
+                    <div
+                        key={end}
+                        className={`edge-end-label edge-end-label--role${irLabelStyle ? '' : ' edge-cardinality'} ${hlClass}`}
+                        style={{
+                            position: 'absolute',
+                            transform: endLabelTransforms[end],
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        {irLabelStyle
+                            ? <span className="edge-label__text edge-label__text--halo" style={{ ...(irStroke ? { color: irStroke } : {}), ...irLabelStyle }}>{text}</span>
+                            : text}
+                    </div>
+                ) : null))}
 
                 {/* ISA label for ER notation (inheritance only) */}
                 {isInheritance && isERNotation && (

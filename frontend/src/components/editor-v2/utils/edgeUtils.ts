@@ -1087,6 +1087,10 @@ export const CARD_LINE_GAP = 4;
  * The cardinality is also shifted laterally so it sits *beside* the entry edge,
  * never on top of it: top → right, bottom → left (vertical edges); right → up,
  * left → down (horizontal edges).
+ *
+ * `mirror` (slice E, P-2026-09-30-1810) takes the other side of the line, at the same
+ * depth: the role name of an end, the multiplicity keeping the side above. Absent or
+ * false, the anchor of before.
  */
 export function computeCardinalityAnchor(
     targetX: number,
@@ -1095,6 +1099,7 @@ export function computeCardinalityAnchor(
     boxGap: number,
     depthShift: number = 0,
     pathPoints?: { x: number; y: number }[],
+    mirror: boolean = false,
 ): string {
     const gap = boxGap + depthShift;
     const vertical = targetSide === 'top' || targetSide === 'bottom';
@@ -1106,7 +1111,8 @@ export function computeCardinalityAnchor(
     // Col tracciato in mano si sceglie il fianco **opposto** a quello da cui arriva:
     // è la parte che non collide con la linea.
     const from = pathPoints ? approachDirection(pathPoints, vertical ? 'x' : 'y') : 0;
-    const lateral = from === 0 ? fallback : -from;
+    const side = from === 0 ? fallback : -from;
+    const lateral = mirror ? -side : side;
 
     // La percentuale di translate segue il verso laterale, altrimenti la scatola
     // scavalcherebbe la linea invece di affiancarla.
@@ -2476,4 +2482,163 @@ export function computeArcSelfLoopGeometry(start: Point, end: Point): ArcEdgeGeo
 export function topLoopEnds(rect: Rect): { start: Point; end: Point } {
     const cx = rect.x + rect.width / 2;
     return { start: { x: cx - ARC_LOOP_HALF_SPAN, y: rect.y }, end: { x: cx + ARC_LOOP_HALF_SPAN, y: rect.y } };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Edge ends (slice E, P-2026-09-30-1810): the line stops at the glyph's back
+// ═══════════════════════════════════════════════════════════════
+//
+// The drawn `d` is cut at each end by the glyph's back (edgeEndGlyphs `back`), on the first and on
+// the last drawing command: a line exactly, a quadratic (the arc) or a cubic (the bezier, the loop)
+// split by de Casteljau at the parameter whose arc length matches. Every builder in use writes
+// absolute M, L, Q, C and A commands (roundManhattanPath, buildFinalPath, the arc helpers, xyflow's
+// straight and bezier paths): anything else is left as drawn, as is an end whose command is an A.
+// Pure: UnifiedEdge calls it on the path it would draw, only for an end that has a glyph.
+
+/** Where an end was cut: the new end point, the original end (the tip), the length cut, the angle at to tip. */
+export interface TrimmedEnd {
+    at: Point;
+    tip: Point;
+    length: number;
+    /** Degrees, the direction from `at` to `tip`, two decimals. */
+    angle: number;
+}
+
+export interface TrimmedPath {
+    d: string;
+    start: TrimmedEnd | null;
+    end: TrimmedEnd | null;
+}
+
+/** Below this the rest of a command is not kept: a cut never reaches a command's other end. */
+const TRIM_KEEP = 0.5;
+const TRIM_SAMPLES = 32;
+
+interface PathCommand { cmd: string; args: number[] }
+
+function parseAbsolutePath(d: string): PathCommand[] | null {
+    const tokens = d.match(/[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi);
+    if (!tokens || tokens[0] !== 'M') return null;
+    const arity: Record<string, number> = { M: 2, L: 2, Q: 4, C: 6, A: 7 };
+    const out: PathCommand[] = [];
+    let i = 0;
+    while (i < tokens.length) {
+        const cmd = tokens[i++];
+        const n = arity[cmd];
+        if (n === undefined) return null;
+        const args = tokens.slice(i, i + n).map(Number);
+        if (args.length !== n || args.some(v => !Number.isFinite(v))) return null;
+        i += n;
+        out.push({ cmd, args });
+    }
+    return out.length >= 2 ? out : null;
+}
+
+/** The control polygon of a drawing command from `from`: its points, the end last. */
+const polygonOf = (from: Point, c: PathCommand): Point[] => {
+    const pts: Point[] = [from];
+    for (let k = 0; k < c.args.length; k += 2) pts.push({ x: c.args[k], y: c.args[k + 1] });
+    return pts;
+};
+
+/** de Casteljau: the point at `t` and the two halves' control polygons. */
+function splitPolygon(p: Point[], t: number): { left: Point[]; right: Point[] } {
+    const left: Point[] = [p[0]];
+    const right: Point[] = [p[p.length - 1]];
+    let q = p;
+    while (q.length > 1) {
+        q = q.slice(1).map((v, k) => ({ x: q[k].x + (v.x - q[k].x) * t, y: q[k].y + (v.y - q[k].y) * t }));
+        left.push(q[0]);
+        right.unshift(q[q.length - 1]);
+    }
+    return { left, right };
+}
+
+const pointAt = (p: Point[], t: number): Point => splitPolygon(p, t).left[p.length - 1];
+
+/** Cumulative arc lengths at TRIM_SAMPLES + 1 parameters, from t = 0. */
+function arcTable(p: Point[]): number[] {
+    const table = [0];
+    let prev = p[0];
+    for (let k = 1; k <= TRIM_SAMPLES; k++) {
+        const c = p.length === 2 ? { x: p[0].x + (p[1].x - p[0].x) * k / TRIM_SAMPLES, y: p[0].y + (p[1].y - p[0].y) * k / TRIM_SAMPLES } : pointAt(p, k / TRIM_SAMPLES);
+        table.push(table[k - 1] + Math.hypot(c.x - prev.x, c.y - prev.y));
+        prev = c;
+    }
+    return table;
+}
+
+/** The parameter at arc length `s` from t = 0, by the table. */
+function paramAt(table: number[], s: number): number {
+    for (let k = 1; k < table.length; k++) {
+        if (table[k] >= s) {
+            const seg = table[k] - table[k - 1];
+            return (k - 1 + (seg > 0 ? (s - table[k - 1]) / seg : 0)) / TRIM_SAMPLES;
+        }
+    }
+    return 1;
+}
+
+const angleOf = (at: Point, tip: Point) => r2(Math.atan2(tip.y - at.y, tip.x - at.x) * 180 / Math.PI);
+
+/**
+ * Cut `length` off the end of a drawing command (from `from`): the new command, or null when it cannot be
+ * cut (an arc, a degenerate command). The cut is at most the command's length less TRIM_KEEP.
+ */
+function cutEnd(from: Point, c: PathCommand, length: number): { cmd: PathCommand; cut: TrimmedEnd } | null {
+    if (c.cmd !== 'L' && c.cmd !== 'Q' && c.cmd !== 'C') return null;
+    const p = polygonOf(from, c);
+    const table = arcTable(p);
+    const total = table[table.length - 1];
+    const a = Math.min(length, total - TRIM_KEEP);
+    if (!(a > 0)) return null;
+    const t = c.cmd === 'L' ? 1 - a / total : paramAt(table, total - a);
+    const left = c.cmd === 'L' ? [p[0], { x: p[0].x + (p[1].x - p[0].x) * t, y: p[0].y + (p[1].y - p[0].y) * t }] : splitPolygon(p, t).left;
+    const kept = left.slice(1).map(q => ({ x: r2(q.x), y: r2(q.y) }));
+    const at = kept[kept.length - 1];
+    const tip = p[p.length - 1];
+    return { cmd: { cmd: c.cmd, args: kept.flatMap(q => [q.x, q.y]) }, cut: { at, tip, length: r2(a), angle: angleOf(at, tip) } };
+}
+
+/** Cut `length` off the start of a drawing command (from `from`): the new start point and command, or null. */
+function cutStart(from: Point, c: PathCommand, length: number): { start: Point; cmd: PathCommand; cut: TrimmedEnd } | null {
+    if (c.cmd !== 'L' && c.cmd !== 'Q' && c.cmd !== 'C') return null;
+    const p = polygonOf(from, c);
+    const table = arcTable(p);
+    const total = table[table.length - 1];
+    const a = Math.min(length, total - TRIM_KEEP);
+    if (!(a > 0)) return null;
+    const t = c.cmd === 'L' ? a / total : paramAt(table, a);
+    const right = c.cmd === 'L' ? [{ x: p[0].x + (p[1].x - p[0].x) * t, y: p[0].y + (p[1].y - p[0].y) * t }, p[1]] : splitPolygon(p, t).right;
+    const kept = right.map((q, k) => (k === right.length - 1 ? q : { x: r2(q.x), y: r2(q.y) }));
+    const at = kept[0];
+    return { start: at, cmd: { cmd: c.cmd, args: kept.slice(1).flatMap(q => [q.x, q.y]) }, cut: { at, tip: from, length: r2(a), angle: angleOf(at, from) } };
+}
+
+/**
+ * The drawn path `d` with `startTrim` px cut off its start and `endTrim` px off its end, and where each end
+ * was cut (null where nothing was). Both trims 0: `d` itself, byte for byte. A path this cannot read is
+ * returned as drawn, with no cut.
+ */
+export function trimPathEnds(d: string, startTrim: number, endTrim: number): TrimmedPath {
+    if (!(startTrim > 0) && !(endTrim > 0)) return { d, start: null, end: null };
+    const cmds = parseAbsolutePath(d);
+    if (!cmds || cmds.slice(1).some(c => c.cmd === 'M')) return { d, start: null, end: null };
+    const startOf = (k: number): Point => {
+        const a = cmds[k - 1].args;
+        return { x: a[a.length - 2], y: a[a.length - 1] };
+    };
+    let end: TrimmedEnd | null = null;
+    let start: TrimmedEnd | null = null;
+    const lastIdx = cmds.length - 1;
+    if (endTrim > 0) {
+        const r = cutEnd(startOf(lastIdx), cmds[lastIdx], endTrim);
+        if (r) { cmds[lastIdx] = r.cmd; end = r.cut; }
+    }
+    if (startTrim > 0) {
+        const r = cutStart(startOf(1), cmds[1], startTrim);
+        if (r) { cmds[0] = { cmd: 'M', args: [r.start.x, r.start.y] }; cmds[1] = r.cmd; start = r.cut; }
+    }
+    if (!start && !end) return { d, start: null, end: null };
+    return { d: cmds.map(c => `${c.cmd} ${c.args.join(' ')}`).join(' '), start, end };
 }

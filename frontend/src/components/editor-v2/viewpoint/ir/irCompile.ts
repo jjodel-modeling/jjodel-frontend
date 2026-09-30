@@ -576,7 +576,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
 
 // ---- edge views (Fase 2c) --------------------------------------------------
 
-import type { CompiledEdgeView, EdgeViewIR, TextSource } from './irTypes';
+import type { CompiledEdgeView, EdgeTermination, EdgeViewIR, TextSource } from './irTypes';
 import { CONTAINER_ENDPOINT } from './irTypes';
 
 function compileTextSource(src: TextSource | undefined, deps: Set<string>): CompiledAccessor | null {
@@ -641,6 +641,50 @@ function compileEndLabel(src: unknown, deps: Set<string>): CompiledAccessor | nu
     return compileTextSource(src as TextSource, deps);
 }
 
+/**
+ * The labels at one end (slice E): an object without `from` is an `EdgeEndLabels`, its multiplicity and role
+ * compiled as an R-VP-23 end label each; anything else is read as the R-VP-23 text source, the multiplicity.
+ */
+function compileEndLabels(src: unknown, deps: Set<string>): { multiplicity: CompiledAccessor | null; role: CompiledAccessor | null } {
+    if (src && typeof src === 'object' && !Array.isArray(src) && !('from' in src)) {
+        const parts = src as { multiplicity?: unknown; role?: unknown };
+        return { multiplicity: compileEndLabel(parts.multiplicity, deps), role: compileEndLabel(parts.role, deps) };
+    }
+    return { multiplicity: compileEndLabel(src, deps), role: null };
+}
+
+/** A Conditional end (slice E): an object carrying `when` or `rules`, as `compileConditional` discriminates them. */
+const isConditionalEnd = (v: unknown): v is Exclude<Conditional<EdgeTermination>, EdgeTermination> =>
+    !!v && typeof v === 'object' && !Array.isArray(v) && ('when' in v || 'rules' in v);
+
+/**
+ * The end a view states for every instance: a plain end as written (the compile of before), a Conditional's
+ * `else` / `default`, else the default end. The per-instance value of a Conditional is its resolver's.
+ */
+function staticTermination(v: unknown, fallback: EdgeTermination): EdgeTermination {
+    if (!isConditionalEnd(v)) return (v ?? fallback) as EdgeTermination;
+    const other = 'when' in v ? v.else : v.default;
+    return other !== undefined ? other : fallback;
+}
+
+/**
+ * The resolver of a Conditional end (slice E), or null: a plain end has none, and a malformed Conditional
+ * (a `rules` that is not a list, a predicate the compile refuses) renders as the static end instead of
+ * dropping the view (R-B9-bis: the render is permissive, `validateIR` refuses it).
+ */
+function compileTerminationEnd(v: unknown, fallback: EdgeTermination, deps: Set<string>): CompiledConditional<EdgeTermination> | null {
+    if (!isConditionalEnd(v)) return null;
+    if ('rules' in v && !Array.isArray(v.rules)) return null;
+    const local = new Set<string>();
+    try {
+        const fn = compileConditional<EdgeTermination>(v, fallback, local);
+        local.forEach(f => deps.add(f));
+        return fn;
+    } catch {
+        return null;
+    }
+}
+
 const edgeCompileCache = new Map<string, CompiledEdgeView>();
 
 export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeView {
@@ -689,8 +733,8 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
         lineWidth: e.line?.width !== undefined ? compileConditional(e.line.width, 1, deps) : null,
         lineStyle: e.line?.style !== undefined ? compileConditional(e.line.style, 'solid' as const, deps) : null,
         terminations: {
-            sourceEnd: e.terminations?.sourceEnd ?? 'none',
-            targetEnd: e.terminations?.targetEnd ?? 'openArrow',
+            sourceEnd: staticTermination(e.terminations?.sourceEnd, 'none'),
+            targetEnd: staticTermination(e.terminations?.targetEnd, 'openArrow'),
         },
         routing: e.routing ?? null,
         labelText: compileLabelText(e.labels, deps),
@@ -708,10 +752,18 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
     }
     // R-VP-23: the end labels, each compiled only when it is a text source of the vocabulary, so an
     // edge view without them compiles to the shape it had and irEdgeViews writes no end text.
-    const sourceEnd = compileEndLabel(e.labels?.sourceEnd, deps);
-    if (sourceEnd) compiled.sourceEndText = sourceEnd;
-    const targetEnd = compileEndLabel(e.labels?.targetEnd, deps);
-    if (targetEnd) compiled.targetEndText = targetEnd;
+    // Slice E: the role of an `EdgeEndLabels`, compiled only when declared, the same way.
+    const sourceEnd = compileEndLabels(e.labels?.sourceEnd, deps);
+    if (sourceEnd.multiplicity) compiled.sourceEndText = sourceEnd.multiplicity;
+    if (sourceEnd.role) compiled.sourceEndRole = sourceEnd.role;
+    const targetEnd = compileEndLabels(e.labels?.targetEnd, deps);
+    if (targetEnd.multiplicity) compiled.targetEndText = targetEnd.multiplicity;
+    if (targetEnd.role) compiled.targetEndRole = targetEnd.role;
+    // Slice E: a Conditional end's resolver, only when declared, so a plain end compiles to the shape it had.
+    const sourceEndTermination = compileTerminationEnd(e.terminations?.sourceEnd, 'none', deps);
+    if (sourceEndTermination) compiled.sourceEndTermination = sourceEndTermination;
+    const targetEndTermination = compileTerminationEnd(e.terminations?.targetEnd, 'openArrow', deps);
+    if (targetEndTermination) compiled.targetEndTermination = targetEndTermination;
     compiled.dependencySet = Array.from(deps);
     compiled.crossPaths = dedupeCrossPaths(crossPathSink ?? []);
     const channels = harvestChannels();
