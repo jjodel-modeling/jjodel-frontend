@@ -560,3 +560,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: pending — chat, RC-23; lane probe on 3091 (light) 57/57: palette with #0ea5e9 and #f59e0b on DemoESM and DemoFlowB, selected white-text node 7.54:1 on its fill, option off 0 px from the trunk tip; crops `frontend/scripts/smoke/_tmp_vpcolor_crops/vpc_after2_*_600.png`
 **Notes**: The 15° floor on the palette step is this lane's (R-VP-29): at count 10 the literal 13.3° gave neighbours ΔE76 7.4 apart at equal lightness. The trunk-tip baseline ran on `45ff6c290`'s five files checked out in this tree and restored from HEAD; the tree was clean after. Causa (a): the palette rule was respecified after the first review.
 **Prompt document name**: 2026-09-30 18:15
+
+## 2026-09-30 — merge: viewpoint-metaclass-colors into alfonso-frontend-jjtl (P-2026-09-30-2000)
+**Prompt**: `claude_2026-09-30_2000_prompt_merge_viewpoint-metaclass-colors.md`, a direct merge by `lane-run merge --direct`, no session: `viewpoint-metaclass-colors` at `728291b21` into `alfonso-frontend-jjtl`, merge base `45ff6c290`, 8 commits on the branch side.
+**Files touched**: merge `524bdd3f1`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1815_prompt_viewpoint_metaclass_colors.md`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx`, `frontend/src/components/editors/viewpoint/properties/properties.scss`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `524bdd3f1` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5982 tests in 240 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat verification: lane probe 57/57 on 3091, text contrast 5.15-12.19, selected white-text node 7.54:1, 0 px with coloring off, node boxes 0 px, four demo scenes byte-identical to 45ff6c290; GO by Alfonso (ok alle raccomandazioni, 19:24)
+**Notes**: Rollback tag `pre-viewpoint-metaclass-colors` on `45ff6c290` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2000/result.json`.
+**Prompt document name**: 2026-09-30 20:00
