@@ -425,3 +425,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-09-29-2351
 **Detail**: docs/discovery/discovery_2026-09-29_ir_edge_ports.md (§1 H1-H2, §2)
+
+## 2026-09-30 — merge: ir-edge-ports into alfonso-frontend-jjtl (P-2026-09-30-1509)
+**Prompt**: `claude_2026-09-30_1509_prompt_merge_ir-edge-ports.md`, a direct merge by `lane-run merge --direct`, no session: `ir-edge-ports` at `fb8944688` into `alfonso-frontend-jjtl`, merge base `62f4ac3fc`, 3 commits on the branch side.
+**Files touched**: merge `e7dec63bb`: 3 files from the branch side (`docs/discovery/discovery_2026-09-29_ir_edge_ports.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_2351_prompt_c3_ir_edge_ports.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e7dec63bb` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5905 tests in 234 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, the C3 ir-edge-ports discovery (hypothesis falsified); no code, 8 gates green on e7dec63bb; GO by the chat C-2026-09-30 release-3.1
+**Notes**: Rollback tag `pre-ir-edge-ports` on `cab8a535d` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1509/result.json`.
+**Prompt document name**: 2026-09-30 15:09
