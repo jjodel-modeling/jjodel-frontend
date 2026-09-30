@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1810
 Chat: C-2026-09-30-1810
 Lane: Phase 1 then Phase 2 in cascade (no critical zone expected; no go-ahead given). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane edge-ends · 77c2f946b, 8f3e7c307, 462fba92d · non fuso: hard-stop, lane probe on 3093 (light and dark, widths 1 and 2) 16/16, crops in frontend/scripts/smoke/_tmp_edgeends_crops/ (gitignored), mutation bench 22/23 (the survivor equivalent), R-EE-1..4 nel commit docs, verifica visiva alla chat
 Worktree: `~/jjodel-w-edgeends`, branch `edge-ends`, created from the tip of `viewpoint-notations` at `30f3d8a81` (not from the trunk: that branch already adds `hollowCircle` and validates terminations, and it merges on the trunk before this one). A fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-edgeends`, branch `edge-ends`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA

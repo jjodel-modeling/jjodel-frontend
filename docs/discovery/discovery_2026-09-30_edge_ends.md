@@ -136,3 +136,40 @@ R-B9, R-B9-bis, R-VP-15, R-VP-23..R-VP-26; `docs/discovery/discovery_2026-09-29_
 `…/authoring/__tests__/edgeAuthoring.test.ts` (:1-50); `…/EditorV2.scss` (:2703-2790, :2839-2847, :4425-4500);
 `…/_themes.scss` (grep); `frontend/src/components/ui/ConditionalEditor/ConditionalEditor.tsx` (:1-140); `…/ui/Select` (grep);
 `frontend/scripts/hooks/critical-zone.mjs` (:1-80); `frontend/node_modules/@xyflow/system/dist/esm/index.js` (:945-970, :1144-1152).
+
+## 9. Phase 2 (added 2026-09-30, after the Phase 1 commit `77c2f946b`)
+
+Code `8f3e7c307` and `462fba92d` (13 and 3 files; the list of §5, all within it). The decisions of §0 were adopted as
+recommended and are rows R-EE-1..R-EE-4 of `docs/decisions.md` (`provisional, unattended`). Q2 was checked by a second
+agent (RC-27): verified, the line is in R-EE-3.
+
+- **Tests first.** The three new files (`irEdgeEnds.test.ts`, `irEdgeEndsRender.test.ts`, `edgeEndGlyphs.test.ts`) ran
+  red on `77c2f946b`: 14 failed and one file at import, 4 passed, the markup pins among them. The pins are 9 digests of
+  UnifiedEdge markup (the seven existing ends on orthogonal, two-segment, straight, curved and arc routes, the R-VP-23
+  end labels as halo and as badge, an unknown end, an M2 reference), taken on `77c2f946b` before any edit; green after.
+- **Gates on `462fba92d`.** `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; `npx vitest run`
+  6255 passed, 0 failed, the 9 known files red at import; `npm run build` exit 0. `irValidate.test.ts:643` (the
+  vocabulary pin) extended with the seven names.
+- **Mutation bench** (`frontend/scripts/smoke/_tmp_edgeends_bench.mjs`, gitignored; 10 on the resolver, 13 on the trim
+  and its use): first run 20/23, on `8f3e7c307` plus the source-end and no-else per-instance test; survivors the
+  resolver's `rules` guard (redundant with its catch), the split's right half (no test read the kept curve after a start
+  cut), the zero-trim early return. `462fba92d` removed the guard (the mutant now drops the catch, and dies), added the
+  start-cut curve test and carried the per-instance test. Second run **22/23**; the survivor, the zero-trim early return,
+  is equivalent: with no cut every path returns `d` itself.
+- **Lane probe** on 3093 (`_tmp_edgeends_probe.ts` + `_tmp_edgeends_fixture.ts`, DPR 2, 1600×1000): **16/16**. The four
+  demo scenes in the default viewpoint against the shots taken on `77c2f946b` before any edit: 0 px left of the rail and
+  on the rail in all three runs (byte-identical in one; the others differ only in the Jodie launcher's animated glyph,
+  masked, as in every lane since C2). The fixture: metamodel EdgeEnds, 84 boxes, 42 links, one row per termination (all
+  fourteen), three links per row (orthogonal, straight, curved), the end at both ends from a fourteen-rule Conditional on
+  `$end.value`; at widths 1 and 2, light and dark: every new end cut at its back (±0.6 px) at both ends with its marker,
+  glyph stroke = width, every old end uncut and on its old marker; hollow fill `rgb(241, 245, 249)` light and
+  `rgb(30, 41, 59)` dark, each equal to `var(--canvas-bg)` resolved in the pane; the `erZeroOrMany` row carries six
+  multiplicities and six roles. Console: the one pre-existing `failed to get project {project: null}`, also in the base run.
+- **Crops** (`sips -Z 600`, gitignored) in `frontend/scripts/smoke/_tmp_edgeends_crops/`: `ee_fixture_w{1,2}_{light,dark}_600.png`,
+  `ee_fixture_w{1,2}_{light,dark}_new_600.png`; detail `ee_fixture_w1_light_zoom.png`, `ee_fixture_w2_dark_zoom.png`; the
+  default scenes `ee_{sm,petri,esm,flowB}_default_{base,after}.png`.
+- **Seen on the crops, not measured:** a Manhattan or bezier tip stops on the handle's outer edge, a few px off the box
+  (§7 risk 2, as every IR arrow today); on the diagonal rows the labels of the `erZeroOrMany` row sit close to the glyph
+  (§7 risk 3).
+- **Incident.** The RC-27 verifier wrote two scratch folders in `/tmp` (`rc27probe`, `rc27old`), outside the worktree;
+  removed by this session after its report.
