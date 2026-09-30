@@ -393,3 +393,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Freeze not reproduced (28 replays of a-d, 21 live rewrites, 3 reloads: 0). A nested L-proxy in `ir` (unguarded, `action.ts:321`) pins the renderer: Cmd+S unresponsive 5.5-232.7 s, id control fine. Points 2 and 3 are missing renderers, measured per contrasto. Side finding 1 confirmed: Cmd+S saves Navbar's stale `LProject`, dropping a new viewpoint. Headless never reports `hidden`, so the timeout arm is void.
 **Prompt document name**: 2026-09-29 19:35
+
+## 2026-09-30 — merge: ir-freeze-disc into alfonso-frontend-jjtl (P-2026-09-30-1104)
+**Prompt**: `claude_2026-09-30_1104_prompt_merge_ir-freeze-disc.md`, a direct merge by `lane-run merge --direct`, no session: `ir-freeze-disc` into `alfonso-frontend-jjtl`; the worker stopped `blocked` on one red vitest gate and left the merge commit `d8f7be824`; closed by hand by the chat (P9).
+**Files touched**: merge `d8f7be824` from the branch side (`docs/discovery/discovery_2026-09-29_ir_authoring_freeze.md`, the discovery prompt, its entry in this inbox, union-resolved); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d8f7be824` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5905 tests in 234 files, 9 red at import, 8 failed, all in harness script tests (`scripts/hooks/__tests__/laneRun.test.ts`, `laneRunDirect.test.ts`, `bashGuard.test.ts`, `scripts/gates/__tests__/check-addonly.test.ts`, `docsDigest.test.ts`, `traceIndex.test.ts`), 3 of them already red on the receiving tip before the merge; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0. Re-run on `d8f7be824` at 15:04-15:07 with load average 3-5: the six files alone 352 tests, 0 failed; the full suite 5905 tests, 0 failed, the 9 known files red at import (`window is not defined`). The red gate was load-induced.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (docs only)
+**Notes**: Rollback tag `pre-ir-freeze-disc` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1104/result.json`. Ticket, second occurrence after P-2026-09-29-1239 and despite the vitest-timeout lane: the harness script tests still time out under load in the merge gate; run `scripts/**/__tests__` serially or with a longer timeout in the gate worker.
+**Prompt document name**: 2026-09-30 11:04
