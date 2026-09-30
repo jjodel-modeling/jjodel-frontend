@@ -592,3 +592,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-09-30-1940
 **Detail**: docs/discovery/discovery_2026-09-30_edge_click_properties.md
+
+## 2026-09-30 — merge: edge-click-properties into alfonso-frontend-jjtl (P-2026-09-30-2105)
+**Prompt**: `claude_2026-09-30_2105_prompt_merge_edge-click-properties.md`, a direct merge by `lane-run merge --direct`, no session: `edge-click-properties` at `1079a9740` into `alfonso-frontend-jjtl`, merge base `45ff6c290`, 4 commits on the branch side.
+**Files touched**: merge `35d8c8e89`: 8 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-30_edge_click_properties.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1940_prompt_edge_click_properties.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/hooks/useJjomSelection.ts`, `frontend/src/components/editor-v2/utils/__tests__/edgeSelectionTarget.test.ts`, `frontend/src/components/editor-v2/utils/edgeSelectionTarget.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `35d8c8e89` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5997 tests in 241 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on lane 1940 DOM measures: M1 ref click shows DValue slot, object-as-edge shows DObject, M2 ref unchanged, 4 demo scenes 0 px; merge gates green
+**Notes**: Rollback tag `pre-edge-click-properties` on `31999a630` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2105/result.json`.
+**Prompt document name**: 2026-09-30 21:05
