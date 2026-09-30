@@ -16,7 +16,7 @@ import { isUsableEndpointExpr } from './edgeEndpoints';
 import { authoredCornerRadius } from './shapeRegistry';
 import { usableSizeAxis } from '../../nodes/nodeSizing';
 import { isConditionalValue } from '../../../ui/ConditionalEditor/conditional';
-import type { AnyViewIR, EdgeCurve, EdgeViewIR, EntryMark, LabelPosition, NodeViewIR, PaddingToken, Predicate, RowViewIR, TextSource, VertexViewIR } from './irTypes';
+import type { AnyViewIR, EdgeCurve, EdgeTermination, EdgeViewIR, EntryMark, LabelPosition, NodeViewIR, PaddingToken, Predicate, RowViewIR, TextSource, VertexViewIR } from './irTypes';
 
 /**
  * Closed vocabulary of `edge.routing` (R-B9, 2026-08-03): the persisted identifiers,
@@ -46,6 +46,16 @@ export const VALID_ENTRY_VALUES: ReadonlyArray<EntryMark> = ['dot', 'arrow'];
 
 /** Closed vocabulary of `edge.curve` (R-VP-22), same shape and reasoning as VALID_ROUTING_VALUES; absent = the routing path. */
 export const VALID_CURVE_VALUES: ReadonlyArray<EdgeCurve> = ['arc'];
+
+/**
+ * Closed vocabulary of `edge.terminations` (P-2026-09-30-1521, R-VP-24): the persisted ends, `hollowCircle`
+ * among them. A Record keyed on the union, as VALID_PREDICATE_OPS below: an end added to the type without
+ * being added here fails to compile. Authoring-time only (R-B9-bis): the render stays permissive, an unknown
+ * end draws no marker (UnifiedEdge `irMarkerUrl`). An absent end is legal: the compile's default applies.
+ */
+export const VALID_TERMINATIONS: Record<EdgeTermination, true> = {
+    none: true, openArrow: true, closedArrow: true, hollowTriangle: true, filledDiamond: true, hollowDiamond: true, hollowCircle: true,
+};
 
 /**
  * Closed vocabulary of `LabelSpec.position` (P-2026-09-29-1245): the four inside positions and
@@ -348,6 +358,20 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
                 ok: false,
                 error: `[ir] edge.curve must be ${VALID_CURVE_VALUES.join(' | ')}, or absent for the routing path, read ${JSON.stringify(curve)}`,
             };
+        }
+
+        // Termination vocabulary (R-VP-24): same criterion as routing, each end read as unknown for the same reason.
+        const terminations: unknown = (ir as EdgeViewIR).edge?.terminations;
+        if (terminations && typeof terminations === 'object') {
+            for (const end of ['sourceEnd', 'targetEnd'] as const) {
+                const t: unknown = (terminations as Record<string, unknown>)[end];
+                if (t !== undefined && (typeof t !== 'string' || !Object.prototype.hasOwnProperty.call(VALID_TERMINATIONS, t))) {
+                    return {
+                        ok: false,
+                        error: `[ir] edge.terminations.${end} must be one of ${Object.keys(VALID_TERMINATIONS).join(' | ')}, or absent for the default end, read ${JSON.stringify(t)}`,
+                    };
+                }
+            }
         }
 
         // Endpoint vocabulary (R-B13/R-B15): the FIRST endpoint rule of validateIR,

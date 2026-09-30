@@ -577,6 +577,8 @@ function UnifiedEdge(props: EdgeProps) {
     const markerIRHollowTriangleId = `ir-triangle-hollow-${id}`;
     const markerIRFilledDiamondId = `ir-diamond-filled-${id}`;
     const markerIRHollowDiamondId = `ir-diamond-hollow-${id}`;
+    // R-VP-24 (P-2026-09-30-1521): the inhibitor arc's end, mounted only where an end uses it.
+    const markerIRHollowCircleId = `ir-circle-hollow-${id}`;
     // Map an EdgeTermination to its IR-only per-edge marker (all defined below,
     // gated on isIREdge, and colored inline from irStroke).
     const irMarkerUrl = (t: string | undefined): string | undefined => {
@@ -586,6 +588,7 @@ function UnifiedEdge(props: EdgeProps) {
             case 'hollowTriangle': return `url(#${markerIRHollowTriangleId})`;
             case 'filledDiamond': return `url(#${markerIRFilledDiamondId})`;
             case 'hollowDiamond': return `url(#${markerIRHollowDiamondId})`;
+            case 'hollowCircle': return `url(#${markerIRHollowCircleId})`;
             case 'none':
             default: return undefined;
         }
@@ -940,6 +943,22 @@ function UnifiedEdge(props: EdgeProps) {
                         >
                             <path d="M 0 4 L 6 0 L 12 4 L 6 8 Z" className="reference-marker hollow" style={irMarkerStrokeStyle} />
                         </marker>
+                        {/* Hollow circle (R-VP-24): the inhibitor arc's end. Mounted only on an edge one of whose
+                            ends uses it, so every other IR edge keeps its markup byte for byte. The far side of
+                            the circle sits on the end point; reversed at a start, so it stays outside the node. */}
+                        {(irSourceTermination === 'hollowCircle' || irTargetTermination === 'hollowCircle') && (
+                            <marker
+                                id={markerIRHollowCircleId}
+                                viewBox="0 0 10 10"
+                                refX="9"
+                                refY="5"
+                                markerWidth="8"
+                                markerHeight="8"
+                                orient="auto-start-reverse"
+                            >
+                                <circle cx="5" cy="5" r="4" className="reference-marker hollow" style={irMarkerStrokeStyle} />
+                            </marker>
+                        )}
                     </>
                 )}
             </defs>

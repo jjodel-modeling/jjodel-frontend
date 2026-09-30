@@ -3,7 +3,7 @@
  * Pure: no store, no React — irValidate -> irCompile is joiner-free.
  */
 import { describe, it, expect } from 'vitest';
-import { validateIR, VALID_LABEL_POSITIONS, VALID_PADDING_VALUES, VALID_ROUTING_VALUES } from '../irValidate';
+import { validateIR, VALID_LABEL_POSITIONS, VALID_PADDING_VALUES, VALID_ROUTING_VALUES, VALID_TERMINATIONS } from '../irValidate';
 import { clearCompileCache, compileView, irHash, LABEL_ANCHORS } from '../irCompile';
 import { defaultObjectViewIR, defaultEdgeViewIR } from '../irDefaults';
 import { CONTAINER_ENDPOINT } from '../irTypes';
@@ -629,5 +629,45 @@ describe('validateIR — C2 keys (R-VP-20)', () => {
         ok('c2v-default-object', defaultObjectViewIR());
         ok('c2v-default-edge', defaultEdgeViewIR());
         ok('c2v-label-no-axes', labelled({ fontSize: 10, fontWeight: 'semibold' }));
+    });
+});
+
+describe('validateIR — edge.terminations closed vocabulary (R-VP-24, P-2026-09-30-1521)', () => {
+    /** Written through `unknown`, as routing: the values this rule catches come from outside the type. */
+    const ended = (terminations: unknown): EdgeViewIR => ({
+        ...defaultEdgeViewIR(),
+        metaclasses: ['InhibitorArc'],
+        edge: { terminations } as EdgeViewIR['edge'],
+    });
+
+    it('the vocabulary is the union: the six ends of before and hollowCircle', () => {
+        expect(Object.keys(VALID_TERMINATIONS)).toEqual(['none', 'openArrow', 'closedArrow', 'hollowTriangle', 'filledDiamond', 'hollowDiamond', 'hollowCircle']);
+    });
+
+    it('accepts hollowCircle at either end, and every other end of the vocabulary', () => {
+        for (const t of Object.keys(VALID_TERMINATIONS)) {
+            clearCompileCache();
+            expect(validateIR(`e-end-${t}-target`, ended({ sourceEnd: 'none', targetEnd: t })), t).toEqual({ ok: true });
+            expect(validateIR(`e-end-${t}-source`, ended({ sourceEnd: t })), t).toEqual({ ok: true });
+        }
+    });
+
+    it('accepts no terminations key, and an object missing either end (the compile\'s defaults)', () => {
+        clearCompileCache();
+        expect('terminations' in defaultEdgeViewIR().edge).toBe(false);
+        expect(validateIR('e-end-absent', defaultEdgeViewIR())).toEqual({ ok: true });
+        expect(validateIR('e-end-empty', ended({}))).toEqual({ ok: true });
+    });
+
+    it('rejects an end outside the vocabulary, naming the end and the value read', () => {
+        for (const [end, value] of [['targetEnd', 'hollowcircle'], ['sourceEnd', 'circle'], ['targetEnd', ''], ['targetEnd', 0], ['sourceEnd', null]] as const) {
+            clearCompileCache();
+            const r = validateIR(`e-end-bad-${end}-${String(value)}`, ended({ [end]: value }));
+            expect(r.ok, `${end} ${String(value)}`).toBe(false);
+            if (!r.ok) {
+                expect(r.error).toContain(`edge.terminations.${end}`);
+                expect(r.error).toContain(JSON.stringify(value));
+            }
+        }
     });
 });

@@ -187,35 +187,38 @@ const LINE_EDGE = { terminations: { sourceEnd: 'none', targetEnd: 'none' }, line
 
 describe('A4 leaves every other notation as it was', () => {
     // Measured on the A1+A3 tip (47a7cceb1) before any A4 edit: the documents WITH their provenance.
+    // R-VP-25 (P-2026-09-30-1521): the 24 lists that held a filled arrowhead moved with the open one, each to the
+    // digest predicted on 2cde09984's code, before any A2 edit: the tip's documents with every closedArrow an
+    // openArrow and their provenance hash recomputed.
     const PINNED: Record<string, string> = {
         'DemoESM flowchart': '2862738923d879f7',
-        'DemoESM flowchartIso': '96c781898a02e1fd',
-        'DemoESM generic': 'c9aae43a5d357246',
+        'DemoESM flowchartIso': '65941a499cffa865',
+        'DemoESM generic': 'f5b415d0f3a7512c',
         'DemoESM petri': 'dc9e0e57e0d30d05',
         'DemoESM stateMachine': 'a7c31157af785978',
-        'DemoESM statechart': 'b8411eab63bf1fa3',
+        'DemoESM statechart': '743e5eada3182f5a',
         'DemoFlowB flowchart': '7e7715ad457a678a',
-        'DemoFlowB flowchartIso': '164eaa4f456e03bd',
-        'DemoFlowB generic': '785774f02752745f',
-        'DemoFlowB petri': '7ef0daafc7705d8f',
+        'DemoFlowB flowchartIso': 'b7cb2ce5f5a14bd0',
+        'DemoFlowB generic': '1ebd123804dc75a1',
+        'DemoFlowB petri': 'b8415f0e187edacc',
         'DemoFlowB stateMachine': '723e4c4e2883e64b',
-        'DemoFlowB statechart': '3c153f16aeccd224',
+        'DemoFlowB statechart': '90451f737522f3cc',
         'DemoPEST flowchart': 'e1dcb9c59b5a3f7b',
-        'DemoPEST flowchartIso': '46b0b9a470322854',
-        'DemoPEST generic': 'c8cab24a97799088',
+        'DemoPEST flowchartIso': '042f60bcc91d9e26',
+        'DemoPEST generic': '6d66ed919a80875b',
         'DemoPEST petri': '0d845ed009b85a0a',
         'DemoPEST stateMachine': '6fb489cf0bf7c6ab',
-        'DemoPEST statechart': '85c748644fcbe838',
+        'DemoPEST statechart': '6018e49cd52e7a9c',
         'DemoPetri flowchart': 'c7f24aeb60cfb60b',
-        'DemoPetri flowchartIso': 'e558111252d92e62',
-        'DemoPetri generic': '431bcadaa7622d3f',
-        'DemoPetri petri': '16da88787ee483c3',
+        'DemoPetri flowchartIso': '02ed35a22d5bcf3f',
+        'DemoPetri generic': 'dab0b1ddf3a00c38',
+        'DemoPetri petri': '8e7711ee80601155',
         'DemoPetri stateMachine': '67fe6343eba8001a',
-        'DemoPetri statechart': '40aef18bde22257c',
+        'DemoPetri statechart': '8c464c188cbec9e6',
         'ERDLanguage ERD flowchart': '-',
         'ERDLanguage ERD flowchartIso': '-',
-        'ERDLanguage ERD generic': 'a2021d90e5463a46',
-        'ERDLanguage ERD petri': 'c946ddf64b118639',
+        'ERDLanguage ERD generic': 'a718dff62a153ed7',
+        'ERDLanguage ERD petri': '642a52fda44c5cd7',
         'ERDLanguage ERD stateMachine': '-',
         'ERDLanguage ERD statechart': '-',
         'ERDLanguage Library flowchart': '-',
@@ -225,21 +228,21 @@ describe('A4 leaves every other notation as it was', () => {
         'ERDLanguage Library stateMachine': '-',
         'ERDLanguage Library statechart': '-',
         'ERDLanguage Relational flowchart': 'dfcc6e64954e642b',
-        'ERDLanguage Relational flowchartIso': '0ce82200b74ad5c5',
-        'ERDLanguage Relational generic': '4a0c9550435bf220',
-        'ERDLanguage Relational petri': '90cc6fc41b4920ac',
+        'ERDLanguage Relational flowchartIso': '12281bc7135b87f2',
+        'ERDLanguage Relational generic': 'c86b731e691610e0',
+        'ERDLanguage Relational petri': 'a45225ea6a124bc8',
         'ERDLanguage Relational stateMachine': '5d63c63c613a5fc8',
-        'ERDLanguage Relational statechart': '0bbe2e03464abf06',
+        'ERDLanguage Relational statechart': 'ac8c99e26e734bf9',
         'MDE ERD (1) flowchart': '8ab6df421217f157',
         'MDE ERD (1) flowchartIso': '727faf7f3e030138',
-        'MDE ERD (1) generic': '6ed84c97c3a8c99e',
-        'MDE ERD (1) petri': '272daa3178e0a27d',
+        'MDE ERD (1) generic': '0e6fb2e157d7fff9',
+        'MDE ERD (1) petri': '2851b77e48fdd704',
         'MDE ERD (1) stateMachine': '3b8d796198a7d457',
         'MDE ERD (1) statechart': 'a6344cb79ce431bb',
         'MDE ERD flowchart': '574ac48c053bc5fa',
         'MDE ERD flowchartIso': 'dd39f0a6229dd899',
-        'MDE ERD generic': '837143793b5b358b',
-        'MDE ERD petri': '5dd490a272a21111',
+        'MDE ERD generic': '56b57c4cbf8511b0',
+        'MDE ERD petri': 'f17c6f3738ada970',
         'MDE ERD stateMachine': '876c7a17aa462489',
         'MDE ERD statechart': '8f38c3b0478f25d1',
     };
@@ -247,7 +250,7 @@ describe('A4 leaves every other notation as it was', () => {
     it('Generic, State machine, Statechart, Petri net, Flowchart and Flowchart (ISO) derive the tip\'s documents on the corpus', () => {
         const got: Record<string, string> = {};
         for (const [name, make, stored] of CORPUS) {
-            for (const n of DERIVED_NOTATIONS.map(x => x.id).filter(id => id !== 'erChen')) {
+            for (const n of DERIVED_NOTATIONS.map(x => x.id).filter(id => id !== 'erChen' && id !== 'petriClassic')) {
                 const mm = configured(make, stored);
                 const choice = { notation: n, classRoles: dialogPrefill(mm.lookup, mm.id, n, []).roles };
                 got[`${name} ${n}`] = canDerive(choice) ? digest(derivedDocuments(mm.lookup, mm.id, choice)) : '-';
@@ -262,9 +265,10 @@ describe('A4 leaves every other notation as it was', () => {
 // ---------------------------------------------------------------------------
 
 describe('ER (Chen) in the list', () => {
-    it('last of the seven, with no simulation profile, its four class roles', () => {
-        expect(DERIVED_NOTATIONS.map(n => n.id)).toEqual(['generic', 'stateMachine', 'statechart', 'petri', 'flowchart', 'flowchartIso', 'erChen']);
-        const er = DERIVED_NOTATIONS[6];
+    it('last of the eight, with no simulation profile, its four class roles', () => {
+        // A2 (P-2026-09-30-1521, R-VP-24): Petri net (classic) after Petri net.
+        expect(DERIVED_NOTATIONS.map(n => n.id)).toEqual(['generic', 'stateMachine', 'statechart', 'petri', 'petriClassic', 'flowchart', 'flowchartIso', 'erChen']);
+        const er = DERIVED_NOTATIONS[7];
         expect([er.label, er.profile]).toEqual(['ER (Chen)', null]);
         expect(notationRoles('erChen')).toEqual(['entity', 'relationship', 'attribute', 'key']);
         expect(notationRoles('erChen').map(r => roleLabel('erChen', r))).toEqual(['Entity', 'Relationship', 'Attribute', 'Key']);

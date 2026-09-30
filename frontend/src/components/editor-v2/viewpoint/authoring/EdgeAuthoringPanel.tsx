@@ -119,6 +119,8 @@ const TERMINATION_OPTIONS = [
     { value: 'hollowTriangle', label: 'Hollow triangle' },
     { value: 'filledDiamond', label: 'Filled diamond' },
     { value: 'hollowDiamond', label: 'Hollow diamond' },
+    // R-VP-24 (P-2026-09-30-1521): listed, so a view that holds it shows it instead of «None».
+    { value: 'hollowCircle', label: 'Hollow circle' },
 ];
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */

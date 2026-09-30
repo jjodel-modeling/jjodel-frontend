@@ -9,7 +9,8 @@
  *   and Flowchart (ISO 5807) beside their siblings, on the same profiles; a stored binding still
  *   opens on the sibling. Slice A4 (P-2026-09-30-0440, R-VP-23) adds ER (Chen), with no simulation
  *   profile: its table offers the four ER class roles (erSignals.ts), prefilled by the name and
- *   structure signals.
+ *   structure signals. Slice A2 (P-2026-09-30-1521, R-VP-24) adds Petri net (classic) beside Petri
+ *   net, on its profile; a stored Petri binding opens on it.
  * - **The table**: a metaclass → role map over the class roles the notation's system profile edits
  *   and the derivation draws. Its prefill is the binder's (`bindProfile`), with the metamodel's stored
  *   simulation binding as bag, inverted per class; when the metamodel already has a derived viewpoint
@@ -39,7 +40,7 @@ import type { ErRoleId } from './erSignals';
 
 type Lookup = Record<string, any>;
 
-export type DerivedNotationId = 'generic' | 'stateMachine' | 'statechart' | 'petri' | 'flowchart' | 'flowchartIso' | 'erChen';
+export type DerivedNotationId = 'generic' | 'stateMachine' | 'statechart' | 'petri' | 'petriClassic' | 'flowchart' | 'flowchartIso' | 'erChen';
 
 /** A role of a notation's table: a simulation class role, or an ER one (A4, R-VP-23). */
 export type NotationRoleId = RoleId | ErRoleId;
@@ -62,6 +63,8 @@ export const DERIVED_NOTATIONS: readonly DerivedNotation[] = [
     // A1 (P-2026-09-30-0355, R-VP-22): beside State machine, on its profile and prefill.
     { id: 'statechart', label: 'Statechart (UML)', profile: 'stateMachine', nodeLabel: 'State' },
     { id: 'petri', label: 'Petri net', profile: 'petri', nodeLabel: 'Place' },
+    // A2 (P-2026-09-30-1521, R-VP-24): beside Petri net, on its profile and prefill.
+    { id: 'petriClassic', label: 'Petri net (classic)', profile: 'petri', nodeLabel: 'Place' },
     { id: 'flowchart', label: 'Flowchart', profile: 'flowchart', nodeLabel: 'Node' },
     // A3 (P-2026-09-30-0355, R-VP-22): beside Flowchart, on its profile and prefill.
     { id: 'flowchartIso', label: 'Flowchart (ISO 5807)', profile: 'flowchart', nodeLabel: 'Node' },
@@ -135,9 +138,12 @@ function storedBinding(lookup: Lookup, metamodelId: string): Readonly<Record<str
     return ROLE_CATALOG.some(d => d.key !== null && typeof raw[d.key] === 'string' && raw[d.key] !== '') ? raw : null;
 }
 
-/** The notation each system profile draws in: the four control-flow machines are state machines. */
+/**
+ * The notation each system profile draws in: the four control-flow machines are state machines. A Petri
+ * binding opens on Petri net (classic) (A2, R-VP-24); the others on the sibling of their pair (R-VP-22).
+ */
 const PROFILE_NOTATION: Readonly<Record<SystemProfileId, DerivedNotationId>> = {
-    petri: 'petri', flowchart: 'flowchart', stateMachine: 'stateMachine', extendedStateMachine: 'stateMachine',
+    petri: 'petriClassic', flowchart: 'flowchart', stateMachine: 'stateMachine', extendedStateMachine: 'stateMachine',
     dfa: 'stateMachine', nfa: 'stateMachine', moore: 'stateMachine', mealy: 'stateMachine',
 };
 
@@ -146,7 +152,7 @@ function notationOfBinding(bag: Readonly<Record<string, unknown>>): DerivedNotat
     const { profile } = storedProfile(bag);
     const system = profile.system ? profile.id : profile.basedOn;
     if (system && isSystemProfileId(system)) return PROFILE_NOTATION[system];
-    if (profile.shape === 'petri') return 'petri';
+    if (profile.shape === 'petri') return 'petriClassic';
     // A binding with a Trigger is a state machine, one without an activity (R-VP-17).
     return typeof bag.simTrigger === 'string' && bag.simTrigger !== '' ? 'stateMachine' : 'flowchart';
 }
@@ -249,8 +255,8 @@ function derivationRolesOf(lookup: Lookup, metamodelId: string, choice: DeriveCh
         const b = bindings[d.id];
         if (d.key !== null && d.kind !== 'class' && b?.status === 'bound') bag[d.key] = b.value;
     }
-    // A1 and A3 (R-VP-22): the two notations drawn over their sibling's documents say so.
-    const notation = choice.notation === 'statechart' || choice.notation === 'flowchartIso' ? choice.notation : undefined;
+    // A1 and A3 (R-VP-22), A2 (R-VP-24): the notations drawn over their sibling's documents say so.
+    const notation = choice.notation === 'statechart' || choice.notation === 'flowchartIso' || choice.notation === 'petriClassic' ? choice.notation : undefined;
     return { bag, shape: profile.shape, classRoles, ...(notation ? { notation } : {}) };
 }
 

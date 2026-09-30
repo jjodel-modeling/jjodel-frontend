@@ -592,7 +592,9 @@ describe('deriveViewpointIRs — without roles the documents are byte-equal to b
 
     it('the Petri documents with their roles are byte-equal to before V1', () => {
         // Measured on the derivation of f8e041498, before V1 (P-2026-09-29-1331) touched it (R-VP-16).
-        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('d43f9d79bf78f9f4');
+        // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
+        // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
+        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('997f12afe5b58db0');
     });
 
     it('a control-flow shape with no role bound keeps the boxes: the notation is keyed on the roles, not the shape', () => {
@@ -683,15 +685,15 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         });
     });
 
-    it('Arc: a 1 px ink line ending in the filled arrowhead, no routing (the orthogonal router)', () => {
+    it('Arc: a 1 px ink line ending in the open arrowhead (R-VP-25), no routing (the orthogonal router)', () => {
         expect(edge(byClass(views(), 'Arc')).edge).toEqual({
             source: '$src.value', target: '$tgt.value',
-            terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' },
+            terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
             line: { color: NAME_INK, width: 1 },
         });
     });
 
-    it('InhibitorArc: the same line, no routing, the open arrowhead kept until the circle termination (lane 3)', () => {
+    it('InhibitorArc: the same line, no routing, the open arrowhead as the arc (the circle is the classic notation\'s, R-VP-24)', () => {
         expect(edge(byClass(views(), 'InhibitorArc')).edge).toEqual({
             source: '$src.value', target: '$tgt.value',
             terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
@@ -771,6 +773,159 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         expect(deriveViewpointIRs(PETRI.lookup, PETRI.id, { bag: elsewhere, shape: 'petri' })).toEqual(bound);
         // The place is the catalogue's Place for the Symbol Editor.
         expect(recognizeSymbol(vertex(byClass(bound, 'Place')).shape).map(p => p.id)).toContain('petri-place');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Petri net (classic), slice A2 (P-2026-09-30-1521, R-VP-24, mockup petri-A.svg)
+// ---------------------------------------------------------------------------
+
+describe('deriveViewpointForBinding — Petri net (classic), over the Petri documents (R-VP-24)', () => {
+    const roles = (): DerivationRoles => ({ ...boundRoles(PETRI, 'petri'), notation: 'petriClassic' });
+    const views = () => deriveViewpointForBinding(PETRI.lookup, PETRI.id, roles()) as DerivedView[];
+    const all = (name: string) => views().filter(v => v.className === name);
+    const WEIGHT_LABEL = { center: { from: 'path', expr: '$weight.value' }, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } };
+    const ABOVE_ONE = { op: 'gt', left: '$weight.value', right: { kind: 'number', value: 1 } };
+
+    it('Place, as a whole document: a 44 px circle in the ink, the name outside below, the marking as dots up to 4 and a number from 5', () => {
+        const place = byClass(views(), 'Place');
+        expect(place.rule).toBe('role:node');
+        const eqTokens = (n: number) => ({ op: 'eq', left: '$tokens.value', right: { kind: 'number', value: n } });
+        expect(place.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Place'], authoringMetaclassPins: { Place: 'PETRI.Place' },
+            exclusive: true, label: 'View for Place', defaultSize: { width: 44, height: 44 },
+            shape: {
+                form: 'circle', fill: 'var(--color-inode-surface)',
+                border: { color: NAME_INK, width: 1, style: 'solid' },
+                labels: [
+                    { position: 'outside', anchor: 's', source: NAME, style: { fontSize: 13, fontWeight: 'medium', color: NAME_INK } },
+                    {
+                        position: 'center', source: { from: 'path', expr: '$tokens.value' }, style: { fontSize: 15, fontWeight: 'semibold', color: NAME_INK },
+                        visible: { when: { op: 'gt', left: '$tokens.value', right: { kind: 'number', value: 4 } }, then: true, else: false },
+                    },
+                ],
+                marker: {
+                    rules: [
+                        { when: eqTokens(1), then: 'dot' }, { when: eqTokens(2), then: 'dots-2' },
+                        { when: eqTokens(3), then: 'dots-3' }, { when: eqTokens(4), then: 'dots-4' },
+                    ],
+                    default: '',
+                },
+            },
+        });
+    });
+
+    it('Transition, as a whole document: an upright bar 10×44 in the catalogue ink, its name outside to the right', () => {
+        const t = byClass(views(), 'Transition');
+        expect(t.rule).toBe('role:transition');
+        expect(t.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
+            exclusive: true, label: 'View for Transition', defaultSize: { width: 10, height: 44 },
+            shape: {
+                form: 'bar', fill: INK,
+                border: { color: INK, width: 1, style: 'solid' },
+                labels: [{ position: 'outside', anchor: 'e', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
+            },
+        });
+    });
+
+    it('Arc: an arc in the ink ending in the open arrowhead; a second document labels a weight above 1', () => {
+        const [plain, weighted] = all('Arc').map(edge);
+        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' };
+        expect(all('Arc')).toHaveLength(2);
+        expect(plain.edge).toEqual(line);
+        expect(plain.predicate).toBeUndefined();
+        expect(plain.priority).toBeUndefined();
+        expect(weighted.edge).toEqual({ ...line, labels: WEIGHT_LABEL });
+        expect(weighted.predicate).toEqual(ABOVE_ONE);
+        expect(weighted.priority).toBe(1);
+        expect(weighted.label).toBe('View for Arc (weight)');
+    });
+
+    it('InhibitorArc: the same two documents, ending in the hollow circle', () => {
+        const [plain, weighted] = all('InhibitorArc').map(edge);
+        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'hollowCircle' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' };
+        expect(all('InhibitorArc').map(v => v.rule)).toEqual(['role:inhibitorArc', 'role:inhibitorArc']);
+        expect(plain.edge).toEqual(line);
+        expect(weighted.edge).toEqual({ ...line, labels: WEIGHT_LABEL });
+        expect(weighted.predicate).toEqual(ABOVE_ONE);
+        expect(weighted.priority).toBe(1);
+    });
+
+    it('the tokens on the objects: one to four dots, the number from five, nothing at zero or unset; the name always', () => {
+        clearCompileCache();
+        const { lookup, ctx } = petriWorld();
+        const cv = compileView('derived:PlaceClassic', vertex(byClass(views(), 'Place')));
+        const seen = ['pEmpty', 'p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'].map(id => [
+            id, String(cv.marker!(ctx, id) ?? ''), cv.labels.filter(l => l.visible(ctx, id)).map(l => String(l.text(ctx, id))),
+        ]);
+        expect(seen).toEqual([
+            ['pEmpty', '', [lookup.pEmpty.name]], ['p0', '', [lookup.p0.name]],
+            ['p1', 'dot', [lookup.p1.name]], ['p2', 'dots-2', [lookup.p2.name]], ['p3', 'dots-3', [lookup.p3.name]], ['p4', 'dots-4', [lookup.p4.name]],
+            ['p5', '', [lookup.p5.name, '5']], ['p6', '', [lookup.p6.name, '6']], ['p7', '', [lookup.p7.name, '7']],
+        ]);
+        expect(cv.labels.map(l => [l.position, l.anchor ?? null])).toEqual([['outside', 's'], ['center', null]]);
+    });
+
+    it('the compiled arcs: the ink, 1 px, the arc, the ends; the bar keeps the catalogue hex', () => {
+        clearCompileCache();
+        const { ctx } = petriWorld();
+        for (const [n, id, end] of [['Arc', 'a1', 'openArrow'], ['InhibitorArc', 'i1', 'hollowCircle']]) {
+            const ce = compileEdgeView(`derived:${n}Classic`, edge(all(n)[0]));
+            expect(ce.lineColor!(ctx, id), n).toBe(NAME_INK);
+            expect(ce.lineWidth!(ctx, id), n).toBe(1);
+            expect(ce.curve, n).toBe('arc');
+            expect(ce.terminations, n).toEqual({ sourceEnd: 'none', targetEnd: end });
+        }
+        const bar = compileView('derived:TransitionClassic', vertex(byClass(views(), 'Transition')));
+        expect(bar.fill!(ctx, 't1')).toBe(INK);
+        expect(bar.form(ctx, 't1')).toBe('bar');
+    });
+
+    it('the order and the rules are the Petri net\'s, each weighted document right after its plain one', () => {
+        const petri = deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri'));
+        const expected = petri.flatMap(v => (v.ir.kind === 'edge' ? [[v.className, v.rule], [v.className, v.rule]] : [[v.className, v.rule]]));
+        expect(views().map(v => [v.className, v.rule])).toEqual(expected);
+    });
+
+    it('with no marking bound, no marks; with no weight bound, one document per arc class', () => {
+        const r = roles();
+        const bag = { ...r.bag };
+        delete bag.simInitialMarking;
+        delete bag.simArcWeight;
+        const bare = deriveViewpointForBinding(PETRI.lookup, PETRI.id, { ...r, bag });
+        const place = vertex(byClass(bare, 'Place'));
+        expect(place.shape.marker).toBeUndefined();
+        expect(place.shape.labels!.map(l => l.position)).toEqual(['outside']);
+        expect(bare.filter(v => v.ir.kind === 'edge').map(v => v.className)).toEqual(['InhibitorArc', 'Arc']);
+        expect(bare.filter(v => v.ir.kind === 'edge').every(v => edge(v).edge.labels === undefined)).toBe(true);
+    });
+
+    it('a class with no role, and the Terminal, keep the Petri drawing', () => {
+        const mm = metamodel('PX', 'PetriExtra', [
+            cls('PNode', { abstract: true }),
+            cls('Place', { supers: ['PNode'], attrs: [attr('tokens', EINT)] }),
+            cls('Sink', { supers: ['Place'] }),
+            cls('Transition', { supers: ['PNode'] }),
+            cls('Arc', { attrs: [attr('weight', EINT)], refs: [ref('src', 'PNode'), ref('tgt', 'PNode')] }),
+            cls('Note', { attrs: [attr('text', ESTRING)] }),
+        ]);
+        const base = boundRoles(mm, 'petri');
+        const table = { 'PX.Place': 'node', 'PX.Sink': 'terminal', 'PX.Transition': 'transition', 'PX.Arc': 'arc' };
+        const petri = deriveViewpointForBinding(mm.lookup, mm.id, { ...base, classRoles: table });
+        const classic = deriveViewpointForBinding(mm.lookup, mm.id, { ...base, classRoles: table, notation: 'petriClassic' });
+        expect(byClass(classic, 'Note')).toEqual(byClass(petri, 'Note'));
+        expect(byClass(classic, 'Sink')).toEqual(byClass(petri, 'Sink'));
+        expect(vertex(byClass(classic, 'Place')).shape.labels![0].position).toBe('outside');
+    });
+
+    it('every document passes the IR validator', () => {
+        for (const v of views()) expect(validateIR(`derived:${v.className}`, v.ir), v.className).toEqual({ ok: true });
+    });
+
+    it('Petri net itself is untouched by the classic notation: the same documents without it', () => {
+        const { notation: _n, ...plain } = roles();
+        expect(deriveViewpointForBinding(PETRI.lookup, PETRI.id, plain)).toEqual(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')));
     });
 });
 
@@ -1059,7 +1214,8 @@ const MONO = { fontFamily: 'mono', fontSize: 11 };
 const PLAIN_BORDER = { color: BORDER, width: 1, style: 'solid' };
 const INITIAL_BORDER = { color: NAME_INK, width: 2, style: 'solid' };
 const FINAL_BORDER = { color: NAME_INK, width: 3, style: 'double' };
-const C_ARROW = { sourceEnd: 'none', targetEnd: 'closedArrow' };
+// R-VP-25 (P-2026-09-30-1521): the generic edges end in the open arrowhead.
+const C_ARROW = { sourceEnd: 'none', targetEnd: 'openArrow' };
 const genericOf = (mm: Fixture) => deriveGenericViewpointIRs(mm.lookup, mm.id);
 const kindsOf = (views: AnyDerivedView[], kind: string) => views.filter(v => v.ir.kind === kind).map(v => v.className).sort();
 
@@ -1206,7 +1362,7 @@ describe('deriveGenericViewpointIRs — whole documents', () => {
         expect(vertex(byClass(views, 'Terminal')).shape).toEqual({ form: 'rounded', fill: SURFACE, border: FINAL_BORDER, labels: [eyebrow('Terminal'), NAME_LABEL] });
     });
 
-    it('DemoPEST Transition: from the container to nextState, the filled arrowhead, the ink line, the event', () => {
+    it('DemoPEST Transition: from the container to nextState, the open arrowhead (R-VP-25), the ink line, the event', () => {
         const v = byClass(genericOf(PEST), 'Transition');
         expect(v.rule).toBe('structure:contained-ref');
         expect(v.ir).toEqual({
@@ -1284,7 +1440,7 @@ describe('deriveGenericViewpointIRs — rule 2, edges: today\'s recognition, a l
         }
     });
 
-    it('every edge: the ink line at 1 px, the filled arrowhead, no routing', () => {
+    it('every edge: the ink line at 1 px, the open arrowhead (R-VP-25), no routing', () => {
         for (const [name, mm] of ALL_FIXTURES) {
             for (const v of genericOf(mm)) {
                 if (v.ir.kind !== 'edge') continue;
@@ -1574,10 +1730,12 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
 
     it('the role-keyed documents are byte-equal to before the generic notation', () => {
         // Measured on the derivation of 58aa78ba9, before P-2026-09-29-2350 touched it.
+        // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
+        // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: 'd43f9d79bf78f9f4', DemoESM: 'a9bd2541f1f94b09', DemoFlowB: '58aeb562c91a731f',
+            DemoPEST: '99e03cfb52856542', DemoPetri: '997f12afe5b58db0', DemoESM: 'a9bd2541f1f94b09', DemoFlowB: '58aeb562c91a731f',
         });
     });
 });

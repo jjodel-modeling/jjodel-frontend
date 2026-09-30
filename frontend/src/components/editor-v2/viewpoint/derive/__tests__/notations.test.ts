@@ -124,7 +124,8 @@ function configured(make: () => Fixture, profileId: string): Fixture {
 /** [name, fixture with its binding applied, the stored profile, the notation it opens on] */
 const DEMOS: [string, () => Fixture, string, DerivedNotationId][] = [
     ['DemoPEST', PEST, 'stateMachine', 'stateMachine'],
-    ['DemoPetri', PETRI, 'petri', 'petri'],
+    // A2 (P-2026-09-30-1521, R-VP-24): a stored Petri binding opens on Petri net (classic).
+    ['DemoPetri', PETRI, 'petri', 'petriClassic'],
     ['DemoESM', ESM, 'extendedStateMachine', 'stateMachine'],
     ['DemoFlowB', FLOWB, 'flowchart', 'flowchart'],
 ];
@@ -171,13 +172,15 @@ function derivedVp(id: string, state: Record<string, unknown>) {
 // ---------------------------------------------------------------------------
 
 describe('the notations offered in slice D', () => {
-    it('Generic first, then State machine, Statechart (UML), Petri net, Flowchart, Flowchart (ISO 5807), each on its system profile, and ER (Chen)', () => {
+    it('Generic first, then State machine, Statechart (UML), Petri net, Petri net (classic), Flowchart, Flowchart (ISO 5807), each on its system profile, and ER (Chen)', () => {
         // A1 and A3 (P-2026-09-30-0355, R-VP-22): the two new notations beside their siblings, which stay.
         expect(DERIVED_NOTATIONS.map(n => [n.id, n.label, n.profile])).toEqual([
             ['generic', 'Generic', null],
             ['stateMachine', 'State machine', 'stateMachine'],
             ['statechart', 'Statechart (UML)', 'stateMachine'],
             ['petri', 'Petri net', 'petri'],
+            // A2 (P-2026-09-30-1521, R-VP-24): beside Petri net, which stays.
+            ['petriClassic', 'Petri net (classic)', 'petri'],
             ['flowchart', 'Flowchart', 'flowchart'],
             ['flowchartIso', 'Flowchart (ISO 5807)', 'flowchart'],
             // A4 (P-2026-09-30-0440, R-VP-23): ER (Chen), no profile (erChen.test.ts).
@@ -297,7 +300,7 @@ describe('initialNotation — the select opens on the stored binding\'s notation
         const petriBag = appliedBag(petri, 'petri');
         delete petriBag.simProfile;
         petri.lookup[petri.id]._state = petriBag;
-        expect(initialNotation(petri.lookup, petri.id, [])).toBe('petri');
+        expect(initialNotation(petri.lookup, petri.id, [])).toBe('petriClassic');
 
         const sm = PEST();
         const smBag = appliedBag(sm, 'stateMachine');
@@ -323,7 +326,7 @@ describe('initialNotation — the select opens on the stored binding\'s notation
     it('every system profile names one notation', () => {
         const mm = PEST();
         const want: Record<string, DerivedNotationId> = {
-            petri: 'petri', flowchart: 'flowchart', stateMachine: 'stateMachine', extendedStateMachine: 'stateMachine',
+            petri: 'petriClassic', flowchart: 'flowchart', stateMachine: 'stateMachine', extendedStateMachine: 'stateMachine',
             dfa: 'stateMachine', nfa: 'stateMachine', moore: 'stateMachine', mealy: 'stateMachine',
         };
         for (const [profile, notation] of Object.entries(want)) {
@@ -389,7 +392,8 @@ describe('regeneration — the dialog opens on the latest derived viewpoint of t
     it('an unknown notation in the latest is not a notation: the stored binding decides', () => {
         const mm = configured(PETRI, 'petri');
         mm.lookup.vp1 = derivedVp('vp1', { derivedFrom: mm.id, derivedNotation: 'er' });
-        expect(initialNotation(mm.lookup, mm.id, ['vp1'])).toBe('petri');
+        // A2 (R-VP-24): the stored Petri binding opens on Petri net (classic).
+        expect(initialNotation(mm.lookup, mm.id, ['vp1'])).toBe('petriClassic');
     });
 });
 
@@ -443,15 +447,20 @@ describe('canDerive — Generic always; a role notation once a class has a role'
 describe('derivedDocuments — the role-keyed renderings, unchanged, now applied when picked', () => {
     // The digests of viewpointDerivation.test.ts («the role-keyed documents are byte-equal to before the
     // generic notation»), measured on 58aa78ba9: today's role-keyed documents from the Apply bag.
+    // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
+    // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
     const PINNED: Record<string, string> = {
-        DemoPEST: '99e03cfb52856542', DemoPetri: 'd43f9d79bf78f9f4', DemoESM: 'a9bd2541f1f94b09', DemoFlowB: '58aeb562c91a731f',
+        DemoPEST: '99e03cfb52856542', DemoPetri: '997f12afe5b58db0', DemoESM: 'a9bd2541f1f94b09', DemoFlowB: '58aeb562c91a731f',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
         const got: Record<string, string> = {};
         for (const [name, make, stored] of DEMOS) {
             const mm = configured(make, stored);
-            got[name] = digest(withoutProvenance(derivedDocuments(mm.lookup, mm.id, defaultChoice(mm.lookup, mm.id, []))));
+            // A2 (R-VP-24): DemoPetri opens on Petri net (classic); its sibling, on the same table, is the pinned one.
+            const choice = defaultChoice(mm.lookup, mm.id, []);
+            const role = choice.notation === 'petriClassic' ? { ...choice, notation: 'petri' as const } : choice;
+            got[name] = digest(withoutProvenance(derivedDocuments(mm.lookup, mm.id, role)));
         }
         expect(got).toEqual(PINNED);
     });
@@ -636,11 +645,14 @@ const irOf = (views: AnyDerivedView[], name: string, n = 0) => views.filter(v =>
 
 describe('A1 and A3 leave the notations of slice D as they were', () => {
     // Measured on the D tip (c676fc6f6) before any A1 or A3 edit: the documents WITH their provenance.
+    // R-VP-25 (P-2026-09-30-1521): Generic ×4, DemoPetri petri and DemoFlowB petri moved with the open arrowhead,
+    // each to the digest predicted on 2cde09984's code, before any A2 edit: every closedArrow an openArrow and
+    // the provenance hash recomputed.
     const PINNED_D: Record<string, string> = {
-        'DemoPEST generic': 'c8cab24a97799088', 'DemoPEST stateMachine': '6fb489cf0bf7c6ab', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'e1dcb9c59b5a3f7b',
-        'DemoPetri generic': '431bcadaa7622d3f', 'DemoPetri stateMachine': '67fe6343eba8001a', 'DemoPetri petri': '16da88787ee483c3', 'DemoPetri flowchart': 'c7f24aeb60cfb60b',
-        'DemoESM generic': 'c9aae43a5d357246', 'DemoESM stateMachine': 'a7c31157af785978', 'DemoESM petri': 'dc9e0e57e0d30d05', 'DemoESM flowchart': '2862738923d879f7',
-        'DemoFlowB generic': '785774f02752745f', 'DemoFlowB stateMachine': '723e4c4e2883e64b', 'DemoFlowB petri': '7ef0daafc7705d8f', 'DemoFlowB flowchart': '7e7715ad457a678a',
+        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '6fb489cf0bf7c6ab', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'e1dcb9c59b5a3f7b',
+        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': '67fe6343eba8001a', 'DemoPetri petri': '8e7711ee80601155', 'DemoPetri flowchart': 'c7f24aeb60cfb60b',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': 'a7c31157af785978', 'DemoESM petri': 'dc9e0e57e0d30d05', 'DemoESM flowchart': '2862738923d879f7',
+        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '723e4c4e2883e64b', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '7e7715ad457a678a',
     };
 
     it('Generic, State machine, Petri net and Flowchart derive the D tip\'s documents, byte for byte, provenance included', () => {
@@ -706,10 +718,10 @@ describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
         expect(irOf(views, 'Terminal').shape).toEqual({ ...box, border: { color: INK, width: 3, style: 'double' } });
     });
 
-    it('a transition is an arc in the ink, the filled arrowhead, labelled by its event in the C2 label style', () => {
+    it('a transition is an arc in the ink, the open arrowhead (R-VP-25), labelled by its event in the C2 label style', () => {
         expect(irOf(views, 'Transition').edge).toEqual({
             source: 'container', target: '$nextState.value',
-            terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' },
+            terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
             line: { color: INK, width: 1 }, curve: 'arc',
             labels: { center: { from: 'path', expr: '$event.value' }, style: LABEL_STYLE },
         });
@@ -776,11 +788,11 @@ describe('Flowchart (ISO 5807) — A3', () => {
         }
     });
 
-    it('a flow is orthogonal (today\'s router), in the ink, the filled arrowhead, its guard the label through the template', () => {
+    it('a flow is orthogonal (today\'s router), in the ink, the open arrowhead (R-VP-25), its guard the label through the template', () => {
         const { views } = derivedWith(FLOWB, 'flowchart', 'flowchartIso');
         const flows = views.filter(v => v.className === 'ControlFlow');
         expect(flows.map(v => v.ir.label)).toEqual(['View for ControlFlow', 'View for ControlFlow (yes)', 'View for ControlFlow (no)']);
-        const base = { source: '$source.value', target: '$target.value', terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' }, line: { color: INK, width: 1 } };
+        const base = { source: '$source.value', target: '$target.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: INK, width: 1 } };
         expect(irOf(views, 'ControlFlow', 0).edge).toEqual({ ...base, labels: { template: [{ from: 'path', expr: '$guard.value' }], style: LABEL_STYLE } });
         expect(irOf(views, 'ControlFlow', 0).predicate).toBeUndefined();
         for (const [n, word] of [[1, 'yes'], [2, 'no']] as const) {
@@ -868,5 +880,112 @@ describe('Flowchart (ISO 5807) — A3', () => {
         const flows = views.filter(v => v.className === 'Flow');
         expect(flows.length).toBe(1);
         expect((flows[0].ir as any).edge.labels).toBeUndefined();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Slice A2 (P-2026-09-30-1521, R-VP-24, R-VP-25): Petri net (classic), and the open arrowheads
+// ---------------------------------------------------------------------------
+
+/** A Petri object for the resolver: its slots by feature, each on the class that declares it. */
+function petriObject(mm: Fixture, lookup: Record<string, any>, id: string, cls: string, slots: Record<string, unknown[]>) {
+    lookup[id] = { id, name: id, className: 'DObject', instanceof: mm.classId(cls), features: Object.keys(slots).map(f => `${id}.${f}`) };
+    for (const [f, values] of Object.entries(slots)) {
+        const owner = f === 'tokens' ? 'Place' : f === 'guard' ? 'Transition' : 'Arc';
+        lookup[`${id}.${f}`] = { id: `${id}.${f}`, className: 'DValue', instanceof: `${mm.classId(owner)}.${f}`, values };
+    }
+}
+
+describe('Petri net (classic) in the list and the dialog (R-VP-24)', () => {
+    it('after Petri net, on the petri profile, with the same roles, labels and prefill', () => {
+        const ids = DERIVED_NOTATIONS.map(n => n.id);
+        expect(ids.indexOf('petriClassic')).toBe(ids.indexOf('petri') + 1);
+        expect(notationRoles('petriClassic')).toEqual(notationRoles('petri'));
+        expect(roleLabel('petriClassic', 'node')).toBe('Place');
+        expect(roleLabel('petriClassic', 'inhibitorArc')).toBe('Inhibitor arc');
+        for (const [name, make, stored] of DEMOS) {
+            const mm = configured(make, stored);
+            expect(dialogPrefill(mm.lookup, mm.id, 'petriClassic', []), name).toEqual(dialogPrefill(mm.lookup, mm.id, 'petri', []));
+        }
+    });
+
+    it('DemoPetri preselects it; the latest derived viewpoint still decides, Petri net included', () => {
+        const mm = configured(PETRI, 'petri');
+        expect(initialNotation(mm.lookup, mm.id, [])).toBe('petriClassic');
+        expect(defaultChoice(mm.lookup, mm.id, []).notation).toBe('petriClassic');
+        mm.lookup.vp1 = derivedVp('vp1', { derivedFrom: mm.id, derivedNotation: 'petri' });
+        expect(initialNotation(mm.lookup, mm.id, ['vp1'])).toBe('petri');
+        mm.lookup.vp2 = derivedVp('vp2', { derivedFrom: mm.id, derivedNotation: 'petriClassic', [`derivedRole_${mm.classId('Place')}`]: 'node' });
+        expect(initialNotation(mm.lookup, mm.id, ['vp1', 'vp2'])).toBe('petriClassic');
+        expect(dialogPrefill(mm.lookup, mm.id, 'petriClassic', ['vp1', 'vp2'])).toEqual({ roles: { [mm.classId('Place')]: 'node' }, from: 'derived' });
+    });
+
+    it('DemoPEST and DemoFlowB still open on the siblings (R-VP-22, not amended here)', () => {
+        expect(initialNotation(configured(PEST, 'stateMachine').lookup, 'PEST', [])).toBe('stateMachine');
+        expect(initialNotation(configured(FLOWB, 'flowchart').lookup, 'FLOWB', [])).toBe('flowchart');
+    });
+
+    it('stores its id as the notation, and stamps every document with it; every document is valid', () => {
+        const mm = configured(PETRI, 'petri');
+        const choice = defaultChoice(mm.lookup, mm.id, []);
+        expect(derivedViewpointState(mm.lookup, mm.id, choice).derivedNotation).toBe('petriClassic');
+        const views = derivedDocuments(mm.lookup, mm.id, choice);
+        for (const v of views) {
+            expect((v.ir as any).generated.notation, v.className).toBe('petriClassic');
+            expect(validateIR(`derived:${v.className}`, v.ir), v.className).toEqual({ ok: true });
+        }
+        expect(views.map(v => v.className)).toEqual(['Place', 'Transition', 'InhibitorArc', 'InhibitorArc', 'Arc', 'Arc']);
+    });
+
+    it('resolved on objects: the weight labels an arc above 1 only, the inhibitor ends in the hollow circle', () => {
+        const mm = configured(PETRI, 'petri');
+        const views = derivedDocuments(mm.lookup, mm.id, defaultChoice(mm.lookup, mm.id, []));
+        const lookup: Record<string, any> = { ...mm.lookup };
+        petriObject(mm, lookup, 'p', 'Place', { tokens: [1] });
+        petriObject(mm, lookup, 't', 'Transition', { guard: [] });
+        const arcs: [string, string, unknown[]][] = [
+            ['a1', 'Arc', [1]], ['a2', 'Arc', [2]], ['a0', 'Arc', []], ['i1', 'InhibitorArc', [1]], ['i3', 'InhibitorArc', [3]],
+        ];
+        for (const [id, cls, weight] of arcs) petriObject(mm, lookup, id, cls, { src: ['p'], tgt: ['t'], weight });
+        const ids = views.map((_, i) => `V${i}`);
+        views.forEach((v, i) => { lookup[ids[i]] = { id: ids[i], viewpoint: 'VP', ir: v.ir }; });
+        const index = getIRIndex({ viewpoint: 'VP', viewelements: ids, idlookup: lookup }, 'a2_weights')!;
+        const ctx = makeDrawReadCtx(lookup);
+        const seen = arcs.map(([id, cls]) => {
+            const cv = resolveObjectAsEdgeView(id, mm.classId(cls), index, ctx, lookup)!;
+            return [id, cv.labelText ? String(cv.labelText(ctx, id) ?? '') : null, cv.terminations.targetEnd, cv.curve ?? null];
+        });
+        expect(seen).toEqual([
+            ['a1', null, 'openArrow', 'arc'], ['a2', '2', 'openArrow', 'arc'], ['a0', null, 'openArrow', 'arc'],
+            ['i1', null, 'hollowCircle', 'arc'], ['i3', '3', 'hollowCircle', 'arc'],
+        ]);
+    });
+});
+
+describe('open arrowheads in every derived notation that draws one (R-VP-25)', () => {
+    /** Every termination the notation's documents write, over the four configured demos. */
+    const ends = (notation: DerivedNotationId) => {
+        const out = new Set<string>();
+        for (const [, make, stored] of DEMOS) {
+            const mm = configured(make, stored);
+            const choice = { notation, classRoles: dialogPrefill(mm.lookup, mm.id, notation, []).roles };
+            if (!canDerive(choice)) continue;
+            for (const v of derivedDocuments(mm.lookup, mm.id, choice)) {
+                const t = (v.ir as any).edge?.terminations;
+                if (t) out.add(`${t.sourceEnd}>${t.targetEnd}`);
+            }
+        }
+        return [...out].sort();
+    };
+
+    it('Generic, State machine, Statechart (UML), Petri net, Flowchart and Flowchart (ISO 5807): the open arrowhead only', () => {
+        for (const n of ['generic', 'stateMachine', 'statechart', 'petri', 'flowchart', 'flowchartIso'] as DerivedNotationId[]) {
+            expect(ends(n), n).toEqual(['none>openArrow']);
+        }
+    });
+
+    it('Petri net (classic): the open arrowhead, the hollow circle on the inhibitor arc; no filled arrowhead anywhere', () => {
+        expect(ends('petriClassic')).toEqual(['none>hollowCircle', 'none>openArrow']);
+        for (const n of DERIVED_NOTATIONS.map(x => x.id)) expect(ends(n).some(e => e.includes('closedArrow')), n).toBe(false);
     });
 });

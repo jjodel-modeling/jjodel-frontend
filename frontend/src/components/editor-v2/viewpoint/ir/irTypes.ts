@@ -612,7 +612,10 @@ export type EdgeTermination =
     | 'closedArrow'
     | 'hollowTriangle'
     | 'filledDiamond'
-    | 'hollowDiamond';
+    | 'hollowDiamond'
+    /** R-VP-24 (P-2026-09-30-1521): a hollow circle, the inhibitor arc's end in «Petri net (classic)».
+     *  The name of R-VP-15 (1). Persisted, never renamed (R-B9); additive, no migration. */
+    | 'hollowCircle';
 
 /**
  * Reserved endpoint token of an object-as-edge view (R-B13): resolves to the

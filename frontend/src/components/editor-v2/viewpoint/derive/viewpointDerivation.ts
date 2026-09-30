@@ -29,8 +29,8 @@
  *   italic, and draws no token marks; a transition is a `bar` in the catalogue
  *   ink with its name centred in the name ink, drawn over the bar where it does
  *   not fit; an arc and an inhibitor arc are a 1 px line in the same ink, on the
- *   default (orthogonal) router, the arc ending in the filled arrowhead. With no
- *   role bound every class keeps the structure's box.
+ *   default (orthogonal) router, both ending in the open arrowhead (R-VP-25,
+ *   P-2026-09-30-1521). With no role bound every class keeps the structure's box.
  * - **The control-flow notation** (P-2026-09-29-1331, lane V1 of
  *   docs/discovery/discovery_2026-09-29_visual_concrete_syntax.md §5, R-VP-17),
  *   under the `controlFlow` shape with the Node role bound: a transition is a
@@ -44,8 +44,8 @@
  * - **The generic structural notation** (variant C, P-2026-09-29-2350, R-VP-19,
  *   mockups docs/mockups/derived-viewpoints/*-C-generic.svg), what «Derive
  *   viewpoint» draws when no role is bound (`deriveGenericViewpointIRs`): the
- *   edges of the structure-only derivation, in the name ink with the filled
- *   arrowhead, labelled by one text source or by a template, the label in the
+ *   edges of the structure-only derivation, in the name ink with the open
+ *   arrowhead (R-VP-25), labelled by one text source or by a template, the label in the
  *   halo style; every node a white rounded box with the metaclass name as an
  *   eyebrow over its name, the subclasses named initial or final marked on the
  *   border; a class held by a node's multi-valued composition a row of that
@@ -96,9 +96,10 @@ export interface DerivationRoles {
     /**
      * The drawing over the role-keyed documents of the profile (slices A1 and A3, P-2026-09-30-0355,
      * R-VP-22): `statechart` (Statechart (UML), on `stateMachine`), `flowchartIso` (Flowchart (ISO
-     * 5807), on `flowchart`). Absent: the role-keyed documents of R-VP-15..18, as before.
+     * 5807), on `flowchart`); slice A2 (P-2026-09-30-1521, R-VP-24): `petriClassic` (Petri net
+     * (classic), on `petri`). Absent: the role-keyed documents of R-VP-15..18, as before.
      */
-    readonly notation?: 'statechart' | 'flowchartIso';
+    readonly notation?: 'statechart' | 'flowchartIso' | 'petriClassic';
 }
 
 export interface DerivedView {
@@ -337,9 +338,10 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
             };
             if (stringAttr) edge.labels = { center: { from: 'path', expr: path(stringAttr.name) } };
             if (shape === 'petri' && (role === 'arc' || role === 'inhibitorArc')) {
-                // The inhibitor keeps the open arrowhead until a circle termination exists (lane 3).
-                // No routing: the default orthogonal router (R-VP-16).
-                if (role === 'arc') edge.terminations = { sourceEnd: 'none', targetEnd: 'closedArrow' };
+                // The arc ends in the open arrowhead (R-VP-25), as the inhibitor already did; the
+                // inhibitor's circle is Petri net (classic)'s (R-VP-24). No routing: the default
+                // orthogonal router (R-VP-16).
+                if (role === 'arc') edge.terminations = { sourceEnd: 'none', targetEnd: 'openArrow' };
                 edge.line = { color: NAME_INK, width: 1 };
             }
             if (flow && role === 'transition') {
@@ -433,7 +435,7 @@ const anyKindOf = (names: string[]): Predicate => (names.length === 1 ? isKindOf
  * An unknown metamodel gives `[]`.
  *
  * - **Edges** are the edges of `deriveViewpointIRs(…, null)`, endpoints unchanged: a 1 px
- *   line in the name ink ending in the filled arrowhead. The label is the first plain
+ *   line in the name ink ending in the open arrowhead (R-VP-25, P-2026-09-30-1521). The label is the first plain
  *   single reference that is not an endpoint (the event of a transition), else the first
  *   slot other than the name as a template `name = value` (`weight = 2`), else the name
  *   slot; a sub-edge is labelled by its stereotype `«Name»`, before its own reference or
@@ -534,7 +536,7 @@ export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): 
 
         if (v.ir.kind === 'edge') {
             const { source, target } = v.ir.edge;
-            const edge: EdgeViewIR['edge'] = { source, target, terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' } };
+            const edge: EdgeViewIR['edge'] = { source, target, terminations: { sourceEnd: 'none', targetEnd: 'openArrow' } };
             const text = edgeLabel(v.classId, [source, target]);
             if (text) edge.labels = { ...text, style: EDGE_LABEL_STYLE() };
             edge.line = { color: NAME_INK, width: 1 };
@@ -629,7 +631,7 @@ const centredName = (fontSize: number, fontWeight: 'semibold' | 'medium'): Label
  *   (`shape.entry: 'dot'`), the Terminal with the double border of R-VP-17. A state holding slots
  *   other than its name keeps the attribute rows of R-VP-17 (3), its name then on top; the
  *   Terminal holds none (a UML final state has no behaviour).
- * - A transition: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the filled arrowhead, labelled by
+ * - A transition: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the open arrowhead (R-VP-25), labelled by
  *   its event, else its guard (R-VP-17 (2)), in the label style of C2.
  * - Every other document (a class with no role, a fork or join bar) is the State machine's.
  */
@@ -641,7 +643,7 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             if (role !== 'transition') return v;
             const { source, target, labels } = v.ir.edge;
             const edge: EdgeViewIR['edge'] = {
-                source, target, terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc',
+                source, target, terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc',
             };
             if (labels?.center) edge.labels = { center: labels.center, style: EDGE_LABEL_STYLE() };
             return { ...v, ir: { ...v.ir, edge } };
@@ -689,7 +691,7 @@ export function isoFormOf(role: string | undefined, className: string): 'stadium
  * - A node with a role: its ISO form (`isoFormOf`: the Initial, the Terminal and an Activity final a
  *   stadium, then the name signals, a rectangle with the form's 4 px radius otherwise), white, 1 px
  *   in the name ink, its name centred in 13 px 500 in the ink, no compartment.
- * - A flow: today's orthogonal router, 1 px in the ink, the filled arrowhead; its guard the label
+ * - A flow: today's orthogonal router, 1 px in the ink, the open arrowhead (R-VP-25); its guard the label
  *   through a C2 template, in the C2 label style. A guard that is literally `true` or `false` reads
  *   `yes` or `no`: two more documents for the class, each with a predicate on the guard and priority 1,
  *   so the resolver picks them over the plain one when they hold.
@@ -705,7 +707,7 @@ export function deriveIsoFlowchartViewpointIRs(lookup: Lookup, metamodelId: stri
             if (role !== 'transition') { out.push(v); continue; }
             const { source, target } = v.ir.edge;
             const base = (): EdgeViewIR['edge'] => ({
-                source, target, terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' }, line: { color: NAME_INK, width: 1 },
+                source, target, terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 },
             });
             const guard = typeof guardKey === 'string' ? attributesOf(v.classId).find(a => a.id === guardKey) : undefined;
             const edge = base();
@@ -735,6 +737,115 @@ export function deriveIsoFlowchartViewpointIRs(lookup: Lookup, metamodelId: stri
             },
         };
         out.push({ ...v, ir });
+    }
+    return out;
+}
+
+// ---------------------------------------------------------------------------
+// Petri net (classic) (slice A2, R-VP-24)
+// ---------------------------------------------------------------------------
+
+/** The marker of 1..4 tokens, by count (markerRegistry.ts, the rows of R-VP-15 (1)); from 5 the place shows the number. */
+const TOKEN_MARKERS: readonly string[] = ['dot', 'dots-2', 'dots-3', 'dots-4'];
+/** The place of mockup A: a circle of radius 22. */
+const CLASSIC_PLACE_SIZE = { width: 44, height: 44 } as const;
+/**
+ * The transition of mockup A: an upright bar 10×44. The IR has no orientation, so the bar is upright for
+ * every transition; `defaultSize` is floored at 24 px per axis (nodes/nodeSizing.ts `defaultBoxFor`), so it
+ * draws 24×44 until that floor is lifted for the bar.
+ */
+const CLASSIC_BAR_SIZE = { width: 10, height: 44 } as const;
+
+/**
+ * Petri net (classic), slice A2 (R-VP-24, mockup docs/mockups/derived-viewpoints/petri-A.svg): the Petri
+ * net's documents (order, endpoints, rules) with the drawing of the textbook, beside R-VP-16's.
+ *
+ * - A place (Node): a white circle of 44 px, 1 px in the ink, its name outside below in 13 px 500 in the
+ *   ink; the initial marking (the Initial marking role) as one to four dots (`dot`, `dots-2..4`, in the
+ *   border ink) and as the number from five, 15 px 600 in the ink; nothing at zero or unset.
+ * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`) in the catalogue ink (R-VP-15 (4)), its name
+ *   outside to the right, in the label style of C2 (12 px 500, the quiet ink).
+ * - An arc: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the open arrowhead (R-VP-25); an inhibitor arc
+ *   the same, ending in the hollow circle. A weight above 1 (the Arc weight role) is the arc's label, in
+ *   the C2 label style: a second document per arc class, a predicate on the weight and priority 1, so the
+ *   resolver picks it where it holds, a subclass's own over its superclass's (priority, then specificity).
+ * - Every other document (a class with no role, the Terminal) is the Petri net's.
+ */
+export function deriveClassicPetriViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
+    const attributesOf = attributesHeld(lookup, metamodelId);
+    /** The name of the attribute a role binds, when `classId` holds it. */
+    const bound = (key: string, classId: string): string | undefined => {
+        const id = roles.bag[key];
+        return typeof id === 'string' && id !== '' ? attributesOf(classId).find(a => a.id === id)?.name : undefined;
+    };
+    const out: DerivedView[] = [];
+    for (const v of deriveViewpointIRs(lookup, metamodelId, roles)) {
+        const role = roleOfRule(v.rule);
+        const pins = { [v.className]: v.classId };
+        const label = `View for ${v.className}`;
+        if (v.ir.kind === 'edge') {
+            if (role !== 'arc' && role !== 'inhibitorArc') { out.push(v); continue; }
+            const { source, target, labels } = v.ir.edge;
+            const base = (): EdgeViewIR['edge'] => ({
+                source, target,
+                terminations: { sourceEnd: 'none', targetEnd: role === 'inhibitorArc' ? 'hollowCircle' : 'openArrow' },
+                line: { color: NAME_INK, width: 1 }, curve: 'arc',
+            });
+            const edge = base();
+            if (labels?.center) edge.labels = { center: labels.center, style: EDGE_LABEL_STYLE() };
+            out.push({ ...v, ir: { ...v.ir, edge } });
+            const weight = bound('simArcWeight', v.classId);
+            if (!weight) continue;
+            const weighted = base();
+            weighted.labels = { center: { from: 'path', expr: path(weight) }, style: EDGE_LABEL_STYLE() };
+            out.push({
+                ...v,
+                ir: {
+                    ...v.ir, label: `${label} (weight)`, edge: weighted, priority: 1,
+                    predicate: { op: 'gt', left: path(weight), right: { kind: 'number', value: 1 } },
+                },
+            });
+            continue;
+        }
+        if (role === 'node') {
+            const shape: ShapeSpec = {
+                form: 'circle', fill: SURFACE, border: { color: NAME_INK, width: 1, style: 'solid' },
+                labels: [{ position: 'outside', anchor: 's', source: NAME_SOURCE(), style: { fontSize: 13, fontWeight: 'medium', color: NAME_INK } }],
+            };
+            const tokens = bound('simInitialMarking', v.classId);
+            if (tokens) {
+                const t = path(tokens);
+                (shape.labels as LabelSpec[]).push({
+                    position: 'center', source: { from: 'path', expr: t }, style: { fontSize: 15, fontWeight: 'semibold', color: NAME_INK },
+                    visible: { when: { op: 'gt', left: t, right: { kind: 'number', value: TOKEN_MARKERS.length } }, then: true, else: false },
+                });
+                shape.marker = {
+                    rules: TOKEN_MARKERS.map((id, i) => ({ when: { op: 'eq' as const, left: t, right: { kind: 'number' as const, value: i + 1 } }, then: id })),
+                    default: '',
+                };
+            }
+            const ir: VertexViewIR = {
+                irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: pins, exclusive: true, label,
+                defaultSize: { ...CLASSIC_PLACE_SIZE }, shape,
+            };
+            out.push({ ...v, ir });
+            continue;
+        }
+        if (role === 'transition' && v.ir.kind === 'vertex') {
+            // The catalogue ink of the Petri bar (R-VP-15 (4)), on the border too: one solid bar.
+            const ink = v.ir.shape.fill as string;
+            const ir: VertexViewIR = {
+                irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: pins, exclusive: true, label,
+                defaultSize: { ...CLASSIC_BAR_SIZE },
+                shape: {
+                    form: 'bar', fill: ink, border: { color: ink, width: 1, style: 'solid' },
+                    labels: [{ position: 'outside', anchor: 'e', source: NAME_SOURCE(), style: EDGE_LABEL_STYLE() }],
+                },
+            };
+            out.push({ ...v, ir });
+            continue;
+        }
+        out.push(v);
     }
     return out;
 }
@@ -877,5 +988,7 @@ export function deriveViewpointForBinding(lookup: Lookup, metamodelId: string, r
     // A1 and A3 (R-VP-22): the drawing of the notation picked, over the role-keyed documents.
     if (roles.notation === 'statechart') return deriveStatechartViewpointIRs(lookup, metamodelId, roles);
     if (roles.notation === 'flowchartIso') return deriveIsoFlowchartViewpointIRs(lookup, metamodelId, roles);
+    // A2 (R-VP-24): Petri net (classic), over the Petri documents.
+    if (roles.notation === 'petriClassic') return deriveClassicPetriViewpointIRs(lookup, metamodelId, roles);
     return deriveViewpointIRs(lookup, metamodelId, roles);
 }
