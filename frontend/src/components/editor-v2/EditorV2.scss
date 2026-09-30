@@ -2832,6 +2832,20 @@
     box-shadow: none;
 }
 
+// Styled IR edge label (R-VP-20, TS3 of the TextStyle addendum): a declared `edge.labels.style`
+// drops the box for a halo in the canvas surface colour, about 4 px across, so the text reads
+// over the line it sits on. 12 px, 500 and the quiet ink are its defaults; the authored axes win
+// inline. An edge view without the key keeps the box above.
+.edge-label__text--halo {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-inode-quiet);
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    text-shadow: 0 0 2px var(--canvas-bg), 0 0 2px var(--canvas-bg), 0 0 4px var(--canvas-bg), 0 0 4px var(--canvas-bg);
+}
+
 // Cardinality — naked text, no background
 .edge-cardinality {
     font-family: var(--font-sans);

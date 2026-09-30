@@ -28,6 +28,7 @@ import { type Edge, type Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
 import type { CompiledCrossPath, CompiledEdgeView } from './irTypes';
 import { resolveEdgeView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
+import { resolveTextStyle } from './irCompile';
 
 type Idlookup = Record<string, any>;
 
@@ -44,6 +45,10 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
     const dash = DASH[lineStyle];
     // IR-authored label: undefined when the view declares none (leave the edge's own label).
     const labelText = cv.labelText ? String(cv.labelText(ctx, evalId) ?? '') : undefined;
+    // R-VP-20 (TS3): the label style resolved to CSS here, where the read context is; UnifiedEdge
+    // only paints it. A declared style with no axis is `{}`, still the halo label. Written only when
+    // declared, so an edge view without it decorates the edge as before.
+    const labelStyle = cv.labelStyle ? (resolveTextStyle(cv.labelStyle, ctx, evalId) ?? {}) : undefined;
     return {
         ...e,
         // Keep seeding the RF label (UnifiedEdge's labelText state reads props.label).
@@ -67,6 +72,7 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             irTargetTermination: cv.terminations.targetEnd,
             irLabelText: labelText,
             irLabelAlwaysVisible: labelText !== undefined,
+            ...(labelStyle ? { irLabelStyle: labelStyle } : {}),
         },
     };
 }

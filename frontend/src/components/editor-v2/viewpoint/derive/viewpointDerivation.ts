@@ -45,12 +45,13 @@
  *   mockups docs/mockups/derived-viewpoints/*-C-generic.svg), what «Derive
  *   viewpoint» draws when no role is bound (`deriveGenericViewpointIRs`): the
  *   edges of the structure-only derivation, in the name ink with the filled
- *   arrowhead, labelled only where one text source says it; every node a white
- *   rounded box with the metaclass name as an eyebrow over its name, the
- *   subclasses named initial or final marked on the border; a class held by a
- *   node's multi-valued composition a row of that node. What needs an IR key
- *   (letter spacing, a label template, the name slot kept out of the slot rows)
- *   waits for slice C2.
+ *   arrowhead, labelled by one text source or by a template, the label in the
+ *   halo style; every node a white rounded box with the metaclass name as an
+ *   eyebrow over its name, the subclasses named initial or final marked on the
+ *   border; a class held by a node's multi-valued composition a row of that
+ *   node. The IR keys of slice C2 (P-2026-09-30-0150, R-VP-20) carry the eyebrow's
+ *   letter spacing and case, the label templates and style, and the name slot
+ *   kept out of the slot rows.
  * - **No priority**: the list comes deepest class first and the resolver ranks
  *   an exact match above an inherited one (irResolveCore.ts), so the creation
  *   order settles every tie (decision 1).
@@ -65,7 +66,7 @@
 import { applyPresetToShape, getCatalogPreset } from '../ir/notationCatalog';
 import { CONTAINER_ENDPOINT } from '../ir/irTypes';
 import type {
-    EdgeViewIR, FieldCompartmentSpec, LabelSpec, Predicate, RowViewIR, ShapeSpec, TextSource, VertexViewIR,
+    EdgeViewIR, FieldCompartmentSpec, LabelSpec, Predicate, RowViewIR, ShapeSpec, TextSource, TextStyle, VertexViewIR,
 } from '../ir/irTypes';
 import { sketchOfMetamodel } from '../../sim/metamodelSketch';
 import { SKETCH_TYPE } from '../../../../model/simulation/profileBinder';
@@ -365,6 +366,13 @@ const FINAL_WORDS: ReadonlySet<string> = new Set(['final', 'terminal', 'end', 'a
 const isIdentity = (a: SketchAttribute): boolean => a.name === 'name' && a.type === SKETCH_TYPE.string;
 
 const NAME_SOURCE = (): TextSource => ({ from: 'intrinsic', prop: 'name' });
+/** The halo label of every labelled edge (R-VP-20 (5)): 12 px, 500, the quiet ink; a new object per view. */
+const EDGE_LABEL_STYLE = (): TextStyle => ({ fontSize: 12, fontWeight: 'medium', color: QUIET });
+/**
+ * A slot as `name = value`, the row of the attributes compartment, in a label template (R-VP-20 (4)).
+ * The literal is the value's caption: an unset slot draws neither. `lead` is the space after a stereotype.
+ */
+const slotRow = (a: SketchAttribute, lead = ''): TextSource[] => [{ from: 'literal', text: `${lead}${a.name} = ` }, { from: 'path', expr: path(a.name) }];
 const isKindOf = (className: string): Predicate => ({ op: 'isKind', class: className });
 const anyKindOf = (names: string[]): Predicate => (names.length === 1 ? isKindOf(names[0]) : { op: 'or', args: names.map(isKindOf) });
 
@@ -375,20 +383,20 @@ const anyKindOf = (names: string[]): Predicate => (names.length === 1 ? isKindOf
  *
  * - **Edges** are the edges of `deriveViewpointIRs(…, null)`, endpoints unchanged: a 1 px
  *   line in the name ink ending in the filled arrowhead. The label is the first plain
- *   single reference that is not an endpoint (the event of a transition), else the name
- *   slot; a sub-edge is labelled by its stereotype `«Name»`. Where the label would need
- *   two parts (`weight = 2`, `«InhibitorArc» weight = 3`) the edge stays unlabelled
- *   until the label template of slice C2.
+ *   single reference that is not an endpoint (the event of a transition), else the first
+ *   slot other than the name as a template `name = value` (`weight = 2`), else the name
+ *   slot; a sub-edge is labelled by its stereotype `«Name»`, before its own reference or
+ *   slot when it has one (`«InhibitorArc» weight = 3`). Every label in the halo style.
  * - **Rows**: a class held by a node through a multi-valued composition (its own or
  *   inherited, not into the holder's own hierarchy) is a row of that node, `name` or
  *   `name : type` in mono 11 px, unless it is the type of a plain reference, which needs
  *   it as a node. A class held only by another row, or by an edge, stays a node.
  * - **Nodes**: a white rounded box, 1 px in the node border token, sized from its content;
- *   the metaclass name, uppercased in the literal, in 10 px 600 quiet ink over the name in
- *   14 px 600 name ink. A subclass whose name holds the word initial or start takes a
- *   2 px ink border, one holding final, terminal, end or accept the double border.
- *   The slots other than the name in mono 11 px quiet rows; the name slot is listed too
- *   until the `exclude` key of slice C2, so a class whose only slot is the name has none.
+ *   the metaclass name as written, uppercased by `textTransform` and spaced 0.08 em, in
+ *   10 px 600 quiet ink over the name in 14 px 600 name ink. A subclass whose name holds
+ *   the word initial or start takes a 2 px ink border, one holding final, terminal, end or
+ *   accept the double border. The slots other than the name in mono 11 px quiet rows, the
+ *   name slot excluded; a class whose only slot is the name has none.
  */
 export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): AnyDerivedView[] {
     // The order and the edges are today's structure-only derivation (rule 2 of the prompt).
@@ -453,16 +461,20 @@ export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): 
         return undefined;
     };
 
-    /** One text source only: what needs a template (a slot `name = value`, a stereotype and more) is left out. */
-    const edgeLabel = (c: string, ends: ReadonlyArray<string | undefined>): TextSource | undefined => {
+    /** One text source where one says it; a template where the label needs two parts (R-VP-20 (4)). */
+    const edgeLabel = (c: string, ends: ReadonlyArray<string | undefined>): { center: TextSource } | { template: TextSource[] } | undefined => {
         const extra = referencesOf(c).find(r => !r.composition && upper(r.id) === 1 && !ends.includes(path(r.name)));
         const slot = attributesOf(c).find(a => !isIdentity(a));
         if (lineage(c).slice(1).some(s => edges.has(s))) {
-            return extra || slot ? undefined : { from: 'literal', text: `«${nameOf(c)}»` };
+            const stereotype = `«${nameOf(c)}»`;
+            if (!extra && !slot) return { center: { from: 'literal', text: stereotype } };
+            // The space is the caption of what follows, so the stereotype stands alone when that is unset.
+            const own: TextSource[] = extra ? [{ from: 'literal', text: ' ' }, { from: 'path', expr: path(extra.name) }] : slotRow(slot as SketchAttribute, ' ');
+            return { template: [{ from: 'literal', text: stereotype }, ...own] };
         }
-        if (extra) return { from: 'path', expr: path(extra.name) };
-        if (slot) return undefined;
-        return attributesOf(c).some(isIdentity) ? NAME_SOURCE() : undefined;
+        if (extra) return { center: { from: 'path', expr: path(extra.name) } };
+        if (slot) return { template: slotRow(slot) };
+        return attributesOf(c).some(isIdentity) ? { center: NAME_SOURCE() } : undefined;
     };
 
     return structure.map((v): AnyDerivedView => {
@@ -472,8 +484,8 @@ export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): 
         if (v.ir.kind === 'edge') {
             const { source, target } = v.ir.edge;
             const edge: EdgeViewIR['edge'] = { source, target, terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' } };
-            const center = edgeLabel(v.classId, [source, target]);
-            if (center) edge.labels = { center };
+            const text = edgeLabel(v.classId, [source, target]);
+            if (text) edge.labels = { ...text, style: EDGE_LABEL_STYLE() };
             edge.line = { color: NAME_INK, width: 1 };
             return {
                 classId: v.classId, className: v.className, rule: v.rule,
@@ -493,8 +505,8 @@ export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): 
 
         const mark = markOf(v.classId);
         const eyebrow: LabelSpec = {
-            position: 'top', source: { from: 'literal', text: v.className.toUpperCase() },
-            style: { fontSize: 10, fontWeight: 'semibold', color: QUIET },
+            position: 'top', source: { from: 'literal', text: v.className },
+            style: { fontSize: 10, fontWeight: 'semibold', color: QUIET, letterSpacing: 0.08, textTransform: 'uppercase' },
         };
         const name: LabelSpec = { position: 'top', source: NAME_SOURCE(), style: { fontSize: 14, fontWeight: 'semibold', color: NAME_INK } };
         const shape: ShapeSpec = {
@@ -511,6 +523,8 @@ export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): 
         const compartments: FieldCompartmentSpec[] = [];
         if (attributesOf(v.classId).some(a => !isIdentity(a))) {
             const slots = attributesCompartment();
+            // The name label already shows the identity slot (R-VP-20 (2)).
+            if (attributesOf(v.classId).some(isIdentity)) slots.source = { from: 'attributes', exclude: ['name'] };
             slots.rowFormat.style = { fontFamily: 'mono', fontSize: 11, color: QUIET };
             compartments.push(slots);
         }

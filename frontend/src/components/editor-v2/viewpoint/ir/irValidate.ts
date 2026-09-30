@@ -10,13 +10,13 @@
  * is a cache hit.
  */
 
-import { compileView, compileEdgeView, compileRowView, LABEL_ANCHORS } from './irCompile';
+import { compileView, compileEdgeView, compileRowView, LABEL_ANCHORS, TEXT_TRANSFORMS } from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
 import { isUsableEndpointExpr } from './edgeEndpoints';
 import { authoredCornerRadius } from './shapeRegistry';
 import { usableSizeAxis } from '../../nodes/nodeSizing';
 import { isConditionalValue } from '../../../ui/ConditionalEditor/conditional';
-import type { AnyViewIR, EdgeViewIR, LabelPosition, NodeViewIR, PaddingToken, Predicate, RowViewIR, VertexViewIR } from './irTypes';
+import type { AnyViewIR, EdgeViewIR, LabelPosition, NodeViewIR, PaddingToken, Predicate, RowViewIR, TextSource, VertexViewIR } from './irTypes';
 
 /**
  * Closed vocabulary of `edge.routing` (R-B9, 2026-08-03): the persisted identifiers,
@@ -101,6 +101,95 @@ function findUnknownPredicateOp(node: unknown, seen: Set<object>): string | null
     for (const value of Object.values(node as Record<string, unknown>)) {
         const bad = findUnknownPredicateOp(value, seen);
         if (bad !== null) return bad;
+    }
+    return null;
+}
+
+/** Closed vocabulary of `TextSource.from`, for the segments of an edge label template (R-VP-20). */
+const TEXT_SOURCE_KINDS: Record<TextSource['from'], true> = { path: true, literal: true, intrinsic: true };
+
+const isPlainObject = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
+const readOf = (v: unknown) => (typeof v === 'number' ? String(v) : JSON.stringify(v));
+
+/**
+ * The two axes R-VP-20 adds to TextStyle, on any TextStyle surface. Only these are read: the axes
+ * TextStyle already had keep being checked by the compile alone, as before, so a view that
+ * validated before C2 validates now. A surface that is not an object is left to its own rule.
+ */
+function textStyleAxesError(style: unknown, where: string): string | null {
+    if (!isPlainObject(style)) return null;
+    const ls = style.letterSpacing;
+    if (ls !== undefined && !(typeof ls === 'number' && Number.isFinite(ls))) {
+        return `[ir] ${where}.letterSpacing must be a finite number (em), or absent for the surface's spacing, read ${readOf(ls)}`;
+    }
+    const tt = style.textTransform;
+    if (tt !== undefined && (typeof tt !== 'string' || !Object.prototype.hasOwnProperty.call(TEXT_TRANSFORMS, tt))) {
+        return `[ir] ${where}.textTransform must be one of ${Object.keys(TEXT_TRANSFORMS).join(' | ')}, or absent for the surface's case, read ${readOf(tt)}`;
+    }
+    return null;
+}
+
+/** A key R-VP-20 adds whose value is a TextStyle (a literal segment's, an edge label's): an object when present. */
+function textStyleKeyError(style: unknown, where: string): string | null {
+    if (style === undefined) return null;
+    if (!isPlainObject(style)) return `[ir] ${where} must be a TextStyle object, or absent, read ${readOf(style)}`;
+    return textStyleAxesError(style, where);
+}
+
+/**
+ * The C2 keys (R-VP-20, P-2026-09-30-0150), authoring-time by the R-B9-bis criterion: the render
+ * reads a value outside the vocabulary as absent (irCompile resolveTextStyle, compileLabelText), the
+ * authoring surface refuses it here. Read as unknown for the reason given at `routing` below.
+ */
+function c2KeysError(ir: AnyViewIR): string | null {
+    const node = ir as NodeViewIR;
+    if (ir.kind === 'vertex' || ir.kind === 'graphVertex') {
+        const text = textStyleAxesError(node.shape?.text, 'shape.text');
+        if (text) return text;
+        const labels: unknown = node.shape?.labels;
+        if (Array.isArray(labels)) {
+            for (let i = 0; i < labels.length; i++) {
+                const bad = textStyleAxesError(labels[i]?.style, `shape.labels[${i}].style`);
+                if (bad) return bad;
+            }
+        }
+        const compartments: unknown = node.fieldCompartments;
+        if (Array.isArray(compartments)) {
+            for (let j = 0; j < compartments.length; j++) {
+                const fc = compartments[j];
+                const at = `fieldCompartments[${j}]`;
+                const exclude: unknown = fc?.source?.exclude;
+                if (exclude !== undefined) {
+                    if (fc.source.from !== 'attributes') return `[ir] ${at}.source.exclude applies to the attributes source only, read on ${readOf(fc.source.from)}`;
+                    if (!Array.isArray(exclude) || !exclude.every(x => typeof x === 'string')) {
+                        return `[ir] ${at}.source.exclude must be an array of feature names, or absent for every slot, read ${readOf(exclude)}`;
+                    }
+                }
+                const rowStyle = textStyleAxesError(fc?.rowFormat?.style, `${at}.rowFormat.style`);
+                if (rowStyle) return rowStyle;
+                const segments: unknown = fc?.rowFormat?.segments;
+                if (Array.isArray(segments)) {
+                    for (let k = 0; k < segments.length; k++) {
+                        if (segments[k]?.kind !== 'literal') continue;
+                        const bad = textStyleKeyError(segments[k].style, `${at}.rowFormat.segments[${k}].style`);
+                        if (bad) return bad;
+                    }
+                }
+            }
+        }
+    }
+    if (ir.kind === 'row') return textStyleAxesError((ir as RowViewIR).style, 'style');
+    if (ir.kind === 'edge') {
+        const labels: unknown = (ir as EdgeViewIR).edge?.labels;
+        if (isPlainObject(labels)) {
+            const template = labels.template;
+            if (template !== undefined && !(Array.isArray(template) && template.length > 0
+                && template.every(seg => isPlainObject(seg) && typeof seg.from === 'string' && Object.prototype.hasOwnProperty.call(TEXT_SOURCE_KINDS, seg.from)))) {
+                return `[ir] edge.labels.template must be a non-empty array of text sources (from: ${Object.keys(TEXT_SOURCE_KINDS).join(' | ')}), or absent for the centre source, read ${readOf(template)}`;
+            }
+            const style = textStyleKeyError(labels.style, 'edge.labels.style');
+            if (style) return style;
+        }
     }
     return null;
 }
@@ -249,6 +338,10 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             }
         }
     }
+
+    // The C2 keys (R-VP-20): after the rules above, before the compile, which reads them permissively.
+    const c2 = c2KeysError(ir);
+    if (c2 !== null) return { ok: false, error: c2 };
 
     try {
         if (ir.kind === 'edge') compileEdgeView(viewId, ir as EdgeViewIR);

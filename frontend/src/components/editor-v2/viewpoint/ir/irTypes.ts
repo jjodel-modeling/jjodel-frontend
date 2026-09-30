@@ -87,6 +87,10 @@ export type FontFamilyToken = 'sans' | 'mono';
  *  normal 400, medium 500, semibold 600, bold 700. */
 export type FontWeightToken = 'normal' | 'medium' | 'semibold' | 'bold';
 
+/** Case transform of a text surface (R-VP-20, P-2026-09-30-0150): the rendered text only, the source
+ *  string is left as written. Persisted, never renamed (R-B9). */
+export type TextTransformToken = 'uppercase' | 'lowercase' | 'none';
+
 /**
  * Typographic style for a text surface (spec ir-1.3 addendum sez. 2). Every axis
  * is optional and Conditional; an absent axis inherits the surface's CSS default
@@ -99,6 +103,11 @@ export interface TextStyle {
     fontStyle?: Conditional<'normal' | 'italic'>;
     color?: Conditional<string>;                 // same shape as ShapeSpec.fill
     underline?: Conditional<boolean>;            // ir-1.3 addendum sez. 7 — additive, no migration
+    /** Letter spacing in em (R-VP-20). A plain number, not Conditional: widening it to
+     *  Conditional<number> later stays additive, a number being a Conditional. Absent = the surface's CSS. */
+    letterSpacing?: number;
+    /** Case transform (R-VP-20), scalar like `letterSpacing`. Absent = the surface's CSS. */
+    textTransform?: TextTransformToken;
 }
 
 export interface LabelSpec {
@@ -125,7 +134,9 @@ export type FieldSegment =
     | { kind: 'name' }
     | { kind: 'type' }
     | { kind: 'value'; editable?: boolean | { widget: 'text' | 'textarea' | 'select' | 'checkbox' | 'color' } }
-    | { kind: 'literal'; text: string };
+    /** `style` (R-VP-20): the literal's own typographic style, inline on its span, over the row's (a
+     *  grey `attr` prefix). Absent = the row's style. Additive, no migration. */
+    | { kind: 'literal'; text: string; style?: TextStyle };
 
 export interface FieldCompartmentSpec {
     id: string;
@@ -136,8 +147,12 @@ export interface FieldCompartmentSpec {
      * optional predicate over the child (absent = all containment children). For a
      * `children` source `rowFormat` is ignored (the row format comes from the child's
      * row view) but stays required by the contract.
+     *
+     * `exclude` (R-VP-20, the `attributes` source only): feature names whose slot draws no
+     * row, the identity slot the name label already shows. The symbol only: a form lists
+     * every feature (R-FRM-1). Absent = every slot. Additive, no migration.
      */
-    source: { from: 'attributes' } | { from: 'references' } | { from: 'children'; filter?: Predicate };
+    source: { from: 'attributes'; exclude?: string[] } | { from: 'references' } | { from: 'children'; filter?: Predicate };
     /**
      * `style` (ir-1.3 TS2): typographic style of the compartment rows. Rendered
      * inline on the compartment and inherited by its rows, so it wins over
@@ -617,6 +632,21 @@ export interface EdgeViewIR {
         labels?: {
             center?: TextSource;
             placement?: 'auto' | 'above' | 'below';
+            /**
+             * R-VP-20: the centre label as segments concatenated, the precedent of a row view's
+             * `template`; it wins over `center`. A value segment (path, intrinsic) that resolves
+             * empty draws nothing and takes with it the literal right before it, its caption
+             * (`weight = ` with no weight); a template left with no text draws no label, as an
+             * empty `center` path; one of literals only always draws.
+             */
+            template?: TextSource[];
+            /**
+             * R-VP-20 (TS3 of the TextStyle addendum): the centre label's typographic style.
+             * Declared, the label drops its box for a halo in the canvas surface colour
+             * (EditorV2.scss `.edge-label__text--halo`); `style.color` wins over `line.color`
+             * for the text only, the terminations keep the line colour. Absent = the label box.
+             */
+            style?: TextStyle;
         };
         /** spec v1.2 sez. 7 (extended reading, 2026-07-19): default true; false =
          *  the whole layout override (waypoints AND side pins) stays session-only. */
@@ -721,6 +751,8 @@ export interface CompiledEdgeView {
     routing: 'orthogonal' | 'straight' | 'curved' | null;
     labelText: CompiledAccessor | null;
     labelPlacement: 'auto' | 'above' | 'below';
+    /** Compiled `edge.labels.style` (R-VP-20); absent when the view declares none. */
+    labelStyle?: CompiledTextStyle;
     /** persistWaypoints ?? true — gates persistence/hydration of layout overrides. */
     persistWaypoints: boolean;
 }
@@ -825,6 +857,9 @@ export interface CompiledTextStyle {
     fontStyle?: CompiledConditional<'normal' | 'italic' | ''>;
     color?: CompiledConditional<string>;
     underline?: CompiledConditional<boolean>;
+    /** R-VP-20: undefined / '' mean "no override", like the other axes' fallbacks. */
+    letterSpacing?: CompiledConditional<number | undefined>;
+    textTransform?: CompiledConditional<TextTransformToken | ''>;
 }
 
 export interface CompiledLabel {
@@ -860,6 +895,10 @@ export interface CompiledFieldCompartment {
     separator: boolean;
     /** Compiled rowFormat.style (ir-1.3 TS2); undefined when the compartment declares none. */
     rowStyle?: CompiledTextStyle;
+    /** `attributes` source only (R-VP-20): the feature names that draw no row; absent when none declared. */
+    exclude?: string[];
+    /** R-VP-20: the compiled style of each literal segment, by segment index; absent when no literal declares one. */
+    segmentStyles?: (CompiledTextStyle | undefined)[];
 }
 
 export interface CompiledContainment {

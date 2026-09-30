@@ -1025,13 +1025,16 @@ function corpusCounts() {
                 t.vertex++;
                 const shape = vertex(v).shape;
                 const top = shape.labels?.[0];
-                if (top?.source.from === 'literal' && top.source.text === v.className.toUpperCase()) {
+                if (top?.source.from === 'literal' && top.source.text === v.className) {
                     t.eyebrows++;
                     t.eyebrowsM1 += objects;
                 }
                 if (shape.border?.color === NAME_INK) t.marks++;
-                if (vertex(v).fieldCompartments?.some(fc => fc.source.from === 'attributes')) {
+                const slots = vertex(v).fieldCompartments?.find(fc => fc.source.from === 'attributes');
+                if (slots) {
+                    const excluded = (slots.source as { exclude?: string[] }).exclude ?? [];
                     for (const a of attributesOfClass(mm, v.classId)) {
+                        if (excluded.includes(a.name)) continue;
                         if (a.name === 'name' && a.type === ESTRING) t.identityRowsM1 += objects;
                         else t.slotRowsM1 += objects;
                     }
@@ -1043,7 +1046,14 @@ function corpusCounts() {
 }
 
 const row = (v: AnyDerivedView) => v.ir as RowViewIR;
-const eyebrow = (text: string) => ({ position: 'top', source: { from: 'literal', text }, style: { fontSize: 10, fontWeight: 'semibold', color: QUIET } });
+const eyebrow = (text: string) => ({
+    position: 'top', source: { from: 'literal', text },
+    style: { fontSize: 10, fontWeight: 'semibold', color: QUIET, letterSpacing: 0.08, textTransform: 'uppercase' },
+});
+/** The halo label of every labelled C edge (R-VP-20 (5)): 12 px, 500, the quiet ink. */
+const EDGE_LABEL_STYLE = { fontSize: 12, fontWeight: 'medium', color: QUIET };
+/** A slot as `name = value` in a label template (R-VP-20 (4)). */
+const slotRow = (name: string, lead = '') => [{ from: 'literal', text: `${lead}${name} = ` }, { from: 'path', expr: `$${name}.value` }];
 const NAME_LABEL = { position: 'top', source: NAME, style: { fontSize: 14, fontWeight: 'semibold', color: NAME_INK } };
 const MONO = { fontFamily: 'mono', fontSize: 11 };
 const PLAIN_BORDER = { color: BORDER, width: 1, style: 'solid' };
@@ -1126,14 +1136,13 @@ const ALL_FIXTURES: [string, Fixture][] = [
 ];
 
 describe('deriveGenericViewpointIRs — the report\'s §4 counts on the corpus', () => {
-    it('39 views, 25 vertex, 9 edge, 5 row; 25 eyebrows, 6 marks, 5 labelled edges', () => {
-        expect(corpusCounts()).toMatchObject({ views: 39, vertex: 25, edge: 9, row: 5, eyebrows: 25, marks: 6, labelled: 5 });
+    it('39 views, 25 vertex, 9 edge, 5 row; 25 eyebrows, 6 marks, 9 labelled edges (5 as in C1, 4 by a template)', () => {
+        expect(corpusCounts()).toMatchObject({ views: 39, vertex: 25, edge: 9, row: 5, eyebrows: 25, marks: 6, labelled: 9 });
     });
 
-    it('M1: 66 eyebrows, 41 edges, 13 contained objects as rows, 24 slot rows (and 7 name rows until C2)', () => {
-        // The attributes compartment lists every slot, the identity one included: 7 ERDLanguage
-        // Attributes repeat their name until the `exclude` key of slice C2.
-        expect(corpusCounts()).toMatchObject({ eyebrowsM1: 66, edgesM1: 41, childRowsM1: 13, slotRowsM1: 24, identityRowsM1: 7 });
+    it('M1: 66 eyebrows, 41 edges, 13 contained objects as rows, 24 slot rows, no name row (the exclude of C2)', () => {
+        // C1 drew 7 name rows: the 7 ERDLanguage Attributes repeated their name. The exclude keeps it out.
+        expect(corpusCounts()).toMatchObject({ eyebrowsM1: 66, edgesM1: 41, childRowsM1: 13, slotRowsM1: 24, identityRowsM1: 0 });
     });
 
     it('per metamodel: vertex, edge and row views', () => {
@@ -1185,16 +1194,16 @@ describe('deriveGenericViewpointIRs — whole documents', () => {
         expect(v.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['State'], authoringMetaclassPins: { State: 'PEST.State' },
             exclusive: true, label: 'View for State',
-            shape: { form: 'rounded', fill: SURFACE, border: PLAIN_BORDER, labels: [eyebrow('STATE'), NAME_LABEL] },
+            shape: { form: 'rounded', fill: SURFACE, border: PLAIN_BORDER, labels: [eyebrow('State'), NAME_LABEL] },
         });
     });
 
     it('DemoPEST Initial and Terminal: the same box with the 2 px ink border and the double border', () => {
         const views = genericOf(PEST);
         expect(byClass(views, 'Initial').rule).toBe('generic:initial');
-        expect(vertex(byClass(views, 'Initial')).shape).toEqual({ form: 'rounded', fill: SURFACE, border: INITIAL_BORDER, labels: [eyebrow('INITIAL'), NAME_LABEL] });
+        expect(vertex(byClass(views, 'Initial')).shape).toEqual({ form: 'rounded', fill: SURFACE, border: INITIAL_BORDER, labels: [eyebrow('Initial'), NAME_LABEL] });
         expect(byClass(views, 'Terminal').rule).toBe('generic:final');
-        expect(vertex(byClass(views, 'Terminal')).shape).toEqual({ form: 'rounded', fill: SURFACE, border: FINAL_BORDER, labels: [eyebrow('TERMINAL'), NAME_LABEL] });
+        expect(vertex(byClass(views, 'Terminal')).shape).toEqual({ form: 'rounded', fill: SURFACE, border: FINAL_BORDER, labels: [eyebrow('Terminal'), NAME_LABEL] });
     });
 
     it('DemoPEST Transition: from the container to nextState, the filled arrowhead, the ink line, the event', () => {
@@ -1205,14 +1214,14 @@ describe('deriveGenericViewpointIRs — whole documents', () => {
             exclusive: true, label: 'View for Transition',
             edge: {
                 source: 'container', target: '$nextState.value', terminations: C_ARROW,
-                labels: { center: { from: 'path', expr: '$event.value' } }, line: INK_LINE,
+                labels: { center: { from: 'path', expr: '$event.value' }, style: EDGE_LABEL_STYLE }, line: INK_LINE,
             },
         });
     });
 
     it('DemoPetri Place: the slot rows in mono 11 px in the quiet ink', () => {
         const v = vertex(byClass(genericOf(PETRI), 'Place'));
-        expect(v.shape.labels).toEqual([eyebrow('PLACE'), NAME_LABEL]);
+        expect(v.shape.labels).toEqual([eyebrow('Place'), NAME_LABEL]);
         expect(v.fieldCompartments).toEqual([{
             id: 'attributes', source: { from: 'attributes' },
             rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }], style: { ...MONO, color: QUIET } },
@@ -1222,7 +1231,7 @@ describe('deriveGenericViewpointIRs — whole documents', () => {
 
     it('MDE ERD Entity: its Attributes as rows, filtered to the row class; no slot rows for the name alone', () => {
         const v = vertex(byClass(genericOf(ERD), 'Entity'));
-        expect(v.shape.labels).toEqual([eyebrow('ENTITY'), NAME_LABEL]);
+        expect(v.shape.labels).toEqual([eyebrow('Entity'), NAME_LABEL]);
         expect(v.fieldCompartments).toEqual([{
             id: 'children', source: { from: 'children', filter: { op: 'isKind', class: 'Attribute' } },
             rowFormat: { segments: [{ kind: 'name' }], style: MONO }, separator: true,
@@ -1237,6 +1246,20 @@ describe('deriveGenericViewpointIRs — whole documents', () => {
             label: 'View for Attribute',
             template: [NAME, { from: 'literal', text: ' : ' }, { from: 'path', expr: '$type.value' }],
         });
+    });
+
+    it('ERDLanguage Attribute: a node, its slot rows with the name slot excluded (R-VP-20 (2))', () => {
+        const v = vertex(byClass(genericOf(ERDL), 'Attribute'));
+        expect(v.fieldCompartments).toEqual([{
+            id: 'attributes', source: { from: 'attributes', exclude: ['name'] },
+            rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }], style: { ...MONO, color: QUIET } },
+            separator: true,
+        }]);
+    });
+
+    it('a class with no identity slot excludes nothing: the source is bare (DemoPetri Place, Library Loan)', () => {
+        expect(vertex(byClass(genericOf(PETRI), 'Place')).fieldCompartments?.[0].source).toEqual({ from: 'attributes' });
+        expect(vertex(byClass(genericOf(LIBRARY), 'Loan')).fieldCompartments?.[0].source).toEqual({ from: 'attributes' });
     });
 
     it('Library: the Catalogue lists Books and Members; a row with no type feature is the name alone', () => {
@@ -1272,31 +1295,84 @@ describe('deriveGenericViewpointIRs — rule 2, edges: today\'s recognition, a l
         }
     });
 
-    it('the labels on the corpus: the event, the name; none where C needs a template (weight, guard, cardinality)', () => {
+    it('the labels on the corpus: the event, the name as in C1; a template where C1 had none (weight, guard, cardinality); every one with the halo style', () => {
         const labels: Record<string, unknown> = {};
         for (const [name, mm] of CORPUS) {
-            for (const v of genericOf(mm)) if (v.ir.kind === 'edge') labels[`${name}.${v.className}`] = edge(v).edge.labels?.center ?? null;
+            for (const v of genericOf(mm)) if (v.ir.kind === 'edge') labels[`${name}.${v.className}`] = edge(v).edge.labels ?? null;
         }
+        const S = EDGE_LABEL_STYLE;
         expect(labels).toEqual({
-            'DemoPEST.Transition': { from: 'path', expr: '$event.value' },
-            'DemoPetri.Arc': null,
-            'DemoPetri.InhibitorArc': null,
-            'DemoESM.Transition': { from: 'path', expr: '$event.value' },
-            'DemoFlowB.ControlFlow': null,
-            'ERDLanguage ERD.Relationship': null,
-            'ERDLanguage Relational.ForeignKey': NAME,
-            'MDE ERD (1).Relation': NAME,
-            'MDE ERD.Relation': NAME,
+            'DemoPEST.Transition': { center: { from: 'path', expr: '$event.value' }, style: S },
+            'DemoPetri.Arc': { template: slotRow('weight'), style: S },
+            'DemoPetri.InhibitorArc': { template: [{ from: 'literal', text: '«InhibitorArc»' }, ...slotRow('weight', ' ')], style: S },
+            'DemoESM.Transition': { center: { from: 'path', expr: '$event.value' }, style: S },
+            'DemoFlowB.ControlFlow': { template: slotRow('guard'), style: S },
+            'ERDLanguage ERD.Relationship': { template: slotRow('cardinality'), style: S },
+            'ERDLanguage Relational.ForeignKey': { center: NAME, style: S },
+            'MDE ERD (1).Relation': { center: NAME, style: S },
+            'MDE ERD.Relation': { center: NAME, style: S },
         });
     });
 
-    it('a sub-edge: its stereotype alone when it adds nothing, no label when it adds a slot or a reference', () => {
+    it('the four templates are the edges C1 left unlabelled: the centre sources of C1 are unchanged', () => {
+        const templated: string[] = [];
+        for (const [name, mm] of CORPUS) {
+            for (const v of genericOf(mm)) if (v.ir.kind === 'edge' && edge(v).edge.labels?.template) templated.push(`${name}.${v.className}`);
+        }
+        expect(templated).toEqual(['DemoPetri.InhibitorArc', 'DemoPetri.Arc', 'DemoFlowB.ControlFlow', 'ERDLanguage ERD.Relationship']);
+        for (const [name, mm] of CORPUS) {
+            for (const v of genericOf(mm)) {
+                const l = v.ir.kind === 'edge' ? edge(v).edge.labels : undefined;
+                if (l) expect(!!l.center !== !!l.template, `${name}.${v.className}: one text source or one template`).toBe(true);
+            }
+        }
+    });
+
+    it('a sub-edge: its stereotype alone when it adds nothing, the stereotype before its slot or reference otherwise', () => {
         const views = genericOf(LINKS);
-        expect(edge(byClass(views, 'Dependency')).edge.labels).toEqual({ center: { from: 'literal', text: '«Dependency»' } });
-        expect(edge(byClass(views, 'Usage')).edge.labels).toBeUndefined();
-        expect(edge(byClass(views, 'Trace')).edge.labels).toBeUndefined();
-        // The base edge has nothing to print, and no name: unlabelled.
+        const S = EDGE_LABEL_STYLE;
+        expect(edge(byClass(views, 'Dependency')).edge.labels).toEqual({ center: { from: 'literal', text: '«Dependency»' }, style: S });
+        expect(edge(byClass(views, 'Usage')).edge.labels).toEqual({ template: [{ from: 'literal', text: '«Usage»' }, ...slotRow('kind', ' ')], style: S });
+        expect(edge(byClass(views, 'Trace')).edge.labels).toEqual({ template: [{ from: 'literal', text: '«Trace»' }, { from: 'literal', text: ' ' }, { from: 'path', expr: '$owner.value' }], style: S });
+        // The base edge has nothing to print, and no name: unlabelled, no style either.
         expect(edge(byClass(views, 'Link')).edge.labels).toBeUndefined();
+    });
+
+    it('a reference wins over a slot, as in C1: the centre of a base edge, the tail of a sub-edge\'s template', () => {
+        const both = metamodel('BTH', 'Both', [
+            cls('Node'), cls('Owner'),
+            cls('Link', { attrs: [attr('note', ESTRING)], refs: [ref('source', 'Node'), ref('target', 'Node'), ref('owner', 'Owner')] }),
+            cls('Traced', { supers: ['Link'] }),
+        ]);
+        const views = genericOf(both);
+        expect(edge(byClass(views, 'Link')).edge.labels).toEqual({ center: { from: 'path', expr: '$owner.value' }, style: EDGE_LABEL_STYLE });
+        expect(edge(byClass(views, 'Traced')).edge.labels).toEqual({
+            template: [{ from: 'literal', text: '«Traced»' }, { from: 'literal', text: ' ' }, { from: 'path', expr: '$owner.value' }], style: EDGE_LABEL_STYLE,
+        });
+    });
+
+    it('executed: the templates print `weight = 2`, `«InhibitorArc» weight = 3`, `guard = …`; unset, no label, and the stereotype alone', () => {
+        clearCompileCache();
+        const lookup: Lookup = { ...PETRI.lookup, ...FLOWB.lookup };
+        const obj = (id: string, cls: string, mm: Fixture, slots: Record<string, unknown[]>) => {
+            lookup[id] = { id, name: id, className: 'DObject', instanceof: mm.classId(cls), features: Object.keys(slots).map(f => `${id}.${f}`) };
+            const owner = cls === 'InhibitorArc' ? 'Arc' : cls;
+            for (const [f, values] of Object.entries(slots)) lookup[`${id}.${f}`] = { id: `${id}.${f}`, className: 'DValue', instanceof: `${mm.classId(owner)}.${f}`, values };
+        };
+        obj('a1', 'Arc', PETRI, { weight: [2] });
+        obj('i1', 'InhibitorArc', PETRI, { weight: [3] });
+        obj('f1', 'ControlFlow', FLOWB, { guard: ['model.[count] < 2'] });
+        obj('f2', 'ControlFlow', FLOWB, { guard: [] });
+        obj('a2', 'Arc', PETRI, { weight: [] });
+        obj('i2', 'InhibitorArc', PETRI, { weight: [] });
+        const ctx = makeDrawReadCtx(lookup);
+        const text = (mm: Fixture, cls: string, id: string) => String(compileEdgeView(`c2:${cls}`, edge(byClass(genericOf(mm), cls))).labelText!(ctx, id));
+        expect(text(PETRI, 'Arc', 'a1')).toBe('weight = 2');
+        expect(text(PETRI, 'InhibitorArc', 'i1')).toBe('«InhibitorArc» weight = 3');
+        expect(text(FLOWB, 'ControlFlow', 'f1')).toBe('guard = model.[count] < 2');
+        expect(text(FLOWB, 'ControlFlow', 'f2')).toBe('');
+        expect(text(PETRI, 'Arc', 'a2')).toBe('');
+        expect(text(PETRI, 'InhibitorArc', 'i2')).toBe('«InhibitorArc»');
     });
 
     it('an edge with no name, no slot and no extra reference has no label (Graph)', () => {
@@ -1399,14 +1475,14 @@ describe('deriveGenericViewpointIRs — rule 3, rows', () => {
 });
 
 describe('deriveGenericViewpointIRs — rule 4, the eyebrow', () => {
-    it('every vertex: the metaclass name uppercased in the literal, 10 px, 600, the quiet ink, above the name', () => {
+    it('every vertex: the metaclass name as written, uppercased by textTransform, 0.08 em, 10 px, 600, the quiet ink, above the name', () => {
         for (const [name, mm] of ALL_FIXTURES) {
             for (const v of genericOf(mm)) {
                 if (v.ir.kind !== 'vertex') continue;
-                expect(vertex(v).shape.labels, `${name} ${v.className}`).toEqual([eyebrow(v.className.toUpperCase()), NAME_LABEL]);
+                expect(vertex(v).shape.labels, `${name} ${v.className}`).toEqual([eyebrow(v.className), NAME_LABEL]);
             }
         }
-        expect(vertex(byClass(genericOf(NAMES), 'final_state')).shape.labels?.[0].source).toEqual({ from: 'literal', text: 'FINAL_STATE' });
+        expect(vertex(byClass(genericOf(NAMES), 'final_state')).shape.labels?.[0].source).toEqual({ from: 'literal', text: 'final_state' });
     });
 
     it('compiled: two top labels, the eyebrow first, its text and size', () => {
@@ -1415,9 +1491,12 @@ describe('deriveGenericViewpointIRs — rule 4, the eyebrow', () => {
         const ctx = makeDrawReadCtx(lookup);
         const cv = compileView('generic:State', vertex(byClass(genericOf(PEST), 'State')));
         expect(cv.labels.map(l => l.position)).toEqual(['top', 'top']);
-        expect(cv.labels.map(l => String(l.text(ctx, 's1')))).toEqual(['STATE', 'locked']);
+        expect(cv.labels.map(l => String(l.text(ctx, 's1')))).toEqual(['State', 'locked']);
         expect(cv.labels[0].style!.fontSize!(ctx, 's1')).toBe(10);
+        expect(cv.labels[0].style!.letterSpacing!(ctx, 's1')).toBe(0.08);
+        expect(cv.labels[0].style!.textTransform!(ctx, 's1')).toBe('uppercase');
         expect(cv.labels[1].style!.fontSize!(ctx, 's1')).toBe(14);
+        expect(cv.labels[1].style!.textTransform).toBeUndefined();
     });
 });
 

@@ -129,6 +129,11 @@ function UnifiedEdge(props: EdgeProps) {
     // irEdgeViews.applyEdgeStyle since the E0 slice; this is its first consumer —
     // until now the field was a dead write. Read here, applied in labelOffset.
     const irLabelPlacement = irData.irLabelPlacement as 'auto' | 'above' | 'below' | undefined;
+    // R-VP-20 (TS3): an authored `edge.labels.style`, resolved to CSS by irEdgeViews.applyEdgeStyle.
+    // Present, the label drops its box for the halo (EditorV2.scss `.edge-label__text--halo`) and the
+    // authored axes go inline over the line colour: `style.color` wins for the text, the markers keep
+    // irStroke (E0b). Absent = the label box, byte-identical.
+    const irLabelStyle = isIREdge ? irData.irLabelStyle as React.CSSProperties | undefined : undefined;
     // E-route: authored routing style. Absent / null / 'orthogonal' all render
     // exactly as before — every existing view is byte-identical on screen.
     const irRouting = irData.irRoutingHint as 'orthogonal' | 'straight' | 'curved' | undefined;
@@ -963,7 +968,9 @@ function UnifiedEdge(props: EdgeProps) {
                                 onClick={(e) => e.stopPropagation()}
                             />
                         ) : (
-                            labelText && labelText !== 'newRef' && <span className="edge-label__text" style={isIREdge && irStroke ? { color: irStroke } : undefined}>{labelText}</span>
+                            labelText && labelText !== 'newRef' && (irLabelStyle
+                                ? <span className="edge-label__text edge-label__text--halo" style={{ ...(irStroke ? { color: irStroke } : {}), ...irLabelStyle }}>{labelText}</span>
+                                : <span className="edge-label__text" style={isIREdge && irStroke ? { color: irStroke } : undefined}>{labelText}</span>)
                         )}
                     </div>
                 )}
