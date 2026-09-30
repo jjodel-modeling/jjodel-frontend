@@ -675,3 +675,191 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Checked by the chat: lane probe 154/154 on the four exports (M2, M1, derived IR M1), on-screen canvas 0 px change after the exports, M2 PNG viewed by the chat (nodes, edges, white background). Merge changes the export path only, no demo content.
 **Notes**: Rollback tag `pre-canvas-export-fix` on `120d97c01` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2205/result.json`.
 **Prompt document name**: 2026-09-30 22:05
+
+## 2026-09-29 — docs(views): discovery, notation catalogue for derived viewpoints, C, A and B (P-2026-09-29-2320)
+**Prompt**: `claude_2026-09-29_2320_prompt_discovery_derived_viewpoint_notations.md`, a read-only heavy lane on `~/jjodel-w-notations`, branch `viewpoint-notations`. Inventory the fifteen mockups (five formalisms × generic C, A, B) against the IR and the renderers, plan the binding dialog, measure variant C on the demo and ERD exports, and plan the Phase 2 slices before 2026-10-07.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (new, 89 lines), this entry, the Status line of the prompt file. No tracked file under `frontend/`; probes `frontend/scripts/smoke/_tmp_notations_*` gitignored, left on disk.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — docs only; `git status --porcelain` shows only these three paths
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (read-only; the report's §2 is the LIR the Phase 2 §3.1 slices will need)
+**Smoke visivo**: non applicabile
+**Notes**: Prototype C on 9 metamodels: 39/39 views pass validateIR, control padding:'huge' fails. One docs commit for report, entry and Status as the prompt asks, against the skills' «commit of its own». Four read-only Explore agents; their key citations re-read. The ~370 px width and the grey dot are not found by reading: slice C3 and the C1 visual step measure them in the DOM.
+**Prompt document name**: 2026-09-29 23:20
+
+**Ticket** (observations, low, in the report's §1): `freeHandleIndex` (`irEdgeViews.ts:81-91`) is documented as the first free index and returns a count, a candidate cause of arrowheads on one point, not reproduced; `validateIR` does not check `edge.terminations`, so an unknown value (e.g. `hollowCircle`) passes and draws no marker.
+
+## 2026-09-30 — feat(views): the generic structural notation (variant C) derived with no role bound, slice C1 (P-2026-09-29-2350)
+**Prompt**: `claude_2026-09-29_2350_prompt_c1_generic_notation.md`, Phase 2 slice C1 of the notation discovery, heavy, on `~/jjodel-w-notations` branch `viewpoint-notations`: variant C as derivation data with no role bound (rules 1-6), tests first, mutation bench, lane probe, R-VP-19.
+**Files touched**: code `3ed86119f`: `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`, its test `derive/__tests__/viewpointDerivation.test.ts`, `frontend/src/utils/deriveViewpoint.ts`. This commit: `docs/decisions.md` (R-VP-19), this entry, the Status line of the prompt file. Probes `frontend/scripts/smoke/_tmp_c1_*` and crops `_tmp_c1_crops/` gitignored, not committed.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `3ed86119f`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; derive file 107 passed (36 red first); full `npx vitest run` 5942 passed, the 9 known files red at import; `npm run build` exit 0, chunk-size warning only. Role-keyed digests pinned on `58aa78ba9`, structure-only pins unchanged. Mutation bench 42/43, the survivor an equivalent mutant.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 file: `viewpoint/derive/` is outside `viewpoint/ir/` and `viewpoint/authoring/`)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3071 (light, 1600×1000) 50/50 EXIT=0, crops `frontend/scripts/smoke/_tmp_c1_crops/c1_{sm,petri,esm,flowB,erd}_derived_600.png`
+**Notes**: Turnstile box 198 px: the 200 px floor of `.mm-node.mm-object` (`instanceNode.scss:35`), not `irStyle.ts:82`. The session stopped at 00:25 on ENOTFOUND (network) and was resumed; nothing lost. Default canvas: an empty-viewpoint round-trip leaves it byte-identical; any derived viewpoint round-trip re-routes M1 reference edges, the trunk's boxes too; after C it equals the boxes case byte for byte, 5/5.
+**Prompt document name**: 2026-09-29 23:50
+
+**Ticket** (observation, low, not a ticket of its own): visiting a derived viewpoint and returning to the default one re-routes some M1 reference edges of the default canvas (DemoPEST `coin`↔`t1`, `push`↔`t2`), with the trunk's own derived boxes as well; an empty viewpoint does not. Not investigated; a candidate for slice C3's edge-port work.
+
+## 2026-09-30 — feat(ir): text and edge-label IR keys for the generic notation, slice C2 (P-2026-09-30-0150)
+**Prompt**: `claude_2026-09-30_0150_prompt_c2_ir_keys.md`, Phase 2 slice C2 of the notation discovery, heavy, critical zone `viewpoint/ir/` (LIR first), on `~/jjodel-w-notations` branch `viewpoint-notations`: five optional IR keys (letterSpacing, textTransform, the attributes exclude, a literal segment style, the edge label template and style), used by the generic notation; R-VP-20.
+**Files touched**: code `2360515f4`: `viewpoint/ir/irTypes.ts`, `irCompile.ts`, `irValidate.ts`, `IRNodeContent.tsx`, `irEdgeViews.ts`, `edges/UnifiedEdge.tsx`, `EditorV2.scss`, `viewpoint/derive/viewpointDerivation.ts`; tests `ir.test.ts`, `irValidate.test.ts`, `irC2Render.test.ts` (new), `viewpointDerivation.test.ts`. This commit: `docs/discovery/discovery_2026-09-30_c2_ir_keys.md` (new), `docs/decisions.md` (R-VP-20), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `2360515f4`: typecheck exit 2, 14 errors, the §17 set by file and code; vitest 5990 passed (5942 + 48), the 9 known files red at import; build exit 0. Red first on the C1 tip: 44. Absent-case pins measured there. Mutation bench 43/43. Default viewpoint of the four demos pixel-identical to the C1 tip outside the Jodie launcher, 12/12.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (report §1, written before the first source edit; committed with the docs, as the prompt's commit plan says)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3072 (light, 1600×1000) 46/46 EXIT=0, crops `frontend/scripts/smoke/_tmp_c2_crops/c2_{sm,petri,esm,flowB,erd,erdl}_derived_after2_600.png`
+**Notes**: IRRow is in the DOVE and untouched (the literal style is the FieldSegment's). Lane choice, Q1 of the report: a template value that resolves empty takes its caption. Byte identity failed only on the Jodie launcher's animated glyph (report §3). One vitest log went to /tmp, moved into the tree at once.
+**Prompt document name**: 2026-09-30 01:50
+
+## 2026-09-30 — feat(views): the Derive viewpoint dialog, notation binding and provenance, slice D (P-2026-09-30-0255)
+**Prompt**: `claude_2026-09-30_0255_prompt_d_derive_dialog.md`, Phase 2 slice D of the notation discovery, heavy, one §3.1 key (`ir.generated`, LIR first), on `~/jjodel-w-notations` branch `viewpoint-notations`: «Derive viewpoint» opens a dialog (notation select, metaclass → role table prefilled by the binder), the binding kept in the derived viewpoint's `_state`, `ir.generated` on every view; R-VP-21.
+**Files touched**: code `64ea9f216`: new `viewpoint/derive/notations.ts`, `sim/DeriveViewpointDialog.tsx`, `sim/DeriveViewpointDialog.scss`; `App.tsx`, `events/registry.ts`, `TreeViewSidebar/TreeViewContent.tsx`, `utils/deriveViewpoint.ts`, `viewpoint/derive/viewpointDerivation.ts`, `viewpoint/ir/irTypes.ts`, `viewpoint/ir/irDefaults.ts`; tests `notations.test.ts` (new), `DeriveViewpointDialog.test.ts` (new), `viewpointDerivation.test.ts`, `ir.test.ts`. This commit: `docs/discovery/discovery_2026-09-30_d_dialog.md` (new), `docs/decisions.md` (R-VP-21), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `64ea9f216`: typecheck exit 2, 14 errors, the §17 set; vitest 6049 passed (5990 + 59), the 9 known files red at import; build exit 0. Red first on the C2 tip: 9 failed, 2 files at collection. Role-keyed documents equal the pins of `58aa78ba9` through the dialog's default. Default viewpoint of the four demos byte-identical to the C2 tip, 12/12. Mutation bench 44/45, the survivor equivalent.
+**Out-of-scope changes**: no — the 14 files are the prompt's DOVE (the dialog next to the dialogs whose shell it shares, `editor-v2/sim/`).
+**Layer Impact Report**: produced (report §1, written before the first source edit; committed with the docs)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3074 (light, 1600×1000) 58/58 EXIT=0, crops `frontend/scripts/smoke/_tmp_d_crops/d_{sm,petri,esm,flowB}_dialog_600.png`, `d_sm_dialog_generic_600.png`, `d_sm_derived_{stateMachine,generic}_600.png`
+**Notes**: Rule 19: 14 files, listed in report §4 (9). A first probe run (43/58) failed on the probe's own fixture and undo call, not the code; kept as `probe-_tmp_d_probe.run1.log`. Delete-time console warnings measured as pre-existing by a control (report §3). Two questions with Recommended answers in report §0.
+**Prompt document name**: 2026-09-30 02:55
+
+## 2026-09-30 — feat(views): Statechart (UML) and Flowchart (ISO 5807) notations, slices A1 and A3 (P-2026-09-30-0355)
+**Prompt**: `claude_2026-09-30_0355_prompt_a1_a3_notations.md`, Phase 2 slices A1 and A3 of the notation discovery, heavy, critical zone (LIR first), on `~/jjodel-w-notations` branch `viewpoint-notations`: two notations beside State machine and Flowchart, two optional IR keys (`shape.entry`, `edge.curve: 'arc'`), the three C3 edge causes fixed for arc edges only, R-VP-22.
+**Files touched**: code `74995f429`: `viewpoint/ir/irTypes.ts`, `irCompile.ts`, `irValidate.ts`, `irEdgeViews.ts`, `IRNodeContent.tsx`, `irStyle.ts`, `edges/UnifiedEdge.tsx`, `utils/edgeUtils.ts`, `viewpoint/derive/viewpointDerivation.ts`, `notations.ts`; tests `irA1Keys.test.ts`, `irA1Render.test.ts` (new), `notations.test.ts`, `DeriveViewpointDialog.test.ts`, `shapeRegistry.test.ts`. This commit: the report, R-VP-22, this entry, the Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (d)
+**Regressions**: no — on `74995f429`: typecheck exit 2, 14 errors, the §17 set; vitest 6093 passed (6049 + 44), the 9 known files red at import; build exit 0. Red first on the D tip, pins read there. Mutation bench 46/46.
+**Out-of-scope changes**: no — the DOVE files and their tests; two existing tests changed with the list and the CSS (report §1, §4).
+**Layer Impact Report**: produced (report §1, written before the first source edit; committed with the docs)
+**Smoke visivo**: fallito (probe 15/23 on 3076: 7 are the procedure, rail and bag, read in report §2; 1 is a tip at 1.01 px against ≤ 1) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_a1a3_crops/a1a3_{sm_statechart,sm_stateMachine,flowB_flowchartIso,flowB_flowchart}_600.png`
+**Notes**: Rule 19: 15 files, listed in report §4. Default scenes 0 px from the D tip left of the rail (4 of 4). Arrow tips 1.00-1.01 px from the visible border: the wrapper's transparent 1 px border. `stop` crosses `unlocked` on the demo layout; the ISO diamond is content-sized. No Decision role in the catalogue. Detail in `docs/discovery/discovery_2026-09-30_a1_a3_notations.md`.
+**Prompt document name**: 2026-09-30 03:55
+
+## 2026-09-30 — feat(views): the ER (Chen) notation and the edge end labels, slice A4 (P-2026-09-30-0440)
+**Prompt**: `claude_2026-09-30_0440_prompt_a4_er_chen.md`, Phase 2 slice A4 of the notation discovery, heavy, critical zone (LIR first), on `~/jjodel-w-notations` branch `viewpoint-notations`: «ER (Chen)» with no simulation profile, its table prefilled by name and structure signals (new `erSignals.ts`), relationship as a diamond node with plain lines, ellipse attributes with the key underlined, two optional IR keys (`edge.labels.sourceEnd` / `targetEnd`), R-VP-23.
+**Files touched**: code `7c2593c85`: `viewpoint/ir/irTypes.ts`, `irCompile.ts`, `irValidate.ts`, `irEdgeViews.ts`, `edges/UnifiedEdge.tsx`, `viewpoint/derive/viewpointDerivation.ts`, `notations.ts`, `erSignals.ts` (new), `sim/DeriveViewpointDialog.tsx`; tests `erChen.test.ts`, `irA4Keys.test.ts`, `irA4Render.test.ts` (new), `notations.test.ts`, `DeriveViewpointDialog.test.ts`. This commit: the report, R-VP-23, this entry, the Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `7c2593c85`: typecheck exit 2, 14 errors, the §17 set; vitest 6144 passed (6093 + 51), the 9 known files red at import; build exit 0. Red first on the tip (36 of 48). The six other notations: 54 digests identical to the tip on fixtures and on the decoded exports. Mutation bench 56/57, the survivor equivalent.
+**Out-of-scope changes**: no — the DOVE files and their tests; the dialog changed by type only (report §0 question 2).
+**Layer Impact Report**: produced (report §1, written before the first source edit; committed with the docs)
+**Smoke visivo**: passato (lane probe 27/27 on 3078, light; the four demo scenes 0 px from the A1+A3 tip left of the rail) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_a4_crops/a4_{erdl,mde}_{erChen,generic}{,_all}_600.png`
+**Notes**: Rule 19: 14 files (report §4). MDE ERD's contained attributes keep the C rows (R-VP-23 (5)). The enum is compared by literal name, as the L-proxy backend reads it. The M1 grid placement makes the lines cross (report §0, question 1). Detail in `docs/discovery/discovery_2026-09-30_a4_er_chen.md`.
+**Prompt document name**: 2026-09-30 04:40
+
+## 2026-09-30 — feat(views): Petri net (classic) and open arrowheads in the derived notations, slice A2 (P-2026-09-30-1521)
+**Prompt**: `claude_2026-09-30_1521_prompt_a2_petri_classic_open_arrows.md`, Phase 1 then Phase 2 in cascade, heavy, critical zone (LIR first, go-ahead), on `~/jjodel-w-notations` branch `viewpoint-notations`: after Alfonso's review of 2026-09-30, «Petri net (classic)» after mockup A beside R-VP-16 with `EdgeTermination 'hollowCircle'`, DemoPetri preselecting it (R-VP-24); open arrowheads in every derived notation (R-VP-25); the ratification line of R-VP-21.
+**Files touched**: docs `618e4e958`: the Phase 1 report. Code `f603f28e8` (12 files): `viewpoint/ir/irTypes.ts`, `irValidate.ts`, `edges/UnifiedEdge.tsx`, `viewpoint/authoring/EdgeAuthoringPanel.tsx`, `viewpoint/derive/viewpointDerivation.ts`, `notations.ts`; tests `irValidate.test.ts`, `irA2Render.test.ts` (new), `notations.test.ts`, `viewpointDerivation.test.ts`, `erChen.test.ts`, `DeriveViewpointDialog.test.ts`. This commit: the report's §6, `docs/decisions.md` (R-VP-24, R-VP-25, the R-VP-21 line), this entry and two tickets, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `f603f28e8`: typecheck exit 2, 14 errors, the §17 set; vitest 6173 (6144 + 29), the 9 known files red at import and 4 hook tests red from the lane's go-ahead variable (70/70 unset, ticket of P-2026-09-29-2122); build exit 0. Red first: 39 of 297. Moved pins predicted on `2cde09984`'s code, 25/25 equal. Mutation bench 36/36.
+**Out-of-scope changes**: no — the 12 files of `f603f28e8` are the prompt's DOVE and their tests; `irCompile`, `irEdgeViews` and `DeriveViewpointDialog.tsx` needed no change.
+**Layer Impact Report**: produced (report §1, committed in `618e4e958` before the first source edit)
+**Smoke visivo**: passato (lane probe 29/31 on 3081, light: the four demo scenes byte-identical to the A4 tip's shots; the 2 FAIL are the default scenes after a derived-viewpoint round trip, the size ticket below) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_a2_crops/a2_{petri_classic,petri_rvp16,sm_statechart,flowB_flowchartIso,esm_generic}_600.png`
+**Notes**: The bar draws 24×44, not 10×44: `defaultSize` is floored at 24 (ticket). DemoPEST and DemoFlowB still open on State machine and Flowchart (R-VP-22), not on the notations the demo uses: awaiting Alfonso (report §0). The panel's «Hollow circle» option has no executed test (monaco in the bench). Two logs went to `/tmp`, moved into the tree (report §6). Report, rows, entry and Status in one docs commit, as the prompt asks.
+**Prompt document name**: 2026-09-30 15:21
+
+## 2026-09-30 — ticket: a derived viewpoint's node size outlives it on the default canvas
+**Ticket**: After a derived viewpoint is shown and the default viewpoint is activated again, the M1 nodes keep the size the derived view's size hook wrote on the React Flow node: DemoPetri's places 66×66 (the R-VP-16 circle) instead of 200×78, DemoFlowB's `d1` 54×66 (the ISO diamond) instead of 200×50; positions, edges and markers unchanged. Measured on 3081 by the A2 probe; both notations predate A2, which changes only their arrowhead. `useContentDrivenSize` (`useContentSize.ts`) drops its size only while its IRNodeContent is mounted, which the default view is not. Visible in the demo when a presenter derives a viewpoint and goes back.
+**Priority**: high
+**Found in**: P-2026-09-30-1521
+**Detail**: docs/discovery/discovery_2026-09-30_a2_petri_classic_open_arrows.md
+
+## 2026-09-30 — ticket: the classic Petri bar draws 24 px wide, the defaultSize floor
+**Ticket**: «Petri net (classic)» writes `defaultSize: { width: 10, height: 44 }` on the transition bar (mockup A); `defaultBoxFor` (`nodes/nodeSizing.ts:73`) floors every authored axis at `SHAPE_MIN_SIZE` (24), so the bar draws 24×44 (visible 22×42). A per-form floor (the bar: none) is one line in a file outside A2's DOVE; the IR has no orientation, so every classic bar is upright.
+**Priority**: medium
+**Found in**: P-2026-09-30-1521
+**Detail**: docs/discovery/discovery_2026-09-30_a2_petri_classic_open_arrows.md
+
+## 2026-09-30 — feat(views): the Activity (UML) notation, DemoFlowB and DemoPEST preselection (P-2026-09-30-1552)
+**Prompt**: `claude_2026-09-30_1552_prompt_activity_uml_notation.md`, Phase 1 then Phase 2 in cascade, heavy, critical zone possible (LIR first, go-ahead), on `~/jjodel-w-notations` branch `viewpoint-notations`: after Alfonso's review of DemoFlowB, «Activity (UML)» beside the flowcharts (initial dot, rounded action, hollow diamond, bar, bull's-eye, `[guard]`), DemoFlowB opening on it and DemoPEST on Statechart (UML), R-VP-26.
+**Files touched**: docs `e63ea6d73`: the Phase 1 report. Code `ca3e41a92` (6 files): `viewpoint/derive/notations.ts`, `viewpointDerivation.ts`; tests `activityUml.test.ts` (new), `notations.test.ts`, `erChen.test.ts`, `sim/__tests__/DeriveViewpointDialog.test.ts`. This commit: the report's §6, `docs/decisions.md` (R-VP-26), this entry and two tickets, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — on `ca3e41a92`: typecheck exit 2, 14 errors, the §17 set; vitest 6201 (6173 + 28), the 9 known files red at import and 4 hook tests red from the lane's go-ahead variable (70/70 unset); build exit 0. Red first: 35 of 260. The eight other notations: 72/72 lists on the exports identical to the A2 tip. Mutation bench 44/45, the survivor equivalent.
+**Out-of-scope changes**: no — the two source files and their tests, in the prompt's DOVE; no IR file, no dialog source.
+**Layer Impact Report**: produced (report §1, committed in `e63ea6d73` before the first source edit)
+**Smoke visivo**: passato (lane probe 22/22 on 3084, light: the four demo scenes byte-identical to the A2 tip's shots) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_actuml_crops/actuml_flowB_{activityUml,flowchartIso}_600.png`, close-ups `actuml_flowB_activityUml_{decision,bars}.png`
+**Notes**: Partial because three sizes miss the spec by render floors outside the DOVE: the bar draws 24×120 (5 asked), the initial 24 (20), the bull's-eye's disc is the registry dot (≈7 px, 14 asked); radius 14 draws 10.5. The two guard labels overlap 796 px² (router). No new IR key. One scratch file went to `/tmp`, deleted (report §6). Detail in `docs/discovery/discovery_2026-09-30_activity_uml_notation.md`.
+**Prompt document name**: 2026-09-30 15:52
+
+## 2026-09-30 — ticket: Activity (UML) sizes held by render floors outside the notation
+**Ticket**: «Activity (UML)» writes the specified sizes; three draw otherwise. `defaultBoxFor` (`nodes/nodeSizing.ts:73`) floors every authored `defaultSize` axis at `SHAPE_MIN_SIZE` (24): the fork/join bar 5×120 draws 24×120 (visible 22×118, a slab, what Alfonso called «i join sono quelli delle reti di petri»), the initial 20 draws 24. The bull's-eye's inner disc is the registry `dot` (radius 16 of 100, `markerRegistry.ts:83`), about 7 px in a 24 px circle where the mockup has 14. A per-form floor (the bar none, a circle 12) is one line and also fixes the classic Petri bar (the A2 ticket); a larger disc is one registry row. Both change what the demo shows: Alfonso decides (RC-26).
+**Priority**: high
+**Found in**: P-2026-09-30-1552
+**Detail**: docs/discovery/discovery_2026-09-30_activity_uml_notation.md
+
+## 2026-09-30 — ticket: DemoFlowB's two guard labels overlap in Activity (UML)
+**Ticket**: Derived as «Activity (UML)» on the demo layout, `[model.[count] < 2]` and `[model.[count] >= 2]` overlap by 796 px², both between `work` and `d1`, where the orthogonal router runs `f3` and the first leg of `f4` side by side around the 36 px diamond (read on the crop). The notation writes the labels right; their placement is the router's. For the layout lane after the freeze, or a label offset per parallel segment.
+**Priority**: medium
+**Found in**: P-2026-09-30-1552
+**Detail**: docs/discovery/discovery_2026-09-30_activity_uml_notation.md
+
+## 2026-09-30 — fix(views): declared sizes unfloored, radius clamp at half, dot-large (P-2026-09-30-1720)
+**Prompt**: `claude_2026-09-30_1720_prompt_activity_sizes.md`, Phase 1 and 2 in cascade on `viewpoint-notations`. The three limits the Activity (UML) lane left (R-VP-26): the 24 px floor on declared sizes, the bull's-eye disc, the radius clamp at a quarter.
+**Files touched**: report `b65be5594` + §6 in this commit: `docs/discovery/discovery_2026-09-30_activity_sizes.md`. Code `3805796be`: `nodes/nodeSizing.ts`, `viewpoint/ir/shapeRegistry.ts`, `viewpoint/ir/markerRegistry.ts`, their three tests. This commit: the report, this entry, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-09-30 15:52 claude_2026-09-30_1552_prompt_activity_uml_notation.md
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no — nine files, all in the DOVE: the six of `3805796be`, the report, `docs/log-inbox/views.md`, the prompt file.
+**Layer Impact Report**: produced
+**Smoke visivo**: lane probe on 3087 19/19, light; the visual GO is the chat's (pending)
+**Notes**: Typecheck the known 14; vitest 6209/6213, the 9 known files and 4 criticalZone from the go-ahead variable (70/70 unset); build exit 0; bench 16/16. Partial: the Activity final still names `dot` (6.4 px disc): `dot-large` measured 14 px in session, the switch is `viewpointDerivation.ts:837`, outside the DOVE, asked. Default scenes 0 px from 21345bbba.
+**Prompt document name**: 2026-09-30 17:20
+
+**Ticket** (observations, low): (1) the bar paints 3 px at the declared 5: the wrapper's transparent 1 px each side, as every IR node; a painted 5 is `defaultSize` 7. (2) Flows stop 5 px short of every symbol (the router's end offset), more visible on the thin bars. (3) `viewpointDerivation.ts:768`, `:775-777`, `:871-873` still describe the 24 px floor.
+
+## 2026-09-30 — fix(views): the Activity final draws the dot-large disc (P-2026-09-30-1720, resume)
+**Prompt**: the chat's resume of P-2026-09-30-1720: question 1 of the hard stop adopted (RC-21), scope extended to `viewpointDerivation.ts` (the Activity final's marker, the stale floor comments) and `activityUml.test.ts`; question 2 (the bar painted 3 px) to Alfonso.
+**Files touched**: code `ea4a7ae19`: `viewpoint/derive/viewpointDerivation.ts`, `derive/__tests__/activityUml.test.ts`, `nodes/__tests__/nodeSizing.test.ts`. This commit: the report's §7, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-30 15:52 claude_2026-09-30_1552_prompt_activity_uml_notation.md
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no — the two files the GO added and `nodeSizing.test.ts` of the first DOVE.
+**Layer Impact Report**: produced
+**Smoke visivo**: lane probe on 3087 19/19, light; the visual GO is the chat's, the bar's 3 px Alfonso's (pending)
+**Notes**: Bull's-eye as derived: disc 14 px on the 24 px node. Documents: 78 of 81 lists identical to ca3e41a92, the 3 Activity lists equal with dot -> dot-large. Gates: typecheck 14; vitest 6209/6213 (known 9 + 4 criticalZone, 70/70 unset); build 0; bench 19/19. The earlier entry of this lane stays as written (add-only, RC-34): this one completes it. Report §7.
+**Prompt document name**: 2026-09-30 17:20
+
+## 2026-09-30 — feat(views): Activity decision/merge, guard patch, token inside (P-2026-09-30-1935)
+**Prompt**: `claude_2026-09-30_1935_prompt_activity_decision_merge.md`, Phase 1 and 2 in cascade on `activity-decision-merge`. Alfonso's review of the Activity (UML) view of DemoFlowB: explicit decision and merge, guards in UML brackets, the token inside the node, action border and bars, the «2», the axis.
+**Files touched**: report `d34cded42` + §6 in this commit: `docs/discovery/discovery_2026-09-30_activity_decision_merge.md`. Code `d2e4e7959`: `viewpoint/ir/irJunctions.ts` (new), `viewpoint/ir/irEdgeViews.ts`, `edges/UnifiedEdge.tsx`, `viewpoint/derive/viewpointDerivation.ts`, `sim/SimNodeRunState.tsx`, `sim/simNodeRunState.scss`, `nodes/ObjectNode.tsx`, tests `irJunctions.test.ts` (new), `irActivityRender.test.ts` (new), `activityUml.test.ts`. This commit: the report, `docs/decisions.md` (R-VP-32..35), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-30 15:52 claude_2026-09-30_1552_prompt_activity_uml_notation.md
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no — fourteen files, all in the DOVE and named by the report (§3): the ten of `d2e4e7959`, the report, `docs/decisions.md`, `docs/log-inbox/views.md`, the prompt file.
+**Layer Impact Report**: produced
+**Smoke visivo**: lane probe on 3093 31/31, light; the visual GO is the chat's (pending)
+**Notes**: Precondition holds (one transition per plain edge, one per step). Typecheck the known 14; vitest 6244/6245 + the 9 known at import, 2 files red under load green alone; build 0; bench 48/50 (the two ObjectNode mutants, probe-only). Documents 79/81 identical, 2 with the guard style. Default scenes 0 px from 30f3d8a81. Points 4-6 change no code (R-VP-35). Report §6.
+**Prompt document name**: 2026-09-30 19:35
+
+**Ticket** (observations, low): (1) a decision whose trunk side is shared with an entry sits on the side's slot, 6 px off the action's axis (DemoFlowB with Decision read as an Action). (2) the explicit decision is 36 px, the synthetic 28. (3) the guard overlap between `work` and `d1` persists (the ticket of P-2026-09-30-1552). (4) `ObjectNode.tsx`'s wiring of the inside token is covered by the probe only: the file does not import in the bench.
+
+## 2026-09-30 — merge: activity-decision-merge takes alfonso-frontend-jjtl (P-2026-09-30-2143)
+**Prompt**: `claude_2026-09-30_2143_prompt_activity-decision-merge_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`: the trunk `alfonso-frontend-jjtl` at `120d97c01` into `activity-decision-merge` at `865f53378`, one `--no-ff` merge commit, merge base `62f4ac3fc`, 72 trunk commits against 36 on the branch (RC-14).
+**Files touched**: merge `91333202f`: the 63 files of the trunk side, two of them resolved by union (`docs/decisions.md`, `docs/log-inbox/views.md`). This commit: this entry, the Status of this prompt, and the second Status flip of `claude_2026-09-30_1935_prompt_activity_decision_merge.md` asked by the chat's GO.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `91333202f`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6337 passed in 253 files (trunk 5997 + branch 340), 0 failed, the 9 known red at import; hooks 344 (trunk 344); build exit 0; check:docs 4/4; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: yes — the second Status flip of P-2026-09-30-1935, outside step 9's list, named by the chat's GO.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: the branch probe re-run on `91333202f` (3094), `_tmp_actdec_probe.ts` 31/31, no page errors; visual GO by Alfonso.
+**Notes**: Union in the prescribed order: R-VP-27..31 (trunk) before R-VP-19..26 and 32..35 (branch); the branch's 2026-09-29 entry follows the trunk's 2026-09-30 ones. Vitest expectation stated as 6336 from a static count; the run gave 6337: one `it` in `erChen.test.ts` runs over two models, so the branch adds 340 (its record: 6245 - 5905). The merge carries the trunk's `canvasToJjom.ts` as its lane left it, no hand edit. Docs read end to end by a subagent.
+**Prompt document name**: 2026-09-30 21:43

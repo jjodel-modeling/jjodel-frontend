@@ -81,6 +81,13 @@ export const MARKER_REGISTRY: Readonly<Record<string, MarkerDef>> = {
     bars: { id: 'bars', label: 'Bars (multi-instance)', paths: [{ d: 'M42,34 L42,66 M50,34 L50,66 M58,34 L58,66' }] },
     // Statechart UML (dentro il cerchio)
     dot: { id: 'dot', label: 'Dot (final state, token)', paths: [{ d: 'M34,50 A16,16 0 1,0 66,50 A16,16 0 1,0 34,50', fill: true }] },
+    // Il disco del bull's-eye di Activity (UML) (P-2026-09-30-1720): 14px su un cerchio di
+    // 24 (layer 20 dentro il bordo). Centrato, ma esce dal box 26..74: il significato e' il
+    // rapporto col contorno, il disco riempie quasi l'anello.
+    'dot-large': {
+        id: 'dot-large', label: 'Large dot (activity final)',
+        paths: [{ d: 'M15,50 A35,35 0 1,0 85,50 A35,35 0 1,0 15,50', fill: true }],
+    },
     // Token di Petri da 2 a 4 (P-2026-09-29-0939): pallini di raggio 8, meta' di
     // `dot`, disgiunti e centrati come gruppo su (50,50). Da 5 token la view
     // derivata mostra il numero, non un marker.

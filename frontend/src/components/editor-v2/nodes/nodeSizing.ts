@@ -64,14 +64,16 @@ export function authoredDefaultSize(v: unknown): DefaultSizeAxes | undefined {
     return { ...(width !== undefined ? { width } : {}), ...(height !== undefined ? { height } : {}) };
 }
 
-// Box di un vertex disegnato alla taglia di default. Ogni asse autorato ha il pavimento
-// del resize a mano (SHAPE_MIN_SIZE), non quello della derivazione (minBox*, che
-// .mm-node.ir-sized neutralizza per qualunque taglia esplicita); l'asse assente resta
-// quello derivato. Forma a rapporto fisso (circle): lato = il maggiore degli assi
-// autorati, come fa il NodeResizer con keepAspectRatio.
+// Box di un vertex disegnato alla taglia di default. Ogni asse autorato vale come scritto
+// (P-2026-09-30-1720): la view che dichiara la sua taglia la ottiene, anche sotto il
+// pavimento del resize a mano (SHAPE_MIN_SIZE, che resta al NodeResizer) e sotto quello
+// della derivazione (minBox*, che .mm-node.ir-sized neutralizza per qualunque taglia
+// esplicita); l'unico filtro e' usableSizeAxis. L'asse assente resta quello derivato.
+// Forma a rapporto fisso (circle): lato = il maggiore degli assi autorati, come fa il
+// NodeResizer con keepAspectRatio.
 export function defaultBoxFor(defaults: DefaultSizeAxes, derived: Size, keepAspect: boolean): Size {
-    const w = defaults.width !== undefined ? Math.max(SHAPE_MIN_SIZE, defaults.width) : undefined;
-    const h = defaults.height !== undefined ? Math.max(SHAPE_MIN_SIZE, defaults.height) : undefined;
+    const w = defaults.width;
+    const h = defaults.height;
     if (keepAspect) {
         const s = Math.max(w ?? 0, h ?? 0);
         return { w: s, h: s };

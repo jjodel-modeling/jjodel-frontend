@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+</style><marker id="hc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 368 228 L 670 228" marker-end="url(#hc)"/>
+<path d="M 672 252 L 370 252" marker-end="url(#hc)"/>
+<path d="M 284 210 V 172 Q 284 168 288 168 H 312 Q 316 168 316 172 V 208" marker-end="url(#hc)"/>
+<path d="M 724 210 V 172 Q 724 168 728 168 H 752 Q 756 168 756 172 V 208" marker-end="url(#hc)"/>
+<path d="M 300 270 L 300 408" marker-end="url(#hc)"/>
+</g>
+<rect x="232" y="210" width="136" height="60" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+<rect x="672" y="210" width="136" height="60" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<rect x="232" y="410" width="136" height="60" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<rect x="236" y="414" width="128" height="52" rx="7" fill="none" stroke="#334155" stroke-width="1"/>
+<text class="eb" x="300" y="232" text-anchor="middle">INITIAL</text>
+<text class="nm" x="300" y="253" text-anchor="middle">locked</text>
+<text class="eb" x="740" y="232" text-anchor="middle">STATE</text>
+<text class="nm" x="740" y="253" text-anchor="middle">unlocked</text>
+<text class="eb" x="300" y="434" text-anchor="middle">TERMINAL</text>
+<text class="nm" x="300" y="455" text-anchor="middle">off</text>
+<text class="lbl" x="519" y="219" text-anchor="middle">coin</text>
+<text class="lbl" x="519" y="271" text-anchor="middle">push</text>
+<text class="lbl" x="300" y="160" text-anchor="middle">push</text>
+<text class="lbl" x="740" y="160" text-anchor="middle">coin</text>
+<text class="lbl" x="312" y="344">stop</text>
+</svg>

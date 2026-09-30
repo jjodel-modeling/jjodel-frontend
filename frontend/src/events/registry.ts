@@ -53,6 +53,9 @@ export const JjodelEvents = {
   // R-VAL. Apre l'ambiente di authoring delle regole su un metamodello.
   // detail: { metamodelId: string; metamodelName?: string }.
   VALIDATION_RULES_OPEN: 'jjodel:validation-rules-open',
+  // Slice D (P-2026-09-30-0255). Opens the «Derive viewpoint» dialog on a metamodel.
+  // detail: { metamodelId: string }.
+  DERIVE_VIEWPOINT_OPEN: 'jjodel:derive-viewpoint-open',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   CREATE_MODEL: 'jjodel:createModel',

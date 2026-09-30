@@ -27,7 +27,9 @@
 import { type Edge, type Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
 import type { CompiledCrossPath, CompiledEdgeView } from './irTypes';
-import { resolveEdgeView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
+import { resolveEdgeView, resolveIRView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
+import { resolveTextStyle } from './irCompile';
+import { assignActivityJunctions, isActivityActionView, isActivityFlowView } from './irJunctions';
 
 type Idlookup = Record<string, any>;
 
@@ -44,6 +46,10 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
     const dash = DASH[lineStyle];
     // IR-authored label: undefined when the view declares none (leave the edge's own label).
     const labelText = cv.labelText ? String(cv.labelText(ctx, evalId) ?? '') : undefined;
+    // R-VP-20 (TS3): the label style resolved to CSS here, where the read context is; UnifiedEdge
+    // only paints it. A declared style with no axis is `{}`, still the halo label. Written only when
+    // declared, so an edge view without it decorates the edge as before.
+    const labelStyle = cv.labelStyle ? (resolveTextStyle(cv.labelStyle, ctx, evalId) ?? {}) : undefined;
     return {
         ...e,
         // Keep seeding the RF label (UnifiedEdge's labelText state reads props.label).
@@ -67,6 +73,17 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             irTargetTermination: cv.terminations.targetEnd,
             irLabelText: labelText,
             irLabelAlwaysVisible: labelText !== undefined,
+            ...(labelStyle ? { irLabelStyle: labelStyle } : {}),
+            // R-VP-22: the arc, read by UnifiedEdge and by assignGeometricHandles below. Written
+            // only when declared, like the label style.
+            ...(cv.curve ? { irCurve: cv.curve } : {}),
+            // R-VP-23: the end labels, resolved here as the centre label is; each written only when
+            // declared, so an edge view without them decorates the edge as before.
+            ...(cv.sourceEndText ? { irSourceEndText: String(cv.sourceEndText(ctx, evalId) ?? '') } : {}),
+            ...(cv.targetEndText ? { irTargetEndText: String(cv.targetEndText(ctx, evalId) ?? '') } : {}),
+            // P-2026-09-30-1935: an Activity (UML) control flow, read from its view's provenance (irJunctions.ts): the
+            // junction pass groups these, UnifiedEdge puts their label on a patch. Written only then.
+            ...(isActivityFlowView(cv.ir) ? { irActivityFlow: true } : {}),
         },
     };
 }
@@ -101,7 +118,13 @@ export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>,
     const sc = center(s), tc = center(t);
     const dx = tc.x - sc.x, dy = tc.y - sc.y;
     let sourceSide: string, targetSide: string;
-    if (Math.abs(dx) >= Math.abs(dy)) {
+    // R-VP-22 (C3 causes 1 and 2): an arc self-loop is drawn over the top edge (UnifiedEdge), so it
+    // takes two top handles, the ones its line touches, instead of a right and a left one that no
+    // line touches and that would still take two slots in the side's split.
+    if (edge.source === edge.target && (edge.data as any)?.irCurve === 'arc') {
+        sourceSide = 'top';
+        targetSide = 'top';
+    } else if (Math.abs(dx) >= Math.abs(dy)) {
         sourceSide = dx >= 0 ? 'right' : 'left';
         targetSide = dx >= 0 ? 'left' : 'right';
     } else {
@@ -291,5 +314,23 @@ export function synthesizeObjectAsEdges(
         placed.push(withHandles);
         return withHandles;
     });
-    return { nodes: outNodes, edges: [...outEdges, ...syntheticWithHandles], edgeObjects, edgeObjectDeps };
+    // P-2026-09-30-1935: the view-only decision and merge of Activity (UML) (irJunctions.ts). Only when a flow carries
+    // the flag, so every other viewpoint returns the edges above as they are. An action is an object whose vertex
+    // view is Activity's in the Node role, resolved once per vertex.
+    let junctioned = syntheticWithHandles;
+    if (syntheticWithHandles.some(e => (e.data as any)?.irActivityFlow)) {
+        const actionMemo = new Map<string, boolean>();
+        const isAction = (vertexId: string): boolean => {
+            const hit = actionMemo.get(vertexId);
+            if (hit !== undefined) return hit;
+            const objectId = objByVertex.get(vertexId);
+            const metaclassId = objectId ? idlookup[objectId]?.instanceof : undefined;
+            const view = objectId && typeof metaclassId === 'string' ? resolveIRView(objectId, metaclassId, index, readCtx, idlookup) : null;
+            const yes = isActivityActionView(view?.ir);
+            actionMemo.set(vertexId, yes);
+            return yes;
+        };
+        junctioned = assignActivityJunctions(syntheticWithHandles, outEdges, isAction);
+    }
+    return { nodes: outNodes, edges: [...outEdges, ...junctioned], edgeObjects, edgeObjectDeps };
 }

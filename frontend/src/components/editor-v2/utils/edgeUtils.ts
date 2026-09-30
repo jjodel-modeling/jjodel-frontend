@@ -2376,3 +2376,104 @@ export function avoidNodeRects(points: Pt[], rects: Rect[]): Pt[] {
     if (pathBlockingRects(snapped, rects).length > 0) return points;
     return snapped;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Arc edges (R-VP-22, P-2026-09-30-0355): `edge.curve: 'arc'`
+// ═══════════════════════════════════════════════════════════════
+//
+// An arc edge is drawn between the CENTRES of its two handles, which DynamicHandles places on the
+// node's outline, and not between the points xyflow passes (the handle's outer edge, 4 px past the
+// border): so the arrow tip sits on the outline and on the anchor the node shows on hover. No
+// router runs, so no snap moves the tip off it (C3, cause 3). Pure: UnifiedEdge gathers the points.
+
+type Point = { x: number; y: number };
+
+/** The bow of an opposite pair: control point off the chord's midpoint, as a share of the chord. */
+export const ARC_BOW_RATIO = 0.23;
+export const ARC_BOW_MIN = 24;
+export const ARC_BOW_MAX = 96;
+/** Distance of an arc's label from its apex, outwards; of a loop's label above its top. */
+export const ARC_LABEL_GAP = 10;
+/** Height of a self-loop's control points above its ends, and their outward spread. */
+export const ARC_LOOP_HEIGHT = 64;
+export const ARC_LOOP_SPREAD = 16;
+/** Half the span of a self-loop drawn at the top centre, when its handles are not on top. */
+export const ARC_LOOP_HALF_SPAN = 18;
+
+export interface ArcEdgeGeometry {
+    d: string;
+    start: Point;
+    end: Point;
+    /** The label's anchor. */
+    label: Point;
+    /** True on a straight arc edge: the label takes the classic perpendicular nudge; false where `label` already stands off the line. */
+    nudge: boolean;
+    /** Dominant axis of the chord, for that nudge. */
+    isHorizontal: boolean;
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100;
+const pt = (p: Point) => `${r2(p.x)} ${r2(p.y)}`;
+
+/**
+ * Centre of the handle `handleId` of `type` on an internal node (React Flow's `internals.handleBounds`,
+ * relative to `internals.positionAbsolute`), or null when the node or the handle is not measured yet.
+ */
+export function handleCenterOf(node: any, handleId: string | null | undefined, type: 'source' | 'target'): Point | null {
+    const bounds = node?.internals?.handleBounds?.[type];
+    const pos = node?.internals?.positionAbsolute;
+    if (!handleId || !Array.isArray(bounds) || !pos) return null;
+    const h = bounds.find((b: any) => b?.id === handleId);
+    if (!h) return null;
+    return { x: pos.x + h.x + h.width / 2, y: pos.y + h.y + h.height / 2 };
+}
+
+/**
+ * An arc edge from `start` to `end`. With no opposite edge: a straight line, its label at the
+ * midpoint. With one or more (their chords in `opposite`, each from its own start to its own end):
+ * a quadratic whose control point stands off the midpoint on the side AWAY from the mean midpoint
+ * of the opposite chords, so the two arcs bow apart whichever slot each one got; on coincident
+ * chords, to the left of the direction of travel, which is opposite for the two directions. The
+ * label stands `ARC_LABEL_GAP` past the apex, outwards.
+ */
+export function computeArcEdgeGeometry(start: Point, end: Point, opposite: ReadonlyArray<{ start: Point; end: Point }>): ArcEdgeGeometry {
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const len = Math.hypot(dx, dy);
+    const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+    if (opposite.length === 0 || len < 1) {
+        return { d: `M ${pt(start)} L ${pt(end)}`, start, end, label: mid, nudge: true, isHorizontal };
+    }
+    // Left of the direction of travel, in screen coordinates (y down).
+    const n = { x: dy / len, y: -dx / len };
+    const other = opposite.reduce((acc, o) => ({ x: acc.x + (o.start.x + o.end.x) / 2 / opposite.length, y: acc.y + (o.start.y + o.end.y) / 2 / opposite.length }), { x: 0, y: 0 });
+    const away = (mid.x - other.x) * n.x + (mid.y - other.y) * n.y;
+    const side = Math.abs(away) < 0.5 ? 1 : Math.sign(away);
+    const h = Math.min(ARC_BOW_MAX, Math.max(ARC_BOW_MIN, ARC_BOW_RATIO * len));
+    const c = { x: mid.x + n.x * side * h, y: mid.y + n.y * side * h };
+    const apex = { x: (start.x + 2 * c.x + end.x) / 4, y: (start.y + 2 * c.y + end.y) / 4 };
+    const label = { x: apex.x + n.x * side * ARC_LABEL_GAP, y: apex.y + n.y * side * ARC_LABEL_GAP };
+    return { d: `M ${pt(start)} Q ${pt(c)} ${pt(end)}`, start, end, label, nudge: false, isHorizontal };
+}
+
+/**
+ * A self-loop over the top edge: a cubic from `start` to `end`, both on that edge, its control
+ * points `ARC_LOOP_HEIGHT` above them and spread outwards, so the loop leaves upwards and the
+ * arrow enters the top edge from above. The label stands `ARC_LABEL_GAP` above the loop's top.
+ */
+export function computeArcSelfLoopGeometry(start: Point, end: Point): ArcEdgeGeometry {
+    const s = end.x >= start.x ? 1 : -1;
+    const c1 = { x: start.x - s * ARC_LOOP_SPREAD, y: start.y - ARC_LOOP_HEIGHT };
+    const c2 = { x: end.x + s * ARC_LOOP_SPREAD, y: end.y - ARC_LOOP_HEIGHT };
+    const top = { x: (start.x + 3 * c1.x + 3 * c2.x + end.x) / 8, y: (start.y + 3 * c1.y + 3 * c2.y + end.y) / 8 };
+    return {
+        d: `M ${pt(start)} C ${pt(c1)}, ${pt(c2)}, ${pt(end)}`,
+        start, end, label: { x: top.x, y: top.y - ARC_LABEL_GAP }, nudge: false, isHorizontal: true,
+    };
+}
+
+/** The ends of a self-loop drawn at the centre of the top edge of `rect`, when its handles are not both on top. */
+export function topLoopEnds(rect: Rect): { start: Point; end: Point } {
+    const cx = rect.x + rect.width / 2;
+    return { start: { x: cx - ARC_LOOP_HALF_SPAN, y: rect.y }, end: { x: cx + ARC_LOOP_HALF_SPAN, y: rect.y } };
+}

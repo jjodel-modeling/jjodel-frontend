@@ -15,7 +15,7 @@ import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import { useEditorContextSafe } from '../../contexts/EditorContext';
 import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
-import type { BadgePosition, CompiledView, CompiledTextStyle, ShapeForm } from './irTypes';
+import type { BadgePosition, CompiledView, ShapeForm } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
@@ -108,11 +108,7 @@ const SEL_BAND_STROKE_WIDTH = 6;
 import { useContentDrivenSize } from './useContentSize';
 import { getMarkerDef, MARKER_STROKE_WIDTH, MARKER_VIEWBOX } from './markerRegistry';
 import IRRow from './IRRow';
-
-/** FontFamilyToken -> design-system CSS var. */
-const FONT_FAMILY_VAR: Record<string, string> = { sans: 'var(--font-sans)', mono: 'var(--font-mono)' };
-/** FontWeightToken -> numeric CSS weight. */
-const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semibold: 600, bold: 700 };
+import { resolveTextStyle } from './irCompile';
 
 /**
  * A badge sits in its corner on every form (P-2026-09-29-2122). On the five SVG-painted forms
@@ -125,29 +121,27 @@ const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semi
 const BADGE_STYLE: React.CSSProperties = { position: 'absolute', zIndex: 2 };
 
 /**
- * Resolve a CompiledTextStyle into an inline style for the current element
- * (ir-1.3 TS1). Only authored axes with a non-empty resolved value are emitted,
- * so an absent axis — or a conditional axis whose branch does not match — inherits
- * the surface's CSS default (irStyle.ts BASE_CSS). An authored axis is always
- * emitted (even when its value equals a CSS default) so it overrides the class rule.
- *
- * Exported since TS2: IRRow renders the dispatched rows outside this component and
- * must resolve their style with the same function, not a copy of it.
+ * The entry mark (R-VP-22, `ShapeSpec.entry`): a layer ENTRY_W × ENTRY_H outside the box, its right
+ * edge on the box's left border and its middle on the box's middle, so the arrow's tip, the layer's
+ * rightmost point, touches the border and nothing more. Placed inline, as the badge is, so no in-flow
+ * rule of the SVG-painted forms can take it back into the flow; irStyle.ts only lifts the two clips.
+ * `dot`: a filled dot (UML initial pseudostate), then the line; `arrow`: the line alone.
  */
-export function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): React.CSSProperties | undefined {
-    if (!cs) return undefined;
-    const s: React.CSSProperties = {};
-    if (cs.fontFamily) { const v = cs.fontFamily(ctx, id); if (v) s.fontFamily = FONT_FAMILY_VAR[v]; }
-    if (cs.fontSize) { const v = cs.fontSize(ctx, id); if (v && v > 0) s.fontSize = `${v}px`; }
-    if (cs.fontWeight) { const v = cs.fontWeight(ctx, id); if (v) s.fontWeight = FONT_WEIGHT_NUM[v]; }
-    if (cs.fontStyle) { const v = cs.fontStyle(ctx, id); if (v) s.fontStyle = v; }
-    if (cs.color) { const v = cs.color(ctx, id); if (v) s.color = v; }
-    // Underline means the native instance-name underline (UML convention), offset
-    // included: the 3px is baked into the axis, not a separate field. Same value as the
-    // bare literal in instanceNode.scss (.mm-object__name). Offset authoring: owed to S5.
-    if (cs.underline) { const v = cs.underline(ctx, id); if (v) { s.textDecoration = 'underline'; s.textUnderlineOffset = '3px'; } }
-    return Object.keys(s).length ? s : undefined;
-}
+const ENTRY_W = 40;
+const ENTRY_H = 14;
+const ENTRY_DOT_R = 6;
+const ENTRY_HEAD = 8;
+const ENTRY_STYLE: React.CSSProperties = {
+    position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', overflow: 'visible', pointerEvents: 'none', zIndex: 1,
+};
+
+/**
+ * Exported since TS2: IRRow renders the dispatched rows outside this component and
+ * must resolve their style with the same function, not a copy of it. The function
+ * lives in irCompile.ts since P-2026-09-30-0150 (R-VP-20), so the pure irEdgeViews.ts
+ * can call it too; re-exported here under the same name.
+ */
+export { resolveTextStyle };
 
 export interface IRNodeContentProps {
     compiled: CompiledView;
@@ -586,6 +580,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     ))}
                 </svg>
             )}
+            {compiled.entry && (
+                <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={ENTRY_STYLE} aria-hidden="true">
+                    {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={markerColor} />}
+                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W - ENTRY_HEAD}`} stroke={markerColor} strokeWidth={1} fill="none" />
+                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4} Z`} fill={markerColor} />
+                </svg>
+            )}
             {compiled.badges.map((b, i) => {
                 if (!b.visible(readCtx, objectId)) return null;
                 const icon = b.icon(readCtx, objectId);
@@ -668,7 +669,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     );
                 }
                 const isReferenceCompartment = fc.source === 'references';
-                const source = isReferenceCompartment ? rows.references : rows.attributes;
+                const slots = isReferenceCompartment ? rows.references : rows.attributes;
+                // R-VP-20: the attributes exclude keeps the named slots out of the rows (the identity
+                // slot the name label shows). Every slot excluded draws no compartment, as none does.
+                const exclude = fc.exclude;
+                const source = exclude ? slots.filter(r => !exclude.includes(r.name)) : slots;
                 if (source.length === 0) return null;
                 return (
                     <div
@@ -765,7 +770,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                                                 </span>
                                             );
                                         }
-                                        case 'literal': return <span key={si}>{seg.text}</span>;
+                                        // R-VP-20: a literal's own style, inline on its span; absent, a bare span.
+                                        case 'literal': return <span key={si} style={resolveTextStyle(fc.segmentStyles?.[si], readCtx, objectId)}>{seg.text}</span>;
                                         default: return null;
                                     }
                                 })}

@@ -22,6 +22,7 @@ import type {
     CompiledRowView,
     CompiledView,
     Conditional,
+    FieldSegment,
     FontFamilyToken,
     FontWeightToken,
     LabelAnchor,
@@ -31,7 +32,9 @@ import type {
     Predicate,
     NodeViewIR,
     RowViewIR,
+    TextTransformToken,
 } from './irTypes';
+import type { CSSProperties } from 'react';
 import type { ReadCtx } from './irReadCtx';
 import { parsePathExpr } from './pathExpr';
 import { proxyToIdReplacer } from '../../../../model/unproxy';
@@ -313,7 +316,63 @@ function compileTextStyle(style: TextStyle | undefined, deps: Set<string>): Comp
     if (style.fontStyle !== undefined) out.fontStyle = compileConditional<'normal' | 'italic' | ''>(style.fontStyle, '', deps);
     if (style.color !== undefined) out.color = compileConditional<string>(style.color, '', deps);
     if (style.underline !== undefined) out.underline = compileConditional<boolean>(style.underline, false, deps);
+    // R-VP-20: two scalar axes, compiled like the others so the render reads one shape. A scalar never
+    // reaches the fallback; anything else that does resolves to "no override".
+    if (style.letterSpacing !== undefined) out.letterSpacing = compileConditional<number | undefined>(style.letterSpacing, undefined, deps);
+    if (style.textTransform !== undefined) out.textTransform = compileConditional<TextTransformToken | ''>(style.textTransform, '', deps);
     return out;
+}
+
+/**
+ * Closed vocabulary of `TextStyle.textTransform` (R-VP-20). A Record keyed on the union, as
+ * LABEL_ANCHORS is; irValidate reads it for the authoring-time rule, the render below for what it emits.
+ */
+export const TEXT_TRANSFORMS: Record<TextTransformToken, true> = { uppercase: true, lowercase: true, none: true };
+
+/** FontFamilyToken -> design-system CSS var. */
+const FONT_FAMILY_VAR: Record<string, string> = { sans: 'var(--font-sans)', mono: 'var(--font-mono)' };
+/** FontWeightToken -> numeric CSS weight. */
+const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semibold: 600, bold: 700 };
+
+/**
+ * Resolve a CompiledTextStyle into an inline style for the current element
+ * (ir-1.3 TS1). Only authored axes with a non-empty resolved value are emitted,
+ * so an absent axis — or a conditional axis whose branch does not match — inherits
+ * the surface's CSS default (irStyle.ts BASE_CSS). An authored axis is always
+ * emitted (even when its value equals a CSS default) so it overrides the class rule.
+ *
+ * Here since P-2026-09-30-0150, moved from IRNodeContent.tsx with its two maps and
+ * otherwise unchanged but for the two axes of R-VP-20: the pure irEdgeViews.ts resolves
+ * an edge label's style with it, and cannot import the component (the joiner barrel).
+ * IRNodeContent re-exports it under the same name, which is where IRRow imports it from.
+ */
+export function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): CSSProperties | undefined {
+    if (!cs) return undefined;
+    const s: CSSProperties = {};
+    if (cs.fontFamily) { const v = cs.fontFamily(ctx, id); if (v) s.fontFamily = FONT_FAMILY_VAR[v]; }
+    if (cs.fontSize) { const v = cs.fontSize(ctx, id); if (v && v > 0) s.fontSize = `${v}px`; }
+    if (cs.fontWeight) { const v = cs.fontWeight(ctx, id); if (v) s.fontWeight = FONT_WEIGHT_NUM[v]; }
+    if (cs.fontStyle) { const v = cs.fontStyle(ctx, id); if (v) s.fontStyle = v; }
+    if (cs.color) { const v = cs.color(ctx, id); if (v) s.color = v; }
+    // Underline means the native instance-name underline (UML convention), offset
+    // included: the 3px is baked into the axis, not a separate field. Same value as the
+    // bare literal in instanceNode.scss (.mm-object__name). Offset authoring: owed to S5.
+    if (cs.underline) { const v = cs.underline(ctx, id); if (v) { s.textDecoration = 'underline'; s.textUnderlineOffset = '3px'; } }
+    // R-VP-20. Permissive towards what is persisted (R-B9-bis): a spacing that is not a finite
+    // number, or a case outside TEXT_TRANSFORMS, emits nothing. Zero is an authored spacing.
+    if (cs.letterSpacing) { const v = cs.letterSpacing(ctx, id); if (typeof v === 'number' && Number.isFinite(v)) s.letterSpacing = `${v}em`; }
+    if (cs.textTransform) { const v = cs.textTransform(ctx, id); if (typeof v === 'string' && Object.prototype.hasOwnProperty.call(TEXT_TRANSFORMS, v)) s.textTransform = v as TextTransformToken; }
+    return Object.keys(s).length ? s : undefined;
+}
+
+/**
+ * The compiled style of each literal segment of a row format (R-VP-20), by segment index, as a
+ * key to spread: empty when no literal declares one, so a compartment without the key compiles
+ * to the shape it had.
+ */
+function segmentStylesOf(segments: FieldSegment[], deps: Set<string>): { segmentStyles?: (CompiledTextStyle | undefined)[] } {
+    if (!Array.isArray(segments) || !segments.some(seg => seg?.kind === 'literal' && seg.style !== undefined)) return {};
+    return { segmentStyles: segments.map(seg => (seg?.kind === 'literal' ? compileTextStyle(seg.style, deps) : undefined)) };
 }
 
 /**
@@ -435,6 +494,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         id: fc.id,
         source: fc.source.from,
         segments: fc.rowFormat.segments,
+        // R-VP-20: the attributes exclude, copied verbatim and only on its own source (the
+        // validator applies the vocabulary, the render only compares names).
+        ...(fc.source.from === 'attributes' && Array.isArray(fc.source.exclude) ? { exclude: fc.source.exclude } : {}),
         // Section heading for the form rendering (2026-08-26). Copied verbatim, never
         // defaulted here: the fallback (`id` capitalized) belongs to the form host, and
         // materializing it now would make an authored title indistinguishable from a
@@ -455,6 +517,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         // axes extend the HOST view's deps, which is the right owner: the
         // compartment is drawn by the host node.
         rowStyle: compileTextStyle(fc.rowFormat.style, deps),
+        ...segmentStylesOf(fc.rowFormat.segments, deps),
     }));
 
     let containment: CompiledContainment | null = null;
@@ -503,6 +566,10 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         badges,
         fieldCompartments,
     };
+    // Entry mark (R-VP-22): written only when declared in the vocabulary, so a view without it
+    // compiles to the key list it had; a value outside it renders as absent (R-B9-bis).
+    const entry: unknown = ir.shape.entry;
+    if (entry === 'dot' || entry === 'arrow') compiled.entry = entry;
     compileCache.set(key, compiled);
     return compiled;
 }
@@ -532,6 +599,46 @@ function compileTextSource(src: TextSource | undefined, deps: Set<string>): Comp
     }
     const t = src.text;
     return () => t;
+}
+
+/**
+ * The centre label of an edge view (R-VP-20 (4)): the `template` when it is a non-empty array,
+ * else `center`. The template concatenates its segments, as a row view's does, with one rule of
+ * its own: a value segment (path, intrinsic) that resolves empty draws nothing and takes with it
+ * the literal right before it, its caption (`weight = ` with no weight). Every value empty, the
+ * label is what the other literals say, and nothing at all when there are none, which draws no
+ * label, as an empty `center` path does; a template of literals only always draws. A template
+ * that is not a non-empty array falls back to `center`: the render is permissive, the validator
+ * refuses it (R-B9-bis).
+ */
+function compileLabelText(labels: EdgeViewIR['edge']['labels'], deps: Set<string>): CompiledAccessor | null {
+    const template = labels?.template;
+    if (!Array.isArray(template) || template.length === 0) return compileTextSource(labels?.center, deps);
+    const parts = template.map(seg => ({
+        value: seg?.from === 'path' || seg?.from === 'intrinsic',
+        text: compileTextSource(seg, deps) ?? (() => ''),
+    }));
+    return (ctx, id) => {
+        const drawn = parts.map(p => { const v = p.text(ctx, id); return v == null ? '' : String(v); });
+        let out = '';
+        for (let i = 0; i < parts.length; i++) {
+            // A literal right before an empty value is its caption: it goes with it.
+            if (!parts[i].value && parts[i + 1]?.value && drawn[i + 1] === '') continue;
+            out += drawn[i];
+        }
+        return out;
+    };
+}
+
+/** The TextSource kinds an end label may take (R-VP-23); anything else renders as absent (R-B9-bis). */
+const END_LABEL_SOURCES: Readonly<Record<string, true>> = { path: true, literal: true, intrinsic: true };
+
+/** An end label (R-VP-23): a text source compiled as a centre `center` is, or null when it is not one. */
+function compileEndLabel(src: unknown, deps: Set<string>): CompiledAccessor | null {
+    if (!src || typeof src !== 'object' || Array.isArray(src)) return null;
+    const from = (src as { from?: unknown }).from;
+    if (typeof from !== 'string' || !Object.prototype.hasOwnProperty.call(END_LABEL_SOURCES, from)) return null;
+    return compileTextSource(src as TextSource, deps);
 }
 
 const edgeCompileCache = new Map<string, CompiledEdgeView>();
@@ -586,10 +693,25 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
             targetEnd: e.terminations?.targetEnd ?? 'openArrow',
         },
         routing: e.routing ?? null,
-        labelText: compileTextSource(e.labels?.center, deps),
+        labelText: compileLabelText(e.labels, deps),
         labelPlacement: e.labels?.placement ?? 'auto',
         persistWaypoints: e.persistWaypoints ?? true,
     };
+    // R-VP-22: the arc, the same way: only when declared in the vocabulary.
+    const curve: unknown = e.curve;
+    if (curve === 'arc') compiled.curve = curve;
+    // R-VP-20 (TS3): the label style, compiled only when it is an object, so an edge view without
+    // it compiles to the shape it had and irEdgeViews writes no irLabelStyle.
+    const labelStyleIR = e.labels?.style;
+    if (labelStyleIR && typeof labelStyleIR === 'object' && !Array.isArray(labelStyleIR)) {
+        compiled.labelStyle = compileTextStyle(labelStyleIR, deps);
+    }
+    // R-VP-23: the end labels, each compiled only when it is a text source of the vocabulary, so an
+    // edge view without them compiles to the shape it had and irEdgeViews writes no end text.
+    const sourceEnd = compileEndLabel(e.labels?.sourceEnd, deps);
+    if (sourceEnd) compiled.sourceEndText = sourceEnd;
+    const targetEnd = compileEndLabel(e.labels?.targetEnd, deps);
+    if (targetEnd) compiled.targetEndText = targetEnd;
     compiled.dependencySet = Array.from(deps);
     compiled.crossPaths = dedupeCrossPaths(crossPathSink ?? []);
     const channels = harvestChannels();

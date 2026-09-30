@@ -3,7 +3,7 @@
  * Pure: no store, no React — irValidate -> irCompile is joiner-free.
  */
 import { describe, it, expect } from 'vitest';
-import { validateIR, VALID_LABEL_POSITIONS, VALID_PADDING_VALUES, VALID_ROUTING_VALUES } from '../irValidate';
+import { validateIR, VALID_LABEL_POSITIONS, VALID_PADDING_VALUES, VALID_ROUTING_VALUES, VALID_TERMINATIONS } from '../irValidate';
 import { clearCompileCache, compileView, irHash, LABEL_ANCHORS } from '../irCompile';
 import { defaultObjectViewIR, defaultEdgeViewIR } from '../irDefaults';
 import { CONTAINER_ENDPOINT } from '../irTypes';
@@ -531,5 +531,143 @@ describe('compileView — form passthrough', () => {
         clearCompileCache();
         expect(compileView('v-form-cache', view('plain')).formSpec).toEqual({ theme: 'plain' });
         expect(compileView('v-form-cache', view('card')).formSpec).toEqual({ theme: 'card' });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Slice C2 (P-2026-09-30-0150, R-VP-20): the five keys, accepted when well typed, refused otherwise
+// ---------------------------------------------------------------------------
+
+describe('validateIR — C2 keys (R-VP-20)', () => {
+    const vertex = (over: Partial<VertexViewIR>): VertexViewIR => ({
+        irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['State'], shape: { form: 'rounded' }, ...over,
+    } as VertexViewIR);
+    const labelled = (style: unknown): VertexViewIR => vertex({
+        shape: { form: 'rounded', labels: [{ position: 'top', source: { from: 'literal', text: 'State' }, style: style as never }] },
+    });
+    const compartment = (source: unknown, segments: unknown[] = [{ kind: 'name' }], style?: unknown): VertexViewIR => vertex({
+        fieldCompartments: [{ id: 'a', source: source as never, rowFormat: { segments: segments as never, ...(style !== undefined ? { style: style as never } : {}) } }],
+    });
+    const edge = (labels: unknown): EdgeViewIR => ({
+        irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Arc'], edge: { source: '$src.value', target: '$tgt.value', labels: labels as never },
+    });
+    const row = (style: unknown): RowViewIR => ({ irVersion: 'ir-1.0', kind: 'row', metaclasses: ['A'], template: [{ from: 'intrinsic', prop: 'name' }], style: style as never });
+    const ok = (id: string, ir: unknown) => { clearCompileCache(); expect(validateIR(id, ir as never), id).toEqual({ ok: true }); };
+    const refused = (id: string, ir: unknown, match: RegExp) => {
+        clearCompileCache();
+        const r = validateIR(id, ir as never);
+        expect(r.ok, id).toBe(false);
+        if (!r.ok) expect(r.error, id).toMatch(match);
+    };
+
+    it('accepts letterSpacing and textTransform on every TextStyle surface', () => {
+        const style = { letterSpacing: 0.08, textTransform: 'uppercase' };
+        ok('c2v-label', labelled(style));
+        ok('c2v-shape-text', vertex({ shape: { form: 'rounded', text: { letterSpacing: -0.02, textTransform: 'none' } } }));
+        ok('c2v-rowformat', compartment({ from: 'attributes' }, [{ kind: 'name' }], { letterSpacing: 0, textTransform: 'lowercase' }));
+        ok('c2v-row', row(style));
+        ok('c2v-edge-style', edge({ center: { from: 'literal', text: 'x' }, style }));
+    });
+
+    it('refuses a letterSpacing that is not a finite number, wherever the TextStyle is', () => {
+        for (const bad of ['0.08', null, true, Infinity, { when: { op: 'literal', value: true }, then: 0.1 }]) {
+            refused(`c2v-ls-label-${String(bad)}`, labelled({ letterSpacing: bad }), /shape\.labels\[0\]\.style\.letterSpacing/);
+            refused(`c2v-ls-row-${String(bad)}`, row({ letterSpacing: bad }), /style\.letterSpacing/);
+            refused(`c2v-ls-edge-${String(bad)}`, edge({ center: { from: 'literal', text: 'x' }, style: { letterSpacing: bad } }), /edge\.labels\.style\.letterSpacing/);
+        }
+        refused('c2v-ls-text', vertex({ shape: { form: 'rounded', text: { letterSpacing: '1em' as never } } }), /shape\.text\.letterSpacing/);
+        refused('c2v-ls-rowformat', compartment({ from: 'attributes' }, [{ kind: 'name' }], { letterSpacing: 'x' }), /fieldCompartments\[0\]\.rowFormat\.style\.letterSpacing/);
+    });
+
+    it('refuses a textTransform outside uppercase | lowercase | none', () => {
+        for (const bad of ['capitalize', 'UPPERCASE', '', 1]) {
+            refused(`c2v-tt-${String(bad)}`, labelled({ textTransform: bad }), /textTransform must be one of uppercase \| lowercase \| none/);
+        }
+        refused('c2v-tt-segment', compartment({ from: 'attributes' }, [{ kind: 'literal', text: 'a', style: { textTransform: 'small-caps' } }]), /segments\[0\]\.style\.textTransform/);
+    });
+
+    it('accepts exclude on the attributes source, an array of feature names (empty included)', () => {
+        ok('c2v-ex', compartment({ from: 'attributes', exclude: ['name'] }));
+        ok('c2v-ex-two', compartment({ from: 'attributes', exclude: ['name', 'id'] }));
+        ok('c2v-ex-empty', compartment({ from: 'attributes', exclude: [] }));
+    });
+
+    it('refuses an exclude that is not an array of strings, or on another source', () => {
+        for (const bad of ['name', [1], [null], { name: true }, [['name']]]) {
+            refused(`c2v-ex-${JSON.stringify(bad)}`, compartment({ from: 'attributes', exclude: bad }), /fieldCompartments\[0\]\.source\.exclude must be an array of feature names/);
+        }
+        refused('c2v-ex-refs', compartment({ from: 'references', exclude: ['next'] }), /exclude applies to the attributes source only/);
+        refused('c2v-ex-children', compartment({ from: 'children', exclude: ['x'] }), /exclude applies to the attributes source only/);
+    });
+
+    it('accepts a style on a literal segment, and refuses one that is not a TextStyle object', () => {
+        ok('c2v-seg', compartment({ from: 'attributes' }, [{ kind: 'literal', text: 'attr ', style: { color: 'var(--color-inode-quiet)', fontSize: 10 } }, { kind: 'name' }]));
+        for (const bad of ['grey', 3, [], null]) {
+            refused(`c2v-seg-${JSON.stringify(bad)}`, compartment({ from: 'attributes' }, [{ kind: 'literal', text: 'a', style: bad }]), /fieldCompartments\[0\]\.rowFormat\.segments\[0\]\.style must be a TextStyle object/);
+        }
+    });
+
+    it('accepts a label template of TextSources, and refuses a template that is not one', () => {
+        ok('c2v-tpl', edge({ template: [{ from: 'literal', text: 'weight = ' }, { from: 'path', expr: '$weight.value' }] }));
+        ok('c2v-tpl-center', edge({ center: { from: 'literal', text: 'x' }, template: [{ from: 'intrinsic', prop: 'name' }] }));
+        for (const bad of [{}, 'weight', [], [42], [{ from: 'bogus' }], [{ text: 'x' }]]) {
+            refused(`c2v-tpl-${JSON.stringify(bad)}`, edge({ template: bad }), /edge\.labels\.template must be a non-empty array of text sources/);
+        }
+        // A forbidden PathExpr inside a segment is refused by the compile-as-validator.
+        refused('c2v-tpl-path', edge({ template: [{ from: 'path', expr: '$a?.b' }] }), /./);
+    });
+
+    it('accepts a label style (the halo label), empty included, and refuses one that is not an object', () => {
+        ok('c2v-lstyle', edge({ center: { from: 'literal', text: 'x' }, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }));
+        ok('c2v-lstyle-empty', edge({ center: { from: 'literal', text: 'x' }, style: {} }));
+        for (const bad of ['halo', true, [], null]) {
+            refused(`c2v-lstyle-${JSON.stringify(bad)}`, edge({ center: { from: 'literal', text: 'x' }, style: bad }), /edge\.labels\.style must be a TextStyle object/);
+        }
+    });
+
+    it('an IR without the keys validates exactly as before', () => {
+        ok('c2v-default-object', defaultObjectViewIR());
+        ok('c2v-default-edge', defaultEdgeViewIR());
+        ok('c2v-label-no-axes', labelled({ fontSize: 10, fontWeight: 'semibold' }));
+    });
+});
+
+describe('validateIR — edge.terminations closed vocabulary (R-VP-24, P-2026-09-30-1521)', () => {
+    /** Written through `unknown`, as routing: the values this rule catches come from outside the type. */
+    const ended = (terminations: unknown): EdgeViewIR => ({
+        ...defaultEdgeViewIR(),
+        metaclasses: ['InhibitorArc'],
+        edge: { terminations } as EdgeViewIR['edge'],
+    });
+
+    it('the vocabulary is the union: the six ends of before and hollowCircle', () => {
+        expect(Object.keys(VALID_TERMINATIONS)).toEqual(['none', 'openArrow', 'closedArrow', 'hollowTriangle', 'filledDiamond', 'hollowDiamond', 'hollowCircle']);
+    });
+
+    it('accepts hollowCircle at either end, and every other end of the vocabulary', () => {
+        for (const t of Object.keys(VALID_TERMINATIONS)) {
+            clearCompileCache();
+            expect(validateIR(`e-end-${t}-target`, ended({ sourceEnd: 'none', targetEnd: t })), t).toEqual({ ok: true });
+            expect(validateIR(`e-end-${t}-source`, ended({ sourceEnd: t })), t).toEqual({ ok: true });
+        }
+    });
+
+    it('accepts no terminations key, and an object missing either end (the compile\'s defaults)', () => {
+        clearCompileCache();
+        expect('terminations' in defaultEdgeViewIR().edge).toBe(false);
+        expect(validateIR('e-end-absent', defaultEdgeViewIR())).toEqual({ ok: true });
+        expect(validateIR('e-end-empty', ended({}))).toEqual({ ok: true });
+    });
+
+    it('rejects an end outside the vocabulary, naming the end and the value read', () => {
+        for (const [end, value] of [['targetEnd', 'hollowcircle'], ['sourceEnd', 'circle'], ['targetEnd', ''], ['targetEnd', 0], ['sourceEnd', null]] as const) {
+            clearCompileCache();
+            const r = validateIR(`e-end-bad-${end}-${String(value)}`, ended({ [end]: value }));
+            expect(r.ok, `${end} ${String(value)}`).toBe(false);
+            if (!r.ok) {
+                expect(r.error).toContain(`edge.terminations.${end}`);
+                expect(r.error).toContain(JSON.stringify(value));
+            }
+        }
     });
 });
