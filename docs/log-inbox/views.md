@@ -521,3 +521,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-09-30 18:08
 
 **Ticket** (low, not a ticket of its own): `irStyle.ts:165` (`.mm-node.drop-target > .ir-node-content`) never applies on the canvas, because only `ClassNode.tsx:478` and `EnumNode.tsx:154` emit `drop-target`, and neither mounts `.ir-node-content`. Left in place (Rule 9).
+
+## 2026-09-30 — merge: selection-outline into alfonso-frontend-jjtl (P-2026-09-30-1846)
+**Prompt**: `claude_2026-09-30_1846_prompt_merge_selection-outline.md`, a direct merge by `lane-run merge --direct`, no session: `selection-outline` at `a5c9d905f` into `alfonso-frontend-jjtl`, merge base `c1e0376dc`, 5 commits on the branch side.
+**Files touched**: merge `7614e7e10`: 5 files from the branch side (`docs/discovery/discovery_2026-09-30_selection_outline.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1808_prompt_selection_outline.md`, `frontend/src/components/editor-v2/nodes/__tests__/irSelectionRing.test.ts`, `frontend/src/components/editor-v2/nodes/instanceNode.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7614e7e10` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5949 tests in 239 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: IR ring painted cyan, box 0 px; Alfonso authorised the merge (fondi)
+**Notes**: Rollback tag `pre-selection-outline` on `c1e0376dc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1846/result.json`.
+**Prompt document name**: 2026-09-30 18:46
