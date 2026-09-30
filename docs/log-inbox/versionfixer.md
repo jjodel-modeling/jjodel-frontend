@@ -67,3 +67,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-09-30-1540
 **Detail**: docs/discovery/discovery_2026-09-30_empty_state_white_page.md
+
+## 2026-09-30 — merge: empty-state-guard into alfonso-frontend-jjtl (P-2026-09-30-1633)
+**Prompt**: `claude_2026-09-30_1633_prompt_merge_empty-state-guard.md`, a direct merge by `lane-run merge --direct`, no session: `empty-state-guard` at `693dc86e5` into `alfonso-frontend-jjtl`, merge base `ecbc0e92c`, 4 commits on the branch side.
+**Files touched**: merge `eb5c02928`: 9 files from the branch side (`docs/discovery/discovery_2026-09-30_empty_state_white_page.md`, `docs/log-inbox/versionfixer.md`, `docs/prompts/claude_2026-09-30_1540_prompt_empty_state_white_page.md`, `frontend/src/api/__tests__/projectsEmptyState.test.ts`, `frontend/src/api/persistance/projects.ts`, `frontend/src/components/forEndUser/Try.tsx`, `frontend/src/components/forEndUser/__tests__/tryCatchOnce.test.ts`, `frontend/src/components/project/ProjectEditor.tsx`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `eb5c02928` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5924 tests in 236 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non-visual persistence guard: favorite and tags no longer write an empty state; a damaged record opens the error screen (lane probe 3061); four demo scenes 45/45; 8 gates green on eb5c02928; GO by the chat C-2026-09-30-1458, unattended
+**Notes**: Rollback tag `pre-empty-state-guard` on `ecbc0e92c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1633/result.json`.
+**Prompt document name**: 2026-09-30 16:33
