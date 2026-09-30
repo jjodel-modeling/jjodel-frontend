@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-2025
 Chat: C-2026-09-30-1940
 Lane: fast (z-order bug, one or two style files, measure then fix, no Phase 1 hard stop). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane loader-over-rail · b46af6f27 · non fuso: hard-stop, lane probe on 3071 (light), overlay forced (save too fast to catch), rail centre div.jj-conformance-bar → div.loader-spinner, rail pixel 248,250,252 → 74,75,75, open/navigation/navbar menu unchanged, scene panes 0 px outside the Jodie glyph box, crops in frontend/scripts/smoke/_tmp_loaderz_crops/ (gitignored), verifica visiva alla chat
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
 Worktree: `~/jjodel-w-loaderz`, branch `loader-over-rail`, created from the trunk `alfonso-frontend-jjtl` at `45ff6c290`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-loaderz`, branch `loader-over-rail`, `git log -1` is the docs commit that added this prompt, `git status` clean; if any differs, stop with `Outcome: blocked`.

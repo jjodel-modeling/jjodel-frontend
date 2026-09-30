@@ -534,3 +534,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: IR ring painted cyan, box 0 px; Alfonso authorised the merge (fondi)
 **Notes**: Rollback tag `pre-selection-outline` on `c1e0376dc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1846/result.json`.
 **Prompt document name**: 2026-09-30 18:46
+
+## 2026-09-30 — fix(loader): the save overlay covers the Properties rail (P-2026-09-30-2025)
+**Prompt**: `claude_2026-09-30_2025_prompt_loader_over_rail.md`, fast lane, measure then fix, on `~/jjodel-w-loaderz` branch `loader-over-rail`. While saving, the dark loading overlay dimmed canvas, left rail and top bar, but the right Properties rail stayed bright on top of it.
+**Files touched**: code `b46af6f27`: `frontend/src/components/loader/Loader.tsx` (portal onto `document.body`). This commit: `docs/discovery/discovery_2026-09-30_loader_over_rail.md` (new), this entry and a ticket, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `b46af6f27`: typecheck exit 2, 14 errors, the §17 set by file and code; build exit 0; vitest 5949 passed, 0 failed, the 9 §17 files red at import plus `irSelectionRing.test.ts`, 5/5 passing, its `afterAll` `browser.close()` timed out at 10 s (load average 110, `Loader.tsx` outside its graph). Probe on 3071: open, navigation, `U.navigating`, rail and user menu unchanged; the four scenes 0 px outside the Jodie glyph box (report §4.4).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat (RC-23); lane probe before/after, rail centre `div.jj-conformance-bar` → `div.loader-spinner`, pixel 248,250,252 → 74,75,75; crops in `frontend/scripts/smoke/_tmp_loaderz_crops/` (gitignored)
+**Notes**: Root cause: `#root` is `position: fixed` (`index.scss:31`), a stacking context at level 0 of body, and the loader lived inside it while the rail is a body child at 900 (D-UI-14). The save is too fast to catch in the probe (2.1 ms, no `isLoading` transition): the overlay was forced with the flag `saveProject.tsx:63` sets. No z-index, class or rail change.
+**Prompt document name**: 2026-09-30 20:25
+
+## 2026-09-30 — ticket: user menu Dashboard throws on Collaborative.client.off when no collaborative session was opened
+**Ticket**: user menu > Dashboard runs `Collaborative.client.off('pullAction')` (`Navbar.tsx:2019`), but `Collaborative.client` is assigned only in `Collaborative.connect()` (`Collaborative.ts:55`): on a project that never connected it throws `Cannot read properties of undefined (reading 'off')` and does not navigate. Observed by automation only (probe, offline session, non-collaborative project), not yet reproduced by hand (RC-8).
+**Priority**: low
+**Found in**: P-2026-09-30-2025
+**Detail**: docs/discovery/discovery_2026-09-30_loader_over_rail.md
