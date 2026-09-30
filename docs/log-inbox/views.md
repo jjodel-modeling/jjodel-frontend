@@ -380,3 +380,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Visual evidence from the lane itself (P-2026-09-29-2122): 7 crops expanded/collapsed/re-expanded/control in light and dark with DOM measures, tests irCollapsedRender and useContentSizeDrop; merge gates green. Dark-mode contrast of the fixture fill is an authoring colour, not a renderer defect. Merge taken over by chat C-2026-09-29-1826 on Alfonso request.
 **Notes**: Rollback tag `pre-ir-collapsed-render` on `cf8c031f6` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2243/result.json`.
 **Prompt document name**: 2026-09-29 22:43
+
+## 2026-09-29 — docs(views): discovery, IR authoring freezes, collapsed graphVertex, StructureSpec (P-2026-09-29-1935)
+**Prompt**: `claude_2026-09-29_1935_prompt_discovery_ir_authoring_freeze.md`, read-only discovery, heavy tier, branch `ir-freeze-disc` in `~/jjodel-w-irfreeze`: explain the four tab freezes of chat C-2026-09-29-1840, the ignored `collapsed.form`/`badge`, the inert `StructureSpec`, and two side findings; Phase 2 plan.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-29_ir_authoring_freeze.md` (new), this entry, the Status line of the prompt file. No tracked file under `frontend/`; probes `frontend/scripts/smoke/_tmp_irfreeze_*` and `_tmp_lane_vite_3056.config.ts` gitignored, left on disk.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — docs only; `git status --porcelain` empty before and after the probes; Vite on 3056 started from this tree and stopped by this session.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (read-only; no critical-zone file read or edited)
+**Smoke visivo**: non applicabile
+**Notes**: Freeze not reproduced (28 replays of a-d, 21 live rewrites, 3 reloads: 0). A nested L-proxy in `ir` (unguarded, `action.ts:321`) pins the renderer: Cmd+S unresponsive 5.5-232.7 s, id control fine. Points 2 and 3 are missing renderers, measured per contrasto. Side finding 1 confirmed: Cmd+S saves Navbar's stale `LProject`, dropping a new viewpoint. Headless never reports `hidden`, so the timeout arm is void.
+**Prompt document name**: 2026-09-29 19:35
