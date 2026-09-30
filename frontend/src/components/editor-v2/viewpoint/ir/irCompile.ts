@@ -674,7 +674,6 @@ function staticTermination(v: unknown, fallback: EdgeTermination): EdgeTerminati
  */
 function compileTerminationEnd(v: unknown, fallback: EdgeTermination, deps: Set<string>): CompiledConditional<EdgeTermination> | null {
     if (!isConditionalEnd(v)) return null;
-    if ('rules' in v && !Array.isArray(v.rules)) return null;
     const local = new Set<string>();
     try {
         const fn = compileConditional<EdgeTermination>(v, fallback, local);

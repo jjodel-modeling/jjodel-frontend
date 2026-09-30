@@ -172,6 +172,19 @@ describe('trimPathEnds — the line stops at the glyph\'s back', () => {
         expect(r.end!.angle).toBeCloseTo(Math.atan2(0 - e.y, 100 - e.x) * 180 / Math.PI, 1);
     });
 
+    it('a quadratic cut at its start keeps the same curve: the control on C→P1, 20 px of curve removed', () => {
+        const P = [[0, 0], [50, 40], [100, 0]];
+        const r = trimPathEnds('M 0 0 Q 50 40 100 0', 20, 0);
+        const n = nums(r.d);
+        const [s, c, e] = [{ x: n[0], y: n[1] }, { x: n[2], y: n[3] }, { x: n[4], y: n[5] }];
+        expect(s).toEqual(r.start!.at);
+        expect(e).toEqual({ x: 100, y: 0 });
+        // The kept control point lies on C→P1 at the split parameter t: C' = C + t (P1 − C).
+        const t = (c.x - 50) / 50;
+        expect(c.y).toBeCloseTo(40 - 40 * t, 1);
+        expect(arcLen(P, 0, t)).toBeCloseTo(20, 0);
+    });
+
     it('a cubic (the bezier and the loop): both ends trimmed along the curve', () => {
         const P = [[0, 0], [30, 0], [70, 50], [100, 50]];
         const r = trimPathEnds('M 0 0 C 30 0 70 50 100 50', 14, 20);

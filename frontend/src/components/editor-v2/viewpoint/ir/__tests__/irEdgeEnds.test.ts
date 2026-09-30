@@ -163,6 +163,13 @@ describe('irEdgeViews — a Conditional end resolved per edge instance', () => {
         }
     });
 
+    it('either end; a Conditional with no else falls back per instance to that end\'s default', () => {
+        clearCompileCache();
+        const [a, b] = world([refView({ terminations: { sourceEnd: { when: MANY, then: 'filledCircle' }, targetEnd: { when: MANY, then: 'bar' } } })]);
+        expect([a.irSourceTermination, b.irSourceTermination]).toEqual(['filledCircle', 'none']);
+        expect([a.irTargetTermination, b.irTargetTermination]).toEqual(['bar', 'openArrow']);
+    });
+
     it('a plain end writes the same edge data it wrote before the slice', () => {
         clearCompileCache();
         const [a] = world([refView({ terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, labels: { targetEnd: N } })]);
