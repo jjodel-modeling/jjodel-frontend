@@ -150,6 +150,12 @@ describe('diagramBounds', () => {
         expect(b).toEqual({ x: -24, y: -24, width: 248, height: 348 });
     });
 
+    it('divides every side by the zoom, away from the flow origin', () => {
+        // zoom 2, flow origin at (100, 50): the box (140, 70)-(180, 90) on screen is (20, 10)-(40, 20) in flow units
+        const b = diagramBounds([r(140, 70, 180, 90)], { x: 100, y: 50 }, 2, 0);
+        expect(b).toEqual({ x: 20, y: 10, width: 20, height: 10 });
+    });
+
     it('keeps a zero-width box (a vertical edge) and skips an empty one', () => {
         const b = diagramBounds([r(0, 0, 0, 0), r(50, 10, 50, 90)], { x: 0, y: 0 }, 1, 0);
         expect(b).toEqual({ x: 50, y: 10, width: 0, height: 80 });
