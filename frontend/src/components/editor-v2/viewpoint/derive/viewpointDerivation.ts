@@ -58,6 +58,10 @@
  * - **No provenance key** in the ir (decision 3): `rule` is returned beside it,
  *   for the caller and the tests, and never written. The provenance a created view
  *   carries (`generated`, slice D, P-2026-09-30-0255) is added by `notations.ts`.
+ * - **Activity (UML)** (P-2026-09-30-1552, R-VP-26): the Flowchart's documents drawn as the
+ *   UML activity diagram, the initial a filled dot, the action a rounded box, the decision a
+ *   hollow diamond, fork and join a bar, the final a bull's-eye, a guard in brackets
+ *   (`deriveActivityViewpointIRs`).
  * - **The dialog's table** (slice D): `DerivationRoles.classRoles`, when given, says
  *   each class's role in place of the bag's class keys (`rolesFromTable`); the bag
  *   still gives the references and attributes the roles read.
@@ -97,9 +101,10 @@ export interface DerivationRoles {
      * The drawing over the role-keyed documents of the profile (slices A1 and A3, P-2026-09-30-0355,
      * R-VP-22): `statechart` (Statechart (UML), on `stateMachine`), `flowchartIso` (Flowchart (ISO
      * 5807), on `flowchart`); slice A2 (P-2026-09-30-1521, R-VP-24): `petriClassic` (Petri net
-     * (classic), on `petri`). Absent: the role-keyed documents of R-VP-15..18, as before.
+     * (classic), on `petri`); P-2026-09-30-1552 (R-VP-26): `activityUml` (Activity (UML), on `flowchart`).
+     * Absent: the role-keyed documents of R-VP-15..18, as before.
      */
-    readonly notation?: 'statechart' | 'flowchartIso' | 'petriClassic';
+    readonly notation?: 'statechart' | 'flowchartIso' | 'petriClassic' | 'activityUml';
 }
 
 export interface DerivedView {
@@ -742,6 +747,118 @@ export function deriveIsoFlowchartViewpointIRs(lookup: Lookup, metamodelId: stri
 }
 
 // ---------------------------------------------------------------------------
+// Activity (UML) (P-2026-09-30-1552, R-VP-26)
+// ---------------------------------------------------------------------------
+
+/** The name signals of Activity (UML), in their order: the first group a word of the class name is in decides. */
+const ACTIVITY_SIGNALS: ReadonlyArray<{ role: 'initial' | 'activityFinal' | 'decision' | 'fork' | 'join'; words: ReadonlySet<string> }> = [
+    { role: 'initial', words: new Set(['initial', 'start']) },
+    { role: 'activityFinal', words: new Set(['final', 'end']) },
+    { role: 'decision', words: new Set(['decision', 'choice', 'branch', 'merge']) },
+    { role: 'fork', words: new Set(['fork']) },
+    { role: 'join', words: new Set(['join']) },
+];
+
+/** The role the words of a class name give in Activity (UML)'s table (R-VP-26), or undefined. Whole words, as R-VP-19's. */
+export function activitySignalRole(className: string): 'initial' | 'activityFinal' | 'decision' | 'fork' | 'join' | undefined {
+    const words = nameWords(className);
+    return ACTIVITY_SIGNALS.find(g => words.some(w => g.words.has(w)))?.role;
+}
+
+/** The initial node: a filled dot of 20 px. Every authored axis is floored at 24 px today (nodes/nodeSizing.ts `defaultBoxFor`). */
+const ACTIVITY_INITIAL_SIZE = { width: 20, height: 20 } as const;
+/** The activity final: a bull's-eye of 24 px, its inner disc the registry's `dot`. */
+const ACTIVITY_FINAL_SIZE = { width: 24, height: 24 } as const;
+/** Decision and merge: a hollow diamond of 36 px. */
+const ACTIVITY_DECISION_SIZE = { width: 36, height: 36 } as const;
+/**
+ * Fork and join: a bar 5 px thick and 120 long. The IR has no orientation and `defaultSize` is per view, so the bar
+ * is upright for every fork and join (the demo's rows run left to right); it draws 24 px thick until the floor above
+ * is lifted for the bar.
+ */
+const ACTIVITY_BAR_SIZE = { width: 5, height: 120 } as const;
+/** The action: 44 px high, its width from its name; radius 14, clamped at render to a quarter of the height. */
+const ACTIVITY_ACTION_SIZE = { height: 44 } as const;
+const ACTIVITY_ACTION_RADIUS = 14;
+
+/**
+ * Activity (UML), P-2026-09-30-1552 (R-VP-26, docs/discovery/discovery_2026-09-30_activity_uml_notation.md): the
+ * Flowchart's documents (order, endpoints, router) drawn as the UML activity diagram, keyed on the dialog's table.
+ *
+ * - The Initial: a filled circle in the ink, 20 px, no name.
+ * - An action (the Node role, and every class that takes it): a white rounded rectangle, 1 px in the ink, radius 14,
+ *   44 px high, its name centred in 13 px 500 in the ink, no compartment.
+ * - A decision (the notation's own `decision` role): a hollow diamond, 36 px, no name.
+ * - Fork and join: a filled bar in the ink, upright, 5 by 120 px, no name.
+ * - The Terminal and an Activity final: a bull's-eye, a white circle of 24 px, 1 px in the ink, the `dot` marker in the
+ *   border colour, no name.
+ * - A control flow (the Transition role): the Flowchart's endpoints on today's router, 1 px in the ink, the open
+ *   arrowhead (R-VP-25), no label; where its guard is set, a second document with priority 1 draws it as
+ *   `[guard]`, verbatim, in the C2 label style. A template drops only the literal before an empty value, so the
+ *   bracket needs its own document, not a template on the plain one.
+ * - Every other document (a class with no role) is the Flowchart's.
+ */
+export function deriveActivityViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
+    const attributesOf = attributesHeld(lookup, metamodelId);
+    // The decision is no role of the profile, so its document's rule is structural: the table says it.
+    const table = roles.classRoles ? rolesFromTable(lookup, metamodelId, roles.classRoles) : null;
+    const guardKey = roles.bag.simGuard;
+    const out: DerivedView[] = [];
+    for (const v of deriveViewpointIRs(lookup, metamodelId, roles)) {
+        const role = table ? table.get(v.classId) : roleOfRule(v.rule);
+        const label = `View for ${v.className}`;
+        if (v.ir.kind === 'edge') {
+            if (role !== 'transition') { out.push(v); continue; }
+            const { source, target } = v.ir.edge;
+            const base = (): EdgeViewIR['edge'] => ({
+                source, target, terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 },
+            });
+            out.push({ ...v, ir: { ...v.ir, edge: base() } });
+            const guard = typeof guardKey === 'string' ? attributesOf(v.classId).find(a => a.id === guardKey) : undefined;
+            if (!guard) continue;
+            const bracketed = base();
+            bracketed.labels = {
+                template: [{ from: 'literal', text: '[' }, { from: 'path', expr: path(guard.name) }, { from: 'literal', text: ']' }],
+                style: EDGE_LABEL_STYLE(),
+            };
+            out.push({
+                ...v,
+                ir: { ...v.ir, label: `${label} (guard)`, edge: bracketed, priority: 1, predicate: { op: 'exists', path: path(guard.name) } },
+            });
+            continue;
+        }
+        const ink = () => ({ color: NAME_INK, width: 1, style: 'solid' as const });
+        let shape: ShapeSpec;
+        let size: { width?: number; height?: number };
+        if (role === 'initial') {
+            shape = { form: 'circle', fill: NAME_INK, border: ink(), labels: [] };
+            size = ACTIVITY_INITIAL_SIZE;
+        } else if (role === 'terminal' || role === 'activityFinal') {
+            shape = { form: 'circle', fill: SURFACE, border: ink(), marker: 'dot', labels: [] };
+            size = ACTIVITY_FINAL_SIZE;
+        } else if (role === 'decision') {
+            shape = { form: 'diamond', fill: SURFACE, border: ink(), labels: [] };
+            size = ACTIVITY_DECISION_SIZE;
+        } else if (role === 'fork' || role === 'join') {
+            shape = { form: 'bar', fill: NAME_INK, border: ink(), labels: [] };
+            size = ACTIVITY_BAR_SIZE;
+        } else if (role === 'node') {
+            shape = { form: 'rounded', fill: SURFACE, border: ink(), cornerRadius: ACTIVITY_ACTION_RADIUS, labels: [centredName(13, 'medium')] };
+            size = ACTIVITY_ACTION_SIZE;
+        } else {
+            out.push(v);
+            continue;
+        }
+        const ir: VertexViewIR = {
+            irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: { [v.className]: v.classId },
+            exclusive: true, label, defaultSize: { ...size }, shape,
+        };
+        out.push({ ...v, ir });
+    }
+    return out;
+}
+
+// ---------------------------------------------------------------------------
 // Petri net (classic) (slice A2, R-VP-24)
 // ---------------------------------------------------------------------------
 
@@ -990,5 +1107,7 @@ export function deriveViewpointForBinding(lookup: Lookup, metamodelId: string, r
     if (roles.notation === 'flowchartIso') return deriveIsoFlowchartViewpointIRs(lookup, metamodelId, roles);
     // A2 (R-VP-24): Petri net (classic), over the Petri documents.
     if (roles.notation === 'petriClassic') return deriveClassicPetriViewpointIRs(lookup, metamodelId, roles);
+    // R-VP-26: Activity (UML), over the Flowchart documents.
+    if (roles.notation === 'activityUml') return deriveActivityViewpointIRs(lookup, metamodelId, roles);
     return deriveViewpointIRs(lookup, metamodelId, roles);
 }

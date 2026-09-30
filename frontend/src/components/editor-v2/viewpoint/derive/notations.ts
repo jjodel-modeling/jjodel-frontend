@@ -10,7 +10,10 @@
  *   opens on the sibling. Slice A4 (P-2026-09-30-0440, R-VP-23) adds ER (Chen), with no simulation
  *   profile: its table offers the four ER class roles (erSignals.ts), prefilled by the name and
  *   structure signals. Slice A2 (P-2026-09-30-1521, R-VP-24) adds Petri net (classic) beside Petri
- *   net, on its profile; a stored Petri binding opens on it.
+ *   net, on its profile; a stored Petri binding opens on it. P-2026-09-30-1552 (R-VP-26) adds
+ *   Activity (UML) beside the two flowcharts, on their profile, with a Decision role of its own
+ *   prefilled by the name signals; a stored Flowchart binding opens on it, a stored State machine
+ *   binding on Statechart (UML).
  * - **The table**: a metaclass → role map over the class roles the notation's system profile edits
  *   and the derivation draws. Its prefill is the binder's (`bindProfile`), with the metamodel's stored
  *   simulation binding as bag, inverted per class; when the metamodel already has a derived viewpoint
@@ -33,17 +36,26 @@ import { sketchOfMetamodel } from '../../sim/metamodelSketch';
 import { storedProfile } from '../../sim/simRoleStatus';
 import { structuralHash } from '../ir/irDefaults';
 import type { GeneratedProvenance } from '../ir/irTypes';
-import { DERIVATION_CLASS_ROLES, deriveChenViewpointIRs, deriveViewpointForBinding, rolesFromTable } from './viewpointDerivation';
+import { DERIVATION_CLASS_ROLES, activitySignalRole, deriveChenViewpointIRs, deriveViewpointForBinding, rolesFromTable } from './viewpointDerivation';
 import type { AnyDerivedView, DerivationRoles } from './viewpointDerivation';
 import { ER_ROLE_IDS, ER_ROLE_LABELS, erSignalRoles, isErRole } from './erSignals';
 import type { ErRoleId } from './erSignals';
 
 type Lookup = Record<string, any>;
 
-export type DerivedNotationId = 'generic' | 'stateMachine' | 'statechart' | 'petri' | 'petriClassic' | 'flowchart' | 'flowchartIso' | 'erChen';
+export type DerivedNotationId = 'generic' | 'stateMachine' | 'statechart' | 'petri' | 'petriClassic' | 'flowchart' | 'flowchartIso' | 'activityUml' | 'erChen';
 
-/** A role of a notation's table: a simulation class role, or an ER one (A4, R-VP-23). */
-export type NotationRoleId = RoleId | ErRoleId;
+/**
+ * A role Activity (UML) adds to its profile's (R-VP-26): the decision and merge diamond. Not a simulation
+ * role (the catalogue has none), so the dialog's table holds it and the simulation binding never does.
+ * Persisted as a `derivedRole_<classId>` value, never renamed (R-B9).
+ */
+export type ActivityRoleId = 'decision';
+export const ACTIVITY_ROLE_IDS: readonly ActivityRoleId[] = ['decision'];
+const isActivityRole = (role: string): role is ActivityRoleId => (ACTIVITY_ROLE_IDS as readonly string[]).includes(role);
+
+/** A role of a notation's table: a simulation class role, an ER one (A4, R-VP-23), or Activity (UML)'s decision (R-VP-26). */
+export type NotationRoleId = RoleId | ErRoleId | ActivityRoleId;
 
 export interface DerivedNotation {
     readonly id: DerivedNotationId;
@@ -54,6 +66,8 @@ export interface DerivedNotation {
     readonly nodeLabel: string;
     /** The class roles of a notation with no simulation profile (A4: ER (Chen)); its table offers these. */
     readonly roles?: readonly ErRoleId[];
+    /** Roles a notation adds after its profile's (R-VP-26: Activity (UML)'s decision). */
+    readonly extraRoles?: readonly ActivityRoleId[];
 }
 
 /** The notations of the dialog's select, in its order; Generic is the default. */
@@ -68,6 +82,8 @@ export const DERIVED_NOTATIONS: readonly DerivedNotation[] = [
     { id: 'flowchart', label: 'Flowchart', profile: 'flowchart', nodeLabel: 'Node' },
     // A3 (P-2026-09-30-0355, R-VP-22): beside Flowchart, on its profile and prefill.
     { id: 'flowchartIso', label: 'Flowchart (ISO 5807)', profile: 'flowchart', nodeLabel: 'Node' },
+    // P-2026-09-30-1552 (R-VP-26): beside the two flowcharts, on their profile, with a Decision role of its own.
+    { id: 'activityUml', label: 'Activity (UML)', profile: 'flowchart', nodeLabel: 'Action', extraRoles: ACTIVITY_ROLE_IDS },
     // A4 (P-2026-09-30-0440, R-VP-23): no profile; the four ER roles, prefilled by erSignals.ts.
     { id: 'erChen', label: 'ER (Chen)', profile: null, nodeLabel: 'Entity', roles: ER_ROLE_IDS },
 ];
@@ -111,14 +127,19 @@ export function notationRoles(id: DerivedNotationId): NotationRoleId[] {
     if (own) return [...own];
     const profile = profileOf(id);
     if (!profile) return [];
-    return ROLE_CATALOG
-        .filter(d => d.kind === 'class' && profile.modes[d.id].mode === 'edit' && DERIVATION_CLASS_ROLES.includes(d.id))
-        .map(d => d.id);
+    const extra: NotationRoleId[] = [...(notationOf(id)?.extraRoles ?? [])];
+    return [
+        ...ROLE_CATALOG
+            .filter(d => d.kind === 'class' && profile.modes[d.id].mode === 'edit' && DERIVATION_CLASS_ROLES.includes(d.id))
+            .map(d => d.id),
+        ...extra,
+    ];
 }
 
 /** A role as the notation's table names it: Node by the notation's own word, the others as the catalog does. */
 export function roleLabel(id: DerivedNotationId, role: NotationRoleId): string {
     if (isErRole(role)) return ER_ROLE_LABELS[role];
+    if (role === 'decision') return 'Decision / merge';
     return role === 'node' ? (notationOf(id)?.nodeLabel ?? roleDescriptor(role).label) : roleDescriptor(role).label;
 }
 
@@ -140,10 +161,11 @@ function storedBinding(lookup: Lookup, metamodelId: string): Readonly<Record<str
 
 /**
  * The notation each system profile draws in: the four control-flow machines are state machines. A Petri
- * binding opens on Petri net (classic) (A2, R-VP-24); the others on the sibling of their pair (R-VP-22).
+ * binding opens on Petri net (classic) (A2, R-VP-24); a Flowchart binding on Activity (UML), a State machine
+ * binding on Statechart (UML) (R-VP-26, amending R-VP-22); the others on State machine.
  */
 const PROFILE_NOTATION: Readonly<Record<SystemProfileId, DerivedNotationId>> = {
-    petri: 'petriClassic', flowchart: 'flowchart', stateMachine: 'stateMachine', extendedStateMachine: 'stateMachine',
+    petri: 'petriClassic', flowchart: 'activityUml', stateMachine: 'statechart', extendedStateMachine: 'stateMachine',
     dfa: 'stateMachine', nfa: 'stateMachine', moore: 'stateMachine', mealy: 'stateMachine',
 };
 
@@ -153,8 +175,8 @@ function notationOfBinding(bag: Readonly<Record<string, unknown>>): DerivedNotat
     const system = profile.system ? profile.id : profile.basedOn;
     if (system && isSystemProfileId(system)) return PROFILE_NOTATION[system];
     if (profile.shape === 'petri') return 'petriClassic';
-    // A binding with a Trigger is a state machine, one without an activity (R-VP-17).
-    return typeof bag.simTrigger === 'string' && bag.simTrigger !== '' ? 'stateMachine' : 'flowchart';
+    // A binding with a Trigger is a state machine, one without an activity (R-VP-17), drawn in Activity (UML) (R-VP-26).
+    return typeof bag.simTrigger === 'string' && bag.simTrigger !== '' ? 'stateMachine' : 'activityUml';
 }
 
 /** The table kept to what the notation offers, on classes of the metamodel. */
@@ -187,10 +209,28 @@ function binderRoles(lookup: Lookup, metamodelId: string, notation: DerivedNotat
     const bindings = bindProfile(profile, sketchOfMetamodel(lookup, metamodelId), bag);
     const out: Record<string, RoleId> = {};
     for (const role of notationRoles(notation)) {
-        // A profile's table holds simulation roles only; an ER role is never one of them.
-        if (isErRole(role)) continue;
+        // A profile's table holds simulation roles only; an ER role, and Activity (UML)'s decision, never one of them.
+        if (isErRole(role) || isActivityRole(role)) continue;
         const b = bindings[role];
         if (b?.status === 'bound' && !(b.value in out)) out[b.value] = role;
+    }
+    return out;
+}
+
+/**
+ * Activity (UML)'s name signals over a table (R-VP-26): a class with no entry of its own that takes Node by
+ * inheritance takes the role its name says (`activitySignalRole`); every entry already there is kept. Any other
+ * notation's table is returned as it is.
+ */
+function withActivitySignals(lookup: Lookup, metamodelId: string, notation: DerivedNotationId, roles: ClassRoles): ClassRoles {
+    if (notation !== 'activityUml') return roles;
+    const offered = new Set<string>(notationRoles(notation));
+    const inherited = rolesFromTable(lookup, metamodelId, roles);
+    const out: Record<string, NotationRoleId> = { ...roles };
+    for (const c of sketchOfMetamodel(lookup, metamodelId).classes) {
+        if (c.id in roles || inherited.get(c.id) !== 'node') continue;
+        const role = activitySignalRole(c.name);
+        if (role && offered.has(role)) out[c.id] = role;
     }
     return out;
 }
@@ -220,7 +260,9 @@ export function dialogPrefill(lookup: Lookup, metamodelId: string, notation: Der
     // A4: no profile, so no binder and no stored binding: the name and structure signals.
     if (!profileOf(notation)) return { roles: cleanTable(lookup, metamodelId, notation, Object.entries(erSignalRoles(lookup, metamodelId))), from: 'signals' };
     const bag = storedBinding(lookup, metamodelId);
-    return { roles: binderRoles(lookup, metamodelId, notation, bag ?? undefined), from: bag ? 'binding' : 'signals' };
+    // R-VP-26: Activity (UML) adds its name signals to the binder's table.
+    const roles = withActivitySignals(lookup, metamodelId, notation, binderRoles(lookup, metamodelId, notation, bag ?? undefined));
+    return { roles, from: bag ? 'binding' : 'signals' };
 }
 
 /** What a confirm without a change derives: the initial notation and its prefill. */
@@ -255,8 +297,9 @@ function derivationRolesOf(lookup: Lookup, metamodelId: string, choice: DeriveCh
         const b = bindings[d.id];
         if (d.key !== null && d.kind !== 'class' && b?.status === 'bound') bag[d.key] = b.value;
     }
-    // A1 and A3 (R-VP-22), A2 (R-VP-24): the notations drawn over their sibling's documents say so.
-    const notation = choice.notation === 'statechart' || choice.notation === 'flowchartIso' || choice.notation === 'petriClassic' ? choice.notation : undefined;
+    // A1 and A3 (R-VP-22), A2 (R-VP-24), Activity (UML) (R-VP-26): the notations drawn over their sibling's documents say so.
+    const notation = choice.notation === 'statechart' || choice.notation === 'flowchartIso' || choice.notation === 'petriClassic'
+        || choice.notation === 'activityUml' ? choice.notation : undefined;
     return { bag, shape: profile.shape, classRoles, ...(notation ? { notation } : {}) };
 }
 

@@ -54,18 +54,30 @@ describe('DeriveViewpointForm — the notation select and the table', () => {
         expect(html).toMatch(new RegExp(`id="${title}"[^>]*>Derive viewpoint — DemoPEST<`));
     });
 
-    it('the notation select lists the eight notations, the chosen one selected, with a real label', () => {
+    it('the notation select lists the nine notations, the chosen one selected, with a real label', () => {
         const html = render({ notation: 'petri' });
         const [notation] = selects(html);
         // A1 and A3 (P-2026-09-30-0355, R-VP-22): Statechart (UML) and Flowchart (ISO 5807) beside their siblings.
         // A4 (P-2026-09-30-0440, R-VP-23): ER (Chen) last.
         // A2 (P-2026-09-30-1521, R-VP-24): Petri net (classic) after Petri net.
+        // P-2026-09-30-1552 (R-VP-26): Activity (UML) after Flowchart (ISO 5807).
         expect(notation.options.map(o => [o.value, o.text])).toEqual([
             ['generic', 'Generic'], ['stateMachine', 'State machine'], ['statechart', 'Statechart (UML)'],
-            ['petri', 'Petri net'], ['petriClassic', 'Petri net (classic)'], ['flowchart', 'Flowchart'], ['flowchartIso', 'Flowchart (ISO 5807)'], ['erChen', 'ER (Chen)'],
+            ['petri', 'Petri net'], ['petriClassic', 'Petri net (classic)'], ['flowchart', 'Flowchart'], ['flowchartIso', 'Flowchart (ISO 5807)'],
+            ['activityUml', 'Activity (UML)'], ['erChen', 'ER (Chen)'],
         ]);
         expect(notation.options.filter(o => o.selected).map(o => o.value)).toEqual(['petri']);
         expect(labelsFor(html)).toContainEqual([notation.id, 'Notation']);
+    });
+
+    it('Activity (UML) offers the flowchart roles, Node read as Action, and Decision / merge last (R-VP-26)', () => {
+        const html = render({ notation: 'activityUml', roles: { S: 'node', I: 'decision', T: 'transition' } });
+        const [, ...rows] = selects(html);
+        expect(rows[0].options.map(o => [o.value, o.text])).toEqual([
+            ['', '—'], ['node', 'Action'], ['initial', 'Initial'], ['terminal', 'Terminal'], ['activityFinal', 'Activity final'],
+            ['transition', 'Transition'], ['fork', 'Fork'], ['join', 'Join'], ['decision', 'Decision / merge'],
+        ]);
+        expect(rows.map(r => r.options.find(o => o.selected)?.value)).toEqual(['node', 'decision', 'transition', '']);
     });
 
     it('Generic hides the table: one select, no row, no role', () => {

@@ -250,13 +250,49 @@ describe('A4 leaves every other notation as it was', () => {
     it('Generic, State machine, Statechart, Petri net, Flowchart and Flowchart (ISO) derive the tip\'s documents on the corpus', () => {
         const got: Record<string, string> = {};
         for (const [name, make, stored] of CORPUS) {
-            for (const n of DERIVED_NOTATIONS.map(x => x.id).filter(id => id !== 'erChen' && id !== 'petriClassic')) {
+            // Activity (UML) (P-2026-09-30-1552, R-VP-26) is pinned in activityUml.test.ts.
+            for (const n of DERIVED_NOTATIONS.map(x => x.id).filter(id => id !== 'erChen' && id !== 'petriClassic' && id !== 'activityUml')) {
                 const mm = configured(make, stored);
                 const choice = { notation: n, classRoles: dialogPrefill(mm.lookup, mm.id, n, []).roles };
                 got[`${name} ${n}`] = canDerive(choice) ? digest(derivedDocuments(mm.lookup, mm.id, choice)) : '-';
             }
         }
         expect(got).toEqual(PINNED);
+    });
+
+    // Measured on the A2 tip (d4daecaf7's code) before any edit of P-2026-09-30-1552: the two notations the
+    // table above leaves out, the documents WITH their provenance.
+    const PINNED_A2: Record<string, string> = {
+        'DemoESM erChen': '-',
+        'DemoESM petriClassic': '27c39cc5930f8dc8',
+        'DemoFlowB erChen': '-',
+        'DemoFlowB petriClassic': 'b098e7f609b2e4d7',
+        'DemoPEST erChen': '-',
+        'DemoPEST petriClassic': 'e838a4e40d369fad',
+        'DemoPetri erChen': '-',
+        'DemoPetri petriClassic': '1145469c86278aae',
+        'ERDLanguage ERD erChen': '61c73fe96b150683',
+        'ERDLanguage ERD petriClassic': '8a0f23ac82acb85b',
+        'ERDLanguage Library erChen': '-',
+        'ERDLanguage Library petriClassic': '-',
+        'ERDLanguage Relational erChen': 'c82afdad857005ab',
+        'ERDLanguage Relational petriClassic': '441bd0c2d0d5062b',
+        'MDE ERD (1) erChen': '23a31f1c3f487daa',
+        'MDE ERD (1) petriClassic': '51c0ae379c967623',
+        'MDE ERD erChen': '4299e38db1cad805',
+        'MDE ERD petriClassic': '9fa735e07eab5ef3',
+    };
+
+    it('Petri net (classic) and ER (Chen) derive the A2 tip\'s documents on the corpus (Activity (UML) moves neither)', () => {
+        const got: Record<string, string> = {};
+        for (const [name, make, stored] of CORPUS) {
+            for (const n of ['petriClassic', 'erChen'] as DerivedNotationId[]) {
+                const mm = configured(make, stored);
+                const choice = { notation: n, classRoles: dialogPrefill(mm.lookup, mm.id, n, []).roles };
+                got[`${name} ${n}`] = canDerive(choice) ? digest(derivedDocuments(mm.lookup, mm.id, choice)) : '-';
+            }
+        }
+        expect(got).toEqual(PINNED_A2);
     });
 });
 
@@ -265,10 +301,11 @@ describe('A4 leaves every other notation as it was', () => {
 // ---------------------------------------------------------------------------
 
 describe('ER (Chen) in the list', () => {
-    it('last of the eight, with no simulation profile, its four class roles', () => {
+    it('last of the nine, with no simulation profile, its four class roles', () => {
         // A2 (P-2026-09-30-1521, R-VP-24): Petri net (classic) after Petri net.
-        expect(DERIVED_NOTATIONS.map(n => n.id)).toEqual(['generic', 'stateMachine', 'statechart', 'petri', 'petriClassic', 'flowchart', 'flowchartIso', 'erChen']);
-        const er = DERIVED_NOTATIONS[7];
+        // P-2026-09-30-1552 (R-VP-26): Activity (UML) after Flowchart (ISO 5807).
+        expect(DERIVED_NOTATIONS.map(n => n.id)).toEqual(['generic', 'stateMachine', 'statechart', 'petri', 'petriClassic', 'flowchart', 'flowchartIso', 'activityUml', 'erChen']);
+        const er = DERIVED_NOTATIONS[8];
         expect([er.label, er.profile]).toEqual(['ER (Chen)', null]);
         expect(notationRoles('erChen')).toEqual(['entity', 'relationship', 'attribute', 'key']);
         expect(notationRoles('erChen').map(r => roleLabel('erChen', r))).toEqual(['Entity', 'Relationship', 'Attribute', 'Key']);
