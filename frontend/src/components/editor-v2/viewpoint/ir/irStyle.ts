@@ -236,6 +236,11 @@ const BASE_CSS = `
 .ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-w { top: 50%; bottom: auto; left: auto; right: calc(100% + 8px); transform: translateY(-50%); text-align: right; }
 .ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-e { top: 50%; bottom: auto; left: calc(100% + 8px); right: auto; transform: translateY(-50%); text-align: left; }
 .ir-node-content > .ir-label__input.ir-label--outside { width: auto; min-width: 80px; }
+/* Entry mark (R-VP-22): drawn past the box on its left (IRNodeContent places it inline). The two
+   clips it would meet, the shape's and the wrapper's, are lifted only on a node that carries one,
+   as for the outside label. Appended after every other rule, so the rules above stay byte-identical. */
+.ir-node-content:has(> .ir-entry-svg) { overflow: visible; }
+.mm-node:has(> .ir-node-content > .ir-entry-svg) { overflow: visible; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

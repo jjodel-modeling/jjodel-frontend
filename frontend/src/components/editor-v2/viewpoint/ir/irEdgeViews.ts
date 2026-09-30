@@ -73,6 +73,9 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             irLabelText: labelText,
             irLabelAlwaysVisible: labelText !== undefined,
             ...(labelStyle ? { irLabelStyle: labelStyle } : {}),
+            // R-VP-22: the arc, read by UnifiedEdge and by assignGeometricHandles below. Written
+            // only when declared, like the label style.
+            ...(cv.curve ? { irCurve: cv.curve } : {}),
         },
     };
 }
@@ -107,7 +110,13 @@ export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>,
     const sc = center(s), tc = center(t);
     const dx = tc.x - sc.x, dy = tc.y - sc.y;
     let sourceSide: string, targetSide: string;
-    if (Math.abs(dx) >= Math.abs(dy)) {
+    // R-VP-22 (C3 causes 1 and 2): an arc self-loop is drawn over the top edge (UnifiedEdge), so it
+    // takes two top handles, the ones its line touches, instead of a right and a left one that no
+    // line touches and that would still take two slots in the side's split.
+    if (edge.source === edge.target && (edge.data as any)?.irCurve === 'arc') {
+        sourceSide = 'top';
+        targetSide = 'top';
+    } else if (Math.abs(dx) >= Math.abs(dy)) {
         sourceSide = dx >= 0 ? 'right' : 'left';
         targetSide = dx >= 0 ? 'left' : 'right';
     } else {

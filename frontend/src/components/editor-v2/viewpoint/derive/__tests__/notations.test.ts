@@ -19,6 +19,8 @@ import type { ClassRoles, DeriveChoice, DerivedNotationId } from '../notations';
 import { deriveGenericViewpointIRs } from '../viewpointDerivation';
 import type { AnyDerivedView } from '../viewpointDerivation';
 import { validateIR } from '../../ir/irValidate';
+import { getIRIndex, resolveObjectAsEdgeView } from '../../ir/irResolveCore';
+import { makeDrawReadCtx } from '../../ir/irReadCtx';
 import { structuralHash } from '../../ir/irDefaults';
 import { sketchOfMetamodel } from '../../../sim/metamodelSketch';
 import { bindProfile } from '../../../../../model/simulation/profileBinder';
@@ -169,12 +171,15 @@ function derivedVp(id: string, state: Record<string, unknown>) {
 // ---------------------------------------------------------------------------
 
 describe('the notations offered in slice D', () => {
-    it('Generic first, then State machine, Petri net and Flowchart, each on its system profile', () => {
+    it('Generic first, then State machine, Statechart (UML), Petri net, Flowchart and Flowchart (ISO 5807), each on its system profile', () => {
+        // A1 and A3 (P-2026-09-30-0355, R-VP-22): the two new notations beside their siblings, which stay.
         expect(DERIVED_NOTATIONS.map(n => [n.id, n.label, n.profile])).toEqual([
             ['generic', 'Generic', null],
             ['stateMachine', 'State machine', 'stateMachine'],
+            ['statechart', 'Statechart (UML)', 'stateMachine'],
             ['petri', 'Petri net', 'petri'],
             ['flowchart', 'Flowchart', 'flowchart'],
+            ['flowchartIso', 'Flowchart (ISO 5807)', 'flowchart'],
         ]);
     });
 
@@ -607,5 +612,259 @@ describe('the simulation binding is byte-identical before and after', () => {
             expect(JSON.stringify(mm.lookup[mm.id]._state), name).toBe(before);
             expect(JSON.stringify(mm.lookup), name).toBe(whole);
         }
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Slices A1 and A3 (P-2026-09-30-0355, R-VP-22): Statechart (UML) and Flowchart (ISO 5807)
+// ---------------------------------------------------------------------------
+
+const INK = 'var(--color-inode-name)';
+const QUIET = 'var(--color-inode-quiet)';
+const SURFACE = 'var(--color-inode-surface)';
+const LABEL_STYLE = { fontSize: 12, fontWeight: 'medium', color: QUIET };
+
+/** Each demo with its binding applied, derived with `notation` and that notation's prefill. */
+function derivedWith(make: () => Fixture, stored: string, notation: DerivedNotationId) {
+    const mm = configured(make, stored);
+    const views = derivedDocuments(mm.lookup, mm.id, { notation, classRoles: dialogPrefill(mm.lookup, mm.id, notation, []).roles });
+    return { mm, views };
+}
+const irOf = (views: AnyDerivedView[], name: string, n = 0) => views.filter(v => v.className === name)[n]?.ir as any;
+
+describe('A1 and A3 leave the notations of slice D as they were', () => {
+    // Measured on the D tip (c676fc6f6) before any A1 or A3 edit: the documents WITH their provenance.
+    const PINNED_D: Record<string, string> = {
+        'DemoPEST generic': 'c8cab24a97799088', 'DemoPEST stateMachine': '6fb489cf0bf7c6ab', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'e1dcb9c59b5a3f7b',
+        'DemoPetri generic': '431bcadaa7622d3f', 'DemoPetri stateMachine': '67fe6343eba8001a', 'DemoPetri petri': '16da88787ee483c3', 'DemoPetri flowchart': 'c7f24aeb60cfb60b',
+        'DemoESM generic': 'c9aae43a5d357246', 'DemoESM stateMachine': 'a7c31157af785978', 'DemoESM petri': 'dc9e0e57e0d30d05', 'DemoESM flowchart': '2862738923d879f7',
+        'DemoFlowB generic': '785774f02752745f', 'DemoFlowB stateMachine': '723e4c4e2883e64b', 'DemoFlowB petri': '7ef0daafc7705d8f', 'DemoFlowB flowchart': '7e7715ad457a678a',
+    };
+
+    it('Generic, State machine, Petri net and Flowchart derive the D tip\'s documents, byte for byte, provenance included', () => {
+        const got: Record<string, string> = {};
+        for (const [name, make, stored] of DEMOS) {
+            for (const notation of ['generic', 'stateMachine', 'petri', 'flowchart'] as DerivedNotationId[]) {
+                got[`${name} ${notation}`] = digest(derivedWith(make, stored, notation).views);
+            }
+        }
+        expect(got).toEqual(PINNED_D);
+    });
+
+    it('the two new notations take their sibling\'s profile, roles and prefill', () => {
+        expect(notationRoles('statechart')).toEqual(notationRoles('stateMachine'));
+        expect(notationRoles('flowchartIso')).toEqual(notationRoles('flowchart'));
+        expect(roleLabel('statechart', 'node')).toBe('State');
+        expect(roleLabel('flowchartIso', 'node')).toBe('Node');
+        for (const [name, make, stored] of DEMOS) {
+            const mm = configured(make, stored);
+            expect(dialogPrefill(mm.lookup, mm.id, 'statechart', []), name).toEqual(dialogPrefill(mm.lookup, mm.id, 'stateMachine', []));
+            expect(dialogPrefill(mm.lookup, mm.id, 'flowchartIso', []), name).toEqual(dialogPrefill(mm.lookup, mm.id, 'flowchart', []));
+        }
+    });
+
+    it('a stored binding still opens the dialog on the sibling; the latest derived viewpoint on the new notation', () => {
+        const mm = configured(PEST, 'stateMachine');
+        expect(initialNotation(mm.lookup, mm.id, [])).toBe('stateMachine');
+        mm.lookup.vp1 = derivedVp('vp1', { derivedFrom: mm.id, derivedNotation: 'statechart' });
+        expect(initialNotation(mm.lookup, mm.id, ['vp1'])).toBe('statechart');
+        const flow = configured(FLOWB, 'flowchart');
+        flow.lookup.vp2 = derivedVp('vp2', { derivedFrom: flow.id, derivedNotation: 'flowchartIso' });
+        expect(initialNotation(flow.lookup, flow.id, ['vp2'])).toBe('flowchartIso');
+    });
+
+    it('every document of the new notations passes the IR validator and carries its provenance', () => {
+        for (const [name, make, stored] of DEMOS) {
+            for (const notation of ['statechart', 'flowchartIso'] as DerivedNotationId[]) {
+                for (const v of derivedWith(make, stored, notation).views) {
+                    expect(validateIR(`derived:${v.className}`, v.ir), `${name} ${notation} ${v.className}`).toEqual({ ok: true });
+                    const { generated, ...bare } = v.ir as any;
+                    expect(generated.notation).toBe(notation);
+                    expect(generated.hash).toBe(structuralHash(bare));
+                }
+            }
+        }
+    });
+});
+
+describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
+    const { views } = derivedWith(PEST, 'stateMachine', 'statechart');
+    const box = { form: 'rounded', fill: SURFACE, labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'name' }, style: { fontSize: 14, fontWeight: 'semibold', color: INK } }] };
+
+    it('a state is a rounded white box, 1 px in the ink, its name centred 14 px 600 in the ink', () => {
+        expect(irOf(views, 'State').shape).toEqual({ ...box, border: { color: INK, width: 1, style: 'solid' } });
+        expect(irOf(views, 'State').fieldCompartments).toBeUndefined();
+    });
+
+    it('the Initial is the same box with the entry dot; no solid disc', () => {
+        expect(irOf(views, 'Initial').shape).toEqual({ ...box, border: { color: INK, width: 1, style: 'solid' }, entry: 'dot' });
+    });
+
+    it('the Terminal is the same box with the double border (as R-VP-17)', () => {
+        expect(irOf(views, 'Terminal').shape).toEqual({ ...box, border: { color: INK, width: 3, style: 'double' } });
+    });
+
+    it('a transition is an arc in the ink, the filled arrowhead, labelled by its event in the C2 label style', () => {
+        expect(irOf(views, 'Transition').edge).toEqual({
+            source: 'container', target: '$nextState.value',
+            terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' },
+            line: { color: INK, width: 1 }, curve: 'arc',
+            labels: { center: { from: 'path', expr: '$event.value' }, style: LABEL_STYLE },
+        });
+    });
+
+    it('a class with no role keeps the State machine drawing (the Event)', () => {
+        const sm = derivedWith(PEST, 'stateMachine', 'stateMachine').views;
+        const { generated: _a, ...a } = irOf(views, 'Event');
+        const { generated: _b, ...b } = irOf(sm, 'Event');
+        expect(a).toEqual(b);
+    });
+
+    it('the order and the endpoints are the State machine\'s', () => {
+        const sm = derivedWith(PEST, 'stateMachine', 'stateMachine').views;
+        expect(views.map(v => [v.className, v.rule])).toEqual(sm.map(v => [v.className, v.rule]));
+    });
+
+    it('the drawing follows the notation picked, not the presence of a Trigger (D, question 1)', () => {
+        // No event anywhere: State machine draws the activity look (a nameless disc for the Initial).
+        const mm = metamodel('NT', 'NoTrigger', [
+            cls('State', { refs: [ref('transitions', 'Transition', { composition: true, upper: -1 })] }),
+            cls('Initial', { supers: ['State'] }),
+            cls('Terminal', { supers: ['State'] }),
+            cls('Transition', { attrs: [attr('guard', EXPRESSION)], refs: [ref('nextState', 'State')] }),
+        ]);
+        const table = { 'NT.State': 'node', 'NT.Initial': 'initial', 'NT.Terminal': 'terminal', 'NT.Transition': 'transition' } as ClassRoles;
+        const sm = derivedDocuments(mm.lookup, mm.id, { notation: 'stateMachine', classRoles: table });
+        const sc = derivedDocuments(mm.lookup, mm.id, { notation: 'statechart', classRoles: table });
+        expect(irOf(sm, 'Initial').shape.labels).toEqual([]);
+        expect(irOf(sc, 'Initial').shape).toEqual({ ...box, border: { color: INK, width: 1, style: 'solid' }, entry: 'dot' });
+        expect(irOf(sc, 'Terminal').shape.border).toEqual({ color: INK, width: 3, style: 'double' });
+        // No event: the guard labels the transition (R-VP-17 (2)).
+        expect(irOf(sc, 'Transition').edge.labels).toEqual({ center: { from: 'path', expr: '$guard.value' }, style: LABEL_STYLE });
+    });
+
+    it('a state with slots other than the name keeps a compartment, its name then on top (DemoESM)', () => {
+        const esm = derivedWith(ESM, 'extendedStateMachine', 'statechart').views;
+        expect(irOf(esm, 'State').shape.labels[0].position).toBe('top');
+        expect(irOf(esm, 'State').fieldCompartments.map((c: any) => c.source)).toEqual([{ from: 'attributes' }]);
+        expect(irOf(esm, 'Initial').shape.entry).toBe('dot');
+        expect(irOf(esm, 'Terminal').fieldCompartments).toBeUndefined();
+    });
+});
+
+describe('Flowchart (ISO 5807) — A3', () => {
+    const labelled = (fontSize: number) => [{ position: 'center', source: { from: 'intrinsic', prop: 'name' }, style: { fontSize, fontWeight: 'medium', color: INK } }];
+    const formsOf = (views: AnyDerivedView[]) => Object.fromEntries(views.filter(v => v.ir.kind === 'vertex').map(v => [v.className, (v.ir as any).shape.form]));
+
+    it('DemoFlowB: forms by role, then by name', () => {
+        const { views } = derivedWith(FLOWB, 'flowchart', 'flowchartIso');
+        expect(formsOf(views)).toEqual({
+            InitialNode: 'stadium', Activity: 'rect', Decision: 'diamond', Fork: 'rect', Join: 'rect', FinalNode: 'stadium', ActivityNode: 'rect',
+        });
+    });
+
+    it('every node white, 1 px in the ink, its name centred 13 px 500 in the ink, no compartment', () => {
+        const { views } = derivedWith(FLOWB, 'flowchart', 'flowchartIso');
+        for (const v of views.filter(x => x.ir.kind === 'vertex')) {
+            const ir = v.ir as any;
+            expect(ir.shape.fill, v.className).toBe(SURFACE);
+            expect(ir.shape.border, v.className).toEqual({ color: INK, width: 1, style: 'solid' });
+            expect(ir.shape.labels, v.className).toEqual(labelled(13));
+            expect(ir.fieldCompartments, v.className).toBeUndefined();
+        }
+    });
+
+    it('a flow is orthogonal (today\'s router), in the ink, the filled arrowhead, its guard the label through the template', () => {
+        const { views } = derivedWith(FLOWB, 'flowchart', 'flowchartIso');
+        const flows = views.filter(v => v.className === 'ControlFlow');
+        expect(flows.map(v => v.ir.label)).toEqual(['View for ControlFlow', 'View for ControlFlow (yes)', 'View for ControlFlow (no)']);
+        const base = { source: '$source.value', target: '$target.value', terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' }, line: { color: INK, width: 1 } };
+        expect(irOf(views, 'ControlFlow', 0).edge).toEqual({ ...base, labels: { template: [{ from: 'path', expr: '$guard.value' }], style: LABEL_STYLE } });
+        expect(irOf(views, 'ControlFlow', 0).predicate).toBeUndefined();
+        for (const [n, word] of [[1, 'yes'], [2, 'no']] as const) {
+            const ir = irOf(views, 'ControlFlow', n);
+            expect(ir.edge).toEqual({ ...base, labels: { center: { from: 'literal', text: word }, style: LABEL_STYLE } });
+            expect(ir.predicate).toEqual({ op: 'eq', left: '$guard.value', right: { kind: 'string', value: word === 'yes' ? 'true' : 'false' } });
+            expect(ir.priority).toBe(1);
+        }
+        for (const v of flows) {
+            expect('routing' in (v.ir as any).edge).toBe(false);
+            expect('curve' in (v.ir as any).edge).toBe(false);
+        }
+    });
+
+    it('resolved on objects: a literal true reads yes, a literal false no, any other guard itself, none nothing', () => {
+        const mm = configured(FLOWB, 'flowchart');
+        const { views } = derivedWith(FLOWB, 'flowchart', 'flowchartIso');
+        const lookup: Record<string, any> = { ...mm.lookup };
+        const guards: [string, unknown[]][] = [['f_t', ['true']], ['f_f', ['false']], ['f_b', [true]], ['f_x', ['i < n']], ['f_0', []]];
+        for (const [id, values] of guards) {
+            lookup[id] = { id, className: 'DObject', name: id, instanceof: mm.classId('ControlFlow'), features: [`${id}.g`] };
+            lookup[`${id}.g`] = { id: `${id}.g`, className: 'DValue', instanceof: `${mm.classId('ControlFlow')}.guard`, values };
+        }
+        const ids = views.map((_, i) => `V${i}`);
+        views.forEach((v, i) => { lookup[ids[i]] = { id: ids[i], viewpoint: 'VP', ir: v.ir }; });
+        const index = getIRIndex({ viewpoint: 'VP', viewelements: ids, idlookup: lookup }, 'a3_yes_no')!;
+        const ctx = makeDrawReadCtx(lookup);
+        const label = (id: string) => {
+            const cv = resolveObjectAsEdgeView(id, mm.classId('ControlFlow'), index, ctx, lookup);
+            return cv?.labelText ? String(cv.labelText(ctx, id) ?? '') : null;
+        };
+        expect(guards.map(([id]) => label(id))).toEqual(['yes', 'no', 'yes', 'i < n', '']);
+    });
+
+    it('the name signals, on a fixture with one class per signal', () => {
+        const names = [
+            'Start', 'End', 'InitialStep', 'FinalStep', 'Terminal',
+            'ReadInput', 'Output', 'Write', 'Print', 'IO',
+            'Decision', 'Choice', 'IfThen', 'Branch',
+            'Task', 'Process',
+        ];
+        const mm = metamodel('SIG', 'Signals', [
+            cls('Node'),
+            ...names.map(n => cls(n, { supers: ['Node'] })),
+            cls('Flow', { attrs: [attr('guard', EXPRESSION)], refs: [ref('source', 'Node'), ref('target', 'Node')] }),
+        ]);
+        const table = { 'SIG.Node': 'node', 'SIG.Flow': 'transition' } as ClassRoles;
+        const forms = formsOf(derivedDocuments(mm.lookup, mm.id, { notation: 'flowchartIso', classRoles: table }));
+        expect(forms).toEqual({
+            Start: 'stadium', End: 'stadium', InitialStep: 'stadium', FinalStep: 'stadium', Terminal: 'stadium',
+            ReadInput: 'parallelogram', Output: 'parallelogram', Write: 'parallelogram', Print: 'parallelogram', IO: 'parallelogram',
+            Decision: 'diamond', Choice: 'diamond', IfThen: 'diamond', Branch: 'diamond',
+            Task: 'rect', Process: 'rect', Node: 'rect',
+        });
+    });
+
+    it('the role comes before the name: Task bound as the Initial is a stadium, Decision bound as the Terminal too', () => {
+        const mm = metamodel('RB', 'RoleFirst', [
+            cls('Node'), cls('Task', { supers: ['Node'] }), cls('Decision', { supers: ['Node'] }),
+            cls('Flow', { refs: [ref('source', 'Node'), ref('target', 'Node')] }),
+        ]);
+        const table = { 'RB.Node': 'node', 'RB.Task': 'initial', 'RB.Decision': 'terminal', 'RB.Flow': 'transition' } as ClassRoles;
+        const forms = formsOf(derivedDocuments(mm.lookup, mm.id, { notation: 'flowchartIso', classRoles: table }));
+        expect(forms).toMatchObject({ Task: 'stadium', Decision: 'stadium', Node: 'rect' });
+    });
+
+    it('a class with no role keeps the Flowchart drawing', () => {
+        const mm = metamodel('NR', 'NoRole', [
+            cls('Node'), cls('Note'), cls('Flow', { refs: [ref('source', 'Node'), ref('target', 'Node')] }),
+        ]);
+        const table = { 'NR.Node': 'node', 'NR.Flow': 'transition' } as ClassRoles;
+        const iso = derivedDocuments(mm.lookup, mm.id, { notation: 'flowchartIso', classRoles: table });
+        const flow = derivedDocuments(mm.lookup, mm.id, { notation: 'flowchart', classRoles: table });
+        const { generated: _a, ...a } = irOf(iso, 'Note');
+        const { generated: _b, ...b } = irOf(flow, 'Note');
+        expect(a).toEqual(b);
+        expect(irOf(iso, 'Node').shape.form).toBe('rect');
+    });
+
+    it('a flow class with no guard gets one document, unlabelled', () => {
+        const mm = metamodel('NG', 'NoGuard', [
+            cls('Node'), cls('Flow', { refs: [ref('source', 'Node'), ref('target', 'Node')] }),
+        ]);
+        const views = derivedDocuments(mm.lookup, mm.id, { notation: 'flowchartIso', classRoles: { 'NG.Node': 'node', 'NG.Flow': 'transition' } });
+        const flows = views.filter(v => v.className === 'Flow');
+        expect(flows.length).toBe(1);
+        expect((flows[0].ir as any).edge.labels).toBeUndefined();
     });
 });

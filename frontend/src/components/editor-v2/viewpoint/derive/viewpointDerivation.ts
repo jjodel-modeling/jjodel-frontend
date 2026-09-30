@@ -92,6 +92,12 @@ export interface DerivationRoles {
      * as before.
      */
     readonly classRoles?: Readonly<Record<string, string>>;
+    /**
+     * The drawing over the role-keyed documents of the profile (slices A1 and A3, P-2026-09-30-0355,
+     * R-VP-22): `statechart` (Statechart (UML), on `stateMachine`), `flowchartIso` (Flowchart (ISO
+     * 5807), on `flowchart`). Absent: the role-keyed documents of R-VP-15..18, as before.
+     */
+    readonly notation?: 'statechart' | 'flowchartIso';
 }
 
 export interface DerivedView {
@@ -584,6 +590,154 @@ export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): 
     });
 }
 
+// ---------------------------------------------------------------------------
+// Statechart (UML) and Flowchart (ISO 5807) (slices A1 and A3, R-VP-22)
+// ---------------------------------------------------------------------------
+
+/** The role a role-keyed document was decided by (`role:<id>`), or undefined for a structure rule. */
+const roleOfRule = (rule: string): string | undefined => (rule.startsWith('role:') ? rule.slice('role:'.length) : undefined);
+
+/** The attributes `classId` holds, its own and inherited, cycle-safe. */
+function attributesHeld(lookup: Lookup, metamodelId: string): (classId: string) => SketchAttribute[] {
+    const sketch = sketchOfMetamodel(lookup, metamodelId);
+    const byId = new Map<string, SketchClass>(sketch.classes.map(c => [c.id, c]));
+    return (classId: string) => {
+        const line: string[] = [];
+        const queue = [classId];
+        while (queue.length > 0) {
+            const c = queue.shift() as string;
+            if (line.includes(c)) continue;
+            line.push(c);
+            for (const s of byId.get(c)?.supers ?? []) queue.push(s);
+        }
+        return sketch.attributes.filter(a => line.includes(a.owner));
+    };
+}
+
+/** The name label of the two notations: centred, in the name ink. */
+const centredName = (fontSize: number, fontWeight: 'semibold' | 'medium'): LabelSpec =>
+    ({ position: 'center', source: NAME_SOURCE(), style: { fontSize, fontWeight, color: NAME_INK } });
+
+/**
+ * Statechart (UML), slice A1 (R-VP-22, mockup docs/mockups/derived-viewpoints/statechart-A.svg):
+ * the State machine's documents (order, endpoints, labels, rules) with the drawing of the
+ * notation picked, whatever the binding says about a Trigger (D, question 1).
+ *
+ * - A state (Node), the Initial and the Terminal: a white rounded box sized from its content, 1 px
+ *   in the name ink, its name centred in 14 px 600 in the ink; the Initial with the entry dot
+ *   (`shape.entry: 'dot'`), the Terminal with the double border of R-VP-17. A state holding slots
+ *   other than its name keeps the attribute rows of R-VP-17 (3), its name then on top; the
+ *   Terminal holds none (a UML final state has no behaviour).
+ * - A transition: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the filled arrowhead, labelled by
+ *   its event, else its guard (R-VP-17 (2)), in the label style of C2.
+ * - Every other document (a class with no role, a fork or join bar) is the State machine's.
+ */
+export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
+    const attributesOf = attributesHeld(lookup, metamodelId);
+    return deriveViewpointIRs(lookup, metamodelId, roles).map((v): DerivedView => {
+        const role = roleOfRule(v.rule);
+        if (v.ir.kind === 'edge') {
+            if (role !== 'transition') return v;
+            const { source, target, labels } = v.ir.edge;
+            const edge: EdgeViewIR['edge'] = {
+                source, target, terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc',
+            };
+            if (labels?.center) edge.labels = { center: labels.center, style: EDGE_LABEL_STYLE() };
+            return { ...v, ir: { ...v.ir, edge } };
+        }
+        if (role !== 'node' && role !== 'initial' && role !== 'terminal') return v;
+        const compartment = role !== 'terminal' && attributesOf(v.classId).some(a => !isIdentity(a));
+        const label = centredName(14, 'semibold');
+        if (compartment) label.position = 'top';
+        const shape: ShapeSpec = {
+            form: 'rounded', fill: SURFACE,
+            // A CSS double border draws two lines from a width of 3 (irTypes.ts), as R-VP-17.
+            border: role === 'terminal' ? { color: NAME_INK, width: 3, style: 'double' } : { color: NAME_INK, width: 1, style: 'solid' },
+            labels: [label],
+        };
+        if (role === 'initial') shape.entry = 'dot';
+        const ir: VertexViewIR = {
+            irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: { [v.className]: v.classId },
+            exclusive: true, label: `View for ${v.className}`, shape,
+        };
+        if (compartment) ir.fieldCompartments = [attributesCompartment()];
+        return { ...v, ir };
+    });
+}
+
+/** The name signals of ISO 5807, in their order: the first group a word of the class name is in decides. */
+const ISO_FORMS: ReadonlyArray<{ form: 'stadium' | 'parallelogram' | 'diamond'; words: ReadonlySet<string> }> = [
+    { form: 'stadium', words: new Set(['start', 'end', 'initial', 'final', 'terminal']) },
+    { form: 'parallelogram', words: new Set(['input', 'output', 'read', 'write', 'print', 'io']) },
+    { form: 'diamond', words: new Set(['decision', 'choice', 'if', 'branch']) },
+];
+/** The roles that are a terminator, a stadium, whatever the class is called. */
+const ISO_TERMINATOR_ROLES: ReadonlySet<string> = new Set(['initial', 'terminal', 'activityFinal']);
+
+/** The ISO 5807 form of a class: by role, then by the words of its name; a rectangle otherwise. */
+export function isoFormOf(role: string | undefined, className: string): 'stadium' | 'parallelogram' | 'diamond' | 'rect' {
+    if (role && ISO_TERMINATOR_ROLES.has(role)) return 'stadium';
+    const words = nameWords(className);
+    return ISO_FORMS.find(g => words.some(w => g.words.has(w)))?.form ?? 'rect';
+}
+
+/**
+ * Flowchart (ISO 5807), slice A3 (R-VP-22, mockup docs/mockups/derived-viewpoints/flowchart-A-iso5807.svg):
+ * the Flowchart's documents with the drawing of the notation, data only.
+ *
+ * - A node with a role: its ISO form (`isoFormOf`: the Initial, the Terminal and an Activity final a
+ *   stadium, then the name signals, a rectangle with the form's 4 px radius otherwise), white, 1 px
+ *   in the name ink, its name centred in 13 px 500 in the ink, no compartment.
+ * - A flow: today's orthogonal router, 1 px in the ink, the filled arrowhead; its guard the label
+ *   through a C2 template, in the C2 label style. A guard that is literally `true` or `false` reads
+ *   `yes` or `no`: two more documents for the class, each with a predicate on the guard and priority 1,
+ *   so the resolver picks them over the plain one when they hold.
+ * - Every other document (a class with no role) is the Flowchart's.
+ */
+export function deriveIsoFlowchartViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
+    const attributesOf = attributesHeld(lookup, metamodelId);
+    const guardKey = roles.bag.simGuard;
+    const out: DerivedView[] = [];
+    for (const v of deriveViewpointIRs(lookup, metamodelId, roles)) {
+        const role = roleOfRule(v.rule);
+        if (v.ir.kind === 'edge') {
+            if (role !== 'transition') { out.push(v); continue; }
+            const { source, target } = v.ir.edge;
+            const base = (): EdgeViewIR['edge'] => ({
+                source, target, terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' }, line: { color: NAME_INK, width: 1 },
+            });
+            const guard = typeof guardKey === 'string' ? attributesOf(v.classId).find(a => a.id === guardKey) : undefined;
+            const edge = base();
+            if (guard) edge.labels = { template: [{ from: 'path', expr: path(guard.name) }], style: EDGE_LABEL_STYLE() };
+            out.push({ ...v, ir: { ...v.ir, edge } });
+            if (!guard) continue;
+            for (const [literal, word] of [['true', 'yes'], ['false', 'no']] as const) {
+                const e = base();
+                e.labels = { center: { from: 'literal', text: word }, style: EDGE_LABEL_STYLE() };
+                out.push({
+                    ...v,
+                    ir: {
+                        ...v.ir, label: `View for ${v.className} (${word})`, edge: e, priority: 1,
+                        predicate: { op: 'eq', left: path(guard.name), right: { kind: 'string', value: literal } },
+                    },
+                });
+            }
+            continue;
+        }
+        if (!role) { out.push(v); continue; }
+        const ir: VertexViewIR = {
+            irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: { [v.className]: v.classId },
+            exclusive: true, label: `View for ${v.className}`,
+            shape: {
+                form: isoFormOf(role, v.className), fill: SURFACE, border: { color: NAME_INK, width: 1, style: 'solid' },
+                labels: [centredName(13, 'medium')],
+            },
+        };
+        out.push({ ...v, ir });
+    }
+    return out;
+}
+
 /**
  * The documents «Derive viewpoint» creates (R-VP-19): with a role bound, the role-keyed
  * notations of R-VP-15..17, byte for byte; with none, the generic structural notation.
@@ -591,5 +745,9 @@ export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): 
  * passes `null`, a role notation the binding its table gives (R-VP-21).
  */
 export function deriveViewpointForBinding(lookup: Lookup, metamodelId: string, roles: DerivationRoles | null): AnyDerivedView[] {
-    return roles ? deriveViewpointIRs(lookup, metamodelId, roles) : deriveGenericViewpointIRs(lookup, metamodelId);
+    if (!roles) return deriveGenericViewpointIRs(lookup, metamodelId);
+    // A1 and A3 (R-VP-22): the drawing of the notation picked, over the role-keyed documents.
+    if (roles.notation === 'statechart') return deriveStatechartViewpointIRs(lookup, metamodelId, roles);
+    if (roles.notation === 'flowchartIso') return deriveIsoFlowchartViewpointIRs(lookup, metamodelId, roles);
+    return deriveViewpointIRs(lookup, metamodelId, roles);
 }

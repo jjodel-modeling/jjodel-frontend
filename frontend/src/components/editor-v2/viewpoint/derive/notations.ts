@@ -5,7 +5,9 @@
  * - **The list**: Generic (variant C, R-VP-19, R-VP-20), State machine, Petri net and Flowchart. The
  *   last three are the role-keyed renderings of R-VP-15..18, unchanged, and apply only when picked:
  *   the stored simulation binding no longer picks them (amends R-VP-15 (5) and R-VP-17). ER and UML
- *   come with their own slices.
+ *   come with their own slices. Slices A1 and A3 (P-2026-09-30-0355, R-VP-22) add Statechart (UML)
+ *   and Flowchart (ISO 5807) beside their siblings, on the same profiles; a stored binding still
+ *   opens on the sibling.
  * - **The table**: a metaclass → role map over the class roles the notation's system profile edits
  *   and the derivation draws. Its prefill is the binder's (`bindProfile`), with the metamodel's stored
  *   simulation binding as bag, inverted per class; when the metamodel already has a derived viewpoint
@@ -33,7 +35,7 @@ import type { AnyDerivedView, DerivationRoles } from './viewpointDerivation';
 
 type Lookup = Record<string, any>;
 
-export type DerivedNotationId = 'generic' | 'stateMachine' | 'petri' | 'flowchart';
+export type DerivedNotationId = 'generic' | 'stateMachine' | 'statechart' | 'petri' | 'flowchart' | 'flowchartIso';
 
 export interface DerivedNotation {
     readonly id: DerivedNotationId;
@@ -48,8 +50,12 @@ export interface DerivedNotation {
 export const DERIVED_NOTATIONS: readonly DerivedNotation[] = [
     { id: 'generic', label: 'Generic', profile: null, nodeLabel: 'Node' },
     { id: 'stateMachine', label: 'State machine', profile: 'stateMachine', nodeLabel: 'State' },
+    // A1 (P-2026-09-30-0355, R-VP-22): beside State machine, on its profile and prefill.
+    { id: 'statechart', label: 'Statechart (UML)', profile: 'stateMachine', nodeLabel: 'State' },
     { id: 'petri', label: 'Petri net', profile: 'petri', nodeLabel: 'Place' },
     { id: 'flowchart', label: 'Flowchart', profile: 'flowchart', nodeLabel: 'Node' },
+    // A3 (P-2026-09-30-0355, R-VP-22): beside Flowchart, on its profile and prefill.
+    { id: 'flowchartIso', label: 'Flowchart (ISO 5807)', profile: 'flowchart', nodeLabel: 'Node' },
 ];
 
 /** The keys of a derived viewpoint's `_state` (R-VP-21, persisted names, R-B9). */
@@ -224,7 +230,9 @@ function derivationRolesOf(lookup: Lookup, metamodelId: string, choice: DeriveCh
         const b = bindings[d.id];
         if (d.key !== null && d.kind !== 'class' && b?.status === 'bound') bag[d.key] = b.value;
     }
-    return { bag, shape: profile.shape, classRoles };
+    // A1 and A3 (R-VP-22): the two notations drawn over their sibling's documents say so.
+    const notation = choice.notation === 'statechart' || choice.notation === 'flowchartIso' ? choice.notation : undefined;
+    return { bag, shape: profile.shape, classRoles, ...(notation ? { notation } : {}) };
 }
 
 /** The `_state` of the derived viewpoint: where it came from, the notation, one `derivedRole_<classId>` per bound class. */

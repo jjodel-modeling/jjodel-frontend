@@ -16,7 +16,7 @@ import { isUsableEndpointExpr } from './edgeEndpoints';
 import { authoredCornerRadius } from './shapeRegistry';
 import { usableSizeAxis } from '../../nodes/nodeSizing';
 import { isConditionalValue } from '../../../ui/ConditionalEditor/conditional';
-import type { AnyViewIR, EdgeViewIR, LabelPosition, NodeViewIR, PaddingToken, Predicate, RowViewIR, TextSource, VertexViewIR } from './irTypes';
+import type { AnyViewIR, EdgeCurve, EdgeViewIR, EntryMark, LabelPosition, NodeViewIR, PaddingToken, Predicate, RowViewIR, TextSource, VertexViewIR } from './irTypes';
 
 /**
  * Closed vocabulary of `edge.routing` (R-B9, 2026-08-03): the persisted identifiers,
@@ -40,6 +40,12 @@ export const VALID_ROUTING_VALUES: ReadonlyArray<NonNullable<EdgeViewIR['edge'][
  * instead of writing 'normal'). Only a PRESENT out-of-vocabulary value is an error.
  */
 export const VALID_PADDING_VALUES: ReadonlyArray<PaddingToken> = ['small', 'normal', 'large'];
+
+/** Closed vocabulary of `shape.entry` (R-VP-22), same shape and reasoning as VALID_PADDING_VALUES; absent = no mark. */
+export const VALID_ENTRY_VALUES: ReadonlyArray<EntryMark> = ['dot', 'arrow'];
+
+/** Closed vocabulary of `edge.curve` (R-VP-22), same shape and reasoning as VALID_ROUTING_VALUES; absent = the routing path. */
+export const VALID_CURVE_VALUES: ReadonlyArray<EdgeCurve> = ['arc'];
 
 /**
  * Closed vocabulary of `LabelSpec.position` (P-2026-09-29-1245): the four inside positions and
@@ -226,6 +232,16 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             };
         }
 
+        // Entry mark (R-VP-22): same criterion as padding. The render reads a value outside the
+        // vocabulary as absent (compileView), the authoring surface refuses it here.
+        const entry: unknown = (ir as NodeViewIR).shape?.entry;
+        if (entry !== undefined && !(VALID_ENTRY_VALUES as readonly unknown[]).includes(entry)) {
+            return {
+                ok: false,
+                error: `[ir] shape.entry must be one of ${VALID_ENTRY_VALUES.join(' | ')}, or absent for no entry mark, read ${JSON.stringify(entry)}`,
+            };
+        }
+
         // Corner radius (slice 3, D5): numeric guard, same criterion as padding. The render
         // reads an invalid value as absent (authoredCornerRadius), the authoring surface
         // rejects it here through the same function, so the two cannot disagree on what
@@ -303,6 +319,15 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             return {
                 ok: false,
                 error: `[ir] edge.routing must be one of ${VALID_ROUTING_VALUES.join(' | ')}, or absent for the Manhattan default — read ${JSON.stringify(routing)}`,
+            };
+        }
+
+        // Curve vocabulary (R-VP-22): same criterion as routing, read as unknown for the same reason.
+        const curve: unknown = (ir as EdgeViewIR).edge?.curve;
+        if (curve !== undefined && !(VALID_CURVE_VALUES as readonly unknown[]).includes(curve)) {
+            return {
+                ok: false,
+                error: `[ir] edge.curve must be ${VALID_CURVE_VALUES.join(' | ')}, or absent for the routing path, read ${JSON.stringify(curve)}`,
             };
         }
 

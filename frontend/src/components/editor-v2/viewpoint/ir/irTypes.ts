@@ -66,6 +66,12 @@ export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 /** Spacing preset of the symbol (header, compartments, inside label). Absent = 'normal'. */
 export type PaddingToken = 'small' | 'normal' | 'large';
 
+/** Entry mark of a shape (R-VP-22): see `ShapeSpec.entry`. Persisted, never renamed (R-B9). */
+export type EntryMark = 'dot' | 'arrow';
+
+/** Curve of an edge (R-VP-22): see `EdgeViewIR.edge.curve`. Persisted, never renamed (R-B9). */
+export type EdgeCurve = 'arc';
+
 /**
  * Text source of a label. 'intrinsic' reads element-level properties that are
  * not feature slots (spec v1.2: needed by default views — DObject.name is the
@@ -237,6 +243,16 @@ export interface ShapeSpec {
      * (same precedent as `marker`).
      */
     padding?: PaddingToken;
+    /**
+     * Entry mark (R-VP-22, P-2026-09-30-0355): a mark drawn OUTSIDE the box, on its left, whose
+     * arrow ends on the box's border. `dot` is the UML initial pseudostate, a small filled dot
+     * with a short arrow into the state (Statechart (UML)); `arrow` is the arrow alone, the start
+     * arrow of an automaton. Drawn in the border colour, as the marker is; it enters neither the
+     * box size nor the handles (irStyle.ts places it, IRNodeContent draws it). Scalar like
+     * `padding`, never Conditional. Absent = no mark. Persisted, never renamed (R-B9); additive
+     * optional field: no irVersion bump, no migration.
+     */
+    entry?: EntryMark;
     /**
      * Typographic style of the whole symbol (ir-1.3, node-level cascade root).
      * Applied inline on `.ir-node-content` and inherited by every text surface
@@ -654,6 +670,16 @@ export interface EdgeViewIR {
          *  router); 'straight' and 'curved' reuse the same handles and only change the
          *  curve, which drops waypoints and crossing bridges for that edge. */
         routing?: 'orthogonal' | 'straight' | 'curved';
+        /**
+         * R-VP-22 (P-2026-09-30-0355): `arc` draws the edge between the centres of its two
+         * handles, off the Manhattan router: straight when it is the only edge between its two
+         * nodes; a quadratic bowed away from the other edge when one runs between the same two
+         * nodes the other way, its label at the apex; a cubic loop over the top edge of the node
+         * for a self-loop, which then takes two top handles (irEdgeViews), its label above the
+         * loop. No waypoints, no crossing bridges, no snap. Wins over `routing`. Absent = the
+         * `routing` path, as before. Persisted, never renamed (R-B9); additive, no migration.
+         */
+        curve?: EdgeCurve;
         labels?: {
             center?: TextSource;
             placement?: 'auto' | 'above' | 'below';
@@ -776,6 +802,8 @@ export interface CompiledEdgeView {
     lineStyle: CompiledConditional<'solid' | 'dashed' | 'dotted'> | null;
     terminations: { sourceEnd: EdgeTermination; targetEnd: EdgeTermination };
     routing: 'orthogonal' | 'straight' | 'curved' | null;
+    /** `edge.curve` (R-VP-22); absent when the view declares none, or a value outside the vocabulary. */
+    curve?: EdgeCurve;
     labelText: CompiledAccessor | null;
     labelPlacement: 'auto' | 'above' | 'below';
     /** Compiled `edge.labels.style` (R-VP-20); absent when the view declares none. */
@@ -860,6 +888,8 @@ export interface CompiledView {
     marker: CompiledConditional<string> | null;
     /** shape.padding ?? 'normal' */
     padding: PaddingToken;
+    /** `shape.entry` (R-VP-22); absent when the view declares none, or a value outside the vocabulary. */
+    entry?: EntryMark;
     /** Compiled node-level text style; undefined when the view declares none. */
     text?: CompiledTextStyle;
     labels: CompiledLabel[];

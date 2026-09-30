@@ -120,6 +120,21 @@ import { resolveTextStyle } from './irCompile';
 const BADGE_STYLE: React.CSSProperties = { position: 'absolute', zIndex: 2 };
 
 /**
+ * The entry mark (R-VP-22, `ShapeSpec.entry`): a layer ENTRY_W × ENTRY_H outside the box, its right
+ * edge on the box's left border and its middle on the box's middle, so the arrow's tip, the layer's
+ * rightmost point, touches the border and nothing more. Placed inline, as the badge is, so no in-flow
+ * rule of the SVG-painted forms can take it back into the flow; irStyle.ts only lifts the two clips.
+ * `dot`: a filled dot (UML initial pseudostate), then the line; `arrow`: the line alone.
+ */
+const ENTRY_W = 40;
+const ENTRY_H = 14;
+const ENTRY_DOT_R = 6;
+const ENTRY_HEAD = 8;
+const ENTRY_STYLE: React.CSSProperties = {
+    position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', overflow: 'visible', pointerEvents: 'none', zIndex: 1,
+};
+
+/**
  * Exported since TS2: IRRow renders the dispatched rows outside this component and
  * must resolve their style with the same function, not a copy of it. The function
  * lives in irCompile.ts since P-2026-09-30-0150 (R-VP-20), so the pure irEdgeViews.ts
@@ -544,6 +559,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                             strokeLinejoin="round"
                         />
                     ))}
+                </svg>
+            )}
+            {compiled.entry && (
+                <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={ENTRY_STYLE} aria-hidden="true">
+                    {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={markerColor} />}
+                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W - ENTRY_HEAD}`} stroke={markerColor} strokeWidth={1} fill="none" />
+                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4} Z`} fill={markerColor} />
                 </svg>
             )}
             {compiled.badges.map((b, i) => {

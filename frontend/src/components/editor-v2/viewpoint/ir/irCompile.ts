@@ -566,6 +566,10 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         badges,
         fieldCompartments,
     };
+    // Entry mark (R-VP-22): written only when declared in the vocabulary, so a view without it
+    // compiles to the key list it had; a value outside it renders as absent (R-B9-bis).
+    const entry: unknown = ir.shape.entry;
+    if (entry === 'dot' || entry === 'arrow') compiled.entry = entry;
     compileCache.set(key, compiled);
     return compiled;
 }
@@ -682,6 +686,9 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
         labelPlacement: e.labels?.placement ?? 'auto',
         persistWaypoints: e.persistWaypoints ?? true,
     };
+    // R-VP-22: the arc, the same way: only when declared in the vocabulary.
+    const curve: unknown = e.curve;
+    if (curve === 'arc') compiled.curve = curve;
     // R-VP-20 (TS3): the label style, compiled only when it is an object, so an edge view without
     // it compiles to the shape it had and irEdgeViews writes no irLabelStyle.
     const labelStyleIR = e.labels?.style;
