@@ -105,6 +105,59 @@
     line-height: 1.4;
     color: #64748b;
   }
+
+  // «Color by metaclass» base colour (R-VP-19): the native swatch in the frame of
+  // .wp-field__input, the hex beside it as a caption. `[type="color"]` lifts the rule
+  // to (0,2,0) over the global `input[type="color"]` 24px box of style.scss.
+  &__color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__color[type="color"] {
+    width: 48px;
+    height: 36px;
+    margin: 0;
+    padding: 3px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+
+    &:hover {
+      border-color: #cbd5e1;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: #334155;
+      box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1);
+    }
+
+    &:disabled {
+      background: #f1f5f9;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    &::-webkit-color-swatch {
+      border: none;
+      border-radius: 4px;
+    }
+  }
+
+  &__color-hex {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    color: #64748b;
+  }
 }
 
 // ---------- Toggle row ----------
