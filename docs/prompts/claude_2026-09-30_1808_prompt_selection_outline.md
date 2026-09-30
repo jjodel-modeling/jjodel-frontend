@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1808
 Chat: C-2026-09-30-1806
 Lane: fast (Phase 1 then Phase 2 in cascade, visual fix, no critical-zone go-ahead). Tier: heavy (settings pin).
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane selection-outline · 27a6b2d69 · non fuso: hard-stop, lane probe on 3083 (light) 24/24, unselected panes 0 px from c4846df0e, IR ring equal to the class card's and painted, box 0 px, mutation bench 5/5, crops in frontend/scripts/smoke/_tmp_selring_crops/ (gitignored), verifica visiva alla chat
 
 Worktree: `~/jjodel-w-selring`, branch `selection-outline`, created from the trunk `alfonso-frontend-jjtl` at `c1e0376dc`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-selring`, branch `selection-outline`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 

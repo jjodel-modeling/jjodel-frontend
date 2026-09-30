@@ -170,3 +170,22 @@ confirms it in the live app (§0). The Phase 2 entry closes that ticket.
   light, as the prompt asks.
 - Stacking: once lifted, a selected node's ring can overlap a neighbour closer than 5 px, as the class card's ring
   already does.
+
+## Addendum 2026-09-30, Phase 2 (`27a6b2d69`)
+
+- **Question 3 corrected.** Its premise is false. Only `ClassNode.tsx:478` and `EnumNode.tsx:154` emit `drop-target`
+  (`grep -rn "drop-target"` over `src` `*.ts`/`*.tsx`, tests excluded; positive control: the same search finds those
+  two sites and the three lines of `irStyle.ts`). The IR branch of ObjectNode never emits it, so
+  `.mm-node.drop-target > .ir-node-content` (`irStyle.ts:165`) never applies on the canvas and nothing there gets
+  clipped. It is recorded as a paragraph of the log entry, not as a ticket, and the rule stays (Rule 9).
+- **Questions 1, 2 and 4** were taken with their `Recommended:` lines, unattended (RC-21). The fix is the §4 rule in
+  `instanceNode.scss`, unchanged.
+- **Measured after the fix** (probe `after` on 3083, 24/24): on `work` and `d1`, the computed ring and band on the IR
+  shape equal the native class card's (`solid 2px rgba(56, 189, 248, 0.55) off 3px`, `rgba(56, 189, 248, 0.22) 0px 0px
+  0px 3px`). The painted ring pixels, css rows 19-20 above the top edge, read `139,214,248`, against the class card's
+  `139,214,247` / `138,213,247`. Idle-to-selected changed pixels outside the box: `work` 432 → 18604, `d1` 432 → 10020
+  (`d1` ends at the canvas's right edge at this zoom, as the pane crop `sr_after_derived_flowB_work_pane_selected_600.png`
+  shows, so the right half of its ring falls outside the clip: corners `tr` and `br` count 0). Node box 0 px on all
+  four scenes. The four unselected panes are 0 px from the `before` run.
+- A difference that stays, by design of `irStyle.ts:149`: when selected, the IR shape keeps its resting shadows
+  (`0 1px 3px`, `0 4px 12px`), while the class card switches to `0 4px 16px`. The ring and the band are the same.
