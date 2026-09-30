@@ -519,3 +519,31 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: pending — chat, RC-23; lane probe on 3091 (light) 51/51: DemoESM native and DemoFlowB derived (IR), toggle off/on/#f59e0b/border off, fill, text, stroke per node against the resolver, boxes 0 px, toggle off 0 px; crops `frontend/scripts/smoke/_tmp_vpcolor_crops/vpc_after_*_600.png`
 **Notes**: «Fresh viewpoint» tested on a fixture: `Constructors` does not import under vitest (`window is not defined`); the probe runs the live save serializer, JSON.parse and VersionFixer.update. RC-27 second agent: HOLDS (R-VP-20). A selected white-text native node reads its name 1.11:1 on the untouched #e0f7fa selection header (R-VP-22, for the GO). Scratch files in /tmp (gate outputs).
 **Prompt document name**: 2026-09-30 18:15
+
+## 2026-09-30 — fix(editor-v2): the selection ring of an IR node is no longer clipped (P-2026-09-30-1808)
+**Prompt**: `claude_2026-09-30_1808_prompt_selection_outline.md`, fast lane, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-selring` branch `selection-outline`. A selected IR-rendered node (DemoFlowB `work`, derived viewpoint) showed its handles but no selection outline, only a faint halo.
+**Files touched**: report `ca2cfb8a8`: `docs/discovery/discovery_2026-09-30_selection_outline.md`. Code `27a6b2d69`: `frontend/src/components/editor-v2/nodes/instanceNode.scss` (one rule), `frontend/src/components/editor-v2/nodes/__tests__/irSelectionRing.test.ts` (new). This commit: this entry, the report's addendum, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `27a6b2d69`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 5949 passed, 0 failed, the 9 §17 files red at import; `npm run build` exit 0. Test red 2/5 before the rule, 5/5 after; mutation bench 5/5 killed (commit body). Probe on 3083, light: 24/24, the unselected panes 0 px from the `before` run on `c4846df0e`, node box 0 px.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 or §3.2 file touched; `irStyle.ts` read, not edited)
+**Smoke visivo**: pending — chat (RC-23); lane probe 24/24, crops in `frontend/scripts/smoke/_tmp_selring_crops/` (gitignored)
+**Notes**: Root cause: `instanceNode.scss:27` (`overflow: hidden`) clipped the ring `irStyle.ts:149` draws outside `.ir-node-content`. Adopted unattended (RC-21, report §0): the IR ring takes the class card token, `rgba(56,189,248,0.55)`, not `#0ea5e9`, which no native node paints; moving the token is Alfonso's call. Closes the 2026-09-29 ticket «IR selection ring reads clipped by the node wrapper».
+**Prompt document name**: 2026-09-30 18:08
+
+**Ticket** (low, not a ticket of its own): `irStyle.ts:165` (`.mm-node.drop-target > .ir-node-content`) never applies on the canvas, because only `ClassNode.tsx:478` and `EnumNode.tsx:154` emit `drop-target`, and neither mounts `.ir-node-content`. Left in place (Rule 9).
+
+## 2026-09-30 — merge: selection-outline into alfonso-frontend-jjtl (P-2026-09-30-1846)
+**Prompt**: `claude_2026-09-30_1846_prompt_merge_selection-outline.md`, a direct merge by `lane-run merge --direct`, no session: `selection-outline` at `a5c9d905f` into `alfonso-frontend-jjtl`, merge base `c1e0376dc`, 5 commits on the branch side.
+**Files touched**: merge `7614e7e10`: 5 files from the branch side (`docs/discovery/discovery_2026-09-30_selection_outline.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1808_prompt_selection_outline.md`, `frontend/src/components/editor-v2/nodes/__tests__/irSelectionRing.test.ts`, `frontend/src/components/editor-v2/nodes/instanceNode.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7614e7e10` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5949 tests in 239 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: IR ring painted cyan, box 0 px; Alfonso authorised the merge (fondi)
+**Notes**: Rollback tag `pre-selection-outline` on `c1e0376dc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1846/result.json`.
+**Prompt document name**: 2026-09-30 18:46
