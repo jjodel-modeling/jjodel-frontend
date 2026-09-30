@@ -27,6 +27,7 @@ import {
     store,
 } from '../../../joiner';
 import { markCanvasUpdatedBatch } from '../sync/syncState';
+import { resolveEdgeSelectionTarget } from '../utils/edgeSelectionTarget';
 import { JjodelEvents } from '../../../events/registry';
 
 /**
@@ -75,11 +76,14 @@ function notifyElementSelected(elementId: string): void {
     } catch { /* ignore */ }
 }
 
-/** Select one element and deselect all others in the same graph. */
-function selectElement(elementId: string, modelid: string): void {
+/** Select one element and deselect all others in the same graph. `modelElementId`, when given, is
+ *  what the Properties panel shows instead of the element's own `.model` (an edge that represents a
+ *  slot or an object, R-ESEL-2); with no D-object behind `elementId` (object-as-edge) nothing is
+ *  selected and `node` is empty (R-ESEL-3). */
+function selectElement(elementId: string, modelid: string, modelElementId?: string): void {
     try {
         const lElement: any = LPointerTargetable.fromPointer(elementId);
-        if (!lElement) return;
+        if (!lElement && !modelElementId) return;
 
         // Anti-bounce: mark ALL graph elements BEFORE the TRANSACTION.
         // The TRANSACTION changes isSelected on every D-object, creating
@@ -102,13 +106,13 @@ function selectElement(elementId: string, modelid: string): void {
                 }
             }
 
-            try { lElement.select(DUser.current); } catch { /* ignore */ }
+            if (lElement) { try { lElement.select(DUser.current); } catch { /* ignore */ } }
 
-            const modelElement = lElement.model;
+            const modelElement = modelElementId ? null : lElement.model;
             SetRootFieldAction.new('_lastSelected' as any, {
-                node: elementId,
+                node: lElement ? elementId : '',
                 view: '',
-                modelElement: modelElement?.id ?? modelElement?.__raw?.id ?? '',
+                modelElement: modelElementId || (modelElement?.id ?? modelElement?.__raw?.id ?? ''),
             });
         });
 
@@ -117,6 +121,17 @@ function selectElement(elementId: string, modelid: string): void {
     } catch (err) {
         console.warn('[useJjomSelection] Failed to select element:', err);
     }
+}
+
+/** Select a canvas edge: the edge keeps the canvas selection, the Properties panel shows the
+ *  element it represents (resolveEdgeSelectionTarget). An edge the resolver does not know goes
+ *  through selectElement exactly as before (R-ESEL-1). */
+function selectEdgeTarget(edgeId: string, modelid: string): void {
+    let modelElementId: string | undefined;
+    try {
+        modelElementId = resolveEdgeSelectionTarget(edgeId, store.getState().idlookup as any)?.modelElementId;
+    } catch { /* unresolved: the edge's own .model, as before */ }
+    selectElement(edgeId, modelid, modelElementId);
 }
 
 /** Deselect all elements but keep _lastSelected.modelElement pointing to the
@@ -167,6 +182,8 @@ function deselectAll(modelid: string): void {
 interface UseJjomSelectionResult {
     onNodeClick: (_event: React.MouseEvent, node: Node) => void;
     onEdgeClick: (_event: React.MouseEvent, edge: Edge) => void;
+    /** Object-as-edge (`irobj_*`): the Properties panel shows the object (R-ESEL-2). */
+    onObjectAsEdgeClick: (edgeId: string) => void;
     onPaneClick: () => void;
 }
 
@@ -213,10 +230,21 @@ const onEdgeClick = useCallback(
         _event.stopPropagation();  // prevent pane click deselect race
         // Highlight mode ON: il click assegna il colore attivo all'edge.
         if (highlightActive && onAssign) { onAssign(edge.id); return; }
-        if (isJjomMode && modelid) selectElement(edge.id, modelid);
+        if (isJjomMode && modelid) selectEdgeTarget(edge.id, modelid);
     },
     [isJjomMode, modelid, highlightActive, onAssign],
 );
+
+    // Object-as-edge: the canvas selection is EditorV2's (IR interaction store); this only points the
+    // Properties panel at the object. Highlight mode ON: no colour and no selection, as before this
+    // handler existed (R-ESEL-5).
+    const onObjectAsEdgeClick = useCallback(
+        (edgeId: string) => {
+            if (highlightActive && onAssign) return;
+            if (isJjomMode && modelid) selectEdgeTarget(edgeId, modelid);
+        },
+        [isJjomMode, modelid, highlightActive, onAssign],
+    );
 
     const onPaneClick = useCallback(() => {
         if (!modelid) return;
@@ -236,5 +264,5 @@ const onEdgeClick = useCallback(
         }
     }, [isJjomMode, modelid]);
 
-    return { onNodeClick, onEdgeClick, onPaneClick };
+    return { onNodeClick, onEdgeClick, onObjectAsEdgeClick, onPaneClick };
 }

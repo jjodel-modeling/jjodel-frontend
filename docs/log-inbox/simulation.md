@@ -1245,3 +1245,30 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: R-SIM-101 Choices Ask|Random, Play, k; Step 854.5; Petri Deadlock in 4, FlowB Terminated 6, SM waits for an event
 **Notes**: Rollback tag `pre-sim-random-l2` on `6c460f998` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2034/result.json`.
 **Prompt document name**: 2026-09-29 20:34
+
+## 2026-09-28 — discovery: Entry, Exit, Action and Guard multi-valued, R-SIM-90 (P-2026-09-28-2306)
+**Prompt**: `claude_2026-09-28_2306_prompt_discovery_sim_multi_roles.md`, read-only discovery on `sim-multi-roles` in `~/jjodel-w-multi` (cut from `alfonso-frontend-jjtl` at `fb044365b`), heavy tier: a Phase 2 plan for R-SIM-90 (the four Data roles multi-valued) before the freeze, the risks for the four demo scenes measured, every open point with a `Recommended:` line, the order against the `sim-outputs-accepting` merge.
+**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-28_sim_multi_roles.md` (new), this entry, the Status of the prompt file. No code. Probes, gitignored: `frontend/scripts/smoke/_tmp_multi_probe.ts`, `_tmp_multi_scenes.ts` (`npx tsx`, exit 0 both).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs only, no file under `frontend/src` written; `npm run check:docs` on this commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The prompt's premise of a Trigger list codec is false: `simTrigger` is one pointer, the list is the M1 slot; the encoding is new (plain id for one, JSON array string for more). Measured: today's engine reads a list as one pointer and the guard becomes true, silently; the dialog says Not checkable. The four scenes bind at most one attribute per multi role, each with at most one compatible candidate (sketches from the builder spec). RC-27 verifier: holds-with-changes, two adopted (report §12).
+**Prompt document name**: 2026-09-28 23:06
+**Ticket** (priority low, opened here, report §11 risk 3). With R-SIM-90 in, `simCheckToProblems.ts:117-120` dedups a parse error by the first bound attribute's type only: a parse error in a second attribute of another type is dropped or shown twice in the problems registry. Critical zone, left for after the freeze.
+
+## 2026-09-30 — merge: sim-multi-roles into alfonso-frontend-jjtl (P-2026-09-30-1518)
+**Prompt**: `claude_2026-09-30_1518_prompt_merge_sim-multi-roles.md`, a direct merge by `lane-run merge --direct`, no session: `sim-multi-roles` at `e052ea399` into `alfonso-frontend-jjtl`, merge base `fb044365b`, 2 commits on the branch side.
+**Files touched**: merge `a889afbdd`: 3 files from the branch side (`docs/discovery/discovery_2026-09-28_sim_multi_roles.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-09-28_2306_prompt_discovery_sim_multi_roles.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a889afbdd` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5905 tests in 234 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, the R-SIM-90 multi-valued roles discovery report that trunk docs already cite; no code, 8 gates green on a889afbdd; GO by the chat C-2026-09-30-1458
+**Notes**: Rollback tag `pre-sim-multi-roles` on `9e2441595` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1518/result.json`.
+**Prompt document name**: 2026-09-30 15:18

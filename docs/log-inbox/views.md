@@ -381,6 +381,263 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Notes**: Rollback tag `pre-ir-collapsed-render` on `cf8c031f6` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2243/result.json`.
 **Prompt document name**: 2026-09-29 22:43
 
+## 2026-09-29 — docs(views): discovery, IR authoring freezes, collapsed graphVertex, StructureSpec (P-2026-09-29-1935)
+**Prompt**: `claude_2026-09-29_1935_prompt_discovery_ir_authoring_freeze.md`, read-only discovery, heavy tier, branch `ir-freeze-disc` in `~/jjodel-w-irfreeze`: explain the four tab freezes of chat C-2026-09-29-1840, the ignored `collapsed.form`/`badge`, the inert `StructureSpec`, and two side findings; Phase 2 plan.
+**Files touched**: this commit: `docs/discovery/discovery_2026-09-29_ir_authoring_freeze.md` (new), this entry, the Status line of the prompt file. No tracked file under `frontend/`; probes `frontend/scripts/smoke/_tmp_irfreeze_*` and `_tmp_lane_vite_3056.config.ts` gitignored, left on disk.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — docs only; `git status --porcelain` empty before and after the probes; Vite on 3056 started from this tree and stopped by this session.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (read-only; no critical-zone file read or edited)
+**Smoke visivo**: non applicabile
+**Notes**: Freeze not reproduced (28 replays of a-d, 21 live rewrites, 3 reloads: 0). A nested L-proxy in `ir` (unguarded, `action.ts:321`) pins the renderer: Cmd+S unresponsive 5.5-232.7 s, id control fine. Points 2 and 3 are missing renderers, measured per contrasto. Side finding 1 confirmed: Cmd+S saves Navbar's stale `LProject`, dropping a new viewpoint. Headless never reports `hidden`, so the timeout arm is void.
+**Prompt document name**: 2026-09-29 19:35
+
+## 2026-09-30 — merge: ir-freeze-disc into alfonso-frontend-jjtl (P-2026-09-30-1104)
+**Prompt**: `claude_2026-09-30_1104_prompt_merge_ir-freeze-disc.md`, a direct merge by `lane-run merge --direct`, no session: `ir-freeze-disc` into `alfonso-frontend-jjtl`; the worker stopped `blocked` on one red vitest gate and left the merge commit `d8f7be824`; closed by hand by the chat (P9).
+**Files touched**: merge `d8f7be824` from the branch side (`docs/discovery/discovery_2026-09-29_ir_authoring_freeze.md`, the discovery prompt, its entry in this inbox, union-resolved); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d8f7be824` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5905 tests in 234 files, 9 red at import, 8 failed, all in harness script tests (`scripts/hooks/__tests__/laneRun.test.ts`, `laneRunDirect.test.ts`, `bashGuard.test.ts`, `scripts/gates/__tests__/check-addonly.test.ts`, `docsDigest.test.ts`, `traceIndex.test.ts`), 3 of them already red on the receiving tip before the merge; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0. Re-run on `d8f7be824` at 15:04-15:07 with load average 3-5: the six files alone 352 tests, 0 failed; the full suite 5905 tests, 0 failed, the 9 known files red at import (`window is not defined`). The red gate was load-induced.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (docs only)
+**Notes**: Rollback tag `pre-ir-freeze-disc` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1104/result.json`. Ticket, second occurrence after P-2026-09-29-1239 and despite the vitest-timeout lane: the harness script tests still time out under load in the merge gate; run `scripts/**/__tests__` serially or with a longer timeout in the gate worker.
+**Prompt document name**: 2026-09-30 11:04
+
+## 2026-09-30 — docs(views): slice C3, IR edge ports, closed without code (P-2026-09-29-2351)
+**Prompt**: `claude_2026-09-29_2351_prompt_c3_ir_edge_ports.md`, Phase 2 slice C3 on `~/jjodel-w-irports` branch `ir-edge-ports`: reproduce rows 11-12 of discovery `ee7206d0c` (arrowheads on one point of `locked`, a grey dot on `off`) on a derived turnstile, and fix `freeHandleIndex` to the first free index with the per-side cap only if the reproduction confirms the hypothesis.
+**Files touched**: `f83d6bc81`: `docs/discovery/discovery_2026-09-29_ir_edge_ports.md` (new). This commit: the report's §0 resolution, the Status line of the prompt file, this entry and one ticket. No file under `frontend/` tracked by git; probes `frontend/scripts/smoke/_tmp_irports_*` gitignored, left on disk.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — docs only; `git status --porcelain` clean before and after the probes; vite on 3061 started and stopped by `lane-run probe`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no diff written; the report §5 records the one the follow-up owes)
+**Smoke visivo**: non applicabile
+**Notes**: DOM probe on 3061 (derived turnstile, light, DPR 2) and a headless `assignGeometricHandles` agree: 5 distinct handles, max index 2, 5 edges drawn, no coincident arrowheads. Seen instead: the self-loop drawn on the bounding-box corner beside the start of `stop`, its two untouched handles, the 8 px snap leaving the hovered anchor 3.9 px off the arrow tip. Chat decision (RC-21): no code, a ticket, those causes to slice A1.
+**Prompt document name**: 2026-09-29 23:51
+
+## 2026-09-30 — ticket: freeHandleIndex returns a count, not the first free index, and has no per-side cap
+**Ticket**: `freeHandleIndex` (`irEdgeViews.ts:82-91`) is documented «First free handle index for (node, side, role)» but returns how many handles on that side are taken. With a hole in the taken indices it returns a taken one: synthetic control, one assigned edge on `off.left-1` only, `freeHandleIndex('off', 'left', 'target', …) = 1` where the first free index is 0, so two edges share an anchor. It has no cap: five edges on one (node, side, role) get `right-4/left-4` (control `CAP fifth edge`), while DynamicHandles renders indices 0..3 (`MAX_HANDLES_PER_SIDE = 4`, `portDistribution.ts:520`) and xyflow drops an edge whose handle is missing (error 008). Read, not measured: anchor overrides (the reconnect gesture) and `decorateEdges` (`irContainment.ts:328`, counting over a partial `out`) can reach it. The derived turnstile does not: 5 distinct handles, max index 2. Fix when a scene shows it: first free index, capped, a §3.1 edit with its Layer Impact Report.
+**Priority**: low
+**Found in**: P-2026-09-29-2351
+**Detail**: docs/discovery/discovery_2026-09-29_ir_edge_ports.md (§1 H1-H2, §2)
+
+## 2026-09-30 — merge: ir-edge-ports into alfonso-frontend-jjtl (P-2026-09-30-1509)
+**Prompt**: `claude_2026-09-30_1509_prompt_merge_ir-edge-ports.md`, a direct merge by `lane-run merge --direct`, no session: `ir-edge-ports` at `fb8944688` into `alfonso-frontend-jjtl`, merge base `62f4ac3fc`, 3 commits on the branch side.
+**Files touched**: merge `e7dec63bb`: 3 files from the branch side (`docs/discovery/discovery_2026-09-29_ir_edge_ports.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-29_2351_prompt_c3_ir_edge_ports.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e7dec63bb` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5905 tests in 234 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, the C3 ir-edge-ports discovery (hypothesis falsified); no code, 8 gates green on e7dec63bb; GO by the chat C-2026-09-30 release-3.1
+**Notes**: Rollback tag `pre-ir-edge-ports` on `cab8a535d` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1509/result.json`.
+**Prompt document name**: 2026-09-30 15:09
+
+## 2026-09-30 — fix(ir): the derived size goes back when its node leaves the IR view (P-2026-09-30-1625)
+**Prompt**: `claude_2026-09-30_1625_prompt_derived_size_leak.md`, Phase 1 then 2 in cascade on `~/jjodel-w-sizeleak` branch `derived-size-leak` (RC-30 go-ahead). A2's finding: after a derived viewpoint, back in the default one, nodes kept the derived size. Reproduce on the trunk with R-VP-16 Petri, find the cause, fix without touching what is persisted.
+**Files touched**: docs `580f75377`: `docs/discovery/discovery_2026-09-30_derived_size_leak.md` (new, Layer Impact Report §6). Code `92d0d5f0a`: `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts` (unmount-only cleanup, `store` import), `frontend/src/components/editor-v2/viewpoint/ir/__tests__/useContentSizeUnmount.test.ts` (new). This commit: this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `92d0d5f0a`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 5907 passed, 4 failed, 11 files red: the 9 known at import, `criticalZone.test.ts` (4, reads this session's RC-30 variable; 70/70 with it unset), `irCollapsedRender.test.ts` (`afterAll` Chromium close timed out under load; 13/13 alone); `npm run build` exit 0. Mutation bench 9/9 killed (commit body).
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3081 (light): 12/17 on `ee5cd0792`, the 5 reds the leak, 22/22 after; the four demo scenes 0 px left of the rail; crops `frontend/scripts/smoke/_tmp_sizeleak_crops/sl_{before,after}_*_600.png`
+**Notes**: Cause: `useContentDrivenSize` gave the size back only while mounted; the sync never sees a derived size. Adopted as recommended (RC-21), report §0: Q1 option A, Q2 the isResized read in the cleanup, Q3 no ISO-diamond check here. Native object cards mount no resizer, so the default-layout hand size is written as data (`syncSizeToJjom`). Not in `decisions.md`: outside this lane's DOVE.
+**Prompt document name**: 2026-09-30 16:25
+
+**Ticket** (low, two observations, not tickets of their own): (1) `scripts/hooks/__tests__/criticalZone.test.ts` reads `JJODEL_CRITICAL_ZONE_GOAHEAD` from the environment, so the full suite run inside a lane launched with the RC-30 go-ahead shows four false reds; the test could unset it. (2) `irCollapsedRender.test.ts`'s `afterAll` (`browser.close()`) has the 10 s default hook timeout, exceeded once under the full suite's load.
+
+## 2026-09-30 — merge: derived-size-leak into alfonso-frontend-jjtl (P-2026-09-30-1658)
+**Prompt**: `claude_2026-09-30_1658_prompt_merge_derived-size-leak.md`, a direct merge by `lane-run merge --direct`, no session: `derived-size-leak` at `345759408` into `alfonso-frontend-jjtl`, merge base `ecbc0e92c`, 4 commits on the branch side.
+**Files touched**: merge `f031d4948`: 5 files from the branch side (`docs/discovery/discovery_2026-09-30_derived_size_leak.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1625_prompt_derived_size_leak.md`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/useContentSizeUnmount.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f031d4948` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5930 tests in 237 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: derived size released on unmount; lane probe 3081 22/22, DemoPetri p1 p3 and DemoFlowB i0 fin back to 200x78 and 200x50 in default; hand sizes kept; four demo scenes 0 px; 8 gates green on f031d4948; GO by the chat C-2026-09-30-1458, unattended
+**Notes**: Rollback tag `pre-derived-size-leak` on `f43fe429e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1658/result.json`.
+**Prompt document name**: 2026-09-30 16:58
+
+## 2026-09-30 — fix(editor-v2): an M1 edge delete removes the link, not the reference (P-2026-09-30-1542)
+**Prompt**: `claude_2026-09-30_1542_prompt_reference_delete.md`, Phase 1 then 2 in cascade, critical zone with the RC-30 go-ahead. Alfonso: «le reference (edge) non si riescono a cancellare». Matrix of delete paths × levels, bisect, fix in one undo step.
+**Files touched**: `024ded72f` report `docs/discovery/discovery_2026-09-30_reference_delete.md`. `c820dbb51` `frontend/src/components/editor-v2/sync/canvasToJjom.ts` (`deleteM1Link`, called in `syncDeleteEdge`), `frontend/src/components/editor-v2/sync/__tests__/syncDeleteEdge.test.ts` (new). This commit: report addendum §8, this entry, two tickets, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc 14 (the baseline set); vitest 5915 passed, the 9 known red at import, 4 `criticalZone.test.ts` red from this session's `JJODEL_CRITICAL_ZONE_GOAHEAD` (70/70 unset); build exit 0; syncDeleteEdge 14/14, bench 12/12 killed; M2 matrix identical before and after; four demo scenes 8/8 readings identical.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — probe, unattended: M1 matrix 24/25 (the rail's untouched undo), DemoPEST 5/5, bisect oracle GOOD, crops `_tmp_refdelete_crops/`; GO by the chat C-2026-09-30-1458 on the lane probe (RC-23)
+**Notes**: The four M1 canvas paths deleted the metaclass DReference (`syncDeleteEdge` read the edge's `model`); on loaded projects the other links stayed as unselectable ghosts. Bisect: `3.0.0` and `1b40eacd0` BAD, no first bad commit in range; by reading, since `75fe8f2f5`, with `964344aff` and `91a0e89c8` giving M1 edges the DReference as `model`. Q1, Q2, Q5 adopted as recommended: the `decisions.md` record is the chat's.
+**Prompt document name**: 2026-09-30 15:42
+
+**Ticket** (P-2026-09-30-1542, low): the reference's tree row and the Properties rail offer no delete (`TreeViewContent.tsx:1289`, `Info.tsx:1769`); the rail × on an M1 link undoes to the edge without the slot value; a selected edge's segment handle can cover a sibling's label (3 parallel references, `lab2`). Report §2, §5.3.
+
+## 2026-09-30 — ticket: an M2 edge delete is not undoable in one step, and the undo leaves a partial DEdge
+**Ticket**: select + Delete (or Backspace, toolbar) on an M2 reference: the delete's delta carries `edges`, which forces a merge into the select step (`reducer.ts:1211`), and `U.objectMergeInPlace` is first-wins on `idlookup` (`U.tsx:896-905`), so one Cmd+Z restores nothing and leaves `idlookup[edge] = {clonedCounter, pointedBy, isSelected}` with `state.edges` and `state.references` listing both ids. Core (Rule 5): needs Alfonso's approval for a reducer lane.
+**Priority**: medium
+**Found in**: P-2026-09-30-1542
+**Detail**: docs/discovery/discovery_2026-09-30_reference_delete.md
+
+## 2026-09-30 — ticket: a deleted edge stays in graph.subElements on a loaded project, ghost edges on M1 canvases
+**Ticket**: deleting an M2 reference while its model's canvas is mounted (DemoPEST, `nextState`) leaves the 5 M1 DEdge ids in the graph's `subElements` after they left `idlookup`: `useJjomSync.ts:1310-1315` never evicts them, 5 RF edges stay, not selectable, not deletable. `Dummy.get_delete` removes an edge from `subElements` only through `pointedBy` (`Dummy.ts:205-225`), absent on loaded edges. Core: an edge father net in `get_delete`, the R-DEL-4 shape.
+**Priority**: medium
+**Found in**: P-2026-09-30-1542
+**Detail**: docs/discovery/discovery_2026-09-30_reference_delete.md
+
+## 2026-09-30 — merge: reference-delete into alfonso-frontend-jjtl (P-2026-09-30-1736)
+**Prompt**: `claude_2026-09-30_1736_prompt_merge_reference-delete.md`, a direct merge by `lane-run merge --direct`, no session: `reference-delete` at `e6c1f452a` into `alfonso-frontend-jjtl`, merge base `ecbc0e92c`, 4 commits on the branch side.
+**Files touched**: merge `6ecf05100`: 5 files from the branch side (`docs/discovery/discovery_2026-09-30_reference_delete.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1542_prompt_reference_delete.md`, `frontend/src/components/editor-v2/sync/__tests__/syncDeleteEdge.test.ts`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6ecf05100` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5944 tests in 238 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: M1 link delete fix c820dbb51 (canvasToJjom deleteM1Link), 14 tests, mutation 12/12, 8 gates green on 6ecf05100; GO by the chat C-2026-09-30-1458, unattended under the critical-zone standing go-ahead
+**Notes**: Rollback tag `pre-reference-delete` on `c6243eed9` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1736/result.json`.
+**Prompt document name**: 2026-09-30 17:36
+
+## 2026-09-30 — feat(views): viewpoint option «Color by metaclass», palette, text contrast, border on/off (P-2026-09-30-1815)
+**Prompt**: `claude_2026-09-30_1815_prompt_viewpoint_metaclass_colors.md`, Phase 1 then 2 in cascade on `~/jjodel-w-vpcolor` branch `viewpoint-metaclass-colors` (RC-30 go-ahead). A switch in the viewpoint panel, with Base color and Border; M1 object nodes filled per metaclass from a palette of the base, black or white text by contrast, border shade or none.
+**Files touched**: docs `c29280962`: `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md` (new, Layer Impact Report §6). Code `fa0b20de1`: `frontend/src/view/viewPoint/metaclassPalette.ts` (new), `frontend/src/view/viewPoint/__tests__/metaclassPalette.test.ts` (new), `frontend/src/view/viewElement/view.tsx` (optional field), `ViewpointProperties.tsx`, `properties.scss`, `editor-v2/nodes/ObjectNode.tsx`, `editor-v2/viewpoint/ir/IRNodeContent.tsx`. This commit: `docs/decisions.md` (R-VP-27..31), this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `fa0b20de1`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` (GOAHEAD unset) 5974 passed, 0 failed, the 9 known files red at import; `npm run build` exit 0. metaclassPalette 30/30; mutation bench 29/31 killed (commit body). Lane probe on 3091, light: 51/51, the four demo scenes 0 px from the before run on the untouched tree.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3091 (light) 51/51: DemoESM native and DemoFlowB derived (IR), toggle off/on/#f59e0b/border off, fill, text, stroke per node against the resolver, boxes 0 px, toggle off 0 px; crops `frontend/scripts/smoke/_tmp_vpcolor_crops/vpc_after_*_600.png`
+**Notes**: «Fresh viewpoint» tested on a fixture: `Constructors` does not import under vitest (`window is not defined`); the probe runs the live save serializer, JSON.parse and VersionFixer.update. RC-27 second agent: HOLDS (R-VP-28). A selected white-text native node reads its name 1.11:1 on the untouched #e0f7fa selection header (R-VP-30, for the GO). Scratch files in /tmp (gate outputs).
+**Prompt document name**: 2026-09-30 18:15
+
+## 2026-09-30 — fix(editor-v2): the selection ring of an IR node is no longer clipped (P-2026-09-30-1808)
+**Prompt**: `claude_2026-09-30_1808_prompt_selection_outline.md`, fast lane, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-selring` branch `selection-outline`. A selected IR-rendered node (DemoFlowB `work`, derived viewpoint) showed its handles but no selection outline, only a faint halo.
+**Files touched**: report `ca2cfb8a8`: `docs/discovery/discovery_2026-09-30_selection_outline.md`. Code `27a6b2d69`: `frontend/src/components/editor-v2/nodes/instanceNode.scss` (one rule), `frontend/src/components/editor-v2/nodes/__tests__/irSelectionRing.test.ts` (new). This commit: this entry, the report's addendum, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `27a6b2d69`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 5949 passed, 0 failed, the 9 §17 files red at import; `npm run build` exit 0. Test red 2/5 before the rule, 5/5 after; mutation bench 5/5 killed (commit body). Probe on 3083, light: 24/24, the unselected panes 0 px from the `before` run on `c4846df0e`, node box 0 px.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 or §3.2 file touched; `irStyle.ts` read, not edited)
+**Smoke visivo**: pending — chat (RC-23); lane probe 24/24, crops in `frontend/scripts/smoke/_tmp_selring_crops/` (gitignored)
+**Notes**: Root cause: `instanceNode.scss:27` (`overflow: hidden`) clipped the ring `irStyle.ts:149` draws outside `.ir-node-content`. Adopted unattended (RC-21, report §0): the IR ring takes the class card token, `rgba(56,189,248,0.55)`, not `#0ea5e9`, which no native node paints; moving the token is Alfonso's call. Closes the 2026-09-29 ticket «IR selection ring reads clipped by the node wrapper».
+**Prompt document name**: 2026-09-30 18:08
+
+**Ticket** (low, not a ticket of its own): `irStyle.ts:165` (`.mm-node.drop-target > .ir-node-content`) never applies on the canvas, because only `ClassNode.tsx:478` and `EnumNode.tsx:154` emit `drop-target`, and neither mounts `.ir-node-content`. Left in place (Rule 9).
+
+## 2026-09-30 — merge: selection-outline into alfonso-frontend-jjtl (P-2026-09-30-1846)
+**Prompt**: `claude_2026-09-30_1846_prompt_merge_selection-outline.md`, a direct merge by `lane-run merge --direct`, no session: `selection-outline` at `a5c9d905f` into `alfonso-frontend-jjtl`, merge base `c1e0376dc`, 5 commits on the branch side.
+**Files touched**: merge `7614e7e10`: 5 files from the branch side (`docs/discovery/discovery_2026-09-30_selection_outline.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1808_prompt_selection_outline.md`, `frontend/src/components/editor-v2/nodes/__tests__/irSelectionRing.test.ts`, `frontend/src/components/editor-v2/nodes/instanceNode.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7614e7e10` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5949 tests in 239 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: IR ring painted cyan, box 0 px; Alfonso authorised the merge (fondi)
+**Notes**: Rollback tag `pre-selection-outline` on `c1e0376dc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1846/result.json`.
+**Prompt document name**: 2026-09-30 18:46
+
+## 2026-09-30 — feat(views): «Color by metaclass» rework, analogous palette, coloured selected header (P-2026-09-30-1815)
+**Prompt**: resumed lane P-2026-09-30-1815, rework after the hard stop (Alfonso accepted the chat's recommendations, 19:20): merge the trunk (selection-outline), an analogous palette instead of the golden angle, a selected coloured native node keeping its fill, the rows renumbered R-VP-19..23 to R-VP-27..31.
+**Files touched**: merge `c76656bbc` (trunk `45ff6c290`; union in `docs/log-inbox/views.md`). Code `390bcaddd`: `frontend/src/view/viewPoint/metaclassPalette.ts`, its test, and the R-VP comments of `ObjectNode.tsx`, `IRNodeContent.tsx`, `ViewpointProperties.tsx`, `properties.scss`, `view.tsx`. `ce5e70027`: this lane's first entry, three references (`Log-Repair`). This commit: `docs/decisions.md` (R-VP-27..31), the report's addendum, this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-30 18:15
+**Causa**: (a)
+**Regressions**: no — on `390bcaddd`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set; `npx vitest run` (GOAHEAD unset) 5982 passed, the 9 known files red at import; `npm run build` exit 0. metaclassPalette 33/33; mutation bench 37/38 (the unreachable tie). Lane probe 3091, light, 57/57; the four demo scenes identical bytes to the trunk tip `45ff6c290`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (the §6 report of the first pass covers `IRNodeContent.tsx`; this pass changes only its comment)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3091 (light) 57/57: palette with #0ea5e9 and #f59e0b on DemoESM and DemoFlowB, selected white-text node 7.54:1 on its fill, option off 0 px from the trunk tip; crops `frontend/scripts/smoke/_tmp_vpcolor_crops/vpc_after2_*_600.png`
+**Notes**: The 15° floor on the palette step is this lane's (R-VP-29): at count 10 the literal 13.3° gave neighbours ΔE76 7.4 apart at equal lightness. The trunk-tip baseline ran on `45ff6c290`'s five files checked out in this tree and restored from HEAD; the tree was clean after. Causa (a): the palette rule was respecified after the first review.
+**Prompt document name**: 2026-09-30 18:15
+
+## 2026-09-30 — merge: viewpoint-metaclass-colors into alfonso-frontend-jjtl (P-2026-09-30-2000)
+**Prompt**: `claude_2026-09-30_2000_prompt_merge_viewpoint-metaclass-colors.md`, a direct merge by `lane-run merge --direct`, no session: `viewpoint-metaclass-colors` at `728291b21` into `alfonso-frontend-jjtl`, merge base `45ff6c290`, 8 commits on the branch side.
+**Files touched**: merge `524bdd3f1`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1815_prompt_viewpoint_metaclass_colors.md`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx`, `frontend/src/components/editors/viewpoint/properties/properties.scss`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `524bdd3f1` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5982 tests in 240 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat verification: lane probe 57/57 on 3091, text contrast 5.15-12.19, selected white-text node 7.54:1, 0 px with coloring off, node boxes 0 px, four demo scenes byte-identical to 45ff6c290; GO by Alfonso (ok alle raccomandazioni, 19:24)
+**Notes**: Rollback tag `pre-viewpoint-metaclass-colors` on `45ff6c290` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2000/result.json`.
+**Prompt document name**: 2026-09-30 20:00
+
+## 2026-09-30 — fix(editor-v2): an edge click shows the element the edge represents (P-2026-09-30-1940)
+**Prompt**: `claude_2026-09-30_1940_prompt_edge_click_properties.md`, full lane, Phase 1 then Phase 2 in cascade on `~/jjodel-w-edgesel` branch `edge-click-properties`. Clicking a canvas edge must show in Properties the reference, the reference slot or the object-as-edge the edge represents, on M2 and M1, native and IR views.
+**Files touched**: report `371804cf0`: `docs/discovery/discovery_2026-09-30_edge_click_properties.md`. Code `bb0fd90c9`: `frontend/src/components/editor-v2/utils/edgeSelectionTarget.ts` (new), `utils/__tests__/edgeSelectionTarget.test.ts` (new), `hooks/useJjomSelection.ts`, `EditorV2.tsx` (2 lines). This commit: `docs/decisions.md` (R-ESEL-1..5), this entry and ticket, the report's addendum, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `bb0fd90c9`: typecheck exit 2, 14 errors, the §17 set by file and code, same as before the change; vitest 5960 passed, the 9 §17 files red at import, plus 4 `criticalZone.test.ts` (this session's `JJODEL_CRITICAL_ZONE_GOAHEAD`) and 2 Chromium `beforeAll` timeouts, 88/88 in isolation with the variable unset; build exit 0. Tests 15, red before the module, green after; mutation bench 12/12 killed. Probe on 3097 (light) 50/51; four demo scenes 8/8 panes 0 px from the `before` run; node and pane click Properties text identical before and after.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 file touched; the selection TRANSACTION holds no creator and none is added)
+**Smoke visivo**: pending — chat (RC-23); lane probe 50/51, crops in `frontend/scripts/smoke/_tmp_edgesel_crops/es_after_*_600.png` (gitignored)
+**Notes**: Before: M1 reference and composition edges showed the metamodel's DReference, object-as-edges left the previous selection. After: the M1 slot (DValue), the object. The one probe red is the gesture, not the code: t1's visible line in derived demoSM lies under a sibling's 20 px hit path for its whole length (no point, as in the `before` run); the native object-as-edge route is covered by f2. Decisions R-ESEL-1..5 adopted unattended (RC-25).
+**Prompt document name**: 2026-09-30 19:40
+
+## 2026-09-30 — ticket: an inheritance edge click shows the empty panel, a lifted edge click shows nothing
+**Ticket**: After R-ESEL-2 an inheritance edge still writes `_lastSelected.modelElement = ''` (the DEdge has no `model`) and the Properties panel reads «No element selected»; an IR-lifted edge `<id>__irlift` (collapsed container) has no D-object behind it and a click changes nothing. Options: inheritance → the subclass (its INHERITANCE section); lifted → the slot of the original source (`data.irSourceObjectId`), first of a deduplicated bundle. Also: an M1 edge is pair-keyed, so two references of one object to the same target show the first slot.
+**Priority**: low
+**Found in**: P-2026-09-30-1940
+**Detail**: docs/discovery/discovery_2026-09-30_edge_click_properties.md
+
+## 2026-09-30 — merge: edge-click-properties into alfonso-frontend-jjtl (P-2026-09-30-2105)
+**Prompt**: `claude_2026-09-30_2105_prompt_merge_edge-click-properties.md`, a direct merge by `lane-run merge --direct`, no session: `edge-click-properties` at `1079a9740` into `alfonso-frontend-jjtl`, merge base `45ff6c290`, 4 commits on the branch side.
+**Files touched**: merge `35d8c8e89`: 8 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-30_edge_click_properties.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1940_prompt_edge_click_properties.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/hooks/useJjomSelection.ts`, `frontend/src/components/editor-v2/utils/__tests__/edgeSelectionTarget.test.ts`, `frontend/src/components/editor-v2/utils/edgeSelectionTarget.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `35d8c8e89` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5997 tests in 241 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on lane 1940 DOM measures: M1 ref click shows DValue slot, object-as-edge shows DObject, M2 ref unchanged, 4 demo scenes 0 px; merge gates green
+**Notes**: Rollback tag `pre-edge-click-properties` on `31999a630` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2105/result.json`.
+**Prompt document name**: 2026-09-30 21:05
+
+## 2026-09-30 — fix(loader): the save overlay covers the Properties rail (P-2026-09-30-2025)
+**Prompt**: `claude_2026-09-30_2025_prompt_loader_over_rail.md`, fast lane, measure then fix, on `~/jjodel-w-loaderz` branch `loader-over-rail`. While saving, the dark loading overlay dimmed canvas, left rail and top bar, but the right Properties rail stayed bright on top of it.
+**Files touched**: code `b46af6f27`: `frontend/src/components/loader/Loader.tsx` (portal onto `document.body`). This commit: `docs/discovery/discovery_2026-09-30_loader_over_rail.md` (new), this entry and a ticket, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `b46af6f27`: typecheck exit 2, 14 errors, the §17 set by file and code; build exit 0; vitest 5949 passed, 0 failed, the 9 §17 files red at import plus `irSelectionRing.test.ts`, 5/5 passing, its `afterAll` `browser.close()` timed out at 10 s (load average 110, `Loader.tsx` outside its graph). Probe on 3071: open, navigation, `U.navigating`, rail and user menu unchanged; the four scenes 0 px outside the Jodie glyph box (report §4.4).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat (RC-23); lane probe before/after, rail centre `div.jj-conformance-bar` → `div.loader-spinner`, pixel 248,250,252 → 74,75,75; crops in `frontend/scripts/smoke/_tmp_loaderz_crops/` (gitignored)
+**Notes**: Root cause: `#root` is `position: fixed` (`index.scss:31`), a stacking context at level 0 of body, and the loader lived inside it while the rail is a body child at 900 (D-UI-14). The save is too fast to catch in the probe (2.1 ms, no `isLoading` transition): the overlay was forced with the flag `saveProject.tsx:63` sets. No z-index, class or rail change.
+**Prompt document name**: 2026-09-30 20:25
+
+## 2026-09-30 — ticket: user menu Dashboard throws on Collaborative.client.off when no collaborative session was opened
+**Ticket**: user menu > Dashboard runs `Collaborative.client.off('pullAction')` (`Navbar.tsx:2019`), but `Collaborative.client` is assigned only in `Collaborative.connect()` (`Collaborative.ts:55`): on a project that never connected it throws `Cannot read properties of undefined (reading 'off')` and does not navigate. Observed by automation only (probe, offline session, non-collaborative project), not yet reproduced by hand (RC-8).
+**Priority**: low
+**Found in**: P-2026-09-30-2025
+**Detail**: docs/discovery/discovery_2026-09-30_loader_over_rail.md
+
+## 2026-09-30 — merge: loader-over-rail into alfonso-frontend-jjtl (P-2026-09-30-2120)
+**Prompt**: `claude_2026-09-30_2120_prompt_merge_loader-over-rail.md`, a direct merge by `lane-run merge --direct`, no session: `loader-over-rail` at `fb6826c1a` into `alfonso-frontend-jjtl`, merge base `45ff6c290`, 3 commits on the branch side.
+**Files touched**: merge `f5f9f4f23`: 4 files from the branch side (`docs/discovery/discovery_2026-09-30_loader_over_rail.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_2025_prompt_loader_over_rail.md`, `frontend/src/components/loader/Loader.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f5f9f4f23` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5997 tests in 241 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on lane 2025 measures: with the overlay up the rail centre returns div.loader-spinner and is dimmed (74,75,75); navbar menu above the rail without loader; merge gates green
+**Notes**: Rollback tag `pre-loader-over-rail` on `6fddac6b7` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2120/result.json`.
+**Prompt document name**: 2026-09-30 21:20
+
 ## 2026-09-29 — docs(views): discovery, notation catalogue for derived viewpoints, C, A and B (P-2026-09-29-2320)
 **Prompt**: `claude_2026-09-29_2320_prompt_discovery_derived_viewpoint_notations.md`, a read-only heavy lane on `~/jjodel-w-notations`, branch `viewpoint-notations`. Inventory the fifteen mockups (five formalisms × generic C, A, B) against the IR and the renderers, plan the binding dialog, measure variant C on the demo and ERD exports, and plan the Phase 2 slices before 2026-10-07.
 **Files touched**: this commit: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (new, 89 lines), this entry, the Status line of the prompt file. No tracked file under `frontend/`; probes `frontend/scripts/smoke/_tmp_notations_*` gitignored, left on disk.

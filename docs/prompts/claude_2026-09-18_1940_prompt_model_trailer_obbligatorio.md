@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-18-1940
 Chat: C-2026-09-18-1940
-Status: da eseguire, con precedenza su P-2026-09-18-1930
+Status: eseguito 2026-09-18 · lane harness · 97a41475e, portato sul tronco da 32dbe1ef8 · flip 2026-09-30 dalla chat
 Date: 2026-09-18 19:40 (Europe/Rome)
 Type: chore (docs only, one commit)
 Branch: `validation-skeleton` in `/Users/alfonso/jjodel`, measured at `b3c6b6976`

@@ -2815,6 +2815,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
             clearSyntheticEdgeSelection();
             setSyntheticEdgeSelected(edge.id, true);
+            jjomSelection.onObjectAsEdgeClick(edge.id);
             return;
         }
         clearSyntheticEdgeSelection();
@@ -2836,6 +2837,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
             clearSyntheticEdgeSelection();
             setSyntheticEdgeSelected(edgeId, true);
+            jjomSelection.onObjectAsEdgeClick(edgeId);
             return;
         }
         clearSyntheticEdgeSelection();

@@ -18,7 +18,7 @@
  */
 
 import { Fragment, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, shallowEqual } from 'react-redux';
 import { NodeResizer, useReactFlow, useStore, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
 import { isNodeResizable, SHAPE_MIN_SIZE, defaultResizableForForm, keepAspectRatioForForm } from './nodeSizing';
@@ -41,6 +41,7 @@ import { getSimNodeState, isSimActive, useSimVersion } from '../sim/simRunState'
 import { initialMarkingFeature, isInitialMarkingRow } from '../sim/simCanvasState';
 import SimNodeRunState from '../sim/SimNodeRunState';
 import { entityLetter } from '../../../common/entityMeta';
+import { metaclassColoringVars, resolveMetaclassColoring } from '../../../view/viewPoint/metaclassPalette';
 import { store, LPointerTargetable } from '../../../joiner';
 import {
     resolveInstanceNodeStyle,
@@ -135,6 +136,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return { name: dClass?.name ?? null };
     });
     const liveMetaclassName = liveMetaclassInfo.name;
+    // «Color by metaclass» (R-VP-27..31): the ACTIVE viewpoint's fill, text and border for this
+    // object's metaclass, or null (option off, no viewpoint, no metaclass). Compared field by
+    // field, so a fresh answer with the same colours does not re-render the node.
+    const metaclassColor = useSelector((state: any) => resolveMetaclassColoring(state, data.instanceOfClassId), shallowEqual);
     const metaclassName = liveMetaclassName
         ?? (data.instanceOfClassId ? data.instanceOfClassName : 'Orphan');
 
@@ -952,6 +957,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     onInspectFeature={openInspectorByFeatureName}
                     renderRowValue={renderRowValue}
                     collapsed={collapsedLook}
+                    colorOverride={metaclassColor ?? undefined}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'
@@ -1176,6 +1182,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 className={`mm-node mm-object mm-object--pill ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}
                 onDoubleClick={handleDoubleClick}
                 onClick={() => { if (selected && !editing) setEditing(true); }}
+                style={metaclassColor ? metaclassColoringVars(metaclassColor) as React.CSSProperties : undefined}
             >
                 <DynamicHandles nodeId={id} />
                 <NodeProblemIndicator nodeId={id} />
@@ -1233,6 +1240,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 ['--inode-accent' as string]: chrome.accentColor ?? 'transparent',
                 ['--inode-badge-bg' as string]: chrome.badgeBg,
                 ['--inode-badge-fg' as string]: chrome.badgeFg,
+                ...(metaclassColor && !notRendered ? metaclassColoringVars(metaclassColor) : undefined),
             } as React.CSSProperties}
         >
             {isNodeResizable('objectNode') && (
