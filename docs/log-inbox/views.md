@@ -863,3 +863,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat: the branch probe re-run on `91333202f` (3094), `_tmp_actdec_probe.ts` 31/31, no page errors; visual GO by Alfonso.
 **Notes**: Union in the prescribed order: R-VP-27..31 (trunk) before R-VP-19..26 and 32..35 (branch); the branch's 2026-09-29 entry follows the trunk's 2026-09-30 ones. Vitest expectation stated as 6336 from a static count; the run gave 6337: one `it` in `erChen.test.ts` runs over two models, so the branch adds 340 (its record: 6245 - 5905). The merge carries the trunk's `canvasToJjom.ts` as its lane left it, no hand edit. Docs read end to end by a subagent.
 **Prompt document name**: 2026-09-30 21:43
+
+## 2026-09-30 — merge: activity-decision-merge into alfonso-frontend-jjtl (P-2026-09-30-2220)
+**Prompt**: `claude_2026-09-30_2220_prompt_merge_activity-decision-merge.md`, full lane rendered by `lane-run merge`: `activity-decision-merge` at `ea7702a83` into `alfonso-frontend-jjtl` at `79cf837a7`, one `--no-ff` merge commit, merge base `120d97c01`, 39 commits on the branch side against 9 on the trunk (this prompt's included).
+**Files touched**: merge `530c18a7e`: the 84 files of the branch side, one resolved by union (`docs/log-inbox/views.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `530c18a7e`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6360 passed in 254 files, 0 failed, the 9 known red at import (expected 6360: trunk 6020 + branch 340); hooks 344 (trunk 344); build exit 0; check:docs 4/4; check:agents PASS; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat `C-2026-09-30-1932`: Alfonso visual GO on activity-decision-merge; `_tmp_actdec_probe.ts` 31/31 on `91333202f`; merge gates green on `530c18a7e`.
+**Notes**: Rollback tag `pre-activity-decision-merge` on `34c4df57a` (RC-31), set by `lane-run`. Union: `docs/log-inbox/views.md`, the trunk's 4 headings then the branch's 16, both sides pure appends. Probes 32/32 once, control R-VP-36 absent. Branch count 6337 in 253 files measured read-only in `jjodel-w-actdec`. The Status parenthetical carries the chat's GO, not the template's morning-digest text: the GO reports Alfonso's visual GO.
+**Prompt document name**: 2026-09-30 22:20
