@@ -4389,6 +4389,40 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   two line ends on `locked` within 6 px (minimum 10.5), arrow tips 1.00 to 1.01 px from the visible border (the handle
   centre, on the RF box, 1 px outside it); the four demo scenes in the default viewpoint 0 px from the D tip left of the
   rail; mutation bench 46/46. Prompt P-2026-09-30-0355, commit `74995f429`.
+- **R-VP-23** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **A notation «ER (Chen)» with no simulation profile, its table prefilled by name and structure signals, and two
+  optional IR keys, the end labels.** Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md`
+  (P-2026-09-29-2320, §1 rows 9 and 22, §3 «ER and UML signals», §5 A4) and `docs/discovery/discovery_2026-09-30_a4_er_chen.md`
+  (the Layer Impact Report and the measures); mockup `docs/mockups/derived-viewpoints/er-A-chen.svg`. No earlier row is
+  amended: the six notations of R-VP-21 and R-VP-22 derive their documents byte for byte. (1) The dialog lists seven
+  notations, ER (Chen) last; its table offers four class roles, Entity, Relationship, Attribute, Key, prefilled by the
+  signals of the pure module `derive/erSignals.ts` (an entity holds a multi-valued reference to a class with `type`, a
+  relationship has two single-valued references into entities or a word starting with `relat`, a key a word starting with
+  `key`, `id` or `primary` under an attribute class), always editable; a stored simulation binding never opens it. (2)
+  Entity: a white rectangle (the `rect`'s own 4 px radius), 1 px in the ink, the name 14 px 600 in the ink. Relationship: a
+  `diamond` node, its name inside 13 px 500, even with two references; its references into Chen nodes plain lines, by
+  reference-as-edge views (no termination, the `arc` of R-VP-22, straight between the anchors). Attribute, when its class is a
+  node (ERDLanguage): an `ellipse`, 13 px 500, linked to its owner by a plain line, underlined (the ir-1.3 `underline`) when a
+  boolean key flag holds (`isKey`); a Key class always. (3) Marks at the entity's end, `1`, `N`, `M`: from a relationship's
+  enum attribute with a word starting with `card` or `mult`, whose literals name both sides (`OneToMany`, `ONE_TO_MANY`,
+  `N_M`), else from a slot per end naming the reference and `max`, `upper`, `card` or `mult` (`1` stays `1`, anything else
+  `N`, the second many side of the same relationship `M`); per reference one more document per mark, a predicate on the slot,
+  priority 1 (2 for `M` from slots). (4) The persisted names, permanent once saved (R-B9): `EdgeViewIR.edge.labels.sourceEnd?`
+  and `targetEnd?` (TextSource), styled by `edge.labels.style` (the halo of R-VP-20 (5)) when declared, else as the
+  cardinality badge, anchored by `computeCardinalityAnchor`; an empty text draws nothing; the `_state` value
+  `derivedNotation` and `ir.generated.notation` gain `erChen`, the role values `entity`, `relationship`, `attribute`, `key`.
+  Both keys optional; absent renders as before (Rule 11, R-IRN-32: no `irVersion` bump, no migration); a value that is not a
+  text source renders as absent and is refused by the validator. (5) The limit: attributes held by composition (MDE ERD) keep
+  the C rows of R-VP-19 inside the entity; Chen's ellipses for contained attributes are out of this slice. Lane choices
+  inside that list: a class with no role, and a class the Generic notation draws as a row, keep their Generic document; the
+  enum is compared by literal name, which the L-proxy backend gives (measured on the probe); the derivation writes only
+  `targetEnd`; the dialog's role type widens to the notation's (`NotationRoleId`), its source otherwise untouched. Measured:
+  the 54 documents of the six other notations on the nine corpus metamodels identical to the A1+A3 tip, on the fixtures and
+  on the decoded exports; the markup of edges without the keys pinned on the tip; the lane probe on 3078 27/27 (ERDLanguage
+  ERD: 3 rectangles, 2 diamonds, 7 ellipses, `id2`, `id3` underlined, 11 lines without markers, marks `1 N` and `N M` beside
+  their entities; MDE ERD: rows kept, 2 diamonds); the four demo scenes in the default viewpoint 0 px from the A1+A3 tip left of
+  the rail; mutation bench 56/57, the survivor equivalent. Prompt P-2026-09-30-0440, commit `7c2593c85`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)

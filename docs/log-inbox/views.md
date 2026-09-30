@@ -449,3 +449,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: fallito (probe 15/23 on 3076: 7 are the procedure, rail and bag, read in report §2; 1 is a tip at 1.01 px against ≤ 1) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_a1a3_crops/a1a3_{sm_statechart,sm_stateMachine,flowB_flowchartIso,flowB_flowchart}_600.png`
 **Notes**: Rule 19: 15 files, listed in report §4. Default scenes 0 px from the D tip left of the rail (4 of 4). Arrow tips 1.00-1.01 px from the visible border: the wrapper's transparent 1 px border. `stop` crosses `unlocked` on the demo layout; the ISO diamond is content-sized. No Decision role in the catalogue. Detail in `docs/discovery/discovery_2026-09-30_a1_a3_notations.md`.
 **Prompt document name**: 2026-09-30 03:55
+
+## 2026-09-30 — feat(views): the ER (Chen) notation and the edge end labels, slice A4 (P-2026-09-30-0440)
+**Prompt**: `claude_2026-09-30_0440_prompt_a4_er_chen.md`, Phase 2 slice A4 of the notation discovery, heavy, critical zone (LIR first), on `~/jjodel-w-notations` branch `viewpoint-notations`: «ER (Chen)» with no simulation profile, its table prefilled by name and structure signals (new `erSignals.ts`), relationship as a diamond node with plain lines, ellipse attributes with the key underlined, two optional IR keys (`edge.labels.sourceEnd` / `targetEnd`), R-VP-23.
+**Files touched**: code `7c2593c85`: `viewpoint/ir/irTypes.ts`, `irCompile.ts`, `irValidate.ts`, `irEdgeViews.ts`, `edges/UnifiedEdge.tsx`, `viewpoint/derive/viewpointDerivation.ts`, `notations.ts`, `erSignals.ts` (new), `sim/DeriveViewpointDialog.tsx`; tests `erChen.test.ts`, `irA4Keys.test.ts`, `irA4Render.test.ts` (new), `notations.test.ts`, `DeriveViewpointDialog.test.ts`. This commit: the report, R-VP-23, this entry, the Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `7c2593c85`: typecheck exit 2, 14 errors, the §17 set; vitest 6144 passed (6093 + 51), the 9 known files red at import; build exit 0. Red first on the tip (36 of 48). The six other notations: 54 digests identical to the tip on fixtures and on the decoded exports. Mutation bench 56/57, the survivor equivalent.
+**Out-of-scope changes**: no — the DOVE files and their tests; the dialog changed by type only (report §0 question 2).
+**Layer Impact Report**: produced (report §1, written before the first source edit; committed with the docs)
+**Smoke visivo**: passato (lane probe 27/27 on 3078, light; the four demo scenes 0 px from the A1+A3 tip left of the rail) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_a4_crops/a4_{erdl,mde}_{erChen,generic}{,_all}_600.png`
+**Notes**: Rule 19: 14 files (report §4). MDE ERD's contained attributes keep the C rows (R-VP-23 (5)). The enum is compared by literal name, as the L-proxy backend reads it. The M1 grid placement makes the lines cross (report §0, question 1). Detail in `docs/discovery/discovery_2026-09-30_a4_er_chen.md`.
+**Prompt document name**: 2026-09-30 04:40

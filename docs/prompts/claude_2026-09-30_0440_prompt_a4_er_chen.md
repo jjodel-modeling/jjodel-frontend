@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-0440
 Chat: C-2026-09-29-2230
 Lane: Phase 2 (critical zone: `irTypes.ts`, `irCompile`, `irEdgeViews.ts`, `UnifiedEdge.tsx`, `edgeUtils.ts`; Layer Impact Report required). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane viewpoint-notations · 7c2593c85 · non fuso: hard-stop, lane probe on 3078 (light) 27/27, crops in frontend/scripts/smoke/_tmp_a4_crops/ (gitignored), mutation bench 56/57 (the survivor equivalent), R-VP-23 nel commit docs, verifica visiva alla chat
 Worktree: `~/jjodel-w-notations`, branch `viewpoint-notations`, on top of C1, C2, D, A1+A3 (`74995f429`, `6daba2e7f`), not merged, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-notations`, branch `viewpoint-notations`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA
