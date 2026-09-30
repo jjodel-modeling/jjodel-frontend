@@ -493,3 +493,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-09-30-1542
 **Detail**: docs/discovery/discovery_2026-09-30_reference_delete.md
+
+## 2026-09-30 — merge: reference-delete into alfonso-frontend-jjtl (P-2026-09-30-1736)
+**Prompt**: `claude_2026-09-30_1736_prompt_merge_reference-delete.md`, a direct merge by `lane-run merge --direct`, no session: `reference-delete` at `e6c1f452a` into `alfonso-frontend-jjtl`, merge base `ecbc0e92c`, 4 commits on the branch side.
+**Files touched**: merge `6ecf05100`: 5 files from the branch side (`docs/discovery/discovery_2026-09-30_reference_delete.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1542_prompt_reference_delete.md`, `frontend/src/components/editor-v2/sync/__tests__/syncDeleteEdge.test.ts`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6ecf05100` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5944 tests in 238 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: M1 link delete fix c820dbb51 (canvasToJjom deleteM1Link), 14 tests, mutation 12/12, 8 gates green on 6ecf05100; GO by the chat C-2026-09-30-1458, unattended under the critical-zone standing go-ahead
+**Notes**: Rollback tag `pre-reference-delete` on `c6243eed9` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1736/result.json`.
+**Prompt document name**: 2026-09-30 17:36

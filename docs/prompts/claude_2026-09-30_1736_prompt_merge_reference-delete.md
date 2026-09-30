@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1736
 Chat: —
 Lane: full (merge; 1 conflict: `docs/log-inbox/views.md` measured)
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane merge · 6ecf05100 · verifica visiva passata 2026-09-30 (M1 link delete fix c820dbb51 (canvasToJjom deleteM1Link), 14 tests, mutation 12/12, 8 gates green on 6ecf05100; GO by the chat C-2026-09-30-1458, unattended under the critical-zone standing go-ahead)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-30-1736 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
