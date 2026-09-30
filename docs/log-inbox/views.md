@@ -410,3 +410,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-09-29 23:50
 
 **Ticket** (observation, low, not a ticket of its own): visiting a derived viewpoint and returning to the default one re-routes some M1 reference edges of the default canvas (DemoPEST `coin`↔`t1`, `push`↔`t2`), with the trunk's own derived boxes as well; an empty viewpoint does not. Not investigated; a candidate for slice C3's edge-port work.
+
+## 2026-09-30 — feat(ir): text and edge-label IR keys for the generic notation, slice C2 (P-2026-09-30-0150)
+**Prompt**: `claude_2026-09-30_0150_prompt_c2_ir_keys.md`, Phase 2 slice C2 of the notation discovery, heavy, critical zone `viewpoint/ir/` (LIR first), on `~/jjodel-w-notations` branch `viewpoint-notations`: five optional IR keys (letterSpacing, textTransform, the attributes exclude, a literal segment style, the edge label template and style), used by the generic notation; R-VP-20.
+**Files touched**: code `2360515f4`: `viewpoint/ir/irTypes.ts`, `irCompile.ts`, `irValidate.ts`, `IRNodeContent.tsx`, `irEdgeViews.ts`, `edges/UnifiedEdge.tsx`, `EditorV2.scss`, `viewpoint/derive/viewpointDerivation.ts`; tests `ir.test.ts`, `irValidate.test.ts`, `irC2Render.test.ts` (new), `viewpointDerivation.test.ts`. This commit: `docs/discovery/discovery_2026-09-30_c2_ir_keys.md` (new), `docs/decisions.md` (R-VP-20), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `2360515f4`: typecheck exit 2, 14 errors, the §17 set by file and code; vitest 5990 passed (5942 + 48), the 9 known files red at import; build exit 0. Red first on the C1 tip: 44. Absent-case pins measured there. Mutation bench 43/43. Default viewpoint of the four demos pixel-identical to the C1 tip outside the Jodie launcher, 12/12.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (report §1, written before the first source edit; committed with the docs, as the prompt's commit plan says)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3072 (light, 1600×1000) 46/46 EXIT=0, crops `frontend/scripts/smoke/_tmp_c2_crops/c2_{sm,petri,esm,flowB,erd,erdl}_derived_after2_600.png`
+**Notes**: IRRow is in the DOVE and untouched (the literal style is the FieldSegment's). Lane choice, Q1 of the report: a template value that resolves empty takes its caption. Byte identity failed only on the Jodie launcher's animated glyph (report §3). One vitest log went to /tmp, moved into the tree at once.
+**Prompt document name**: 2026-09-30 01:50

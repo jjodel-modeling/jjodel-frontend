@@ -4288,6 +4288,33 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   rows, from the fixtures and from the exports; the derived box on the turnstile is 198 px wide, the 200 px floor of
   `.mm-node.mm-object` (`nodes/instanceNode.scss:35`), not the 140 px of `irStyle.ts:82`. Prompt P-2026-09-29-2350,
   commit `3ed86119f`.
+- **R-VP-20** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **Five optional IR keys for text and edge labels (slice C2), and the generic notation using them.** Source:
+  `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §1 rows 6, 8, 13, 15, §2, §5
+  C2), the TextStyle addendum (TS3), and `docs/discovery/discovery_2026-09-30_c2_ir_keys.md` (the Layer Impact Report and
+  the measures). Alfonso delegated to the chat, on 2026-09-29, the decision on additive and optional IR keys with a
+  Layer Impact Report; the chat named them. The persisted names, permanent once saved (R-B9): (1)
+  `TextStyle.letterSpacing` (a number, em) and `TextStyle.textTransform` (`'uppercase' | 'lowercase' | 'none'`), on every
+  TextStyle surface; (2) `exclude` (string[], feature names) on the `attributes` compartment source; (3) `style`
+  (TextStyle) on a `literal` FieldSegment; (4) `edge.labels.template` (TextSource[]), the centre label, over `center`;
+  (5) `edge.labels.style` (TextStyle): declared, the label drops its box for a halo in the canvas surface colour (12 px,
+  500, the quiet ink as defaults), `style.color` over `line.color` for the text only, the terminations keep the line
+  colour. Every key optional; absent renders as before (Rule 11, R-IRN-32: no `irVersion` bump, no migration). The
+  generic notation (amends R-VP-19 (2), (4) and the slot-row clause): the eyebrow is the metaclass name as written with
+  `letterSpacing: 0.08`, `textTransform: 'uppercase'`; the slot rows `exclude: ['name']` on a class holding the identity
+  slot; the edges C1 left unlabelled get a template, a slot as `name = value` (`weight = 2`), a sub-edge's stereotype
+  first (`«InhibitorArc» weight = 3`); every labelled C edge `style: { fontSize: 12, fontWeight: 'medium', color:
+  var(--color-inode-quiet) }`. Lane choices inside that list: in a template a value that resolves empty takes with it
+  the literal right before it (its caption), so an unset `weight` draws nothing and an unset inhibitor weight leaves
+  `«InhibitorArc»`; a template of literals only always draws; a malformed template falls back to `center` at render and
+  is refused by the validator; the two new axes are scalars, compiled like the Conditional ones; `exclude` governs the
+  symbol only, on the attributes source only (a form lists every feature, R-FRM-1); the halo is a `text-shadow` in
+  `var(--canvas-bg)` (`.edge-label__text--halo`); `resolveTextStyle` moves to `irCompile.ts`, re-exported by
+  `IRNodeContent`. Measured: the irHash of 59 fixture views and the compiled defaults unchanged; the corpus gives 9
+  labelled edges (5 before) and 0 name rows (7 before); the lane probe on 3072 46/46, the four demo scenes in the
+  default viewpoint pixel-identical to the C1 tip outside the animated Jodie launcher (12 of 12, 7 byte-identical);
+  mutation bench 43/43. Prompt P-2026-09-30-0150, commit `2360515f4`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
