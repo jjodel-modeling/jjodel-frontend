@@ -1,5 +1,5 @@
 /**
- * «Color by metaclass» (P-2026-09-30-1815, R-VP-19..23): the pure half of the viewpoint option.
+ * «Color by metaclass» (P-2026-09-30-1815, R-VP-27..31): the pure half of the viewpoint option.
  *
  * With the option on, every M1 object node shown under the viewpoint is filled with the colour
  * of its metaclass, taken from a palette derived from one base colour; its text turns black or
@@ -29,10 +29,13 @@ export interface MetaclassColorOverride {
 
 export const DEFAULT_METACLASS_BASE_COLOR = '#0ea5e9';
 
-/** The golden angle: consecutive classes land far apart on the hue circle, for any count. */
-const GOLDEN_ANGLE = 137.508;
+/** Analogous scheme (R-VP-29): the hues stay within ±60° of the base, one step apart. */
+const HUE_WINDOW = 60;
+const STEP_MAX = 30, STEP_MIN = 15;
+/** Past the window the hues cycle again, 10 lightness points darker, then lighter, and so on. */
+const L_STEP = 10;
 const S_MIN = 40, S_MAX = 80;
-const L_MIN = 40, L_MAX = 72;
+const L_MIN = 35, L_MAX = 75;
 const SHADE_STEP = 25, SHADE_FLOOR = 10;
 
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
@@ -76,18 +79,41 @@ function hexOfHsl(h: number, s: number, l: number): string {
 }
 
 /**
- * One colour per metaclass, `count` of them. Colour 0 is the base itself; colour i turns the
- * base hue by i × 137.508° and keeps the base saturation and lightness, clamped to S 40..80 %
- * and L 40..72 % so that no fill is washed out or near black. The clamps do not touch colour 0:
- * the picked colour is painted as picked (the default `#0ea5e9` has S 89 %). Deterministic, and
- * colour i does not depend on `count`. An invalid base falls back to the default.
+ * One colour per metaclass, `count` of them, ANALOGOUS to the base (R-VP-29): a scheme that goes
+ * with the picked colour, not a categorical wheel.
+ *
+ * Colour 0 is the base exactly as picked (the default `#0ea5e9` has S 89 %, above the clamp).
+ * From colour 1 the hues spread inside ±60° of the base hue, +1 step, −1 step, +2, −2, …, the step
+ * 120° / (count − 1) kept within 15°..30°: 30° up to five classes, tighter above, never under the
+ * 15° that keeps two neighbours apart. When the window is used up the hues cycle again (the base
+ * hue first) with the lightness moved 10 points, darker, then lighter, then 20 darker, …, inside
+ * L 35..75, a level outside it skipped. Saturation is the base's, clamped to 40..80 %.
+ * Deterministic; an invalid base falls back to the default.
  */
 export function metaclassPalette(baseColor: string, count: number): string[] {
     const base = normalizeHex(baseColor) ?? DEFAULT_METACLASS_BASE_COLOR;
+    if (count <= 0) return [];
     const [h, s, l] = hslOf(base);
-    const out: string[] = [];
-    for (let i = 0; i < count; i++) {
-        out.push(i === 0 ? base : hexOfHsl(h + i * GOLDEN_ANGLE, clamp(s, S_MIN, S_MAX), clamp(l, L_MIN, L_MAX)));
+    const sat = clamp(s, S_MIN, S_MAX);
+    const light = clamp(l, L_MIN, L_MAX);
+    const step = clamp((2 * HUE_WINDOW) / Math.max(count - 1, 1), STEP_MIN, STEP_MAX);
+    const offsets: number[] = [];
+    for (let k = 1; k * step <= HUE_WINDOW + 1e-9; k++) offsets.push(k * step, -k * step);
+    const levels: number[] = [];
+    for (let d = L_STEP; d <= L_MAX - L_MIN; d += L_STEP) {
+        for (const v of [light - d, light + d]) if (v >= L_MIN && v <= L_MAX) levels.push(v);
+    }
+    const out: string[] = [base];
+    for (const o of offsets) {
+        if (out.length >= count) break;
+        out.push(hexOfHsl(h + o, sat, light));
+    }
+    for (let round = 0; out.length < count; round++) {
+        const lv = levels[round % levels.length];
+        for (const o of [0, ...offsets]) {
+            if (out.length >= count) break;
+            out.push(hexOfHsl(h + o, sat, lv));
+        }
     }
     return out;
 }
@@ -188,11 +214,18 @@ export function resolveMetaclassColoring(
  * them follows: the native card's fill, border and header rule, and the text of names, labels,
  * values and footers (the row values of IR nodes too). Border off is `transparent`, never a
  * width of 0: the node keeps its size. Chips and ref pills keep their own grounds and inks.
+ *
+ * Selected, the native header keeps the fill and its rule (R-VP-30): the two selected-header
+ * tokens are pointed at the unselected look, so the name keeps its contrast and selection shows
+ * through the cyan border and ring alone. Set only while coloured: off, selection is untouched.
  */
 export function metaclassColoringVars(o: MetaclassColorOverride): Record<string, string> {
+    const rule = o.border ? o.stroke : 'transparent';
     return {
         '--color-inode-surface': o.fill,
-        '--color-inode-border': o.border ? o.stroke : 'transparent',
+        '--color-inode-border': rule,
+        '--color-inode-selected-header-bg': 'transparent',
+        '--color-inode-selected-header-border': rule,
         '--color-inode-name': o.text,
         '--color-inode-label': o.text,
         '--color-inode-quiet': o.text,

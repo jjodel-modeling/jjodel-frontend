@@ -41,53 +41,113 @@ function hslOf(hex: string): [number, number, number] {
 const hueGap = (a: number, b: number) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
 const HEX = /^#[0-9a-f]{6}$/;
 
-describe('metaclassPalette', () => {
-    it('is deterministic, and a colour does not depend on the count', () => {
-        const a = metaclassPalette('#0ea5e9', 8);
-        const b = metaclassPalette('#0ea5e9', 8);
-        expect(a).toEqual(b);
-        expect(a).toHaveLength(8);
-        expect(a.every((c) => HEX.test(c))).toBe(true);
-        expect(metaclassPalette('#0ea5e9', 5)).toEqual(a.slice(0, 5));
+/** CIE76 ΔE on Lab (D65), written independently of the module. */
+function deltaE(a: string, b: string): number {
+    const lab = (hex: string) => {
+        const n = parseInt(hex.slice(1), 16);
+        const lin = (c: number) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+        const [r, g, bb] = [lin((n >> 16) & 255), lin((n >> 8) & 255), lin(n & 255)];
+        const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+        const x = f((r * 0.4124 + g * 0.3576 + bb * 0.1805) / 0.95047), y = f(r * 0.2126 + g * 0.7152 + bb * 0.0722),
+            z = f((r * 0.0193 + g * 0.1192 + bb * 0.9505) / 1.08883);
+        return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+    };
+    const [p, q] = [lab(a), lab(b)];
+    return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+}
+/** Signed hue offset of `c` from `h0`, in -180..180. */
+const offsetOf = (h0: number, c: string) => { const d = ((hslOf(c)[0] - h0) % 360 + 540) % 360 - 180; return d; };
+const expectOffsets = (base: string, count: number, offsets: number[]) => {
+    const [h0] = hslOf(base);
+    const p = metaclassPalette(base, count);
+    offsets.forEach((o, i) => expect(Math.abs(offsetOf(h0, p[i + 1]) - o)).toBeLessThan(1.5));
+};
+const BASES = ['#0ea5e9', '#f59e0b', '#808080', '#6366f1', '#22c55e', '#ff0000', '#fefce8', '#0b0b1f'];
+
+describe('metaclassPalette (analogous, R-VP-29)', () => {
+    it('is deterministic, and gives an empty list for a count of zero or less', () => {
+        expect(metaclassPalette('#0ea5e9', 8)).toEqual(metaclassPalette('#0ea5e9', 8));
+        expect(metaclassPalette('#0ea5e9', 8)).toHaveLength(8);
+        expect(metaclassPalette('#0ea5e9', 8).every((c) => HEX.test(c))).toBe(true);
+        expect(metaclassPalette('#0ea5e9', 0)).toEqual([]);
+        expect(metaclassPalette('#0ea5e9', -3)).toEqual([]);
     });
 
     it('colour 0 is the base colour itself, normalized to #rrggbb', () => {
         expect(metaclassPalette('#0EA5E9', 4)[0]).toBe('#0ea5e9');
         expect(metaclassPalette('#abc', 2)[0]).toBe('#aabbcc');
-        // A base outside the clamps is still colour 0 as picked.
         expect(metaclassPalette('#fefce8', 3)[0]).toBe('#fefce8');
+        expect(metaclassPalette('#0ea5e9', 1)).toEqual(['#0ea5e9']);
     });
 
-    it('colour i rotates the hue of the base by i x 137.508 degrees', () => {
-        const [h0] = hslOf('#0ea5e9');
-        const p = metaclassPalette('#0ea5e9', 6);
-        for (let i = 1; i < p.length; i++) {
-            expect(hueGap(hslOf(p[i])[0], (h0 + i * 137.508) % 360)).toBeLessThan(1.5);
-        }
+    it('up to five classes: +30, -30, +60, -60 degrees from the base hue', () => {
+        expectOffsets('#0ea5e9', 2, [30]);
+        expectOffsets('#0ea5e9', 3, [30, -30]);
+        expectOffsets('#0ea5e9', 5, [30, -30, 60, -60]);
+        expectOffsets('#f59e0b', 5, [30, -30, 60, -60]);
     });
 
-    it('keeps the base saturation and lightness from colour 1, clamped to S 40..80 and L 40..72', () => {
-        // #0ea5e9: S 88.7 is clamped to 80, L 48.4 is kept.
-        for (const c of metaclassPalette('#0ea5e9', 6).slice(1)) {
-            const [, s, l] = hslOf(c);
-            expect(Math.abs(s - 80)).toBeLessThan(1.5);
-            expect(Math.abs(l - 48.4)).toBeLessThan(1);
+    it('above five the step is 120 / (count - 1), never under 15 degrees', () => {
+        expectOffsets('#0ea5e9', 7, [20, -20, 40, -40, 60, -60]);
+        expectOffsets('#0ea5e9', 9, [15, -15, 30, -30, 45, -45, 60, -60]);
+        // count 10: 120/9 = 13.3 is floored at 15, so the window holds eight and the ninth cycles.
+        expectOffsets('#0ea5e9', 10, [15, -15, 30, -30, 45, -45, 60, -60, 0]);
+    });
+
+    it('keeps the base saturation, clamped to 40..80, and the base lightness, clamped to 35..75, from colour 1', () => {
+        for (const c of metaclassPalette('#0ea5e9', 5).slice(1)) {
+            expect(Math.abs(hslOf(c)[1] - 80)).toBeLessThan(1.5);
+            expect(Math.abs(hslOf(c)[2] - 48.4)).toBeLessThan(1);
         }
-        // Near white: L 95 clamped to 72.
-        for (const c of metaclassPalette('#fefce8', 5).slice(1)) expect(Math.abs(hslOf(c)[2] - 72)).toBeLessThan(1);
-        // Near black: L 8 clamped to 40.
-        for (const c of metaclassPalette('#0b0b1f', 5).slice(1)) expect(Math.abs(hslOf(c)[2] - 40)).toBeLessThan(1);
-        // Grey: S 0 raised to 40, so the classes still differ by hue.
         for (const c of metaclassPalette('#808080', 5).slice(1)) expect(Math.abs(hslOf(c)[1] - 40)).toBeLessThan(1.5);
-        // Pure red: S 100 lowered to 80.
         for (const c of metaclassPalette('#ff0000', 5).slice(1)) expect(Math.abs(hslOf(c)[1] - 80)).toBeLessThan(1.5);
+        for (const c of metaclassPalette('#fefce8', 5).slice(1)) expect(Math.abs(hslOf(c)[2] - 75)).toBeLessThan(1);
+        for (const c of metaclassPalette('#0b0b1f', 5).slice(1)) expect(Math.abs(hslOf(c)[2] - 35)).toBeLessThan(1);
     });
 
-    it('gives eight classes eight distinct hues, at least 20 degrees apart', () => {
-        const hues = metaclassPalette('#0ea5e9', 8).map((c) => hslOf(c)[0]);
-        expect(new Set(metaclassPalette('#0ea5e9', 8)).size).toBe(8);
-        for (let i = 0; i < hues.length; i++) {
-            for (let j = i + 1; j < hues.length; j++) expect(hueGap(hues[i], hues[j])).toBeGreaterThanOrEqual(20);
+    it('past the window the hues cycle from the base hue, 10 points darker, then 10 lighter', () => {
+        const [h0] = hslOf('#0ea5e9');
+        // count 6: step 24, window +-24, +-48; colour 5 is the base hue 10 points darker.
+        const six = metaclassPalette('#0ea5e9', 6);
+        expect(Math.abs(offsetOf(h0, six[5]))).toBeLessThan(1.5);
+        expect(Math.abs(hslOf(six[5])[2] - 38.4)).toBeLessThan(1);
+        // count 20: step 15, eight in the window, colours 9..17 darker, 18.. lighter.
+        const twenty = metaclassPalette('#0ea5e9', 20);
+        expect(Math.abs(hslOf(twenty[17])[2] - 38.4)).toBeLessThan(1);
+        expect(Math.abs(offsetOf(h0, twenty[18]))).toBeLessThan(1.5);
+        expect(Math.abs(hslOf(twenty[18])[2] - 58.4)).toBeLessThan(1);
+        expect(Math.abs(offsetOf(h0, twenty[19]) - 15)).toBeLessThan(1.5);
+    });
+
+    it('skips a lightness level outside 35..75', () => {
+        // Near white: lightness 75, so the first cycle goes darker (65) and the lighter level is skipped.
+        const w = metaclassPalette('#fefce8', 20);
+        expect(Math.abs(hslOf(w[9])[2] - 65)).toBeLessThan(1);
+        expect(Math.abs(hslOf(w[18])[2] - 55)).toBeLessThan(1);
+        // Near black: lightness 35, so the first cycle goes lighter (45).
+        expect(Math.abs(hslOf(metaclassPalette('#0b0b1f', 10)[9])[2] - 45)).toBeLessThan(1);
+    });
+
+    it('stays analogous: every colour within 60 degrees of the base hue, for 2..10 classes', () => {
+        for (const base of BASES) {
+            const [h0] = hslOf(base);
+            for (let n = 2; n <= 10; n++) {
+                for (const c of metaclassPalette(base, n).slice(1)) expect(Math.abs(offsetOf(h0, c))).toBeLessThanOrEqual(61);
+            }
+        }
+    });
+
+    it('gives neighbours visibly different colours (hue >= 15, lightness >= 10 or deltaE >= 15), all distinct, for 2..10 classes', () => {
+        for (const base of BASES) {
+            for (let n = 2; n <= 10; n++) {
+                const p = metaclassPalette(base, n);
+                expect(new Set(p).size).toBe(n);
+                for (let i = 1; i < n; i++) {
+                    const [a, b] = [hslOf(p[i - 1]), hslOf(p[i])];
+                    const ok = hueGap(a[0], b[0]) >= 14.5 || Math.abs(a[2] - b[2]) >= 9.5 || deltaE(p[i - 1], p[i]) >= 15;
+                    if (!ok) throw new Error(`${base} n=${n} i=${i}: ${p[i - 1]} ${p[i]}`);
+                }
+            }
         }
     });
 
@@ -97,11 +157,6 @@ describe('metaclassPalette', () => {
         for (const bad of ['blue', '#12345', '', '#ggg', '0ea5e9', undefined as unknown as string, null as unknown as string]) {
             expect(metaclassPalette(bad, 5)).toEqual(expected);
         }
-    });
-
-    it('gives an empty list for a count of zero or less', () => {
-        expect(metaclassPalette('#0ea5e9', 0)).toEqual([]);
-        expect(metaclassPalette('#0ea5e9', -3)).toEqual([]);
     });
 });
 
@@ -257,6 +312,8 @@ describe('metaclassColoringVars', () => {
         expect(metaclassColoringVars(o)).toEqual({
             '--color-inode-surface': '#0ea5e9',
             '--color-inode-border': '#075985',
+            '--color-inode-selected-header-bg': 'transparent',
+            '--color-inode-selected-header-border': '#075985',
             '--color-inode-name': '#000000',
             '--color-inode-label': '#000000',
             '--color-inode-quiet': '#000000',
@@ -267,6 +324,7 @@ describe('metaclassColoringVars', () => {
     it('paints the border transparent when Border is off (width kept, no layout shift)', () => {
         const o = { fill: '#0ea5e9', text: '#000000' as const, stroke: '#075985', border: false };
         expect(metaclassColoringVars(o)['--color-inode-border']).toBe('transparent');
+        expect(metaclassColoringVars(o)['--color-inode-selected-header-border']).toBe('transparent');
     });
 });
 

@@ -136,7 +136,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return { name: dClass?.name ?? null };
     });
     const liveMetaclassName = liveMetaclassInfo.name;
-    // «Color by metaclass» (R-VP-19..23): the ACTIVE viewpoint's fill, text and border for this
+    // «Color by metaclass» (R-VP-27..31): the ACTIVE viewpoint's fill, text and border for this
     // object's metaclass, or null (option off, no viewpoint, no metaclass). Compared field by
     // field, so a fresh answer with the same colours does not re-render the node.
     const metaclassColor = useSelector((state: any) => resolveMetaclassColoring(state, data.instanceOfClassId), shallowEqual);

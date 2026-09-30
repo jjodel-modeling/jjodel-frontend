@@ -193,7 +193,7 @@ export interface IRNodeContentProps {
      */
     collapsed?: boolean;
     /**
-     * «Color by metaclass» of the active viewpoint (R-VP-19..23), resolved by the host, which
+     * «Color by metaclass» of the active viewpoint (R-VP-27..31), resolved by the host, which
      * knows the metaclass (`ObjectNode`). Present, it wins over the view's fill, border colour
      * and text colour; the border keeps the view's width and style (transparent when the
      * option's Border is off), and an outside label keeps its ink. Absent = the view paints

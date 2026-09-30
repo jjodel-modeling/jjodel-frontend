@@ -276,7 +276,7 @@ export class DViewElement extends DPointerTargetable {
      */
     formPalette?: FormPaletteName;
     /**
-     * «Color by metaclass» of a VIEWPOINT (P-2026-09-30-1815, R-VP-20): `{ enabled, baseColor,
+     * «Color by metaclass» of a VIEWPOINT (P-2026-09-30-1815, R-VP-28): `{ enabled, baseColor,
      * border }`. ABSENT IS A VALUE, as for `formTheme` above: it reads as off, so a saved project
      * has no such key and renders as it did, and no VersionFixer migration accompanies it.
      * Written whole (the default setter replaces it), `enabled: false` to turn it off so the

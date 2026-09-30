@@ -39,7 +39,7 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
         (viewpoint as any).isValidation = (newType === 'validation');
     }, [viewpoint, readOnly]);
 
-    // «Color by metaclass» (R-VP-19, R-VP-20). Absent reads as off with the defaults; the field
+    // «Color by metaclass» (R-VP-27, R-VP-28). Absent reads as off with the defaults; the field
     // is written WHOLE through the L proxy, as Name is, because the default setter replaces it:
     // turning it off writes `enabled: false` and keeps the base colour and the border.
     const coloring = readMetaclassColoring(dview as any);
