@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-18-2110
 Chat: C-2026-09-18-2110
-Status: da eseguire
+Status: eseguito 2026-09-18 · lane claude-md-split · 068d59367, d20d8e42c, entry 8aa303ff1 · flip 2026-09-30 dalla chat
 Date: 2026-09-18 21:10 (Europe/Rome)
 Type: chore (docs only)
 Amends: `claude_2026-09-18_1930_prompt_claude_md_split_oltre_limite.md`. Its phase 0 is closed
