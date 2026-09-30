@@ -481,6 +481,25 @@ export interface StructureSpec {
     edgeMarker?: boolean;
 }
 
+/**
+ * The provenance of a view a derivation created (slice D, P-2026-09-30-0255, R-VP-21): `by`
+ * names the derivation (`'derive-2'`, «Derive viewpoint» with its notation dialog), `notation`
+ * the notation picked there (`generic`, `stateMachine`, `petri`, `flowchart`), `role` the
+ * class's role in the dialog's metaclass → role table when it has one, and `hash` the view's
+ * `structuralHash` (irDefaults.ts) at creation, which leaves this key out, so a later
+ * regeneration can tell an untouched view from an edited one.
+ *
+ * Describes the ir, as `migratedFrom` does, and is not part of it: the resolver, the compiler
+ * and the renderers never read it. Absent on every view written by hand. Additive optional
+ * field: no irVersion bump, no migration; the spelling is permanent (R-B9).
+ */
+export interface GeneratedProvenance {
+    by: string;
+    notation: string;
+    role?: string;
+    hash: string;
+}
+
 export interface VertexViewIR {
     irVersion: string;               // "ir-1.0" | "ir-1.2"
     kind: 'vertex';
@@ -488,6 +507,8 @@ export interface VertexViewIR {
     metaclasses: string[] | '*';
     /** Which class each name above stands for — see AuthoringMetaclassPins. */
     authoringMetaclassPins?: AuthoringMetaclassPins;
+    /** Written by a derivation, never by hand — see GeneratedProvenance. */
+    generated?: GeneratedProvenance;
     predicate?: Predicate;
     priority?: number;
     exclusive?: boolean;             // spike: only exclusive views are rendered; decorative ones are ignored
@@ -534,6 +555,8 @@ export interface GraphVertexViewIR {
     metaclasses: string[] | '*';
     /** Which class each name above stands for — see AuthoringMetaclassPins. */
     authoringMetaclassPins?: AuthoringMetaclassPins;
+    /** Written by a derivation, never by hand — see GeneratedProvenance. */
+    generated?: GeneratedProvenance;
     predicate?: Predicate;
     priority?: number;
     exclusive?: boolean;
@@ -607,6 +630,8 @@ export interface EdgeViewIR {
     metaclasses: string[] | '*';
     /** Which class each name above stands for — see AuthoringMetaclassPins. */
     authoringMetaclassPins?: AuthoringMetaclassPins;
+    /** Written by a derivation, never by hand — see GeneratedProvenance. */
+    generated?: GeneratedProvenance;
     reference?: string;
     predicate?: Predicate;
     priority?: number;
@@ -674,6 +699,8 @@ export interface RowViewIR {
     metaclasses: string[] | '*';
     /** Which class each name above stands for — see AuthoringMetaclassPins. */
     authoringMetaclassPins?: AuthoringMetaclassPins;
+    /** Written by a derivation, never by hand — see GeneratedProvenance. */
+    generated?: GeneratedProvenance;
     predicate?: Predicate;
     priority?: number;
     label?: string;

@@ -14,7 +14,7 @@ import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFrom
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
 import { getIRIndex, pinAccepts, resolveIRView, resolveRowView } from '../irResolveCore';
-import { defaultEdgeViewIR, defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID, withMigratedHash } from '../irDefaults';
+import { defaultEdgeViewIR, defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID, structuralHash, withMigratedHash } from '../irDefaults';
 import {
     buildContainmentModel,
     computeHidden,
@@ -1619,6 +1619,45 @@ describe('isMigratedDefaultView — migratedHash stamp (P-2026-09-24-1455)', () 
         expect(isMigratedDefaultView(compileView('V_stamp_pin', pinned))).toBe(true);
         const pinnedEdited = { ...pinned, priority: 7 } as VertexViewIR;
         expect(isMigratedDefaultView(compileView('V_stamp_pin_edit', pinnedEdited))).toBe(false);
+    });
+});
+
+describe('structuralHash ignores ir.generated (slice D, P-2026-09-30-0255, R-IRN-33)', () => {
+    // `generated` is the provenance a derivation writes on its views (irTypes.ts): it describes the ir,
+    // as `migratedFrom` does, and is not part of it. The derivation stamps `generated.hash` with this
+    // function, so a stamped view must hash to its stamp.
+    const GEN = { by: 'derive-2', notation: 'stateMachine', role: 'node', hash: '123' };
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+    it('a view with and without generated hash alike, whatever generated holds', () => {
+        const ir = defaultObjectViewIR();
+        expect(structuralHash({ ...ir, generated: GEN })).toBe(structuralHash(ir));
+        expect(structuralHash({ ...ir, generated: { ...GEN, hash: 'other', role: undefined } })).toBe(structuralHash(ir));
+        const edge = defaultEdgeViewIR();
+        expect(structuralHash({ ...edge, generated: GEN })).toBe(structuralHash(edge));
+    });
+
+    it('does not mask a real edit: the control moves the hash', () => {
+        const ir = defaultObjectViewIR();
+        expect(structuralHash({ ...ir, generated: GEN, priority: 7 })).not.toBe(structuralHash({ ...ir, generated: GEN }));
+    });
+
+    it('is the stamp withMigratedHash writes: generated does not enter it', () => {
+        const ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' };
+        expect(withMigratedHash({ ...ir, generated: GEN }).migratedHash).toBe(withMigratedHash(ir).migratedHash);
+    });
+
+    it('a stamped migrated default that later carries generated still delegates, and an edit still does not', () => {
+        const ir = persisted(withMigratedHash({ ...defaultObjectViewIR(), migratedFrom: 'classic-default' }));
+        const tagged = { ...ir, generated: GEN } as unknown as VertexViewIR;
+        expect(isMigratedDefaultView(compileView('V_gen_stamp', tagged))).toBe(true);
+        expect(isMigratedDefaultView(compileView('V_gen_stamp_edit', { ...tagged, priority: 7 } as VertexViewIR))).toBe(false);
+    });
+
+    it('irHash is unchanged for an ir without the key, and moves with it (the compile cache keeps them apart)', () => {
+        const ir = defaultObjectViewIR();
+        expect(irHash(persisted(ir))).toBe(irHash(ir));
+        expect(irHash({ ...ir, generated: GEN } as VertexViewIR)).not.toBe(irHash(ir));
     });
 });
 

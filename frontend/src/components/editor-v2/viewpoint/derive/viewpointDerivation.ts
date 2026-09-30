@@ -56,7 +56,11 @@
  *   an exact match above an inherited one (irResolveCore.ts), so the creation
  *   order settles every tie (decision 1).
  * - **No provenance key** in the ir (decision 3): `rule` is returned beside it,
- *   for the caller and the tests, and never written.
+ *   for the caller and the tests, and never written. The provenance a created view
+ *   carries (`generated`, slice D, P-2026-09-30-0255) is added by `notations.ts`.
+ * - **The dialog's table** (slice D): `DerivationRoles.classRoles`, when given, says
+ *   each class's role in place of the bag's class keys (`rolesFromTable`); the bag
+ *   still gives the references and attributes the roles read.
  *
  * Pure: no React, no store, no import from the joiner, so it runs under the
  * node bench (derive/__tests__/viewpointDerivation.test.ts). It reads the raw
@@ -81,6 +85,13 @@ export interface DerivationRoles {
     readonly bag: Readonly<Record<string, unknown>>;
     /** Under `petri` the Transition role is a vertex (a bar), under `controlFlow` an edge. */
     readonly shape: ProfileShape;
+    /**
+     * The «Derive viewpoint» dialog's metaclass → role table (slice D, P-2026-09-30-0255): class
+     * id to role (`node`, `initial`, …). When given, a class's role is read here (`rolesFromTable`)
+     * and not from the bag's class keys, so two classes can share a role; absent, the bag decides,
+     * as before.
+     */
+    readonly classRoles?: Readonly<Record<string, string>>;
 }
 
 export interface DerivedView {
@@ -119,6 +130,9 @@ const CLASS_ROLES: ReadonlyArray<{ role: string; key: string }> = [
     { role: 'node', key: 'simNode' },
 ];
 
+/** The class roles a derivation draws, the roles a notation's table may offer (notations.ts). */
+export const DERIVATION_CLASS_ROLES: readonly string[] = CLASS_ROLES.map(r => r.role);
+
 /** The catalogue preset of a vertex role (notationCatalog.ts), per profile shape. */
 const ROLE_PRESET: { readonly [S in ProfileShape]: Readonly<Record<string, string>> } = {
     controlFlow: {
@@ -152,6 +166,33 @@ const path = (featureName: string) => `$${featureName}.value`;
  */
 export function isDerivableMetamodel(entity: any): boolean {
     return !!entity && entity.className === 'DModel' && !!entity.isMetamodel;
+}
+
+/**
+ * The role every class of the metamodel takes from a metaclass → role table (slice D): its own
+ * entry, else the entry of its nearest superclass, breadth first over `extends`, cycle-safe. A
+ * class with neither has none; an id that is not a class of the metamodel is ignored. Sketch order.
+ */
+export function rolesFromTable(lookup: Lookup, metamodelId: string, table: Readonly<Record<string, string>>): Map<string, string> {
+    const sketch = sketchOfMetamodel(lookup, metamodelId);
+    const byId = new Map<string, SketchClass>(sketch.classes.map(c => [c.id, c]));
+    const out = new Map<string, string>();
+    for (const c of sketch.classes) {
+        const seen = new Set<string>();
+        const queue = [c.id];
+        while (queue.length > 0) {
+            const x = queue.shift() as string;
+            if (seen.has(x)) continue;
+            seen.add(x);
+            const role = table[x];
+            if (typeof role === 'string' && role !== '') {
+                out.set(c.id, role);
+                break;
+            }
+            for (const s of byId.get(x)?.supers ?? []) queue.push(s);
+        }
+    }
+    return out;
 }
 
 /**
@@ -217,7 +258,10 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         const id = roleValue(key);
         return id ? attributesOf(c).find(a => a.id === id)?.name : undefined;
     };
+    /** The dialog's table, resolved per class; null when the bag's class keys decide. */
+    const table = roles?.classRoles ? rolesFromTable(lookup, metamodelId, roles.classRoles) : null;
     const roleOf = (c: string): string | undefined => {
+        if (table) return table.get(c);
         for (const { role, key } of CLASS_ROLES) {
             const v = roleValue(key);
             if (v && isKind(c, v)) return role;
@@ -225,7 +269,7 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         return undefined;
     };
     /** The control-flow notation (V1) is keyed on the roles: the Node role bound under the shape. */
-    const flow = shape === 'controlFlow' && roleValue('simNode') !== undefined;
+    const flow = shape === 'controlFlow' && (table ? [...table.values()].includes('node') : roleValue('simNode') !== undefined);
     /** Transitions fired by events make a state machine; without a Trigger it is an activity. */
     const stateMachine = flow && roleValue('simTrigger') !== undefined;
 
@@ -543,7 +587,8 @@ export function deriveGenericViewpointIRs(lookup: Lookup, metamodelId: string): 
 /**
  * The documents «Derive viewpoint» creates (R-VP-19): with a role bound, the role-keyed
  * notations of R-VP-15..17, byte for byte; with none, the generic structural notation.
- * The notation dialog of slice D will make the choice explicit.
+ * The notation dialog of slice D makes the choice explicit (`notations.ts`): Generic
+ * passes `null`, a role notation the binding its table gives (R-VP-21).
  */
 export function deriveViewpointForBinding(lookup: Lookup, metamodelId: string, roles: DerivationRoles | null): AnyDerivedView[] {
     return roles ? deriveViewpointIRs(lookup, metamodelId, roles) : deriveGenericViewpointIRs(lookup, metamodelId);

@@ -1,0 +1,56 @@
+// DeriveViewpointDialog — «Derive viewpoint» (slice D; P-2026-09-30-0255).
+//
+// The shell is the Simulation roles dialog's, as SimInputDialog's: the root carries
+// `.sim-roles-modal` and every header, body, section, select, footer and button class of
+// SimRolesModal.scss. Only the size, the notation field and the rows are its own: 480 wide, as
+// tall as its rows, the body scrolling past ten of them; labels 11 px, the metaclass names in the
+// code font as SimInputDialog's input names, an abstract one in italic. Design-system tokens only;
+// no variable is DEFINED here (Rule 28).
+
+.sim-roles-modal.derive-viewpoint-dialog {
+    width: 480px;
+    height: auto;
+
+    .sim-roles-modal__body {
+        max-height: 368px;
+        padding: 8px 24px 16px;
+    }
+
+    .derive-viewpoint-dialog__field,
+    .derive-viewpoint-dialog__row {
+        display: grid;
+        grid-template-columns: 160px minmax(0, 1fr);
+        align-items: center;
+        column-gap: 16px;
+    }
+
+    .derive-viewpoint-dialog__row {
+        height: 32px;
+        padding: 4px 0;
+    }
+
+    .derive-viewpoint-dialog__label {
+        overflow: hidden;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: var(--color-text-secondary);
+    }
+
+    .derive-viewpoint-dialog__class {
+        font-family: var(--font-mono, monospace);
+        color: var(--color-text-primary);
+
+        &--abstract {
+            font-style: italic;
+        }
+    }
+
+    .derive-viewpoint-dialog__empty {
+        margin: 0;
+        padding: 8px 0;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+}

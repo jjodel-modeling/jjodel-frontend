@@ -14,7 +14,7 @@
 
 import { createHash } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
-import { deriveGenericViewpointIRs, deriveViewpointForBinding, deriveViewpointIRs, isDerivableMetamodel } from '../viewpointDerivation';
+import { deriveGenericViewpointIRs, deriveViewpointForBinding, deriveViewpointIRs, isDerivableMetamodel, rolesFromTable } from '../viewpointDerivation';
 import type { AnyDerivedView, DerivationRoles, DerivedView } from '../viewpointDerivation';
 import { validateIR } from '../../ir/irValidate';
 import { recognizeSymbol } from '../../ir/symbolRecognition';
@@ -1579,6 +1579,73 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         expect(got).toEqual({
             DemoPEST: '99e03cfb52856542', DemoPetri: 'd43f9d79bf78f9f4', DemoESM: 'a9bd2541f1f94b09', DemoFlowB: '58aeb562c91a731f',
         });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The dialog's table as input (slice D, P-2026-09-30-0255)
+// ---------------------------------------------------------------------------
+
+/** The class keys of a bag as a metaclass → role table: the class each class role binds. */
+function tableOf(roles: DerivationRoles): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const d of ROLE_CATALOG) {
+        const v = roles.bag[d.key ?? ''];
+        if (d.kind === 'class' && typeof v === 'string' && !(v in out)) out[v] = d.id;
+    }
+    return out;
+}
+
+describe('deriveViewpointIRs — classRoles, the dialog\'s metaclass → role table', () => {
+    it('the table of the bag\'s own classes derives the bag\'s documents on every demo', () => {
+        for (const [name, mm, profile] of DEMOS) {
+            const roles = boundRoles(mm, profile);
+            expect(deriveViewpointIRs(mm.lookup, mm.id, { ...roles, classRoles: tableOf(roles) }), name)
+                .toEqual(deriveViewpointIRs(mm.lookup, mm.id, roles));
+        }
+    });
+
+    it('the table is read, not the class keys of the bag: an empty table draws no role', () => {
+        for (const [name, mm, profile] of DEMOS) {
+            const roles = boundRoles(mm, profile);
+            expect(deriveViewpointIRs(mm.lookup, mm.id, { ...roles, classRoles: {} }), name)
+                .toEqual(deriveViewpointIRs(mm.lookup, mm.id, { bag: {}, shape: roles.shape }));
+        }
+    });
+
+    it('a role on a second class draws that class with it too, which a bag cannot say', () => {
+        const roles = boundRoles(PEST, 'stateMachine');
+        const table = { ...tableOf(roles), [PEST.classId('Terminal')]: 'initial' };
+        const views = deriveViewpointIRs(PEST.lookup, PEST.id, { ...roles, classRoles: table });
+        expect(byClass(views, 'Terminal').rule).toBe('role:initial');
+        expect(vertex(byClass(views, 'Terminal')).shape).toEqual(vertex(byClass(views, 'Initial')).shape);
+    });
+});
+
+describe('rolesFromTable — a class\'s own entry, else its nearest superclass\'s', () => {
+    it('own entry first, then the superclasses breadth first; a class with neither has none', () => {
+        const got = rolesFromTable(FLOWB.lookup, FLOWB.id, { [FLOWB.classId('ActivityNode')]: 'node', [FLOWB.classId('InitialNode')]: 'initial' });
+        const named = Object.fromEntries([...got].map(([id, r]) => [FLOWB.lookup[id].name, r]));
+        expect(named).toEqual({ ActivityNode: 'node', InitialNode: 'initial', Activity: 'node', Decision: 'node', Fork: 'node', Join: 'node', FinalNode: 'node' });
+    });
+
+    it('the nearest superclass wins over a farther one', () => {
+        const chain = metamodel('CH', 'Chain', [cls('A'), cls('B', { supers: ['A'] }), cls('C', { supers: ['B'] })]);
+        const got = rolesFromTable(chain.lookup, chain.id, { 'CH.A': 'node', 'CH.B': 'terminal' });
+        expect(got.get('CH.C')).toBe('terminal');
+        expect(got.get('CH.A')).toBe('node');
+    });
+
+    it('breadth first: a nearer superclass on the second branch wins over a farther one on the first', () => {
+        // D extends X and Y; X extends Z. Y is one step away, Z two.
+        const mi = metamodel('MI', 'Multi', [cls('Z'), cls('X', { supers: ['Z'] }), cls('Y'), cls('D', { supers: ['X', 'Y'] })]);
+        expect(rolesFromTable(mi.lookup, mi.id, { 'MI.Y': 'terminal', 'MI.Z': 'node' }).get('MI.D')).toBe('terminal');
+    });
+
+    it('ignores ids that are not classes of the metamodel, and survives an extends cycle', () => {
+        const cyc = metamodel('CY', 'Cycle', [cls('A', { supers: ['B'] }), cls('B', { supers: ['A'] }), cls('C')]);
+        const got = rolesFromTable(cyc.lookup, cyc.id, { 'CY.B': 'node', 'ELSEWHERE.X': 'initial' });
+        expect([...got]).toEqual([['CY.A', 'node'], ['CY.B', 'node']]);
     });
 });
 
