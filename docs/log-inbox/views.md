@@ -487,3 +487,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-09-30-1521
 **Detail**: docs/discovery/discovery_2026-09-30_a2_petri_classic_open_arrows.md
+
+## 2026-09-30 — feat(views): the Activity (UML) notation, DemoFlowB and DemoPEST preselection (P-2026-09-30-1552)
+**Prompt**: `claude_2026-09-30_1552_prompt_activity_uml_notation.md`, Phase 1 then Phase 2 in cascade, heavy, critical zone possible (LIR first, go-ahead), on `~/jjodel-w-notations` branch `viewpoint-notations`: after Alfonso's review of DemoFlowB, «Activity (UML)» beside the flowcharts (initial dot, rounded action, hollow diamond, bar, bull's-eye, `[guard]`), DemoFlowB opening on it and DemoPEST on Statechart (UML), R-VP-26.
+**Files touched**: docs `e63ea6d73`: the Phase 1 report. Code `ca3e41a92` (6 files): `viewpoint/derive/notations.ts`, `viewpointDerivation.ts`; tests `activityUml.test.ts` (new), `notations.test.ts`, `erChen.test.ts`, `sim/__tests__/DeriveViewpointDialog.test.ts`. This commit: the report's §6, `docs/decisions.md` (R-VP-26), this entry and two tickets, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — on `ca3e41a92`: typecheck exit 2, 14 errors, the §17 set; vitest 6201 (6173 + 28), the 9 known files red at import and 4 hook tests red from the lane's go-ahead variable (70/70 unset); build exit 0. Red first: 35 of 260. The eight other notations: 72/72 lists on the exports identical to the A2 tip. Mutation bench 44/45, the survivor equivalent.
+**Out-of-scope changes**: no — the two source files and their tests, in the prompt's DOVE; no IR file, no dialog source.
+**Layer Impact Report**: produced (report §1, committed in `e63ea6d73` before the first source edit)
+**Smoke visivo**: passato (lane probe 22/22 on 3084, light: the four demo scenes byte-identical to the A2 tip's shots) — chat, RC-23, pending; crops `frontend/scripts/smoke/_tmp_actuml_crops/actuml_flowB_{activityUml,flowchartIso}_600.png`, close-ups `actuml_flowB_activityUml_{decision,bars}.png`
+**Notes**: Partial because three sizes miss the spec by render floors outside the DOVE: the bar draws 24×120 (5 asked), the initial 24 (20), the bull's-eye's disc is the registry dot (≈7 px, 14 asked); radius 14 draws 10.5. The two guard labels overlap 796 px² (router). No new IR key. One scratch file went to `/tmp`, deleted (report §6). Detail in `docs/discovery/discovery_2026-09-30_activity_uml_notation.md`.
+**Prompt document name**: 2026-09-30 15:52
+
+## 2026-09-30 — ticket: Activity (UML) sizes held by render floors outside the notation
+**Ticket**: «Activity (UML)» writes the specified sizes; three draw otherwise. `defaultBoxFor` (`nodes/nodeSizing.ts:73`) floors every authored `defaultSize` axis at `SHAPE_MIN_SIZE` (24): the fork/join bar 5×120 draws 24×120 (visible 22×118, a slab, what Alfonso called «i join sono quelli delle reti di petri»), the initial 20 draws 24. The bull's-eye's inner disc is the registry `dot` (radius 16 of 100, `markerRegistry.ts:83`), about 7 px in a 24 px circle where the mockup has 14. A per-form floor (the bar none, a circle 12) is one line and also fixes the classic Petri bar (the A2 ticket); a larger disc is one registry row. Both change what the demo shows: Alfonso decides (RC-26).
+**Priority**: high
+**Found in**: P-2026-09-30-1552
+**Detail**: docs/discovery/discovery_2026-09-30_activity_uml_notation.md
+
+## 2026-09-30 — ticket: DemoFlowB's two guard labels overlap in Activity (UML)
+**Ticket**: Derived as «Activity (UML)» on the demo layout, `[model.[count] < 2]` and `[model.[count] >= 2]` overlap by 796 px², both between `work` and `d1`, where the orthogonal router runs `f3` and the first leg of `f4` side by side around the 36 px diamond (read on the crop). The notation writes the labels right; their placement is the router's. For the layout lane after the freeze, or a label offset per parallel segment.
+**Priority**: medium
+**Found in**: P-2026-09-30-1552
+**Detail**: docs/discovery/discovery_2026-09-30_activity_uml_notation.md

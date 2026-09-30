@@ -142,3 +142,46 @@ whole, `docs/log-inbox/views.md` (the A1..A2 entries and tickets), `docs/session
 `_tmp_a2_bench.mjs` (whole), `_tmp_a1a3_crops/a1a3_flowB_flowchart.png`. The design canvas
 `https://claude.ai/artifact/2zcZ84EkYUUq7ZhMqVJFKg` was not readable from this session (the docs connector answered «not shared
 with you»); the six rules of the prompt's COSA are the specification used.
+
+## 6. Addendum 2026-09-30, Phase 2 (measured on `ca3e41a92`)
+- **Adopted as recommended** (RC-21, unattended): questions 1-7 of §0, as written. The two decisions awaiting Alfonso (the
+  24 px floor per form, a larger bull's-eye disc) are left as they are: tickets in the log entry.
+- **Code** `ca3e41a92`: the two source files of §4 and four test files (`activityUml.test.ts` new; `notations.test.ts`,
+  `erChen.test.ts`, `DeriveViewpointDialog.test.ts`). `irTypes.ts`, `irCompile.ts`, `irValidate.ts`, `irEdgeViews.ts`,
+  `UnifiedEdge.tsx` and `DeriveViewpointDialog.tsx` untouched. One addition beyond §4, forced by the typecheck: the binder
+  loop skips the notation-own role (`isActivityRole`), as it skips the ER roles.
+- **Tests first** [M]: 35 of 260 red on `d4daecaf7` (Activity 23 of 25, the list and preselection tests); the new pins of the
+  two notations the A4 table left out (Petri net (classic), ER (Chen), 18 digests) measured on the unchanged source.
+- **Other notations** [M]: `_tmp_actuml_dump.ts --out after`, 81 lists; the 72 of the eight other notations byte-identical to
+  the base (0 differ); the nine new lists, DemoFlowB 9 documents (circle, rounded, diamond, bar, bull's-eye, two flows).
+- **Gates** [M]: typecheck exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 6201 tests (6173 + 28), 6197
+  passed, the 9 known files red at import and 4 in `criticalZone.test.ts` from the lane's go-ahead variable (70/70 with it
+  unset); a first full run also timed out once in `irCollapsedRender.test.ts`'s Chromium `afterAll` (13/13 alone, green on
+  the second full run); `npm run build` exit 0; `check:scripts` PASS.
+- **Mutation bench** [M] (`_tmp_actuml_bench.mjs`, 45 mutants): 43/45 on the first run; `final-terminal-only` survived (the
+  Flowchart's own bull's-eye has the same shape, only the size differs), the test now reads the size, killed on the rerun;
+  **44/45**, the survivor `nota-binder-guard` equivalent (`bindings['decision']` is undefined at runtime; the guard is for the
+  type). Controls 261/261 before and after.
+- **Lane probe** [M] (`lane-run probe`, 3084, light, 1600×1000, DPR 2; `_tmp_actuml_probe.ts`, log
+  `~/.jjodel-lanes/P-2026-09-30-1552/probe-_tmp_actuml_probe.log`, third run **22/22**; the two earlier runs stopped on the
+  probe's own reading of nameless nodes and of the diamond's hit-area polygon, not on the notation).
+  - Default scenes `first`: sm, petri, esm, flowB byte-identical to the A2 tip's shots (`_tmp_a2_crops/a2_*_default_first.png`).
+  - Bindings written as Apply writes them: the dialog opens on Statechart (UML) (DemoPEST), Petri net (classic) (DemoPetri),
+    State machine (DemoESM), Activity (UML) (DemoFlowB, nine options, the table from the simulation roles, Decision `decision`,
+    Activity inheriting the action).
+  - DemoFlowB as Activity (UML), in flow px at zoom 1: `i0` a circle filled `rgb(15, 23, 42)`, node 24×24, visible 22; `work`,
+    `left`, `right` rounded, node 142×44, white, 1 px ink, radius 10.5 px, the name 13 px 500 in the ink; `d1` a diamond, node
+    36×36, the painted polygon white with a 1 px ink stroke, no name; `fk`, `jn` bars filled in the ink, node 24×120, visible
+    22×118; `fin` a white circle node 24×24, 1 px ink, one dot in the ink; nine flows 1 px ink with the open arrowhead; the only
+    labels `[model.[count] < 2]` and `[model.[count] >= 2]`, halo 12 px 500. Every line end 5 px from the visible box of its
+    symbol, the same on actions, bars and circles (the router's end offset, not this notation's).
+  - **The two guard labels overlap** [M]: 796 px² of their boxes, both between `work` and `d1`; read on the crop, not
+    measured: the router runs `f3` and the first leg of `f4` side by side there (on the ISO crop of A1+A3 the same two flows
+    part, around a larger diamond). Layout is out of this lane; ticket in the log entry.
+  - DemoFlowB as Flowchart (ISO 5807): unchanged (stadiums, the diamond, rectangles, open heads, the guards as plain text).
+  - No page error.
+  - Crops (`frontend/scripts/smoke/_tmp_actuml_crops/`, gitignored): `actuml_flowB_activityUml_600.png`,
+    `actuml_flowB_flowchartIso_600.png`, and the full-size close-ups `actuml_flowB_activityUml_decision.png`,
+    `actuml_flowB_activityUml_bars.png`.
+- **Incident**: one scratch file of this phase was written to `/tmp` (`actuml_dom_scratch.json`, a probe line for parsing),
+  against the prompt's «never writes outside this worktree»; deleted in the same command, nothing kept there.

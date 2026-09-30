@@ -4464,6 +4464,43 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   stay. Viewpoints already derived keep what they saved. Measured on the corpus: 24 of 63 document lists moved, each equal to
   the tip's with the substitution (the provenance hash recomputed), none else; no `closedArrow` left in any derived document.
   Prompt P-2026-09-30-1521, commit `f603f28e8`.
+- **R-VP-26** (2026-09-30, ratified by Alfonso 2026-09-30, evidence: measured, verified: none, reversible: branch).
+  **A notation «Activity (UML)» beside the two flowcharts; DemoFlowB opens on it, DemoPEST on Statechart (UML); amends
+  R-VP-22 («a stored simulation binding still opens on the sibling»).** Alfonso, 2026-09-30, on DemoFlowB derived as
+  Flowchart (verbatim): «la notazione non è per niente conforme alla notazione comunemente nota, ad esempio il decision
+  node è tipicamente un diamond, [...] i join sono quelli delle reti di petri e inizio e fine inusuali sia nell'aspetto che
+  nelle dimensioni»; on the mockup: «il nuovo mockup UML activity è ottimo»; he accepted the same day that the demos open on
+  the new notations. Source: `docs/discovery/discovery_2026-09-30_activity_uml_notation.md` (the Layer Impact Report, the
+  measures). No earlier drawing is amended: the eight other notations derive their documents byte for byte. (1) The dialog
+  lists nine notations, «Activity (UML)» after «Flowchart (ISO 5807)», on the `flowchart` profile, its Node read «Action».
+  (2) Initial: a circle filled in `var(--color-inode-name)`, `defaultSize` 20×20, no name. Action (the Node role and every
+  class that takes it): a white `rounded` box, 1 px in the ink, `cornerRadius` 14, `defaultSize: { height: 44 }`, the name
+  centred 13 px 500 in the ink, no compartment. Decision and merge: a white `diamond`, 1 px in the ink, 36×36, no name.
+  Fork and join: a `bar` filled in the ink, upright, `defaultSize` 5×120, no name (the IR has no orientation, and
+  DemoFlowB's rows run left to right). Terminal and Activity final: a bull's-eye, a white circle 24×24, 1 px in the ink,
+  the `dot` marker. Control flow: the Flowchart's endpoints on today's router, 1 px in the ink, the open arrowhead (R-VP-25),
+  no label; a set guard `[` + the guard verbatim + `]`, in the C2 label style, through a second document per flow class
+  with `exists $guard.value` and priority 1. A class with no role keeps the Flowchart's document. (3) The table gains a
+  notation-own role `decision` («Decision / merge»), not a simulation role; after the binder, a class with no entry of its
+  own that takes Node by inheritance takes the role its name words give: `initial|start` Initial, `final|end` Activity
+  final, `decision|choice|branch|merge` Decision, `fork`, `join`. (4) The preselection: a stored `flowchart` binding, and a
+  Custom one without Trigger, open on Activity (UML); a stored `stateMachine` binding (a user profile based on it too) on
+  Statechart (UML); `extendedStateMachine`, `dfa`, `nfa`, `moore`, `mealy`, a Custom one with Trigger and every Petri binding
+  as before; the latest derived viewpoint still first. (5) The persisted names, permanent once saved (R-B9): the `_state`
+  value `derivedNotation` and `ir.generated.notation` gain `activityUml`; `derivedRole_<classId>` and `ir.generated.role`
+  gain `decision`. No IR key, no `irVersion` bump, no migration. Lane choices, each ratified as recommended, unattended
+  (RC-21, the report's questions 1-7): the upright bar; the notation-own role; `merge` added to the diamond's words and
+  `final|end` giving Activity final; every set guard bracketed (an `isKind` with a `path` on the source is always false on
+  the production L-proxy backend, `irCompile.ts:193`; on DemoFlowB only the two flows leaving `d1` carry a guard); the
+  preselection as in (4); the Flowchart's router; the place in the list. The limits, from render floors outside the lane
+  (decisions awaiting Alfonso, RC-26): every authored `defaultSize` axis is floored at 24 px (`nodes/nodeSizing.ts:73`), so
+  the initial draws 24 (visible 22) and the bar 24×120 (visible 22×118); the bull's-eye's disc is the registry `dot`
+  (radius 16 of 100); the radius 14 is clamped to a quarter of the 42 px box, 10.5. Measured: 72/72 document lists of the
+  eight other notations on the seven decoded exports identical to the A2 tip's; the lane probe on 3084 22/22 (the four demo
+  scenes in the default viewpoint byte-identical to the A2 tip's shots; the dialog on DemoPEST, DemoPetri, DemoESM, DemoFlowB
+  opening on Statechart (UML), Petri net (classic), State machine, Activity (UML); DemoFlowB's nine flows open-headed, the
+  guards `[model.[count] < 2]` and `[model.[count] >= 2]` the only labels); mutation bench 44/45, the survivor equivalent.
+  Prompt P-2026-09-30-1552, commit `ca3e41a92`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
