@@ -1,7 +1,17 @@
-import React, { useCallback, useId } from 'react';
+import React, { useCallback, useId, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { LViewPoint } from '../../../../joiner';
+import { JjSelect } from '../../../ui';
 import { ViewpointType, getViewpointType } from '../../../../view/viewPoint/viewpoint';
-import { readMetaclassColoring, type MetaclassColoring } from '../../../../view/viewPoint/metaclassPalette';
+import {
+    PASTEL_SWATCHES,
+    clearMetaclassOverrides,
+    metaclassColorTable,
+    readMetaclassColoring,
+    withMetaclassOverride,
+    type MetaclassColorRow,
+    type MetaclassColoring,
+} from '../../../../view/viewPoint/metaclassPalette';
 // Self-import the stylesheet so .wp-type-segmented + .wp-field + .workbench-properties
 // render correctly even when this component is mounted outside WorkbenchProperties
 // (e.g., directly from Info.tsx's view-branch).
@@ -19,6 +29,20 @@ const typeOptions: { value: ViewpointType; label: string; enabled: boolean; reas
     { value: 'semantics', label: 'Semantics', enabled: false, reason: 'Not available yet.' },
     { value: 'editor_behavior', label: 'Editor', enabled: false, reason: 'Not available yet.' },
 ];
+
+/** One entry of the metaclass dropdown: the class, and the colour it paints under this viewpoint. */
+interface MetaclassOption { value: string; label: string; color: string }
+
+const toMetaclassOption = (c: MetaclassColorRow['classes'][number]): MetaclassOption => ({ value: c.id, label: c.name, color: c.color });
+
+// The small swatch and the name, for the options and the selected value alike; the name is
+// clipped with an ellipsis so the fixed-width control never grows (R-VP-34).
+const formatMetaclassOption = (o: MetaclassOption) => (
+    <span className="wp-metaclass-option" title={o.label}>
+        <span className="wp-metaclass-option__swatch" style={{ background: o.color }} />
+        <span className="wp-metaclass-option__name">{o.label}</span>
+    </span>
+);
 
 const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, readOnly }) => {
     const dview = viewpoint.__raw;
@@ -47,6 +71,34 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
     const writeColoring = useCallback((patch: Partial<MetaclassColoring>) => {
         if (readOnly) return;
         (viewpoint as any).metaclassColoring = { ...readMetaclassColoring(viewpoint.__raw as any), ...patch };
+    }, [viewpoint, readOnly]);
+
+    // Per-metaclass colours (R-VP-34): the classes of every metamodel of the project with the
+    // colour each paints under THIS viewpoint's setting (the edited one, not the active one).
+    // Selected as a string so an unrelated store change does not re-render the panel.
+    const vpId = dview?.id as string | undefined;
+    const tableKey = useSelector((state: any) => {
+        const setting = readMetaclassColoring(vpId ? state.idlookup?.[vpId] : undefined);
+        if (!setting.enabled) return '[]';
+        return JSON.stringify(metaclassColorTable(state.idlookup ?? {}, state.m2models ?? [], setting));
+    });
+    const table = useMemo(() => JSON.parse(tableKey) as MetaclassColorRow[], [tableKey]);
+    const [pickedId, setPickedId] = useState<string | null>(null);
+    const allClasses = table.flatMap((r) => r.classes);
+    const selected = allClasses.find((c) => c.id === pickedId) ?? allClasses[0] ?? null;
+    const metaclassOptions = table.length > 1
+        ? table.map((r) => ({ label: r.modelName, options: r.classes.map(toMetaclassOption) }))
+        : (table[0]?.classes ?? []).map(toMetaclassOption);
+
+    // One write each, whole, through the same default setter: «Reset» removes the override of
+    // the selected class, «Reset all» every override; the automatic colour comes back.
+    const writeOverride = useCallback((classId: string, color: string | null) => {
+        if (readOnly) return;
+        (viewpoint as any).metaclassColoring = withMetaclassOverride(readMetaclassColoring(viewpoint.__raw as any), classId, color);
+    }, [viewpoint, readOnly]);
+    const resetAllOverrides = useCallback(() => {
+        if (readOnly) return;
+        (viewpoint as any).metaclassColoring = clearMetaclassOverrides(readMetaclassColoring(viewpoint.__raw as any));
     }, [viewpoint, readOnly]);
 
     return (
@@ -121,6 +173,56 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                             disabled={readOnly}
                         />
                     </label>
+
+                    <div className="wp-field">
+                        <label className="wp-field__label" id={`${colorId}-metaclass`}>Metaclass color</label>
+                        <div className="wp-metaclass-row">
+                            <JjSelect<MetaclassOption>
+                                className="jj-select wp-metaclass-select"
+                                aria-labelledby={`${colorId}-metaclass`}
+                                options={metaclassOptions as any}
+                                value={selected ? toMetaclassOption(selected) : null}
+                                formatOptionLabel={formatMetaclassOption}
+                                onChange={(o: any) => setPickedId(o ? o.value : null)}
+                                placeholder="No metaclasses"
+                                isDisabled={readOnly || !selected}
+                            />
+                            <div className="wp-swatch-grid" role="radiogroup" aria-labelledby={`${colorId}-metaclass`}>
+                                {PASTEL_SWATCHES.map((c) => (
+                                    <button
+                                        key={c}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={selected?.color === c}
+                                        aria-label={c}
+                                        title={c}
+                                        className={`wp-swatch${selected?.color === c ? ' wp-swatch--current' : ''}`}
+                                        style={{ background: c }}
+                                        onClick={() => selected && writeOverride(selected.id, c)}
+                                        disabled={readOnly || !selected}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="wp-metaclass-resets">
+                            <button
+                                type="button"
+                                className="wp-text-button"
+                                onClick={() => selected && writeOverride(selected.id, null)}
+                                disabled={readOnly || !selected?.overridden}
+                            >
+                                Reset
+                            </button>
+                            <button
+                                type="button"
+                                className="wp-text-button"
+                                onClick={resetAllOverrides}
+                                disabled={readOnly || !coloring.overrides}
+                            >
+                                Reset all
+                            </button>
+                        </div>
+                    </div>
                 </>
             )}
         </div>

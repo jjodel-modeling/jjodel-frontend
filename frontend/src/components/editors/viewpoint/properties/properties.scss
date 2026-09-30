@@ -160,6 +160,129 @@
   }
 }
 
+// ---------- Metaclass colours (R-VP-34) ----------
+// The metaclass dropdown, 160px wide whatever the name, and beside it the twelve pastel
+// swatches as a 6x2 grid exactly as tall as the dropdown (36px): nothing moves when the
+// selection or a colour changes. 160 + 8 + 116 = 284px fits the narrowest rail (360px less
+// the 32px padding of .workbench-properties).
+.wp-metaclass-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wp-metaclass-select {
+  width: 160px;
+  flex: none;
+}
+
+// Two rules of the shared sheets reach this JjSelect and are undone here, at (0,2,x):
+// `_form-system.scss` gives `.jj-select` 20px of padding-bottom (the control measured 56px
+// tall, the grid off its middle), and react-select's inner search input takes the global
+// input chrome, drawn as two bars beside the caret while the menu is open. The rail's own
+// fix (`viewapplyto.scss`, the `.jj-field .jj-select input` rule) does not reach this
+// panel, which has no `.jj-field`.
+.wp-metaclass-row .wp-metaclass-select {
+  padding-bottom: 0;
+
+  input,
+  input:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+// The swatch and the name of an option, in the menu and in the control. The name is
+// clipped, never wrapped, so the control keeps its width and height.
+.wp-metaclass-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  &__swatch {
+    width: 10px;
+    height: 10px;
+    flex: none;
+    border-radius: 2px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    box-sizing: border-box;
+  }
+
+  &__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.wp-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 16px);
+  grid-auto-rows: 16px;
+  gap: 4px;
+  height: 36px;
+  flex: none;
+}
+
+// The current colour is marked by an outline, which takes no layout space.
+.wp-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 3px;
+  box-sizing: border-box;
+  cursor: pointer;
+
+  // The class doubled, and the focused state named: after a click the current swatch is
+  // focused, and Bootstrap's reboot `button:focus:not(:focus-visible) { outline: 0 }` (0,2,1)
+  // dropped the marker exactly when it was set.
+  &.wp-swatch--current,
+  &.wp-swatch--current:focus:not(:focus-visible) {
+    outline: 2px solid #334155;
+    outline-offset: 1px;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.wp-metaclass-resets {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  height: 16px;
+}
+
+// A text button (11px), the «Reset» links under the swatches.
+.wp-text-button {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 11px;
+  line-height: 16px;
+  color: #334155;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    color: #94a3b8;
+    cursor: default;
+  }
+}
+
 // ---------- Toggle row ----------
 .wp-toggle {
   display: flex;

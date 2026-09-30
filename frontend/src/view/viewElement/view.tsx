@@ -281,6 +281,8 @@ export class DViewElement extends DPointerTargetable {
      * has no such key and renders as it did, and no VersionFixer migration accompanies it.
      * Written whole (the default setter replaces it), `enabled: false` to turn it off so the
      * other two survive. Declared HERE and not on `DViewPoint`, for the reason stated above.
+     * P-2026-09-30-2022 (R-VP-34) adds an optional `overrides` map, metaclass id → colour,
+     * absent when there is none; an entry on a deleted class is ignored.
      *
      * READ BY: `resolveMetaclassColoring` (`metaclassPalette.ts`), from the ACTIVE viewpoint
      * (`state.viewpoint`), in `ObjectNode.tsx`. WRITTEN BY: the «Color by metaclass» controls of
