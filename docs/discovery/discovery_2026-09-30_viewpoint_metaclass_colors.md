@@ -175,3 +175,21 @@ Smoke-test scenarios potentially affected:
   - `scripts/hooks/critical-zone.mjs:25-60`
   - `redux/__tests__/versionfixer_old_states.test.ts:20-70`
 - **Read by three read-only Explore agents** (native path, IR path, persistence). Every citation above was re-read, except `classes.ts`, `proxy.ts`, `reducer.ts`, `U.tsx` and `SaveManager.ts` in §3, which are the persistence agent's and are marked [R] through it.
+
+## Addendum 2026-09-30 (rework, Corregge 2026-09-30 18:15)
+Alfonso accepted the chat's recommendations on the hard stop at 19:20; the session resumed on the same lane. The rows of this lane are R-VP-27..31 (R-VP-27 panel, R-VP-28 persistence, R-VP-29 palette, R-VP-30 text, border and selection, R-VP-31 scope). They were written first as R-VP-19..23, a range `viewpoint-notations` (not merged) already holds; this report never cited them by number. [M] measured on `390bcaddd`.
+- **Trunk merged.** `c76656bbc` merges `alfonso-frontend-jjtl` at `45ff6c290` (selection-outline). The one conflict was `docs/log-inbox/views.md`, kept as a union. Typecheck gave the 14 of the baseline, and the touched-area tests 921/921.
+- **Palette, decision 1 of §0 superseded.** The golden angle is replaced by an analogous rule (R-VP-29, `metaclassPalette.ts`):
+  - The hues sit within ±60° of the base, stepping +1, −1, +2, −2.
+  - The step is 120°/(count−1), kept within 15..30°.
+  - Past the window, the lightness moves ±10 points inside 35..75.
+  - The 15° floor is this lane's addition. The literal step, 13.3° at count 10, left neighbours ΔE76 7.4 apart with equal lightness [M, gitignored `_tmp_vpcolor_pal.mjs`].
+  - Tests 33/33, with adjacency checked for 2..10 classes on eight bases. Mutation bench 37/38; the survivor is the unreachable tie.
+- **Decision 6 of §0 resolved.** While coloured, a selected native node keeps its fill under the header. The two selected-header tokens are set inline only while the option is on.
+  - A selected white-text node shows its name at 7.54:1 [M], and a black-text one at 14.9:1.
+  - Border `rgb(8, 145, 178)`, ring `rgba(6, 182, 212, 0.18) 0 0 0 3px`.
+  - With the option off, a selected node is 0 px from the trunk tip, both before the first write and after `enabled: false`.
+- **Probe, 3091, light: 57/57** (`vpc_after2_*_600.png`).
+  - The baseline `before2` ran on the trunk tip's code. The five changed files were checked out from `45ff6c290` into this tree and restored from HEAD after the run; the tree was clean before and after.
+  - The four demo scenes are 0 px (identical bytes).
+  - Every coloured node: fill, text and stroke from the DOM equal the resolver; boxes 0 px; option off 0 px.

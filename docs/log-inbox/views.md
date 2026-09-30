@@ -547,3 +547,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: IR ring painted cyan, box 0 px; Alfonso authorised the merge (fondi)
 **Notes**: Rollback tag `pre-selection-outline` on `c1e0376dc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1846/result.json`.
 **Prompt document name**: 2026-09-30 18:46
+
+## 2026-09-30 — feat(views): «Color by metaclass» rework, analogous palette, coloured selected header (P-2026-09-30-1815)
+**Prompt**: resumed lane P-2026-09-30-1815, rework after the hard stop (Alfonso accepted the chat's recommendations, 19:20): merge the trunk (selection-outline), an analogous palette instead of the golden angle, a selected coloured native node keeping its fill, the rows renumbered R-VP-19..23 to R-VP-27..31.
+**Files touched**: merge `c76656bbc` (trunk `45ff6c290`; union in `docs/log-inbox/views.md`). Code `390bcaddd`: `frontend/src/view/viewPoint/metaclassPalette.ts`, its test, and the R-VP comments of `ObjectNode.tsx`, `IRNodeContent.tsx`, `ViewpointProperties.tsx`, `properties.scss`, `view.tsx`. `ce5e70027`: this lane's first entry, three references (`Log-Repair`). This commit: `docs/decisions.md` (R-VP-27..31), the report's addendum, this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-30 18:15
+**Causa**: (a)
+**Regressions**: no — on `390bcaddd`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set; `npx vitest run` (GOAHEAD unset) 5982 passed, the 9 known files red at import; `npm run build` exit 0. metaclassPalette 33/33; mutation bench 37/38 (the unreachable tie). Lane probe 3091, light, 57/57; the four demo scenes identical bytes to the trunk tip `45ff6c290`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (the §6 report of the first pass covers `IRNodeContent.tsx`; this pass changes only its comment)
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3091 (light) 57/57: palette with #0ea5e9 and #f59e0b on DemoESM and DemoFlowB, selected white-text node 7.54:1 on its fill, option off 0 px from the trunk tip; crops `frontend/scripts/smoke/_tmp_vpcolor_crops/vpc_after2_*_600.png`
+**Notes**: The 15° floor on the palette step is this lane's (R-VP-29): at count 10 the literal 13.3° gave neighbours ΔE76 7.4 apart at equal lightness. The trunk-tip baseline ran on `45ff6c290`'s five files checked out in this tree and restored from HEAD; the tree was clean after. Causa (a): the palette rule was respecified after the first review.
+**Prompt document name**: 2026-09-30 18:15
