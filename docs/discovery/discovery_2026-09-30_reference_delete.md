@@ -220,3 +220,33 @@ the subject runs, the joiner is mocked. Mutation bench on the new branch.
 
 Probes (gitignored, `frontend/scripts/smoke/_tmp_refdelete_*.ts`): `m2`, `m1`, `drawn`, `scene`, `scene2`, `undo`,
 `label`, `bisect`, `explore`, `common`.
+
+## 8. Addendum 2026-09-30, Phase 2 (code `c820dbb51`)
+
+Adopted as recommended, unattended (RC-21, the prompt's cascade): Q1 (link only), Q2 (composition detaches the
+child), Q5 (no new affordance). Q3 and Q4 await Alfonso (core). The `decisions.md` record of the three adoptions is
+the chat's (the file is outside this lane's DOVE).
+
+**Code.** `deleteM1Link` in `sync/canvasToJjom.ts`, called first in `syncDeleteEdge`'s non-inheritance branch, as
+§6 describes. The M2 branch reads `lookup` two lines earlier; nothing else in the file moved.
+
+**Test and bench.** `sync/__tests__/syncDeleteEdge.test.ts`, 14 tests: red first on `024ded72f` (10 failed, the 4
+unchanged-path tests passed), 14/14 on the fix. Mutation bench, 12 of 12 killed (branch not called, first candidate
+slot, index 0, no `subElements` removal, no `DeleteElementAction`, delete outside the TRANSACTION, pair guard kept,
+model-less first of several, non-DReference model as a link, slot filter without the DReference check, graph filter
+dropped, `isPtr: false`); the last two died only after two tests were added for them.
+
+**Matrix after the fix, measured** (`lane-run probe`, 3093):
+
+| Level | Path | Canvas | Model | M2 reference | Undo (one Cmd+Z) |
+|---|---|---|---|---|---|
+| M1 | Delete, Backspace, context menu, toolbar | gone | slot empty, DEdge gone | kept | link restored (4/4) |
+| M1 | rail × (not touched) | gone | slot empty, DEdge gone | kept | edge back, slot empty (unchanged) |
+| M2 | all six paths | as §2 | as §2 | | as §2 (Q3) |
+
+Undo stack on M1 (`_tmp_refdelete_undo_m1.ts`): 1 after the select (`idlookup,_lastSelected`), 2 after the delete
+(`idlookup` only: the M1 DEdge delete carries no `edges` key, so it is not forced into the select step), 1 after Cmd+Z
+with `a1`'s slot, DEdge and RF edge back. Bisect oracle: GOOD. DemoPEST: `nextState` and `transitions` 5/5 each, one
+link gone, reference kept, 0 ghosts, one Cmd+Z restores; the detached `t1` has `father` DModel, stays in `objects`, keeps
+its vertex. The four demo scenes, both tabs, before (HEAD code) and after: 8 DOM readings (nodes, edges, labels, names)
+identical, 0 page errors. Crops (`sips -Z 600`): `frontend/scripts/smoke/_tmp_refdelete_crops/`, `before_*` and `after_*`.

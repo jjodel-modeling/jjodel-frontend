@@ -438,3 +438,30 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs only, the C3 ir-edge-ports discovery (hypothesis falsified); no code, 8 gates green on e7dec63bb; GO by the chat C-2026-09-30 release-3.1
 **Notes**: Rollback tag `pre-ir-edge-ports` on `cab8a535d` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1509/result.json`.
 **Prompt document name**: 2026-09-30 15:09
+
+## 2026-09-30 — fix(editor-v2): an M1 edge delete removes the link, not the reference (P-2026-09-30-1542)
+**Prompt**: `claude_2026-09-30_1542_prompt_reference_delete.md`, Phase 1 then 2 in cascade, critical zone with the RC-30 go-ahead. Alfonso: «le reference (edge) non si riescono a cancellare». Matrix of delete paths × levels, bisect, fix in one undo step.
+**Files touched**: `024ded72f` report `docs/discovery/discovery_2026-09-30_reference_delete.md`. `c820dbb51` `frontend/src/components/editor-v2/sync/canvasToJjom.ts` (`deleteM1Link`, called in `syncDeleteEdge`), `frontend/src/components/editor-v2/sync/__tests__/syncDeleteEdge.test.ts` (new). This commit: report addendum §8, this entry, two tickets, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc 14 (the baseline set); vitest 5915 passed, the 9 known red at import, 4 `criticalZone.test.ts` red from this session's `JJODEL_CRITICAL_ZONE_GOAHEAD` (70/70 unset); build exit 0; syncDeleteEdge 14/14, bench 12/12 killed; M2 matrix identical before and after; four demo scenes 8/8 readings identical.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — probe, unattended: M1 matrix 24/25 (the rail's untouched undo), DemoPEST 5/5, bisect oracle GOOD, crops `_tmp_refdelete_crops/`; GO by the chat C-2026-09-30-1458 on the lane probe (RC-23)
+**Notes**: The four M1 canvas paths deleted the metaclass DReference (`syncDeleteEdge` read the edge's `model`); on loaded projects the other links stayed as unselectable ghosts. Bisect: `3.0.0` and `1b40eacd0` BAD, no first bad commit in range; by reading, since `75fe8f2f5`, with `964344aff` and `91a0e89c8` giving M1 edges the DReference as `model`. Q1, Q2, Q5 adopted as recommended: the `decisions.md` record is the chat's.
+**Prompt document name**: 2026-09-30 15:42
+
+**Ticket** (P-2026-09-30-1542, low): the reference's tree row and the Properties rail offer no delete (`TreeViewContent.tsx:1289`, `Info.tsx:1769`); the rail × on an M1 link undoes to the edge without the slot value; a selected edge's segment handle can cover a sibling's label (3 parallel references, `lab2`). Report §2, §5.3.
+
+## 2026-09-30 — ticket: an M2 edge delete is not undoable in one step, and the undo leaves a partial DEdge
+**Ticket**: select + Delete (or Backspace, toolbar) on an M2 reference: the delete's delta carries `edges`, which forces a merge into the select step (`reducer.ts:1211`), and `U.objectMergeInPlace` is first-wins on `idlookup` (`U.tsx:896-905`), so one Cmd+Z restores nothing and leaves `idlookup[edge] = {clonedCounter, pointedBy, isSelected}` with `state.edges` and `state.references` listing both ids. Core (Rule 5): needs Alfonso's approval for a reducer lane.
+**Priority**: medium
+**Found in**: P-2026-09-30-1542
+**Detail**: docs/discovery/discovery_2026-09-30_reference_delete.md
+
+## 2026-09-30 — ticket: a deleted edge stays in graph.subElements on a loaded project, ghost edges on M1 canvases
+**Ticket**: deleting an M2 reference while its model's canvas is mounted (DemoPEST, `nextState`) leaves the 5 M1 DEdge ids in the graph's `subElements` after they left `idlookup`: `useJjomSync.ts:1310-1315` never evicts them, 5 RF edges stay, not selectable, not deletable. `Dummy.get_delete` removes an edge from `subElements` only through `pointedBy` (`Dummy.ts:205-225`), absent on loaded edges. Core: an edge father net in `get_delete`, the R-DEL-4 shape.
+**Priority**: medium
+**Found in**: P-2026-09-30-1542
+**Detail**: docs/discovery/discovery_2026-09-30_reference_delete.md

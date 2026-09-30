@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1542
 Chat: C-2026-09-30-1458
 Lane: Phase 1 then Phase 2 in cascade (critical zone possible: `useJjomSync.ts`, `canvasToJjom.ts`; Layer Impact Report before any edit there; go-ahead RC-30 given at launch). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane reference-delete · c820dbb51 · verifica visiva passata 2026-09-30 (GO by the chat C-2026-09-30-1458, RC-23 on the lane probe)
 
 Worktree: `~/jjodel-w-refdelete`, branch `reference-delete`, created from the trunk at `ecbc0e92c`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-refdelete`, branch `reference-delete`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
