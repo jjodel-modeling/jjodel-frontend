@@ -8,6 +8,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+Planned as 3.1.0. The entries below cover the trunk `alfonso-frontend-jjtl` since `3.0.0`; work still on branches or on `staging` is added when it lands.
+
+### Added
+
+#### Simulation
+- Simulation panel driven by a pure core: one step per press, run state on the canvas nodes, per-model run state.
+- Events as M1 instances, one button per enabled event, ε for transitions without a trigger.
+- Guards and actions: `Expression` and `Action` primitive types, guard evaluation on the run state, parallel assignments per step, state access with `.[x]` in JjEL.
+- Petri core: weighted preset and postset, bound `k` with an «unsafe» halt, decision blocks with `else`.
+- Five run states (Not started, Running, Terminated, Deadlock, Halted); the deadlock reason names the false guard.
+- Simulation roles dialog with system presets and user profiles; roles match metaclasses with ancestry and may bind several attributes.
+- DFA, NFA, Moore and Mealy faces: accepting mark, Output line, Mealy output in «Last step».
+- State and input declarations: stored or derived attributes, a model's globals declared in its own Data dialog.
+- Nondeterministic choice list, Random with a seeded draw, a per-model run policy (Ask or Random) and Play.
+- A Simulation toggle in the metamodel's Semantic Type Class section gates the feature.
+
+#### Viewpoints and notation
+- «Derive viewpoint» on a metamodel row: one IR view per class, with a control-flow notation and a Petri notation.
+- Symbol Editor 1b: conditional border per axis, `cornerRadius` as a conditional axis with a rules table, the Goal family with the cloud form, a three-instance preview, the Underline row.
+- Vertex labels outside the symbol box (left, right, top, bottom); default width and height of a vertex view.
+- Edge views and row views created from the v2 canvas menus; the viewpoint `+` asks what the new view applies to and seeds its IR.
+- IR forms: the bar form, token markers, declared collapsed form, fill and badge.
+
+#### Validation
+- User-defined validation, first cut: validation viewpoints, minimal rule authoring, the «Validate» command, violation dots on instances (R-VAL).
+
+#### Data Manager and environments
+- Reference editor in the canvas rail with drill-in, inline edit and create-and-link for references (#142).
+- Environment configuration and Configurator screen with role profiles and a restricted consumer shell (#157).
+
+### Changed
+- Model format: migration `2.229` introduces the `Expression` and `Action` types. Projects saved by 3.0 are migrated on load.
+- The default notation of M2 and M1 canvases is more legible in the light theme (contrast of headers, edges and quiet text).
+- The metamodel canvas refuses references and supertypes whose type is not a class.
+- The authoring Form tab is labelled Layout; the Symbol tab opens the Symbol Editor directly.
+
+### Fixed
+- Cmd+S saves the live project; a view IR never stores an L-proxy.
+- A project that cannot be opened shows an error screen; a change of project id in the URL opens that project.
+- JjScript: forward references refused, superclasses resolved before creating a class, enum types resolved, exact-case homonyms reported as ambiguous.
+- Export embeds externally referenced M1 objects in JSON (#128).
+- Custom AI provider accepts a free-text model name (#147).
+- Two metaclasses with the same name in different metamodels are distinct for views (R-MCID).
+- Default object view fill and chrome match the native view.
+
+### Known issues
+- The dark theme is not maintained in this release.
+
 ## [3.0.0] - 2026-09-15
 
 The full list of user-facing changes is at https://docs.jjodel.io/whats-new/. The entries below are partial.
