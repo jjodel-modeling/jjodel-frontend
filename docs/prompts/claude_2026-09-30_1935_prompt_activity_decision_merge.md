@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1935
 Chat: C-2026-09-30-1932
 Lane: Phase 1 then Phase 2 in cascade (critical zone possible; Layer Impact Report before any edit there; go-ahead RC-30 given at launch). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane activity-decision-merge · d34cded42, d2e4e7959 · non fuso: hard-stop, lane probe on 3093 (light) 31/31, crops in frontend/scripts/smoke/_tmp_actdec_crops/ (gitignored), mutation bench 48/50 (the two ObjectNode mutants probe-only), R-VP-32..35 provisional, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-actdec`, branch `activity-decision-merge`, created from `viewpoint-notations` at `30f3d8a81` (the Activity sizes lane, P-2026-09-30-1720), a fresh session started by `lane-run`. `viewpoint-notations` itself is not touched: it waits for Alfonso's GO and merges on its own; this branch merges after it. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-actdec`, branch `activity-decision-merge`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 

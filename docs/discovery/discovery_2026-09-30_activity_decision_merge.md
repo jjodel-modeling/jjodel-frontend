@@ -141,3 +141,46 @@ RC-20..34, R-VP-15..26, R-SIM-7..12, R-SIM-16..21, `docs/discovery/discovery_202
 `~/jjodel-w-notations/frontend/scripts/smoke/` (`_tmp_c1_scenario.js`, `_tmp_c1_common.ts`, `_tmp_actsize_probe2.ts`, read and copied).
 Measures: `frontend/scripts/smoke/_tmp_actdec_facts.ts` (gitignored) through `lane-run probe` on 3093, light, 1600×1000, DPR 2, log
 `~/.jjodel-lanes/P-2026-09-30-1935/probe-_tmp_actdec_facts.log`, crops `frontend/scripts/smoke/_tmp_actdec_crops/actdec_facts_*.png`; no page error.
+
+## 6. Addendum 2026-09-30, Phase 2 (measured on `d2e4e7959`)
+- **Adopted as recommended** (RC-21, unattended): questions 1-10 of §0, as written, rows R-VP-32..35. One lane choice beyond §3:
+  the dot is centred on a diamond too, not only on a circle (the 36 px decision would sit 1 px off-centre) [M].
+- **Code** `d2e4e7959`: the seven source files of §3 and three test files; no other file. The ring is a 1.5 px spread shadow on a
+  10.5 px disc: a 1.5 px border computed as 1 px on the probe (first run), so the drawn circle matches the target's `r=6`, stroke 1.5.
+- **Tests first** [M]: on `17a70f2ad` 8 red and `irJunctions.test.ts` at import (`_tmp_actdec_red.log`); the eight markup pins of
+  `irActivityRender.test.ts` (an edge without the new keys, the overlay's corner placement) taken there and green after.
+- **Documents** [M] (`_tmp_actdec_dump.ts`, the 81 lists of the nine notations on the seven decoded exports): the base byte-identical to
+  the sizes lane's dump; after, 79 identical, the 2 Activity lists with a guard equal with the guard style substituted.
+- **Gates** [M]: typecheck exit 2, the 14 errors of §17 by file and code; `npx vitest run` (go-ahead variable unset) 6245 tests,
+  6244 passed, the 9 known files red at import, and under the load of the full run 2 more files, `traceMonitor.test.ts` (a CLI
+  spawn returned `status: null`) and `irCollapsedRender.test.ts` (Chromium `afterAll` timeout, as in the Activity lane's §6), both
+  green alone (`_tmp_actdec_vitest3.log`, 2/2 files), neither touched here; the first full run, before the last tests, had only the
+  9; `npm run build` exit 0 (twice).
+- **Mutation bench** [M] (`_tmp_actdec_bench.mjs`, 50 mutants, 5 test files, controls 227/227 before and after): 43/50 on the first
+  run; four tests added (the approach side of a branch, the grips on the vertices, an edge that is a member at both ends, another
+  edge on the shared side through the synthesis) and one for the arc guard; **48/50**, the survivors `derived-ignored` and
+  `placement-dropped` in `ObjectNode.tsx`, which the bench cannot import (the joiner barrel, §5 of `CLAUDE.md`): the lane probe's
+  run checks cover them (the dot inside `work`, the derived class; the default view's pill).
+- **Lane probe** [M] (`lane-run probe`, 3093, light, 1600×1000, DPR 2; `_tmp_actdec_probe.ts`, log
+  `~/.jjodel-lanes/P-2026-09-30-1935/probe-_tmp_actdec_probe.log`, third run **31/31**; the first two stopped on the probe's own
+  coordinate spaces, row locator and undo sequencing, and on the ring above):
+  - Default scenes `first`: sm, petri, esm, flowB 0 px left of the rail from the sizes lane's shots (code of `30f3d8a81`), 431 px each
+    inside the animated Jodie launcher, masked as before; control 348100 px.
+  - DemoFlowB as Activity (UML), flow px: one `polygon.ir-junction`, drawn by `f1`, 28×28, white, `rgb(15, 23, 42)` 1 px, its centre
+    59 px left of `work`'s painted edge on its axis; one trunk `M 426 72 L 466 72` with the open arrowhead; `f1` ends at the far vertex
+    (398, 72), `f3` at the top vertex (412, 58), each with its arrowhead; 8 nodes drawn, as before; the guards `IBM Plex Mono` 11.5 px 400
+    `rgb(51, 65, 85)` on `rgba(255, 255, 255, 0.9)`; M1 and M2 JSON identical (counts DModel 2, DClass 8, DObject 17, DValue 36);
+    activating the viewpoint is one undo step of its own, rendering none.
+  - The run, Activity view: token on `work`, a 10.5 px disc with a 1.5 px white ring, 12.75 px from the painted left edge, vertically
+    centred, `rgb(245, 158, 11)`; `work`'s outline `2px rgb(14, 165, 233)` at −2 px, the wrapper's none, its border pixels cyan; no other
+    node marked. `d1` marked: its polygon stroked cyan 2 px, the dot at its centre. `i0` marked: the dot at the circle's centre. The
+    default view in the same run: the pill «1», the wrapper outline and halo, no dot.
+  - Decision read as an Action: two diamonds (the merge, the decision after `d1`), `f3` and `f4` leaving from its vertices, the trunk
+    with the arrowhead into it; the diamond on its trunk's line, 6 px below `d1`'s axis (the trunk shares the left side with `f2`).
+  - Undo/redo of that derivation: one undo removes it, one redo restores it, DemoFlowB identical. Save/load (`SaveManager.load` of the
+    serialised state, 859150 bytes): DemoFlowB identical, the merge diamond and the patched guards drawn again. No page error.
+  - Crops (`frontend/scripts/smoke/_tmp_actdec_crops/`, gitignored): `actdec_flowB_activityUml_600.png` (at rest),
+    `actdec_flowB_activityUml_run_work_600.png`, `actdec_flowB_activityUml_run_work_close.png`, `actdec_flowB_activityUml_run_d1_600.png`,
+    `actdec_flowB_activityUml_decision_as_action_600.png`, `actdec_flowB_side_by_side_target_600.png` (beside the target SVG).
+- **Read on the crops, not measured**: `f3` loops over `work` into the merge's top vertex; the two guards of `d1` still overlap each
+  other between `work` and `d1` (the layout ticket), the lower one's patch covering part of the upper one.

@@ -4501,6 +4501,59 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   opening on Statechart (UML), Petri net (classic), State machine, Activity (UML); DemoFlowB's nine flows open-headed, the
   guards `[model.[count] < 2]` and `[model.[count] >= 2]` the only labels); mutation bench 44/45, the survivor equivalent.
   Prompt P-2026-09-30-1552, commit `ca3e41a92`.
+- **R-VP-32** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Activity (UML) draws a view-only decision and merge where the engine chooses and merges.** Alfonso, 2026-09-30 19:30,
+  on the Activity view of DemoFlowB («questa è la notazione giusta», «ok su tutto, procedi»); target
+  `docs/design/activity_uml_target_2026-09-30.svg`. Source: `docs/discovery/discovery_2026-09-30_activity_decision_merge.md`
+  (the Layer Impact Report, the precondition, the measures). The precondition holds: a plain control flow is a transition
+  of its own and a step fires one (`netCompile.ts:325-330`, `netStep.ts:274`, R-SIM-7), so two exits of a plain node are a
+  choice and two entries a merge. (1) An action (a view of `activityUml` in the `node` role) with two or more entering
+  (leaving) control flows (views of `activityUml` in the `transition` role) gets a merge (decision) diamond; a decision,
+  a bar, an initial, a final and every other notation never do. (2) View-only: the members share one handle on the
+  action (`irJunctions.ts`, called at the end of `synthesizeObjectAsEdges`), each branch ends (starts) at the diamond's
+  vertex facing its other end, on today's router, with its own arrowhead; the member with the lowest id draws the trunk
+  (40 px from the handle point, the edge's arrowhead into the action for a merge, into the diamond for a decision) and
+  the diamond; no React Flow node, no model object, no IR key, no persisted value. (3) Keyed on the views' provenance
+  `ir.generated` (R-VP-21 (4)), so Activity viewpoints derived before this row draw it too. Lane choices, each adopted as
+  recommended, unattended (RC-21, the report's questions 1, 2, 9, 10): 28 px across (the target's polygon, not a 28 px
+  side turned 45°); white (`--color-inode-surface`), stroke and width the edge's (`var(--color-inode-name)`, 1 px) rather
+  than the prompt's `#334155`; the trunk on the members' majority side, a tie to the first member's in model order, a
+  decision on a node with a merge on another side; self-loops are no members; a user anchor on a member's junction end
+  is not honoured. Measured: DemoFlowB one diamond, the merge before `work` (`f1`, `f3`), none on `i0`, `d1`, the bars,
+  `fin`, `left`, `right`; the model's M1 and M2 JSON identical after rendering, a run, undo/redo and save/load; with
+  Decision read as an Action, the decision after `d1` with the two guards on its branches, its trunk sharing `d1`'s left
+  side with `f2` (6 px off the axis, a measured limit). Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-33** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The Activity guard is mono 11.5 px, slate-700, on a white patch; the expression verbatim.** Amends the guard style of
+  R-VP-26 (the C2 label style) as Alfonso asked on 2026-09-30 (the prompt's point 2). The document's `labels.style` is `{ fontFamily: 'mono', fontSize: 11.5, fontWeight:
+  'normal', color: 'var(--color-text-secondary)' }`; the edge of an Activity flow draws its label on
+  `var(--color-edge-label-bg)` (white 0.9 in light), 1 px 4 px of padding, no halo. `[` and `]` wrap the whole guard;
+  `model.[count]` stays as written (the JjEL state read, R-SIM-18). Report question 8, adopted as recommended, unattended.
+  Measured: the 81 document lists of the nine notations on the seven decoded exports, 79 identical to `30f3d8a81`'s, the 2
+  Activity lists with a guard equal to them with the style substituted; on the probe `IBM Plex Mono`, 11.5 px, 400,
+  `rgb(51, 65, 85)` on `rgba(255, 255, 255, 0.9)`, no text shadow. Viewpoints already derived keep their font and get the
+  patch. The two guards of DemoFlowB still overlap each other (the layout ticket). Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-34** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **On a node a derived viewpoint draws, the run's token is a dot inside the node and the marked node a 2 px cyan border.**
+  The run overlay (S15) is shared by every node of every viewpoint; the new drawing applies only where the node's view
+  carries `ir.generated`, so the default viewpoint and user views keep the corner pill and the outline byte for byte (the
+  report's question 5). In a derived view: nothing on an empty place (question 6); from one token an amber `#f59e0b` dot,
+  12 px with a 1.5 px ring in `--color-inode-surface`, no blur, centred 18 px from the painted left edge (12 px to its
+  edge), vertically centred, at the centre of a circle or a diamond; from two tokens the count beside it; the marked node
+  a 2 px `#0ea5e9` outline over its own border (the stroke for a form painted in SVG), the wrapper's outline and halo
+  off, not while selected; the enabled and pending rings and the σ card as before. Hex values as `.sim-active` has them
+  (question 7), no new token. Moves, during a run, every derived viewpoint of the nine notations; the MODELS demo runs in
+  the default viewpoint and does not move. Measured on the probe: the dot on `work` 10.5 px disc plus ring, 12.75 px from
+  the painted edge, amber, `work`'s border pixels cyan; the default view in the same run keeps the pill «1» and the
+  wrapper outline. Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-35** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Points 4 to 6 of the review change nothing in the code.** (1) The action border already paints the edge's ink at the
+  edge's width, `1px solid rgb(15, 23, 42)`, computed and in the pixels; `#334155` would make it lighter than the arrows
+  (question 3). (2) Fork and join are identical at rest; the join's «light border» is the run's dashed enabled ring on
+  whichever bar can fire (question 4). (3) The «2» binds to no element: in five run states no label reads 2, the two guard
+  labels overlap each other 12 px right of `work`. (4) The initial, the fork and the join sit off the actions' axis
+  because the stored positions are top-left aligned (`i0 (50,50)`, `work (470,50)`); the derivation writes no position
+  (the layout ticket). Prompt P-2026-09-30-1935.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
