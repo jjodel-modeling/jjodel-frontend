@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1625
 Chat: C-2026-09-30-1458
 Lane: Phase 1 then Phase 2 in cascade (critical zone possible; Layer Impact Report before any edit there; go-ahead RC-30 given at launch). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane derived-size-leak · 580f75377, 92d0d5f0a · non fuso: hard-stop, lane probe on 3081 (light) 12/17 on ee5cd0792 then 22/22, the four demo scenes 0 px, mutation bench 9/9, crops in frontend/scripts/smoke/_tmp_sizeleak_crops/ (gitignored), verifica visiva alla chat
 
 Worktree: `~/jjodel-w-sizeleak`, branch `derived-size-leak`, created from the trunk `alfonso-frontend-jjtl` at `ecbc0e92c`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-sizeleak`, branch `derived-size-leak`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
