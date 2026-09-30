@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-2143
 Chat: —
 Lane: full (merge of the trunk into the branch; 2 conflicts: `docs/decisions.md`, `docs/log-inbox/views.md` measured)
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane activity-decision-merge · 91333202f · verifica visiva passata 2026-09-30 (chat: the branch probe re-run on 91333202f, port 3094, _tmp_actdec_probe.ts 31/31, no page errors; visual GO by Alfonso; 8 gates green on 91333202f)
 
 Worktree: `/Users/alfonso/jjodel-w-actdec`, branch `activity-decision-merge`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-actdec`, branch `activity-decision-merge`, `git log -1` is the commit that adds this file (its parent `df33e5da8`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-09-30-2143 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
