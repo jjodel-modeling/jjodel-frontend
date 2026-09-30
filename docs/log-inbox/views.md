@@ -662,3 +662,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-09-30-2035
 **Detail**: docs/discovery/discovery_2026-09-30_canvas_export_broken.md
+
+## 2026-09-30 — merge: canvas-export-fix into alfonso-frontend-jjtl (P-2026-09-30-2205)
+**Prompt**: `claude_2026-09-30_2205_prompt_merge_canvas-export-fix.md`, a direct merge by `lane-run merge --direct`, no session: `canvas-export-fix` at `3c9a078ce` into `alfonso-frontend-jjtl`, merge base `31999a630`, 5 commits on the branch side.
+**Files touched**: merge `088e4c385`: 6 files from the branch side (`docs/discovery/discovery_2026-09-30_canvas_export_broken.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_2035_prompt_canvas_export_fix.md`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `frontend/src/services/CanvasExportService.ts`, `frontend/src/services/__tests__/CanvasExportService.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `088e4c385` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6020 tests in 242 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Checked by the chat: lane probe 154/154 on the four exports (M2, M1, derived IR M1), on-screen canvas 0 px change after the exports, M2 PNG viewed by the chat (nodes, edges, white background). Merge changes the export path only, no demo content.
+**Notes**: Rollback tag `pre-canvas-export-fix` on `120d97c01` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2205/result.json`.
+**Prompt document name**: 2026-09-30 22:05
