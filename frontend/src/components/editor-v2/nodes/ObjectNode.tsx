@@ -922,10 +922,14 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         const hasGeometricShape = defaultResizableForForm(shapeForm);
         const resolvedResizable = (irResolution.compiled.ir as VertexViewIR).resizable;
         const canResize = resolvedResizable ?? hasGeometricShape;
+        // P-2026-09-30-1935: a node a derived viewpoint draws (its view carries `generated`, R-VP-21 (4)) shows the run
+        // inside it: the token as a dot, the marked node's own outline in cyan (simNodeRunState.scss). The default
+        // viewpoint and user views keep the corner pill and the outline.
+        const derivedView = !!(irResolution.compiled.ir as VertexViewIR).generated;
         return (
             <>
             <div
-                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}${hasExplicitSize ? ' ir-sized' : ''}${isSimActiveNode ? ' sim-active' : ''}`}
+                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}${hasExplicitSize ? ' ir-sized' : ''}${isSimActiveNode ? ' sim-active' : ''}${isSimActiveNode && derivedView ? ' sim-active--derived' : ''}`}
                 data-viewid={irResolution.compiled.viewId}
             >
                 {isNodeResizable('objectNode', canResize) && (
@@ -976,7 +980,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     transform. */}
                 {inspectorEl}
             </div>
-            <SimNodeRunState objectId={simObjectId} />
+            <SimNodeRunState objectId={simObjectId} placement={derivedView ? 'inside' : undefined} />
             </>
         );
     }

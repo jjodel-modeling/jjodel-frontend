@@ -27,8 +27,9 @@
 import { type Edge, type Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
 import type { CompiledCrossPath, CompiledEdgeView } from './irTypes';
-import { resolveEdgeView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
+import { resolveEdgeView, resolveIRView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
 import { resolveTextStyle } from './irCompile';
+import { assignActivityJunctions, isActivityActionView, isActivityFlowView } from './irJunctions';
 
 type Idlookup = Record<string, any>;
 
@@ -80,6 +81,9 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             // declared, so an edge view without them decorates the edge as before.
             ...(cv.sourceEndText ? { irSourceEndText: String(cv.sourceEndText(ctx, evalId) ?? '') } : {}),
             ...(cv.targetEndText ? { irTargetEndText: String(cv.targetEndText(ctx, evalId) ?? '') } : {}),
+            // P-2026-09-30-1935: an Activity (UML) control flow, read from its view's provenance (irJunctions.ts): the
+            // junction pass groups these, UnifiedEdge puts their label on a patch. Written only then.
+            ...(isActivityFlowView(cv.ir) ? { irActivityFlow: true } : {}),
         },
     };
 }
@@ -310,5 +314,23 @@ export function synthesizeObjectAsEdges(
         placed.push(withHandles);
         return withHandles;
     });
-    return { nodes: outNodes, edges: [...outEdges, ...syntheticWithHandles], edgeObjects, edgeObjectDeps };
+    // P-2026-09-30-1935: the view-only decision and merge of Activity (UML) (irJunctions.ts). Only when a flow carries
+    // the flag, so every other viewpoint returns the edges above as they are. An action is an object whose vertex
+    // view is Activity's in the Node role, resolved once per vertex.
+    let junctioned = syntheticWithHandles;
+    if (syntheticWithHandles.some(e => (e.data as any)?.irActivityFlow)) {
+        const actionMemo = new Map<string, boolean>();
+        const isAction = (vertexId: string): boolean => {
+            const hit = actionMemo.get(vertexId);
+            if (hit !== undefined) return hit;
+            const objectId = objByVertex.get(vertexId);
+            const metaclassId = objectId ? idlookup[objectId]?.instanceof : undefined;
+            const view = objectId && typeof metaclassId === 'string' ? resolveIRView(objectId, metaclassId, index, readCtx, idlookup) : null;
+            const yes = isActivityActionView(view?.ir);
+            actionMemo.set(vertexId, yes);
+            return yes;
+        };
+        junctioned = assignActivityJunctions(syntheticWithHandles, outEdges, isAction);
+    }
+    return { nodes: outNodes, edges: [...outEdges, ...junctioned], edgeObjects, edgeObjectDeps };
 }

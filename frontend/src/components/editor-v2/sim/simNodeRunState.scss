@@ -98,3 +98,64 @@
 .mm-node.mm-object .sim-initial-marking {
     opacity: 0.45;
 }
+
+// P-2026-09-30-1935: a node a derived viewpoint draws (ObjectNode mounts the overlay with `placement="inside"` and adds
+// `sim-active--derived` beside `sim-active` while the node holds a token). The token is a 12 px dot inside the node,
+// its left edge 12 px from the painted left edge (the node box less the wrapper's 1 px), vertically centred, a 1.5 px
+// ring in the node's surface, no shadow; the count beside it from two. The hex values are `.sim-active`'s cyan
+// (simulation-panel.scss) and the run's amber.
+.sim-node-run--inside .sim-node-run__dot {
+    // The 12 px circle of the target drawing with its ring on the line: a 10.5 px disc and a 1.5 px spread ring (a
+    // border would be snapped to 1 px), centred 18 px from the painted edge, 19 from the node box.
+    position: absolute;
+    left: 13.75px;
+    top: 50%;
+    width: 10.5px;
+    height: 10.5px;
+    margin-top: -5.25px;
+    border-radius: 50%;
+    background: #f59e0b;
+    box-shadow: 0 0 0 1.5px var(--color-inode-surface);
+}
+
+.sim-node-run--inside .sim-node-run__count {
+    position: absolute;
+    left: 29px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-inode-name);
+    font-variant-numeric: tabular-nums;
+}
+
+// A circle (the initial, the final, a place) and a diamond (a decision) are too narrow for the left inset, or pointed
+// there: the dot sits at their centre.
+.react-flow__node:has(> .mm-node > .ir-node-content:is(.ir-shape--circle, .ir-shape--diamond)) > .sim-node-run--inside {
+    .sim-node-run__dot { left: calc(50% - 5.25px); }
+    .sim-node-run__count { left: calc(50% + 10px); }
+}
+
+// The marked node: a 2 px cyan border on its own outline, in place of the wrapper's outline and halo. An inset outline
+// covers the 1 px border without moving the layout; a form painted in SVG strokes its outline instead. Selection keeps
+// its own style (irStyle.ts), so none of this applies to a selected node.
+.mm-node.sim-active.sim-active--derived {
+    outline: none;
+    box-shadow: none;
+}
+
+.mm-node.sim-active--derived:not(.selected) > .ir-node-content {
+    outline: 2px solid #0ea5e9;
+    outline-offset: -2px;
+}
+
+.mm-node.sim-active--derived:not(.selected) > .ir-node-content:is(.ir-shape--diamond, .ir-shape--hexagon, .ir-shape--parallelogram, .ir-shape--cloud, .ir-shape--cylinder) {
+    outline: none;
+}
+
+.mm-node.sim-active--derived:not(.selected) > .ir-node-content > svg:not(.ir-marker-svg) > :is(polygon, path):not(.ir-sel-ring):not(.ir-sel-band) {
+    stroke: #0ea5e9;
+    stroke-width: 2px;
+}

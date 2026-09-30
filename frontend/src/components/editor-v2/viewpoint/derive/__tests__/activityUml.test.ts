@@ -126,7 +126,8 @@ const INK = 'var(--color-inode-name)';
 const QUIET = 'var(--color-inode-quiet)';
 const SURFACE = 'var(--color-inode-surface)';
 const INK_BORDER = { color: INK, width: 1, style: 'solid' };
-const LABEL_STYLE = { fontSize: 12, fontWeight: 'medium', color: QUIET };
+/** The guard of Activity (UML), P-2026-09-30-1935: mono 11.5 px, normal, slate-700. */
+const GUARD_STYLE = { fontFamily: 'mono', fontSize: 11.5, fontWeight: 'normal', color: 'var(--color-text-secondary)' };
 
 // ---------------------------------------------------------------------------
 // The notation and its table
@@ -315,9 +316,10 @@ describe('Activity (UML) — the documents on DemoFlowB', () => {
         expect(irOf(views, 'ControlFlow', 0).predicate).toBeUndefined();
         expect(irOf(views, 'ControlFlow', 0).priority).toBeUndefined();
         const guarded = irOf(views, 'ControlFlow', 1);
+        // P-2026-09-30-1935: the guard in mono 11.5 px, normal, slate-700 (the white patch is the edge's, irActivityRender.test.ts).
         expect(guarded.edge).toEqual({
             ...base,
-            labels: { template: [{ from: 'literal', text: '[' }, { from: 'path', expr: '$guard.value' }, { from: 'literal', text: ']' }], style: LABEL_STYLE },
+            labels: { template: [{ from: 'literal', text: '[' }, { from: 'path', expr: '$guard.value' }, { from: 'literal', text: ']' }], style: GUARD_STYLE },
         });
         expect(guarded.predicate).toEqual({ op: 'exists', path: '$guard.value' });
         expect(guarded.priority).toBe(1);

@@ -779,6 +779,11 @@ const ACTIVITY_BAR_SIZE = { width: 5, height: 120 } as const;
 /** The action: 44 px high, its width from its name; radius 14, clamped at render to half the height (P-2026-09-30-1720). */
 const ACTIVITY_ACTION_SIZE = { height: 44 } as const;
 const ACTIVITY_ACTION_RADIUS = 14;
+/**
+ * The guard (P-2026-09-30-1935): mono 11.5 px, normal, slate-700 (`--color-text-secondary`); the edge draws it on a white
+ * patch (UnifiedEdge, the Activity flag). The expression is verbatim: `model.[count]` is JjEL's state read, not a bracket.
+ */
+const ACTIVITY_GUARD_STYLE = (): TextStyle => ({ fontFamily: 'mono', fontSize: 11.5, fontWeight: 'normal', color: 'var(--color-text-secondary)' });
 
 /**
  * Activity (UML), P-2026-09-30-1552 (R-VP-26, docs/discovery/discovery_2026-09-30_activity_uml_notation.md): the
@@ -793,8 +798,8 @@ const ACTIVITY_ACTION_RADIUS = 14;
  *   (14 px) in the border colour, no name.
  * - A control flow (the Transition role): the Flowchart's endpoints on today's router, 1 px in the ink, the open
  *   arrowhead (R-VP-25), no label; where its guard is set, a second document with priority 1 draws it as
- *   `[guard]`, verbatim, in the C2 label style. A template drops only the literal before an empty value, so the
- *   bracket needs its own document, not a template on the plain one.
+ *   `[guard]`, verbatim, in mono 11.5 px (P-2026-09-30-1935; the C2 label style before). A template drops only
+ *   the literal before an empty value, so the bracket needs its own document, not a template on the plain one.
  * - Every other document (a class with no role) is the Flowchart's.
  */
 export function deriveActivityViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
@@ -818,7 +823,7 @@ export function deriveActivityViewpointIRs(lookup: Lookup, metamodelId: string, 
             const bracketed = base();
             bracketed.labels = {
                 template: [{ from: 'literal', text: '[' }, { from: 'path', expr: path(guard.name) }, { from: 'literal', text: ']' }],
-                style: EDGE_LABEL_STYLE(),
+                style: ACTIVITY_GUARD_STYLE(),
             };
             out.push({
                 ...v,
