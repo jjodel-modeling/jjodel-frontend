@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-2022
 Chat: C-2026-09-30-1815
 Lane: full (persisted field extended, panel UI, palette algorithm; Phase 1 then Phase 2 in cascade; critical zone only if the report proves it necessary, Layer Impact Report first, go-ahead RC-30 given at launch). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane viewpoint-colors-pastel · f61fc0265, feefa9214 · non fuso: hard-stop, lane probe on 3137 (light) 60/60, toggle off and the four demo scenes byte-identical to 31999a630, mutation bench 55/59, crops in frontend/scripts/smoke/_tmp_vppastel_crops/vpp_after3_* (gitignored), verifica visiva alla chat
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Corregge: 2026-09-30 18:15

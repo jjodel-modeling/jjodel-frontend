@@ -139,3 +139,36 @@ Edges would be cheap to colour by source or target (ticket, §6 of the closing r
   - `__tests__/metaclassPalette.test.ts:1-60` and its test titles
   - `__tests__/viewpointThemeHint.test.ts:1-60`
   - `~/jjodel-w-vpcolor/frontend/scripts/smoke/_tmp_vpcolor_common.ts:1-150` (probe kit, read only)
+
+## Addendum 2026-09-30 (Phase 2, measured on `feefa9214`)
+[M] throughout. The lane probe is gitignored `frontend/scripts/smoke/_tmp_vppastel_probe.ts`, run by `lane-run probe` on 3137 in light theme, log `~/.jjodel-lanes/P-2026-09-30-2022/probe-_tmp_vppastel_probe.log`.
+- **Baseline.** The `before` run used HEAD's versions of the four changed source files. They are the code of `31999a630`: `git diff --stat 31999a630 HEAD -- frontend/` is empty. The lane's files were saved first and restored afterwards (`cmp` identical).
+- **Final run `after3`: 60/60.**
+  - 0 px against `31999a630`, all byte-identical: the four default scenes (twice), DemoESM under a plain viewpoint never enabled, DemoFlowB under its derived viewpoint, the flowB control, and both scenes after toggle off.
+  - The comparison masks the Jodie robot button (`.jodie-minimized`), whose animation made `after2` differ by 1704 px in that rectangle alone. In `after3` the mask was not needed.
+- **DemoESM, native.**
+  - Fills: Initial `#f3dfcb`, State `#cbdef0`, Terminal `#f3cbcb`, Transition `#ededc0`, Event `#b2b2f1`.
+  - Text is black on every node, 10.53:1 to 17.48:1; the border is the L 55 shade; boxes move 0 px.
+  - Four connected class pairs, all with different fills: Initial–State and State–Terminal by `extends` (1 node pair each), State–Transition by `transitions`/`nextState` (4 node pairs), Event–Transition by `event` (12 node pairs).
+- **DemoFlowB, IR.**
+  - No two nodes have connected metaclasses: InitialNode, Activity, Decision, Fork, Join and FinalNode meet only through ActivityNode, which has no instance, and ControlFlow, which is drawn as edges.
+  - The six node classes have six distinct fills.
+- **Panel.**
+  - The labels read Name, Type, Color by metaclass, Base color, Border, Metaclass color. The select is 160×36 and the grid 116×36 beside it, top-aligned.
+  - The menu lists 5 metamodels in groups, each option with the colour the table computes.
+  - An override is written under the class id, and its nodes paint it; the other nodes equal the resolver, and pairs still differ.
+  - «Reset» and «Reset all» remove the key and restore every automatic fill.
+  - A 45-character name is clipped (scrollWidth 334 against clientWidth 81), and nothing in the panel moves.
+  - Undo and redo are one step each. The map survives the save serializer, `JSON.parse` and `VersionFixer.update`.
+- **Two defects found by the probe and fixed before the commit** (`properties.scss`):
+  1. `_form-system.scss` `.jj-select { padding-bottom: 20px; }` made the control 56 px tall.
+  2. Bootstrap's reboot `button:focus:not(:focus-visible) { outline: 0 }` (`node_modules/bootstrap/scss/_reboot.scss:400`) dropped the current-swatch outline right after the click that set it.
+  - The inner search input's global chrome (two bars beside the caret) is also undone locally. The rail's own rule (`viewapplyto.scss:816`) is scoped to `.jj-field`.
+- **Mutation bench 55/59** (gitignored `_tmp_vppastel_bench.mjs`). The four survivors are equivalent:
+  - count 0 already yields `[]`;
+  - a self-edge is never coloured before its own turn;
+  - the missing-class filter changes only key order;
+  - a non-model table row needs a non-model with `packages`.
+  - The first run gave 53/59. The two real survivors (an exact hue tie for the seed, and a non-swatch override's hue) are now killed by tests using `#fcbd00` (45.000°) and `#0000ff`.
+- **Resolver cost** (gitignored `_tmp_vppastel_perf.ts`): 5.7 µs a call at 5 classes, 28.6 µs at 30 classes and 60 references, 60.9 µs at 60 and 150. No memo.
+- **Perceptual item for the GO.** An override re-runs the greedy around it. In DemoFlowB, overriding Activity moved the fills of the other five node classes, all neighbours of ActivityNode.
