@@ -299,10 +299,12 @@ describe('Activity (UML) — the documents on DemoFlowB', () => {
         }
     });
 
-    it('the activity final: a bull\'s-eye, a white circle 24 px in the ink with the dot, no name', () => {
+    it('the activity final: a bull\'s-eye, a white circle 24 px in the ink with the large dot (14 px), no name', () => {
         const ir = irOf(views, 'FinalNode');
-        expect(ir.shape).toEqual({ form: 'circle', fill: SURFACE, border: INK_BORDER, marker: 'dot', labels: [] });
+        // P-2026-09-30-1720: dot-large, 14 px on the 24 px circle; the Flowchart's own bull's-eye keeps dot.
+        expect(ir.shape).toEqual({ form: 'circle', fill: SURFACE, border: INK_BORDER, marker: 'dot-large', labels: [] });
         expect(ir.defaultSize).toEqual({ width: 24, height: 24 });
+        expect(irOf(flowchart, 'FinalNode').shape.marker).toBe('dot');
     });
 
     it('a control flow: the Flowchart\'s endpoints and router, 1 px ink, the open arrowhead, no label; a guard in brackets', () => {
@@ -382,7 +384,7 @@ describe('Activity (UML) — roles on other metamodels', () => {
         const table = { 'AF.Node': 'node', 'AF.Done': 'terminal', 'AF.Stop': 'activityFinal', 'AF.Flow': 'transition' } as ClassRoles;
         const views = derivedDocuments(mm.lookup, mm.id, { notation: 'activityUml', classRoles: table });
         expect(bare(irOf(views, 'Done')).shape).toEqual(bare(irOf(views, 'Stop')).shape);
-        expect(irOf(views, 'Stop').shape.marker).toBe('dot');
+        expect(irOf(views, 'Stop').shape.marker).toBe('dot-large');
         // The size too: the Flowchart's own bull's-eye has the same shape and no default size.
         for (const name of ['Done', 'Stop']) expect(irOf(views, name).defaultSize, name).toEqual({ width: 24, height: 24 });
     });

@@ -765,19 +765,18 @@ export function activitySignalRole(className: string): 'initial' | 'activityFina
     return ACTIVITY_SIGNALS.find(g => words.some(w => g.words.has(w)))?.role;
 }
 
-/** The initial node: a filled dot of 20 px. Every authored axis is floored at 24 px today (nodes/nodeSizing.ts `defaultBoxFor`). */
+/** The initial node: a filled dot of 20 px, drawn as declared (nodes/nodeSizing.ts `defaultBoxFor`, P-2026-09-30-1720). */
 const ACTIVITY_INITIAL_SIZE = { width: 20, height: 20 } as const;
-/** The activity final: a bull's-eye of 24 px, its inner disc the registry's `dot`. */
+/** The activity final: a bull's-eye of 24 px, its inner disc the registry's `dot-large`, 14 px (P-2026-09-30-1720). */
 const ACTIVITY_FINAL_SIZE = { width: 24, height: 24 } as const;
 /** Decision and merge: a hollow diamond of 36 px. */
 const ACTIVITY_DECISION_SIZE = { width: 36, height: 36 } as const;
 /**
  * Fork and join: a bar 5 px thick and 120 long. The IR has no orientation and `defaultSize` is per view, so the bar
- * is upright for every fork and join (the demo's rows run left to right); it draws 24 px thick until the floor above
- * is lifted for the bar.
+ * is upright for every fork and join (the demo's rows run left to right). Drawn as declared since P-2026-09-30-1720.
  */
 const ACTIVITY_BAR_SIZE = { width: 5, height: 120 } as const;
-/** The action: 44 px high, its width from its name; radius 14, clamped at render to a quarter of the height. */
+/** The action: 44 px high, its width from its name; radius 14, clamped at render to half the height (P-2026-09-30-1720). */
 const ACTIVITY_ACTION_SIZE = { height: 44 } as const;
 const ACTIVITY_ACTION_RADIUS = 14;
 
@@ -790,8 +789,8 @@ const ACTIVITY_ACTION_RADIUS = 14;
  *   44 px high, its name centred in 13 px 500 in the ink, no compartment.
  * - A decision (the notation's own `decision` role): a hollow diamond, 36 px, no name.
  * - Fork and join: a filled bar in the ink, upright, 5 by 120 px, no name.
- * - The Terminal and an Activity final: a bull's-eye, a white circle of 24 px, 1 px in the ink, the `dot` marker in the
- *   border colour, no name.
+ * - The Terminal and an Activity final: a bull's-eye, a white circle of 24 px, 1 px in the ink, the `dot-large` marker
+ *   (14 px) in the border colour, no name.
  * - A control flow (the Transition role): the Flowchart's endpoints on today's router, 1 px in the ink, the open
  *   arrowhead (R-VP-25), no label; where its guard is set, a second document with priority 1 draws it as
  *   `[guard]`, verbatim, in the C2 label style. A template drops only the literal before an empty value, so the
@@ -834,7 +833,7 @@ export function deriveActivityViewpointIRs(lookup: Lookup, metamodelId: string, 
             shape = { form: 'circle', fill: NAME_INK, border: ink(), labels: [] };
             size = ACTIVITY_INITIAL_SIZE;
         } else if (role === 'terminal' || role === 'activityFinal') {
-            shape = { form: 'circle', fill: SURFACE, border: ink(), marker: 'dot', labels: [] };
+            shape = { form: 'circle', fill: SURFACE, border: ink(), marker: 'dot-large', labels: [] };
             size = ACTIVITY_FINAL_SIZE;
         } else if (role === 'decision') {
             shape = { form: 'diamond', fill: SURFACE, border: ink(), labels: [] };
@@ -868,8 +867,7 @@ const TOKEN_MARKERS: readonly string[] = ['dot', 'dots-2', 'dots-3', 'dots-4'];
 const CLASSIC_PLACE_SIZE = { width: 44, height: 44 } as const;
 /**
  * The transition of mockup A: an upright bar 10×44. The IR has no orientation, so the bar is upright for
- * every transition; `defaultSize` is floored at 24 px per axis (nodes/nodeSizing.ts `defaultBoxFor`), so it
- * draws 24×44 until that floor is lifted for the bar.
+ * every transition; drawn as declared (nodes/nodeSizing.ts `defaultBoxFor`, P-2026-09-30-1720).
  */
 const CLASSIC_BAR_SIZE = { width: 10, height: 44 } as const;
 

@@ -179,13 +179,13 @@ describe('Activity (UML) on DemoFlowB: the declared sizes draw as declared', () 
         expect(nodeBox(irOf(views, 'InitialNode'))).toEqual({ w: 20, h: 20 });
     });
 
-    it('the bull\'s-eye: 24x24; the dot-large row gives it a 14 px disc', () => {
+    it('the bull\'s-eye: 24x24, its own marker a 14 px disc', () => {
         const ir = irOf(views, 'FinalNode');
         const box = nodeBox(ir);
         expect(box).toEqual({ w: 24, h: 24 });
         // The marker layer spans the padding box: painted less the circle's own border.
         const markerBox = painted(box).w - 2 * ir.shape.border.width;
-        const r = Number(/A([\d.]+),/.exec(getMarkerDef('dot-large')!.paths[0].d)![1]);
+        const r = Number(/A([\d.]+),/.exec(getMarkerDef(ir.shape.marker)!.paths[0].d)![1]);
         expect(2 * r / 100 * markerBox).toBeCloseTo(14, 6);
     });
 
