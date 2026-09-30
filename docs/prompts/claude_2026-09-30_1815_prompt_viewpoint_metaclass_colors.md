@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1815
 Chat: C-2026-09-30-1815
 Lane: full (new persisted viewpoint field, more than three files, render path of nodes; Phase 1 then Phase 2 in cascade; critical zone only if the report proves it necessary, Layer Impact Report first, go-ahead RC-30 given at launch). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane viewpoint-metaclass-colors · c29280962, fa0b20de1 · non fuso: hard-stop, lane probe on 3091 (light) 51/51, the four demo scenes 0 px, mutation bench 29/31 (two equivalents), crops in frontend/scripts/smoke/_tmp_vpcolor_crops/ (gitignored), verifica visiva alla chat
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

@@ -4260,6 +4260,59 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   edges with no authored colour (SM, ESM, activity) take the new ink, 2.34:1 to 16.3:1, and the ESM derived `—` 1.48:1
   to 4.76:1; derived Petri views unchanged (`#0f172a` before and after); `--node-header-text` also colours the classic
   object view's header. Dark theme untouched. Prompt P-2026-09-29-1332.
+- **R-VP-19** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The viewpoint panel carries «Color by metaclass», off by default, with «Base color» and «Border» under it.**
+  Chat decision 1 of P-2026-09-30-1815 (RC-25). The switch reuses `.wp-toggle` and `.wp-switch` of
+  `properties.scss`, which were styled and used by no component. Base color is a native `<input type="color">` framed
+  as `.wp-field__input`, 48×36, with its hex beside it in 11 px mono. Border is a checkbox, on by default. The two controls
+  are hidden while off and keep their values across off and on. `readOnly` disables all three. Measured by the lane probe
+  on 3091: the labels are `Name, Type, Color by metaclass, Base color, Border`; off then on then off keeps `#f59e0b` and
+  Border. Commit `fa0b20de1`.
+- **R-VP-20** (2026-09-30, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Persisted as one optional field `DViewElement.metaclassColoring?: { enabled; baseColor; border }`; absent = off.**
+  Chat decision 2. The field is declared on `DViewElement` (`view.tsx`), beside `formTheme` and `formPalette`, for the
+  reason written there. It is written whole through the L proxy's default setter, as Name is: one `SetFieldAction`, one
+  undo step. Off writes `enabled: false`, never a delete. No VersionFixer migration. Rejected: three flat fields; keys in
+  `_state`, which is open to user code and `clearState`, and whose `'-='` removal is not undone. Verified: setter,
+  sanitize and `isPointer` path, reducer replace, undo and redo deltas, save, load, VersionFixer, `updateDefaultView`,
+  duplicate, derive, recompile triggers, and Babel class-field emission; falsified by pointer coercion, a key
+  whitelist, a regeneration overwriting a written viewpoint, or a recompile on a generic field write — HOLDS (second
+  agent, RC-27). Its caveat: writes less than 450 ms apart merge into one undo step, first-wins (`U.tsx:896-905`), an
+  older bug that three flat fields would share. Measured: undo and redo of one Border write, and the field through the
+  save serializer, `JSON.parse` and `VersionFixer.update` unchanged. Commit `fa0b20de1`.
+- **R-VP-21** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The palette turns the base hue by i × 137.508° per metaclass, in metamodel order; colour 0 is the base as picked.**
+  Chat decision 3. `metaclassPalette(base, count)` in `view/viewPoint/metaclassPalette.ts` is pure and hand-written.
+  Colours 1..n-1 keep the base saturation and lightness, clamped to S 40..80 % and L 40..72 %. The lane chose that the
+  clamps do not touch colour 0: the default `#0ea5e9` has S 89 %. An invalid hex falls back to `#0ea5e9`. The index is
+  the class's position in a depth-first walk: `DModel.packages`, then in each package its `classes` followed by its
+  `subpackages`. Every class takes an index, abstract ones included. Colour i does not depend on the count. Mutation bench
+  29/31: the survivors are the golden angle 137.5, equivalent within hex rounding, and a tie that no 24-bit hex reaches.
+- **R-VP-22** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Text is black or white by WCAG 2.x contrast, a tie goes to black; the border is the fill less 25 points of
+  lightness, floor 10 %; Border off paints it transparent, keeping its width.** Chat decisions 4 and 5.
+  - The lane chose to override the border COLOUR only, so an authored 3 px double border keeps its width. Markers are
+    drawn in the text colour. Outside labels, which sit on the canvas and not on the fill, keep their ink. Chips and ref
+    pills keep their own ground.
+  - Measured, native DemoESM and IR DemoFlowB: text contrast 4.73:1 to 12.12:1, always the higher of the two. The
+    border stays 1 px, `rgba(0, 0, 0, 0)` with Border off. Node boxes change by 0 px in every state.
+  - A selected native node keeps the selection's `#e0f7fa` header, which the prompt says not to touch. A white-text
+    node's name then reads 1.11:1 until deselected (`locked`/`coin`-class fills). It is left for the visual GO.
+- **R-VP-23** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Only the active viewpoint's setting colours M1 object nodes, in both paint paths; toggle off is 0 px.**
+  Chat decision 6.
+  - The paint paths: `resolveMetaclassColoring` reads `state.viewpoint`. `ObjectNode` sets the `--color-inode-*`
+    tokens inline on the native rectangle and pill, and passes the new optional `colorOverride` prop to `IRNodeContent`
+    (`viewpoint/ir/`, CLAUDE.md §3.1, Layer Impact Report in the discovery §6). No change to `irTypes`, `irValidate`,
+    `irCompile` or any edge file.
+  - Exclusions: orphan and not-rendered nodes are not coloured. Row views dispatched to `IRRow` keep an authored colour;
+    the derivation on the trunk emits none.
+  - Measured on 3091, light: toggle off repaints every node as before, 0 px on the canvas. Another viewpoint's switch
+    colours nothing, and the default scenes are 0 px left of the rail. For DemoFlowB the comparison is against a
+    same-run control with the bag and a derived visit, the switch never on. That control is itself 140728 px from the
+    before run (the Simulation chip of the bag, an edge re-route). The switch was never on there and the resolver
+    answered null; no run on the old code attributes it.
+  - Report `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md` (`c29280962`).
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)

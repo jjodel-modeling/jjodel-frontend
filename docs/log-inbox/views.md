@@ -506,3 +506,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: M1 link delete fix c820dbb51 (canvasToJjom deleteM1Link), 14 tests, mutation 12/12, 8 gates green on 6ecf05100; GO by the chat C-2026-09-30-1458, unattended under the critical-zone standing go-ahead
 **Notes**: Rollback tag `pre-reference-delete` on `c6243eed9` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1736/result.json`.
 **Prompt document name**: 2026-09-30 17:36
+
+## 2026-09-30 — feat(views): viewpoint option «Color by metaclass», palette, text contrast, border on/off (P-2026-09-30-1815)
+**Prompt**: `claude_2026-09-30_1815_prompt_viewpoint_metaclass_colors.md`, Phase 1 then 2 in cascade on `~/jjodel-w-vpcolor` branch `viewpoint-metaclass-colors` (RC-30 go-ahead). A switch in the viewpoint panel, with Base color and Border; M1 object nodes filled per metaclass from a palette of the base, black or white text by contrast, border shade or none.
+**Files touched**: docs `c29280962`: `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md` (new, Layer Impact Report §6). Code `fa0b20de1`: `frontend/src/view/viewPoint/metaclassPalette.ts` (new), `frontend/src/view/viewPoint/__tests__/metaclassPalette.test.ts` (new), `frontend/src/view/viewElement/view.tsx` (optional field), `ViewpointProperties.tsx`, `properties.scss`, `editor-v2/nodes/ObjectNode.tsx`, `editor-v2/viewpoint/ir/IRNodeContent.tsx`. This commit: `docs/decisions.md` (R-VP-19..23), this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `fa0b20de1`: `npx tsc --noEmit` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` (GOAHEAD unset) 5974 passed, 0 failed, the 9 known files red at import; `npm run build` exit 0. metaclassPalette 30/30; mutation bench 29/31 killed (commit body). Lane probe on 3091, light: 51/51, the four demo scenes 0 px from the before run on the untouched tree.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3091 (light) 51/51: DemoESM native and DemoFlowB derived (IR), toggle off/on/#f59e0b/border off, fill, text, stroke per node against the resolver, boxes 0 px, toggle off 0 px; crops `frontend/scripts/smoke/_tmp_vpcolor_crops/vpc_after_*_600.png`
+**Notes**: «Fresh viewpoint» tested on a fixture: `Constructors` does not import under vitest (`window is not defined`); the probe runs the live save serializer, JSON.parse and VersionFixer.update. RC-27 second agent: HOLDS (R-VP-20). A selected white-text native node reads its name 1.11:1 on the untouched #e0f7fa selection header (R-VP-22, for the GO). Scratch files in /tmp (gate outputs).
+**Prompt document name**: 2026-09-30 18:15
