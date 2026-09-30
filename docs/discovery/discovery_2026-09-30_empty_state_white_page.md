@@ -186,3 +186,26 @@ opened","spinner":false}`, zero page errors. The existing path of `0609e9793` co
 `frontend/scripts/smoke/_tmp_emptystate_repro.ts` and `_tmp_emptystate_try.ts` (gitignored), logs in
 `~/.jjodel-lanes/P-2026-09-30-1540/`. Repro: 6 PASS lines, reproduction arms included. Try, before the fix:
 5 FAILURE(S) out of 7 checks, the two green ones being the untouched stored record and arm C.
+
+## Addendum 2026-09-30, Phase 2 (`28a98534e`)
+
+What Phase 2 changed against §0, and what it measured that this report did not cover.
+
+- **The storage-boundary keep is on `favorite` and `updateTags` only**, not on `Offline.save` and `import`. The
+  refusal in `ProjectsApi.save` is the only way into `Offline.save`, and `import` writes the fresh id of
+  `duplicateProject`: no test could kill a guard on either (declared intent, CLAUDE.md §5), so they were dropped.
+- **The `Try` fix is a guard boundary, not a catch counter.** `TryFallbackGuard` holds the full fallback and renders
+  `visibleMessage` when it throws, so the error stops below `TryComponent`. A counter read in `render` would have
+  misfired: React retries a render-phase error, the child threw 5 times in arm A (`childRenders 5`), each a new
+  `Error`. Measured after: arm A `componentDidCatch` 1, max depth 0, the plain message in the container.
+- **A third consumer of the unfiltered list.** With the `getOne` guard switched off and the filters on, the damaged
+  record opens into `TypeError: object is not iterable` at `ConfiguratorTab.tsx` (the memo over
+  `(project as any)?.classes`, `:75-77`), which reads `LProject.classes` over `get_metamodels` (`classes.ts:3406`).
+  `Try` catches it once and shows the plain message; the page is not white (`#root` 1 child). Out of DOVE (core,
+  rule 5): a ticket. Per contrasto on the same bench: filters off, 4 `reading 'id'`/`'name'` throws; filters on, 0.
+- **Probes after the fix, 3061, light:** damaged record → error screen with the details line, 0 catches, stored
+  record untouched (crop `frontend/scripts/smoke/_tmp_emptystate_crops/_tmp_after_damaged_crop.png`); undecompressable
+  state → error screen; the repro's favorite keeps 21749 chars and the project reopens into the editor, 0 page errors;
+  the four scenes import, open both tabs, Cmd+S, favorite, reload intact, 0 page errors, 0 catches (45/45); State
+  machine runs the §2.1 markings to `Terminated` and reads `State machine · Checkable`. The Petri, ESM and Flow B runs
+  through the panel were not re-scripted: no current walk probe survives on disk (the simtoggle tree is gone).
