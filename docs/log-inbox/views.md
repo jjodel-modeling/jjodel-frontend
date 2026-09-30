@@ -506,3 +506,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: M1 link delete fix c820dbb51 (canvasToJjom deleteM1Link), 14 tests, mutation 12/12, 8 gates green on 6ecf05100; GO by the chat C-2026-09-30-1458, unattended under the critical-zone standing go-ahead
 **Notes**: Rollback tag `pre-reference-delete` on `c6243eed9` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-1736/result.json`.
 **Prompt document name**: 2026-09-30 17:36
+
+## 2026-09-30 — fix(editor-v2): the selection ring of an IR node is no longer clipped (P-2026-09-30-1808)
+**Prompt**: `claude_2026-09-30_1808_prompt_selection_outline.md`, fast lane, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-selring` branch `selection-outline`. A selected IR-rendered node (DemoFlowB `work`, derived viewpoint) showed its handles but no selection outline, only a faint halo.
+**Files touched**: report `ca2cfb8a8`: `docs/discovery/discovery_2026-09-30_selection_outline.md`. Code `27a6b2d69`: `frontend/src/components/editor-v2/nodes/instanceNode.scss` (one rule), `frontend/src/components/editor-v2/nodes/__tests__/irSelectionRing.test.ts` (new). This commit: this entry, the report's addendum, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `27a6b2d69`: `npm run typecheck` exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 5949 passed, 0 failed, the 9 §17 files red at import; `npm run build` exit 0. Test red 2/5 before the rule, 5/5 after; mutation bench 5/5 killed (commit body). Probe on 3083, light: 24/24, the unselected panes 0 px from the `before` run on `c4846df0e`, node box 0 px.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 or §3.2 file touched; `irStyle.ts` read, not edited)
+**Smoke visivo**: pending — chat (RC-23); lane probe 24/24, crops in `frontend/scripts/smoke/_tmp_selring_crops/` (gitignored)
+**Notes**: Root cause: `instanceNode.scss:27` (`overflow: hidden`) clipped the ring `irStyle.ts:149` draws outside `.ir-node-content`. Adopted unattended (RC-21, report §0): the IR ring takes the class card token, `rgba(56,189,248,0.55)`, not `#0ea5e9`, which no native node paints; moving the token is Alfonso's call. Closes the 2026-09-29 ticket «IR selection ring reads clipped by the node wrapper».
+**Prompt document name**: 2026-09-30 18:08
+
+**Ticket** (low, not a ticket of its own): `irStyle.ts:165` (`.mm-node.drop-target > .ir-node-content`) never applies on the canvas, because only `ClassNode.tsx:478` and `EnumNode.tsx:154` emit `drop-target`, and neither mounts `.ir-node-content`. Left in place (Rule 9).
