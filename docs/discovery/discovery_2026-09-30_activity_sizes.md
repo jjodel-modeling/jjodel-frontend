@@ -93,3 +93,37 @@ R-VP-15..26, `docs/discovery/discovery_2026-09-30_activity_uml_notation.md` §0 
 `:740-990`, `nodes/ObjectNode.tsx:900-940`, `components/DynamicHandles.tsx:345-365`, `authoring/VertexAuthoringPanel.tsx:100-125`,
 `:450-475`, `:905-940`; the tests `nodes/__tests__/nodeSizing.test.ts`, `ir/__tests__/markerRegistry.test.ts:1-120`,
 `ir/__tests__/shapeRegistry.test.ts` (grep of the clamp), `derive/__tests__/activityUml.test.ts:1-200`; `scripts/smoke/_tmp_actuml_dump.ts`.
+
+## 6. Addendum 2026-09-30, Phase 2 (measured on `3805796be`)
+- **Adopted as recommended** (RC-21, unattended): questions 1 and 3 as written; question 2 in part, the row `dot-large` in
+  `markerRegistry.ts`. Its use by the Activity final (`viewpointDerivation.ts:837`, `activityUml.test.ts`) is outside the DOVE and
+  is not done: asked at the hard stop. The derivation's comments that still speak of the 24 px floor
+  (`viewpointDerivation.ts:768`, `:775-777`, `:871-873`) are in the same file and wait with it.
+- **Code** `3805796be`: `nodeSizing.ts` (`defaultBoxFor` without the floor), `shapeRegistry.ts` (`clampCornerRadius` at half),
+  `markerRegistry.ts` (`dot-large`, radius 35), and their three test files. No other file.
+- **Tests first** [M]: 9 of 101 red on the unchanged source (`_tmp_actsize_red.log`): the two floor unit tests, fork and join,
+  initial, bull's-eye (no `dot-large`), action radius, classic bar, the clamp unit test, the `dot-large` row. 101/101 after.
+- **Gates** [M]: typecheck exit 2, 14 errors, the §17 set by file and code; `npx vitest run` 6213 tests (6201 + 12), 6209 passed,
+  the 9 known files red at import and 4 in `criticalZone.test.ts` from the lane's go-ahead variable (70/70 with it unset);
+  `npm run build` exit 0.
+- **Mutation bench** [M] (`_tmp_actsize_bench.mjs`, 16 mutants on the three sources): **16/16** killed, controls 101/101 before
+  and after; the floor back at 24, 12 or 6, the axes swapped, the width ignored, the resize floor moved, the clamp at a quarter,
+  a third, none or the longer side, `dot-large` dropped, at radius 32, hollow, off-centre, and `dot` enlarged.
+- **Lane probe** [M] (`lane-run probe`, 3087, light, 1600×1000, DPR 2; `_tmp_actsize_probe.ts`, log
+  `~/.jjodel-lanes/P-2026-09-30-1720/probe-_tmp_actsize_probe.log`) **19/19**:
+  - Default scenes `first`: sm, petri, esm, flowB 0 px left of the rail from the Activity lane's shots at `ca3e41a92` (code of
+    `21345bbba`), 462 px each inside the animated Jodie launcher's box, masked as in earlier lanes; control 348100 px.
+  - DemoFlowB as Activity (UML), flow px: fork and join node 5×120, painted 3×118 (was 24×120, 22×118); the initial node 20×20,
+    painted 18 (was 24, 22); the bull's-eye node 24×24, painted 22, its `dot` disc 6.4 px on a 20 px layer; actions node 142×44,
+    radius `14px` (was 10.5); the decision 36×36, unchanged; nine flows 1 px ink.
+  - DemoPetri as Petri net (classic): t1, t2, t3 node 10×44, painted 8×42 (was 24×44); p1, p2, p3, lock 44×44, unchanged.
+  - Session only, the FinalNode view's marker set to `dot-large` through its L-proxy: the disc 14×14 px on the 20 px layer, in the
+    ink (the store read at once still said `dot`; the canvas after reactivation drew the new row). Nothing saved.
+  - Read on the crops, not measured: the flows stop 5 px short of the bars as of every symbol (the router's end offset, the
+    Activity lane's §6), more visible now the bar paints 3 px.
+  - No page error.
+  - Crops (`frontend/scripts/smoke/_tmp_actsize_crops/`, gitignored): `actsize_flowB_activityUml_600.png`,
+    `actsize_petri_classic_600.png`, `actsize_flowB_activityUml_dotlarge_600.png`, and the full-size close-ups
+    `actsize_flowB_activityUml_bars.png`, `_initial.png`, `_final_dot.png`, `_final_dotlarge.png`, `actsize_petri_classic_bar.png`.
+- **Open**, for the chat: (a) switch the Activity final to `dot-large` (question 2); (b) the bar paints 3 px at the declared 5
+  (the wrapper's 1 px each side, question in the hard stop): a 5 px painted bar is `defaultSize` 7, a derivation change.

@@ -512,3 +512,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-09-30-1552
 **Detail**: docs/discovery/discovery_2026-09-30_activity_uml_notation.md
+
+## 2026-09-30 — fix(views): declared sizes unfloored, radius clamp at half, dot-large (P-2026-09-30-1720)
+**Prompt**: `claude_2026-09-30_1720_prompt_activity_sizes.md`, Phase 1 and 2 in cascade on `viewpoint-notations`. The three limits the Activity (UML) lane left (R-VP-26): the 24 px floor on declared sizes, the bull's-eye disc, the radius clamp at a quarter.
+**Files touched**: report `b65be5594` + §6 in this commit: `docs/discovery/discovery_2026-09-30_activity_sizes.md`. Code `3805796be`: `nodes/nodeSizing.ts`, `viewpoint/ir/shapeRegistry.ts`, `viewpoint/ir/markerRegistry.ts`, their three tests. This commit: the report, this entry, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-09-30 15:52 claude_2026-09-30_1552_prompt_activity_uml_notation.md
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no — nine files, all in the DOVE: the six of `3805796be`, the report, `docs/log-inbox/views.md`, the prompt file.
+**Layer Impact Report**: produced
+**Smoke visivo**: lane probe on 3087 19/19, light; the visual GO is the chat's (pending)
+**Notes**: Typecheck the known 14; vitest 6209/6213, the 9 known files and 4 criticalZone from the go-ahead variable (70/70 unset); build exit 0; bench 16/16. Partial: the Activity final still names `dot` (6.4 px disc): `dot-large` measured 14 px in session, the switch is `viewpointDerivation.ts:837`, outside the DOVE, asked. Default scenes 0 px from 21345bbba.
+**Prompt document name**: 2026-09-30 17:20
+
+**Ticket** (observations, low): (1) the bar paints 3 px at the declared 5: the wrapper's transparent 1 px each side, as every IR node; a painted 5 is `defaultSize` 7. (2) Flows stop 5 px short of every symbol (the router's end offset), more visible on the thin bars. (3) `viewpointDerivation.ts:768`, `:775-777`, `:871-873` still describe the 24 px floor.

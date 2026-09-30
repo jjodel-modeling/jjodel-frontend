@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-1720
 Chat: C-2026-09-30-1458
 Lane: Phase 1 then Phase 2 in cascade (critical zone possible; Layer Impact Report before any edit there; go-ahead RC-30 given at launch). Tier: heavy.
-Status: da eseguire
+Status: eseguito in parte 2026-09-30 · lane viewpoint-notations · b65be5594, 3805796be · non fuso: hard-stop, lane probe on 3087 (light) 19/19, crops in frontend/scripts/smoke/_tmp_actsize_crops/ (gitignored), mutation bench 16/16, the Activity final still on `dot` (viewpointDerivation.ts outside the DOVE: question), verifica visiva alla chat
 
 Worktree: `~/jjodel-w-notations`, branch `viewpoint-notations`, on top of the Activity (UML) lane (P-2026-09-30-1552, `21345bbba`), not merged, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-notations`, branch `viewpoint-notations`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
