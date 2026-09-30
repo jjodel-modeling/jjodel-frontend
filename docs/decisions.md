@@ -4315,6 +4315,44 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   labelled edges (5 before) and 0 name rows (7 before); the lane probe on 3072 46/46, the four demo scenes in the
   default viewpoint pixel-identical to the C1 tip outside the animated Jodie launcher (12 of 12, 7 byte-identical);
   mutation bench 43/43. Prompt P-2026-09-30-0150, commit `2360515f4`.
+- **R-VP-21** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **«Derive viewpoint» opens a dialog, a notation select (Generic by default) and a metaclass → role table; a notation
+  applies only when picked; the dialog's binding and each view's provenance are stored with the derived viewpoint.**
+  Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §0 decision 2 and
+  questions 3 and 4, §3, §5 D) and `docs/discovery/discovery_2026-09-30_d_dialog.md` (the Layer Impact Report and the
+  measures). Alfonso chose the dialog on 2026-09-29 evening; the rest is the chat's under his delegation. Amends
+  R-VP-15 (5) and R-VP-17 («keyed on the roles»): the simulation binding stored on the metamodel no longer picks the
+  notation of a derivation; it only prefills the dialog, which never writes it. (1) Notations in this slice: Generic
+  (R-VP-19, R-VP-20), State machine, Petri net, Flowchart, the last three the role-keyed renderings of R-VP-15..18,
+  unchanged, on the system profiles `stateMachine`, `petri`, `flowchart`; ER and UML come with their own slices. (2)
+  Prefill: `bindProfile(profile, sketchOfMetamodel(lookup, mm), bag)` with the stored binding as bag, inverted per
+  class; the select opens on the notation the stored binding matches, else on Generic; Generic has no table. (3) The
+  dialog's binding is stored with the derived viewpoint only, flat keys of its `_state` written in `newVP`'s callback
+  before persist. (4) Provenance: every derived view carries `ir.generated`, declared optional in `irTypes.ts`
+  (question 3, Recommended adopted); `structuralHash` ignores it as it ignores `migratedFrom` (R-IRN-33). (5)
+  Regeneration before 2026-10-07 (question 4, Recommended adopted): the dialog opens on the latest derived viewpoint
+  of the metamodel, its notation and its table, and creates a new viewpoint; no update in place. (6) One undo step;
+  the viewpoint is not activated, its tab opens. (7) The Simulation roles dialog's shell (`sim-roles-modal*`, as
+  SimInputDialog), Bootstrap Icons, labels 11 px, light theme; real `<select>` and `<label>`, focus on the notation
+  select, Esc closes, Enter derives. The persisted names, permanent once saved (R-B9): the `_state` keys
+  `derivedFrom` (the metamodel's id), `derivedNotation` (`generic`, `stateMachine`, `petri`, `flowchart`) and
+  `derivedRole_<classId>` (a role id: `node`, `initial`, `terminal`, `activityFinal`, `fork`, `join`, `transition`,
+  `arc`, `inhibitorArc`), one per bound class; `ir.generated = { by, notation, role?, hash }`, `by: 'derive-2'`, `hash`
+  the view's `structuralHash` at creation. Lane choices inside that list: the table has a row per class of the
+  metamodel and is read per class (`DerivationRoles.classRoles`), so two classes can share a role; a class with no
+  entry takes its nearest superclass's, breadth first (`rolesFromTable`), and says so in its empty option; the
+  inversion keeps a class's first role in catalog order; the references the roles read come from the binder with the
+  table's Node and Transition (the binder's S6); a role notation with no class bound cannot be derived; the stored
+  binding's notation is its system profile's (the four machines are state machines), a user profile's `basedOn`'s,
+  else «Custom» by shape and Trigger; the latest derived viewpoint is the last in the project's `viewpoints` order;
+  the dialog lives in `components/editor-v2/sim/`, beside the dialogs whose shell it shares. Also adopted (RC-21, C2's
+  question 1): an empty value in an edge label template drops the text written just before it (R-VP-20 as
+  implemented). Measured: the dialog's default choice on the four demos configured as Apply configures them derives
+  the role-keyed documents pinned since `58aa78ba9`, byte for byte, provenance aside; the simulation binding
+  byte-identical before and after a derivation and its undo; one undo removes the viewpoint and its views; the lane
+  probe on 3074 58/58, the four demo scenes in the default viewpoint byte-identical to the C2 tip (12 of 12);
+  mutation bench 44/45, the survivor equivalent. Prompt P-2026-09-30-0255, commit `64ea9f216`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
