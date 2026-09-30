@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-30-2035
 Chat: C-2026-09-30-2035
 Lane: fast (bug fix, expected two to four files, no critical zone; Phase 1 then Phase 2 in cascade, no merge to the trunk by this lane). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-09-30 · lane canvas-export-fix · f3ed74cea, 0d6987661, 078cfb5f8 · non fuso: hard-stop, lane probe on 3142 (light) 154/154 on three canvases (M2, M1, M1 under a derived IR viewpoint), mutation bench 26/26 (21/22 on 0d6987661), files in frontend/scripts/smoke/_tmp_canvas_export/phase2/ (gitignored), verifica visiva alla chat
 
 Protocol: docs/PROTOCOL.md, clauses P1..P16 apply unless this prompt says otherwise.
 

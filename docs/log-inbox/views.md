@@ -573,3 +573,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat verification: lane probe 57/57 on 3091, text contrast 5.15-12.19, selected white-text node 7.54:1, 0 px with coloring off, node boxes 0 px, four demo scenes byte-identical to 45ff6c290; GO by Alfonso (ok alle raccomandazioni, 19:24)
 **Notes**: Rollback tag `pre-viewpoint-metaclass-colors` on `45ff6c290` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-30-2000/result.json`.
 **Prompt document name**: 2026-09-30 20:00
+
+## 2026-09-30 — fix(export): canvas export works in all four options, M2 and M1 (P-2026-09-30-2035)
+**Prompt**: `claude_2026-09-30_2035_prompt_canvas_export_fix.md`, Phase 1 then 2 in cascade, fast lane on `~/jjodel-w-canvasexport` branch `canvas-export-fix`. File > Export Canvas did nothing in any option (PNG, JPEG, SVG, Copy to clipboard): find the cause per option, make each produce the whole diagram on white, the chosen format reaching the service.
+**Files touched**: docs `f3ed74cea`: `docs/discovery/discovery_2026-09-30_canvas_export_broken.md` (new). Code `0d6987661`: `frontend/src/services/CanvasExportService.ts`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `frontend/src/services/__tests__/CanvasExportService.test.ts` (new); `078cfb5f8`: the same test, one case. This commit: the report's Phase 2 addendum, this entry, two tickets, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` exit 2, 14 errors, the §17 set by file and code (on `078cfb5f8`); `npx vitest run` 6004 passed, the 9 known files red at import (on `0d6987661`); `npm run build` exit 0. Unit 23/23, red first (18 of 21). Mutation bench 21/22 on `0d6987661`, 26/26 on `078cfb5f8`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: pending — chat, RC-23; lane probe on 3142 (light) 154/154: DemoESM M2, demoESM M1, demoFlowB M1 under its derived IR viewpoint, four options each via the File menu; files `frontend/scripts/smoke/_tmp_canvas_export/phase2/`
+**Notes**: Causes: `canvasRef` on no element since `197b6c3d0`; no M1 listener; options dropped since `260e1a0ce`; element export cropped, grey, half-res; html-to-image 1.11.13 leaves SVG children unstyled; SVG background translated (addendum). Adopted as recommended (RC-21): report §0 Q1-Q4. Not in `decisions.md`: outside this lane's DOVE.
+**Prompt document name**: 2026-09-30 20:35
+
+## 2026-09-30 — ticket: Copy to clipboard likely refused by Safari after the canvas render
+**Ticket**: `CanvasExportService.copyToClipboard` awaits the html-to-image render (1-3 s) before `navigator.clipboard.write`, so the write happens after the click's user activation. Chromium accepts it (measured); Safari's rule refuses such a write (not measured here), and the user gets the alert «Copy Failed ... Use Export as PNG instead». Making Safari work needs a `ClipboardItem` whose value is the blob's Promise, created inside the click.
+**Priority**: low
+**Found in**: P-2026-09-30-2035
+**Detail**: docs/discovery/discovery_2026-09-30_canvas_export_broken.md
+
+## 2026-09-30 — ticket: each canvas export logs two console errors and embeds every font in the SVG
+**Ticket**: html-to-image reads `cssRules` of every stylesheet to embed the fonts; the cross-origin Google Fonts sheet throws `SecurityError`, which the library catches and logs: 2 `console.error` per render (measured on 3142, every option). The export succeeds. The same embedding makes the SVG file 3 to 15 MB on the demo models, and the SVG is HTML inside a `foreignObject`: it opens in a browser, not as editable vectors.
+**Priority**: low
+**Found in**: P-2026-09-30-2035
+**Detail**: docs/discovery/discovery_2026-09-30_canvas_export_broken.md

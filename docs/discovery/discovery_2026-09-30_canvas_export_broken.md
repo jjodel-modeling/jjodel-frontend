@@ -230,3 +230,41 @@ New identifiers, each searched in `src` and `scripts` (tracked files) before use
   covers it (question 4).
 - Dark theme: the nodes keep their dark fills on the white background; the visual check runs in light as the prompt
   asks.
+
+## Addendum, Phase 2 (2026-09-30, same session)
+
+Code `0d6987661` and `078cfb5f8`. What Phase 2 adds to or corrects in the report above.
+
+1. **A sixth defect, found by the Phase 2 probe**: the SVG file had a transparent band. PNG and JPEG paint the
+   background on the whole canvas; `toSvg` paints it on the rendered node only, and the fitted viewport is translated,
+   so on DemoESM M2 (bounds `x 26 y -18`) three corners of the SVG were `rgba(0,0,0,0)`. Fix in `0d6987661`:
+   `withSvgBackground` puts `<rect width="100%" height="100%" fill="#ffffff"/>` as the first child of the `<svg>`,
+   under the `foreignObject`. After it, the four corners of every SVG are `255,255,255,255` (measured).
+2. **Correction to H5 and §7**: a render logs **2** `console.error` from the Google Fonts sheet, not 4 (Phase 2 probe,
+   per export, on every option; the Phase 1 count of 8 lines covered four renders).
+3. **Visual verification**: `lane-run probe` on 3142, light, DPR 2, `_tmp_canvasexport_verify.ts`, 154/154, `EXIT=0`,
+   log `~/.jjodel-lanes/P-2026-09-30-2035/probe-_tmp_canvasexport_verify.log`, files in
+   `frontend/scripts/smoke/_tmp_canvas_export/phase2/`. Three canvases, four options each through File > Export Canvas:
+   DemoESM M2 (5 nodes, 5 edges), demoESM M1 with no viewpoint active (10, 12), demoFlowB M1 under
+   `DemoFlowB (derived)`, 8 IR nodes (8, 9). Per file: name `<model>_<date>.<ext>`, type by content, size, image =
+   bounds x 2 (x 1 for SVG), non-white above 1 %, four white opaque corners, every node box painted, every edge with
+   at least 60 % of its sampled points dark, toast. Clipboard: `image/png`, same size as the PNG. Controls: the
+   clipboard sentinel read back before each copy; with the SVG paint inlining neutralised in the page, the edge check
+   goes red (0 of 4 edges drawn).
+4. **Per-option measures** (bytes, pixels, non-white share):
+
+   | Canvas | PNG | JPEG | SVG | Clipboard |
+   |---|---|---|---|---|
+   | DemoESM M2 | 102318, 2056x944, 6.7 % | 75652, 2056x944, 6.8 % | 4709843, 1028x472, 7.0 % | 86369, 2056x944, 6.7 % |
+   | demoESM M1 | 251401, 2230x2216, 4.0 % | 280575, 2230x2216, 4.1 % | 15114345, 1115x1108, 4.7 % | 211890, 2230x2216, 4.0 % |
+   | demoFlowB M1 (IR) | 93559, 2176x1420, 1.2 % | 66289, 2176x1420, 1.2 % | 3004139, 1088x710, 1.6 % | 76408, 2176x1420, 1.2 % |
+
+5. **View independence and listeners** (measured): after a zoom to 0.5 and a pan leaving 1 of 5 nodes in view, the
+   M2 PNG is 2056x944 again with the same checks green. One listener at startup, with three M2 tabs mounted, and with
+   every M2 tab closed, where the M1 export still downloads `demoESM_<date>.png`. With the summary tab active: no
+   download and the toast «Open a metamodel or model canvas to export it». The on-screen canvas: 0 changed pixels
+   before and after the four exports on each canvas (the animated Jodie button masked); inline SVG styles back to
+   their count.
+6. **Mutation bench** on the service: 22 mutants, 21 killed by `0d6987661`'s tests; the survivor (zoom dropped from
+   `x0` in `diagramBounds`) killed by the case added in `078cfb5f8`, with four more variants (y0, x1, y1, origin), all
+   killed: 26/26.
