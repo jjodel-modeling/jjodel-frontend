@@ -33,3 +33,7 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket** (T5, low): `TEMP-DISCOVERY` timing lines are still in the tree and are not this lane's. Sites: `executor.ts:69-73`, `:100-110`, `:141`, `:215-222`. In `ScriptBlock.tsx` they moved verbatim into `executeLine`.
 
 **Ticket** (T6, low): `skippedLinesAsEditorLines` (`components/summaryLines.ts`) has no production caller left, now that `ScriptBlock` no longer mounts the old dialog summary. It is kept under Rule 9, and its test still runs.
+
+**Visual check** (chat, 3002, two scoped Jjodie scripts): passed except the summary dialog. It did not fit the Jodie window: 646 px tall in a 518 px overlay, title and Close clipped. Fixed in `b42924613`: the dialog is capped to its overlay, the content scrolls (`RunSummaryDialog.scss` only). Check of the fix: to the chat.
+
+**Ticket** (T7, low): under R-JS-3 the `PARENT_NOT_FOUND` suggestion «Make sure the parent was created earlier in the script.» (`errors.ts:183`) is misleading, because a forward reference is retried. It still shows on every final `PARENT_NOT_FOUND` whose handler gives no suggestion of its own. Ticket only, no change (chat, 2026-10-01).

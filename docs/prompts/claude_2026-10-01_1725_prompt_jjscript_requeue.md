@@ -4,6 +4,7 @@ Prompt-ID: P-2026-10-01-1725
 Chat: C-2026-10-01-1725
 Lane: full (two-phase: Phase 1 discovery on the waiter, the handlers' error codes and the three run loops of `ScriptBlock.tsx`; Phase 2 after the chat's GO, same session). Tier: heavy.
 Status: eseguito 2026-10-01 · lane jjscript-requeue · 1315e15c4 · non fuso: hard-stop, verifica visiva alla chat (Petri net script)
+Status note: 2026-10-01 · verifica visiva della chat su 3002 passata salvo il modale fuori dalla finestra Jodie · corretto in b42924613 · nuova verifica del modale alla chat
 
 Worktree: `~/jjodel-w-jjsrequeue`, branch `jjscript-requeue` (cut by the chat from `alfonso-frontend-jjtl` at `4b018b82b`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-jjsrequeue`, branch `jjscript-requeue`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
