@@ -37,3 +37,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Visual check** (chat, 3002, two scoped Jjodie scripts): passed except the summary dialog. It did not fit the Jodie window: 646 px tall in a 518 px overlay, title and Close clipped. Fixed in `b42924613`: the dialog is capped to its overlay, the content scrolls (`RunSummaryDialog.scss` only). Check of the fix: to the chat.
 
 **Ticket** (T7, low): under R-JS-3 the `PARENT_NOT_FOUND` suggestion «Make sure the parent was created earlier in the script.» (`errors.ts:183`) is misleading, because a forward reference is retried. It still shows on every final `PARENT_NOT_FOUND` whose handler gives no suggestion of its own. Ticket only, no change (chat, 2026-10-01).
+
+## 2026-10-01 — merge: jjscript-requeue into alfonso-frontend-jjtl (P-2026-10-01-1926)
+**Prompt**: `claude_2026-10-01_1926_prompt_merge_jjscript-requeue.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-requeue` at `4b001baed` into `alfonso-frontend-jjtl`, merge base `4b018b82b`, 8 commits on the branch side.
+**Files touched**: merge `7fcef0bda`: 14 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-01_jjscript_requeue.md`, `docs/log-inbox/jjscript.md`, `docs/prompts/claude_2026-10-01_1725_prompt_jjscript_requeue.md`, `frontend/src/jjscript/__tests__/runFigures.test.ts`, `frontend/src/jjscript/__tests__/scriptValidator.test.ts`, `frontend/src/jjscript/components/RunSummaryDialog.scss`, `frontend/src/jjscript/components/RunSummaryDialog.tsx`, and 6 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7fcef0bda` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6402 tests in 257 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat visual check on the branch tip 4b001baed (localhost:3002, three scoped Jjodie scripts: success summary with line 13 resolved on retry, error summary, dialog fits the Jjodie window); the trunk side changed no file, so the merged tree carries the same code
+**Notes**: Rollback tag `pre-jjscript-requeue` on `4b018b82b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-01-1926/result.json`.
+**Prompt document name**: 2026-10-01 19:26
