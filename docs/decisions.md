@@ -1487,6 +1487,16 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   Nessun cambio di schema, nessuna migrazione. Implementato in P-2026-09-29-2122 (`04acac227`,
   `61a45540e`), fuso in `889906e43`. (Ratified by Alfonso on 2026-09-29, §5 of the Layer Impact Report.)
 
+- **R-IRN-38** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **One predicate decides
+  whether a label renames the element, and the Editable toggle shows it.** `labelCanRename(source)` and
+  `labelEditsName(label)` in `ir/irLabelEdit.ts`: an intrinsic `name` or `qualifiedName` label renames unless
+  `editable === false`; absent, `true` and the widget object all rename, so the absent key is the default.
+  `irCompile.ts` (`CompiledLabel.editsName`) and `LabelEntryEditor.tsx` (the toggle) both call it, so the panel and
+  the canvas cannot disagree again. The toggle reads the effective value, is disabled and OFF with a one-line hint on
+  a source that cannot rename (literal, path, intrinsic `metaclassName`); OFF writes `editable: false`, ON removes the
+  key, so the IR stays minimal. No schema change, no migration. Implemented in P-2026-10-01-2349 (`20c843f14`);
+  mutation bench 17/17, probe 23/23, four demo scenes 0 px from the base run.
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
