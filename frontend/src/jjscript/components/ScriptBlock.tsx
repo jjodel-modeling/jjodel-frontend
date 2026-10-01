@@ -15,6 +15,7 @@ import { skippedLinesAsEditorLines } from './summaryLines';
 import {parseError, errorFromResult, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
 import type { ExecutionError } from '../types';
 import { collectClassifierNames, validateScriptIntegrity } from '../executor/scriptValidator';
+import { runPasses, isDeferrable } from '../executor/runPasses';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
 import {ExecutionContext} from "../../jjtl/executor";
@@ -113,6 +114,9 @@ export class ExecutionStats {
  * Every metamodel is swept, not only the run's target, because an unbound reference also
  * resolves project-wide, so a name living in a sibling metamodel makes the reference
  * succeed and refusing the script would be a false positive.
+ *
+ * TODO: cleanup — no caller since R-JS-4: Run no longer refuses a forward reference, it
+ * completes it on pass 2 (`runPasses`).
  */
 function projectClassifierNames(): Set<string> | undefined {
     try {
@@ -197,15 +201,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     const [executionStats, setExecutionStats] = useState<ExecutionStats | null>(null);
     const [executionErrorInfo, setExecutionErrorInfo] = useState<ExecutionErrorInfo | null>(null);
 
-    // New error dialog state (for Skip functionality)
+    // Summary dialog state. Run never pauses (R-JS-5): the dialog opens once, on a finished run.
     const [showErrorDialog, setShowErrorDialog] = useState(false);
-    const [pauseInfo, setPauseInfo] = useState<ExecutionPauseInfo | null>(null);
     const [executionSummary, setExecutionSummary] = useState<ExecutionSummary | null>(null);
-    const [skippedLinesSet, setSkippedLinesSet] = useState<Set<number>>(new Set());
-    const [errorsList, setErrorsList] = useState<Array<{ line: number; command: string; error: JjScriptError }>>([]);
-    // Contextual recovery actions proposed by the rule registry for the current pause.
-    // Recomputed reactively from pauseInfo — rule matchers are pure.
-    const [recoveryActions, setRecoveryActions] = useState<RecoveryAction[]>([]);
 
     // Refs
     const abortRef = useRef(false);
@@ -369,10 +367,10 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         // cleanly; it only fails fast (0 commands executed) instead of leaving a half-built
         // model, e.g. when AI-generated output was cut off mid-script. No events are emitted
         // and no execution state is entered — the run simply never starts.
-        // The second argument enables the forward-reference pass: a script whose line N uses
-        // a class created at line N+k cannot complete, and refusing it here keeps the model
-        // from being left half-built.
-        const integrity = validateScriptIntegrity(code, projectClassifierNames());
+        // No name set (R-JS-4): a forward reference is not refused any more. Its line fails on
+        // pass 1 and completes on pass 2 of `runPasses`, once the line that creates its target
+        // has run.
+        const integrity = validateScriptIntegrity(code);
         if (!integrity.valid && integrity.issue) {
             const { line, command, reason, kind } = integrity.issue;
             const isForwardReference = kind === 'forward-reference';
@@ -403,7 +401,8 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             return;
         }
 
-        // Emit execution start event for Tree View auto-expand
+        // Emit execution start event for Tree View auto-expand. Once per Run, never per pass:
+        // `handleRegistry.ts` clears the M1 instance handles on it.
         window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_START, {
             detail: {
                 script: code,
@@ -419,12 +418,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         setExecutionErrorInfo(null);
         setOutcome(null);
 
-        // Reset new error dialog state
+        // Reset the summary dialog state
         setShowErrorDialog(false);
-        setPauseInfo(null);
         setExecutionSummary(null);
-        setSkippedLinesSet(new Set());
-        setErrorsList([]);
 
         // If we were stepping/paused, continue from current position
         // Otherwise start from the beginning
@@ -446,13 +442,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             );
         }
 
-        let executedCount = startIndex; // Count already executed if resuming
-        let errorCount = 0;
-        const results: ScriptLineResult[] = [];
-
-        for (let i = startIndex; i < commands.length; i++) {
-            if (abortRef.current) break;
-
+        // One command, as the old loop ran it. Never throws: a thrown command becomes a failed
+        // result without executor codes, which `runPasses` keeps final.
+        const execOne = async (i: number): Promise<ScriptLineResult> => {
             const _iterStart = performance.now(); // TEMP-DISCOVERY
 
             setCurrentLineIndex(i);
@@ -462,144 +454,103 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 )
             );
 
+            let result: ScriptLineResult;
             try {
                 // Execute command directly (dependencies are handled by executor pre-check)
-                const [result] = await onExecute([commands[i]], resolvedTarget?.id);
-                const success = result.success;
-
-                results.push(result);
-
-                setLineStates(prev =>
-                    prev.map((ls, idx) =>
-                        idx === i
-                            ? { ...ls, status: success ? 'success' : 'error', result }
-                            : ls
-                    )
-                );
-
-                if (success) {
-                    executedCount++;
-                } else {
-                    errorCount++;
-                    // The executor's own error when it sent one, parsed from the text otherwise
-                    const parsedError = errorFromResult(result, commands[i]);
-                    const currentElapsed = Date.now() - startTimeRef.current;
-
-                    const info = {
-                        lineNumber: i + 1,
-                        scriptLine: getScriptLine(i),
-                        command: commands[i],
-                        error: parsedError,
-                        executedSoFar: executedCount,
-                        totalCommands: commands.length,
-                        elapsedMs: currentElapsed,
-                    };
-                    // Store detailed error info
-                    setExecutionErrorInfo(info);
-                    setPauseInfo(info);
-
-                    // Store error in list for final summary
-                    setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
-
-                    // Persistent inline outcome strip (the Skip/recovery dialog below is preserved
-                    // and owns the interactive flow; this strip is the passive summary that remains
-                    // after the dialog is dismissed).
-                    setOutcome({ kind: 'runtime-error', line: getScriptLine(i), message: parsedError.message });
-
-                    // Show error dialog with Skip option
-                    setExecutionState('paused');
-                    setShowErrorDialog(true);
-
-                    // Emit execution paused event
-                    window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_PAUSED, {
-                        detail: {
-                            line: i + 1,
-                            command: commands[i],
-                            error: result.message,
-                        }
-                    }));
-                    return;
-                }
-
-                // Add delay between commands for proper processing
-                if (i < commands.length - 1 && !abortRef.current) {
-                    await sleep(BATCH_DELAY_MS);
-                }
-
-                // TEMP-DISCOVERY: full per-command wall-clock (onExecute apply + async React re-render/settle absorbed during sleep + BATCH_DELAY_MS). settle ≈ iter − executor.total − BATCH_DELAY_MS.
-                console.log(`[JjScript-TIMING] line=${i + 1} iter=${(performance.now() - _iterStart).toFixed(1)} cmd="${commands[i].slice(0, 60)}"`); // TEMP-DISCOVERY
+                const [first] = await onExecute([commands[i]], resolvedTarget?.id);
+                result = first ?? { command: commands[i], success: false, message: 'No result' };
             } catch (err) {
-                errorCount++;
-                const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-                const parsedError = parseError(errorMessage, commands[i]);
-
-                setLineStates(prev =>
-                    prev.map((ls, idx) =>
-                        idx === i
-                            ? {
-                                  ...ls,
-                                  status: 'error',
-                                  result: {
-                                      command: commands[i],
-                                      success: false,
-                                      message: errorMessage,
-                                  },
-                              }
-                            : ls
-                    )
-                );
-
-                // Set pause info for the error dialog
-                const currentElapsed = Date.now() - startTimeRef.current;
-                const info = {
-                    lineNumber: i + 1,
-                    scriptLine: getScriptLine(i),
+                result = {
                     command: commands[i],
-                    error: errorMessage,
-                    executedSoFar: executedCount,
-                    totalCommands: commands.length,
-                    elapsedMs: currentElapsed,
+                    success: false,
+                    message: err instanceof Error ? err.message : 'Unknown error',
                 };
-                // Store detailed error info for the modal
-                setExecutionErrorInfo(info);
-                setPauseInfo(info);
-
-                // Store error in list for final summary
-                setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
-
-                // Persistent inline outcome strip (dialog preserved, see !success branch above).
-                setOutcome({ kind: 'runtime-error', line: getScriptLine(i), message: parsedError.message });
-
-                // Show error dialog with Skip option
-                setExecutionState('paused');
-                setShowErrorDialog(true);
-
-                // Emit execution paused event
-                window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_PAUSED, {
-                    detail: {
-                        line: i + 1,
-                        command: commands[i],
-                        error: errorMessage,
-                    }
-                }));
-                return;
             }
+
+            setLineStates(prev =>
+                prev.map((ls, idx) =>
+                    idx === i
+                        ? { ...ls, status: result.success ? 'success' : 'error', result }
+                        : ls
+                )
+            );
+
+            // Add delay between commands for proper processing
+            if (!abortRef.current) {
+                await sleep(BATCH_DELAY_MS);
+            }
+
+            // TEMP-DISCOVERY: full per-command wall-clock (onExecute apply + async React re-render/settle absorbed during sleep + BATCH_DELAY_MS). settle ≈ iter − executor.total − BATCH_DELAY_MS.
+            console.log(`[JjScript-TIMING] line=${i + 1} iter=${(performance.now() - _iterStart).toFixed(1)} cmd="${commands[i].slice(0, 60)}"`); // TEMP-DISCOVERY
+            return result;
+        };
+
+        // R-JS-3: pass 1 runs every command and never pauses (R-JS-5); the commands that failed
+        // on a name a later line creates run again, pass after pass.
+        const indices = commands.map((_, i) => i).filter(i => i >= startIndex);
+        const run = await runPasses(commands, execOne, isDeferrable, {
+            indices,
+            shouldStop: () => abortRef.current,
+        });
+
+        // Stop already reset the block and announced the end of the run.
+        if (run.stopped) return;
+
+        const duration = Math.max(0, Date.now() - startTimeRef.current);
+        const failed = run.outcomes.filter(o => o.status === 'failed');
+        const superseded = run.outcomes.filter(o => o.status === 'superseded');
+        const executedCount = startIndex + run.outcomes.filter(o => o.status === 'success').length;
+
+        // A superseded `set` never ran to a write: its line settles as skipped.
+        if (superseded.length > 0) {
+            const supersededIndices = new Set(superseded.map(o => o.index));
+            setLineStates(prev =>
+                prev.map((ls, idx) => supersededIndices.has(idx) ? { ...ls, status: 'skipped' } : ls)
+            );
         }
 
-        // Execution completed successfully
-        const duration = Date.now() - startTimeRef.current;
-        const stats = {
+        setExecutionStats({
             totalCommands: commands.length,
             executedCommands: executedCount,
-            skippedLines: 0,
-            errors: 0,
-            duration: duration > 0 ? duration : 0,
-        };
-        // console.log('[ScriptBlock] Setting execution stats (handleExecute):', stats);
-        setExecutionStats(stats);
+            skippedLines: superseded.length,
+            errors: failed.length,
+            duration,
+        });
         setExecutionState('completed');
         setCurrentLineIndex(-1);
-        setOutcome({ kind: 'success', count: executedCount });
+
+        if (failed.length === 0) {
+            setOutcome({ kind: 'success', count: executedCount });
+        } else {
+            const first = failed[0];
+            const more = failed.length > 1 ? ` (+${failed.length - 1} more)` : '';
+            setOutcome({
+                kind: 'runtime-error',
+                line: getScriptLine(first.index),
+                message: errorFromResult(first.result, commands[first.index]).message + more,
+            });
+        }
+
+        // Every final error at once, at the end (R-JS-5). A superseded line is listed apart,
+        // in the skipped row: it is not an error.
+        if (failed.length > 0 || superseded.length > 0) {
+            setExecutionSummary({
+                totalCommands: commands.length,
+                executedCount,
+                skippedCount: superseded.length,
+                // Command-index space, 1-based, as every writer of this field stores it;
+                // `summaryForDialog` maps it to editor lines.
+                skippedLines: superseded.map(o => o.index + 1),
+                errors: failed.map(o => ({
+                    line: getScriptLine(o.index),
+                    command: commands[o.index],
+                    error: errorFromResult(o.result, commands[o.index]),
+                })),
+                duration,
+                errorCount: failed.length,
+            });
+            setShowErrorDialog(true);
+        }
 
         // Dispatch event for auto-expand of Features panel
         if (executedCount > 0) {
@@ -614,6 +565,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 status: 'completed',
                 executedCount,
                 totalCommands: commands.length,
+                errorCount: failed.length,
             }
         }));
     }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine]);
@@ -648,12 +600,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             setExecutionErrorInfo(null);
             setOutcome(null);
 
-            // Reset new error dialog state
+            // Reset the summary dialog state
             setShowErrorDialog(false);
-            setPauseInfo(null);
             setExecutionSummary(null);
-            setSkippedLinesSet(new Set());
-            setErrorsList([]);
         }
 
         const nextIndex = executionState === 'paused' ? currentLineIndex : 0;
@@ -841,455 +790,12 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         }));
     }, []);
 
-    // Skip current error and continue execution
-    const handleSkipAndContinue = useCallback(async () => {
-        if (!pauseInfo || !onExecute) return;
-
-        // Once the interactive Skip/recovery flow takes over, its dialog summary is the
-        // outcome UX — clear the passive strip so the two don't disagree.
-        setOutcome(null);
-
-        const skipLineIndex = pauseInfo.lineNumber - 1; // Convert to 0-based
-
-        // Mark line as skipped
-        setLineStates(prev =>
-            prev.map((ls, idx) =>
-                idx === skipLineIndex ? { ...ls, status: 'skipped' } : ls
-            )
-        );
-
-        // Add to skipped set
-        setSkippedLinesSet(prev => new Set([...prev, pauseInfo.lineNumber]));
-
-        // Close error dialog
-        setShowErrorDialog(false);
-        setPauseInfo(null);
-
-        // Continue execution from next line
-        const nextIndex = skipLineIndex + 1;
-
-        if (nextIndex >= commands.length) {
-            // All done - show completion summary
-            const duration = Date.now() - startTimeRef.current;
-            const skippedLines = [...skippedLinesSet, pauseInfo.lineNumber];
-            setExecutionSummary({
-                totalCommands: commands.length,
-                executedCount: lineStates.filter(ls => ls.status === 'success').length,
-                skippedCount: skippedLines.length,
-                skippedLines,
-                errors: errorsList,
-                duration,
-                errorCount: errorsList.length,
-            });
-            setExecutionState('completed');
-            setShowErrorDialog(true);
-            return;
-        }
-
-        // Continue running from next line
-        setExecutionState('running');
-        setCurrentLineIndex(nextIndex);
-
-        // Execute remaining commands
-        let executedCount = lineStates.filter(ls => ls.status === 'success').length;
-        let errorCount = errorsList.length;
-
-        for (let i = nextIndex; i < commands.length; i++) {
-            if (abortRef.current) break;
-
-            setCurrentLineIndex(i);
-            setLineStates(prev =>
-                prev.map((ls, idx) =>
-                    idx === i ? { ...ls, status: 'running' } : ls
-                )
-            );
-
-            try {
-                // Execute command directly (dependencies are handled by executor pre-check)
-                const [result] = await onExecute([commands[i]], resolvedTarget?.id);
-                const success = result.success;
-
-                setLineStates(prev =>
-                    prev.map((ls, idx) =>
-                        idx === i
-                            ? { ...ls, status: success ? 'success' : 'error', result }
-                            : ls
-                    )
-                );
-
-                if (success) {
-                    executedCount++;
-                } else {
-                    errorCount++;
-                    const parsedError = errorFromResult(result, commands[i]);
-                    setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
-
-                    // Set pause info for the error dialog
-                    const currentElapsed = Date.now() - startTimeRef.current;
-                    setPauseInfo({
-                        lineNumber: i + 1,
-                        scriptLine: getScriptLine(i),
-                        command: commands[i],
-                        error: parsedError,
-                        executedSoFar: executedCount,
-                        totalCommands: commands.length,
-                        elapsedMs: currentElapsed,
-                    });
-
-                    setExecutionState('paused');
-                    setShowErrorDialog(true);
-                    return;
-                }
-
-                // Add delay between commands
-                if (i < commands.length - 1 && !abortRef.current) {
-                    await sleep(BATCH_DELAY_MS);
-                }
-            } catch (err) {
-                errorCount++;
-                const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-                const parsedError = parseError(errorMessage, commands[i]);
-                setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
-
-                setLineStates(prev =>
-                    prev.map((ls, idx) =>
-                        idx === i
-                            ? { ...ls, status: 'error', result: { command: commands[i], success: false, message: errorMessage } }
-                            : ls
-                    )
-                );
-
-                const currentElapsed = Date.now() - startTimeRef.current;
-                setPauseInfo({
-                    lineNumber: i + 1,
-                    scriptLine: getScriptLine(i),
-                    command: commands[i],
-                    error: parsedError,
-                    executedSoFar: executedCount,
-                    totalCommands: commands.length,
-                    elapsedMs: currentElapsed,
-                });
-
-                setExecutionState('paused');
-                setShowErrorDialog(true);
-                return;
-            }
-        }
-
-        // Completed after skipping
-        const duration = Date.now() - startTimeRef.current;
-        const allSkippedLines = [...skippedLinesSet, pauseInfo.lineNumber];
-        setExecutionSummary({
-            totalCommands: commands.length,
-            executedCount,
-            skippedCount: allSkippedLines.length,
-            skippedLines: allSkippedLines,
-            errors: errorsList,
-            duration,
-            errorCount: errorsList.length,
-        });
-        setExecutionState('completed');
-        setShowErrorDialog(true);
-
-        // Emit execution end event
-        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
-            detail: {
-                status: 'completed',
-                executedCount,
-                totalCommands: commands.length,
-                skippedCount: allSkippedLines.length,
-            }
-        }));
-    }, [pauseInfo, onExecute, commands, lineStates, skippedLinesSet, errorsList, resolvedTarget, getScriptLine]);
-
-    // ============================================
-    // RECOVERY ACTIONS — contextual one-click fixes
-    // ============================================
-    // Recompute the proposed actions whenever the pause state changes. Rule matchers
-    // are pure, so this is safe to call on every pauseInfo transition.
-    useEffect(() => {
-        if (!pauseInfo) {
-            setRecoveryActions([]);
-            return;
-        }
-        const errAny = pauseInfo.error as any;
-        const errorMessage: string = (errAny && typeof errAny === 'object' && typeof errAny.message === 'string')
-            ? errAny.message
-            : (typeof errAny === 'string' ? errAny : '');
-        const metamodel = resolvedTarget?.id
-            ? (LPointerTargetable.fromPointer(resolvedTarget.id) as LModel | null)
-            : null;
-        const actions = findRecoveryActions({
-            command: pauseInfo.command,
-            lineNumber: pauseInfo.lineNumber,
-            allCommands: commands,
-            errorMessage,
-            metamodel,
-        });
-        setRecoveryActions(actions);
-    }, [pauseInfo, commands, resolvedTarget]);
-
-    /**
-     * Resume execution from a given 0-based index, optionally honouring a skip set.
-     * Duplicates the loop used by handleSkipAndContinue (intentionally: we're asked
-     * not to refactor that handler). Used by recovery dispatchers below.
-     */
-    const runCommandsFromIndex = useCallback(async (startIdx: number, skipSet: Set<number>) => {
-        if (!onExecute) return;
-        setExecutionState('running');
-        setOutcome(null);
-        let executedCount = lineStates.filter(ls => ls.status === 'success').length;
-        const localErrors = [...errorsList];
-
-        for (let i = startIdx; i < commands.length; i++) {
-            if (abortRef.current) break;
-            if (skipSet.has(i + 1)) continue;
-
-            setCurrentLineIndex(i);
-            setLineStates(prev =>
-                prev.map((ls, idx) => idx === i ? { ...ls, status: 'running' } : ls)
-            );
-
-            try {
-                const [result] = await onExecute([commands[i]], resolvedTarget?.id);
-                const success = result.success;
-                setLineStates(prev =>
-                    prev.map((ls, idx) => idx === i
-                        ? { ...ls, status: success ? 'success' : 'error', result }
-                        : ls
-                    )
-                );
-
-                if (success) {
-                    executedCount++;
-                } else {
-                    const parsedError = errorFromResult(result, commands[i]);
-                    localErrors.push({ line: getScriptLine(i), command: commands[i], error: parsedError });
-                    setErrorsList(localErrors);
-                    const currentElapsed = Date.now() - startTimeRef.current;
-                    setPauseInfo({
-                        lineNumber: i + 1,
-                        scriptLine: getScriptLine(i),
-                        command: commands[i],
-                        error: parsedError,
-                        executedSoFar: executedCount,
-                        totalCommands: commands.length,
-                        elapsedMs: currentElapsed,
-                    });
-                    setExecutionState('paused');
-                    setShowErrorDialog(true);
-                    return;
-                }
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-                const parsedError = parseError(errorMessage, commands[i]);
-                localErrors.push({ line: getScriptLine(i), command: commands[i], error: parsedError });
-                setErrorsList(localErrors);
-                setLineStates(prev =>
-                    prev.map((ls, idx) => idx === i
-                        ? { ...ls, status: 'error', result: { command: commands[i], success: false, message: errorMessage } }
-                        : ls
-                    )
-                );
-                const currentElapsed = Date.now() - startTimeRef.current;
-                setPauseInfo({
-                    lineNumber: i + 1,
-                    scriptLine: getScriptLine(i),
-                    command: commands[i],
-                    error: parsedError,
-                    executedSoFar: executedCount,
-                    totalCommands: commands.length,
-                    elapsedMs: currentElapsed,
-                });
-                setExecutionState('paused');
-                setShowErrorDialog(true);
-                return;
-            }
-        }
-
-        // Completed — show summary
-        const duration = Date.now() - startTimeRef.current;
-        const allSkippedLines = Array.from(skipSet).sort((a, b) => a - b);
-        setExecutionSummary({
-            totalCommands: commands.length,
-            executedCount,
-            skippedCount: allSkippedLines.length,
-            skippedLines: allSkippedLines,
-            errors: localErrors,
-            duration,
-            errorCount: localErrors.length,
-        });
-        setExecutionState('completed');
-        setShowErrorDialog(true);
-    }, [commands, lineStates, onExecute, resolvedTarget, errorsList, getScriptLine]);
-
-    /**
-     * Dispatcher for recovery-action clicks. Handlers live here (not in the rule
-     * registry) because they need to manipulate component-local state (lineStates,
-     * pauseInfo, skippedLinesSet) and call onExecute. Rules stay data-only.
-     */
-    const handleRecoveryAction = useCallback(async (action: RecoveryAction) => {
-        if (!pauseInfo || !onExecute) return;
-
-        switch (action.kind) {
-            case 'createEnumAndRetry': {
-                const enumName = action.enumName;
-                const retryIndex = pauseInfo.lineNumber - 1;
-
-                // Close the modal + clear pause state before running any commands.
-                setShowErrorDialog(false);
-                setPauseInfo(null);
-                setExecutionErrorInfo(null);
-
-                // Side-effect: create the enum. This path reuses the same executor that
-                // handles a normal `create enum Y` line, so validation/duplication checks
-                // are consistent with scripted creation.
-                const [createResult] = await onExecute([`create enum ${enumName}`], resolvedTarget?.id);
-                if (!createResult?.success) {
-                    // Surface the enum-creation failure as a fresh pause so the user can
-                    // see what went wrong (e.g. name collision with an existing class).
-                    const parsedError = errorFromResult(
-                        { message: createResult?.message || 'Enum creation failed', errors: createResult?.errors },
-                        `create enum ${enumName}`
-                    );
-                    const currentElapsed = Date.now() - startTimeRef.current;
-                    setPauseInfo({
-                        lineNumber: pauseInfo.lineNumber,
-                        scriptLine: pauseInfo.scriptLine,
-                        command: `create enum ${enumName}`,
-                        error: parsedError,
-                        executedSoFar: lineStates.filter(ls => ls.status === 'success').length,
-                        totalCommands: commands.length,
-                        elapsedMs: currentElapsed,
-                    });
-                    setExecutionState('paused');
-                    setShowErrorDialog(true);
-                    return;
-                }
-
-                // Log the auto-recovery step so the execution log reflects what happened.
-                // We reuse JjScriptEvents.EXECUTED with a marker tag so downstream console
-                // listeners can render it distinctly if they choose.
-                window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTED, {
-                    detail: {
-                        recovery: true,
-                        command: `create enum ${enumName}`,
-                        success: true,
-                        note: `Auto-created via recovery rule "literal-in-attribute" before retrying line ${pauseInfo.lineNumber}`,
-                    },
-                }));
-                // Also a visible console line — useful in dev, harmless in prod.
-                // eslint-disable-next-line no-console
-                console.log(`[jjscript recovery] auto-created enum "${enumName}", retrying line ${pauseInfo.lineNumber}`);
-
-                // Reset the failed line to "running" state before retrying.
-                setLineStates(prev =>
-                    prev.map((ls, idx) => idx === retryIndex ? { ...ls, status: 'running' } : ls)
-                );
-
-                // Retry FROM the failed line (inclusive), not the next one.
-                await runCommandsFromIndex(retryIndex, skippedLinesSet);
-                return;
-            }
-
-            case 'skipMatchingCreateLiteral': {
-                const targetName = action.targetName;
-
-                // Collect every remaining line that matches `create literal ... in <targetName>`
-                // starting from the currently-failed line. These become the new skip set.
-                const newSkippedLines = new Set(skippedLinesSet);
-                for (let i = pauseInfo.lineNumber - 1; i < commands.length; i++) {
-                    if (isCreateLiteralInTarget(commands[i], targetName)) {
-                        newSkippedLines.add(i + 1);
-                    }
-                }
-                setSkippedLinesSet(newSkippedLines);
-                setLineStates(prev =>
-                    prev.map((ls, idx) => newSkippedLines.has(idx + 1) ? { ...ls, status: 'skipped' } : ls)
-                );
-
-                // Close modal + clear pause.
-                setShowErrorDialog(false);
-                setPauseInfo(null);
-                setExecutionErrorInfo(null);
-
-                // Resume from the first non-skipped line at or after the failed line.
-                let resumeIdx = pauseInfo.lineNumber - 1;
-                while (resumeIdx < commands.length && newSkippedLines.has(resumeIdx + 1)) {
-                    resumeIdx++;
-                }
-
-                // If everything from here is skipped, jump straight to summary.
-                if (resumeIdx >= commands.length) {
-                    const duration = Date.now() - startTimeRef.current;
-                    const executedCount = lineStates.filter(ls => ls.status === 'success').length;
-                    setExecutionSummary({
-                        totalCommands: commands.length,
-                        executedCount,
-                        skippedCount: newSkippedLines.size,
-                        skippedLines: Array.from(newSkippedLines).sort((a, b) => a - b),
-                        errors: errorsList,
-                        duration,
-                        errorCount: errorsList.length,
-                    });
-                    setExecutionState('completed');
-                    setShowErrorDialog(true);
-                    return;
-                }
-
-                await runCommandsFromIndex(resumeIdx, newSkippedLines);
-                return;
-            }
-
-            default: {
-                // Exhaustiveness guard: TypeScript will flag missing cases at compile time.
-                const _exhaustive: never = action;
-                void _exhaustive;
-            }
-        }
-    }, [pauseInfo, commands, lineStates, onExecute, resolvedTarget, skippedLinesSet, errorsList, runCommandsFromIndex]);
-
-    // Close error dialog (stop execution and show summary)
+    // Close the summary dialog. Run never pauses (R-JS-5), so there is no paused state to
+    // turn into a summary here any more: the dialog only ever shows a finished run.
     const handleCloseErrorDialog = useCallback(() => {
-        if (executionSummary) {
-            // Was showing summary - close completely
-            setShowErrorDialog(false);
-            setExecutionSummary(null);
-            setErrorsList([]);
-            setSkippedLinesSet(new Set());
-            return;
-        }
-
-        if (pauseInfo) {
-            // Was paused on error - show final summary
-            const duration = Date.now() - startTimeRef.current;
-            const allSkippedLines = [...skippedLinesSet];
-            const executedCount = lineStates.filter(ls => ls.status === 'success').length;
-
-            setExecutionSummary({
-                totalCommands: commands.length,
-                executedCount,
-                skippedCount: allSkippedLines.length,
-                skippedLines: allSkippedLines,
-                errors: errorsList,
-                duration,
-                errorCount: errorsList.length,
-            });
-            setPauseInfo(null);
-            setExecutionState('error');
-
-            // Emit execution end event
-            window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
-                detail: {
-                    status: 'stopped',
-                    executedCount,
-                    totalCommands: commands.length,
-                }
-            }));
-        } else {
-            setShowErrorDialog(false);
-        }
-    }, [executionSummary, pauseInfo, skippedLinesSet, lineStates, commands.length, errorsList]);
+        setShowErrorDialog(false);
+        setExecutionSummary(null);
+    }, []);
 
     // Get status icon for a line
     const getLineStatusIcon = (status: LineState['status']) => {
@@ -1559,15 +1065,12 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 </div>
             )}
 
-            {/* New Error Dialog with Skip functionality + contextual recovery actions */}
+            {/* Summary of a finished run with errors or superseded lines. Run never pauses
+                (R-JS-5), so the dialog has no Skip and no paused state here. */}
             <ExecutionErrorDialog
                 isOpen={showErrorDialog}
                 onClose={handleCloseErrorDialog}
-                pauseInfo={pauseInfo || undefined}
                 summary={summaryForDialog}
-                onSkip={(pauseInfo?.error as JjScriptError)?.skippable ? handleSkipAndContinue : undefined}
-                recoveryActions={recoveryActions}
-                onRecoveryAction={handleRecoveryAction}
             />
 
             {/* Completion modal removed — the terminal outcome is now the inline strip above.
