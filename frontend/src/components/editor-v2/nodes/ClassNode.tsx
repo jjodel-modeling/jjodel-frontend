@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { memo, useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
@@ -907,4 +907,21 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     );
 }
 
-export default ClassNode;
+/**
+ * Memoized on the props ClassNode reads: `id`, `data`, `selected`, `width`, `height`
+ * (P-2026-10-01-2136, fix 2). React Flow also passes the drag state, the absolute position and
+ * the connectable/selectable flags, none of which this component reads, so a change in them
+ * alone does not re-render it. `data` is compared by reference: useJjomSync patches a node's
+ * data only when it changed (`shallowDataEqual`), so an unchanged node keeps the same object.
+ * The hooks inside (editor context, highlight class, the selection selector, useReactFlow)
+ * still re-render it when their own value changes.
+ */
+function classNodePropsEqual(prev: NodeProps<ClassNodeType>, next: NodeProps<ClassNodeType>): boolean {
+    return prev.id === next.id
+        && prev.data === next.data
+        && prev.selected === next.selected
+        && prev.width === next.width
+        && prev.height === next.height;
+}
+
+export default memo(ClassNode, classNodePropsEqual);
