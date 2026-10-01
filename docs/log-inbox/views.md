@@ -926,3 +926,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato (lane probe 17/17, crops in `frontend/scripts/smoke/_tmp_forkbar_crops/`, gitignored; the visual GO of the chat and Alfonso is pending)
 **Notes**: Fork and join measured node 7×120, painted 5×118. A saved derived viewpoint keeps 5 until derived again (R-VP-25's precedent); report H3, read not run. The base probe ran with the constant temporarily at 5, restored, `git diff HEAD` empty. The merge waits for the visual GO. Report: `docs/discovery/discovery_2026-10-01_activity_bar_7px.md`.
 **Prompt document name**: 2026-10-01 22:30
+
+## 2026-10-01 — merge: activity-bar-7 into alfonso-frontend-jjtl (P-2026-10-01-2254)
+**Prompt**: `claude_2026-10-01_2254_prompt_merge_activity-bar-7.md`, a direct merge by `lane-run merge --direct`, no session: `activity-bar-7` into `alfonso-frontend-jjtl`; the worker stopped `blocked` on one red vitest gate and left the merge commit `93dd39879`; closed by hand by the chat (P9).
+**Files touched**: merge `93dd39879` from the branch side (P-2026-10-01-2230: `viewpointDerivation.ts`, `activityUml.test.ts`, the report, R-VP-36, the entry in this inbox, the prompt); this commit: this entry and the Status of the merge prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `93dd39879` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6411 tests in 258 files, 9 red at import, 1 failed, files not as expected `reLayoutWatcher.test.ts` and `getByNameKey.test.ts`; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0. The gates ran at load average about 300 with swap 31.4 of 32 GB (four lanes and the worker at once). Re-run of the two files on `93dd39879` at load 6.7, 23:25: 13 passed, 0 failed. Load-induced.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: accepted by the chat on the lane's DOM measures (fork and join node 7×120, painted 5×118; four default scenes 0 px); crops not inspected by the chat, Alfonso's look pending.
+**Notes**: Rollback tag `pre-activity-bar-7` on `ac3890b7e` (RC-31). Worker and gates: `~/.jjodel-lanes/P-2026-10-01-2254/result.json`. A saved derived viewpoint keeps the 5 px bar until deleted and derived again. Ticket: the merge gate ran a full vitest while four lanes ran; the lane auto rule of no new lane above load 20 does not cover a merge worker, which should wait for the load too.
+**Prompt document name**: 2026-10-01 22:54
