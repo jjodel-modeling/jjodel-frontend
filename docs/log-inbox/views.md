@@ -913,3 +913,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Chat smoke on 3001 (Chrome, light): Notation Demo / model_1 loads on the trunk with the fix, 12 nodes and 12 edges rendered, no Maximum update depth, no CanvasErrorBoundary fallback, no console error. The crash itself was verified by the lane probe (0/7 fresh pages, 240 drags, 0 crashes; scenes 9/9 byte-identical). GO.
 **Notes**: Rollback tag `pre-update-depth-loop-P-2026-10-01-2029` on `649feda48` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-01-2029/result.json`.
 **Prompt document name**: 2026-10-01 20:29
+
+## 2026-10-01 — fix(derive): Activity fork and join bar declared 7 px (P-2026-10-01-2230)
+**Prompt**: `claude_2026-10-01_2230_prompt_activity_bar_7px.md`, light tier, Phase 1 and 2 in cascade on `~/jjodel-w-forkbar`, branch `activity-bar-7`. Alfonso's answer of 2026-10-01 to the 2026-09-30 question, «7»: `ACTIVITY_BAR_SIZE` 5×120 to 7×120, so the bar paints 5×118 instead of 3×118. Decision row R-VP-36, amending R-VP-26 (2) on the thickness only.
+**Files touched**: report `690ca002e`: `docs/discovery/discovery_2026-10-01_activity_bar_7px.md`. Code `c3b0556d6`: `frontend/src/components/editor-v2/viewpoint/derive/viewpointDerivation.ts`, `.../derive/__tests__/activityUml.test.ts`, `frontend/src/components/editor-v2/nodes/__tests__/nodeSizing.test.ts`. This commit: the report (Phase 2 addendum), `docs/decisions.md` (R-VP-36), this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-30 17:20 (`claude_2026-09-30_1720_prompt_activity_sizes.md`, its open item (b): the bar paints 3 px at the declared 5)
+**Causa**: (a)
+**Regressions**: no. Gates on `c3b0556d6`: typecheck exit 2, 14 errors, the §17 set; vitest 258 files, the known 9 red at import, 6411 of 6411 tests passed; build exit 0. Tests 2 of 47 red first, then green. Mutation bench 16/16, controls 243/243. Probe on 3090, light: base (constant at 5) 8/8 and after 17/17; the four default scenes 0 px, byte-identical to the base run.
+**Out-of-scope changes**: no — seven files over two commits, above five (RC-11, rule 19): the three code files and the four docs files, each named in the prompt's DOVE, which is taken as the confirmation; `git diff --stat` of every other path empty.
+**Layer Impact Report**: not-required (`viewpoint/derive/` is not in the §3.1 table)
+**Smoke visivo**: passato (lane probe 17/17, crops in `frontend/scripts/smoke/_tmp_forkbar_crops/`, gitignored; the visual GO of the chat and Alfonso is pending)
+**Notes**: Fork and join measured node 7×120, painted 5×118. A saved derived viewpoint keeps 5 until derived again (R-VP-25's precedent); report H3, read not run. The base probe ran with the constant temporarily at 5, restored, `git diff HEAD` empty. The merge waits for the visual GO. Report: `docs/discovery/discovery_2026-10-01_activity_bar_7px.md`.
+**Prompt document name**: 2026-10-01 22:30

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-2230
 Chat: C-2026-10-01-2220
 Lane: Phase 1 then Phase 2 in cascade, outside the critical zone. Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-01 · lane activity-bar-7 · 690ca002e, c3b0556d6 · non fuso: hard-stop, the fork and join bar node 7×120 painted 5×118 (was 5×120, 3×118), lane probe on 3090 (light) 17/17 and the base run 8/8, the four default scenes 0 px, mutation bench 16/16, crops in frontend/scripts/smoke/_tmp_forkbar_crops/ (gitignored), R-VP-36, a saved derived viewpoint keeps 5 until derived again, verifica visiva alla chat
 Worktree: `~/jjodel-w-forkbar`, branch `activity-bar-7`, created from the trunk at `ac3890b7e`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-forkbar`, branch `activity-bar-7`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA
