@@ -9,6 +9,8 @@ import {
     isTypeEditable,
     visibleTopLevelTypes,
     DEFAULT_TYPE_PERMISSION,
+    metamodelOfClass,
+    modelsForType,
 } from '../environmentConfig';
 
 // A plain idlookup, the shape the store persists — no D-layer classes, so this suite
@@ -146,5 +148,55 @@ describe('visibleTopLevelTypes', () => {
 describe('defaults', () => {
     it('the default type permission is edit', () => {
         expect(DEFAULT_TYPE_PERMISSION).toBe('edit');
+    });
+});
+
+// #157, field test 2026-09-29 («AIM Pro»): two metamodels, a model of only one of them.
+function multiModelFixture() {
+    const idlookup: Record<string, any> = {
+        mmScenario: { className: 'DModel', id: 'mmScenario', isMetamodel: true },
+        mmEducators: { className: 'DModel', id: 'mmEducators', isMetamodel: true },
+        pkgS: { className: 'DPackage', id: 'pkgS', father: 'mmScenario' },
+        pkgE: { className: 'DPackage', id: 'pkgE', father: 'mmEducators' },
+        pkgE2: { className: 'DPackage', id: 'pkgE2', father: 'pkgE' },
+        Scenario: { className: 'DClass', id: 'Scenario', father: 'pkgS' },
+        Educator: { className: 'DClass', id: 'Educator', father: 'pkgE' },
+        Nested: { className: 'DClass', id: 'Nested', father: 'pkgE2' },
+        learningphase: { className: 'DModel', id: 'learningphase', isMetamodel: false, instanceof: 'mmScenario' },
+        scenario2: { className: 'DModel', id: 'scenario2', isMetamodel: false, instanceof: 'mmScenario' },
+    };
+    return idlookup;
+}
+
+describe('metamodelOfClass', () => {
+    it('walks the package chain up to the metamodel, nested packages included', () => {
+        const idlookup = multiModelFixture();
+        expect(metamodelOfClass(idlookup, 'Scenario')).toBe('mmScenario');
+        expect(metamodelOfClass(idlookup, 'Nested')).toBe('mmEducators');
+    });
+    it('is null for an unknown class or a broken chain', () => {
+        const idlookup = multiModelFixture();
+        expect(metamodelOfClass(idlookup, 'nope')).toBeNull();
+        idlookup.Orphan = { className: 'DClass', id: 'Orphan', father: 'gone' };
+        expect(metamodelOfClass(idlookup, 'Orphan')).toBeNull();
+    });
+});
+
+describe('modelsForType', () => {
+    it('keeps only the models of the class\'s metamodel, in project order', () => {
+        const idlookup = multiModelFixture();
+        const models = ['learningphase', 'scenario2'];
+        expect(modelsForType(idlookup, models, 'Scenario')).toEqual(['learningphase', 'scenario2']);
+        expect(modelsForType(idlookup, ['scenario2', 'learningphase'], 'Scenario')).toEqual(['scenario2', 'learningphase']);
+    });
+    it('is empty for a type whose metamodel has no model — not the first model of the project', () => {
+        const idlookup = multiModelFixture();
+        expect(modelsForType(idlookup, ['learningphase', 'scenario2'], 'Educator')).toEqual([]);
+    });
+    it('finds the model once the project has one', () => {
+        const idlookup = multiModelFixture();
+        idlookup.educators1 = { className: 'DModel', id: 'educators1', isMetamodel: false, instanceof: 'mmEducators' };
+        expect(modelsForType(idlookup, ['learningphase', 'educators1'], 'Educator')).toEqual(['educators1']);
+        expect(modelsForType(idlookup, ['learningphase', 'educators1'], 'Nested')).toEqual(['educators1']);
     });
 });

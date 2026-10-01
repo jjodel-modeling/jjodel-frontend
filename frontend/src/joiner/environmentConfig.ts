@@ -101,3 +101,36 @@ export function visibleTopLevelTypes(config: any | null | undefined, profile: an
     const types: string[] = (config && Array.isArray(config.topLevelTypes)) ? config.topLevelTypes : [];
     return types.filter((id) => isTypeVisible(profile, id));
 }
+
+/**
+ * The metamodel (an M2 `DModel`) a metaclass belongs to, by walking `father` up to the first
+ * `DModel` — a class sits under a package, possibly nested, and the package under the model.
+ * Null when the chain breaks (a class not in the store yet, a corrupt father). `depthCap` is a
+ * cycle belt, not a semantic limit.
+ */
+export function metamodelOfClass(idlookup: Idlookup, classId: string, depthCap = 64): string | null {
+    if (!idlookup || !classId) return null;
+    let current = idlookup[classId];
+    for (let i = 0; i < depthCap && current; i++) {
+        if (current.className === 'DModel') return typeof current.id === 'string' ? current.id : null;
+        if (typeof current.father !== 'string') return null;
+        current = idlookup[current.father];
+    }
+    return null;
+}
+
+/**
+ * The models, among `modelIds`, a metaclass can be instantiated in: the M1 models whose
+ * `instanceof` is the class's metamodel, in the order given (the project's order).
+ *
+ * #157, field test of 2026-09-29: the Configurator used the project's FIRST model for every
+ * type, so a type of any other metamodel could not be created (the class is resolved by name
+ * inside the model's own metamodel) and its instances never listed. An M1 offers the classes
+ * of its own metamodel only, so the model has to be chosen per type. Empty when the project
+ * has no model of that metamodel yet.
+ */
+export function modelsForType(idlookup: Idlookup, modelIds: readonly string[], classId: string): string[] {
+    const mm = metamodelOfClass(idlookup, classId);
+    if (!mm) return [];
+    return (modelIds ?? []).filter((id) => idlookup[id]?.className === 'DModel' && idlookup[id].instanceof === mm);
+}

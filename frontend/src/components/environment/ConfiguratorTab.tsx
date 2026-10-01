@@ -28,13 +28,15 @@ import {
     resolveTypePermission,
 } from '../../joiner';
 import { newDraft, paletteAttr } from '../../jjform';
-import { instancesOfClass } from '../abstract/tabs/instanceManagerModel';
+import { metamodelOfClass, modelsForType } from '../../joiner/environmentConfig';
+import { instancesOfClass, modelIdOfObject } from '../abstract/tabs/instanceManagerModel';
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
 import { applyCreate } from '../editor-v2/hooks/createAdapter';
 import { applyDelete, deletePlan, preflightFor } from '../editor-v2/hooks/deleteAdapter';
 import { appendValue } from '../editor-v2/viewpoint/ir/formWrite';
 import InstanceDetail, { type DetailPermission } from '../abstract/tabs/InstanceDetail';
 import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
+import { createM1 } from '../../pages/components/Navbar';
 import type { DeleteOptions, DeletePreflight, NavState } from '../../jjform';
 import './configuratorTab.scss';
 
@@ -72,10 +74,11 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
     const profile: any = findProfile(idlookup, profileId);
 
     const project = LProject.getProject();
-    // First cut: the Configurator targets the project's primary model. A model picker for
-    // multi-model projects is a later refinement.
-    const models = ((project as any)?.models ?? []) as Array<{ id: string }>;
-    const modelId: string | null = models[0]?.id ?? null;
+    // The project's models, in project order. A type is created and listed in the models of ITS
+    // metamodel (`modelsForType`), not in the project's first model: the field test of 2026-09-29
+    // had «New» silent on Educator because the first model conformed to another metamodel.
+    const projectModelIds: string[] = (((project as any)?.models ?? []) as Array<{ id: string }>).map((m) => m.id);
+    const projectModelKey = projectModelIds.join('|');
 
     // classId → display name, from the project's metaclasses.
     const classNameById = useMemo(() => {
@@ -97,13 +100,33 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
         }
     }, [open, topTypeIds, selectedTypeId]);
 
+    /** «New» returned no instance. Shown instead of a silent button; cleared on the next try. */
+    const [createFailed, setCreateFailed] = useState(false);
+
     // Clear the instance selection when the type changes.
-    useEffect(() => { setSelectedInstanceId(null); }, [selectedTypeId]);
+    useEffect(() => { setSelectedInstanceId(null); setCreateFailed(false); }, [selectedTypeId]);
+
+    /** The models the selected type lives in. «New» creates in the first one; the list shows
+     *  the instances of all of them. Empty = the project has no model of that metamodel. */
+    const typeModelIds: string[] = useMemo(
+        () => (selectedTypeId ? modelsForType(idlookup, projectModelIds, selectedTypeId) : []),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [idlookup, projectModelKey, selectedTypeId],
+    );
+    const createModelId: string | null = typeModelIds[0] ?? null;
+    const typeMetamodelId: string | null = selectedTypeId ? metamodelOfClass(idlookup, selectedTypeId) : null;
+    const typeMetamodelName: string = (typeMetamodelId && idlookup[typeMetamodelId]?.name) || 'metamodel';
 
     const instances = useMemo(
-        () => (selectedTypeId && modelId ? instancesOfClass(idlookup, modelId, selectedTypeId) : []),
-        [idlookup, modelId, selectedTypeId],
+        () => (selectedTypeId
+            ? typeModelIds.flatMap((mid) => instancesOfClass(idlookup, mid, selectedTypeId).map((row) => ({ ...row, modelId: mid })))
+            : []),
+        [idlookup, typeModelIds, selectedTypeId],
     );
+
+    /** The model the detail works in: the selected instance's own, which is one of
+     *  `typeModelIds` and not necessarily the first. */
+    const modelId: string | null = selectedInstanceId ? modelIdOfObject(idlookup, selectedInstanceId) : null;
 
     // ── The detail: the Data Manager's panel (`InstanceDetail`) ────────────────
     // The same header, breadcrumb and Back, form, inline children and reference sections
@@ -136,8 +159,9 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
     const [pendingDelete, setPendingDelete] = useState<DeletePreflight | null>(null);
     const [reassignTo, setReassignTo] = useState('');
     const openDelete = (instanceId: string) => {
-        if (!modelId) return;
-        const pre = preflightFor(modelId, makeShapeCtx(modelId).shape(), instanceId);
+        const mid = modelIdOfObject(idlookup, instanceId) ?? modelId;
+        if (!mid) return;
+        const pre = preflightFor(mid, makeShapeCtx(mid).shape(), instanceId);
         setReassignTo(pre.reassignCandidates[0]?.id ?? '');
         setPendingDelete(pre);
     };
@@ -156,30 +180,41 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
     /** «Add <Child>» from the detail: created in place, like this screen's «New», without
      *  the Data Manager's draft dialog. Bare call (editor-v2 §3.3). */
     const createIn = (cls: string, ownerId: string | null, childKey: string | null) => {
-        if (!modelId) return;
-        const shape = makeShapeCtx(modelId).shape();
-        applyCreate(modelId, shape, newDraft(shape, cls, ownerId, childKey));
+        const mid = (ownerId && modelIdOfObject(idlookup, ownerId)) || modelId;
+        if (!mid) return;
+        const shape = makeShapeCtx(mid).shape();
+        applyCreate(mid, shape, newDraft(shape, cls, ownerId, childKey));
     };
 
     /** «New <Target> & link»: the target at model root, then the pointer appended to the
      *  source slot — the same two steps the Data Manager's commit makes (#142). */
     const createAndLink = (targetCls: string, sourceId: string, refKey: string) => {
-        if (!modelId) return;
-        const shape = makeShapeCtx(modelId).shape();
-        const id = applyCreate(modelId, shape, newDraft(shape, targetCls, null, null));
+        const mid = modelIdOfObject(idlookup, sourceId) || modelId;
+        if (!mid) return;
+        const shape = makeShapeCtx(mid).shape();
+        const id = applyCreate(mid, shape, newDraft(shape, targetCls, null, null));
         if (id) appendValue(sourceId, refKey, id, true);
     };
 
     if (!open) return null;
 
     const createNew = () => {
-        if (!modelId || !selectedTypeId) return;
+        if (!createModelId || !selectedTypeId) return;
         const name = classNameById[selectedTypeId];
         if (!name) return;
-        const shape = makeShapeCtx(modelId).shape();
+        const shape = makeShapeCtx(createModelId).shape();
         // Bare call: applyCreate manages its own transaction (editor-v2 §3.3).
-        const id = applyCreate(modelId, shape, newDraft(shape, name, null, null));
+        const id = applyCreate(createModelId, shape, newDraft(shape, name, null, null));
+        setCreateFailed(!id);
         if (id) setSelectedInstanceId(id);
+    };
+
+    /** Developer only (decision of 2026-10-01): a type whose metamodel has no model in the
+     *  project gets a «Create model» button, through the File → New → Model path. */
+    const createTypeModel = () => {
+        if (!typeMetamodelId || !project) return;
+        const mm: any = ((project as any).metamodels ?? []).find((m: any) => m?.id === typeMetamodelId);
+        if (mm) createM1(project as any, mm);
     };
 
     const hasTypes = topTypeIds.length > 0;
@@ -284,21 +319,50 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                                     {/* R4 (#157): on a type the profile may read but not create, the button
                                         is not rendered at all — a disabled "New" was reported as
                                         misleading in the field test. */}
-                                    {canCreate && (
+                                    {canCreate && createModelId && (
                                         <button
                                             className="configurator__new"
                                             onClick={createNew}
-                                            disabled={!modelId || !selectedTypeId}
-                                            title={!modelId ? 'This project has no model yet' : undefined}
+                                            disabled={!selectedTypeId}
+                                            title={typeModelIds.length > 1
+                                                ? `Creates it in ${idlookup[createModelId]?.name || 'the first model'}`
+                                                : undefined}
                                         >
                                             <i className="bi bi-plus-lg" /> New
                                         </button>
                                     )}
                                 </div>
-                                {!modelId ? (
-                                    <p className="configurator__hint">This project has no model yet.</p>
+                                {createFailed && (
+                                    <p className="configurator__error" role="alert">
+                                        The new {selectedTypeId ? classNameById[selectedTypeId] : 'element'} could not be
+                                        created in <strong>{(createModelId && idlookup[createModelId]?.name) || 'its model'}</strong>.
+                                        The browser console has the details.
+                                    </p>
+                                )}
+                                {typeModelIds.length === 0 ? (
+                                    <div className="configurator__hint">
+                                        {!canCreate ? (
+                                            <>No instances: this project has no <strong>{typeMetamodelName}</strong> model.</>
+                                        ) : isDeveloperView ? (
+                                            <>
+                                                This project has no <strong>{typeMetamodelName}</strong> model, so{' '}
+                                                {selectedTypeId ? classNameById[selectedTypeId] : 'these'} elements cannot be created yet.
+                                                <button className="configurator__create-model" onClick={createTypeModel}>
+                                                    <i className="bi bi-plus-lg" /> Create {typeMetamodelName} model
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {selectedTypeId ? classNameById[selectedTypeId] : 'These'} elements cannot be created
+                                                yet: this project has no <strong>{typeMetamodelName}</strong> model. Ask the
+                                                project's developer to add one.
+                                            </>
+                                        )}
+                                    </div>
                                 ) : instances.length === 0 ? (
-                                    <p className="configurator__hint">No instances yet. Click New to create one.</p>
+                                    <p className="configurator__hint">
+                                        {canCreate ? 'No instances yet. Click New to create one.' : 'No instances yet.'}
+                                    </p>
                                 ) : (
                                     <ul className="configurator__instances">
                                         {instances.map((row) => (
@@ -308,6 +372,9 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                                                 onClick={() => setSelectedInstanceId(row.id)}
                                             >
                                                 {row.name || row.id}
+                                                {typeModelIds.length > 1 && (
+                                                    <span className="configurator__row-model">{idlookup[row.modelId]?.name || row.modelId}</span>
+                                                )}
                                             </li>
                                         ))}
                                     </ul>
