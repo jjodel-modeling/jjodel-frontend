@@ -4981,6 +4981,61 @@ fino a 500 ms a essere rifiutata. La gara non è del ruolo `superclass`: `waitFo
 `jjscript/executor/dependencies.ts` aspetta solo le dipendenze `required: true`, quindi ogni ruolo
 lasciato `required: false` la corre, a partire da `type-reference` (`dependencies.ts:205-235`).
 
+R-JS-2..6 below: decided by the chat `C-2026-10-01-1725` in the prompt `P-2026-10-01-1725` under RC-25,
+measured in `docs/discovery/discovery_2026-10-01_jjscript_requeue.md`, with the GO's amendment to the
+report's D15 written into R-JS-3. Marker: **provisional, unattended**.
+
+**R-JS-2** (2026-10-01, provisional, unattended) — **The wait accepts what the guard accepts.** In a
+scope-bound M2 run (`scopeBound && level !== 'M1'`, the guard's own condition at `executor.ts:123`) a
+one-segment name counts as resolved for `waitForDependencies` only when the bound metamodel resolves
+it. The project-wide fallback stays for qualified names, unbound runs, M1, and a bound metamodel that
+is gone, so the guard's `SCOPE_NOT_FOUND` stays immediate. Cause: a homonym in another metamodel ended
+the wait at the first poll and `checkBoundScope` then refused the line (the Petri net of 2026-10-01,
+report §3.1). Accepted cost: a bare name that lives only in another metamodel waits 500 ms before the
+guard refuses it. Code `5fa749339`.
+
+**R-JS-3** (2026-10-01, provisional, unattended) — **Run executes in passes.** Pass 1 runs every
+command in script order and never pauses. A failed command is deferred when its verb is `create`,
+`add`, `set` or the standalone `A extends B`, and its executor code (`result.errors[0].code`, not the
+dialog's mapping) is one of `PARENT_NOT_FOUND`, `CHILD_NOT_FOUND`, `MEMBER_NOT_FOUND`, `NO_PARENT`,
+`ELEMENT_NOT_FOUND`, `UNKNOWN_ATTRIBUTE_TYPE`, `UNKNOWN_REFERENCE_TYPE`, `UNKNOWN_OPERATION_TYPE`,
+`UNKNOWN_PARAMETER_TYPE`, `UNKNOWN_TYPE`, `OUT_OF_SCOPE`, `AMBIGUOUS_OUT_OF_SCOPE`. Each of these is
+emitted before anything is written (report §3.2), so a command succeeds at most once. The deferred
+commands run again in script order while a pass makes at least one command succeed, at most 3 passes
+after the first; what still fails is final with the error of its last attempt. Never deferred:
+`delete`, `rename`, `move`, `copy`, `remove`, `abstract` (a toggle), `forall`, blocks, `let`, `eval`.
+GO amendment: a deferred `set` is not retried when a later line that already succeeded sets the same
+feature of the same target; it ends `superseded by line <n>` (editor numbering), is not counted as an
+error and is listed under «Superseded». Two collection updates (`+=`, `-=`) compose and do not supersede
+each other. Accepted as declared: a deferred `create` can bring back what a later failed `delete` meant
+to remove (R2), and a forward reference with a required dependency costs up to 500 ms per pass (R3).
+Pure module `executor/runPasses.ts`, code `daba6e27e`.
+
+**R-JS-4** (2026-10-01, provisional, unattended) — **The forward-reference refusal leaves Run.** Run
+calls `validateScriptIntegrity(code)` without the name set, so a forward reference completes on pass 2
+instead of being refused before command 1. Parse and syntax errors are still refused before command 1
+and listed in the summary, titled `Script not executed: n errors`. `scriptValidator.ts` is unchanged;
+`ScriptBlock.tsx:projectClassifierNames` has no caller left and is marked `TODO: cleanup`.
+Code `daba6e27e`.
+
+**R-JS-5** (2026-10-01, provisional, unattended) — **Run never pauses.** The interactive Skip dialog
+leaves Run; Step keeps its pause on error, unchanged. The recovery rules are evaluated on each final
+error and their actions sit on that error's row of the summary; an action applies its fix and reruns
+only the final failures, with R-JS-3 semantics. `skipMatchingCreateLiteral` is not offered, since Run
+already goes on past those lines. Code `daba6e27e`, `1315e15c4`.
+
+**R-JS-6** (2026-10-01, provisional, unattended) — **One summary modal closes every Run.** Titles
+`Script executed` and `Script executed with n errors`. It shows before, after and delta per model whose
+figures changed: classes (abstract inside the count), attributes, references, operations,
+enumerations, literals and packages, or instances for an M1 model. It also shows the commands
+executed, `k resolved on retry (lines …)`, the duration, and every final error with its editor line,
+command, message, suggestion and recovery actions. The figures come from the model, read with the
+status bar's accessors, never from the commands. Every model of the project is snapshotted when the
+run starts, because `ScriptBlock` cannot name a Jjodie reply's bound metamodel. "After" is read live.
+There was no success toast on this path to replace. The inline strip stays as the per-message record.
+`RunSummaryDialog` is a new component that reuses the `ExecutionErrorDialog` shell; light theme only.
+Code `1315e15c4`.
+
 ## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homonyms.md`.
