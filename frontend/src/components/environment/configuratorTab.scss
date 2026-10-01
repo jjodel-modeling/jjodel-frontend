@@ -10,6 +10,17 @@
     padding: var(--space-4, 16px);
 }
 
+// #157 R5 — the consumer's landing page: the same window, laid in the project body (over the
+// hidden Dock, see `.project-dock-wrapper--consumer` in dashboard.scss) instead of over the
+// whole screen.
+.configurator-page {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    padding: var(--space-4, 16px);
+    background: var(--color-bg-primary, #f8fafc);
+}
+
 .configurator {
     background: var(--color-bg-secondary, #fff);
     color: var(--color-text-primary, #0f172a);
@@ -20,6 +31,12 @@
     flex-direction: column;
     overflow: hidden;
     min-width: 0;
+
+    // On the page the window sits in the body: a border instead of the floating shadow.
+    &--page {
+        box-shadow: none;
+        border: 1px solid var(--color-border-secondary, #e2e8f0);
+    }
 
     &__header {
         display: flex;
@@ -140,10 +157,25 @@
         }
     }
 
+    // No padding of its own since the detail is the Data Manager's panel (2026-09-28): its
+    // `instance-manager__form-inner` insets by 14px and the header band's negative margins
+    // are computed on that inset — a second padding here would stop the band short of the
+    // column's edges. The hint below keeps its own padding.
     &__detail {
         overflow-y: auto;
         min-height: 0;
-        padding: var(--space-4, 16px);
+        padding: 0;
+    }
+
+    // The detail's wrapper carries the Data Manager's root class for its palette
+    // (`.instance-manager[data-palette]`) and tokens — and so its root LAYOUT, which is a
+    // full-height flex row with `overflow: hidden`. Undone here: this wrapper is a block in
+    // a column that scrolls, and `overflow: hidden` on it would also make it the sticky
+    // breadcrumb's scroll container, pinning the way back to a box that never scrolls.
+    &__dm.instance-manager {
+        display: block;
+        height: auto;
+        overflow: visible;
     }
 
     &__empty,
@@ -159,6 +191,29 @@
         line-height: 1.6;
     }
 
+    // R2 (#157) — a loud, legible reason when the `?profile=` in the URL resolves to no profile.
+    // That case used to be silent: permissions were skipped and the panel looked merely empty.
+    // Tokens: --color-warning / --color-warning-muted exist in both the light and the dark set.
+    &__warn {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--color-text-primary, #0f172a);
+        background: var(--color-warning-muted, rgba(245, 158, 11, 0.12));
+        border: 1px solid var(--color-warning, #f59e0b);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: 0 var(--space-4, 16px) var(--space-3, 12px);
+
+        i { flex: 0 0 auto; margin-top: 1px; color: var(--color-warning, #f59e0b); }
+        code { font-size: 11px; word-break: break-all; }
+    }
+
+    // TODO: cleanup — `&__ro-banner` and `&__ro-body` have no markup since 2026-09-28: the
+    // read-only gate moved into the shared detail (`InstanceDetail`'s `ReadOnlyGate`, styled
+    // as `instance-manager__ro-*`). Kept per Rule 9.
     // F2 — read-only gate for a profile that may view but not edit a type.
     &__ro-banner {
         display: flex;
@@ -204,6 +259,44 @@
             background: var(--color-bg-primary, #f1f5f9);
             border: 1px solid var(--color-border-secondary, #e2e8f0);
         }
+    }
+
+    // #157 (field test 2026-09-29) — a type can live in several models of its metamodel: each
+    // row then says which one. Quiet, after the name, so the name keeps the ellipsis.
+    &__row-model {
+        margin-left: 8px;
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--color-text-tertiary, #94a3b8);
+    }
+
+    // «New» that created nothing says so, instead of a button that stays silent.
+    &__error {
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--color-error-text, #b91c1c);
+        background: var(--color-error-muted, rgba(239, 68, 68, 0.1));
+        border: 1px solid var(--color-error, #ef4444);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: var(--space-3, 12px) var(--space-3, 12px) 0;
+    }
+
+    // Developer view only: the project has no model of the type's metamodel.
+    &__create-model {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: var(--space-3, 12px);
+        border: 1px solid var(--color-border-secondary, #e2e8f0);
+        background: var(--color-bg-primary, #f8fafc);
+        color: var(--color-text-primary, #0f172a);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 13px;
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-primary, #6366f1); }
     }
 
     &__perm-badge {

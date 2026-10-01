@@ -28,6 +28,19 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-28 — docs(#157): triage del feedback di test di @tmaog + piano di rimedio
+**Prompt**: Tommaso ha testato le nuove feature e riportato sulla issue #157 esiti e problemi; fare un piano per risolverli.
+**Files touched**: `docs/discovery/discovery_2026-09-28_157_triage_feedback_tmaog.md` (nuovo), `docs/claude-code-log.md`. Nessun file di codice.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-24 14:00
+**Causa**: (d)
+**Regressions**: no — analisi read-only, nessun sorgente toccato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna modifica di codice.
+**Smoke visivo**: non applicabile
+**Notes**: I 4 sintomi MAGGIORI (Configurator bianco, hidden non nasconde, New su read-only, profili assenti al riapri) sono **UN** guasto: config/profilo non risolti a runtime ⇒ `resolveTypePermission(null,…)` = `'edit'`. Il trim LeftBar/Navbar regge perché dipende solo da `?profile=`. FALSIFICATA l'ipotesi della raggiungibilità: `U.compressedState` serializza tutto l'idlookup. R0 discrimina: progetto non salvato (M1) vs config duplicata da `getOrCreate` (M2). F4b rinviata dopo R1.
+**Prompt document name**: 2026-09-28 (chat)
+
 ## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)
 **Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.
 **Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.
@@ -221,6 +234,19 @@ Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 **Layer Impact Report**: not-required — nessun file di §3.1; nuova entità D/L, nessuna scrittura sync/portDistribution, `.new()` self-gestisce la sua TRANSACTION (nessun creator dentro TRANSACTION esterna, §3.3/§3.4 fuori portata).
 **Smoke visivo**: non applicabile — F0a non ha UI.
 **Notes**: Entità agganciata al progetto via `father` + scan idlookup (nessun campo su DProject/DState); create lazy (`getOrCreate`), nessun VersionFixer. Logica pura (scan/permessi) in `joiner/environmentConfig.ts`, testabile senza `window`. Gotcha: `static get` collide con `RuntimeAccessibleClass.get` (TS2417) → rinominato `getForProject`. Referto: discovery_2026-09-23_157_fase0a_entity_pattern.md.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — docs: piano #157 (Configurator + ambienti jjodel per ruolo)
+**Prompt**: pianificare la feature della #157 in modalità "standalone"/ambienti per ruolo; analisi del sistema (sintassi concreta + data manager) e piano incrementale a fasi; scrivere il documento di planning, rispondere alla issue #157 linkando il doc e chiedendo approvazione a Tommaso, preparare il prompt di corsia della Fase 0, approfondire il punto entità/VersionFixer prima di scrivere.
+**Files touched**: `docs/discovery/discovery_2026-09-23_157_standalone_configurator.md` (nuovo), `docs/prompts/claude_2026-09-23_1200_prompt_157_fase0a_environment_config.md` (nuovo), `docs/claude-code-log.md` (questa entry). Commento su issue #157 (jjodel-modeling/jjodel-frontend).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo documentazione, nessun sorgente toccato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — task di pianificazione, nessun file di §3.1.
+**Smoke visivo**: non applicabile
+**Notes**: Decisioni prese: D1 enforcement solo-frontend (soft), D2 stesso progetto + ruolo in URL, D3 entità dedicata (non campi su DProject). Piano a 6 fasi (F0..F5). Approfondimento: entità persistite in `joiner/classes.ts` (non `megamodel.ts`), aggancio via `father` + scan idlookup, VersionFixer NON necessario in F0 (create lazy). Doc su branch `docs/157-standalone-configurator-plan`. Prompt F0a pronto.
 **Prompt document name**: 2026-09-23 12:00
 
 ## 2026-09-18 — docs: trasporto normativo, passo 2 di P-2026-09-18-2110
