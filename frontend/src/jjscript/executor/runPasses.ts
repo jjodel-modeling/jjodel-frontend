@@ -68,6 +68,26 @@ export interface RunPassesResult<R extends PassResult> {
 export const MAX_RETRY_PASSES = 3;
 
 /**
+ * R-JS-7: how many commands of a retry pass (pass 2 and later) are running right now. Module
+ * state on purpose: the command reaches the executor through the host's callback
+ * (`ScriptBlock` -> `onExecute` -> `JjScriptService` -> `JjScriptExecutor`), and none of those
+ * signatures carries a pass number, so the run publishes it here and `waitForDependencies`
+ * reads it. Raised around `execOne` and lowered in a `finally`, so a throwing command cannot
+ * leave it up.
+ */
+let retryPassDepth = 0;
+
+/**
+ * True while a retry pass is running a command. `waitForDependencies` then awaits every
+ * dependency of that command, `type-reference` and `value-reference` included: a forward
+ * reference that pass 1 deferred waits for the line that created its target to reach the
+ * resolvers, instead of failing again at the first poll and ending the run (R-JS-7).
+ */
+export function isRetryPass(): boolean {
+    return retryPassDepth > 0;
+}
+
+/**
  * The executor's codes for a name that did not resolve, each emitted before anything is
  * written (report §3.2). `TARGET_NOT_FOUND` is not here: no handler emits it.
  */
@@ -181,7 +201,17 @@ export async function runPasses<R extends PassResult>(
                 }
             }
 
-            const result = await execOne(i);
+            let result: R;
+            if (passes > 1) {
+                retryPassDepth++;
+                try {
+                    result = await execOne(i);
+                } finally {
+                    retryPassDepth--;
+                }
+            } else {
+                result = await execOne(i);
+            }
             const attempts = (previous?.attempts ?? 0) + 1;
             if (result.success) {
                 succeeded.add(i);
