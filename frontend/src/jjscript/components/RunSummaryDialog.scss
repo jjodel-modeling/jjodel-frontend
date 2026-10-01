@@ -23,12 +23,28 @@ $summary-mono: 'IBM Plex Mono', Monaco, Consolas, monospace;
 // DIALOG
 // ============================================
 
+// Capped to its overlay, not to the viewport: the overlay is `position: fixed` but an ancestor
+// of the Jodie window confines it to that window (measured 2026-10-01 at a 768 px viewport:
+// overlay 518 px tall, dialog 646 px with a 60vh content, title and Close clipped). Header,
+// stats and actions keep their size; only the content shrinks, and scrolls.
 .exec-error-dialog.run-summary {
     max-width: 560px;
-}
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
 
-.run-summary__content {
-    max-height: 60vh;
+    > .exec-error-header,
+    > .exec-error-stats,
+    > .exec-error-actions {
+        flex-shrink: 0;
+    }
+
+    .run-summary__content {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow-y: auto;
+    }
 }
 
 .run-summary__none {
