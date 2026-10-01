@@ -988,6 +988,18 @@ html[data-theme="dark"] {
     gap: 4px 16px;
 
     li { padding: 2px 0; }
+
+    // R3 (#157): why a metaclass is not offered, under its name. Warning tone when it was marked
+    // before the rule and should be removed.
+    &__reason {
+        display: block;
+        margin-left: 26px;
+        font-size: 11px;
+        line-height: 1.4;
+        color: $color-text-secondary;
+
+        &--marked { color: var(--color-warning, #b45309); }
+    }
 }
 
 .envgen-profile-add {

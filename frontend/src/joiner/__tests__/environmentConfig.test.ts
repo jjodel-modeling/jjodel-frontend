@@ -11,6 +11,7 @@ import {
     DEFAULT_TYPE_PERMISSION,
     metamodelOfClass,
     modelsForType,
+    topLevelReason,
 } from '../environmentConfig';
 
 // A plain idlookup, the shape the store persists — no D-layer classes, so this suite
@@ -198,5 +199,31 @@ describe('modelsForType', () => {
         idlookup.educators1 = { className: 'DModel', id: 'educators1', isMetamodel: false, instanceof: 'mmEducators' };
         expect(modelsForType(idlookup, ['learningphase', 'educators1'], 'Educator')).toEqual(['educators1']);
         expect(modelsForType(idlookup, ['learningphase', 'educators1'], 'Nested')).toEqual(['educators1']);
+    });
+});
+
+// #157 R3 — the class as the L-layer reports it (LClass.rootable and the flags that explain it).
+describe('topLevelReason', () => {
+    const composedBy = (...owners: string[]) => owners.map((name) => ({ father: { name } }));
+    it('a rootable class can be a top-level type', () => {
+        expect(topLevelReason({ rootable: true })).toBeNull();
+    });
+    it('the metamodel\'s explicit rootable wins over being composed', () => {
+        expect(topLevelReason({ rootable: true, isComposedBy: composedBy('Scenario') })).toBeNull();
+    });
+    it('an abstract or interface class has no instances of its own', () => {
+        expect(topLevelReason({ rootable: false, abstract: true })).toBe('abstract, it has no instances of its own');
+        expect(topLevelReason({ rootable: false, interface: true })).toBe('abstract, it has no instances of its own');
+    });
+    it('a composed class names its containers, once each', () => {
+        expect(topLevelReason({ rootable: false, isComposedBy: composedBy('Scenario') })).toBe('created inside Scenario');
+        expect(topLevelReason({ rootable: false, isComposedBy: composedBy('Domain', 'Domain', 'Cluster') })).toBe('created inside Domain, Cluster');
+    });
+    it('a singleton, and a class the metamodel keeps off the root', () => {
+        expect(topLevelReason({ rootable: false, isSingleton: true })).toBe('a singleton');
+        expect(topLevelReason({ rootable: false })).toBe('not allowed at the model root by its metamodel');
+    });
+    it('no class, a reason rather than a pass', () => {
+        expect(topLevelReason(null)).toBe('unknown metaclass');
     });
 });

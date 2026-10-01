@@ -9,6 +9,7 @@
 import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { DState, U, LProject, DEnvironmentConfig, SetFieldAction, findEnvironmentConfig } from '../../../joiner';
+import { topLevelReason } from '../../../joiner/environmentConfig';
 import { Checkbox } from '../../ui/Checkbox/Checkbox';
 
 export const MetaclassesStep: React.FC = () => {
@@ -25,12 +26,15 @@ export const MetaclassesStep: React.FC = () => {
     // instead of repeated on every row. The flat `metamodel:metaclass` list was reported as hard to
     // scan when several metamodels contribute classes; homonymous classes stay distinguishable
     // because each one sits under its own metamodel.
-    const groups: Array<{ mmId: string; mmName: string; items: Array<{ id: string; label: string }> }> = [];
+    // R3 (#157): `reason` says why a class cannot be created on its own at the model root
+    // (abstract, contained in another, …), read from the core's `LClass.rootable` — such a class
+    // is not offered, as @tmaog asked on 2026-09-23 («phase» only lives inside «scenario»).
+    const groups: Array<{ mmId: string; mmName: string; items: Array<{ id: string; label: string; reason: string | null }> }> = [];
     for (const mm of (((project as any)?.metamodels ?? []) as any[])) {
         const mmName: string = mm?.name || 'metamodel';
-        const items: Array<{ id: string; label: string }> = [];
+        const items: Array<{ id: string; label: string; reason: string | null }> = [];
         for (const c of ((mm?.classes ?? []) as Array<{ id: string; name: string }>)) {
-            if (c && c.id) items.push({ id: c.id, label: c.name || c.id });
+            if (c && c.id) items.push({ id: c.id, label: c.name || c.id, reason: topLevelReason(c) });
         }
         if (items.length) groups.push({ mmId: mm?.id || mmName, mmName, items });
     }
@@ -52,7 +56,9 @@ export const MetaclassesStep: React.FC = () => {
                 <h3 className="envgen-section-title">Editable metaclasses</h3>
                 <p className="envgen-section-description">
                     The metaclasses promoted here become the Configurator's top-level entry points for
-                    stand-alone users. Changes are part of the project: «Done» saves it, as Ctrl+S does.
+                    stand-alone users. Only metaclasses that can be created on their own are offered: not
+                    abstract ones, nor those that only live inside another. Changes are part of the
+                    project: «Done» saves it, as Ctrl+S does.
                 </p>
             </div>
 
@@ -65,15 +71,28 @@ export const MetaclassesStep: React.FC = () => {
                     <div className="envgen-mm-group" key={g.mmId}>
                         <div className="envgen-mm-group__title">{g.mmName}</div>
                         <ul className="envgen-checklist">
-                            {g.items.map((it) => (
-                                <li key={it.id}>
-                                    <Checkbox
-                                        checked={topLevel.includes(it.id)}
-                                        onChange={(on) => toggle(it.id, on)}
-                                        label={it.label}
-                                    />
-                                </li>
-                            ))}
+                            {g.items.map((it) => {
+                                const marked = topLevel.includes(it.id);
+                                return (
+                                    <li key={it.id}>
+                                        {/* R3: not offered when it cannot be created on its own; one
+                                            marked before this rule can still be removed. */}
+                                        <Checkbox
+                                            checked={marked}
+                                            onChange={(on) => toggle(it.id, on)}
+                                            label={it.label}
+                                            disabled={!!it.reason && !marked}
+                                        />
+                                        {it.reason && (
+                                            <span className={`envgen-checklist__reason${marked ? ' envgen-checklist__reason--marked' : ''}`}>
+                                                {marked
+                                                    ? `${it.reason}: remove it`
+                                                    : it.reason}
+                                            </span>
+                                        )}
+                                    </li>
+                                );
+                            })}
                         </ul>
                     </div>
                 ))

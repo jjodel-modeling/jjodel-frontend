@@ -134,3 +134,28 @@ export function modelsForType(idlookup: Idlookup, modelIds: readonly string[], c
     if (!mm) return [];
     return (modelIds ?? []).filter((id) => idlookup[id]?.className === 'DModel' && idlookup[id].instanceof === mm);
 }
+
+/**
+ * Why a metaclass cannot be a top-level type of the Configurator — created on its own at the
+ * model root — or null when it can (#157 R3).
+ *
+ * Reads the class as the L-layer reports it, so a proxy (`LClass`) or a plain object of the same
+ * shape both work, and the module keeps its zero imports. The rule is the core's own
+ * `LClass.rootable` (`LModelElement.tsx` `get_rootable`): the metamodel's explicit choice when
+ * set, otherwise not abstract, not interface, not singleton and not the target of a composition.
+ * The other fields only explain a `false`. Measured on 2026-10-01: without this gate «New» on a
+ * composed class created a part at the model root, and on an abstract class an abstract instance.
+ */
+export function topLevelReason(cls: any): string | null {
+    if (!cls) return 'unknown metaclass';
+    if (cls.rootable) return null;
+    if (cls.abstract || cls.interface) return 'abstract, it has no instances of its own';
+    const owners: string[] = [];
+    for (const r of ((cls.isComposedBy ?? []) as any[])) {
+        const name = r?.father?.name;
+        if (typeof name === 'string' && name && !owners.includes(name)) owners.push(name);
+    }
+    if (owners.length) return `created inside ${owners.join(', ')}`;
+    if (cls.isSingleton) return 'a singleton';
+    return 'not allowed at the model root by its metamodel';
+}

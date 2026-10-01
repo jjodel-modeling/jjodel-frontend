@@ -22,13 +22,14 @@ import {
     DState,
     U,
     LProject,
+    LPointerTargetable,
     findEnvironmentConfig,
     findProfile,
     visibleTopLevelTypes,
     resolveTypePermission,
 } from '../../joiner';
 import { newDraft, paletteAttr } from '../../jjform';
-import { metamodelOfClass, modelsForType } from '../../joiner/environmentConfig';
+import { metamodelOfClass, modelsForType, topLevelReason } from '../../joiner/environmentConfig';
 import { instancesOfClass, modelIdOfObject } from '../abstract/tabs/instanceManagerModel';
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
 import { applyCreate } from '../editor-v2/hooks/createAdapter';
@@ -248,7 +249,12 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
     // is unrestricted. 'read' → no create, IRForm gated read-only; 'hidden' types never reach here
     // (filtered out of the top bar by visibleTopLevelTypes).
     const selectedPerm = selectedTypeId ? resolveTypePermission(profile, selectedTypeId) : 'edit';
-    const canCreate = selectedPerm === 'edit';
+    // R3 (#157): a type that cannot be created on its own at the model root (abstract, contained
+    // in another — the core's `LClass.rootable`) gets no «New», whatever the profile says. Without
+    // this, «New» made a part outside its whole, or an abstract instance (measured 2026-10-01).
+    // Its existing instances stay listed and editable.
+    const rootReason: string | null = selectedTypeId ? topLevelReason(LPointerTargetable.fromPointer(selectedTypeId)) : null;
+    const canCreate = selectedPerm === 'edit' && !rootReason;
     const readOnly = selectedPerm === 'read';
 
     // R2 (#157, triage of the field test): tell the "nothing to show" cases apart, so a failure is
@@ -361,6 +367,11 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
                                         </button>
                                     )}
                                 </div>
+                                {selectedPerm === 'edit' && rootReason && (
+                                    <p className="configurator__hint">
+                                        No «New» for {selectedTypeId ? classNameById[selectedTypeId] : 'this type'}: {rootReason}.
+                                    </p>
+                                )}
                                 {createFailed && (
                                     <p className="configurator__error" role="alert">
                                         The new {selectedTypeId ? classNameById[selectedTypeId] : 'element'} could not be
