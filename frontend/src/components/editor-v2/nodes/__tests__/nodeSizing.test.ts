@@ -171,8 +171,11 @@ const painted = (b: { w: number; h: number }) => ({ w: b.w - 2, h: b.h - 2 });
 describe('Activity (UML) on DemoFlowB: the declared sizes draw as declared', () => {
     const views = opened(FLOWB());
 
-    it('fork and join: the bar node 5x120, no 24 px floor', () => {
-        for (const name of ['Fork', 'Join']) expect(nodeBox(irOf(views, name)), name).toEqual({ w: 5, h: 120 });
+    it('fork and join: the bar node 7x120 (painted 5x118), no 24 px floor', () => {
+        for (const name of ['Fork', 'Join']) {
+            expect(nodeBox(irOf(views, name)), name).toEqual({ w: 7, h: 120 });
+            expect(painted(nodeBox(irOf(views, name))), name).toEqual({ w: 5, h: 118 });
+        }
     });
 
     it('the initial dot: 20x20', () => {
