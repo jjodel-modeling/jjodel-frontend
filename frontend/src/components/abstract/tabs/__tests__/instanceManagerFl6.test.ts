@@ -130,9 +130,14 @@ describe('FL6 — la riga espandibile', () => {
         expect(cell.slice(0, end)).toContain('aria-hidden');
     });
 
-    it('il click sulla riga resta selectOnly: selezione ed espansione insieme', () => {
-        expect(TSX).toContain('onClick={() => selectOnly(row.id)}');
+    it('il click sulla riga passa da clickRow: la riga selezionata apre e chiude il vicinato', () => {
+        // #158 P5, field test 2026-09-29: tutta la riga, non solo il chevron.
+        expect(TSX).toContain('onClick={() => clickRow(row.id)}');
         expect(TSX).toContain('aria-expanded={isExpanded}');
+        const body = TSX.slice(TSX.indexOf('const clickRow'));
+        const fn = body.slice(0, body.indexOf('\n    };'));
+        expect(fn).toContain('if (id === subjectId && alsoSelected.length === 0) { setShowNeighborhood(v => !v); return; }');
+        expect(fn).toContain('selectOnly(id);');
     });
 
     it('il click su un vicino passa dallo STESSO corpo degli altri emettitori', () => {

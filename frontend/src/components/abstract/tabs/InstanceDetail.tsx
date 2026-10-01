@@ -44,12 +44,12 @@ import { childSlotCount } from '../../editor-v2/hooks/createAdapter';
 import { childrenIn, navStepOf, pathTo } from '../../editor-v2/hooks/multiDraw';
 import {
     addChildReason,
+    backOf,
     breadcrumbOf,
     crumbLabel,
     currentOf,
     depthOf,
     drillInto,
-    drillOut,
     navFor,
     newInstanceReason,
     rendersInline,
@@ -287,8 +287,10 @@ export function InstanceDetail({
      *
      *  `via` (#158 P3): the inline child a reference link belongs to. Its step goes on
      *  the road first, so opening Antonio from Phase_0's `learners` reads
-     *  «ElenaScenario › Phase_0 › Antonio» — the way the user actually came — and Back
-     *  from Antonio lands on Phase_0, not past it.
+     *  «ElenaScenario › Phase_0 › Antonio» — the way the user actually came. It goes on
+     *  as a PASS-THROUGH step (#158, field test 2026-09-29): Phase_0 was shown inside
+     *  ElenaScenario's form, never as a form of its own, so Back from Antonio lands on
+     *  ElenaScenario (`backOf`); its breadcrumb segment still opens Phase_0.
      *
      *  A target of a type the profile hides does not open (#157). */
     const drillTo = (childId: string, childKey: string, via?: { id: string; key: string }) => {
@@ -304,7 +306,7 @@ export function InstanceDetail({
             from = navFor(root);
         }
         const viaStep = via ? navStepOf(idlookup, via.id, via.key) : null;
-        if (viaStep) from = drillInto(from, viaStep);
+        if (viaStep) from = drillInto(from, { ...viaStep, passThrough: true });
         setNav(drillInto(from, step));
     };
 
@@ -313,12 +315,13 @@ export function InstanceDetail({
         pendingScrollRef.current = navScrollRef.current[depth] ?? 0;
     };
 
-    /** #158 P1 — «Back»: up one level, with the pure `drillOut` the breadcrumb module
-     *  already exports for exactly this. The breadcrumb stays: it jumps anywhere on
-     *  the road, Back is the one-step gesture every list-to-detail screen offers. */
+    /** #158 P1 — «Back»: to the previous form on screen, with the pure `backOf` of the
+     *  breadcrumb module — up one level, past pass-through steps (#158, 2026-09-29). The
+     *  breadcrumb stays: it jumps anywhere on the road, Back is the one-step gesture
+     *  every list-to-detail screen offers. */
     const goBack = () => {
         if (!nav) return;
-        const next = drillOut(nav);
+        const next = backOf(nav);
         restoreScrollFor(depthOf(next));
         setNav(next);
     };
@@ -484,7 +487,7 @@ export function InstanceDetail({
                     <button
                         type="button"
                         className="instance-manager__back"
-                        title={`Back to ${crumbLabel(crumbs[crumbs.length - 2])}`}
+                        title={`Back to ${crumbLabel(currentOf(backOf(nav!)) ?? crumbs[0])}`}
                         onClick={goBack}
                     >
                         <i className="bi bi-arrow-left" aria-hidden="true" />
