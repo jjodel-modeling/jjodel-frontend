@@ -21,10 +21,12 @@
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> \
  *         frontend/scripts/probe/jjscript-run-slowdown.ts --port 3004 [--id <Prompt-ID>]
  * Env:  RUNPERF_VARIANT  baseline | chat-empty | one-tab | tree-hidden | two-mm | two-mm-closed | inset-cached | summary-open
+ *                        | scenes (no runs: import the demo exports of RUNPERF_SCENES and dump handles and edge paths)
  *       RUNPERF_N        runs (default 12)
  *       RUNPERF_PROFILE  runs to profile (default "1,6,12")
  *       RUNPERF_RELOAD   "1": after the last run, reload, reopen and run once more (H4)
  *       RUNPERF_OUT      JSON output path (default /tmp/runperf-<variant>.json)
+ *       RUNPERF_SCENES   directory of *.jjodel exports, read only (default ~/jjodel-demo-exports)
  */
 import { chromium, type Page, type CDPSession } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -155,8 +157,8 @@ const JODIE_HOOK = `(() => {
   return null;
 })()`;
 
-async function inject(page: Page, n: number, mm: { id: string; name: string }, clearFirst: boolean) {
-    const content = 'Here is the script:\n\n```jjscript\n' + script(`R${n}_`) + '\n```\n';
+async function inject(page: Page, n: number, mm: { id: string; name: string }, clearFirst: boolean, body = script(`R${n}_`)) {
+    const content = 'Here is the script:\n\n```jjscript\n' + body + '\n```\n';
     return page.evaluate(`(() => {
       const h = ${JODIE_HOOK};
       if (!h) return 'no chat hook';
@@ -433,8 +435,106 @@ async function openJodie(page: Page) {
     }
 }
 
+
+/** One editor pane by its model id: rc-dock labels the pane `<dock>-tab-<tab id>`, and a model tab's id is the model's. */
+async function paneState(page: Page, modelId: string, needle = '') {
+    return page.evaluate(`(() => {
+      const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"]');
+      if (!pane) return null;
+      const vp = pane.querySelector('.react-flow__viewport');
+      const nodes = [...pane.querySelectorAll('.react-flow__node')];
+      return {
+        active: pane.classList.contains('dock-tabpane-active'),
+        viewport: vp ? vp.style.transform : null,
+        nodes: nodes.length,
+        selected: nodes.filter(n => n.classList.contains('selected')).map(n => n.getAttribute('data-id')).sort(),
+        lastSelected: (window.store.getState()._lastSelected || {}).modelElement || null,
+        needle: ${JSON.stringify(needle)} ? nodes.filter(n => n.textContent.includes(${JSON.stringify(needle)})).length : 0,
+      };
+    })()`) as Promise<any>;
+}
+
+/** Everything that says where a handle and an edge end are drawn, in flow coordinates. */
+const DUMP_PANE = `((pane) => {
+  const nodes = [...pane.querySelectorAll('.react-flow__node')].map(n => ({
+    id: n.getAttribute('data-id'), transform: n.style.transform, w: n.style.width, h: n.style.height,
+    handles: [...n.querySelectorAll('.react-flow__handle.mm-anchor--connected')].map(h => ({
+      id: h.getAttribute('data-handleid'), type: h.classList.contains('source') ? 'source' : 'target', style: h.getAttribute('style'),
+    })).sort((a, b) => (a.id + a.type).localeCompare(b.id + b.type)),
+  })).sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const edges = [...pane.querySelectorAll('.react-flow__edge')].map(e => ({
+    id: e.getAttribute('data-id') || e.getAttribute('data-testid'),
+    d: [...e.querySelectorAll('path')].map(p => p.getAttribute('d')).filter(Boolean),
+  })).sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  return { nodes, edges };
+})`;
+
+async function runScenes(browser: any): Promise<void> {
+    const { readdirSync, readFileSync: rf } = await import('node:fs');
+    const dir = process.env.RUNPERF_SCENES || `${process.env.HOME}/jjodel-demo-exports`;
+    const files = readdirSync(dir).filter((f: string) => f.endsWith('.jjodel')).sort();
+    const out: any = { dir, scenes: {} };
+    for (const f of files) {
+        const c = await browser.newContext({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT } });
+        await c.addInitScript({ content: 'globalThis.__name = (f) => f;' });
+        await seed(c, false);
+        const p: Page = await c.newPage();
+        const errs: string[] = [];
+        p.on('pageerror', (e: Error) => errs.push(e.message));
+        await p.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+        await p.waitForTimeout(4000);
+        const text = rf(`${dir}/${f}`, 'utf8');
+        const imported = await p.evaluate(`(async () => {
+          const api = await import('/src/api/persistance/projects.ts');
+          const count = () => JSON.parse(localStorage.getItem('projects') || '[]').length;
+          const before = count();
+          // importFromText returns before its async TRANSACTION stores the project: wait for it.
+          await api.ProjectsApi.importFromText(${JSON.stringify(text)});
+          for (let i = 0; i < 75 && count() <= before; i++) await new Promise(r => setTimeout(r, 200));
+          const a = JSON.parse(localStorage.getItem('projects') || '[]');
+          return a.length > before ? a[a.length - 1].id : null;
+        })()`) as string | null;
+        check(`scene ${f}: imported`, !!imported, String(imported));
+        if (!imported) { await c.close(); continue; }
+        await p.goto(`${URL}/#/project?id=${imported}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+        await p.waitForTimeout(8000);
+        const models: Array<{ id: string; name: string }> = await p.evaluate(`(async () => {
+          const j = await import('/src/joiner/index.ts');
+          const pr = j.L.fromPointer(j.DUser.current).project;
+          if (!pr) return [];
+          return [...(pr.metamodels || []), ...(pr.models || []).filter(m => !m.isMetamodel)].map(m => ({ id: m.id, name: m.name }));
+        })()`) as any;
+        const panes: any = {};
+        for (const m of models) {
+            await p.evaluate(`(async () => {
+              const j = await import('/src/joiner/index.ts');
+              const dm = await import('/src/components/abstract/DockManager.tsx');
+              await dm.default.open2(j.LModel.fromPointer(${JSON.stringify(m.id)}));
+            })()`).catch(() => {});
+            await p.waitForTimeout(5000);
+            panes[m.name] = await p.evaluate(`(() => {
+              const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m.id}"]');
+              return pane ? ${DUMP_PANE}(pane) : null;
+            })()`);
+        }
+        const counts = Object.fromEntries(Object.entries(panes).map(([k, v]: any) => [k, v ? { nodes: v.nodes.length, edges: v.edges.length, handles: v.nodes.reduce((s: number, n: any) => s + n.handles.length, 0) } : null]));
+        note(`scene ${f}`, { project: imported, models: models.length, counts, pageErrors: errs.length });
+        check(`scene ${f}: every model pane rendered`, Object.values(panes).every((v: any) => v && v.nodes.length > 0), JSON.stringify(counts));
+        out.scenes[f] = { models, panes, pageErrors: errs };
+        await c.close();
+    }
+    writeFileSync(OUT, JSON.stringify(out, null, 1));
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────────────────────
 const browser = await chromium.launch({ args: ['--enable-precise-memory-info'] });
+if (VARIANT === 'scenes') {
+    await runScenes(browser);
+    console.log(`OUT ${OUT}`);
+    console.log(failures === 0 ? 'ALL GREEN' : `${failures} FAILURE(S)`);
+    await browser.close();
+    process.exit(failures === 0 ? 0 : 1);
+}
 const ctx = await browser.newContext({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT } });
 await ctx.addInitScript({ content: INIT });
 await seed(ctx, false);
@@ -473,9 +573,13 @@ if (VARIANT === 'tree-hidden') {
 }
 
 async function oneRun(n: number, label = `run ${n}`) {
+    return oneRunScript(n, undefined, label);
+}
+
+async function oneRunScript(n: number, body: string | undefined, label: string) {
     const before: any = await snapshot(page);
     const clear = VARIANT === 'chat-empty';
-    const inj = await inject(page, n, target, clear);
+    const inj = await inject(page, n, target, clear, body);
     await page.waitForTimeout(600);
     // DOM click: with summary-open the earlier dialogs' overlays may cover the button.
     await page.evaluate(`(() => { const b = [...document.querySelectorAll('.md-code-jjscript')].pop(); if (b) b.click(); })()`);
@@ -540,6 +644,22 @@ async function oneRun(n: number, label = `run ${n}`) {
 for (let n = 1; n <= N; n++) {
     if ((VARIANT === 'two-mm' || VARIANT === 'two-mm-closed') && n === SWITCH_AT) {
         const first = target.name;
+        const firstId = target.id;
+        if (VARIANT === 'two-mm') {
+            // Tab-switch check (fix 1): select a node of metamodel_1 and record its pane before leaving it.
+            await page.locator(`[role="tabpanel"][aria-labelledby$="-tab-${firstId}"] .react-flow__node`, { hasText: `R${n - 1}_Library` })
+                .first().click({ position: { x: 20, y: 8 } }).catch(() => {});
+            await page.waitForTimeout(800);
+            // Move the viewport away from its default with the wheel, so "viewport kept" can fail.
+            const box = await page.locator(`[role="tabpanel"][aria-labelledby$="-tab-${firstId}"] .react-flow__pane`).first().boundingBox().catch(() => null);
+            if (box) {
+                await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+                await page.mouse.wheel(0, -400);
+                await page.waitForTimeout(800);
+            }
+            result.notes.tabBefore = await paneState(page, firstId);
+            result.notes.firstMetamodel = { id: firstId, name: first };
+        }
         result.notes.newMetamodel2 = await newMetamodel(page);
         mms = await metamodels(page);
         const nxt = mms.find((m) => m.id !== target.id);
@@ -551,9 +671,34 @@ for (let n = 1; n <= N; n++) {
     }
     await oneRun(n);
 }
+if (VARIANT === 'two-mm' && result.notes.firstMetamodel) {
+    // Write into metamodel_1 while its tab is hidden, then bring it back: it must show the new
+    // class, and keep its viewport and its selection (what a tab switch shows, fix 1).
+    const mm1 = result.notes.firstMetamodel;
+    const second = target;
+    target = { id: mm1.id, name: mm1.name } as any;
+    const hiddenBefore = await paneState(page, mm1.id, 'HiddenCatchUp');
+    PROFILE.delete(N + 1);
+    await oneRunScript(N + 1, 'create class HiddenCatchUp\ncreate attribute probe in HiddenCatchUp type String', 'write into hidden metamodel_1');
+    const hiddenAfterWrite = await paneState(page, mm1.id, 'HiddenCatchUp');
+    await page.evaluate(`(() => { const t = [...document.querySelectorAll('.dock-tab')].find(t => t.textContent.trim() === ${JSON.stringify(mm1.name)}); if (t) t.click(); })()`);
+    await page.waitForTimeout(2000);
+    const back = await paneState(page, mm1.id, 'HiddenCatchUp');
+    const classes1 = (await metamodels(page)).find((m) => m.id === mm1.id)?.classes;
+    result.notes.tabCheck = { before: result.notes.tabBefore, hiddenBefore, hiddenAfterWrite, back, classes: classes1 };
+    note('tab check', result.notes.tabCheck);
+    check('tab check: metamodel_1 active again', !!back?.active, JSON.stringify(back));
+    check('tab check: the class written while hidden is drawn', back?.needle === 1, `needle=${back?.needle}`);
+    check('tab check: one node per class', back?.nodes === classes1, `nodes=${back?.nodes} classes=${classes1}`);
+    check('tab check: viewport kept', back?.viewport === result.notes.tabBefore?.viewport, `${result.notes.tabBefore?.viewport} -> ${back?.viewport}`);
+    check('tab check: the viewport had moved before the switch', result.notes.tabBefore?.viewport !== 'translate(0px, 0px) scale(1)', String(result.notes.tabBefore?.viewport));
+    check('tab check: selection kept', JSON.stringify(back?.selected) === JSON.stringify(result.notes.tabBefore?.selected), `${JSON.stringify(result.notes.tabBefore?.selected)} -> ${JSON.stringify(back?.selected)}`);
+    note('tab check: hidden pane while hidden (follows the store before fix 1, frozen after)', { nodesBefore: hiddenBefore?.nodes, nodesAfterWrite: hiddenAfterWrite?.nodes, needleAfterWrite: hiddenAfterWrite?.needle });
+    target = second;
+}
 mms = await metamodels(page);
 note('metamodels after runs', mms);
-check('every run created its 7 classes', mms.reduce((s, m) => s + m.classes, 0) === 7 * N, JSON.stringify(mms));
+check('every run created its 7 classes', mms.reduce((s, m) => s + m.classes, 0) === 7 * N + (result.notes.tabCheck ? 1 : 0), JSON.stringify(mms));
 
 if (RELOAD) {
     // H4, two checks after the last run.
