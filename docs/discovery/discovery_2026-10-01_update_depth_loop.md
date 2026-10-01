@@ -185,3 +185,20 @@ None in Phase 1.
 ## 8. Decisions awaiting Alfonso
 
 None (RC-26 list checked).
+
+## 9. Addendum, Phase 2 (same day, after `140a5d366`)
+
+- Confirmation (§3.4) not reached in its 20 minutes: the recorder run (iter15) did not crash. The root cause stays open.
+- Implemented (§5 options 2-4, the paths of §3.3 and §3.2 that are reachable): the content-size budget no longer refilled by a
+  new target, a per-vertex cap of three writes per synchronous cascade (module level, cleared by a microtask); EditorV2's
+  `setEdges` wrapper keeps the array and each edge whose forced `selected` is already in place; `CanvasErrorBoundary` around
+  both mounts of the React Flow canvas. Not changed, by reading: the direct `useSyncExternalStore` sites (cached snapshots),
+  `setLaneShifts` (no subscriber, read as a memo dependency), `EditorV2.tsx:3398` and `:4044` (event paths).
+- After, same probe and instrumentation as the crashing runs: 0/7 fresh pages on the crashing sequence (before 4/10); 240
+  drags, 20 repetitions of the three gestures on each of the four derived viewpoints of the FlowChart fixture, 0 crashes,
+  React nested depth max 3. One run of the probe had a stale instrumentation patch (`sameTarget`, removed by the fix): the
+  derived-size write threw in the probe's code, and `CanvasErrorBoundary` held it inside the canvas, tabs and rail alive.
+- Pixel parity, pre-fix code against the fix: four demo scenes in the default viewpoint and DemoFlowB's four derived
+  viewpoints at rest, 9/9, byte-identical shots.
+- Residual risk: with the trigger unconfirmed, 0/7 against a before rate of 4/10 is evidence, not proof (0.6^7 ≈ 3 % under an
+  unchanged rate). The boundary is what keeps the demo alive if the loop has another path.

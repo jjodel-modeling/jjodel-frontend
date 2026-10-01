@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-1655
 Chat: C-2026-10-01-1640
 Lane: Phase 1 then Phase 2 in cascade (critical zone possible; Layer Impact Report before any edit there; go-ahead RC-30 given at launch). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-01 · lane update-depth-loop · 14c343ac4, 140a5d366 · non fuso: hard-stop, root cause not confirmed (report §3.4, §9), probe 0/7 fresh-page crashes (before 4/10) and 240 drags on four derived viewpoints 0 crashes, scenes 9/9 byte-identical, mutation bench 6/6, crops in frontend/scripts/smoke/_tmp_updatedepth_crops/ (gitignored), verifica visiva alla chat
 Worktree: `~/jjodel-w-updatedepth`, branch `update-depth-loop`, created from the trunk `alfonso-frontend-jjtl` at `4b018b82b`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-updatedepth`, branch `update-depth-loop`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA
