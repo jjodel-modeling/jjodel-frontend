@@ -1,0 +1,197 @@
+/* Superficie di lettura delle violazioni (R-VAL, Step 3).
+ *
+ * Nessuna variabile CSS definita qui: si consumano solo i token di `styles/tokens/`
+ * (CLAUDE.md, regola 28). Nessun token legacy (`--accent`, `--bg-*`, `--radius`,
+ * `--color`, regola 27). Griglia 8px, icone Bootstrap, cyan mai come sfondo di un
+ * bottone. La forma segue `ImportSummaryModal.scss`, che e' il modale gia' ratificato. */
+
+.validation-results-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: var(--z-modal, 9999);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4, 16px);
+}
+
+.validation-results {
+    background: var(--color-bg-secondary, #fff);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: var(--shadow-md);
+    width: 620px;
+    max-width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    color: var(--color-text-primary);
+
+    &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+    }
+
+    &--clean::before { background: var(--color-success); }
+    &--violated::before { background: var(--color-error); }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        padding: var(--space-4, 16px) var(--space-4, 16px) var(--space-3, 12px) var(--space-5, 20px);
+        border-bottom: 1px solid var(--color-border-secondary);
+    }
+
+    &__header-icon {
+        font-size: 20px;
+        line-height: 1;
+        flex-shrink: 0;
+
+        .validation-results--clean & { color: var(--color-success); }
+        .validation-results--violated & { color: var(--color-error); }
+    }
+
+    &__title {
+        flex: 1;
+        margin: 0;
+        font-size: var(--text-base, 15px);
+        font-weight: var(--font-semibold, 600);
+        color: var(--color-text-primary);
+    }
+
+    &__close {
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        padding: var(--space-1, 4px);
+        line-height: 1;
+        border-radius: var(--radius-sm, 4px);
+
+        &:hover { color: var(--color-text-primary); background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+    }
+
+    /* I tre numeri di R-VAL-14. Stessa taglia e stesso peso: nessuno dei tre e'
+     * secondario, ed e' il punto della decisione. */
+    &__stats {
+        display: flex;
+        gap: var(--space-5, 20px);
+        padding: var(--space-3, 12px) var(--space-5, 20px);
+        border-bottom: 1px solid var(--color-border-secondary);
+    }
+
+    &__stat {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-2, 8px);
+    }
+
+    &__stat-value {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: var(--text-lg, 17px);
+        font-weight: var(--font-semibold, 600);
+        color: var(--color-text-primary);
+    }
+
+    &__stat-label {
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+    }
+
+    &__meta {
+        padding: var(--space-2, 8px) var(--space-5, 20px);
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-tertiary, var(--color-text-secondary));
+        border-bottom: 1px solid var(--color-border-secondary);
+    }
+
+    &__body {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-2, 8px) 0;
+        min-height: 0;
+    }
+
+    &__empty {
+        margin: 0;
+        padding: var(--space-4, 16px) var(--space-5, 20px);
+        font-size: var(--text-sm, 13px);
+        color: var(--color-text-secondary);
+    }
+
+    &__list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    &__item + &__item {
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__item-btn {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: 'element rule' 'message rule';
+        gap: 2px var(--space-3, 12px);
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: var(--space-2, 8px) var(--space-5, 20px);
+        color: inherit;
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+    }
+
+    &__item-element {
+        grid-area: element;
+        font-size: var(--text-sm, 13px);
+        font-weight: var(--font-medium, 500);
+        color: var(--color-text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__item-message {
+        grid-area: message;
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+    }
+
+    &__item-rule {
+        grid-area: rule;
+        align-self: center;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-tertiary, var(--color-text-secondary));
+        white-space: nowrap;
+    }
+
+    &__note {
+        padding: var(--space-3, 12px) var(--space-5, 20px);
+        border-top: 1px solid var(--color-border-secondary);
+        font-size: var(--text-xs, 12px);
+        color: var(--color-text-secondary);
+
+        code {
+            font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+            background: var(--color-bg-tertiary);
+            border-radius: var(--radius-sm, 4px);
+            padding: 0 4px;
+        }
+
+        &--defect { color: var(--color-warning); }
+    }
+}

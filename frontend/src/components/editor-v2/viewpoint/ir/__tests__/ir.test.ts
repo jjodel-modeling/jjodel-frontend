@@ -13,8 +13,8 @@ import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
-import { getIRIndex, resolveIRView, resolveRowView } from '../irResolveCore';
-import { defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
+import { getIRIndex, pinAccepts, resolveIRView, resolveRowView } from '../irResolveCore';
+import { defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID, withMigratedHash } from '../irDefaults';
 import {
     buildContainmentModel,
     computeHidden,
@@ -28,6 +28,7 @@ import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges
 import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
 import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
 import { CONTAINER_ENDPOINT } from '../irTypes';
+import { resolveCompiledCornerRadius, resolveCornerRadius } from '../shapeRegistry';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
 function world() {
@@ -103,6 +104,114 @@ describe('irCompile', () => {
         expect(cv.labels[1].text(ctx, 's1')).toBe('fixed');
         expect(cv.labels[2].text(ctx, 's1')).toBe('idle : State');
         expect(cv.dependencySet).toContain('name');
+    });
+    it('compiles the three border axes one by one, per instance (slice 2, D1)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        // A scalar border: every accessor answers the authored value for every object,
+        // which is what a view saved before slice 2 has to keep doing.
+        const scalar = compileView('v_border_scalar', vertexIR({
+            shape: { form: 'rect', border: { color: '#334155', width: 2, style: 'dashed' } },
+        }));
+        expect(scalar.borderColor!(ctx, 's1')).toBe('#334155');
+        expect(scalar.borderWidth!(ctx, 's1')).toBe(2);
+        expect(scalar.borderStyle!(ctx, 's1')).toBe('dashed');
+
+        // One conditional axis: it resolves per instance, and the two axes the view does
+        // not declare stay null, so the renderer keeps the CSS box for those alone.
+        const perAxis = compileView('v_border_cond', vertexIR({
+            shape: {
+                form: 'rect',
+                border: {
+                    width: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 4 }], default: 1 },
+                },
+            },
+        }));
+        expect(perAxis.borderWidth!(ctx, 's2')).toBe(4);
+        expect(perAxis.borderWidth!(ctx, 's1')).toBe(1);
+        expect(perAxis.borderColor).toBeNull();
+        expect(perAxis.borderStyle).toBeNull();
+    });
+    // Corner radius as a Conditional (R-IRN-35). The renderer (IRNodeContent) is not
+    // importable in this bench, so what is executed is the chain it runs: compileView,
+    // resolveCompiledCornerRadius on the read context, resolveCornerRadius on the form.
+    describe('cornerRadius as a Conditional (R-IRN-35)', () => {
+        const BOX = { w: 160, h: 64 };
+        const DIAMOND_BOX = { w: 100, h: 60 };
+        const radiusView = (id: string, shape: Partial<VertexViewIR['shape']>) => {
+            clearCompileCache();
+            return compileView(id, vertexIR({ shape: { form: 'rect', ...shape } }));
+        };
+
+        it('a literal 8 compiles to a resolved 8, painted on a box and on a diamond', () => {
+            const { ctx } = world();
+            const box = radiusView('v_cr_literal_rect', { cornerRadius: 8 });
+            expect(box.cornerRadius).not.toBeNull();
+            expect(box.cornerRadius!(ctx, 's1')).toBe(8);
+            const r = resolveCompiledCornerRadius(box, ctx, 's1');
+            expect(r).toBe(8);
+            expect(resolveCornerRadius('rect', r, BOX)).toEqual({ kind: 'css', px: 8 });
+            const diamond = radiusView('v_cr_literal_diamond', { form: 'diamond', cornerRadius: 8 });
+            const rd = resolveCompiledCornerRadius(diamond, ctx, 's1');
+            expect(rd).toBe(8);
+            expect(resolveCornerRadius('diamond', rd, DIAMOND_BOX)).toEqual({ kind: 'path', r: 8, ...DIAMOND_BOX });
+        });
+
+        it('absent compiles to null and renders the base radius, never a written one', () => {
+            const { ctx } = world();
+            const cv = radiusView('v_cr_absent', {});
+            expect(cv.cornerRadius).toBeNull();
+            const r = resolveCompiledCornerRadius(cv, ctx, 's1');
+            expect(r).toBeUndefined();
+            for (const form of ['rect', 'rounded', 'diamond'] as const) {
+                expect(resolveCornerRadius(form, r, BOX), form).toEqual({ kind: 'none' });
+            }
+        });
+
+        it('one rule resolves per instance, and no matching branch leaves the base radius', () => {
+            const { ctx } = world();
+            const withDefault = radiusView('v_cr_rule_default', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 12 }], default: 4 },
+            });
+            expect(resolveCompiledCornerRadius(withDefault, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(withDefault, ctx, 's1')).toBe(4);
+            // No default and no else: the fallback is NOT emitted, so an unmatched
+            // instance keeps the form's own radius instead of a sharp corner.
+            const noDefault = radiusView('v_cr_rule_nodefault', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 12 }] },
+            });
+            expect(resolveCompiledCornerRadius(noDefault, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(noDefault, ctx, 's1')).toBeUndefined();
+            expect(resolveCornerRadius('rect', resolveCompiledCornerRadius(noDefault, ctx, 's1'), BOX)).toEqual({ kind: 'none' });
+            const oneRule = radiusView('v_cr_when_else', {
+                cornerRadius: { when: { op: 'isKind', class: 'FinalState' }, then: 12 },
+            });
+            expect(resolveCompiledCornerRadius(oneRule, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(oneRule, ctx, 's1')).toBeUndefined();
+        });
+
+        it('a conditional radius extends the dependency set with the predicate of its rules', () => {
+            const cv = radiusView('v_cr_deps', {
+                cornerRadius: { rules: [{ when: { op: 'eq', left: '$isInitial.value', right: { kind: 'boolean', value: true } }, then: 12 }], default: 4 },
+            });
+            expect(cv.dependencySet).toContain('isInitial');
+        });
+
+        it('0 is honoured, not treated as absent', () => {
+            const { ctx } = world();
+            const literal = radiusView('v_cr_zero', { cornerRadius: 0 });
+            expect(literal.cornerRadius).not.toBeNull();
+            expect(literal.cornerRadius!(ctx, 's1')).toBe(0);
+            const r = resolveCompiledCornerRadius(literal, ctx, 's1');
+            expect(r).toBe(0);
+            expect(resolveCornerRadius('rect', r, BOX)).toEqual({ kind: 'css', px: 0 });
+            const ruled = radiusView('v_cr_zero_rule', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 0 }], default: 8 },
+            });
+            expect(resolveCompiledCornerRadius(ruled, ctx, 's2')).toBe(0);
+            expect(resolveCornerRadius('rounded', resolveCompiledCornerRadius(ruled, ctx, 's2'), BOX)).toEqual({ kind: 'css', px: 0 });
+            expect(resolveCompiledCornerRadius(ruled, ctx, 's1')).toBe(8);
+        });
     });
     it('rejects forbidden PathExpr constructs by skipping compile (throw)', () => {
         expect(() => compileView('v_bad', vertexIR({
@@ -441,6 +550,34 @@ function homonymWorld() {
     return { idlookup, ctx: makeDrawReadCtx(idlookup) };
 }
 
+describe('pinAccepts — string pin, array pin (R-MCID-1, 2026-09-19)', () => {
+    it('no pin map, or no pin for that name: accepts any class (legacy, by name)', () => {
+        expect(pinAccepts({}, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: {} }, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: { Machine: 'A_Machine' } }, 'State', 'A_State')).toBe(true);
+    });
+
+    it('a string pin accepts its own id only', () => {
+        expect(pinAccepts({ pins: { State: 'A_State' } }, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: { State: 'A_State' } }, 'State', 'B_State')).toBe(false);
+    });
+
+    it('an array pin accepts every id it holds and nothing else', () => {
+        const entry = { pins: { State: ['A_State', 'B_State'] } };
+        expect(pinAccepts(entry, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts(entry, 'State', 'B_State')).toBe(true);
+        expect(pinAccepts(entry, 'State', 'C_State')).toBe(false);
+    });
+
+    it('an array pin is read per name: another name is not constrained by it', () => {
+        expect(pinAccepts({ pins: { State: ['A_State', 'B_State'] } }, 'Machine', 'X')).toBe(true);
+    });
+
+    it('an empty array pin accepts nothing (hand-written ir; the UI never writes one)', () => {
+        expect(pinAccepts({ pins: { State: [] } }, 'State', 'A_State')).toBe(false);
+    });
+});
+
 describe('irResolveCore metaclass identity (pin-aware matching, 2026-08-13)', () => {
     it('a pinned view applies to its own metamodel only', () => {
         const { idlookup, ctx } = homonymWorld();
@@ -502,6 +639,105 @@ describe('irResolveCore metaclass identity (pin-aware matching, 2026-08-13)', ()
         const index = getIRIndex(state, 'sig_pin_6')!;
         expect(resolveRowView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_a');
         expect(resolveRowView('b1', 'B_State', index, ctx, state.idlookup)).toBeNull();
+    });
+});
+
+/**
+ * R-MCID-1 (2026-09-19): a view may list two metaclasses that share a name and
+ * come from different metamodels. The resolver index stays keyed by name; the
+ * identity is the pin, a class id or an array of class ids. Fixture: the
+ * two-metamodel `homonymWorld()` above (`A_State` with its subclass `A_Sub`, and
+ * `B_State`), plus a third homonym `C_State` where a case needs one the view
+ * does NOT list.
+ */
+describe('irResolveCore metaclass identity — several identities under one name (R-MCID-1, 2026-09-19)', () => {
+    function threeMetamodelWorld() {
+        const w = homonymWorld();
+        w.idlookup.C_State = { id: 'C_State', name: 'State', extends: [] };
+        w.idlookup.c1 = { id: 'c1', name: 'obj_c1', instanceof: 'C_State', features: [] };
+        return w;
+    }
+
+    it('pinned to both: the view matches the instances of both metamodels', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_1')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to both: a class the array does not list is refused, and lands on the wildcard', () => {
+        const { idlookup, ctx } = threeMetamodelWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+            { id: 'V_wild', ir: vertexIR({ metaclasses: '*' }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_2')!;
+        expect(resolveIRView('c1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_wild');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to both: inheritance is untouched, the subclass of one listed class still matches', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_3')!;
+        expect(resolveIRView('asub', 'A_Sub', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to one (the plain string): only that metamodel matches', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_b', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'B_State' } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_4')!;
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b');
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)).toBeNull();
+    });
+
+    it('pinned to one through a one-element array (hand-written): same answer as the string', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_b', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_5')!;
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b');
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)).toBeNull();
+    });
+
+    it('unpinned (legacy): matches both metamodels by name', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_any', ir: vertexIR({ metaclasses: ['State'] }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_6')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_any');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_any');
+    });
+
+    it('a both-pinned view and a one-pinned view coexist: priority decides where they overlap', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] }, priority: 0 }) },
+            { id: 'V_b_hi', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'B_State' }, priority: 5 }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_7')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b_hi');
+    });
+
+    it('row views obey the array pin too', () => {
+        const { idlookup, ctx } = threeMetamodelWorld();
+        const state = stateWith([
+            { id: 'V_row_both', ir: rowIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) as any },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_8')!;
+        expect(resolveRowView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_both');
+        expect(resolveRowView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_both');
+        expect(resolveRowView('c1', 'C_State', index, ctx, state.idlookup)).toBeNull();
     });
 });
 
@@ -1067,16 +1303,54 @@ describe('irDefaults (Fase 2a)', () => {
     });
 });
 
+// Frozen shape of defaultObjectViewIR() from fb876efaa (P-2026-09-22-2105, the fill)
+// until P-2026-09-24-1455 closed the list: the last shape the migration wrote
+// unstamped. Hardcoded, never built from defaultObjectViewIR(): the closed list no
+// longer reads the live factory, and only a literal stays put when the factory
+// changes. It is the input of every unstamped delegation test below, so none of them
+// turns red on a factory change (P-2026-09-24-1455). While the factory still returns
+// this shape, a list that read it instead of the literal passes these tests too; the
+// mutation bench of P-2026-09-24-1455 records it.
+const SNAPSHOT_2026_09_22 = {
+    irVersion: 'ir-1.2' as const,
+    kind: 'vertex' as const,
+    metaclasses: '*' as const,
+    priority: 0,
+    exclusive: true,
+    label: 'Object (IR default)',
+    shape: {
+        form: 'rect' as const,
+        fill: 'var(--color-inode-surface)',
+        cornerRadius: 8,
+        border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' as const },
+        labels: [
+            {
+                position: 'top' as const,
+                source: { from: 'intrinsic' as const, prop: 'qualifiedName' },
+                style: { fontSize: 14, color: 'var(--color-inode-name)', underline: true },
+            },
+        ],
+    },
+    fieldCompartments: [
+        {
+            id: 'attributes',
+            source: { from: 'attributes' as const },
+            rowFormat: { segments: [{ kind: 'name' as const }, { kind: 'literal' as const, text: ' = ' }, { kind: 'value' as const }] },
+            separator: true,
+        },
+    ],
+};
+
 describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
     it('marker + factory-identical structure → delegated to native rendering', () => {
         clearCompileCache();
-        const ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' } as VertexViewIR;
+        const ir = { ...SNAPSHOT_2026_09_22, migratedFrom: 'classic-default' } as unknown as VertexViewIR;
         const cv = compileView('V_mig_eq', ir);
         expect(isMigratedDefaultView(cv)).toBe(true);
     });
     it('marker + permuted key order → still delegated (canonical comparison)', () => {
         // Persistence round-trips may reorder keys; equality must not depend on it.
-        const base = defaultObjectViewIR();
+        const base = SNAPSHOT_2026_09_22;
         const permuted = {
             migratedFrom: 'classic-default',
             fieldCompartments: base.fieldCompartments,
@@ -1092,7 +1366,7 @@ describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
         expect(isMigratedDefaultView(cv)).toBe(true);
     });
     it('marker + edited structure (label position changed) → interpreter, no delegation', () => {
-        const edited = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' } as VertexViewIR;
+        const edited = { ...SNAPSHOT_2026_09_22, migratedFrom: 'classic-default' } as unknown as VertexViewIR;
         edited.shape = {
             ...edited.shape,
             labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'qualifiedName' } }],
@@ -1101,11 +1375,11 @@ describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
         expect(isMigratedDefaultView(cv)).toBe(false);
     });
     it('factory-identical structure without marker → interpreter, no delegation', () => {
-        const cv = compileView('V_nomark', defaultObjectViewIR());
+        const cv = compileView('V_nomark', SNAPSHOT_2026_09_22 as unknown as VertexViewIR);
         expect(isMigratedDefaultView(cv)).toBe(false);
     });
     it('IR_DEFAULT_OBJECT_VIEW_ID (built-in default wildcard) → delegated regardless of marker', () => {
-        const cv = compileView(IR_DEFAULT_OBJECT_VIEW_ID, defaultObjectViewIR());
+        const cv = compileView(IR_DEFAULT_OBJECT_VIEW_ID, SNAPSHOT_2026_09_22 as unknown as VertexViewIR);
         expect(isMigratedDefaultView(cv)).toBe(true);
     });
     it('marker + authoringMetaclassPins → STILL delegated (the pin is not identity)', () => {
@@ -1113,7 +1387,7 @@ describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
         // part of the comparison, writing it would silently move every migrated
         // default view off native rendering — a diffuse change with no visible cause.
         const pinned = {
-            ...defaultObjectViewIR(),
+            ...SNAPSHOT_2026_09_22,
             migratedFrom: 'classic-default',
             authoringMetaclassPins: { State: 'ptr_B_State' },
         } as unknown as VertexViewIR;
@@ -1124,12 +1398,12 @@ describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
         // The exclusion is inside isMigratedDefaultView (canonicalize is private and
         // stays a pure key-sort), so equality is observable only through it.
         const a = {
-            ...defaultObjectViewIR(),
+            ...SNAPSHOT_2026_09_22,
             migratedFrom: 'classic-default',
             authoringMetaclassPins: { State: 'ptr_A_State' },
         } as unknown as VertexViewIR;
         const b = {
-            ...defaultObjectViewIR(),
+            ...SNAPSHOT_2026_09_22,
             migratedFrom: 'classic-default',
             authoringMetaclassPins: { State: 'ptr_B_State' },
         } as unknown as VertexViewIR;
@@ -1140,7 +1414,7 @@ describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
         // Guard against over-excluding: the pin must not make an edited view look
         // like the factory.
         const edited = {
-            ...defaultObjectViewIR(),
+            ...SNAPSHOT_2026_09_22,
             migratedFrom: 'classic-default',
             authoringMetaclassPins: { State: 'ptr_B_State' },
             priority: 7,
@@ -1186,8 +1460,94 @@ describe('isMigratedDefaultView — legacy factory snapshot (R-IRN-33 regression
         const cv = compileView('V_legacy_untouched', ir);
         expect(isMigratedDefaultView(cv)).toBe(true);
     });
+    // Frozen shape of defaultObjectViewIR() as it stood from 400095370 (2026-09-19,
+    // the parity batch that added cornerRadius/border/label color+underline) through
+    // immediately before P-2026-09-22-2105 added shape.fill. Duplicated here for the
+    // SAME reason LEGACY_SNAPSHOT above is: not imported from irDefaults.ts's own
+    // LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_18, so an edit to that constant to match a
+    // NEW live factory cannot silently defeat this test. This is a THIRD copy of the
+    // default object-view shape (LEGACY_SNAPSHOT above, LEGACY_OBJECT_VIEW_SNAPSHOT_
+    // 2026_09_18 in irDefaults.ts, and this one) — the measured cost of the
+    // isMigratedDefaultView identity-by-structural-equality debt (R-IRN-33's "Debito",
+    // still open) surfacing a second time in one prompt.
+    const SNAPSHOT_2026_09_18 = {
+        irVersion: 'ir-1.2' as const,
+        kind: 'vertex' as const,
+        metaclasses: '*' as const,
+        priority: 0,
+        exclusive: true,
+        label: 'Object (IR default)',
+        shape: {
+            form: 'rect' as const,
+            cornerRadius: 8,
+            border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' as const },
+            labels: [
+                {
+                    position: 'top' as const,
+                    source: { from: 'intrinsic' as const, prop: 'qualifiedName' },
+                    style: { fontSize: 14, color: 'var(--color-inode-name)', underline: true },
+                },
+            ],
+        },
+        fieldCompartments: [
+            {
+                id: 'attributes',
+                source: { from: 'attributes' as const },
+                rowFormat: { segments: [{ kind: 'name' as const }, { kind: 'literal' as const, text: ' = ' }, { kind: 'value' as const }] },
+                separator: true,
+            },
+        ],
+    };
+    it('a view migrated between the parity batch and the fill (09-18 shape) still delegates to native rendering', () => {
+        const ir = { ...SNAPSHOT_2026_09_18, migratedFrom: 'classic-default' } as unknown as VertexViewIR;
+        const cv = compileView('V_09_18_untouched', ir);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
+    // Frozen shape of defaultObjectViewIR() at 400095370 alone (2026-09-19 00:51 to
+    // 01:02): the 09-18 shape without the label colour, which 6ee6efcd5 added eleven
+    // minutes later. Duplicated here, not imported, for the same reason as the two
+    // literals above (P-2026-09-24-1455).
+    const SNAPSHOT_400095370 = {
+        irVersion: 'ir-1.2' as const,
+        kind: 'vertex' as const,
+        metaclasses: '*' as const,
+        priority: 0,
+        exclusive: true,
+        label: 'Object (IR default)',
+        shape: {
+            form: 'rect' as const,
+            cornerRadius: 8,
+            border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' as const },
+            labels: [
+                {
+                    position: 'top' as const,
+                    source: { from: 'intrinsic' as const, prop: 'qualifiedName' },
+                    style: { fontSize: 14, underline: true },
+                },
+            ],
+        },
+        fieldCompartments: [
+            {
+                id: 'attributes',
+                source: { from: 'attributes' as const },
+                rowFormat: { segments: [{ kind: 'name' as const }, { kind: 'literal' as const, text: ' = ' }, { kind: 'value' as const }] },
+                separator: true,
+            },
+        ],
+    };
+    it('a view migrated at 400095370 (no label colour) delegates to native rendering', () => {
+        const ir = { ...SNAPSHOT_400095370, migratedFrom: 'classic-default' } as unknown as VertexViewIR;
+        const cv = compileView('V_400095370_untouched', ir);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
+    it('an unstamped view in the 09-22 shape delegates by its frozen literal, whatever the live factory returns', () => {
+        const ir = { ...SNAPSHOT_2026_09_22, migratedFrom: 'classic-default' } as unknown as VertexViewIR;
+        const cv = compileView('V_09_22_untouched', ir);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
     it('a freshly migrated view (current factory shape) still delegates to native rendering', () => {
-        const ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' } as VertexViewIR;
+        // What VersionFixer 2.225 -> 2.226 writes since P-2026-09-24-1455: stamped.
+        const ir = withMigratedHash({ ...defaultObjectViewIR(), migratedFrom: 'classic-default' }) as unknown as VertexViewIR;
         const cv = compileView('V_current_untouched', ir);
         expect(isMigratedDefaultView(cv)).toBe(true);
     });
@@ -1199,6 +1559,64 @@ describe('isMigratedDefaultView — legacy factory snapshot (R-IRN-33 regression
         };
         const cv = compileView('V_legacy_edited', edited);
         expect(isMigratedDefaultView(cv)).toBe(false);
+    });
+});
+
+describe('isMigratedDefaultView — migratedHash stamp (P-2026-09-24-1455)', () => {
+    // Every stamped input goes through withMigratedHash, the helper VersionFixer
+    // 2.225 -> 2.226 calls, and through a JSON round trip, which is what a save and a
+    // reload do to it. VersionFixer itself does not import in this bench (joiner).
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+    const migrated = (): VertexViewIR =>
+        persisted(withMigratedHash({ ...defaultObjectViewIR(), migratedFrom: 'classic-default' })) as unknown as VertexViewIR;
+    const withBorderColor = (ir: VertexViewIR, color: string): VertexViewIR =>
+        ({ ...ir, shape: { ...ir.shape, border: { ...ir.shape.border, color } } }) as unknown as VertexViewIR;
+
+    it('a stamped, untouched view delegates (the stamp stays out of the hash it is compared against)', () => {
+        const ir = migrated();
+        // Control: the input really is stamped, so the verdict comes from the stamp.
+        expect(typeof (ir as unknown as { migratedHash?: unknown }).migratedHash).toBe('string');
+        expect(isMigratedDefaultView(compileView('V_stamp_untouched', ir))).toBe(true);
+    });
+    it('a stamped view whose border colour was edited goes to the interpreter (the stamp is compared, not trusted)', () => {
+        const edited = withBorderColor(migrated(), '#ff0000');
+        expect(isMigratedDefaultView(compileView('V_stamp_edited', edited))).toBe(false);
+    });
+    it('a stamped view edited and then reverted by hand delegates again (decided by the current ir, not by its history)', () => {
+        const born = migrated();
+        const edited = withBorderColor(born, '#ff0000');
+        const reverted = withBorderColor(edited, 'var(--color-inode-border)');
+        // One view, three successive irs, as the canvas sees them. The compile cache is
+        // cleared each time so the reverted ir is compiled as itself, not served as the
+        // born one from the cache.
+        clearCompileCache();
+        expect(isMigratedDefaultView(compileView('V_stamp_revert', born))).toBe(true);
+        clearCompileCache();
+        expect(isMigratedDefaultView(compileView('V_stamp_revert', edited))).toBe(false);
+        clearCompileCache();
+        expect(isMigratedDefaultView(compileView('V_stamp_revert', reverted))).toBe(true);
+    });
+    it('a view stamped under a changed factory delegates (the stamp decides, not the live factory nor the frozen list)', () => {
+        // The factory mutated in the test: what a future defaultObjectViewIR() would
+        // return, today's shape with one axis changed. It matches neither the live
+        // factory nor any frozen shape, so only its stamp can make it delegate.
+        const future = defaultObjectViewIR();
+        future.shape = { ...future.shape, cornerRadius: 6 };
+        const ir = persisted(withMigratedHash({ ...future, migratedFrom: 'classic-default' })) as unknown as VertexViewIR;
+        expect(isMigratedDefaultView(compileView('V_stamp_future', ir))).toBe(true);
+        // Control: the same ir without its stamp is not recognized.
+        const { migratedHash: _stamp, ...unstamped } = ir as unknown as Record<string, unknown>;
+        expect(isMigratedDefaultView(compileView('V_stamp_future_ctrl', unstamped as unknown as VertexViewIR))).toBe(false);
+    });
+    it('a stamp without the migration marker does not delegate (the marker gates the stamp too)', () => {
+        const { migratedFrom: _marker, ...noMarker } = migrated() as unknown as Record<string, unknown>;
+        expect(isMigratedDefaultView(compileView('V_stamp_nomark', noMarker as unknown as VertexViewIR))).toBe(false);
+    });
+    it('a pin written after the stamp keeps it delegating, and does not mask a real edit', () => {
+        const pinned = { ...migrated(), authoringMetaclassPins: { State: 'ptr_State' } } as unknown as VertexViewIR;
+        expect(isMigratedDefaultView(compileView('V_stamp_pin', pinned))).toBe(true);
+        const pinnedEdited = { ...pinned, priority: 7 } as VertexViewIR;
+        expect(isMigratedDefaultView(compileView('V_stamp_pin_edit', pinnedEdited))).toBe(false);
     });
 });
 

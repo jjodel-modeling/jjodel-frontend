@@ -745,3 +745,75 @@ describe('CHECK 12 — name shape', () => {
         expect(v.message).toContain('o1');
     });
 });
+
+// ==================================================================
+// CHECK 3 — the Expression and Action types (R-SIM-17, R-SIM-41, R-SIM-44), P-2026-09-25-1445.
+// A malformed value is saved and reported as the existing type_mismatch at warning. Each test
+// names the mutant of report §7.2 (discovery_2026-09-25_state_operator_core_types.md) it kills.
+// ==================================================================
+describe('CHECK 3 — Expression and Action', () => {
+    const EXPRESSION = { id: 'Pointer_EXPRESSION', name: 'Expression', className: 'DClass' };
+    const ACTION = { id: 'Pointer_ACTION', name: 'Action', className: 'DClass' };
+    function withValue(type: AnyObj, value: unknown) {
+        const a = attr({ id: 'a', name: 'guard', type });
+        const C = klass({ id: 'C', name: 'Arc', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'e1', instanceof: C, features: [val('a', { __raw: { values: [value] } })] });
+        return run([o], [C]);
+    }
+    const flagged = (type: AnyObj, value: unknown) => types(withValue(type, value)).includes('type_mismatch');
+
+    it('a well-formed Expression is not a violation', () => {
+        for (const v of ['self.[visits] < 3', 'p.[tokens] < 2 and q.[marked]', 'event == go', 'true']) {
+            expect(flagged(EXPRESSION, v), v).toBe(false);
+        }
+    });
+
+    it('a malformed Expression is a type_mismatch at warning, with the parse error', () => {
+        const res = withValue(EXPRESSION, 'a +');
+        expect(types(res)).toEqual(['type_mismatch']);
+        expect(res.status).toBe('warnings');
+        const v = res.violations[0];
+        expect(v.severity).toBe('warning');
+        expect(v.message).toContain('expects Expression');
+        expect(v.message).toContain('"a +"');
+        expect(v.message).toMatch(/: 1:\d+ /);
+    });
+
+    it('M4: the check is strict: trailing tokens are malformed', () => {
+        expect(flagged(EXPRESSION, 'self.a self.b')).toBe(true);
+        expect(flagged(EXPRESSION, 'x := 1')).toBe(true);
+    });
+
+    it('M5: blank is absent, not malformed (an absent guard is true)', () => {
+        expect(flagged(EXPRESSION, '')).toBe(false);
+        expect(flagged(EXPRESSION, '   ')).toBe(false);
+        expect(flagged(ACTION, '  ')).toBe(false);
+    });
+
+    it('M6: exactly `else` is a well-formed Expression; `else` with spaces or inside an expression is not', () => {
+        expect(flagged(EXPRESSION, 'else')).toBe(false);
+        expect(flagged(EXPRESSION, ' else')).toBe(true);
+        expect(flagged(EXPRESSION, 'else or true')).toBe(true);
+        expect(flagged(ACTION, 'else')).toBe(true);
+    });
+
+    it('an Action is checked by parseAction', () => {
+        expect(flagged(ACTION, 'self.target.[visits] := self.target.[visits] + 1')).toBe(false);
+        expect(flagged(ACTION, 'model.[i] := 0')).toBe(false);
+        expect(flagged(ACTION, 'self.x := 1')).toBe(true);
+        expect(flagged(ACTION, 'p.[marked] := true')).toBe(true);
+        expect(flagged(ACTION, 'a.[b] := 1 2')).toBe(true);
+        expect(flagged(ACTION, 'self.[v] + 1')).toBe(true);
+    });
+
+    it('keys on the primitive id, not on the name: a user type called Action or Expression is not JjEL', () => {
+        expect(flagged({ id: 'enum-1', name: 'Action', className: 'DEnumerator' }, 'Walk')).toBe(false);
+        expect(flagged({ id: 'dt-1', name: 'Expression', className: 'DDataType' }, 'a +')).toBe(false);
+        expect(flagged({ id: 'cls-1', name: 'expression', className: 'DClass' }, 'a +')).toBe(false);
+        expect(flagged({ id: 'Pointer_EXPRESSION', name: 'renamed' }, 'a +')).toBe(true);
+    });
+
+    it('control: EString keeps accepting the same text', () => {
+        expect(flagged({ id: 'Pointer_ESTRING', name: 'EString' }, 'a +')).toBe(false);
+    });
+});

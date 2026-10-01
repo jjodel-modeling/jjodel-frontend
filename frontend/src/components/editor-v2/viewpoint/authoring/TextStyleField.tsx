@@ -18,6 +18,8 @@ export interface TextStyleFieldProps {
     features?: PathBuilderFeatures | null;
     featuresHint?: string;
     classNames?: string[];
+    /** Forwarded to TextStyleEditor: hides its Underline row (see there). Absent = shown. */
+    hideUnderline?: boolean;
 }
 
 const FAMILY_LABEL: Record<string, string> = { sans: 'Sans', mono: 'Mono' };
@@ -58,6 +60,12 @@ function summarizeTextStyle(style: TextStyle | undefined): Summary {
         if (isConditionalValue(fstyle)) segments.push({ conditional: true, text: 'Style' });
         else if (fstyle === 'italic') segments.push({ conditional: false, text: 'Italic' });
         // fixed 'normal' -> omit (COME.4)
+    }
+    const underline = style.underline;
+    if (underline !== undefined) {
+        if (isConditionalValue(underline)) segments.push({ conditional: true, text: 'Underline' });
+        else if (underline) segments.push({ conditional: false, text: 'Underline' });
+        // fixed false -> omit, like fixed 'normal' above
     }
     const color = style.color;
     if (color !== undefined) {
@@ -100,6 +108,7 @@ export const TextStyleField: React.FC<TextStyleFieldProps> = ({
     features = null,
     featuresHint,
     classNames = [],
+    hideUnderline,
 }) => {
     const [open, setOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -184,6 +193,7 @@ export const TextStyleField: React.FC<TextStyleFieldProps> = ({
                             features={features}
                             featuresHint={featuresHint}
                             classNames={classNames}
+                            hideUnderline={hideUnderline}
                         />
                     </div>
                 </div>,

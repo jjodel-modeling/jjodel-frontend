@@ -1,0 +1,365 @@
+/**
+ * ConfiguratorTab — #157 Fase 1, the Configurator screen (first cut, full-screen overlay).
+ *
+ * A top bar of the project's top-level element types (from the F0 config, filtered by the
+ * role in the URL) replaces the metaclass rail: pick a type → its instances → open one in
+ * `IRForm` → create a new one. Reuses the Data Manager engine WITHOUT touching it:
+ *   - `instancesOfClass` (pure, instanceManagerModel) for the list;
+ *   - `InstanceDetail` for the detail/edit — the Data Manager's own panel (2026-09-28), so
+ *     an element shows and navigates the same in both; it replaced a bare `IRForm`;
+ *   - `applyCreate` + `newDraft` + `makeShapeCtx` (the same chain InstanceManagerTab commits
+ *     through) for "New" — called bare, never wrapped in a TRANSACTION (editor-v2 §3.3).
+ *
+ * Reads only (no lazy create here): the config is authored in Environment config (Fase 0b).
+ * Permission gating of editing (read-only forms) is Fase 2; here the role only filters which
+ * types the bar shows (via `visibleTopLevelTypes`).
+ */
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useSelector } from 'react-redux';
+import {
+    DATA_MANAGER_VIEWPOINT_ID,
+    DState,
+    U,
+    LProject,
+    findEnvironmentConfig,
+    findProfile,
+    visibleTopLevelTypes,
+    resolveTypePermission,
+} from '../../joiner';
+import { newDraft, paletteAttr } from '../../jjform';
+import { instancesOfClass } from '../abstract/tabs/instanceManagerModel';
+import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
+import { applyCreate } from '../editor-v2/hooks/createAdapter';
+import { applyDelete, deletePlan, preflightFor } from '../editor-v2/hooks/deleteAdapter';
+import { appendValue } from '../editor-v2/viewpoint/ir/formWrite';
+import InstanceDetail, { type DetailPermission } from '../abstract/tabs/InstanceDetail';
+import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
+import type { DeleteOptions, DeletePreflight, NavState } from '../../jjform';
+import './configuratorTab.scss';
+
+export interface ConfiguratorTabProps {
+    open: boolean;
+    onClose: () => void;
+}
+
+/** The `profile` hash param, read via the app's canonical parser (same one `getProjectID_URL` uses). */
+function profileIdFromUrl(): string | null {
+    try {
+        return U.getHashParam('profile');
+    } catch {
+        return null;
+    }
+}
+
+export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
+    const idlookup = useSelector((s: DState) => s.idlookup);
+    const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+    const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
+    // The active profile comes from `?profile=` in the hash. Kept in state and refreshed on
+    // `hashchange` and when the panel opens, so editing the URL live updates the gate without a
+    // reload (the app's project navigation can drop extra params, so we re-read defensively).
+    const [profileId, setProfileId] = useState<string | null>(() => profileIdFromUrl());
+    useEffect(() => {
+        const onHash = () => setProfileId(profileIdFromUrl());
+        window.addEventListener('hashchange', onHash);
+        onHash();
+        return () => window.removeEventListener('hashchange', onHash);
+    }, [open]);
+
+    const projectId = (U.getProjectID_URL() || '') as string;
+    const config: any = findEnvironmentConfig(idlookup, projectId);
+    const profile: any = findProfile(idlookup, profileId);
+
+    const project = LProject.getProject();
+    // First cut: the Configurator targets the project's primary model. A model picker for
+    // multi-model projects is a later refinement.
+    const models = ((project as any)?.models ?? []) as Array<{ id: string }>;
+    const modelId: string | null = models[0]?.id ?? null;
+
+    // classId → display name, from the project's metaclasses.
+    const classNameById = useMemo(() => {
+        const map: Record<string, string> = {};
+        for (const c of (((project as any)?.classes ?? []) as Array<{ id: string; name: string }>)) {
+            map[c.id] = c.name || c.id;
+        }
+        return map;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [idlookup, projectId]);
+
+    const topTypeIds: string[] = visibleTopLevelTypes(config, profile);
+
+    // Default the selected type to the first available one.
+    useEffect(() => {
+        if (!open) return;
+        if ((!selectedTypeId || !topTypeIds.includes(selectedTypeId)) && topTypeIds.length) {
+            setSelectedTypeId(topTypeIds[0]);
+        }
+    }, [open, topTypeIds, selectedTypeId]);
+
+    // Clear the instance selection when the type changes.
+    useEffect(() => { setSelectedInstanceId(null); }, [selectedTypeId]);
+
+    const instances = useMemo(
+        () => (selectedTypeId && modelId ? instancesOfClass(idlookup, modelId, selectedTypeId) : []),
+        [idlookup, modelId, selectedTypeId],
+    );
+
+    // ── The detail: the Data Manager's panel (`InstanceDetail`) ────────────────
+    // The same header, breadcrumb and Back, form, inline children and reference sections
+    // the Data Manager shows, so an element reads and navigates the same in both places.
+    // What this host adds is what `InstanceDetail` leaves to its hosts: the navigation
+    // state, the scroll container, the create and delete gestures, and the profile.
+
+    /** Where the detail has drilled to. Cleared when another instance is picked, as the
+     *  Data Manager clears it from its selection gestures. */
+    const [nav, setNav] = useState<NavState | null>(null);
+    useEffect(() => { setNav(null); }, [selectedInstanceId]);
+
+    /** The detail column is the element that scrolls: Back restores its offset. */
+    const detailRef = useRef<HTMLDivElement | null>(null);
+
+    /** The profile's rule for every type the detail shows or reaches by navigating
+     *  (`resolveTypePermission`, unchanged: Juri's decision of 2026-09-28). Stable per
+     *  profile, because the detail's memos depend on it. */
+    const permissionOf = useCallback(
+        (classId: string): DetailPermission => resolveTypePermission(profile, classId),
+        [profile],
+    );
+
+    /** The Data Manager's form palette, so the detail is painted as it is there. */
+    const palette = useSelector((s: any) => paletteAttr(s?.idlookup?.[DATA_MANAGER_VIEWPOINT_ID]?.formPalette));
+
+    /** Delete, with the Data Manager's confirmation (12d): the preflight lists who points
+     *  at the instance and offers to reassign or clear those references. `InstanceDetail`
+     *  offers it only on a type the profile may edit. */
+    const [pendingDelete, setPendingDelete] = useState<DeletePreflight | null>(null);
+    const [reassignTo, setReassignTo] = useState('');
+    const openDelete = (instanceId: string) => {
+        if (!modelId) return;
+        const pre = preflightFor(modelId, makeShapeCtx(modelId).shape(), instanceId);
+        setReassignTo(pre.reassignCandidates[0]?.id ?? '');
+        setPendingDelete(pre);
+    };
+    const confirmDelete = (options: DeleteOptions) => {
+        if (!pendingDelete) return;
+        const plan = deletePlan(pendingDelete, options);
+        setPendingDelete(null);
+        if (plan.blocked) {
+            console.warn('[ConfiguratorTab] delete refused', plan.blocked);
+            return;
+        }
+        applyDelete(plan);
+        if (selectedInstanceId && plan.deletes.includes(selectedInstanceId)) setSelectedInstanceId(null);
+    };
+
+    /** «Add <Child>» from the detail: created in place, like this screen's «New», without
+     *  the Data Manager's draft dialog. Bare call (editor-v2 §3.3). */
+    const createIn = (cls: string, ownerId: string | null, childKey: string | null) => {
+        if (!modelId) return;
+        const shape = makeShapeCtx(modelId).shape();
+        applyCreate(modelId, shape, newDraft(shape, cls, ownerId, childKey));
+    };
+
+    /** «New <Target> & link»: the target at model root, then the pointer appended to the
+     *  source slot — the same two steps the Data Manager's commit makes (#142). */
+    const createAndLink = (targetCls: string, sourceId: string, refKey: string) => {
+        if (!modelId) return;
+        const shape = makeShapeCtx(modelId).shape();
+        const id = applyCreate(modelId, shape, newDraft(shape, targetCls, null, null));
+        if (id) appendValue(sourceId, refKey, id, true);
+    };
+
+    if (!open) return null;
+
+    const createNew = () => {
+        if (!modelId || !selectedTypeId) return;
+        const name = classNameById[selectedTypeId];
+        if (!name) return;
+        const shape = makeShapeCtx(modelId).shape();
+        // Bare call: applyCreate manages its own transaction (editor-v2 §3.3).
+        const id = applyCreate(modelId, shape, newDraft(shape, name, null, null));
+        if (id) setSelectedInstanceId(id);
+    };
+
+    const hasTypes = topTypeIds.length > 0;
+    // F2: the profile's permission on the selected type. Absent profile (developer, no ?profile)
+    // is unrestricted. 'read' → no create, IRForm gated read-only; 'hidden' types never reach here
+    // (filtered out of the top bar by visibleTopLevelTypes).
+    const selectedPerm = selectedTypeId ? resolveTypePermission(profile, selectedTypeId) : 'edit';
+    const canCreate = selectedPerm === 'edit';
+    const readOnly = selectedPerm === 'read';
+
+    // R2 (#157, triage of the field test): tell the "nothing to show" cases apart, so a failure is
+    // legible instead of reading as a blank panel. `profileMissing` is the load-bearing one: a
+    // `?profile=` that resolves to no profile leaves `profile` null, and a null profile is treated
+    // as "no profile at all" = full access — on screen that looks exactly like "hidden did not hide".
+    const configuredTypes: string[] = (config && Array.isArray(config.topLevelTypes)) ? config.topLevelTypes : [];
+    const profileMissing = !!profileId && !profile;
+    // No `?profile=` means the developer is looking. Only they can reach the wizard (the action is
+    // hidden in consumer mode), so the "go configure it" hint is addressed to them alone.
+    const isDeveloperView = !profileId;
+
+    return createPortal(
+        <div className="configurator-overlay" role="dialog" aria-modal="true" aria-label="Configurator">
+            <div className="configurator">
+                <div className="configurator__header">
+                    <div className="configurator__title"><i className="bi bi-grid-1x2" /> Configurator</div>
+                    <div className="configurator__header-right">
+                        <span
+                            className={`configurator__profile-chip${profile ? '' : ' configurator__profile-chip--none'}`}
+                            title={profile ? 'Active profile from the ?profile= URL parameter' : 'No ?profile= in the URL — full access (developer)'}
+                        >
+                            {profile ? (
+                                <><i className="bi bi-person-badge" /> {profile.name || 'profile'}</>
+                            ) : (
+                                <><i className="bi bi-unlock" /> No profile — full access</>
+                            )}
+                        </span>
+                        <button className="configurator__close" onClick={onClose} aria-label="Close">
+                            <i className="bi bi-x-lg" />
+                        </button>
+                    </div>
+                </div>
+
+                {profileMissing && (
+                    <div className="configurator__warn" role="status">
+                        <i className="bi bi-exclamation-triangle" />
+                        <span>
+                            The profile <code>{profileId}</code> is not part of this project's environment
+                            configuration, so <strong>no permission is being applied</strong> — everything
+                            below reads as editable. If the profile was configured in another session,
+                            check that the project was <strong>saved</strong> before this link was opened.
+                        </span>
+                    </div>
+                )}
+
+                {!hasTypes ? (
+                    <div className="configurator__empty">
+                        {!config ? (
+                            <>
+                                No environment is configured for this project yet.
+                                {isDeveloperView && (
+                                    <><br />Open <strong>Configure environment</strong> in the project sidebar to set it up.</>
+                                )}
+                            </>
+                        ) : configuredTypes.length === 0 ? (
+                            <>
+                                No metaclasses are marked as editable for this project.
+                                {isDeveloperView && (
+                                    <><br />Open <strong>Configure environment</strong> → <strong>Editable metaclasses</strong> to choose them.</>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                The profile <strong>{profile?.name || profileId}</strong> has no visible types:
+                                all {configuredTypes.length} configured{' '}
+                                {configuredTypes.length === 1 ? 'type is' : 'types are'} set to <em>Hidden</em>.
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        <div className="configurator__topbar" role="tablist">
+                            {topTypeIds.map((tid) => (
+                                <button
+                                    key={tid}
+                                    role="tab"
+                                    aria-selected={selectedTypeId === tid}
+                                    className={`configurator__typebtn${selectedTypeId === tid ? ' selected' : ''}`}
+                                    onClick={() => setSelectedTypeId(tid)}
+                                >
+                                    {classNameById[tid] || tid}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="configurator__body">
+                            <div className="configurator__list">
+                                <div className="configurator__list-head">
+                                    <span>
+                                        {selectedTypeId ? classNameById[selectedTypeId] : ''} instances
+                                        {readOnly && <span className="configurator__perm-badge">Read only</span>}
+                                    </span>
+                                    {/* R4 (#157): on a type the profile may read but not create, the button
+                                        is not rendered at all — a disabled "New" was reported as
+                                        misleading in the field test. */}
+                                    {canCreate && (
+                                        <button
+                                            className="configurator__new"
+                                            onClick={createNew}
+                                            disabled={!modelId || !selectedTypeId}
+                                            title={!modelId ? 'This project has no model yet' : undefined}
+                                        >
+                                            <i className="bi bi-plus-lg" /> New
+                                        </button>
+                                    )}
+                                </div>
+                                {!modelId ? (
+                                    <p className="configurator__hint">This project has no model yet.</p>
+                                ) : instances.length === 0 ? (
+                                    <p className="configurator__hint">No instances yet. Click New to create one.</p>
+                                ) : (
+                                    <ul className="configurator__instances">
+                                        {instances.map((row) => (
+                                            <li
+                                                key={row.id}
+                                                className={selectedInstanceId === row.id ? 'selected' : ''}
+                                                onClick={() => setSelectedInstanceId(row.id)}
+                                            >
+                                                {row.name || row.id}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+                            <div className="configurator__detail" ref={detailRef}>
+                                {selectedInstanceId && modelId ? (
+                                    /* The Data Manager's detail, not a second one: header,
+                                       breadcrumb and Back, the form (host `manager`, so the
+                                       Data Manager's view applies here too), inline children,
+                                       reference sections with their summaries, «Add».
+                                       Wrapped in the manager's root class for its palette and
+                                       tokens; `configuratorTab.scss` undoes the root's layout. */
+                                    <div className="instance-manager configurator__dm" data-palette={palette}>
+                                        <div className="instance-manager__form-inner">
+                                            <InstanceDetail
+                                                modelid={modelId}
+                                                subjectId={selectedInstanceId}
+                                                nav={nav}
+                                                setNav={setNav}
+                                                scrollRef={detailRef}
+                                                openDelete={openDelete}
+                                                onCreate={createIn}
+                                                onCreateAndLink={createAndLink}
+                                                permissionOf={permissionOf}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="configurator__hint">Select an instance, or create a new one.</p>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* The Data Manager's delete confirmation, inside the overlay so it paints
+                    above it (its scrim is `fixed` at 40, in the overlay's stacking context). */}
+                {pendingDelete && (
+                    <DeleteDialog
+                        pre={pendingDelete}
+                        reassignTo={reassignTo}
+                        onReassignTo={setReassignTo}
+                        onCancel={() => setPendingDelete(null)}
+                        onConfirm={confirmDelete}
+                    />
+                )}
+            </div>
+        </div>,
+        document.body,
+    );
+}
+
+export default ConfiguratorTab;

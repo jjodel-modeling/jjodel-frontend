@@ -5,6 +5,8 @@ import { describe, it, test, expect } from 'vitest';
 
 import { jjelEval } from '../index';
 import type { JjelValue } from '../evaluator';
+import { EvaluationContext, JjelEvaluator, JjelEvaluationError } from '../evaluator';
+import { parseExpression } from '../parser';
 
 function eval_(src: string, ctx?: Record<string, JjelValue>): JjelValue {
     return jjelEval(src, ctx);
@@ -364,5 +366,124 @@ describe('FunctionCall', () => {
         // This validates the parser accepts `fn(x)` as an expression; the
         // evaluator fails with "not defined" because nothing is registered.
         expect(() => eval_('helper(a + 1)')).toThrow(/helper/);
+    });
+});
+
+// ============================================================
+// STATE ACCESS `.[x]` (R-SIM-18, R-SIM-43), P-2026-09-25-1445
+// The hook is JjEL's own reader; `marked` and `tokens` are the simulator's
+// business (its adapter), so here they are ordinary attributes. Each test
+// names the mutant of report §7.1 that it kills.
+// ============================================================
+
+type Reads = Array<[string, string]>;
+
+/** A hook over a table `elementId -> attr -> value` and the site's presentation; records every read. */
+function hookOver(attrs: Record<string, Record<string, JjelValue>>, presentation: Record<string, JjelValue> = {}) {
+    const reads: Reads = [];
+    const presentationReads: string[] = [];
+    return {
+        reads,
+        presentationReads,
+        hook: {
+            read: (elementId: string, attr: string) => {
+                reads.push([elementId, attr]);
+                return attrs[elementId]?.[attr];
+            },
+            readPresentation: (attr: string) => {
+                presentationReads.push(attr);
+                return presentation[attr];
+            },
+        },
+    };
+}
+
+function evalState(src: string, bindings: Record<string, JjelValue>, hook?: unknown): JjelValue {
+    const parsed = parseExpression(src);
+    expect(parsed.errors).toEqual([]);
+    const ctx = new EvaluationContext(bindings);
+    if (hook) (ctx as any).stateAccess = hook;
+    return new JjelEvaluator().evaluate(parsed.expression!, ctx);
+}
+
+const S1 = { id: 's1', __type: 'Object', name: 'S1' };
+const S2 = { id: 's2', __type: 'Object', name: 'S2' };
+const MODEL = { id: 'm1', __type: 'Model', name: 'M' };
+
+describe('state access without the hook (M8)', () => {
+    test('M8: .[x] throws a JjelEvaluationError, never a silent null', () => {
+        expect(() => evalState('self.[visits]', { self: S1 })).toThrow(JjelEvaluationError);
+        expect(() => evalState('self.[visits]', { self: S1 })).toThrow(/readable only in the simulator/);
+        expect(() => eval_('self.[visits] == null', { self: S1 })).toThrow(/readable only in the simulator/);
+    });
+});
+
+describe('state access with the hook', () => {
+    test('reads the element of the path by its id, the attribute by its name', () => {
+        const h = hookOver({ s1: { visits: 3 } });
+        expect(evalState('self.[visits] + 1', { self: S1 }, h.hook)).toBe(4);
+        expect(h.reads).toEqual([['s1', 'visits']]);
+    });
+
+    test('navigates M first: the last segment is the attribute', () => {
+        const h = hookOver({ s2: { visits: 7 } });
+        expect(evalState('self.target.[visits]', { self: { ...S1, target: S2 } }, h.hook)).toBe(7);
+        expect(h.reads).toEqual([['s2', 'visits']]);
+    });
+
+    test('model.[i] reads the global attribute under the model id', () => {
+        const h = hookOver({ m1: { i: 2 } });
+        expect(evalState('model.[i] < 3', { model: MODEL }, h.hook)).toBe(true);
+    });
+
+    test('values come back as the hook gives them: boolean, number, string', () => {
+        const h = hookOver({ s1: { done: false, n: 0, color: 'red' } });
+        expect(evalState('self.[done]', { self: S1 }, h.hook)).toBe(false);
+        expect(evalState('self.[n]', { self: S1 }, h.hook)).toBe(0);
+        expect(evalState('self.[color]', { self: S1 }, h.hook)).toBe('red');
+    });
+
+    test('an attribute the hook does not know is an error, not null', () => {
+        const h = hookOver({ s1: {} });
+        expect(() => evalState('self.[nope]', { self: S1 }, h.hook)).toThrow(JjelEvaluationError);
+        expect(() => evalState('self.[nope]', { self: S1 }, h.hook)).toThrow(/nope/);
+    });
+
+    test('a left side that is not an element is an error', () => {
+        const h = hookOver({});
+        expect(() => evalState('x.[a]', { x: 3 }, h.hook)).toThrow(JjelEvaluationError);
+        expect(() => evalState('xs.[a]', { xs: [S1, S2] }, h.hook)).toThrow(JjelEvaluationError);
+        expect(() => evalState('x.[a]', { x: null }, h.hook)).toThrow(JjelEvaluationError);
+        expect(() => evalState('x.[a]', { x: { name: 'no id' } }, h.hook)).toThrow(JjelEvaluationError);
+        expect(h.reads).toEqual([]);
+    });
+});
+
+describe('node.[x] by syntax (M9)', () => {
+    test('M9: node is never evaluated as a variable: a bound node is ignored', () => {
+        const h = hookOver({ v1: { color: 'WRONG' } }, { color: 'blue' });
+        expect(evalState('node.[color]', { node: { id: 'v1', __type: 'Object' } }, h.hook)).toBe('blue');
+        expect(h.reads).toEqual([]);
+        expect(h.presentationReads).toEqual(['color']);
+    });
+
+    test('node.[x] works with node unbound, as in a simulator context', () => {
+        const h = hookOver({}, { level: 2 });
+        expect(evalState('node.[level] * 2', {}, h.hook)).toBe(4);
+    });
+
+    test('an unknown presentation attribute is an error', () => {
+        const h = hookOver({}, {});
+        expect(() => evalState('node.[level]', {}, h.hook)).toThrow(JjelEvaluationError);
+    });
+});
+
+describe('the hook reaches nested scopes (M10)', () => {
+    test('M10: lambda, forall and exists bodies see the hook', () => {
+        const h = hookOver({ s1: { marked: true }, s2: { marked: false } });
+        const xs = [S1, S2];
+        expect(evalState('xs.all(x => x.[marked])', { xs }, h.hook)).toBe(false);
+        expect(evalState('exists x in xs | x.[marked]', { xs }, h.hook)).toBe(true);
+        expect(evalState('forall x in xs : x.[marked]', { xs }, h.hook)).toEqual([true, false]);
     });
 });

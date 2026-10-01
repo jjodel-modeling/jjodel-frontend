@@ -481,3 +481,92 @@ export async function link(
         fatherId: last.fatherId,
     };
 }
+
+// ── The theme, switched the app way ─────────────────────────────────────────
+
+/**
+ * `setTheme` — switch light/dark through the app's own `ThemeService`, and
+ * assert that the open editors followed.
+ *
+ * Probes set `data-theme` on `<html>` by hand. That reaches every rule keyed on
+ * `[data-theme="dark"]` and nothing else: the editor takes its theme from
+ * `useTheme` (`src/components/editor-v2/EditorV2.tsx:915`, the
+ * `.editor-v2.theme-<t>` class), which follows only the `THEME_CHANGED` event
+ * that `ThemeService.set` fires (`src/services/ThemeService.ts:32-36`). So the
+ * canvas stayed light in the dark crops of P-2026-09-27-1647, 1806, 2324 and
+ * P-2026-09-28-0023.
+ *
+ * The helper imports the real module from the dev server and calls `set`: the
+ * attribute, `localStorage.theme` and the event, the same call Settings >
+ * Appearance makes for a user's choice on a tree that carries `813a73ff5`
+ * (P-2026-09-28-0014); before it, the radio wrote the attribute only too.
+ * A probe that wants a theme from the first paint seeds `localStorage.theme`
+ * before `goto` instead, which is what the boot script of `index.html` and the
+ * first read of `useTheme` both look at.
+ *
+ * The shape is asserted, not waited for: the poll ends when the attribute, the
+ * stored value and every mounted `.editor-v2` agree, and a timeout returns
+ * `ok: false` with the last measurement. No editor mounted is not a failure;
+ * `editors` says how many were there to follow.
+ */
+export interface ThemeResult {
+    /** Attribute, stored value and every mounted editor agree on the theme. */
+    ok: boolean;
+    error?: string;
+    /** `data-theme` on `<html>` when the poll ended. */
+    root?: string | null;
+    /** `localStorage.theme` when the poll ended. */
+    stored?: string | null;
+    /** Mounted `.editor-v2` roots, and how many of them carry `theme-<theme>`. */
+    editors?: number;
+    editorsFollowing?: number;
+    /** ms the assertion took to hold. */
+    settledMs?: number;
+}
+
+export async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<ThemeResult> {
+    // The URL goes in as an argument so tsc does not try to resolve a dev-server path.
+    const failed = await page.evaluate(
+        async (a: { theme: 'light' | 'dark'; url: string }) => {
+            try {
+                const m = await import(a.url);
+                if (typeof m?.ThemeService?.set !== 'function') return `ThemeService.set assente in ${a.url}`;
+                m.ThemeService.set(a.theme);
+                return '';
+            } catch (e) {
+                return e instanceof Error ? e.message : String(e);
+            }
+        },
+        { theme, url: '/src/services/ThemeService.ts' },
+    );
+    if (failed) return { ok: false, error: failed };
+
+    // Same budget as `link`: the event is synchronous, the editor re-renders on it.
+    const timeoutMs = 4000;
+    const pollMs = 100;
+    const started = Date.now();
+    let last = { root: null as string | null, stored: null as string | null, editors: 0, editorsFollowing: 0 };
+    while (Date.now() - started < timeoutMs) {
+        last = await page.evaluate((t: string) => {
+            const editors = Array.from(document.querySelectorAll('.editor-v2'));
+            return {
+                root: document.documentElement.getAttribute('data-theme'),
+                stored: localStorage.getItem('theme'),
+                editors: editors.length,
+                editorsFollowing: editors.filter((el) => el.classList.contains('theme-' + t)).length,
+            };
+        }, theme);
+        if (last.root === theme && last.stored === theme && last.editorsFollowing === last.editors) {
+            return { ok: true, ...last, settledMs: Date.now() - started };
+        }
+        await page.waitForTimeout(pollMs);
+    }
+    return {
+        ok: false,
+        error:
+            `il tema ${theme} non si e' assestato in ${timeoutMs}ms: ` +
+            `data-theme=${last.root}, localStorage.theme=${last.stored}, ` +
+            `editor ${last.editorsFollowing}/${last.editors} su theme-${theme}`,
+        ...last,
+    };
+}

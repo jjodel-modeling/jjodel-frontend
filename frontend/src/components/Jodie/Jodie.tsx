@@ -20,7 +20,7 @@ import {
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
 import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
-import { getActiveModel, getActiveMetamodel, setActiveArtifactCache } from '../../jjscript/executor/utils';
+import { getActiveModel, getActiveMetamodel, getActiveLevel, setActiveArtifactCache } from '../../jjscript/executor/utils';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
 import DockManager from '../abstract/DockManager';
@@ -136,8 +136,13 @@ export function Jodie(): JSX.Element {
         const project = user.project;
         if (!project) return {};
         try {
-            const activeModel = getActiveModel();
-            const activeMetamodel = getActiveMetamodel();
+            // The level decides which resolver runs, never the other way round. Asking for the
+            // model first used to answer with the M1 model of an earlier selection while a
+            // metamodel was on screen, stamping the reply M1 and making every `create` in it
+            // refuse (docs/discovery/discovery_2026-09-16_jjodie_scope_level_m1_on_metamodel.md).
+            const activeLevel = getActiveLevel();
+            const activeModel = activeLevel === 'M1' ? getActiveModel() : null;
+            const activeMetamodel = activeLevel === 'M2' ? getActiveMetamodel() : null;
             let activeArtifact: ActiveArtifact | undefined;
             if (activeModel) {
                 const inst = (activeModel as any).instanceof ?? (activeModel as any).metamodel;

@@ -54,7 +54,9 @@ export class SaveManager {
             }
         }
         save = VersionFixer.update(save);
-        LoadAction.new(save);
+        // Synchronous, not LoadAction.new: Action.fire defers the dispatch (action.ts), and a reducer
+        // throw must reach the caller, the catch of stateInitializer (P-2026-09-25-0030).
+        store.dispatch({...new LoadAction(save, false)} as any);
     }
 
     public static exportEcore_click(toXML: boolean = false, toFile: boolean = true): void { // e: React.MouseEvent,

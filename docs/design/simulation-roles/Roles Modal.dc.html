@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<script src="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/_ds_bundle.js"></script>
+</helmet>
+<div style="width:640px;height:600px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--color-bg-secondary);border:1px solid var(--m-edge,transparent);border-radius:16px;box-shadow:var(--m-shadow,0 12px 32px rgba(15,23,42,.12),0 1px 3px rgba(15,23,42,.06));overflow:hidden;font-family:var(--font-sans);font-feature-settings:'liga' 0;color:var(--color-text-primary);text-align:left">
+  <div style="flex:none;display:flex;flex-direction:column;gap:8px;padding:16px 24px;border-bottom:1px solid var(--color-border-secondary)">
+    <div style="height:32px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:15px;font-weight:600">Simulation roles</span>
+      <sc-if value="{{ checkable }}" hint-placeholder-val="{{ true }}">
+        <span title="All required roles are bound and valid" style="height:24px;box-sizing:border-box;display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:999px;border:1px solid var(--m-ref-bd,#bae6fd);background:var(--m-ref-bg,#e0f2fe);color:var(--m-ref-fg,#0369a1);font-size:11px;font-weight:500"><i class="bi bi-check-circle-fill" style="font-size:11px"></i>Checkable</span>
+      </sc-if>
+      <sc-if value="{{ notCheckable }}">
+        <span title="Fix the problems below" style="height:24px;box-sizing:border-box;display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:999px;border:1px solid var(--color-border-secondary);background:var(--color-bg-tertiary);color:var(--color-text-tertiary);font-size:11px;font-weight:500"><i class="bi bi-x-circle" style="font-size:11px"></i>Not checkable</span>
+      </sc-if>
+      <button title="Close" style="margin-left:auto;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;border-radius:8px;background:transparent;color:var(--color-text-tertiary);cursor:pointer" style-hover="background:var(--color-bg-hover)"><i class="bi bi-x-lg" style="font-size:14px"></i></button>
+    </div>
+    <div style="height:32px;display:flex;align-items:center;gap:8px">
+      <button title="Change preset" style="height:32px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;border:1px solid var(--color-border-primary);border-radius:8px;background:var(--color-bg-secondary);color:var(--color-text-primary);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer" style-hover="border-color:var(--color-border-hover)" style-focus="outline:none;border-color:#334155;box-shadow:0 0 0 3px rgba(51,65,85,.15)">{{ presetLabel }}<i class="bi bi-chevron-down" style="font-size:11px;color:var(--color-text-tertiary)"></i></button>
+      <span style="color:var(--color-text-placeholder);font-size:13px">·</span>
+      <div style="position:relative;display:flex;align-items:center">
+        <i class="bi bi-pencil" style="position:absolute;left:8px;font-size:11px;color:var(--color-text-placeholder);pointer-events:none"></i>
+        <input value="{{ profile }}" onChange="{{ onProfile }}" title="Profile name" aria-label="Profile name" style="width:176px;height:32px;box-sizing:border-box;padding:0 8px 0 24px;border:1px solid transparent;border-radius:4px;background:transparent;font-family:inherit;font-size:13px;color:var(--color-text-secondary);outline:none" style-hover="border-color:var(--color-border-primary)" style-focus="border-color:#334155;box-shadow:0 0 0 3px rgba(51,65,85,.15)">
+      </div>
+    </div>
+  </div>
+  <div style="flex:none;height:32px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 24px;background:var(--color-bg-tertiary);border-bottom:1px solid var(--color-border-secondary);font-size:11px;color:var(--color-text-tertiary)">
+    <i class="bi bi-check2-all" style="font-size:14px"></i>
+    <span>{{ matchText }}</span>
+    <span>·</span>
+    <button onClick="{{ toggleMatch }}" style="padding:0;border:none;background:transparent;font-family:inherit;font-size:11px;font-weight:500;color:var(--color-link);cursor:pointer" style-hover="text-decoration:underline">{{ undoLabel }}</button>
+  </div>
+  <div ref="{{ bodyRef }}" style="flex:1;min-height:0;overflow-y:auto;position:relative;padding:8px 24px 16px">
+    <div style="height:32px;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-tertiary)">Required<span style="font-weight:500;letter-spacing:0">{{ reqCount }}</span></div>
+    <sc-for list="{{ req }}" as="r" hint-placeholder-count="5">
+      <div style="display:grid;grid-template-columns:208px minmax(0,1fr);column-gap:16px;padding:4px 0">
+        <div style="height:32px;display:flex;align-items:center;gap:8px;min-width:0">
+          <dc-import name="Role Kind Badge" kind="{{ r.kind }}" hint-size="40px,16px"></dc-import>
+          <span style="font-size:13px;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.label }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;min-width:0">
+          <sc-if value="{{ r.isBind }}" hint-placeholder-val="{{ true }}">
+            <button style="height:32px;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;border:1px solid var(--color-border-primary);border-radius:4px;background:var(--color-bg-secondary);cursor:pointer;font-family:inherit;text-align:left" style-hover="border-color:var(--color-border-hover)" style-focus="outline:none;border-color:#334155;box-shadow:0 0 0 3px rgba(51,65,85,.15)">
+              <sc-if value="{{ r.isSet }}"><span style="flex:1;min-width:0;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.value }}</span></sc-if>
+              <sc-if value="{{ r.isUnset }}"><span style="flex:1;min-width:0;font-size:13px;color:var(--color-text-placeholder);white-space:nowrap">{{ r.ph }}</span></sc-if>
+              <i class="bi bi-chevron-down" style="font-size:12px;color:var(--color-text-tertiary)"></i>
+            </button>
+          </sc-if>
+          <sc-if value="{{ r.isValue }}">
+            <div style="height:32px;display:flex;align-items:center;gap:8px">
+              <span tabindex="0" style="width:96px;height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 12px;border:1px solid var(--color-border-primary);border-radius:4px;background:var(--color-bg-secondary);font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary)" style-focus="outline:none;border-color:#334155;box-shadow:0 0 0 3px rgba(51,65,85,.15)">{{ r.value }}</span>
+              <span style="font-size:11px;color:var(--color-text-tertiary)">tokens per place</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ r.hasHelp }}"><span style="height:16px;display:flex;align-items:center;font-size:11px;color:var(--color-text-tertiary);white-space:nowrap">{{ r.help }}</span></sc-if>
+        </div>
+      </div>
+    </sc-for>
+    <button onClick="{{ toggleOpt }}" style="height:40px;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;margin-top:8px;padding:0;border:none;border-top:1px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:inherit;font-size:13px;color:var(--color-text-secondary);text-align:left">
+      <i class="bi {{ optChev }}" style="width:16px;font-size:12px;color:var(--color-text-tertiary)"></i>
+      <span style="font-weight:500">Optional</span>
+      <span style="font-size:11px;color:var(--color-text-tertiary)">{{ optCount }}</span>
+    </button>
+    <sc-if value="{{ optOpen }}">
+      <sc-for list="{{ opt }}" as="r" hint-placeholder-count="2">
+        <div style="display:grid;grid-template-columns:208px minmax(0,1fr);column-gap:16px;padding:4px 0">
+          <div style="height:32px;display:flex;align-items:center;gap:8px;min-width:0">
+            <dc-import name="Role Kind Badge" kind="{{ r.kind }}" hint-size="40px,16px"></dc-import>
+            <span style="font-size:13px;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.label }}</span>
+          </div>
+          <button style="height:32px;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;border:1px solid var(--color-border-primary);border-radius:4px;background:var(--color-bg-secondary);cursor:pointer;font-family:inherit;text-align:left" style-hover="border-color:var(--color-border-hover)" style-focus="outline:none;border-color:#334155;box-shadow:0 0 0 3px rgba(51,65,85,.15)">
+            <sc-if value="{{ r.isSet }}"><span style="flex:1;min-width:0;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.value }}</span></sc-if>
+            <sc-if value="{{ r.isUnset }}"><span style="flex:1;min-width:0;font-size:13px;color:var(--color-text-placeholder);white-space:nowrap">{{ r.ph }}</span></sc-if>
+            <i class="bi bi-chevron-down" style="font-size:12px;color:var(--color-text-tertiary)"></i>
+          </button>
+        </div>
+      </sc-for>
+    </sc-if>
+    <button onClick="{{ toggleRest }}" style="height:40px;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0;border:none;border-top:1px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:inherit;font-size:13px;color:var(--color-text-secondary);text-align:left">
+      <i class="bi {{ restChev }}" style="width:16px;font-size:12px;color:var(--color-text-tertiary)"></i>
+      <i class="bi bi-lock" style="font-size:12px;color:var(--color-text-tertiary)"></i>
+      <span style="font-weight:500">{{ restLabel }}</span>
+      <sc-if value="{{ hasErr }}"><i class="bi bi-exclamation-circle-fill" title="1 problem" style="font-size:12px;color:var(--m-err,#dc2626)"></i></sc-if>
+    </button>
+    <sc-if value="{{ restOpen }}">
+      <sc-for list="{{ der }}" as="d" hint-placeholder-count="0">
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:208px minmax(0,1fr);column-gap:16px">
+            <div style="height:32px;display:flex;align-items:center;gap:8px;min-width:0">
+              <dc-import name="Role Kind Badge" kind="{{ d.kind }}" hint-size="40px,16px"></dc-import>
+              <span style="font-size:13px;color:var(--color-text-tertiary);white-space:nowrap">{{ d.label }}</span>
+            </div>
+            <div title="Derived by the preset" style="height:32px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-tertiary);min-width:0">
+              <i class="bi bi-lock" style="font-size:12px;color:var(--color-text-tertiary)"></i>
+              <span style="font-size:13px;color:var(--color-text-tertiary);white-space:nowrap">{{ d.value }}</span>
+            </div>
+          </div>
+          <sc-if value="{{ d.hasErr }}">
+            <div style="height:24px;display:flex;align-items:center;gap:8px;padding-left:224px;font-size:11px;color:var(--m-err,#dc2626)">
+              <i class="bi bi-exclamation-circle-fill" style="font-size:11px"></i>
+              <span style="white-space:nowrap">{{ d.err }}</span>
+              <button onClick="{{ fixErr }}" style="padding:0;border:none;background:transparent;font-family:inherit;font-size:11px;font-weight:500;color:var(--color-link);cursor:pointer;white-space:nowrap" style-hover="text-decoration:underline">Turn Initial on</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <div style="display:grid;grid-template-columns:208px minmax(0,1fr);column-gap:16px;padding:4px 0">
+        <div style="height:32px;display:flex;align-items:center;font-size:13px;color:var(--color-text-tertiary)">Not used</div>
+        <div style="min-height:32px;display:flex;align-items:center;font-size:11px;line-height:16px;color:var(--color-text-tertiary)">{{ offText }}</div>
+      </div>
+    </sc-if>
+    <div ref="{{ dataRef }}">
+      <div style="position:sticky;top:-8px;z-index:1;height:40px;box-sizing:border-box;display:flex;align-items:center;gap:8px;border-top:1px solid var(--color-border-secondary);background:var(--color-bg-secondary)">
+        <button onClick="{{ toggleData }}" style="flex:1;height:40px;display:flex;align-items:center;gap:8px;padding:0;border:none;background:transparent;cursor:pointer;font-family:inherit;font-size:13px;color:var(--color-text-secondary);text-align:left">
+          <i class="bi {{ dataChev }}" style="width:16px;font-size:12px;color:var(--color-text-tertiary)"></i>
+          <i class="bi bi-database" style="font-size:12px;color:var(--color-text-tertiary)"></i>
+          <span style="font-weight:500">Data</span>
+          <span style="font-size:11px;color:var(--color-text-tertiary)">{{ dataCount }}</span>
+        </button>
+        <sc-if value="{{ dataOpen }}">
+          <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Button" variant="outline" size="sm" icon="plus-lg" on-click="{{ addRow }}" hint-size="120px,28px">Add attribute</x-import>
+        </sc-if>
+      </div>
+      <sc-if value="{{ dataOpen }}">
+        <div style="position:sticky;top:32px;z-index:1;height:32px;display:grid;grid-template-columns:88px 88px 40px 40px 48px 80px minmax(0,1fr);gap:8px;align-items:center;background:var(--color-bg-secondary);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-tertiary)">
+          <span>Name</span><span>Domain</span><span>Min</span><span>Max</span><span>Initial</span><span>Kind</span><span>Equation</span>
+        </div>
+        <sc-for list="{{ rows }}" as="d" hint-placeholder-count="2">
+          <div style="height:40px;display:grid;grid-template-columns:88px 88px 40px 40px 48px 80px minmax(0,1fr);gap:8px;align-items:center">
+            <span style="height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 8px;border:1px solid var(--color-border-primary);border-radius:4px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);overflow:hidden">{{ d.name }}</span>
+            <span style="height:32px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 8px;border:1px solid var(--color-border-primary);border-radius:4px;font-size:13px;color:var(--color-text-secondary)">{{ d.domain }}<i class="bi bi-chevron-down" style="font-size:11px;color:var(--color-text-tertiary)"></i></span>
+            <sc-if value="{{ d.hasRange }}">
+              <span style="height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 8px;border:1px solid var(--color-border-primary);border-radius:4px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary)">{{ d.min }}</span>
+              <span style="height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 8px;border:1px solid var(--color-border-primary);border-radius:4px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary)">{{ d.max }}</span>
+            </sc-if>
+            <sc-if value="{{ d.noRange }}">
+              <span title="Only for range" style="height:32px;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-tertiary)"></span>
+              <span title="Only for range" style="height:32px;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-tertiary)"></span>
+            </sc-if>
+            <sc-if value="{{ d.stored }}">
+              <span style="height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 8px;border:1px solid var(--color-border-primary);border-radius:4px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary)">{{ d.init }}</span>
+            </sc-if>
+            <sc-if value="{{ d.derived }}">
+              <span title="Derived: computed from the equation" style="height:32px;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-tertiary)"></span>
+            </sc-if>
+            <span style="height:32px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 8px;border:1px solid var(--color-border-primary);border-radius:4px;font-size:13px;color:var(--color-text-secondary)">{{ d.kind }}<i class="bi bi-chevron-down" style="font-size:11px;color:var(--color-text-tertiary)"></i></span>
+            <sc-if value="{{ d.derived }}">
+              <span style="height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 8px;border:1px solid var(--color-border-primary);border-radius:4px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ d.eq }}</span>
+            </sc-if>
+            <sc-if value="{{ d.stored }}">
+              <span title="Stored: set by transitions" style="height:32px;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-tertiary)"></span>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noRows }}">
+          <div style="height:40px;display:flex;align-items:center;font-size:11px;color:var(--color-text-tertiary)">No attributes. Add one to use it in guards and equations.</div>
+        </sc-if>
+      </sc-if>
+    </div>
+  </div>
+  <div style="flex:none;height:64px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 24px;border-top:1px solid var(--color-border-secondary)">
+    <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Button" variant="ghost" size="sm" icon="arrow-counterclockwise" hint-size="72px,28px">Reset</x-import>
+    <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Button" variant="ghost" size="sm" icon="magic" on-click="{{ rematch }}" hint-size="120px,28px">Match by name</x-import>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <sc-if value="{{ hasErr }}">
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--m-err,#dc2626)"><i class="bi bi-exclamation-circle-fill" style="font-size:11px"></i>{{ problemText }}</span>
+      </sc-if>
+      <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Button" variant="secondary" size="sm" hint-size="72px,28px">Cancel</x-import>
+      <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Button" variant="primary" size="sm" disabled="{{ hasErr }}" hint-size="64px,28px">Apply</x-import>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;640px&quot;,&quot;height&quot;:&quot;600px&quot;},&quot;preset&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;sm&quot;,&quot;pn&quot;],&quot;default&quot;:&quot;sm&quot;,&quot;tsType&quot;:&quot;'sm'|'pn'&quot;},&quot;dataOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;error&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;bound&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;proposed&quot;,&quot;fallback&quot;],&quot;default&quot;:&quot;proposed&quot;,&quot;tsType&quot;:&quot;'proposed'|'fallback'&quot;},&quot;profile&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Default&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const PH = { class: 'Select a metaclass', ref: 'Select a reference', attr: 'Select an attribute' };
+const PRESET = {
+  sm: { label: 'State machine',
+    req: [['Node', 'class', 'State'], ['Initial', 'class', 'Initial'], ['Transition', 'class', 'Transition'], ['Owned transitions', 'ref', 'State.transitions'], ['Next state', 'ref', 'Transition.nextState']],
+    opt: [['Terminal', 'class', 'Terminal'], ['Event', 'class', 'Event'], ['Trigger', 'ref', 'Transition.event'], ['Event identifier', 'attr', 'NamedElement.name']],
+    der: [['Initial marking', 'attr', 'from Initial'], ['Bound', 'value', '1'], ['Arc', 'class', 'from Owned transitions'], ['Arc source', 'ref', 'from Owned transitions'], ['Arc target', 'ref', 'from Next state'], ['Arc weight', 'attr', '1']],
+    off: ['Guard', 'Source', 'Fork', 'Join', 'Inhibitor arc'] },
+  pn: { label: 'Petri net (P/T)',
+    req: [['Node', 'class', 'Place'], ['Transition', 'class', 'Transition'], ['Arc', 'class', 'Arc'], ['Arc source', 'ref', 'Arc.source'], ['Arc target', 'ref', 'Arc.target'], ['Initial marking', 'attr', 'Place.tokens'], ['Bound', 'value', '4']],
+    opt: [['Arc weight', 'attr', 'Arc.weight'], ['Inhibitor arc', 'class', null]],
+    der: [],
+    off: ['Initial', 'Terminal', 'Guard', 'Owned transitions', 'Source', 'Next state', 'Fork', 'Join', 'Event', 'Trigger', 'Event identifier'] }
+};
+const SEED = [
+  { name: 'coins', domain: 'range', min: '0', max: '3', init: '0', kind: 'stored', eq: '' },
+  { name: 'paid', domain: 'boolean', min: '', max: '', init: '', kind: 'derived', eq: 'model.[coins] >= 2' }
+];
+
+class Component extends DCLogic {
+  state = {};
+  bodyRef = React.createRef();
+  dataRef = React.createRef();
+  componentDidMount() { if (this.props.dataOpen) this.scrollTo('data'); }
+  scrollTo(where) {
+    requestAnimationFrame(() => {
+      const b = this.bodyRef.current, d = this.dataRef.current;
+      if (!b || !d) return;
+      b.scrollTop = where === 'end' ? b.scrollHeight : d.offsetTop;
+    });
+  }
+  renderVals() {
+    const st = this.state, pr = this.props;
+    const key = pr.preset === 'pn' ? 'pn' : 'sm', P = PRESET[key];
+    const err = !!pr.error && key === 'sm' && !st.fixed;
+    const cleared = !!st.cleared;
+    const kept = pr.bound === 'fallback';
+    let reqSrc = P.req, off = P.off;
+    if (err) { reqSrc = P.req.filter(r => r[0] !== 'Initial'); off = ['Initial'].concat(P.off); }
+    const row = ([label, kind, value]) => {
+      let v = value;
+      if (kind === 'value' && key === 'pn') v = kept ? '2' : '4';
+      else if (cleared && kind !== 'value') v = null;
+      const isSet = v != null;
+      const help = kind === 'value' && key === 'pn' ? (kept ? 'Kept 2: exploration did not close' : 'Proposed 4: largest reachable marking, 9 markings explored') : '';
+      return { label, kind, value: v, isSet, isUnset: !isSet, ph: PH[kind], isValue: kind === 'value', isBind: kind !== 'value', hasHelp: !!help, help };
+    };
+    const req = reqSrc.map(row), opt = P.opt.map(row);
+    const der = P.der.map(([label, kind, value]) => {
+      const e = err && label === 'Initial marking';
+      return { label, kind, value, hasErr: e, err: e ? 'Initial marking is derived from Initial, which is off.' : '' };
+    });
+    const bindable = req.concat(opt).filter(r => r.isBind);
+    const matched = bindable.filter(r => r.isSet).length;
+    const allReq = req.filter(r => r.isBind).every(r => r.isSet);
+    const optOpen = st.optOpen ?? false;
+    const restOpen = st.restOpen ?? err;
+    const dataOpen = st.dataOpen ?? !!pr.dataOpen;
+    const rows = (st.rows ?? (pr.dataOpen ? SEED : [])).map(d => ({ ...d, hasRange: d.domain === 'range', noRange: d.domain !== 'range', stored: d.kind === 'stored', derived: d.kind === 'derived' }));
+    const problems = err ? 1 : 0;
+    return {
+      bodyRef: this.bodyRef, dataRef: this.dataRef,
+      presetLabel: P.label, profile: st.profile ?? pr.profile ?? (pr.error ? 'My profile' : 'Default'),
+      onProfile: e => this.setState({ profile: e.target.value }),
+      checkable: !err && allReq, notCheckable: err || !allReq,
+      matchText: cleared ? 'Bindings cleared' : matched + ' of ' + bindable.length + ' roles matched by name',
+      undoLabel: cleared ? 'Redo' : 'Undo',
+      toggleMatch: () => this.setState({ cleared: !cleared }),
+      rematch: () => this.setState({ cleared: false }),
+      req, reqCount: String(req.length), opt, optOpen, optCount: String(opt.length),
+      optChev: optOpen ? 'bi-chevron-down' : 'bi-chevron-right',
+      toggleOpt: () => this.setState({ optOpen: !optOpen }),
+      der, restOpen, restChev: restOpen ? 'bi-chevron-down' : 'bi-chevron-right',
+      restLabel: (der.length ? der.length + ' derived · ' : '') + off.length + ' not used',
+      toggleRest: () => this.setState({ restOpen: !restOpen }),
+      offText: off.join(', '),
+      hasErr: err, problemText: problems + (problems === 1 ? ' problem' : ' problems'),
+      fixErr: () => this.setState({ fixed: true }),
+      dataOpen, dataChev: dataOpen ? 'bi-chevron-down' : 'bi-chevron-right', dataCount: String(rows.length),
+      toggleData: () => { this.setState({ dataOpen: !dataOpen }); if (!dataOpen) this.scrollTo('data'); },
+      rows, noRows: rows.length === 0,
+      addRow: () => {
+        const cur = st.rows ?? (pr.dataOpen ? SEED : []);
+        this.setState({ rows: cur.concat([{ name: 'attr' + (cur.length + 1), domain: 'boolean', min: '', max: '', init: 'false', kind: 'stored', eq: '' }]) });
+        this.scrollTo('end');
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

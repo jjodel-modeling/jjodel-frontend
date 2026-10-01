@@ -13,6 +13,8 @@
 import { compileView, compileEdgeView, compileRowView } from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
 import { isUsableEndpointExpr } from './edgeEndpoints';
+import { authoredCornerRadius } from './shapeRegistry';
+import { isConditionalValue } from '../../../ui/ConditionalEditor/conditional';
 import type { AnyViewIR, EdgeViewIR, NodeViewIR, PaddingToken, Predicate, RowViewIR } from './irTypes';
 
 /**
@@ -121,6 +123,22 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             return {
                 ok: false,
                 error: `[ir] shape.padding must be one of ${VALID_PADDING_VALUES.join(' | ')}, or absent for the normal default, read ${JSON.stringify(padding)}`,
+            };
+        }
+
+        // Corner radius (slice 3, D5): numeric guard, same criterion as padding. The render
+        // reads an invalid value as absent (authoredCornerRadius), the authoring surface
+        // rejects it here through the same function, so the two cannot disagree on what
+        // "usable" means. A number is printed with String: JSON.stringify(NaN) is "null".
+        // The guard is for the LITERAL form only (R-IRN-35): a Conditional radius is
+        // validated as the border axes are, by the predicate walk above and the compile
+        // below, and its branch values are not checked (the render reads a bad one as absent).
+        const cornerRadius: unknown = (ir as NodeViewIR).shape?.cornerRadius;
+        if (cornerRadius !== undefined && !isConditionalValue(cornerRadius) && authoredCornerRadius(cornerRadius) === undefined) {
+            const read = typeof cornerRadius === 'number' ? String(cornerRadius) : JSON.stringify(cornerRadius);
+            return {
+                ok: false,
+                error: `[ir] shape.cornerRadius must be a finite number >= 0 (px), or absent for the form's base radius, read ${read}`,
             };
         }
     }

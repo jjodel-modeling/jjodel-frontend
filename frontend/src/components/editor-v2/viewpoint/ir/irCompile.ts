@@ -263,6 +263,39 @@ function compileConditional<T>(c: Conditional<T> | undefined, fallback: T, deps:
 }
 
 /**
+ * WHICH rule wins on one element, as an index — the one thing `CompiledConditional`
+ * cannot say, because it returns the resolved `T` and nothing else (slice 5, D8).
+ *
+ * `null` means "no rule won": the value in force is the `default` (or, for a
+ * `{when, then, else}`, the `else`), which the authoring UI words as `otherwise` on
+ * an axis and `base` on the border. The three input shapes are discriminated exactly
+ * as `compileConditional` above discriminates them, and the rule order is the same
+ * first-match-wins — the two must not be able to disagree about who won.
+ *
+ * `deps` is a throwaway: this runs at authoring time, outside any compile, and feeds
+ * no subscription. The two module-scoped sinks `compilePredicate` can write into are
+ * `null` here and both their call sites are null-guarded (`:131`, `:198`), so a call
+ * from outside a compile pass disturbs nothing.
+ *
+ * NOT on any render path: nothing in the canvas pipeline calls it.
+ */
+export function matchIndexOf<T>(c: Conditional<T> | undefined, ctx: ReadCtx, id: string): number | null {
+    if (c === undefined) return null;
+    if (typeof c !== 'object' || c === null || (!('when' in (c as any)) && !('rules' in (c as any)))) return null;
+    const deps = new Set<string>();
+    if ('when' in (c as any)) {
+        const cc = c as { when: Predicate; then: T; else?: T };
+        return compilePredicate(cc.when, deps)(ctx, id) ? 0 : null;
+    }
+    const cr = c as { rules: { when: Predicate; then: T }[]; default?: T };
+    const rules = Array.isArray(cr.rules) ? cr.rules : [];
+    for (let i = 0; i < rules.length; i++) {
+        if (compilePredicate(rules[i].when, deps)(ctx, id)) return i;
+    }
+    return null;
+}
+
+/**
  * Compile a TextStyle (ir-1.3 TS1): each authored axis becomes a value function
  * via compileConditional (the same helper as fill/line.color); an absent axis
  * stays undefined so the render emits no override. The '' / 0 fallback marks
@@ -305,7 +338,16 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     const predicate = compilePredicate(ir.predicate, deps);
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
-    const border = ir.shape.border ?? null;
+    // Border, one compile per axis (slice 2, D1): the same three lines compileEdgeView
+    // runs for `line`, with the same fallbacks — '' for the colour (the "no override"
+    // convention fill already uses), 1 for the width, 'solid' for the style — which is
+    // what a conditional with no matching branch resolves to.
+    const borderColor = ir.shape.border?.color !== undefined
+        ? compileConditional(ir.shape.border.color, '', deps) : null;
+    const borderWidth = ir.shape.border?.width !== undefined
+        ? compileConditional(ir.shape.border.width, 1, deps) : null;
+    const borderStyle = ir.shape.border?.style !== undefined
+        ? compileConditional(ir.shape.border.style, 'solid' as const, deps) : null;
     // Corner radius (asse raggio, ir-1.3 addendum): fallback is `undefined`, not 0 —
     // 0 is a legitimate authored value (square corner) and must stay distinguishable
     // from "no branch matched", or an unresolved conditional would silently render as
@@ -427,7 +469,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         formSpec,
         form,
         fill,
-        border,
+        borderColor,
+        borderWidth,
+        borderStyle,
         cornerRadius,
         marker,
         padding,

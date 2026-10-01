@@ -90,7 +90,7 @@ export const ExecutionErrorDialog: React.FC<ExecutionErrorDialogProps> = ({
             return {
                 icon: 'bi-exclamation-circle',
                 iconClass: 'warning',
-                title: `Execution stopped at line ${pauseInfo!.lineNumber}`,
+                title: `Execution stopped at line ${pauseInfo!.scriptLine ?? pauseInfo!.lineNumber}`,
             };
         }
         if (isCompleted && hasErrors && summary.executedCount === 0) {

@@ -92,6 +92,7 @@ import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
 import {checkNameUniqueness, checkM2NameUniqueness, getNamespaceOf, m2KindOf, type M2NamespaceKind} from "./nameUniqueness";
 import {lookupNamedEntry, uniqueModelName} from "../nameLookup";
+import {isClassKind, isTypeKindAllowed, isDataTypeExtendsWriteAllowed} from "../classifierKindRules";
 import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
@@ -1500,6 +1501,8 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
                     case 'dfloat':   case 'efloat':   case 'float':   ptr = Defaults.Pointer_EFLOAT; break;
                     case 'number':   case 'real':
                     case 'ddouble':  case 'edouble':  case 'double':  ptr = Defaults.Pointer_EDOUBLE; break;
+                    case 'expression':                                ptr = Defaults.Pointer_EXPRESSION; break;
+                    case 'action':                                    ptr = Defaults.Pointer_ACTION; break;
                     case 'dvoid':    case 'evoid':    case 'void':    if (c.data.className !== 'DAttribute') ptr = Defaults.Pointer_EVOID; break;
                     default:
                     // if not primitive, check enumerators
@@ -1521,6 +1524,16 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             }
             if (!ptr) ptr = old;
             // if (old !== ptr) console.log('autocorrected type set: ', {old, ptr, tn:LPointerTargetable.from(ptr)?.name});
+        }
+
+        // Enum step B (R-EDGE-2): a reference is typed by a class. A pointer that resolves to an enum, a data type
+        // or a package is refused; one that does not resolve passes, as the name resolution above keeps it.
+        // Rule in model/classifierKindRules.ts; load, undo/redo and replay never reach this setter
+        // (docs/discovery/discovery_2026-09-27_enum_step_b.md §3.2-3.6).
+        let targetKind: string | undefined = typeof ptr === 'string' ? (store.getState().idlookup as GObject)[ptr]?.className : undefined;
+        if (!isTypeKindAllowed(c.data.className, targetKind)) {
+            Log.ee('Cannot set the type of '+this.get_fullname(c)+' to '+ LPointerTargetable.from(ptr)?.name+ ': a reference can only be typed by a class.');
+            return true;
         }
 
         if (ptr === c.data.father && (c.data as DReference).composition) {
@@ -3519,7 +3532,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         }
         if (invalid.length) {
             Log.ww('tried to add invalid extends, they were ignored:', invalid);
-            list = list.filter(e=>!invalid.includes(e));
+            // invalidPtrs, not invalid: `invalid` holds the reason objects, so filtering on it never removed a
+            // pointer, and a write that also added a valid class or removed one kept the refused pointer (step B).
+            list = list.filter(e=>!invalidPtrs.includes(e));
         }
         if (diff.removed.length === 0 && diff.added.length === invalid.length) return true;
 
@@ -3538,6 +3553,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         let superclass: LClass = superclass0 && LPointerTargetable.wrap(superclass0) as any;
         let dsuperclass = superclass?.__raw;
         if (!superclass) { output.reason = 'Invalid extend target: ' + superclass; return false; }
+        // Enum step B (R-EDGE-2): only a class can be a supertype. Checked before `superclass.superclasses` below,
+        // which an enum or a package does not have (the read died on `.map`). Rule in model/classifierKindRules.ts.
+        if (!isClassKind(dsuperclass?.className)) { output.reason = 'Only a class can be a supertype, not a ' + (dsuperclass?.className || 'missing element') + '.'; return false; }
         let sealed = superclass.sealed || [];
         if (sealed.length) {
             let inSealed = false;
@@ -3915,6 +3933,25 @@ export class LDataType<Context extends LogicContext<DDataType> = any, C extends 
         TRANSACTION(this.get_name(c)+'.serializable', ()=>{
             SetFieldAction.new(c.data, 'serializable', val);
         }, c.data.serializable, val)
+        return true;
+    }
+
+    // Enum step B (R-EDGE-2): a data type has no supertypes. Without this setter the proxy fell to
+    // `_defaultSetter` and wrote any `extends` raw (the S5b shape). A write that adds a pointer is refused; one that
+    // only removes passes, through the same pointer-flagged SetFieldAction `_defaultSetter` issued, so the
+    // back-links move with it: `Dummy.dclass` and the canvas unlink repair a saved S5b this way
+    // (docs/discovery/discovery_2026-09-27_enum_step_b.md §3.6). Inherited by LEnumerator.
+    protected set_extends(val: any, c: Context): boolean {
+        let next: Pointer[] = Pointers.fromArr(val, true);
+        let prev: Pointer[] = (c.data as GObject).extends || [];
+        if (!isDataTypeExtendsWriteAllowed(prev, next)) {
+            Log.ww('Cannot add a supertype to '+this.get_name(c)+': only a class can extend a class.', {prev, next});
+            return true;
+        }
+        if (next.length === prev.length && next.every((p, i) => p === prev[i])) return true;
+        TRANSACTION(this.get_name(c)+'.extends', ()=>{
+            SetFieldAction.new(c.data as any, 'extends' as any, next, '', true);
+        }, undefined, '-'+(prev.length - next.length));
         return true;
     }
 
@@ -7697,6 +7734,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 break;
             case ShortAttribETypes.EString:
             case ShortAttribETypes.EDate:
+            case ShortAttribETypes.Expression: // stored as text, like EString (R-SIM-44)
+            case ShortAttribETypes.Action:
                 mapperfunc = v => v ? v + '' : ''
                 if (withmetainfo) ret.forEach((struct: ValueDetail)=>{ struct.value = mapperfunc(struct.value); });
                 else ret = ret.map(mapperfunc);

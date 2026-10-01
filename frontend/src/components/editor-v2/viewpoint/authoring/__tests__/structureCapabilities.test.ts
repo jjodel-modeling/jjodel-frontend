@@ -22,7 +22,7 @@ import type { ShapeForm } from '../../ir/irTypes';
 
 const ALL_FORMS: ShapeForm[] = [
     'rect', 'rounded', 'ellipse', 'circle', 'diamond',
-    'stadium', 'hexagon', 'parallelogram', 'cylinder',
+    'stadium', 'hexagon', 'parallelogram', 'cylinder', 'cloud',
 ];
 
 describe('structureCapabilities — the rectangle offers everything (7a)', () => {

@@ -9,6 +9,7 @@ import {Collaborative, Console, Logger, MetaData} from "../editors";
 import {NodeEditor} from "../editors/NodeEditor";
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
+import { isConsumerMode } from '../environment/consumerMode';
 import { TabsOverflowMenu } from '../dock/TabsOverflowMenu';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import { MANAGER_TAB_PREFIX } from "./tabs/instanceManagerModel";
@@ -257,6 +258,22 @@ function DockComponent(props: AllProps) {
             window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorTypeChange);
             document.body.removeAttribute('data-editor-type');
         };
+    }, []);
+
+    // #157 Fase 3 (A): when ?profile= is removed from the hash (consumer -> developer), the shell
+    // must return to developer mode. isConsumerMode() reads the hash live, but the Properties panel
+    // is CSS-gated by body[data-editor-type], which only changes on EDITOR_TYPE_CHANGE. On the
+    // consumer->developer transition, force the dock to re-broadcast the active editor tab's type so
+    // the panel re-syncs. A no-op on the project dashboard, where no editor tab is active.
+    useEffect(() => {
+        let wasConsumer = isConsumerMode();
+        const onHash = () => {
+            const now = isConsumerMode();
+            if (wasConsumer && !now) PinnableDock.instance?.forceEditorTypeBroadcast?.();
+            wasConsumer = now;
+        };
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
     }, []);
 
     // PropertiesWithTreeView width-lock: RETIRED (F5 2026-07-29). Properties + Tree

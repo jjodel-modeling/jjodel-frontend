@@ -351,6 +351,10 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
                     // `handleInsetAt` quando la forma lo dichiara (profilo per lato:
                     // esagono, parallelogramma), altrimenti il profilo di mezza
                     // larghezza, che sulle cinque forme storiche vale su ogni lato.
+                    // TODO(corner radius, docs/prompts/2026-09-15_1830_slice-3_corner-radius.md):
+                    // the profile ignores ShapeSpec.cornerRadius. Decision D5 accepts the
+                    // offset up to 12px, and the render clamp min(w, h) / 4 bounds it above.
+                    // Revisit if the radius outgrows the clamp or becomes Conditional.
                     const insetPct = (t: number) => {
                         const inset = shape.handleInsetAt
                             ? shape.handleInsetAt(t, side)

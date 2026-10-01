@@ -397,7 +397,9 @@ export class Dummy {
                                                 case ShortAttribETypes.EInt:
                                                 case ShortAttribETypes.ELong:
                                                 case ShortAttribETypes.EFloat:
-                                                case ShortAttribETypes.EDouble: collection = 'attributes'; break assignCollection;
+                                                case ShortAttribETypes.EDouble:
+                                                case ShortAttribETypes.Expression:
+                                                case ShortAttribETypes.Action: collection = 'attributes'; break assignCollection;
                                                 default:
                                                     if (Pointers.isPointer(type)) {
                                                         let pointedType = D.from(childEcore.type as Pointer<DClassifier>);
