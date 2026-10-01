@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-2136
 Chat: C-2026-10-01-1725
 Lane: full (two-phase: Phase 1 measures and attributes, Phase 2 after the chat's GO, same session). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-01 · lane jjscript-run-perf · 4bbf7e640, a17444e9d · non fuso: hard-stop, fix 1 non committato (gate scritto, controllo in app non completato per carico macchina 200-380; trovato un loop di render preesistente nel tab nascosto, report addendum), verifica visiva alla chat
 
 Worktree: `~/jjodel-w-runperf`, branch `jjscript-run-perf` (cut by the chat from `alfonso-frontend-jjtl` at `ac3890b7e`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-runperf`, branch `jjscript-run-perf`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 

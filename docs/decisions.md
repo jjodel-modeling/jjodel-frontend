@@ -5036,6 +5036,19 @@ There was no success toast on this path to replace. The inline strip stays as th
 `RunSummaryDialog` is a new component that reuses the `ExecutionErrorDialog` shell; light theme only.
 Code `1315e15c4`.
 
+**R-JS-7** (2026-10-01, provisional, unattended) — **A retry pass waits for every dependency.** Decided
+by the chat `C-2026-10-01-1725` in the GO of `P-2026-10-01-2136` under RC-25, from ticket T8
+(`docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md` §4.8). In pass 2 and later of a Run
+(R-JS-3), `waitForDependencies` awaits every dependency of the retried command, `type-reference` and
+`value-reference` included, up to `MAX_WAIT_MS`. Pass 1 keeps R-JS-1: only `required` dependencies are
+awaited, so a forward reference still fails at once and is deferred. Cause: the retry ran with no wait,
+the target created by a later line had not reached the resolvers yet, the retry failed again, and a pass
+with no success ends the run, so line 14 of the probe's script stayed a final error on run 1 of every
+variant. `runPasses` publishes the retry pass (`isRetryPass()`, module state raised around each command
+and lowered in a `finally`), because the host chain (`ScriptBlock` → `onExecute` → `JjScriptService` →
+executor) carries no pass number. Accepted cost: a retried command whose name never resolves waits
+`MAX_WAIT_MS` per retry pass. Amends R-JS-1 for retry passes only. Code `4bbf7e640`.
+
 ## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homonyms.md`.

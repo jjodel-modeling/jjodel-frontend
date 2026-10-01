@@ -345,3 +345,29 @@ The heavier each dispatch, the more often it fails. Proposed as ticket T8.
 ## 8. Decisions awaiting Alfonso
 
 1. If fix 1 is done by unmounting inactive tabs (`cached: false`) instead of gating their updates, switching to a metamodel tab during the MODELS demo re-fits the view and drops the selection. That changes what the demo shows (RC-26). Recommended: gate updates, keep the tabs mounted; then nothing here waits for Alfonso.
+
+## Addendum 2026-10-01, Phase 2 (GO of the chat)
+
+The GO named three fixes: T8 (R-JS-7), then fix 1 (an inactive-tab gate), then fix 2 (own-edges handles). Results:
+
+- **T8: committed `4bbf7e640`.** Tests: `retryPassWait.test.ts`, 4 tests, 4 of 4 mutations killed. Probe: no final error in either variant on `4bbf7e640`. On the "before" run, line 14 failed in `two-mm` runs 1 and 6. The failure is a race, so that is evidence, not proof.
+- **Fix 2: committed `a17444e9d`.**
+  - Probe, baseline run 12: 6.6 s against 9.8 s on `4bbf7e640`. Visible-editor fibers rendered went from 523,243 to 55,629. `HandleComponent` and `DynamicHandles` left the top renders.
+  - `ClassNode` still rendered 8,711 times: its renders come from context and hooks, not props.
+  - Demo scenes: the 4 exports, 8 model panes. Nodes and connected handles are identical (74 nodes, 152 handles). 18 edge paths differ by at most 0.0001 px, with the same path shape. This compares a dump on `4bbf7e640` with one on `a17444e9d`, ids ignored, because an import duplicates the project with fresh ids.
+- **Fix 1: not committed.**
+  - The gate is written: a pausable store per tab through react-redux's `Provider`, with 6 tests and 7 of 7 mutations killed. A scout in the app confirmed that the hidden pane's view pauses and the active one stays live. Redux-driven renders of the hidden editor dropped to 0.
+  - Two things are open:
+    - (a) The probe's tab-switch check, which tests catch-up, viewport and selection, never completed. The machine reached load averages of 200 to 380 from about 20:55 UTC (Edge renderers, `mdworker`, `spindump`, another lane's Vite on 3241), and the page did not load in 3 minutes.
+    - (b) **A pre-existing render loop.** On `4bbf7e640`, with neither fix, a hidden metamodel editor holding a reference re-renders about 60 times a second while nothing is dispatched. `useNodesState` and `useEdgesState` are set on every render (scout: 90 renders per 1.5 s window, in every window).
+  - The loop is not redux-driven, so the gate cannot stop it. It is the likely main share of the 208 ms per command the hidden tab cost (§4.6), and a continuous CPU drain between Runs. Whether the visible editor loops too was not measured.
+  - The gate and its test are parked in gitignored files (`frontend/scripts/smoke/_tmp_fix1_inactiveTabGate.ts`, `_tmp_fix1_inactiveTabGate.test.ts`, `_tmp_fix1_wiring.patch`). The tree is clean.
+
+**Decisions taken (unattended).**
+- D9: the T8 flag is module state in `runPasses.ts`, read by the waiter. No exported signature changes.
+- D10: fix 1 is not committed, because its in-app check did not complete and a loop it cannot reach was found.
+- D11: fix 2 is committed ahead of fix 1, out of the GO's order. It touches no file of fix 1.
+
+**Decisions awaiting Alfonso:** none.
+
+**For the chat.** The next step for the hidden-tab cost is a discovery of the loop: who calls `setNodes`/`setEdges` on every frame in a hidden pane. Candidates: `DynamicHandles`' double-rAF `updateNodeInternals`, and the ResizeObserver of a pane with `height: 0`. Then the gate, rechecked with the probe's `two-mm` tab check on a quiet machine.
