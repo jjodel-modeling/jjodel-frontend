@@ -1824,6 +1824,17 @@ function NavbarComponent(props: AllProps) {
     }
 
     const [showOverflow, setShowOverflow] = useState(false);
+    /** #157 R1 — the topbar «Save» is busy for the duration of one save, nothing more. */
+    const [savingProject, setSavingProject] = useState(false);
+    const saveFromTopbar = async () => {
+        if (savingProject || !project) return;
+        setSavingProject(true);
+        try {
+            await saveProjectWithFeedback(project);
+        } finally {
+            setSavingProject(false);
+        }
+    };
     const overflowBtnRef = useRef<HTMLButtonElement>(null);
     const overflowDropdownRef = useRef<HTMLDivElement>(null);
     const [overflowMenuPos, setOverflowMenuPos] = useState({ top: 0, left: 0 });
@@ -1972,6 +1983,22 @@ function NavbarComponent(props: AllProps) {
                     una seconda fonte di verita'; si rende da solo `null` finche' non
                     c'e' niente da raccontare. */}
                 {project && <LastSavedIndicator />}
+                {/* #157 R1 (field test 2026-09-29, decision of 2026-10-01): a visible «Save»
+                    beside the save state, for developer and consumer alike. Fourth caller of
+                    `saveProjectWithFeedback`, not a fourth save: menu, Ctrl/Cmd+S and the Data
+                    Manager's button go through the same function. Always enabled but while
+                    saving, as the Data Manager's: `U.isProjectModified` is not subscribable. */}
+                {project && (
+                    <button
+                        type="button"
+                        className="appbar-save"
+                        title="Save the project (Ctrl/Cmd+S)"
+                        disabled={savingProject}
+                        onClick={saveFromTopbar}
+                    >
+                        <i className="bi bi-floppy" aria-hidden="true" /> Save
+                    </button>
+                )}
                 {project && <div className="appbar__sep" />}
                 {/* Basic/Advanced mode switch — the single visible writer for the global
                     interface mode (2026-07-30). Replaces the former read-only level badge:

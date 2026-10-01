@@ -75,20 +75,28 @@ export const ProfilesStep: React.FC = () => {
     const profiles = profilesOfConfig(idlookup, config);
     const selectedProfile: any = selectedProfileId ? idlookup[selectedProfileId] : null;
 
+    /** R1 (#157): profiles travel with the project, so every write below is an unsaved change of
+     *  the project — the flag behind «Unsaved» and the leave prompt. No write here set it, and a
+     *  link copied from an unsaved profile opened on nothing in the field test of 2026-09-25. */
+    const markUnsaved = () => { U.isProjectModified = true; };
+
     const addProfile = () => {
         if (!config) return;
         const name = newProfileName.trim() || 'New profile';
         const profile = DProfile.new(config.id, name);
         SetFieldAction.new(config.id, 'profiles', [...profileIdsOf(config), profile.id], '', true);
+        markUnsaved();
         setNewProfileName('');
         setSelectedProfileId(profile.id);
     };
     const renameProfile = (profileId: string, name: string) => {
         SetFieldAction.new(profileId, 'name', name, '', false);
+        markUnsaved();
     };
     const deleteProfile = (profileId: string) => {
         if (!config) return;
         SetFieldAction.new(config.id, 'profiles', profileIdsOf(config).filter((x) => x !== profileId), '', true);
+        markUnsaved();
         // TODO: cleanup — also DeleteElementAction the now-orphaned DProfile entity.
         if (selectedProfileId === profileId) setSelectedProfileId(null);
     };
@@ -97,6 +105,7 @@ export const ProfilesStep: React.FC = () => {
         if (perm === 'edit') delete cur[classId];
         else cur[classId] = perm;
         SetFieldAction.new(profileD.id, 'typePermissions', cur, '', false);
+        markUnsaved();
     };
     const copyStandaloneLink = async (profileId: string) => {
         if (!projectId) return;
@@ -113,7 +122,7 @@ export const ProfilesStep: React.FC = () => {
                 <h3 className="envgen-section-title">Profiles</h3>
                 <p className="envgen-section-description">
                     A profile restricts what a stand-alone user can see and edit. Share the environment as
-                    <code> #/project?id=…&profile=&lt;id&gt;</code>. Changes are saved to the project immediately.
+                    <code> #/project?id=…&profile=&lt;id&gt;</code>. Changes are part of the project: «Done» saves it, as Ctrl+S does.
                 </p>
             </div>
 
@@ -169,6 +178,9 @@ export const ProfilesStep: React.FC = () => {
                                 >
                                     <i className="bi bi-link-45deg" /> {linkCopied ? 'Copied!' : 'Copy stand-alone link'}
                                 </button>
+                                <p className="envgen-empty-hint">
+                                    The link opens the project as last saved: save it («Done» or Ctrl+S) before sharing.
+                                </p>
                             </div>
                             <div className="envgen-field-label" style={{ marginTop: 12 }}>Permissions per top-level type</div>
                             {topLevel.length === 0 ? (

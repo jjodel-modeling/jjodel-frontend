@@ -41,6 +41,9 @@ export const MetaclassesStep: React.FC = () => {
         if (!config) return;
         const next = on ? [...topLevel, classId] : topLevel.filter((x) => x !== classId);
         SetFieldAction.new(config.id, 'topLevelTypes', next, '', true);
+        // R1 (#157): the config travels with the project, so a change here is an unsaved change
+        // of the project — the flag behind «Unsaved» and the leave prompt. No write here set it.
+        U.isProjectModified = true;
     };
 
     return (
@@ -49,7 +52,7 @@ export const MetaclassesStep: React.FC = () => {
                 <h3 className="envgen-section-title">Editable metaclasses</h3>
                 <p className="envgen-section-description">
                     The metaclasses promoted here become the Configurator's top-level entry points for
-                    stand-alone users. Changes are saved to the project immediately.
+                    stand-alone users. Changes are part of the project: «Done» saves it, as Ctrl+S does.
                 </p>
             </div>
 
