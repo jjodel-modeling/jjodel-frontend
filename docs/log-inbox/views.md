@@ -876,3 +876,27 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat `C-2026-09-30-1932`: Alfonso visual GO on activity-decision-merge; `_tmp_actdec_probe.ts` 31/31 on `91333202f`; merge gates green on `530c18a7e`.
 **Notes**: Rollback tag `pre-activity-decision-merge` on `34c4df57a` (RC-31), set by `lane-run`. Union: `docs/log-inbox/views.md`, the trunk's 4 headings then the branch's 16, both sides pure appends. Probes 32/32 once, control R-VP-36 absent. Branch count 6337 in 253 files measured read-only in `jjodel-w-actdec`. The Status parenthetical carries the chat's GO, not the template's morning-digest text: the GO reports Alfonso's visual GO.
 **Prompt document name**: 2026-09-30 22:20
+
+## 2026-10-01 — fix(editor-v2): bound size writes, keep edges, catch canvas loops (P-2026-10-01-1655)
+**Prompt**: `claude_2026-10-01_1655_prompt_update_depth_loop.md`, Phase 1 then 2, heavy, RC-30 go-ahead. «Maximum update depth exceeded» dragging under a «FlowChart (derived)» viewpoint: reproduce, root cause, fix, a canvas safety net. Stopped by the chat at 120 min; resumed with its order (report first, 20 min to confirm, else close every unbounded path).
+**Files touched**: docs `14c343ac4`: `docs/discovery/discovery_2026-10-01_update_depth_loop.md`. Code `140a5d366`: `viewpoint/ir/useContentSize.ts`, `viewpoint/ir/__tests__/useContentSizeLoop.test.ts` (new), `EditorV2.tsx`. This commit: this entry, the report's addendum, the Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: unknown — `npx tsc --noEmit` 14, the §17 set; vitest 6365 passed, 4 red in `criticalZone.test.ts` only under this session's `JJODEL_CRITICAL_ZONE_GOAHEAD` (70/70 unset), the 9 known import reds; build exit 0; mutation bench 6/6; scenes 9/9 byte-identical to the pre-fix code.
+**Out-of-scope changes**: no — the files the report names (§5).
+**Layer Impact Report**: produced (report §6, committed in `14c343ac4` before the diff)
+**Smoke visivo**: passato — probe, unattended: 0/7 fresh-page crashes (before 4/10), 240 drags on four derived viewpoints 0 crashes, nested depth max 3; Alfonso's GO pending (RC-23)
+**Notes**: Root cause not confirmed: the loop is a useSyncExternalStore consistency cascade with EditorV2's edges moving on every nested render; the hook wrote 0 times in it. The fix closes the reachable unbounded paths and adds `CanvasErrorBoundary`; the residual risk is in the report §9. EditorV2's two changes are covered by the probe only (the file does not import in the bench).
+**Prompt document name**: 2026-10-01 16:55
+
+## 2026-10-01 — ticket: the trigger of the update-depth cascade is still unconfirmed
+**Ticket**: The «Maximum update depth exceeded» of P-2026-10-01-1655 was reproduced 4/10 on fresh pages (hand-made FlowChart, Generic derived viewpoint, the third drag) and measured as a useSyncExternalStore consistency cascade (`updateStoreInstance → forceStoreRerender`, 60/60 stacks) with EditorV2's `edges` state moving on every nested render; neither the subscriber nor the edges writer was named before the fix made it unreproducible (0/7). The probe's uSES recorder is ready; re-run it on `4b018b82b` code to name both.
+**Priority**: medium
+**Found in**: P-2026-10-01-1655
+**Detail**: docs/discovery/discovery_2026-10-01_update_depth_loop.md (§3.4, §9)
+
+## 2026-10-01 — ticket: criticalZone.test.ts reads the ambient go-ahead variable
+**Ticket**: Four tests of `frontend/scripts/hooks/__tests__/criticalZone.test.ts` (permission_mode, RC-19) fail when the full suite runs inside a lane launched with `--critical-zone-goahead`: `JJODEL_CRITICAL_ZONE_GOAHEAD` leaks from the session into the test. 70/70 with the variable unset. The test should clear it in its own setup.
+**Priority**: low
+**Found in**: P-2026-10-01-1655
