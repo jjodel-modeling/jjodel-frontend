@@ -210,11 +210,13 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
     };
 
     /** Developer only (decision of 2026-10-01): a type whose metamodel has no model in the
-     *  project gets a «Create model» button, through the File → New → Model path. */
+     *  project gets a «Create model» button, through the File → New → Model path, without
+     *  opening the model's editor (`open` false): the editor hides the LeftBar that hosts this
+     *  overlay, and the Configurator closed under the user (measured by probe, 2026-10-01). */
     const createTypeModel = () => {
         if (!typeMetamodelId || !project) return;
         const mm: any = ((project as any).metamodels ?? []).find((m: any) => m?.id === typeMetamodelId);
-        if (mm) createM1(project as any, mm);
+        if (mm) createM1(project as any, mm, false);
     };
 
     const hasTypes = topTypeIds.length > 0;

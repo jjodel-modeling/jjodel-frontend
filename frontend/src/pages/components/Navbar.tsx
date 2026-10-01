@@ -95,7 +95,11 @@ export function createM2(project: LProject, name0?: string) {
     });
 }
 
-export function createM1(project: LProject, metamodel: LModel) {
+/** `open` (#157, 2026-10-01): false creates the model without opening its editor. The
+ *  Configurator's «Create model» needs it: opening the editor hides the LeftBar, which hosts
+ *  the Configurator, so the overlay closed under the user (measured by probe). Default true:
+ *  every menu path is unchanged. */
+export function createM1(project: LProject, metamodel: LModel, open: boolean = true) {
     let name = 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
@@ -104,7 +108,7 @@ export function createM1(project: LProject, metamodel: LModel) {
     project.models = [...project.models, lModel];
     project.graphs = [...project.graphs, lModel.node as LGraph];
     // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
-    DockManager.open2(lModel);
+    if (open) DockManager.open2(lModel);
 
     // Log activity
     ActivityLogger.log({
