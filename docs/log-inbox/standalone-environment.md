@@ -44,3 +44,16 @@ in this order** (RC-12) and empties this file. The active log is not touched by 
 **Smoke visivo**: non eseguito — né Playwright né Puppeteer in `node_modules`, nessun dev server; checklist consegnata in chat.
 **Notes**: Causa del New inerte: `models[0]` per tutti i tipi, non R3. `modelsForType` risolve per metamodello; lista su tutti i modelli del tipo, New nel primo. Banco: senza il filtro `instanceof` 2/5 test nuovi rossi. Causa (c) anche per B: il copy «saved immediately» e nessuna scrittura del wizard accendeva `U.isProjectModified`.
 **Prompt document name**: 2026-10-01 (chat)
+
+## 2026-10-01 — fix(#157): «Create model» tiene aperto il Configurator; smoke e sonda Playwright sui seguiti del re-test
+**Prompt**: chat di Juri: «ho installato Playwright per gli smoke test, verifica il corretto funzionamento». Smoke P8 e una sonda dedicata alle tre corsie del 2026-10-01 (#157 A e B, #158 C).
+**Files touched**: `6d35280cd`: `pages/components/Navbar.tsx` (`createM1` con `open` opzionale, default true), `environment/ConfiguratorTab.tsx` (`open` false). Sonda `scripts/smoke/_tmp_157_158_verify.ts`, non committata (`_tmp_*`).
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-01 16:01 (chat, corsia A)
+**Causa**: (c)
+**Regressions**: no — sonda 28/28 sul codice corretto; `npm run smoke` GREEN 12/12 prima e dopo la correzione; `npx tsc --noEmit` **14**, stesso insieme della baseline; `npm run build` exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1; `createM1` cambia solo se apre l'editor.
+**Smoke visivo**: passato — `npm run smoke` GREEN 12/12 (3 skip dichiarati); sonda Playwright 28/28, console nella baseline.
+**Notes**: La sonda ha trovato il difetto: `createM1` apriva l'editor, che nasconde la LeftBar ospite del Configurator (A8 FAIL prima, PASS dopo). Verificati: New per modello del tipo, messaggi dev/consumer/read-only, Save in topbar, wizard → «Unsaved», Done salva, Escape no, link stand-alone dopo reload, Back oltre Phase_0, click sulla riga. A margine: `Checkbox` ha `<label htmlFor={id}>` senza id, il nome non attiva la casella.
+**Prompt document name**: 2026-10-01 (chat)
