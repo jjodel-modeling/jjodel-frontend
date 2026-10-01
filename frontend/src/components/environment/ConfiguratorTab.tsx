@@ -37,12 +37,18 @@ import { appendValue } from '../editor-v2/viewpoint/ir/formWrite';
 import InstanceDetail, { type DetailPermission } from '../abstract/tabs/InstanceDetail';
 import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
 import { createM1 } from '../../pages/components/Navbar';
+import { EnvGenEvents } from '../../events/registry';
 import type { DeleteOptions, DeletePreflight, NavState } from '../../jjform';
 import './configuratorTab.scss';
 
 export interface ConfiguratorTabProps {
     open: boolean;
     onClose: () => void;
+    /** #157 R5 — 'page': the consumer's landing page, mounted in place of the project body. No
+     *  portal, no close button, no type bar: the type comes from the consumer's left column
+     *  (`EnvGenEvents.CONFIGURATOR_SELECT_TYPE`). Default 'overlay', the developer's full-screen
+     *  window opened from the sidebar. */
+    variant?: 'overlay' | 'page';
 }
 
 /** The `profile` hash param, read via the app's canonical parser (same one `getProjectID_URL` uses). */
@@ -54,7 +60,8 @@ function profileIdFromUrl(): string | null {
     }
 }
 
-export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
+export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: ConfiguratorTabProps) {
+    const isPage = variant === 'page';
     const idlookup = useSelector((s: DState) => s.idlookup);
     const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
     const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
@@ -99,6 +106,23 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
             setSelectedTypeId(topTypeIds[0]);
         }
     }, [open, topTypeIds, selectedTypeId]);
+
+    // #157 R5 — the page takes its type from the consumer's left column, and says which type is
+    // on screen so the column can mark it (CustomEvent + useState, CLAUDE.md §8.7). The column
+    // offers only the profile's visible types; the default-selection effect above still guards.
+    useEffect(() => {
+        if (!isPage) return;
+        const onSelect = (e: Event) => {
+            const typeId = (e as CustomEvent).detail?.typeId;
+            if (typeof typeId === 'string') setSelectedTypeId(typeId);
+        };
+        window.addEventListener(EnvGenEvents.CONFIGURATOR_SELECT_TYPE, onSelect);
+        return () => window.removeEventListener(EnvGenEvents.CONFIGURATOR_SELECT_TYPE, onSelect);
+    }, [isPage]);
+    useEffect(() => {
+        if (!isPage) return;
+        window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_TYPE_CHANGED, { detail: { typeId: selectedTypeId } }));
+    }, [isPage, selectedTypeId]);
 
     /** «New» returned no instance. Shown instead of a silent button; cleared on the next try. */
     const [createFailed, setCreateFailed] = useState(false);
@@ -237,9 +261,8 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
     // hidden in consumer mode), so the "go configure it" hint is addressed to them alone.
     const isDeveloperView = !profileId;
 
-    return createPortal(
-        <div className="configurator-overlay" role="dialog" aria-modal="true" aria-label="Configurator">
-            <div className="configurator">
+    const windowBody = (
+            <div className={`configurator${isPage ? ' configurator--page' : ''}`}>
                 <div className="configurator__header">
                     <div className="configurator__title"><i className="bi bi-grid-1x2" /> Configurator</div>
                     <div className="configurator__header-right">
@@ -253,9 +276,12 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                                 <><i className="bi bi-unlock" /> No profile — full access</>
                             )}
                         </span>
-                        <button className="configurator__close" onClick={onClose} aria-label="Close">
-                            <i className="bi bi-x-lg" />
-                        </button>
+                        {/* R5: the page is where the consumer lands, not a window to close. */}
+                        {!isPage && (
+                            <button className="configurator__close" onClick={onClose} aria-label="Close">
+                                <i className="bi bi-x-lg" />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -297,7 +323,8 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                     </div>
                 ) : (
                     <>
-                        <div className="configurator__topbar" role="tablist">
+                        {/* R5: on the page the types are the consumer's left column. */}
+                        {!isPage && <div className="configurator__topbar" role="tablist">
                             {topTypeIds.map((tid) => (
                                 <button
                                     key={tid}
@@ -309,7 +336,7 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                                     {classNameById[tid] || tid}
                                 </button>
                             ))}
-                        </div>
+                        </div>}
 
                         <div className="configurator__body">
                             <div className="configurator__list">
@@ -426,6 +453,14 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                     />
                 )}
             </div>
+    );
+
+    if (isPage) {
+        return <div className="configurator-page" role="region" aria-label="Configurator">{windowBody}</div>;
+    }
+    return createPortal(
+        <div className="configurator-overlay" role="dialog" aria-modal="true" aria-label="Configurator">
+            {windowBody}
         </div>,
         document.body,
     );

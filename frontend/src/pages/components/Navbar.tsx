@@ -1859,7 +1859,8 @@ function NavbarComponent(props: AllProps) {
 
     return(<>
         <nav id={'navbar'} className={'w-100 nav-container d-flex appbar'}>
-            <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
+            {/* #157 R5: inert in consumer — the catalogue is the developer's (decision of 2026-10-01). */}
+            <div className='nav-logo' onClick={() => { if (!consumer) R.navigate('/allProjects'); }}>
                 <div className={"aligner"}>
                     <img
                         src={jjodelLogo}
@@ -1869,13 +1870,16 @@ function NavbarComponent(props: AllProps) {
                 </div>
             </div>
             <div className="appbar__sep" />
-            <MainMenu items={items} />
+            {/* #157 R5 (mockup of @tmaog): no Jjodel/File/Edit/View menus in consumer. Ctrl/Cmd+S
+                still saves: the shortcut reads the URL, not the menu. */}
+            {!consumer && <MainMenu items={items} />}
             <section className='nav-commands d-flex'>
                 {project && debuggerr ? <DebuggerComponent /> : null}
             </section>
 
-            {/* Project label — click activates the project-summary tab (dashboard) */}
-            {project && (
+            {/* Project label — click activates the project-summary tab (dashboard). Not in
+                consumer (R5): there the Configurator is the page and there are no tabs. */}
+            {project && !consumer && (
                 <div
                     className="project-label"
                     onClick={() => {
@@ -1898,8 +1902,8 @@ function NavbarComponent(props: AllProps) {
                 </div>
             )}
 
-            {/* Custom Tab Strip */}
-            {project && (
+            {/* Custom Tab Strip — not in consumer (R5), and with it the «+» new-document button. */}
+            {project && !consumer && (
                 <div className="appbar-tabs">
                     {tabsToShow.map(tab => {
                         const badge = getTabBadge(tab.type);

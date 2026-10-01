@@ -121,6 +121,10 @@ export const JjodieEvents = {
 export const EnvGenEvents = {
   CONFIG_CHANGED: 'envgen-config-changed',
   OPEN_WIZARD: 'envgen-open-wizard',
+  /** #157 R5 — the consumer's left column picks a type for the Configurator page. detail: { typeId } */
+  CONFIGURATOR_SELECT_TYPE: 'envgen-configurator-select-type',
+  /** #157 R5 — the Configurator page says which type is on screen, for the column. detail: { typeId } */
+  CONFIGURATOR_TYPE_CHANGED: 'envgen-configurator-type-changed',
 } as const;
 
 // ─── Avatar ─────────────────────────────────────────────────────
