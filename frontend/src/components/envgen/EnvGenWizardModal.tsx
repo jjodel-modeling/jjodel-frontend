@@ -7,6 +7,8 @@ import { DesignStep } from './steps/DesignStep';
 import { FeaturesStep } from './steps/FeaturesStep';
 import { MetaclassesStep } from './steps/MetaclassesStep';
 import { ProfilesStep } from './steps/ProfilesStep';
+import { LProject, U } from '../../joiner';
+import { saveProjectWithFeedback } from '../../common/libraries/saveProject';
 import './EnvGenWizardModal.scss';
 
 export interface EnvGenWizardModalProps {
@@ -67,6 +69,11 @@ export const EnvGenWizardModal: React.FC<EnvGenWizardModalProps> = ({
             const config = wizard.saveConfig();
             onConfigSaved(config);
         }
+        // R1 (#157, decision of 2026-10-01): the environment (metaclasses, profiles) lives in the
+        // project state and reaches the server only with a project save, and «Done» was read as
+        // that save in the field test. It now is one: the same `saveProjectWithFeedback` as
+        // Ctrl+S, when the project has unsaved changes. Escape and the backdrop still just close.
+        if (U.isProjectModified) void saveProjectWithFeedback(LProject.getProject());
         onClose();
     }, [wizard, onConfigSaved, onClose]);
 
