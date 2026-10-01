@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-2215
 Chat: C-2026-10-01-2215
 Lane: Phase 1 only (discovery, read-only on `frontend/src`; no Phase 2 in cascade: the fixes may touch `portDistribution.ts` / `handlePosition.ts` and what the MODELS demo shows, both on the RC-26 list). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-01 · lane elk-layout-disc · e83a16d41 · Phase 1 hard-stop: report docs/discovery/discovery_2026-10-01_elk_layout_quality.md, seven questions with Recommended lines, decisions D-A..D-C await Alfonso (RC-26)
 
 Worktree: `~/jjodel-w-elklayout`, branch `elk-layout-disc`, created from the trunk `alfonso-frontend-jjtl` at `ac3890b7e`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-elklayout`, branch `elk-layout-disc`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
