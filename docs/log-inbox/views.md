@@ -900,3 +900,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: Four tests of `frontend/scripts/hooks/__tests__/criticalZone.test.ts` (permission_mode, RC-19) fail when the full suite runs inside a lane launched with `--critical-zone-goahead`: `JJODEL_CRITICAL_ZONE_GOAHEAD` leaks from the session into the test. 70/70 with the variable unset. The test should clear it in its own setup.
 **Priority**: low
 **Found in**: P-2026-10-01-1655
+
+## 2026-10-01 — merge: update-depth-loop into alfonso-frontend-jjtl (P-2026-10-01-2029)
+**Prompt**: `claude_2026-10-01_2029_prompt_merge_update-depth-loop.md`, a direct merge by `lane-run merge --direct`, no session: `update-depth-loop` at `347eeb6c1` into `alfonso-frontend-jjtl`, merge base `4b018b82b`, 4 commits on the branch side.
+**Files touched**: merge `a952056bb`: 6 files from the branch side (`docs/discovery/discovery_2026-10-01_update_depth_loop.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-01_1655_prompt_update_depth_loop.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/useContentSizeLoop.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a952056bb` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6411 tests in 258 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat smoke on 3001 (Chrome, light): Notation Demo / model_1 loads on the trunk with the fix, 12 nodes and 12 edges rendered, no Maximum update depth, no CanvasErrorBoundary fallback, no console error. The crash itself was verified by the lane probe (0/7 fresh pages, 240 drags, 0 crashes; scenes 9/9 byte-identical). GO.
+**Notes**: Rollback tag `pre-update-depth-loop-P-2026-10-01-2029` on `649feda48` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-01-2029/result.json`.
+**Prompt document name**: 2026-10-01 20:29
