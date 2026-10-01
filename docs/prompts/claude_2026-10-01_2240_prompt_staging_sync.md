@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-2240
 Chat: C-2026-10-01-2220
 Lane: Phase 1 then Phase 2 in cascade, a merge with semantic conflicts resolved on the branch (RC-14), outside the critical zone. Tier: heavy. Time limit: 120 min.
-Status: da eseguire
+Status: eseguito 2026-10-01 · lane merge · fdfd89ddd
 Worktree: `~/jjodel-w-staging`, branch `staging-sync`, created from the trunk `alfonso-frontend-jjtl` at `ac3890b7e`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-staging`, branch `staging-sync`, `git log -1` is the docs commit that added this prompt, `git rev-parse origin/staging` is `98ebb132e...`; if any differs, stop with `Outcome: blocked`.
 
 ## COSA

@@ -201,3 +201,65 @@ are new files on staging only: no conflict.
 
 `frontend/node_modules` is a symlink to `~/jjodel/frontend/node_modules`, created 22:34, before this session: it
 stays. Ports in use at 22:4x: 3000, 3001, 3003, 3004, 3215, 3216; the probe takes a free one.
+
+## Addendum 2026-10-01 — Phase 2 (merge, gates, probes)
+
+Measured on `staging-sync` at the merge `fdfd89ddd` (parents `298ce7242`, `98ebb132e`). No `fix:` commit: neither
+the typecheck nor the tests nor the probes showed a semantic conflict.
+
+**Merge.** `git merge --no-ff --no-commit origin/staging`: the two conflicts of §2, nothing else. Index after the
+resolution: exactly the 40 staging-side files of §2 (`diff` of the two sorted lists, empty).
+- `LeftBar.tsx` as §4.1. `git diff origin/staging -- LeftBar.tsx` on the result: the trunk's hunk only (2 lines out,
+  4 in).
+- Log as §5: `git diff HEAD^1 -- docs/claude-code-log.md` is 26 added lines and 0 removed; 42 entries; every trunk
+  entry byte-identical; staging keys absent from the result: 18 (3 spliced variants, 15 in the archive).
+
+**Gates**, each in the foreground, from `frontend/`:
+
+| Gate | Before (`298ce7242`, code = `ac3890b7e`) | After (`fdfd89ddd`) |
+|------|------|------|
+| `npm run typecheck` | baseline 14 (§17) | 14, the §17 set by file and code; Dashboard's TS2339 is the known `activeId` at `:599` |
+| `npx vitest run` | 248/258 files, 6410/6411 tests; red: the 9 import files + `traceMonitor.test.ts` («a port in use»: status null under load; alone 9/9) | 249/258 files, 6442/6442 tests; red: the 9 import files only |
+| staging's `instanceTable`, `nav`, `environmentConfig` tests (+ `saveProject`, `dataManagerPicker`, `lastSaved`) | — | 6 files, 187/187 |
+| `npm run build` | — | exit 0, `✓ built in 57.92s`, chunk-size warning only |
+| `npm run check:docs` | — | A, B, C PASS; **D FAIL, 42 > 40**, declared (RC-14); 11 warnings, among them two `Corregge` of Juri's inboxes matching no prompt name (`data-manager-ux.md:22`, `standalone-environment.md:48`) |
+| `npm run check:addonly` | — | `HEAD`: 1 clean; `--range ac3890b7e..HEAD`: 3 clean |
+
+**Probes**, `lane-run probe … --port 3241 --config scripts/smoke/_tmp_staging_vite.config.ts` (cache inside this
+tree's `_tmp_` folder), headless Chromium, light theme, 1600×1000, DPR 2. Kit copied read-only from
+`~/jjodel-w-updatedepth` (`_tmp_c1_common.ts`, `_tmp_c1_scenario.js`). Logs in
+`~/.jjodel-lanes/P-2026-10-01-2240/probe-_tmp_staging_scenes.log` (4 runs) and `probe-_tmp_staging_dm.log` (2 runs).
+Crops `frontend/scripts/smoke/_tmp_staging_crops/*_600.png` (gitignored).
+
+- **(a) Four scenes, default viewpoint.** «before» on `298ce7242`, then three «after» runs on `fdfd89ddd`. Run 1:
+  4/4 byte-identical to «before». Runs 2 and 3: every scene differs by the same count (2429, then 462 px), and every
+  differing pixel lies inside Jjodie's 48×48 button (box x 30-125, y 1624-1719 at DPR 2; 0 px outside, measured
+  per pixel); the merge touches no Jodie file. Canvas: 0 px in 12 of 12 shots outside that button. Console errors
+  per scene: 0.
+- **App bar.** «Save» appears at x 1172, 68×28 (absent before); the Basic/Advanced switch stays at x 1265, 140×26,
+  Advanced at x 1321 in both; the tab strip narrows from 656 to 584 px.
+- **(b) Data Manager**, DemoESM (Transition) and DemoFlowB (ControlFlow), second run 10/10: rows 4 and 9; drill-in
+  from a reference link shows Back («Back to tc: Transition», «Back to f1: ControlFlow») and Back returns to the
+  first form with no Back left; the selected row's `aria-expanded` goes `true` → `false` on a second click; «Hide
+  the model outline» gives one rail and the rail brings it back; drags of +60 px: outline 300 → 360, classes
+  200 → 260. First run 14/16: my probe measured the classes pane while dragging the outline's resizer.
+- **(c) Configurator** with an environment of three types (ESM State, ESM Transition, Widget of a fresh metamodel
+  with no model), 3/3: the three types listed; «New» on State, none on Transition with «No «New» for Transition:
+  created inside State.»; «Create DemoWidgets model» adds one model (0 → 1), the overlay stays open and «New»
+  appears. Console errors 0.
+- **(d) Left bar.** Developer: «All projects», Megamodel, sections Metamodels, Models, Transforms, Viewpoints, Project,
+  actions incl. «Open Configurator» and «Configure environment», same before and after. Consumer (`?profile=`):
+  Types (State, Transition, Widget), Project; no «All projects», no Megamodel, no Models; the Configurator is the
+  page; removing the profile brings the developer bar back.
+- **(e) R-SIM-94** on DemoESM's model tab: «Data…», Add attribute, Apply writes `simStateAttributes` on the model
+  (`x1`, boolean) and the reopened dialog reads «Data of demoESM», Globals 1. Pass before and in after-runs 2 and 3.
+  After-run 1 timed out (30 s) on the dialog's Cancel click, after the scenes; run 2 measured page latency 550-600 ms
+  and a 7.8 s Cancel, run 3 145-176 ms both before «Data…» and after Apply and a 1.8 s Cancel. The 24 console
+  errors «Cannot serialize in ecore, found loop» on Apply are there before the merge too.
+- Console: 1 error at start in every run, «failed to get project {project: null}», before and after.
+
+**Open after this lane.**
+1. Rotation to 40 (Check D), the exclusive lane of P13, after the trunk merge.
+2. The Cancel timeout of (e), once in four runs: not reproduced; the chat's check on its own server tells.
+3. `traceMonitor.test.ts` «a port in use» fails under full-suite load on the trunk code (status null): a ticket,
+   not this merge's.
