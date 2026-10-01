@@ -40,6 +40,12 @@ import { waitForDependencies } from './elementWaiter';
 import { checkBoundScope } from './scopeGuard';
 import { getMetamodelById } from './resolvers';
 import { getProject } from './utils';
+import { checkCommandPermission, metaclassesNamed } from './permissionGuard';
+import type { GuardCommand, GuardType, GuardUnresolved } from './permissionGuard';
+import { resolveTargetModel, resolveInstanceHandle } from './commands/instance';
+import { activeProfileId } from '../../components/environment/consumerMode';
+import { findProfile } from '../../joiner/environmentConfig';
+import { store } from '../../joiner';
 
 // ============================================
 // EXECUTOR CLASS
@@ -114,6 +120,24 @@ export class JjScriptExecutor {
                     // Don't fail here - let the command handler produce the proper error message
                 } else if (waitResult.waitedMs > 0) {
                     // console.log(`[JjScript] Dependencies resolved after ${waitResult.waitedMs}ms`);
+                }
+            }
+
+            // A stand-alone environment (#157) carries a profile in the URL, and the profile decides
+            // what a script may change (#168 J5, `permissionGuard.ts`). After the wait, so the check
+            // resolves names against the state the handler will see; before the scope check, so the
+            // profile's refusal is the one the viewer reads. No profile: nothing is resolved here.
+            const profileId = activeProfileId();
+            if (profileId) {
+                const profile = findProfile((store.getState() as any).idlookup, profileId);
+                const refusal = checkCommandPermission(describeForGuard(ast, context), { profileId, profile });
+                if (refusal) {
+                    return {
+                        success: false,
+                        command: ast.command,
+                        message: refusal.message,
+                        errors: [{ code: refusal.code, message: refusal.message, suggestion: refusal.suggestion }]
+                    };
                 }
             }
 
@@ -318,6 +342,85 @@ export class JjScriptExecutor {
     clearHistory(): void {
         this.context.history = [];
     }
+}
+
+// ============================================
+// PROFILE GUARD ADAPTER
+// ============================================
+
+/**
+ * The command as `checkCommandPermission` reads it: the names it touches, resolved the way the
+ * M1 handlers resolve them (`commands/instance.ts`), so the type checked is the type written.
+ * Resolves only at M1 and only for `create instance` / `set` / `rename` / `delete`; a name that
+ * does not resolve travels as the handler's own sentence, and the guard refuses it.
+ */
+function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCommand {
+    const args: any = ast.args;
+    const cmd: GuardCommand = { command: ast.command, level: context.level, elementType: args?.elementType };
+    if (context.level !== 'M1') return cmd;
+
+    const project = getProject(context);
+    if (ast.command === 'create') {
+        if (args?.elementType !== 'instance') return cmd;
+        const metamodel = project ? getMetamodelById(project, context.targetMetamodelId ?? '') : null;
+        if (!metamodel) {
+            cmd.creates = { unresolved: 'No metamodel of conformity in context' };
+        } else {
+            const types = metaclassesNamed(metamodel, args.name);
+            cmd.creates = types.length > 0 ? types : { unresolved: `Class '${args.name}' not found in metamodel` };
+        }
+        return cmd;
+    }
+    if (ast.command !== 'set' && ast.command !== 'rename' && ast.command !== 'delete') return cmd;
+    if (args?.elementType !== undefined && args.elementType !== 'instance') return cmd;
+
+    const model = project ? resolveTargetModel(context, project) : null;
+    if (!model) {
+        cmd.subject = { unresolved: 'No active M1 model' };
+        return cmd;
+    }
+    // Same spelling as the handlers (`instance.ts`, executeSet/Rename/DeleteInstance).
+    const instanceName = args.target.segments.join('::') || args.target.raw;
+    const resolved = resolveInstanceHandle(model, instanceName);
+    cmd.subject = instanceType(resolved, instanceName);
+
+    // A `set` writes a link when the property is a reference (an attribute of the same name wins,
+    // as in `classifyMetaclassProperty`) and the value names an instance: a string literal or,
+    // like the handler, anything that is not a literal, by its `raw`. `null` unlinks, and any
+    // other literal is refused by the handler (TYPE_MISMATCH): neither links to anything.
+    if (ast.command === 'set' && resolved.ok) {
+        const metaclass: any = resolved.value?.instanceof;
+        const attributes: any[] = metaclass?.allAttributes ?? metaclass?.attributes ?? [];
+        const references: any[] = metaclass?.allReferences ?? metaclass?.references ?? [];
+        const isReference = !attributes.some((a) => a?.name === args.property)
+            && references.some((r) => r?.name === args.property);
+        const value: any = args.value;
+        const isLiteral = !!value && typeof value === 'object' && 'kind' in value
+            && ['string', 'number', 'boolean', 'null', 'array', 'enumLiteral'].includes(value.kind);
+        const links = isReference && (!isLiteral || value.kind === 'string');
+        if (links) {
+            const targetName = isLiteral ? value.value : value?.raw;
+            cmd.linkTarget = typeof targetName === 'string'
+                ? instanceType(resolveInstanceHandle(model, targetName), targetName)
+                : { unresolved: `Reference '${args.property}' expects an instance name` };
+        }
+    }
+    return cmd;
+}
+
+/** The exact metaclass of a resolved instance, or why there is none. */
+function instanceType(
+    resolved: { ok: boolean; value?: any; reason?: string },
+    instanceName: string
+): GuardType | GuardUnresolved {
+    if (!resolved.ok || !resolved.value) {
+        return { unresolved: resolved.reason ?? `No instance named '${instanceName}'` };
+    }
+    const metaclass: any = resolved.value.instanceof;
+    if (!metaclass || typeof metaclass.id !== 'string') {
+        return { unresolved: `Cannot resolve metaclass for instance '${instanceName}'` };
+    }
+    return { id: metaclass.id, name: metaclass.name ?? '' };
 }
 
 // ============================================
