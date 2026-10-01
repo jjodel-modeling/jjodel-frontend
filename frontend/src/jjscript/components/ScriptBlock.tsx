@@ -10,8 +10,8 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { JjScriptEvents } from '../../events/registry';
 import './ScriptBlock.scss';
-import { ExecutionErrorDialog } from './ExecutionErrorDialog';
-import { skippedLinesAsEditorLines } from './summaryLines';
+import { RunSummaryDialog, type RunSummaryData, type RunSummaryErrorRow } from './RunSummaryDialog';
+import { projectFigures, type ProjectFigures } from './runFigures';
 import {parseError, errorFromResult, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
 import type { ExecutionError } from '../types';
 import { collectClassifierNames, validateScriptIntegrity } from '../executor/scriptValidator';
@@ -87,8 +87,8 @@ interface LineState {
 /**
  * Terminal outcome shown as a thin inline strip below the code content (replaces the
  * former completion modal). Persists as component state per-message: scrolling back
- * through the chat shows the last outcome. The Skip/recovery ExecutionErrorDialog is
- * unchanged and owns the interactive error flow; this strip is the passive summary.
+ * through the chat shows the last outcome. The Run summary (`RunSummaryDialog`) opens once at
+ * the end of every Run; this strip is the passive record that stays after it is closed.
  */
 type ScriptOutcome =
     | { kind: 'success'; count: number }
@@ -132,6 +132,28 @@ function projectClassifierNames(): Set<string> | undefined {
     }
     console.warn('[ScriptBlock] Forward-reference check stood down: no metamodel could be read from the project, so a forward reference will not be refused before the run.');
     return undefined;
+}
+
+/**
+ * The figures of every model of the current project, for the Run summary (R-JS-6). Null when
+ * the project cannot be read: the summary then shows no figures rather than wrong ones. Quiet
+ * on purpose, because the summary dialog calls it on every store change while it is open.
+ */
+function readProjectFigures(): ProjectFigures | null {
+    try {
+        const user: LUser = L.fromPointer(DUser.current);
+        const project = user?.project as LProject | undefined;
+        return project ? projectFigures(project) : null;
+    } catch {
+        return null;
+    }
+}
+
+/** The strip after a run: its success count, or its first final error and how many follow. */
+function outcomeOf(errors: RunSummaryErrorRow[], executedCount: number): ScriptOutcome {
+    if (errors.length === 0) return { kind: 'success', count: executedCount };
+    const more = errors.length > 1 ? ` (+${errors.length - 1} more)` : '';
+    return { kind: 'runtime-error', line: errors[0].line, message: errors[0].message + more };
 }
 
 // Utility function for delay between commands
@@ -201,9 +223,12 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     const [executionStats, setExecutionStats] = useState<ExecutionStats | null>(null);
     const [executionErrorInfo, setExecutionErrorInfo] = useState<ExecutionErrorInfo | null>(null);
 
-    // Summary dialog state. Run never pauses (R-JS-5): the dialog opens once, on a finished run.
-    const [showErrorDialog, setShowErrorDialog] = useState(false);
-    const [executionSummary, setExecutionSummary] = useState<ExecutionSummary | null>(null);
+    // The Run summary (R-JS-6): opened once at the end of every Run, never during it (R-JS-5).
+    // `runBefore` is the project's figures when the run started; the dialog reads "after" live.
+    const [runSummary, setRunSummary] = useState<RunSummaryData | null>(null);
+    const [showRunSummary, setShowRunSummary] = useState(false);
+    const [runBefore, setRunBefore] = useState<ProjectFigures | null>(null);
+    const [recoveryBusy, setRecoveryBusy] = useState(false);
 
     // Refs
     const abortRef = useRef(false);
@@ -300,21 +325,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         [lineStates, getScriptLine]
     );
 
-    /**
-     * The summary the dialog renders, with the skipped lines translated to editor numbering
-     * at the last moment. `ExecutionSummary.skippedLines` itself stays in command-index
-     * space: every writer stores `i + 1` there and the run's control state reads it back
-     * that way. Only this render-side copy is mapped, so the skipped rows finally agree
-     * with the errors rows beside them, which were already in editor numbering.
-     */
-    const summaryForDialog = useMemo(() => {
-        if (!executionSummary) return undefined;
-        return {
-            ...executionSummary,
-            skippedLines: skippedLinesAsEditorLines(executionSummary.skippedLines, lineToCommandIndex),
-        };
-    }, [executionSummary, lineToCommandIndex]);
-
     // Initialize line states
     useEffect(() => {
         setLineStates(
@@ -354,6 +364,87 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         }
     }, [onOpenExecutionWindow, code, resolvedTarget, hasValidTarget]);
 
+    /**
+     * Run one command, as the old Run loop did: mark its line, execute it in the run's target,
+     * record the result, wait the batch delay. Never throws: a thrown command becomes a failed
+     * result without executor codes, which `runPasses` keeps final.
+     */
+    const executeLine = useCallback(async (i: number): Promise<ScriptLineResult> => {
+        if (!onExecute) return { command: commands[i], success: false, message: 'No executor' };
+        const _iterStart = performance.now(); // TEMP-DISCOVERY
+
+        setCurrentLineIndex(i);
+        setLineStates(prev =>
+            prev.map((ls, idx) =>
+                idx === i ? { ...ls, status: 'running' } : ls
+            )
+        );
+
+        let result: ScriptLineResult;
+        try {
+            // Execute command directly (dependencies are handled by executor pre-check)
+            const [first] = await onExecute([commands[i]], resolvedTarget?.id);
+            result = first ?? { command: commands[i], success: false, message: 'No result' };
+        } catch (err) {
+            result = {
+                command: commands[i],
+                success: false,
+                message: err instanceof Error ? err.message : 'Unknown error',
+            };
+        }
+
+        setLineStates(prev =>
+            prev.map((ls, idx) =>
+                idx === i
+                    ? { ...ls, status: result.success ? 'success' : 'error', result }
+                    : ls
+            )
+        );
+
+        // Add delay between commands for proper processing
+        if (!abortRef.current) {
+            await sleep(BATCH_DELAY_MS);
+        }
+
+        // TEMP-DISCOVERY: full per-command wall-clock (onExecute apply + async React re-render/settle absorbed during sleep + BATCH_DELAY_MS). settle ≈ iter − executor.total − BATCH_DELAY_MS.
+        console.log(`[JjScript-TIMING] line=${i + 1} iter=${(performance.now() - _iterStart).toFixed(1)} cmd="${commands[i].slice(0, 60)}"`); // TEMP-DISCOVERY
+        return result;
+    }, [onExecute, commands, resolvedTarget]);
+
+    /**
+     * One final error of a run as a summary row, with the actions of the first recovery rule
+     * that matches it (R-JS-5). `skipMatchingCreateLiteral` is not offered: Run already goes on
+     * past every such line, which was the whole effect of that action.
+     */
+    const errorRowFor = useCallback((index: number, result: ScriptLineResult): RunSummaryErrorRow => {
+        const error = errorFromResult(result, commands[index]);
+        const metamodel = resolvedTarget?.id
+            ? (LPointerTargetable.fromPointer(resolvedTarget.id) as LModel | null)
+            : null;
+        const actions = findRecoveryActions({
+            command: commands[index],
+            lineNumber: index + 1,
+            allCommands: commands,
+            errorMessage: error.message,
+            metamodel,
+        }).filter(action => action.kind !== 'skipMatchingCreateLiteral');
+        return {
+            commandIndex: index,
+            line: getScriptLine(index),
+            command: commands[index],
+            message: error.message,
+            suggestion: error.suggestion,
+            actions,
+        };
+    }, [commands, resolvedTarget, getScriptLine]);
+
+    /** A `set` that a later line superseded (R-JS-3), as a summary row. */
+    const supersededRowFor = useCallback((index: number, byIndex: number) => ({
+        line: getScriptLine(index),
+        command: commands[index],
+        byLine: getScriptLine(byIndex),
+    }), [commands, getScriptLine]);
+
     // Execute all commands (or continue from where stepping left off)
     const handleExecute = useCallback(async () => {
         if (!onExecute || commands.length === 0) return;
@@ -374,7 +465,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         if (!integrity.valid && integrity.issue) {
             const { line, command, reason, kind } = integrity.issue;
             const isForwardReference = kind === 'forward-reference';
-            setShowErrorDialog(false);
             setExecutionErrorInfo({
                 // Here `line` is already the editor line: the validator reads the raw script,
                 // not the command list. Stated as `scriptLine` too so the dialog does not have
@@ -398,6 +488,19 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             });
             setExecutionState('error');
             setOutcome({ kind: isForwardReference ? 'refused' : 'syntax-error', line, message: reason });
+
+            // The summary lists the refusal like any final error: nothing ran (R-JS-4).
+            setRunBefore(null);
+            setRunSummary({
+                refused: true,
+                executedCount: 0,
+                totalCommands: commands.length,
+                resolvedOnRetryLines: [],
+                durationMs: 0,
+                errors: [{ commandIndex: -1, line, command, message: reason, actions: [] }],
+                superseded: [],
+            });
+            setShowRunSummary(true);
             return;
         }
 
@@ -419,8 +522,8 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         setOutcome(null);
 
         // Reset the summary dialog state
-        setShowErrorDialog(false);
-        setExecutionSummary(null);
+        setShowRunSummary(false);
+        setRunSummary(null);
 
         // If we were stepping/paused, continue from current position
         // Otherwise start from the beginning
@@ -442,53 +545,11 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             );
         }
 
-        // One command, as the old loop ran it. Never throws: a thrown command becomes a failed
-        // result without executor codes, which `runPasses` keeps final.
-        const execOne = async (i: number): Promise<ScriptLineResult> => {
-            const _iterStart = performance.now(); // TEMP-DISCOVERY
-
-            setCurrentLineIndex(i);
-            setLineStates(prev =>
-                prev.map((ls, idx) =>
-                    idx === i ? { ...ls, status: 'running' } : ls
-                )
-            );
-
-            let result: ScriptLineResult;
-            try {
-                // Execute command directly (dependencies are handled by executor pre-check)
-                const [first] = await onExecute([commands[i]], resolvedTarget?.id);
-                result = first ?? { command: commands[i], success: false, message: 'No result' };
-            } catch (err) {
-                result = {
-                    command: commands[i],
-                    success: false,
-                    message: err instanceof Error ? err.message : 'Unknown error',
-                };
-            }
-
-            setLineStates(prev =>
-                prev.map((ls, idx) =>
-                    idx === i
-                        ? { ...ls, status: result.success ? 'success' : 'error', result }
-                        : ls
-                )
-            );
-
-            // Add delay between commands for proper processing
-            if (!abortRef.current) {
-                await sleep(BATCH_DELAY_MS);
-            }
-
-            // TEMP-DISCOVERY: full per-command wall-clock (onExecute apply + async React re-render/settle absorbed during sleep + BATCH_DELAY_MS). settle ≈ iter − executor.total − BATCH_DELAY_MS.
-            console.log(`[JjScript-TIMING] line=${i + 1} iter=${(performance.now() - _iterStart).toFixed(1)} cmd="${commands[i].slice(0, 60)}"`); // TEMP-DISCOVERY
-            return result;
-        };
-
         // R-JS-3: pass 1 runs every command and never pauses (R-JS-5); the commands that failed
         // on a name a later line creates run again, pass after pass.
         const indices = commands.map((_, i) => i).filter(i => i >= startIndex);
-        const run = await runPasses(commands, execOne, isDeferrable, {
+        const before = readProjectFigures();
+        const run = await runPasses(commands, executeLine, isDeferrable, {
             indices,
             shouldStop: () => abortRef.current,
         });
@@ -519,38 +580,24 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         setExecutionState('completed');
         setCurrentLineIndex(-1);
 
-        if (failed.length === 0) {
-            setOutcome({ kind: 'success', count: executedCount });
-        } else {
-            const first = failed[0];
-            const more = failed.length > 1 ? ` (+${failed.length - 1} more)` : '';
-            setOutcome({
-                kind: 'runtime-error',
-                line: getScriptLine(first.index),
-                message: errorFromResult(first.result, commands[first.index]).message + more,
-            });
-        }
+        const errors = failed.map(o => errorRowFor(o.index, o.result));
+        setOutcome(outcomeOf(errors, executedCount));
 
-        // Every final error at once, at the end (R-JS-5). A superseded line is listed apart,
-        // in the skipped row: it is not an error.
-        if (failed.length > 0 || superseded.length > 0) {
-            setExecutionSummary({
-                totalCommands: commands.length,
-                executedCount,
-                skippedCount: superseded.length,
-                // Command-index space, 1-based, as every writer of this field stores it;
-                // `summaryForDialog` maps it to editor lines.
-                skippedLines: superseded.map(o => o.index + 1),
-                errors: failed.map(o => ({
-                    line: getScriptLine(o.index),
-                    command: commands[o.index],
-                    error: errorFromResult(o.result, commands[o.index]),
-                })),
-                duration,
-                errorCount: failed.length,
-            });
-            setShowErrorDialog(true);
-        }
+        // One summary closes every Run (R-JS-6): what was applied, every final error at once
+        // (R-JS-5), and the superseded `set` lines apart, since they are not errors.
+        setRunBefore(before);
+        setRunSummary({
+            refused: false,
+            executedCount,
+            totalCommands: commands.length,
+            resolvedOnRetryLines: run.outcomes
+                .filter(o => o.status === 'success' && o.pass > 1)
+                .map(o => getScriptLine(o.index)),
+            durationMs: duration,
+            errors,
+            superseded: superseded.map(o => supersededRowFor(o.index, o.supersededBy ?? o.index)),
+        });
+        setShowRunSummary(true);
 
         // Dispatch event for auto-expand of Features panel
         if (executedCount > 0) {
@@ -568,7 +615,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 errorCount: failed.length,
             }
         }));
-    }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine]);
+    }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine, executeLine, errorRowFor, supersededRowFor]);
 
     // Step through commands one by one
     const handleStep = useCallback(async () => {
@@ -601,8 +648,8 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             setOutcome(null);
 
             // Reset the summary dialog state
-            setShowErrorDialog(false);
-            setExecutionSummary(null);
+            setShowRunSummary(false);
+            setRunSummary(null);
         }
 
         const nextIndex = executionState === 'paused' ? currentLineIndex : 0;
@@ -793,9 +840,111 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     // Close the summary dialog. Run never pauses (R-JS-5), so there is no paused state to
     // turn into a summary here any more: the dialog only ever shows a finished run.
     const handleCloseErrorDialog = useCallback(() => {
-        setShowErrorDialog(false);
-        setExecutionSummary(null);
+        setShowRunSummary(false);
     }, []);
+
+    /**
+     * A recovery action from a row of the Run summary (R-JS-5): apply its fix, then rerun only
+     * the final failures, with the passes of R-JS-3. The run's "before" stays, so the figures
+     * keep covering the whole run.
+     */
+    const handleRecoveryAction = useCallback(async (action: RecoveryAction, row: RunSummaryErrorRow) => {
+        if (!onExecute || !runSummary || recoveryBusy) return;
+
+        switch (action.kind) {
+            case 'createEnumAndRetry': {
+                const enumName = action.enumName;
+                setRecoveryBusy(true);
+
+                // Side-effect: create the enum. This path reuses the same executor that
+                // handles a normal `create enum Y` line, so validation/duplication checks
+                // are consistent with scripted creation.
+                const [createResult] = await onExecute([`create enum ${enumName}`], resolvedTarget?.id);
+                if (!createResult?.success) {
+                    // The fix failed: say so on its row, and offer it no more.
+                    const parsedError = errorFromResult(
+                        { message: createResult?.message || 'Enum creation failed', errors: createResult?.errors },
+                        `create enum ${enumName}`
+                    );
+                    setRunSummary(prev => prev && {
+                        ...prev,
+                        errors: prev.errors.map(e => e === row
+                            ? { ...e, message: `create enum ${enumName} failed: ${parsedError.message}`, suggestion: parsedError.suggestion, actions: [] }
+                            : e),
+                    });
+                    setRecoveryBusy(false);
+                    return;
+                }
+
+                // Log the auto-recovery step so the execution log reflects what happened.
+                // We reuse JjScriptEvents.EXECUTED with a marker tag so downstream console
+                // listeners can render it distinctly if they choose.
+                window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTED, {
+                    detail: {
+                        recovery: true,
+                        command: `create enum ${enumName}`,
+                        success: true,
+                        note: `Auto-created via recovery rule "literal-in-attribute" before retrying line ${row.line}`,
+                    },
+                }));
+                // Also a visible console line — useful in dev, harmless in prod.
+                // eslint-disable-next-line no-console
+                console.log(`[jjscript recovery] auto-created enum "${enumName}", retrying line ${row.line}`);
+
+                abortRef.current = false;
+                setExecutionState('running');
+                const rerun = await runPasses(commands, executeLine, isDeferrable, {
+                    indices: runSummary.errors.map(e => e.commandIndex).filter(i => i >= 0),
+                    shouldStop: () => abortRef.current,
+                });
+                setRecoveryBusy(false);
+                if (rerun.stopped) return;
+
+                const succeeded = rerun.outcomes.filter(o => o.status === 'success');
+                const supersededNow = rerun.outcomes.filter(o => o.status === 'superseded');
+                const errors = rerun.outcomes
+                    .filter(o => o.status === 'failed')
+                    .map(o => errorRowFor(o.index, o.result));
+                const executedCount = runSummary.executedCount + succeeded.length;
+
+                if (supersededNow.length > 0) {
+                    const supersededIndices = new Set(supersededNow.map(o => o.index));
+                    setLineStates(prev =>
+                        prev.map((ls, idx) => supersededIndices.has(idx) ? { ...ls, status: 'skipped' } : ls)
+                    );
+                }
+
+                setRunSummary({
+                    ...runSummary,
+                    executedCount,
+                    resolvedOnRetryLines: [
+                        ...runSummary.resolvedOnRetryLines,
+                        ...succeeded.map(o => getScriptLine(o.index)),
+                    ].sort((a, b) => a - b),
+                    durationMs: Math.max(0, Date.now() - startTimeRef.current),
+                    errors,
+                    superseded: [
+                        ...runSummary.superseded,
+                        ...supersededNow.map(o => supersededRowFor(o.index, o.supersededBy ?? o.index)),
+                    ].sort((a, b) => a.line - b.line),
+                });
+                setExecutionState('completed');
+                setCurrentLineIndex(-1);
+                setOutcome(outcomeOf(errors, executedCount));
+                return;
+            }
+
+            case 'skipMatchingCreateLiteral':
+                // Not offered by Run (see `errorRowFor`).
+                return;
+
+            default: {
+                // Exhaustiveness guard: TypeScript will flag missing cases at compile time.
+                const _exhaustive: never = action;
+                void _exhaustive;
+            }
+        }
+    }, [onExecute, runSummary, recoveryBusy, resolvedTarget, commands, executeLine, errorRowFor, supersededRowFor, getScriptLine]);
 
     // Get status icon for a line
     const getLineStatusIcon = (status: LineState['status']) => {
@@ -1065,16 +1214,19 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 </div>
             )}
 
-            {/* Summary of a finished run with errors or superseded lines. Run never pauses
-                (R-JS-5), so the dialog has no Skip and no paused state here. */}
-            <ExecutionErrorDialog
-                isOpen={showErrorDialog}
+            {/* One summary closes every Run (R-JS-6). Run never pauses (R-JS-5): no paused state,
+                no Skip; the recovery actions sit on the rows of the final errors. */}
+            <RunSummaryDialog
+                isOpen={showRunSummary}
                 onClose={handleCloseErrorDialog}
-                summary={summaryForDialog}
+                data={runSummary}
+                before={runBefore}
+                readAfter={readProjectFigures}
+                onRecoveryAction={handleRecoveryAction}
+                busy={recoveryBusy}
             />
 
-            {/* Completion modal removed — the terminal outcome is now the inline strip above.
-                The Skip/recovery ExecutionErrorDialog remains the interactive error surface. */}
+            {/* The strip above stays as the per-message record once the summary is closed. */}
         </div>
     );
 };

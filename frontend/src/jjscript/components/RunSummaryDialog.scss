@@ -1,0 +1,206 @@
+/**
+ * RunSummaryDialog Styles
+ * The parts the Run summary adds to the ExecutionErrorDialog shell (overlay, header,
+ * content, stats bar, buttons), which it reuses. Same palette, light theme only.
+ */
+
+// ============================================
+// VARIABLES (the ExecutionErrorDialog palette)
+// ============================================
+
+$summary-border: #e2e8f0;
+$summary-text: #1e293b;
+$summary-text-muted: #64748b;
+$summary-text-light: #94a3b8;
+$summary-surface: #f8fafc;
+$summary-error: #ef4444;
+$summary-error-bg: rgba(239, 68, 68, 0.1);
+$summary-success: #10b981;
+$summary-suggestion-bg: #f1f5f9;
+$summary-mono: 'IBM Plex Mono', Monaco, Consolas, monospace;
+
+// ============================================
+// DIALOG
+// ============================================
+
+.exec-error-dialog.run-summary {
+    max-width: 560px;
+}
+
+.run-summary__content {
+    max-height: 60vh;
+}
+
+.run-summary__none {
+    font-size: 13px;
+    color: $summary-text-muted;
+}
+
+// ============================================
+// FIGURES
+// ============================================
+
+.run-summary__model {
+    margin-bottom: 12px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.run-summary__model-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $summary-text;
+    margin-bottom: 8px;
+
+    > i {
+        color: $summary-text-muted;
+    }
+}
+
+.run-summary__figures {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+
+    th,
+    td {
+        padding: 4px 8px;
+        border-bottom: 1px solid $summary-border;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    thead th {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: $summary-text-light;
+    }
+
+    tbody th {
+        text-align: left;
+        font-weight: 500;
+        color: $summary-text-muted;
+    }
+
+    td {
+        color: $summary-text;
+    }
+
+    tr:last-child th,
+    tr:last-child td {
+        border-bottom: none;
+    }
+}
+
+.run-summary__row--changed th {
+    color: $summary-text;
+}
+
+.run-summary__delta {
+    color: $summary-text-light;
+
+    &--up {
+        color: $summary-success;
+        font-weight: 600;
+    }
+
+    &--down {
+        color: $summary-error;
+        font-weight: 600;
+    }
+}
+
+// ============================================
+// ERROR AND SUPERSEDED ROWS
+// ============================================
+
+.run-summary__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.run-summary__error,
+.run-summary__superseded {
+    border: 1px solid $summary-border;
+    border-radius: 6px;
+    padding: 8px 12px;
+    background: $summary-surface;
+}
+
+.run-summary__row-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.run-summary__line {
+    flex-shrink: 0;
+    font-family: $summary-mono;
+    font-size: 12px;
+    font-weight: 600;
+    color: $summary-text-muted;
+}
+
+.run-summary__command {
+    font-family: $summary-mono;
+    font-size: 12px;
+    color: $summary-text;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+.run-summary__message {
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: $summary-error-bg;
+    color: $summary-error;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.run-summary__suggestion {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: $summary-suggestion-bg;
+    font-size: 12px;
+    color: $summary-text-muted;
+    line-height: 1.5;
+
+    > i {
+        flex-shrink: 0;
+        color: $summary-text-muted;
+    }
+}
+
+.run-summary__note {
+    margin-top: 4px;
+    font-size: 12px;
+    color: $summary-text-muted;
+}
+
+.run-summary__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.run-summary__action {
+    padding: 6px 12px;
+    font-size: 12px;
+}
