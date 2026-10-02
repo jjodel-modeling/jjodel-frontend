@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-1505
 Chat: C-2026-10-01-2220
 Lane: Phase 1 then Phase 2 in cascade, a trunk sync with code conflicts resolved on the branch (RC-14); stop before the critical zone. Tier: heavy. Time limit: 90 min.
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane edge-ends · 1e1ce1334, 9e1f9fae5, 119046cb2 · non fuso: hard-stop, probe on 3095 (light) base 5/5 on the c3a9c9ffd code and after 20/20, mutation benches 9/9 (the fix) and 22/23 (slice E, the survivor equivalent), check:addonly red on the merge only (inherited from d2eb5fb83, report §7), verifica visiva alla chat
 Worktree: `~/jjodel-w-edgeends`, branch `edge-ends` at `633c22a8c` plus the docs commit that added this prompt, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-edgeends`, branch `edge-ends`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA

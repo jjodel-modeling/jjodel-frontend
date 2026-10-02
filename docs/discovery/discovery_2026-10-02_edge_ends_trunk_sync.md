@@ -109,3 +109,55 @@ diffs); `…/viewpoint/ir/irJunctions.ts` on `eaead2d71` (:1-124); `…/viewpoin
 `frontend/src/services/CanvasExportService.ts` on `eaead2d71` (:185-200: `inlineSvgPaint` walks every `svg *`, markers
 included, so the glyph classes export); `docs/prompts/claude_2026-10-02_1501_prompt_merge_ir-corner-clip.md` on
 `eaead2d71` (head).
+
+## 7. Phase 2 (added 2026-10-02, after the Phase 1 commit `b7d0885e9`)
+
+Commits on `edge-ends`: merge `1e1ce1334` (parents `b7d0885e9`, `eaead2d71`), fix `9e1f9fae5`, fix `119046cb2`. Q1 to
+Q3 adopted as recommended (unattended, RC-21).
+
+- **Q1.** The trunk ref moved again while the merge started: `3db161e62` (the ir-corner-clip merge, 15:10), then
+  `0be127357` and `7de984795` (docs). `eaead2d71` was merged, as pinned. The edge-ends → trunk merge, measured against
+  `7de984795`: one conflict, `docs/log-inbox/views.md` (union, both append). Trunk-only code since `eaead2d71`:
+  `nodes/instanceNode.scss` and `nodes/__tests__/irSelectionRing.test.ts`, which this branch does not touch.
+- **Resolutions.** As §0 says: the two code files with both blocks, the trunk's first. `views.md` is the trunk's preamble
+  plus the slice E entry, both checked byte for byte against their sources. Step 5 reading of the resolved
+  `UnifiedEdge.tsx` (1-1265) and `irEdgeViews.ts`: no marker, no duplicated declaration or hook.
+- **Q3 fix.** `9e1f9fae5`: `trunkEnds` (per primary trunk, `trimPathEnds(junctionTrunkPath(...), 0, back)`), two marker
+  ids `ir-end-trunk-in|out-<id>` among slice E's marker tuples, the trunk path drawing the cut with its own marker. Old
+  ends: the edge's marker, markup unchanged. Tests first: two of three new tests red on `1e1ce1334` (`marker-end`
+  `url(#ir-end-target-*)`). Bench (`_tmp_ee_sync_bench.mjs F`, gitignored, restored by `git checkout HEAD --`):
+  **8/9**. The survivor was the primary guard (a non-primary member mounted an unused trunk marker). `119046cb2` adds
+  the test that kills it: **9/9**.
+- **Slice E's bench on the merged tree** (its 23 mutations, the test list plus `irActivityRender.test.ts`): **22/23**,
+  the survivor T13 equivalent, as in its own lane.
+- **Gates.**
+  - `npx tsc --noEmit`: exit 2 with 14 errors on `1e1ce1334` and again on `9e1f9fae5`, the §17 set by file and code.
+  - `npx vitest run`: 263 files, 6503 tests. 6502 passed. 11 files red: the 9 known at import, plus
+    `irSelectionRing.test.ts` (afterAll hook timeout, Chromium) and `scripts/gates/__tests__/traceMonitor.test.ts` (one
+    port test, `status` null). Each re-run alone passes, 5/5 and 9/9: load. Neither file is touched by this lane.
+  - `npm run build`: exit 0, only the chunk-size warning. `check:scripts`: PASS.
+- **`check:addonly` (RC-34): red on the merge, inherited.** On `1e1ce1334`: 172 inbox entries "rewritten". With
+  `--range c3a9c9ffd..HEAD`: 10 commits, 9 clean, the merge the only one flagged. The cause is the trunk's
+  `d2eb5fb83` (P-2026-10-01-2344), which folded the inboxes and rotated the log in one commit: an inbox entry went to the
+  archive, and the gate only accepts inbox → active log. `npm run check:addonly -- d2eb5fb83` fails the same way on the
+  trunk. Measured (`_tmp_ee_sync_addonly.ts`): all 185 entries that leave this branch's inboxes are verbatim in the
+  merged log or archive, and in the trunk's. Positive control: against `30f3d8a81` the same script reports the slice E
+  entry missing. The merge rewrote no entry. The edge-ends → trunk merge compares against the trunk as first parent,
+  where these entries already sit in the archive.
+- **Probe** (`lane-run probe … --port 3095 --config _tmp_lane_vite_3095.config.ts --id P-2026-10-02-1505`, light, DPR
+  2, 1600×1000; the vite cache and `TMPDIR` inside this tree's gitignored smoke folder, not `/tmp`; log
+  `~/.jjodel-lanes/P-2026-10-02-1505/probe-_tmp_ee_sync_probe.log`).
+  - Base: slice E's 9 modified source files set to `c3a9c9ffd` in this tree (`git diff c3a9c9ffd -- frontend/` then
+    showed only the 4 added files, which nothing imports), restored with `git checkout HEAD --`. **5/5.**
+  - After, on `119046cb2`: **20/20**. The four demo scenes in the default viewpoint are byte-identical to base
+    (`same: true`); the control between two scenes sees 348100 px. DemoFlowB as Activity (UML): preselected and
+    derived through the dialog; fk and jn are 7×120 painted 5×118 in the ink. The 10 visible paths (1 junction
+    trunk, 1 diamond) all end on `ir-arrow-open-*`, with no start marker and no slice E marker. That canvas is
+    byte-identical to base. Slice E's fixture, light, widths 1 and 2: 42 links. Every new end is cut at its back at
+    both ends with glyph stroke = width; the old ends are uncut; the hollow parts are `rgb(241, 245, 249)`, the
+    canvas background; the erZeroOrMany row carries 6 multiplicities and 6 roles. Console: the same list in both runs
+    (`failed to get project`, `Cannot serialize in ecore, found loop`), no page error.
+  - Crops (`sips -Z 600`) in `frontend/scripts/smoke/_tmp_ee_sync_crops/`: `ees_after_{sm,petri,esm,flowB}_default_600.png`,
+    `ees_after_flowB_activity_600.png`, `ee_fixture_w{1,2}_light{,_new}_600.png`.
+- **Not covered by the probe:** the Q3 case (a new end on an Activity junction trunk) is in no demo. Its evidence is
+  the render tests and the bench.
