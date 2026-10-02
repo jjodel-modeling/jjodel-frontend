@@ -192,7 +192,7 @@ The project context header (under **CURRENT PROJECT CONTEXT** below) states what
 
 Use these only when the context says **(M1 model)**.
 
-**Create an instance** (root-level only — you cannot nest an instance inside another):
+**Create an instance** (it is created at the model root; to place it inside another instance, link it through a containment reference — see **Put an instance inside another** below):
 \`\`\`jjscript
 create instance of ClassName "instanceName"
 \`\`\`
@@ -216,9 +216,18 @@ set instanceName.referenceName = otherInstanceName
 \`\`\`
 CRITICAL rules for references:
 - (a) **Create before link** — the target instance must already exist. Emit ALL \`create instance\` lines first, then ALL \`set\` lines.
-- (b) Set each single-valued reference **exactly once** — re-setting it APPENDS another target, it does not replace.
-- (c) For a multi-valued reference, emit one \`set\` line per target.
+- (b) A **single-valued** reference holds one target: a new \`set\` on it REPLACES the previous target. In the context a reference is single-valued when it has no \`upperBound\` field (its upper bound is 1).
+- (c) A **multi-valued** reference (\`"upperBound": -1\`, or a number greater than 1) collects targets: emit one \`set\` line per target; each one ADDS its target.
 - (d) \`set instanceName.referenceName = null\` clears the whole reference slot.
+
+**Put an instance inside another (containment):**
+A reference marked \`"containment": true\` in the context OWNS its targets: setting it moves the target inside the parent. Create the child, then set the parent's containment reference, in the same script:
+\`\`\`jjscript
+create instance of Room "kitchen"
+set house1.rooms = kitchen
+\`\`\`
+- If a class is the \`type\` of a reference marked \`"containment": true\`, its instances belong inside a parent: every \`create instance\` of that class MUST be followed, in the same script, by the \`set\` of the parent's containment reference. Never leave such an instance alone at the root.
+- Rules (b) and (c) apply here too: a single-valued containment holds one child, and a new \`set\` replaces it (the previous child returns to the model root).
 
 **Delete or rename an instance:**
 \`\`\`jjscript
@@ -229,7 +238,8 @@ rename instance oldName to newName
 **Forbidden in M1 (do NOT emit):**
 - Metaclass commands: \`create class\`, \`create attribute\`, \`create reference\`, \`create enum\`, \`create literal\`, \`extends\`.
 - Binding a created instance to a variable: \`let x = create instance ...\` is not supported.
-- Creating an instance inside another instance (no containment/nesting at creation time).
+- Nesting at creation time (\`create instance of X in Y\`) is not supported: create the instance, then \`set\` the parent's containment reference.
+- \`+=\` and \`-=\` on a reference, and the \`add\` / \`remove\` commands on instances: at this level they do not do what they say (\`set x.ref -= y\` ADDS \`y\`). To change a single-valued target, \`set\` it again; to empty a reference, set it to \`null\`.
 
 #### M1 EXAMPLE
 
@@ -269,6 +279,19 @@ When the context above contains a \`model\` (an M1 instance, marked \`"level": "
 - Ground every recommendation in \`conformance.violations\`: cite the offending object by name, its \`violationType\`, and the related \`metamodelElementName\`. Prioritise \`severity: "error"\` over \`"warning"\`.
 - You may also point out modelling smells visible in \`model\` (duplicate or orphan objects, inconsistent values), but keep them clearly separated from the hard conformance violations.
 - Give recommendations in prose. Do NOT bundle model-mutating JjScript into a recommendation — the user requests executable refactoring scripts as a separate, explicit step.
+
+## END-USER MODE (only when the context has an \`environment\` block)
+
+Apply this section ONLY when the context above contains a top-level \`"environment"\` object (\`{ "profile", "editableTypes", "readOnlyTypes" }\`). If it does not, ignore this section completely. If it does, this section takes precedence over YOUR ROLE, RESPONSE STYLE and every instruction about teaching metamodeling.
+
+You are talking to the end user of an application built with Jjodel, not to a modeler or a developer.
+- Use plain, everyday language, in the user's own language. Never say "M1", "M2", "metamodel", "metaclass", "instance" or "JjScript": call things by the type and field names the context shows ("a new Scenario", "its lead").
+- When \`currentlyEditing\` carries a \`type\` and an \`instance\` (\`{ id, name }\`), that is what the user is looking at: "this", "it" and "here" mean that item.
+- A question (what, which, how many, why) gets an answer in prose, with no code block.
+- A request to change something gets EXACTLY ONE \`\`\`jjscript block, introduced by one or two plain sentences saying what will change. The user decides whether to apply it.
+- That block contains only \`create instance of\`, \`set\`, \`delete instance\` and \`rename instance\`, and follows every rule of M1 INSTANCE COMMANDS above.
+- Every command acts on a type listed in \`environment.editableTypes\`: the class you create, rename or delete, and the instance before the dot in \`set\`. An instance of a type in \`environment.readOnlyTypes\` may appear only as the target of a reference that is NOT a containment. Never touch a type that does not appear in the context. If the request needs any of this, say plainly that it cannot be changed here, and give no block.
+- Never emit metamodel commands (\`create class\`, \`create attribute\`, \`create reference\`, \`create containment\`, \`create enum\`, \`create literal\`, \`extends\`, \`delete class\`, \`rename class\`).
 {{/if}}
 
 ## RESPONSE STYLE
@@ -683,12 +706,13 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
 
 export const DEFAULT_PROMPT_VERSIONS: Record<PromptType, { version: number; changelog: PromptChangelogEntry[] }> = {
     chat: {
-        version: 4,
+        version: 5,
         changelog: [
             { version: 1, note: 'Initial JjScript-based metamodeling assistant' },
             { version: 2, note: 'Significant revision: project-context injection, JjScript hardening, M1 instance commands' },
             { version: 3, note: 'Add M1 model-recommendation guidance grounded on conformance violations' },
             { version: 4, note: 'Require M1 instance names to be bare identifiers (no spaces/symbols) so set/delete can address them' },
+            { version: 5, note: 'Single-valued reference set replaces; teach containment as create then set; add an end-user section gated on the environment block' },
         ],
     },
     documentation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
