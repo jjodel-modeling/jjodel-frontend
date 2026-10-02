@@ -615,7 +615,32 @@ export type EdgeTermination =
     | 'hollowDiamond'
     /** R-VP-24 (P-2026-09-30-1521): a hollow circle, the inhibitor arc's end in «Petri net (classic)».
      *  The name of R-VP-15 (1). Persisted, never renamed (R-B9); additive, no migration. */
-    | 'hollowCircle';
+    | 'hollowCircle'
+    /**
+     * Slice E (P-2026-09-30-1810): a filled disc, a bar across the line, the UML non-navigable cross, and
+     * the four crow's foot ends, composed from bar, crow and circle: the part nearest the node gives the
+     * maximum (bar one, crow many), the part farther along the edge the minimum (circle zero, bar one).
+     * Drawn from the glyph table of `edges/edgeEndGlyphs.ts`. `bar` is also a ShapeForm value (R-VP-16): a
+     * different vocabulary on a different key. Persisted, never renamed (R-B9); additive, no migration.
+     */
+    | 'filledCircle'
+    | 'bar'
+    | 'cross'
+    | 'erZeroOrOne'
+    | 'erExactlyOne'
+    | 'erZeroOrMany'
+    | 'erOneOrMany';
+
+/**
+ * The labels at one end of an edge (slice E, P-2026-09-30-1810): the multiplicity (UML `0..*`, ER Chen `N`,
+ * `(0,N)`) on the side of the line R-VP-23 puts an end label, the role name on the other side. Both optional.
+ * `edge.labels.sourceEnd` / `targetEnd` also take a bare TextSource, the R-VP-23 form, read as the multiplicity.
+ * Persisted, never renamed (R-B9); additive, no migration.
+ */
+export interface EdgeEndLabels {
+    multiplicity?: TextSource;
+    role?: TextSource;
+}
 
 /**
  * Reserved endpoint token of an object-as-edge view (R-B13): resolves to the
@@ -668,7 +693,9 @@ export interface EdgeViewIR {
             width?: Conditional<number>;
             style?: Conditional<'solid' | 'dashed' | 'dotted'>;
         };
-        terminations?: { sourceEnd?: EdgeTermination; targetEnd?: EdgeTermination };
+        /** Each end a plain EdgeTermination or a Conditional of them (slice E), resolved per edge instance,
+         *  as `line.color`; `Conditional<T>` admits a plain `T`, so every saved end stays valid. */
+        terminations?: { sourceEnd?: Conditional<EdgeTermination>; targetEnd?: Conditional<EdgeTermination> };
         /** Path shape drawn by UnifiedEdge (E-route). Absent ≡ 'orthogonal' (Manhattan
          *  router); 'straight' and 'curved' reuse the same handles and only change the
          *  curve, which drops waypoints and crossing bridges for that edge. */
@@ -709,10 +736,11 @@ export interface EdgeViewIR {
              * the classic cardinality badge sits (edgeUtils `computeCardinalityAnchor`); in the style
              * of `style` above when declared (the halo), else as that badge. An empty text draws
              * nothing. Absent = no end label, as before. Persisted, never renamed (R-B9); additive, no
-             * migration.
+             * migration. Slice E (P-2026-09-30-1810) widens each to `EdgeEndLabels`, a multiplicity and a
+             * role on the two sides of the line; the bare TextSource stays, read as the multiplicity.
              */
-            sourceEnd?: TextSource;
-            targetEnd?: TextSource;
+            sourceEnd?: TextSource | EdgeEndLabels;
+            targetEnd?: TextSource | EdgeEndLabels;
         };
         /** spec v1.2 sez. 7 (extended reading, 2026-07-19): default true; false =
          *  the whole layout override (waypoints AND side pins) stays session-only. */
@@ -816,6 +844,10 @@ export interface CompiledEdgeView {
     lineWidth: CompiledConditional<number> | null;
     lineStyle: CompiledConditional<'solid' | 'dashed' | 'dotted'> | null;
     terminations: { sourceEnd: EdgeTermination; targetEnd: EdgeTermination };
+    /** Slice E: the resolver of a Conditional end, present only when the view declares one; `terminations`
+     *  then holds its `else` / `default` (else the default end), and irEdgeViews resolves it per instance. */
+    sourceEndTermination?: CompiledConditional<EdgeTermination>;
+    targetEndTermination?: CompiledConditional<EdgeTermination>;
     routing: 'orthogonal' | 'straight' | 'curved' | null;
     /** `edge.curve` (R-VP-22); absent when the view declares none, or a value outside the vocabulary. */
     curve?: EdgeCurve;
@@ -826,6 +858,9 @@ export interface CompiledEdgeView {
     /** Compiled `edge.labels.sourceEnd` / `targetEnd` (R-VP-23); each absent when the view declares none, or not a text source. */
     sourceEndText?: CompiledAccessor;
     targetEndText?: CompiledAccessor;
+    /** Compiled role of `EdgeEndLabels` (slice E); each absent when the view declares none. */
+    sourceEndRole?: CompiledAccessor;
+    targetEndRole?: CompiledAccessor;
     /** persistWaypoints ?? true — gates persistence/hydration of layout overrides. */
     persistWaypoints: boolean;
 }

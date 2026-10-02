@@ -6,6 +6,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-10-02 — fix(editor-v2): «editable inline» toggle of a value segment reads the effective value (P-2026-10-02-1646)
+**Prompt**: `claude_2026-10-02_1646_prompt_segment_editable_toggle.md`, `Lane: fast`, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-segedit` branch `segment-editable-toggle`. The toggle of a `value` segment drew `editable === true` while the runtime reads `editable !== false` (`IRNodeContent.tsx:706`), so a seeded segment read OFF while its row edited inline and ON changed nothing; the sibling of the R-IRN-38 label fix, filed as a ticket by P-2026-10-01-2349. Phase 1 report `76d2d72cc`; both questions adopted with their Recommended (RC-21): inline expression, toggle never disabled.
+**Files touched**: report `76d2d72cc`: `docs/discovery/discovery_2026-10-02_segment_editable_toggle.md` (addendum §8 in the closure commit). Code `d8f2e61c3`, under `frontend/src/components/editor-v2/viewpoint/authoring/`: `FieldSegmentEditor.tsx` (the read, the exported `applyValueEditable`), `__tests__/fieldSegmentEditor.test.ts` (new). Closure commit: this entry, the R-IRN-40 row in `docs/decisions.md`, the report's addendum, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gates on `d8f2e61c3`: `npm run typecheck` exit 2, 14 errors, the baseline set by file and code; `npm run build` exit 0; full vitest 6508 of 6508 tests passed, 9 failed files, exactly the nine at-import files of CLAUDE.md §17; `check:docs` and `check:addonly` green; probe 22 of 22 on the real app, four demo scenes 0 px from the base run.
+**Out-of-scope changes**: no — 2 files in the fix commit, both in the Phase 2 list of the prompt; `IRNodeContent.tsx` and `irLabelEdit.ts` untouched.
+**Layer Impact Report**: produced (in chat before the diff: `authoring/` is a §3.1 row, but no §3.2 trigger file, no D-layer write and no VersionFixer is touched)
+**Smoke visivo**: chat, pending: crops in `frontend/scripts/smoke/_tmp_segedit_crops/` (gitignored): `se_before_structure_rest_600.png` (the base, toggle OFF at rest) and `se_after_structure_rest_600.png` (the fix, ON), plus `se_after_structure_off_600.png` and `se_after_structure_on_again_600.png`. The lane probe passed the ON-at-rest, OFF, ON-again and edit-lands scenarios.
+**Notes**: Mutation bench 18/18 killed, none void (commit body). The base probe, 7/7, reproduces the bug on the real app. Full fix runs at load 100+ died on esbuild «service was stopped» while another lane's probe ran; a run at load 29 passed. Closes this inbox's ticket «FieldSegmentEditor toggle has the same inverted default». Report §8 holds the measures.
+**Prompt document name**: 2026-10-02 16:46
+
 ## 2026-10-02 — fix(editor-v2): Editable toggle of a Symbol label reads the effective value (P-2026-10-01-2349)
 **Prompt**: `claude_2026-10-01_2349_prompt_label_editable_toggle.md`, `Lane: fast`, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-labeledit` branch `label-editable-toggle`. The Editable toggle of a Symbol label drew `editable === true` while the compile and the runtime treat an absent key as editable, so every seeded label read OFF while double-click renamed, and on a literal, path or metaclassName label it was live and inert. Phase 1 report `450eb13c8`; both questions adopted with their Recommended (RC-21).
 **Files touched**: report `450eb13c8`: `docs/discovery/discovery_2026-10-01_label_editable_toggle.md` (addendum §9 in this commit). Code `20c843f14`, under `frontend/src/components/editor-v2/viewpoint/`: `ir/irLabelEdit.ts` (new), `ir/irCompile.ts` (one import and the `editsName` expression), `authoring/LabelEntryEditor.tsx`; tests `ir/__tests__/irLabelEdit.test.ts` (new), `authoring/__tests__/labelEntryEditor.test.ts`. This commit: this entry and three tickets, the R-IRN-38 row in `docs/decisions.md`, the report's addendum, the Status line of the prompt file.
@@ -48,6 +61,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `irLabelEdit.ts` with `labelEditsName` and `LabelEntryEditor.tsx` with the hint «Only a name label can be renamed on the canvas.», so the merged code compiles on the running server; the behaviour was measured by the branch probe (23/23)
 **Notes**: Union in `docs/log-inbox/symbol-editor.md`: the trunk's preamble, then the branch's entry P-2026-10-01-2349 and its three tickets; the base's 13 entries, folded by `d2eb5fb83`, not carried back. `docs/decisions.md` merged clean, R-IRN-38 appended. No rollback tag, pre-merge tip `c10f0fd90`. Gates ran on `~/.hermes/node/bin` v26.8.1 (session PATH had nvm v18 first). check:docs printed 5 non-blocking warnings.
 **Prompt document name**: 2026-10-02 15:48
+
+## 2026-10-02 — merge: segment-editable-toggle into alfonso-frontend-jjtl (P-2026-10-02-1810)
+**Prompt**: `claude_2026-10-02_1810_prompt_merge_segment-editable-toggle.md`, a merge in a session (Lane: full, zero conflicts measured): `segment-editable-toggle` at `013a4dc9c` into `alfonso-frontend-jjtl`, merge base `adb5d9731`, 5 commits on the branch side.
+**Files touched**: merge `bc8989cdb`: 6 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_segment_editable_toggle.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-10-02_1646_prompt_segment_editable_toggle.md`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/fieldSegmentEditor.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bc8989cdb`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 6589 in 265 files (the trunk tip's 6577 in 264 plus the branch's 12, `fieldSegmentEditor.test.ts` new), 0 failed, the 9 known files red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no. 6 files, all from the branch side, listed above; the merge is the prompt's scope.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `FieldSegmentEditor.tsx` with `applyValueEditable`, so the merged code compiles on the running server; the behaviour was measured by the branch probe (22/22)
+**Notes**: The session slept at about 18:25 before step 4 and resumed at 20:52; the 18:11 trunk vitest ran under load (4 timeouts, 1 failed assertion, 3 workers never started) and was taken again: 6577 in 264, 0 failed. `docs/decisions.md` merged clean, R-IRN-40 appended; no union. Rollback tag `pre-segment-editable-toggle` on `9e6adf714` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 18:10
 
 ## 2026-10-02 — feat(editor-v2): a path label on one attribute edits on the canvas (P-2026-10-02-1647)
 **Prompt**: `claude_2026-10-02_1647_prompt_path_label_edit.md`, `Lane: full`, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-pathlabel` branch `path-label-edit`. A `path` label whose expression is one step to a single-valued string attribute of its object edits on double-click when the IR opts in with `editable`; the toggle shows it and says why when it cannot. Report `ddb7a8c16`; its six questions adopted with their Recommended (RC-21); decision R-IRN-41.
