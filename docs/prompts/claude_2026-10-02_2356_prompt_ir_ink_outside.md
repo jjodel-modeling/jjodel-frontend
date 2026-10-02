@@ -3,6 +3,7 @@
 Prompt-ID: P-2026-10-02-2356
 Chat: C-2026-10-01-2220
 Lane: Phase 1 then Phase 2 in cascade, outside the critical zone. Tier: light.
+Status: eseguito 2026-10-03 · lane ir-ink-outside · 770b3ddc9, cce1ecfef · non fuso: hard-stop, outside labels and the entry mark of a coloured node keep the notation ink (light rgb(15, 23, 42), dark rgba(255, 255, 255, 0.92)), lane probe on 3098 (light and dark) 50/50 and the base run 20/20, the four default scenes 0 px, mutation bench 13/14 (the survivor equivalent), crops in frontend/scripts/smoke/_tmp_inkout_crops/ (gitignored), R-VP-51, verifica visiva alla chat
 Worktree: `~/jjodel-w-inkout`, branch `ir-ink-outside`, created from the trunk at `7c9ae4e0d`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-inkout`, branch `ir-ink-outside`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`. Keep the `frontend/node_modules` link if you create one: the direct merge runs its gates in this worktree (ticket of P-2026-10-02-2315 in `docs/log-inbox/merge-gate.md`).
 
 ## COSA

@@ -184,3 +184,44 @@ Smoke scenarios: DemoPetri on Petri net (classic), DemoPEST on Statechart (UML),
 ## 8. Open questions
 
 See §0, questions 1-6, each with its `Recommended:` line.
+
+## 9. Addendum, Phase 2 (2026-10-03)
+
+Measured on the lane's code `cce1ecfef`; the base run on the code of `7c9ae4e0d` (the four code files put back in the
+working tree for the run, then restored byte for byte; `git diff 7c9ae4e0d` of `src/` empty during the run).
+
+**What changed against §0.** Nothing in the design. One measurement correction: the dark rule
+`:root[data-theme="dark"]` exists in two stylesheets of the dev page (the token file is imported twice); the
+mutation check removes the token from both.
+
+**Measures.**
+- Tests: `nodes/__tests__/irInkOutside.test.ts` (16). On `7c9ae4e0d` 8 of 16 fail (the two outside-label and the two
+  entry-mark cases in light and dark, the unstyled and the node-level-colour outside labels in both themes), 8 pass
+  (inside text, badge, off pins, glyph control). After the change 16 of 16 pass. The markup is resolved through a
+  model of custom-property inheritance seeded with the two token files compiled by sass, not grepped.
+- Mutation bench (gitignored `frontend/scripts/smoke/_tmp_inkout_bench/bench.mjs`): **13/14 killed**. Killed: the
+  token rebound by the coloring; the token missing in light; inside labels sent down the outside branch; inside text
+  painted in the canvas ink; the entry mark back in the text colour; the entry layer without the restored ink (the Q5
+  attempt); the outside label without the restored ink; without the node-level colour restated; the root keeping the
+  text colour; badges without it; the restore applied with coloring off; the restore pointing the ink at itself; the
+  entry mark painted in the canvas ink regardless of its border. **Survived**: the token missing in dark, an
+  equivalent mutant as §5 predicted (the light block is `:root`); measured equivalent in the browser too (below).
+- Gates: typecheck exit 2, 14 errors, the §17 set by file and code; vitest 269 files, 6711 of 6711 tests, the 9 known
+  files red at import (`window is not defined`); build exit 0.
+- Lane probe on 3098 (`_tmp_inkout_probe.ts`, 1600×1000, DPR 2). Base run 20/20 shows the defect: with coloring on,
+  the four outside labels of DemoPetri on Petri net (classic) and the Initial's entry mark of DemoPEST on Statechart
+  (UML) paint `rgb(0, 0, 0)`, in light and in dark (black on the `#1e293b` canvas). After run **50/50**:
+  - Light: outside labels `p1 p2 p3 lock` and the entry dot, line and head `rgb(15, 23, 42)` with coloring on and off.
+  - Dark: the same marks `rgba(255, 255, 255, 0.92)` on and off.
+  - Places coloured (`rgb(243, 223, 203)`, the resolver's `#f3dfcb`); the six PEST nodes in their swatch, inside
+    labels `rgb(0, 0, 0)`, the resolver's text colour, in both themes.
+  - Coloring on: fill, border, inside labels, rows, badges and marker of every node equal to the base run; coloring
+    off: every colour read equal to the base run.
+  - Glyphs (R-VP-50): the classic transition bars `t1..t3` paint on as off (`rgb(51, 65, 85)`, label light
+    `rgb(100, 116, 139)`, dark `rgba(255, 255, 255, 0.3)`).
+  - The token dropped from both dark rules in the browser, coloring on: the outside labels still
+    `rgba(255, 255, 255, 0.92)`.
+  - The four demo scenes in the default viewpoint, coloring off, light and dark: 0 px from the base run (8 of 8
+    byte-identical shots). Control: two different scenes differ by 348100 px.
+  - Crops `sips -Z 600` in `frontend/scripts/smoke/_tmp_inkout_crops/` (gitignored), `ink_{base,after}_*_600.png`.
+- Decision row R-VP-51 (§7).

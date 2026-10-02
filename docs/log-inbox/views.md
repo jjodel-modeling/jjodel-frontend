@@ -213,3 +213,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat on 3001 (built-in browser, trunk e2e4fbc35): DemoFlowB copy re-derived on Activity (UML), Color by metaclass on: initial dot, fork and join bars and final bulls-eye paint the notation ink rgb(15,23,42), the three Activity nodes take their palette fill rgb(243,203,203) with border rgb(212,69,69); every gate green
 **Notes**: Rollback tag `pre-vp-glyph-nocolor-P-2026-10-02-2330` on `8ef9e3c48` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-02-2330/result.json`.
 **Prompt document name**: 2026-10-02 23:30
+
+## 2026-10-03 — fix(ir): outside marks of a coloured node keep the notation ink (P-2026-10-02-2356)
+**Prompt**: `claude_2026-10-02_2356_prompt_ir_ink_outside.md`, light tier, Phase 1 and 2 in cascade on `~/jjodel-w-inkout`, branch `ir-ink-outside`. Closes the ticket «name-ink marks outside a coloured node take its text colour» (P-2026-10-02-2045, this inbox): with «Color by metaclass» on, the outside labels and the Statechart Initial's entry mark keep the notation ink in light and dark. Questions 1-6 of the report adopted as recommended (RC-21).
+**Files touched**: report `770b3ddc9`: `docs/discovery/discovery_2026-10-02_ir_ink_outside.md`. Code `cce1ecfef`: `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/view/viewPoint/metaclassPalette.ts`, `frontend/src/styles/tokens/_colors-light.scss`, `frontend/src/styles/tokens/_colors-dark.scss`, `frontend/src/components/editor-v2/nodes/__tests__/irInkOutside.test.ts`. This commit: the report addendum (§9), R-VP-51 in `docs/decisions.md`, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-02 20:45 (`claude_2026-10-02_2045_prompt_vp_glyph_nocolor.md`, its Q5 left as a ticket)
+**Causa**: (c)
+**Regressions**: no. Gates on `cce1ecfef`: typecheck exit 2, 14 errors, the §17 set; vitest 269 files, 6711 of 6711 tests, the known 9 red at import; build exit 0. Tests 8 of 16 red first, then green; mutation bench 13/14, the survivor an equivalent mutant. Probe on 3098, light and dark: base 20/20 shows the defect, after 50/50; inside colours and the four default scenes 0 px from `7c9ae4e0d`.
+**Out-of-scope changes**: no — nine files over three commits, above five (RC-11, rule 19): the five code files and the four docs files, each named in the prompt's DOVE, taken as the confirmation; `irStyle.ts` not touched (report §4).
+**Layer Impact Report**: produced (report §7, `viewpoint/ir/` is in the §3.1 table)
+**Smoke visivo**: passato (lane probe 50/50, crops in `frontend/scripts/smoke/_tmp_inkout_crops/`, gitignored; the visual GO of the chat and Alfonso is pending)
+**Notes**: The typecheck output went once to `/tmp/x`, against the prompt's no-`/tmp` rule; deleted at once, every later log kept in the gitignored bench folder. The dark rule sits in two stylesheets of the dev page (the token file imported twice); the browser check of the dropped dark token removed both. Report: `docs/discovery/discovery_2026-10-02_ir_ink_outside.md` §9.
+**Prompt document name**: 2026-10-02 23:56
