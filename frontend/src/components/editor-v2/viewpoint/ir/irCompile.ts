@@ -37,7 +37,7 @@ import type {
 import type { CSSProperties } from 'react';
 import type { ReadCtx } from './irReadCtx';
 import { parsePathExpr } from './pathExpr';
-import { labelEditsName } from './irLabelEdit';
+import { labelEditsFeature, labelEditsName } from './irLabelEdit';
 import { proxyToIdReplacer } from '../../../../model/unproxy';
 
 /**
@@ -479,6 +479,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         // Outside label (R-VP-15 (1)): the side is resolved here, once, so the render only
         // reads it. An inside label carries no anchor, even a stray persisted one.
         if (l.position === 'outside') compiled.anchor = resolveLabelAnchor(l.anchor);
+        // Path label (R-IRN-41): its feature only when it can edit, so every other label keeps its keys.
+        const editsFeature = labelEditsFeature(l);
+        if (editsFeature !== null) compiled.editsFeature = editsFeature;
         return compiled;
     });
 

@@ -19,6 +19,7 @@ import type { BadgePosition, CompiledView, ShapeForm } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
+import { labelFeatureEditBlock, labelFeatureInfoOf } from './irLabelEdit';
 import { metaclassColoringVars, type MetaclassColorOverride } from '../../../../view/viewPoint/metaclassPalette';
 import {
     getShapeDescriptor, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
@@ -351,13 +352,24 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
 
     const commitLabelEdit = useCallback(() => {
         if (editingLabel !== null) {
+            const label = compiled.labels[editingLabel];
+            if (label?.editsFeature) {
+                // Path label (R-IRN-41): the attribute, through the row value's write path and with
+                // its dirty rule; compared with the label's text, the source the edit was seeded from.
+                const raw = label.text(readCtx, objectId);
+                const changed = (raw == null ? '' : String(raw)) !== editValue;
+                syncUpdateFeatureValue(vertexId, label.editsFeature, editValue);
+                if (changed) U.isProjectModified = true;
+                setEditingLabel(null);
+                return;
+            }
             // Same source the edit was seeded from (see the label onDoubleClick).
             const changed = (readCtx.getName(objectId) ?? '') !== editValue;
             syncNodeLabel(vertexId, editValue);
             if (changed) U.isProjectModified = true;
             setEditingLabel(null);
         }
-    }, [editingLabel, editValue, vertexId, readCtx, objectId]);
+    }, [editingLabel, editValue, vertexId, readCtx, objectId, compiled]);
 
     const editKeys = useCallback((commit: () => void) => (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') commit();
@@ -610,8 +622,10 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 // inside label keeps exactly the class list it had (irStyle.ts places it).
                 const anchorClass = l.anchor ? ` ir-label--anchor-${l.anchor}` : '';
                 // Editable: intrinsic name/qualifiedName labels edit the element
-                // name unless the IR opts out (spec v1.2 sez. 5).
-                if (l.editsName && editingLabel === i) {
+                // name unless the IR opts out (spec v1.2 sez. 5); a one-step path
+                // label that opts in edits its attribute (R-IRN-41).
+                const editsFeature = l.editsFeature;
+                if ((l.editsName || editsFeature) && editingLabel === i) {
                     return (
                         <input
                             key={`label_${i}`}
@@ -638,6 +652,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                         onDoubleClick={l.editsName ? () => {
                             setEditingLabel(i);
                             setEditValue(readCtx.getName(objectId) ?? '');
+                        } : editsFeature ? () => {
+                            // The slot decides at the gesture, as openRowSelect does: a view can
+                            // apply to classes where the feature is not a single string attribute.
+                            const info = labelFeatureInfoOf((store.getState() as any).idlookup, objectId, editsFeature);
+                            if (labelFeatureEditBlock(info) !== null) return;
+                            setEditingLabel(i);
+                            setEditValue(text);
                         } : undefined}
                     >
                         {text}
