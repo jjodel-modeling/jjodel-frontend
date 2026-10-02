@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-2330
 Chat: —
 Lane: full (merge; 1 conflict: `docs/log-inbox/views.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane merge · e2e4fbc35 · verifica visiva passata 2026-10-02 (chat on 3001 (built-in browser, trunk e2e4fbc35): DemoFlowB copy re-derived on Activity (UML), Color by metaclass on: initial dot, fork and join bars and final bulls-eye paint the notation ink rgb(15,23,42), the three Activity nodes take their palette fill rgb(243,203,203) with border rgb(212,69,69); every gate green)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-02-2330 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

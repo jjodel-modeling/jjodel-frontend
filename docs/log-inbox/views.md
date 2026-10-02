@@ -200,3 +200,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-02-2045
 **Detail**: docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md
+
+## 2026-10-02 — merge: vp-glyph-nocolor into alfonso-frontend-jjtl (P-2026-10-02-2330)
+**Prompt**: `claude_2026-10-02_2330_prompt_merge_vp-glyph-nocolor.md`, a direct merge by `lane-run merge --direct`, no session: `vp-glyph-nocolor` at `e6bbc9829` into `alfonso-frontend-jjtl`, merge base `1ff8ab314`, 4 commits on the branch side.
+**Files touched**: merge `e2e4fbc35`: 9 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-02_2045_prompt_vp_glyph_nocolor.md`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/nodes/__tests__/irGlyphNoColor.test.ts`, `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx`, `frontend/src/view/viewPoint/__tests__/notationGlyph.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e2e4fbc35` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6695 tests in 268 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat on 3001 (built-in browser, trunk e2e4fbc35): DemoFlowB copy re-derived on Activity (UML), Color by metaclass on: initial dot, fork and join bars and final bulls-eye paint the notation ink rgb(15,23,42), the three Activity nodes take their palette fill rgb(243,203,203) with border rgb(212,69,69); every gate green
+**Notes**: Rollback tag `pre-vp-glyph-nocolor-P-2026-10-02-2330` on `8ef9e3c48` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-02-2330/result.json`.
+**Prompt document name**: 2026-10-02 23:30
