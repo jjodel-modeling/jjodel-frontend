@@ -294,7 +294,7 @@ Written in the session's reply before the diff, as the GO asked; summary here. L
   - 24 tests, red at import before the module existed.
   - Mutation bench: **16/16 killed**, listed in the commit body.
 - `c7380822c`, `useJjomSync.ts`:
-  - the vertex test gets a structural fallback (`:1388`);
+  - the vertex test gets a structural fallback (`:1391`);
   - the edge patch goes through `mergeSyncedEdge` and keeps the array when no edge changed;
   - `deduplicateInheritanceEdges` returns its input when it drops nothing.
 - `5921a6c06`, the probe: edge-selection phases (`LOOP_EDGE_PHASES=1`) and the three hook mutations below.
