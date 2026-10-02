@@ -40,6 +40,9 @@
  * Env:  LOOP_VARIANTS  comma list of ref | classes | selfref | extends | lib6 | scenes (default "ref,classes")
  *       LOOP_PATCH     none | nodate | nodeguard | edgeguard | both (default none)
  *       LOOP_SCENES    directory of *.jjodel exports (default ~/jjodel-demo-exports)
+ *       LOOP_EDGE_PHASES "1": before closing, select an edge of metamodel_1 by a click and sample
+ *                      visible and hidden, then click the pane and sample again
+ *       LOOP_PATCH also takes mut-nodeguard | mut-edgekeep | mut-dedupe: fix B's mutation bench
  *       LOOP_SAMPLE_MS sample length per phase (default 5000)
  *       LOOP_OUT       JSON output path (default /tmp/hidden-tab-loop.json)
  */
@@ -79,6 +82,11 @@ const REWRITES: Record<string, Array<[RegExp, string]>> = {
     edgeguard: [[/patchedEdges\.set\(id,\s*rfEdge\);/g, 'if (!(existing && JSON.stringify(existing) === JSON.stringify(rfEdge))) patchedEdges.set(id, rfEdge);']],
 };
 REWRITES.both = [...REWRITES.nodeguard, ...REWRITES.edgeguard];
+// Mutation bench of fix B (P-2026-10-02-1450 Phase 2), run against the fixed source: each one
+// undoes one of its three parts, and the probe must see the loop come back.
+REWRITES['mut-nodeguard'] = [[/\s*\|\|\s*samePlainData\(existing\.data,\s*rfNode\.data\)/g, '']];
+REWRITES['mut-edgekeep'] = [[/if \(changed\)\s*result = mapped;/g, 'result = mapped;']];
+REWRITES['mut-dedupe'] = [[/return kept\.length === edges\.length \? edges : kept;/g, 'return kept;']];
 
 const note = (label: string, d: unknown) =>
     console.log(`MEAS  ${label}  ${typeof d === 'string' ? d : JSON.stringify(d)}`);
@@ -312,6 +320,47 @@ async function createSecondMetamodel(page: Page): Promise<string> {
       if (!open) { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(mm); return 'createM2 + open2'; }
       return 'createM2';
     })()`) as Promise<string>;
+}
+
+/** Click the middle of the first edge path drawn in a model's pane, as a user would. */
+async function clickEdge(page: Page, modelId: string): Promise<any> {
+    const pt: any = await page.evaluate(`(() => {
+      const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"]');
+      // The longest drawn path of the first edge: its markers come first in the DOM and have no box.
+      const edge = pane && pane.querySelector('.react-flow__edge');
+      const path = edge && [...edge.querySelectorAll('path')]
+        .filter((q) => { const r = q.getBoundingClientRect(); return r.width + r.height > 0; })
+        .sort((x, y) => y.getTotalLength() - x.getTotalLength())[0];
+      if (!path) return null;
+      const p = path.getPointAtLength(path.getTotalLength() / 2);
+      const m = path.getScreenCTM();
+      return { x: p.x * m.a + p.y * m.c + m.e, y: p.x * m.b + p.y * m.d + m.f };
+    })()`);
+    if (!pt) return { clicked: false };
+    await page.mouse.click(pt.x, pt.y);
+    await page.waitForTimeout(800);
+    const selected = await page.evaluate(`document.querySelectorAll('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"] .react-flow__edge.selected').length`);
+    return { clicked: true, at: pt, selected };
+}
+
+/** Click an empty point of a model's pane (the first grid point whose top element is the pane). */
+async function clickPane(page: Page, modelId: string): Promise<any> {
+    const pt: any = await page.evaluate(`(() => {
+      const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"] .react-flow__pane');
+      if (!pane) return null;
+      const r = pane.getBoundingClientRect();
+      for (let fy = 0.2; fy < 0.9; fy += 0.1) for (let fx = 0.2; fx < 0.8; fx += 0.1) {
+        const x = r.left + r.width * fx, y = r.top + r.height * fy;
+        const el = document.elementFromPoint(x, y);
+        if (el && el.classList && el.classList.contains('react-flow__pane')) return { x, y };
+      }
+      return null;
+    })()`);
+    if (!pt) return { clicked: false };
+    await page.mouse.click(pt.x, pt.y);
+    await page.waitForTimeout(800);
+    const selected = await page.evaluate(`document.querySelectorAll('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"] .react-flow__edge.selected').length`);
+    return { clicked: true, at: pt, selected };
 }
 
 async function clickTab(page: Page, text: string): Promise<boolean> {
@@ -554,6 +603,22 @@ for (const variant of VARIANTS) {
     if (mm2) out.notes.clickMm2 = await clickTab(page, mm2.name);
     await page.waitForTimeout(3000);
     await phase('mm1-hidden-again');
+    if (process.env.LOOP_EDGE_PHASES === '1' && variant !== 'classes') {
+        // An edge selected by a click: EditorV2 keeps it selected through sync patches.
+        out.notes.clickMm1ForEdge = await clickTab(page, mm1.name);
+        await page.waitForTimeout(2000);
+        out.notes.edgeClick = await clickEdge(page, mm1.id);
+        check(`${variant}: an edge of metamodel_1 is selected`, out.notes.edgeClick.selected === 1, JSON.stringify(out.notes.edgeClick));
+        await phase('mm1-edge-selected');
+        if (mm2) out.notes.clickMm2WithEdge = await clickTab(page, mm2.name);
+        await page.waitForTimeout(2000);
+        await phase('mm1-hidden-edge-selected');
+        out.notes.clickMm1ForPane = await clickTab(page, mm1.name);
+        await page.waitForTimeout(2000);
+        out.notes.paneClick = await clickPane(page, mm1.id);
+        check(`${variant}: the pane click cleared the edge selection`, out.notes.paneClick.selected === 0, JSON.stringify(out.notes.paneClick));
+        await phase('mm1-pane-clicked');
+    }
     out.notes.closeMm1 = await closeTab(page, mm1.name);
     await page.waitForTimeout(3000);
     await phase('mm1-closed');
