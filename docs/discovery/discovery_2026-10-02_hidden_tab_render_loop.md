@@ -279,3 +279,99 @@ The parked gate pauses the react-redux store seen by the hidden subtree. The cyc
 None for fix B: the chat gave the critical-zone go-ahead at launch (RC-30, `goahead.txt` in the lane folder), the Layer Impact Report is Phase 2's first step, and B changes nothing a tab shows.
 
 If the chat chooses fix A instead, one item waits for Alfonso (RC-26, «anything that changes what the MODELS demo shows»): A can reopen #67, so a class marked singleton may stop showing it. Recommended: B, so nothing waits.
+
+## Addendum 2026-10-03, Phase 2 (GO of the chat: fix B only)
+
+Tree: `hidden-tab-loop`. The trunk was merged in first, `ec57a268d` (`07bca00e2`, 154 commits, no conflict). `useJjomSync.ts`, `jjomTransformers.ts` and `EditorV2.tsx` came out unchanged by it.
+
+### Layer Impact Report
+
+Written in the session's reply before the diff, as the GO asked; summary here. Layers touched: Canvas v2-flow (the identity of node and edge objects) and the sync layer (`useJjomSync.ts`). D-layer, L-layer, JjOM, classic canvas and persistence are not touched: no action, no TRANSACTION, no transformer change. `Date.now()` and `prevModel = {}` (#67) stay.
+
+### Commits
+
+- `c99cb758b`, the pure module `frontend/src/components/editor-v2/utils/syncPatchIdentity.ts` and its test `utils/__tests__/syncPatchIdentity.test.ts`.
+  - 24 tests, red at import before the module existed.
+  - Mutation bench: **16/16 killed**, listed in the commit body.
+- `c7380822c`, `useJjomSync.ts`:
+  - the vertex test gets a structural fallback (`:1388`);
+  - the edge patch goes through `mergeSyncedEdge` and keeps the array when no edge changed;
+  - `deduplicateInheritanceEdges` returns its input when it drops nothing.
+- `5921a6c06`, the probe: edge-selection phases (`LOOP_EDGE_PHASES=1`) and the three hook mutations below.
+
+### Measurements, before (merged tree, unfixed) and after
+
+| measure | before | after |
+|---|---|---|
+| `ref`, renders/s, visible / hidden (×2 each) | 119.9 / 119.3 / 119.9 / 120 | **0 / 0 / 0 / 0** |
+| `extends` | 60 ×4 | **0 ×4** |
+| `selfref` | 119.9-120 ×4 | **0 ×4** |
+| `classes` | 0 | 0 |
+| demo scenes, renders/s per editor (busy) | 107.5, 66.5, 53.2, 67.4 (99.6-100%) | **0** (1.8-4.1%) |
+| two-mm, run 12 wall | 7839 ms | **2684 ms** |
+| two-mm, run 12 React render, hidden / visible editor | 3302 / 376 ms | 403 / 258 ms |
+| two-mm, run 12 editor CPU | 5482 ms | 1248 ms |
+| two-mm, walls run 1-12 | 1364 … 4048 (6) … 7839 | 1367 … 1806 (6) … 2684 |
+
+- The after demo-scene row comes from a run with a fresh Vite. In the first after run, the model panes never opened, so its 0 counted nothing. The cause is a long-lived Vite serving the edited module's importers with `?t=` stamps: the probe's `import('/src/components/abstract/DockManager.tsx')` got a second, uninitialised module instance, and `open2` failed silently. The rerun had both panes in every scene.
+- Hook mutations through the probe (served-module rewrites of the fixed source, each matched once), `ref`, renders/s per phase. **3/3 killed**:
+  - `mut-nodeguard` (structural fallback removed): 120 in all four phases;
+  - `mut-edgekeep` (array always replaced): 0, then 60 ×3;
+  - `mut-dedupe` (dedupe always copies): 0, then 60 ×3.
+  - The first 0 of the last two is the cycle not yet started: it needs one render to start, then sustains itself.
+- Gates:
+  - typecheck 14, the known set, before and after;
+  - vitest `src/components/editor-v2`: 114 files / 2770 tests before, 115 / 2794 after, all green;
+  - `npm run build` exit 0.
+- The two-mm tab check FAILs «the viewport had moved before the switch» before and after alike. The wheel did not move the viewport. It is a check for the parked fix 1, not for this one.
+- Before and after two-mm ran against a Vite started by hand with the lane's `_tmp_lane_vite_3014.config.ts`, warmed by one page load. Under load 14-17, a cold Vite on the merged tree takes 78 s to the first page, over the run-slowdown probe's 30 s `goto` timeout. Two `lane-run probe` attempts died there.
+
+### Demo scene dumps: two regressions in line jumps
+
+Before and after are paired by position: both dumps are id-sorted, and an import allocates ids in the same order. `_tmp_hl_scene_diff2.mjs` (gitignored) does the pairing; its control (one transform and one path edited) is reported.
+
+- **Nodes and connected handles: identical**, 74 nodes, 152 handles.
+- **78 of 80 edge paths: same shape**, numbers within 0.0004 px.
+- **2 edges differ in shape**, both in `scene_4_DemoFlowB` / `demoFlowB`, and both are line-jump arcs (`A 6 6`). The final geometry is the same before and after. Against it:
+  - edge #3's horizontal at y=83.3 is crossed by edge #4's vertical (x=620.2, y 71..946). Before, #3 drew that hop; **after, it is missing**.
+  - after, edge #2 draws a hop at x≈256.6, y=75, where **no** vertical crosses: **spurious**.
+- A second after-dump agrees with the first on every shape (0 shape differences), so this is deterministic.
+
+**Cause (read).**
+- `UnifiedEdge.tsx:423-427` memoises the crossings on `[id, drawnPoints, allEdges]`. The comment reads «Recompute triggers: own path (spreadPoints) and any edges-array change (allEdges)».
+- `:409-415` registers the edge's path in an effect, after the render.
+- So an edge computes its hops from the paths registered in the previous commit. With the loop, the edges array changed every frame, and every edge recomputed against the final routes. Without it, the hops computed in the commit that changes routes (layout, lanes) stay stale.
+- This is R1 of §7. Fix B is the trigger, and the staleness is in the line-jump code.
+
+### Selected edge
+
+`LOOP_EDGE_PHASES=1`, after fix B. Once an edge is selected by a click, the edge half still loops at **60 renders/s**, visible (27.1% busy) and hidden (21.8%), until a pane click brings it to 0. `ref` and `extends` alike.
+
+The cause, measured by the commit diff and the stacks:
+- EditorV2's `setEdges` wrapper (`EditorV2.tsx:443-452`) re-adds `selected` to every edge while `selectedEdgeIdRef` is set.
+- The merge, moved verbatim, never carries `selected` (test M8 pins it).
+- So the merged edge never equals the current one.
+
+Before fix B this case looped too, inside the 120/s idle loop.
+
+### Decisions taken (unattended)
+
+- D9. The trunk merge used plain `git merge --no-ff`, since the merge was conflict-free.
+- D10. Fix B is committed on the branch with both known issues declared in its body. P6: the visual check blocks the merge, not the commit. One revert undoes it.
+- D11. The selection semantics of the merge are left as they were. Carrying `selected` would change what box-selected edges show (§ below).
+- D12. The log entry and the Status flip wait for the lane's closure (P13), after the question is answered and the visual check runs.
+
+### Decisions awaiting Alfonso
+
+1. **Selected edge** (RC-26, what the demo shows). Ignoring `selected` in `mergeSyncedEdge`'s comparison would stop the residual loop. But edges box-selected by React Flow (shift-drag, no click) would then stay selected, where today the next sync patch clears them.
+   - Recommended: yes, as a separate lane after the demo; for the demo, a pane click ends it.
+
+### Question for the chat
+
+Fix the line-jump staleness in this lane before the visual check? It needs files outside the report's list:
+- `frontend/src/components/editor-v2/utils/edgeUtils.ts`: the registry gets a version, bumped when an edge's registered points change in content, plus `subscribe`/`getVersion`;
+- `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx`: subscribes through `useSyncExternalStore` and adds the version to the crossings memo;
+- possibly `hooks/useTreeLayout.ts`, which registers tree segments through the same API;
+- a test of the registry.
+
+Neither file is in the critical-zone table, and the new exports only add. The acceptance is the same scene dumps: the 2 hops back to the before shapes, 0 renders/s idle unchanged.
