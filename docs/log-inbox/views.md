@@ -76,3 +76,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-02-1506
 **Detail**: docs/discovery/discovery_2026-10-02_pastel_trunk_sync.md
+
+## 2026-10-02 — merge: viewpoint-colors-pastel into alfonso-frontend-jjtl (P-2026-10-02-1642)
+**Prompt**: `claude_2026-10-02_1642_prompt_merge_viewpoint-colors-pastel.md`, a direct merge by `lane-run merge --direct`, no session: `viewpoint-colors-pastel` at `8b5bd6de5` into `alfonso-frontend-jjtl`, merge base `c3a9c9ffd`, 9 commits on the branch side.
+**Files touched**: merge `abb05cb9f`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-30_viewpoint_colors_pastel.md`, `docs/discovery/discovery_2026-10-02_pastel_trunk_sync.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_2022_prompt_viewpoint_colors_pastel.md`, `docs/prompts/claude_2026-10-02_1506_prompt_pastel_trunk_sync.md`, `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx`, `frontend/src/components/editors/viewpoint/properties/properties.scss`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `abb05cb9f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6531 tests in 261 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: lane probe 60/60 on the branch (P-2026-10-02-1506), four default scenes 0 px, pastel tests 68/68; worker gates green
+**Notes**: Rollback tag `pre-viewpoint-colors-pastel` on `adb5d9731` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-02-1642/result.json`.
+**Prompt document name**: 2026-10-02 16:42
