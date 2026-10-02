@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-1647
 Chat: C-2026-10-01-2349
 Lane: full (a small feature across the label predicate, the compiler and the node renderer). Phase 1, then Phase 2 in cascade.
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane path-label-edit · ddb7a8c16, aa04b92fb · six Phase 1 questions adopted as recommended (unattended), R-IRN-41 provisional · probe 35/36: undo of the written attribute fails as the trunk row edit does (ticket) · in attesa della verifica della chat
 
 Worktree: `~/jjodel-w-pathlabel`, branch `path-label-edit`, created from the trunk `alfonso-frontend-jjtl` at `adb5d9731`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-pathlabel`, branch `path-label-edit`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 

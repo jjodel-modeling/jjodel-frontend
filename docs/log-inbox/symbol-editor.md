@@ -48,3 +48,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `irLabelEdit.ts` with `labelEditsName` and `LabelEntryEditor.tsx` with the hint «Only a name label can be renamed on the canvas.», so the merged code compiles on the running server; the behaviour was measured by the branch probe (23/23)
 **Notes**: Union in `docs/log-inbox/symbol-editor.md`: the trunk's preamble, then the branch's entry P-2026-10-01-2349 and its three tickets; the base's 13 entries, folded by `d2eb5fb83`, not carried back. `docs/decisions.md` merged clean, R-IRN-38 appended. No rollback tag, pre-merge tip `c10f0fd90`. Gates ran on `~/.hermes/node/bin` v26.8.1 (session PATH had nvm v18 first). check:docs printed 5 non-blocking warnings.
 **Prompt document name**: 2026-10-02 15:48
+
+## 2026-10-02 — feat(editor-v2): a path label on one attribute edits on the canvas (P-2026-10-02-1647)
+**Prompt**: `claude_2026-10-02_1647_prompt_path_label_edit.md`, `Lane: full`, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-pathlabel` branch `path-label-edit`. A `path` label whose expression is one step to a single-valued string attribute of its object edits on double-click when the IR opts in with `editable`; the toggle shows it and says why when it cannot. Report `ddb7a8c16`; its six questions adopted with their Recommended (RC-21); decision R-IRN-41.
+**Files touched**: report `ddb7a8c16`: `docs/discovery/discovery_2026-10-02_path_label_edit.md` (addendum §8 in this commit). Code `aa04b92fb`, under `frontend/src/components/editor-v2/viewpoint/`: `ir/irLabelEdit.ts`, `ir/irCompile.ts`, `ir/irTypes.ts` (`CompiledLabel.editsFeature?`), `ir/IRNodeContent.tsx`, `authoring/LabelEntryEditor.tsx`; tests `ir/__tests__/irLabelEdit.test.ts`, `authoring/__tests__/labelEntryEditor.test.ts`. This commit: this entry and a ticket, the R-IRN-41 row in `docs/decisions.md`, the addendum, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — typecheck exit 2, the 14 of §17; build exit 0; vitest: the 9 known import reds only, after the load-hit files passed alone (`laneRun*` 108/108 at load 16); probe: the four demo scenes and DemoFlowB's derived viewpoint 0 px from `adb5d9731`, no new editable label.
+**Out-of-scope changes**: no — the seven files of the prompt's DOVE; `canvasToJjom.ts` is called, not edited.
+**Layer Impact Report**: not-required (no §3.2 file edited; the write reuses `syncUpdateFeatureValue`)
+**Smoke visivo**: chat, pending: lane probe 35/36 on 3093; the failing item is undo, see the ticket below. Crops in `frontend/scripts/smoke/_tmp_pathlabel_crops/` (gitignored), `pathlabel_*_600.png`.
+**Notes**: Mutation bench 28/28, none void (commit body). Undo of the written attribute fails, and the same run shows the trunk's row value edit failing the same way: the prompt's «with its undo snapshot» assumed a working undo that Phase 1 read but did not run (Causa c). One 18:14 probe abort on `unparse_test.js` (`module is not defined`) did not recur. The Mac's sleep killed the session once; resumed at `aa04b92fb`, clean. Report §8 holds the measures.
+**Prompt document name**: 2026-10-02 16:47
+
+## 2026-10-02 — ticket: one undo does not restore a slot value written by syncUpdateFeatureValue
+**Ticket**: an attribute written through `syncUpdateFeatureValue` (the IR row value edit, the R-IRN-41 path label, a direct call) pushes an undo entry whose only key is `action_title`, no `idlookup` delta; one Cmd+Z pops it (depth 11 to 10) and the value stays. Measured on `aa04b92fb` with the row edit of the trunk path as control. The value change is either merged into another entry or missed by `Uobj.objectDelta` (`reducer.ts:1203-1265`); the fix is in the reducer or in `canvasToJjom.ts` (critical zone, Layer Impact Report), a Phase 1 of its own.
+**Priority**: medium
+**Found in**: P-2026-10-02-1647
+**Detail**: `docs/discovery/discovery_2026-10-02_path_label_edit.md` §8
