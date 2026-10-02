@@ -291,4 +291,15 @@ describe('UnifiedEdge — a junction trunk with a new end (P-2026-10-02-1505)', 
         const s = rfPoint(rf.nodes.W, 'right-0', 'source');
         expect(pts(attr(trunk, 'd')!)).toEqual([s.x, s.y, s.x + 40, s.y]);
     });
+
+    it('a member that is not the primary draws no trunk and mounts no trunk marker, its branch keeps its own', () => {
+        const { w1, f1 } = junctionScene();
+        const out = renderEdge(w1, IR('none', 'bar', { irJunctionSource: { kind: 'decision', side: 'right', primary: false } }));
+        const into = renderEdge(f1, IR('none', 'bar', { irJunctionTarget: { kind: 'merge', side: 'left', primary: false } }));
+        for (const html of [out, into]) {
+            expect(trunkPath(html)).toBe('');
+            expect(markerIds(html).some(m => m.startsWith('ir-end-trunk'))).toBe(false);
+            expect(markerIds(html).some(m => m.startsWith('ir-end-target-'))).toBe(true);
+        }
+    });
 });
