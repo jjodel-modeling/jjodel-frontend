@@ -57,3 +57,16 @@ active log is not touched by these lanes.
 **Priority**: medium
 **Found in**: P-2026-10-01-2302
 **Detail**: docs/discovery/discovery_2026-10-01_168_b_guard.md
+
+## 2026-10-02 — merge: 168-guard into feat/168-jodie-consumer
+**Prompt**: `claude_2026-10-02_0732_prompt_merge_168-guard.md` (P-2026-10-02-0732) — merge diretto (`lane-run merge --direct`) della lane B (J5, controllo dei permessi in JjScript) nel trunk #168, secondo nell'ordine M0 → B → A.
+**Files touched**: merge `ae61c823b` (3 commit di B: referto `f1992b96a`, codice `b3b9fcb9d`, chiusura `8ea1e68c4`); conflitto su `docs/log-inbox/jodie-consumer.md` risolto per unione (due inserimenti); tag `pre-168-guard` su `ab102f3ce`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gate del worker sul merge: typecheck 14 (insieme della punta ricevente), typecheck:scripts, vitest (5505 test, +38 rispetto al merge M0, 9 rossi all'import noti), build, check:agents, check:scripts verdi.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — `executor.ts` e il modulo puro `permissionGuard.ts`, nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna interfaccia cambiata; la lane B ha verificato con la sua sonda sulla porta 3043.
+**Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B sulle entry `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40), nessuno dalle entry o dai ticket di B. Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
+**Prompt document name**: 2026-10-02 07:32
