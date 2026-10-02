@@ -29,3 +29,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `frontend/scripts/hooks/__tests__/criticalZone.test.ts` reads the ambient `JJODEL_CRITICAL_ZONE_GOAHEAD`. In a lane launched with `--critical-zone-goahead` (RC-30), 4 of its 70 tests fail («bypass not read», «deny limited to the six files»). With the variable unset they pass 70/70. Measured on `feefa9214`. The tests should clear or set the variable themselves, so the full vitest gate of a go-ahead lane is not red for its environment.
 **Priority**: medium
 **Found in**: P-2026-09-30-2022
+
+## 2026-10-02 — merge: the trunk into viewpoint-colors-pastel, pastel rows renumbered R-VP-37..39 (P-2026-10-02-1506)
+**Prompt**: `claude_2026-10-02_1506_prompt_pastel_trunk_sync.md`, Phase 1 and 2 in cascade on `~/jjodel-w-vppastel` after Alfonso's GO on the pastel colours: merge `alfonso-frontend-jjtl` into the branch (RC-14) and move its rows R-VP-32..34, which collide with the trunk's R-VP-32..36, to the next free ids.
+**Files touched**: report `48abe2b94`: `docs/discovery/discovery_2026-10-02_pastel_trunk_sync.md`. Merge `68c3f8251` (`c3a9c9ffd`): `docs/decisions.md` (R-VP-32→37, 33→38, 34→39), `docs/log-inbox/views.md`. Code `25ed824fb`: `metaclassPalette.ts`, its test, `ViewpointProperties.tsx`, `properties.scss`, `view.tsx` (comments, `describe` names). This commit: the addendum, this entry and a ticket, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no — on `25ed824fb`: typecheck exit 2, the §17 set of 14; vitest 6492 tests, the 9 known files red at import, `traceMonitor.test.ts` 2 red at load 25, 9/9 alone; build exit 0; check:docs 4/4; check:scripts PASS; check:addonly range 7/8 clean, the merge red (194 folded entries, all verbatim in the trunk's archive; ticket below). metaclassPalette 68/68, mutation bench 55/59, the 4 equivalent survivors.
+**Out-of-scope changes**: no — 9 files over three commits plus the closure, all in the DOVE list
+**Layer Impact Report**: not-required (no §3.1 file in the lane's own diff; the merge carries the trunk's as they are)
+**Smoke visivo**: pending — chat; lane probe on 3151 (light) 60/60: the four demo scenes, the off states and the FlowB control 0 px from `c3a9c9ffd`; swatches, override, Reset, Reset all, contrast 10.53-17.48:1; crops `frontend/scripts/smoke/_tmp_vp_sync_crops/vpp_after_*_600.png`
+**Notes**: Merged `c3a9c9ffd` by sha (the ref moved by one docs prompt). The views inbox kept the trunk's fold: union of the branch's 3 new entries only. The 2026-09-30 entry still says R-VP-32..34: add-only, this entry is the mapping. ⚠️ for the add-only red only, which the prompt's measure did not foresee; second cause (a). Five recommendations adopted by the session; details in the report's addendum.
+**Prompt document name**: 2026-10-02 15:06
+
+## 2026-10-02 — ticket: check:addonly reads a fold-and-rotate as a rewrite through a trunk-into-branch merge
+**Ticket**: `d2eb5fb83` folded the inboxes and rotated the log in one commit. `check-addonly.ts` explains an inbox deficit only by the active log's new entries, so `d2eb5fb83` fails its own gate (199) and so does every merge of the trunk into a branch cut before it: `5c9aadb1c` (196), `68c3f8251` (194). Every flagged entry is byte-identical in the archive; nothing is lost. Either accept inbox → archive in one comparison, or fold and rotate in two commits.
+**Priority**: medium
+**Found in**: P-2026-10-02-1506
+**Detail**: docs/discovery/discovery_2026-10-02_pastel_trunk_sync.md

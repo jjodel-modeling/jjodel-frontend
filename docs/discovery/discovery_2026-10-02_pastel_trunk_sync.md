@@ -157,3 +157,63 @@ R-VP-19..36 (`c3a9c9ffd`); `docs/prompts/claude_2026-10-02_1506_prompt_pastel_tr
 `frontend/scripts/gates/log-tools.ts` (`:66-80`, `:246-254`); `frontend/scripts/lane-run.mjs` (`:1340-1420`);
 `frontend/scripts/lane-templates/trunk-into-branch.md`; `frontend/scripts/smoke/_tmp_vppastel_probe.ts` (`:1-60`);
 the trunk diff of `ObjectNode.tsx` and `IRNodeContent.tsx` since the base.
+
+## Addendum 2026-10-02 (Phase 2, measured on `25ed824fb`)
+
+**Recommendations adopted.** No question was answered from outside: the session took its own five
+`Recommended:` lines in cascade, as the prompt allows when each question has one. Q1 `c3a9c9ffd` merged by sha; Q2
+the fold-respecting union; Q3 the 2026-09-30 entry left verbatim; Q4 one «Was …» sentence per renamed row; Q5 no
+`Log-Repair` trailer, the red declared.
+
+**Commits.**
+
+- `68c3f8251` merge, parents `48abe2b94` and `c3a9c9ffd`. `git diff --cached --stat c3a9c9ffd` before the commit:
+  11 files, the branch's own (5 code, 4 prompt and report files, `decisions.md` +62, `views.md` +23). `decisions.md`
+  against `c3a9c9ffd`: 62 lines inserted after line 4669, 0 trunk lines changed; each of `- **R-VP-32**` to
+  `- **R-VP-39**` once (`grep -cF`). Against the branch's own rows: the three ids, `R-VP-32's` → `R-VP-37's` in R-VP-38,
+  and the three «Was R-VP-3x on the branch, renumbered by P-2026-10-02-1506.» sentences, nothing else.
+  `views.md`: lines 1-8 `cmp`-identical to the trunk's file, lines 9-end `cmp`-identical to the branch's lines 577-end.
+- `25ed824fb` fix: 16 lines in 5 files, comments and three `describe` names. A first pass turned `R-VP-32..34` into
+  `R-VP-37..34` (the bare `34` carries no prefix); caught on the diff and fixed before the commit. After it,
+  `git grep -nE 'R-VP-3[2-4]\b|\.\.3[2-4]\b'` over the two code folders: no line (exit 1); `R-VP-3[7-9]` in
+  `frontend/src`: 16 lines.
+- No separate `docs:` renumbering commit: §2.3 found nothing to renumber in the report or the 2022 Status, and Q3 keeps
+  the entry. The citations left with the old ids are history: the 2026-09-30 entry, the 2022 prompt's body, this
+  prompt's body.
+
+**Gates** (foreground, from `frontend/`, on `25ed824fb`).
+
+- `typecheck`: exit 2, 14 errors, the §17 set by file and code.
+- `vitest run`: 260 files, 6492 tests, 6490 passed. Red: the 9 known files at import (`window is not defined`), and
+  `scripts/gates/__tests__/traceMonitor.test.ts`, 2 tests («3001 accepted», «a port in use taken», `status` null: the CLI
+  child did not return), run at load average 25 to 27. Re-run alone: 9/9 passed. The same flake is on the trunk's log
+  (staging-sync entry).
+- `build`: exit 0, the chunk-size warning only. `check:docs`: 4/4. `check:scripts`: PASS, 1216 files.
+- `check:addonly --range c3a9c9ffd..HEAD`: 8 commits, 7 clean, `68c3f8251` red with 194 entries: harness 33,
+  simulation 93, symbol-editor 13, versionfixer 8, views 47. None of the branch's three entries. The same 194 as the
+  §2.6 prediction, all byte-identical in the trunk's archive.
+- `metaclassPalette.test.ts` 68/68. Mutation bench (`_tmp_vppastel_bench.mjs`, unchanged) 55/59. The four survivors
+  are the report's equivalent ones (count 0, self-reference, missing-class override, table non-models). The file was
+  restored by the bench, `git status` empty after.
+
+**Visual** (`lane-run probe … --port 3151 --config scripts/smoke/_tmp_vp_sync_vite_3151.config.ts --id P-2026-10-02-1506`,
+light, 1600×1000, DPR 2; probe `_tmp_vp_sync_probe.ts`, a copy of `_tmp_vppastel_probe.ts` with the baseline
+`c3a9c9ffd` and the crops folder renamed).
+
+- Baseline: the five code files written from `git show c3a9c9ffd:<path>` into the working tree only (copies in
+  `_tmp_vp_sync_save/`). `git diff c3a9c9ffd --name-only -- frontend` gave 0 files. Run `before`: 1/1, seven shots.
+  Then the copies were put back, each `cmp`-identical to HEAD, `git status` empty.
+- Run `after` on the merged tree: **60/60**. The four demo scenes in the default viewpoint, the ESM native view off, the
+  FlowB IR view off and its default control: 0 px from `c3a9c9ffd` outside the masked Jodie button (497 px inside it
+  each). DemoESM native and DemoFlowB IR, on: every fill is one of the 12 swatches. Text is black at 10.53:1 to
+  17.48:1. Boxes move 0 px, connected class pairs differ (4 on ESM). The override is persisted under the class id;
+  Reset and Reset all work. Toggle off returns to the first paint. Undo/redo, and the save, `JSON.parse` and
+  `VersionFixer.update` round trip, all pass.
+- Crops `frontend/scripts/smoke/_tmp_vp_sync_crops/vpp_after_*_600.png` (16, gitignored).
+- A perceptual item for the chat, not a failure: in the coloured FlowB IR view the fork and join bars, 7 px since the
+  trunk's R-VP-36, take a pastel fill (`vpp_after_ir_flowB_on_600.png`). They did the same at 5 px before the merge.
+
+**Writes outside the tree.** Vite's cache went to `frontend/scripts/smoke/_tmp_vp_sync_vitecache/`, not `/tmp`. The
+probe logs went to `~/.jjodel-lanes/P-2026-10-02-1506/`, the folder the prompt's `lane-run probe` writes. Once, the
+harness moved a slow `git grep` (all branches, Phase 1) to the background, and its output landed in
+`/private/tmp/claude-501/…`. The task was stopped and the search re-run narrower, in the foreground.

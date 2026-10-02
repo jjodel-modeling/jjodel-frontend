@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-1506
 Chat: C-2026-10-01-2220
 Lane: Phase 1 then Phase 2 in cascade, a trunk sync on the branch (RC-14), docs conflicts only as measured, outside the critical zone. Tier: heavy. Time limit: 90 min.
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane viewpoint-colors-pastel · 48abe2b94, 68c3f8251, 25ed824fb · non fuso: hard-stop, rows R-VP-37..39, lane probe on 3151 (light) 60/60, the four demo scenes 0 px from c3a9c9ffd, mutation bench 55/59, check:addonly red on the merge only (194, structural), crops in frontend/scripts/smoke/_tmp_vp_sync_crops/ (gitignored), verifica visiva alla chat
 Worktree: `~/jjodel-w-vppastel`, branch `viewpoint-colors-pastel` at `7d1882c5f` plus the docs commit that added this prompt, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-vppastel`, branch `viewpoint-colors-pastel`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA
