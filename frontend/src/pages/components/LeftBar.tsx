@@ -1,6 +1,6 @@
 import {useState, useEffect, MouseEventHandler, JSX} from 'react';
 import {useSelector} from 'react-redux';
-import {DProject, LProject, LUser, R, U} from '../../joiner';
+import {DProject, LProject, LUser, R, U, findEnvironmentConfig, findProfile, visibleTopLevelTypes} from '../../joiner';
 
 import {DashProps} from "./Dashboard";
 import Collaborative from "../../components/collaborative/Collaborative";
@@ -14,7 +14,7 @@ import DockManager from '../../components/abstract/DockManager';
 import { createM2 } from './Navbar';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
-import { isConsumerMode } from '../../components/environment/consumerMode';
+import { activeProfileId, isConsumerMode } from '../../components/environment/consumerMode';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
@@ -287,8 +287,34 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // #157 Fase 3: consumer (stand-alone) mode when a ?profile= is in the URL — hide the
     // developer surfaces (metamodels, transformations, viewpoints, megamodel, env authoring).
     const consumer = isConsumerMode();
-    const pMetamodels = project?.metamodels || [];
-    const pModels = project?.models || [];
+
+    // #157 R5 — consumer: this column lists the types the profile may see and picks one on the
+    // Configurator page, whose own type bar is gone; the page says which type is on screen.
+    // Selected as one string so the column re-renders only when the list itself changes.
+    const consumerTypesKey: string = useSelector((state: any) => {
+        if (!consumer || !project?.id) return '';
+        const idl = state?.idlookup;
+        return visibleTopLevelTypes(findEnvironmentConfig(idl, project.id), findProfile(idl, activeProfileId()))
+            .map((id) => `${id}\u0001${idl?.[id]?.name || id}`).join('\u0002');
+    });
+    const consumerTypes = consumerTypesKey
+        ? consumerTypesKey.split('\u0002').map((row) => { const [id, name] = row.split('\u0001'); return { id, name }; })
+        : [];
+    const [shownTypeId, setShownTypeId] = useState<string | null>(null);
+    useEffect(() => {
+        const onShown = (e: Event) => setShownTypeId((e as CustomEvent).detail?.typeId ?? null);
+        window.addEventListener(EnvGenEvents.CONFIGURATOR_TYPE_CHANGED, onShown);
+        return () => window.removeEventListener(EnvGenEvents.CONFIGURATOR_TYPE_CHANGED, onShown);
+    }, []);
+    // Before the page announces anything it shows the first type, the page's own default.
+    const markedTypeId = shownTypeId ?? consumerTypes[0]?.id ?? null;
+    const pickType = (typeId: string) =>
+        window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECT_TYPE, { detail: { typeId } }));
+
+    // An absent target is left out: a pointer no state holds is `undefined` here, and `.id` on it
+    // white-paged the project (P-2026-09-30-1540).
+    const pMetamodels = (project?.metamodels || []).filter(m => !!m);
+    const pModels = (project?.models || []).filter(m => !!m);
     const pViewpoints = project?.viewpoints || [];
     // LProject.transformations is synced by ProjectEditor via SetFieldAction (see ProjectEditor.tsx:169)
     const pTransformations = (((project as any)?.transformations) || []) as Array<{ id: string; name: string }>;
@@ -359,11 +385,12 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
         {active === 'Project' ?
             <div className={'leftbar leftbar--project'}>
-                {/* Back to all projects — with unsaved check */}
-                <div className="psb-back" onClick={handleBackToProjects}>
+                {/* Back to all projects — with unsaved check. Not in consumer (R5, decision of
+                    2026-10-01): it leads to the developer's catalogue; «My models» comes with F4b. */}
+                {!consumer && <div className="psb-back" onClick={handleBackToProjects}>
                     <i className="bi bi-chevron-left" />
                     <span>All projects</span>
-                </div>
+                </div>}
 
                 {/* Project Megamodel — single entry (listener in ProjectEditor.tsx:360) */}
                 {!consumer && <div className="psb-megamodel" onClick={openMegamodel} title="Project Megamodel">
@@ -380,7 +407,30 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     'New metamodel',
                 )}
 
-                {renderSection(
+                {/* #157 R5 — consumer: the types of the profile, in place of the models. */}
+                {consumer && (
+                    <div className={`psb-section${collapsedSections['types'] ? ' collapsed' : ''}`}>
+                        <div className="psb-section-header" onClick={() => toggleSection('types')}>
+                            <span className="psb-section-label">Types</span>
+                            <i className="bi bi-chevron-down psb-chevron" />
+                        </div>
+                        <div className="psb-section-body">
+                            {consumerTypes.map(t => (
+                                <div
+                                    key={t.id}
+                                    className={`psb-item${markedTypeId === t.id ? ' active' : ''}`}
+                                    onClick={() => pickType(t.id)}
+                                    title={t.name}
+                                >
+                                    <span className="psb-item-name">{t.name}</span>
+                                    <i className="bi bi-arrow-right psb-item-arrow" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {!consumer && renderSection(
                     'models', 'Models', 'm',
                     pModels.map(m => ({ id: m.id, name: m.name })),
                     (m) => { const lm = pModels.find(x => x.id === m.id); if (lm) DockManager.open2(lm); },
@@ -442,10 +492,11 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             <i className="bi bi-share" />
                             <span>Share</span>
                         </div>
-                        <div className="psb-action" onClick={() => setShowConfigurator(true)}>
+                        {/* In consumer the Configurator is the page itself (R5). */}
+                        {!consumer && <div className="psb-action" onClick={() => setShowConfigurator(true)}>
                             <i className="bi bi-grid-1x2" />
                             <span>Open Configurator</span>
-                        </div>
+                        </div>}
                         {!consumer && <div className="psb-action" onClick={() => window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD))}>
                             <i className="bi bi-shield-lock" />
                             <span>Configure environment</span>
@@ -456,7 +507,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         </div>
                     </div>
                 </div>
-                <ConfiguratorTab open={showConfigurator} onClose={() => setShowConfigurator(false)} />
+                {!consumer && <ConfiguratorTab open={showConfigurator} onClose={() => setShowConfigurator(false)} />}
             </div>
             :
             <div className={'leftbar'}>

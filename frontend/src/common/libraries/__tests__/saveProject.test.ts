@@ -160,11 +160,12 @@ const TAB = strip(TAB_SRC);
 const HELPER = strip(readFileSync(resolve(__dirname, '../saveProject.tsx'), 'utf8'));
 
 describe('§B Navbar — menu File, Ctrl/Cmd+S e «Save & Exit» passano dall\'helper', () => {
-    it('lo importa e lo chiama tre volte: menu, scorciatoia, «Save & Exit»', () => {
+    it('lo importa e lo chiama quattro volte: menu, scorciatoia, «Save & Exit», «Save» in topbar', () => {
         expect(NAVBAR).toContain("from '../../common/libraries/saveProject'");
         // Due con SAVE1 (la voce di menu e Ctrl/Cmd+S), la terza con SAVE1-bis
-        // (`SaveAndCloseProject`). Tutte e tre passano il proprio `project`.
-        expect(NAVBAR.match(/saveProjectWithFeedback\(project\)/g)?.length).toBe(3);
+        // (`SaveAndCloseProject`), la quarta con #157 R1 (il bottone «Save» accanto
+        // all'indicatore, 2026-10-01). Tutte e quattro passano il proprio `project`.
+        expect(NAVBAR.match(/saveProjectWithFeedback\(project\)/g)?.length).toBe(4);
     });
 
     it('la voce «Save Project» non ha piu\' un salvataggio suo', () => {

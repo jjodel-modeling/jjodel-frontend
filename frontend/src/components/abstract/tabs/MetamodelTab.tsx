@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode, useCallback, useRef, useEffect} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useCallback, useRef} from "react";
 import {connect} from "react-redux";
 import {
     DModel,
@@ -22,56 +22,33 @@ import {
 } from "../../../joiner";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
-import { CanvasExportService, ExportFormat } from "../../../services/CanvasExportService";
+import { installCanvasExportListener, findActiveCanvas } from "../../../services/CanvasExportService";
 import { EditorSwitch } from "./EditorSwitch";
-import { JjodelEvents } from '../../../events/registry';
 import { resolveVertexLayoutWrite, type VertexLayoutSource } from "../../editor-v2/viewpoint/layout/vertexLayout";
 import { getActiveLayoutKey } from "../../editor-v2/viewpoint/layout/vertexLayoutAdapter";
 
+// File > Export Canvas: one listener for the whole app and for the canvas of every tab, metamodel and model,
+// installed when this module loads (TabDataMaker imports it at startup). It replaces a per-tab listener that read a
+// ref no element carried after the classic shutdown, and that a model tab never had
+// (docs/discovery/discovery_2026-09-30_canvas_export_broken.md).
+installCanvasExportListener(window, {
+    resolveCanvas: () => {
+        const canvas = findActiveCanvas(document);
+        if (!canvas) return null;
+        let name: string | undefined;
+        try {
+            name = canvas.modelId ? (LModel.fromPointer(canvas.modelId as Pointer<DModel, 1, 1, LModel>) as LModel | undefined)?.name : undefined;
+        } catch { /* the tab id is not a model id: keep the default name */ }
+        return { element: canvas.element, filename: name || 'metamodel' };
+    },
+    notify: (type, title, message) => U.alert(type, title, message),
+});
 
 function MetamodelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
     const isEdgePending = props.isEdgePending;
     const canvasRef = useRef<HTMLDivElement>(null);
-
-    // Listen for export events from File menu
-    useEffect(() => {
-        const handleExportCanvas = async (e: CustomEvent<{ format: string }>) => {
-            if (!canvasRef.current || !model) return;
-
-            const { format } = e.detail;
-            const filename = model.name || 'metamodel';
-
-            try {
-                if (format === 'clipboard') {
-                    const success = await CanvasExportService.copyToClipboard(canvasRef.current, {
-                        backgroundColor: '#ffffff',
-                    });
-                    if (success) {
-                        U.alert('i', 'Copied to Clipboard', 'Canvas image copied to clipboard');
-                    } else {
-                        U.alert('e', 'Copy Failed', 'Failed to copy canvas to clipboard');
-                    }
-                } else {
-                    const result = await CanvasExportService.export(canvasRef.current);
-                    if (result.success) {
-                        U.alert('i', 'Export Complete', `Canvas exported as ${result.filename}`);
-                    } else {
-                        U.alert('e', 'Export Failed', result.error || 'Failed to export canvas');
-                    }
-                }
-            } catch (error) {
-                console.error('[MetamodelTab] Export failed:', error);
-                U.alert('e', 'Export Failed', 'An error occurred during export');
-            }
-        };
-
-        window.addEventListener(JjodelEvents.EXPORT_CANVAS, handleExportCanvas as any);
-        return () => {
-            window.removeEventListener(JjodelEvents.EXPORT_CANVAS, handleExportCanvas as any);
-        };
-    }, [model]);
 
     // Handle drag over on canvas - allow drop
     const handleDragOver = useCallback((e: React.DragEvent) => {

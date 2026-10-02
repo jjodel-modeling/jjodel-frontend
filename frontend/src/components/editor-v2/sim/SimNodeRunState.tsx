@@ -18,6 +18,12 @@
  * wrapper clips its own overflow (instanceNode.scss), and the badge and the σ
  * card sit outside its box. Absolutely positioned and `pointer-events: none`,
  * so the node keeps its size, its handles and every gesture.
+ *
+ * P-2026-09-30-1935: `placement: 'inside'`, for a node a derived viewpoint draws
+ * (ObjectNode, `ir.generated`): the token is a dot inside the node, 12 px from its
+ * left edge, vertically centred, with the count beside it from two; an empty place
+ * paints nothing. The rings and the σ card are the corner placement's. Without the
+ * prop the overlay renders as before.
  */
 
 import { getSimNodeState, isSimPending, useSimChoiceVersion, useSimVersion } from './simRunState';
@@ -27,9 +33,11 @@ import './simNodeRunState.scss';
 export interface SimNodeRunStateProps {
     /** The DObject id of the node (`idlookup[vertexId].model`); nothing is painted without one. */
     objectId: string | null;
+    /** Where the token is drawn: the pill on the corner (absent, the default) or the dot inside a derived view's node. */
+    placement?: 'corner' | 'inside';
 }
 
-export function SimNodeRunState({ objectId }: SimNodeRunStateProps) {
+export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
     // Unconditional (rules of hooks): the overlay re-reads the store on every bump of either channel.
     useSimVersion();
     useSimChoiceVersion();
@@ -40,9 +48,10 @@ export function SimNodeRunState({ objectId }: SimNodeRunStateProps) {
     // A candidate of the open list is always enabled; the fallback only keeps the ring if that ever fails.
     const s: Pick<SimNodeState, 'tokens' | 'sigma' | 'enabled'> = found ?? { tokens: null, sigma: [], enabled: false };
     const tokensTitle = s.tokens === null ? '' : `${s.tokens} ${s.tokens === 1 ? 'token' : 'tokens'} in the run`;
+    const inside = placement === 'inside';
     return (
         <div
-            className="sim-node-run"
+            className={inside ? 'sim-node-run sim-node-run--inside' : 'sim-node-run'}
             data-sim-tokens={s.tokens ?? undefined}
             data-sim-enabled={s.enabled ? 'true' : undefined}
             data-sim-pending={pending ? 'true' : undefined}
@@ -50,7 +59,13 @@ export function SimNodeRunState({ objectId }: SimNodeRunStateProps) {
             {pending
                 ? <div className="sim-node-run__pending" title="Candidate of the open choice: pick it in the panel" />
                 : s.enabled && <div className="sim-node-run__ring" title="Enabled: can fire in the run" />}
-            {s.tokens !== null && (
+            {inside && s.tokens !== null && s.tokens > 0 && (
+                <>
+                    <span className="sim-node-run__dot" title={tokensTitle} aria-label={tokensTitle} />
+                    {s.tokens > 1 && <span className="sim-node-run__count">{s.tokens}</span>}
+                </>
+            )}
+            {!inside && s.tokens !== null && (
                 <span
                     className={`sim-node-run__tokens${s.tokens === 0 ? ' sim-node-run__tokens--empty' : ''}`}
                     title={tokensTitle}

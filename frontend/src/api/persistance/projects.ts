@@ -89,8 +89,16 @@ class ProjectsApi {
 
     // NB: returned value is not yet persistent, and is a dto in case of online getone
     static async getOne(id: DProject['id']): Promise<null|DProject> {
-        if(U.isOffline()) return Offline.getOne(id);
-        else return await Online.getOne(id);
+        const project = U.isOffline() ? Offline.getOne(id) : await Online.getOne(id);
+        // An empty state is a new project only when the record claims no content. One that lists models, or counted
+        // them at a save, lost its state: opening it as new mounted the editor on pointers no state holds, and the
+        // page went white. The throw lands in stateInitializer's catch: the error screen (P-2026-09-30-1540).
+        if (project && isEmptyState(project.state) && claimsContent(project)) {
+            throw new Error('The saved state of this project is empty, but the project lists '
+                + (project.metamodels?.length || project.metamodelsNumber || 0) + ' metamodel(s) and '
+                + (project.models?.length || project.modelsNumber || 0) + ' model(s). Nothing was loaded.');
+        }
+        return project;
     }
 
 
@@ -150,6 +158,13 @@ class ProjectsApi {
         // console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
 
         const state = await U.compressedState(dProject);
+        // A state is never saved empty: an empty string reads back as a new project with no content
+        // (P-2026-09-30-1540). Refused before the write, the version bump and the dirty-flag reset.
+        if (isEmptyState(state)) {
+            Log.ee('ProjectsApi.save: the serialized state is empty, not saved; the stored copy is kept', {id: dProject.id});
+            U.alert('e', 'Not saved', 'The project serialized to an empty state. The stored copy was kept.');
+            return dProject;
+        }
         dProject.state = state;
         const persisted = U.isOffline() ? await Offline.save(dProject) : await Online.save(dProject);
 
@@ -308,6 +323,25 @@ class ProjectsApi {
 
 }
 
+/* Empty-state guard (P-2026-09-30-1540). Every saved state holds the project's own entry with `state: ''`
+ * (`U.compressedState`), so after an open the store's entry has an empty state; a write that spreads that entry
+ * (the in-editor favorite, `LeftBar.tsx:190`, `Navbar.tsx:1438`) emptied the stored record: measured 21850 -> 0. */
+function isEmptyState(state: unknown): boolean { return typeof state !== 'string' || state.length === 0; }
+
+/** The record lists content only a saved state can hold. Viewpoints are left out: defaults are in every state. */
+function claimsContent(p: Partial<DProject>): boolean {
+    return !!(p.metamodels?.length || p.models?.length || (p.metamodelsNumber || 0) > 0 || (p.modelsNumber || 0) > 0);
+}
+
+/** A record never replaces a stored non-empty state with an empty one: the stored state is kept. */
+function keepStoredState<T extends {id: string, state?: unknown}>(projects: DProject[], record: T): T {
+    if (!isEmptyState(record.state)) return record;
+    const stored = projects.find(p => p.id === record.id);
+    if (!stored || isEmptyState(stored.state)) return record;
+    Log.ww('Offline: a write with an empty state kept the stored one', {id: record.id});
+    return {...record, state: stored.state};
+}
+
 class Offline {
     static create (project: DProject): void {
         const projects = Storage.read<DProject[]>('projects') || [];
@@ -365,7 +399,7 @@ class Offline {
     static async favorite(project: DProject): Promise<void> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
-        Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
+        Storage.write('projects', [...filtered, keepStoredState(projects, {...project, isFavorite: !project.isFavorite})]);
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
 
@@ -380,7 +414,7 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
         // console.log('[DEBUG Offline.updateTags] Filtered projects (without current):', filtered);
 
-        const updatedProject = {...project, tags};
+        const updatedProject = keepStoredState(projects, {...project, tags});
         // console.log('[DEBUG Offline.updateTags] Updated project to save:', updatedProject);
 
         const newProjectsList = [...filtered, updatedProject];

@@ -55,6 +55,12 @@ export interface NavStep {
     cls: string;
     /** The containment feature this step was reached through; null for the root. */
     childKey: string | null;
+    /** #158 (field test 2026-09-29): a step the user never had on screen as a form of its
+     *  own — an inline child whose reference list opened the next step («Scenario ›
+     *  Phase_0 › Antonio», Phase_0 shown inside Scenario's form). It stays on the road, so
+     *  the breadcrumb still names it and its segment still opens it, but «Back» passes over
+     *  it ({@link backOf}). Absent: a level the user stood on. */
+    passThrough?: boolean;
 }
 
 /** Where the form currently is. The path always starts at the root subject, so
@@ -118,8 +124,17 @@ export function rendersInline(depth: number): boolean {
  */
 export function drillInto(nav: NavState, step: NavStep): NavState {
     const at = nav.path.findIndex(s => s.id === step.id);
-    if (at >= 0) return { path: nav.path.slice(0, at + 1) };
+    if (at >= 0) return { path: standOn(nav.path.slice(0, at + 1)) };
     return { path: [...nav.path, step] };
+}
+
+/** The last step of `path` becomes one the user stands on: a pass-through step reached
+ *  as a form (a breadcrumb click, a cycle) is a form from then on, and «Back» from a
+ *  step below it stops there. Same array when there is nothing to clear. */
+function standOn(path: NavStep[]): NavStep[] {
+    const last = path[path.length - 1];
+    if (!last || !last.passThrough) return path;
+    return [...path.slice(0, -1), { ...last, passThrough: false }];
 }
 
 /** Click on a breadcrumb segment: keep the road up to `depth`, drop the rest.
@@ -129,13 +144,23 @@ export function drillInto(nav: NavState, step: NavStep): NavState {
 export function truncateTo(nav: NavState, depth: number): NavState {
     if (nav.path.length === 0) return nav;
     const d = Math.min(Math.max(0, depth), nav.path.length - 1);
-    return { path: nav.path.slice(0, d + 1) };
+    return { path: standOn(nav.path.slice(0, d + 1)) };
 }
 
 /** Up one level. At the root it is a no-op, not an empty path: a form always has
  *  a subject. */
 export function drillOut(nav: NavState): NavState {
     return nav.path.length <= 1 ? nav : { path: nav.path.slice(0, -1) };
+}
+
+/** «Back»: to the form the user had on screen before this one — up one level, then past
+ *  every pass-through step (#158, field test 2026-09-29: Back from Antonio, opened from
+ *  the learners of the Phase_0 shown inside Scenario, landed on a Phase_0 form the user
+ *  never opened). Without pass-through steps it is `drillOut`. At the root, a no-op. */
+export function backOf(nav: NavState): NavState {
+    let next = drillOut(nav);
+    while (next.path.length > 1 && next.path[next.path.length - 1].passThrough) next = drillOut(next);
+    return next;
 }
 
 /** The breadcrumb, every segment but the last clickable. */

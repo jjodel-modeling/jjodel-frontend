@@ -303,6 +303,37 @@ per la C2). Alfonso riceve il digest alla chiusura della corsia.
   D (la caduta classe→enum crea un attributo di quel tipo) è rinviata: comodità a bassa scopribilità che tocca
   l'unione esportata `EdgeTypeChoice`.
 
+## Serie R-ESEL — the edge click and the Properties panel (decisions 2026-09-30)
+
+Evidence: `docs/discovery/discovery_2026-09-30_edge_click_properties.md` (`371804cf0`), measured on 3097. Decided by
+the chat `C-2026-09-30-1940` in the prompt `P-2026-09-30-1940` under RC-25, adopted by the lane as written; code
+`bb0fd90c9`. Alfonso receives the digest at the close of the lane.
+
+- **R-ESEL-1** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **One pure resolver maps a clicked edge to the element the Properties panel shows.**
+  `resolveEdgeSelectionTarget(edgeId, idlookup)` in `editor-v2/utils/edgeSelectionTarget.ts` reads the D-layer from
+  the edge id, never the React Flow `data` (the mirrored click passes `{ id }` only, `EditorV2.tsx:2845`). An edge
+  kind it does not know returns `null` and the click keeps its previous path exactly. The prompt's `viewId` is
+  dropped: a view id in `_lastSelected.view` turns the panel into the view editor (`Info.tsx:1591`).
+- **R-ESEL-2** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **What each edge shows.** M2 reference and M2 composition: the `DReference` (as before). M1 reference and M1
+  composition: the reference slot, the `DValue` of the source object whose `instanceof` is the edge's `DReference`
+  (before: the metamodel's `DReference`, whose editor then opened inside the model tab); the slot, not the feature,
+  because the panel has a slot view that names the owner and edits the value. Object-as-edge `irobj_<id>`: the
+  `DObject`, as its node click shows it (before: nothing changed). Inheritance and IR-lifted `<id>__irlift`: `null`,
+  today's behaviour (the empty panel, respectively nothing); a follow-up is ticketed.
+- **R-ESEL-3** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The clicked edge stays the canvas selection.** Only `_lastSelected.modelElement` changes. An object-as-edge has no
+  D-element behind its id: nothing is `select()`ed, every graph element is deselected as for any selection, and
+  `_lastSelected.node` is `''`; the object's node, hidden or absent, is not selected.
+- **R-ESEL-4** (2026-09-30, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Native and mirrored edge clicks take the same path.** `EditorV2.onEdgeClick` and `EditorV2.selectEdge` call the
+  same hook handlers: `jjomSelection.onEdgeClick` for D-edges, `jjomSelection.onObjectAsEdgeClick` in their two
+  `irobj_` branches; both end in the resolver.
+- **R-ESEL-5** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Highlight mode, node click and pane click are unchanged.** In highlight mode a D-edge click assigns the colour
+  and does not select; an object-as-edge click neither assigns nor selects, as before it had a handler.
+
 ## Arco A — barra a tab e capi degli edge
 
 - **R-A** (2026-08-05) — Strada B per la barra: tutti i tab montati, gli inattivi nascosti con
@@ -4260,6 +4291,73 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   edges with no authored colour (SM, ESM, activity) take the new ink, 2.34:1 to 16.3:1, and the ESM derived `—` 1.48:1
   to 4.76:1; derived Petri views unchanged (`#0f172a` before and after); `--node-header-text` also colours the classic
   object view's header. Dark theme untouched. Prompt P-2026-09-29-1332.
+- **R-VP-27** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The viewpoint panel carries «Color by metaclass», off by default, with «Base color» and «Border» under it.**
+  Chat decision 1 of P-2026-09-30-1815 (RC-25). The switch reuses `.wp-toggle` and `.wp-switch` of
+  `properties.scss`, which were styled and used by no component. Base color is a native `<input type="color">` framed
+  as `.wp-field__input`, 48×36, with its hex beside it in 11 px mono. Border is a checkbox, on by default. The two controls
+  are hidden while off and keep their values across off and on. `readOnly` disables all three. Measured by the lane probe
+  on 3091: the labels are `Name, Type, Color by metaclass, Base color, Border`; off then on then off keeps `#f59e0b` and
+  Border. Commit `fa0b20de1`. Numbered R-VP-19 until the rework (`viewpoint-notations` holds R-VP-19..26).
+- **R-VP-28** (2026-09-30, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **Persisted as one optional field `DViewElement.metaclassColoring?: { enabled; baseColor; border }`; absent = off.**
+  Chat decision 2. The field is declared on `DViewElement` (`view.tsx`), beside `formTheme` and `formPalette`, for the
+  reason written there. It is written whole through the L proxy's default setter, as Name is: one `SetFieldAction`, one
+  undo step. Off writes `enabled: false`, never a delete. No VersionFixer migration. Rejected: three flat fields; keys in
+  `_state`, which is open to user code and `clearState`, and whose `'-='` removal is not undone. Verified: setter,
+  sanitize and `isPointer` path, reducer replace, undo and redo deltas, save, load, VersionFixer, `updateDefaultView`,
+  duplicate, derive, recompile triggers, and Babel class-field emission; falsified by pointer coercion, a key
+  whitelist, a regeneration overwriting a written viewpoint, or a recompile on a generic field write — HOLDS (second
+  agent, RC-27). Its caveat: writes less than 450 ms apart merge into one undo step, first-wins (`U.tsx:896-905`), an
+  older bug that three flat fields would share. Measured: undo and redo of one Border write, and the field through the
+  save serializer, `JSON.parse` and `VersionFixer.update` unchanged. Commit `fa0b20de1`. Was R-VP-20.
+- **R-VP-29** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The palette is ANALOGOUS to the base: colour 0 is the base as picked, the others within ±60° of its hue, in
+  metamodel order.** Amended in the rework (Alfonso accepted the chat's recommendation, 19:20): the golden-angle first
+  version (i × 137.508°) read as categorical, not as a scheme that goes with the picked colour.
+  - The rule, in `metaclassPalette(base, count)` (`view/viewPoint/metaclassPalette.ts`, pure, hand-written). From
+    colour 1 the hues go +1 step, −1 step, +2, −2, … inside ±60°. The step is 120° / (count − 1), capped at 30°. When
+    the window is used up, the hues cycle again from the base hue, with the lightness 10 points darker, then 10 lighter,
+    then 20 darker, …, inside L 35..75, and a level outside that range is skipped. Saturation is the base's, clamped to
+    40..80 %. An invalid hex falls back to `#0ea5e9`.
+  - The lane added a floor of 15° to the step. The literal step, 13.3° at count 10, gave neighbours ΔE76 7.4 apart
+    with the same lightness. With the floor, every pair of neighbours is at least 15° or 10 points apart for 2..10
+    classes, on eight bases; for 2..9 classes the palette is identical to the literal rule.
+  - The index is the class's position in a depth-first walk: `DModel.packages`, then in each package its `classes`
+    followed by its `subpackages`. Every class takes an index, abstract ones included.
+  - Tests 33/33. Mutation bench 37/38; the survivor is a tie that no 24-bit hex reaches. Commit `390bcaddd`. Was
+    R-VP-21.
+- **R-VP-30** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Text is black or white by WCAG 2.x contrast, a tie goes to black; the border is the fill less 25 points of
+  lightness, floor 10 %; Border off paints it transparent, keeping its width.** Chat decisions 4 and 5.
+  - The lane chose to override the border COLOUR only, so an authored 3 px double border keeps its width. Markers are
+    drawn in the text colour. Outside labels, which sit on the canvas and not on the fill, keep their ink. Chips and ref
+    pills keep their own ground.
+  - Measured, native DemoESM and IR DemoFlowB: text contrast 5.15:1 to 12.19:1 with the analogous palette (4.73:1 to
+    12.12:1 with the first one), always the higher of the two. The
+    border stays 1 px, `rgba(0, 0, 0, 0)` with Border off. Node boxes change by 0 px in every state.
+  - Selected while coloured (rework, the chat's recommendation accepted by Alfonso at 19:20): the native header keeps
+    the fill. `metaclassColoringVars` points `--color-inode-selected-header-bg` at `transparent` and
+    `--color-inode-selected-header-border` at the rule colour, and only while the option is on. Selection then shows
+    through the cyan border and the 3 px ring alone. In the first version the name read 1.11:1 on `#e0f7fa`.
+    Measured on 3091: a white-text node selected shows the name at 7.54:1 on its fill, and a black-text one at 14.9:1.
+    A selected node with the option off is 0 px from the trunk tip `45ff6c290`, both before the first write and after
+    `enabled: false`. Commit `390bcaddd`. Was R-VP-22.
+- **R-VP-31** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Only the active viewpoint's setting colours M1 object nodes, in both paint paths; toggle off is 0 px.**
+  Chat decision 6.
+  - The paint paths: `resolveMetaclassColoring` reads `state.viewpoint`. `ObjectNode` sets the `--color-inode-*`
+    tokens inline on the native rectangle and pill, and passes the new optional `colorOverride` prop to `IRNodeContent`
+    (`viewpoint/ir/`, CLAUDE.md §3.1, Layer Impact Report in the discovery §6). No change to `irTypes`, `irValidate`,
+    `irCompile` or any edge file.
+  - Exclusions: orphan and not-rendered nodes are not coloured. Row views dispatched to `IRRow` keep an authored colour;
+    the derivation on the trunk emits none.
+  - Measured on 3091, light: toggle off repaints every node as before, 0 px on the canvas. Another viewpoint's switch
+    colours nothing, and the default scenes are 0 px left of the rail. For DemoFlowB the comparison is against a
+    same-run control with the bag and a derived visit, the switch never on. That control is itself 140728 px from the
+    before run (the Simulation chip of the bag, an edge re-route). The switch was never on there and the resolver
+    answered null; no run on the old code attributes it.
+  - Report `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md` (`c29280962`). Was R-VP-23.
 - **R-VP-19** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
   evidence: measured, verified: none, reversible: branch).
   **The derived viewpoint draws the generic structural notation (variant C) when no role is bound.** Source:
@@ -4501,6 +4599,74 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   opening on Statechart (UML), Petri net (classic), State machine, Activity (UML); DemoFlowB's nine flows open-headed, the
   guards `[model.[count] < 2]` and `[model.[count] >= 2]` the only labels); mutation bench 44/45, the survivor equivalent.
   Prompt P-2026-09-30-1552, commit `ca3e41a92`.
+- **R-VP-32** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Activity (UML) draws a view-only decision and merge where the engine chooses and merges.** Alfonso, 2026-09-30 19:30,
+  on the Activity view of DemoFlowB («questa è la notazione giusta», «ok su tutto, procedi»); target
+  `docs/design/activity_uml_target_2026-09-30.svg`. Source: `docs/discovery/discovery_2026-09-30_activity_decision_merge.md`
+  (the Layer Impact Report, the precondition, the measures). The precondition holds: a plain control flow is a transition
+  of its own and a step fires one (`netCompile.ts:325-330`, `netStep.ts:274`, R-SIM-7), so two exits of a plain node are a
+  choice and two entries a merge. (1) An action (a view of `activityUml` in the `node` role) with two or more entering
+  (leaving) control flows (views of `activityUml` in the `transition` role) gets a merge (decision) diamond; a decision,
+  a bar, an initial, a final and every other notation never do. (2) View-only: the members share one handle on the
+  action (`irJunctions.ts`, called at the end of `synthesizeObjectAsEdges`), each branch ends (starts) at the diamond's
+  vertex facing its other end, on today's router, with its own arrowhead; the member with the lowest id draws the trunk
+  (40 px from the handle point, the edge's arrowhead into the action for a merge, into the diamond for a decision) and
+  the diamond; no React Flow node, no model object, no IR key, no persisted value. (3) Keyed on the views' provenance
+  `ir.generated` (R-VP-21 (4)), so Activity viewpoints derived before this row draw it too. Lane choices, each adopted as
+  recommended, unattended (RC-21, the report's questions 1, 2, 9, 10): 28 px across (the target's polygon, not a 28 px
+  side turned 45°); white (`--color-inode-surface`), stroke and width the edge's (`var(--color-inode-name)`, 1 px) rather
+  than the prompt's `#334155`; the trunk on the members' majority side, a tie to the first member's in model order, a
+  decision on a node with a merge on another side; self-loops are no members; a user anchor on a member's junction end
+  is not honoured. Measured: DemoFlowB one diamond, the merge before `work` (`f1`, `f3`), none on `i0`, `d1`, the bars,
+  `fin`, `left`, `right`; the model's M1 and M2 JSON identical after rendering, a run, undo/redo and save/load; with
+  Decision read as an Action, the decision after `d1` with the two guards on its branches, its trunk sharing `d1`'s left
+  side with `f2` (6 px off the axis, a measured limit). Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-33** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The Activity guard is mono 11.5 px, slate-700, on a white patch; the expression verbatim.** Amends the guard style of
+  R-VP-26 (the C2 label style) as Alfonso asked on 2026-09-30 (the prompt's point 2). The document's `labels.style` is `{ fontFamily: 'mono', fontSize: 11.5, fontWeight:
+  'normal', color: 'var(--color-text-secondary)' }`; the edge of an Activity flow draws its label on
+  `var(--color-edge-label-bg)` (white 0.9 in light), 1 px 4 px of padding, no halo. `[` and `]` wrap the whole guard;
+  `model.[count]` stays as written (the JjEL state read, R-SIM-18). Report question 8, adopted as recommended, unattended.
+  Measured: the 81 document lists of the nine notations on the seven decoded exports, 79 identical to `30f3d8a81`'s, the 2
+  Activity lists with a guard equal to them with the style substituted; on the probe `IBM Plex Mono`, 11.5 px, 400,
+  `rgb(51, 65, 85)` on `rgba(255, 255, 255, 0.9)`, no text shadow. Viewpoints already derived keep their font and get the
+  patch. The two guards of DemoFlowB still overlap each other (the layout ticket). Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-34** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **On a node a derived viewpoint draws, the run's token is a dot inside the node and the marked node a 2 px cyan border.**
+  The run overlay (S15) is shared by every node of every viewpoint; the new drawing applies only where the node's view
+  carries `ir.generated`, so the default viewpoint and user views keep the corner pill and the outline byte for byte (the
+  report's question 5). In a derived view: nothing on an empty place (question 6); from one token an amber `#f59e0b` dot,
+  12 px with a 1.5 px ring in `--color-inode-surface`, no blur, centred 18 px from the painted left edge (12 px to its
+  edge), vertically centred, at the centre of a circle or a diamond; from two tokens the count beside it; the marked node
+  a 2 px `#0ea5e9` outline over its own border (the stroke for a form painted in SVG), the wrapper's outline and halo
+  off, not while selected; the enabled and pending rings and the σ card as before. Hex values as `.sim-active` has them
+  (question 7), no new token. Moves, during a run, every derived viewpoint of the nine notations; the MODELS demo runs in
+  the default viewpoint and does not move. Measured on the probe: the dot on `work` 10.5 px disc plus ring, 12.75 px from
+  the painted edge, amber, `work`'s border pixels cyan; the default view in the same run keeps the pill «1» and the
+  wrapper outline. Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-35** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Points 4 to 6 of the review change nothing in the code.** (1) The action border already paints the edge's ink at the
+  edge's width, `1px solid rgb(15, 23, 42)`, computed and in the pixels; `#334155` would make it lighter than the arrows
+  (question 3). (2) Fork and join are identical at rest; the join's «light border» is the run's dashed enabled ring on
+  whichever bar can fire (question 4). (3) The «2» binds to no element: in five run states no label reads 2, the two guard
+  labels overlap each other 12 px right of `work`. (4) The initial, the fork and the join sit off the actions' axis
+  because the stored positions are top-left aligned (`i0 (50,50)`, `work (470,50)`); the derivation writes no position
+  (the layout ticket). Prompt P-2026-09-30-1935.
+- **R-VP-36** (2026-10-01, ratified by Alfonso 2026-10-01, evidence: measured, verified: none, reversible: branch).
+  **The Activity (UML) fork and join bar is declared 7 px thick, painted 5; amends R-VP-26 (2) on the bar thickness only.**
+  Alfonso, 2026-10-01, asked «Fork/join bar declared 5 px draws 3 px (1 px border each side). Keep 5 or 7?» (the
+  2026-09-30 checkpoint): «7». `ACTIVITY_BAR_SIZE` goes from 5×120 to 7×120 (`viewpointDerivation.ts`); the height, the
+  fill, the border, the upright bar and everything else in the notation stay; `CLASSIC_BAR_SIZE` (R-VP-24, 10×44) does not
+  move; the text of R-VP-26 is not edited (add-only). Viewpoints already derived keep the 5 they saved, as R-VP-25 accepted
+  for the arrowheads: the size is copied onto each view at derivation (`deriveViewpoint.ts:73`) and read from it at render
+  (`IRNodeContent.tsx:275`), so a saved «(derived)» viewpoint shows 7 once deleted and derived again; no scene file,
+  persisted project or migration is edited (no IR key, no `irVersion` bump). Source:
+  `docs/discovery/discovery_2026-10-01_activity_bar_7px.md`. Measured on the lane probe, 3090, light, 1600×1000, DPR 2: with
+  the constant at 5 (the code of `ac3890b7e`) DemoFlowB as Activity (UML) draws the fork and the join node 5×120, painted
+  3×118; at 7 both node 7×120, painted 5×118, filled in the ink, no name, identical at rest, the stored views carrying
+  `defaultSize` 7×120; the initial 20, the bull's-eye 24, the decision 36 and the actions 44 unchanged; the four demo scenes
+  in the default viewpoint byte-identical to the run at 5 (0 px); the tests 2 of 47 red first, 441/441 after; mutation
+  bench 16/16. Prompt P-2026-10-01-2230, commit `c3b0556d6`.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 
@@ -4877,6 +5043,74 @@ di risolverla prima che Redux l'abbia propagata (`9345a4046`, report
 fino a 500 ms a essere rifiutata. La gara non è del ruolo `superclass`: `waitForDependencies` in
 `jjscript/executor/dependencies.ts` aspetta solo le dipendenze `required: true`, quindi ogni ruolo
 lasciato `required: false` la corre, a partire da `type-reference` (`dependencies.ts:205-235`).
+
+R-JS-2..6 below: decided by the chat `C-2026-10-01-1725` in the prompt `P-2026-10-01-1725` under RC-25,
+measured in `docs/discovery/discovery_2026-10-01_jjscript_requeue.md`, with the GO's amendment to the
+report's D15 written into R-JS-3. Marker: **provisional, unattended**.
+
+**R-JS-2** (2026-10-01, provisional, unattended) — **The wait accepts what the guard accepts.** In a
+scope-bound M2 run (`scopeBound && level !== 'M1'`, the guard's own condition at `executor.ts:123`) a
+one-segment name counts as resolved for `waitForDependencies` only when the bound metamodel resolves
+it. The project-wide fallback stays for qualified names, unbound runs, M1, and a bound metamodel that
+is gone, so the guard's `SCOPE_NOT_FOUND` stays immediate. Cause: a homonym in another metamodel ended
+the wait at the first poll and `checkBoundScope` then refused the line (the Petri net of 2026-10-01,
+report §3.1). Accepted cost: a bare name that lives only in another metamodel waits 500 ms before the
+guard refuses it. Code `5fa749339`.
+
+**R-JS-3** (2026-10-01, provisional, unattended) — **Run executes in passes.** Pass 1 runs every
+command in script order and never pauses. A failed command is deferred when its verb is `create`,
+`add`, `set` or the standalone `A extends B`, and its executor code (`result.errors[0].code`, not the
+dialog's mapping) is one of `PARENT_NOT_FOUND`, `CHILD_NOT_FOUND`, `MEMBER_NOT_FOUND`, `NO_PARENT`,
+`ELEMENT_NOT_FOUND`, `UNKNOWN_ATTRIBUTE_TYPE`, `UNKNOWN_REFERENCE_TYPE`, `UNKNOWN_OPERATION_TYPE`,
+`UNKNOWN_PARAMETER_TYPE`, `UNKNOWN_TYPE`, `OUT_OF_SCOPE`, `AMBIGUOUS_OUT_OF_SCOPE`. Each of these is
+emitted before anything is written (report §3.2), so a command succeeds at most once. The deferred
+commands run again in script order while a pass makes at least one command succeed, at most 3 passes
+after the first; what still fails is final with the error of its last attempt. Never deferred:
+`delete`, `rename`, `move`, `copy`, `remove`, `abstract` (a toggle), `forall`, blocks, `let`, `eval`.
+GO amendment: a deferred `set` is not retried when a later line that already succeeded sets the same
+feature of the same target; it ends `superseded by line <n>` (editor numbering), is not counted as an
+error and is listed under «Superseded». Two collection updates (`+=`, `-=`) compose and do not supersede
+each other. Accepted as declared: a deferred `create` can bring back what a later failed `delete` meant
+to remove (R2), and a forward reference with a required dependency costs up to 500 ms per pass (R3).
+Pure module `executor/runPasses.ts`, code `daba6e27e`.
+
+**R-JS-4** (2026-10-01, provisional, unattended) — **The forward-reference refusal leaves Run.** Run
+calls `validateScriptIntegrity(code)` without the name set, so a forward reference completes on pass 2
+instead of being refused before command 1. Parse and syntax errors are still refused before command 1
+and listed in the summary, titled `Script not executed: n errors`. `scriptValidator.ts` is unchanged;
+`ScriptBlock.tsx:projectClassifierNames` has no caller left and is marked `TODO: cleanup`.
+Code `daba6e27e`.
+
+**R-JS-5** (2026-10-01, provisional, unattended) — **Run never pauses.** The interactive Skip dialog
+leaves Run; Step keeps its pause on error, unchanged. The recovery rules are evaluated on each final
+error and their actions sit on that error's row of the summary; an action applies its fix and reruns
+only the final failures, with R-JS-3 semantics. `skipMatchingCreateLiteral` is not offered, since Run
+already goes on past those lines. Code `daba6e27e`, `1315e15c4`.
+
+**R-JS-6** (2026-10-01, provisional, unattended) — **One summary modal closes every Run.** Titles
+`Script executed` and `Script executed with n errors`. It shows before, after and delta per model whose
+figures changed: classes (abstract inside the count), attributes, references, operations,
+enumerations, literals and packages, or instances for an M1 model. It also shows the commands
+executed, `k resolved on retry (lines …)`, the duration, and every final error with its editor line,
+command, message, suggestion and recovery actions. The figures come from the model, read with the
+status bar's accessors, never from the commands. Every model of the project is snapshotted when the
+run starts, because `ScriptBlock` cannot name a Jjodie reply's bound metamodel. "After" is read live.
+There was no success toast on this path to replace. The inline strip stays as the per-message record.
+`RunSummaryDialog` is a new component that reuses the `ExecutionErrorDialog` shell; light theme only.
+Code `1315e15c4`.
+
+**R-JS-7** (2026-10-01, provisional, unattended) — **A retry pass waits for every dependency.** Decided
+by the chat `C-2026-10-01-1725` in the GO of `P-2026-10-01-2136` under RC-25, from ticket T8
+(`docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md` §4.8). In pass 2 and later of a Run
+(R-JS-3), `waitForDependencies` awaits every dependency of the retried command, `type-reference` and
+`value-reference` included, up to `MAX_WAIT_MS`. Pass 1 keeps R-JS-1: only `required` dependencies are
+awaited, so a forward reference still fails at once and is deferred. Cause: the retry ran with no wait,
+the target created by a later line had not reached the resolvers yet, the retry failed again, and a pass
+with no success ends the run, so line 14 of the probe's script stayed a final error on run 1 of every
+variant. `runPasses` publishes the retry pass (`isRetryPass()`, module state raised around each command
+and lowered in a `finally`), because the host chain (`ScriptBlock` → `onExecute` → `JjScriptService` →
+executor) carries no pass number. Accepted cost: a retried command whose name never resolves waits
+`MAX_WAIT_MS` per retry pass. Amends R-JS-1 for retry passes only. Code `4bbf7e640`.
 
 ## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
 

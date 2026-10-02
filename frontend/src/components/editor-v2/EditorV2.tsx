@@ -364,6 +364,38 @@ export interface EditorV2Props {
 }
 
 /**
+ * Error boundary around the React Flow canvas (P-2026-10-01-1655). A render loop in the
+ * canvas («Maximum update depth exceeded», thrown from React Flow's StoreUpdater) used to
+ * reach the tab's `<Try>`, which replaced the whole editor pane. Caught here, it costs the
+ * canvas only: toolbar, rail and tabs stay, and «Reload canvas» mounts React Flow again
+ * from the editor's state, which nothing here touched.
+ */
+class CanvasErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+    state: { error: Error | null } = { error: null };
+
+    static getDerivedStateFromError(error: Error) {
+        return { error };
+    }
+
+    componentDidCatch(error: Error, info: React.ErrorInfo) {
+        console.error('[EditorV2] canvas error, caught inside the canvas:', error, info?.componentStack);
+    }
+
+    render() {
+        const { error } = this.state;
+        if (!error) return this.props.children;
+        return (
+            <div className="editor-v2__canvas-error" role="alert" style={{ padding: 24, textAlign: 'center' }}>
+                <p>The canvas stopped: {String(error.message ?? error).split('\n')[0].slice(0, 160)}</p>
+                <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => this.setState({ error: null })}>
+                    Reload canvas
+                </button>
+            </div>
+        );
+    }
+}
+
+/**
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
@@ -404,11 +436,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 
                 // Re-apply selection to the preserved edge ID
                 // This ensures selection survives Redux patches from useJjomSync
+                // An edge whose flag is already the forced one keeps its object, and the
+                // array its reference when none moves (P-2026-10-01-1655): rebuilt on
+                // every call, it turned an updater that returned its input into a new
+                // state, voiding every equality guard upstream of this wrapper.
                 if (selectedEdgeIdRef.current) {
-                    return deduped.map(e => ({
-                        ...e,
-                        selected: e.id === selectedEdgeIdRef.current,
-                    }));
+                    const sel = selectedEdgeIdRef.current;
+                    let moved = false;
+                    const reselected = deduped.map(e => {
+                        if (e.selected === (e.id === sel)) return e;
+                        moved = true;
+                        return { ...e, selected: e.id === sel };
+                    });
+                    return moved ? reselected : deduped;
                 }
                 return deduped;
             });
@@ -2815,6 +2855,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
             clearSyntheticEdgeSelection();
             setSyntheticEdgeSelected(edge.id, true);
+            jjomSelection.onObjectAsEdgeClick(edge.id);
             return;
         }
         clearSyntheticEdgeSelection();
@@ -2836,6 +2877,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
             clearSyntheticEdgeSelection();
             setSyntheticEdgeSelected(edgeId, true);
+            jjomSelection.onObjectAsEdgeClick(edgeId);
             return;
         }
         clearSyntheticEdgeSelection();
@@ -4375,7 +4417,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                     style={{ position: 'relative' }}
                                     onMouseDownCapture={() => setActive('flow')}
                                 >
-                                    {flowCanvas}
+                                    <CanvasErrorBoundary>{flowCanvas}</CanvasErrorBoundary>
                                 </div>
                             </div>
                         </div>
@@ -4386,7 +4428,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             style={{ position: 'relative' }}
                             onMouseDownCapture={() => setActive('flow')}
                         >
-                            {flowCanvas}
+                            <CanvasErrorBoundary>{flowCanvas}</CanvasErrorBoundary>
                         </div>
                     )}
 

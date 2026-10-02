@@ -772,13 +772,19 @@ const ACTIVITY_FINAL_SIZE = { width: 24, height: 24 } as const;
 /** Decision and merge: a hollow diamond of 36 px. */
 const ACTIVITY_DECISION_SIZE = { width: 36, height: 36 } as const;
 /**
- * Fork and join: a bar 5 px thick and 120 long. The IR has no orientation and `defaultSize` is per view, so the bar
- * is upright for every fork and join (the demo's rows run left to right). Drawn as declared since P-2026-09-30-1720.
+ * Fork and join: a bar declared 7 px thick and 120 long, painted 5 by 118 (the wrapper keeps a 1 px border each side).
+ * The IR has no orientation and `defaultSize` is per view, so the bar is upright for every fork and join (the demo's
+ * rows run left to right). Drawn as declared since P-2026-09-30-1720; 7, not 5, since P-2026-10-01-2230 (R-VP-36).
  */
-const ACTIVITY_BAR_SIZE = { width: 5, height: 120 } as const;
+const ACTIVITY_BAR_SIZE = { width: 7, height: 120 } as const;
 /** The action: 44 px high, its width from its name; radius 14, clamped at render to half the height (P-2026-09-30-1720). */
 const ACTIVITY_ACTION_SIZE = { height: 44 } as const;
 const ACTIVITY_ACTION_RADIUS = 14;
+/**
+ * The guard (P-2026-09-30-1935): mono 11.5 px, normal, slate-700 (`--color-text-secondary`); the edge draws it on a white
+ * patch (UnifiedEdge, the Activity flag). The expression is verbatim: `model.[count]` is JjEL's state read, not a bracket.
+ */
+const ACTIVITY_GUARD_STYLE = (): TextStyle => ({ fontFamily: 'mono', fontSize: 11.5, fontWeight: 'normal', color: 'var(--color-text-secondary)' });
 
 /**
  * Activity (UML), P-2026-09-30-1552 (R-VP-26, docs/discovery/discovery_2026-09-30_activity_uml_notation.md): the
@@ -788,13 +794,13 @@ const ACTIVITY_ACTION_RADIUS = 14;
  * - An action (the Node role, and every class that takes it): a white rounded rectangle, 1 px in the ink, radius 14,
  *   44 px high, its name centred in 13 px 500 in the ink, no compartment.
  * - A decision (the notation's own `decision` role): a hollow diamond, 36 px, no name.
- * - Fork and join: a filled bar in the ink, upright, 5 by 120 px, no name.
+ * - Fork and join: a filled bar in the ink, upright, 7 by 120 px, no name.
  * - The Terminal and an Activity final: a bull's-eye, a white circle of 24 px, 1 px in the ink, the `dot-large` marker
  *   (14 px) in the border colour, no name.
  * - A control flow (the Transition role): the Flowchart's endpoints on today's router, 1 px in the ink, the open
  *   arrowhead (R-VP-25), no label; where its guard is set, a second document with priority 1 draws it as
- *   `[guard]`, verbatim, in the C2 label style. A template drops only the literal before an empty value, so the
- *   bracket needs its own document, not a template on the plain one.
+ *   `[guard]`, verbatim, in mono 11.5 px (P-2026-09-30-1935; the C2 label style before). A template drops only
+ *   the literal before an empty value, so the bracket needs its own document, not a template on the plain one.
  * - Every other document (a class with no role) is the Flowchart's.
  */
 export function deriveActivityViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
@@ -818,7 +824,7 @@ export function deriveActivityViewpointIRs(lookup: Lookup, metamodelId: string, 
             const bracketed = base();
             bracketed.labels = {
                 template: [{ from: 'literal', text: '[' }, { from: 'path', expr: path(guard.name) }, { from: 'literal', text: ']' }],
-                style: EDGE_LABEL_STYLE(),
+                style: ACTIVITY_GUARD_STYLE(),
             };
             out.push({
                 ...v,

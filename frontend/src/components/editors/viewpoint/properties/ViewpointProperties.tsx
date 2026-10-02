@@ -1,6 +1,7 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useId } from 'react';
 import { LViewPoint } from '../../../../joiner';
 import { ViewpointType, getViewpointType } from '../../../../view/viewPoint/viewpoint';
+import { readMetaclassColoring, type MetaclassColoring } from '../../../../view/viewPoint/metaclassPalette';
 // Self-import the stylesheet so .wp-type-segmented + .wp-field + .workbench-properties
 // render correctly even when this component is mounted outside WorkbenchProperties
 // (e.g., directly from Info.tsx's view-branch).
@@ -38,6 +39,16 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
         (viewpoint as any).isValidation = (newType === 'validation');
     }, [viewpoint, readOnly]);
 
+    // «Color by metaclass» (R-VP-27, R-VP-28). Absent reads as off with the defaults; the field
+    // is written WHOLE through the L proxy, as Name is, because the default setter replaces it:
+    // turning it off writes `enabled: false` and keeps the base colour and the border.
+    const coloring = readMetaclassColoring(dview as any);
+    const colorId = useId();
+    const writeColoring = useCallback((patch: Partial<MetaclassColoring>) => {
+        if (readOnly) return;
+        (viewpoint as any).metaclassColoring = { ...readMetaclassColoring(viewpoint.__raw as any), ...patch };
+    }, [viewpoint, readOnly]);
+
     return (
         <div className="workbench-properties">
             <h4 className="workbench-properties__section-header">Viewpoint</h4>
@@ -70,6 +81,48 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                 </div>
                 <p className="wp-field__hint">Only Syntax can be chosen here.</p>
             </div>
+
+            <div className="wp-toggle">
+                <span className="wp-toggle__label" id={`${colorId}-toggle`}>Color by metaclass</span>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={coloring.enabled}
+                    aria-labelledby={`${colorId}-toggle`}
+                    className={`wp-switch${coloring.enabled ? ' wp-switch--active' : ''}`}
+                    onClick={() => writeColoring({ enabled: !coloring.enabled })}
+                    disabled={readOnly}
+                />
+            </div>
+
+            {coloring.enabled && (
+                <>
+                    <div className="wp-field">
+                        <label className="wp-field__label" htmlFor={`${colorId}-base`}>Base color</label>
+                        <div className="wp-field__color-row">
+                            <input
+                                id={`${colorId}-base`}
+                                type="color"
+                                className="wp-field__color"
+                                value={coloring.baseColor}
+                                onChange={(e) => writeColoring({ baseColor: e.target.value })}
+                                disabled={readOnly}
+                            />
+                            <span className="wp-field__color-hex">{coloring.baseColor}</span>
+                        </div>
+                    </div>
+
+                    <label className="wp-toggle">
+                        <span className="wp-toggle__label">Border</span>
+                        <input
+                            type="checkbox"
+                            checked={coloring.border}
+                            onChange={(e) => writeColoring({ border: e.target.checked })}
+                            disabled={readOnly}
+                        />
+                    </label>
+                </>
+            )}
         </div>
     );
 };

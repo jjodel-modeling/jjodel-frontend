@@ -48,6 +48,7 @@ import { useEdgeHighlightClass } from '../contexts/HighlightContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
 import { SegmentHandles } from './SegmentHandles';
 import { EndpointHandles } from './EndpointHandles';
+import { junctionGeometry, junctionTrunkPath, junctionVertex, type JunctionEnd } from '../viewpoint/ir/irJunctions';
 import { endGlyphOf, endGlyphMarker, glyphPathD, glyphCircles } from './edgeEndGlyphs';
 
 // Bundle spread lives in ./bundleSpread (pure, testable). It fans the middle
@@ -62,6 +63,10 @@ const ROLE_LINE_GAP_PY = 8; // px, perpendicular nudge so the role text is off t
 // (niente S con le due curve a contatto). L'ereditarieta' non la usa: il suo
 // connettore resta byte-identico.
 const REFERENCE_ROUNDING = { approachRun: MARKER_APPROACH_RUN, interiorStraight: 0.5 } as const;
+
+// P-2026-09-30-1935: the guard of an Activity (UML) flow sits on a patch of the label background, so the line
+// never runs through the text; it replaces the halo's shadow. Applied only on an edge with the Activity flag.
+const ACTIVITY_LABEL_PATCH: React.CSSProperties = { background: 'var(--color-edge-label-bg)', padding: '1px 4px', borderRadius: 2, textShadow: 'none' };
 
 // E-route: React Flow's Position enum carries the same four strings as the
 // codebase's Side type; the map keeps the conversion explicit instead of casting.
@@ -151,6 +156,9 @@ function UnifiedEdge(props: EdgeProps) {
     // IR-decorated edge only. An empty text draws nothing, so an edge without the keys renders as before.
     const irSourceEndText = isIREdge ? (irData.irSourceEndText as string | undefined) || undefined : undefined;
     const irTargetEndText = isIREdge ? (irData.irTargetEndText as string | undefined) || undefined : undefined;
+    // P-2026-09-30-1935: an Activity (UML) control flow (irEdgeViews writes the flag only then) and the junction at
+    // either end (irJunctions.ts): absent on every other edge, which renders as before.
+    const irActivityFlow = isIREdge && !!irData.irActivityFlow;
     // Slice E: the role at each end (irEdgeViews writes each only when declared), on the other side of the line.
     const irSourceEndRole = isIREdge ? (irData.irSourceEndRole as string | undefined) || undefined : undefined;
     const irTargetEndRole = isIREdge ? (irData.irTargetEndRole as string | undefined) || undefined : undefined;
@@ -181,6 +189,14 @@ function UnifiedEdge(props: EdgeProps) {
     // degenerate to a point. Everything downstream of the Manhattan router (waypoints,
     // bundle spread, crossings, segment handles) is bypassed for these edges.
     const isNonOrthogonalIR = isIREdge && !isSelfLoop && (irRouting === 'straight' || irRouting === 'curved');
+
+    // P-2026-09-30-1935: the view-only decision and merge of Activity (UML). The members of a group share one handle on
+    // the action; each draws its branch to (from) the vertex of the diamond that faces its other end, on today's
+    // router, and the primary member also draws the trunk and the diamond (the tree's pattern, CASE 1). Orthogonal
+    // edges only: an arc, a direct or curved route and a self-loop keep their own geometry.
+    const junctionOk = isIREdge && !isSelfLoop && !isNonOrthogonalIR && !isArcIR;
+    const junctionIn = junctionOk ? irData.irJunctionTarget as JunctionEnd | undefined : undefined;
+    const junctionOut = junctionOk ? irData.irJunctionSource as JunctionEnd | undefined : undefined;
 
     // ─── Label state (reference edges only) ───
     const [editing, setEditing] = useState(false);
@@ -232,10 +248,42 @@ function UnifiedEdge(props: EdgeProps) {
         isInheritance,
     );
 
+    // ─── Junction geometry (Activity (UML), P-2026-09-30-1935) ───
+    // The diamond from the point xyflow gives the shared handle; a branch's vertex faces the centre of the node at its
+    // other end, or that end's own diamond when it has one. Null on every edge without a junction.
+    const junctionInSide = junctionIn?.side;
+    const junctionOutSide = junctionOut?.side;
+    const junctionInGeom = useMemo(
+        () => (junctionInSide ? junctionGeometry({ x: targetX, y: targetY }, junctionInSide) : null),
+        [junctionInSide, targetX, targetY],
+    );
+    const junctionOutGeom = useMemo(
+        () => (junctionOutSide ? junctionGeometry({ x: sourceX, y: sourceY }, junctionOutSide) : null),
+        [junctionOutSide, sourceX, sourceY],
+    );
+    const branchEnds = useMemo(() => {
+        if (!junctionInGeom && !junctionOutGeom) return null;
+        const centreOf = (n: typeof sourceNode, x: number, y: number) => {
+            if (!n) return { x, y };
+            const r = getNodeRect(n);
+            return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        };
+        return {
+            start: junctionOutGeom ? junctionVertex(junctionOutGeom, junctionInGeom?.centre ?? centreOf(targetNode, targetX, targetY)) : null,
+            end: junctionInGeom ? junctionVertex(junctionInGeom, junctionOutGeom?.centre ?? centreOf(sourceNode, sourceX, sourceY)) : null,
+        };
+    }, [junctionInGeom, junctionOutGeom, sourceNode, targetNode, sourceX, sourceY, targetX, targetY]);
+    const pathSX = branchEnds?.start?.point.x ?? sourceX;
+    const pathSY = branchEnds?.start?.point.y ?? sourceY;
+    const pathSSide = branchEnds?.start?.side ?? sourceSide;
+    const pathTX = branchEnds?.end?.point.x ?? targetX;
+    const pathTY = branchEnds?.end?.point.y ?? targetY;
+    const pathTSide = branchEnds?.end?.side ?? targetSide;
+
     // ─── Compute base path — Manhattan routing ───
     const rawPath = useMemo(
-        () => computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide),
-        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
+        () => computeManhattanPath(pathSX, pathSY, pathSSide, pathTX, pathTY, pathTSide),
+        [pathSX, pathSY, pathSSide, pathTX, pathTY, pathTSide]
     );
 
     // ─── E-route: non-orthogonal IR geometry (direct / bezier) ───
@@ -289,10 +337,11 @@ function UnifiedEdge(props: EdgeProps) {
     // punto che vede tutti gli archi insieme: il ventaglio di `applyBundleSpread`
     // separa i corridoi della stessa coppia di nodi, la corsia quelli di coppie
     // diverse. Fuori dalla Z a quattro punti sono entrambi no-op per riferimento.
+    // A junction's branch is not a corridor between the pair of nodes: it ends on the diamond, so it is not fanned.
     const spreadPoints = useMemo(() => {
-        if (isInheritance || isSelfLoop) return rawPoints;
+        if (isInheritance || isSelfLoop || branchEnds) return rawPoints;
         return applyBundleSpread(rawPoints, bundleCenter);
-    }, [rawPoints, bundleCenter, isInheritance, isSelfLoop]);
+    }, [rawPoints, bundleCenter, isInheritance, isSelfLoop, branchEnds]);
     // Anti-collisione (Fase B del punto 1, 2026-08-25): il router resta intatto e
     // questo passaggio guarda la polilinea gia' pronta — dopo i waypoint e dopo lo
     // spread, cioe' dove il criterio si misura davvero — e la ri-instrada solo se
@@ -1049,6 +1098,38 @@ function UnifiedEdge(props: EdgeProps) {
                 markerEnd={markerEnd}
             />
 
+            {/* Junction (Activity (UML), P-2026-09-30-1935): the primary member draws the trunk, with the edge's own
+                arrowhead (into the action for a merge, into the diamond for a decision), and the diamond over it,
+                white, in the edge's stroke and width. View-only: no node, no model object. */}
+            {(junctionIn?.primary || junctionOut?.primary) && [
+                junctionIn?.primary && junctionInGeom ? { key: 'in', g: junctionInGeom, kind: 'merge' as const } : null,
+                junctionOut?.primary && junctionOutGeom ? { key: 'out', g: junctionOutGeom, kind: 'decision' as const } : null,
+            ].map(j => j && (
+                <g key={`junction-${j.key}`}>
+                    <path
+                        d={junctionTrunkPath(j.g, j.kind)}
+                        fill="none"
+                        stroke="transparent"
+                        strokeWidth={20}
+                        style={{ pointerEvents: 'stroke' }}
+                        onClick={(e) => { e.stopPropagation(); selectEdge?.(id); }}
+                    />
+                    <path
+                        d={junctionTrunkPath(j.g, j.kind)}
+                        fill="none"
+                        className={`${edgeClassName} ir-junction-trunk`}
+                        style={irPathStyle}
+                        markerEnd={markerEnd}
+                    />
+                    <polygon
+                        className="ir-junction"
+                        points={j.g.polygon}
+                        style={{ fill: 'var(--color-inode-surface)', stroke: irStroke ?? 'var(--color-inode-name)', strokeWidth: irStrokeWidth ?? 1 }}
+                        onClick={(e) => { e.stopPropagation(); selectEdge?.(id); }}
+                    />
+                </g>
+            ))}
+
             {/* Segment handles for manual edge customization */}
             {/* E-route (R-B10): a direct/bezier edge has no Manhattan segments to grab,
                 so the handles are not mounted — which also removes the only gesture that
@@ -1071,10 +1152,10 @@ function UnifiedEdge(props: EdgeProps) {
             {!isSelfLoop && (
                 <EndpointHandles
                     edgeId={id}
-                    sourceX={arcGeom ? arcGeom.start.x : sourceX}
-                    sourceY={arcGeom ? arcGeom.start.y : sourceY}
-                    targetX={arcGeom ? arcGeom.end.x : targetX}
-                    targetY={arcGeom ? arcGeom.end.y : targetY}
+                    sourceX={arcGeom ? arcGeom.start.x : pathSX}
+                    sourceY={arcGeom ? arcGeom.start.y : pathSY}
+                    targetX={arcGeom ? arcGeom.end.x : pathTX}
+                    targetY={arcGeom ? arcGeom.end.y : pathTY}
                     sourceNodeId={source}
                     targetNodeId={target}
                     selected={!!selected}
@@ -1108,7 +1189,7 @@ function UnifiedEdge(props: EdgeProps) {
                             />
                         ) : (
                             labelText && labelText !== 'newRef' && (irLabelStyle
-                                ? <span className="edge-label__text edge-label__text--halo" style={{ ...(irStroke ? { color: irStroke } : {}), ...irLabelStyle }}>{labelText}</span>
+                                ? <span className="edge-label__text edge-label__text--halo" style={{ ...(irStroke ? { color: irStroke } : {}), ...irLabelStyle, ...(irActivityFlow ? ACTIVITY_LABEL_PATCH : {}) }}>{labelText}</span>
                                 : <span className="edge-label__text" style={isIREdge && irStroke ? { color: irStroke } : undefined}>{labelText}</span>)
                         )}
                     </div>
