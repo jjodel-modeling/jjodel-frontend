@@ -1,6 +1,6 @@
 /**
  * «Color by metaclass» (P-2026-09-30-1815, R-VP-27..31; reworked by P-2026-09-30-2022,
- * R-VP-32..34): the pure half of the viewpoint option.
+ * R-VP-37..39): the pure half of the viewpoint option.
  *
  * With the option on, every M1 object node shown under the viewpoint is filled with the colour
  * of its metaclass: one of twelve pastel swatches, chosen so that two metaclasses connected by
@@ -52,7 +52,7 @@ export interface MetaclassColorRow {
 export const DEFAULT_METACLASS_BASE_COLOR = '#0ea5e9';
 
 /**
- * The twelve pastel swatches (R-VP-32): swatch k has hue 30·k (within 1°), saturation 55..70 %
+ * The twelve pastel swatches (R-VP-37): swatch k has hue 30·k (within 1°), saturation 55..70 %
  * and lightness 82..88 %, read back from the hex. Tuned by a search over S and L so that any two
  * are at least 12.5 ΔE76 apart (the rule asks 10; S 60 / L 85 for all gave 8.0, on 240/270).
  * Black text wins on every one.
@@ -116,7 +116,7 @@ function hueOfColor(hex: string): number {
 }
 
 /**
- * The swatch the scheme starts from: the one nearest in hue to the base colour (R-VP-32). A
+ * The swatch the scheme starts from: the one nearest in hue to the base colour (R-VP-37). A
  * tie goes to the lower index; an achromatic base reads as hue 0; an invalid one as the default.
  */
 export function seedSwatchIndex(baseColor: string): number {
@@ -141,7 +141,7 @@ function seedRank(k: number, seed: number): number {
 }
 
 /**
- * `count` colours in the ANALOGOUS ORDER round the seed (R-VP-29 as amended by R-VP-32): the
+ * `count` colours in the ANALOGOUS ORDER round the seed (R-VP-29 as amended by R-VP-37): the
  * swatch nearest the base, then one step up, one down, two up, two down, …, the opposite one
  * last; past twelve the order starts again. What classes with no connection get, in metamodel
  * order. Deterministic; an invalid base falls back to the default.
@@ -154,7 +154,7 @@ export function metaclassPalette(baseColor: string, count: number): string[] {
 }
 
 /**
- * One colour per class, REFERENCE-AWARE (R-VP-33). `adjacency` lists who is connected to
+ * One colour per class, REFERENCE-AWARE (R-VP-38). `adjacency` lists who is connected to
  * whom; it is read both ways, so a directed list does. Greedy, in the order of `ids`:
  *  1. an override (a valid hex; one on a class not in `ids` is ignored) is taken as is, first,
  *     and uses its swatch up;
@@ -228,7 +228,7 @@ export function contrastText(fill: string): '#000000' | '#ffffff' {
     return onBlack >= onWhite ? '#000000' : '#ffffff';
 }
 
-/** The border of a coloured node (R-VP-32): same hue and saturation, lightness 55 %. */
+/** The border of a coloured node (R-VP-37): same hue and saturation, lightness 55 %. */
 export function borderShade(fill: string): string {
     const [h, s] = hslOf(normalizeHex(fill) ?? DEFAULT_METACLASS_BASE_COLOR);
     return hexOfHsl(h, s, BORDER_L);
@@ -319,7 +319,7 @@ function classesOfModel(idlookup: Record<string, any>, modelId: string): string[
 /**
  * The position of a class among the classes of its metamodel, and how many there are (the
  * order of `classesOfModel`). Null when the class or its model is not in the lookup.
- * TODO: cleanup — no longer read by the resolver since R-VP-33 (the reference-aware
+ * TODO: cleanup — no longer read by the resolver since R-VP-38 (the reference-aware
  * assignment replaced the index); kept, and tested, per the no-removal rule.
  */
 export function metaclassOrder(idlookup: Record<string, any>, classId: string): { index: number; count: number } | null {
@@ -331,7 +331,7 @@ export function metaclassOrder(idlookup: Record<string, any>, classId: string): 
 }
 
 /**
- * The classes of a model and their connections (R-VP-33): two classes are adjacent when a
+ * The classes of a model and their connections (R-VP-38): two classes are adjacent when a
  * DECLARED reference of one (containment included) is typed by the other, or one extends the
  * other, in either direction. Forward links only (`references` → `type`, `extends`); a
  * self-reference, a reference missing from the lookup and a class of another model make no
@@ -383,7 +383,7 @@ export function resolveMetaclassColoring(
 }
 
 /**
- * The panel's list (R-VP-34): each model of `modelIds` that is a model and has classes, with
+ * The panel's list (R-VP-39): each model of `modelIds` that is a model and has classes, with
  * its classes in metamodel order, the colour the resolver paints under `setting`, and whether
  * that colour is an override. A class with no name shows its id.
  */

@@ -36,7 +36,7 @@ interface MetaclassOption { value: string; label: string; color: string }
 const toMetaclassOption = (c: MetaclassColorRow['classes'][number]): MetaclassOption => ({ value: c.id, label: c.name, color: c.color });
 
 // The small swatch and the name, for the options and the selected value alike; the name is
-// clipped with an ellipsis so the fixed-width control never grows (R-VP-34).
+// clipped with an ellipsis so the fixed-width control never grows (R-VP-39).
 const formatMetaclassOption = (o: MetaclassOption) => (
     <span className="wp-metaclass-option" title={o.label}>
         <span className="wp-metaclass-option__swatch" style={{ background: o.color }} />
@@ -73,7 +73,7 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
         (viewpoint as any).metaclassColoring = { ...readMetaclassColoring(viewpoint.__raw as any), ...patch };
     }, [viewpoint, readOnly]);
 
-    // Per-metaclass colours (R-VP-34): the classes of every metamodel of the project with the
+    // Per-metaclass colours (R-VP-39): the classes of every metamodel of the project with the
     // colour each paints under THIS viewpoint's setting (the edited one, not the active one).
     // Selected as a string so an unrelated store change does not re-render the panel.
     const vpId = dview?.id as string | undefined;

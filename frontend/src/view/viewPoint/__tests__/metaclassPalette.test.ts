@@ -83,7 +83,7 @@ const at = (i: number, k: number) => SW[((i + k) % 12 + 12) % 12];
 const hueOfColor = (c: string) => (SW.indexOf(c) >= 0 ? 30 * SW.indexOf(c) : hslOf(c)[0]);
 const BASES = ['#0ea5e9', '#f59e0b', '#808080', '#6366f1', '#22c55e', '#ff0000', '#fefce8', '#0b0b1f'];
 
-describe('PASTEL_SWATCHES (R-VP-32)', () => {
+describe('PASTEL_SWATCHES (R-VP-37)', () => {
     it('holds twelve distinct #rrggbb swatches, one every 30 degrees of hue from 0', () => {
         expect(SW).toHaveLength(12);
         expect(new Set(SW).size).toBe(12);
@@ -216,7 +216,7 @@ const adjacencyOf = (edges: [string, string][]) => {
     return out;
 };
 
-describe('assignMetaclassColors (reference-aware, R-VP-33)', () => {
+describe('assignMetaclassColors (reference-aware, R-VP-38)', () => {
     it('with no edges it is the analogous order of metaclassPalette, for 1..14 classes and every base', () => {
         for (const base of BASES) {
             for (let n = 1; n <= 14; n++) {
@@ -370,7 +370,7 @@ describe('contrastText (WCAG 2.x relative luminance)', () => {
     });
 });
 
-describe('borderShade (R-VP-32: same hue, lightness 55 %)', () => {
+describe('borderShade (R-VP-37: same hue, lightness 55 %)', () => {
     it('keeps hue and saturation and sets the lightness to 55', () => {
         for (const c of SW) {
             const [h, s] = hslOf(c);
