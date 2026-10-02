@@ -1510,6 +1510,18 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   mutation bench 18/18, the base reads OFF at rest on the real app and the fix ON, four demo scenes 0 px from the
   base run.
 
+- **R-IRN-39** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **The IR node and row
+  subscriptions carry the object's name and its metaclass's name.** `objectSnapshotParts(lookup, objectId, irSig)` in
+  `ir/irResolveCore.ts` is the one self snapshot behind `useIRView` and `useIRRowView`: the slot values as before, then
+  `n=` the name as `getName` reads it from the D-layer (`name ?? initialName`) and `c=` the metaclass's own name, both
+  JSON-quoted. Before it, an intrinsic `name` label on a class with no `name` attribute (no slot moves on a rename) and a
+  `metaclassName` label after a class rename kept the old text, and so did a default row. The metaclass term stops at the
+  class itself (no ancestry walk in a selector that runs for every node on every store update): a rename of a superclass
+  keeps an inherited match stale, a known limit. No schema change, no migration. Implemented in P-2026-10-02-1645
+  (`7c92ffc2c`); mutation bench 14/14 (11/12 first pass, the inverted `name`/`initialName` fallback survived until the
+  test for an object holding both), probe 21/22 after against 11/18 before, memo re-runs of other nodes 0, four demo
+  scenes 0 px from `adb5d9731`.
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
