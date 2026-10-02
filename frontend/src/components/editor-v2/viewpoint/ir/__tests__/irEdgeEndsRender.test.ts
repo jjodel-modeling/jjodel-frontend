@@ -235,3 +235,60 @@ describe('UnifiedEdge — the seven new ends', () => {
         expect(renderEdge(ab, IR('none', 'none', { irSourceEndRole: 'items' }))).toContain('>items</div>');
     });
 });
+
+/**
+ * P-2026-10-02-1505: the trunk of an Activity (UML) junction (P-2026-09-30-1935) carries the edge's own target end.
+ * A new end's marker is cut and oriented per line, so the trunk takes its own. W's decision trunk runs right while
+ * the branch enters A from below; the merge trunk of f1 runs right into W.
+ */
+function junctionScene(): { w1: EdgeSpec; f1: EdgeSpec } {
+    rf.nodes = {
+        W: node('W', 0, 100, 140, 44, [['right-0', 'source', 'right', 1 / 2], ['left-0', 'target', 'left', 1 / 2]]),
+        A: node('A', 400, 0, 100, 40, [['bottom-0', 'target', 'bottom', 1 / 2]]),
+        I: node('I', -400, 300, 20, 20, [['top-0', 'source', 'top', 1 / 2]]),
+    };
+    const w1: EdgeSpec = { id: 'w1', source: 'W', target: 'A', sourceHandle: 'right-0', targetHandle: 'bottom-0' };
+    const f1: EdgeSpec = { id: 'f1', source: 'I', target: 'W', sourceHandle: 'top-0', targetHandle: 'left-0' };
+    rf.edges = [w1, f1];
+    return { w1, f1 };
+}
+const trunkPath = (html: string) => /<path[^>]*class="[^"]*ir-junction-trunk[^"]*"[^>]*>/.exec(html)?.[0] ?? '';
+const DECISION = { irJunctionSource: { kind: 'decision', side: 'right', primary: true } };
+const MERGE = { irJunctionTarget: { kind: 'merge', side: 'left', primary: true } };
+
+describe('UnifiedEdge — a junction trunk with a new end (P-2026-10-02-1505)', () => {
+    it('a decision trunk: its own marker, cut at the glyph\'s back and oriented on the trunk, not on the branch', () => {
+        const { w1 } = junctionScene();
+        const html = renderEdge(w1, IR('none', 'bar', DECISION));
+        const trunk = trunkPath(html);
+        expect(attr(trunk, 'marker-end')).toBe('url(#ir-end-trunk-out-w1)');
+        // The trunk runs right from the handle point to the diamond's near vertex, 40 px; the bar's back is 8.
+        const s = rfPoint(rf.nodes.W, 'right-0', 'source');
+        expect(pts(attr(trunk, 'd')!)).toEqual([s.x, s.y, s.x + 32, s.y]);
+        const mt = markerTag(html, 'ir-end-trunk-out-w1');
+        expect([attr(mt, 'refX'), Number(attr(mt, 'orient'))]).toEqual(['-8', 0]);
+        // The branch keeps its own marker: it enters A from below.
+        expect(Number(attr(markerTag(html, 'ir-end-target-w1'), 'orient'))).toBeCloseTo(-90, 5);
+    });
+
+    it('a merge trunk: the same, into the action', () => {
+        const { f1 } = junctionScene();
+        const html = renderEdge(f1, IR('none', 'erExactlyOne', MERGE));
+        const trunk = trunkPath(html);
+        expect(attr(trunk, 'marker-end')).toBe('url(#ir-end-trunk-in-f1)');
+        const t = rfPoint(rf.nodes.W, 'left-0', 'target');
+        expect(pts(attr(trunk, 'd')!)).toEqual([t.x - 40, t.y, t.x - 12, t.y]);
+        const mt = markerTag(html, 'ir-end-trunk-in-f1');
+        expect([attr(mt, 'refX'), Number(attr(mt, 'orient'))]).toEqual(['-12', 0]);
+    });
+
+    it('an old end keeps the edge\'s own marker on the trunk: no trunk marker, the trunk uncut', () => {
+        const { w1 } = junctionScene();
+        const html = renderEdge(w1, IR('none', 'openArrow', DECISION));
+        const trunk = trunkPath(html);
+        expect(attr(trunk, 'marker-end')).toBe('url(#ir-arrow-open-w1)');
+        expect(markerIds(html).some(m => m.startsWith('ir-end-trunk'))).toBe(false);
+        const s = rfPoint(rf.nodes.W, 'right-0', 'source');
+        expect(pts(attr(trunk, 'd')!)).toEqual([s.x, s.y, s.x + 40, s.y]);
+    });
+});

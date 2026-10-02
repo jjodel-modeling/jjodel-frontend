@@ -582,6 +582,16 @@ function UnifiedEdge(props: EdgeProps) {
         () => (irSourceGlyph || irTargetGlyph ? trimPathEnds(path, irSourceGlyph?.back ?? 0, irTargetGlyph?.back ?? 0) : null),
         [path, irSourceGlyph, irTargetGlyph],
     );
+    // P-2026-10-02-1505: a junction trunk carries the edge's own target end (P-2026-09-30-1935). A new end's marker
+    // is cut and oriented per line, so each primary trunk takes its own cut here and its own marker below; an old
+    // end keeps the edge's marker, whose orient="auto" already follows the trunk.
+    const trunkEnds = useMemo(() => {
+        if (!irTargetGlyph) return null;
+        return {
+            in: junctionIn?.primary && junctionInGeom ? trimPathEnds(junctionTrunkPath(junctionInGeom, 'merge'), 0, irTargetGlyph.back) : null,
+            out: junctionOut?.primary && junctionOutGeom ? trimPathEnds(junctionTrunkPath(junctionOutGeom, 'decision'), 0, irTargetGlyph.back) : null,
+        };
+    }, [irTargetGlyph, junctionIn?.primary, junctionOut?.primary, junctionInGeom, junctionOutGeom]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
@@ -655,6 +665,8 @@ function UnifiedEdge(props: EdgeProps) {
     // Slice E: one marker per end whose glyph is new, its reference and orientation that end's own.
     const markerIREndSourceId = `ir-end-source-${id}`;
     const markerIREndTargetId = `ir-end-target-${id}`;
+    const markerIREndTrunkInId = `ir-end-trunk-in-${id}`;
+    const markerIREndTrunkOutId = `ir-end-trunk-out-${id}`;
     // Map an EdgeTermination to its IR-only per-edge marker (all defined below,
     // gated on isIREdge, and colored inline from irStroke).
     const irMarkerUrl = (t: string | undefined): string | undefined => {
@@ -1038,13 +1050,19 @@ function UnifiedEdge(props: EdgeProps) {
                         {/* Slice E: the seven new ends (edgeEndGlyphs), a marker per end that uses one, in user space,
                             its reference the cut the line stops at. Line work in the ink, a zero's circle on the canvas
                             background, the filled disc in the ink; the stroke the line's resolved width and colour. */}
-                        {([['source', irSourceGlyph, trimmedPath?.start ?? null, markerIREndSourceId], ['target', irTargetGlyph, trimmedPath?.end ?? null, markerIREndTargetId]] as const).map(([role, glyph, cut, markerId]) => {
+                        {([
+                            ['source', irSourceGlyph, trimmedPath?.start ?? null, markerIREndSourceId],
+                            ['target', irTargetGlyph, trimmedPath?.end ?? null, markerIREndTargetId],
+                            // P-2026-10-02-1505: each primary junction trunk's own, cut and oriented on the trunk.
+                            ['target', trunkEnds?.in ? irTargetGlyph : null, trunkEnds?.in?.end ?? null, markerIREndTrunkInId],
+                            ['target', trunkEnds?.out ? irTargetGlyph : null, trunkEnds?.out?.end ?? null, markerIREndTrunkOutId],
+                        ] as const).map(([role, glyph, cut, markerId]) => {
                             if (!glyph) return null;
                             const m = endGlyphMarker(glyph, irGlyphWidth, cut, role);
                             const lineWork = glyphPathD(glyph);
                             return (
                                 <marker
-                                    key={role}
+                                    key={markerId}
                                     id={markerId}
                                     viewBox={m.viewBox}
                                     refX={m.refX}
@@ -1102,8 +1120,8 @@ function UnifiedEdge(props: EdgeProps) {
                 arrowhead (into the action for a merge, into the diamond for a decision), and the diamond over it,
                 white, in the edge's stroke and width. View-only: no node, no model object. */}
             {(junctionIn?.primary || junctionOut?.primary) && [
-                junctionIn?.primary && junctionInGeom ? { key: 'in', g: junctionInGeom, kind: 'merge' as const } : null,
-                junctionOut?.primary && junctionOutGeom ? { key: 'out', g: junctionOutGeom, kind: 'decision' as const } : null,
+                junctionIn?.primary && junctionInGeom ? { key: 'in', g: junctionInGeom, kind: 'merge' as const, trimmed: trunkEnds?.in ?? null, markerId: markerIREndTrunkInId } : null,
+                junctionOut?.primary && junctionOutGeom ? { key: 'out', g: junctionOutGeom, kind: 'decision' as const, trimmed: trunkEnds?.out ?? null, markerId: markerIREndTrunkOutId } : null,
             ].map(j => j && (
                 <g key={`junction-${j.key}`}>
                     <path
@@ -1115,11 +1133,11 @@ function UnifiedEdge(props: EdgeProps) {
                         onClick={(e) => { e.stopPropagation(); selectEdge?.(id); }}
                     />
                     <path
-                        d={junctionTrunkPath(j.g, j.kind)}
+                        d={j.trimmed ? j.trimmed.d : junctionTrunkPath(j.g, j.kind)}
                         fill="none"
                         className={`${edgeClassName} ir-junction-trunk`}
                         style={irPathStyle}
-                        markerEnd={markerEnd}
+                        markerEnd={j.trimmed ? `url(#${j.markerId})` : markerEnd}
                     />
                     <polygon
                         className="ir-junction"
