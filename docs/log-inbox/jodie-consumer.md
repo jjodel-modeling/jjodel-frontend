@@ -103,3 +103,16 @@ active log is not touched by these lanes.
 **Priority**: low
 **Found in**: P-2026-10-02-0740
 **Detail**: docs/discovery/discovery_2026-10-02_168_r_reparent_from_root.md
+
+## 2026-10-02 — merge: 168-reparent into feat/168-jodie-consumer
+**Prompt**: `claude_2026-10-02_1247_prompt_merge_168-reparent.md` (P-2026-10-02-1247) — merge diretto (`lane-run merge --direct`) della lane R, sospesa dopo la Fase 1 per decisione di Juri (opzione d): entra solo il referto e la chiusura, nessun codice.
+**Files touched**: merge `36695c8b3` (2 commit di R: referto `3a5ae1084`, chiusura `20ecaad98`; 3 file docs, zero conflitti); tag `pre-168-reparent` su `a78d614b7`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gate del worker sul merge: typecheck 14 (insieme della punta ricevente), typecheck:scripts, vitest (5505 test, 9 rossi all'import noti), build, check:agents, check:scripts verdi.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — solo docs; il LIR di R sta nel suo referto.
+**Smoke visivo**: non applicabile — merge di soli docs.
+**Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B su `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40). Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
+**Prompt document name**: 2026-10-02 12:47

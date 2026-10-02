@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-1247
 Chat: —
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane merge · 36695c8b3 · nessuna verifica visiva (solo docs); check:docs rosso pre-esistente, identico alla baseline del trunk
 
 Worktree: `/Users/juridirocco/development/jjodel-168`, branch `feat/168-jodie-consumer`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/juridirocco/development/jjodel-168` on `feat/168-jodie-consumer`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-02-1247 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
