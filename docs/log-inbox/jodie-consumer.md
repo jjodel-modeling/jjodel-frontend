@@ -70,3 +70,36 @@ active log is not touched by these lanes.
 **Smoke visivo**: non applicabile — nessuna interfaccia cambiata; la lane B ha verificato con la sua sonda sulla porta 3043.
 **Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B sulle entry `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40), nessuno dalle entry o dai ticket di B. Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
 **Prompt document name**: 2026-10-02 07:32
+
+## 2026-10-02 — docs(#168): discovery R, contenimento e radice del modello (sospesa, opzione d)
+**Prompt**: `claude_2026-10-02_0740_prompt_168_r_reparent_from_root.md` (P-2026-10-02-0740) — correzione nel core: uno spostamento per contenimento da un oggetto con padre il modello lo toglie da `model.objects` (ramo di contenimento di `get_setValueAtPosition`). Fase 1 di verifica e Layer Impact Report, Fase 2 dopo il GO.
+**Files touched**: `3a5ae1084`: `docs/discovery/discovery_2026-10-02_168_r_reparent_from_root.md` (nuovo); commit di chiusura: `docs/log-inbox/jodie-consumer.md`, la riga Status del prompt. Nessun file di codice. Sonda `frontend/scripts/smoke/_tmp_168_r_baseline.ts`, non committata (`_tmp_*`).
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — nessun file di codice modificato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — referto §7.
+**Smoke visivo**: non applicabile — sospesa dopo la Fase 1, nessuna modifica.
+**Notes**: Sospesa per decisione di Juri (opzione d). La premessa «copiare set_father» non reggeva: getCollection() su nomi di classe restituisce '' e set_father non tocca collezioni. La voce del figlio ri-padrato in model.objects è portante: la producono i gesti connect e add-child del canvas, la leggono gli archi M1, la ricerca per nome di JjScript e la conformità. Sonda 3044, 25/25, stato corretto simulato. Tre ticket sotto.
+**Prompt document name**: 2026-10-02 07:40
+
+**Ticket** (minori, senza voce propria; referto §9.6): il `set_father` di base non mantiene alcuna collezione e passerebbe l'id sbagliato (`LModelElement.tsx:763-766`, referto §5.2); il commento di `irContainment.ts:78-79` («an object created by the canvas keeps `father = DModel`») non vale dopo `syncCreateCompositionLink`; React Flow continua a dipingere un arco il cui DEdge è stato cancellato dalla riconciliazione (referto §5.4, CV2).
+
+## 2026-10-02 — ticket: due forme di annidamento nel core, e consumatori che leggono solo model.objects
+**Ticket**: Un figlio scritto in uno slot di composizione da `get_setValueAtPosition` (JjScript `set`, gesti connect e add-child del canvas, picker del form IR, output JjTL) ha `father` = slot ma resta in `model.objects`. Un figlio di `addObject` ha `father` = slot ed è fuori da `objects`. I consumatori che leggono solo `model.objects` trattano le due forme in modo diverso: archi di riferimento M1 (`useM1ReferenceEdges.ts:131`, `m1EdgeSweep.ts:81`, che eliminano gli archi uscenti di un figlio fuori da `objects`, misurato), ricerca per nome di JjScript (`instance.ts:117-120`), conformità (`ConformanceValidator.ts:35`). Unificare le due forme richiede lane in critical zone fuori dal perimetro di #168.
+**Priority**: medium
+**Found in**: P-2026-10-02-0740
+**Detail**: docs/discovery/discovery_2026-10-02_168_r_reparent_from_root.md
+
+## 2026-10-02 — ticket: l'espulsione da uno slot di composizione lascia un orfano
+**Ticket**: `_clearValueAtPosition` (`LModelElement.tsx:7855-7856`) ri-padra al modello l'oggetto espulso da uno slot di composizione senza rimetterlo in `model.objects`. Misurato su un figlio di `addObject` espulso con `formWrite.clearValue`: `father` = DModel, fuori da `objects`, quindi invisibile alle letture che partono dalle radici. Un figlio nato alla radice oggi resta coerente solo perché non ha mai lasciato `objects`.
+**Priority**: low
+**Found in**: P-2026-10-02-0740
+**Detail**: docs/discovery/discovery_2026-10-02_168_r_reparent_from_root.md
+
+## 2026-10-02 — ticket: se un riferimento di aggregazione debba ri-padrare l'oggetto
+**Ticket**: `LReference.get_containment` restituisce `composition || aggregation` (`LModelElement.tsx:4202`), quindi `set s.team = p` su un riferimento di aggregazione sposta `p` nello slot. Misurato: `father` = slot `team`, `p` ancora in `model.objects`. Da decidere se un'aggregazione (condivisa, non proprietaria) debba ri-padrare l'oggetto come una composizione.
+**Priority**: low
+**Found in**: P-2026-10-02-0740
+**Detail**: docs/discovery/discovery_2026-10-02_168_r_reparent_from_root.md
