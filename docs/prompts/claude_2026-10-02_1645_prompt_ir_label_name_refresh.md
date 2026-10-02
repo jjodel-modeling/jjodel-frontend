@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-1645
 Chat: C-2026-10-01-2349
 Lane: fast (one subscription signature, root cause already read by the chat). Phase 1 short, then Phase 2 in cascade. Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane ir-label-name-refresh · 7c92ffc2c · Q1-Q4 adopted as recommended (unattended) · verifica della chat sulle misure della probe (before 11/18, after 21/22: renamed node re-resolves, others untouched; the one failure is the lane own two-frame bound on the metaclass rename, correct at the next read), scene 0 px, crop non ispezionati a vista · merge senza GO visivo di Alfonso: non cambia la demo (RC-26), su suo «1. proceed» del 2026-10-02
 
 Worktree: `~/jjodel-w-labelname`, branch `ir-label-name-refresh`, created from the trunk `alfonso-frontend-jjtl` at `adb5d9731`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-labelname`, branch `ir-label-name-refresh`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
