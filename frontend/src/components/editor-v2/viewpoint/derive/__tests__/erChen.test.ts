@@ -390,6 +390,8 @@ describe('the signal prefill (erSignals.ts)', () => {
         expect(derivedViewpointState(mm.lookup, mm.id, { notation: 'erChen', classRoles: roles })).toEqual({
             derivedFrom: 'ERDL', derivedNotation: 'erChen',
             'derivedRole_ERDL.Entity': 'entity', 'derivedRole_ERDL.Attribute': 'attribute', 'derivedRole_ERDL.Relationship': 'relationship',
+            // P-2026-10-01-2215 (Q2): the notation's layout profile travels with the viewpoint.
+            derivedLayout: JSON.stringify(DERIVED_NOTATIONS.find(n => n.id === 'erChen')!.layout),
         });
     });
 });

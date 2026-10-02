@@ -36,10 +36,11 @@ import { sketchOfMetamodel } from '../../sim/metamodelSketch';
 import { storedProfile } from '../../sim/simRoleStatus';
 import { structuralHash } from '../ir/irDefaults';
 import type { GeneratedProvenance } from '../ir/irTypes';
-import { DERIVATION_CLASS_ROLES, activitySignalRole, deriveChenViewpointIRs, deriveViewpointForBinding, rolesFromTable } from './viewpointDerivation';
+import { ACTIVITY_LAYOUT_DIRECTION, DERIVATION_CLASS_ROLES, activitySignalRole, deriveChenViewpointIRs, deriveViewpointForBinding, rolesFromTable } from './viewpointDerivation';
 import type { AnyDerivedView, DerivationRoles } from './viewpointDerivation';
 import { ER_ROLE_IDS, ER_ROLE_LABELS, erSignalRoles, isErRole } from './erSignals';
 import type { ErRoleId } from './erSignals';
+import type { ElkLayoutProfile } from '../../utils/elkLayout';
 
 type Lookup = Record<string, any>;
 
@@ -68,29 +69,49 @@ export interface DerivedNotation {
     readonly roles?: readonly ErRoleId[];
     /** Roles a notation adds after its profile's (R-VP-26: Activity (UML)'s decision). */
     readonly extraRoles?: readonly ActivityRoleId[];
+    /**
+     * The toolbar auto-layout's profile (P-2026-10-01-2215, Q2), copied into the derived viewpoint's
+     * `_state` at derivation. Absent: today's strategy. Values: the best variants measured in
+     * docs/discovery/discovery_2026-10-01_elk_layout_quality.md §5.1.
+     */
+    readonly layout?: ElkLayoutProfile;
 }
+
+/** The compact spacing the profiles share (Phase 1 V4): node 40, layer 56, edge-node 24, edge-edge 16, label 4. */
+const COMPACT = { node: 40, layer: 56, edgeNode: 24, edgeEdge: 16, label: 4 } as const;
 
 /** The notations of the dialog's select, in its order; Generic is the default. */
 export const DERIVED_NOTATIONS: readonly DerivedNotation[] = [
     { id: 'generic', label: 'Generic', profile: null, nodeLabel: 'Node' },
     { id: 'stateMachine', label: 'State machine', profile: 'stateMachine', nodeLabel: 'State' },
     // A1 (P-2026-09-30-0355, R-VP-22): beside State machine, on its profile and prefill.
-    { id: 'statechart', label: 'Statechart (UML)', profile: 'stateMachine', nodeLabel: 'State' },
+    { id: 'statechart', label: 'Statechart (UML)', profile: 'stateMachine', nodeLabel: 'State',
+        // Its transitions are arcs between the route's ends: wider edge and node spacing keep neighbouring chords, and
+        // the labels at their middles, apart.
+        layout: { direction: 'RIGHT', edgeRouting: 'ORTHOGONAL', nodePlacement: 'BRANDES_KOEPF', layerConstraints: { first: ['initial'], last: ['terminal'] }, spacing: { ...COMPACT, node: 80, edgeEdge: 32 } } },
     { id: 'petri', label: 'Petri net', profile: 'petri', nodeLabel: 'Place' },
     // A2 (P-2026-09-30-1521, R-VP-24): beside Petri net, on its profile and prefill.
-    { id: 'petriClassic', label: 'Petri net (classic)', profile: 'petri', nodeLabel: 'Place' },
-    { id: 'flowchart', label: 'Flowchart', profile: 'flowchart', nodeLabel: 'Node' },
+    { id: 'petriClassic', label: 'Petri net (classic)', profile: 'petri', nodeLabel: 'Place',
+        layout: { direction: 'RIGHT', edgeRouting: 'POLYLINE', nodePlacement: 'NETWORK_SIMPLEX', spacing: { ...COMPACT } } },
+    { id: 'flowchart', label: 'Flowchart', profile: 'flowchart', nodeLabel: 'Node',
+        layout: { direction: 'DOWN', edgeRouting: 'ORTHOGONAL', nodePlacement: 'NETWORK_SIMPLEX', layerConstraints: { first: ['initial'], last: ['terminal', 'activityFinal'] }, spacing: { ...COMPACT } } },
     // A3 (P-2026-09-30-0355, R-VP-22): beside Flowchart, on its profile and prefill.
     { id: 'flowchartIso', label: 'Flowchart (ISO 5807)', profile: 'flowchart', nodeLabel: 'Node' },
     // P-2026-09-30-1552 (R-VP-26): beside the two flowcharts, on their profile, with a Decision role of its own.
-    { id: 'activityUml', label: 'Activity (UML)', profile: 'flowchart', nodeLabel: 'Action', extraRoles: ACTIVITY_ROLE_IDS },
+    { id: 'activityUml', label: 'Activity (UML)', profile: 'flowchart', nodeLabel: 'Action', extraRoles: ACTIVITY_ROLE_IDS,
+        // The fork and join bars follow this direction (Q7): viewpointDerivation.ts reads the same constant.
+        layout: { direction: ACTIVITY_LAYOUT_DIRECTION, edgeRouting: 'ORTHOGONAL', nodePlacement: 'BRANDES_KOEPF', layerConstraints: { first: ['initial'], last: ['terminal', 'activityFinal'] }, spacing: { ...COMPACT } } },
     // A4 (P-2026-09-30-0440, R-VP-23): no profile; the four ER roles, prefilled by erSignals.ts.
-    { id: 'erChen', label: 'ER (Chen)', profile: null, nodeLabel: 'Entity', roles: ER_ROLE_IDS },
+    { id: 'erChen', label: 'ER (Chen)', profile: null, nodeLabel: 'Entity', roles: ER_ROLE_IDS,
+        // Q6: no flow direction; stress, ELK's overlap removal, straight lines.
+        layout: { algorithm: 'stress', overlapRemoval: true, edgeLength: 110 } },
 ];
 
 /** The keys of a derived viewpoint's `_state` (R-VP-21, persisted names, R-B9). */
 export const DERIVED_FROM_KEY = 'derivedFrom';
 export const DERIVED_NOTATION_KEY = 'derivedNotation';
+/** The notation's layout profile, a JSON string (P-2026-10-01-2215, Q2); absent when the notation has none. */
+export const DERIVED_LAYOUT_KEY = 'derivedLayout';
 /** One key per bound class: `derivedRole_<classId>`, its role id as value. */
 export const DERIVED_ROLE_PREFIX = 'derivedRole_';
 /** `ir.generated.by` of every view this derivation creates. */
@@ -303,12 +324,17 @@ function derivationRolesOf(lookup: Lookup, metamodelId: string, choice: DeriveCh
     return { bag, shape: profile.shape, classRoles, ...(notation ? { notation } : {}) };
 }
 
-/** The `_state` of the derived viewpoint: where it came from, the notation, one `derivedRole_<classId>` per bound class. */
+/**
+ * The `_state` of the derived viewpoint: where it came from, the notation, one `derivedRole_<classId>` per bound class,
+ * and the notation's layout profile when it has one (P-2026-10-01-2215, Q2).
+ */
 export function derivedViewpointState(lookup: Lookup, metamodelId: string, choice: DeriveChoice): Record<string, string> {
     const out: Record<string, string> = { [DERIVED_FROM_KEY]: metamodelId, [DERIVED_NOTATION_KEY]: choice.notation };
     for (const [id, role] of Object.entries(cleanTable(lookup, metamodelId, choice.notation, Object.entries(choice.classRoles)))) {
         out[`${DERIVED_ROLE_PREFIX}${id}`] = role;
     }
+    const layout = notationOf(choice.notation)?.layout;
+    if (layout) out[DERIVED_LAYOUT_KEY] = JSON.stringify(layout);
     return out;
 }
 
