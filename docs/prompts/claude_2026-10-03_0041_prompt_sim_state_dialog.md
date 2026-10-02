@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-0041
 Chat: C-2026-10-02-2340
 Lane: full (Phase 2, simulation dialogs, tests first, visual check by the chat). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane sim-state-dialog · b8ac89fcd, 0889e83be, a57092326, b4b32bd72 · the State page in two columns in both dialogs (1120 × 600, no layout shift between the picker, the roles and the State page), kind chip, access path, E-NODE before Apply, Written by and Read by on selection (simStateUsage.ts), «State of …»; the chat's first visual check (RC-23) fixed in a57092326: DEFINE and IVAR chips in the entity palette's operation and model tokens, no inner Globals heading in the model dialog; tests first, mutation bench 21/21, typecheck 14 (the §17 set), sim suites 395/395, build exit 0, lane probe on 3064 (light) 78/78, crops docs/discovery/harness/_tmp_simdialog_*.png (gitignored) · GO visivo della chat 2026-10-03 (RC-23) sulle crop fresche: State page two columns with the one-way arrow, E-NODE before Apply, Written by/Read by on ESM and Flow B, DEFINE indigo and IVAR amber chips, concrete chips dashed pink, model dialog with Globals once · non fuso
 
 Worktree: `~/jjodel-w-simdialog`, branch `sim-state-dialog`, cut by the chat from `sim-state-disc` at `fece79bc3` (the discovery branch, merging into the trunk as P-2026-10-03-0032), `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-simdialog`, branch `sim-state-dialog`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
