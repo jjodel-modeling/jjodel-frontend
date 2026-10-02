@@ -1667,6 +1667,28 @@ $transition-menu: 150ms ease;
   .appbar-last-saved { display: none; }
 }
 
+// #157 R1 — «Save» beside the save state (field test 2026-09-29: no visible save).
+// Secondary, like the Data Manager's save: a command, but not the page's primary one.
+.appbar-save {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { border-color: var(--color-accent); }
+  &:disabled { opacity: 0.6; cursor: progress; }
+}
+
 // ============================================
 // APP BAR SEPARATOR
 // ============================================

@@ -95,7 +95,11 @@ export function createM2(project: LProject, name0?: string) {
     });
 }
 
-export function createM1(project: LProject, metamodel: LModel) {
+/** `open` (#157, 2026-10-01): false creates the model without opening its editor. The
+ *  Configurator's «Create model» needs it: opening the editor hides the LeftBar, which hosts
+ *  the Configurator, so the overlay closed under the user (measured by probe). Default true:
+ *  every menu path is unchanged. */
+export function createM1(project: LProject, metamodel: LModel, open: boolean = true) {
     let name = 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
@@ -104,7 +108,7 @@ export function createM1(project: LProject, metamodel: LModel) {
     project.models = [...project.models, lModel];
     project.graphs = [...project.graphs, lModel.node as LGraph];
     // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
-    DockManager.open2(lModel);
+    if (open) DockManager.open2(lModel);
 
     // Log activity
     ActivityLogger.log({
@@ -1825,6 +1829,17 @@ function NavbarComponent(props: AllProps) {
     }
 
     const [showOverflow, setShowOverflow] = useState(false);
+    /** #157 R1 — the topbar «Save» is busy for the duration of one save, nothing more. */
+    const [savingProject, setSavingProject] = useState(false);
+    const saveFromTopbar = async () => {
+        if (savingProject || !project) return;
+        setSavingProject(true);
+        try {
+            await saveProjectWithFeedback(project);
+        } finally {
+            setSavingProject(false);
+        }
+    };
     const overflowBtnRef = useRef<HTMLButtonElement>(null);
     const overflowDropdownRef = useRef<HTMLDivElement>(null);
     const [overflowMenuPos, setOverflowMenuPos] = useState({ top: 0, left: 0 });
@@ -1845,7 +1860,8 @@ function NavbarComponent(props: AllProps) {
 
     return(<>
         <nav id={'navbar'} className={'w-100 nav-container d-flex appbar'}>
-            <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
+            {/* #157 R5: inert in consumer — the catalogue is the developer's (decision of 2026-10-01). */}
+            <div className='nav-logo' onClick={() => { if (!consumer) R.navigate('/allProjects'); }}>
                 <div className={"aligner"}>
                     <img
                         src={jjodelLogo}
@@ -1855,13 +1871,16 @@ function NavbarComponent(props: AllProps) {
                 </div>
             </div>
             <div className="appbar__sep" />
-            <MainMenu items={items} />
+            {/* #157 R5 (mockup of @tmaog): no Jjodel/File/Edit/View menus in consumer. Ctrl/Cmd+S
+                still saves: the shortcut reads the URL, not the menu. */}
+            {!consumer && <MainMenu items={items} />}
             <section className='nav-commands d-flex'>
                 {project && debuggerr ? <DebuggerComponent /> : null}
             </section>
 
-            {/* Project label — click activates the project-summary tab (dashboard) */}
-            {project && (
+            {/* Project label — click activates the project-summary tab (dashboard). Not in
+                consumer (R5): there the Configurator is the page and there are no tabs. */}
+            {project && !consumer && (
                 <div
                     className="project-label"
                     onClick={() => {
@@ -1884,8 +1903,8 @@ function NavbarComponent(props: AllProps) {
                 </div>
             )}
 
-            {/* Custom Tab Strip */}
-            {project && (
+            {/* Custom Tab Strip — not in consumer (R5), and with it the «+» new-document button. */}
+            {project && !consumer && (
                 <div className="appbar-tabs">
                     {tabsToShow.map(tab => {
                         const badge = getTabBadge(tab.type);
@@ -1973,6 +1992,22 @@ function NavbarComponent(props: AllProps) {
                     una seconda fonte di verita'; si rende da solo `null` finche' non
                     c'e' niente da raccontare. */}
                 {project && <LastSavedIndicator />}
+                {/* #157 R1 (field test 2026-09-29, decision of 2026-10-01): a visible «Save»
+                    beside the save state, for developer and consumer alike. Fourth caller of
+                    `saveProjectWithFeedback`, not a fourth save: menu, Ctrl/Cmd+S and the Data
+                    Manager's button go through the same function. Always enabled but while
+                    saving, as the Data Manager's: `U.isProjectModified` is not subscribable. */}
+                {project && (
+                    <button
+                        type="button"
+                        className="appbar-save"
+                        title="Save the project (Ctrl/Cmd+S)"
+                        disabled={savingProject}
+                        onClick={saveFromTopbar}
+                    >
+                        <i className="bi bi-floppy" aria-hidden="true" /> Save
+                    </button>
+                )}
                 {project && <div className="appbar__sep" />}
                 {/* Basic/Advanced mode switch — the single visible writer for the global
                     interface mode (2026-07-30). Replaces the former read-only level badge:

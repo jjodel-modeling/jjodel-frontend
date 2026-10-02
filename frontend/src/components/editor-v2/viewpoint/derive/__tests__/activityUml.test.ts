@@ -292,11 +292,11 @@ describe('Activity (UML) — the documents on DemoFlowB', () => {
         expect(ir.defaultSize).toEqual({ width: 36, height: 36 });
     });
 
-    it('fork and join: a filled bar in the ink, upright, 5 by 120, no name', () => {
+    it('fork and join: a filled bar in the ink, upright, 7 by 120, no name', () => {
         for (const name of ['Fork', 'Join']) {
             const ir = irOf(views, name);
             expect(ir.shape, name).toEqual({ form: 'bar', fill: INK, border: INK_BORDER, labels: [] });
-            expect(ir.defaultSize, name).toEqual({ width: 5, height: 120 });
+            expect(ir.defaultSize, name).toEqual({ width: 7, height: 120 });
         }
     });
 

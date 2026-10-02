@@ -4652,6 +4652,21 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   labels overlap each other 12 px right of `work`. (4) The initial, the fork and the join sit off the actions' axis
   because the stored positions are top-left aligned (`i0 (50,50)`, `work (470,50)`); the derivation writes no position
   (the layout ticket). Prompt P-2026-09-30-1935.
+- **R-VP-36** (2026-10-01, ratified by Alfonso 2026-10-01, evidence: measured, verified: none, reversible: branch).
+  **The Activity (UML) fork and join bar is declared 7 px thick, painted 5; amends R-VP-26 (2) on the bar thickness only.**
+  Alfonso, 2026-10-01, asked «Fork/join bar declared 5 px draws 3 px (1 px border each side). Keep 5 or 7?» (the
+  2026-09-30 checkpoint): «7». `ACTIVITY_BAR_SIZE` goes from 5×120 to 7×120 (`viewpointDerivation.ts`); the height, the
+  fill, the border, the upright bar and everything else in the notation stay; `CLASSIC_BAR_SIZE` (R-VP-24, 10×44) does not
+  move; the text of R-VP-26 is not edited (add-only). Viewpoints already derived keep the 5 they saved, as R-VP-25 accepted
+  for the arrowheads: the size is copied onto each view at derivation (`deriveViewpoint.ts:73`) and read from it at render
+  (`IRNodeContent.tsx:275`), so a saved «(derived)» viewpoint shows 7 once deleted and derived again; no scene file,
+  persisted project or migration is edited (no IR key, no `irVersion` bump). Source:
+  `docs/discovery/discovery_2026-10-01_activity_bar_7px.md`. Measured on the lane probe, 3090, light, 1600×1000, DPR 2: with
+  the constant at 5 (the code of `ac3890b7e`) DemoFlowB as Activity (UML) draws the fork and the join node 5×120, painted
+  3×118; at 7 both node 7×120, painted 5×118, filled in the ink, no name, identical at rest, the stored views carrying
+  `defaultSize` 7×120; the initial 20, the bull's-eye 24, the decision 36 and the actions 44 unchanged; the four demo scenes
+  in the default viewpoint byte-identical to the run at 5 (0 px); the tests 2 of 47 red first, 441/441 after; mutation
+  bench 16/16. Prompt P-2026-10-01-2230, commit `c3b0556d6`.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
@@ -5035,6 +5050,19 @@ run starts, because `ScriptBlock` cannot name a Jjodie reply's bound metamodel. 
 There was no success toast on this path to replace. The inline strip stays as the per-message record.
 `RunSummaryDialog` is a new component that reuses the `ExecutionErrorDialog` shell; light theme only.
 Code `1315e15c4`.
+
+**R-JS-7** (2026-10-01, provisional, unattended) — **A retry pass waits for every dependency.** Decided
+by the chat `C-2026-10-01-1725` in the GO of `P-2026-10-01-2136` under RC-25, from ticket T8
+(`docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md` §4.8). In pass 2 and later of a Run
+(R-JS-3), `waitForDependencies` awaits every dependency of the retried command, `type-reference` and
+`value-reference` included, up to `MAX_WAIT_MS`. Pass 1 keeps R-JS-1: only `required` dependencies are
+awaited, so a forward reference still fails at once and is deferred. Cause: the retry ran with no wait,
+the target created by a later line had not reached the resolvers yet, the retry failed again, and a pass
+with no success ends the run, so line 14 of the probe's script stayed a final error on run 1 of every
+variant. `runPasses` publishes the retry pass (`isRetryPass()`, module state raised around each command
+and lowered in a `finally`), because the host chain (`ScriptBlock` → `onExecute` → `JjScriptService` →
+executor) carries no pass number. Accepted cost: a retried command whose name never resolves waits
+`MAX_WAIT_MS` per retry pass. Amends R-JS-1 for retry passes only. Code `4bbf7e640`.
 
 ## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
 

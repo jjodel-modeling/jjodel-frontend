@@ -22,8 +22,10 @@
 import { describe, it, expect } from 'vitest';
 import { attrShape, classifyAttrType, featureFlags, referencedBy } from '../../../editor-v2/hooks/shapeDraw';
 import {
+    SUMMARY_LIMIT,
     filterRows,
     orderColumns,
+    referenceSummary,
     slotShapeFor,
     tableColumns,
     tableRow,
@@ -556,5 +558,92 @@ describe('filterRows', () => {
     it('is case-insensitive and returns everything on an empty query', () => {
         expect(filterRows(rows, '  GREEN ').map(r => r.id)).toEqual(['s1']);
         expect(filterRows(rows, '   ')).toHaveLength(2);
+    });
+});
+
+// --- #158 P4: the summary of a referenced element ---------------------------
+
+describe('referenceSummary', () => {
+    const s1 = tableRow(idlookup, 's1', Sensor, shape);
+    const s2 = tableRow(idlookup, 's2', Sensor, shape);
+    const keys = (items: { key: string }[]) => items.map(i => i.key);
+
+    it('positive control: s1 holds values in tint, threshold, tags and cfg', () => {
+        expect(s1.cells.tint.text).toBe('Green');
+        expect(s1.cells.threshold.text).toBe('42');
+        expect(s1.cells.tags.text).not.toBe('');
+        expect(s1.cells.cfg.text).toBe('cfg1');
+    });
+
+    it('without a view, the required features — minus the name the link already prints', () => {
+        // name and cfg are the required ones; name is the identity.
+        expect(referenceSummary(Sensor, s1)).toEqual([{ key: 'cfg', label: 'cfg', text: 'cfg1' }]);
+    });
+
+    it('a declared basic is the answer, in the shape order', () => {
+        expect(keys(referenceSummary(Sensor, s1, { basic: ['threshold', 'tint'] }))).toEqual(['tint', 'threshold']);
+    });
+
+    it('the view order leads', () => {
+        const form = { basic: ['threshold', 'tint'], order: ['threshold'] };
+        expect(keys(referenceSummary(Sensor, s1, form))).toEqual(['threshold', 'tint']);
+    });
+
+    it('the label is the view\'s, the text the cell\'s', () => {
+        const [item] = referenceSummary(Sensor, s1, { basic: ['tint'], labels: { tint: 'Colour' } });
+        expect(item).toEqual({ key: 'tint', label: 'Colour', text: 'Green' });
+    });
+
+    it('a hidden feature never shows, by either channel', () => {
+        expect(keys(referenceSummary(Sensor, s1, { basic: ['tint', 'threshold'], hidden: ['tint'] }))).toEqual(['threshold']);
+        expect(keys(referenceSummary(Sensor, s1, { basic: ['tint', 'cfg'], features: { cfg: 'hidden' } }))).toEqual(['tint']);
+    });
+
+    it('a declared basic with nothing valued gives nothing: no fallback over an author', () => {
+        expect(referenceSummary(Sensor, s1, { basic: ['computed'] })).toEqual([]);
+        expect(referenceSummary(Sensor, s1, { basic: [] })).toEqual([]);
+    });
+
+    it('the heuristic with nothing valued falls back to the first valued attributes', () => {
+        // cfg, the only required feature besides the name, is hidden here.
+        const items = referenceSummary(Sensor, s1, { features: { cfg: 'hidden' } });
+        expect(keys(items)).toEqual(['tint', 'threshold', 'tags']);
+    });
+
+    it('a broken pointer is not a value', () => {
+        // s2.cfg dangles and s2 has no other value: the summary is empty, not «gone».
+        expect(s2.cells.cfg.broken).toBe(true);
+        expect(referenceSummary(Sensor, s2)).toEqual([]);
+    });
+
+    it('a broken slot stays out even when it prints its good values', () => {
+        // One dangling pointer among good ones: `slotShapeFor` keeps the good texts
+        // AND flags the slot. The table says «broken»; the summary says nothing.
+        // cfg is the only required feature besides the name, so with it out the
+        // heuristic is empty and the attribute fallback speaks instead.
+        const partly = { ...s1, cells: { ...s1.cells, cfg: { ...s1.cells.cfg, broken: true } } };
+        expect(partly.cells.cfg.text).toBe('cfg1');
+        expect(keys(referenceSummary(Sensor, partly))).toEqual(['tint', 'threshold', 'tags']);
+    });
+
+    it('the fallback lists attributes only, never a reference', () => {
+        // cfg made optional: no required feature but the name, so the fallback runs,
+        // and cfg — valued — is left out even with room for it.
+        const loose: ClassShape = { ...Sensor, refs: [{ ...Sensor.refs[0], lower: 0, required: false }] };
+        const row = tableRow(idlookup, 's1', loose, shape);
+        expect(row.cells.cfg.text).toBe('cfg1');
+        expect(keys(referenceSummary(loose, row, null, 10))).toEqual(['tint', 'threshold', 'tags']);
+    });
+
+    it('a value equal to the name is not repeated', () => {
+        const echo = { ...s1, cells: { ...s1.cells, threshold: { ...s1.cells.threshold, text: 's1' } } };
+        expect(keys(referenceSummary(Sensor, echo, { basic: ['tint', 'threshold'] }))).toEqual(['tint']);
+    });
+
+    it('caps at SUMMARY_LIMIT, and at the limit given', () => {
+        expect(SUMMARY_LIMIT).toBe(3);
+        const form = { basic: ['tint', 'threshold', 'tags', 'cfg'] };
+        expect(referenceSummary(Sensor, s1, form)).toHaveLength(3);
+        expect(keys(referenceSummary(Sensor, s1, form, 2))).toEqual(['tint', 'threshold']);
     });
 });

@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Handle, Position, useEdges, useStoreApi } from '@xyflow/react';
+import React, { memo, useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { Handle, Position, useStore, useStoreApi, type Edge, type ReactFlowState } from '@xyflow/react';
 import { MAX_HANDLES_PER_SIDE, type Side } from '../utils/portDistribution';
 import { computeSideEndpoints, computeSidePositions } from '../utils/handlePosition';
 import { getShapeDescriptor } from '../viewpoint/ir/shapeRegistry';
@@ -23,6 +23,36 @@ interface DynamicHandlesProps {
      * nodo senza forma geometrica, che ricadono su `rect`, cioe' rientro nullo.
      */
     shapeForm?: ShapeForm;
+}
+
+/**
+ * The fields of an edge that this component reads: `edgeTopologyKey` below lists them, and
+ * `computeSideEndpoints` (handlePosition.ts) reads no other. Two edges with the same key draw
+ * the same handles.
+ */
+const edgeKey = (e: Edge): string =>
+    `${e.id}:${e.source}:${e.target}:${e.type}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}`;
+
+/**
+ * The edges that touch `nodeId`, in store order. Every computation below filters the flow's
+ * edges on `source === nodeId || target === nodeId` first, so it sees exactly these.
+ */
+export function selectOwnEdges(edges: readonly Edge[], nodeId: string): Edge[] {
+    return edges.filter(e => e.source === nodeId || e.target === nodeId);
+}
+
+/**
+ * Equal when both lists hold, in the same order, edges with the same `edgeKey`. React Flow
+ * replaces edge objects on every sync, so identity alone would re-render every node; a change
+ * in a field outside the key (data, label, style, selection) draws no handle differently.
+ */
+export function ownEdgesEqual(a: readonly Edge[], b: readonly Edge[]): boolean {
+    if (a === b) return true;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i] && edgeKey(a[i]) !== edgeKey(b[i])) return false;
+    }
+    return true;
 }
 
 /** Distance in px from node edge within which a side is considered "hovered". */
@@ -94,7 +124,14 @@ function scheduleNodeInternalsUpdate(storeApi: { getState: () => any }, nodeId: 
  * React keys are stable (${side}-${index}) so handles never mount/unmount.
  */
 function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
-    const edges = useEdges();
+    // This node's edges only, compared on the fields read below (P-2026-10-01-2136, fix 2).
+    // useEdges() re-rendered the 32 handles of every node on any edge change of the flow:
+    // 240,928 handle renders in one 16-command Run at 84 nodes
+    // (docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md §4.1).
+    const edges = useStore(
+        useCallback((s: ReactFlowState) => selectOwnEdges(s.edges, nodeId), [nodeId]),
+        ownEdgesEqual
+    );
     const storeApi = useStoreApi();
     const shape = getShapeDescriptor(shapeForm);
 
@@ -415,4 +452,10 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
     );
 }
 
-export default DynamicHandles;
+/**
+ * Memoized with React's default shallow comparison of the props, which is exact here: `nodeId`
+ * is a string and `shapeForm` a string or undefined. A parent node re-rendering for its own
+ * reasons no longer re-renders the handle pool; the pool re-renders on its own edges
+ * (`useStore` above) and on hover.
+ */
+export default memo(DynamicHandles);
