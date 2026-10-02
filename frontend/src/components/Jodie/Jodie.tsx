@@ -18,11 +18,21 @@ import {
     CONSOLE_MODES, ConsoleModeSwitchVia, JjodieScope
 } from '../../types/jodie';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
-import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
+import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
 import { getActiveModel, getActiveMetamodel, getActiveLevel, setActiveArtifactCache } from '../../jjscript/executor/utils';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
+import { findProfile } from '../../joiner/environmentConfig';
+import { activeProfileId, isConsumerMode } from '../environment/consumerMode';
+import {
+    describeConsumerSelection,
+    filterContextForProfile,
+    getConsumerSelection,
+    resolveConsumerArtifact,
+    selectionNotice,
+    withConsumerSelection,
+} from '../environment/consumerJodieContext';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { consoleLanguageRegistry } from './console/languageRegistry';
@@ -76,6 +86,35 @@ function useLocalStorageString<T extends string>(key: string, defaultValue: T): 
     return [value, set];
 }
 
+/**
+ * #168 J1, J2 — context and scope in the stand-alone consumer (`?profile=`). The artefact is the
+ * Configurator's selection, never the hidden Dock's tab: `getActiveLevel` and its siblings read a
+ * state the consumer cannot see (on a fresh load nothing, after a developer session a metamodel).
+ * The context passes through the profile's filter with the selection inside it; the scope is
+ * stamped as for the developer: M1, the model's metamodel, the model.
+ */
+function consumerContextBundle(project: LProject): { text?: string; scope?: JjodieScope } {
+    const idlookup = (store.getState() as any).idlookup ?? {};
+    const modelIds = (((project as any).models ?? []) as Array<{ id: string } | null>)
+        .map((m) => m?.id)
+        .filter((id): id is string => typeof id === 'string');
+    const selection = getConsumerSelection();
+    const activeArtifact = resolveConsumerArtifact(selection, idlookup, modelIds);
+    const raw = JjodieContextService.getContextJSON(project, activeArtifact);
+    const profile = findProfile(idlookup, activeProfileId());
+    const text = raw
+        ? JSON.stringify(filterContextForProfile(withConsumerSelection(JSON.parse(raw), idlookup, selection), idlookup, profile), null, 2)
+        : undefined;
+    const shown = JjodieContextService.resolveMetamodelScope(project, activeArtifact);
+    const scope: JjodieScope | undefined = text && shown && activeArtifact ? {
+        level: 'M1',
+        metamodelId: shown.id,
+        metamodelName: shown.name ?? 'Unnamed',
+        modelId: activeArtifact.id,
+    } : undefined;
+    return { text, scope };
+}
+
 export function Jodie(): JSX.Element {
     const navigate = useNavigate();
     const settingsModal = useSettingsModalSafe();
@@ -120,6 +159,11 @@ export function Jodie(): JSX.Element {
     // when the active editor tab changes (independent of redux state churn).
     const [editorChangeCounter, setEditorChangeCounter] = useState(0);
 
+    // #168 J1 — bumped on CONFIGURATOR_SELECTION_CHANGED, so the context follows the consumer's
+    // selection; the last selection said in the chat, so it is said once.
+    const [consumerSelectionCounter, setConsumerSelectionCounter] = useState(0);
+    const lastSelectionRef = useRef<string | undefined>(undefined);
+
     // Tracks the last artefact for which a context-switch notice was injected,
     // so we don't emit duplicates on tab events that don't actually change focus.
     const lastArtifactRef = useRef<string | undefined>(undefined);
@@ -136,6 +180,9 @@ export function Jodie(): JSX.Element {
         const project = user.project;
         if (!project) return {};
         try {
+            // #168 J1, J2: in the stand-alone consumer the Configurator's selection is the
+            // artefact and the profile filters the context.
+            if (isConsumerMode()) return consumerContextBundle(project as LProject);
             // The level decides which resolver runs, never the other way round. Asking for the
             // model first used to answer with the M1 model of an earlier selection while a
             // metamodel was on screen, stamping the reply M1 and making every `create` in it
@@ -173,7 +220,7 @@ export function Jodie(): JSX.Element {
             return { text, scope };
         }
         catch (err) { console.warn('Could not get project context:', err); return {}; }
-    }, [state.idlookup.clonedCounter, editorChangeCounter]);
+    }, [state.idlookup.clonedCounter, editorChangeCounter, consumerSelectionCounter]);
     const projectContext = projectContextBundle.text;
     const projectScope = projectContextBundle.scope;
 
@@ -218,6 +265,10 @@ export function Jodie(): JSX.Element {
 
             setEditorChangeCounter(c => c + 1);
 
+            // #168 J1: in the consumer the artefact is the Configurator's selection, which says
+            // itself when it changes; no notice about a tab the consumer cannot see.
+            if (isConsumerMode()) return;
+
             const newModel = getActiveModel();
             const newMeta = getActiveMetamodel();
             const newName = newModel?.name ?? newMeta?.name;
@@ -250,6 +301,36 @@ export function Jodie(): JSX.Element {
         };
         window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
         return () => window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
+    }, []);
+
+    // #168 J1 — the Configurator's selection changed: refresh the context and, with a
+    // conversation open, say what Jodie now looks at, in the consumer's words.
+    useEffect(() => {
+        const handler = () => {
+            setConsumerSelectionCounter(c => c + 1);
+            if (!isConsumerMode()) return;
+            const described = describeConsumerSelection(getConsumerSelection(), store.getState().idlookup);
+            if (!described || described.key === lastSelectionRef.current) return;
+            lastSelectionRef.current = described.key;
+            setChatState(prev => {
+                if (!prev.messages || prev.messages.length === 0) return prev;
+                return {
+                    ...prev,
+                    messages: [
+                        ...prev.messages,
+                        {
+                            id: generateMessageId(),
+                            kind: 'chat',
+                            role: 'assistant',
+                            content: `_${selectionNotice(described)}_`,
+                            timestamp: Date.now(),
+                        }
+                    ]
+                };
+            });
+        };
+        window.addEventListener(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, handler);
+        return () => window.removeEventListener(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, handler);
     }, []);
 
     // Listen for notifications popover toggle (hide Jodie while open)
@@ -593,7 +674,8 @@ export function Jodie(): JSX.Element {
                 activeProvider: providerToUse,
                 history,
                 projectContext,
-                ragInitialized,
+                // #168: no RAG in the consumer, its index covers every class, hidden ones included.
+                ragInitialized: ragInitialized && !isConsumerMode(),
                 images,
                 documents,
             };
@@ -638,7 +720,8 @@ export function Jodie(): JSX.Element {
                 activeProvider,
                 history,
                 projectContext,
-                ragInitialized,
+                // #168: no RAG in the consumer, its index covers every class, hidden ones included.
+                ragInitialized: ragInitialized && !isConsumerMode(),
             };
             const { entries } = await jjodieProvider.run(input, ctx);
             // Stamp the reply with the scope its context showed (projectContextBundle).

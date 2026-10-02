@@ -125,6 +125,10 @@ export const EnvGenEvents = {
   CONFIGURATOR_SELECT_TYPE: 'envgen-configurator-select-type',
   /** #157 R5 — the Configurator page says which type is on screen, for the column. detail: { typeId } */
   CONFIGURATOR_TYPE_CHANGED: 'envgen-configurator-type-changed',
+  /** #168 J1 — the Configurator page says what is on screen, for Jodie. detail: { typeId, instanceId, modelId }
+   *  (`ConsumerSelection`), or null when the page unmounts; the last one is also kept by
+   *  `getConsumerSelection()` (components/environment/consumerJodieContext.ts). */
+  CONFIGURATOR_SELECTION_CHANGED: 'envgen-configurator-selection-changed',
 } as const;
 
 // ─── Avatar ─────────────────────────────────────────────────────
