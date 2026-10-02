@@ -65,3 +65,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-02-1505
 **Detail**: docs/discovery/discovery_2026-10-02_edge_ends_trunk_sync.md
+
+## 2026-10-02 — merge: edge-ends takes alfonso-frontend-jjtl, slice E on the trunk before its own merge (P-2026-10-02-1641)
+**Prompt**: `claude_2026-10-02_1641_prompt_edge-ends_take_trunk.md`, rendered by `lane-run merge --trunk-into`, full lane on `~/jjodel-w-edgeends` branch `edge-ends`: the trunk `alfonso-frontend-jjtl` at `adb5d9731` into the branch with one `--no-ff` merge, merge base `eaead2d71`, before the branch's own merge into the trunk (RC-14).
+**Files touched**: merge `0c221f237`: 18 files from the trunk side (`docs/decisions.md`, two discovery reports, five prompts, `docs/log-inbox/{jjscript,symbol-editor,views}.md`, `nodes/instanceNode.scss`, `authoring/LabelEntryEditor.tsx`, `ir/irCompile.ts`, `ir/irLabelEdit.ts` and three tests), `views.md` resolved by union. This commit: this entry and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gates on `0c221f237`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6542/6542 in 264 files, 0 failed, the 9 known files red at import (expected: 6496 at `adb5d9731` plus the 46 the branch adds); hooks 344/344; build exit 0; check:docs 4/4; check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no — 18 files, above five (RC-11), all from the trunk side, the merge being the prompt's scope; the one hand resolution is `views.md`, by the union of COME 4.
+**Layer Impact Report**: not-required (no §3.2 file; `irCompile.ts`, under `viewpoint/ir/`, auto-merged with disjoint hunks, no hand edit)
+**Smoke visivo**: passato — chat GO, unattended, on the report and the slice E probes of P-2026-10-02-1505 (20/20); no probe re-run on `0c221f237`; Alfonso in the morning digest.
+**Notes**: Union in `views.md`: preamble, the trunk's two entries, the branch's three, verbatim. `decisions.md` auto-merged (R-IRN-38, Serie R-EE): base plus each side's hunk. Trunk count from P-2026-10-02-1642's `vitest-before.json` on `adb5d9731`: `jjodel-release` moved to `abb05cb9f` (pastel, code) mid-lane, its gates running. `merge-tree HEAD abb05cb9f`: 1 conflict, `views.md`, for the merge into the trunk.
+**Prompt document name**: 2026-10-02 16:41

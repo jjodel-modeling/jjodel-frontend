@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-1641
 Chat: C-2026-10-01-2220
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/log-inbox/views.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane edge-ends · 0c221f237 · verifica visiva passata 2026-10-02 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-edgeends`, branch `edge-ends`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-edgeends`, branch `edge-ends`, `git log -1` is the commit that adds this file (its parent `c80aed8bb`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-02-1641 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
