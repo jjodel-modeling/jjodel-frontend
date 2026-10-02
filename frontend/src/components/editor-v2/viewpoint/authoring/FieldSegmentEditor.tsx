@@ -20,6 +20,20 @@ function forKind(kind: FieldSegment['kind']): FieldSegment {
     }
 }
 
+/**
+ * The value segment after a click on the «editable inline» toggle. OFF writes `editable: false`; ON
+ * removes the key: absent is the default (the runtime edits unless `editable === false`), so the IR
+ * stays minimal and a persisted `true` is dropped too. Every other key keeps its place.
+ */
+export function applyValueEditable(
+    segment: Extract<FieldSegment, { kind: 'value' }>,
+    checked: boolean,
+): Extract<FieldSegment, { kind: 'value' }> {
+    if (!checked) return { ...segment, editable: false };
+    const { editable: _editable, ...rest } = segment;
+    return rest;
+}
+
 export interface FieldSegmentEditorProps {
     segment: FieldSegment;
     onChange: (segment: FieldSegment) => void;
@@ -28,8 +42,9 @@ export interface FieldSegmentEditorProps {
 /**
  * Editor for a single FieldSegment (a cell of a compartment row): kind +
  * kind-specific field. `literal` gets a text Input; `value` exposes the boolean
- * `editable` flag (the widget-object variant is read-only and round-trips
- * verbatim — phase B2b); `name`/`type` have no sub-fields.
+ * `editable` flag, read as the runtime reads it (`!== false`: absent edits, so absent
+ * reads ON; the widget-object variant is read-only and round-trips verbatim — phase
+ * B2b); `name`/`type` have no sub-fields.
  */
 export const FieldSegmentEditor: React.FC<FieldSegmentEditorProps> = ({ segment, onChange }) => {
     const valueEditable = segment.kind === 'value' ? segment.editable : undefined;
@@ -54,8 +69,8 @@ export const FieldSegmentEditor: React.FC<FieldSegmentEditorProps> = ({ segment,
                 editableIsWidget
                     ? <span style={PRESERVED_CHIP}>editable: advanced widget</span>
                     : <Toggle
-                        checked={valueEditable === true}
-                        onChange={(c) => onChange({ kind: 'value', editable: c })}
+                        checked={valueEditable !== false}
+                        onChange={(c) => onChange(applyValueEditable(segment, c))}
                         label="editable inline"
                         size="xs"
                     />
