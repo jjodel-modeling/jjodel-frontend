@@ -4779,6 +4779,37 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - An override also moves the automatic colours of the other classes: the greedy re-runs around it, as decided. In
     DemoFlowB, overriding Activity changed five other node classes, since every one neighbours ActivityNode, coloured
     first. This is a perceptual item for the visual GO. Was R-VP-34 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-50** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  **A node a derived notation draws as a glyph is not coloured by metaclass; amends R-VP-27 on the scope of the
+  coloring.** The chat asked Alfonso on 2026-10-02 whether to exclude the notation glyphs (fork and join bars, the
+  initial and final dots), recommending yes. His answer, verbatim: «ok». The id is R-VP-50 and not R-VP-40, because
+  `elk-layout-disc` (not merged) holds R-VP-40..49. Source: `docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md`.
+  - The rule, in `isNotationGlyph(ir)` (`view/viewPoint/metaclassPalette.ts`): a view a derivation created
+    (`ir.generated`), drawn as a `bar`, as a `circle` filled in an ink (`var(--color-inode-name)` or the catalogue
+    `#334155`), or as a `circle` with the `dot` or `dot-large` marker. A conditional form, fill or marker never
+    matches. `ObjectNode.tsx`, the one host of `colorOverride`, passes none to such a node, so it paints its own
+    fill, border and text, exactly as with coloring off.
+  - Covered, measured on the four demos under the nine notations:
+    - the fork and join bars, the initial discs and the final bull's-eyes of Activity (UML), Flowchart and State
+      machine;
+    - the transition bars of Petri net and Petri net (classic), adopted under RC-21 as the report's Q2;
+    - the named bull's-eye of the Petri Terminal (Q6).
+  - Statechart (UML) draws no glyph node on the demos. Flowchart (ISO 5807), Generic and ER (Chen) draw none.
+  - Adopted unattended as recommended (RC-21, report §0):
+    - only derived views: a view written by hand keeps today's colouring (Q1);
+    - glyph classes keep their palette slot, so `assignMetaclassColors` and the resolver are unchanged and no
+      other class moves (Q3);
+    - an override stored on a glyph class is not painted while the class is a glyph, is kept in the data and
+      still counts in the assignment (Q4).
+  - The panel lists a glyph class with an empty swatch and the title «notation glyph, not coloured». Selected, it
+    shows no swatch grid and the hint «Not coloured: notation glyph.»; «Reset» still removes a stale override.
+  - Not covered: the entry mark of Statechart's Initial (Q5). It is part of a coloured node, and
+    `metaclassColoringVars` rebinds `--color-inode-name` on the node root, so it stays in the text colour as at
+    `1ff8ab314`. A ticket in `docs/log-inbox/views.md` covers it.
+  - No IR key, no persisted value, no migration. Measured on the lane probe (3097, light): base 17/17 shows the
+    glyphs coloured; after 30/30, every glyph equal on and off, the ordinary nodes equal to the resolver, the four
+    demo scenes in the default viewpoint 0 px. Tests 28 of 32 red first, then green; mutation bench 14/14.
+    Prompt P-2026-10-02-2045, commit `00b16d998`.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 

@@ -181,3 +181,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves the merged `irResolve.ts`, so the merged code compiles on the running server; the behaviour was measured by the branch probe (after 21/22)
 **Notes**: Union in `docs/decisions.md` (R-IRN-40, then R-IRN-39) and in `docs/log-inbox/views.md` (the trunk's 11 entries, then the branch's entry, its ticket paragraph and its ticket), markers removed and nothing else: 0 lines removed against either side. Probes 25/25, control R-EE-5 absent. Rollback tag `pre-ir-label-name-refresh` on `79b29a7da` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
 **Prompt document name**: 2026-10-02 21:09
+
+## 2026-10-02 — fix(views): notation glyphs out of «Color by metaclass» (P-2026-10-02-2045)
+**Prompt**: `claude_2026-10-02_2045_prompt_vp_glyph_nocolor.md`, light tier, Phase 1 and 2 in cascade on `~/jjodel-w-vpglyph`, branch `vp-glyph-nocolor`. Alfonso's «ok» of 2026-10-02: a node a derived notation draws as a glyph (fork and join bars, initial dot, final bull's-eye) keeps its own colours with coloring on. Decision row R-VP-50, amending R-VP-27 on the scope.
+**Files touched**: report `353fa49b4`: `docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md`. Code `00b16d998`: `frontend/src/view/viewPoint/metaclassPalette.ts`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx`, `frontend/src/view/viewPoint/__tests__/notationGlyph.test.ts` (new), `frontend/src/components/editor-v2/nodes/__tests__/irGlyphNoColor.test.ts` (new). This commit: the report (§8 addendum), `docs/decisions.md` (R-VP-50), this entry and the ticket below, the Status line of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Gates on `00b16d998`: typecheck exit 2, 14 errors, the §17 set; vitest 266 files, 6609 of 6609 tests, the known 9 red at import; build exit 0. Tests 28 of 32 red on the code of `1ff8ab314`, then green; mutation bench 14/14. The four default scenes 0 px from the base run.
+**Out-of-scope changes**: no — nine files over three commits, above five (RC-11, rule 19), each named in the prompt's DOVE; `IRNodeContent.tsx` was edited for Q5 and reverted, in no commit.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (lane probe on 3097, light: base 17/17 shows the defect, after 30/30; crops in `frontend/scripts/smoke/_tmp_vpglyph_crops/`, gitignored; Alfonso's visual GO pending)
+**Notes**: Q1-Q4, Q6, Q7 adopted as recommended (RC-21). Q5 (Statechart entry mark keeps the ink) failed on the probe, since metaclassColoringVars rebinds --color-inode-name on the node root, and was reverted: hence partial, ticket below. R-VP-50 because elk-layout-disc holds R-VP-40..49. Temporary node_modules symlink removed at close. Report: docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md.
+**Prompt document name**: 2026-10-02 20:45
+
+## 2026-10-02 — ticket: name-ink marks outside a coloured node take its text colour
+**Ticket**: With «Color by metaclass» on, `metaclassColoringVars` sets `--color-inode-name` to the node's text colour inline on `.ir-node-content`, so whatever that node draws on the canvas in the name ink follows it. Measured on 3097, light: the entry mark of Statechart (UML)'s Initial and the outside name label of a classic Petri place go from `rgb(15, 23, 42)` to `rgb(0, 0, 0)`. R-VP-30 says outside labels keep their ink. In dark they would be black on the dark canvas (read, not measured). Keeping the ink needs a token that survives the override (rule 28, `styles/tokens/`).
+**Priority**: medium
+**Found in**: P-2026-10-02-2045
+**Detail**: docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md

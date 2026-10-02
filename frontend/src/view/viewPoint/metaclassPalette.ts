@@ -9,7 +9,8 @@
  * its border is the fill's hue at 55 % lightness, or transparent. The two render points
  * (`ObjectNode.tsx` for the native branch, `IRNodeContent.tsx` for the IR one) ask
  * `resolveMetaclassColoring` and paint what it answers; the panel (`ViewpointProperties.tsx`)
- * lists the same colours through `metaclassColorTable`.
+ * lists the same colours through `metaclassColorTable`. A node a derived notation draws as a
+ * glyph (`isNotationGlyph`, R-VP-50) is not painted; its class keeps its colour in the palette.
  *
  * NO IMPORTS, on purpose: this module is what the test bench executes (CLAUDE.md §5, the
  * `nameLookup.ts` pattern). It reads the store's plain shape (`viewpoint`, `idlookup`), never an
@@ -406,6 +407,51 @@ export function metaclassColorTable(idlookup: Record<string, any>, modelIds: rea
         });
     }
     return rows;
+}
+
+/** The inks a derived notation fills a glyph with: the name ink (`NAME_INK`, viewpointDerivation.ts) and the catalogue's (`INK`, notationCatalog.ts). */
+const GLYPH_INKS: ReadonlySet<unknown> = new Set(['var(--color-inode-name)', '#334155']);
+/** The markers of a bull's-eye: the catalogue's final state (`dot`) and Activity (UML)'s final (`dot-large`). */
+const BULLSEYE_MARKERS: ReadonlySet<unknown> = new Set(['dot', 'dot-large']);
+
+/**
+ * Whether a view draws its node as a NOTATION GLYPH (P-2026-10-02-2045, R-VP-50): a view a
+ * derivation created (`generated` set; a view written by hand never is one) drawn as a `bar`
+ * (fork, join, a Petri transition), as a `circle` filled in an ink (an initial disc), or as a
+ * `circle` with the `dot` or `dot-large` marker (a final bull's-eye). Such a node is not
+ * coloured by metaclass: its shape carries its meaning. A conditional form, fill or marker
+ * never matches, so the classic Petri place, whose token marker is one, stays coloured.
+ */
+export function isNotationGlyph(
+    ir: { readonly kind?: unknown; readonly generated?: unknown; readonly shape?: { readonly form?: unknown; readonly fill?: unknown; readonly marker?: unknown } } | null | undefined,
+): boolean {
+    const shape = ir?.generated ? ir.shape : undefined;
+    if (!shape) return false;
+    if (shape.form === 'bar') return true;
+    return shape.form === 'circle' && (GLYPH_INKS.has(shape.fill) || BULLSEYE_MARKERS.has(shape.marker));
+}
+
+/**
+ * The classes viewpoint `viewpointId` draws only as notation glyphs (R-VP-50), for the panel:
+ * each class a glyph view of that viewpoint is pinned to (`authoringMetaclassPins`) and no other
+ * node view of it is. The views are read as the resolver's index reads them (`viewelements`,
+ * `viewpoint`). The palette still assigns these classes their colour; they are just not painted.
+ */
+export function notationGlyphClasses(
+    state: { idlookup?: Record<string, any>; viewelements?: readonly string[] } | null | undefined,
+    viewpointId: string | null | undefined,
+): string[] {
+    if (!viewpointId) return [];
+    const idlookup = state?.idlookup ?? {};
+    const glyph = new Set<string>();
+    const other = new Set<string>();
+    for (const vid of state?.viewelements ?? []) {
+        const ir = idlookup[vid]?.viewpoint === viewpointId ? idlookup[vid].ir : null;
+        if (!ir || typeof ir !== 'object' || (ir.kind !== 'vertex' && ir.kind !== 'graphVertex')) continue;
+        const into = isNotationGlyph(ir) ? glyph : other;
+        for (const classId of Object.values(ir.authoringMetaclassPins ?? {})) if (typeof classId === 'string') into.add(classId);
+    }
+    return [...glyph].filter((id) => !other.has(id));
 }
 
 /**
