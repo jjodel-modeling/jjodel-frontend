@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-0040
 Chat: C-2026-10-02-2340
 Lane: full (Phase 2, simulation run state, bridge and stepping core, tests first, mutation bench, no visual check). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane sim-state-model · 14311a636 · non fuso: done, no visual check (nothing on screen changes), typecheck 14 = baseline, sim and simulation 28 files 978 tests, build exit 0, four demo scenes' readings identical to the base tree, configAt replay equal to kept 30/30, mutation bench 53/56 (3 equivalent), configAt and withInputs in simRunState.ts (import direction)
 
 Worktree: `~/jjodel-w-simmodel`, branch `sim-state-model`, cut by the chat from `sim-state-disc` at `fece79bc3` (the discovery branch, merging into the trunk as P-2026-10-03-0032), `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-simmodel`, branch `sim-state-model`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
