@@ -74,3 +74,37 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `FieldSegmentEditor.tsx` with `applyValueEditable`, so the merged code compiles on the running server; the behaviour was measured by the branch probe (22/22)
 **Notes**: The session slept at about 18:25 before step 4 and resumed at 20:52; the 18:11 trunk vitest ran under load (4 timeouts, 1 failed assertion, 3 workers never started) and was taken again: 6577 in 264, 0 failed. `docs/decisions.md` merged clean, R-IRN-40 appended; no union. Rollback tag `pre-segment-editable-toggle` on `9e6adf714` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
 **Prompt document name**: 2026-10-02 18:10
+
+## 2026-10-02 — feat(editor-v2): a path label on one attribute edits on the canvas (P-2026-10-02-1647)
+**Prompt**: `claude_2026-10-02_1647_prompt_path_label_edit.md`, `Lane: full`, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-pathlabel` branch `path-label-edit`. A `path` label whose expression is one step to a single-valued string attribute of its object edits on double-click when the IR opts in with `editable`; the toggle shows it and says why when it cannot. Report `ddb7a8c16`; its six questions adopted with their Recommended (RC-21); decision R-IRN-41.
+**Files touched**: report `ddb7a8c16`: `docs/discovery/discovery_2026-10-02_path_label_edit.md` (addendum §8 in this commit). Code `aa04b92fb`, under `frontend/src/components/editor-v2/viewpoint/`: `ir/irLabelEdit.ts`, `ir/irCompile.ts`, `ir/irTypes.ts` (`CompiledLabel.editsFeature?`), `ir/IRNodeContent.tsx`, `authoring/LabelEntryEditor.tsx`; tests `ir/__tests__/irLabelEdit.test.ts`, `authoring/__tests__/labelEntryEditor.test.ts`. This commit: this entry and a ticket, the R-IRN-41 row in `docs/decisions.md`, the addendum, the prompt's Status.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — typecheck exit 2, the 14 of §17; build exit 0; vitest: the 9 known import reds only, after the load-hit files passed alone (`laneRun*` 108/108 at load 16); probe: the four demo scenes and DemoFlowB's derived viewpoint 0 px from `adb5d9731`, no new editable label.
+**Out-of-scope changes**: no — the seven files of the prompt's DOVE; `canvasToJjom.ts` is called, not edited.
+**Layer Impact Report**: not-required (no §3.2 file edited; the write reuses `syncUpdateFeatureValue`)
+**Smoke visivo**: chat, pending: lane probe 35/36 on 3093; the failing item is undo, see the ticket below. Crops in `frontend/scripts/smoke/_tmp_pathlabel_crops/` (gitignored), `pathlabel_*_600.png`.
+**Notes**: Mutation bench 28/28, none void (commit body). Undo of the written attribute fails, and the same run shows the trunk's row value edit failing the same way: the prompt's «with its undo snapshot» assumed a working undo that Phase 1 read but did not run (Causa c). One 18:14 probe abort on `unparse_test.js` (`module is not defined`) did not recur. The Mac's sleep killed the session once; resumed at `aa04b92fb`, clean. Report §8 holds the measures.
+**Prompt document name**: 2026-10-02 16:47
+
+## 2026-10-02 — ticket: one undo does not restore a slot value written by syncUpdateFeatureValue
+**Ticket**: an attribute written through `syncUpdateFeatureValue` (the IR row value edit, the R-IRN-41 path label, a direct call) pushes an undo entry whose only key is `action_title`, no `idlookup` delta; one Cmd+Z pops it (depth 11 to 10) and the value stays. Measured on `aa04b92fb` with the row edit of the trunk path as control. The value change is either merged into another entry or missed by `Uobj.objectDelta` (`reducer.ts:1203-1265`); the fix is in the reducer or in `canvasToJjom.ts` (critical zone, Layer Impact Report), a Phase 1 of its own.
+**Priority**: medium
+**Found in**: P-2026-10-02-1647
+**Detail**: `docs/discovery/discovery_2026-10-02_path_label_edit.md` §8
+
+## 2026-10-02 — merge: path-label-edit takes alfonso-frontend-jjtl, the path label on the trunk before its own merge (P-2026-10-02-2132)
+**Prompt**: `claude_2026-10-02_2132_prompt_path-label-edit_take_trunk.md`, rendered by `lane-run merge --trunk-into`, full lane on `~/jjodel-w-pathlabel` branch `path-label-edit`: the trunk `alfonso-frontend-jjtl` at `936a1b947` into the branch with one `--no-ff` merge, merge base `adb5d9731`, before the branch's own merge into the trunk (RC-14).
+**Files touched**: merge `1dff977e4`: 43 files from the trunk side (`docs/decisions.md`, six discovery reports, eleven prompts, `docs/log-inbox/{symbol-editor,views}.md`, and 23 code and test files under `editor-v2/edges/`, `editor-v2/utils/`, `editor-v2/viewpoint/{authoring,ir}/`, `editors/viewpoint/properties/`, `view/`), `decisions.md` and `symbol-editor.md` resolved by union. This commit: this entry and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gates on `1dff977e4`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6663/6663 in 266 files, 0 failed, the 9 known files red at import (expected: the trunk tip's 6600 in 266 plus the branch's 63); hooks 344/344; build exit 0; check:docs 4/4; check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no — 43 files, above five (RC-11), all from the trunk side, the merge being the prompt's scope; the hand resolutions are the two unions of COME 4.
+**Layer Impact Report**: not-required (no §3.2 file; `irCompile.ts` and `irTypes.ts`, under `viewpoint/ir/`, auto-merged, no hand edit)
+**Smoke visivo**: passato — chat GO, unattended, on a re-run of the P-2026-10-02-1647 probe on `1dff977e4`: `lane-run probe` on 3093, light, 35 of 36, the one failure the known undo of an inline write (ticketed), the 36 verdicts identical to the branch's run; four demo scenes and DemoFlowB's derived viewpoint 0 px from `adb5d9731`; Alfonso in the morning digest.
+**Notes**: Union in `decisions.md` (the trunk's R-IRN-40 and R-IRN-39, then the branch's R-IRN-41) and in this inbox (the trunk's 76 lines, then the branch's two entries), verbatim; `irCompile.ts` and `irTypes.ts` auto-merged, read whole. No rollback tag, pre-merge tip `641fc9a57`. Gates on `~/.hermes/node/bin` v26.8.1. The branch's crops copied to `_tmp_pathlabel_crops_branch/` before the re-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 21:32
+
+**Ticket** (low, lane-run template): step 7 of `frontend/scripts/lane-templates/trunk-into-branch.md` renders the `check:addonly` fallback as `git reset --hard {{branchTip}}`, «this branch's own pre-merge tip»; `{{branchTip}}` is the tip lane-run measured before the prompt commit landed, so here it read `c0dfec656` while the merge sat on `641fc9a57`, and the reset would have dropped the prompt's own commit. Not triggered (check:addonly PASS). Fix: render the reset as the merge's first parent, `git reset --hard HEAD^1`.

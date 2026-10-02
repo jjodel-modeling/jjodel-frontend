@@ -1522,6 +1522,21 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   test for an object holding both), probe 21/22 after against 11/18 before, memo re-runs of other nodes 0, four demo
   scenes 0 px from `adb5d9731`.
 
+- **R-IRN-41** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **A path label on one
+  attribute of its own object edits on the canvas, opt-in.** Amends R-IRN-38 on the path case only. The absent
+  `editable` is read per source (`labelEditableDefault` in `ir/irLabelEdit.ts`): a path label edits only when the IR
+  opts in (`true` or the widget object), every other source keeps «absent = editable», so no derived view changes. The
+  IR half is decided at compile time: `labelEditsFeature` gives the feature of `$f` or `$f.value` and `irCompile.ts`
+  writes `CompiledLabel.editsFeature` only then. The metamodel half is one function, `labelFeatureEditBlock`, called by
+  the toggle with the panel's metaclass features and by the canvas at the double-click with the object's slot
+  (`labelFeatureInfoOf`): single-valued `EString` attribute only, since the inline write passes the typed string with no
+  parse. The commit is `syncUpdateFeatureValue`, the row value's write path. Toggle on a path label: ON writes `true`, OFF
+  removes the key; disabled with «Only a single attribute of this object can be edited on the canvas.» (multi-step,
+  `.values`, reference, multi-valued, no metaclass) or «Only a string attribute can be edited on the canvas.». No schema
+  change, no migration. Implemented in P-2026-10-02-1647 (`aa04b92fb`); mutation bench 28/28, probe 35/36, the four demo
+  scenes and DemoFlowB's derived viewpoint 0 px from `adb5d9731`. The failing item is undo, shared with the row value
+  edit of the trunk and filed as a ticket (report `docs/discovery/discovery_2026-10-02_path_label_edit.md` §8).
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con

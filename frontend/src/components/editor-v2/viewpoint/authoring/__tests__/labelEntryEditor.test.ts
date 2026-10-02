@@ -11,7 +11,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { LabelEntryEditor, applyLabelEditable, applyLabelPositionValue, labelPositionValue } from '../LabelEntryEditor';
 import type { LabelEntryEditorProps } from '../LabelEntryEditor';
-import { Toggle } from '../../../../ui';
+import { Toggle, type PathBuilderFeatures } from '../../../../ui';
 import type { LabelSpec, TextSource } from '../../ir/irTypes';
 
 const base = (over: Partial<LabelSpec> = {}): LabelSpec =>
@@ -168,13 +168,21 @@ describe('LabelEntryEditor: the Editable toggle', () => {
         expect(html).not.toContain(HINT);
     });
 
-    it('is disabled and OFF with the hint for a literal, a path and a metaclassName; enabling them kills this test', () => {
-        for (const key of ['literal', 'path', 'metaclassName']) {
+    it('is disabled and OFF with the hint for a literal and a metaclassName; enabling them kills this test', () => {
+        for (const key of ['literal', 'metaclassName']) {
             const html = render(base({ source: SRC[key] }));
             expect(editableSwitch(html), key).toContain('disabled=""');
             expect(editableSwitch(html), key).toContain('aria-checked="false"');
             expect(html, key).toContain(HINT);
         }
+    });
+
+    it('a path label with no metaclass is disabled and OFF with the single-attribute hint, not the name one', () => {
+        const html = render(base({ source: SRC.path }));
+        expect(editableSwitch(html)).toContain('disabled=""');
+        expect(editableSwitch(html)).toContain('aria-checked="false"');
+        expect(html).toContain(SINGLE_HINT);
+        expect(html).not.toContain(HINT);
     });
 
     it('stays OFF and disabled on a non-name source even when editable true is stored, and writes nothing on render', () => {
@@ -212,3 +220,127 @@ describe('LabelEntryEditor: the Editable toggle', () => {
         expect(render(label)).toContain('editable: advanced widget');
     });
 });
+
+/**
+ * A path label on one attribute (R-IRN-41, P-2026-10-02-1647). Opt-in: absent reads OFF and the
+ * canvas does not edit; ON writes `editable: true`, OFF removes the key. The toggle is disabled with
+ * a hint naming the reason when the feature is not a single string attribute of the metaclass.
+ */
+const SINGLE_HINT = 'Only a single attribute of this object can be edited on the canvas.';
+const STRING_HINT = 'Only a string attribute can be edited on the canvas.';
+
+describe('applyLabelEditable on a path label: the default is OFF', () => {
+    const pathBase = (over: Partial<LabelSpec> = {}): LabelSpec =>
+        ({ position: 'center', source: { from: 'path', expr: '$title.value' }, ...over });
+
+    it('ON writes editable true; removing the key instead (the name-label rule) kills this test', () => {
+        expect(applyLabelEditable(pathBase(), true)).toEqual({ ...pathBase(), editable: true });
+    });
+
+    it('OFF removes the key; writing false instead kills this test', () => {
+        const next = applyLabelEditable(pathBase({ editable: true }), false);
+        expect('editable' in next).toBe(false);
+        expect(next).toEqual(pathBase());
+    });
+
+    it('every other key keeps its place', () => {
+        const label = pathBase({ editable: true, visible: false });
+        expect(Object.keys(applyLabelEditable(label, false))).toEqual(Object.keys(label).filter(k => k !== 'editable'));
+        expect(Object.keys(applyLabelEditable(label, true))).toEqual(Object.keys(label));
+    });
+});
+
+describe('LabelEntryEditor: the Editable toggle of a path label', () => {
+    const FEATURES: PathBuilderFeatures = {
+        attributes: [
+            { name: 'title', type: 'EString', upperBound: 1 },
+            { name: 'tags', type: 'EString', upperBound: -1 },
+            { name: 'count', type: 'EInt', upperBound: 1 },
+            { name: 'done', type: 'EBoolean', upperBound: 1 },
+        ],
+        references: [{ name: 'owner', targetClassName: 'Person', upperBound: 1 }],
+    };
+    const pathOf = (expr: string, over: Partial<LabelSpec> = {}): LabelSpec =>
+        ({ position: 'center', source: { from: 'path', expr }, ...over });
+    const props = (label: LabelSpec, onChange: (l: LabelSpec) => void = () => undefined, features: PathBuilderFeatures | null = FEATURES): LabelEntryEditorProps =>
+        ({ label, features, classNames: [], onChange });
+    const render = (label: LabelSpec) => renderToStaticMarkup(React.createElement(LabelEntryEditor, props(label)));
+    const editableSwitch = (html: string): string => html.match(/<button[^>]*role="switch"[^>]*>/)![0];
+    const toggles = (node: React.ReactNode, out: React.ReactElement<{ checked?: boolean; disabled?: boolean; onChange?: (c: boolean) => void }>[] = []) => {
+        if (Array.isArray(node)) node.forEach(n => toggles(n, out));
+        else if (React.isValidElement(node)) {
+            if (node.type === Toggle) out.push(node as never);
+            toggles((node.props as { children?: React.ReactNode }).children, out);
+        }
+        return out;
+    };
+    const tree = (label: LabelSpec, onChange?: (l: LabelSpec) => void) =>
+        (LabelEntryEditor as unknown as (p: LabelEntryEditorProps) => React.ReactNode)(props(label, onChange));
+
+    it('reads OFF at rest and is enabled, with no hint, on a single string attribute; the name default kills this test', () => {
+        const html = render(pathOf('$title.value'));
+        expect(editableSwitch(html)).toContain('aria-checked="false"');
+        expect(editableSwitch(html)).not.toContain('disabled');
+        expect(html).not.toContain(SINGLE_HINT);
+        expect(html).not.toContain(STRING_HINT);
+        expect(html).not.toContain(HINT_NAME);
+    });
+
+    it('reads ON with editable true and OFF with editable false', () => {
+        expect(editableSwitch(render(pathOf('$title.value', { editable: true })))).toContain('aria-checked="true"');
+        expect(editableSwitch(render(pathOf('$title', { editable: true })))).toContain('aria-checked="true"');
+        expect(editableSwitch(render(pathOf('$title.value', { editable: false })))).toContain('aria-checked="false"');
+    });
+
+    it('the switch writes editable true when turned ON', () => {
+        const calls: LabelSpec[] = [];
+        const found = toggles(tree(pathOf('$title.value'), (l) => calls.push(l)));
+        expect(found).toHaveLength(1);
+        expect(found[0].props.disabled).toBe(false);
+        found[0].props.onChange!(true);
+        expect(calls).toEqual([pathOf('$title.value', { editable: true })]);
+    });
+
+    it('the switch removes the key when turned OFF', () => {
+        const calls: LabelSpec[] = [];
+        const found = toggles(tree(pathOf('$title.value', { editable: true }), (l) => calls.push(l)));
+        expect(found[0].props.checked).toBe(true);
+        found[0].props.onChange!(false);
+        expect(calls).toHaveLength(1);
+        expect('editable' in calls[0]).toBe(false);
+    });
+
+    it('a number or boolean attribute is disabled and OFF with the string hint, even with editable true', () => {
+        for (const expr of ['$count.value', '$done.value']) {
+            const html = render(pathOf(expr, { editable: true }));
+            expect(editableSwitch(html), expr).toContain('disabled=""');
+            expect(editableSwitch(html), expr).toContain('aria-checked="false"');
+            expect(html, expr).toContain(STRING_HINT);
+        }
+    });
+
+    it('a multi-valued attribute, a reference, a multi-step path and an unknown feature are disabled with the single-attribute hint', () => {
+        for (const expr of ['$tags.value', '$owner.value', '$owner.value.$name.value', '$title.values', '$nope.value']) {
+            const html = render(pathOf(expr, { editable: true }));
+            expect(editableSwitch(html), expr).toContain('disabled=""');
+            expect(editableSwitch(html), expr).toContain('aria-checked="false"');
+            expect(html, expr).toContain(SINGLE_HINT);
+            expect(html, expr).not.toContain(STRING_HINT);
+        }
+    });
+
+    it('a name label with the same features is unchanged: ON at rest, enabled, no hint', () => {
+        const html = render({ position: 'top', source: { from: 'intrinsic', prop: 'name' } });
+        expect(editableSwitch(html)).toContain('aria-checked="true"');
+        expect(editableSwitch(html)).not.toContain('disabled');
+        expect(html).not.toContain(SINGLE_HINT);
+        expect(html).not.toContain(HINT_NAME);
+    });
+
+    it('the widget variant on a path keeps its chip and draws no switch', () => {
+        expect(toggles(tree(pathOf('$title.value', { editable: { widget: 'text' } })))).toHaveLength(0);
+        expect(render(pathOf('$title.value', { editable: { widget: 'text' } }))).toContain('editable: advanced widget');
+    });
+});
+
+const HINT_NAME = 'Only a name label can be renamed on the canvas.';
