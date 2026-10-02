@@ -3,6 +3,7 @@
 Prompt-ID: P-2026-10-02-2045
 Chat: C-2026-10-01-2220
 Lane: Phase 1 then Phase 2 in cascade, outside the critical zone. Tier: light.
+Status: eseguito 2026-10-02 · lane vp-glyph-nocolor · 353fa49b4, 00b16d998 · non fuso: hard-stop, derived glyphs (bars, ink discs, bull's-eyes, Petri bars) not coloured, lane probe on 3097 (light) 30/30 and the base run 17/17, the four default scenes 0 px, mutation bench 14/14, crops in frontend/scripts/smoke/_tmp_vpglyph_crops/ (gitignored), R-VP-50, Statechart's entry mark not changed (ticket), verifica visiva alla chat
 Worktree: `~/jjodel-w-vpglyph`, branch `vp-glyph-nocolor`, created from the trunk at `1ff8ab314`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-vpglyph`, branch `vp-glyph-nocolor`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA

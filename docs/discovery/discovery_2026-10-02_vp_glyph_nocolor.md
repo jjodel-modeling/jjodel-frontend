@@ -182,3 +182,53 @@ Smoke scenarios: DemoFlowB on Activity (UML), coloring on; DemoPEST on Statechar
 ## 7. Open questions
 
 See §0, questions 1-7, each with its `Recommended:` line adopted unattended (RC-21).
+
+## 8. Addendum, Phase 2 (2026-10-02)
+
+Measured on the lane's code (`fix:` commit of this lane), the base run on the code of `1ff8ab314` (the four
+code files put back in the working tree for the run, then restored byte for byte).
+
+**What changed against §0.**
+- **Q5 is not implemented; the entry mark keeps today's behaviour.** Phase 2 painted the entry mark of a derived view
+  in `borderColorV` (`var(--color-inode-name)`) instead of `markerColor`. The markup test passed, the probe failed:
+  with coloring on the mark still painted `rgb(0, 0, 0)` [M]. `metaclassColoringVars` sets `--color-inode-name` to
+  the text colour inline on `.ir-node-content`, the mark's parent, so the ink token itself resolves to black inside
+  a coloured node. Keeping the ink there needs a new CSS variable (rule 28: tokens live in `styles/tokens/`) or a
+  rework of which tokens the override rebinds; both are outside this lane's scope. The change was reverted, so
+  `IRNodeContent.tsx` is not touched and the Layer Impact Report of §5 describes a change not made. The same cause
+  turns the outside name label of a classic Petri place `rgb(0, 0, 0)` from `rgb(15, 23, 42)` [M]. R-VP-30 states
+  that outside labels keep their ink, and that does not hold for a label styled in the name ink. In dark this
+  reads as black on the dark canvas [R]. Filed as a ticket in `docs/log-inbox/views.md`.
+  Recommended (adopted): no change to the entry mark in this lane, the ticket instead.
+- **One mutation survived the first bench**: the node-kind filter of `notationGlyphClasses` (M16). A test was
+  added: an edge view of a glyph class does not disqualify it, because edges are never coloured (R-VP-31).
+
+**Measures.**
+- Tests: `notationGlyph.test.ts` (19) and `irGlyphNoColor.test.ts` (13). On the code of `1ff8ab314` 28 of 32
+  fail, 4 pass (the positive control and the three still-coloured nodes). After the change 32 of 32 pass.
+- Mutation bench (gitignored `_tmp_vpglyph_bench/bench.mjs`): 14/14 killed. The predicate: drop the bar, the ink
+  disc, `dot`, `dot-large`, each ink, the provenance gate, the circle guard; invert it; any marker read as a
+  bull's-eye. `ObjectNode` ignoring the predicate. `notationGlyphClasses` without the other-view, viewpoint and
+  node-kind filters.
+- Gates: typecheck exit 2 with 14 errors, the §17 set by file and code; vitest 266 files and 6609 of 6609 tests,
+  the 9 known files red at import (`window is not defined`); build exit 0.
+- Lane probe on 3097, light, 1600×1000, DPR 2. Base run 17/17 shows the defect: the DemoFlowB glyphs go from
+  `rgb(15, 23, 42)` to the palette (`i0` `rgb(243, 223, 203)`, `fk` `rgb(235, 186, 210)`, `jn` `rgb(213, 242, 184)`,
+  `fin` `rgb(238, 181, 238)`), and the classic Petri bars from `rgb(51, 65, 85)` to `rgb(243, 203, 203)`.
+  After run 30/30:
+  - DemoFlowB on Activity (UML): the initial disc, the fork and join bars and the final bull's-eye are equal on and
+    off in fill, border colour and width, text, marker and box (`i0` 20×20, `fk` and `jn` 7×120, `fin` 24×24).
+    `work`, `left` and `right` paint `rgb(243, 203, 203)` and `d1` `rgb(237, 237, 192)`, each equal to the
+    resolver; no box moves.
+  - DemoPEST on Statechart (UML): no glyph node; all six nodes take their swatch; the entry mark paints as at
+    `1ff8ab314`.
+  - DemoPetri on Petri net (classic): `t1..t3` equal on and off (`rgb(51, 65, 85)`, 10×44); the four places
+    `rgb(243, 223, 203)`.
+  - The panel: InitialNode, Fork, Join and FinalNode show an empty swatch (`rgba(0, 0, 0, 0)`) and the title
+    «…: notation glyph, not coloured». Fork selected shows no grid and «Not coloured: notation glyph.»; Activity
+    selected shows the grid and no hint.
+  - The four demo scenes in the default viewpoint, coloring off: 0 px left of the rail from the base run, the Jodie
+    launcher's box aside. Control: two different scenes differ by 348100 px.
+  - Crops `sips -Z 600` in `frontend/scripts/smoke/_tmp_vpglyph_crops/` (gitignored), `vpg_after_*_600.png` and
+    `vpg_base_*_600.png`.
+- Decision row R-VP-50 (§6).
