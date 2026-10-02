@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
 import {
     Select,
@@ -6,6 +7,7 @@ import {
     Toggle,
     ColorPicker,
     ConditionalEditor,
+    isConditionalValue,
     HelpText,
     ErrorText,
     Button,
@@ -19,7 +21,8 @@ import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode'
 import { validateIR } from '../ir/irValidate';
 import { defaultEdgeViewIR } from '../ir/irDefaults';
 import { CONTAINER_ENDPOINT } from '../ir/irTypes';
-import type { EdgeViewIR, TextSource, EdgeTermination } from '../ir/irTypes';
+import type { EdgeViewIR, TextSource, EdgeTermination, Conditional } from '../ir/irTypes';
+import { TERMINATION_OPTION_GROUPS, endLabelParts, withEndLabelPart } from '../../edges/edgeEndGlyphs';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import {
     metaclassChipLabel,
@@ -112,16 +115,10 @@ const ROUTING_OPTIONS = [
     { value: 'straight', label: 'Direct' },
     { value: 'curved', label: 'Bezier' },
 ];
-const TERMINATION_OPTIONS = [
-    { value: 'none', label: 'None' },
-    { value: 'openArrow', label: 'Open arrow' },
-    { value: 'closedArrow', label: 'Closed arrow' },
-    { value: 'hollowTriangle', label: 'Hollow triangle' },
-    { value: 'filledDiamond', label: 'Filled diamond' },
-    { value: 'hollowDiamond', label: 'Hollow diamond' },
-    // R-VP-24 (P-2026-09-30-1521): listed, so a view that holds it shows it instead of «None».
-    { value: 'hollowCircle', label: 'Hollow circle' },
-];
+// R-VP-24 (P-2026-09-30-1521): «Hollow circle» listed, so a view that holds it shows it instead of «None».
+// Slice E (P-2026-09-30-1810): grouped (Arrows, UML, ER, Petri), the seven ends of before in their order and
+// wording, the seven new ones slotted in; the list lives in edgeEndGlyphs, where it is tested.
+const TERMINATION_OPTIONS = TERMINATION_OPTION_GROUPS;
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -177,6 +174,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
     const [nature, setNature] = useState<EdgeNature>(() => natureOf((view as any).ir));
     const [sourceExpr, setSourceExpr] = useState<string>(() => (view as any).ir?.edge?.source ?? '');
     const [targetExpr, setTargetExpr] = useState<string>(() => (view as any).ir?.edge?.target ?? '');
+    // Disclosure mode, read-only as in VertexAuthoringPanel (slice E): Advanced offers a Conditional end and
+    // the end labels; Basic keeps the plain Ends select.
+    const advanced = useSelector((s: any) => !!s.advanced);
     const dirtyRef = useRef(false);
 
     // Reset the draft when the selected view changes (no commit on reset). Nature and
@@ -522,6 +522,51 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
         }
     };
 
+    // --- ends (slice E) ---
+    // Basic, a plain end: the grouped Select as before. A Conditional end in Basic: the editor's read-only chip.
+    // Advanced: the Fixed / Conditional control of the line fields, the Select as its value editor.
+    const endSelect = (v: EdgeTermination, onCh: (v: EdgeTermination) => void) => (
+        <Select
+            options={TERMINATION_OPTIONS}
+            value={v}
+            onChange={(e) => onCh(e.target.value as EdgeTermination)}
+        />
+    );
+    const renderEnd = (end: 'sourceEnd' | 'targetEnd', value: Conditional<EdgeTermination>, fallback: EdgeTermination) => {
+        if (!advanced && !isConditionalValue(value)) {
+            return endSelect(value as EdgeTermination, (v) => patchTerminations({ [end]: v }));
+        }
+        return (
+            <ConditionalEditor<EdgeTermination>
+                value={value}
+                onChange={(next) => patchTerminations({ [end]: next })}
+                renderValue={endSelect}
+                defaultValue={fallback}
+                features={features}
+                featuresHint={FEATURES_HINT}
+                classNames={classNames}
+                allowConditional={advanced}
+            />
+        );
+    };
+
+    // --- end labels (slice E, Advanced) ---
+    // A multiplicity and a role per end; the helpers keep the R-VP-23 form while there is no role, and drop
+    // the key (and `labels`, when left empty) as the centre label does.
+    const setEndLabelPart = (end: 'sourceEnd' | 'targetEnd', part: 'multiplicity' | 'role', src: TextSource | undefined) => {
+        const next = withEndLabelPart(draft.edge.labels?.[end], part, src);
+        const labels = { ...draft.edge.labels };
+        if (next === undefined) delete labels[end];
+        else labels[end] = next;
+        if (Object.keys(labels).length === 0) {
+            const edge = { ...draft.edge };
+            delete edge.labels;
+            patch({ ...draft, edge });
+        } else {
+            patchEdge({ labels });
+        }
+    };
+
     /** Body visibility of the five-tab partition: `display: none` only (R-A). */
     const body = (id: IRTabId) => irTabBodyStyle(id, activeTab);
 
@@ -822,19 +867,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
             <FormSection title="Ends" divider={false}>
             <div className="jj-field">
                 <label className="jj-field-label">Start</label>
-                <Select
-                    options={TERMINATION_OPTIONS}
-                    value={srcEnd}
-                    onChange={(e) => patchTerminations({ sourceEnd: e.target.value as EdgeTermination })}
-                />
+                {renderEnd('sourceEnd', srcEnd, 'none')}
             </div>
             <div className="jj-field">
                 <label className="jj-field-label">End</label>
-                <Select
-                    options={TERMINATION_OPTIONS}
-                    value={tgtEnd}
-                    onChange={(e) => patchTerminations({ targetEnd: e.target.value as EdgeTermination })}
-                />
+                {renderEnd('targetEnd', tgtEnd, 'openArrow')}
             </div>
             </FormSection>
             </div>
@@ -868,6 +905,41 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 )}
             </div>
             </FormSection>
+
+            {/* End labels (slice E, Advanced): a multiplicity and a role at each end */}
+            {advanced && (
+                <FormSection title="End labels" divider={false}>
+                    {(['sourceEnd', 'targetEnd'] as const).map((end) => {
+                        const parts = endLabelParts(draft.edge.labels?.[end]);
+                        return (
+                            <div className="jj-field" key={end}>
+                                <label className="jj-field-label">{end === 'sourceEnd' ? 'Start' : 'End'}</label>
+                                {(['multiplicity', 'role'] as const).map((part) => (
+                                    <div key={part} style={{ marginTop: 4 }}>
+                                        <Toggle
+                                            checked={parts[part] !== undefined}
+                                            onChange={(checked) => setEndLabelPart(end, part, checked ? newCenterSource() : undefined)}
+                                            label={part === 'multiplicity' ? 'Multiplicity' : 'Role'}
+                                            size="xs"
+                                        />
+                                        {parts[part] !== undefined && (
+                                            <div style={{ marginTop: 4 }}>
+                                                <TextSourceEditor
+                                                    source={parts[part]!}
+                                                    features={features}
+                                                    disabledHint={FEATURES_HINT}
+                                                    onChange={(src) => setEndLabelPart(end, part, src)}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })}
+                    <HelpText>The multiplicity sits beside the line at its end, the role on the other side of the line; both are read on the object the view is evaluated on.</HelpText>
+                </FormSection>
+            )}
             </div>
 
             {/* ─────────── Source ─────────── */}

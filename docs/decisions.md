@@ -4740,6 +4740,54 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     DemoFlowB, overriding Activity changed five other node classes, since every one neighbours ActivityNode, coloured
     first. This is a perceptual item for the visual GO. Was R-VP-34 on the branch, renumbered by P-2026-10-02-1506.
 
+## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
+
+Source: `docs/discovery/discovery_2026-09-30_edge_ends.md` (P-2026-09-30-1810, §0 questions 1-8, §9 the measures), branch
+`edge-ends`, commits `8f3e7c307`, `462fba92d`. Taken by the lane under RC-25, each the Recommended line of its question;
+Alfonso receives the digest. The mechanism only: no derived notation and no demo binds it (the prompt's COSA).
+
+- **R-EE-1** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Seven more edge ends, drawn from a glyph table, the line cut at each glyph's back.** Persisted names, permanent once
+  saved (R-B9), additive, no migration: `EdgeTermination` gains `filledCircle`, `bar`, `cross`, `erZeroOrOne`,
+  `erExactlyOne`, `erZeroOrMany`, `erOneOrMany`; `bar` is also a `ShapeForm` value (R-VP-16), a different vocabulary on a
+  different key, kept as the prompt names it (Q1). The crow's foot ends compose bar, crow and circle, the part nearest the
+  node the maximum. Geometry fixed in px (`edges/edgeEndGlyphs.ts`), the stroke the line's resolved width and colour, so
+  the longest back (20 px) fits the 24 px Manhattan stub (Q3); markers in user space, their reference the cut
+  (`edgeUtils.trimPathEnds`: L exact, Q and C by de Casteljau, an A or anything unread left as drawn). Hollow parts fill
+  `var(--canvas-bg)` (`.ir-end-glyph--hollow`, EditorV2.scss, Q7). The seven ends of before keep their markers byte for
+  byte, no trim (Q4). Measured: markup of edges without the additions equal to `77c2f946b` (9 pins); lane probe on 3093
+  16/16, 42 fixture links in light and dark at widths 1 and 2, every new end cut at its back at both ends, every old end
+  uncut, hollow fill equal to the canvas background in both themes; the four demo scenes in the default viewpoint 0 px
+  from the pre-edit shots.
+- **R-EE-2** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Each end takes a `Conditional<EdgeTermination>`, resolved per edge instance as `line.color`.** `Conditional<T>`
+  already admits a plain `T`, so the declared type needs no union. The compile adds a resolver only for a Conditional end
+  (`CompiledEdgeView.sourceEndTermination` / `targetEndTermination`); `terminations` keeps its type, holding the plain
+  end, else the Conditional's `else` / `default`, else the default end (Q8); irEdgeViews writes the resolved end on
+  `irSourceTermination` / `irTargetTermination`, so UnifiedEdge reads what it read. A malformed Conditional renders as that
+  static end, never drops the view (R-B9-bis); `validateIR` refuses an unknown end in any branch, a `when` that is not a
+  predicate, a `rules` that is not a list. Measured: the fixture of the prompt (a reference view, `erZeroOrMany` where
+  `upperBound` is -1, `erExactlyOne` otherwise, two references) gives the two ends; in the app, 42 links each resolved from
+  a fourteen-rule Conditional on `$end.value`.
+- **R-EE-3** (2026-09-30, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **An end label is a text source or `{ multiplicity?, role? }`; amends nothing of R-VP-23.** `labels.sourceEnd` /
+  `targetEnd` widen to `TextSource | EdgeEndLabels` (Q2): the bare text source of R-VP-23 is the multiplicity, the object
+  form is told apart by the absence of `from`. The multiplicity sits where R-VP-23 put the label; the role at the same
+  depth on the other side of the line (`computeCardinalityAnchor`'s optional `mirror`, the six-argument call unchanged);
+  beside a new glyph both are pushed along the axis by its back (Q5). Compiled `sourceEndRole` / `targetEndRole`, emitted
+  `irSourceEndRole` / `irTargetEndRole`, each only when declared. Verified (RC-27, second agent): the pre-lane and post-lane
+  validate/compile results on 16 end-label values (all old legal text sources behave the same; only legal `EdgeEndLabels`
+  including `{}` are newly accepted), the 3 test files passing 34/34, and every `sourceEnd`/`targetEnd` reader in
+  `frontend/src`; it would be falsified by a legal text source that compiles to a role or loses `sourceEndText`, or by a
+  reader outside the lane's files that reads `.from`/`.text` on `labels.sourceEnd`/`targetEnd` without a check.
+- **R-EE-4** (2026-09-30, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The edge authoring panel lists the ends grouped and edits the Conditional ends and the end labels in Advanced.**
+  Groups Arrows, UML, ER, Petri (`TERMINATION_OPTION_GROUPS`), the seven options of before in their order and wording.
+  Basic: the grouped Select as before; a Conditional end shows the editor's read-only chip. Advanced: the Fixed /
+  Conditional control of the line fields, and an «End labels» section, a multiplicity and a role toggle per end with the
+  panel's text-source editor; the R-VP-23 form is kept while an end has no role (`withEndLabelPart`). The panel is not
+  importable in the bench (monaco): the groups and the two label forms are tested in the pure module, the wiring is not.
+
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
 
