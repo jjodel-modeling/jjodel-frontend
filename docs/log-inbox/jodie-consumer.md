@@ -174,3 +174,16 @@ active log is not touched by these lanes.
 **Ticket**: ogni riga di avviso in chat («Now looking at: …», e l'avviso developer «Context switched to …») passa per `MarkdownMessage` e mostra sotto di sé il pulsante «Source» del markdown (misurato: `innerText` della riga = «Now looking at: Scenario «Scenario_0»» seguito da «Source»). Per il fruitore è rumore: serve uno stile di avviso dedicato, senza il pulsante. Assegnato a J7 (linguaggio e aspetto di Jodie), richiesta di Juri del 2026-10-02.
 **Priority**: low
 **Found in**: P-2026-10-01-2301
+
+## 2026-10-02 — merge: 168-context into feat/168-jodie-consumer
+**Prompt**: `claude_2026-10-02_2147_prompt_merge_168-context.md` (P-2026-10-02-2147) — merge diretto (`lane-run merge --direct`) della lane A (J1 + J2: Jodie segue la selezione e la navigazione del Configurator, contesto filtrato per profilo) nel trunk #168, terzo nell'ordine M0 → B → A.
+**Files touched**: merge `9065643db` (5 commit di A: referto `72dca4dc3`, codice `39b6b7cde`, `491e3a022`, `800238541`, chiusura `a1455999a`); conflitto su `docs/log-inbox/jodie-consumer.md` risolto per unione; tag `pre-168-context` su `a70f54af5`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gate del worker sul merge: typecheck 14 (insieme della punta ricevente), typecheck:scripts, vitest (5531 test, 9 rossi all'import noti), build, check:agents, check:scripts verdi; sonde di A rieseguite sul trunk unito (porta 3045): `_tmp_168_a_verify` 21/21, `_tmp_168_a_drill` 23/23.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — verifica visiva di Juri sulla lane (2026-10-02, voci 1-6 del rework e 1-6 della navigazione nel dettaglio); sul trunk unito le sonde della lane, non `npm run smoke` (fisso sulla 3000).
+**Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B su `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40). Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
+**Prompt document name**: 2026-10-02 21:47
