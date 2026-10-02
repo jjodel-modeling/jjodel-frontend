@@ -277,3 +277,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-01-2215
 **Detail**: docs/discovery/discovery_2026-10-01_elk_layout_quality.md
+
+## 2026-10-03 — merge: elk-layout-disc into alfonso-frontend-jjtl (P-2026-10-03-0126)
+**Prompt**: `claude_2026-10-03_0126_prompt_merge_elk-layout-disc.md`, a direct merge by `lane-run merge --direct`, no session: `elk-layout-disc` at `15a17ba08` into `alfonso-frontend-jjtl`, merge base `07bca00e2`, 14 commits on the branch side.
+**Files touched**: merge `788570c06`: 16 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-01_elk_layout_quality.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-01_2215_fase2_elk_layout.md`, `docs/prompts/claude_2026-10-01_2215_prompt_elk_layout_discovery.md`, `docs/prompts/claude_2026-10-02_1718_prompt_elk-layout-disc_take_trunk.md`, `docs/prompts/claude_2026-10-03_0050_prompt_elk-layout-disc_take_trunk.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, and 8 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `788570c06` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6794 tests in 271 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat on 3001 (built-in browser, trunk 788570c06) after Alfonso visual GO (2026-10-03 01:25): DemoFlowB copy re-derived on Activity (UML): fork and join bars 120x7 horizontal; toolbar auto-layout runs top-down with ELK, initial at top, merge and decision diamonds on the spine, guard labels [model.count < 2] and >= 2 clear of edges and nodes, fork and join bars across the flow, final at the bottom; no console error; every gate green (vitest 6794, 9 known red at import)
+**Notes**: Rollback tag `pre-elk-layout-disc` on `f7131a405` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0126/result.json`.
+**Prompt document name**: 2026-10-03 01:26
