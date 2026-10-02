@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
     consumerModelId,
+    consumerSelectionLine,
     consumerSelectionOf,
     describeConsumerSelection,
     filterContextForProfile,
@@ -214,6 +215,24 @@ describe('the selection (J1)', () => {
         const typeOnly = describeConsumerSelection({ typeId: 'cLearner', instanceId: null, modelId: 'mA' }, idlookup)!;
         expect(selectionNotice(typeOnly)).toBe('Now looking at: Learner');
         expect(withInstance.key).not.toBe(typeOnly.key);
+    });
+
+    it('a selection made with an empty chat is not said, and stays due for when the chat is open', () => {
+        const { idlookup } = fixture();
+        const antonio = describeConsumerSelection({ typeId: 'cLearner', instanceId: 'oAnt', modelId: 'mA' }, idlookup);
+        // Empty chat: no line, and the caller keeps its last-said key (it moves only on a write).
+        expect(consumerSelectionLine(antonio, undefined, 0)).toBeNull();
+        // The same selection, once a conversation exists: due, since it was never said.
+        expect(consumerSelectionLine(antonio, undefined, 1)).toBe('Now looking at: Learner «Antonio»');
+    });
+
+    it('the selection last said is not said again', () => {
+        const { idlookup } = fixture();
+        const antonio = describeConsumerSelection({ typeId: 'cLearner', instanceId: 'oAnt', modelId: 'mA' }, idlookup)!;
+        const learner = describeConsumerSelection({ typeId: 'cLearner', instanceId: null, modelId: 'mA' }, idlookup)!;
+        expect(consumerSelectionLine(antonio, antonio.key, 3)).toBeNull();
+        expect(consumerSelectionLine(learner, antonio.key, 3)).toBe('Now looking at: Learner');
+        expect(consumerSelectionLine(null, undefined, 3)).toBeNull();
     });
 
     it('puts the selection in currentlyEditing, and the profile filters it like the rest', () => {

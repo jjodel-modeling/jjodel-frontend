@@ -135,6 +135,21 @@ export function selectionNotice(described: { typeName: string; instanceName: str
         : `Now looking at: ${described.typeName}`;
 }
 
+/**
+ * The chat line for a selection, or null when none is due: the chat is empty (no conversation to
+ * interrupt), or this selection was the last one said. `lastSaidKey` is the key of the last line
+ * actually written, and the caller moves it only when it writes: a selection made with an empty chat
+ * is not consumed, so it is never skipped in silence (visual check of 2026-10-02).
+ */
+export function consumerSelectionLine(
+    described: { key: string; typeName: string; instanceName: string | null } | null,
+    lastSaidKey: string | undefined,
+    chatLength: number,
+): string | null {
+    if (!described || chatLength === 0 || described.key === lastSaidKey) return null;
+    return selectionNotice(described);
+}
+
 /** The envelope with the selection in `currentlyEditing` (`type`, `instance { id, name }`).
  *  Unchanged when there is no `currentlyEditing` (no artefact resolved) or no selection. */
 export function withConsumerSelection(

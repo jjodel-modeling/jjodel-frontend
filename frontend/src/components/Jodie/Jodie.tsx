@@ -26,11 +26,11 @@ import {DUser, L, LUser, LProject, store} from '../../joiner';
 import { findProfile } from '../../joiner/environmentConfig';
 import { activeProfileId, isConsumerMode } from '../environment/consumerMode';
 import {
+    consumerSelectionLine,
     describeConsumerSelection,
     filterContextForProfile,
     getConsumerSelection,
     resolveConsumerArtifact,
-    selectionNotice,
     withConsumerSelection,
 } from '../environment/consumerJodieContext';
 import DockManager from '../abstract/DockManager';
@@ -310,10 +310,14 @@ export function Jodie(): JSX.Element {
             setConsumerSelectionCounter(c => c + 1);
             if (!isConsumerMode()) return;
             const described = describeConsumerSelection(getConsumerSelection(), store.getState().idlookup);
-            if (!described || described.key === lastSelectionRef.current) return;
-            lastSelectionRef.current = described.key;
+            // The key moves only when the line is written: a selection made with an empty chat
+            // is said at the next change, never skipped in silence. Read before the updater, so
+            // the updater gives the same answer however many times React calls it.
+            const lastSaid = lastSelectionRef.current;
             setChatState(prev => {
-                if (!prev.messages || prev.messages.length === 0) return prev;
+                const line = consumerSelectionLine(described, lastSaid, prev.messages?.length ?? 0);
+                if (!line || !described) return prev;
+                lastSelectionRef.current = described.key;
                 return {
                     ...prev,
                     messages: [
@@ -322,7 +326,9 @@ export function Jodie(): JSX.Element {
                             id: generateMessageId(),
                             kind: 'chat',
                             role: 'assistant',
-                            content: `_${selectionNotice(described)}_`,
+                            // `*…*`, not `_…_`: MarkdownMessage renders as markdown only what its
+                            // `hasMarkdownSyntax` recognises, and its italic is the asterisk.
+                            content: `*${line}*`,
                             timestamp: Date.now(),
                         }
                     ]
