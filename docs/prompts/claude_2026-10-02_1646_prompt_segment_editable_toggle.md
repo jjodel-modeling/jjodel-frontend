@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-1646
 Chat: C-2026-10-01-2349
 Lane: fast (one authoring component, the same fix as R-IRN-38 on a sibling editor). Phase 1 short, then Phase 2 in cascade. Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane segment-editable-toggle · 76d2d72cc, d8f2e61c3 · non fuso: hard-stop, both Phase 1 questions adopted as recommended (unattended), inline expression and no predicate module, R-IRN-40, mutation bench 18/18, lane probe 22/22 on the fix and 7/7 on the base (the base toggle reads OFF at rest), the four default scenes 0 px, crops in frontend/scripts/smoke/_tmp_segedit_crops/ (gitignored), visual GO of the chat and Alfonso pending
 
 Worktree: `~/jjodel-w-segedit`, branch `segment-editable-toggle`, created from the trunk `alfonso-frontend-jjtl` at `adb5d9731`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-segedit`, branch `segment-editable-toggle`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
