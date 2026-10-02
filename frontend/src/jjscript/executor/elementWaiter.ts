@@ -9,6 +9,7 @@ import { getProject, getTargetMetamodel } from './utils';
 import { ElementDependency } from './dependencies';
 import { findInstanceByName, resolveTargetModel } from './commands/instance';
 import { LModel, LProject } from '../../joiner';
+import { isRetryPass } from './runPasses';
 
 // ============================================
 // CONFIGURATION
@@ -47,8 +48,11 @@ export async function waitForDependencies(
     dependencies: ElementDependency[],
     context: ExecutionContext
 ): Promise<WaitResult> {
-    // Filter to only required dependencies
-    const requiredDeps = dependencies.filter(d => d.required);
+    // Filter to only required dependencies (R-JS-1). In a retry pass every dependency is
+    // awaited (R-JS-7): the command was deferred because a name did not resolve, and the line
+    // that creates it has run, so its target is on its way to the resolvers; not waiting made a
+    // forward reference fail again at the first poll and ended the run with nothing retried.
+    const requiredDeps = isRetryPass() ? dependencies : dependencies.filter(d => d.required);
 
     // If no required dependencies, return immediately
     if (requiredDeps.length === 0) {
