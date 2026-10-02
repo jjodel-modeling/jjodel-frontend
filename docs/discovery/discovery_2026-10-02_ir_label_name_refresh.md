@@ -121,3 +121,55 @@ Properties the tests pin: the signature changes when ONLY `dObject.name` changes
 Source: 1. `viewpoint/ir/irResolve.ts` (the two selectors and one import name). 2. `viewpoint/ir/irResolveCore.ts` (the added function, additive).
 Test: 3. `viewpoint/ir/__tests__/irObjectSnapshot.test.ts` (new).
 Docs: this report, one row `R-IRN-39` in `docs/decisions.md`, a log entry (and the tickets) in `docs/log-inbox/views.md`, the prompt's Status.
+
+---
+
+## 7. Addendum 2026-10-02, Phase 2 (P-2026-10-02-1645)
+
+Added after the fix, `7c92ffc2c`; sections 0 to 6 above are as written in Phase 1. Tags as above: [R] read, [M] measured.
+
+### 7.1 Correction to section 5 [R]
+
+Section 5 says «No critical-zone file: `irResolve.ts` and `irResolveCore.ts` are on the 2.5 hot list, not in §3.1». That is wrong: the §3.1 table lists the directory `frontend/src/components/editor-v2/viewpoint/ir/` («IR execution rendering», `CLAUDE.md:172`), and both files sit in it. The §3.2 trigger list names other files (`useJjomSync.ts`, `syncState.ts`, `canvasToJjom.ts`, `portDistribution.ts`, `useM1ReferenceEdges.ts`, `VersionFixer.tsx`, D-layer write paths), so no Layer Impact Report was produced before the diff; the prompt named both files, which is the go-ahead of P5. The log entry marks the report `skipped`. What it would have said, read from the diff: layers touched are the L-layer read path (the selector reads raw `idlookup`, no write) and the canvas v2-flow (an `ObjectNode` and an `IRRow` memo re-run on two more triggers); the sync layer, the D-layer write paths and persistence are not touched; the smoke scenarios affected are the four demo scenes (0 px, 7.4) and an open-and-rename of an M1 object.
+
+### 7.2 What was done
+
+Code `7c92ffc2c`: `objectSnapshotParts(lookup, objectId, irSig)` in `irResolveCore.ts` (additive); `useIRView` and `useIRRowView` in `irResolve.ts` call it. Terms appended after the slot values: `n=` the name as `getName` reads it from the D-layer (`name ?? initialName ?? ''`), `c=` the metaclass's own name, both JSON-quoted. Test `ir/__tests__/irObjectSnapshot.test.ts`, 11 tests.
+
+### 7.3 Mutation bench on `objectSnapshotParts` [M]
+
+First pass 11/12: the survivor was M12, the inverted fallback (`initialName ?? name`). The fixtures had `name` or `initialName`, never both, and the inverted order is invisible then; the realistic object has both (a rename changes `name`, `initialName` stays), and the inverted order would have left the label stale. Test added: «follows name, not initialName, once both are set». Second pass 14/14 (M13 name term reads `initialName` only, M14 metaclass term reads the class id, added with it). Mutants: drop the name term, name term reads the metaclass name, name term reads every name, drop the `initialName` fallback, drop the metaclass term, metaclass term reads the object name, metaclass term reads every class name, no JSON quoting, drop the slot loop, swap the leading parts, drop the missing-object guard, inverted fallback, `initialName` only, class id instead of name. Each applied in place, tested, restored; file hash identical after. The hook wiring in `irResolve.ts` does not load in the bench (it imports the joiner), so no unit test executes it: the probe (7.4) does, and no source-text test stands in for it.
+
+### 7.4 Gates and probe [M]
+
+Gates on `7c92ffc2c`: typecheck exit 2, 14 errors, the §17 set by file and code; vitest 262 files, 6507 tests passed, 0 failed, the 9 known files red at import (8 under one `window is not defined` block, 1 under another); build exit 0; `check:scripts` PASS (41 files, 4 `_tmp_*` probes); `check:addonly` clean.
+
+Probe `frontend/scripts/smoke/_tmp_labelname_probe.ts` (gitignored), `lane-run probe` on port 3171, light theme (`setTheme` reported root `light`), 1600x1000, DPR 2. Before = `irResolve.ts` and `irResolveCore.ts` put back at `adb5d9731` for the run and restored from `HEAD` after (diff against `HEAD` 0 lines checked after each run); after = `HEAD`. Scene: a class `Plain` with no `name` attribute, `Named` with one, `Wild` drawn by a wildcard view with a `metaclassName` label, `Box` with two containment children drawn as default rows.
+
+| Check | Before (`adb5d9731`) | After (`7c92ffc2c`) |
+|---|---|---|
+| A: double-click rename of `plain1` (no attribute): label after two frames, `msToShow`, +5 s, after a tab round trip | `plain1`, null, `plain1`, `plain1`; store holds `plain1_renamed` | `plain1_renamed`, 0 ms, `plain1_renamed`, `plain1_renamed` |
+| A: memo re-runs of the renamed node (readCtx identity) | 0 | 1 |
+| A: memo re-runs of every other node and row | 0 | 0 |
+| B: the same on `named1` (with attribute), label at +5 s and after the tab round trip | `named1_renamed` | `named1_renamed` |
+| C: class `Wild` renamed, `metaclassName` label | `Wild` at 8 s | `WildRenamed` at 0 ms and at +5 s |
+| D: child `item1` renamed, its row | `item1` | `item1_renamed` |
+| Four demo scenes (sm, petri, esm, flowB), `.react-flow` shot, Jodie launcher masked | | 0 px each |
+| Verdict | 11 pass, 7 fail (the defect: A 4, C 2, D 1) | 21 pass, 1 fail |
+
+The one failure in the after run is the probe's own check C «within two frames»: the label was stale at the two-frame read (about 33 ms) and correct at the next poll (`msToShow` 0), so the latency of a metaclass rename is under the Playwright round trip but not resolved finer. A's two-frame check passes. The positive control of the re-run measure is in the same run: the renamed node's 1 against the others' 0.
+
+Two measures that do not say what the prompt hoped. Render counts: every `ObjectNode` renders on every commit, so all nodes read the same count (74 of 74 in the after run, 226 in the before run, whose window ran to the 8 s cap of `msUntil` because the label never changed): the count cannot show an unrelated re-resolve, and the memo re-run count above is the measure used. The name-attribute control lags: `getName` prefers the `name` slot to `DObject.name`, and the slot is written after, so the label follows at 644 ms (before) and 959 ms (after, a loaded machine); unchanged by this fix, and the «within one frame» claim holds for a class without the attribute only.
+
+Probe flakes: three after runs died at start under a machine load of 131 to 60 (`page.goto` 240 s, `Failed to fetch dynamically imported module` twice, once after a 20 x 8 s warm-up, and `Execution context was destroyed`); the fourth ran at load 14 and is the one reported. The corner-clip lane recorded the same flakes.
+
+### 7.5 Not measured, and tickets
+
+- The edge-label gap (section 0, `useIRContainment.ts:204`) is unmeasured: the probe scene has no edge view. Ticket in `docs/log-inbox/views.md`, with the comment at `useIRFormView.ts:79-82`, now untrue.
+- A rename of a SUPERCLASS mid-session leaves an inherited match stale (the metaclass term stops at the class itself, Q2). Low ticket.
+- The metaclass half is measured in the page for the label only (C); that the view match itself follows a class rename was measured on the bench copy in Phase 1 (M3), not in the page.
+
+### 7.6 Decisions
+
+**Decisions taken (unattended):** Q1 to Q4 answered as recommended: the row hook fixed with the node hook through the shared helper (D shows it stale before and right after); the metaclass term stops at the class itself; the edge-label gap and the stale form-hook comment are tickets. Decision row `R-IRN-39` (provisional, unattended, RC-25). The prompt's Status line is left at `da eseguire`: the `status-flip` skill is user-only (`disable-model-invocation`), and a hand edit would route around it, so the flip is owed to the chat.
+**Decisions awaiting Alfonso:** none on the recommended path.
