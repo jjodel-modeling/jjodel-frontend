@@ -208,3 +208,16 @@ active log is not touched by these lanes.
 **Priority**: medium
 **Found in**: P-2026-10-02-1255
 **Detail**: docs/discovery/discovery_2026-10-02_168_c1_executor_prompt.md
+
+## 2026-10-02 — merge: 168-exec into feat/168-jodie-consumer
+**Prompt**: `claude_2026-10-02_2251_prompt_merge_168-exec.md` (P-2026-10-02-2251) — merge diretto (`lane-run merge --direct`) della lane C1 (esecutore JjScript: sostituzione sui riferimenti singoli, nessuna scrittura persa, `= null` che svuota; prompt di chat v5) nel trunk #168, primo dell'ordine C1 → C2 → D.
+**Files touched**: merge `be4260166` (4 commit di C1: referto `327bfedd7`, codice `4d49a28b7` e `dc8b7f9b5`, chiusura `5b8c95b1b`); conflitto su `docs/log-inbox/jodie-consumer.md` risolto per unione; tag `pre-168-exec` su `4e2382f36`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gate del worker sul merge: typecheck 14 (insieme della punta ricevente), typecheck:scripts, vitest (5551 test, 9 rossi all'import noti), build, check:agents, check:scripts verdi; sonda di C1 `_tmp_168_c1_verify` rieseguita sul trunk unito (porta 3046): 24 PASS, exit 0, console con i soli 3 `wrong project setup in navbar` già presenti nella sonda della lane.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1; il flush usa il `COMMIT` già esistente, nessun TRANSACTION attorno a creatori (Rule 12, referto C1 §7).
+**Smoke visivo**: non applicabile — nessuna interfaccia cambiata.
+**Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B su `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40). Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
+**Prompt document name**: 2026-10-02 22:51
