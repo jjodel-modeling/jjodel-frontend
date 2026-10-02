@@ -146,3 +146,38 @@ Measured: the derived Fork and Join (bar) draw the resting shadow today, 20 rows
 
 1. The Symbol Editor preview does not show the defect by construction (F6, read only). Record it as a ticket? (the prompt says: only if it shows the same defect)
    Recommended: no ticket; note F6 in the closing log entry.
+
+## 6. Addendum, 2026-10-02: Phase 2, the fix and what the fixed tree measured
+
+Written after the fix, `0070222d8` (code), on the same tree and the same probe as section 3 (`_tmp_irclip_probe.ts`, port 3077, light, DPR 2, run tag `after`, 103/103, exit 0).
+Tags as above: [measured] a run of this phase, [read] a file.
+
+**The change [read, diff].** `instanceNode.scss`, one rule and its comment: `&.selected:has(> .ir-node-content) {` becomes `&:has(> .ir-node-content) {`, `overflow: visible;`, at (0,3,0) over `.mm-node.mm-object` (0,2,0). The comment now says why:
+the shape inside carries its own radius, clip and shadow, and the wrapper's `overflow: hidden` cut the corners of a shape under the 7px arc and its resting shadow, as well as the ring and band.
+
+**A1. The R1 spill census is measured now [measured].** For each of 20 nodes (the ten forms, a content node with an attribute compartment and three badges, the derived Activity (UML) nodes, and the two Activity nodes rewritten as rect) at rest: descendants of the wrapper whose box extends past the wrapper's border box by more than 0.5 px and are drawn
+(opacity above 0 and visibility not hidden): **0 on all 20**. Descendants past the box that are not drawn at rest: 32 per node (30 on the diamond), all `react-flow__handle` anchors, opacity 0. The stop condition of the prompt (something drawn past the box at rest) does not fire.
+
+**A2. Rest after the fix equals rest with the clip lifted [measured].** The probe's lifted state is now the natural one: top-left crop, rest versus rest with the clip lifted by a style, 0 differing pixels on every node; resting shadow rows lit, rest/lifted:
+`rect 27/27, rect0 28/28, rect4 27/27, rect7 27/27, rounded 27/27, stadium 27/27, ellipse 26/26, rich 27/27, circle i0 24/24, action 14 27/27, circle fin 24/24, bar fork and join 20/20, parallelogram, hexagon, diamond 0/0 (box-shadow none)`.
+Before the fix the same rows were 0 on every node but the bars (section 3, F4).
+Rest before versus rest after, whole-node crop: the counts equal the rest-versus-lifted counts of the before run to the pixel (rect 19417, rect0 20593, rect4 10428, rect7 19183, rounded 18882, stadium 9337, ellipse 5819, para 461, hex 379, diamond 176, action 13772, i0 2834, d1 280, fin 3276, bars 0).
+
+**A3. The default scenes [measured].** The four demo scenes in the default viewpoint (sm, petri, esm, flowB M1) and the two metamodel tabs (sm, flowB M2): the `.react-flow` shot, after against before, **0 px on all six** (the 431 pixels of the Jodie launcher masked, the same count in all six). Non-IR M1 nodes (the classic `.mm-object` with accent bar) and M2 class nodes are among them.
+
+**A4. The derived pane [measured].** Derived Activity (UML) viewpoint, before against after: 44297 differing pixels (47197 with the Activity view rewritten as rect), every one within 30 css px of a node card except the 431 of the Jodie launcher; per node 13772 (work), 13773 (left), 9931 (right), 2834 (i0), 3276 (fin), 280 (d1), 0 for the two bars. Those are the corner and shadow pixels, listed by node, and nothing else.
+
+**A5. The hover state, a consequence the prompt did not name [measured].** On an unselected IR node the connected anchors draw on hover (EditorV2.scss:1718-1722, `.react-flow__node:hover .mm-anchor.mm-anchor--connected { opacity: 1 }`), the two of the `work` node 4 px past the box on the left and the right. Under the old clip (forced back by a style) they draw as half circles, now whole, as they already did selected and as they do on M2 nodes. The two crops differ below a channel delta of 40 in the anchors (light grey on the canvas); the visible change is the shadow and the corners. The chat accepted it (ratified answer to Q1).
+
+**A6. The red test, and the answer to Q1 [measured, read].** `irSelectionRing.test.ts:183-186`, `expect(rgb).toEqual(CANVAS)` for an unselected IR node 4 px above its top edge, passed 5/5 without the fix and failed with it: `expected [ 240, 244, 248 ] to deeply equal [ 241, 245, 249 ]`, the resting shadow arriving. The lane stopped with `Outcome: question` (the file was outside the prompt's scope); the chat ratified the recommendation. The test is now `an unselected IR node paints no ring or band outside its shape, only its resting shadow`: every channel at most 3 under the canvas and blue minus red at most 10. Mutation bench: the same test with the unselected node rendered selected fails on the first assertion (`rgb 139,214,248`); the four ring tests are untouched.
+
+**A7. Gates [measured].** typecheck exit 2, 14 errors, the section 17 set by file and code (compared to the first run, identical); `npx vitest run src/components/editor-v2` 105 files, 2559 tests, exit 0; `npm run build` exit 0. A first vitest run at load average 28 timed out four Chromium-laid-out files (hook 10 s, test 15 s: `irCollapsedRender`, `irSelectionRing`, `irActivityRender`, `irC2Render`), none an assertion; the rerun at load 5 was green.
+
+**A8. Crops (gitignored, `frontend/scripts/smoke/_tmp_irclip_crops/`, `sips -Z 600`).**
+`ic_triptych_<label>_600.png`, tiles [before rest | after rest | after selected], top-left corner at 4x, labels `forms_rect`, `forms_rect0`, `forms_rect4`, `forms_rect7`, `forms_rounded`, `forms_para`, `forms_hex`, `forms_diamond`, `forms_stadium`, `forms_ellipse`, `derived_flowB_{i0,work,left,d1,fk,jn,fin}`, `derived_flowB_work_asRect`, `derived_flowB_left_asRect`;
+`ic_before_triptych_<label>_600.png`, tiles [rest | rest with the clip lifted | selected], the defect as it was;
+`ic_after_hover_derived_flowB_work_r14_600.png` and `..._work_asRect_600.png`, tiles [old clip forced back | tree], the hover anchors;
+panes `ic_{before,after}_flowB_derived_pane.png`, `..._derived_asRect_pane.png`, `ic_{before,after}_<scene>_default.png`.
+Probe, scenario, logs: `frontend/scripts/smoke/_tmp_irclip_{probe.ts,scenario.js,common.ts,celldiff.ts,before.log,after.log}`; the lane folder `~/.jjodel-lanes/P-2026-10-01-2336/` holds `probe-_tmp_irclip_probe.log`.
+
+**Open.** The Symbol Editor preview (F6) stays read-only evidence, no ticket (the recommendation of Q1 of section 5). Visual check owed to the chat: the corners and shadow of an IR rect node, whole at rest; selection now differs from rest by the ring and band only; anchors whole on hover.
