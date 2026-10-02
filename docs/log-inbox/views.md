@@ -226,3 +226,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato (lane probe 50/50, crops in `frontend/scripts/smoke/_tmp_inkout_crops/`, gitignored; the visual GO of the chat and Alfonso is pending)
 **Notes**: The typecheck output went once to `/tmp/x`, against the prompt's no-`/tmp` rule; deleted at once, every later log kept in the gitignored bench folder. The dark rule sits in two stylesheets of the dev page (the token file imported twice); the browser check of the dropped dark token removed both. Report: `docs/discovery/discovery_2026-10-02_ir_ink_outside.md` §9.
 **Prompt document name**: 2026-10-02 23:56
+
+## 2026-10-03 — merge: ir-ink-outside into alfonso-frontend-jjtl (P-2026-10-03-0038)
+**Prompt**: `claude_2026-10-03_0038_prompt_merge_ir-ink-outside.md`, a direct merge by `lane-run merge --direct`, no session: `ir-ink-outside` at `d5defd00d` into `alfonso-frontend-jjtl`, merge base `7c9ae4e0d`, 4 commits on the branch side.
+**Files touched**: merge `a48a8aefa`: 9 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_ir_ink_outside.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-02_2356_prompt_ir_ink_outside.md`, `frontend/src/components/editor-v2/nodes/__tests__/irInkOutside.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/styles/tokens/_colors-dark.scss`, `frontend/src/styles/tokens/_colors-light.scss`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a48a8aefa` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6711 tests in 269 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat on 3001 (built-in browser, trunk a48a8aefa, light), visual GO delegated by Alfonso: DemoPetri copy re-derived on Petri net (classic); with Color by metaclass on the places fill rgb(243,223,203) and the outside labels p1 p2 p3 lock stay rgb(15,23,42), the same as with coloring off; transition labels t1..t3 rgb(100,116,139) both ways; dark checked on the lane crops (labels readable, were black); every gate green
+**Notes**: Rollback tag `pre-ir-ink-outside` on `6dc5fdc4b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0038/result.json`.
+**Prompt document name**: 2026-10-03 00:38
