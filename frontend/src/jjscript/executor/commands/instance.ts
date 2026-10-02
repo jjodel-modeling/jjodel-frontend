@@ -12,10 +12,11 @@
  *   - (lObject as any)['$' + featureName].value = newValue    — inside TRANSACTION (single value)
  *   - refProxy.values = [...meaningful, targetObject.id]      — inside TRANSACTION (multi-value / reference)
  *
- * Reference (link) semantics:
- *   In M1, `set X.refName = Y` where refName is a metaclass reference appends Y's id
- *   to the reference values array (mirroring syncCreateReferenceLink).
- *   Setting to null clears the reference (unlink).
+ * Reference (link) semantics (#168 C1, `../referenceWrite.ts`):
+ *   In M1, `set X.refName = Y` where refName is a metaclass reference REPLACES the target
+ *   when the reference is single-valued, and appends Y's id when it is multi-valued
+ *   (mirroring syncCreateReferenceLink). Setting to null clears the reference (unlink).
+ *   Both read the slot only after the queued writes have landed (`settlePendingWrites`).
  */
 
 import {
@@ -48,6 +49,7 @@ import {
     renameHandle,
     getReservedHandles,
 } from '../handleRegistry';
+import { isManyValued, linkedIds, planLink, planUnlink } from '../referenceWrite';
 
 // ============================================
 // SHARED HELPERS
@@ -249,6 +251,46 @@ function literalToPrimitive(value: LiteralValue): string | number | boolean | nu
         case 'number':  return value.value;
         case 'string':  return value.value;
         default:        return null;
+    }
+}
+
+/**
+ * Let every write already queued reach the store before a reference slot is read.
+ *
+ * The app keeps a transaction block open and commits it every `U.UpdatingTimer` (300 ms,
+ * `reducer.ts:1444`), so a `set` returns while its write is still queued. A second `set` on the
+ * same slot inside that window read the old values and overwrote the first: measured in a
+ * `do ... end` block, in a `forall` and at the Run button's 20 ms pacing (#168 C1,
+ * `docs/discovery/discovery_2026-10-02_168_c1_executor_prompt.md` §3.2-3.3). This is the
+ * interval's own call made now; it schedules the dispatch as a `setTimeout(0)` (`action.ts:349`),
+ * so one macrotask later the store holds it, as in the drain of `reducer.ts:1591-1592`.
+ *
+ * `COMMIT` is loaded here, not at the top: `joiner` does not export it, and a static import of
+ * `action.ts` would evaluate it in the suites that mock `joiner` to load this file
+ * (`handleRegistry.test.ts`, `elementWaiter.test.ts`), where it reads `windoww` from the mock.
+ */
+async function settlePendingWrites(): Promise<void> {
+    const { COMMIT } = await import('../../../redux/action/action');
+    COMMIT(undefined, false);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Take ids out of a reference slot by value. Must run inside the caller's TRANSACTION.
+ *
+ * `refProxy.values = [...]` cannot shrink a slot: it shortens it with a `'-='` that carries no
+ * value, which the reducer drops (`model/CLAUDE.md` §9.3). By value it is the reducer's own
+ * removal, the one `Dummy.get_delete` uses (R-DEL-4). A child taken out of a containment goes
+ * back to the model root, the write `_clearValueAtPosition` makes when it evicts one
+ * (`LModelElement.tsx:7855-7856`) — only when this slot is its father, so an object another
+ * container holds is not pulled out of it.
+ */
+function removeLinked(refProxy: any, ids: readonly string[], containment: boolean, modelId: string): void {
+    for (const id of ids) {
+        SetFieldAction.new(refProxy.id, 'values', id as any, '-=', true);
+        if (containment && (LPointerTargetable.fromPointer(id as any) as any)?.__raw?.father === refProxy.id) {
+            SetFieldAction.new(id as any, 'father', modelId as any, undefined, true);
+        }
     }
 }
 
@@ -751,12 +793,16 @@ export async function executeSetInstance(
     const isUnlink = isLiteralValue(args.value) && (args.value as LiteralValue).kind === 'null';
 
     if (isUnlink) {
+        // Read the slot only after the queued writes have landed.
+        await settlePendingWrites();
         return new Promise((resolve) => {
             try {
                 TRANSACTION('JjScript: Unlink reference', () => {
                     const refProxy = (lObject as any)['$' + args.property];
                     if (refProxy) {
-                        refProxy.values = [];
+                        // `refProxy.values = []` reported success and left the slot as it was.
+                        const plan = planUnlink(linkedIds(refProxy.__raw?.values));
+                        removeLinked(refProxy, plan.remove, !!refProxy.instanceof?.containment, targetModel.id);
                     }
                     resolve({
                         success: true,
@@ -823,6 +869,9 @@ export async function executeSetInstance(
         };
     }
 
+    // Read the slot only after the queued writes have landed.
+    await settlePendingWrites();
+
     return new Promise((resolve) => {
         try {
             TRANSACTION('JjScript: Link reference', () => {
@@ -836,9 +885,11 @@ export async function executeSetInstance(
                     });
                     return;
                 }
-                const rawVals: any[] = refProxy.__raw?.values ?? [];
-                const meaningful = rawVals.filter((v: any) => v != null && v !== '');
-                refProxy.values = [...meaningful, targetInstance.id];
+                // Single-valued: the target replaces what the slot held. Multi-valued: appended.
+                const meta = refProxy.instanceof;
+                const plan = planLink(linkedIds(refProxy.__raw?.values), targetInstance.id, isManyValued(meta?.upperBound));
+                removeLinked(refProxy, plan.remove, !!meta?.containment, targetModel.id);
+                if (plan.write) refProxy.values = plan.write;
                 resolve({
                     success: true,
                     command: 'set',
