@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-2300
 Chat: sessione Claude Code di Juri (VS Code), 2026-10-01, orchestratore delle lane #168
 Lane: discovery (read-only sul codice: scrive solo il referto in docs/ e sonde `_tmp_*` non tracciate)
-Status: da eseguire
+Status: eseguito 2026-10-01 · lane 168-measures · 58adb6728
 Limite: 90 minuti
 
 Worktree: `/Users/juridirocco/development/jjodel-168-measures`, branch `168-measures`, tagliato dal
