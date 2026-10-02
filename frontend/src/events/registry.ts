@@ -53,6 +53,9 @@ export const JjodelEvents = {
   // R-VAL. Apre l'ambiente di authoring delle regole su un metamodello.
   // detail: { metamodelId: string; metamodelName?: string }.
   VALIDATION_RULES_OPEN: 'jjodel:validation-rules-open',
+  // Slice D (P-2026-09-30-0255). Opens the «Derive viewpoint» dialog on a metamodel.
+  // detail: { metamodelId: string }.
+  DERIVE_VIEWPOINT_OPEN: 'jjodel:derive-viewpoint-open',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   CREATE_MODEL: 'jjodel:createModel',
@@ -121,6 +124,10 @@ export const JjodieEvents = {
 export const EnvGenEvents = {
   CONFIG_CHANGED: 'envgen-config-changed',
   OPEN_WIZARD: 'envgen-open-wizard',
+  /** #157 R5 — the consumer's left column picks a type for the Configurator page. detail: { typeId } */
+  CONFIGURATOR_SELECT_TYPE: 'envgen-configurator-select-type',
+  /** #157 R5 — the Configurator page says which type is on screen, for the column. detail: { typeId } */
+  CONFIGURATOR_TYPE_CHANGED: 'envgen-configurator-type-changed',
 } as const;
 
 // ─── Avatar ─────────────────────────────────────────────────────

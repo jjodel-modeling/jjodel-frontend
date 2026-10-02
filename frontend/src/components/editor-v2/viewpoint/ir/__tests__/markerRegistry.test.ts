@@ -125,6 +125,23 @@ describe('markerRegistry: token dots', () => {
             expect(Math.abs(mean(dots.map(d => d.cy)) - 50)).toBeLessThanOrEqual(2);
         });
     }
+
+    it('dot keeps radius 16: the State machine and Flowchart bull\'s-eyes, the one-token place, the catalogue presets', () => {
+        expect(dotRadius).toBe(16);
+        expect(circle(MARKER_REGISTRY.dot.paths[0].d)).toEqual({ cx: 50, cy: 50, r: 16 });
+    });
+
+    it('dot-large (P-2026-09-30-1720): one filled disc centred on (50,50), radius 35, 14 px on the 20 px layer of a 24 px circle', () => {
+        const def = getMarkerDef('dot-large');
+        expect(def).toBeDefined();
+        expect(def!.paths).toHaveLength(1);
+        expect(def!.paths[0].fill).toBe(true);
+        const disc = circle(def!.paths[0].d);
+        expect(disc).toEqual({ cx: 50, cy: 50, r: 35 });
+        expect(disc.r).toBeGreaterThan(dotRadius);
+        // node 24, painted 22 (the wrapper's transparent 1 px), the layer 20 inside the circle's 1 px border
+        expect((2 * disc.r / 100) * 20).toBeCloseTo(14, 6);
+    });
 });
 
 describe('asse bordo: double', () => {

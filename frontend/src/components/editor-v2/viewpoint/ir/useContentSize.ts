@@ -75,11 +75,45 @@ function measureIntrinsic(el: HTMLElement): IntrinsicMeasure {
 }
 
 /**
- * How many consecutive commits this hook may write the same size before it gives
+ * How many consecutive commits this hook may write on a vertex without seeing the
+ * store come back with the size it measures, whatever that size is, before it gives
  * up on that vertex. Three is one more than the two a legitimate settle needs
- * (write, then confirm) and far below React's nested-update limit.
+ * (write, then confirm) and far below React's nested-update limit. A new target does
+ * not refill it (P-2026-10-01-1655): a measurement that alternates between two sizes
+ * has a new target at every commit, and refilling on it made the budget void.
  */
 const MAX_UNACCEPTED_WRITES = 3;
+
+/**
+ * How many writes this hook may make on one vertex inside one synchronous cascade of
+ * commits, whatever happens in it. Each write is followed by nested commits that run
+ * the hook again before the browser gets the thread back (React flushes the sync
+ * updates of a commit in one loop, with no microtask between them), so a cycle that
+ * gives the size back to the hook every time (another writer dropping it, the host
+ * remounting with fresh refs) refilled the budget above at every turn. Counted per
+ * vertex at module level, so a remount does not reset it; cleared by a microtask, the
+ * first moment after the cascade. Same three: a settle needs two.
+ */
+const MAX_WRITES_PER_CASCADE = 3;
+const cascadeWrites = new Map<string, number>();
+let cascadeEndQueued = false;
+
+/** Counts one write of `vertexId` in the running cascade; false when over the cap. */
+function takeCascadeWrite(vertexId: string): boolean {
+    const n = (cascadeWrites.get(vertexId) ?? 0) + 1;
+    cascadeWrites.set(vertexId, n);
+    if (!cascadeEndQueued) {
+        cascadeEndQueued = true;
+        queueMicrotask(() => {
+            cascadeWrites.clear();
+            cascadeEndQueued = false;
+        });
+    }
+    if (n === MAX_WRITES_PER_CASCADE + 1) {
+        console.warn('[useContentDrivenSize] size written too often in one commit cascade, yielding', { vertexId });
+    }
+    return n <= MAX_WRITES_PER_CASCADE;
+}
 
 /**
  * Keep the React Flow node sized after the content of its IR view.
@@ -207,21 +241,20 @@ export function useContentDrivenSize(
 
         const derived = boxFromIntrinsic(desc, measureIntrinsic(el));
         const size = defaults ? defaultBoxFor(defaults, derived, desc.keepAspectRatio) : derived;
-        // Same answer as last commit: the measurement has not moved, so if the
-        // store still disagrees it is not going to start agreeing.
-        const sameTarget = mine !== null && mine.w === size.w && mine.h === size.h;
         written.current = size;
         fromDefault.current = defaults !== undefined;
         if (curW === size.w && curH === size.h) {
             unaccepted.current = 0;
             return;
         }
-        if (!sameTarget) unaccepted.current = 0;
 
         // Write budget. The effect has no dependency array on purpose (the trigger
         // is a commit of the content), so its only guarantee of termination is
         // that the next commit observes the size just written. When another writer
         // resets it on every cycle that guarantee is void and the two ping-pong.
+        // Only a commit that finds the store holding the measured size refills it:
+        // a new target does not (it was reset on one until P-2026-10-01-1655, and a
+        // measurement alternating between two sizes wrote forever).
         // Yielding costs a node drawn at the CSS content-hug size; not yielding
         // costs the whole canvas.
         unaccepted.current += 1;
@@ -232,6 +265,11 @@ export function useContentDrivenSize(
                     { vertexId, form, store: { w: curW, h: curH }, derived: size },
                 );
             }
+            return;
+        }
+        if (!takeCascadeWrite(vertexId)) {
+            // Not a write the store refused: the cascade's cap, which the next cascade lifts.
+            unaccepted.current -= 1;
             return;
         }
 

@@ -9,6 +9,7 @@ import { getProject, getTargetMetamodel } from './utils';
 import { ElementDependency } from './dependencies';
 import { findInstanceByName, resolveTargetModel } from './commands/instance';
 import { LModel, LProject } from '../../joiner';
+import { isRetryPass } from './runPasses';
 
 // ============================================
 // CONFIGURATION
@@ -47,8 +48,11 @@ export async function waitForDependencies(
     dependencies: ElementDependency[],
     context: ExecutionContext
 ): Promise<WaitResult> {
-    // Filter to only required dependencies
-    const requiredDeps = dependencies.filter(d => d.required);
+    // Filter to only required dependencies (R-JS-1). In a retry pass every dependency is
+    // awaited (R-JS-7): the command was deferred because a name did not resolve, and the line
+    // that creates it has run, so its target is on its way to the resolvers; not waiting made a
+    // forward reference fail again at the first poll and ended the run with nothing retried.
+    const requiredDeps = isRetryPass() ? dependencies : dependencies.filter(d => d.required);
 
     // If no required dependencies, return immediately
     if (requiredDeps.length === 0) {
@@ -69,11 +73,15 @@ export async function waitForDependencies(
     // once when the instance already exists instead of burning the full MAX_WAIT_MS.
     const m1Model = context.level === 'M1' ? resolveTargetModel(context, project) : null;
 
+    // The executor's own condition for the bound-scope guard (`executor.ts:123`): the wait must
+    // not accept a bare name the guard will refuse right after it (R-JS-2).
+    const boundM2 = !!context.scopeBound && context.level !== 'M1';
+
     const startTime = Date.now();
     let elapsed = 0;
 
     while (elapsed < MAX_WAIT_MS) {
-        const unresolved = findUnresolved(requiredDeps, project, targetMetamodel, m1Model);
+        const unresolved = findUnresolved(requiredDeps, project, targetMetamodel, m1Model, boundM2);
 
         if (unresolved.length === 0) {
             return { allResolved: true, unresolved: [], waitedMs: elapsed };
@@ -85,7 +93,7 @@ export async function waitForDependencies(
     }
 
     // Final check after timeout
-    const finalUnresolved = findUnresolved(requiredDeps, project, targetMetamodel, m1Model);
+    const finalUnresolved = findUnresolved(requiredDeps, project, targetMetamodel, m1Model, boundM2);
     return {
         allResolved: finalUnresolved.length === 0,
         unresolved: finalUnresolved,
@@ -104,7 +112,8 @@ function findUnresolved(
     deps: ElementDependency[],
     project: LProject,
     targetMetamodel: LModel | null,
-    m1Model: LModel | null
+    m1Model: LModel | null,
+    boundM2: boolean
 ): ElementDependency[] {
     return deps.filter(dep => {
         // M1: resolve instance targets against `model.objects` with the same lookup the
@@ -127,6 +136,14 @@ function findUnresolved(
         if (targetMetamodel) {
             const found = resolveElementInMetamodel(dep.name, targetMetamodel);
             if (found) return false; // resolved
+            // R-JS-2. In a bound M2 run a bare name resolves in the bound metamodel or not at
+            // all: `checkBoundScope` refuses one held only by another metamodel. Falling back
+            // project-wide here let a homonym elsewhere end the wait before the bound
+            // metamodel's own element had reached the resolvers, and the guard then refused
+            // the line (`discovery_2026-10-01_jjscript_requeue.md` §3.1). A qualified name
+            // still crosses, as it does in the guard; a bound metamodel that is gone leaves
+            // `targetMetamodel` null and keeps the fallback, so the guard refuses at once.
+            if (boundM2 && dep.name.segments.length === 1) return true; // still unresolved
         }
         // Fallback to project-wide
         const found = resolveElement(dep.name, project);

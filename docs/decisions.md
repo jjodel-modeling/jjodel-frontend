@@ -303,6 +303,37 @@ per la C2). Alfonso riceve il digest alla chiusura della corsia.
   D (la caduta classe→enum crea un attributo di quel tipo) è rinviata: comodità a bassa scopribilità che tocca
   l'unione esportata `EdgeTypeChoice`.
 
+## Serie R-ESEL — the edge click and the Properties panel (decisions 2026-09-30)
+
+Evidence: `docs/discovery/discovery_2026-09-30_edge_click_properties.md` (`371804cf0`), measured on 3097. Decided by
+the chat `C-2026-09-30-1940` in the prompt `P-2026-09-30-1940` under RC-25, adopted by the lane as written; code
+`bb0fd90c9`. Alfonso receives the digest at the close of the lane.
+
+- **R-ESEL-1** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **One pure resolver maps a clicked edge to the element the Properties panel shows.**
+  `resolveEdgeSelectionTarget(edgeId, idlookup)` in `editor-v2/utils/edgeSelectionTarget.ts` reads the D-layer from
+  the edge id, never the React Flow `data` (the mirrored click passes `{ id }` only, `EditorV2.tsx:2845`). An edge
+  kind it does not know returns `null` and the click keeps its previous path exactly. The prompt's `viewId` is
+  dropped: a view id in `_lastSelected.view` turns the panel into the view editor (`Info.tsx:1591`).
+- **R-ESEL-2** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **What each edge shows.** M2 reference and M2 composition: the `DReference` (as before). M1 reference and M1
+  composition: the reference slot, the `DValue` of the source object whose `instanceof` is the edge's `DReference`
+  (before: the metamodel's `DReference`, whose editor then opened inside the model tab); the slot, not the feature,
+  because the panel has a slot view that names the owner and edits the value. Object-as-edge `irobj_<id>`: the
+  `DObject`, as its node click shows it (before: nothing changed). Inheritance and IR-lifted `<id>__irlift`: `null`,
+  today's behaviour (the empty panel, respectively nothing); a follow-up is ticketed.
+- **R-ESEL-3** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The clicked edge stays the canvas selection.** Only `_lastSelected.modelElement` changes. An object-as-edge has no
+  D-element behind its id: nothing is `select()`ed, every graph element is deselected as for any selection, and
+  `_lastSelected.node` is `''`; the object's node, hidden or absent, is not selected.
+- **R-ESEL-4** (2026-09-30, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Native and mirrored edge clicks take the same path.** `EditorV2.onEdgeClick` and `EditorV2.selectEdge` call the
+  same hook handlers: `jjomSelection.onEdgeClick` for D-edges, `jjomSelection.onObjectAsEdgeClick` in their two
+  `irobj_` branches; both end in the resolver.
+- **R-ESEL-5** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Highlight mode, node click and pane click are unchanged.** In highlight mode a D-edge click assigns the colour
+  and does not select; an object-as-edge click neither assigns nor selects, as before it had a handler.
+
 ## Arco A — barra a tab e capi degli edge
 
 - **R-A** (2026-08-05) — Strada B per la barra: tutti i tab montati, gli inattivi nascosti con
@@ -4327,7 +4358,316 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     before run (the Simulation chip of the bag, an edge re-route). The switch was never on there and the resolver
     answered null; no run on the old code attributes it.
   - Report `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md` (`c29280962`). Was R-VP-23.
+- **R-VP-19** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **The derived viewpoint draws the generic structural notation (variant C) when no role is bound.** Source:
+  `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §0 questions 1 and 2,
+  §1 rows 13, 14, 15, 17, §4, §5 C1) and the mockups `docs/mockups/derived-viewpoints/*-C-generic.svg`. Alfonso chose
+  «Derive viewpoint» opening a dialog whose notation select defaults to Generic, and «C first»; the dialog is slice D.
+  Amends R-VP-15 (5) and the last clause of R-VP-17 («no role bound: today's boxes»): with no role bound the
+  derivation draws variant C; with a binding the role-keyed path of R-VP-15..18 is unchanged, byte for byte. (1) Where:
+  `deriveViewpointForBinding`, called by `createDerivedViewpoint`. (2) Edges: today's recognition (5/5 demo edge
+  classes, 41 M1 edges on the corpus), a 1 px line in `var(--color-inode-name)` with the filled arrowhead; an edge
+  whose label needs a template (`weight = 2`, `guard = true`, `«InhibitorArc» weight = 3`) stays unlabelled until C2.
+  (3) Rows (question 2, Recommended adopted): a class held by a node's multi-valued composition is a row of that node,
+  `children` compartment, `rowFormat` mono 11 px, `name : type` where a `type` feature exists, unless it types a plain
+  reference. (4) Eyebrow: the metaclass name as a literal, uppercased in the literal, 10 px, 600,
+  `var(--color-inode-quiet)`; letter spacing with C2. (5) Subclass mark (question 1, Recommended adopted): name signals
+  only, `initial|start` a 2 px border in the name ink, `final|terminal|end|accept` the `double` border (3 px, as
+  R-VP-17); otherwise the eyebrow alone. (6) Look: white fill (`--color-inode-surface`), 1 px `--color-inode-border`
+  (slate-300), radius 10 (`.ir-shape--rounded`), name 14 px 600 in the name ink, size from content; the mockups'
+  `#334155` at 1.5 px is not adopted. Lane choices inside that list: the words of the name are matched (camel case and
+  `_` split, so `Legend`, `Endpoint`, `Restart` are not marked), on a class with any superclass; a row with no `type`
+  feature is its name alone; the slot rows in mono 11 px quiet (the mockups' `.at`), and only on a class holding a slot
+  other than the name, since the name slot is listed too until C2's `exclude`; a composition into the holder's own
+  hierarchy, a holder the class is a kind of, and a holder that is itself a row or an edge make no row; the children
+  filter is `isKind` over the held row classes, less the classes that are kinds of them and not rows. Measured: the
+  nine corpus metamodels give 39 views (25 vertex, 9 edge, 5 row), 6 marks, 5 labelled edges, M1 66 eyebrows and 13
+  rows, from the fixtures and from the exports; the derived box on the turnstile is 198 px wide, the 200 px floor of
+  `.mm-node.mm-object` (`nodes/instanceNode.scss:35`), not the 140 px of `irStyle.ts:82`. Prompt P-2026-09-29-2350,
+  commit `3ed86119f`.
+- **R-VP-20** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **Five optional IR keys for text and edge labels (slice C2), and the generic notation using them.** Source:
+  `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §1 rows 6, 8, 13, 15, §2, §5
+  C2), the TextStyle addendum (TS3), and `docs/discovery/discovery_2026-09-30_c2_ir_keys.md` (the Layer Impact Report and
+  the measures). Alfonso delegated to the chat, on 2026-09-29, the decision on additive and optional IR keys with a
+  Layer Impact Report; the chat named them. The persisted names, permanent once saved (R-B9): (1)
+  `TextStyle.letterSpacing` (a number, em) and `TextStyle.textTransform` (`'uppercase' | 'lowercase' | 'none'`), on every
+  TextStyle surface; (2) `exclude` (string[], feature names) on the `attributes` compartment source; (3) `style`
+  (TextStyle) on a `literal` FieldSegment; (4) `edge.labels.template` (TextSource[]), the centre label, over `center`;
+  (5) `edge.labels.style` (TextStyle): declared, the label drops its box for a halo in the canvas surface colour (12 px,
+  500, the quiet ink as defaults), `style.color` over `line.color` for the text only, the terminations keep the line
+  colour. Every key optional; absent renders as before (Rule 11, R-IRN-32: no `irVersion` bump, no migration). The
+  generic notation (amends R-VP-19 (2), (4) and the slot-row clause): the eyebrow is the metaclass name as written with
+  `letterSpacing: 0.08`, `textTransform: 'uppercase'`; the slot rows `exclude: ['name']` on a class holding the identity
+  slot; the edges C1 left unlabelled get a template, a slot as `name = value` (`weight = 2`), a sub-edge's stereotype
+  first (`«InhibitorArc» weight = 3`); every labelled C edge `style: { fontSize: 12, fontWeight: 'medium', color:
+  var(--color-inode-quiet) }`. Lane choices inside that list: in a template a value that resolves empty takes with it
+  the literal right before it (its caption), so an unset `weight` draws nothing and an unset inhibitor weight leaves
+  `«InhibitorArc»`; a template of literals only always draws; a malformed template falls back to `center` at render and
+  is refused by the validator; the two new axes are scalars, compiled like the Conditional ones; `exclude` governs the
+  symbol only, on the attributes source only (a form lists every feature, R-FRM-1); the halo is a `text-shadow` in
+  `var(--canvas-bg)` (`.edge-label__text--halo`); `resolveTextStyle` moves to `irCompile.ts`, re-exported by
+  `IRNodeContent`. Measured: the irHash of 59 fixture views and the compiled defaults unchanged; the corpus gives 9
+  labelled edges (5 before) and 0 name rows (7 before); the lane probe on 3072 46/46, the four demo scenes in the
+  default viewpoint pixel-identical to the C1 tip outside the animated Jodie launcher (12 of 12, 7 byte-identical);
+  mutation bench 43/43. Prompt P-2026-09-30-0150, commit `2360515f4`.
+- **R-VP-21** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **«Derive viewpoint» opens a dialog, a notation select (Generic by default) and a metaclass → role table; a notation
+  applies only when picked; the dialog's binding and each view's provenance are stored with the derived viewpoint.**
+  Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §0 decision 2 and
+  questions 3 and 4, §3, §5 D) and `docs/discovery/discovery_2026-09-30_d_dialog.md` (the Layer Impact Report and the
+  measures). Alfonso chose the dialog on 2026-09-29 evening; the rest is the chat's under his delegation. Amends
+  R-VP-15 (5) and R-VP-17 («keyed on the roles»): the simulation binding stored on the metamodel no longer picks the
+  notation of a derivation; it only prefills the dialog, which never writes it. (1) Notations in this slice: Generic
+  (R-VP-19, R-VP-20), State machine, Petri net, Flowchart, the last three the role-keyed renderings of R-VP-15..18,
+  unchanged, on the system profiles `stateMachine`, `petri`, `flowchart`; ER and UML come with their own slices. (2)
+  Prefill: `bindProfile(profile, sketchOfMetamodel(lookup, mm), bag)` with the stored binding as bag, inverted per
+  class; the select opens on the notation the stored binding matches, else on Generic; Generic has no table. (3) The
+  dialog's binding is stored with the derived viewpoint only, flat keys of its `_state` written in `newVP`'s callback
+  before persist. (4) Provenance: every derived view carries `ir.generated`, declared optional in `irTypes.ts`
+  (question 3, Recommended adopted); `structuralHash` ignores it as it ignores `migratedFrom` (R-IRN-33). (5)
+  Regeneration before 2026-10-07 (question 4, Recommended adopted): the dialog opens on the latest derived viewpoint
+  of the metamodel, its notation and its table, and creates a new viewpoint; no update in place. (6) One undo step;
+  the viewpoint is not activated, its tab opens. (7) The Simulation roles dialog's shell (`sim-roles-modal*`, as
+  SimInputDialog), Bootstrap Icons, labels 11 px, light theme; real `<select>` and `<label>`, focus on the notation
+  select, Esc closes, Enter derives. The persisted names, permanent once saved (R-B9): the `_state` keys
+  `derivedFrom` (the metamodel's id), `derivedNotation` (`generic`, `stateMachine`, `petri`, `flowchart`) and
+  `derivedRole_<classId>` (a role id: `node`, `initial`, `terminal`, `activityFinal`, `fork`, `join`, `transition`,
+  `arc`, `inhibitorArc`), one per bound class; `ir.generated = { by, notation, role?, hash }`, `by: 'derive-2'`, `hash`
+  the view's `structuralHash` at creation. Lane choices inside that list: the table has a row per class of the
+  metamodel and is read per class (`DerivationRoles.classRoles`), so two classes can share a role; a class with no
+  entry takes its nearest superclass's, breadth first (`rolesFromTable`), and says so in its empty option; the
+  inversion keeps a class's first role in catalog order; the references the roles read come from the binder with the
+  table's Node and Transition (the binder's S6); a role notation with no class bound cannot be derived; the stored
+  binding's notation is its system profile's (the four machines are state machines), a user profile's `basedOn`'s,
+  else «Custom» by shape and Trigger; the latest derived viewpoint is the last in the project's `viewpoints` order;
+  the dialog lives in `components/editor-v2/sim/`, beside the dialogs whose shell it shares. Also adopted (RC-21, C2's
+  question 1): an empty value in an edge label template drops the text written just before it (R-VP-20 as
+  implemented). Measured: the dialog's default choice on the four demos configured as Apply configures them derives
+  the role-keyed documents pinned since `58aa78ba9`, byte for byte, provenance aside; the simulation binding
+  byte-identical before and after a derivation and its undo; one undo removes the viewpoint and its views; the lane
+  probe on 3074 58/58, the four demo scenes in the default viewpoint byte-identical to the C2 tip (12 of 12);
+  mutation bench 44/45, the survivor equivalent. Prompt P-2026-09-30-0255, commit `64ea9f216`.
+  - Ratified by Alfonso on 2026-09-30 (review of the crops of C1, C2, D, A1+A3, A4, verbatim «Q2: ratificato ma con frecce
+    aperte»); the open arrowheads are R-VP-25. Recorded by P-2026-09-30-1521.
+- **R-VP-22** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **Two notations beside their siblings, Statechart (UML) and Flowchart (ISO 5807), and two optional IR keys, the entry
+  mark and the arc.** Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320,
+  §1 rows 1, 2, 7, 19, 20, §5 A1 and A3), the C3 report (`fb8944688`, causes 1-3) and
+  `docs/discovery/discovery_2026-09-30_a1_a3_notations.md` (the Layer Impact Report and the measures); mockups
+  `docs/mockups/derived-viewpoints/statechart-A.svg`, `flowchart-A-iso5807.svg`. No earlier row is amended: «State
+  machine» (R-VP-17, the solid Initial disc) and «Flowchart» stay as they are, byte for byte; Alfonso chooses which of
+  each pair the demo uses. (1) The dialog of R-VP-21 lists six notations: Generic, State machine, **Statechart (UML)**,
+  Petri net, Flowchart, **Flowchart (ISO 5807)**; the two new ones on the profiles, roles and prefill of their siblings
+  (`stateMachine`, `flowchart`); a stored simulation binding still opens on the sibling. (2) Statechart (UML): a state,
+  the Initial and the Terminal a white rounded box, 1 px in `var(--color-inode-name)`, the name centred 14 px 600 in the
+  ink; the Initial with the entry dot, the Terminal with the double border of R-VP-17; the drawing follows the notation
+  picked, not the presence of a Trigger (D's question 1, Recommended adopted); a transition an arc in the ink, 1 px, the
+  filled arrowhead, labelled by its event, else its guard (R-VP-17 (2)), in the label style of R-VP-20 (5). (3) Flowchart
+  (ISO 5807), data only: the Initial, the Terminal and an Activity final a stadium, then the words of the class name
+  (`start|end|initial|final|terminal` stadium, `input|output|read|write|print|io` parallelogram,
+  `decision|choice|if|branch` diamond), a rectangle with the form's 4 px radius otherwise; white, 1 px in the ink, the
+  name centred 13 px 500 in the ink; flows on today's orthogonal router, their guard the label through an R-VP-20
+  template, `yes`/`no` when the guard is literally `true`/`false` (two more documents per flow class, a predicate on the
+  guard and priority 1). (4) The persisted names, permanent once saved (R-B9): `ShapeSpec.entry?: 'dot' | 'arrow'`
+  (`arrow` without the dot, for the Automaton notation), `EdgeViewIR.edge.curve?: 'arc'`; the `_state` value
+  `derivedNotation` and `ir.generated.notation` gain `statechart` and `flowchartIso`. Both keys optional; absent renders
+  as before (Rule 11, R-IRN-32: no `irVersion` bump, no migration); a value outside the vocabulary renders as absent and
+  is refused by the validator. (5) The three edge fixes of C3, for edges with `curve: 'arc'` only: an arc runs between
+  the centres of its two handles, off the router (no snap, cause 3); an arc self-loop is a cubic over the top edge on two
+  top handles, so no untouched handle takes a slot (causes 1 and 2); an edge without the key keeps today's behaviour byte
+  for byte. Lane choices inside that list: the two drawings post-process the sibling's documents, a class with no role
+  keeping the sibling's drawing; a state with slots other than its name keeps R-VP-17's rows, its name then on top; the
+  pair bows away from the opposite chord, whichever slot each got; the entry mark 40×14 in the border colour, placed
+  inline past the box, the two clips lifted as for the outside label; there is no Decision role in the catalogue, so
+  the diamond comes from the name. Measured: State machine, Flowchart, Petri net and Generic derive the D tip's documents
+  (16 digests with provenance); the markup of nodes and edges without the keys pinned on the D tip; on the turnstile no
+  two line ends on `locked` within 6 px (minimum 10.5), arrow tips 1.00 to 1.01 px from the visible border (the handle
+  centre, on the RF box, 1 px outside it); the four demo scenes in the default viewpoint 0 px from the D tip left of the
+  rail; mutation bench 46/46. Prompt P-2026-09-30-0355, commit `74995f429`.
+- **R-VP-23** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
+  evidence: measured, verified: none, reversible: branch).
+  **A notation «ER (Chen)» with no simulation profile, its table prefilled by name and structure signals, and two
+  optional IR keys, the end labels.** Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md`
+  (P-2026-09-29-2320, §1 rows 9 and 22, §3 «ER and UML signals», §5 A4) and `docs/discovery/discovery_2026-09-30_a4_er_chen.md`
+  (the Layer Impact Report and the measures); mockup `docs/mockups/derived-viewpoints/er-A-chen.svg`. No earlier row is
+  amended: the six notations of R-VP-21 and R-VP-22 derive their documents byte for byte. (1) The dialog lists seven
+  notations, ER (Chen) last; its table offers four class roles, Entity, Relationship, Attribute, Key, prefilled by the
+  signals of the pure module `derive/erSignals.ts` (an entity holds a multi-valued reference to a class with `type`, a
+  relationship has two single-valued references into entities or a word starting with `relat`, a key a word starting with
+  `key`, `id` or `primary` under an attribute class), always editable; a stored simulation binding never opens it. (2)
+  Entity: a white rectangle (the `rect`'s own 4 px radius), 1 px in the ink, the name 14 px 600 in the ink. Relationship: a
+  `diamond` node, its name inside 13 px 500, even with two references; its references into Chen nodes plain lines, by
+  reference-as-edge views (no termination, the `arc` of R-VP-22, straight between the anchors). Attribute, when its class is a
+  node (ERDLanguage): an `ellipse`, 13 px 500, linked to its owner by a plain line, underlined (the ir-1.3 `underline`) when a
+  boolean key flag holds (`isKey`); a Key class always. (3) Marks at the entity's end, `1`, `N`, `M`: from a relationship's
+  enum attribute with a word starting with `card` or `mult`, whose literals name both sides (`OneToMany`, `ONE_TO_MANY`,
+  `N_M`), else from a slot per end naming the reference and `max`, `upper`, `card` or `mult` (`1` stays `1`, anything else
+  `N`, the second many side of the same relationship `M`); per reference one more document per mark, a predicate on the slot,
+  priority 1 (2 for `M` from slots). (4) The persisted names, permanent once saved (R-B9): `EdgeViewIR.edge.labels.sourceEnd?`
+  and `targetEnd?` (TextSource), styled by `edge.labels.style` (the halo of R-VP-20 (5)) when declared, else as the
+  cardinality badge, anchored by `computeCardinalityAnchor`; an empty text draws nothing; the `_state` value
+  `derivedNotation` and `ir.generated.notation` gain `erChen`, the role values `entity`, `relationship`, `attribute`, `key`.
+  Both keys optional; absent renders as before (Rule 11, R-IRN-32: no `irVersion` bump, no migration); a value that is not a
+  text source renders as absent and is refused by the validator. (5) The limit: attributes held by composition (MDE ERD) keep
+  the C rows of R-VP-19 inside the entity; Chen's ellipses for contained attributes are out of this slice. Lane choices
+  inside that list: a class with no role, and a class the Generic notation draws as a row, keep their Generic document; the
+  enum is compared by literal name, which the L-proxy backend gives (measured on the probe); the derivation writes only
+  `targetEnd`; the dialog's role type widens to the notation's (`NotationRoleId`), its source otherwise untouched. Measured:
+  the 54 documents of the six other notations on the nine corpus metamodels identical to the A1+A3 tip, on the fixtures and
+  on the decoded exports; the markup of edges without the keys pinned on the tip; the lane probe on 3078 27/27 (ERDLanguage
+  ERD: 3 rectangles, 2 diamonds, 7 ellipses, `id2`, `id3` underlined, 11 lines without markers, marks `1 N` and `N M` beside
+  their entities; MDE ERD: rows kept, 2 diamonds); the four demo scenes in the default viewpoint 0 px from the A1+A3 tip left of
+  the rail; mutation bench 56/57, the survivor equivalent. Prompt P-2026-09-30-0440, commit `7c2593c85`.
+- **R-VP-24** (2026-09-30, ratified by Alfonso 2026-09-30, evidence: measured, verified: none, reversible: branch).
+  **A notation «Petri net (classic)» after mockup A, beside the Petri net of R-VP-16, with the persisted termination
+  `hollowCircle`; DemoPetri preselects it.** Alfonso's review of 2026-09-30 (verbatim): «Q1: Mockup A». Source:
+  `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` §5 row A2, `docs/discovery/discovery_2026-09-30_a2_petri_classic_open_arrows.md`
+  (the Layer Impact Report and the measures); mockup `docs/mockups/derived-viewpoints/petri-A.svg`. No earlier row is amended:
+  «Petri net» (R-VP-15 as amended by R-VP-16) derives its documents byte for byte, but for the arrowhead of R-VP-25. (1) The
+  dialog lists eight notations, «Petri net (classic)» after «Petri net», on the `petri` profile, its roles and prefill; a
+  stored Petri binding (the system profile, a user profile based on it, a Custom Petri shape) opens the dialog on it, the
+  latest derived viewpoint still first; the State machine and Flowchart bindings still open on their siblings (R-VP-22).
+  (2) Place: a white circle, `defaultSize` 44×44 (node 44, visible 42 inside the wrapper's 1 px border), 1 px in
+  `var(--color-inode-name)`, its name `outside`, anchor `s`, 13 px 500 in the ink; the initial marking (the Initial marking
+  role) as `dot`, `dots-2`, `dots-3`, `dots-4` in the border ink, from 5 the number 15 px 600 in the ink, nothing at 0 or unset.
+  (3) Transition: a `bar` upright, `defaultSize` 10×44, drawn 24×44 while `defaultBoxFor` floors every axis at 24 px
+  (`nodes/nodeSizing.ts:73`, outside this lane); the catalogue ink `#334155` on fill and border (R-VP-15 (4)); its name
+  `outside`, anchor `e`, in the C2 label style (12 px 500, `var(--color-inode-quiet)`). The IR has no orientation: every bar
+  is upright. (4) Arc and inhibitor arc: `curve: 'arc'` (R-VP-22), 1 px in the ink, the arc ending in the open arrowhead
+  (R-VP-25), the inhibitor in the hollow circle; a weight above 1 (the Arc weight role) is the arc's label in the C2 label
+  style, through a second document per arc class with `gt $weight.value 1` and priority 1. (5) The persisted names,
+  permanent once saved (R-B9): `EdgeTermination 'hollowCircle'` (the name of R-VP-15 (1)); the `_state` value
+  `derivedNotation` and `ir.generated.notation` gain `petriClassic`. Additive (Rule 11, R-IRN-32: no `irVersion` bump, no
+  migration); `validateIR` gains the closed vocabulary of the terminations (a Record on the union), the render stays
+  permissive. Lane choices inside that list: the marker circle drawn only on an edge that uses it (every other IR edge keeps
+  its markup), `orient="auto-start-reverse"`; the Edge authoring panel lists «Hollow circle»; one token the registry's `dot`
+  (radius 16 of 100, larger than the mockup's), the markers file being outside the lane. Measured: 63/63 document lists of
+  the seven existing notations on the seven decoded exports equal the tip's with every `closedArrow` an `openArrow`; the lane
+  probe on 3081 29/31 (DemoPetri classic: 4 circles, 3 bars, dots 2 and 1, names outside, 5 open heads, 1 hollow circle, the
+  weight `2` twice), the four demo scenes in the default viewpoint byte-identical to the A4 tip's shots; the 2 failures a
+  size that outlives a derived viewpoint (ticket of this lane); mutation bench 36/36. Prompt P-2026-09-30-1521, commit
+  `f603f28e8`.
+- **R-VP-25** (2026-09-30, ratified by Alfonso 2026-09-30, evidence: measured, verified: none, reversible: branch).
+  **Every derived notation that draws an arrowhead draws the open one; amends the «filled arrowhead» R-VP-16 kept and the
+  arrowheads of R-VP-17, R-VP-19 and R-VP-22.** Alfonso's review of 2026-09-30 (verbatim): «Q2: ratificato ma con frecce
+  aperte». `EdgeTermination 'openArrow'` where the derivation wrote `'closedArrow'`: Generic (R-VP-19 (2)), Statechart (UML)
+  and Flowchart (ISO 5807) (R-VP-22 (2), (3)), the Petri arc of R-VP-16; State machine and Flowchart (R-VP-17) already ended in
+  it, the structure default their transitions keep; «Petri net (classic)» uses it on its arcs (R-VP-24). Chen lines keep no
+  arrowhead (R-VP-23); the default viewpoint (M2 and M1 native views) is not touched, its generalization triangle and UML ends
+  stay. Viewpoints already derived keep what they saved. Measured on the corpus: 24 of 63 document lists moved, each equal to
+  the tip's with the substitution (the provenance hash recomputed), none else; no `closedArrow` left in any derived document.
+  Prompt P-2026-09-30-1521, commit `f603f28e8`.
+- **R-VP-26** (2026-09-30, ratified by Alfonso 2026-09-30, evidence: measured, verified: none, reversible: branch).
+  **A notation «Activity (UML)» beside the two flowcharts; DemoFlowB opens on it, DemoPEST on Statechart (UML); amends
+  R-VP-22 («a stored simulation binding still opens on the sibling»).** Alfonso, 2026-09-30, on DemoFlowB derived as
+  Flowchart (verbatim): «la notazione non è per niente conforme alla notazione comunemente nota, ad esempio il decision
+  node è tipicamente un diamond, [...] i join sono quelli delle reti di petri e inizio e fine inusuali sia nell'aspetto che
+  nelle dimensioni»; on the mockup: «il nuovo mockup UML activity è ottimo»; he accepted the same day that the demos open on
+  the new notations. Source: `docs/discovery/discovery_2026-09-30_activity_uml_notation.md` (the Layer Impact Report, the
+  measures). No earlier drawing is amended: the eight other notations derive their documents byte for byte. (1) The dialog
+  lists nine notations, «Activity (UML)» after «Flowchart (ISO 5807)», on the `flowchart` profile, its Node read «Action».
+  (2) Initial: a circle filled in `var(--color-inode-name)`, `defaultSize` 20×20, no name. Action (the Node role and every
+  class that takes it): a white `rounded` box, 1 px in the ink, `cornerRadius` 14, `defaultSize: { height: 44 }`, the name
+  centred 13 px 500 in the ink, no compartment. Decision and merge: a white `diamond`, 1 px in the ink, 36×36, no name.
+  Fork and join: a `bar` filled in the ink, upright, `defaultSize` 5×120, no name (the IR has no orientation, and
+  DemoFlowB's rows run left to right). Terminal and Activity final: a bull's-eye, a white circle 24×24, 1 px in the ink,
+  the `dot` marker. Control flow: the Flowchart's endpoints on today's router, 1 px in the ink, the open arrowhead (R-VP-25),
+  no label; a set guard `[` + the guard verbatim + `]`, in the C2 label style, through a second document per flow class
+  with `exists $guard.value` and priority 1. A class with no role keeps the Flowchart's document. (3) The table gains a
+  notation-own role `decision` («Decision / merge»), not a simulation role; after the binder, a class with no entry of its
+  own that takes Node by inheritance takes the role its name words give: `initial|start` Initial, `final|end` Activity
+  final, `decision|choice|branch|merge` Decision, `fork`, `join`. (4) The preselection: a stored `flowchart` binding, and a
+  Custom one without Trigger, open on Activity (UML); a stored `stateMachine` binding (a user profile based on it too) on
+  Statechart (UML); `extendedStateMachine`, `dfa`, `nfa`, `moore`, `mealy`, a Custom one with Trigger and every Petri binding
+  as before; the latest derived viewpoint still first. (5) The persisted names, permanent once saved (R-B9): the `_state`
+  value `derivedNotation` and `ir.generated.notation` gain `activityUml`; `derivedRole_<classId>` and `ir.generated.role`
+  gain `decision`. No IR key, no `irVersion` bump, no migration. Lane choices, each ratified as recommended, unattended
+  (RC-21, the report's questions 1-7): the upright bar; the notation-own role; `merge` added to the diamond's words and
+  `final|end` giving Activity final; every set guard bracketed (an `isKind` with a `path` on the source is always false on
+  the production L-proxy backend, `irCompile.ts:193`; on DemoFlowB only the two flows leaving `d1` carry a guard); the
+  preselection as in (4); the Flowchart's router; the place in the list. The limits, from render floors outside the lane
+  (decisions awaiting Alfonso, RC-26): every authored `defaultSize` axis is floored at 24 px (`nodes/nodeSizing.ts:73`), so
+  the initial draws 24 (visible 22) and the bar 24×120 (visible 22×118); the bull's-eye's disc is the registry `dot`
+  (radius 16 of 100); the radius 14 is clamped to a quarter of the 42 px box, 10.5. Measured: 72/72 document lists of the
+  eight other notations on the seven decoded exports identical to the A2 tip's; the lane probe on 3084 22/22 (the four demo
+  scenes in the default viewpoint byte-identical to the A2 tip's shots; the dialog on DemoPEST, DemoPetri, DemoESM, DemoFlowB
+  opening on Statechart (UML), Petri net (classic), State machine, Activity (UML); DemoFlowB's nine flows open-headed, the
+  guards `[model.[count] < 2]` and `[model.[count] >= 2]` the only labels); mutation bench 44/45, the survivor equivalent.
+  Prompt P-2026-09-30-1552, commit `ca3e41a92`.
 - **R-VP-32** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Activity (UML) draws a view-only decision and merge where the engine chooses and merges.** Alfonso, 2026-09-30 19:30,
+  on the Activity view of DemoFlowB («questa è la notazione giusta», «ok su tutto, procedi»); target
+  `docs/design/activity_uml_target_2026-09-30.svg`. Source: `docs/discovery/discovery_2026-09-30_activity_decision_merge.md`
+  (the Layer Impact Report, the precondition, the measures). The precondition holds: a plain control flow is a transition
+  of its own and a step fires one (`netCompile.ts:325-330`, `netStep.ts:274`, R-SIM-7), so two exits of a plain node are a
+  choice and two entries a merge. (1) An action (a view of `activityUml` in the `node` role) with two or more entering
+  (leaving) control flows (views of `activityUml` in the `transition` role) gets a merge (decision) diamond; a decision,
+  a bar, an initial, a final and every other notation never do. (2) View-only: the members share one handle on the
+  action (`irJunctions.ts`, called at the end of `synthesizeObjectAsEdges`), each branch ends (starts) at the diamond's
+  vertex facing its other end, on today's router, with its own arrowhead; the member with the lowest id draws the trunk
+  (40 px from the handle point, the edge's arrowhead into the action for a merge, into the diamond for a decision) and
+  the diamond; no React Flow node, no model object, no IR key, no persisted value. (3) Keyed on the views' provenance
+  `ir.generated` (R-VP-21 (4)), so Activity viewpoints derived before this row draw it too. Lane choices, each adopted as
+  recommended, unattended (RC-21, the report's questions 1, 2, 9, 10): 28 px across (the target's polygon, not a 28 px
+  side turned 45°); white (`--color-inode-surface`), stroke and width the edge's (`var(--color-inode-name)`, 1 px) rather
+  than the prompt's `#334155`; the trunk on the members' majority side, a tie to the first member's in model order, a
+  decision on a node with a merge on another side; self-loops are no members; a user anchor on a member's junction end
+  is not honoured. Measured: DemoFlowB one diamond, the merge before `work` (`f1`, `f3`), none on `i0`, `d1`, the bars,
+  `fin`, `left`, `right`; the model's M1 and M2 JSON identical after rendering, a run, undo/redo and save/load; with
+  Decision read as an Action, the decision after `d1` with the two guards on its branches, its trunk sharing `d1`'s left
+  side with `f2` (6 px off the axis, a measured limit). Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-33** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The Activity guard is mono 11.5 px, slate-700, on a white patch; the expression verbatim.** Amends the guard style of
+  R-VP-26 (the C2 label style) as Alfonso asked on 2026-09-30 (the prompt's point 2). The document's `labels.style` is `{ fontFamily: 'mono', fontSize: 11.5, fontWeight:
+  'normal', color: 'var(--color-text-secondary)' }`; the edge of an Activity flow draws its label on
+  `var(--color-edge-label-bg)` (white 0.9 in light), 1 px 4 px of padding, no halo. `[` and `]` wrap the whole guard;
+  `model.[count]` stays as written (the JjEL state read, R-SIM-18). Report question 8, adopted as recommended, unattended.
+  Measured: the 81 document lists of the nine notations on the seven decoded exports, 79 identical to `30f3d8a81`'s, the 2
+  Activity lists with a guard equal to them with the style substituted; on the probe `IBM Plex Mono`, 11.5 px, 400,
+  `rgb(51, 65, 85)` on `rgba(255, 255, 255, 0.9)`, no text shadow. Viewpoints already derived keep their font and get the
+  patch. The two guards of DemoFlowB still overlap each other (the layout ticket). Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-34** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **On a node a derived viewpoint draws, the run's token is a dot inside the node and the marked node a 2 px cyan border.**
+  The run overlay (S15) is shared by every node of every viewpoint; the new drawing applies only where the node's view
+  carries `ir.generated`, so the default viewpoint and user views keep the corner pill and the outline byte for byte (the
+  report's question 5). In a derived view: nothing on an empty place (question 6); from one token an amber `#f59e0b` dot,
+  12 px with a 1.5 px ring in `--color-inode-surface`, no blur, centred 18 px from the painted left edge (12 px to its
+  edge), vertically centred, at the centre of a circle or a diamond; from two tokens the count beside it; the marked node
+  a 2 px `#0ea5e9` outline over its own border (the stroke for a form painted in SVG), the wrapper's outline and halo
+  off, not while selected; the enabled and pending rings and the σ card as before. Hex values as `.sim-active` has them
+  (question 7), no new token. Moves, during a run, every derived viewpoint of the nine notations; the MODELS demo runs in
+  the default viewpoint and does not move. Measured on the probe: the dot on `work` 10.5 px disc plus ring, 12.75 px from
+  the painted edge, amber, `work`'s border pixels cyan; the default view in the same run keeps the pill «1» and the
+  wrapper outline. Prompt P-2026-09-30-1935, commit `d2e4e7959`.
+- **R-VP-35** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Points 4 to 6 of the review change nothing in the code.** (1) The action border already paints the edge's ink at the
+  edge's width, `1px solid rgb(15, 23, 42)`, computed and in the pixels; `#334155` would make it lighter than the arrows
+  (question 3). (2) Fork and join are identical at rest; the join's «light border» is the run's dashed enabled ring on
+  whichever bar can fire (question 4). (3) The «2» binds to no element: in five run states no label reads 2, the two guard
+  labels overlap each other 12 px right of `work`. (4) The initial, the fork and the join sit off the actions' axis
+  because the stored positions are top-left aligned (`i0 (50,50)`, `work (470,50)`); the derivation writes no position
+  (the layout ticket). Prompt P-2026-09-30-1935.
+- **R-VP-36** (2026-10-01, ratified by Alfonso 2026-10-01, evidence: measured, verified: none, reversible: branch).
+  **The Activity (UML) fork and join bar is declared 7 px thick, painted 5; amends R-VP-26 (2) on the bar thickness only.**
+  Alfonso, 2026-10-01, asked «Fork/join bar declared 5 px draws 3 px (1 px border each side). Keep 5 or 7?» (the
+  2026-09-30 checkpoint): «7». `ACTIVITY_BAR_SIZE` goes from 5×120 to 7×120 (`viewpointDerivation.ts`); the height, the
+  fill, the border, the upright bar and everything else in the notation stay; `CLASSIC_BAR_SIZE` (R-VP-24, 10×44) does not
+  move; the text of R-VP-26 is not edited (add-only). Viewpoints already derived keep the 5 they saved, as R-VP-25 accepted
+  for the arrowheads: the size is copied onto each view at derivation (`deriveViewpoint.ts:73`) and read from it at render
+  (`IRNodeContent.tsx:275`), so a saved «(derived)» viewpoint shows 7 once deleted and derived again; no scene file,
+  persisted project or migration is edited (no IR key, no `irVersion` bump). Source:
+  `docs/discovery/discovery_2026-10-01_activity_bar_7px.md`. Measured on the lane probe, 3090, light, 1600×1000, DPR 2: with
+  the constant at 5 (the code of `ac3890b7e`) DemoFlowB as Activity (UML) draws the fork and the join node 5×120, painted
+  3×118; at 7 both node 7×120, painted 5×118, filled in the ink, no name, identical at rest, the stored views carrying
+  `defaultSize` 7×120; the initial 20, the bull's-eye 24, the decision 36 and the actions 44 unchanged; the four demo scenes
+  in the default viewpoint byte-identical to the run at 5 (0 px); the tests 2 of 47 red first, 441/441 after; mutation
+  bench 16/16. Prompt P-2026-10-01-2230, commit `c3b0556d6`.
+- **R-VP-37** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **The fills are twelve fixed pastel swatches, one every 30° of hue; «Base color» is the seed; the border is the
   fill's hue at 55 % lightness.** Chat decision 1 of P-2026-09-30-2022, on Alfonso's review point (1) («the colours
   must be pastel»). Amends R-VP-29 (analogous hues within ±60° of the base, colour 0 the base as picked) and the border
@@ -4341,7 +4681,8 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     the default `#0ea5e9` seeds 210°. `metaclassPalette(base, count)` is now the analogous order round the seed: the
     seed, +30°, −30°, +60°, …, +180° last, again from the seed past twelve.
   - Border on: `hsl(h, s, 55 %)` of the fill, 1 px, width unchanged; off: transparent, as before.
-- **R-VP-33** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+    Was R-VP-32 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-38** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **The swatches are assigned by reference: greedy in metamodel order, each class as far in hue as it can be from
   the classes it is connected to.** Chat decision 2, on Alfonso's point (3).
   - Graph (`metaclassGraph`): two classes are adjacent when a DECLARED reference of one, containment included, is typed
@@ -4351,7 +4692,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Rule (`assignMetaclassColors`): overrides first; then each class takes, among the FREE swatches (all of them once
     none is free), the one whose smallest hue distance to its already coloured neighbours is the largest. Ties go to the
     least used swatch (only past twelve), then to the analogous order round the seed, + before −: the lane's reading
-    of «distance from the seed, then swatch order», which makes a class with no coloured neighbour follow R-VP-32's
+    of «distance from the seed, then swatch order», which makes a class with no coloured neighbour follow R-VP-37's
     order. Deterministic; the order of the adjacency lists does not matter.
   - Measured on 3137, light, DemoESM (native): four class pairs connected on the canvas, all with different fills.
     Initial–State and State–Terminal by `extends`, State–Transition by `transitions`/`nextState` (4 node pairs),
@@ -4360,7 +4701,8 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     six distinct fills.
   - Cost: the resolver builds the metamodel's graph on every call while the option is on. 28.6 µs a call at 30
     classes and 60 references, 60.9 µs at 60 and 150 (gitignored `_tmp_vppastel_perf.ts`). No memo (Rule 6).
-- **R-VP-34** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+    Was R-VP-33 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-39** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **Per-metaclass colour in the viewpoint panel: a dropdown of the metaclasses beside the twelve swatches, «Reset» and
   «Reset all»; persisted as `metaclassColoring.overrides?: Record<metaclass id, hex>`.** Chat decision 3, on Alfonso's
   point (2).
@@ -4386,7 +4728,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     `JSON.parse` and `VersionFixer.update`.
   - An override also moves the automatic colours of the other classes: the greedy re-runs around it, as decided. In
     DemoFlowB, overriding Activity changed five other node classes, since every one neighbours ActivityNode, coloured
-    first. This is a perceptual item for the visual GO.
+    first. This is a perceptual item for the visual GO. Was R-VP-34 on the branch, renumbered by P-2026-10-02-1506.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
@@ -4715,6 +5057,74 @@ di risolverla prima che Redux l'abbia propagata (`9345a4046`, report
 fino a 500 ms a essere rifiutata. La gara non è del ruolo `superclass`: `waitForDependencies` in
 `jjscript/executor/dependencies.ts` aspetta solo le dipendenze `required: true`, quindi ogni ruolo
 lasciato `required: false` la corre, a partire da `type-reference` (`dependencies.ts:205-235`).
+
+R-JS-2..6 below: decided by the chat `C-2026-10-01-1725` in the prompt `P-2026-10-01-1725` under RC-25,
+measured in `docs/discovery/discovery_2026-10-01_jjscript_requeue.md`, with the GO's amendment to the
+report's D15 written into R-JS-3. Marker: **provisional, unattended**.
+
+**R-JS-2** (2026-10-01, provisional, unattended) — **The wait accepts what the guard accepts.** In a
+scope-bound M2 run (`scopeBound && level !== 'M1'`, the guard's own condition at `executor.ts:123`) a
+one-segment name counts as resolved for `waitForDependencies` only when the bound metamodel resolves
+it. The project-wide fallback stays for qualified names, unbound runs, M1, and a bound metamodel that
+is gone, so the guard's `SCOPE_NOT_FOUND` stays immediate. Cause: a homonym in another metamodel ended
+the wait at the first poll and `checkBoundScope` then refused the line (the Petri net of 2026-10-01,
+report §3.1). Accepted cost: a bare name that lives only in another metamodel waits 500 ms before the
+guard refuses it. Code `5fa749339`.
+
+**R-JS-3** (2026-10-01, provisional, unattended) — **Run executes in passes.** Pass 1 runs every
+command in script order and never pauses. A failed command is deferred when its verb is `create`,
+`add`, `set` or the standalone `A extends B`, and its executor code (`result.errors[0].code`, not the
+dialog's mapping) is one of `PARENT_NOT_FOUND`, `CHILD_NOT_FOUND`, `MEMBER_NOT_FOUND`, `NO_PARENT`,
+`ELEMENT_NOT_FOUND`, `UNKNOWN_ATTRIBUTE_TYPE`, `UNKNOWN_REFERENCE_TYPE`, `UNKNOWN_OPERATION_TYPE`,
+`UNKNOWN_PARAMETER_TYPE`, `UNKNOWN_TYPE`, `OUT_OF_SCOPE`, `AMBIGUOUS_OUT_OF_SCOPE`. Each of these is
+emitted before anything is written (report §3.2), so a command succeeds at most once. The deferred
+commands run again in script order while a pass makes at least one command succeed, at most 3 passes
+after the first; what still fails is final with the error of its last attempt. Never deferred:
+`delete`, `rename`, `move`, `copy`, `remove`, `abstract` (a toggle), `forall`, blocks, `let`, `eval`.
+GO amendment: a deferred `set` is not retried when a later line that already succeeded sets the same
+feature of the same target; it ends `superseded by line <n>` (editor numbering), is not counted as an
+error and is listed under «Superseded». Two collection updates (`+=`, `-=`) compose and do not supersede
+each other. Accepted as declared: a deferred `create` can bring back what a later failed `delete` meant
+to remove (R2), and a forward reference with a required dependency costs up to 500 ms per pass (R3).
+Pure module `executor/runPasses.ts`, code `daba6e27e`.
+
+**R-JS-4** (2026-10-01, provisional, unattended) — **The forward-reference refusal leaves Run.** Run
+calls `validateScriptIntegrity(code)` without the name set, so a forward reference completes on pass 2
+instead of being refused before command 1. Parse and syntax errors are still refused before command 1
+and listed in the summary, titled `Script not executed: n errors`. `scriptValidator.ts` is unchanged;
+`ScriptBlock.tsx:projectClassifierNames` has no caller left and is marked `TODO: cleanup`.
+Code `daba6e27e`.
+
+**R-JS-5** (2026-10-01, provisional, unattended) — **Run never pauses.** The interactive Skip dialog
+leaves Run; Step keeps its pause on error, unchanged. The recovery rules are evaluated on each final
+error and their actions sit on that error's row of the summary; an action applies its fix and reruns
+only the final failures, with R-JS-3 semantics. `skipMatchingCreateLiteral` is not offered, since Run
+already goes on past those lines. Code `daba6e27e`, `1315e15c4`.
+
+**R-JS-6** (2026-10-01, provisional, unattended) — **One summary modal closes every Run.** Titles
+`Script executed` and `Script executed with n errors`. It shows before, after and delta per model whose
+figures changed: classes (abstract inside the count), attributes, references, operations,
+enumerations, literals and packages, or instances for an M1 model. It also shows the commands
+executed, `k resolved on retry (lines …)`, the duration, and every final error with its editor line,
+command, message, suggestion and recovery actions. The figures come from the model, read with the
+status bar's accessors, never from the commands. Every model of the project is snapshotted when the
+run starts, because `ScriptBlock` cannot name a Jjodie reply's bound metamodel. "After" is read live.
+There was no success toast on this path to replace. The inline strip stays as the per-message record.
+`RunSummaryDialog` is a new component that reuses the `ExecutionErrorDialog` shell; light theme only.
+Code `1315e15c4`.
+
+**R-JS-7** (2026-10-01, provisional, unattended) — **A retry pass waits for every dependency.** Decided
+by the chat `C-2026-10-01-1725` in the GO of `P-2026-10-01-2136` under RC-25, from ticket T8
+(`docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md` §4.8). In pass 2 and later of a Run
+(R-JS-3), `waitForDependencies` awaits every dependency of the retried command, `type-reference` and
+`value-reference` included, up to `MAX_WAIT_MS`. Pass 1 keeps R-JS-1: only `required` dependencies are
+awaited, so a forward reference still fails at once and is deferred. Cause: the retry ran with no wait,
+the target created by a later line had not reached the resolvers yet, the retry failed again, and a pass
+with no success ends the run, so line 14 of the probe's script stayed a final error on run 1 of every
+variant. `runPasses` publishes the retry pass (`isRetryPass()`, module state raised around each command
+and lowered in a `finally`), because the host chain (`ScriptBlock` → `onExecute` → `JjScriptService` →
+executor) carries no pass number. Accepted cost: a retried command whose name never resolves waits
+`MAX_WAIT_MS` per retry pass. Amends R-JS-1 for retry passes only. Code `4bbf7e640`.
 
 ## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
 

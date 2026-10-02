@@ -481,13 +481,15 @@ export function baseCornerRadius(form: ShapeForm | undefined): number {
 }
 
 /**
- * Render clamp: `min(w, h) / 4`. Up to 12px the anchors and the content rect are not
- * recomputed (decision D5), and above that this clamp keeps the shape sane. The
- * authored number is never rewritten. Degenerate input answers 0.
+ * Render clamp: `min(w, h) / 2`, the browser's own bound for a CSS radius, so the
+ * polygons follow the same number (P-2026-09-30-1720: the Activity (UML) action draws
+ * its radius 14 on a 42 px box, where the quarter gave 10.5). Up to 12px the anchors and
+ * the content rect are not recomputed (decision D5). The authored number is never
+ * rewritten. Degenerate input answers 0.
  */
 export function clampCornerRadius(r: number, w: number, h: number): number {
     if (!(r > 0) || !(w > 0) || !(h > 0)) return 0;
-    return Math.min(r, Math.min(w, h) / 4);
+    return Math.min(r, Math.min(w, h) / 2);
 }
 
 /** What the painter does with the radius of one node. */

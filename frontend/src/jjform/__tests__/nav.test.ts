@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     INLINE_DEPTH_LIMIT,
+    backOf,
     breadcrumbOf,
     crumbLabel,
     currentOf,
@@ -123,5 +124,46 @@ describe('il breadcrumb', () => {
     it('un\'istanza senza nome mostra la sola metaclasse, non un due punti orfano', () => {
         expect(crumbLabel(step('x', '', 'Port'))).toBe('Port');
         expect(crumbLabel(step('x', '   ', 'Port'))).toBe('Port');
+    });
+});
+
+describe('Back — #158, il passo attraversato (field test 2026-09-29)', () => {
+    // Scenario mostra Phase_0 INLINE; dalla lista learners di Phase_0 si apre Antonio.
+    // Phase_0 entra nel path come passo attraversato: l'utente non l'ha mai avuto a
+    // schermo come form sua.
+    const Sc = step('sc', 'Scenario_0', 'Scenario');
+    const Ph = { ...step('ph', 'Phase_0', 'Phase', 'pathway'), passThrough: true };
+    const An = step('an', 'Antonio', 'Learner', 'learners');
+    const road = drillInto(drillInto(navFor(Sc), Ph), An);
+
+    it('il breadcrumb tiene Phase_0: la strada resta quella vera', () => {
+        expect(breadcrumbOf(road).map(c => c.id)).toEqual(['sc', 'ph', 'an']);
+    });
+
+    it('Back da Antonio torna a Scenario, la form che era a schermo', () => {
+        expect(currentOf(backOf(road))).toEqual(Sc);
+        // drillOut resta un livello: e' Back che salta il passo attraversato
+        expect(currentOf(drillOut(road))?.id).toBe('ph');
+    });
+
+    it('senza passi attraversati Back e\' drillOut', () => {
+        const plain = drillInto(drillInto(navFor(S), P), F);
+        expect(backOf(plain)).toEqual(drillOut(plain));
+    });
+
+    it('alla radice Back non svuota il path', () => {
+        expect(backOf(navFor(Sc)).path).toHaveLength(1);
+    });
+
+    it('cliccato nel breadcrumb, Phase_0 diventa una form: Back da sotto si ferma li\'', () => {
+        const onPhase = truncateTo(road, 1);
+        expect(currentOf(onPhase)?.passThrough).toBe(false);
+        const below = drillInto(onPhase, An);
+        expect(currentOf(backOf(below))?.id).toBe('ph');
+    });
+
+    it('il rientro su Phase_0 per ciclo la rende una form allo stesso modo', () => {
+        const again = drillInto(road, Ph);
+        expect(currentOf(again)?.passThrough).toBe(false);
     });
 });

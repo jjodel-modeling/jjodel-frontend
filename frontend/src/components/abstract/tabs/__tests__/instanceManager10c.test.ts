@@ -42,7 +42,10 @@ import {
 } from '../instanceTable';
 import type { ClassShape, MetamodelShape } from '../../../../jjform';
 
-const TSX = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8');
+// 2026-09-28 — the detail panel moved to `InstanceDetail.tsx`, shared with the stand-alone
+// environment (#157): the tab's source is the two files, read together.
+const TSX = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8')
+    + '\n' + readFileSync(resolve(__dirname, '../InstanceDetail.tsx'), 'utf8');
 const SCSS = readFileSync(resolve(__dirname, '../instanceManagerTab.scss'), 'utf8');
 
 /**
@@ -582,7 +585,8 @@ describe('10c — zero regressioni sulle superfici FL6 / 10b / FL7', () => {
     });
 
     it('FL6: la riga espandibile segue ancora la selezione, e non e\' un secondo stato', () => {
-        expect(TSX).toContain('const isExpanded = row.id === subjectId;');
+        // #158 P5 — con in AND l'interruttore di vista del vicinato, uno per il tab.
+        expect(TSX).toContain('const isExpanded = row.id === subjectId && showNeighborhood;');
         expect(CODE).not.toContain('expandedId');
     });
 

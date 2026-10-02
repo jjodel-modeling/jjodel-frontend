@@ -28,7 +28,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const TSX = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8');
+// 2026-09-28 — the detail panel moved to `InstanceDetail.tsx`, shared with the stand-alone
+// environment (#157): the tab's source is the two files, read together.
+const TSX = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8')
+    + '\n' + readFileSync(resolve(__dirname, '../InstanceDetail.tsx'), 'utf8');
 const SCSS = readFileSync(resolve(__dirname, '../instanceManagerTab.scss'), 'utf8');
 
 describe('FL6 — la form sotto la tabella', () => {
@@ -61,6 +64,16 @@ describe('FL6 — la form sotto la tabella', () => {
         expect(SCSS).toMatch(/&__form-inner\s*\{[^}]*margin:\s*0 auto/);
     });
 
+    it('il tab MONTA il pannello condiviso, e gli passa navigazione e scroll', () => {
+        // Il file del pannello e' letto insieme al tab (sopra): senza questo asserto,
+        // un tab che smettesse di montarlo passerebbe ogni altro test di questo file.
+        const TAB = readFileSync(resolve(__dirname, '../InstanceManagerTab.tsx'), 'utf8');
+        expect(TAB).toContain('<InstanceDetail');
+        for (const prop of ['nav={nav}', 'setNav={setNav}', 'scrollRef={formPaneRef}', 'openDelete={openDelete}', 'onCreate={openCreate}', 'onCreateAndLink={openCreateAndLink}']) {
+            expect(TAB).toContain(prop);
+        }
+    });
+
     it('la form montata e\' UNA, quella di FL4, e non una form parallela', () => {
         // La create (2c) passa dalla sua dialogue, che monta lo stesso
         // auto-layout (`autoLayoutRows`): due motori di geometria sarebbero due
@@ -72,7 +85,11 @@ describe('FL6 — la form sotto la tabella', () => {
 
 describe('FL6 — la riga espandibile', () => {
     it('l\'espansione SEGUE la selezione: nessun secondo stato', () => {
-        expect(TSX).toContain('const isExpanded = row.id === subjectId;');
+        // #158 P5 — in AND con UN interruttore di vista del tab, che chiude il
+        // vicinato. Non e' uno stato per riga: la riga espansa resta al piu' una,
+        // ed e' sempre la selezionata.
+        expect(TSX).toContain('const isExpanded = row.id === subjectId && showNeighborhood;');
+        expect(TSX).toContain('const [showNeighborhood, setShowNeighborhood] = useState(true);');
         // Nessuno `useState` di espansione: se ce ne fosse uno, «una sola riga
         // per volta» tornerebbe a essere una regola da far rispettare a mano.
         expect(TSX).not.toMatch(/useState[^\n]*expandedId/);
@@ -100,19 +117,27 @@ describe('FL6 — la riga espandibile', () => {
         expect(TSX).toContain('instance-manager__td-chev');
     });
 
-    it('il chevron cambia verso e non e\' un secondo bersaglio di click', () => {
+    it('il chevron cambia verso ed e\' il gesto che chiude il vicinato, non la selezione', () => {
+        // #158 P5 — era un indicatore senza click. Ora e' un bottone con un gesto
+        // che la riga NON ha (`toggleNeighborhood`), e ferma la propagazione: il
+        // click sulla riga resta la selezione e non passa di qui due volte.
         expect(TSX).toContain("(isExpanded ? 'bi-chevron-up' : 'bi-chevron-down')");
-        // Indicatore: nessun onClick suo, e nascosto agli screen reader — il
-        // gesto e' il click sulla riga, che c'e' gia'.
         const cell = TSX.slice(TSX.indexOf('instance-manager__td-chev'));
         const end = cell.indexOf('</td>');
-        expect(cell.slice(0, end)).not.toContain('onClick');
+        expect(cell.slice(0, end)).toContain('onClick={e => { e.stopPropagation(); toggleNeighborhood(row.id); }}');
+        expect(cell.slice(0, end)).toContain('aria-expanded={isExpanded}');
+        // il glifo resta nascosto agli screen reader: il nome e' sul bottone
         expect(cell.slice(0, end)).toContain('aria-hidden');
     });
 
-    it('il click sulla riga resta selectOnly: selezione ed espansione insieme', () => {
-        expect(TSX).toContain('onClick={() => selectOnly(row.id)}');
+    it('il click sulla riga passa da clickRow: la riga selezionata apre e chiude il vicinato', () => {
+        // #158 P5, field test 2026-09-29: tutta la riga, non solo il chevron.
+        expect(TSX).toContain('onClick={() => clickRow(row.id)}');
         expect(TSX).toContain('aria-expanded={isExpanded}');
+        const body = TSX.slice(TSX.indexOf('const clickRow'));
+        const fn = body.slice(0, body.indexOf('\n    };'));
+        expect(fn).toContain('if (id === subjectId && alsoSelected.length === 0) { setShowNeighborhood(v => !v); return; }');
+        expect(fn).toContain('selectOnly(id);');
     });
 
     it('il click su un vicino passa dallo STESSO corpo degli altri emettitori', () => {
@@ -204,9 +229,12 @@ describe('FL6 — il fallback a larghezza stretta', () => {
 
 describe('FL6 — l\'header della form', () => {
     it('nome dell\'istanza e metaclasse', () => {
+        // 2026-09-28 — letti da `navStepOf` in `InstanceDetail` e non piu' dal nastro:
+        // il pannello e' condiviso con lo stand-alone, che il nastro non ce l'ha. Stessa
+        // regola di nome (`makeDrawReadCtx`), quindi lo stesso testo a schermo.
         expect(TSX).toContain('instance-manager__form-head');
-        expect(TSX).toContain('{ego?.subject.name ||');
-        expect(TSX).toContain('{ego.subject.cls}');
+        expect(TSX).toContain('{subjectStep?.name ||');
+        expect(TSX).toContain('{subjectStep.cls}');
     });
 
     it('il badge «Unsaved changes» e\' andato via con 10c (deviazione A3)', () => {

@@ -26,7 +26,6 @@ import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
 import { hasCreatableViewpoint, resolveParentViewpoint, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
-import { createDerivedViewpoint } from '../../utils/deriveViewpoint';
 import { isDerivableMetamodel } from '../editor-v2/viewpoint/derive/viewpointDerivation';
 import { NewViewDialog, type NewViewClassOption, type NewViewTarget } from '../project/NewViewDialog';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
@@ -615,8 +614,9 @@ function renderHighlightedName(name: string, query?: string): ReactNode {
  * Hook that returns context-menu state + handlers for a classifier (DClass,
  * DEnumerator, DModel, DPackage). Right-click on the row opens the popup;
  * "Create View" calls createViewInWorkbench on the last-edited viewpoint.
- * On a metamodel row, "Derive viewpoint" creates a new viewpoint from it
- * (createDerivedViewpoint, P-2026-09-29-0135).
+ * On a metamodel row, "Derive viewpoint" opens the dialog that derives a new
+ * viewpoint from it (DeriveViewpointDialog, P-2026-09-29-0135, slice D
+ * P-2026-09-30-0255).
  */
 function useClassifierContextMenu(elementId: string, name: string, className: string) {
     const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; canDerive: boolean } | null>(null);
@@ -673,7 +673,7 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
     }, [elementId, name, className]);
 
     const handleDeriveViewpoint = useCallback(() => {
-        createDerivedViewpoint(elementId);
+        window.dispatchEvent(new CustomEvent(JjodelEvents.DERIVE_VIEWPOINT_OPEN, { detail: { metamodelId: elementId } }));
         setCtxMenu(null);
     }, [elementId]);
 

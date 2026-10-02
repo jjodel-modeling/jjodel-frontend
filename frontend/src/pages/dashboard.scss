@@ -428,6 +428,18 @@
     }
   }
 
+  /* #157 R5 — consumer: the Configurator page lies over the Dock. The Dock stays mounted and
+     laid out underneath (ProjectEditor lives in it, and removing &profile= brings it back
+     without a reload) but is neither painted nor reachable: visibility, not a z-index race
+     with rc-dock's own layers (up to 400). */
+  .project-dock-wrapper--consumer {
+    position: relative;
+
+    > :not(.configurator-page) {
+      visibility: hidden;
+    }
+  }
+
   /* ============================================
      DASH CONTENT AREA
      ============================================ */

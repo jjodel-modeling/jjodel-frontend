@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:600;fill:#0f172a}
+</style><marker id="hb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round">
+<path d="M 176 240 L 262 240" marker-end="url(#hb)"/>
+<path d="M 335 231 Q 518 158 698 229" marker-end="url(#hb)"/>
+<path d="M 699 251 Q 518 322 336 249" marker-end="url(#hb)"/>
+<path d="M 288 206 C 270 146, 330 146, 312 206" marker-end="url(#hb)"/>
+<path d="M 726 201 C 708 140, 772 140, 754 201" marker-end="url(#hb)"/>
+<path d="M 300 276 L 300 408" marker-end="url(#hb)"/>
+</g>
+<circle cx="300" cy="240" r="36" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="740" cy="240" r="42" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="300" cy="440" r="31" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="300" cy="440" r="26" fill="none" stroke="#334155" stroke-width="1"/>
+<text class="nm" x="300" y="245" text-anchor="middle">locked</text>
+<text class="nm" x="740" y="245" text-anchor="middle">unlocked</text>
+<text class="nm" x="300" y="445" text-anchor="middle">off</text>
+<text class="lbl" x="518" y="186" text-anchor="middle">coin</text>
+<text class="lbl" x="518" y="304" text-anchor="middle">push</text>
+<text class="lbl" x="300" y="146" text-anchor="middle">push</text>
+<text class="lbl" x="740" y="140" text-anchor="middle">coin</text>
+<text class="lbl" x="312" y="346">stop</text>
+</svg>

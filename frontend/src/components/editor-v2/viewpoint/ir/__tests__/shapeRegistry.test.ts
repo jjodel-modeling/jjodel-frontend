@@ -623,18 +623,27 @@ describe('shapeRegistry: raggio degli spigoli', () => {
         expect(resolveCornerRadius('diamond', 0, { w: 160, h: 64 })).toEqual({ kind: 'none' });
     });
 
-    it('clamp di render a min(w, h) / 4 su entrambi i painter', () => {
-        expect(clampCornerRadius(30, 200, 40)).toBe(10);
+    it('clamp di render a min(w, h) / 2 su entrambi i painter (P-2026-09-30-1720)', () => {
+        expect(clampCornerRadius(30, 200, 40)).toBe(20);
         expect(clampCornerRadius(6, 200, 40)).toBe(6);
-        expect(resolveCornerRadius('rect', 30, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 10 });
+        // L'azione di Activity (UML): raggio 14 sul box dipinto 140x42, prima 10.5.
+        expect(clampCornerRadius(14, 140, 42)).toBe(14);
+        expect(clampCornerRadius(14, 140, 20)).toBe(10);
+        expect(resolveCornerRadius('rect', 30, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 20 });
         expect(resolveCornerRadius('rounded', 6, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 6 });
-        expect(resolveCornerRadius('diamond', 30, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 15, w: 100, h: 60 });
+        expect(resolveCornerRadius('diamond', 30, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 30, w: 100, h: 60 });
+        expect(resolveCornerRadius('diamond', 40, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 30, w: 100, h: 60 });
         expect(resolveCornerRadius('hexagon', 8, { w: 160, h: 64 })).toEqual({ kind: 'path', r: 8, w: 160, h: 64 });
         // senza box la forma CSS tiene il numero scritto: non e' una taglia indovinata
         expect(resolveCornerRadius('rect', 30, null)).toEqual({ kind: 'css', px: 30 });
         for (const [r, w, h] of [[NaN, 10, 10], [6, 0, 10], [6, 10, -1], [-2, 10, 10]]) {
             expect(clampCornerRadius(r, w, h), `${r} ${w} ${h}`).toBe(0);
         }
+    });
+
+    it('il raggio salvato del corpus (8, viste rect utente) non cambia: su un box alto almeno 40 passava gia\'', () => {
+        for (const h of [40, 64, 120]) expect(clampCornerRadius(8, 200, h), String(h)).toBe(8);
+        expect(resolveCornerRadius('rect', 8, { w: 140, h: 40 })).toEqual({ kind: 'css', px: 8 });
     });
 
     it('un poligono senza box misurato resta spigoloso', () => {
@@ -752,6 +761,10 @@ function rulesOf(css: string): Map<string, Record<string, string>> {
  *  (P-2026-09-29-1245): where the bar's section ends and the outside label's begins. */
 const OUTSIDE_LABEL_CSS_START = 17954;
 
+/** Length of the injected CSS before the entry mark's rules, measured on the D tip (c676fc6f6,
+ *  P-2026-09-30-0355): where the outside label's section ends and the entry mark's begins. */
+const ENTRY_MARK_CSS_START = 20461;
+
 /**
  * The bar (R-VP-16, P-2026-09-29-1021): the Petri transition as a thin solid box drawn at a
  * fixed size. The CSS is read as irStyle.ts injects it, through a stand-in `document` (the
@@ -831,7 +844,8 @@ describe('irStyle: the outside label (P-2026-09-29-1245)', () => {
         const css = injectedCss();
         const BEFORE = { length: OUTSIDE_LABEL_CSS_START, sha16: '063ce686b2d24781' };
         expect(createHash('sha256').update(css.slice(0, BEFORE.length)).digest('hex').slice(0, 16)).toBe(BEFORE.sha16);
-        const added = [...rulesOf(css.slice(BEFORE.length)).keys()];
+        // The outside label's section ends where the entry mark's begins (P-2026-09-30-0355).
+        const added = [...rulesOf(css.slice(BEFORE.length, ENTRY_MARK_CSS_START)).keys()];
         expect(added.length).toBeGreaterThan(0);
         for (const sel of added) expect(sel, sel).toContain('ir-label--outside');
     });
@@ -875,5 +889,25 @@ describe('irStyle: the outside label (P-2026-09-29-1245)', () => {
     it('gives the inline editor of an outside label its own width, not 90% of the box', () => {
         expect(rulesOf(injectedCss()).get('.ir-node-content > .ir-label__input.ir-label--outside'))
             .toEqual({ width: 'auto', 'min-width': '80px' });
+    });
+});
+
+/**
+ * The entry mark (R-VP-22, P-2026-09-30-0355). IRNodeContent places the mark inline, past the box on
+ * its left; irStyle.ts only lifts the two clips it would meet, on a node that carries one.
+ */
+describe('irStyle: the entry mark (P-2026-09-30-0355)', () => {
+    it('every rule written before it is byte-identical: the entry mark only appends', () => {
+        const css = injectedCss();
+        // The whole injected CSS of the D tip (c676fc6f6), 20461 characters.
+        expect(createHash('sha256').update(css.slice(0, ENTRY_MARK_CSS_START)).digest('hex').slice(0, 16)).toBe('9389262213aac4a4');
+        const added = [...rulesOf(css.slice(ENTRY_MARK_CSS_START)).keys()];
+        expect(added).toEqual(['.ir-node-content:has(> .ir-entry-svg)', '.mm-node:has(> .ir-node-content > .ir-entry-svg)']);
+    });
+
+    it('lifts the two clips, and only them', () => {
+        const rules = rulesOf(injectedCss().slice(ENTRY_MARK_CSS_START));
+        expect(rules.get('.ir-node-content:has(> .ir-entry-svg)')).toEqual({ overflow: 'visible' });
+        expect(rules.get('.mm-node:has(> .ir-node-content > .ir-entry-svg)')).toEqual({ overflow: 'visible' });
     });
 });

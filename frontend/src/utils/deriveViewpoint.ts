@@ -1,11 +1,15 @@
 /**
- * deriveViewpoint — «Derive viewpoint» on a metamodel (P-2026-09-29-0135).
+ * deriveViewpoint — «Derive viewpoint» on a metamodel (P-2026-09-29-0135; the notation
+ * dialog, slice D, P-2026-09-30-0255, R-VP-21).
  *
  * Creates a NEW viewpoint named `<metamodel> (derived)` with one IR view per
- * concrete class, the documents of `deriveViewpointIRs`, created in its order
- * (deepest class first). The structure always feeds it; the simulation role
- * binding stored on the metamodel feeds it when there is one, read as a run
- * reads it (`runBag`, the keys of the roles its profile turns off dropped).
+ * concrete class, the documents of the choice the dialog confirms
+ * (`derivedDocuments`, notations.ts: the notation picked and its metaclass → role
+ * table), created in their order (deepest class first), each with its provenance
+ * (`ir.generated`). The viewpoint keeps the choice in its `_state`
+ * (`derivedViewpointState`), where the next derivation from the same metamodel
+ * finds it. The simulation binding stored on the metamodel is not read here: it
+ * only prefills the dialog, and nothing here writes it.
  *
  * - The default viewpoint and every existing view are never touched: the
  *   father of every view is the new viewpoint.
@@ -17,45 +21,51 @@
  *   action, and one undo step (action.ts BEGIN/END).
  */
 
-import { DViewElement, DViewPoint, U, store } from '../joiner';
+import { DProject, DViewElement, DViewPoint, U, store } from '../joiner';
 import DockManager from '../components/abstract/DockManager';
 import { toast } from '../components/Toast/toastDispatch';
 import { appliableToForIRKind } from '../view/viewElement/view';
-import { deriveViewpointIRs, isDerivableMetamodel } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
-import { runBag } from '../components/editor-v2/sim/simBridge';
-import { storedProfile } from '../components/editor-v2/sim/simRoleStatus';
-import { ROLE_CATALOG } from '../model/simulation/roleCatalog';
-import type { DerivationRoles } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
+import { isDerivableMetamodel } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
+import { canDerive, defaultChoice, derivedDocuments, derivedViewpointState } from '../components/editor-v2/viewpoint/derive/notations';
+import type { DeriveChoice } from '../components/editor-v2/viewpoint/derive/notations';
 
-/** The role binding stored on the metamodel, or null when no role key is set. */
-function storedRoles(lookup: Record<string, any>, metamodelId: string): DerivationRoles | null {
-    const raw = lookup[metamodelId]?._state;
-    if (!raw || typeof raw !== 'object') return null;
-    if (!ROLE_CATALOG.some(d => d.key !== null && typeof raw[d.key] === 'string' && raw[d.key] !== '')) return null;
-    return { bag: runBag(raw, lookup), shape: storedProfile(raw).profile.shape };
+/** The project's viewpoints, in its order: where the dialog looks for the latest derived viewpoint. */
+export function projectViewpointIds(): string[] {
+    const ids = (DProject.getProject() as any)?.viewpoints;
+    return Array.isArray(ids) ? ids.filter((x: unknown): x is string => typeof x === 'string') : [];
 }
 
 /**
- * Derives a viewpoint from the metamodel `metamodelId` and opens its tab.
+ * Derives a viewpoint from the metamodel `metamodelId` with `choice`, the dialog's
+ * (absent: what the dialog would open on, `defaultChoice`), and opens its tab.
  * Returns the new viewpoint, or null when there is nothing to derive.
  */
-export function createDerivedViewpoint(metamodelId: string): DViewPoint | null {
+export function createDerivedViewpoint(metamodelId: string, choice?: DeriveChoice): DViewPoint | null {
     const lookup: Record<string, any> = (store.getState() as any).idlookup ?? {};
     const metamodel = lookup[metamodelId];
     if (!isDerivableMetamodel(metamodel)) return null;
 
-    const views = deriveViewpointIRs(lookup, metamodelId, storedRoles(lookup, metamodelId));
+    const picked = choice ?? defaultChoice(lookup, metamodelId, projectViewpointIds());
+    if (!canDerive(picked)) {
+        toast.warning('Give a class a role, or choose Generic.', 'Nothing to derive');
+        return null;
+    }
+    const views = derivedDocuments(lookup, metamodelId, picked);
     if (views.length === 0) {
         toast.warning(`"${metamodel.name}" has no concrete class to derive a view for.`, 'Nothing to derive');
         return null;
     }
 
     const name = `${metamodel.name} (derived)`;
+    const state = derivedViewpointState(lookup, metamodelId, picked);
     // A syntax viewpoint, set as New Viewpoint sets the type 'syntax'.
     const viewpoint = DViewPoint.newVP(name, (vp) => {
         vp.isExclusiveView = true;
         vp.isValidation = false;
         (vp as any).viewpointType = 'syntax';
+        // The dialog's binding, kept with the viewpoint only (R-VP-21): set before persist, as
+        // viewpointType, so it is part of the created object and of its one undo step.
+        (vp as any)._state = state;
     });
     for (const v of views) {
         DViewElement.new2(v.ir.label ?? `View for ${v.className}`, '', viewpoint, (d) => {

@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.sm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:500;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+.at{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#64748b}
+.rw{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#0f172a}
+.it{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;font-style:italic;fill:#0f172a}
+.mk{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;fill:#0f172a}
+.mk0{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;fill:#94a3b8}
+</style><marker id="hea" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker><marker id="iea" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></marker><marker id="oea" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 1 L9 5 L0 9" fill="none" stroke="#334155" stroke-width="1.3" stroke-linejoin="round"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 200 260 L 270 260"/>
+<path d="M 390 260 L 460 260"/>
+<path d="M 580 260 L 650 260"/>
+<path d="M 770 260 L 840 260"/>
+<path d="M 80 160 L 110 236"/>
+<path d="M 200 160 L 170 236"/>
+<path d="M 460 160 L 490 236"/>
+<path d="M 580 160 L 550 236"/>
+<path d="M 840 160 L 870 236"/>
+<path d="M 960 160 L 930 236"/>
+<path d="M 330 370 L 330 292"/>
+<path d="M 520 370 L 520 284"/>
+</g>
+<rect x="80" y="236" width="120" height="48" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="nm" x="140" y="265" text-anchor="middle">Student</text>
+<rect x="460" y="236" width="120" height="48" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="nm" x="520" y="265" text-anchor="middle">Course</text>
+<rect x="840" y="236" width="120" height="48" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="nm" x="900" y="265" text-anchor="middle">Professor</text>
+<polygon points="270,260 330,228 390,260 330,292" fill="#ffffff" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+<text class="sm" x="330" y="265" text-anchor="middle">enrolls</text>
+<polygon points="650,260 710,228 770,260 710,292" fill="#ffffff" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+<text class="sm" x="710" y="265" text-anchor="middle">teaches</text>
+<ellipse cx="80" cy="140" rx="44" ry="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="80" y="145" text-anchor="middle">id</text>
+<line x1="72.5" y1="148" x2="87.5" y2="148" stroke="#0f172a" stroke-width="1"/>
+<ellipse cx="200" cy="140" rx="44" ry="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="200" y="145" text-anchor="middle">name</text>
+<ellipse cx="460" cy="140" rx="44" ry="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="460" y="145" text-anchor="middle">code</text>
+<line x1="445.0" y1="148" x2="475.0" y2="148" stroke="#0f172a" stroke-width="1"/>
+<ellipse cx="580" cy="140" rx="44" ry="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="580" y="145" text-anchor="middle">title</text>
+<ellipse cx="840" cy="140" rx="44" ry="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="840" y="145" text-anchor="middle">id</text>
+<line x1="832.5" y1="148" x2="847.5" y2="148" stroke="#0f172a" stroke-width="1"/>
+<ellipse cx="960" cy="140" rx="44" ry="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="960" y="145" text-anchor="middle">name</text>
+<ellipse cx="330" cy="390" rx="44" ry="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="330" y="395" text-anchor="middle">grade</text>
+<ellipse cx="520" cy="390" rx="44" ry="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="520" y="395" text-anchor="middle">credits</text>
+<text class="lbl" x="235" y="250" text-anchor="middle">N</text>
+<text class="lbl" x="425" y="250" text-anchor="middle">M</text>
+<text class="lbl" x="615" y="250" text-anchor="middle">N</text>
+<text class="lbl" x="805" y="250" text-anchor="middle">1</text>
+</svg>

@@ -49,29 +49,54 @@ export const ProfilesStep: React.FC = () => {
     // classId → `metamodel:metaclass`, so the permission rows read like the metaclasses step.
     const project = LProject.getProject();
     const classNameById: Record<string, string> = {};
+    // R6 (#157): keep the metamodel name and the bare class name too, so the permission rows can be
+    // grouped per metamodel like the metaclasses step — the heading carries the qualification
+    // instead of every row repeating it. `classNameById` stays the qualified label, used for a11y.
+    const mmNameById: Record<string, string> = {};
+    const shortNameById: Record<string, string> = {};
     for (const mm of (((project as any)?.metamodels ?? []) as any[])) {
         const mmName: string = mm?.name || 'metamodel';
         for (const c of ((mm?.classes ?? []) as Array<{ id: string; name: string }>)) {
-            if (c && c.id) classNameById[c.id] = `${mmName}:${c.name || c.id}`;
+            if (c && c.id) {
+                classNameById[c.id] = `${mmName}:${c.name || c.id}`;
+                mmNameById[c.id] = mmName;
+                shortNameById[c.id] = c.name || c.id;
+            }
         }
+    }
+    // Groups in first-appearance order, preserving the developer's stored order inside each group.
+    const permGroups: Array<{ mmName: string; ids: string[] }> = [];
+    for (const cid of topLevel) {
+        const mmName = mmNameById[cid] || 'metamodel';
+        let g = permGroups.find((x) => x.mmName === mmName);
+        if (!g) { g = { mmName, ids: [] }; permGroups.push(g); }
+        g.ids.push(cid);
     }
     const profiles = profilesOfConfig(idlookup, config);
     const selectedProfile: any = selectedProfileId ? idlookup[selectedProfileId] : null;
+
+    /** R1 (#157): profiles travel with the project, so every write below is an unsaved change of
+     *  the project — the flag behind «Unsaved» and the leave prompt. No write here set it, and a
+     *  link copied from an unsaved profile opened on nothing in the field test of 2026-09-25. */
+    const markUnsaved = () => { U.isProjectModified = true; };
 
     const addProfile = () => {
         if (!config) return;
         const name = newProfileName.trim() || 'New profile';
         const profile = DProfile.new(config.id, name);
         SetFieldAction.new(config.id, 'profiles', [...profileIdsOf(config), profile.id], '', true);
+        markUnsaved();
         setNewProfileName('');
         setSelectedProfileId(profile.id);
     };
     const renameProfile = (profileId: string, name: string) => {
         SetFieldAction.new(profileId, 'name', name, '', false);
+        markUnsaved();
     };
     const deleteProfile = (profileId: string) => {
         if (!config) return;
         SetFieldAction.new(config.id, 'profiles', profileIdsOf(config).filter((x) => x !== profileId), '', true);
+        markUnsaved();
         // TODO: cleanup — also DeleteElementAction the now-orphaned DProfile entity.
         if (selectedProfileId === profileId) setSelectedProfileId(null);
     };
@@ -80,6 +105,7 @@ export const ProfilesStep: React.FC = () => {
         if (perm === 'edit') delete cur[classId];
         else cur[classId] = perm;
         SetFieldAction.new(profileD.id, 'typePermissions', cur, '', false);
+        markUnsaved();
     };
     const copyStandaloneLink = async (profileId: string) => {
         if (!projectId) return;
@@ -96,7 +122,7 @@ export const ProfilesStep: React.FC = () => {
                 <h3 className="envgen-section-title">Profiles</h3>
                 <p className="envgen-section-description">
                     A profile restricts what a stand-alone user can see and edit. Share the environment as
-                    <code> #/project?id=…&profile=&lt;id&gt;</code>. Changes are saved to the project immediately.
+                    <code> #/project?id=…&profile=&lt;id&gt;</code>. Changes are part of the project: «Done» saves it, as Ctrl+S does.
                 </p>
             </div>
 
@@ -152,20 +178,28 @@ export const ProfilesStep: React.FC = () => {
                                 >
                                     <i className="bi bi-link-45deg" /> {linkCopied ? 'Copied!' : 'Copy stand-alone link'}
                                 </button>
+                                <p className="envgen-empty-hint">
+                                    The link opens the project as last saved: save it («Done» or Ctrl+S) before sharing.
+                                </p>
                             </div>
                             <div className="envgen-field-label" style={{ marginTop: 12 }}>Permissions per top-level type</div>
                             {topLevel.length === 0 ? (
                                 <p className="envgen-empty-hint">Mark some editable metaclasses first.</p>
                             ) : (
-                                topLevel.map((cid) => (
-                                    <div key={cid} className="envgen-perm-row">
-                                        <span className="envgen-perm-row__name">{classNameById[cid] || cid}</span>
-                                        <SegmentedControl
-                                            options={PERMISSION_OPTIONS}
-                                            value={resolveTypePermission(selectedProfile, cid)}
-                                            onChange={(v) => setPermission(selectedProfile, cid, v as EnvPermission)}
-                                            ariaLabel={`Permission for ${classNameById[cid] || cid}`}
-                                        />
+                                permGroups.map((g) => (
+                                    <div className="envgen-mm-group" key={g.mmName}>
+                                        <div className="envgen-mm-group__title">{g.mmName}</div>
+                                        {g.ids.map((cid) => (
+                                            <div key={cid} className="envgen-perm-row">
+                                                <span className="envgen-perm-row__name">{shortNameById[cid] || cid}</span>
+                                                <SegmentedControl
+                                                    options={PERMISSION_OPTIONS}
+                                                    value={resolveTypePermission(selectedProfile, cid)}
+                                                    onChange={(v) => setPermission(selectedProfile, cid, v as EnvPermission)}
+                                                    ariaLabel={`Permission for ${classNameById[cid] || cid}`}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
                                 ))
                             )}

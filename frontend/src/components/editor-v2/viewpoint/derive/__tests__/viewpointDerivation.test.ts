@@ -14,14 +14,15 @@
 
 import { createHash } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
-import { deriveViewpointIRs, isDerivableMetamodel } from '../viewpointDerivation';
-import type { DerivationRoles, DerivedView } from '../viewpointDerivation';
+import { deriveGenericViewpointIRs, deriveViewpointForBinding, deriveViewpointIRs, isDerivableMetamodel, rolesFromTable } from '../viewpointDerivation';
+import type { AnyDerivedView, DerivationRoles, DerivedView } from '../viewpointDerivation';
 import { validateIR } from '../../ir/irValidate';
 import { recognizeSymbol } from '../../ir/symbolRecognition';
-import { compileView, compileEdgeView, clearCompileCache } from '../../ir/irCompile';
+import { compileView, compileEdgeView, compileRowView, clearCompileCache } from '../../ir/irCompile';
+import { rowRenderedChildren } from '../../ir/irContainment';
 import { makeDrawReadCtx } from '../../ir/irReadCtx';
 import { BAR_SIZE, boxForContent, getShapeDescriptor, hasSizeSupplement } from '../../ir/shapeRegistry';
-import type { EdgeViewIR, VertexViewIR } from '../../ir/irTypes';
+import type { EdgeViewIR, RowViewIR, VertexViewIR } from '../../ir/irTypes';
 import { sketchOfMetamodel } from '../../../sim/metamodelSketch';
 import { bindProfile } from '../../../../../model/simulation/profileBinder';
 import { systemProfile } from '../../../../../model/simulation/simProfiles';
@@ -219,14 +220,14 @@ const DEMOS: [string, Fixture, string][] = [
     ['DemoFlowB', FLOWB, 'flowchart'],
 ];
 
-const byClass = (views: DerivedView[], name: string): DerivedView => {
+const byClass = <V extends AnyDerivedView>(views: V[], name: string): V => {
     const v = views.find(x => x.className === name);
     if (!v) throw new Error(`no view for ${name}: ${views.map(x => x.className).join(', ')}`);
     return v;
 };
-const vertex = (v: DerivedView) => v.ir as VertexViewIR;
-const edge = (v: DerivedView) => v.ir as EdgeViewIR;
-const edgeClasses = (views: DerivedView[]) => views.filter(v => v.ir.kind === 'edge').map(v => v.className).sort();
+const vertex = (v: AnyDerivedView) => v.ir as VertexViewIR;
+const edge = (v: AnyDerivedView) => v.ir as EdgeViewIR;
+const edgeClasses = (views: AnyDerivedView[]) => views.filter(v => v.ir.kind === 'edge').map(v => v.className).sort();
 
 /** Longest `extends` chain to a root, the order the derivation promises. */
 function depthOf(lookup: Lookup, id: string, seen: string[] = []): number {
@@ -559,7 +560,7 @@ describe('deriveViewpointIRs — pure: nothing it reads is touched', () => {
 // ---------------------------------------------------------------------------
 
 /** 16 hex of the sha256 of the list, as JSON: documents, rules and ids, in derivation order. */
-const digest = (views: DerivedView[]) => createHash('sha256').update(JSON.stringify(views)).digest('hex').slice(0, 16);
+const digest = (views: AnyDerivedView[]) => createHash('sha256').update(JSON.stringify(views)).digest('hex').slice(0, 16);
 
 describe('deriveViewpointIRs — without roles the documents are byte-equal to before the notations', () => {
     // Measured on the derivation of e5010856c, before lane 1 of the Petri notation touched it.
@@ -591,7 +592,9 @@ describe('deriveViewpointIRs — without roles the documents are byte-equal to b
 
     it('the Petri documents with their roles are byte-equal to before V1', () => {
         // Measured on the derivation of f8e041498, before V1 (P-2026-09-29-1331) touched it (R-VP-16).
-        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('d43f9d79bf78f9f4');
+        // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
+        // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
+        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('997f12afe5b58db0');
     });
 
     it('a control-flow shape with no role bound keeps the boxes: the notation is keyed on the roles, not the shape', () => {
@@ -682,15 +685,15 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         });
     });
 
-    it('Arc: a 1 px ink line ending in the filled arrowhead, no routing (the orthogonal router)', () => {
+    it('Arc: a 1 px ink line ending in the open arrowhead (R-VP-25), no routing (the orthogonal router)', () => {
         expect(edge(byClass(views(), 'Arc')).edge).toEqual({
             source: '$src.value', target: '$tgt.value',
-            terminations: { sourceEnd: 'none', targetEnd: 'closedArrow' },
+            terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
             line: { color: NAME_INK, width: 1 },
         });
     });
 
-    it('InhibitorArc: the same line, no routing, the open arrowhead kept until the circle termination (lane 3)', () => {
+    it('InhibitorArc: the same line, no routing, the open arrowhead as the arc (the circle is the classic notation\'s, R-VP-24)', () => {
         expect(edge(byClass(views(), 'InhibitorArc')).edge).toEqual({
             source: '$src.value', target: '$tgt.value',
             terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
@@ -770,6 +773,159 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         expect(deriveViewpointIRs(PETRI.lookup, PETRI.id, { bag: elsewhere, shape: 'petri' })).toEqual(bound);
         // The place is the catalogue's Place for the Symbol Editor.
         expect(recognizeSymbol(vertex(byClass(bound, 'Place')).shape).map(p => p.id)).toContain('petri-place');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Petri net (classic), slice A2 (P-2026-09-30-1521, R-VP-24, mockup petri-A.svg)
+// ---------------------------------------------------------------------------
+
+describe('deriveViewpointForBinding — Petri net (classic), over the Petri documents (R-VP-24)', () => {
+    const roles = (): DerivationRoles => ({ ...boundRoles(PETRI, 'petri'), notation: 'petriClassic' });
+    const views = () => deriveViewpointForBinding(PETRI.lookup, PETRI.id, roles()) as DerivedView[];
+    const all = (name: string) => views().filter(v => v.className === name);
+    const WEIGHT_LABEL = { center: { from: 'path', expr: '$weight.value' }, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } };
+    const ABOVE_ONE = { op: 'gt', left: '$weight.value', right: { kind: 'number', value: 1 } };
+
+    it('Place, as a whole document: a 44 px circle in the ink, the name outside below, the marking as dots up to 4 and a number from 5', () => {
+        const place = byClass(views(), 'Place');
+        expect(place.rule).toBe('role:node');
+        const eqTokens = (n: number) => ({ op: 'eq', left: '$tokens.value', right: { kind: 'number', value: n } });
+        expect(place.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Place'], authoringMetaclassPins: { Place: 'PETRI.Place' },
+            exclusive: true, label: 'View for Place', defaultSize: { width: 44, height: 44 },
+            shape: {
+                form: 'circle', fill: 'var(--color-inode-surface)',
+                border: { color: NAME_INK, width: 1, style: 'solid' },
+                labels: [
+                    { position: 'outside', anchor: 's', source: NAME, style: { fontSize: 13, fontWeight: 'medium', color: NAME_INK } },
+                    {
+                        position: 'center', source: { from: 'path', expr: '$tokens.value' }, style: { fontSize: 15, fontWeight: 'semibold', color: NAME_INK },
+                        visible: { when: { op: 'gt', left: '$tokens.value', right: { kind: 'number', value: 4 } }, then: true, else: false },
+                    },
+                ],
+                marker: {
+                    rules: [
+                        { when: eqTokens(1), then: 'dot' }, { when: eqTokens(2), then: 'dots-2' },
+                        { when: eqTokens(3), then: 'dots-3' }, { when: eqTokens(4), then: 'dots-4' },
+                    ],
+                    default: '',
+                },
+            },
+        });
+    });
+
+    it('Transition, as a whole document: an upright bar 10×44 in the catalogue ink, its name outside to the right', () => {
+        const t = byClass(views(), 'Transition');
+        expect(t.rule).toBe('role:transition');
+        expect(t.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
+            exclusive: true, label: 'View for Transition', defaultSize: { width: 10, height: 44 },
+            shape: {
+                form: 'bar', fill: INK,
+                border: { color: INK, width: 1, style: 'solid' },
+                labels: [{ position: 'outside', anchor: 'e', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
+            },
+        });
+    });
+
+    it('Arc: an arc in the ink ending in the open arrowhead; a second document labels a weight above 1', () => {
+        const [plain, weighted] = all('Arc').map(edge);
+        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' };
+        expect(all('Arc')).toHaveLength(2);
+        expect(plain.edge).toEqual(line);
+        expect(plain.predicate).toBeUndefined();
+        expect(plain.priority).toBeUndefined();
+        expect(weighted.edge).toEqual({ ...line, labels: WEIGHT_LABEL });
+        expect(weighted.predicate).toEqual(ABOVE_ONE);
+        expect(weighted.priority).toBe(1);
+        expect(weighted.label).toBe('View for Arc (weight)');
+    });
+
+    it('InhibitorArc: the same two documents, ending in the hollow circle', () => {
+        const [plain, weighted] = all('InhibitorArc').map(edge);
+        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'hollowCircle' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' };
+        expect(all('InhibitorArc').map(v => v.rule)).toEqual(['role:inhibitorArc', 'role:inhibitorArc']);
+        expect(plain.edge).toEqual(line);
+        expect(weighted.edge).toEqual({ ...line, labels: WEIGHT_LABEL });
+        expect(weighted.predicate).toEqual(ABOVE_ONE);
+        expect(weighted.priority).toBe(1);
+    });
+
+    it('the tokens on the objects: one to four dots, the number from five, nothing at zero or unset; the name always', () => {
+        clearCompileCache();
+        const { lookup, ctx } = petriWorld();
+        const cv = compileView('derived:PlaceClassic', vertex(byClass(views(), 'Place')));
+        const seen = ['pEmpty', 'p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'].map(id => [
+            id, String(cv.marker!(ctx, id) ?? ''), cv.labels.filter(l => l.visible(ctx, id)).map(l => String(l.text(ctx, id))),
+        ]);
+        expect(seen).toEqual([
+            ['pEmpty', '', [lookup.pEmpty.name]], ['p0', '', [lookup.p0.name]],
+            ['p1', 'dot', [lookup.p1.name]], ['p2', 'dots-2', [lookup.p2.name]], ['p3', 'dots-3', [lookup.p3.name]], ['p4', 'dots-4', [lookup.p4.name]],
+            ['p5', '', [lookup.p5.name, '5']], ['p6', '', [lookup.p6.name, '6']], ['p7', '', [lookup.p7.name, '7']],
+        ]);
+        expect(cv.labels.map(l => [l.position, l.anchor ?? null])).toEqual([['outside', 's'], ['center', null]]);
+    });
+
+    it('the compiled arcs: the ink, 1 px, the arc, the ends; the bar keeps the catalogue hex', () => {
+        clearCompileCache();
+        const { ctx } = petriWorld();
+        for (const [n, id, end] of [['Arc', 'a1', 'openArrow'], ['InhibitorArc', 'i1', 'hollowCircle']]) {
+            const ce = compileEdgeView(`derived:${n}Classic`, edge(all(n)[0]));
+            expect(ce.lineColor!(ctx, id), n).toBe(NAME_INK);
+            expect(ce.lineWidth!(ctx, id), n).toBe(1);
+            expect(ce.curve, n).toBe('arc');
+            expect(ce.terminations, n).toEqual({ sourceEnd: 'none', targetEnd: end });
+        }
+        const bar = compileView('derived:TransitionClassic', vertex(byClass(views(), 'Transition')));
+        expect(bar.fill!(ctx, 't1')).toBe(INK);
+        expect(bar.form(ctx, 't1')).toBe('bar');
+    });
+
+    it('the order and the rules are the Petri net\'s, each weighted document right after its plain one', () => {
+        const petri = deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri'));
+        const expected = petri.flatMap(v => (v.ir.kind === 'edge' ? [[v.className, v.rule], [v.className, v.rule]] : [[v.className, v.rule]]));
+        expect(views().map(v => [v.className, v.rule])).toEqual(expected);
+    });
+
+    it('with no marking bound, no marks; with no weight bound, one document per arc class', () => {
+        const r = roles();
+        const bag = { ...r.bag };
+        delete bag.simInitialMarking;
+        delete bag.simArcWeight;
+        const bare = deriveViewpointForBinding(PETRI.lookup, PETRI.id, { ...r, bag });
+        const place = vertex(byClass(bare, 'Place'));
+        expect(place.shape.marker).toBeUndefined();
+        expect(place.shape.labels!.map(l => l.position)).toEqual(['outside']);
+        expect(bare.filter(v => v.ir.kind === 'edge').map(v => v.className)).toEqual(['InhibitorArc', 'Arc']);
+        expect(bare.filter(v => v.ir.kind === 'edge').every(v => edge(v).edge.labels === undefined)).toBe(true);
+    });
+
+    it('a class with no role, and the Terminal, keep the Petri drawing', () => {
+        const mm = metamodel('PX', 'PetriExtra', [
+            cls('PNode', { abstract: true }),
+            cls('Place', { supers: ['PNode'], attrs: [attr('tokens', EINT)] }),
+            cls('Sink', { supers: ['Place'] }),
+            cls('Transition', { supers: ['PNode'] }),
+            cls('Arc', { attrs: [attr('weight', EINT)], refs: [ref('src', 'PNode'), ref('tgt', 'PNode')] }),
+            cls('Note', { attrs: [attr('text', ESTRING)] }),
+        ]);
+        const base = boundRoles(mm, 'petri');
+        const table = { 'PX.Place': 'node', 'PX.Sink': 'terminal', 'PX.Transition': 'transition', 'PX.Arc': 'arc' };
+        const petri = deriveViewpointForBinding(mm.lookup, mm.id, { ...base, classRoles: table });
+        const classic = deriveViewpointForBinding(mm.lookup, mm.id, { ...base, classRoles: table, notation: 'petriClassic' });
+        expect(byClass(classic, 'Note')).toEqual(byClass(petri, 'Note'));
+        expect(byClass(classic, 'Sink')).toEqual(byClass(petri, 'Sink'));
+        expect(vertex(byClass(classic, 'Place')).shape.labels![0].position).toBe('outside');
+    });
+
+    it('every document passes the IR validator', () => {
+        for (const v of views()) expect(validateIR(`derived:${v.className}`, v.ir), v.className).toEqual({ ok: true });
+    });
+
+    it('Petri net itself is untouched by the classic notation: the same documents without it', () => {
+        const { notation: _n, ...plain } = roles();
+        expect(deriveViewpointForBinding(PETRI.lookup, PETRI.id, plain)).toEqual(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')));
     });
 });
 
@@ -937,6 +1093,717 @@ describe('deriveViewpointIRs — the control-flow notation reads the roles', () 
         const cf = compileEdgeView('derived:ControlFlow', edge(byClass(views, 'ControlFlow')));
         expect(String(cf.labelText!(ctx, 'c1'))).toBe('x > 0');
         expect(cf.lineColor!(ctx, 'c1')).toBe(NAME_INK);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The generic structural notation, variant C (P-2026-09-29-2350, R-VP-19)
+// ---------------------------------------------------------------------------
+
+const EBOOLEAN = 'Pointer_EBOOLEAN';
+const EDATE = 'Pointer_EDATE';
+const QUIET = 'var(--color-inode-quiet)';
+
+/** ERDLanguage.jjodel, metamodel ERD: `ownedAttributes` is a plain reference, so its Attribute stays a node. */
+const ERDL = metamodel('ERDL', 'ERD', [
+    cls('NamedElement', { abstract: true, attrs: [attr('name', ESTRING)] }),
+    cls('Entity', { supers: ['NamedElement'], refs: [ref('ownedAttributes', 'Attribute', { upper: -1 })] }),
+    cls('Attribute', { supers: ['NamedElement'], attrs: [attr('type', 'ERDL.Type'), attr('isKey', EBOOLEAN)] }),
+    cls('Relationship', { supers: ['NamedElement'], attrs: [attr('cardinality', 'ERDL.Cardinality')], refs: [ref('left', 'Entity'), ref('right', 'Entity')] }),
+]);
+/** ERDLanguage.jjodel, metamodel Relational. */
+const RELATIONAL = metamodel('REL', 'Relational', [
+    cls('Table', { attrs: [attr('name', ESTRING)], refs: [ref('columns', 'Column', { composition: true, upper: -1 })] }),
+    cls('Column', { attrs: [attr('name', ESTRING), attr('type', 'REL.SqlType'), attr('isPrimaryKey', EBOOLEAN)] }),
+    cls('ForeignKey', { attrs: [attr('name', ESTRING)], refs: [ref('source', 'Table'), ref('target', 'Table')] }),
+]);
+/** ERDLanguage.jjodel, metamodel Library (no M1 object). */
+const LIBRARY = metamodel('LIB', 'Library', [
+    cls('Catalogue', { refs: [ref('books', 'Book', { composition: true, upper: -1 }), ref('members', 'Member', { composition: true, upper: -1 })] }),
+    cls('Book', { attrs: [attr('title', ESTRING), attr('isbn', ESTRING), attr('year', EINT)] }),
+    cls('Member', { attrs: [attr('name', ESTRING), attr('memberId', ESTRING)] }),
+    cls('Loan', { attrs: [attr('dueDate', EDATE)] }),
+]);
+/** MDE _ ERD.jjodel: the `ERD` fixture above (MDE _ ERD (1)) with namedElement abstract. */
+const MDE_ERD = metamodel('MERD', 'ERD MM', [
+    cls('Entity', { supers: ['namedElement'], refs: [ref('attributes', 'Attribute', { composition: true, upper: -1 })] }),
+    cls('Attribute', { supers: ['namedElement'], attrs: [attr('type', 'MERD.EnumType')] }),
+    cls('namedElement', { abstract: true, attrs: [attr('name', ESTRING)] }),
+    cls('Relation', { supers: ['namedElement'], refs: [ref('left', 'Entity'), ref('right', 'Entity')] }),
+]);
+
+/** The nine metamodels of the seven exports the discovery measured (report §4). */
+const CORPUS: [string, Fixture][] = [
+    ['DemoPEST', PEST], ['DemoPetri', PETRI], ['DemoESM', ESM], ['DemoFlowB', FLOWB],
+    ['ERDLanguage ERD', ERDL], ['ERDLanguage Relational', RELATIONAL], ['ERDLanguage Library', LIBRARY],
+    ['MDE ERD (1)', ERD], ['MDE ERD', MDE_ERD],
+];
+/** The M1 objects per class of each export, as the discovery's probe counted them. */
+const M1_OBJECTS: Record<string, Record<string, number>> = {
+    DemoPEST: { Initial: 1, State: 1, Terminal: 1, Event: 3, Transition: 5 },
+    DemoPetri: { Place: 4, Transition: 3, Arc: 5, InhibitorArc: 1 },
+    DemoESM: { Initial: 1, State: 1, Terminal: 1, Event: 3, Transition: 4 },
+    DemoFlowB: { InitialNode: 1, Activity: 3, Decision: 1, Fork: 1, Join: 1, FinalNode: 1, ControlFlow: 9 },
+    'ERDLanguage ERD': { Entity: 3, Attribute: 7, Relationship: 2 },
+    'ERDLanguage Relational': { Table: 24, ForeignKey: 12 },
+    'ERDLanguage Library': {},
+    'MDE ERD (1)': { Entity: 3, Attribute: 7, Relation: 2 },
+    'MDE ERD': { Entity: 2, Attribute: 6, Relation: 1 },
+};
+
+/** The attributes of a class, its own and inherited, read from the fixture's lookup. */
+function attributesOfClass(mm: Fixture, classId: string, seen: string[] = []): { name: string; type: string }[] {
+    if (seen.includes(classId)) return [];
+    const c = mm.lookup[classId];
+    const own = (c?.attributes ?? []).map((id: string) => ({ name: mm.lookup[id].name, type: mm.lookup[id].type }));
+    return [...own, ...(c?.extends ?? []).flatMap((s: string) => attributesOfClass(mm, s, [...seen, classId]))];
+}
+
+/** The report's §4 measures, taken on the derived documents, M1 weighted by the objects per class. */
+function corpusCounts() {
+    const t = {
+        views: 0, vertex: 0, edge: 0, row: 0, eyebrows: 0, marks: 0, labelled: 0,
+        eyebrowsM1: 0, edgesM1: 0, childRowsM1: 0, slotRowsM1: 0, identityRowsM1: 0,
+    };
+    for (const [name, mm] of CORPUS) {
+        for (const v of deriveGenericViewpointIRs(mm.lookup, mm.id)) {
+            const objects = M1_OBJECTS[name][v.className] ?? 0;
+            t.views++;
+            if (v.ir.kind === 'edge') {
+                t.edge++;
+                t.edgesM1 += objects;
+                if (edge(v).edge.labels) t.labelled++;
+            } else if (v.ir.kind === 'row') {
+                t.row++;
+                t.childRowsM1 += objects;
+            } else {
+                t.vertex++;
+                const shape = vertex(v).shape;
+                const top = shape.labels?.[0];
+                if (top?.source.from === 'literal' && top.source.text === v.className) {
+                    t.eyebrows++;
+                    t.eyebrowsM1 += objects;
+                }
+                if (shape.border?.color === NAME_INK) t.marks++;
+                const slots = vertex(v).fieldCompartments?.find(fc => fc.source.from === 'attributes');
+                if (slots) {
+                    const excluded = (slots.source as { exclude?: string[] }).exclude ?? [];
+                    for (const a of attributesOfClass(mm, v.classId)) {
+                        if (excluded.includes(a.name)) continue;
+                        if (a.name === 'name' && a.type === ESTRING) t.identityRowsM1 += objects;
+                        else t.slotRowsM1 += objects;
+                    }
+                }
+            }
+        }
+    }
+    return t;
+}
+
+const row = (v: AnyDerivedView) => v.ir as RowViewIR;
+const eyebrow = (text: string) => ({
+    position: 'top', source: { from: 'literal', text },
+    style: { fontSize: 10, fontWeight: 'semibold', color: QUIET, letterSpacing: 0.08, textTransform: 'uppercase' },
+});
+/** The halo label of every labelled C edge (R-VP-20 (5)): 12 px, 500, the quiet ink. */
+const EDGE_LABEL_STYLE = { fontSize: 12, fontWeight: 'medium', color: QUIET };
+/** A slot as `name = value` in a label template (R-VP-20 (4)). */
+const slotRow = (name: string, lead = '') => [{ from: 'literal', text: `${lead}${name} = ` }, { from: 'path', expr: `$${name}.value` }];
+const NAME_LABEL = { position: 'top', source: NAME, style: { fontSize: 14, fontWeight: 'semibold', color: NAME_INK } };
+const MONO = { fontFamily: 'mono', fontSize: 11 };
+const PLAIN_BORDER = { color: BORDER, width: 1, style: 'solid' };
+const INITIAL_BORDER = { color: NAME_INK, width: 2, style: 'solid' };
+const FINAL_BORDER = { color: NAME_INK, width: 3, style: 'double' };
+// R-VP-25 (P-2026-09-30-1521): the generic edges end in the open arrowhead.
+const C_ARROW = { sourceEnd: 'none', targetEnd: 'openArrow' };
+const genericOf = (mm: Fixture) => deriveGenericViewpointIRs(mm.lookup, mm.id);
+const kindsOf = (views: AnyDerivedView[], kind: string) => views.filter(v => v.ir.kind === kind).map(v => v.className).sort();
+
+/** A Column held by a Table and also the type of a plain reference: it stays a node (rule 3's guard). */
+const KEYED = metamodel('KEY', 'Keyed', [
+    cls('Table', { refs: [ref('columns', 'Column', { composition: true, upper: -1 })] }),
+    cls('Column', { attrs: [attr('name', ESTRING)] }),
+    cls('Index', { refs: [ref('column', 'Column')] }),
+]);
+/** Three levels: a Table is a row of its Schema, so a Column, held by a row and not by a node, stays a node. */
+const NESTED = metamodel('NST', 'Nested', [
+    cls('Schema', { refs: [ref('tables', 'Table', { composition: true, upper: -1 })] }),
+    cls('Table', { refs: [ref('columns', 'Column', { composition: true, upper: -1 })] }),
+    cls('Column'),
+]);
+/**
+ * A state hierarchy: a State holds Vertices and is one, so the composition runs into the holder's
+ * own hierarchy and its Pseudostates are nodes inside it, not rows.
+ */
+const TREE = metamodel('TRE', 'Tree', [
+    cls('Vertex', { abstract: true }),
+    cls('State', { supers: ['Vertex'], refs: [ref('subvertices', 'Vertex', { composition: true, upper: -1 })] }),
+    cls('Pseudostate', { supers: ['Vertex'] }),
+    cls('FinalState', { supers: ['State'] }),
+]);
+/** A SubPackage is a Package and an Element: a class that is a kind of its holder stays a node. */
+const PACKAGES = metamodel('PKG', 'Packages', [
+    cls('Element'),
+    cls('Package', { refs: [ref('elements', 'Element', { composition: true, upper: -1 })] }),
+    cls('SubPackage', { supers: ['Package', 'Element'] }),
+    cls('Leaf', { supers: ['Element'] }),
+]);
+/**
+ * A Node holds its Actions (rows) and its outgoing Flows (edges, from the container); a Flow
+ * holds Notes, which an edge cannot show as rows, so they stay nodes.
+ */
+const EDGE_HOLDER = metamodel('EH', 'EdgeHolder', [
+    cls('Node', { refs: [ref('actions', 'Action', { composition: true, upper: -1 }), ref('out', 'Flow', { composition: true, upper: -1 })] }),
+    cls('Flow', { refs: [ref('target', 'Node'), ref('notes', 'Note', { composition: true, upper: -1 })] }),
+    cls('Action', { attrs: [attr('name', ESTRING)] }),
+    cls('Note'),
+]);
+/** Subclass marks read the words of the name, and only on a subclass (rule 5). */
+const NAMES = metamodel('NAM', 'Names', [
+    cls('Node', { abstract: true }),
+    cls('InitialNode', { supers: ['Node'] }),
+    cls('StartEvent', { supers: ['Node'] }),
+    cls('EndEvent', { supers: ['Node'] }),
+    cls('AcceptState', { supers: ['Node'] }),
+    cls('final_state', { supers: ['Node'] }),
+    cls('Legend', { supers: ['Node'] }),
+    cls('Calendar', { supers: ['Node'] }),
+    cls('Restart', { supers: ['Node'] }),
+    cls('Endpoint', { supers: ['Node'] }),
+    cls('Initializer', { supers: ['Node'] }),
+    cls('Start'),
+    cls('Terminal'),
+]);
+/** A sub-edge with nothing of its own to print is labelled by its stereotype alone. */
+const LINKS = metamodel('LNK', 'Links', [
+    cls('Node'),
+    cls('Link', { refs: [ref('source', 'Node'), ref('target', 'Node')] }),
+    cls('Dependency', { supers: ['Link'] }),
+    cls('Usage', { supers: ['Link'], attrs: [attr('kind', ESTRING)] }),
+    cls('Trace', { supers: ['Link'], refs: [ref('owner', 'Owner')] }),
+    cls('Owner'),
+]);
+
+const ALL_FIXTURES: [string, Fixture][] = [
+    ...CORPUS,
+    ['Families', FAMILIES], ['Persons', PERSONS], ['Composite', COMPOSITE], ['Cars', CARS], ['Graph', GRAPH],
+    ['Keyed', KEYED], ['Nested', NESTED], ['Tree', TREE], ['Packages', PACKAGES], ['EdgeHolder', EDGE_HOLDER],
+    ['Names', NAMES], ['Links', LINKS],
+];
+
+describe('deriveGenericViewpointIRs — the report\'s §4 counts on the corpus', () => {
+    it('39 views, 25 vertex, 9 edge, 5 row; 25 eyebrows, 6 marks, 9 labelled edges (5 as in C1, 4 by a template)', () => {
+        expect(corpusCounts()).toMatchObject({ views: 39, vertex: 25, edge: 9, row: 5, eyebrows: 25, marks: 6, labelled: 9 });
+    });
+
+    it('M1: 66 eyebrows, 41 edges, 13 contained objects as rows, 24 slot rows, no name row (the exclude of C2)', () => {
+        // C1 drew 7 name rows: the 7 ERDLanguage Attributes repeated their name. The exclude keeps it out.
+        expect(corpusCounts()).toMatchObject({ eyebrowsM1: 66, edgesM1: 41, childRowsM1: 13, slotRowsM1: 24, identityRowsM1: 0 });
+    });
+
+    it('per metamodel: vertex, edge and row views', () => {
+        const KINDS: Record<string, [string[], string[], string[]]> = {
+            DemoPEST: [['Event', 'Initial', 'State', 'Terminal'], ['Transition'], []],
+            DemoPetri: [['Place', 'Transition'], ['Arc', 'InhibitorArc'], []],
+            DemoESM: [['Event', 'Initial', 'State', 'Terminal'], ['Transition'], []],
+            DemoFlowB: [['Activity', 'ActivityNode', 'Decision', 'FinalNode', 'Fork', 'InitialNode', 'Join'], ['ControlFlow'], []],
+            'ERDLanguage ERD': [['Attribute', 'Entity'], ['Relationship'], []],
+            'ERDLanguage Relational': [['Table'], ['ForeignKey'], ['Column']],
+            'ERDLanguage Library': [['Catalogue', 'Loan'], [], ['Book', 'Member']],
+            'MDE ERD (1)': [['Entity', 'namedElement'], ['Relation'], ['Attribute']],
+            'MDE ERD': [['Entity'], ['Relation'], ['Attribute']],
+        };
+        for (const [name, mm] of CORPUS) {
+            const views = genericOf(mm);
+            expect([kindsOf(views, 'vertex'), kindsOf(views, 'edge'), kindsOf(views, 'row')], name).toEqual(KINDS[name]);
+        }
+    });
+
+    it('the six marks: the Initial and Terminal of both state machines, the InitialNode and FinalNode of the flow', () => {
+        const marks: string[] = [];
+        for (const [name, mm] of CORPUS) {
+            for (const v of genericOf(mm)) {
+                if (v.ir.kind !== 'vertex') continue;
+                const b = vertex(v).shape.border;
+                if (b?.color === NAME_INK) marks.push(`${name}.${v.className}:${b.style}`);
+            }
+        }
+        expect(marks).toEqual([
+            'DemoPEST.Initial:solid', 'DemoPEST.Terminal:double', 'DemoESM.Initial:solid', 'DemoESM.Terminal:double',
+            'DemoFlowB.InitialNode:solid', 'DemoFlowB.FinalNode:double',
+        ]);
+    });
+
+    it('every document of every fixture passes the IR validator', () => {
+        for (const [name, mm] of ALL_FIXTURES) {
+            const views = genericOf(mm);
+            expect(views.length, name).toBeGreaterThan(0);
+            for (const v of views) expect(validateIR(`generic:${name}:${v.className}`, v.ir), `${name} ${v.className}`).toEqual({ ok: true });
+        }
+    });
+});
+
+describe('deriveGenericViewpointIRs — whole documents', () => {
+    it('DemoPEST State: the white box, the eyebrow over the name, no compartment', () => {
+        const v = byClass(genericOf(PEST), 'State');
+        expect(v.rule).toBe('generic:node');
+        expect(v.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['State'], authoringMetaclassPins: { State: 'PEST.State' },
+            exclusive: true, label: 'View for State',
+            shape: { form: 'rounded', fill: SURFACE, border: PLAIN_BORDER, labels: [eyebrow('State'), NAME_LABEL] },
+        });
+    });
+
+    it('DemoPEST Initial and Terminal: the same box with the 2 px ink border and the double border', () => {
+        const views = genericOf(PEST);
+        expect(byClass(views, 'Initial').rule).toBe('generic:initial');
+        expect(vertex(byClass(views, 'Initial')).shape).toEqual({ form: 'rounded', fill: SURFACE, border: INITIAL_BORDER, labels: [eyebrow('Initial'), NAME_LABEL] });
+        expect(byClass(views, 'Terminal').rule).toBe('generic:final');
+        expect(vertex(byClass(views, 'Terminal')).shape).toEqual({ form: 'rounded', fill: SURFACE, border: FINAL_BORDER, labels: [eyebrow('Terminal'), NAME_LABEL] });
+    });
+
+    it('DemoPEST Transition: from the container to nextState, the open arrowhead (R-VP-25), the ink line, the event', () => {
+        const v = byClass(genericOf(PEST), 'Transition');
+        expect(v.rule).toBe('structure:contained-ref');
+        expect(v.ir).toEqual({
+            irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PEST.Transition' },
+            exclusive: true, label: 'View for Transition',
+            edge: {
+                source: 'container', target: '$nextState.value', terminations: C_ARROW,
+                labels: { center: { from: 'path', expr: '$event.value' }, style: EDGE_LABEL_STYLE }, line: INK_LINE,
+            },
+        });
+    });
+
+    it('DemoPetri Place: the slot rows in mono 11 px in the quiet ink', () => {
+        const v = vertex(byClass(genericOf(PETRI), 'Place'));
+        expect(v.shape.labels).toEqual([eyebrow('Place'), NAME_LABEL]);
+        expect(v.fieldCompartments).toEqual([{
+            id: 'attributes', source: { from: 'attributes' },
+            rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }], style: { ...MONO, color: QUIET } },
+            separator: true,
+        }]);
+    });
+
+    it('MDE ERD Entity: its Attributes as rows, filtered to the row class; no slot rows for the name alone', () => {
+        const v = vertex(byClass(genericOf(ERD), 'Entity'));
+        expect(v.shape.labels).toEqual([eyebrow('Entity'), NAME_LABEL]);
+        expect(v.fieldCompartments).toEqual([{
+            id: 'children', source: { from: 'children', filter: { op: 'isKind', class: 'Attribute' } },
+            rowFormat: { segments: [{ kind: 'name' }], style: MONO }, separator: true,
+        }]);
+    });
+
+    it('MDE ERD Attribute: a row `name : type`', () => {
+        const v = byClass(genericOf(ERD), 'Attribute');
+        expect(v.rule).toBe('generic:row');
+        expect(v.ir).toEqual({
+            irVersion: 'ir-1.0', kind: 'row', metaclasses: ['Attribute'], authoringMetaclassPins: { Attribute: 'ERD.Attribute' },
+            label: 'View for Attribute',
+            template: [NAME, { from: 'literal', text: ' : ' }, { from: 'path', expr: '$type.value' }],
+        });
+    });
+
+    it('ERDLanguage Attribute: a node, its slot rows with the name slot excluded (R-VP-20 (2))', () => {
+        const v = vertex(byClass(genericOf(ERDL), 'Attribute'));
+        expect(v.fieldCompartments).toEqual([{
+            id: 'attributes', source: { from: 'attributes', exclude: ['name'] },
+            rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }], style: { ...MONO, color: QUIET } },
+            separator: true,
+        }]);
+    });
+
+    it('a class with no identity slot excludes nothing: the source is bare (DemoPetri Place, Library Loan)', () => {
+        expect(vertex(byClass(genericOf(PETRI), 'Place')).fieldCompartments?.[0].source).toEqual({ from: 'attributes' });
+        expect(vertex(byClass(genericOf(LIBRARY), 'Loan')).fieldCompartments?.[0].source).toEqual({ from: 'attributes' });
+    });
+
+    it('Library: the Catalogue lists Books and Members; a row with no type feature is the name alone', () => {
+        const views = genericOf(LIBRARY);
+        expect(vertex(byClass(views, 'Catalogue')).fieldCompartments).toEqual([{
+            id: 'children',
+            source: { from: 'children', filter: { op: 'or', args: [{ op: 'isKind', class: 'Book' }, { op: 'isKind', class: 'Member' }] } },
+            rowFormat: { segments: [{ kind: 'name' }], style: MONO }, separator: true,
+        }]);
+        for (const n of ['Book', 'Member']) expect(row(byClass(views, n)).template, n).toEqual([NAME]);
+        // Loan is held by nothing: a node, with its one slot row.
+        expect(vertex(byClass(views, 'Loan')).fieldCompartments?.map(fc => fc.id)).toEqual(['attributes']);
+    });
+});
+
+describe('deriveGenericViewpointIRs — rule 2, edges: today\'s recognition, a label only where one source says it', () => {
+    it('the edge classes and their endpoints are today\'s, on every fixture', () => {
+        for (const [name, mm] of ALL_FIXTURES) {
+            const ends = (views: AnyDerivedView[]) => views.filter(v => v.ir.kind === 'edge')
+                .map(v => `${v.className}:${edge(v).edge.source}->${edge(v).edge.target}:${v.rule}`).sort();
+            expect(ends(genericOf(mm)), name).toEqual(ends(deriveViewpointIRs(mm.lookup, mm.id, null)));
+        }
+    });
+
+    it('every edge: the ink line at 1 px, the open arrowhead (R-VP-25), no routing', () => {
+        for (const [name, mm] of ALL_FIXTURES) {
+            for (const v of genericOf(mm)) {
+                if (v.ir.kind !== 'edge') continue;
+                expect(edge(v).edge.line, `${name} ${v.className}`).toEqual(INK_LINE);
+                expect(edge(v).edge.terminations, `${name} ${v.className}`).toEqual(C_ARROW);
+                expect(Object.keys(edge(v).edge), `${name} ${v.className}`).not.toContain('routing');
+            }
+        }
+    });
+
+    it('the labels on the corpus: the event, the name as in C1; a template where C1 had none (weight, guard, cardinality); every one with the halo style', () => {
+        const labels: Record<string, unknown> = {};
+        for (const [name, mm] of CORPUS) {
+            for (const v of genericOf(mm)) if (v.ir.kind === 'edge') labels[`${name}.${v.className}`] = edge(v).edge.labels ?? null;
+        }
+        const S = EDGE_LABEL_STYLE;
+        expect(labels).toEqual({
+            'DemoPEST.Transition': { center: { from: 'path', expr: '$event.value' }, style: S },
+            'DemoPetri.Arc': { template: slotRow('weight'), style: S },
+            'DemoPetri.InhibitorArc': { template: [{ from: 'literal', text: '«InhibitorArc»' }, ...slotRow('weight', ' ')], style: S },
+            'DemoESM.Transition': { center: { from: 'path', expr: '$event.value' }, style: S },
+            'DemoFlowB.ControlFlow': { template: slotRow('guard'), style: S },
+            'ERDLanguage ERD.Relationship': { template: slotRow('cardinality'), style: S },
+            'ERDLanguage Relational.ForeignKey': { center: NAME, style: S },
+            'MDE ERD (1).Relation': { center: NAME, style: S },
+            'MDE ERD.Relation': { center: NAME, style: S },
+        });
+    });
+
+    it('the four templates are the edges C1 left unlabelled: the centre sources of C1 are unchanged', () => {
+        const templated: string[] = [];
+        for (const [name, mm] of CORPUS) {
+            for (const v of genericOf(mm)) if (v.ir.kind === 'edge' && edge(v).edge.labels?.template) templated.push(`${name}.${v.className}`);
+        }
+        expect(templated).toEqual(['DemoPetri.InhibitorArc', 'DemoPetri.Arc', 'DemoFlowB.ControlFlow', 'ERDLanguage ERD.Relationship']);
+        for (const [name, mm] of CORPUS) {
+            for (const v of genericOf(mm)) {
+                const l = v.ir.kind === 'edge' ? edge(v).edge.labels : undefined;
+                if (l) expect(!!l.center !== !!l.template, `${name}.${v.className}: one text source or one template`).toBe(true);
+            }
+        }
+    });
+
+    it('a sub-edge: its stereotype alone when it adds nothing, the stereotype before its slot or reference otherwise', () => {
+        const views = genericOf(LINKS);
+        const S = EDGE_LABEL_STYLE;
+        expect(edge(byClass(views, 'Dependency')).edge.labels).toEqual({ center: { from: 'literal', text: '«Dependency»' }, style: S });
+        expect(edge(byClass(views, 'Usage')).edge.labels).toEqual({ template: [{ from: 'literal', text: '«Usage»' }, ...slotRow('kind', ' ')], style: S });
+        expect(edge(byClass(views, 'Trace')).edge.labels).toEqual({ template: [{ from: 'literal', text: '«Trace»' }, { from: 'literal', text: ' ' }, { from: 'path', expr: '$owner.value' }], style: S });
+        // The base edge has nothing to print, and no name: unlabelled, no style either.
+        expect(edge(byClass(views, 'Link')).edge.labels).toBeUndefined();
+    });
+
+    it('a reference wins over a slot, as in C1: the centre of a base edge, the tail of a sub-edge\'s template', () => {
+        const both = metamodel('BTH', 'Both', [
+            cls('Node'), cls('Owner'),
+            cls('Link', { attrs: [attr('note', ESTRING)], refs: [ref('source', 'Node'), ref('target', 'Node'), ref('owner', 'Owner')] }),
+            cls('Traced', { supers: ['Link'] }),
+        ]);
+        const views = genericOf(both);
+        expect(edge(byClass(views, 'Link')).edge.labels).toEqual({ center: { from: 'path', expr: '$owner.value' }, style: EDGE_LABEL_STYLE });
+        expect(edge(byClass(views, 'Traced')).edge.labels).toEqual({
+            template: [{ from: 'literal', text: '«Traced»' }, { from: 'literal', text: ' ' }, { from: 'path', expr: '$owner.value' }], style: EDGE_LABEL_STYLE,
+        });
+    });
+
+    it('executed: the templates print `weight = 2`, `«InhibitorArc» weight = 3`, `guard = …`; unset, no label, and the stereotype alone', () => {
+        clearCompileCache();
+        const lookup: Lookup = { ...PETRI.lookup, ...FLOWB.lookup };
+        const obj = (id: string, cls: string, mm: Fixture, slots: Record<string, unknown[]>) => {
+            lookup[id] = { id, name: id, className: 'DObject', instanceof: mm.classId(cls), features: Object.keys(slots).map(f => `${id}.${f}`) };
+            const owner = cls === 'InhibitorArc' ? 'Arc' : cls;
+            for (const [f, values] of Object.entries(slots)) lookup[`${id}.${f}`] = { id: `${id}.${f}`, className: 'DValue', instanceof: `${mm.classId(owner)}.${f}`, values };
+        };
+        obj('a1', 'Arc', PETRI, { weight: [2] });
+        obj('i1', 'InhibitorArc', PETRI, { weight: [3] });
+        obj('f1', 'ControlFlow', FLOWB, { guard: ['model.[count] < 2'] });
+        obj('f2', 'ControlFlow', FLOWB, { guard: [] });
+        obj('a2', 'Arc', PETRI, { weight: [] });
+        obj('i2', 'InhibitorArc', PETRI, { weight: [] });
+        const ctx = makeDrawReadCtx(lookup);
+        const text = (mm: Fixture, cls: string, id: string) => String(compileEdgeView(`c2:${cls}`, edge(byClass(genericOf(mm), cls))).labelText!(ctx, id));
+        expect(text(PETRI, 'Arc', 'a1')).toBe('weight = 2');
+        expect(text(PETRI, 'InhibitorArc', 'i1')).toBe('«InhibitorArc» weight = 3');
+        expect(text(FLOWB, 'ControlFlow', 'f1')).toBe('guard = model.[count] < 2');
+        expect(text(FLOWB, 'ControlFlow', 'f2')).toBe('');
+        expect(text(PETRI, 'Arc', 'a2')).toBe('');
+        expect(text(PETRI, 'InhibitorArc', 'i2')).toBe('«InhibitorArc»');
+    });
+
+    it('an edge with no name, no slot and no extra reference has no label (Graph)', () => {
+        expect(edge(byClass(genericOf(GRAPH), 'Edge')).edge.labels).toBeUndefined();
+    });
+});
+
+describe('deriveGenericViewpointIRs — rule 3, rows', () => {
+    it('a class held by a composition but typing a plain reference stays a node (Keyed)', () => {
+        const views = genericOf(KEYED);
+        expect(kindsOf(views, 'row')).toEqual([]);
+        expect(byClass(views, 'Column').ir.kind).toBe('vertex');
+        expect(vertex(byClass(views, 'Table')).fieldCompartments).toBeUndefined();
+    });
+
+    it('a single-valued composition makes no row (Cars); a multi-valued one does, even beside single ones (Families)', () => {
+        expect(kindsOf(genericOf(CARS), 'row')).toEqual([]);
+        const fam = genericOf(FAMILIES);
+        expect(kindsOf(fam, 'row')).toEqual(['Member']);
+        expect(vertex(byClass(fam, 'Family')).fieldCompartments?.map(fc => fc.id)).toEqual(['attributes', 'children']);
+    });
+
+    it('a plain multi-valued reference makes no row (Graph, ERDLanguage ownedAttributes)', () => {
+        expect(kindsOf(genericOf(GRAPH), 'row')).toEqual([]);
+        expect(byClass(genericOf(ERDL), 'Attribute').ir.kind).toBe('vertex');
+    });
+
+    it('a composition into the holder\'s own hierarchy makes no row (Tree, Composite)', () => {
+        for (const mm of [TREE, COMPOSITE]) {
+            expect(kindsOf(genericOf(mm), 'row'), mm.id).toEqual([]);
+            for (const v of genericOf(mm)) expect(vertex(v).fieldCompartments, `${mm.id} ${v.className}`).toBeUndefined();
+        }
+    });
+
+    it('a class that is a kind of its holder stays a node (Packages)', () => {
+        const views = genericOf(PACKAGES);
+        expect(kindsOf(views, 'row')).toEqual(['Element', 'Leaf']);
+        expect(byClass(views, 'SubPackage').ir.kind).toBe('vertex');
+    });
+
+    it('executed: a Package draws its Leaf as a row and leaves its SubPackage, an Element too, a node', () => {
+        clearCompileCache();
+        const lookup: Lookup = { ...PACKAGES.lookup };
+        lookup.p1 = { id: 'p1', name: 'p1', className: 'DObject', instanceof: PACKAGES.classId('Package'), features: ['p1.elements'] };
+        lookup['p1.elements'] = { id: 'p1.elements', className: 'DValue', instanceof: `${PACKAGES.classId('Package')}.elements`, values: ['leaf1', 'sub1', 'el1'] };
+        lookup.leaf1 = { id: 'leaf1', name: 'leaf1', className: 'DObject', instanceof: PACKAGES.classId('Leaf'), features: [] };
+        lookup.sub1 = { id: 'sub1', name: 'sub1', className: 'DObject', instanceof: PACKAGES.classId('SubPackage'), features: [] };
+        lookup.el1 = { id: 'el1', name: 'el1', className: 'DObject', instanceof: PACKAGES.classId('Element'), features: [] };
+        const ctx = makeDrawReadCtx(lookup);
+        const cv = compileView('generic:Package', vertex(byClass(genericOf(PACKAGES), 'Package')));
+        expect(rowRenderedChildren(cv, ctx, 'p1', lookup)).toEqual(['leaf1', 'el1']);
+    });
+
+    it('a class held only by a row, not by a node, stays a node (Nested)', () => {
+        const views = genericOf(NESTED);
+        expect(kindsOf(views, 'row')).toEqual(['Table']);
+        expect(byClass(views, 'Column').ir.kind).toBe('vertex');
+        expect(vertex(byClass(views, 'Schema')).fieldCompartments?.[0].source).toEqual({ from: 'children', filter: { op: 'isKind', class: 'Table' } });
+    });
+
+    it('a class held by an edge stays a node; the holder lists its rows and not its edges (EdgeHolder)', () => {
+        const views = genericOf(EDGE_HOLDER);
+        expect(kindsOf(views, 'edge')).toEqual(['Flow']);
+        expect(kindsOf(views, 'row')).toEqual(['Action']);
+        expect(byClass(views, 'Note').ir.kind).toBe('vertex');
+        expect(vertex(byClass(views, 'Node')).fieldCompartments?.[0].source).toEqual({ from: 'children', filter: { op: 'isKind', class: 'Action' } });
+    });
+
+    it('executed: the Node draws its Action as a row and leaves its Flow to the edge', () => {
+        clearCompileCache();
+        const lookup: Lookup = { ...EDGE_HOLDER.lookup };
+        const object = (id: string, c: string, slots: Record<string, [string, unknown[]]>) => {
+            lookup[id] = { id, name: id, className: 'DObject', instanceof: EDGE_HOLDER.classId(c), features: Object.keys(slots).map(f => `${id}.${f}`) };
+            for (const [f, [owner, values]] of Object.entries(slots)) {
+                lookup[`${id}.${f}`] = { id: `${id}.${f}`, className: 'DValue', instanceof: `${EDGE_HOLDER.classId(owner)}.${f}`, values };
+            }
+        };
+        object('n1', 'Node', { actions: ['Node', ['act1']], out: ['Node', ['f1']] });
+        object('n2', 'Node', { actions: ['Node', []], out: ['Node', []] });
+        object('act1', 'Action', { name: ['Action', ['open']] });
+        object('f1', 'Flow', { target: ['Flow', ['n2']], notes: ['Flow', []] });
+        const ctx = makeDrawReadCtx(lookup);
+        const cv = compileView('generic:Node', vertex(byClass(genericOf(EDGE_HOLDER), 'Node')));
+        expect(rowRenderedChildren(cv, ctx, 'n1', lookup)).toEqual(['act1']);
+    });
+
+    it('executed: an MDE ERD Entity draws its Attribute as `id : String`', () => {
+        clearCompileCache();
+        const lookup: Lookup = { ...ERD.lookup };
+        lookup.e1 = { id: 'e1', name: 'Student', className: 'DObject', instanceof: ERD.classId('Entity'), features: ['e1.attributes'] };
+        lookup['e1.attributes'] = { id: 'e1.attributes', className: 'DValue', instanceof: `${ERD.classId('Entity')}.attributes`, values: ['a1'] };
+        lookup.a1 = { id: 'a1', name: 'id', className: 'DObject', instanceof: ERD.classId('Attribute'), features: ['a1.type'] };
+        lookup['a1.type'] = { id: 'a1.type', className: 'DValue', instanceof: `${ERD.classId('Attribute')}.type`, values: ['String'] };
+        const ctx = makeDrawReadCtx(lookup);
+        const views = genericOf(ERD);
+        expect(rowRenderedChildren(compileView('generic:Entity', vertex(byClass(views, 'Entity'))), ctx, 'e1', lookup)).toEqual(['a1']);
+        const r = compileRowView('generic:Attribute', row(byClass(views, 'Attribute')));
+        expect(r.template.map(t => String(t(ctx, 'a1'))).join('')).toBe('id : String');
+    });
+});
+
+describe('deriveGenericViewpointIRs — rule 4, the eyebrow', () => {
+    it('every vertex: the metaclass name as written, uppercased by textTransform, 0.08 em, 10 px, 600, the quiet ink, above the name', () => {
+        for (const [name, mm] of ALL_FIXTURES) {
+            for (const v of genericOf(mm)) {
+                if (v.ir.kind !== 'vertex') continue;
+                expect(vertex(v).shape.labels, `${name} ${v.className}`).toEqual([eyebrow(v.className), NAME_LABEL]);
+            }
+        }
+        expect(vertex(byClass(genericOf(NAMES), 'final_state')).shape.labels?.[0].source).toEqual({ from: 'literal', text: 'final_state' });
+    });
+
+    it('compiled: two top labels, the eyebrow first, its text and size', () => {
+        clearCompileCache();
+        const lookup: Lookup = { ...PEST.lookup, s1: { id: 's1', name: 'locked', className: 'DObject', instanceof: PEST.classId('State'), features: [] } };
+        const ctx = makeDrawReadCtx(lookup);
+        const cv = compileView('generic:State', vertex(byClass(genericOf(PEST), 'State')));
+        expect(cv.labels.map(l => l.position)).toEqual(['top', 'top']);
+        expect(cv.labels.map(l => String(l.text(ctx, 's1')))).toEqual(['State', 'locked']);
+        expect(cv.labels[0].style!.fontSize!(ctx, 's1')).toBe(10);
+        expect(cv.labels[0].style!.letterSpacing!(ctx, 's1')).toBe(0.08);
+        expect(cv.labels[0].style!.textTransform!(ctx, 's1')).toBe('uppercase');
+        expect(cv.labels[1].style!.fontSize!(ctx, 's1')).toBe(14);
+        expect(cv.labels[1].style!.textTransform).toBeUndefined();
+    });
+});
+
+describe('deriveGenericViewpointIRs — rule 5, the subclass mark reads the words of the name', () => {
+    it('initial or start: 2 px ink; final, terminal, end or accept: double; a word inside a word or a root class: none', () => {
+        const borders: Record<string, unknown> = {};
+        for (const v of genericOf(NAMES)) borders[v.className] = vertex(v).shape.border;
+        expect(borders).toEqual({
+            InitialNode: INITIAL_BORDER, StartEvent: INITIAL_BORDER,
+            EndEvent: FINAL_BORDER, AcceptState: FINAL_BORDER, final_state: FINAL_BORDER,
+            Legend: PLAIN_BORDER, Calendar: PLAIN_BORDER, Restart: PLAIN_BORDER, Endpoint: PLAIN_BORDER, Initializer: PLAIN_BORDER,
+            Start: PLAIN_BORDER, Terminal: PLAIN_BORDER,
+        });
+    });
+});
+
+describe('deriveGenericViewpointIRs — rule 6, the look', () => {
+    it('every vertex: a rounded white box, content-sized, radius from the form; every colour a token', () => {
+        for (const [name, mm] of ALL_FIXTURES) {
+            for (const v of genericOf(mm)) {
+                for (const [p, value] of colours(v.ir)) expect(value, `${name} ${v.className} ${p}`).toMatch(/^var\(--[a-z0-9-]+\)$/);
+                if (v.ir.kind !== 'vertex') continue;
+                const ir = vertex(v);
+                expect(ir.shape.form, `${name} ${v.className}`).toBe('rounded');
+                expect(ir.shape.fill, `${name} ${v.className}`).toBe(SURFACE);
+                expect(Object.keys(ir.shape).sort(), `${name} ${v.className}`).toEqual(['border', 'fill', 'form', 'labels']);
+                expect(ir.defaultSize, `${name} ${v.className}`).toBeUndefined();
+                expect(ir.priority, `${name} ${v.className}`).toBeUndefined();
+            }
+        }
+    });
+});
+
+describe('deriveGenericViewpointIRs — pure', () => {
+    it('reads a frozen lookup and leaves it identical', () => {
+        const before = JSON.stringify(ERD.lookup);
+        const frozen = deepFreeze(JSON.parse(before));
+        const views = deriveGenericViewpointIRs(frozen, ERD.id);
+        expect(JSON.stringify(frozen)).toBe(before);
+        for (const v of views) expect(Object.isFrozen(v.ir)).toBe(false);
+    });
+
+    it('no object is shared between two documents', () => {
+        for (const [, mm] of ALL_FIXTURES) {
+            const owner = new Map<object, string>();
+            const walk = (node: unknown, doc: string) => {
+                if (!node || typeof node !== 'object') return;
+                const seen = owner.get(node);
+                expect(seen === undefined || seen === doc, `${doc} shares an object with ${seen}`).toBe(true);
+                owner.set(node, doc);
+                for (const v of Object.values(node as object)) walk(v, doc);
+            };
+            for (const v of genericOf(mm)) walk(v.ir, v.className);
+        }
+    });
+
+    it('deterministic, deepest class first, and an unknown metamodel gives no view', () => {
+        expect(genericOf(LIBRARY)).toEqual(genericOf(LIBRARY));
+        expect(genericOf(PEST).map(v => v.className)).toEqual(['Initial', 'Terminal', 'State', 'Transition', 'Event']);
+        expect(deriveGenericViewpointIRs(PEST.lookup, 'nope')).toEqual([]);
+    });
+});
+
+describe('deriveViewpointForBinding — rule 1: the generic notation with no role bound, the role-keyed ones with a binding', () => {
+    it('no binding: the generic documents', () => {
+        for (const [name, mm] of CORPUS) expect(deriveViewpointForBinding(mm.lookup, mm.id, null), name).toEqual(genericOf(mm));
+    });
+
+    it('a binding: the role-keyed documents', () => {
+        for (const [name, mm, profile] of DEMOS) {
+            const roles = boundRoles(mm, profile);
+            expect(deriveViewpointForBinding(mm.lookup, mm.id, roles), name).toEqual(deriveViewpointIRs(mm.lookup, mm.id, roles));
+        }
+    });
+
+    it('the role-keyed documents are byte-equal to before the generic notation', () => {
+        // Measured on the derivation of 58aa78ba9, before P-2026-09-29-2350 touched it.
+        // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
+        // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
+        const got: Record<string, string> = {};
+        for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
+        expect(got).toEqual({
+            DemoPEST: '99e03cfb52856542', DemoPetri: '997f12afe5b58db0', DemoESM: 'a9bd2541f1f94b09', DemoFlowB: '58aeb562c91a731f',
+        });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The dialog's table as input (slice D, P-2026-09-30-0255)
+// ---------------------------------------------------------------------------
+
+/** The class keys of a bag as a metaclass → role table: the class each class role binds. */
+function tableOf(roles: DerivationRoles): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const d of ROLE_CATALOG) {
+        const v = roles.bag[d.key ?? ''];
+        if (d.kind === 'class' && typeof v === 'string' && !(v in out)) out[v] = d.id;
+    }
+    return out;
+}
+
+describe('deriveViewpointIRs — classRoles, the dialog\'s metaclass → role table', () => {
+    it('the table of the bag\'s own classes derives the bag\'s documents on every demo', () => {
+        for (const [name, mm, profile] of DEMOS) {
+            const roles = boundRoles(mm, profile);
+            expect(deriveViewpointIRs(mm.lookup, mm.id, { ...roles, classRoles: tableOf(roles) }), name)
+                .toEqual(deriveViewpointIRs(mm.lookup, mm.id, roles));
+        }
+    });
+
+    it('the table is read, not the class keys of the bag: an empty table draws no role', () => {
+        for (const [name, mm, profile] of DEMOS) {
+            const roles = boundRoles(mm, profile);
+            expect(deriveViewpointIRs(mm.lookup, mm.id, { ...roles, classRoles: {} }), name)
+                .toEqual(deriveViewpointIRs(mm.lookup, mm.id, { bag: {}, shape: roles.shape }));
+        }
+    });
+
+    it('a role on a second class draws that class with it too, which a bag cannot say', () => {
+        const roles = boundRoles(PEST, 'stateMachine');
+        const table = { ...tableOf(roles), [PEST.classId('Terminal')]: 'initial' };
+        const views = deriveViewpointIRs(PEST.lookup, PEST.id, { ...roles, classRoles: table });
+        expect(byClass(views, 'Terminal').rule).toBe('role:initial');
+        expect(vertex(byClass(views, 'Terminal')).shape).toEqual(vertex(byClass(views, 'Initial')).shape);
+    });
+});
+
+describe('rolesFromTable — a class\'s own entry, else its nearest superclass\'s', () => {
+    it('own entry first, then the superclasses breadth first; a class with neither has none', () => {
+        const got = rolesFromTable(FLOWB.lookup, FLOWB.id, { [FLOWB.classId('ActivityNode')]: 'node', [FLOWB.classId('InitialNode')]: 'initial' });
+        const named = Object.fromEntries([...got].map(([id, r]) => [FLOWB.lookup[id].name, r]));
+        expect(named).toEqual({ ActivityNode: 'node', InitialNode: 'initial', Activity: 'node', Decision: 'node', Fork: 'node', Join: 'node', FinalNode: 'node' });
+    });
+
+    it('the nearest superclass wins over a farther one', () => {
+        const chain = metamodel('CH', 'Chain', [cls('A'), cls('B', { supers: ['A'] }), cls('C', { supers: ['B'] })]);
+        const got = rolesFromTable(chain.lookup, chain.id, { 'CH.A': 'node', 'CH.B': 'terminal' });
+        expect(got.get('CH.C')).toBe('terminal');
+        expect(got.get('CH.A')).toBe('node');
+    });
+
+    it('breadth first: a nearer superclass on the second branch wins over a farther one on the first', () => {
+        // D extends X and Y; X extends Z. Y is one step away, Z two.
+        const mi = metamodel('MI', 'Multi', [cls('Z'), cls('X', { supers: ['Z'] }), cls('Y'), cls('D', { supers: ['X', 'Y'] })]);
+        expect(rolesFromTable(mi.lookup, mi.id, { 'MI.Y': 'terminal', 'MI.Z': 'node' }).get('MI.D')).toBe('terminal');
+    });
+
+    it('ignores ids that are not classes of the metamodel, and survives an extends cycle', () => {
+        const cyc = metamodel('CY', 'Cycle', [cls('A', { supers: ['B'] }), cls('B', { supers: ['A'] }), cls('C')]);
+        const got = rolesFromTable(cyc.lookup, cyc.id, { 'CY.B': 'node', 'ELSEWHERE.X': 'initial' });
+        expect([...got]).toEqual([['CY.A', 'node'], ['CY.B', 'node']]);
     });
 });
 
