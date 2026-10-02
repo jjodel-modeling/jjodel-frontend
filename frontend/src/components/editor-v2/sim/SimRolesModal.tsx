@@ -429,7 +429,10 @@ export function Declarations({
                 </div>
                 {/* The row's name as the engine reads it: its kind, its access path (which selects it), E-NODE. */}
                 <div className="sim-roles-modal__decl-meta">
-                    <span className={`sim-roles-modal__decl-kind sim-roles-modal__decl-kind--${semantic ? 'semantic' : 'presentation'}`} title={KIND_TITLE[nuxmv]}>
+                    <span
+                        className={`sim-roles-modal__decl-kind sim-roles-modal__decl-kind--${semantic ? 'semantic' : 'presentation'} sim-roles-modal__decl-kind--${nuxmv.toLowerCase()}`}
+                        title={KIND_TITLE[nuxmv]}
+                    >
                         {nuxmv}
                     </span>
                     <button
@@ -487,10 +490,13 @@ export function Declarations({
                 </div>
             ) : groups.map(g => (
                 <div className="sim-roles-modal__group" key={g.metaclass ?? ''}>
-                    <div className="sim-roles-modal__group-head">
-                        <span className="sim-roles-modal__group-name">{groupName(g.metaclass)}</span>
-                        <span className="sim-roles-modal__count">{g.rows.length}</span>
-                    </div>
+                    {/* A model's dialog heads its table «Globals» already: its own group has no heading of its own. */}
+                    {!(globalsOnly && g.metaclass === null) && (
+                        <div className="sim-roles-modal__group-head">
+                            <span className="sim-roles-modal__group-name">{groupName(g.metaclass)}</span>
+                            <span className="sim-roles-modal__count">{g.rows.length}</span>
+                        </div>
+                    )}
                     {g.rows.map(declaration)}
                 </div>
             ))}

@@ -980,10 +980,32 @@
         font-size: 11px;
         font-weight: 500;
 
+        // R-SIM-102: VAR slate (above); DEFINE the operation pair, IVAR the model pair of the entity palette.
+        &--define {
+            border-color: transparent;
+            background: var(--color-entity-operation-bg);
+            color: var(--color-entity-operation-fg);
+        }
+
+        &--ivar {
+            border-color: transparent;
+            background: var(--color-entity-model-bg);
+            color: var(--color-entity-model-fg);
+        }
+
+        // Concrete: the dashed pink outline and tint, the kind's own text colour.
         &--presentation {
             border: 1px dashed var(--color-opt-4-fg);
             background: var(--color-opt-4-bg);
-            color: var(--color-opt-4-fg);
+            color: var(--color-text-secondary);
+        }
+
+        &--presentation#{&}--define {
+            color: var(--color-entity-operation-fg);
+        }
+
+        &--presentation#{&}--ivar {
+            color: var(--color-entity-model-fg);
         }
     }
 
