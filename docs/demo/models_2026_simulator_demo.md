@@ -59,8 +59,8 @@
   or Initial marking, Source or Owned transitions.` [M, P-2026-09-29-1225].
 - **Reset starts the run: before Reset every input is off.** The M1 face reads `Not started` with every event
   button off, e.g. `coin(off)`, `push(off)`, `stop(off)` [M].
-- **Data on the model tab (R-SIM-94).** A model declares its own globals in the `Data…` entry, the first line of the
-  M1 face, which opens the dialog `Data of <model>`; one Apply is one undo step, and an edit interrupts a running
+- **State on the model tab (R-SIM-94, R-SIM-103).** A model declares its own globals in the `Data…` entry, the first line of the
+  M1 face, which opens the dialog `State of <model>` [M, P-2026-10-03-0041]; one Apply is one undo step, and an edit interrupts a running
   simulation (`Run interrupted: the model changed. Reset to run again.`). A global declared in the metamodel stays
   the default of every model that does not declare its own [M, P-2026-09-29-0110,
   `docs/discovery/discovery_2026-09-29_sim_data_level.md` §8]. §2.3 and §2.4 declare on this route and keep the
@@ -231,15 +231,15 @@ to 830 [M]. Click it again to close.
 1. Click an empty point of the canvas and turn `Simulation` on in the Properties; click the chip, then `Configure…`,
    `Extended state machine` and `Continue` [M, P-2026-09-29-1225]. The dialog reads `Checkable` and `10 of 13 roles
    matched`: the seven of §2.1 plus Guard `Transition.guard`, Action
-   `Transition.effect`, Entry `State.entry` [M]. The Data fold reads `Declare the state attributes the actions
-   write` [M].
+   `Transition.effect`, Entry `State.entry` [M]. The State fold (`Data` until P-2026-10-03-0041) reads `Declare the
+   state attributes the actions write (a model's globals go in its State…)` [R, SimRolesModal.tsx].
 2. Apply, in the dialog, with no declaration. The summary reads `Extended state machine · Checkable` and the line
    `Declare the state attributes the actions write: Add attribute`, its `Add attribute` in view [M]. The panel is
    198.5 px at 752.5 [M, P-2026-09-27-2105].
    **Say** "The binding is complete. The actions write state attributes, and the panel asks me to declare them."
    <!-- not re-measured since R-SIM-94: the label of this line now reads `Declare the state attributes the actions
-   write (a model's globals go in its Data…):` in simRoleStatus.ts:495 [R]; the walk of P-2026-09-29-0110 does not
-   read it -->
+   write (a model's globals go in its State…):` in simRoleStatus.ts:596 [R, P-2026-10-03-0041]; the walk of
+   P-2026-09-29-0110 does not read it -->
 
 Count: 7 clicks, no keystroke; the chip on tab `demoESM`, 1 click; the optional Reset below, 2 clicks; the
 declarations on the model tab, 9 interactions and 34 keystrokes, 0 scrolls; the run, 11 clicks [M, P-2026-09-29-1225].
@@ -256,19 +256,28 @@ the walk reads it and declares through the `Data…` entry -->
 
 **Declarations on the model tab** (tab `demoESM`, the model). The tab switch to `demoESM` that the run needs comes
 first.
-1. Click `Data…`, the first line of the M1 face; no Reset is needed first. The dialog `Data of demoESM` opens, its
-   `Add attribute` focused. The dialog's Apply is off, `Nothing to write` [M, P-2026-09-29-0110].
+1. Click `Data…`, the first line of the M1 face; no Reset is needed first. The dialog `State of demoESM` opens, its
+   `Add attribute` focused. The dialog's Apply is off, `Nothing to write` [M, P-2026-09-29-0110]. It is 1120 × 600
+   with two columns, `σ Abstract` and `node Concrete`, the arrow `σ is read one way` between them; the concrete
+   column reads `No presentation state. A row set to presentation is read as node.[name].` [M, P-2026-10-03-0041].
 2. Click `Add attribute`. Row 1 reads `x1 · Global · stored`, the name selected: type `coins`, Enter. Domain `range`:
    the minimum reads `0`, the maximum `1`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter. Row 1
-   reads `coins · Global · stored · semantic · range 0..3 · 0` [M]. The metaclass select offers `Global` only [M].
+   reads `coins · Global · stored · semantic · range 0..3 · 0` [M], in the abstract column, counted by the dialog's
+   `Globals` head with no group heading of its own, its third line `VAR model.[coins]` [M, P-2026-10-03-0041]. The metaclass select offers `Global` only [M].
 3. Click `Add attribute`. Row 2 reads `x1`, the name selected: `paid`, Enter; `derived`. Click the equation,
-   `model.[coins] >= 2`, Enter [M].
+   `model.[coins] >= 2`, Enter [M]. Its third line reads `DEFINE model.[paid]`, the name in italics; the equation
+   cell holds the text whole [M, P-2026-10-03-0041].
 4. Apply, in the dialog. The dialog closes; the model's bag holds the two records, the metamodel's holds no
    `simStateAttributes`; the undo stack goes from 3 to 4 [M, P-2026-09-29-1225]: the toggle and the roles' Apply are
    one step each, and the setup left one (the Advanced switch is an undo step of its own [M]).
 
 Steps 1 to 4 are 9 interactions (7 clicks, 2 select choices) and 34 keystrokes, with no scroll: every target is in
-view, where the metamodel path needs 2 scrolls on this screen [M, P-2026-09-29-0110].
+view, where the metamodel path needs 2 scrolls on this screen [M, P-2026-09-29-0110]. With the two rows of three lines
+the body is still not scrolled before Apply (429 of 429 px) [M, P-2026-10-03-0041].
+
+**Optional, not counted: who writes and reads coins.** Before Apply, click `model.[coins]` under row 1: under it
+`Written by` `tc action` `tp action`, `Read by` `tc action` `equation of paid`; click it again to close [M,
+P-2026-10-03-0041]. Nothing above the row moves.
 **Say** "The data belongs to the model, not to the metamodel. coins is stored, with the domain 0 to 3. paid is derived
 from coins."
 
@@ -276,8 +285,11 @@ from coins."
 declared in the metamodel is the default of every model that does not declare its own (R-SIM-94), and the four demo
 exports carry an empty model bag [M, P-2026-09-29-0011]. Declared this way the four scenes run to their final readings
 as before [M, P-2026-09-29-0110].
-1. Click `Add attribute` in the summary line. The dialog opens on Data, its own `Add attribute` in view and focused
+1. Click `Add attribute` in the summary line. The dialog opens on State, its own `Add attribute` in view and focused
    [M, P-2026-09-27-2105: 645.5-673.5, body 338-735]. The dialog's Apply is off, `Nothing to write` [M].
+   <!-- not re-measured since P-2026-10-03-0041: the dialog is 1120 wide and a row three lines (120 px, was 88), so the
+   coordinates and the 2 scrolls below are the 640 px dialog's; the lane probe declared on this path with the rows
+   scrolled into view, and its body read 806 of 397 px with two rows and coins selected -->
 2. Click `Add attribute`. Row 1 reads `x1`, the name selected: type `coins`, Enter [M]. Scroll the dialog body to
    its end: the row's second line is below the fold [M 728-760, body bottom 735]. Domain `range`: the minimum reads
    `0`, the maximum `1` [M]. Click the maximum, `3`, Enter; click the initial value, `0`, Enter. A click selects the
@@ -359,8 +371,8 @@ together. <!-- not measured: abstract ActivityNode with FinalNode and the explic
 2. Apply, in the dialog, with no declaration. The summary reads `Flowchart / Activity · Checkable`, the declarations
    line in view [M]. The panel is 198.5 px at 752.5 [M, P-2026-09-27-2105].
    <!-- not re-measured since R-SIM-94: the label of the declarations line now reads `Declare the state attributes the
-   actions write (a model's globals go in its Data…):` in simRoleStatus.ts:495 [R]; the walk of P-2026-09-29-0110 does
-   not read it -->
+   actions write (a model's globals go in its State…):` in simRoleStatus.ts:596 [R, P-2026-10-03-0041]; the walk of
+   P-2026-09-29-0110 does not read it -->
 
 Count: 7 clicks, no keystroke; the chip on tab `demoFlowB`, 1 click; the Reset before declaring, 1 click, the entry
 of the route below; the declaration from the Reset line, 5 interactions and 4 keystrokes, 0 scrolls; the run, 7
@@ -372,14 +384,17 @@ the defects the panel reads `Undeclared: count. Declare in Data…` [M, P-2026-0
 **Say** "The panel names what the model leaves undeclared, and takes me to the data of the model."
 
 **Declaration on the model tab** (tab `demoFlowB`, from the Reset line).
-1. Click `Declare in Data…`. The dialog `Data of demoFlowB` opens with row 1 already there, `count · Global · stored ·
-   boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110].
+1. Click `Declare in Data…`. The dialog `State of demoFlowB` opens with row 1 already there, `count · Global · stored ·
+   boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110]. The row sits in the abstract column, counted
+   by the dialog's `Globals` head, its third line `VAR model.[count]` [M, P-2026-10-03-0041].
 2. Select Domain `range`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter.
 3. Apply, in the dialog. The model's bag holds `count`; the undo stack goes from 3 to 4 [M, P-2026-09-29-1225], as in
    §2.3.
 
 5 interactions (4 clicks, 1 select choice) and 4 keystrokes, with no scroll, against 6 interactions, 10 keystrokes and
-1 scroll on the metamodel path [M, P-2026-09-29-0110]. The name is not typed: the line carried it.
+1 scroll on the metamodel path [M, P-2026-09-29-0110]. The name is not typed: the line carried it. Still no scroll
+with the row of three lines [M, P-2026-10-03-0041]. Optional, not counted: `model.[count]` opens `Written by` `f2
+action`, `Read by` `f2 action` `f3 guard` `f4 guard` [M, P-2026-10-03-0041].
 **Say** "count, from 0 to 3, starts at 0."
 
 **Fallback: declaration in the metamodel** (tab `DemoFlowB`). Use it if the `Data…` route misbehaves (§4). A global
@@ -387,9 +402,9 @@ declared in the metamodel is the default of every model that does not declare it
 exports carry an empty model bag [M, P-2026-09-29-0011]. Declared this way the four scenes run to their final readings
 as before [M, P-2026-09-29-0110]. The Reset above stays optional on this path.
 
-**Declaration** (tab `DemoFlowB`). Click `Add attribute` in the summary line: the dialog opens on Data, its own `Add
+**Declaration** (tab `DemoFlowB`). Click `Add attribute` in the summary line: the dialog opens on State, its own `Add
 attribute` in view and focused [M, P-2026-09-27-2105]. Click it; row 1's name is selected: `count`, Enter. Scroll
-the dialog body to its end [M 728-760 > 735]. Domain `range`; click the maximum, `3`, Enter; click the initial
+the dialog body to its end [M 728-760 > 735; the 640 px dialog's, not re-measured since P-2026-10-03-0041]. Domain `range`; click the maximum, `3`, Enter; click the initial
 value, `0`, Enter. Apply, in the dialog: the declarations line is gone [M]. 6 interactions: 1 hint, 1 `Add
 attribute`, 1 select choice, 2 cells, 1 Apply; 10 keystrokes; 1 scroll [M, P-2026-09-27-2105].
 **Say** "count, from 0 to 3, starts at 0."

@@ -35,6 +35,7 @@ import {
     simPillVisible,
     simulationEnabled,
     staleEventWarning,
+    stateColumns,
     storedProfile,
     VERDICT_LABEL,
 } from '../simRoleStatus';
@@ -888,7 +889,7 @@ describe('the declarations hint (R-SIM-81, G9)', () => {
         { name: 'coins', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' },
     ]);
     // R-SIM-94: the metamodel cannot see its models' declarations, so the hint says where a global goes.
-    const HINT = "Declare the state attributes the actions write (a model's globals go in its Data…):";
+    const HINT = "Declare the state attributes the actions write (a model's globals go in its State…):";
 
     it('Action bound and no declarations: the hint, whether Action is set or only proposed', () => {
         const proposed = profileSummary(ESM, {}, WITH_ACTION);
@@ -1089,5 +1090,33 @@ describe('R-SIM-90: the summary of a list of attributes (P-2026-09-29-0010)', ()
         expect(status('["Transition.guard","Other.label"]')).toBe('notCheckable');
         // control: the incompatible attribute alone
         expect(status('Other.label')).toBe('notCheckable');
+    });
+});
+
+describe('the State page: two columns, globals first, one group per metaclass (R-SIM-103)', () => {
+    const row = (name: string, metaclass: string | null, space: 'semantic' | 'presentation' = 'semantic') => (
+        { name, metaclass, space, domain: space === 'semantic' ? { kind: 'boolean' as const } : null, initial: 'false' }
+    );
+    // A metaclass row first, so a column in order of first appearance would put State before the globals.
+    const ROWS = [
+        row('visits', 'C_State'), row('coins', null), row('heat', 'C_State', 'presentation'), row('fired', 'C_Trans'),
+        row('paid', null), row('glow', null, 'presentation'), row('seen', 'C_State'), row('count', 'C_Trans', 'presentation'),
+    ];
+
+    it('abstract: the globals, then State and Transition in order of first appearance; rows by index (killed by first appearance alone)', () => {
+        expect(stateColumns(ROWS).abstract).toEqual([
+            { metaclass: null, rows: [1, 4] }, { metaclass: 'C_State', rows: [0, 6] }, { metaclass: 'C_Trans', rows: [3] },
+        ]);
+    });
+
+    it('concrete: the presentation rows only, the model\'s own first (killed by putting a row in both columns)', () => {
+        expect(stateColumns(ROWS).concrete).toEqual([
+            { metaclass: null, rows: [5] }, { metaclass: 'C_State', rows: [2] }, { metaclass: 'C_Trans', rows: [7] },
+        ]);
+    });
+
+    it('a column with no row has no group; no row, no group at all', () => {
+        expect(stateColumns([row('coins', null)])).toEqual({ abstract: [{ metaclass: null, rows: [0] }], concrete: [] });
+        expect(stateColumns([])).toEqual({ abstract: [], concrete: [] });
     });
 });
