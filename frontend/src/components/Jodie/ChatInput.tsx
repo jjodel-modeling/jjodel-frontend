@@ -11,6 +11,8 @@ import {
 import { AIEvents } from '../../events/registry';
 import { getJjelSuggestions, applyJjelSuggestion } from '../../jjel/autocomplete';
 import type { Suggestion } from '../../jjscript/autocomplete/types';
+import { isConsumerMode } from '../environment/consumerMode';
+import { CONSUMER_INPUT_PLACEHOLDER, consumerSlashCommand } from './consumerVoice';
 import './ChatInput.scss';
 
 interface ChatInputProps {
@@ -129,6 +131,8 @@ export function ChatInput({
     const isCode = consoleMode === 'jjel';
     // Jjodie is the only mode that talks to an AI provider and takes attachments.
     const isJjodie = consoleMode === 'jjodie';
+    // #168 J7: the consumer's input has no mode prompt, no mode switch, and two commands only.
+    const consumer = isConsumerMode();
     const [message, setMessage] = useState('');
     const [images, setImages] = useState<ChatImage[]>([]);
     const [documents, setDocuments] = useState<ChatDocument[]>([]);
@@ -296,6 +300,19 @@ export function ChatInput({
             return;
         }
 
+        // #168 J7: in the consumer `/help` is the only other command; `/js`, `/jjel`, `/ask` and
+        // any other `/…` are unknown commands (a static line, no mode switch, no AI call).
+        const consumerCommand = consumer ? consumerSlashCommand(trimmed) : null;
+        if (consumerCommand === 'help' || consumerCommand === 'unknown') {
+            if (consumerCommand === 'help') onHelpRequested?.();
+            else onUnknownCommand?.(trimmed);
+            setMessage('');
+            setHistoryIndex(-1);
+            setSavedMessage('');
+            if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            return;
+        }
+
         // `/` meta-commands: switch mode or show help, in ALL modes. The `/`
         // authority is per-component, not per-mode — the escape hatch must work
         // from the formal modes too (e.g. `/ask` from jjscript → back to Jjodie).
@@ -362,7 +379,7 @@ export function ChatInput({
                 textareaRef.current.style.height = 'auto';
             }
         }
-    }, [message, images, documents, disabled, onSend, isCode, consoleMode, onConsoleModeChange, onHelpRequested, onSubmitCode, onClearRequested]);
+    }, [message, images, documents, disabled, onSend, isCode, consoleMode, onConsoleModeChange, onHelpRequested, onSubmitCode, onClearRequested, consumer, onUnknownCommand]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         // Regola C: any printable character or Backspace counts as the user
@@ -374,7 +391,8 @@ export function ChatInput({
         }
 
         // Backtick on an empty non-JjEL input switches to JjEL mode (and swallows the char).
-        if (!isCode && e.key === '`' && message === '') {
+        // #168 J7: not in the consumer, where the backtick is a character like any other.
+        if (!consumer && !isCode && e.key === '`' && message === '') {
             e.preventDefault();
             onConsoleModeChange('jjel', 'backtick');
             return;
@@ -417,6 +435,11 @@ export function ChatInput({
             // user can always clear history via the keyboard, even when the
             // chat send button would otherwise refuse Enter.
             if (trimmed === '/clear') {
+                handleSubmit();
+                return;
+            }
+            // #168 J7: the consumer's commands bypass the provider gate too (handleSubmit routes them).
+            if (consumer && consumerSlashCommand(trimmed)) {
                 handleSubmit();
                 return;
             }
@@ -628,7 +651,8 @@ export function ChatInput({
     // No placeholder: the persistent `<mode>>` prompt (and, in Jjodie, the attach
     // button on the right) already convey what to do. An externally-supplied
     // `placeholder` prop still wins if set.
-    const getPlaceholder = () => placeholder ?? '';
+    // #168 J7: the consumer has no prompt glyph, so the input says what it is for.
+    const getPlaceholder = () => placeholder ?? (consumer ? CONSUMER_INPUT_PLACEHOLDER : '');
 
     // Send button: 4 mutually-exclusive states.
     // The provider check is only relevant in Jjodie mode: JjEL and JjScript run
@@ -742,7 +766,7 @@ export function ChatInput({
 
             <div className="jodie-input-row">
                 <div className={`jodie-composer${isCode ? ' jodie-composer--code' : ''}`}>
-                    <span className="jodie-code-prompt" aria-hidden="true">{`${consoleMode}>`}</span>
+                    {!consumer && <span className="jodie-code-prompt" aria-hidden="true">{`${consoleMode}>`}</span>}
                     <textarea
                         ref={textareaRef}
                         className={`jodie-input${isCode ? ' jodie-input--code' : ''}`}

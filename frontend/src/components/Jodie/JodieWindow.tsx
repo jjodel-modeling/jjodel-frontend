@@ -471,6 +471,8 @@ export function JodieWindow({
                 onOfferExecute={onOfferExecute}
                 onOfferAsk={onOfferAsk}
                 onAskFromError={onAskFromError}
+                onOpenSettings={onOpenSettings}
+                providerMissing={!isAlive}
             />
 
             <ChatInput
