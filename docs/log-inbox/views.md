@@ -134,3 +134,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat GO, unattended, on the report and the slice E probes of P-2026-10-02-1505 (20/20); no probe re-run on `0c221f237`; Alfonso in the morning digest.
 **Notes**: Union in `views.md`: preamble, the trunk's two entries, the branch's three, verbatim. `decisions.md` auto-merged (R-IRN-38, Serie R-EE): base plus each side's hunk. Trunk count from P-2026-10-02-1642's `vitest-before.json` on `adb5d9731`: `jjodel-release` moved to `abb05cb9f` (pastel, code) mid-lane, its gates running. `merge-tree HEAD abb05cb9f`: 1 conflict, `views.md`, for the merge into the trunk.
 **Prompt document name**: 2026-10-02 16:41
+
+## 2026-10-02 — merge: edge-ends into alfonso-frontend-jjtl (P-2026-10-02-1704)
+**Prompt**: `claude_2026-10-02_1704_prompt_merge_edge-ends.md`, a direct merge by `lane-run merge --direct`, no session: `edge-ends` at `5cc0522f0` into `alfonso-frontend-jjtl`, merge base `adb5d9731`, 14 commits on the branch side.
+**Files touched**: merge `0bcdac22a`: 20 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-09-30_edge_ends.md`, `docs/discovery/discovery_2026-10-02_edge_ends_trunk_sync.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-09-30_1810_prompt_edge_ends.md`, `docs/prompts/claude_2026-10-02_1505_prompt_edge_ends_trunk_sync.md`, `docs/prompts/claude_2026-10-02_1641_prompt_edge-ends_take_trunk.md`, `frontend/src/components/editor-v2/EditorV2.scss`, and 12 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0bcdac22a` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6577 tests in 264 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: edge-ends probes 20/20 (P-2026-10-02-1505), trunk-take gates green on 0c221f237 (P-2026-10-02-1641), worker gates green
+**Notes**: Rollback tag `pre-edge-ends` on `cdec5e44d` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-02-1704/result.json`.
+**Prompt document name**: 2026-10-02 17:04
