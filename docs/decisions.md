@@ -4677,6 +4677,68 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   `defaultSize` 7×120; the initial 20, the bull's-eye 24, the decision 36 and the actions 44 unchanged; the four demo scenes
   in the default viewpoint byte-identical to the run at 5 (0 px); the tests 2 of 47 red first, 441/441 after; mutation
   bench 16/16. Prompt P-2026-10-01-2230, commit `c3b0556d6`.
+- **R-VP-37** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The fills are twelve fixed pastel swatches, one every 30° of hue; «Base color» is the seed; the border is the
+  fill's hue at 55 % lightness.** Chat decision 1 of P-2026-09-30-2022, on Alfonso's review point (1) («the colours
+  must be pastel»). Amends R-VP-29 (analogous hues within ±60° of the base, colour 0 the base as picked) and the border
+  rule of R-VP-30 (the fill less 25 points).
+  - `PASTEL_SWATCHES` (`view/viewPoint/metaclassPalette.ts`): `#f3cbcb #f3dfcb #ededc0 #d5f2b8 #b2f1b2 #baebd2
+    #cbf3f3 #cbdef0 #b2b2f1 #d6c0ed #eeb5ee #ebbad2`. Read back from the hex: hue within 0.8° of 30·k, S 55.1..69.2 %,
+    L 82.2..87.5 %. Minimum pairwise ΔE76 12.56 (90°/120°); one S 60 / L 85 for all gave 8.02 (240°/270°). Tuned by a
+    search over S and L on the rounded hex (gitignored `_tmp_vppastel_pal2.mjs`).
+  - The WCAG rule of R-VP-30 is kept, not hard-coded: it picks black on all twelve, 10.53:1 to 17.48:1 on the canvas.
+  - The seed is the swatch nearest in hue to Base color (a tie to the lower index, an achromatic base reads as 0°);
+    the default `#0ea5e9` seeds 210°. `metaclassPalette(base, count)` is now the analogous order round the seed: the
+    seed, +30°, −30°, +60°, …, +180° last, again from the seed past twelve.
+  - Border on: `hsl(h, s, 55 %)` of the fill, 1 px, width unchanged; off: transparent, as before.
+    Was R-VP-32 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-38** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The swatches are assigned by reference: greedy in metamodel order, each class as far in hue as it can be from
+  the classes it is connected to.** Chat decision 2, on Alfonso's point (3).
+  - Graph (`metaclassGraph`): two classes are adjacent when a DECLARED reference of one, containment included, is typed
+    by the other, or one extends the other, either way. Forward links only (`references` → `type`, `extends`), the
+    order of `metaclassOrder`. A self-reference, a reference to another metamodel's class and an inherited reference
+    make no edge (the lane's reading).
+  - Rule (`assignMetaclassColors`): overrides first; then each class takes, among the FREE swatches (all of them once
+    none is free), the one whose smallest hue distance to its already coloured neighbours is the largest. Ties go to the
+    least used swatch (only past twelve), then to the analogous order round the seed, + before −: the lane's reading
+    of «distance from the seed, then swatch order», which makes a class with no coloured neighbour follow R-VP-37's
+    order. Deterministic; the order of the adjacency lists does not matter.
+  - Measured on 3137, light, DemoESM (native): four class pairs connected on the canvas, all with different fills.
+    Initial–State and State–Terminal by `extends`, State–Transition by `transitions`/`nextState` (4 node pairs),
+    Event–Transition by `event` (12 node pairs). DemoFlowB (IR): no two NODES have connected metaclasses. The node
+    classes meet only through ActivityNode (no instance) and ControlFlow (drawn as edges). Its six node classes have
+    six distinct fills.
+  - Cost: the resolver builds the metamodel's graph on every call while the option is on. 28.6 µs a call at 30
+    classes and 60 references, 60.9 µs at 60 and 150 (gitignored `_tmp_vppastel_perf.ts`). No memo (Rule 6).
+    Was R-VP-33 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-39** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Per-metaclass colour in the viewpoint panel: a dropdown of the metaclasses beside the twelve swatches, «Reset» and
+  «Reset all»; persisted as `metaclassColoring.overrides?: Record<metaclass id, hex>`.** Chat decision 3, on Alfonso's
+  point (2).
+  - The dropdown reuses `JjSelect` (`components/ui/JjSelect`, the Property Panel's react-select wrapper; no new
+    dependency), 160×36, each option a 10 px swatch and the name clipped with an ellipsis. It lists the classes of every
+    metamodel of `state.m2models`, grouped by metamodel when there is more than one, with the colours of the EDITED
+    viewpoint, not the active one.
+  - The swatches sit beside it as a 6×2 grid of 16 px, 116×36, the dropdown's height. This is the lane's choice over a
+    single row: twelve in a row beside a 160 px dropdown need ~392 px, and the rail's content is 328 px at its
+    narrowest (360 less 32).
+  - The current colour carries a 2 px `#334155` outline, offset 1 px. It is kept while focused after a click, which
+    Bootstrap's reboot `button:focus:not(:focus-visible)` would drop. «Reset» and «Reset all» are 11 px text buttons,
+    disabled, not hidden, when there is nothing to reset.
+  - Two shared rules are undone locally, in `properties.scss`: `.jj-select`'s 20 px `padding-bottom`
+    (`_form-system.scss`, which measured the control 56 px tall), and the global chrome on react-select's inner input.
+  - Only the twelve swatches are offered; the resolver accepts any valid hex, and ignores an invalid one or an override
+    on a class that is gone. `readMetaclassColoring` carries `overrides` only when one is valid. The last removal drops
+    the key; the toggle keeps the map.
+  - Measured on 3137 (light, DemoESM and DemoFlowB): an override is written under the class id. Every node of that
+    class paints it, the other nodes equal the resolver, and connected pairs still differ. «Reset» and «Reset all»
+    remove the key and restore every automatic fill. Choosing a class, overriding it, or a 45-character name move
+    nothing in the panel. Undo and redo are one step each; the field and its map survive the save serializer,
+    `JSON.parse` and `VersionFixer.update`.
+  - An override also moves the automatic colours of the other classes: the greedy re-runs around it, as decided. In
+    DemoFlowB, overriding Activity changed five other node classes, since every one neighbours ActivityNode, coloured
+    first. This is a perceptual item for the visual GO. Was R-VP-34 on the branch, renumbered by P-2026-10-02-1506.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
