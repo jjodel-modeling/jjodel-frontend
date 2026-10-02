@@ -37,6 +37,7 @@ import type {
 import type { CSSProperties } from 'react';
 import type { ReadCtx } from './irReadCtx';
 import { parsePathExpr } from './pathExpr';
+import { labelEditsName } from './irLabelEdit';
 import { proxyToIdReplacer } from '../../../../model/unproxy';
 
 /**
@@ -473,9 +474,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
             const t = l.source.text;
             text = () => t;
         }
-        const editsName = l.source.from === 'intrinsic'
-            && (l.source.prop === 'name' || l.source.prop === 'qualifiedName')
-            && l.editable !== false;
+        const editsName = labelEditsName(l);
         const compiled: CompiledLabel = { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName, style: compileTextStyle(l.style, deps) };
         // Outside label (R-VP-15 (1)): the side is resolved here, once, so the render only
         // reads it. An inside label carries no anchor, even a stray persisted one.
