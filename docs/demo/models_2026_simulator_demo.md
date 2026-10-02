@@ -262,8 +262,8 @@ first.
    column reads `No presentation state. A row set to presentation is read as node.[name].` [M, P-2026-10-03-0041].
 2. Click `Add attribute`. Row 1 reads `x1 · Global · stored`, the name selected: type `coins`, Enter. Domain `range`:
    the minimum reads `0`, the maximum `1`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter. Row 1
-   reads `coins · Global · stored · semantic · range 0..3 · 0` [M], in the abstract column under `Globals`, its third
-   line `VAR model.[coins]` [M, P-2026-10-03-0041]. The metaclass select offers `Global` only [M].
+   reads `coins · Global · stored · semantic · range 0..3 · 0` [M], in the abstract column, counted by the dialog's
+   `Globals` head with no group heading of its own, its third line `VAR model.[coins]` [M, P-2026-10-03-0041]. The metaclass select offers `Global` only [M].
 3. Click `Add attribute`. Row 2 reads `x1`, the name selected: `paid`, Enter; `derived`. Click the equation,
    `model.[coins] >= 2`, Enter [M]. Its third line reads `DEFINE model.[paid]`, the name in italics; the equation
    cell holds the text whole [M, P-2026-10-03-0041].
@@ -385,8 +385,8 @@ the defects the panel reads `Undeclared: count. Declare in Data…` [M, P-2026-0
 
 **Declaration on the model tab** (tab `demoFlowB`, from the Reset line).
 1. Click `Declare in Data…`. The dialog `State of demoFlowB` opens with row 1 already there, `count · Global · stored ·
-   boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110]. The row sits in the abstract column under
-   `Globals`, its third line `VAR model.[count]` [M, P-2026-10-03-0041].
+   boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110]. The row sits in the abstract column, counted
+   by the dialog's `Globals` head, its third line `VAR model.[count]` [M, P-2026-10-03-0041].
 2. Select Domain `range`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter.
 3. Apply, in the dialog. The model's bag holds `count`; the undo stack goes from 3 to 4 [M, P-2026-09-29-1225], as in
    §2.3.
