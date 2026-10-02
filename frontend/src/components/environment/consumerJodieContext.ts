@@ -99,6 +99,43 @@ export function consumerSelectionOf(
     return { typeId, instanceId: kept, modelId: consumerModelId(idlookup, projectModelIds, typeId, kept) };
 }
 
+/**
+ * What the consumer is looking at in the Configurator: the element in the detail panel, not only
+ * the row of the list (Juri, 2026-10-02). With a navigation (`NavState` of `jjform/nav`, the
+ * breadcrumb of `InstanceDetail`) it is the current step, the deepest one; without, the selected
+ * instance. Its exact class is the type, as the Configurator rules permissions.
+ *
+ * A step of a type the profile hides never becomes the focus: the nearest visible step above it
+ * does (the panel refuses to open one, `InstanceDetail.drillTo`; this is the rule if one gets
+ * there). Two stale states of one commit are ignored: an instance of another type after a type
+ * change, and a navigation rooted elsewhere after a row change (`setNav(null)` runs one commit
+ * later). A class not known yet (`instanceof` lands deferred) leaves the selected type.
+ */
+export function consumerFocusOf(
+    idlookup: Idlookup,
+    profile: any | null | undefined,
+    selectedTypeId: string | null,
+    selectedInstanceId: string | null,
+    nav: { path: ReadonlyArray<{ id: string }> } | null | undefined,
+): { typeId: string | null; instanceId: string | null } {
+    const classOf = (id: string): string | undefined => {
+        const c = idlookup?.[id]?.instanceof;
+        return typeof c === 'string' ? c : undefined;
+    };
+    const rootClass = selectedInstanceId ? classOf(selectedInstanceId) : undefined;
+    const root = selectedInstanceId && (!rootClass || rootClass === selectedTypeId) ? selectedInstanceId : null;
+    if (!root) return { typeId: selectedTypeId, instanceId: null };
+    const path = nav?.path?.length && nav.path[0]?.id === root ? nav.path : [{ id: root }];
+    for (let i = path.length - 1; i >= 0; i--) {
+        const id = path[i]?.id;
+        if (typeof id !== 'string') continue;
+        const cls = classOf(id);
+        if (cls && resolveTypePermission(profile, cls) === 'hidden') continue;
+        return { typeId: cls ?? selectedTypeId, instanceId: id };
+    }
+    return { typeId: selectedTypeId, instanceId: null };
+}
+
 /** The artefact of a selection, or undefined when the selection resolves no model. */
 export function resolveConsumerArtifact(
     selection: ConsumerSelection | null | undefined,

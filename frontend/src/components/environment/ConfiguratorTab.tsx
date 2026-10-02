@@ -39,7 +39,7 @@ import InstanceDetail, { type DetailPermission } from '../abstract/tabs/Instance
 import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
 import { createM1 } from '../../pages/components/Navbar';
 import { EnvGenEvents } from '../../events/registry';
-import { consumerSelectionOf, setConsumerSelection } from './consumerJodieContext';
+import { consumerFocusOf, consumerSelectionOf, setConsumerSelection } from './consumerJodieContext';
 import type { DeleteOptions, DeletePreflight, NavState } from '../../jjform';
 import './configuratorTab.scss';
 
@@ -154,11 +154,24 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
      *  `typeModelIds` and not necessarily the first. */
     const modelId: string | null = selectedInstanceId ? modelIdOfObject(idlookup, selectedInstanceId) : null;
 
-    // #168 J1 — what is on screen, for Jodie: the type, the instance, the model they resolve to.
-    // Written to `consumerJodieContext` (a Jodie that recomputes later still reads it) and
-    // announced by event. The page only: the overlay is the developer's, who Jodie follows
-    // through the Dock. Primitive deps, so a store update that changes none of them is silent.
-    const selection = consumerSelectionOf(idlookup, projectModelIds, selectedTypeId, selectedInstanceId);
+    // ── The detail: the Data Manager's panel (`InstanceDetail`) ────────────────
+    // The same header, breadcrumb and Back, form, inline children and reference sections
+    // the Data Manager shows, so an element reads and navigates the same in both places.
+    // What this host adds is what `InstanceDetail` leaves to its hosts: the navigation
+    // state, the scroll container, the create and delete gestures, and the profile.
+
+    /** Where the detail has drilled to. Cleared when another instance is picked, as the
+     *  Data Manager clears it from its selection gestures. */
+    const [nav, setNav] = useState<NavState | null>(null);
+    useEffect(() => { setNav(null); }, [selectedInstanceId]);
+
+    // #168 J1 — what is on screen, for Jodie: the element in the detail (the breadcrumb's current
+    // step after a drill-in, otherwise the selected row), its exact type, its model
+    // (`consumerFocusOf`). Written to `consumerJodieContext` (a Jodie that recomputes later still
+    // reads it) and announced by event. The page only: the overlay is the developer's, who Jodie
+    // follows through the Dock. Primitive deps, so a store update that changes none of them is silent.
+    const focus = consumerFocusOf(idlookup, profile, selectedTypeId, selectedInstanceId, nav);
+    const selection = consumerSelectionOf(idlookup, projectModelIds, focus.typeId, focus.instanceId);
     useEffect(() => {
         if (!isPage) return;
         const detail = { typeId: selection.typeId, instanceId: selection.instanceId, modelId: selection.modelId };
@@ -173,17 +186,6 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
             window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, { detail: null }));
         };
     }, [isPage]);
-
-    // ── The detail: the Data Manager's panel (`InstanceDetail`) ────────────────
-    // The same header, breadcrumb and Back, form, inline children and reference sections
-    // the Data Manager shows, so an element reads and navigates the same in both places.
-    // What this host adds is what `InstanceDetail` leaves to its hosts: the navigation
-    // state, the scroll container, the create and delete gestures, and the profile.
-
-    /** Where the detail has drilled to. Cleared when another instance is picked, as the
-     *  Data Manager clears it from its selection gestures. */
-    const [nav, setNav] = useState<NavState | null>(null);
-    useEffect(() => { setNav(null); }, [selectedInstanceId]);
 
     /** The detail column is the element that scrolls: Back restores its offset. */
     const detailRef = useRef<HTMLDivElement | null>(null);

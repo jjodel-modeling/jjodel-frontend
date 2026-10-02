@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { backOf, drillInto, navFor, truncateTo } from '../../../jjform/nav';
 import {
+    consumerFocusOf,
     consumerModelId,
     consumerSelectionLine,
     consumerSelectionOf,
@@ -241,5 +243,69 @@ describe('the selection (J1)', () => {
         expect(selected.currentlyEditing).toEqual({ name: 'scen_a', level: 'M1 model', type: 'Scenario', instance: { id: 'oScen', name: 'Scenario_0' } });
         const hidden = withConsumerSelection(modelEnvelope, idlookup, { typeId: 'cVault', instanceId: 'oVault', modelId: 'mA' });
         expect(filterContextForProfile(hidden, idlookup, profile).currentlyEditing).toEqual({ name: 'scen_a', level: 'M1 model' });
+    });
+});
+
+describe('the focus inside the detail (J1, drill-in)', () => {
+    // The steps InstanceDetail puts on the road (`navStepOf`): id, name, class name, slot.
+    const step = (id: string, name: string, cls: string, childKey: string | null = null) => ({ id, name, cls, childKey });
+    const scenario = step('oScen', 'Scenario_0', 'Scenario');
+    const phase = step('oPhase', 'Phase_0', 'Phase', 'pathway');
+    const antonio = step('oAnt', 'Antonio', 'Learner', 'learners');
+
+    it('without a navigation the focus is the selected row', () => {
+        const { idlookup, profile } = fixture();
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', null)).toEqual({ typeId: 'cScen', instanceId: 'oScen' });
+        expect(consumerFocusOf(idlookup, profile, 'cScen', null, null)).toEqual({ typeId: 'cScen', instanceId: null });
+    });
+
+    it('a drill into a contained child focuses the child, with its own exact type', () => {
+        const { idlookup, profile } = fixture();
+        const nav = drillInto(navFor(scenario), phase);
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', nav)).toEqual({ typeId: 'cPhase', instanceId: 'oPhase' });
+    });
+
+    it('a drill through a reference focuses the referenced element', () => {
+        const { idlookup, profile } = fixture();
+        // Juri's road: Antonio opened from the learners of the Phase_0 shown inline (pass-through).
+        const nav = drillInto(drillInto(navFor(scenario), { ...phase, passThrough: true }), antonio);
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', nav)).toEqual({ typeId: 'cLearner', instanceId: 'oAnt' });
+    });
+
+    it('Back and a click on the breadcrumb move the focus with the road', () => {
+        const { idlookup, profile } = fixture();
+        const deep = drillInto(drillInto(navFor(scenario), phase), antonio);
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', backOf(deep)).instanceId).toBe('oPhase');
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', backOf(backOf(deep))).instanceId).toBe('oScen');
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', truncateTo(deep, 1)).instanceId).toBe('oPhase');
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', truncateTo(deep, 0)).instanceId).toBe('oScen');
+    });
+
+    it('a step of a hidden type is never the focus: the nearest visible step above it is', () => {
+        const { idlookup, profile } = fixture();
+        const vault = step('oVault', 'vault_alpha', 'Vault', 'guard');
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', drillInto(navFor(scenario), vault)))
+            .toEqual({ typeId: 'cScen', instanceId: 'oScen' });
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oScen', drillInto(drillInto(navFor(scenario), phase), vault)))
+            .toEqual({ typeId: 'cPhase', instanceId: 'oPhase' });
+        // Per contrasto: without a profile nothing is hidden, and the vault is the focus.
+        expect(consumerFocusOf(idlookup, null, 'cScen', 'oScen', drillInto(navFor(scenario), vault)).instanceId).toBe('oVault');
+    });
+
+    it('ignores the stale states of one commit: another type, a road rooted elsewhere', () => {
+        const { idlookup, profile } = fixture();
+        const deep = drillInto(navFor(scenario), phase);
+        // The type changed, the row and its road are the old type's.
+        expect(consumerFocusOf(idlookup, profile, 'cLearner', 'oScen', deep)).toEqual({ typeId: 'cLearner', instanceId: null });
+        // Another row of the same type, the road still the previous row's.
+        expect(consumerFocusOf(idlookup, profile, 'cScen', 'oArco', deep)).toEqual({ typeId: 'cScen', instanceId: 'oArco' });
+    });
+
+    it('the focus resolves to the element\'s model and says itself like a row', () => {
+        const { idlookup, profile } = fixture();
+        const focus = consumerFocusOf(idlookup, profile, 'cScen', 'oScen', drillInto(drillInto(navFor(scenario), phase), antonio));
+        const selection = consumerSelectionOf(idlookup, ['mB', 'mA'], focus.typeId, focus.instanceId);
+        expect(selection).toEqual({ typeId: 'cLearner', instanceId: 'oAnt', modelId: 'mA' });
+        expect(selectionNotice(describeConsumerSelection(selection, idlookup)!)).toBe('Now looking at: Learner «Antonio»');
     });
 });
