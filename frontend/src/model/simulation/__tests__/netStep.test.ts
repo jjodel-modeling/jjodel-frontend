@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    admissible, candidates, isAccepting, isMarked, netRunStatus, stateAccess, stateOutputOf, step, structuralInputs, terminated, tokens,
+    admissible, candidates, isAccepting, isMarked, netRunStatus, presentationOf, stateAccess, stateOutputOf, step, structuralInputs, terminated, tokens,
     transitionOutputOf,
 } from '../netStep';
 import { compileNet, netStcFromRoles } from '../netCompile';
@@ -856,5 +856,37 @@ describe('R-SIM-88: an input is read-only in the step (P-2026-09-28-0034)', () =
         const out = step(net, c, 't', NO_GUARDS, actionsBy({ 'transition:t': () => [{ element: 'M', attr: 'ask', value: true }] }));
         expect(out.kind === 'halted' && out.reason).toEqual({ kind: 'read-only', site: { element: 't', role: 'transition' }, element: 'M', attr: 'ask', input: true });
         expect(out.kind === 'halted' && out.next.state).toBe(c.state);
+    });
+});
+
+describe('presentationOf (R-SIM-108, P-2026-10-03-0040): an element\'s presentation, stored then derived', () => {
+    const space = (values: Record<string, Record<string, SimValue>>) => new Map(Object.entries(values).map(([e, v]) => [e, new Map(Object.entries(v))]));
+    const state = (stored: Record<string, Record<string, SimValue>>, derived?: Record<string, Record<string, SimValue>>): SimState => ({
+        ...st({}, { e: { visits: 2 } }),
+        presentation: space(stored),
+        ...(derived ? { derived: { attrs: new Map(), presentation: space(derived) } } : {}),
+    });
+
+    it('a stored value before a derived one of the same name (mutant: the derived part read first)', () => {
+        expect(presentationOf(state({ e: { heat: 3 } }, { e: { heat: 9 } }), 'e', 'heat')).toBe(3);
+    });
+
+    it('a stored 0, false or empty text is a value, not a miss (mutant: `||` for `??`)', () => {
+        for (const v of [0, false, ''] as const) expect(presentationOf(state({ e: { heat: v } }, { e: { heat: 9 } }), 'e', 'heat')).toBe(v);
+    });
+
+    it('the derived value when none is stored; undefined for another element, another name, a semantic attribute, no derived part', () => {
+        const s = state({}, { e: { heat: 'hot' } });
+        expect(presentationOf(s, 'e', 'heat')).toBe('hot');
+        expect([presentationOf(s, 'f', 'heat'), presentationOf(s, 'e', 'cold'), presentationOf(s, 'e', 'visits')]).toEqual([undefined, undefined, undefined]);
+        expect(presentationOf(state({}), 'e', 'heat')).toBeUndefined();
+    });
+
+    it('the accessor answers as presentationOf on its own site, and nothing elsewhere or without one (locality kept, R-SIM-18)', () => {
+        const s = state({ e: { heat: 0 } }, { e: { heat: 9, glow: true }, f: { glow: false } });
+        for (const attr of ['heat', 'glow', 'none']) expect(stateAccess(s, 'e').readPresentation(attr)).toBe(presentationOf(s, 'e', attr));
+        expect(stateAccess(s, 'e').readPresentation('heat')).toBe(0);
+        expect(stateAccess(s).readPresentation('glow')).toBeUndefined();
+        expect(stateAccess(s, 'g').readPresentation('glow')).toBeUndefined();
     });
 });

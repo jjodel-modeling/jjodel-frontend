@@ -68,6 +68,12 @@
  * Play does, and `playPress` runs one tick against the store, so the panel's
  * timer reads the run and the policy afresh at every tick. Play presses ε only:
  * it never chooses an event nor the value of an input.
+ *
+ * The navigable trace and the face's state (R-SIM-102, R-SIM-104, R-SIM-106;
+ * P-2026-10-03-0040): a press records the input values it was given on the
+ * step it commits, so `configAt` (simRunState.ts) can replay it, and returns a
+ * past step shown to live, since it acts on the live configuration. The pure
+ * builders of the M1 face: `watchRows`, `markingChips` and `statusLine`.
  */
 
 import type { ExecutionContext } from '../../../jjscript/types';
@@ -95,12 +101,16 @@ import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog'
 import { drawTransition, seededRng } from '../../../model/simulation/simRandom';
 import type { SimRng } from '../../../model/simulation/simRandom';
 import type {
-    ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, GuardOracle, HaltReason,
+    ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, Domain, GuardOracle, HaltReason,
     InputRead, NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
-import { getSimPolicy, getSimRun, simCommit } from './simRunState';
+import { getSimPolicy, getSimRun, simCommit, simSetView, withInputs } from './simRunState';
 import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
 import { storedProfile } from './simRoleStatus';
+import { stateKindOf, stateValueOf } from './simCanvasState';
+import type { SimStateKind } from './simCanvasState';
+import { defaultSimPins } from './simViewerPrefs';
+import type { SimAttrRef } from './simViewerPrefs';
 
 type Lookup = Record<string, any>;
 
@@ -880,6 +890,96 @@ export function outputLine(state: SimState, net: CompiledNet, lookup: Lookup): {
     return { line, title: line };
 }
 
+// ---------------------------------------------------------------------------
+// The face's state (R-SIM-102, R-SIM-104; P-2026-10-03-0040)
+// ---------------------------------------------------------------------------
+
+/** One Watch row of the M1 face (R-SIM-104): an attribute of one element, on the configuration shown. */
+export interface SimWatchRow {
+    /** The owner: the model id for a global. */
+    readonly element: string;
+    readonly attr: string;
+    /** As the face names it, `inputLabel`'s form: `coins` for a global, `p1.visits` otherwise. */
+    readonly name: string;
+    readonly space: 'semantic' | 'presentation';
+    readonly kind: SimStateKind;
+    /** A range draws a domain bar; `null` for the presentation. */
+    readonly domain: Domain | null;
+    /** Stored then derived; an input's is the value its step was given. `null` when there is none. */
+    readonly value: SimValue | null;
+    /** The value before the step, when the step changed it (`null` when there was none); `null` otherwise. */
+    readonly before: SimValue | null;
+    /** The step changed the value. Never an input's: it is not state. */
+    readonly changed: boolean;
+}
+
+/**
+ * The Watch rows (R-SIM-104) of the configuration shown, `state`, after the step
+ * from `prev` (`null` at step 0): one per pin, in the pins' order; a pin of a
+ * metaclass gives one row per element that carries it, by name. `pins` `null` is
+ * the default of `defaultSimPins`; a pin no declaration of the net names is
+ * skipped. An input (`IVAR`) reads the value its step was given, `inputs`
+ * (`SimTraceStep.inputs`), and is never a change.
+ */
+export function watchRows(
+    net: Pick<CompiledNet, 'modelId' | 'attributes' | 'declared'>, state: SimState, prev: SimState | null,
+    pins: readonly SimAttrRef[] | null, lookup: Lookup, inputs: readonly InputValue[] = [],
+): SimWatchRow[] {
+    const out: SimWatchRow[] = [];
+    for (const pin of pins ?? defaultSimPins(net.attributes)) {
+        const owners: Array<{ element: string; name: string; decl: StateAttributeDecl }> = [];
+        for (const [element, byName] of net.declared) {
+            const decl = byName.get(pin.name);
+            if (!decl || decl.metaclass !== pin.metaclass || decl.space !== pin.space) continue;
+            owners.push({ element, name: inputLabel({ element, attr: pin.name }, net, lookup), decl });
+        }
+        owners.sort((a, b) => a.name.localeCompare(b.name));
+        for (const { element, name, decl } of owners) {
+            const kind = stateKindOf(decl);
+            const value = kind === 'IVAR'
+                ? inputs.find(v => v.element === element && v.attr === decl.name)?.value ?? null
+                : stateValueOf(state, decl.space, element, decl.name) ?? null;
+            const old = kind === 'IVAR' || prev === null ? value : stateValueOf(prev, decl.space, element, decl.name) ?? null;
+            out.push({
+                element, attr: decl.name, name, space: decl.space, kind, domain: decl.domain, value,
+                before: old === value ? null : old, changed: old !== value,
+            });
+        }
+    }
+    return out;
+}
+
+/** One Marking chip of the M1 face (R-SIM-104): a marked place, `×n` from two tokens. */
+export interface SimMarkingChip {
+    readonly place: string;
+    readonly name: string;
+    readonly tokens: number;
+    readonly text: string;
+}
+
+/** The Marking chips (R-SIM-104): the places `markingLine` lists, in its order and its words, one chip each. */
+export function markingChips(state: SimState, lookup: Lookup): SimMarkingChip[] {
+    return [...state.marking]
+        .filter(([, n]) => n > 0)
+        .map(([place, n]) => ({ place, name: elementName(lookup, place), tokens: n }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(c => ({ ...c, text: c.tokens === 1 ? c.name : `${c.name} ×${c.tokens}` }));
+}
+
+/**
+ * The one status line of the M1 face (R-SIM-104), beside the pill that names
+ * the status: `step n`, the seed, then the last step, `last` being the text and
+ * the title of today's «Last step» line. The title is that line's own,
+ * `Last step: …`, so its readers change a selector and not a string; without a
+ * last step, the line itself.
+ */
+export function statusLine(
+    step: number, seed: number | undefined, last: { readonly text: string; readonly title: string } | null,
+): { line: string; title: string } {
+    const line = [`step ${step}`, ...(seed === undefined ? [] : [`seed ${seed}`]), ...(last ? [last.text] : [])].join(' · ');
+    return { line, title: last ? `Last step: ${last.title}` : line };
+}
+
 /**
  * The short form of a guard defect (R-SIM-62): the parse position and message,
  * the subset code, the evaluation message without the error class, the type a
@@ -1171,26 +1271,8 @@ export function inputLabel(read: { readonly element: string; readonly attr: stri
     return read.element === net.modelId ? read.attr : `${elementName(lookup, read.element)}.${read.attr}`;
 }
 
-/**
- * The run with its oracles reading `values` for the inputs they name, σ for
- * everything else. A value for a name that is not an input of its element is
- * ignored, so an answer never shadows σ. The record is not stored: the values
- * hold for this press only, and σ′ is built from σ and the assignments alone.
- */
-function withInputs(run: SimRun, values: readonly InputValue[]): SimRun {
-    const given = new Map<string, SimValue>();
-    for (const v of values) {
-        if (run.net.declared.get(v.element)?.get(v.attr)?.input === true) given.set(`${v.element}\u0000${v.attr}`, v.value);
-    }
-    const over = (s: SimStateAccess): SimStateAccess => ({
-        ...s,
-        read: (element, attr) => {
-            const key = `${element}\u0000${attr}`;
-            return given.has(key) ? given.get(key) : s.read(element, attr);
-        },
-    });
-    return { ...run, guards: (site, e, s) => run.guards(site, e, over(s)), actions: (site, e, s) => run.actions(site, e, over(s)) };
-}
+// `withInputs`, the overlay of the values given at a press, moved to simRunState.ts (P-2026-10-03-0040):
+// the replay of `configAt` reads a step's inputs through it too.
 
 /**
  * The status of a run as the panel shows it: `netRunStatus`, except that a run
@@ -1400,6 +1482,8 @@ function press(
 ): InputPress {
     const run = getSimRun(modelId);
     if (!run) return { pending: null, lastStep: null, outcome: null };
+    // R-SIM-106: a press acts on the live configuration, and a past step shown returns to it.
+    simSetView(modelId, null);
     // R-SIM-88: what the press reads is asked first; nothing is committed before the answer.
     if (values === undefined) {
         const asks = inputAsks(run, event);
@@ -1417,7 +1501,8 @@ function press(
     }
     const outcome = step(run.net, cfg, chosen, live.guards, live.actions, run.derived);
     // The store keeps the origin only among two or more candidates: a press without a selector was forced.
-    simCommit(modelId, outcome, origin);
+    // The values given are kept on the step, so a replay reads them (R-SIM-106).
+    simCommit(modelId, outcome, origin, values);
     const why = outcome.kind === 'discard' || outcome.kind === 'quiescence' ? firstBlocked(live, outcome, lookup) : null;
     const lastStep = lastStepText(outcome, run.net, lookup, input, why);
     const assigned = outcome.label.assignments.map(a => `${elementName(lookup, a.element)}.${a.attr} = ${String(a.value)}`);
