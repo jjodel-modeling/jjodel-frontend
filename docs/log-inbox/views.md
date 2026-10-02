@@ -168,3 +168,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-02-1645
 **Detail**: docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md
+
+## 2026-10-02 — merge: ir-label-name-refresh into alfonso-frontend-jjtl (P-2026-10-02-2109)
+**Prompt**: `claude_2026-10-02_2109_prompt_merge_ir-label-name-refresh.md`, a merge in a session (Lane: full, 2 conflicts measured: `docs/decisions.md`, `docs/log-inbox/views.md`): `ir-label-name-refresh` at `fb567d6a2` into `alfonso-frontend-jjtl`, merge base `adb5d9731`, 6 commits on the branch side.
+**Files touched**: merge `fc11b841a`: 7 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-02_1645_prompt_ir_label_name_refresh.md`, `frontend/src/components/editor-v2/viewpoint/ir/irResolve.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irResolveCore.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irObjectSnapshot.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fc11b841a`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 6600 in 266 files (the trunk tip's 6589 in 265 plus the branch's 11, `irObjectSnapshot.test.ts` new), 0 failed, the 9 known files red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no. 7 files, all from the branch side, listed above; the merge is the prompt's scope.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves the merged `irResolve.ts`, so the merged code compiles on the running server; the behaviour was measured by the branch probe (after 21/22)
+**Notes**: Union in `docs/decisions.md` (R-IRN-40, then R-IRN-39) and in `docs/log-inbox/views.md` (the trunk's 11 entries, then the branch's entry, its ticket paragraph and its ticket), markers removed and nothing else: 0 lines removed against either side. Probes 25/25, control R-EE-5 absent. Rollback tag `pre-ir-label-name-refresh` on `79b29a7da` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 21:09
