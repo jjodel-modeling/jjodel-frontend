@@ -342,6 +342,7 @@
   --color-inode-border: rgba(255, 255, 255, 0.16);
   --color-inode-header-fill: rgba(255, 255, 255, 0.06);
   --color-inode-name: rgba(255, 255, 255, 0.92);
+  --color-canvas-ink: var(--color-inode-name);       /* the name ink, resolved at :root out of reach of a coloured node (R-VP-51): its outside marks */
   --color-inode-label: rgba(255, 255, 255, 0.55);
   --color-inode-quiet: rgba(255, 255, 255, 0.3);       /* dash and cardinality: the quietest role */
   --color-inode-footer: rgba(255, 255, 255, 0.45);

@@ -7,6 +7,7 @@ import {
     PASTEL_SWATCHES,
     clearMetaclassOverrides,
     metaclassColorTable,
+    notationGlyphClasses,
     readMetaclassColoring,
     withMetaclassOverride,
     type MetaclassColorRow,
@@ -30,16 +31,20 @@ const typeOptions: { value: ViewpointType; label: string; enabled: boolean; reas
     { value: 'editor_behavior', label: 'Editor', enabled: false, reason: 'Not available yet.' },
 ];
 
-/** One entry of the metaclass dropdown: the class, and the colour it paints under this viewpoint. */
-interface MetaclassOption { value: string; label: string; color: string }
+/**
+ * One entry of the metaclass dropdown: the class, and the colour it paints under this viewpoint.
+ * `glyph`: the viewpoint draws the class only as a notation glyph, which is not coloured (R-VP-50).
+ */
+interface MetaclassOption { value: string; label: string; color: string; glyph?: boolean }
 
-const toMetaclassOption = (c: MetaclassColorRow['classes'][number]): MetaclassOption => ({ value: c.id, label: c.name, color: c.color });
+const toMetaclassOption = (c: MetaclassColorRow['classes'][number], glyph = false): MetaclassOption => ({ value: c.id, label: c.name, color: c.color, glyph });
 
 // The small swatch and the name, for the options and the selected value alike; the name is
-// clipped with an ellipsis so the fixed-width control never grows (R-VP-39).
+// clipped with an ellipsis so the fixed-width control never grows (R-VP-39). A notation glyph
+// shows the swatch empty: it is not coloured.
 const formatMetaclassOption = (o: MetaclassOption) => (
-    <span className="wp-metaclass-option" title={o.label}>
-        <span className="wp-metaclass-option__swatch" style={{ background: o.color }} />
+    <span className="wp-metaclass-option" title={o.glyph ? `${o.label}: notation glyph, not coloured` : o.label}>
+        <span className="wp-metaclass-option__swatch" style={o.glyph ? undefined : { background: o.color }} />
         <span className="wp-metaclass-option__name">{o.label}</span>
     </span>
 );
@@ -83,12 +88,18 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
         return JSON.stringify(metaclassColorTable(state.idlookup ?? {}, state.m2models ?? [], setting));
     });
     const table = useMemo(() => JSON.parse(tableKey) as MetaclassColorRow[], [tableKey]);
+    // The classes this viewpoint draws only as notation glyphs (R-VP-50): listed, not coloured,
+    // no swatch picker. Selected as a string too.
+    const glyphKey = useSelector((state: any) => JSON.stringify(notationGlyphClasses(state, vpId)));
+    const glyphIds = useMemo(() => new Set(JSON.parse(glyphKey) as string[]), [glyphKey]);
+    const toOption = (c: MetaclassColorRow['classes'][number]) => toMetaclassOption(c, glyphIds.has(c.id));
     const [pickedId, setPickedId] = useState<string | null>(null);
     const allClasses = table.flatMap((r) => r.classes);
     const selected = allClasses.find((c) => c.id === pickedId) ?? allClasses[0] ?? null;
+    const selectedGlyph = !!selected && glyphIds.has(selected.id);
     const metaclassOptions = table.length > 1
-        ? table.map((r) => ({ label: r.modelName, options: r.classes.map(toMetaclassOption) }))
-        : (table[0]?.classes ?? []).map(toMetaclassOption);
+        ? table.map((r) => ({ label: r.modelName, options: r.classes.map(toOption) }))
+        : (table[0]?.classes ?? []).map(toOption);
 
     // One write each, whole, through the same default setter: «Reset» removes the override of
     // the selected class, «Reset all» every override; the automatic colour comes back.
@@ -181,13 +192,13 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                                 className="jj-select wp-metaclass-select"
                                 aria-labelledby={`${colorId}-metaclass`}
                                 options={metaclassOptions as any}
-                                value={selected ? toMetaclassOption(selected) : null}
+                                value={selected ? toOption(selected) : null}
                                 formatOptionLabel={formatMetaclassOption}
                                 onChange={(o: any) => setPickedId(o ? o.value : null)}
                                 placeholder="No metaclasses"
                                 isDisabled={readOnly || !selected}
                             />
-                            <div className="wp-swatch-grid" role="radiogroup" aria-labelledby={`${colorId}-metaclass`}>
+                            {!selectedGlyph && <div className="wp-swatch-grid" role="radiogroup" aria-labelledby={`${colorId}-metaclass`}>
                                 {PASTEL_SWATCHES.map((c) => (
                                     <button
                                         key={c}
@@ -202,8 +213,9 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                                         disabled={readOnly || !selected}
                                     />
                                 ))}
-                            </div>
+                            </div>}
                         </div>
+                        {selectedGlyph && <p className="wp-field__hint">Not coloured: notation glyph.</p>}
                         <div className="wp-metaclass-resets">
                             <button
                                 type="button"

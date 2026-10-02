@@ -978,6 +978,10 @@ export interface CompiledLabel {
     visible: CompiledConditional<boolean>;
     /** True when double-click edits the element name (intrinsic name/qualifiedName, editable !== false). */
     editsName: boolean;
+    /** The feature a double-click writes (R-IRN-41): set on a one-step path label that opts in with
+     *  `editable`, absent on every other label. Whether the slot is a single string attribute is
+     *  checked at the gesture, where the object is known. */
+    editsFeature?: string;
     /** Compiled typographic style (ir-1.3 TS1); undefined when the label has no style. */
     style?: CompiledTextStyle;
     /** Resolved side of an `outside` label, always set for it ('s' when absent or unknown);

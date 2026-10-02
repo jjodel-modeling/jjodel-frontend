@@ -1497,6 +1497,46 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   key, so the IR stays minimal. No schema change, no migration. Implemented in P-2026-10-01-2349 (`20c843f14`);
   mutation bench 17/17, probe 23/23, four demo scenes 0 px from the base run.
 
+- **R-IRN-40** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **The «editable inline»
+  toggle of a value segment reads the effective value, inline, with no predicate module.** The runtime edits a row
+  value unless `seg.editable === false` (`IRNodeContent.tsx:706`, and the singleton select at `:714`), so
+  `FieldSegmentEditor.tsx` draws `checked = editable !== false`; OFF writes `editable: false`, ON removes the key
+  through the exported `applyValueEditable`, so the IR stays minimal and a persisted `true` is dropped. The widget
+  object keeps its chip. The toggle is never disabled: the panel knows the compartment, not the row, and on a
+  `references` compartment the same flag gates the singleton select. No `irSegmentEdit.ts`: the runtime keeps its
+  inline reads and is read-only here, so a predicate would have one consumer, unlike R-IRN-38's label predicate
+  (compile and panel share it). No schema change, no migration: only the display of an absent key changes (OFF to
+  ON); the canvas and every persisted value keep their meaning. Implemented in P-2026-10-02-1646 (`d8f2e61c3`);
+  mutation bench 18/18, the base reads OFF at rest on the real app and the fix ON, four demo scenes 0 px from the
+  base run.
+
+- **R-IRN-39** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **The IR node and row
+  subscriptions carry the object's name and its metaclass's name.** `objectSnapshotParts(lookup, objectId, irSig)` in
+  `ir/irResolveCore.ts` is the one self snapshot behind `useIRView` and `useIRRowView`: the slot values as before, then
+  `n=` the name as `getName` reads it from the D-layer (`name ?? initialName`) and `c=` the metaclass's own name, both
+  JSON-quoted. Before it, an intrinsic `name` label on a class with no `name` attribute (no slot moves on a rename) and a
+  `metaclassName` label after a class rename kept the old text, and so did a default row. The metaclass term stops at the
+  class itself (no ancestry walk in a selector that runs for every node on every store update): a rename of a superclass
+  keeps an inherited match stale, a known limit. No schema change, no migration. Implemented in P-2026-10-02-1645
+  (`7c92ffc2c`); mutation bench 14/14 (11/12 first pass, the inverted `name`/`initialName` fallback survived until the
+  test for an object holding both), probe 21/22 after against 11/18 before, memo re-runs of other nodes 0, four demo
+  scenes 0 px from `adb5d9731`.
+
+- **R-IRN-41** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **A path label on one
+  attribute of its own object edits on the canvas, opt-in.** Amends R-IRN-38 on the path case only. The absent
+  `editable` is read per source (`labelEditableDefault` in `ir/irLabelEdit.ts`): a path label edits only when the IR
+  opts in (`true` or the widget object), every other source keeps «absent = editable», so no derived view changes. The
+  IR half is decided at compile time: `labelEditsFeature` gives the feature of `$f` or `$f.value` and `irCompile.ts`
+  writes `CompiledLabel.editsFeature` only then. The metamodel half is one function, `labelFeatureEditBlock`, called by
+  the toggle with the panel's metaclass features and by the canvas at the double-click with the object's slot
+  (`labelFeatureInfoOf`): single-valued `EString` attribute only, since the inline write passes the typed string with no
+  parse. The commit is `syncUpdateFeatureValue`, the row value's write path. Toggle on a path label: ON writes `true`, OFF
+  removes the key; disabled with «Only a single attribute of this object can be edited on the canvas.» (multi-step,
+  `.values`, reference, multi-valued, no metaclass) or «Only a string attribute can be edited on the canvas.». No schema
+  change, no migration. Implemented in P-2026-10-02-1647 (`aa04b92fb`); mutation bench 28/28, probe 35/36, the four demo
+  scenes and DemoFlowB's derived viewpoint 0 px from `adb5d9731`. The failing item is undo, shared with the row value
+  edit of the trunk and filed as a ticket (report `docs/discovery/discovery_2026-10-02_path_label_edit.md` §8).
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
@@ -2465,6 +2505,28 @@ Evidence: `docs/discovery/discovery_2026-09-29_sim_data_level.md` (P-2026-09-29-
   k and its control (the discovery's Q2, adopted by the chat): k = 100 by default, a number input (1..1000) after the `Choices` select, in one constant row above the lines and the buttons, so Step does not move. k counts the steps of one Play press; at k Play stops, the run stays `Running`, the status row reads `Running · Play stopped at 100 steps`, and Play continues from there. The seed stays where R-SIM-100 put it (Q3).
   The stops, in the order each tick reads them: no run (Stop, the R-SIM-34 interruption; Reset and a hand press stop Play too), `Terminated`, `Deadlock`, `Halted`, k, an ε press that asks an input, no ε candidate, two or more candidates under Ask, where the list opens as Step's does. Under Random no ε list opens on Step either: every drawn step goes through R-SIM-100's `pressRandom` and records `origin: 'random'`. The policy is a map beside the runs in `simRunState.ts`, default `{ ask, 100 }`, outside Redux: lost on reload, kept across Reset, Stop and a model switch. The loop is a `setTimeout` chain in the panel over the pure `playTick(run, policy, steps)` of `simBridge.ts`; each tick reads the store (`playPress`), never React state. Taken in the lane: Play is on while the run is `Running`, ε off included, so that on a state machine it can say it waits for an event; the first tick falls at the press.
   Evidence: `docs/discovery/discovery_2026-09-29_sim_random_choice.md` (P-2026-09-29-1700) §0, §7, §8 L2; built by P-2026-09-29-1943 (chat C-2026-09-28-1936), tests first, mutation benches 8/8 and 17/17; its lane probe on 3058, light, 1600×1000: Step's top 854.5 under Ask and Random with the row present, the panel's top 748 inside the editor (51); Petri, Random + Play, `Deadlock` at `p2 ×2, p3` in 4 steps for three seeds; Flow B `Terminated` in 6; SM `Running · Play waits for an event` at 0 steps; pause and Stop mid-play; Ask + Play stops at the first list; the hand runs of sm, esm, flowB identical to `trunk_readings_2026-09-29c` in their run readings, Petri's but for a reader of the pre-R-SIM-98 heading.
+
+### Decisions 2026-10-02: the simulator's state UI (R-SIM-102..109)
+
+Evidence: the design canvas «Simulator UI and state data» (Claude Design, six artboards, an invented Turnstile model) and the proposal `docs/ratifiche/claude_ratifiche_2026-10-02_sim_state_ui.md` (`872d0abe8`), rows P1..P8, renumbered here in order. Read on the trunk at `9e6adf7`: the run's σ reaches the user only as the clamped marking line (`simBridge.ts` `markingLine`) and the σ card under a node (`SimNodeRunState.tsx`, semantic only); the presentation state is computed (`netCompile.ts`, `derivedEvaluator.ts`) and shown nowhere. Alfonso, 2026-10-02: «mi convince» on the design, then «procedi tu, decidi tu» on the rows and the lanes; the owner chat of this front from 2026-10-02 is C-2026-10-02-2340 (no simulator lane had run since 2026-09-30).
+
+- **R-SIM-102** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
+  **Two spaces, one visual key, nuXmv names.** The abstract (semantic) state σ and the concrete (presentation) state `node` are always shown apart. σ is solid slate with the glyph `σ`; `node` takes the viewpoint colour of the design system (the `#db2777` family, dashed outline), because presentation state belongs to the view. An attribute's kind is named as in nuXmv wherever it shows: `VAR` (stored), `DEFINE` (derived, name in italics, never assigned), `IVAR` (input, asked at the press that reads it). A value changed by the last step is tinted with the run's cyan and shows `before → after`. The value states are: unchanged, changed now, past step, input asked, out of domain, undeclared.
+- **R-SIM-103** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
+  **The roles dialog's «Data» page becomes «State», in two columns; the model's «Data…» becomes «State…». Amends the labels of R-SIM-71, R-SIM-81(3) and R-SIM-94(4).** «Data» collides with the Data Manager (R-DMV-1). Abstract column (globals `model`, then one group per metaclass) and concrete column (one group per metaclass), with an arrow «σ is read one way» between them: a presentation equation may read σ, a semantic one that reads `node` is E-NODE, flagged on its row before Apply. Row columns: name, kind chip, domain, initial or equation, access path. The selected row opens «Written by» and «Read by». A read-only «Export preview» renders the abstract declarations in `.smv` syntax; it is a rendering of the declarations, not the exporter (spec steps 4–5 stay deferred), and the discovery may drop it without touching the rest.
+- **R-SIM-104** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
+  **The compact M1 panel shows state, not a line. Amends R-SIM-82 (the marking line) and R-SIM-92 (the Output line becomes a Watch row).** Above the transport row, from the top: «Watch» (up to four pinned attributes, globals first by default, a domain bar for a range, a chip for `DEFINE` or `IVAR`, the delta when changed), «Marking» (one chip per marked place, `×n` from two tokens), «Events» (the reason in the title when off, an input chip when the press asks one). The transport row and the Choices control stay where R-SIM-65, R-SIM-66 and R-SIM-101 put them: the panel grows upward and the buttons never move. The status block under them carries the pill, `step n`, the seed and the last step on one line. Pins are a viewer preference beside the run policy, outside Redux and never in a bag (R-SIM-6 holds; a pin does not move `runSignature`).
+- **R-SIM-105** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
+  **A run inspector, opened from the panel.** The whole σ (globals with domain bars, then per metaclass per instance, marked ones flagged), the concrete state in its own section, and the trace. Where it docks is the discovery's question; the compact panel stays the default and the demo path.
+- **R-SIM-106** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
+  **The trace is navigable: configurations are kept. Extends R-SIM-100.** `SimRun` keeps the committed configurations beside `trace`, capped at the last 1000, older ones rebuilt by replay from the seed and the trace. Choosing a step shows σ, `node` and the canvas overlay as they were, under «Viewing step n. The run is still at step m» with «Back to live». Viewing is read-only: an input pressed while a past step is shown acts on the live configuration and returns the view to live. Nothing is persisted.
+- **R-SIM-107** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
+  **The σ overlay on the canvas is opt-in per attribute. Amends the σ card of S15 slice A1.** The overlay stays the simulator's own (R-SIM-3 pattern): token, enabled transitions, marked border. The `attr = value` card under every node is replaced by tags for the attributes the viewer turns on (default: none, except the attributes changed by the last step, for that step only); globals may be shown in one card pinned to the canvas corner. Viewer preferences, as the pins of R-SIM-104.
+- **R-SIM-108** (2026-10-02, decided by the chat on Alfonso's delegation 2026-10-02, «procedi tu, decidi tu», evidence: read, verified: none, reversible: branch). **Amends R-SIM-4; Alfonso keeps the veto.**
+  **`node.[x]` reaches the viewpoints, read-only.** The run-state singleton exports a reader of an element's presentation (stored then derived, as `netStep.ts` resolves it), and the IR interpreter exposes it to view expressions with the engine's syntax, `node.[x]`, absent when no run knows the element (the view gives its own default). The lane opens with a discovery and a Layer Impact Report (how a view expression reads it, how the view re-renders on the `'mark'` version without re-rendering the canvas, what a derived viewpoint does with it); its Phase 2 waits for that report. Views never write it (R-SIM-6, R-SIM-18 unchanged).
+- **R-SIM-109** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
+  **An «Inspect node.[x]» switch on the canvas**, off by default: on, every element with presentation state carries dashed pink tags naming each value, so data and notation can be told apart. A viewer preference; the tags work without R-SIM-108, the drawing needs it.
+  Lanes: discovery D1 (R-SIM-102..107, 109) and discovery D2 (R-SIM-108) in parallel, read-only; Phase 2 in cascade on disjoint file sets as the reports split them. Alfonso, 2026-10-02 about 23:55, «prima della demo», and 2026-10-03, «vai»: the lanes merge into the trunk before the MODELS demo, one at a time, each tagged `pre-<branch>` for rollback; the demo shows the dialog and the M1 face as built, the inspector and the navigable trace an optional beat. Adopted from `docs/discovery/discovery_2026-10-02_sim_state_ui.md` §0 by the chat (RC-25, 2026-10-03): the inspector is a floating card mounted by the panel, right of it, 400 px wide, clamped clear of the MiniMap and the rail; the `.smv` Export preview of R-SIM-103 is dropped; «Written by»/«Read by» come from `compileAction`, `compileGuard`, `compileDerived` plus one exported StateAccess walk, computed on row selection only; kept configurations are capped at 1000 in `simCommit`, rebuilt by replay over the recorded selectors with `inputs?` added to the trace step (an implementation of R-SIM-106, not an amendment of R-SIM-100); viewer preferences live in `simViewerPrefs.ts` with their own version channel, never the `'mark'` one; «Data» is renamed in its visible strings only, identifiers and classes unchanged; Lane A exports `getSimPresentation(objectId)` on the viewed configuration for R-SIM-108. Lanes: A `sim-state-model` and B `sim-state-dialog` in parallel, then C `sim-state-face` after both.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
@@ -4739,6 +4801,58 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - An override also moves the automatic colours of the other classes: the greedy re-runs around it, as decided. In
     DemoFlowB, overriding Activity changed five other node classes, since every one neighbours ActivityNode, coloured
     first. This is a perceptual item for the visual GO. Was R-VP-34 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-50** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  **A node a derived notation draws as a glyph is not coloured by metaclass; amends R-VP-27 on the scope of the
+  coloring.** The chat asked Alfonso on 2026-10-02 whether to exclude the notation glyphs (fork and join bars, the
+  initial and final dots), recommending yes. His answer, verbatim: «ok». The id is R-VP-50 and not R-VP-40, because
+  `elk-layout-disc` (not merged) holds R-VP-40..49. Source: `docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md`.
+  - The rule, in `isNotationGlyph(ir)` (`view/viewPoint/metaclassPalette.ts`): a view a derivation created
+    (`ir.generated`), drawn as a `bar`, as a `circle` filled in an ink (`var(--color-inode-name)` or the catalogue
+    `#334155`), or as a `circle` with the `dot` or `dot-large` marker. A conditional form, fill or marker never
+    matches. `ObjectNode.tsx`, the one host of `colorOverride`, passes none to such a node, so it paints its own
+    fill, border and text, exactly as with coloring off.
+  - Covered, measured on the four demos under the nine notations:
+    - the fork and join bars, the initial discs and the final bull's-eyes of Activity (UML), Flowchart and State
+      machine;
+    - the transition bars of Petri net and Petri net (classic), adopted under RC-21 as the report's Q2;
+    - the named bull's-eye of the Petri Terminal (Q6).
+  - Statechart (UML) draws no glyph node on the demos. Flowchart (ISO 5807), Generic and ER (Chen) draw none.
+  - Adopted unattended as recommended (RC-21, report §0):
+    - only derived views: a view written by hand keeps today's colouring (Q1);
+    - glyph classes keep their palette slot, so `assignMetaclassColors` and the resolver are unchanged and no
+      other class moves (Q3);
+    - an override stored on a glyph class is not painted while the class is a glyph, is kept in the data and
+      still counts in the assignment (Q4).
+  - The panel lists a glyph class with an empty swatch and the title «notation glyph, not coloured». Selected, it
+    shows no swatch grid and the hint «Not coloured: notation glyph.»; «Reset» still removes a stale override.
+  - Not covered: the entry mark of Statechart's Initial (Q5). It is part of a coloured node, and
+    `metaclassColoringVars` rebinds `--color-inode-name` on the node root, so it stays in the text colour as at
+    `1ff8ab314`. A ticket in `docs/log-inbox/views.md` covers it.
+  - No IR key, no persisted value, no migration. Measured on the lane probe (3097, light): base 17/17 shows the
+    glyphs coloured; after 30/30, every glyph equal on and off, the ordinary nodes equal to the resolver, the four
+    demo scenes in the default viewpoint 0 px. Tests 28 of 32 red first, then green; mutation bench 14/14.
+    Prompt P-2026-10-02-2045, commit `00b16d998`.
+- **R-VP-51** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  **What a coloured node draws outside its box keeps the notation ink, in both themes, as with coloring off; a
+  conformance fix of R-VP-30 under R-VP-50.** Alfonso asked to proceed on the ticket of P-2026-10-02-2045 (verbatim:
+  «procedi»). Source: `docs/discovery/discovery_2026-10-02_ir_ink_outside.md`.
+  - A token `--color-canvas-ink: var(--color-inode-name)` in `_colors-light.scss` and `_colors-dark.scss`, resolved
+    at `:root`, so a node's inline rebinding of `--color-inode-name` («Color by metaclass») does not reach it.
+  - `metaclassOutsideInkVars()` (`metaclassPalette.ts`) points `--color-inode-name` back at it. `IRNodeContent.tsx`
+    sets it, only while coloured, on the outside labels (`.ir-label--outside`) and the entry layer (R-VP-22). The
+    entry mark paints in its border ink, not the text colour. An outside label restates the node-level text colour.
+  - The root no longer sets `color` while coloured; the badges state the text colour, as labels and compartments do.
+    So an outside label with no colour of its own inherits what it inherits off.
+  - Inside the box keeps R-VP-30's WCAG colour; glyphs (R-VP-50) receive no override. No IR key, no persisted
+    value, no migration, no class renamed.
+  - Adopted as recommended (RC-21, report §0): root `color` dropped (Q1); an alias, not a copy (Q2); outside marks
+    in another rebound token not covered (Q3, no producer reaches a coloured node); the entry mark in its border ink
+    (Q4); the name `--color-canvas-ink` (Q5); the id (Q6).
+  - Measured on the lane probe (3098, light and dark): base 20/20 shows the marks `rgb(0, 0, 0)`; after 50/50, outside
+    labels and entry mark on = off (`rgb(15, 23, 42)` light, `rgba(255, 255, 255, 0.92)` dark). Inside colours, glyphs
+    and the four default scenes 0 px from `7c9ae4e0d`. Tests 8 of 16 red first, then green; mutation bench 13/14, the
+    survivor an equivalent mutant (the dark declaration dropped, the light block being `:root`). Prompt
+    P-2026-10-02-2356, commit `cce1ecfef`.
 - **R-VP-48** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
   **The toolbar auto-layout uses ELK in full, in one lane, merged before the 2026-10-07 freeze (Q1).** Alfonso, 2026-10-02,
   «ok alle raccomandazioni» on `docs/discovery/discovery_2026-10-01_elk_layout_quality.md` §10. One lane: ELK's input
@@ -4752,7 +4866,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   (`handlePosition.ts`), the side of each comes from the route. `portDistribution.ts` and `handlePosition.ts` untouched.
   Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
   Was R-VP-38 on the branch, renumbered by P-2026-10-02-1718.
-- **R-VP-50** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+- **R-VP-52** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
   **The Activity (UML) fork and join bar lies across the layout direction: 120 by 7 under a flow that runs down (Q7, D-C);
   amends R-VP-26 (2) on the orientation, the thickness staying R-VP-36's 7 px.** The text of R-VP-26 is not edited
   (add-only). `ACTIVITY_LAYOUT_DIRECTION` (`viewpointDerivation.ts`) is read by both the bar size and the notation's
@@ -4761,6 +4875,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   rest probe: a fresh Activity (UML) derivation of DemoFlowB draws both bars 120×7; the other seven rest scenes 0 px.
   Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
   Was R-VP-39 on the branch, renumbered by P-2026-10-02-1718.
+  Was R-VP-50 on the branch, renumbered by P-2026-10-03-0050.
 - **R-VP-40** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **A notation's layout profile is an optional `layout` on `DerivedNotation` (`notations.ts`), copied into the derived
   viewpoint's `_state` as `derivedLayout`, a JSON string (Q2).** Profiles for Flowchart, Activity (UML), Petri net

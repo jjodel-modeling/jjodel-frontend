@@ -3,7 +3,10 @@ import { Select, Toggle, HelpText, ConditionalEditor, PRESERVED_CHIP, type PathB
 import { TextSourceEditor } from './TextSourceEditor';
 import { TextStyleField } from './TextStyleField';
 import { resolveLabelAnchor } from '../ir/irCompile';
-import { labelCanRename, labelEditsName } from '../ir/irLabelEdit';
+import {
+    labelEditable, labelEditableDefault, labelEditBlock, labelPathFeature,
+    type LabelEditBlock, type LabelFeatureInfo,
+} from '../ir/irLabelEdit';
 import type { LabelSpec, LabelPosition, LabelAnchor, TextSource, TextStyle } from '../ir/irTypes';
 
 const POSITION_OPTIONS = [
@@ -51,14 +54,35 @@ export function applyLabelPositionValue(label: LabelSpec, value: string): LabelS
 }
 
 /**
- * The label after a click on the Editable toggle. OFF writes `editable: false`; ON removes the key:
- * absent is the default (an intrinsic name label renames), so the IR stays minimal and a persisted
- * `true` is dropped too. Every other key keeps its place.
+ * The label after a click on the Editable toggle. The choice that equals the source's default
+ * removes the key, the other one is written, so the IR stays minimal: on a name label OFF writes
+ * `editable: false` and ON removes the key (absent renames, R-IRN-38); on a path label ON writes
+ * `editable: true` and OFF removes the key (absent does not edit, R-IRN-41). Every other key keeps
+ * its place.
  */
 export function applyLabelEditable(label: LabelSpec, checked: boolean): LabelSpec {
-    if (!checked) return { ...label, editable: false };
+    if (checked !== labelEditableDefault(label.source)) return { ...label, editable: checked };
     const { editable: _editable, ...rest } = label;
     return rest;
+}
+
+/** The hint under a disabled Editable toggle, one per reason (R-IRN-38, R-IRN-41). */
+const EDIT_BLOCK_HINTS: Record<LabelEditBlock, string> = {
+    'name-only': 'Only a name label can be renamed on the canvas.',
+    'single-attribute': 'Only a single attribute of this object can be edited on the canvas.',
+    'string-only': 'Only a string attribute can be edited on the canvas.',
+};
+
+/** The metaclass's feature of a one-step path label, as the edit check reads it; null when there is
+ *  no metaclass, no one-step path or no feature of that name. */
+function labelFeatureInfo(source: TextSource, features: PathBuilderFeatures | null): LabelFeatureInfo | null {
+    const name = labelPathFeature(source);
+    if (!features || name === null) return null;
+    const attribute = features.attributes.find((a) => a.name === name);
+    if (attribute) return { kind: 'attribute', type: attribute.type, upperBound: attribute.upperBound };
+    const reference = features.references.find((r) => r.name === name);
+    if (reference) return { kind: 'reference', type: reference.targetClassName, upperBound: reference.upperBound };
+    return null;
 }
 
 export interface LabelEntryEditorProps {
@@ -91,6 +115,8 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
 }) => {
     const editable = label.editable;
     const editableIsWidget = editable !== null && typeof editable === 'object';
+    const featureInfo = labelFeatureInfo(label.source, features);
+    const editBlock = labelEditBlock(label.source, featureInfo);
 
     return (
         <>
@@ -118,13 +144,13 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                 {editableIsWidget
                     ? <span style={PRESERVED_CHIP}>editable: advanced widget</span>
                     : <Toggle
-                        checked={labelEditsName(label)}
-                        disabled={!labelCanRename(label.source)}
+                        checked={labelEditable(label, featureInfo)}
+                        disabled={editBlock !== null}
                         onChange={(c) => onChange(applyLabelEditable(label, c))}
                         size="xs"
                     />}
-                {!editableIsWidget && !labelCanRename(label.source) && (
-                    <HelpText icon={false}>Only a name label can be renamed on the canvas.</HelpText>
+                {!editableIsWidget && editBlock !== null && (
+                    <HelpText icon={false}>{EDIT_BLOCK_HINTS[editBlock]}</HelpText>
                 )}
             </div>
 

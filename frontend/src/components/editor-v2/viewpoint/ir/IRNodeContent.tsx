@@ -19,7 +19,8 @@ import type { BadgePosition, CompiledView, ShapeForm } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
-import { metaclassColoringVars, type MetaclassColorOverride } from '../../../../view/viewPoint/metaclassPalette';
+import { labelFeatureEditBlock, labelFeatureInfoOf } from './irLabelEdit';
+import { metaclassColoringVars, metaclassOutsideInkVars, type MetaclassColorOverride } from '../../../../view/viewPoint/metaclassPalette';
 import {
     getShapeDescriptor, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
     SVG_BORDER_DASH, type ShapePainter, type Size,
@@ -351,13 +352,24 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
 
     const commitLabelEdit = useCallback(() => {
         if (editingLabel !== null) {
+            const label = compiled.labels[editingLabel];
+            if (label?.editsFeature) {
+                // Path label (R-IRN-41): the attribute, through the row value's write path and with
+                // its dirty rule; compared with the label's text, the source the edit was seeded from.
+                const raw = label.text(readCtx, objectId);
+                const changed = (raw == null ? '' : String(raw)) !== editValue;
+                syncUpdateFeatureValue(vertexId, label.editsFeature, editValue);
+                if (changed) U.isProjectModified = true;
+                setEditingLabel(null);
+                return;
+            }
             // Same source the edit was seeded from (see the label onDoubleClick).
             const changed = (readCtx.getName(objectId) ?? '') !== editValue;
             syncNodeLabel(vertexId, editValue);
             if (changed) U.isProjectModified = true;
             setEditingLabel(null);
         }
-    }, [editingLabel, editValue, vertexId, readCtx, objectId]);
+    }, [editingLabel, editValue, vertexId, readCtx, objectId, compiled]);
 
     const editKeys = useCallback((commit: () => void) => (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') commit();
@@ -481,12 +493,18 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // Compartment rows declare no weight, so there it does propagate.
     // resolveTextStyle returns undefined when there is nothing to emit, and
     // Object.assign with undefined is a no-op: no guard needed.
-    Object.assign(inlineStyle, resolveTextStyle(compiled.text, readCtx, objectId));
-    // «Color by metaclass»: the text colour on the root, and the node tokens the row values
-    // (RowValue) and the bar's halo paint with. Labels and compartments restate it below.
-    if (colorOverride) Object.assign(inlineStyle, { color: colorOverride.text }, metaclassColoringVars(colorOverride));
+    const nodeTextStyle = resolveTextStyle(compiled.text, readCtx, objectId);
+    Object.assign(inlineStyle, nodeTextStyle);
+    // «Color by metaclass»: the node tokens the row values (RowValue) and the bar's halo paint with.
+    // The text colour is not set on the root (R-VP-51): labels, compartments and badges state it
+    // below, so an outside label with no colour of its own inherits what it inherits off.
+    if (colorOverride) Object.assign(inlineStyle, metaclassColoringVars(colorOverride));
+    // What the node draws outside its box sits on the canvas and paints as with coloring off
+    // (R-VP-51): the name ink rebound back, and the node-level colour restated so it resolves there.
+    const outsideInk: React.CSSProperties | undefined = colorOverride
+        ? { ...metaclassOutsideInkVars(), color: nodeTextStyle?.color } : undefined;
     const overText = (st: React.CSSProperties | undefined, position?: string): React.CSSProperties | undefined =>
-        colorOverride && position !== 'outside' ? { ...st, color: colorOverride.text } : st;
+        !colorOverride ? st : position === 'outside' ? { ...outsideInk, ...st } : { ...st, color: colorOverride.text };
 
     // The SVG layer paints the same resolved fill/border, with the box-base
     // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
@@ -511,7 +529,9 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // preserveAspectRatio="meet" (irStyle.ts positions the layer).
     const markerId = compiled.marker ? compiled.marker(readCtx, objectId) : '';
     const markerDef = getMarkerDef(markerId ? String(markerId) : undefined);
-    const markerColor = colorOverride ? colorOverride.text : (borderColorV || 'var(--border-default)');
+    // The entry mark sits outside the box, so it keeps this colour while coloured (R-VP-51).
+    const inkColor = borderColorV || 'var(--border-default)';
+    const markerColor = colorOverride ? colorOverride.text : inkColor;
 
     // Spacing preset (2026-08-25): 'normal' carries no class, so the tokens declared on
     // .ir-node-content itself apply and the markup of an unauthored view is unchanged.
@@ -581,10 +601,10 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 </svg>
             )}
             {compiled.entry && (
-                <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={ENTRY_STYLE} aria-hidden="true">
-                    {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={markerColor} />}
-                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W - ENTRY_HEAD}`} stroke={markerColor} strokeWidth={1} fill="none" />
-                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4} Z`} fill={markerColor} />
+                <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={colorOverride ? { ...ENTRY_STYLE, ...metaclassOutsideInkVars() } : ENTRY_STYLE} aria-hidden="true">
+                    {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={inkColor} />}
+                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W - ENTRY_HEAD}`} stroke={inkColor} strokeWidth={1} fill="none" />
+                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4} Z`} fill={inkColor} />
                 </svg>
             )}
             {compiled.badges.map((b, i) => {
@@ -592,13 +612,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 const icon = b.icon(readCtx, objectId);
                 if (!icon) return null;
                 return (
-                    <span key={`badge_${i}`} className={`ir-badge ir-badge--${b.position}`} style={BADGE_STYLE} title={b.tooltip}>
+                    <span key={`badge_${i}`} className={`ir-badge ir-badge--${b.position}`} style={overText(BADGE_STYLE)} title={b.tooltip}>
                         <i className={`bi ${icon}`} />
                     </span>
                 );
             })}
             {collapsedBadge && (
-                <span className={`ir-badge ir-badge--${collapsedBadge.position}`} style={BADGE_STYLE} title={collapsedBadge.tooltip}>
+                <span className={`ir-badge ir-badge--${collapsedBadge.position}`} style={overText(BADGE_STYLE)} title={collapsedBadge.tooltip}>
                     <i className={`bi ${collapsedBadge.icon}`} />
                 </span>
             )}
@@ -610,8 +630,10 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 // inside label keeps exactly the class list it had (irStyle.ts places it).
                 const anchorClass = l.anchor ? ` ir-label--anchor-${l.anchor}` : '';
                 // Editable: intrinsic name/qualifiedName labels edit the element
-                // name unless the IR opts out (spec v1.2 sez. 5).
-                if (l.editsName && editingLabel === i) {
+                // name unless the IR opts out (spec v1.2 sez. 5); a one-step path
+                // label that opts in edits its attribute (R-IRN-41).
+                const editsFeature = l.editsFeature;
+                if ((l.editsName || editsFeature) && editingLabel === i) {
                     return (
                         <input
                             key={`label_${i}`}
@@ -638,6 +660,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                         onDoubleClick={l.editsName ? () => {
                             setEditingLabel(i);
                             setEditValue(readCtx.getName(objectId) ?? '');
+                        } : editsFeature ? () => {
+                            // The slot decides at the gesture, as openRowSelect does: a view can
+                            // apply to classes where the feature is not a single string attribute.
+                            const info = labelFeatureInfoOf((store.getState() as any).idlookup, objectId, editsFeature);
+                            if (labelFeatureEditBlock(info) !== null) return;
+                            setEditingLabel(i);
+                            setEditValue(text);
                         } : undefined}
                     >
                         {text}

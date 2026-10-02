@@ -148,6 +148,98 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Notes**: Rollback tag `pre-edge-ends` on `cdec5e44d` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-02-1704/result.json`.
 **Prompt document name**: 2026-10-02 17:04
 
+## 2026-10-02 — fix(editor-v2): IR node and row re-resolve on object and metaclass rename (P-2026-10-02-1645)
+**Prompt**: `claude_2026-10-02_1645_prompt_ir_label_name_refresh.md`, fast lane, light tier, Phase 1 then Phase 2 in cascade on `~/jjodel-w-labelname` (branch `ir-label-name-refresh`). After a double-click rename of an M1 object whose class has no `name` attribute the store held the new name and the IR node kept drawing the old label: the `useIRView` signature carried the slot values but not `dObject.name`. The session was killed once by the Mac sleeping during the docs closure and resumed from the committed state.
+**Files touched**: Phase 1 `acf5a9fc3`: `docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md`. Code `7c92ffc2c`: `frontend/src/components/editor-v2/viewpoint/ir/irResolveCore.ts` (`objectSnapshotParts`, additive), `frontend/src/components/editor-v2/viewpoint/ir/irResolve.ts` (the two selectors and one import name), `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irObjectSnapshot.test.ts` (new, 11 tests). Docs `8f5102d29`: the report addendum (section 7) and `docs/decisions.md` (R-IRN-39). This commit: this entry and the ticket below. The Status line of the prompt file is left at `da eseguire`: `status-flip` is user-only, so the flip is owed to the chat.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gates on `7c92ffc2c`: typecheck exit 2, 14 errors, the §17 set by file and code; vitest 262 files, 6507 tests, 0 failed, the 9 known files red at import (`window is not defined`); build exit 0; `check:scripts` and `check:addonly` clean. Probe: the name-attribute control (B) follows by +5 s and after the tab round trip as before, and the four demo scenes are 0 px from `adb5d9731`.
+**Out-of-scope changes**: no — three code files, all in the prompt's list (`irResolveCore.ts` additive, as the prompt allows). `useIRRowView`, a second selector of `irResolve.ts`, is fixed with the first: the report's Q1, answered by its recommendation, and the probe shows its row stale before and right after.
+**Layer Impact Report**: skipped — the §3.1 table lists `viewpoint/ir/`, which holds both files; Phase 1 wrongly said it did not. The §3.2 trigger list names other files, the prompt named these two, and the change writes nothing to the D-layer or the sync layer; no report was written before the diff. The layers it would have named are in section 7.1 of the report.
+**Smoke visivo**: passato — lane probe on 3171, light, DPR 2, 1600x1000: before (the two files at `adb5d9731`) 11 pass, 7 fail, the defect on A, C and D; after (`7c92ffc2c`) 21 pass, 1 fail; the one failure is the probe's own two-frame limit on the metaclass rename (stale at about 33 ms, right at the next read). Memo re-runs of the renamed node 0 to 1, of every other node 0 to 0; chat check pending. Crops `sips -Z 600` in `frontend/scripts/smoke/_tmp_labelname_crops/` (gitignored): `ln_<before|after>_{labels_rest,A_after_rename,final}_600.png`.
+**Notes**: Q1 to Q4 answered as recommended (row hook fixed too, metaclass term the class's own name, edge-label gap and the stale comment at `useIRFormView.ts:79-82` ticketed). Bench 11/12, then 14/14: an inverted name/initialName fallback survived until a test held both. The hook wiring cannot load in the bench; the probe runs it. Report with addendum: docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md.
+**Prompt document name**: 2026-10-02 16:45
+
+**Ticket** (observation, low, not a ticket of its own): a rename of a SUPERCLASS mid-session leaves an inherited view match stale, the metaclass term of `objectSnapshotParts` stops at the class itself (R-IRN-39). Also: three of four `lane-run probe` after runs died at start under a machine load of 131 to 60 (`page.goto` timeout, `Failed to fetch dynamically imported module` twice, `Execution context was destroyed`); the run that passed was at load 14. Same flakes as the corner-clip lane's ticket above.
+
+## 2026-10-02 — ticket: IR edge labels and the form-hook comment after a rename
+**Ticket**: an edge view's label (centre, template segment, end label) may take an `intrinsic` name or `metaclassName` (`irCompile.ts` `compileTextSource`), and the decoration memo of `useIRContainment.ts` (deps `[nodes, edges, irSig, collapseVersion, edgeInteractionVersion, oaeSlotsSig, markDep]`) observes no name: whether a rename re-runs it depends on `nodes`/`edges` changing identity, which was NOT measured (the probe scene has no edge view). Measure first with a reference-as-edge and an object-as-edge view carrying an intrinsic name label, then fix in `oaeSlotsSig` or the deps. Also: the comment at `useIRFormView.ts:79-82` says `useIRView` can leave the object's name out of its snapshot; after R-IRN-39 that is no longer true.
+**Priority**: medium
+**Found in**: P-2026-10-02-1645
+**Detail**: docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md
+
+## 2026-10-02 — merge: ir-label-name-refresh into alfonso-frontend-jjtl (P-2026-10-02-2109)
+**Prompt**: `claude_2026-10-02_2109_prompt_merge_ir-label-name-refresh.md`, a merge in a session (Lane: full, 2 conflicts measured: `docs/decisions.md`, `docs/log-inbox/views.md`): `ir-label-name-refresh` at `fb567d6a2` into `alfonso-frontend-jjtl`, merge base `adb5d9731`, 6 commits on the branch side.
+**Files touched**: merge `fc11b841a`: 7 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-02_1645_prompt_ir_label_name_refresh.md`, `frontend/src/components/editor-v2/viewpoint/ir/irResolve.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irResolveCore.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irObjectSnapshot.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fc11b841a`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 6600 in 266 files (the trunk tip's 6589 in 265 plus the branch's 11, `irObjectSnapshot.test.ts` new), 0 failed, the 9 known files red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no. 7 files, all from the branch side, listed above; the merge is the prompt's scope.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves the merged `irResolve.ts`, so the merged code compiles on the running server; the behaviour was measured by the branch probe (after 21/22)
+**Notes**: Union in `docs/decisions.md` (R-IRN-40, then R-IRN-39) and in `docs/log-inbox/views.md` (the trunk's 11 entries, then the branch's entry, its ticket paragraph and its ticket), markers removed and nothing else: 0 lines removed against either side. Probes 25/25, control R-EE-5 absent. Rollback tag `pre-ir-label-name-refresh` on `79b29a7da` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 21:09
+
+## 2026-10-02 — fix(views): notation glyphs out of «Color by metaclass» (P-2026-10-02-2045)
+**Prompt**: `claude_2026-10-02_2045_prompt_vp_glyph_nocolor.md`, light tier, Phase 1 and 2 in cascade on `~/jjodel-w-vpglyph`, branch `vp-glyph-nocolor`. Alfonso's «ok» of 2026-10-02: a node a derived notation draws as a glyph (fork and join bars, initial dot, final bull's-eye) keeps its own colours with coloring on. Decision row R-VP-50, amending R-VP-27 on the scope.
+**Files touched**: report `353fa49b4`: `docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md`. Code `00b16d998`: `frontend/src/view/viewPoint/metaclassPalette.ts`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx`, `frontend/src/view/viewPoint/__tests__/notationGlyph.test.ts` (new), `frontend/src/components/editor-v2/nodes/__tests__/irGlyphNoColor.test.ts` (new). This commit: the report (§8 addendum), `docs/decisions.md` (R-VP-50), this entry and the ticket below, the Status line of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Gates on `00b16d998`: typecheck exit 2, 14 errors, the §17 set; vitest 266 files, 6609 of 6609 tests, the known 9 red at import; build exit 0. Tests 28 of 32 red on the code of `1ff8ab314`, then green; mutation bench 14/14. The four default scenes 0 px from the base run.
+**Out-of-scope changes**: no — nine files over three commits, above five (RC-11, rule 19), each named in the prompt's DOVE; `IRNodeContent.tsx` was edited for Q5 and reverted, in no commit.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (lane probe on 3097, light: base 17/17 shows the defect, after 30/30; crops in `frontend/scripts/smoke/_tmp_vpglyph_crops/`, gitignored; Alfonso's visual GO pending)
+**Notes**: Q1-Q4, Q6, Q7 adopted as recommended (RC-21). Q5 (Statechart entry mark keeps the ink) failed on the probe, since metaclassColoringVars rebinds --color-inode-name on the node root, and was reverted: hence partial, ticket below. R-VP-50 because elk-layout-disc holds R-VP-40..49. Temporary node_modules symlink removed at close. Report: docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md.
+**Prompt document name**: 2026-10-02 20:45
+
+## 2026-10-02 — ticket: name-ink marks outside a coloured node take its text colour
+**Ticket**: With «Color by metaclass» on, `metaclassColoringVars` sets `--color-inode-name` to the node's text colour inline on `.ir-node-content`, so whatever that node draws on the canvas in the name ink follows it. Measured on 3097, light: the entry mark of Statechart (UML)'s Initial and the outside name label of a classic Petri place go from `rgb(15, 23, 42)` to `rgb(0, 0, 0)`. R-VP-30 says outside labels keep their ink. In dark they would be black on the dark canvas (read, not measured). Keeping the ink needs a token that survives the override (rule 28, `styles/tokens/`).
+**Priority**: medium
+**Found in**: P-2026-10-02-2045
+**Detail**: docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md
+
+## 2026-10-02 — merge: vp-glyph-nocolor into alfonso-frontend-jjtl (P-2026-10-02-2330)
+**Prompt**: `claude_2026-10-02_2330_prompt_merge_vp-glyph-nocolor.md`, a direct merge by `lane-run merge --direct`, no session: `vp-glyph-nocolor` at `e6bbc9829` into `alfonso-frontend-jjtl`, merge base `1ff8ab314`, 4 commits on the branch side.
+**Files touched**: merge `e2e4fbc35`: 9 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_vp_glyph_nocolor.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-02_2045_prompt_vp_glyph_nocolor.md`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/nodes/__tests__/irGlyphNoColor.test.ts`, `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx`, `frontend/src/view/viewPoint/__tests__/notationGlyph.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e2e4fbc35` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6695 tests in 268 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat on 3001 (built-in browser, trunk e2e4fbc35): DemoFlowB copy re-derived on Activity (UML), Color by metaclass on: initial dot, fork and join bars and final bulls-eye paint the notation ink rgb(15,23,42), the three Activity nodes take their palette fill rgb(243,203,203) with border rgb(212,69,69); every gate green
+**Notes**: Rollback tag `pre-vp-glyph-nocolor-P-2026-10-02-2330` on `8ef9e3c48` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-02-2330/result.json`.
+**Prompt document name**: 2026-10-02 23:30
+
+## 2026-10-03 — fix(ir): outside marks of a coloured node keep the notation ink (P-2026-10-02-2356)
+**Prompt**: `claude_2026-10-02_2356_prompt_ir_ink_outside.md`, light tier, Phase 1 and 2 in cascade on `~/jjodel-w-inkout`, branch `ir-ink-outside`. Closes the ticket «name-ink marks outside a coloured node take its text colour» (P-2026-10-02-2045, this inbox): with «Color by metaclass» on, the outside labels and the Statechart Initial's entry mark keep the notation ink in light and dark. Questions 1-6 of the report adopted as recommended (RC-21).
+**Files touched**: report `770b3ddc9`: `docs/discovery/discovery_2026-10-02_ir_ink_outside.md`. Code `cce1ecfef`: `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/view/viewPoint/metaclassPalette.ts`, `frontend/src/styles/tokens/_colors-light.scss`, `frontend/src/styles/tokens/_colors-dark.scss`, `frontend/src/components/editor-v2/nodes/__tests__/irInkOutside.test.ts`. This commit: the report addendum (§9), R-VP-51 in `docs/decisions.md`, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-02 20:45 (`claude_2026-10-02_2045_prompt_vp_glyph_nocolor.md`, its Q5 left as a ticket)
+**Causa**: (c)
+**Regressions**: no. Gates on `cce1ecfef`: typecheck exit 2, 14 errors, the §17 set; vitest 269 files, 6711 of 6711 tests, the known 9 red at import; build exit 0. Tests 8 of 16 red first, then green; mutation bench 13/14, the survivor an equivalent mutant. Probe on 3098, light and dark: base 20/20 shows the defect, after 50/50; inside colours and the four default scenes 0 px from `7c9ae4e0d`.
+**Out-of-scope changes**: no — nine files over three commits, above five (RC-11, rule 19): the five code files and the four docs files, each named in the prompt's DOVE, taken as the confirmation; `irStyle.ts` not touched (report §4).
+**Layer Impact Report**: produced (report §7, `viewpoint/ir/` is in the §3.1 table)
+**Smoke visivo**: passato (lane probe 50/50, crops in `frontend/scripts/smoke/_tmp_inkout_crops/`, gitignored; the visual GO of the chat and Alfonso is pending)
+**Notes**: The typecheck output went once to `/tmp/x`, against the prompt's no-`/tmp` rule; deleted at once, every later log kept in the gitignored bench folder. The dark rule sits in two stylesheets of the dev page (the token file imported twice); the browser check of the dropped dark token removed both. Report: `docs/discovery/discovery_2026-10-02_ir_ink_outside.md` §9.
+**Prompt document name**: 2026-10-02 23:56
+
+## 2026-10-03 — merge: ir-ink-outside into alfonso-frontend-jjtl (P-2026-10-03-0038)
+**Prompt**: `claude_2026-10-03_0038_prompt_merge_ir-ink-outside.md`, a direct merge by `lane-run merge --direct`, no session: `ir-ink-outside` at `d5defd00d` into `alfonso-frontend-jjtl`, merge base `7c9ae4e0d`, 4 commits on the branch side.
+**Files touched**: merge `a48a8aefa`: 9 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_ir_ink_outside.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-02_2356_prompt_ir_ink_outside.md`, `frontend/src/components/editor-v2/nodes/__tests__/irInkOutside.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/styles/tokens/_colors-dark.scss`, `frontend/src/styles/tokens/_colors-light.scss`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a48a8aefa` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6711 tests in 269 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat on 3001 (built-in browser, trunk a48a8aefa, light), visual GO delegated by Alfonso: DemoPetri copy re-derived on Petri net (classic); with Color by metaclass on the places fill rgb(243,223,203) and the outside labels p1 p2 p3 lock stay rgb(15,23,42), the same as with coloring off; transition labels t1..t3 rgb(100,116,139) both ways; dark checked on the lane crops (labels readable, were black); every gate green
+**Notes**: Rollback tag `pre-ir-ink-outside` on `6dc5fdc4b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0038/result.json`.
+**Prompt document name**: 2026-10-03 00:38
+
 ## 2026-10-01 — docs: ELK auto-layout quality, measured per notation (P-2026-10-01-2215)
 **Prompt**: `claude_2026-10-01_2215_prompt_elk_layout_discovery.md`, Phase 1 only, heavy, on `~/jjodel-w-elklayout` branch `elk-layout-disc`. Verify by measurement why the toolbar auto-layout falls short of commercial-grade drawings: points 1-7 on `elkLayout.ts` and `handleAutoLayout`, variants V0..V5 on real graphs, per-notation profile draft.
 **Files touched**: `e83a16d41`: `docs/discovery/discovery_2026-10-01_elk_layout_quality.md` (new). This commit: this entry, one ticket, the prompt's Status line. Nothing under `frontend/src`; probes and crops gitignored (`frontend/scripts/smoke/_tmp_elk_*`).
