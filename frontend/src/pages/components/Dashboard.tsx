@@ -45,6 +45,8 @@ import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
 import { JjodelEvents } from '../../events/registry';
+import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
+import { isConsumerMode } from '../../components/environment/consumerMode';
 
 
 type UserProps = {
@@ -565,6 +567,17 @@ function ProjectDashboard(props: DashProps): any {
     const [hideLeftBar, setHideLeftBar] = useState(false);
     const tabTypeMapRef = useRef<Map<string, string>>(new Map());
 
+    // #157 R5 — consumer (a `?profile=` in the URL): the Configurator is the page. Read live from
+    // the hash and re-read on hashchange, like LeftBar and Navbar (F3-A), so removing the
+    // profile brings the developer project back without a reload.
+    const [, forceHashTick] = useState(0);
+    useEffect(() => {
+        const onHash = () => forceHashTick((t) => t + 1);
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
+    const consumer = isConsumerMode();
+
     // Hide project sidebar when metamodel, model, OR transformation editor tab
     // is active. Project structure (Metamodels/Models/Transforms/Viewpoints/Docs)
     // is redundant inside these editors: the top menus (File / Edit / Jjodel)
@@ -634,13 +647,16 @@ function ProjectDashboard(props: DashProps): any {
         </Try>
         <Try><Navbar /></Try>
         <div className={`dashboard-container two-column${hideLeftBar ? ' hide-leftbar' : ''}`}>
-            {!hideLeftBar && <LeftBar active={'Project'} project={project} />}
-            <div className="project-dock-wrapper">
+            {(consumer || !hideLeftBar) && <LeftBar active={'Project'} project={project} />}
+            <div className={`project-dock-wrapper${consumer ? ' project-dock-wrapper--consumer' : ''}`}>
                 <Try><Dock /></Try>
                 {/* F2 floating panels (2026-07-29): Properties + Tree render as a floating
                     overlay over the full-width canvas (portaled to <body>). Sibling of
                     <Dock/>, inside Redux + TreeViewPanelProvider — no context barrier. */}
                 <Try><PropertiesWithTreeView mode={'floating'} /></Try>
+                {/* #157 R5 — the consumer lands on the Configurator: it covers the Dock, which
+                    stays mounted underneath (`.project-dock-wrapper--consumer`). Nothing to close. */}
+                {consumer && <ConfiguratorTab variant="page" open onClose={() => {}} />}
             </div>
             {/* TODO: Add contextual RightPanel for project view with:
                 - Overview: Rev, creation date, owner

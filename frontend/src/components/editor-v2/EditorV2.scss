@@ -2762,6 +2762,23 @@
     }
 }
 
+// Edge end glyphs (slice E, P-2026-09-30-1810): the seven ends of edges/edgeEndGlyphs.ts. Line work
+// stroke-only in the edge ink; the filled disc takes the ink; a hollow part the canvas background, so the
+// line never shows through it. The stroke width is the edge's, set on the element; an authored line colour
+// goes inline over these, as on the IR markers above.
+.ir-end-glyph {
+    fill: none;
+    stroke: var(--edge-marker-stroke);
+
+    &--filled {
+        fill: var(--edge-marker-stroke);
+    }
+
+    &--hollow {
+        fill: var(--canvas-bg);
+    }
+}
+
 // Inheritance edge marker (hollow triangle) — same stroke as the line it closes
 .inheritance-marker {
     fill: var(--edge-marker-fill);

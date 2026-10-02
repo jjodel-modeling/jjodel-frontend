@@ -679,13 +679,16 @@
         }
     }
 
-    // An IR-rendered node wears this wrapper too, but paints its ring and band on
-    // the shape inside it (`.ir-node-content`, irStyle.ts), up to 5px outside the
-    // shape's box, and the shape fills the wrapper, so the `overflow: hidden`
-    // above cut every ring pixel. The IR branch mounts no accent bar, so there is
-    // nothing to clip. Lifted only while selected: idle, the clip still holds the
-    // shape's resting shadow and corners exactly as before. (0,4,0) beats (0,2,0).
-    &.selected:has(> .ir-node-content) {
+    // An IR-rendered node wears this wrapper too, but the shape inside it
+    // (`.ir-node-content`, irStyle.ts) carries its own radius, clip and shadow, and
+    // paints its ring and band up to 5px outside its box. The shape fills the
+    // wrapper, so the `overflow: hidden` above cut all of it: the ring and band
+    // while selected, and at rest the corners of a shape whose radius is under the
+    // wrapper's 7px padding-box arc (rect 4, an authored 0 to 6) and its resting
+    // shadow. The IR branch mounts no accent bar, so there is nothing to clip.
+    // Lifted at rest as well as selected, so rest and selection differ by the ring
+    // and band only. (0,3,0) beats (0,2,0).
+    &:has(> .ir-node-content) {
         overflow: visible;
     }
 

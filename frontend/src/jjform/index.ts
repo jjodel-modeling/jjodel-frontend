@@ -164,6 +164,7 @@ export type { Crumb, NavState, NavStep } from './nav';
 
 export {
     INLINE_DEPTH_LIMIT,
+    backOf,
     breadcrumbOf,
     crumbLabel,
     currentOf,

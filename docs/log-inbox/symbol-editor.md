@@ -6,141 +6,118 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
-## 2026-09-29 — feat(editor-v2): default width and height of a vertex view (P-2026-09-29-1230)
-**Prompt**: `claude_2026-09-29_1230_prompt_symbol_default_size.md`, `Lane: full`, two-phase, on `~/jjodel-w-symsize` branch `symbol-default-size`. Sizing section of the Symbol Editor: Width and Height fields, `defaultSize` on `VertexViewIR`, every instance born at that size. Phase 1 report `6955e5c6d` recommended option (b), derivation at render; the GO (RC-25, unattended) adopted it with the 24 px floor, circle squared, no clamp in `irValidate`, the deactivation clear and the `default` caption.
-**Files touched**: report `6955e5c6d`: `docs/discovery/discovery_2026-09-29_symbol_default_size.md`. Code `34c0ac422`, under `frontend/src/components/editor-v2/`: `nodes/nodeSizing.ts` (`usableSizeAxis`, `authoredDefaultSize`, `defaultBoxFor`, `sizeSourceOf`), `viewpoint/ir/irTypes.ts` (one optional field), `viewpoint/ir/irValidate.ts` (numeric rule), `viewpoint/ir/useContentSize.ts` (default box, deactivation clear), `viewpoint/ir/IRNodeContent.tsx` (one argument), `viewpoint/authoring/VertexAuthoringPanel.tsx` (Width and Height row), `viewpoint/authoring/SymbolBoxPreview.tsx` and `SymbolEditorModal.tsx` (`default size` caption); tests `nodes/__tests__/nodeSizing.test.ts` (new), `viewpoint/ir/__tests__/irValidate.test.ts`, `ir.test.ts`, `viewpoint/authoring/__tests__/symbolBoxPreview.test.ts`. This commit: this entry, the Status line of the prompt file.
+## 2026-10-02 — fix(editor-v2): «editable inline» toggle of a value segment reads the effective value (P-2026-10-02-1646)
+**Prompt**: `claude_2026-10-02_1646_prompt_segment_editable_toggle.md`, `Lane: fast`, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-segedit` branch `segment-editable-toggle`. The toggle of a `value` segment drew `editable === true` while the runtime reads `editable !== false` (`IRNodeContent.tsx:706`), so a seeded segment read OFF while its row edited inline and ON changed nothing; the sibling of the R-IRN-38 label fix, filed as a ticket by P-2026-10-01-2349. Phase 1 report `76d2d72cc`; both questions adopted with their Recommended (RC-21): inline expression, toggle never disabled.
+**Files touched**: report `76d2d72cc`: `docs/discovery/discovery_2026-10-02_segment_editable_toggle.md` (addendum §8 in the closure commit). Code `d8f2e61c3`, under `frontend/src/components/editor-v2/viewpoint/authoring/`: `FieldSegmentEditor.tsx` (the read, the exported `applyValueEditable`), `__tests__/fieldSegmentEditor.test.ts` (new). Closure commit: this entry, the R-IRN-40 row in `docs/decisions.md`, the report's addendum, the Status line of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: unknown — gates on `34c0ac422`: `npm run typecheck` exit 2, 14 errors, the same file-and-code set as the baseline taken before the change; `npm run build` exit 0, only the chunk-size warning; vitest on the 4 touched test files plus `shapeRegistry.test.ts` and `irCreationSeed.test.ts`, 6 files, 264 passed. The hook and the panel are not covered by tests; the canvas behaviour waits for the visual check.
-**Out-of-scope changes**: no — 12 files (8 source, 4 tests), all in the Phase 2 list of the report and the scope of the GO; above rule 19's 5, declared in the report before the GO (RC-11).
-**Layer Impact Report**: not-required (no §3.2 file touched, no D-layer write: the default is a session-only size on the RF node)
-**Smoke visivo**: chat, pending: set Width/Height on a rect and an ellipse view, new instance from the palette, a resized instance keeps its size, Reset size returns to the default, clearing both fields returns to content, circle squared, caption `default size`
-**Notes**: Under (b) the default also redraws existing instances with no manual size; nothing is rewritten in the D-layer. Mutation bench 6/6 killed, listed in the commit body. The hook and the panel do not import in vitest (`ReferenceError: window is not defined` via `joiner`, measured with a `_tmp_` probe, deleted), so the deactivation clear, the fields row and the caption choice rest on the visual check.
-**Prompt document name**: 2026-09-29 12:30
+**Regressions**: no — gates on `d8f2e61c3`: `npm run typecheck` exit 2, 14 errors, the baseline set by file and code; `npm run build` exit 0; full vitest 6508 of 6508 tests passed, 9 failed files, exactly the nine at-import files of CLAUDE.md §17; `check:docs` and `check:addonly` green; probe 22 of 22 on the real app, four demo scenes 0 px from the base run.
+**Out-of-scope changes**: no — 2 files in the fix commit, both in the Phase 2 list of the prompt; `IRNodeContent.tsx` and `irLabelEdit.ts` untouched.
+**Layer Impact Report**: produced (in chat before the diff: `authoring/` is a §3.1 row, but no §3.2 trigger file, no D-layer write and no VersionFixer is touched)
+**Smoke visivo**: chat, pending: crops in `frontend/scripts/smoke/_tmp_segedit_crops/` (gitignored): `se_before_structure_rest_600.png` (the base, toggle OFF at rest) and `se_after_structure_rest_600.png` (the fix, ON), plus `se_after_structure_off_600.png` and `se_after_structure_on_again_600.png`. The lane probe passed the ON-at-rest, OFF, ON-again and edit-lands scenarios.
+**Notes**: Mutation bench 18/18 killed, none void (commit body). The base probe, 7/7, reproduces the bug on the real app. Full fix runs at load 100+ died on esbuild «service was stopped» while another lane's probe ran; a run at load 29 passed. Closes this inbox's ticket «FieldSegmentEditor toggle has the same inverted default». Report §8 holds the measures.
+**Prompt document name**: 2026-10-02 16:46
 
-## 2026-09-29 — feat(editor-v2): vertex labels outside the symbol box (P-2026-09-29-1245)
-**Prompt**: `claude_2026-09-29_1245_prompt_label_outside_positions.md`, `Lane: full`, two-phase, on `~/jjodel-w-labelout` branch `label-outside-pos`. Four label positions outside the box (above, below, left, right). Phase 1 report `21c0d6ede` corrected the proposed `'outside-*'` values to R-VP-15 (1)'s ratified `'outside'` + `anchor` and recommended strategy A; the GO (RC-25, unattended) adopted it on the base `ca59e317e` (lane 1230 merged in).
-**Files touched**: report `21c0d6ede`: `docs/discovery/discovery_2026-09-29_label_outside_positions.md`. Code `9cca484ae`, under `frontend/src/components/editor-v2/viewpoint/`: `ir/irTypes.ts` (`'outside'`, `LabelAnchor`, `LabelSpec.anchor?`, `CompiledLabel.anchor?`), `ir/irCompile.ts` (`LABEL_ANCHORS`, `resolveLabelAnchor`), `ir/irValidate.ts` (`VALID_LABEL_POSITIONS`, label rule), `ir/IRNodeContent.tsx` (anchor class), `ir/irStyle.ts` (appended rules), `authoring/LabelEntryEditor.tsx` (optgroups, mapper), `authoring/SymbolBoxPreview.tsx`, `authoring/SymbolEditorModal.tsx`, `authoring/SymbolEditorModal.scss`; tests `ir/__tests__/irValidate.test.ts`, `ir.test.ts`, `shapeRegistry.test.ts` (bar check bounded, helpers hoisted unchanged), `authoring/__tests__/labelEntryEditor.test.ts` (new), `symbolBoxPreview.test.ts`. This commit: this entry, the report's addendum, the prompt's Status line.
+## 2026-10-02 — fix(editor-v2): Editable toggle of a Symbol label reads the effective value (P-2026-10-01-2349)
+**Prompt**: `claude_2026-10-01_2349_prompt_label_editable_toggle.md`, `Lane: fast`, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-labeledit` branch `label-editable-toggle`. The Editable toggle of a Symbol label drew `editable === true` while the compile and the runtime treat an absent key as editable, so every seeded label read OFF while double-click renamed, and on a literal, path or metaclassName label it was live and inert. Phase 1 report `450eb13c8`; both questions adopted with their Recommended (RC-21).
+**Files touched**: report `450eb13c8`: `docs/discovery/discovery_2026-10-01_label_editable_toggle.md` (addendum §9 in this commit). Code `20c843f14`, under `frontend/src/components/editor-v2/viewpoint/`: `ir/irLabelEdit.ts` (new), `ir/irCompile.ts` (one import and the `editsName` expression), `authoring/LabelEntryEditor.tsx`; tests `ir/__tests__/irLabelEdit.test.ts` (new), `authoring/__tests__/labelEntryEditor.test.ts`. This commit: this entry and three tickets, the R-IRN-38 row in `docs/decisions.md`, the report's addendum, the Status line of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: unknown — gates on `9cca484ae`: `npm run typecheck` exit 2, 14 errors, the same file-and-code set as before the change; `npm run build` exit 0, only the chunk-size warning; vitest on the 5 touched test files plus 6 adjacent, 11 files, 380 passed; all of `src/components/editor-v2`, 85 files, 2081 passed. The canvas render waits for the visual check.
-**Out-of-scope changes**: no — 14 files (9 source, 5 tests), above rule 19's 5, all in the Phase 2 list of the report and the scope of the GO (RC-11).
-**Layer Impact Report**: not-required (no §3.1 file touched, no D-layer write: view IR vocabulary, compile, CSS and authoring UI only)
-**Smoke visivo**: chat, pending: the checklist of the closing report (four anchors on rect, circle, bar; old views unchanged; select groups; previews; dark theme)
-**Notes**: Mutation bench 14/14 killed, listed in the commit body (one bench mutation was void, `false && A || B`, re-run as a real disable). `IRNodeContent.tsx` does not import in vitest (`ReferenceError: window is not defined`, `_tmp_` probe, deleted): its anchor class rests on the headless probe (report §6) and the visual check.
-**Prompt document name**: 2026-09-29 12:45
+**Regressions**: no — gates on `20c843f14`: `npm run typecheck` exit 2, 14 errors, the baseline set by file and code; `npm run build` exit 0; full vitest 6450 of 6450 tests passed, 9 failed files, exactly the nine at-import files of CLAUDE.md §17; probe 23 of 23 on the real app; four demo scenes 0 px from the base run.
+**Out-of-scope changes**: no — 5 files in the fix commit, all in the Phase 2 list of the report; the one import line in `irCompile.ts` is inherent to calling the predicate.
+**Layer Impact Report**: not-required (no §3.1 file touched, no D-layer write, no VersionFixer: ON removes a key whose absence already reads editable; `irCompile.ts` is the IR/Execution hot area, not a critical-zone file)
+**Smoke visivo**: chat, pending: crops in `frontend/scripts/smoke/_tmp_labeledit_crops/` (gitignored): the Text section at rest with the toggle ON (`labeledit_text_rest_toggle_600.png`), the disabled toggle with its hint on a literal label (`labeledit_disabled_hint_600.png`). The lane probe passed the OFF, ON, rename and literal scenarios.
+**Notes**: Mutation bench 17/17 killed, none void (commit body). Probe 23/23; demo scenes petri, flowB, sm, esm 0 px from the base run. A first full vitest under load 87 also failed two lane-run test files on timeouts; at low load they pass (108) and the final run has the 9 known import reds only. One stray write to /tmp/x (typecheck output), against the prompt, removed at once. Report §9 holds the measures.
+**Prompt document name**: 2026-10-01 23:49
 
-## 2026-09-29 — ticket: outside label anchors are cardinal only, no diagonals
-**Ticket**: `LabelAnchor` is `'n' | 'e' | 's' | 'w'`. R-VP-15 (1) names the Petri Place's label `nw`, which needs `ne/nw/se/sw`: an additive union widening plus four CSS rules, four select options and the vocabulary tests.
+## 2026-10-02 — ticket: IR name label stays stale after an inline rename when the class has no name attribute
+**Ticket**: `useIRView`'s selector (`irResolve.ts:49-72`) snapshots the viewpoint signature, the object's id, class and DValue slots, and the cross deps, not `dObject.name`. After a double-click rename of an object whose class has no `name` attribute the store holds the new name (`DObject.name` and the L-proxy) but the IR node keeps drawing the old label: still stale after 5 s and after a tab round trip. With a `name` attribute (identity slot) the rename changes a DValue and the label refreshes. Measured identical with the base `irCompile.ts`, so it predates P-2026-10-01-2349. A one-line widening of the signature is the likely fix; Phase 1 first, IR/Execution hot area.
+**Priority**: medium
+**Found in**: P-2026-10-01-2349
+**Detail**: `docs/discovery/discovery_2026-10-01_label_editable_toggle.md` §9
+
+## 2026-10-02 — ticket: FieldSegmentEditor toggle has the same inverted default as the label one
+**Ticket**: `FieldSegmentEditor.tsx:57` draws `checked={valueEditable === true}` for the `value` segment, while the runtime reads `(seg as any).editable !== false` (`IRNodeContent.tsx:706`) and the row value is editable only for attributes (`row.editableValue`, kind A). A value segment with `editable` absent reads OFF while its row value edits on double-click. The fix is the same shape as R-IRN-38: effective value, ON removes the key, and a disabled state where the row cannot edit.
 **Priority**: low
-**Found in**: P-2026-09-29-1245
+**Found in**: P-2026-10-01-2349
 
-## 2026-09-29 — ticket: IR selection ring reads clipped by the node wrapper
-**Ticket**: in a headless probe with the real `BASE_CSS` and `instanceNode.scss`, the pixel 4px outside a selected IR rect is white under `.mm-node.mm-object { overflow: hidden }` and the ring colour once the wrapper is lifted. Not yet confirmed in the live app. Nodes with an outside label lift the wrapper, so their ring may read fuller than their neighbours'.
+## 2026-10-02 — ticket: a single-attribute path label cannot be edited on the canvas
+**Ticket**: a label whose source is a `path` to one attribute has `editsName` false, so double-click does nothing and the Editable toggle is disabled (R-IRN-38). Making it editable reuses the row value editing of `IRNodeContent.tsx:342-350`: a compiled field on `CompiledLabel` (the feature name of a one-feature path), a second editing state and commit in `IRNodeContent.tsx` through `syncUpdateFeatureValue`, a widening of the predicate, and the two compiled-label key lists pinned in `ir.test.ts:2002` and `:2129`; about four source files plus tests, a prompt of its own.
 **Priority**: low
-**Found in**: P-2026-09-29-1245
-**Detail**: docs/discovery/discovery_2026-09-29_label_outside_positions.md
+**Found in**: P-2026-10-01-2349
+**Detail**: `docs/discovery/discovery_2026-10-01_label_editable_toggle.md` §0
 
-## 2026-09-29 — ticket: Symbol Editor previews ignore the inside label positions
-**Ticket**: both previews honour only `outside` for the primary label; `top`, `inside` and `bottom` still draw centred, as before this lane. Passing the inside position to the replica is a one-line change, kept out to leave committed preview behaviour untouched.
-**Priority**: low
-**Found in**: P-2026-09-29-1245
-
-## 2026-09-29 — merge: label-outside-pos into alfonso-frontend-jjtl (P-2026-09-29-1827)
-**Prompt**: `claude_2026-09-29_1827_prompt_merge_label-outside-pos.md`, a direct merge by `lane-run merge --direct`, no session: `label-outside-pos` at `e3d96cb9c` into `alfonso-frontend-jjtl`, merge base `12ac29f74`, 9 commits on the branch side.
-**Files touched**: merge `7d1b0da4f`: 23 files from the branch side (`docs/discovery/discovery_2026-09-29_label_outside_positions.md`, `docs/discovery/discovery_2026-09-29_symbol_default_size.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-09-29_1230_prompt_symbol_default_size.md`, `docs/prompts/claude_2026-09-29_1245_prompt_label_outside_positions.md`, `frontend/src/components/editor-v2/nodes/__tests__/nodeSizing.test.ts`, `frontend/src/components/editor-v2/nodes/nodeSizing.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/LabelEntryEditor.tsx`, and 15 more); this commit: this entry and the Status of the prompt file.
+## 2026-10-02 — merge: label-editable-toggle into alfonso-frontend-jjtl (P-2026-10-02-1548)
+**Prompt**: `claude_2026-10-02_1548_prompt_merge_label-editable-toggle.md`, a merge in a session (Lane: full, a union hunk edits a base section of `docs/log-inbox/symbol-editor.md`): `label-editable-toggle` at `aa0396dd5` into `alfonso-frontend-jjtl`, merge base `4b9bc5836`, 5 commits on the branch side.
+**Files touched**: merge `a8870fa63`: 9 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-01_label_editable_toggle.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-10-01_2349_prompt_label_editable_toggle.md`, `frontend/src/components/editor-v2/viewpoint/authoring/LabelEntryEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/labelEntryEditor.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irLabelEdit.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irCompile.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irLabelEdit.ts`); this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Gates on `7d1b0da4f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5825 tests in 229 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
-**Out-of-scope changes**: no
+**Regressions**: no. Gates on `a8870fa63`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 6496 in 261 files (the trunk tip's 6457 in 260 plus the branch's 39: `labelEntryEditor.test.ts` 10 to 21, `irLabelEdit.test.ts` new with 28), 0 failed, the 9 known files red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no. 9 files, all from the branch side, listed above; the merge is the prompt's scope.
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: Alfonso asked for the merge without the visual check; gates green on the merge
-**Notes**: Rollback tag `pre-label-outside-pos` on `8f972410f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1827/result.json`.
-**Prompt document name**: 2026-09-29 18:27
+**Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `irLabelEdit.ts` with `labelEditsName` and `LabelEntryEditor.tsx` with the hint «Only a name label can be renamed on the canvas.», so the merged code compiles on the running server; the behaviour was measured by the branch probe (23/23)
+**Notes**: Union in `docs/log-inbox/symbol-editor.md`: the trunk's preamble, then the branch's entry P-2026-10-01-2349 and its three tickets; the base's 13 entries, folded by `d2eb5fb83`, not carried back. `docs/decisions.md` merged clean, R-IRN-38 appended. No rollback tag, pre-merge tip `c10f0fd90`. Gates ran on `~/.hermes/node/bin` v26.8.1 (session PATH had nvm v18 first). check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 15:48
 
-## 2026-09-29 — ticket: Symbol Editor Border swatch paints black for a CSS-variable colour
-**Ticket**: with `shape.border.color` = `var(--color-inode-border)` the modal's Border Color field shows the string in its text box but its native swatch falls back to `#000000` (`ColorPicker.tsx:58`, `FULL_HEX_RE` only). The rail card that painted the resolved colour was retired by P-2026-09-29-1826, so the swatch is now the only colour chip for that axis outside the preview strip.
-**Priority**: low
-**Found in**: P-2026-09-29-1826
-**Detail**: docs/discovery/discovery_2026-09-29_symbol_tab_opens_modal.md
-
-## 2026-09-29 — feat(authoring): the Symbol tab opens the Symbol Editor, Form becomes Layout (P-2026-09-29-1826)
-**Prompt**: `claude_2026-09-29_1826_prompt_symbol_tab_opens_modal.md`, `Lane: fast`, on `~/jjodel-w-symbol-tab` branch `symbol-tab-modal`. The Symbol tab becomes a trigger for the Symbol Editor modal (no intermediate pane, previous tab kept, arrows inert, dialog icon), and the Form tab reads Layout with a tooltip. Answers (unattended, RC-25): Q1 ticket, Q2 SymbolCard kept (RC-26), rail tab padding 10px to 8px.
-**Files touched**: report `8ca549c5d`: `docs/discovery/discovery_2026-09-29_symbol_tab_opens_modal.md`. Code: `f8bd58ae0` `frontend/src/components/editors/views/ViewData.tsx`; `90e41df6a` `ViewData.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/irTabs.tsx`, `frontend/src/components/editor-v2/nodes/RendererInspector.tsx`; `25d350167` `ViewData.tsx` (icon colour); `6e606fa3d` `frontend/src/components/editors/properties-with-tree-view.scss`. This commit: this entry, the Q1 ticket above it, the Status line of the prompt file.
+## 2026-10-02 — merge: segment-editable-toggle into alfonso-frontend-jjtl (P-2026-10-02-1810)
+**Prompt**: `claude_2026-10-02_1810_prompt_merge_segment-editable-toggle.md`, a merge in a session (Lane: full, zero conflicts measured): `segment-editable-toggle` at `013a4dc9c` into `alfonso-frontend-jjtl`, merge base `adb5d9731`, 5 commits on the branch side.
+**Files touched**: merge `bc8989cdb`: 6 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_segment_editable_toggle.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-10-02_1646_prompt_segment_editable_toggle.md`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/fieldSegmentEditor.test.ts`); this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: yes, found by the lane probe and fixed in the lane: the icon painted slate-900 through the global `i.bi` (`25d350167`), and the vertex bar in Advanced overflowed the default 400px rail, Source clipped 9.8px (`6e606fa3d`, now 383/383). Typecheck 14 (baseline), build green, vitest 5825/5825 with the 9 known import reds.
-**Out-of-scope changes**: yes: `RendererInspector.tsx` (the «Open the Layout tab» link, declared in Phase 1) and `properties-with-tree-view.scss` (added to the DOVE by the ratified answer).
+**Regressions**: no. Gates on `bc8989cdb`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 6589 in 265 files (the trunk tip's 6577 in 264 plus the branch's 12, `fieldSegmentEditor.test.ts` new), 0 failed, the 9 known files red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no. 6 files, all from the branch side, listed above; the merge is the prompt's scope.
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (Playwright probes on :3002: checks a-e, 4 closers, arrows inert with Enter/Space as control; row, edge and legacy view bars 4px narrower per tab, no label cut; crops in `frontend/scripts/smoke/_tmp_symtab/`, gitignored)
-**Notes**: At 360px Advanced the vertex bar still overflows: 381/343, Source hidden 29.8px, against 24.2px before the lane. Edge and legacy bars overflow less than before at every width. The hover-colour FAIL of probe2 is the probe's premise: the rail label does not change colour on hover; icon equals label idle and on hover. No tag, no merge.
-**Prompt document name**: 2026-09-29 18:26
+**Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `FieldSegmentEditor.tsx` with `applyValueEditable`, so the merged code compiles on the running server; the behaviour was measured by the branch probe (22/22)
+**Notes**: The session slept at about 18:25 before step 4 and resumed at 20:52; the 18:11 trunk vitest ran under load (4 timeouts, 1 failed assertion, 3 workers never started) and was taken again: 6577 in 264, 0 failed. `docs/decisions.md` merged clean, R-IRN-40 appended; no union. Rollback tag `pre-segment-editable-toggle` on `9e6adf714` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 18:10
 
-## 2026-09-29 — merge: symbol-tab-modal into alfonso-frontend-jjtl (P-2026-09-29-1925)
-**Prompt**: `claude_2026-09-29_1925_prompt_merge_symbol-tab-modal.md`, a direct merge by `lane-run merge --direct`, no session: `symbol-tab-modal` at `a4d9c7ab3` into `alfonso-frontend-jjtl`, merge base `7b5c807b8`, 7 commits on the branch side.
-**Files touched**: merge `f7c5fd910`: 7 files from the branch side (`docs/discovery/discovery_2026-09-29_symbol_tab_opens_modal.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-09-29_1826_prompt_symbol_tab_opens_modal.md`, `frontend/src/components/editor-v2/nodes/RendererInspector.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/irTabs.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editors/views/ViewData.tsx`); this commit: this entry and the Status of the prompt file.
-**Outcome**: ✅ completed
+## 2026-10-02 — feat(editor-v2): a path label on one attribute edits on the canvas (P-2026-10-02-1647)
+**Prompt**: `claude_2026-10-02_1647_prompt_path_label_edit.md`, `Lane: full`, Phase 1 then Phase 2 in cascade, on `~/jjodel-w-pathlabel` branch `path-label-edit`. A `path` label whose expression is one step to a single-valued string attribute of its object edits on double-click when the IR opts in with `editable`; the toggle shows it and says why when it cannot. Report `ddb7a8c16`; its six questions adopted with their Recommended (RC-21); decision R-IRN-41.
+**Files touched**: report `ddb7a8c16`: `docs/discovery/discovery_2026-10-02_path_label_edit.md` (addendum §8 in this commit). Code `aa04b92fb`, under `frontend/src/components/editor-v2/viewpoint/`: `ir/irLabelEdit.ts`, `ir/irCompile.ts`, `ir/irTypes.ts` (`CompiledLabel.editsFeature?`), `ir/IRNodeContent.tsx`, `authoring/LabelEntryEditor.tsx`; tests `ir/__tests__/irLabelEdit.test.ts`, `authoring/__tests__/labelEntryEditor.test.ts`. This commit: this entry and a ticket, the R-IRN-41 row in `docs/decisions.md`, the addendum, the prompt's Status.
+**Outcome**: ⚠️ partial
 **Corregge**: —
-**Causa**: —
-**Regressions**: no. Gates on `f7c5fd910` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5825 tests in 229 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: Code under frontend/src on the trunk equals the branch tip a4d9c7ab3 (merge conflict only in docs/log-inbox); visual checks a-e and all rail tab bars passed on the branch with Playwright probes on :3002 (P-2026-09-29-1826); gates green on the merge
-**Notes**: Rollback tag `pre-symbol-tab-modal` on `70b580af4` (RC-31). Union: `docs/log-inbox/symbol-editor.md`. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1925/result.json`.
-**Prompt document name**: 2026-09-29 19:25
-
-## 2026-09-29 — refactor(authoring): remove the dead SymbolCard and its styles (P-2026-09-29-1929)
-**Prompt**: `claude_2026-09-29_1929_prompt_remove_symbolcard.md`, `Lane: fast`, on `~/jjodel-w-symcard` branch `symbolcard-cleanup`. Delete `SymbolCard.tsx`, `SymbolCard.scss` and the SymbolCard rules of `railSystem.scss`, dead since P-2026-09-29-1826; discovery first, STOP on any outside user.
-**Files touched**: report `959601170`: `docs/discovery/discovery_2026-09-29_remove_symbolcard.md`. Code `89bed3547`: `frontend/src/components/editor-v2/viewpoint/authoring/SymbolCard.tsx` and `SymbolCard.scss` (deleted), `frontend/src/components/editors/railSystem.scss` (-23 lines). This commit: this entry, the Status line of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Typecheck 14 (baseline, same files and codes), build exit 0, vitest 5825/5825 with the 9 known import reds (`window is not defined`).
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato (Playwright probe on :3002, before and after the deletion: Symbol tab opens the modal, Structure stays active, Esc closes, no `.symbol-card`; 12 rail tab bars identical before/after and equal to the 1826 measures; crops in `frontend/scripts/smoke/_tmp_symcard/`, gitignored)
-**Notes**: The cited block `railSystem.scss:326-354` is 326-348 on this HEAD. Left in place, outside the authorised range: the dead selector `> section.properties-tab.properties-panel.symbol-card` at `:52` (the first selector of the same list covers it) and the SymbolCard mention in the header comment at `:26`. Report §4.3, Q1. No merge.
-**Prompt document name**: 2026-09-29 19:29
-
-## 2026-09-29 — merge: symbolcard-cleanup into alfonso-frontend-jjtl (P-2026-09-29-1947)
-**Prompt**: `claude_2026-09-29_1947_prompt_merge_symbolcard-cleanup.md`, a direct merge by `lane-run merge --direct`, no session: `symbolcard-cleanup` at `dee8746f7` into `alfonso-frontend-jjtl`, merge base `b256abc36`, 4 commits on the branch side.
-**Files touched**: merge `6ada3b757`: 6 files from the branch side (`docs/discovery/discovery_2026-09-29_remove_symbolcard.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-09-29_1929_prompt_remove_symbolcard.md`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolCard.scss`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolCard.tsx`, `frontend/src/components/editors/railSystem.scss`); this commit: this entry and the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Gates on `6ada3b757` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5849 tests in 230 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: Merge brings in only the three SymbolCard paths (two deleted files, railSystem.scss); the other frontend/src differences from the branch tip are trunk-side sim files, disjoint. Branch probe P-2026-09-29-1929 on :3002: Symbol tab opens the modal, 12 rail tab bars identical to the 1826 measures; gates green on the merge
-**Notes**: Rollback tag `pre-symbolcard-cleanup` on `7c2539ae9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-1947/result.json`.
-**Prompt document name**: 2026-09-29 19:47
-
-## 2026-09-29 — style(editors): drop SymbolCard leftovers in railSystem.scss (P-2026-09-29-2253)
-**Prompt**: `claude_2026-09-29_2253_prompt_railsystem_symbolcard_leftovers.md`, `Lane: fast`, on `~/jjodel-w-railleft` branch `railsystem-leftovers`. Remove the two invisible leftovers reported by P-2026-09-29-1929 in `railSystem.scss`: the dead `.symbol-card` selector in the background list and the SymbolCard mention in the header comment. Not merged, as asked.
-**Files touched**: code `26b29ae57`: `frontend/src/components/editors/railSystem.scss` (the `.symbol-card` selector and its comma, three lines of the header comment reflowed). Closure commit: this entry and the Status line of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-29 19:29 claude_2026-09-29_1929_prompt_remove_symbolcard.md (it reported these two leftovers)
 **Causa**: (c)
-**Regressions**: no. `npm run build` exit 0, only the chunk-size warning; `npm run typecheck` exit 2 with 14 errors, the baseline count; `npm run check:docs` 4/4 passed. No visual probe, as the prompt states.
-**Out-of-scope changes**: no, one source file, the one the prompt lists.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile. Evidence in place of a probe: `command grep -rniE 'symbol-card|SymbolCard' frontend/src` returned exactly the two lines named (26 and 52) before the edit (control on `properties-panel` in the same file found hits) and returned nothing, exit 1, after it. The removed selector matched no element and `> section.properties-tab.properties-panel` already covers the same sections.
-**Notes**: Rollback is `git revert 26b29ae57`. The Status flip is a plain edit of the prompt file, made by hand because the `status-flip` skill is user-invoked only.
-**Prompt document name**: 2026-09-29 22:53
+**Regressions**: no — typecheck exit 2, the 14 of §17; build exit 0; vitest: the 9 known import reds only, after the load-hit files passed alone (`laneRun*` 108/108 at load 16); probe: the four demo scenes and DemoFlowB's derived viewpoint 0 px from `adb5d9731`, no new editable label.
+**Out-of-scope changes**: no — the seven files of the prompt's DOVE; `canvasToJjom.ts` is called, not edited.
+**Layer Impact Report**: not-required (no §3.2 file edited; the write reuses `syncUpdateFeatureValue`)
+**Smoke visivo**: chat, pending: lane probe 35/36 on 3093; the failing item is undo, see the ticket below. Crops in `frontend/scripts/smoke/_tmp_pathlabel_crops/` (gitignored), `pathlabel_*_600.png`.
+**Notes**: Mutation bench 28/28, none void (commit body). Undo of the written attribute fails, and the same run shows the trunk's row value edit failing the same way: the prompt's «with its undo snapshot» assumed a working undo that Phase 1 read but did not run (Causa c). One 18:14 probe abort on `unparse_test.js` (`module is not defined`) did not recur. The Mac's sleep killed the session once; resumed at `aa04b92fb`, clean. Report §8 holds the measures.
+**Prompt document name**: 2026-10-02 16:47
 
-## 2026-09-29 — merge: railsystem-leftovers into alfonso-frontend-jjtl (P-2026-09-29-2302)
-**Prompt**: `claude_2026-09-29_2302_prompt_merge_railsystem-leftovers.md`, a direct merge by `lane-run merge --direct`, no session: `railsystem-leftovers` at `5555a3619` into `alfonso-frontend-jjtl`, merge base `313a84663`, 3 commits on the branch side.
-**Files touched**: merge `e42e5d7f5`: 3 files from the branch side (`docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-09-29_2253_prompt_railsystem_symbolcard_leftovers.md`, `frontend/src/components/editors/railSystem.scss`); this commit: this entry and the Status of the prompt file.
+## 2026-10-02 — ticket: one undo does not restore a slot value written by syncUpdateFeatureValue
+**Ticket**: an attribute written through `syncUpdateFeatureValue` (the IR row value edit, the R-IRN-41 path label, a direct call) pushes an undo entry whose only key is `action_title`, no `idlookup` delta; one Cmd+Z pops it (depth 11 to 10) and the value stays. Measured on `aa04b92fb` with the row edit of the trunk path as control. The value change is either merged into another entry or missed by `Uobj.objectDelta` (`reducer.ts:1203-1265`); the fix is in the reducer or in `canvasToJjom.ts` (critical zone, Layer Impact Report), a Phase 1 of its own.
+**Priority**: medium
+**Found in**: P-2026-10-02-1647
+**Detail**: `docs/discovery/discovery_2026-10-02_path_label_edit.md` §8
+
+## 2026-10-02 — merge: path-label-edit takes alfonso-frontend-jjtl, the path label on the trunk before its own merge (P-2026-10-02-2132)
+**Prompt**: `claude_2026-10-02_2132_prompt_path-label-edit_take_trunk.md`, rendered by `lane-run merge --trunk-into`, full lane on `~/jjodel-w-pathlabel` branch `path-label-edit`: the trunk `alfonso-frontend-jjtl` at `936a1b947` into the branch with one `--no-ff` merge, merge base `adb5d9731`, before the branch's own merge into the trunk (RC-14).
+**Files touched**: merge `1dff977e4`: 43 files from the trunk side (`docs/decisions.md`, six discovery reports, eleven prompts, `docs/log-inbox/{symbol-editor,views}.md`, and 23 code and test files under `editor-v2/edges/`, `editor-v2/utils/`, `editor-v2/viewpoint/{authoring,ir}/`, `editors/viewpoint/properties/`, `view/`), `decisions.md` and `symbol-editor.md` resolved by union. This commit: this entry and the prompt's Status.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Gates on `e42e5d7f5` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 5905 tests in 234 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
-**Out-of-scope changes**: no
+**Regressions**: no — gates on `1dff977e4`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6663/6663 in 266 files, 0 failed, the 9 known files red at import (expected: the trunk tip's 6600 in 266 plus the branch's 63); hooks 344/344; build exit 0; check:docs 4/4; check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no — 43 files, above five (RC-11), all from the trunk side, the merge being the prompt's scope; the hand resolutions are the two unions of COME 4.
+**Layer Impact Report**: not-required (no §3.2 file; `irCompile.ts` and `irTypes.ts`, under `viewpoint/ir/`, auto-merged, no hand edit)
+**Smoke visivo**: passato — chat GO, unattended, on a re-run of the P-2026-10-02-1647 probe on `1dff977e4`: `lane-run probe` on 3093, light, 35 of 36, the one failure the known undo of an inline write (ticketed), the 36 verdicts identical to the branch's run; four demo scenes and DemoFlowB's derived viewpoint 0 px from `adb5d9731`; Alfonso in the morning digest.
+**Notes**: Union in `decisions.md` (the trunk's R-IRN-40 and R-IRN-39, then the branch's R-IRN-41) and in this inbox (the trunk's 76 lines, then the branch's two entries), verbatim; `irCompile.ts` and `irTypes.ts` auto-merged, read whole. No rollback tag, pre-merge tip `641fc9a57`. Gates on `~/.hermes/node/bin` v26.8.1. The branch's crops copied to `_tmp_pathlabel_crops_branch/` before the re-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 21:32
+
+**Ticket** (low, lane-run template): step 7 of `frontend/scripts/lane-templates/trunk-into-branch.md` renders the `check:addonly` fallback as `git reset --hard {{branchTip}}`, «this branch's own pre-merge tip»; `{{branchTip}}` is the tip lane-run measured before the prompt commit landed, so here it read `c0dfec656` while the merge sat on `641fc9a57`, and the reset would have dropped the prompt's own commit. Not triggered (check:addonly PASS). Fix: render the reset as the merge's first parent, `git reset --hard HEAD^1`.
+
+## 2026-10-02 — merge: path-label-edit into alfonso-frontend-jjtl (P-2026-10-02-2157)
+**Prompt**: `claude_2026-10-02_2157_prompt_merge_path-label-edit.md`, a merge in a session (Lane: full, zero conflicts measured): `path-label-edit` at `3aa9dd34f` into `alfonso-frontend-jjtl`, merge base `936a1b947`, 8 commits on the branch side, 0 on the trunk side but this merge's prompt.
+**Files touched**: merge `949e0c75d`: 12 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_path_label_edit.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-10-02_1647_prompt_path_label_edit.md`, `docs/prompts/claude_2026-10-02_2132_prompt_path-label-edit_take_trunk.md`, and under `frontend/src/components/editor-v2/viewpoint/`: `authoring/LabelEntryEditor.tsx`, `authoring/__tests__/labelEntryEditor.test.ts`, `ir/IRNodeContent.tsx`, `ir/__tests__/irLabelEdit.test.ts`, `ir/irCompile.ts`, `ir/irLabelEdit.ts`, `ir/irTypes.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `949e0c75d`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 6663 in 266 files (the trunk tip's 6600 plus the branch's 63: `labelEntryEditor.test.ts` 21 to 33, `irLabelEdit.test.ts` 28 to 79, no new file), 0 failed, the 9 known files red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no. 12 files, all from the branch side, listed above; the merge is the prompt's scope.
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: No visual change by construction: the removed selector targeted .symbol-card, which no element carries (grep of symbol-card/SymbolCard in frontend/src: 0 hits after merge); the remaining selector covers the same section; the other change is a comment. Gates green.
-**Notes**: Rollback tag `pre-railsystem-leftovers` on `313a84663` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-09-29-2302/result.json`.
-**Prompt document name**: 2026-09-29 23:02
+**Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves the merged `irLabelEdit.ts`, so the merged code compiles on the running server; the behaviour was measured by the probe on the synced branch (35/36, the one failure the known undo ticket); Alfonso in the morning digest.
+**Notes**: Clean merge, no union resolution: the committed tree is the merge-tree result `abb42b858`. Probes 4/4 once each (R-IRN-41, the three headings in this inbox), control R-IRN-42 absent. Rollback tag `pre-path-label-edit` on `936a1b947` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 21:57

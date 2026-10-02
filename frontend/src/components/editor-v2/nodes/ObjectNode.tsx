@@ -41,7 +41,7 @@ import { getSimNodeState, isSimActive, useSimVersion } from '../sim/simRunState'
 import { initialMarkingFeature, isInitialMarkingRow } from '../sim/simCanvasState';
 import SimNodeRunState from '../sim/SimNodeRunState';
 import { entityLetter } from '../../../common/entityMeta';
-import { metaclassColoringVars, resolveMetaclassColoring } from '../../../view/viewPoint/metaclassPalette';
+import { isNotationGlyph, metaclassColoringVars, resolveMetaclassColoring } from '../../../view/viewPoint/metaclassPalette';
 import { store, LPointerTargetable } from '../../../joiner';
 import {
     resolveInstanceNodeStyle,
@@ -957,7 +957,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     onInspectFeature={openInspectorByFeatureName}
                     renderRowValue={renderRowValue}
                     collapsed={collapsedLook}
-                    colorOverride={metaclassColor ?? undefined}
+                    // R-VP-50: a node its derived notation draws as a glyph (bar, disc, bull's-eye) is not coloured.
+                    colorOverride={metaclassColor && !isNotationGlyph(irResolution.compiled.ir) ? metaclassColor : undefined}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'
