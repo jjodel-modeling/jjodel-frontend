@@ -1,8 +1,9 @@
 import React from 'react';
-import { Select, Toggle, ConditionalEditor, PRESERVED_CHIP, type PathBuilderFeatures } from '../../../ui';
+import { Select, Toggle, HelpText, ConditionalEditor, PRESERVED_CHIP, type PathBuilderFeatures } from '../../../ui';
 import { TextSourceEditor } from './TextSourceEditor';
 import { TextStyleField } from './TextStyleField';
 import { resolveLabelAnchor } from '../ir/irCompile';
+import { labelCanRename, labelEditsName } from '../ir/irLabelEdit';
 import type { LabelSpec, LabelPosition, LabelAnchor, TextSource, TextStyle } from '../ir/irTypes';
 
 const POSITION_OPTIONS = [
@@ -47,6 +48,17 @@ export function applyLabelPositionValue(label: LabelSpec, value: string): LabelS
     if (!value.startsWith(OUTSIDE_VALUE_PREFIX)) return { ...rest, position: value as LabelPosition };
     const anchor: LabelAnchor = resolveLabelAnchor(value.slice(OUTSIDE_VALUE_PREFIX.length));
     return anchor === 's' ? { ...rest, position: 'outside' } : { ...rest, position: 'outside', anchor };
+}
+
+/**
+ * The label after a click on the Editable toggle. OFF writes `editable: false`; ON removes the key:
+ * absent is the default (an intrinsic name label renames), so the IR stays minimal and a persisted
+ * `true` is dropped too. Every other key keeps its place.
+ */
+export function applyLabelEditable(label: LabelSpec, checked: boolean): LabelSpec {
+    if (!checked) return { ...label, editable: false };
+    const { editable: _editable, ...rest } = label;
+    return rest;
 }
 
 export interface LabelEntryEditorProps {
@@ -106,10 +118,14 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                 {editableIsWidget
                     ? <span style={PRESERVED_CHIP}>editable: advanced widget</span>
                     : <Toggle
-                        checked={editable === true}
-                        onChange={(c) => onChange({ ...label, editable: c })}
+                        checked={labelEditsName(label)}
+                        disabled={!labelCanRename(label.source)}
+                        onChange={(c) => onChange(applyLabelEditable(label, c))}
                         size="xs"
                     />}
+                {!editableIsWidget && !labelCanRename(label.source) && (
+                    <HelpText icon={false}>Only a name label can be renamed on the canvas.</HelpText>
+                )}
             </div>
 
             {/* `props-label-entry-split`: dashed hairline that separates the field
