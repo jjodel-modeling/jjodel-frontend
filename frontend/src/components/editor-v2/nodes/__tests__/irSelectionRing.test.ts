@@ -180,9 +180,12 @@ describe('the selection ring of a node on the canvas (laid out in Chromium)', ()
         expect(rgb[2] - rgb[0], `rgb ${rgb}`).toBeGreaterThan(60);
     });
 
-    it('an unselected IR node paints nothing outside its shape', async () => {
+    it('an unselected IR node paints no ring or band outside its shape, only its resting shadow', async () => {
         const { rgb } = await paint(render(vertexIR('rounded'), false));
-        expect(rgb).toEqual(CANVAS);
+        // The wrapper no longer clips at rest (instanceNode.scss), so the shape's own shadow tints the
+        // canvas here by a unit or two; a ring or band would be a sky blue, blue channel on top.
+        expect(rgb.every((v, i) => CANVAS[i] - v >= 0 && CANVAS[i] - v <= 3), `rgb ${rgb}`).toBe(true);
+        expect(rgb[2] - rgb[0], `rgb ${rgb}`).toBeLessThanOrEqual(10);
     });
 
     it('selecting an IR node moves neither the node box nor the shape box', async () => {
