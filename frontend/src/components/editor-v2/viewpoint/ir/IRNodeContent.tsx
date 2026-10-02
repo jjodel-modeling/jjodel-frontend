@@ -20,7 +20,7 @@ import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
 import { labelFeatureEditBlock, labelFeatureInfoOf } from './irLabelEdit';
-import { metaclassColoringVars, type MetaclassColorOverride } from '../../../../view/viewPoint/metaclassPalette';
+import { metaclassColoringVars, metaclassOutsideInkVars, type MetaclassColorOverride } from '../../../../view/viewPoint/metaclassPalette';
 import {
     getShapeDescriptor, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
     SVG_BORDER_DASH, type ShapePainter, type Size,
@@ -493,12 +493,18 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // Compartment rows declare no weight, so there it does propagate.
     // resolveTextStyle returns undefined when there is nothing to emit, and
     // Object.assign with undefined is a no-op: no guard needed.
-    Object.assign(inlineStyle, resolveTextStyle(compiled.text, readCtx, objectId));
-    // «Color by metaclass»: the text colour on the root, and the node tokens the row values
-    // (RowValue) and the bar's halo paint with. Labels and compartments restate it below.
-    if (colorOverride) Object.assign(inlineStyle, { color: colorOverride.text }, metaclassColoringVars(colorOverride));
+    const nodeTextStyle = resolveTextStyle(compiled.text, readCtx, objectId);
+    Object.assign(inlineStyle, nodeTextStyle);
+    // «Color by metaclass»: the node tokens the row values (RowValue) and the bar's halo paint with.
+    // The text colour is not set on the root (R-VP-51): labels, compartments and badges state it
+    // below, so an outside label with no colour of its own inherits what it inherits off.
+    if (colorOverride) Object.assign(inlineStyle, metaclassColoringVars(colorOverride));
+    // What the node draws outside its box sits on the canvas and paints as with coloring off
+    // (R-VP-51): the name ink rebound back, and the node-level colour restated so it resolves there.
+    const outsideInk: React.CSSProperties | undefined = colorOverride
+        ? { ...metaclassOutsideInkVars(), color: nodeTextStyle?.color } : undefined;
     const overText = (st: React.CSSProperties | undefined, position?: string): React.CSSProperties | undefined =>
-        colorOverride && position !== 'outside' ? { ...st, color: colorOverride.text } : st;
+        !colorOverride ? st : position === 'outside' ? { ...outsideInk, ...st } : { ...st, color: colorOverride.text };
 
     // The SVG layer paints the same resolved fill/border, with the box-base
     // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
@@ -523,7 +529,9 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // preserveAspectRatio="meet" (irStyle.ts positions the layer).
     const markerId = compiled.marker ? compiled.marker(readCtx, objectId) : '';
     const markerDef = getMarkerDef(markerId ? String(markerId) : undefined);
-    const markerColor = colorOverride ? colorOverride.text : (borderColorV || 'var(--border-default)');
+    // The entry mark sits outside the box, so it keeps this colour while coloured (R-VP-51).
+    const inkColor = borderColorV || 'var(--border-default)';
+    const markerColor = colorOverride ? colorOverride.text : inkColor;
 
     // Spacing preset (2026-08-25): 'normal' carries no class, so the tokens declared on
     // .ir-node-content itself apply and the markup of an unauthored view is unchanged.
@@ -593,10 +601,10 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 </svg>
             )}
             {compiled.entry && (
-                <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={ENTRY_STYLE} aria-hidden="true">
-                    {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={markerColor} />}
-                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W - ENTRY_HEAD}`} stroke={markerColor} strokeWidth={1} fill="none" />
-                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4} Z`} fill={markerColor} />
+                <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={colorOverride ? { ...ENTRY_STYLE, ...metaclassOutsideInkVars() } : ENTRY_STYLE} aria-hidden="true">
+                    {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={inkColor} />}
+                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W - ENTRY_HEAD}`} stroke={inkColor} strokeWidth={1} fill="none" />
+                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4} Z`} fill={inkColor} />
                 </svg>
             )}
             {compiled.badges.map((b, i) => {
@@ -604,13 +612,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 const icon = b.icon(readCtx, objectId);
                 if (!icon) return null;
                 return (
-                    <span key={`badge_${i}`} className={`ir-badge ir-badge--${b.position}`} style={BADGE_STYLE} title={b.tooltip}>
+                    <span key={`badge_${i}`} className={`ir-badge ir-badge--${b.position}`} style={overText(BADGE_STYLE)} title={b.tooltip}>
                         <i className={`bi ${icon}`} />
                     </span>
                 );
             })}
             {collapsedBadge && (
-                <span className={`ir-badge ir-badge--${collapsedBadge.position}`} style={BADGE_STYLE} title={collapsedBadge.tooltip}>
+                <span className={`ir-badge ir-badge--${collapsedBadge.position}`} style={overText(BADGE_STYLE)} title={collapsedBadge.tooltip}>
                     <i className={`bi ${collapsedBadge.icon}`} />
                 </span>
             )}

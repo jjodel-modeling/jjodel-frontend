@@ -4832,6 +4832,27 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     glyphs coloured; after 30/30, every glyph equal on and off, the ordinary nodes equal to the resolver, the four
     demo scenes in the default viewpoint 0 px. Tests 28 of 32 red first, then green; mutation bench 14/14.
     Prompt P-2026-10-02-2045, commit `00b16d998`.
+- **R-VP-51** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  **What a coloured node draws outside its box keeps the notation ink, in both themes, as with coloring off; a
+  conformance fix of R-VP-30 under R-VP-50.** Alfonso asked to proceed on the ticket of P-2026-10-02-2045 (verbatim:
+  «procedi»). Source: `docs/discovery/discovery_2026-10-02_ir_ink_outside.md`.
+  - A token `--color-canvas-ink: var(--color-inode-name)` in `_colors-light.scss` and `_colors-dark.scss`, resolved
+    at `:root`, so a node's inline rebinding of `--color-inode-name` («Color by metaclass») does not reach it.
+  - `metaclassOutsideInkVars()` (`metaclassPalette.ts`) points `--color-inode-name` back at it. `IRNodeContent.tsx`
+    sets it, only while coloured, on the outside labels (`.ir-label--outside`) and the entry layer (R-VP-22). The
+    entry mark paints in its border ink, not the text colour. An outside label restates the node-level text colour.
+  - The root no longer sets `color` while coloured; the badges state the text colour, as labels and compartments do.
+    So an outside label with no colour of its own inherits what it inherits off.
+  - Inside the box keeps R-VP-30's WCAG colour; glyphs (R-VP-50) receive no override. No IR key, no persisted
+    value, no migration, no class renamed.
+  - Adopted as recommended (RC-21, report §0): root `color` dropped (Q1); an alias, not a copy (Q2); outside marks
+    in another rebound token not covered (Q3, no producer reaches a coloured node); the entry mark in its border ink
+    (Q4); the name `--color-canvas-ink` (Q5); the id (Q6).
+  - Measured on the lane probe (3098, light and dark): base 20/20 shows the marks `rgb(0, 0, 0)`; after 50/50, outside
+    labels and entry mark on = off (`rgb(15, 23, 42)` light, `rgba(255, 255, 255, 0.92)` dark). Inside colours, glyphs
+    and the four default scenes 0 px from `7c9ae4e0d`. Tests 8 of 16 red first, then green; mutation bench 13/14, the
+    survivor an equivalent mutant (the dark declaration dropped, the light block being `:root`). Prompt
+    P-2026-10-02-2356, commit `cce1ecfef`.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 

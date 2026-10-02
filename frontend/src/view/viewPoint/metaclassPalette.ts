@@ -477,3 +477,13 @@ export function metaclassColoringVars(o: MetaclassColorOverride): Record<string,
         '--color-inode-footer': o.text,
     };
 }
+
+/**
+ * The rebinding of `metaclassColoringVars` undone, for what a coloured node draws OUTSIDE its box
+ * (R-VP-51: the outside labels, the entry mark). They sit on the canvas, not on the fill, so they
+ * keep the notation's ink: the name ink points back at `--color-canvas-ink`, which the token files
+ * resolve at `:root`, where no node's inline rebinding reaches.
+ */
+export function metaclassOutsideInkVars(): Record<string, string> {
+    return { '--color-inode-name': 'var(--color-canvas-ink)' };
+}
