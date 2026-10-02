@@ -315,3 +315,86 @@ Prompt `claude_2026-10-01_2215_fase2_elk_layout.md` (`57c150a2a`); the trunk tip
 - **Profiles:** `DerivedNotation.layout` for Flowchart, Activity (UML), Petri net (classic), Statechart (UML), ER (Chen), copied into `_state` as `derivedLayout` (a JSON string, the `_state` values being strings); a metamodel canvas without a derived profile takes the measured class profile (§5.1: V4 and V4-ns tie on DemoFlowB, V4-ns best on DemoERD); every other canvas keeps today's strategy, with the input fixes (real sizes, hidden nodes out, labels, model order off, 8 px snap).
 - **Q7 with R-VP-36:** the prompt's «120 x 5» predates R-VP-36 (bar declared 7 px, ratified 2026-10-01); the bar follows the direction at 7 px: 120 x 7 under DOWN.
 - **Tests outside the DOVE list, declared:** `viewpoint/derive/__tests__/activityUml.test.ts` (the bar's pinned 7 x 120) and `__tests__/erChen.test.ts` (the pinned `_state` of ER (Chen), which gains `derivedLayout`).
+
+## 12. Addendum 2026-10-02, Phase 2 results (measured)
+
+Code `803b84e3a` on `elk-layout-disc`. Files: `utils/elkLayout.ts` (the toolbar path appended; `computeElkLayout` unchanged
+but for one import line), `utils/__tests__/elkLayout.test.ts` (new, 30 tests), `EditorV2.tsx` (`handleAutoLayout`'s
+`full` branch, and the toolbar prop at the `onAutoLayout` line), `edges/UnifiedEdge.tsx`, `viewpoint/derive/notations.ts`,
+`viewpoint/derive/viewpointDerivation.ts`, and three pinned tests: `activityUml.test.ts`, `erChen.test.ts`,
+`nodes/__tests__/nodeSizing.test.ts` (the bar and the `_state` they pinned). No critical-zone file.
+
+**What changed against §11's plan, each measured on the in-app probe:**
+- Route ends are ELK's own ports, moved only by their node's 8 px snap, not fitted to the handles: fitting them to the
+  handles' uniform slots reordered ports and crossed routes (Flowchart 2 crossings, measured). The endpoint grips sit on
+  the drawn ends (R-VP-38).
+- Activity (UML)'s merge and decision diamonds are 28 px ELK nodes, the branches fitted to the diamond's vertex: with
+  the junction edges left on the router the guards still crossed three edges (measured).
+- `curve: 'arc'` edges draw their chord between the route's ends, the opposite edge of a pair read the same way; a
+  stress (ER) route keeps the handles' ends, since it ends on the box, not on the diamond or the ellipse.
+- No `data-*` attribute on the label `div`s: they changed the markup bytes the IR render tests pin (6 files red,
+  measured). The labels are matched to edges by their text, then by distance.
+
+**Metrics after a real toolbar auto-layout** (`lane-run probe ... _tmp_elk_after.ts --port 3220`, 17/17, no page error;
+fit box = the 16:10 box needed to show the drawing, against V0):
+
+| scene | variant | node-node | edge-node | crossings | edge-edge overlap | label-label | label-node | label-edge | off 8px grid | bends mean / max | W×H px | aspect | fit box vs V0 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| flowB_flowchart | V0 (today) | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 8/8 | 1.78 / 2 | 775×1026 | 0.76 | 1.00 |
+| flowB_flowchart | Phase 1 best (V4-ns) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 7/8 | 1.11 / 2 | 701×532 | 1.32 | 0.27 |
+| flowB_flowchart | **after (Phase 2)** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0/8 | 0.89 / 2 | 442×538 | 0.82 | 0.27 |
+| flowB_activityUml | V0 (today) | 0 | 0 | 1 | 0 | 1 | 0 | 2 | 8/8 | 2.11 / 3 | 717×984 | 0.73 | 1.00 |
+| flowB_activityUml | Phase 1 best (V4) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 8/8 | 1.56 / 2 | 569×649 | 0.88 | 0.44 |
+| flowB_activityUml | **after (Phase 2)** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0/8 | 1.78 / 5 | 368×680 | 0.54 | 0.48 |
+| petri_petriClassic | V0 (today) | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 7/7 | 0 / 0 | 354×1027 | 0.34 | 1.00 |
+| petri_petriClassic | Phase 1 best (V4-ns) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6/7 | 0 / 0 | 547×179 | 3.06 | 0.11 |
+| petri_petriClassic | **after (Phase 2)** | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 0/7 | 0 / 0 | 556×155 | 3.59 | 0.11 |
+| pest_statechart | V0 (today) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6/6 | 3.6 / 7 | 600×802 | 0.75 | 1.00 |
+| pest_statechart | Phase 1 best (V4) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 5/6 | 1.2 / 2 | 541×278 | 1.95 | 0.18 |
+| pest_statechart | **after (Phase 2)** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0/6 | 4 / 7 | 552×442 | 1.25 | 0.30 |
+| er_erChen | V0 (today) | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 13/13 | 0 / 0 | 1741×546 | 3.19 | 1.00 |
+| er_erChen | Phase 1 best (V5-stress-spore) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 13/13 | 0 / 0 | 649×579 | 1.12 | 0.28 |
+| er_erChen | **after (Phase 2)** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0/13 | 0 / 0 | 622×586 | 1.06 | 0.29 |
+| class_DemoFlowB | V0 (today) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 8/8 | 1 / 2 | 1540×522 | 2.95 | 1.00 |
+| class_DemoFlowB | Phase 1 best (V4) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 8/8 | 1.5 / 2 | 1040×384 | 2.71 | 0.46 |
+| class_DemoFlowB | **after (Phase 2)** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0/8 | 0 / 0 | 1044×394 | 2.65 | 0.46 |
+| class_DemoERD | V0 (today) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4/4 | 1.5 / 2 | 276×800 | 0.35 | 1.00 |
+| class_DemoERD | Phase 1 best (V4-ns) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4/4 | 1.67 / 4 | 235×596 | 0.39 | 0.56 |
+| class_DemoERD | **after (Phase 2)** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0/4 | 0.5 / 2 | 228×608 | 0.38 | 0.58 |
+
+- Target «0 node overlaps, 0 edge-node intersections, 0 label collisions»: met in 6 of 7 scenes. **Petri net (classic)
+  keeps 2**: the transition names `t1`, `t2` are painted right of the upright bar and the outgoing arc leaves the bar's
+  right side through them (the notation's label position, R-VP-24; V0 had 3, the place names). Question 1 below.
+- Crossings: 0 in 7/7, no worse than the best variant. Bends: no worse in 5/7; Activity 1.78 mean / 5 max against 1.56 / 2
+  (the fit to the diamond vertex adds a jog on two branches); Statechart reads 4 / 7 because its transitions are arcs and
+  the bend count reads their curvature (V0 3.6 / 7), not ELK segments.
+- Area: the fit box at 0.11 to 0.58 of V0's, within 0.04 of the best variant everywhere but Statechart (0.30 against
+  0.18: the wider spacing that keeps the arc labels apart).
+- Drag: on Flowchart, after the layout, dragging `work` 60 px redraws its 3 edges on the router (3/3 paths changed), 0 on
+  every collision metric after the drag. Mutant «the renderer ignores the route's validity»: 0/3 changed, killed.
+- At rest (no auto-layout pressed), `_tmp_elk_rest.ts` against a baseline dev server that serves the five changed runtime
+  files from `5c9aadb1c` through a Vite `load` plugin (positive control both ways: the served `elkLayout.ts` has, resp.
+  lacks, `computeElkAutoLayout`): the four demo scenes in the default viewpoint and DemoFlowB under Generic, Flowchart,
+  Flowchart (ISO 5807) are 0 px outside Jodie's avatar button; the avatar differs by 1 729 px (1 672 in an earlier run),
+  and differs by the same amount baseline against baseline: an animation, not this lane. DemoFlowB under Activity (UML)
+  differs by 94 135 px: the bars, 120×7 (Q7), the expected change.
+
+**Gates on the code commit:** typecheck exit 2, 14 errors, the §17 set by file and code; vitest 6487 passed, 0 failed, the 9 known files red at import; build
+exit 0, 50 warning lines. **Mutation bench** (`_tmp_elk_mutate.mjs`, one replacement per mutant, file restored and hash-checked): 38/38
+killed on the input builder (hidden nodes, real sizes and their precedence, labels and their placement, model order,
+profile direction, placement, spacing, FIRST and LAST, inheritance reversal and priority, stress and overlap removal, the
+snap), the routes (orientation, junction node, side and position, snap shift of both ends, centre label, rects), the
+validity (tolerance, source, target, size), the fit (both bends, the jog, polyline ends), the store (delete, revision),
+the profiles (`_state`, Activity direction, ER overlap removal) and Q7; plus the renderer mutant on the probe.
+
+**Crops** (`frontend/scripts/smoke/_tmp_elk_crops/`, gitignored, 600 px): `after_<scene>_600.png` for the seven scenes,
+`after_flowB_flowchart_drag_600.png`, next to Phase 1's `<scene>_V0_canvas_600.png`; rest shots under `rest/`.
+
+### 12.1 Questions
+
+1. Petri net (classic) transition names cross their outgoing arc under the left-to-right profile. Move the name above the
+   bar (a notation change, R-VP-24, RC-26), or accept the two collisions?
+   Recommended: move the transition name above the bar in Petri net (classic), in a lane of its own after the demo.
+2. Statechart (UML)'s transitions stay arcs between ELK's ports; Phase 1's best (V4) assumed orthogonal routes and is 40%
+   smaller. Keep the arcs?
+   Recommended: keep the arcs (R-VP-22, the notation's own curve) and accept the larger fit box.

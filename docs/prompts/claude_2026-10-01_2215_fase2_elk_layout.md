@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-2215
 Chat: C-2026-10-01-2215
 Lane: Phase 2 of the ELK layout discovery, same session. No critical-zone go-ahead (RC-30 not given). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane elk-layout-disc · 5c9aadb1c (trunk merge), 803b84e3a · hard-stop: 6 of 7 scenes at 0 collisions after a toolbar auto-layout, Petri 2 (transition names, question 1), rest 0 px; visual GO pending (RC-23)
 
 Worktree: `~/jjodel-w-elklayout`, branch `elk-layout-disc`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this file); if any differs, stop with `Outcome: blocked`.
 

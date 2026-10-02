@@ -24,3 +24,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-01-2215
 **Detail**: docs/discovery/discovery_2026-10-01_elk_layout_quality.md
+
+## 2026-10-02 — feat(editor-v2): toolbar auto-layout uses ELK in full (P-2026-10-01-2215)
+**Prompt**: `claude_2026-10-01_2215_fase2_elk_layout.md`, Phase 2, heavy, no critical-zone go-ahead. ELK input (real sizes, hidden nodes out, labels, model order off, per-notation profile), ELK routes drawn in session, 8 px snap, Activity bars across the flow (Q7); Alfonso ratified Q1, D-B, Q7, the chat adopted Q2-Q6.
+**Files touched**: merge `5c9aadb1c` (trunk `c3a9c9ffd`); docs `ccba4b030`; code `803b84e3a`: `utils/elkLayout.ts`, `utils/__tests__/elkLayout.test.ts` (new), `EditorV2.tsx`, `edges/UnifiedEdge.tsx`, `viewpoint/derive/notations.ts`, `viewpointDerivation.ts`, `__tests__/activityUml.test.ts`, `__tests__/erChen.test.ts`, `nodes/__tests__/nodeSizing.test.ts`. This commit: `docs/decisions.md` (R-VP-37..47), the report's §12, this entry, a ticket, the Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: unknown — typecheck 14, the §17 set; vitest 6487 passed, the 9 known import reds; build exit 0; rest probe 0 px on 7 scenes outside Jodie's animated avatar (same noise baseline against baseline); bench 38/38 plus the renderer mutant. Gestures after a layout other than a drag (reconnect, label edit, segment drag) not exercised.
+**Out-of-scope changes**: yes — 9 files (RC-11): the three pinned tests outside the DOVE (`activityUml`, `erChen`, `nodeSizing`: the bar and the `_state` they pin) and the toolbar prop line outside `handleAutoLayout`.
+**Layer Impact Report**: not-required (no §3.2 file touched; D-B deferred)
+**Smoke visivo**: passato — probe, unattended: 6 of 7 scenes at 0 overlaps, 0 edge-node, 0 label collisions, 0 crossings after a toolbar layout; Petri 2 label-edge; Alfonso's GO pending (RC-23)
+**Notes**: Causa (c): Phase 1's V4 placed outside node names across the flow, which the Petri renderer does not; its transition names stay crossed by their arc (report §12.1 Q1). Closes the ticket on hidden object-as-edge vertices (`a2b4e8168`) and, for the toolbar layout, the DemoFlowB guard-label ticket. Merge `5c9aadb1c` inherits `check:addonly` findings of the trunk's `d2eb5fb83` (196 of its 199).
+**Prompt document name**: 2026-10-01 22:15
+
+## 2026-10-02 — ticket: Petri net (classic) transition names are crossed by their outgoing arc after the toolbar layout
+**Ticket**: Under the left-to-right profile of Petri net (classic) the transition name is painted right of the upright bar and the outgoing arc leaves the bar's right side through it: `t1` and `t2` on DemoPetri after a toolbar auto-layout (2 label-edge collisions, against 3 place names at V0). The label position is the notation's (R-VP-24); moving it above the bar, or the outgoing port off the centre, removes it. The second needs the handle alignment of D-B (critical zone).
+**Priority**: medium
+**Found in**: P-2026-10-01-2215
+**Detail**: docs/discovery/discovery_2026-10-01_elk_layout_quality.md
