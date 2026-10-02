@@ -640,8 +640,9 @@ describe('validateIR — edge.terminations closed vocabulary (R-VP-24, P-2026-09
         edge: { terminations } as EdgeViewIR['edge'],
     });
 
-    it('the vocabulary is the union: the six ends of before and hollowCircle', () => {
-        expect(Object.keys(VALID_TERMINATIONS)).toEqual(['none', 'openArrow', 'closedArrow', 'hollowTriangle', 'filledDiamond', 'hollowDiamond', 'hollowCircle']);
+    it('the vocabulary is the union: the six ends of before, hollowCircle, and the seven of slice E', () => {
+        expect(Object.keys(VALID_TERMINATIONS)).toEqual(['none', 'openArrow', 'closedArrow', 'hollowTriangle', 'filledDiamond', 'hollowDiamond', 'hollowCircle',
+            'filledCircle', 'bar', 'cross', 'erZeroOrOne', 'erExactlyOne', 'erZeroOrMany', 'erOneOrMany']);
     });
 
     it('accepts hollowCircle at either end, and every other end of the vocabulary', () => {

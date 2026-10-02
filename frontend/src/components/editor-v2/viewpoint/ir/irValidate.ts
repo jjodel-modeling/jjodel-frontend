@@ -55,7 +55,40 @@ export const VALID_CURVE_VALUES: ReadonlyArray<EdgeCurve> = ['arc'];
  */
 export const VALID_TERMINATIONS: Record<EdgeTermination, true> = {
     none: true, openArrow: true, closedArrow: true, hollowTriangle: true, filledDiamond: true, hollowDiamond: true, hollowCircle: true,
+    // Slice E (P-2026-09-30-1810): the seven ends of edges/edgeEndGlyphs.ts.
+    filledCircle: true, bar: true, cross: true, erZeroOrOne: true, erExactlyOne: true, erZeroOrMany: true, erOneOrMany: true,
 };
+
+const isTermination = (t: unknown): boolean => typeof t === 'string' && Object.prototype.hasOwnProperty.call(VALID_TERMINATIONS, t);
+const isPredicateObject = (p: unknown): boolean => !!p && typeof p === 'object' && !Array.isArray(p) && typeof (p as { op?: unknown }).op === 'string';
+
+/**
+ * An end of `edge.terminations` (slice E): absent, an end of the vocabulary, or a Conditional of them, as
+ * `line.color` takes a Conditional of colours: `{ when, then, else? }` or `{ rules: [{ when, then }], default? }`,
+ * every branch an end of the vocabulary. The predicates' operators are checked by the scan above, their paths
+ * by the compile. Null when valid, else the offending value.
+ */
+function terminationEndError(t: unknown): { read: unknown } | null {
+    if (t === undefined || isTermination(t)) return null;
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return { read: t };
+    const c = t as { when?: unknown; then?: unknown; else?: unknown; rules?: unknown; default?: unknown };
+    if ('when' in c) {
+        if (!isPredicateObject(c.when)) return { read: c.when };
+        if (!isTermination(c.then)) return { read: c.then };
+        if (c.else !== undefined && !isTermination(c.else)) return { read: c.else };
+        return null;
+    }
+    if ('rules' in c) {
+        if (!Array.isArray(c.rules)) return { read: c.rules };
+        for (const r of c.rules) {
+            if (!r || typeof r !== 'object' || !isPredicateObject((r as { when?: unknown }).when)) return { read: r };
+            if (!isTermination((r as { then?: unknown }).then)) return { read: (r as { then?: unknown }).then };
+        }
+        if (c.default !== undefined && !isTermination(c.default)) return { read: c.default };
+        return null;
+    }
+    return { read: t };
+}
 
 /**
  * Closed vocabulary of `LabelSpec.position` (P-2026-09-29-1245): the four inside positions and
@@ -205,7 +238,7 @@ function c2KeysError(ir: AnyViewIR): string | null {
             }
             const style = textStyleKeyError(labels.style, 'edge.labels.style');
             if (style) return style;
-            // R-VP-23: an end label is a text source, or absent; the compile reads anything else as absent.
+            // R-VP-23: an end label is a text source, or absent (slice E: or {multiplicity?, role?}); the compile reads anything else as absent.
             for (const end of ['sourceEnd', 'targetEnd'] as const) {
                 const bad = endLabelError(labels[end], `edge.labels.${end}`);
                 if (bad) return bad;
@@ -218,15 +251,29 @@ function c2KeysError(ir: AnyViewIR): string | null {
 /** The intrinsic props a text source may read (irTypes.ts `TextSource`). */
 const INTRINSIC_PROPS: Readonly<Record<string, true>> = { name: true, metaclassName: true, qualifiedName: true };
 
-/** An end label (R-VP-23): absent, or a text source whose own field has its type. */
+/** A text source whose own field has its type (R-VP-23). */
+const isEndTextSource = (src: unknown): boolean => isPlainObject(src) && (
+    (src.from === 'literal' && typeof src.text === 'string')
+    || (src.from === 'path' && typeof src.expr === 'string')
+    || (src.from === 'intrinsic' && typeof src.prop === 'string' && Object.prototype.hasOwnProperty.call(INTRINSIC_PROPS, src.prop))
+);
+
+/** The keys of an `EdgeEndLabels` (slice E). */
+const END_LABEL_KEYS: Readonly<Record<string, true>> = { multiplicity: true, role: true };
+
+/**
+ * An end label (R-VP-23): absent, or a text source. Slice E adds `{ multiplicity?, role? }`, an object
+ * without `from`, whose keys are those two and each a text source when present.
+ */
 function endLabelError(src: unknown, where: string): string | null {
     if (src === undefined) return null;
-    const ok = isPlainObject(src) && (
-        (src.from === 'literal' && typeof src.text === 'string')
-        || (src.from === 'path' && typeof src.expr === 'string')
-        || (src.from === 'intrinsic' && typeof src.prop === 'string' && Object.prototype.hasOwnProperty.call(INTRINSIC_PROPS, src.prop))
-    );
-    return ok ? null : `[ir] ${where} must be a text source ({from: 'literal', text} | {from: 'path', expr} | {from: 'intrinsic', prop}), or absent for no end label, read ${readOf(src)}`;
+    if (isPlainObject(src) && !('from' in src)) {
+        const bad = Object.keys(src).find(k => !Object.prototype.hasOwnProperty.call(END_LABEL_KEYS, k)
+            || (src[k] !== undefined && !isEndTextSource(src[k])));
+        if (bad === undefined) return null;
+        return `[ir] ${where} must be a text source, or an end label {multiplicity?, role?} of text sources ({from: 'literal', text} | {from: 'path', expr} | {from: 'intrinsic', prop}), or absent for no end label, read ${readOf(src)}: ${Object.prototype.hasOwnProperty.call(END_LABEL_KEYS, bad) ? `${bad} is not a text source` : `unknown key ${bad}`}`;
+    }
+    return isEndTextSource(src) ? null : `[ir] ${where} must be a text source ({from: 'literal', text} | {from: 'path', expr} | {from: 'intrinsic', prop}), or an end label {multiplicity?, role?} of them, or absent for no end label, read ${readOf(src)}`;
 }
 
 export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: false; error: string } {
@@ -365,10 +412,11 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
         if (terminations && typeof terminations === 'object') {
             for (const end of ['sourceEnd', 'targetEnd'] as const) {
                 const t: unknown = (terminations as Record<string, unknown>)[end];
-                if (t !== undefined && (typeof t !== 'string' || !Object.prototype.hasOwnProperty.call(VALID_TERMINATIONS, t))) {
+                const bad = terminationEndError(t);
+                if (bad) {
                     return {
                         ok: false,
-                        error: `[ir] edge.terminations.${end} must be one of ${Object.keys(VALID_TERMINATIONS).join(' | ')}, or absent for the default end, read ${JSON.stringify(t)}`,
+                        error: `[ir] edge.terminations.${end} must be one of ${Object.keys(VALID_TERMINATIONS).join(' | ')}, a Conditional of them ({when, then, else?} | {rules: [{when, then}], default?}), or absent for the default end, read ${JSON.stringify(bad.read)}`,
                     };
                 }
             }

@@ -69,8 +69,9 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             irStroke: color || undefined,
             irStrokeWidth: width,
             irStrokeDasharray: dash,
-            irSourceTermination: cv.terminations.sourceEnd,
-            irTargetTermination: cv.terminations.targetEnd,
+            // Slice E: a Conditional end resolved on this instance; a plain one is the view's, as before.
+            irSourceTermination: cv.sourceEndTermination ? cv.sourceEndTermination(ctx, evalId) : cv.terminations.sourceEnd,
+            irTargetTermination: cv.targetEndTermination ? cv.targetEndTermination(ctx, evalId) : cv.terminations.targetEnd,
             irLabelText: labelText,
             irLabelAlwaysVisible: labelText !== undefined,
             ...(labelStyle ? { irLabelStyle: labelStyle } : {}),
@@ -84,6 +85,9 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
             // P-2026-09-30-1935: an Activity (UML) control flow, read from its view's provenance (irJunctions.ts): the
             // junction pass groups these, UnifiedEdge puts their label on a patch. Written only then.
             ...(isActivityFlowView(cv.ir) ? { irActivityFlow: true } : {}),
+            // Slice E: the role at each end, the same way.
+            ...(cv.sourceEndRole ? { irSourceEndRole: String(cv.sourceEndRole(ctx, evalId) ?? '') } : {}),
+            ...(cv.targetEndRole ? { irTargetEndRole: String(cv.targetEndRole(ctx, evalId) ?? '') } : {}),
         },
     };
 }

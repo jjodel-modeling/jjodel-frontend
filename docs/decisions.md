@@ -1487,6 +1487,16 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   Nessun cambio di schema, nessuna migrazione. Implementato in P-2026-09-29-2122 (`04acac227`,
   `61a45540e`), fuso in `889906e43`. (Ratified by Alfonso on 2026-09-29, §5 of the Layer Impact Report.)
 
+- **R-IRN-38** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **One predicate decides
+  whether a label renames the element, and the Editable toggle shows it.** `labelCanRename(source)` and
+  `labelEditsName(label)` in `ir/irLabelEdit.ts`: an intrinsic `name` or `qualifiedName` label renames unless
+  `editable === false`; absent, `true` and the widget object all rename, so the absent key is the default.
+  `irCompile.ts` (`CompiledLabel.editsName`) and `LabelEntryEditor.tsx` (the toggle) both call it, so the panel and
+  the canvas cannot disagree again. The toggle reads the effective value, is disabled and OFF with a one-line hint on
+  a source that cannot rename (literal, path, intrinsic `metaclassName`); OFF writes `editable: false`, ON removes the
+  key, so the IR stays minimal. No schema change, no migration. Implemented in P-2026-10-01-2349 (`20c843f14`);
+  mutation bench 17/17, probe 23/23, four demo scenes 0 px from the base run.
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
@@ -4667,18 +4677,82 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   `defaultSize` 7×120; the initial 20, the bull's-eye 24, the decision 36 and the actions 44 unchanged; the four demo scenes
   in the default viewpoint byte-identical to the run at 5 (0 px); the tests 2 of 47 red first, 441/441 after; mutation
   bench 16/16. Prompt P-2026-10-01-2230, commit `c3b0556d6`.
-- **R-VP-37** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+- **R-VP-37** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The fills are twelve fixed pastel swatches, one every 30° of hue; «Base color» is the seed; the border is the
+  fill's hue at 55 % lightness.** Chat decision 1 of P-2026-09-30-2022, on Alfonso's review point (1) («the colours
+  must be pastel»). Amends R-VP-29 (analogous hues within ±60° of the base, colour 0 the base as picked) and the border
+  rule of R-VP-30 (the fill less 25 points).
+  - `PASTEL_SWATCHES` (`view/viewPoint/metaclassPalette.ts`): `#f3cbcb #f3dfcb #ededc0 #d5f2b8 #b2f1b2 #baebd2
+    #cbf3f3 #cbdef0 #b2b2f1 #d6c0ed #eeb5ee #ebbad2`. Read back from the hex: hue within 0.8° of 30·k, S 55.1..69.2 %,
+    L 82.2..87.5 %. Minimum pairwise ΔE76 12.56 (90°/120°); one S 60 / L 85 for all gave 8.02 (240°/270°). Tuned by a
+    search over S and L on the rounded hex (gitignored `_tmp_vppastel_pal2.mjs`).
+  - The WCAG rule of R-VP-30 is kept, not hard-coded: it picks black on all twelve, 10.53:1 to 17.48:1 on the canvas.
+  - The seed is the swatch nearest in hue to Base color (a tie to the lower index, an achromatic base reads as 0°);
+    the default `#0ea5e9` seeds 210°. `metaclassPalette(base, count)` is now the analogous order round the seed: the
+    seed, +30°, −30°, +60°, …, +180° last, again from the seed past twelve.
+  - Border on: `hsl(h, s, 55 %)` of the fill, 1 px, width unchanged; off: transparent, as before.
+    Was R-VP-32 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-38** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The swatches are assigned by reference: greedy in metamodel order, each class as far in hue as it can be from
+  the classes it is connected to.** Chat decision 2, on Alfonso's point (3).
+  - Graph (`metaclassGraph`): two classes are adjacent when a DECLARED reference of one, containment included, is typed
+    by the other, or one extends the other, either way. Forward links only (`references` → `type`, `extends`), the
+    order of `metaclassOrder`. A self-reference, a reference to another metamodel's class and an inherited reference
+    make no edge (the lane's reading).
+  - Rule (`assignMetaclassColors`): overrides first; then each class takes, among the FREE swatches (all of them once
+    none is free), the one whose smallest hue distance to its already coloured neighbours is the largest. Ties go to the
+    least used swatch (only past twelve), then to the analogous order round the seed, + before −: the lane's reading
+    of «distance from the seed, then swatch order», which makes a class with no coloured neighbour follow R-VP-37's
+    order. Deterministic; the order of the adjacency lists does not matter.
+  - Measured on 3137, light, DemoESM (native): four class pairs connected on the canvas, all with different fills.
+    Initial–State and State–Terminal by `extends`, State–Transition by `transitions`/`nextState` (4 node pairs),
+    Event–Transition by `event` (12 node pairs). DemoFlowB (IR): no two NODES have connected metaclasses. The node
+    classes meet only through ActivityNode (no instance) and ControlFlow (drawn as edges). Its six node classes have
+    six distinct fills.
+  - Cost: the resolver builds the metamodel's graph on every call while the option is on. 28.6 µs a call at 30
+    classes and 60 references, 60.9 µs at 60 and 150 (gitignored `_tmp_vppastel_perf.ts`). No memo (Rule 6).
+    Was R-VP-33 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-39** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Per-metaclass colour in the viewpoint panel: a dropdown of the metaclasses beside the twelve swatches, «Reset» and
+  «Reset all»; persisted as `metaclassColoring.overrides?: Record<metaclass id, hex>`.** Chat decision 3, on Alfonso's
+  point (2).
+  - The dropdown reuses `JjSelect` (`components/ui/JjSelect`, the Property Panel's react-select wrapper; no new
+    dependency), 160×36, each option a 10 px swatch and the name clipped with an ellipsis. It lists the classes of every
+    metamodel of `state.m2models`, grouped by metamodel when there is more than one, with the colours of the EDITED
+    viewpoint, not the active one.
+  - The swatches sit beside it as a 6×2 grid of 16 px, 116×36, the dropdown's height. This is the lane's choice over a
+    single row: twelve in a row beside a 160 px dropdown need ~392 px, and the rail's content is 328 px at its
+    narrowest (360 less 32).
+  - The current colour carries a 2 px `#334155` outline, offset 1 px. It is kept while focused after a click, which
+    Bootstrap's reboot `button:focus:not(:focus-visible)` would drop. «Reset» and «Reset all» are 11 px text buttons,
+    disabled, not hidden, when there is nothing to reset.
+  - Two shared rules are undone locally, in `properties.scss`: `.jj-select`'s 20 px `padding-bottom`
+    (`_form-system.scss`, which measured the control 56 px tall), and the global chrome on react-select's inner input.
+  - Only the twelve swatches are offered; the resolver accepts any valid hex, and ignores an invalid one or an override
+    on a class that is gone. `readMetaclassColoring` carries `overrides` only when one is valid. The last removal drops
+    the key; the toggle keeps the map.
+  - Measured on 3137 (light, DemoESM and DemoFlowB): an override is written under the class id. Every node of that
+    class paints it, the other nodes equal the resolver, and connected pairs still differ. «Reset» and «Reset all»
+    remove the key and restore every automatic fill. Choosing a class, overriding it, or a 45-character name move
+    nothing in the panel. Undo and redo are one step each; the field and its map survive the save serializer,
+    `JSON.parse` and `VersionFixer.update`.
+  - An override also moves the automatic colours of the other classes: the greedy re-runs around it, as decided. In
+    DemoFlowB, overriding Activity changed five other node classes, since every one neighbours ActivityNode, coloured
+    first. This is a perceptual item for the visual GO. Was R-VP-34 on the branch, renumbered by P-2026-10-02-1506.
+- **R-VP-48** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
   **The toolbar auto-layout uses ELK in full, in one lane, merged before the 2026-10-07 freeze (Q1).** Alfonso, 2026-10-02,
   «ok alle raccomandazioni» on `docs/discovery/discovery_2026-10-01_elk_layout_quality.md` §10. One lane: ELK's input
   (real sizes, hidden nodes out, labels in, model order off), ELK's routes drawn in session, the per-notation profile as
   data, the 8 px snap. It may change what the MODELS demo scenes show after an auto-layout (RC-26), not at rest. Prompt
   P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
-- **R-VP-38** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  Was R-VP-37 on the branch, renumbered by P-2026-10-02-1718.
+- **R-VP-49** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
   **Aligning React Flow's handles with ELK's ports waits for a critical-zone lane (D-B).** Until then an ELK route is drawn
   from ELK's own ports and the edge's endpoint grips sit on the drawn ends; the handles keep their uniform slots
   (`handlePosition.ts`), the side of each comes from the route. `portDistribution.ts` and `handlePosition.ts` untouched.
   Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
-- **R-VP-39** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  Was R-VP-38 on the branch, renumbered by P-2026-10-02-1718.
+- **R-VP-50** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
   **The Activity (UML) fork and join bar lies across the layout direction: 120 by 7 under a flow that runs down (Q7, D-C);
   amends R-VP-26 (2) on the orientation, the thickness staying R-VP-36's 7 px.** The text of R-VP-26 is not edited
   (add-only). `ACTIVITY_LAYOUT_DIRECTION` (`viewpointDerivation.ts`) is read by both the bar size and the notation's
@@ -4686,6 +4760,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   the bar they saved (the size is copied onto each view at derivation, as R-VP-36 measured). Measured at rest on the
   rest probe: a fresh Activity (UML) derivation of DemoFlowB draws both bars 120×7; the other seven rest scenes 0 px.
   Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+  Was R-VP-39 on the branch, renumbered by P-2026-10-02-1718.
 - **R-VP-40** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
   **A notation's layout profile is an optional `layout` on `DerivedNotation` (`notations.ts`), copied into the derived
   viewpoint's `_state` as `derivedLayout`, a JSON string (Q2).** Profiles for Flowchart, Activity (UML), Petri net
@@ -4723,6 +4798,54 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   the two bow apart; Statechart's profile widens node and edge spacing (80, 32) so neighbouring chords and their labels
   stay apart. (3) The labels ELK is given are matched to edges in the DOM by their text, then by distance: the edge
   markup stays byte-identical (the IR render digests pin it). Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+
+## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
+
+Source: `docs/discovery/discovery_2026-09-30_edge_ends.md` (P-2026-09-30-1810, §0 questions 1-8, §9 the measures), branch
+`edge-ends`, commits `8f3e7c307`, `462fba92d`. Taken by the lane under RC-25, each the Recommended line of its question;
+Alfonso receives the digest. The mechanism only: no derived notation and no demo binds it (the prompt's COSA).
+
+- **R-EE-1** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Seven more edge ends, drawn from a glyph table, the line cut at each glyph's back.** Persisted names, permanent once
+  saved (R-B9), additive, no migration: `EdgeTermination` gains `filledCircle`, `bar`, `cross`, `erZeroOrOne`,
+  `erExactlyOne`, `erZeroOrMany`, `erOneOrMany`; `bar` is also a `ShapeForm` value (R-VP-16), a different vocabulary on a
+  different key, kept as the prompt names it (Q1). The crow's foot ends compose bar, crow and circle, the part nearest the
+  node the maximum. Geometry fixed in px (`edges/edgeEndGlyphs.ts`), the stroke the line's resolved width and colour, so
+  the longest back (20 px) fits the 24 px Manhattan stub (Q3); markers in user space, their reference the cut
+  (`edgeUtils.trimPathEnds`: L exact, Q and C by de Casteljau, an A or anything unread left as drawn). Hollow parts fill
+  `var(--canvas-bg)` (`.ir-end-glyph--hollow`, EditorV2.scss, Q7). The seven ends of before keep their markers byte for
+  byte, no trim (Q4). Measured: markup of edges without the additions equal to `77c2f946b` (9 pins); lane probe on 3093
+  16/16, 42 fixture links in light and dark at widths 1 and 2, every new end cut at its back at both ends, every old end
+  uncut, hollow fill equal to the canvas background in both themes; the four demo scenes in the default viewpoint 0 px
+  from the pre-edit shots.
+- **R-EE-2** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Each end takes a `Conditional<EdgeTermination>`, resolved per edge instance as `line.color`.** `Conditional<T>`
+  already admits a plain `T`, so the declared type needs no union. The compile adds a resolver only for a Conditional end
+  (`CompiledEdgeView.sourceEndTermination` / `targetEndTermination`); `terminations` keeps its type, holding the plain
+  end, else the Conditional's `else` / `default`, else the default end (Q8); irEdgeViews writes the resolved end on
+  `irSourceTermination` / `irTargetTermination`, so UnifiedEdge reads what it read. A malformed Conditional renders as that
+  static end, never drops the view (R-B9-bis); `validateIR` refuses an unknown end in any branch, a `when` that is not a
+  predicate, a `rules` that is not a list. Measured: the fixture of the prompt (a reference view, `erZeroOrMany` where
+  `upperBound` is -1, `erExactlyOne` otherwise, two references) gives the two ends; in the app, 42 links each resolved from
+  a fourteen-rule Conditional on `$end.value`.
+- **R-EE-3** (2026-09-30, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+  **An end label is a text source or `{ multiplicity?, role? }`; amends nothing of R-VP-23.** `labels.sourceEnd` /
+  `targetEnd` widen to `TextSource | EdgeEndLabels` (Q2): the bare text source of R-VP-23 is the multiplicity, the object
+  form is told apart by the absence of `from`. The multiplicity sits where R-VP-23 put the label; the role at the same
+  depth on the other side of the line (`computeCardinalityAnchor`'s optional `mirror`, the six-argument call unchanged);
+  beside a new glyph both are pushed along the axis by its back (Q5). Compiled `sourceEndRole` / `targetEndRole`, emitted
+  `irSourceEndRole` / `irTargetEndRole`, each only when declared. Verified (RC-27, second agent): the pre-lane and post-lane
+  validate/compile results on 16 end-label values (all old legal text sources behave the same; only legal `EdgeEndLabels`
+  including `{}` are newly accepted), the 3 test files passing 34/34, and every `sourceEnd`/`targetEnd` reader in
+  `frontend/src`; it would be falsified by a legal text source that compiles to a role or loses `sourceEndText`, or by a
+  reader outside the lane's files that reads `.from`/`.text` on `labels.sourceEnd`/`targetEnd` without a check.
+- **R-EE-4** (2026-09-30, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The edge authoring panel lists the ends grouped and edits the Conditional ends and the end labels in Advanced.**
+  Groups Arrows, UML, ER, Petri (`TERMINATION_OPTION_GROUPS`), the seven options of before in their order and wording.
+  Basic: the grouped Select as before; a Conditional end shows the editor's read-only chip. Advanced: the Fixed /
+  Conditional control of the line fields, and an «End labels» section, a multiplicity and a role toggle per end with the
+  panel's text-source editor; the R-VP-23 form is kept while an end has no role (`withEndLabelPart`). The panel is not
+  importable in the bench (monaco): the groups and the two label forms are tested in the pure module, the wiring is not.
 
 
 ## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
