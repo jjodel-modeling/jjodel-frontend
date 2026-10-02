@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-0121
 Chat: C-2026-10-02-2340
 Lane: full (Phase 2, IR compiler and interpreter ReadCtx, critical zone by decision, tests first, mutation bench). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane sim-node-read · b60775776, bf81fc979 · non fuso: done, LIR committed first, typecheck 14 = baseline, IR, sim, simulation and jjel 72 files 2217 tests, build exit 0, probe on 3070 with C rewritten on node.[x]: commits and run-editor renders equal to C on the four scenes, the label shows the stand-in value on every IR node, the default-viewpoint scenes equal to the report, mutation bench 12/13 (the survivor a defensive check), addendum in a file of its own (the report is on sim-node-disc, unmerged)
 
 Worktree: `~/jjodel-w-simnoderead`, branch `sim-node-read`, cut by the chat from `alfonso-frontend-jjtl` after the merge of `sim-state-model` (P-2026-10-03-0114), `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run` with `--critical-zone-goahead P-2026-10-03-0121`. Before anything else: `pwd`, branch, `git log -1` (the docs commit that added this prompt), and `grep -n 'export function getSimPresentation' frontend/src/components/editor-v2/sim/simRunState.ts` and `grep -n 'export function presentationOf' frontend/src/model/simulation/netStep.ts` both hit; if any check fails, stop with `Outcome: blocked`.
 
