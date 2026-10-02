@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-2132
 Chat: C-2026-10-01-2349
 Lane: full (merge of the trunk into the branch; 2 conflicts: `docs/decisions.md`, `docs/log-inbox/symbol-editor.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane path-label-edit · 1dff977e4 · verifica visiva passata 2026-10-02 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-pathlabel`, branch `path-label-edit`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-pathlabel`, branch `path-label-edit`, `git log -1` is the commit that adds this file (its parent `c0dfec656`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-02-2132 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

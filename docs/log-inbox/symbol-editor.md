@@ -93,3 +93,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-02-1647
 **Detail**: `docs/discovery/discovery_2026-10-02_path_label_edit.md` §8
+
+## 2026-10-02 — merge: path-label-edit takes alfonso-frontend-jjtl, the path label on the trunk before its own merge (P-2026-10-02-2132)
+**Prompt**: `claude_2026-10-02_2132_prompt_path-label-edit_take_trunk.md`, rendered by `lane-run merge --trunk-into`, full lane on `~/jjodel-w-pathlabel` branch `path-label-edit`: the trunk `alfonso-frontend-jjtl` at `936a1b947` into the branch with one `--no-ff` merge, merge base `adb5d9731`, before the branch's own merge into the trunk (RC-14).
+**Files touched**: merge `1dff977e4`: 43 files from the trunk side (`docs/decisions.md`, six discovery reports, eleven prompts, `docs/log-inbox/{symbol-editor,views}.md`, and 23 code and test files under `editor-v2/edges/`, `editor-v2/utils/`, `editor-v2/viewpoint/{authoring,ir}/`, `editors/viewpoint/properties/`, `view/`), `decisions.md` and `symbol-editor.md` resolved by union. This commit: this entry and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gates on `1dff977e4`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6663/6663 in 266 files, 0 failed, the 9 known files red at import (expected: the trunk tip's 6600 in 266 plus the branch's 63); hooks 344/344; build exit 0; check:docs 4/4; check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no — 43 files, above five (RC-11), all from the trunk side, the merge being the prompt's scope; the hand resolutions are the two unions of COME 4.
+**Layer Impact Report**: not-required (no §3.2 file; `irCompile.ts` and `irTypes.ts`, under `viewpoint/ir/`, auto-merged, no hand edit)
+**Smoke visivo**: passato — chat GO, unattended, on a re-run of the P-2026-10-02-1647 probe on `1dff977e4`: `lane-run probe` on 3093, light, 35 of 36, the one failure the known undo of an inline write (ticketed), the 36 verdicts identical to the branch's run; four demo scenes and DemoFlowB's derived viewpoint 0 px from `adb5d9731`; Alfonso in the morning digest.
+**Notes**: Union in `decisions.md` (the trunk's R-IRN-40 and R-IRN-39, then the branch's R-IRN-41) and in this inbox (the trunk's 76 lines, then the branch's two entries), verbatim; `irCompile.ts` and `irTypes.ts` auto-merged, read whole. No rollback tag, pre-merge tip `641fc9a57`. Gates on `~/.hermes/node/bin` v26.8.1. The branch's crops copied to `_tmp_pathlabel_crops_branch/` before the re-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 21:32
+
+**Ticket** (low, lane-run template): step 7 of `frontend/scripts/lane-templates/trunk-into-branch.md` renders the `check:addonly` fallback as `git reset --hard {{branchTip}}`, «this branch's own pre-merge tip»; `{{branchTip}}` is the tip lane-run measured before the prompt commit landed, so here it read `c0dfec656` while the merge sat on `641fc9a57`, and the reset would have dropped the prompt's own commit. Not triggered (check:addonly PASS). Fix: render the reset as the merge's first parent, `git reset --hard HEAD^1`.
