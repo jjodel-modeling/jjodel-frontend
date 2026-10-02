@@ -35,3 +35,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-01-2349
 **Detail**: `docs/discovery/discovery_2026-10-01_label_editable_toggle.md` §0
+
+## 2026-10-02 — merge: label-editable-toggle into alfonso-frontend-jjtl (P-2026-10-02-1548)
+**Prompt**: `claude_2026-10-02_1548_prompt_merge_label-editable-toggle.md`, a merge in a session (Lane: full, a union hunk edits a base section of `docs/log-inbox/symbol-editor.md`): `label-editable-toggle` at `aa0396dd5` into `alfonso-frontend-jjtl`, merge base `4b9bc5836`, 5 commits on the branch side.
+**Files touched**: merge `a8870fa63`: 9 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-01_label_editable_toggle.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-10-01_2349_prompt_label_editable_toggle.md`, `frontend/src/components/editor-v2/viewpoint/authoring/LabelEntryEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/labelEntryEditor.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irLabelEdit.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irCompile.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irLabelEdit.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a8870fa63`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 6496 in 261 files (the trunk tip's 6457 in 260 plus the branch's 39: `labelEntryEditor.test.ts` 10 to 21, `irLabelEdit.test.ts` new with 28), 0 failed, the 9 known files red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no. 9 files, all from the branch side, listed above; the merge is the prompt's scope.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `irLabelEdit.ts` with `labelEditsName` and `LabelEntryEditor.tsx` with the hint «Only a name label can be renamed on the canvas.», so the merged code compiles on the running server; the behaviour was measured by the branch probe (23/23)
+**Notes**: Union in `docs/log-inbox/symbol-editor.md`: the trunk's preamble, then the branch's entry P-2026-10-01-2349 and its three tickets; the base's 13 entries, folded by `d2eb5fb83`, not carried back. `docs/decisions.md` merged clean, R-IRN-38 appended. No rollback tag, pre-merge tip `c10f0fd90`. Gates ran on `~/.hermes/node/bin` v26.8.1 (session PATH had nvm v18 first). check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 15:48
