@@ -1497,6 +1497,19 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   key, so the IR stays minimal. No schema change, no migration. Implemented in P-2026-10-01-2349 (`20c843f14`);
   mutation bench 17/17, probe 23/23, four demo scenes 0 px from the base run.
 
+- **R-IRN-40** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **The «editable inline»
+  toggle of a value segment reads the effective value, inline, with no predicate module.** The runtime edits a row
+  value unless `seg.editable === false` (`IRNodeContent.tsx:706`, and the singleton select at `:714`), so
+  `FieldSegmentEditor.tsx` draws `checked = editable !== false`; OFF writes `editable: false`, ON removes the key
+  through the exported `applyValueEditable`, so the IR stays minimal and a persisted `true` is dropped. The widget
+  object keeps its chip. The toggle is never disabled: the panel knows the compartment, not the row, and on a
+  `references` compartment the same flag gates the singleton select. No `irSegmentEdit.ts`: the runtime keeps its
+  inline reads and is read-only here, so a predicate would have one consumer, unlike R-IRN-38's label predicate
+  (compile and panel share it). No schema change, no migration: only the display of an absent key changes (OFF to
+  ON); the canvas and every persisted value keep their meaning. Implemented in P-2026-10-02-1646 (`d8f2e61c3`);
+  mutation bench 18/18, the base reads OFF at rest on the real app and the fix ON, four demo scenes 0 px from the
+  base run.
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
