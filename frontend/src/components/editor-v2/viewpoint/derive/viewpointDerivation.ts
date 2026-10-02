@@ -772,11 +772,19 @@ const ACTIVITY_FINAL_SIZE = { width: 24, height: 24 } as const;
 /** Decision and merge: a hollow diamond of 36 px. */
 const ACTIVITY_DECISION_SIZE = { width: 36, height: 36 } as const;
 /**
- * Fork and join: a bar declared 7 px thick and 120 long, painted 5 by 118 (the wrapper keeps a 1 px border each side).
- * The IR has no orientation and `defaultSize` is per view, so the bar is upright for every fork and join (the demo's
- * rows run left to right). Drawn as declared since P-2026-09-30-1720; 7, not 5, since P-2026-10-01-2230 (R-VP-36).
+ * The direction of Activity (UML)'s auto-layout profile (notations.ts `layout`), read here so the fork and join bars
+ * follow it (P-2026-10-01-2215, Q7, amends R-VP-26 (2)).
  */
-const ACTIVITY_BAR_SIZE = { width: 7, height: 120 } as const;
+export const ACTIVITY_LAYOUT_DIRECTION = 'DOWN' as const;
+/**
+ * Fork and join: a bar declared 7 px thick and 120 long, painted 5 by 118 (the wrapper keeps a 1 px border each side).
+ * The IR has no orientation and `defaultSize` is per view, so the bar lies across the layout direction: 120 by 7
+ * under a flow that runs down (Q7, P-2026-10-01-2215), 7 by 120 under one that runs across. Drawn as declared
+ * since P-2026-09-30-1720; 7, not 5, since P-2026-10-01-2230 (R-VP-36).
+ */
+const ACTIVITY_BAR_SIZE = (ACTIVITY_LAYOUT_DIRECTION as string) === 'DOWN' || (ACTIVITY_LAYOUT_DIRECTION as string) === 'UP'
+    ? { width: 120, height: 7 } as const
+    : { width: 7, height: 120 } as const;
 /** The action: 44 px high, its width from its name; radius 14, clamped at render to half the height (P-2026-09-30-1720). */
 const ACTIVITY_ACTION_SIZE = { height: 44 } as const;
 const ACTIVITY_ACTION_RADIUS = 14;
@@ -794,7 +802,7 @@ const ACTIVITY_GUARD_STYLE = (): TextStyle => ({ fontFamily: 'mono', fontSize: 1
  * - An action (the Node role, and every class that takes it): a white rounded rectangle, 1 px in the ink, radius 14,
  *   44 px high, its name centred in 13 px 500 in the ink, no compartment.
  * - A decision (the notation's own `decision` role): a hollow diamond, 36 px, no name.
- * - Fork and join: a filled bar in the ink, upright, 7 by 120 px, no name.
+ * - Fork and join: a filled bar in the ink, across the layout direction, 120 by 7 px under DOWN (Q7), no name.
  * - The Terminal and an Activity final: a bull's-eye, a white circle of 24 px, 1 px in the ink, the `dot-large` marker
  *   (14 px) in the border colour, no name.
  * - A control flow (the Transition role): the Flowchart's endpoints on today's router, 1 px in the ink, the open
