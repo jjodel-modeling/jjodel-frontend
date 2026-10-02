@@ -447,6 +447,7 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-inode-border: #{$slate-300};               /* node border, header rule */
   --color-inode-header-fill: #{$slate-100};          /* headerFill = true */
   --color-inode-name: #{$slate-900};                 /* instance name, scalar values */
+  --color-canvas-ink: var(--color-inode-name);       /* the name ink, resolved at :root out of reach of a coloured node (R-VP-51): its outside marks */
   --color-inode-label: #{$slate-500};                /* property labels */
   --color-inode-quiet: #{$slate-500};                /* empty dash, cardinality suffix; slate-300 read 1.48:1 (R-VP-18) */
   --color-inode-footer: #{$slate-400};               /* collapsed-slots footer, edge marker */
