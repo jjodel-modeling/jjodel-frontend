@@ -61,3 +61,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `irLabelEdit.ts` with `labelEditsName` and `LabelEntryEditor.tsx` with the hint «Only a name label can be renamed on the canvas.», so the merged code compiles on the running server; the behaviour was measured by the branch probe (23/23)
 **Notes**: Union in `docs/log-inbox/symbol-editor.md`: the trunk's preamble, then the branch's entry P-2026-10-01-2349 and its three tickets; the base's 13 entries, folded by `d2eb5fb83`, not carried back. `docs/decisions.md` merged clean, R-IRN-38 appended. No rollback tag, pre-merge tip `c10f0fd90`. Gates ran on `~/.hermes/node/bin` v26.8.1 (session PATH had nvm v18 first). check:docs printed 5 non-blocking warnings.
 **Prompt document name**: 2026-10-02 15:48
+
+## 2026-10-02 — merge: segment-editable-toggle into alfonso-frontend-jjtl (P-2026-10-02-1810)
+**Prompt**: `claude_2026-10-02_1810_prompt_merge_segment-editable-toggle.md`, a merge in a session (Lane: full, zero conflicts measured): `segment-editable-toggle` at `013a4dc9c` into `alfonso-frontend-jjtl`, merge base `adb5d9731`, 5 commits on the branch side.
+**Files touched**: merge `bc8989cdb`: 6 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_segment_editable_toggle.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-10-02_1646_prompt_segment_editable_toggle.md`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldSegmentEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/__tests__/fieldSegmentEditor.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bc8989cdb`: typecheck 14, the §17 set; typecheck:scripts exit 0; vitest 6589 in 265 files (the trunk tip's 6577 in 264 plus the branch's 12, `fieldSegmentEditor.test.ts` new), 0 failed, the 9 known files red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts and check:addonly PASS.
+**Out-of-scope changes**: no. 6 files, all from the branch side, listed above; the merge is the prompt's scope.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves `FieldSegmentEditor.tsx` with `applyValueEditable`, so the merged code compiles on the running server; the behaviour was measured by the branch probe (22/22)
+**Notes**: The session slept at about 18:25 before step 4 and resumed at 20:52; the 18:11 trunk vitest ran under load (4 timeouts, 1 failed assertion, 3 workers never started) and was taken again: 6577 in 264, 0 failed. `docs/decisions.md` merged clean, R-IRN-40 appended; no union. Rollback tag `pre-segment-editable-toggle` on `9e6adf714` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
+**Prompt document name**: 2026-10-02 18:10
