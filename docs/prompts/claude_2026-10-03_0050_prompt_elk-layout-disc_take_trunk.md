@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-0050
 Chat: —
 Lane: full (merge of the trunk into the branch; 2 conflicts: `docs/decisions.md`, `docs/log-inbox/views.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane elk-layout-disc · 6a1cea69b · hard-stop: trunk 07bca00e2 merged, every gate green, the branch row R-VP-50 renumbered R-VP-52; line added by the chat C-2026-10-01-2220, the session left it unflipped
 
 Worktree: `/Users/alfonso/jjodel-w-elklayout`, branch `elk-layout-disc`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-elklayout`, branch `elk-layout-disc`, `git log -1` is the commit that adds this file (its parent `1c63fca7c`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-03-0050 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
