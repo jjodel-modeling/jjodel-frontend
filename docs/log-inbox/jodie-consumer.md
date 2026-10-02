@@ -116,3 +116,24 @@ active log is not touched by these lanes.
 **Smoke visivo**: non applicabile — merge di soli docs.
 **Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B su `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40). Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
 **Prompt document name**: 2026-10-02 12:47
+
+## 2026-10-02 — fix(#168): JjScript sostituisce sui riferimenti singoli, = null svuota, prompt v5 (C1)
+**Prompt**: `claude_2026-10-02_1255_prompt_168_c1_executor_prompt.md` (P-2026-10-02-1255) — `set` su un riferimento a valore singolo sostituisce, più `set` sullo stesso slot non perdono scritture, prompt di chat v5 (regola (b), contenimento create + set, sezione per il fruitore sul blocco `environment`). Fase 1 di verifica, Fase 2 dopo il GO con le sei raccomandazioni adottate da Juri.
+**Files touched**: `327bfedd7`: `docs/discovery/discovery_2026-10-02_168_c1_executor_prompt.md` (nuovo); `4d49a28b7`: `frontend/src/jjscript/executor/referenceWrite.ts` (nuovo), `frontend/src/jjscript/executor/__tests__/referenceWrite.test.ts` (nuovo), `frontend/src/jjscript/executor/commands/instance.ts`; `dc8b7f9b5`: `frontend/src/constants/defaultPrompts.ts`; commit di chiusura: `docs/log-inbox/jodie-consumer.md`, la riga Status del prompt. Sonde `_tmp_168_c1_baseline.ts`, `_tmp_168_c1_window.ts`, `_tmp_168_c1_verify.ts`, non committate.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes — intermedia, non committata: l'import statico di `action.ts` in `instance.ts` rompeva `handleRegistry.test.ts` ed `elementWaiter.test.ts`; trovata da vitest e corretta prima del commit. Stato committato: tsc 14 stesso insieme, build exit 0, vitest `src/jjscript` 512 test (rosso solo il noto `context-binding.test.ts`), sonda 3046 24/24.
+**Out-of-scope changes**: no — quattro file di codice del DOVE; il ramo di scollegamento di `instance.ts` è entrato per il GO (raccomandazione 2).
+**Layer Impact Report**: produced — referto §7; nessun file di §3.1, nessun creatore dentro una TRANSACTION.
+**Smoke visivo**: non applicabile — nessuna interfaccia cambiata; sonda `_tmp_168_c1_verify.ts` su 3046, 24/24, zero errori di pagina.
+**Notes**: La race era un blocco sempre aperto, committato ogni 300 ms (`reducer.ts:1444`), non un `setTimeout(0)`: colpiva anche Run (20 ms). Correzione: flush prima della lettura e rimozione per valore. Banchi: 14/14 sul modulo puro, 5/5 nel browser; il proxy rinnovato sopravviveva ed è stato tolto. `COMMIT` si importa al momento della chiamata: un avviso Rollup in più (4 → 5). Oggetti dei due commit accorciati sotto 72 (§6.2). Una riga oltre la bozza nel prompt: `currentlyEditing`, dalla nota del GO.
+**Prompt document name**: 2026-10-02 12:55
+
+**Ticket** (minore, senza voce propria; referto §6): un `delete instance x` entro 300 ms da un link verso `x` può lasciare un id pendente nello slot, perché la rete di `Dummy.get_delete` non vede il link ancora in coda; solo letto, non misurato, ed è comune a ogni scrittura. Dichiarata anche la guardia sul padre in `removeLinked`, che nessun arm della sonda distingue.
+
+## 2026-10-02 — ticket: JjScript a M1 accetta +=, -=, add e remove senza eseguirli
+**Ticket**: `set x.ref -= y` è analizzato (`parser.ts:570-584`) e ignorato da `executeSetInstance`, quindi AGGIUNGE `y` in silenzio e risponde «Linked»; `+=` aggiunge per coincidenza. `remove y from x.ref` e `add` a M1 passano alla risoluzione M2 e falliscono con `ELEMENT_NOT_FOUND`. Il prompt di chat v5 li vieta; l'esecutore dovrebbe rifiutarli a M1 con un codice e una frase propri.
+**Priority**: medium
+**Found in**: P-2026-10-02-1255
+**Detail**: docs/discovery/discovery_2026-10-02_168_c1_executor_prompt.md
