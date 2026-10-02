@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-2349
 Chat: C-2026-10-01-2349
 Lane: fast (one authoring component and one shared predicate, root cause already read by the chat). Phase 1 short, then Phase 2 in cascade. Tier: light.
-Status: eseguito 2026-10-02 · lane fast · 450eb13c8, 20c843f14 · non fuso: hard-stop, mutation bench 17/17, probe 23/23 (toggle ON at rest, OFF opens nothing, ON again renames and drops the key, literal disabled with hint), four demo scenes 0 px, crops in frontend/scripts/smoke/_tmp_labeledit_crops/ (gitignored), verifica visiva alla chat
+Status: eseguito 2026-10-02 · lane label-editable-toggle · 20c843f14, 6652bcb9d · two Phase 1 questions adopted as recommended, two predicates instead of one (unattended) · verifica della chat sulle misure DOM della probe (23/23, scene 0 px), crop non ispezionati a vista · merge senza GO visivo di Alfonso: non cambia la demo (RC-26), su suo «riprendi» del 2026-10-02
 
 Worktree: `~/jjodel-w-labeledit`, branch `label-editable-toggle`, created from the trunk `alfonso-frontend-jjtl` at `4b9bc5836`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-labeledit`, branch `label-editable-toggle`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
