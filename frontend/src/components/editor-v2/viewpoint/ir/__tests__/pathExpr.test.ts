@@ -8,7 +8,8 @@
  * shape returned for the partial inputs the two authoring widgets can receive.
  */
 import { describe, it, expect } from 'vitest';
-import { FORBIDDEN_PATH, STEP_RE, parsePathExpr, singleHopOf } from '../pathExpr';
+import { FORBIDDEN_PATH, STEP_RE, parsePathExpr, presentationAttrOf, singleHopOf } from '../pathExpr';
+import { parseExpressionStrict } from '../../../../../jjel/parser/parser';
 
 describe('parsePathExpr — single hop', () => {
     it('parses a bare $feature as a .value take', () => {
@@ -150,5 +151,66 @@ describe('singleHopOf', () => {
 
     it('tolerates a null-ish expression', () => {
         expect(singleHopOf(undefined as unknown as string)).toBeNull();
+    });
+});
+
+/**
+ * `node.[x]` recognized by the JjEL parser itself (R-SIM-108, P-2026-10-03-0121): the corpus of the
+ * discovery (`discovery_2026-10-02_sim_node_presentation.md` §2.1), where a regex built from
+ * STATE_RESERVED disagreed with the parser on two inputs, `node.[ heat ]` and `node.[if]`.
+ */
+describe('presentationAttrOf — node.[x], as the engine reads it', () => {
+    const CORPUS: [string, string | null][] = [
+        ['node.[heat]', 'heat'],
+        [' node.[heat] ', 'heat'],
+        ['node .[heat]', 'heat'],
+        ['node.[ heat ]', 'heat'],        // the regex said null: the parser accepts the spaces
+        ['node. [heat]', null],           // `. [` is not the operator
+        ['node.heat', null],
+        ['node.[heat].x', null],
+        ['node.[1x]', null],
+        ['self.[visits]', null],          // a state root, not the presentation one
+        ['model.[i]', null],
+        ['node.[heat] ?? 0', null],
+        ['node?.[heat]', null],
+        ['$node.value', null],            // a feature called node stays a feature
+        ['Node.[heat]', null],
+        ['node.[marked]', 'marked'],
+        ['node.[if]', null],              // the regex said `if`: a keyword is not an attribute
+        ['node.[_x9]', '_x9'],
+        ['node[heat]', null],
+    ];
+
+    it('answers the corpus as the JjEL parser does, input by input', () => {
+        for (const [expr, attr] of CORPUS) expect([expr, presentationAttrOf(expr)]).toEqual([expr, attr]);
+    });
+
+    it('agrees with parseExpressionStrict on every input, by construction', () => {
+        for (const [expr] of CORPUS) {
+            const r = parseExpressionStrict(expr);
+            const e: any = r.expression;
+            const engine = e && r.errors.length === 0 && e.type === 'StateAccess' && e.object?.type === 'Identifier' && e.object.name === 'node'
+                ? e.attribute : null;
+            expect([expr, presentationAttrOf(expr)]).toEqual([expr, engine]);
+        }
+    });
+
+    it('requires the end of the input, as the engine\'s strict parse does', () => {
+        expect(presentationAttrOf('node.[heat] x')).toBeNull();
+        expect(presentationAttrOf('node.[heat] node.[cold]')).toBeNull();
+    });
+
+    it('is null, never a throw, on every PathExpr and on what is not a string', () => {
+        for (const expr of ['$name', '$name.value', '$tags.values[3]', '$owner.value.$name.value', '', '$', '.value', '$a?.value']) {
+            expect(() => presentationAttrOf(expr)).not.toThrow();
+            expect(presentationAttrOf(expr)).toBeNull();
+        }
+        expect(presentationAttrOf(undefined as unknown as string)).toBeNull();
+    });
+
+    it('leaves the PathExpr grammar closed: node.[x] still throws in parsePathExpr (R-J7, R-MK-1)', () => {
+        expect(STEP_RE.test('node')).toBe(false);
+        expect(() => parsePathExpr('node.[heat]')).toThrow('[ir] invalid PathExpr step "node" in node.[heat]');
+        expect(singleHopOf('node.[heat]')).toBeNull();
     });
 });
