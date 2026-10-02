@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-01-2336
 Chat: C-2026-10-01-2336
 Lane: fast (one SCSS rule, root cause already read by the chat). Phase 1 short, then Phase 2 in cascade. Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane ir-corner-clip · 0070222d8, 12800ede4 · Q1 adopted as recommended (irSelectionRing.test.ts in scope) · verifica visiva della chat sui crop OK (corners whole at rest, resting shadow, hover anchors whole), GO di Alfonso al merge 2026-10-02
 Worktree: `~/jjodel-w-irclip`, branch `ir-corner-clip`, created from the trunk `alfonso-frontend-jjtl` at `4b9bc5836`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-irclip`, branch `ir-corner-clip`, `git log -1` is the docs commit that added this prompt; if any differs, stop with `Outcome: blocked`.
 
 ## COSA
