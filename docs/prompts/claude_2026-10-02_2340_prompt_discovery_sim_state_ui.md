@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-2340
 Chat: C-2026-10-02-2340
 Lane: discovery (read-only; the simulation panel, the roles and data dialogs, the run state, the canvas overlay). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-02 · lane discovery sim-state-disc · report docs/discovery/discovery_2026-10-02_sim_state_ui.md, measured on 60b60c31d · hard-stop, one decision for Alfonso (the MODELS demo) and seven questions with Recommended in §0, three Phase 2 lanes in §8
 
 Worktree: `~/jjodel-w-simstate`, branch `sim-state-disc` (cut by the chat from `alfonso-frontend-jjtl` at `872d0abe8`, `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-simstate`, branch `sim-state-disc`, `git log -1` is the docs commit that added this prompt and the rows R-SIM-102..109; if any differs, stop with `Outcome: blocked` and say which.
 
