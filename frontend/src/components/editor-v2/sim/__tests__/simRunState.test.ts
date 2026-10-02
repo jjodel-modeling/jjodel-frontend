@@ -9,13 +9,14 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    __resetSimRunsForTests, DEFAULT_SIM_POLICY, getSimActiveIds, getSimChoiceVersion, getSimPolicy, getSimRun, getSimVersion, isSimActive,
-    isSimPending, MAX_PLAY_STEPS, setSimPolicy, simClear, simCommit, simReset, simSetPending,
+    __resetSimRunsForTests, configAt, DEFAULT_SIM_POLICY, getSimActiveIds, getSimChoiceVersion, getSimNodeState, getSimPolicy, getSimPresentation,
+    getSimRun, getSimVersion, getSimView, isSimActive, isSimPending, MAX_PLAY_STEPS, setSimPolicy, SIM_KEEP_CONFIGS, simClear, simCommit, simReset,
+    simSetPending, simSetView, withInputs,
 } from '../simRunState';
 import type { SimPolicy, SimRun, SimTraceStep } from '../simRunState';
 import { step } from '../../../../model/simulation/netStep';
 import type {
-    ActionOracle, CompiledNet, GuardOracle, HaltReason, NetTransition, SimState,
+    ActionOracle, CompiledNet, GuardOracle, HaltReason, NetTransition, SimState, SimValue,
 } from '../../../../model/simulation/netTypes';
 
 const TRUE: GuardOracle = () => ({ kind: 'true' });
@@ -369,5 +370,287 @@ describe('the run policy of a model (R-SIM-101)', () => {
         expect(setSimPolicy('M', { k: Number.NaN }).k).toBe(8);
         expect(setSimPolicy('M', { k: Number.POSITIVE_INFINITY }).k).toBe(8);
         expect(getSimPolicy('M').k).toBe(8);
+    });
+});
+
+describe('kept configurations and the inputs of a step (R-SIM-106, P-2026-10-03-0040)', () => {
+    /** a -t-> b -u-> a: one forced step at a time, for ever. */
+    const LOOP = mkNet([tr('t', { a: 1 }, { b: 1 }), tr('u', { b: 1 }, { a: 1 })]);
+    const loop = (n: number): Array<ReturnType<typeof step>> => {
+        const outs: Array<ReturnType<typeof step>> = [];
+        for (let i = 0; i < n; i++) {
+            const run = getSimRun('M')!;
+            const o = step(LOOP, run.config, i % 2 === 0 ? 't' : 'u', TRUE, NONE);
+            simCommit('M', o);
+            outs.push(o);
+        }
+        return outs;
+    };
+
+    it('every stored step keeps its configuration beside the trace; a refused selector keeps none (mutant: a kind left out)', () => {
+        simReset('M', mkRun(NET, { b: 1, c: 1 }));
+        const discard = out({ b: 1, c: 1 }, null, 'coin');
+        const quiet = out({ b: 1 }, null);
+        const halted = out({ b: 1, c: 1 }, 'merge');
+        expect([discard.kind, quiet.kind, halted.kind]).toEqual(['discard', 'quiescence', 'halted']);
+        for (const o of [discard, quiet, out({ b: 1 }, 't'), halted]) simCommit('M', o);
+        const run = getSimRun('M')!;
+        expect(run.trace).toHaveLength(3);
+        expect(run.keptConfigs).toHaveLength(3);
+        const nexts = [discard, quiet, halted].map(o => (o.kind === 'inadmissible' ? null : o.next));
+        run.keptConfigs!.forEach((c, i) => expect(c).toBe(nexts[i]));
+        expect(run.keptConfigs![2]).toBe(run.config);
+    });
+
+    it('capped at the last 1000: after 1003 steps the oldest kept is step 4 (mutants: the cap off by one either way)', () => {
+        expect(SIM_KEEP_CONFIGS).toBe(1000);
+        simReset('M', mkRun(LOOP, { a: 1 }));
+        const outs = loop(1003);
+        const run = getSimRun('M')!;
+        expect(run.trace).toHaveLength(1003);
+        expect(run.keptConfigs).toHaveLength(1000);
+        const next = (i: number) => { const o = outs[i]; return o.kind === 'inadmissible' ? null : o.next; };
+        expect(run.keptConfigs![0]).toBe(next(3));
+        expect(run.keptConfigs![999]).toBe(run.config);
+    });
+
+    it('the inputs given at a press are recorded on its step, as a copy; a step given none has no field (mutants: dropped; recorded empty)', () => {
+        simReset('M', mkRun(LOOP, { a: 1 }));
+        const values = [{ element: 'M', attr: 'ask', value: true }];
+        simCommit('M', step(LOOP, getSimRun('M')!.config, 't', TRUE, NONE), 'user', values);
+        simCommit('M', step(LOOP, getSimRun('M')!.config, 'u', TRUE, NONE), 'user', []);
+        simCommit('M', step(LOOP, getSimRun('M')!.config, 't', TRUE, NONE));
+        const trace = getSimRun('M')!.trace!;
+        expect(trace[0]).toEqual<SimTraceStep>({ event: null, selector: 't', kind: 'fired', inputs: values });
+        expect(trace[0].inputs).not.toBe(values);
+        expect('inputs' in trace[1]).toBe(false);
+        expect('inputs' in trace[2]).toBe(false);
+    });
+
+    describe('configAt: a kept configuration, or a replay from net.initial over the trace', () => {
+        it('step m is the live configuration, a kept step its kept configuration, step 0 the net\'s initial σ; out of range is null', () => {
+            const net = { ...LOOP, initial: st({ a: 1 }) };
+            simReset('M', mkRun(net, { a: 1 }));
+            loop(3);
+            const run = getSimRun('M')!;
+            expect(configAt(run, 3)).toBe(run.config);
+            expect(configAt(run, 1)).toBe(run.keptConfigs![0]);
+            expect(configAt(run, 0)?.state).toBe(net.initial);
+            for (const n of [-1, 4, 1.5, Number.NaN]) expect(configAt(run, n)).toBeNull();
+        });
+
+        it('a step older than the kept ones is replayed, equal to what was committed (mutant: the replay starts from the live σ)', () => {
+            const net = { ...LOOP, initial: st({ a: 1 }) };
+            simReset('M', mkRun(net, { a: 1 }));
+            const outs = loop(5);
+            const run = { ...getSimRun('M')!, keptConfigs: getSimRun('M')!.keptConfigs!.slice(-1) };
+            for (const n of [1, 2, 3, 4]) {
+                const o = outs[n - 1];
+                const replayed = configAt(run, n);
+                expect(replayed).not.toBeNull();
+                expect([...replayed!.state.marking]).toEqual([...(o.kind === 'inadmissible' ? new Map() : o.next.state.marking)]);
+            }
+        });
+
+        it('the replay reads the inputs recorded on each step (mutant: the replay ignores the inputs)', () => {
+            const ASK = { name: 'ask', metaclass: null, space: 'semantic' as const, domain: { kind: 'boolean' as const }, input: true as const };
+            const gated: NetTransition = { ...tr('t', { a: 1 }, { b: 1 }), guardSites: ['g'] };
+            const net: CompiledNet = { ...mkNet([gated, tr('u', { b: 1 }, { a: 1 })]), declared: new Map([['M', new Map([['ask', ASK]])]]), initial: st({ a: 1 }) };
+            // The guard of t reads the input: true only when the press gave ask = true.
+            const guards: GuardOracle = (_site, _event, s) => ({ kind: s.read('M', 'ask') === true ? 'true' : 'false' });
+            simReset('M', { ...mkRun(net, { a: 1 }), guards });
+            const values = [{ element: 'M', attr: 'ask', value: true }];
+            const given = withInputs(getSimRun('M')!, values);
+            const fired = step(net, getSimRun('M')!.config, 't', given.guards, given.actions);
+            expect(fired.kind).toBe('fired');
+            simCommit('M', fired, 'user', values);
+            simCommit('M', step(net, getSimRun('M')!.config, 'u', guards, NONE));
+            const run = { ...getSimRun('M')!, keptConfigs: [] };
+            expect([...configAt(run, 1)!.state.marking]).toEqual([['b', 1]]);
+            expect([...configAt(run, 2)!.state.marking]).toEqual([['a', 1]]);
+        });
+
+        it('a trace the replay refuses rebuilds nothing: null, never a wrong configuration (mutant: the refused step skipped)', () => {
+            const net = { ...LOOP, initial: st({ a: 1 }) };
+            simReset('M', mkRun(net, { a: 1 }));
+            loop(2);
+            const live = getSimRun('M')!;
+            const bad = { ...live, keptConfigs: [], trace: [{ event: null, selector: 'u', kind: 'fired' as const }, ...live.trace!.slice(1)] };
+            expect(configAt(bad, 1)).toBeNull();
+            // a replay that fires where the trace says halted is refused too
+            const lied = { ...live, keptConfigs: [], trace: [{ event: null, selector: 't', kind: 'halted' as const }, ...live.trace!.slice(1)] };
+            expect(configAt(lied, 1)).toBeNull();
+        });
+    });
+});
+
+describe('the viewed step (R-SIM-106, P-2026-10-03-0040): the canvas reads the shown configuration', () => {
+    /** a -t-> b -u-> c -v-> a, each forced. */
+    const RING = mkNet([tr('t', { a: 1 }, { b: 1 }), tr('u', { b: 1 }, { c: 1 }), tr('v', { c: 1 }, { a: 1 })]);
+    const go = (selector: string) => simCommit('M', step(RING, getSimRun('M')!.config, selector, TRUE, NONE));
+    const twoSteps = () => {
+        simReset('M', mkRun({ ...RING, initial: st({ a: 1 }) }, { a: 1 }));
+        go('t');
+        go('u');
+    };
+
+    it('a past step shows its marking to isSimActive, getSimActiveIds and getSimNodeState; getSimRun stays live (mutant: the viewed read falls back to live)', () => {
+        twoSteps();
+        expect(getSimActiveIds('M')).toEqual(['c']);
+        simSetView('M', 1);
+        expect(getSimView('M')).toBe(1);
+        expect([isSimActive('b'), isSimActive('c')]).toEqual([true, false]);
+        expect(getSimActiveIds('M')).toEqual(['b']);
+        expect(getSimActiveIds()).toEqual(['b']);
+        expect(getSimNodeState('b')?.tokens).toBe(1);
+        expect(getSimNodeState('u')?.enabled).toBe(true);
+        expect(getSimNodeState('v')).toBeNull();
+        expect([...getSimRun('M')!.config.state.marking]).toEqual([['c', 1]]);
+        simSetView('M', 0);
+        expect(getSimActiveIds('M')).toEqual(['a']);
+    });
+
+    it('the setter bumps \'mark\' once per change, never when nothing changes (mutants: no bump; a bump on every call)', () => {
+        twoSteps();
+        const v = getSimVersion();
+        simSetView('M', null);                      // already live
+        simSetView('M', 2);                         // the live step is live
+        expect(getSimVersion()).toBe(v);
+        expect(getSimView('M')).toBeNull();
+        simSetView('M', 1);
+        expect(getSimVersion()).toBe(v + 1);
+        simSetView('M', 1);
+        expect(getSimVersion()).toBe(v + 1);
+        simSetView('M', 0);
+        expect(getSimVersion()).toBe(v + 2);
+        simSetView('M', null);                      // Back to live
+        expect(getSimVersion()).toBe(v + 3);
+        expect(getSimView('M')).toBeNull();
+    });
+
+    it('a step out of range, or no run, moves nothing (mutant: an invalid step shown as live or as 0)', () => {
+        twoSteps();
+        simSetView('M', 1);
+        const v = getSimVersion();
+        for (const n of [-1, 3, 0.5]) simSetView('M', n);
+        expect(getSimView('M')).toBe(1);
+        expect(getSimVersion()).toBe(v);
+        simSetView('X', 0);
+        expect(getSimView('X')).toBeNull();
+        expect(getSimVersion()).toBe(v);
+    });
+
+    it('one viewed record per (run, step): the enabled set of the viewed configuration is computed once (mutant: a fresh record per read)', () => {
+        let asked = 0;
+        const counting: GuardOracle = () => { asked++; return { kind: 'true' }; };
+        const guarded = mkNet(RING.transitions.map(t => ({ ...t, guardSites: [t.id] })));
+        simReset('M', { ...mkRun({ ...guarded, initial: st({ a: 1 }) }, { a: 1 }), guards: counting });
+        simCommit('M', step(guarded, getSimRun('M')!.config, 't', counting, NONE));
+        simSetView('M', 0);
+        asked = 0;
+        getSimNodeState('t');
+        const once = asked;
+        expect(once).toBeGreaterThan(0);
+        getSimNodeState('a');
+        getSimNodeState('u');
+        expect(asked).toBe(once);
+    });
+
+    it('a past step of a halted run reads no halt: its candidates are ringed (mutant: the live halt carried into the past)', () => {
+        simReset('M', mkRun(NET, { b: 1, c: 1 }));
+        simCommit('M', out({ b: 1, c: 1 }, null, 'coin'));       // step 1: a discard, nothing moves
+        simCommit('M', out({ b: 1, c: 1 }, 'merge'));            // step 2: halted, unsafe on b
+        expect(getSimRun('M')!.halt).not.toBeNull();
+        expect(getSimNodeState('merge')).toBeNull();
+        simSetView('M', 1);
+        expect(getSimNodeState('merge')?.enabled).toBe(true);
+    });
+
+    it('any stored commit, Reset and Stop return to live; a refused selector does not (mutant: the view outlives the live step)', () => {
+        twoSteps();
+        simSetView('M', 1);
+        const refused = step(RING, getSimRun('M')!.config, 't', TRUE, NONE);
+        expect(refused.kind).toBe('inadmissible');
+        simCommit('M', refused);
+        expect(getSimView('M')).toBe(1);
+        let v = getSimVersion();
+        simCommit('M', step(RING, { state: getSimRun('M')!.config.state, event: 'coin' }, null, TRUE, NONE));   // a discard
+        expect(getSimView('M')).toBeNull();
+        expect(getSimVersion()).toBe(v + 1);
+        expect(getSimActiveIds('M')).toEqual(['c']);
+        simSetView('M', 1);
+        simReset('M', mkRun({ ...RING, initial: st({ a: 1 }) }, { a: 1 }));
+        expect(getSimView('M')).toBeNull();
+        go('t');
+        simSetView('M', 0);
+        v = getSimVersion();
+        simClear('M');
+        expect(getSimView('M')).toBeNull();
+        expect(getSimVersion()).toBe(v + 1);
+        expect(isSimActive('a')).toBe(false);
+    });
+
+    it('per model: viewing one model leaves another live (mutant: one view for every model)', () => {
+        twoSteps();
+        simReset('M2', mkRun(mkNet([tr('x', { p: 1 }, { q: 1 })]), { q: 1 }));
+        simSetView('M', 0);
+        expect(getSimView('M2')).toBeNull();
+        expect(getSimActiveIds('M2')).toEqual(['q']);
+        expect(getSimActiveIds('M')).toEqual(['a']);
+    });
+
+    it('after the test reset the new run reads live (declared intent: a stale view is inert, `viewedOf` checks the run record)', () => {
+        twoSteps();
+        simSetView('M', 0);
+        __resetSimRunsForTests();
+        twoSteps();
+        expect(getSimView('M')).toBeNull();
+        expect(getSimActiveIds('M')).toEqual(['c']);
+    });
+});
+
+describe('getSimPresentation (R-SIM-108): an element\'s presentation on the shown configuration', () => {
+    const glow = (marking: Record<string, number>, stored: Record<string, SimValue>, derived: Record<string, SimValue> = {}): SimState => ({
+        ...st(marking),
+        presentation: new Map([['b', new Map(Object.entries(stored))]]),
+        derived: { attrs: new Map(), presentation: new Map([['b', new Map(Object.entries(derived))]]) },
+    });
+
+    it('undefined without a run, after Stop, for an element no run knows (mutant: a stale value kept)', () => {
+        expect(getSimPresentation('b', 'heat')).toBeUndefined();
+        simReset('M', { ...mkRun(NET, {}), config: { state: glow({ a: 1 }, { heat: 1 }), event: null } });
+        expect(getSimPresentation('b', 'heat')).toBe(1);
+        expect(getSimPresentation('zz', 'heat')).toBeUndefined();
+        expect(getSimPresentation('b', 'cold')).toBeUndefined();
+        simClear('M');
+        expect(getSimPresentation('b', 'heat')).toBeUndefined();
+    });
+
+    it('stored then derived, as the engine reads it (mutant: the derived part first)', () => {
+        simReset('M', { ...mkRun(NET, {}), config: { state: glow({ a: 1 }, { heat: 0 }, { heat: 9, shade: 'dark' }), event: null } });
+        expect(getSimPresentation('b', 'heat')).toBe(0);
+        expect(getSimPresentation('b', 'shade')).toBe('dark');
+    });
+
+    it('reads the viewed step while one is shown, the live one after (mutant: the reader reads live)', () => {
+        const first = glow({ a: 1 }, { heat: 1 });
+        const net: CompiledNet = { ...mkNet([tr('t', { a: 1 }, { b: 1 })]), initial: first };
+        simReset('M', { ...mkRun(net, {}), config: { state: first, event: null } });
+        const actions: ActionOracle = () => ({ kind: 'ok', assignments: [{ element: 'b', attr: 'heat', value: 2 }] });
+        const declared = new Map([['b', new Map([['heat', { name: 'heat', metaclass: null, space: 'presentation' as const, domain: null }]])]]);
+        const withDecl: CompiledNet = { ...net, declared, transitions: [{ ...net.transitions[0], actionSites: [{ element: 't', role: 'transition' }] }] };
+        simCommit('M', step(withDecl, getSimRun('M')!.config, 't', TRUE, actions));
+        expect(getSimPresentation('b', 'heat')).toBe(2);
+        simSetView('M', 0);
+        expect(getSimPresentation('b', 'heat')).toBe(1);
+        simSetView('M', null);
+        expect(getSimPresentation('b', 'heat')).toBe(2);
+    });
+
+    it('reading bumps nothing (R-SIM-108: a reader, never a writer)', () => {
+        simReset('M', { ...mkRun(NET, {}), config: { state: glow({ a: 1 }, { heat: 1 }), event: null } });
+        const v = getSimVersion();
+        getSimPresentation('b', 'heat');
+        expect(getSimVersion()).toBe(v);
     });
 });

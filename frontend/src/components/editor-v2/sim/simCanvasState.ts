@@ -16,20 +16,46 @@
  *
  * Slice A2 adds a fourth, which is not a reading of the configuration: the
  * elements of the transitions the panel's open choice list offers.
+ *
+ * P-2026-10-03-0040 (R-SIM-102, R-SIM-107, R-SIM-109) adds, for the face and
+ * the canvas that Lane C draws: the presentation rows of an element, apart from
+ * σ; the nuXmv kind of every row; and, given the σ before the step that led to
+ * the configuration, the values that step changed. `sigma` keeps its meaning,
+ * so the overlay paints what it painted.
  */
 
-import { candidates, terminated, tokens } from '../../../model/simulation/netStep';
+import { candidates, presentationOf, terminated, tokens } from '../../../model/simulation/netStep';
 import { netStcFromRoles } from '../../../model/simulation/netCompile';
-import type { SimState, SimValue } from '../../../model/simulation/netTypes';
+import type { SimState, SimValue, StateAttributeDecl } from '../../../model/simulation/netTypes';
 import type { SimRun } from './simRunState';
 
 /** The part of a run the canvas reads. */
 export type SimCanvasRun = Pick<SimRun, 'net' | 'config' | 'guards' | 'alphabet' | 'halt' | 'inputs'>;
 
-/** One semantic attribute of an element in σ, as text. */
+/** The kind of a state attribute, named as nuXmv names it (R-SIM-102): stored, derived, input. */
+export type SimStateKind = 'VAR' | 'DEFINE' | 'IVAR';
+
+/**
+ * R-SIM-102: an input is `IVAR` (asked at the press that reads it, never in σ), a
+ * derived attribute `DEFINE` (never assigned), any other `VAR`. The order of
+ * `declarationForm` (simInputs.ts), which the dialogs read from the rows.
+ */
+export function stateKindOf(decl: StateAttributeDecl): SimStateKind {
+    return decl.input === true ? 'IVAR' : decl.equation !== undefined ? 'DEFINE' : 'VAR';
+}
+
+/** One attribute of an element in one space of σ, as text. */
 export interface SimSigmaRow {
     readonly attr: string;
     readonly value: string;
+    /** R-SIM-102: the kind of the declaration the run holds for the element; absent where none is declared. */
+    readonly kind?: SimStateKind;
+    /**
+     * R-SIM-102, R-SIM-107: the value before the step that led to this configuration, as text, when that
+     * step changed it; `null` when the element had no value before. Absent on an unchanged value, and on
+     * every row when the reader gave no σ before (Reset).
+     */
+    readonly before?: string | null;
 }
 
 /** What one node shows of a run. */
@@ -42,6 +68,8 @@ export interface SimNodeState {
     readonly sigma: readonly SimSigmaRow[];
     /** A candidate transition of some input was compiled from the element. */
     readonly enabled: boolean;
+    /** R-SIM-109: the element's presentation state (`node.[x]`), stored then derived, sorted; never in `sigma`. */
+    readonly presentation?: readonly SimSigmaRow[];
 }
 
 /**
@@ -99,27 +127,55 @@ export function choiceElements(net: SimCanvasRun['net'], transitions: readonly s
     return out;
 }
 
-/** The element's attributes of one σ space, `[]` when it has none. */
-function rowsOf(space: SimState['attrs'] | undefined, element: string): SimSigmaRow[] {
-    const values = space?.get(element);
-    if (!values) return [];
-    return [...values].map(([attr, value]: [string, SimValue]) => ({ attr, value: String(value) }));
+/** An element's value of one space of σ, stored then derived, as the engine reads it (`stateAccess`, `presentationOf`). */
+export function stateValueOf(state: SimState, space: 'semantic' | 'presentation', element: string, attr: string): SimValue | undefined {
+    return space === 'presentation'
+        ? presentationOf(state, element, attr)
+        : state.attrs.get(element)?.get(attr) ?? state.derived?.attrs.get(element)?.get(attr);
 }
 
 /**
- * What the node of `objectId` shows of `run`: `null` when the run does not know
- * the element (not a place, not the origin of a candidate, no σ). The model's
- * globals are keyed on the model id, which is never a node, so they stay in the
- * panel.
+ * The element's attributes of one σ map, `[]` when it has none: the kind from
+ * the net's declarations, and `before` where `prev`, the σ before the step, holds
+ * another value of the same space.
  */
-export function nodeStateOf(run: SimCanvasRun, objectId: string): SimNodeState | null {
+function rowsOf(
+    space: SimState['attrs'] | undefined, element: string, run: SimCanvasRun, presentation: boolean, prev?: SimState | null,
+): SimSigmaRow[] {
+    const values = space?.get(element);
+    if (!values) return [];
+    const declared = run.net.declared.get(element);
+    return [...values].map(([attr, value]: [string, SimValue]) => {
+        const decl = declared?.get(attr);
+        const old = prev ? stateValueOf(prev, presentation ? 'presentation' : 'semantic', element, attr) : value;
+        return {
+            attr, value: String(value),
+            ...(decl ? { kind: stateKindOf(decl) } : {}),
+            ...(old !== value ? { before: old === undefined ? null : String(old) } : {}),
+        };
+    });
+}
+
+const byAttr = (a: SimSigmaRow, b: SimSigmaRow) => a.attr.localeCompare(b.attr);
+
+/**
+ * What the node of `objectId` shows of `run`: `null` when the run does not know
+ * the element (not a place, not the origin of a candidate, no σ, no presentation).
+ * The model's globals are keyed on the model id, which is never a node, so they
+ * stay in the panel. `prev` is the σ before the step that led to the run's
+ * configuration: given, a row that step changed says so (`before`); a value the
+ * step removed has no row.
+ */
+export function nodeStateOf(run: SimCanvasRun, objectId: string, prev?: SimState | null): SimNodeState | null {
     const state = run.config.state;
     const isPlace = run.net.places.has(objectId);
     const enabled = enabledElements(run).has(objectId);
-    const sigma = [...rowsOf(state.attrs, objectId), ...rowsOf(state.derived?.attrs, objectId)]
-        .sort((a, b) => a.attr.localeCompare(b.attr));
-    if (!isPlace && !enabled && sigma.length === 0) return null;
-    return { modelId: run.net.modelId, tokens: isPlace ? tokens(state, objectId) : null, sigma, enabled };
+    const sigma = [...rowsOf(state.attrs, objectId, run, false, prev), ...rowsOf(state.derived?.attrs, objectId, run, false, prev)].sort(byAttr);
+    const presentation = [
+        ...rowsOf(state.presentation, objectId, run, true, prev), ...rowsOf(state.derived?.presentation, objectId, run, true, prev),
+    ].sort(byAttr);
+    if (!isPlace && !enabled && sigma.length === 0 && presentation.length === 0) return null;
+    return { modelId: run.net.modelId, tokens: isPlace ? tokens(state, objectId) : null, sigma, enabled, presentation };
 }
 
 /**
