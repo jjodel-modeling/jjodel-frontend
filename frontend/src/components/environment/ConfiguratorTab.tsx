@@ -39,6 +39,7 @@ import InstanceDetail, { type DetailPermission } from '../abstract/tabs/Instance
 import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
 import { createM1 } from '../../pages/components/Navbar';
 import { EnvGenEvents } from '../../events/registry';
+import { consumerFocusOf, consumerSelectionOf, setConsumerSelection } from './consumerJodieContext';
 import type { DeleteOptions, DeletePreflight, NavState } from '../../jjform';
 import './configuratorTab.scss';
 
@@ -163,6 +164,28 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
      *  Data Manager clears it from its selection gestures. */
     const [nav, setNav] = useState<NavState | null>(null);
     useEffect(() => { setNav(null); }, [selectedInstanceId]);
+
+    // #168 J1 — what is on screen, for Jodie: the element in the detail (the breadcrumb's current
+    // step after a drill-in, otherwise the selected row), its exact type, its model
+    // (`consumerFocusOf`). Written to `consumerJodieContext` (a Jodie that recomputes later still
+    // reads it) and announced by event. The page only: the overlay is the developer's, who Jodie
+    // follows through the Dock. Primitive deps, so a store update that changes none of them is silent.
+    const focus = consumerFocusOf(idlookup, profile, selectedTypeId, selectedInstanceId, nav);
+    const selection = consumerSelectionOf(idlookup, projectModelIds, focus.typeId, focus.instanceId);
+    useEffect(() => {
+        if (!isPage) return;
+        const detail = { typeId: selection.typeId, instanceId: selection.instanceId, modelId: selection.modelId };
+        setConsumerSelection(detail);
+        window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, { detail }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPage, selection.typeId, selection.instanceId, selection.modelId]);
+    useEffect(() => {
+        if (!isPage) return;
+        return () => {
+            setConsumerSelection(null);
+            window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, { detail: null }));
+        };
+    }, [isPage]);
 
     /** The detail column is the element that scrolls: Back restores its offset. */
     const detailRef = useRef<HTMLDivElement | null>(null);
