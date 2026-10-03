@@ -187,3 +187,49 @@ active log is not touched by these lanes.
 **Smoke visivo**: passato — verifica visiva di Juri sulla lane (2026-10-02, voci 1-6 del rework e 1-6 della navigazione nel dettaglio); sul trunk unito le sonde della lane, non `npm run smoke` (fisso sulla 3000).
 **Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B su `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40). Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
 **Prompt document name**: 2026-10-02 21:47
+
+## 2026-10-03 — feat(#168): il fruitore vede la proposta di Jodie e la applica (J4, lane C2)
+**Prompt**: `claude_2026-10-02_2215_prompt_168_c2_proposal.md` (P-2026-10-02-2215) — nello stand-alone un blocco `jjscript` di Jodie diventa una proposta leggibile con «Apply» e «Discard» e lo script in «Details»; Apply accende l'annullamento e «Unsaved» e mostra l'elemento nel Configurator; controllo del contenimento prima di Apply; developer invariato.
+**Files touched**: `f7fde9973`: `Jodie/consumerProposalModel.ts`, `Jodie/__tests__/consumerProposal.test.ts`, `Jodie/ConsumerProposal.tsx`, `Jodie/ConsumerProposal.scss` (nuovi), `common/MarkdownRenderer.tsx`, `events/registry.ts`, `environment/ConfiguratorTab.tsx`; referto `ae1978693`. Sonde `_tmp_168_c2_verify.ts`, `_tmp_168_c2_raw.ts`, `_tmp_168_c2_console.ts` e righe `_tmp_168_c2_setup.js`, `_tmp_168_c2_mock.js` non committate.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` output completo **14**, insieme di §17; build exit 0; vitest 49/49 sul test nuovo, verdi `consumerJodieContext`, `multiDraw`, `lastSaved`, `formAuthoring`; sonda 3047 19/19 a clic reali, zero errori di pagina, zero chiamate reali; developer: «Run» e `ScriptBlock` come prima (S6).
+**Out-of-scope changes**: no — rinomina di un file della lista: `consumerProposal.ts` → `consumerProposalModel.ts` (collisione di maiuscole con `ConsumerProposal.tsx`, TS1149), su risposta dell'orchestratore.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — verifica visiva di Juri del 2026-10-03, voci 1-7 della checklist (vite 3047 su `f7fde9973`, fixture `_tmp_168_c2_setup.js`, risposte simulate `_tmp_168_c2_mock.js`, zero chiamate reali); sonda Playwright 19/19 su 3047.
+**Notes**: Sette raccomandazioni del referto adottate da Juri. Misurato e corretto: Apply attende U.UpdatingTimer*1.5+150 ms dopo ogni passo. Senza, i passi diventano una sola voce di undo (R-UNDO-5: un Ctrl+Z lasciava l'id di ph1 nello slot di Scenario_0) e il guard rifiuta il set che nomina l'elemento appena creato. Ora 3 Ctrl+Z per 3 passi, stato iniziale ripristinato. Banco 23/23.
+**Prompt document name**: 2026-10-02 22:15
+
+## 2026-10-03 — ticket: in consumer il guard rifiuta un set che nomina l'elemento creato dal passo prima
+**Ticket**: Con `?profile=`, `create instance of Phase "p"` seguito subito da `set Scenario_0.pathway = p` è rifiutato come `PROFILE_UNRESOLVED` «Cannot resolve metaclass for instance 'p'»: `describeForGuard` (`executor.ts`) legge `instanceof` dell'oggetto appena creato prima che il dispatch differito arrivi nello store. Misurato con `JjScriptService.execute` e lo scope di Jodie: senza pausa rifiutato, con 400 ms passa, in developer (nessun guard) passa. La proposta di C2 lo aggira con una pausa fra i passi (`f7fde9973`); ogni altro esecutore in consumer (console, `ScriptBlock`) lo incontra.
+**Priority**: medium
+**Found in**: P-2026-10-02-2215
+
+## 2026-10-03 — ticket: i passi di uno script entro 450 ms diventano una voce di undo che non si annulla per intero
+**Ticket**: Il reducer fonde un delta nella voce precedente quando arriva entro `U.UpdatingTimer * 1.5` (`isRelevantChangeCheck`), con il merge superficiale first-wins di R-UNDO-5. Misurato su «create ph1, put it inside Scenario_0, link it» senza pausa: una sola voce, un Ctrl+Z toglie ph1 e lascia il suo id nello slot `pathway` di Scenario_0, le pressioni successive non fanno nulla. C2 distanzia i passi; `ScriptBlock` (20 ms fra i comandi) è con ogni probabilità nella stessa condizione, non misurato.
+**Priority**: medium
+**Found in**: P-2026-10-02-2215
+
+## 2026-10-03 — ticket: una proposta non può cambiare un elemento annidato dal Configurator
+**Ticket**: JjScript trova i nomi solo fra le radici del modello (`findInstanceByName`, `instance.ts:117-120`). Un elemento annidato con «Add» del Configurator o del Data Manager (forma `addObject`, fuori da `model.objects`) non è raggiungibile per nome: la proposta lo dice in chiaro («"Phase_0" is inside another element, and changes to it can't be made from here yet.»). Un elemento annidato da un `set` di JjScript resta in `model.objects` (referto R) e quindi è raggiungibile: correzione del referto C2 §3.7, che includeva anche quello.
+**Priority**: medium
+**Found in**: P-2026-10-02-2215
+**Detail**: docs/discovery/discovery_2026-10-02_168_c2_proposal.md
+
+## 2026-10-03 — ticket: due forme del parser JjScript che Jodie deve rispettare
+**Ticket**: Misurato sul parser: in `create instance of X nome` un nome senza virgolette sparisce in silenzio e l'elemento prende il nome automatico (`X`, `X2`…), così un `set` successivo che usa `nome` fallisce; `rename instance x to "y"` con le virgolette non si legge (serve `to y`). Il prompt di chat (C1) dovrebbe insegnare il nome tra virgolette nel `create` e senza nel `rename`. La proposta mostra una riga illeggibile come non applicabile.
+**Priority**: low
+**Found in**: P-2026-10-02-2215
+**Detail**: docs/discovery/discovery_2026-10-02_168_c2_proposal.md
+
+## 2026-10-03 — ticket: «Test in console mode» e «Source» sotto un messaggio con una proposta
+**Ticket**: Sotto il messaggio che contiene una proposta il fruitore vede «Test in console mode» (`ChatMessages.tsx:182-190`) e «Source» (`MarkdownMessage.tsx:65-72`), che mostra lo script grezzo; l'interruttore smonta e rimonta la proposta (il suo esito resta nello store). Li copre la lane D, che li toglie in consumer (decisione dell'orchestratore nel GO di C2).
+**Priority**: low
+**Found in**: P-2026-10-02-2215
+**Detail**: docs/discovery/discovery_2026-10-02_168_c2_proposal.md
+
+## 2026-10-03 — ticket: un set di contenimento accetta un elemento esistente di un altro tipo
+**Ticket**: Misurato in consumer: `set Scenario_0.pathway = Antonio` mette un Learner nello slot `pathway`, che è di tipo Phase, e riesce. Il controllo di C2 prima di «Apply» verifica il tipo solo per gli elementi che la proposta crea; per un elemento esistente decide il core, che non controlla il tipo. La conformità lo segnala solo alla rivalidazione.
+**Priority**: low
+**Found in**: P-2026-10-02-2215
