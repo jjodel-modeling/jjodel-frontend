@@ -15,7 +15,7 @@ import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import { useEditorContextSafe } from '../../contexts/EditorContext';
 import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
-import type { BadgePosition, CompiledView, ShapeForm, VertexViewIR } from './irTypes';
+import type { BadgePosition, CompiledView, LabelAnchor, ShapeForm, VertexViewIR } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
@@ -202,7 +202,15 @@ export interface IRNodeContentProps {
      * and by a bar without a thickness, which paints its box as before.
      */
     barOrientation?: 'upright' | 'lying';
+    /**
+     * The sides the edge synthesis moved outside labels to, declared -> chosen (P-2026-10-03-1920, item 2; irEdgeViews.ts),
+     * handed over by the host from the node data. Absent = every outside label on its declared side, as before.
+     */
+    labelAnchors?: Partial<Record<LabelAnchor, LabelAnchor>>;
 }
+
+/** The four sides an outside label's anchor can name. */
+const LABEL_ANCHORS: ReadonlySet<string> = new Set(['n', 'e', 's', 'w']);
 
 /**
  * Form of the node as painted (F3, P-2026-09-29-2122). Collapsed, a graphVertex takes
@@ -257,7 +265,7 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride, barOrientation }: IRNodeContentProps) {
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride, barOrientation, labelAnchors }: IRNodeContentProps) {
     const form = resolveNodeForm(compiled, readCtx, objectId, collapsed);
     // A collapsed fill that resolves empty (a conditional with no match) falls back to the
     // expanded fill, the same convention as an empty fill falling back to the box colour.
@@ -660,7 +668,10 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 const text = raw == null ? '' : String(raw);
                 // Outside label (R-VP-15 (1)): the side rides on a class of its own, so an
                 // inside label keeps exactly the class list it had (irStyle.ts places it).
-                const anchorClass = l.anchor ? ` ir-label--anchor-${l.anchor}` : '';
+                // P-2026-10-03-1920 (item 2): an outside label the edge synthesis moved off an edge end paints on its new side.
+                const moved = l.position === 'outside' && l.anchor ? labelAnchors?.[l.anchor] : undefined;
+                const anchor = moved && LABEL_ANCHORS.has(moved) ? moved : l.anchor;
+                const anchorClass = anchor ? ` ir-label--anchor-${anchor}` : '';
                 // Q9a: with no row left under 'hide', a name on top is centred (`noRowsLeft`).
                 const position = noRowsLeft && l.position === 'top' ? 'center' : l.position;
                 // Editable: intrinsic name/qualifiedName labels edit the element

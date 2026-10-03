@@ -33,7 +33,7 @@ import { useIsHighlighted } from '../problems/useNodeProblems';
 import { useIRView, useIRViewpointActive } from '../viewpoint/ir/irResolve';
 import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
 import { rendererForWidget } from '../viewpoint/ir/widgetRenderer';
-import type { VertexViewIR } from '../viewpoint/ir/irTypes';
+import type { LabelAnchor, VertexViewIR } from '../viewpoint/ir/irTypes';
 import IRNodeContent, { resolveCollapsedBadge, resolveNodeForm } from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
@@ -966,6 +966,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     // R-VP-50: a node its derived notation draws as a glyph (bar, disc, bull's-eye) is not coloured.
                     colorOverride={metaclassColor && !isNotationGlyph(irResolution.compiled.ir) ? metaclassColor : undefined}
                     barOrientation={barOrientation}
+                    // P-2026-10-03-1920 (item 2): the outside labels' sides the edge synthesis chose (irEdgeViews.ts).
+                    labelAnchors={(data as { irLabelAnchors?: Partial<Record<LabelAnchor, LabelAnchor>> }).irLabelAnchors}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'

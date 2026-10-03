@@ -262,6 +262,28 @@ export type BarOrientation = 'upright' | 'lying';
 export interface ElkAutoLayoutResult {
     positions: Map<string, ElkPoint>;
     routes: Map<string, ElkRoute>;
+    /**
+     * Per node with outside labels, the side each declared label was reserved on (declared -> reserved; P-2026-10-03-1920,
+     * item 2): the declared one, or the one `outsideAnchorFor` moved it to when a route of the first pass took it.
+     */
+    outsideAnchors?: Map<string, Partial<Record<LabelAnchor, LabelAnchor>>>;
+}
+
+/** The side of a box an outside label's anchor names. */
+const ANCHOR_SIDE: Record<LabelAnchor, AnchorSide> = { n: 'top', s: 'bottom', e: 'right', w: 'left' };
+const ANCHOR_ORDER: Record<LabelAnchor, LabelAnchor[]> = { n: ['n', 's', 'e', 'w'], s: ['s', 'n', 'e', 'w'], e: ['e', 'w', 's', 'n'], w: ['w', 'e', 's', 'n'] };
+
+/**
+ * The side an outside label takes (P-2026-10-03-1920, item 2): its declared side when no edge end holds it, else the
+ * first free of the opposite side and the other two (e then w for n and s, s then n for e and w); with all four held,
+ * the one of those holding the fewest ends, the same order breaking a tie. `ends` counts the ends on each side.
+ */
+export function outsideAnchorFor(declared: LabelAnchor, ends: Partial<Record<AnchorSide, number>>): LabelAnchor {
+    const order = ANCHOR_ORDER[declared];
+    const held = (a: LabelAnchor) => ends[ANCHOR_SIDE[a]] ?? 0;
+    const free = order.find(a => held(a) === 0);
+    if (free) return free;
+    return order.reduce((best, a) => (held(a) < held(best) ? a : best), order[0]);
 }
 
 const LABEL_ID = (edgeId: string, kind: ElkLabelInput['kind']) => `${edgeId}::elk-${kind}`;
@@ -579,8 +601,56 @@ function readElkResult(out: ElkNode, edges: Edge[], input: ElkAutoLayoutInput, b
     return { positions, routes };
 }
 
-/** The toolbar auto-layout: positions on the grid and a route per laid-out edge. */
+/**
+ * The toolbar auto-layout: positions on the grid and a route per laid-out edge.
+ *
+ * Outside labels (P-2026-10-03-1920, item 2): each is reserved on its declared side, read back through the node's
+ * `irLabelAnchors` when the label is painted on a moved one; where a route of that layout ends on a reserved side, the
+ * label moves by `outsideAnchorFor` and ELK runs once more (layered only), so the room is where the label will paint.
+ */
 export async function computeElkAutoLayout(nodes: Node[], edges: Edge[], input: ElkAutoLayoutInput = {}): Promise<ElkAutoLayoutResult> {
+    const byId = new Map(nodes.map(n => [n.id, n] as const));
+    const declaredOf = (id: string, painted: LabelAnchor): LabelAnchor => {
+        const moved = (byId.get(id)?.data as { irLabelAnchors?: Record<string, unknown> } | undefined)?.irLabelAnchors;
+        const back = moved ? Object.entries(moved).find(([, to]) => to === painted)?.[0] : undefined;
+        return back && back in ANCHOR_SIDE ? (back as LabelAnchor) : painted;
+    };
+    const declared = new Map<string, ElkNodeLabelInput[]>();
+    for (const n of nodes) {
+        const labels = input.outsideLabelsOf?.(n.id);
+        if (labels?.length) declared.set(n.id, labels.map(l => ({ ...l, anchor: declaredOf(n.id, l.anchor) })));
+    }
+    const reservedOf = (moved: Map<string, Partial<Record<LabelAnchor, LabelAnchor>>>) => {
+        const out = new Map<string, Partial<Record<LabelAnchor, LabelAnchor>>>();
+        for (const [id, labels] of declared) out.set(id, Object.fromEntries(labels.map(l => [l.anchor, moved.get(id)?.[l.anchor] ?? l.anchor])));
+        return out;
+    };
+    const run = (moved: Map<string, Partial<Record<LabelAnchor, LabelAnchor>>>) => layoutOnce(nodes, edges, {
+        ...input,
+        outsideLabelsOf: id => declared.get(id)?.map(l => ({ ...l, anchor: moved.get(id)?.[l.anchor] ?? l.anchor })),
+    });
+    const first = await run(new Map());
+    if (declared.size === 0 || input.profile?.algorithm === 'stress') return { ...first, outsideAnchors: reservedOf(new Map()) };
+    // The ends each node's routes take, by side; a label whose side one holds moves.
+    const ends = new Map<string, Partial<Record<AnchorSide, number>>>();
+    const add = (id: string, side: AnchorSide) => { const c = ends.get(id) ?? {}; c[side] = (c[side] ?? 0) + 1; ends.set(id, c); };
+    for (const e of edges) {
+        const r = first.routes.get(e.id);
+        if (r) { add(e.source, r.sourceSide); add(e.target, r.targetSide); }
+    }
+    const moved = new Map<string, Partial<Record<LabelAnchor, LabelAnchor>>>();
+    for (const [id, labels] of declared) {
+        for (const l of labels) {
+            const to = outsideAnchorFor(l.anchor, ends.get(id) ?? {});
+            if (to !== l.anchor) moved.set(id, { ...moved.get(id), [l.anchor]: to });
+        }
+    }
+    if (moved.size === 0) return { ...first, outsideAnchors: reservedOf(moved) };
+    return { ...(await run(moved)), outsideAnchors: reservedOf(moved) };
+}
+
+/** One layout: the graph, ELK (with the stress profile's overlap removal), positions and routes. */
+async function layoutOnce(nodes: Node[], edges: Edge[], input: ElkAutoLayoutInput): Promise<ElkAutoLayoutResult> {
     const graph = buildElkGraph(nodes, edges, input);
     if (!graph.children?.length) return { positions: new Map(), routes: new Map() };
     let out = await elk.layout(graph);

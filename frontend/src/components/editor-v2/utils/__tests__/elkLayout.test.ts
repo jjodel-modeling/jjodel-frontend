@@ -264,6 +264,35 @@ describe('outside vertex labels: ELK reserves them, the positions stay the node 
     });
 });
 
+describe('outside labels: the declared side reserved, moved once when a route takes it (P-2026-10-03-1920, item 2)', () => {
+    const lab = (anchor: ElkNodeLabelInput['anchor'], width = 20, height = 16, gap = 6, text = 't'): ElkNodeLabelInput => ({ anchor, text, width, height, gap });
+
+    it('a route leaving the declared side: ELK runs again with the label on the free side (mutation: no second pass)', async () => {
+        const r = await computeElkAutoLayout([sized('a', 44, 44), sized('b', 44, 44)], [edge('ab', 'a', 'b')],
+            { profile: { direction: 'DOWN' }, outsideLabelsOf: (id) => (id === 'a' ? [lab('s')] : undefined) });
+        expect(r.outsideAnchors?.get('a')).toEqual({ s: 'n' });
+        expect(r.routes.get('ab')?.sourceSide).toBe('bottom');
+        // The layout drawn is the second one: the room above a, as if the label were declared there.
+        const above = await computeElkAutoLayout([sized('a', 44, 44), sized('b', 44, 44)], [edge('ab', 'a', 'b')],
+            { profile: { direction: 'DOWN' }, outsideLabelsOf: (id) => (id === 'a' ? [lab('n')] : undefined) });
+        expect([...r.positions]).toEqual([...above.positions]);
+        expect(r.positions.get('a')!.y).toBeGreaterThan(48);
+    });
+
+    it('the declared side free after the layout: kept, one pass (mutation: the label always moved)', async () => {
+        const r = await computeElkAutoLayout([sized('a', 44, 44), sized('b', 44, 44)], [edge('ab', 'a', 'b')],
+            { profile: { direction: 'RIGHT' }, outsideLabelsOf: (id) => (id === 'a' ? [lab('s')] : undefined) });
+        expect(r.outsideAnchors?.get('a')).toEqual({ s: 's' });
+    });
+
+    it('a label painted on a moved side is reserved on its declared one, read back through the node data (mutation: the painted side reserved)', async () => {
+        const a = sized('a', 44, 44, { data: { irLabelAnchors: { s: 'n' } } });
+        const r = await computeElkAutoLayout([a, sized('b', 44, 44)], [edge('ab', 'a', 'b')],
+            { profile: { direction: 'RIGHT' }, outsideLabelsOf: (id) => (id === 'a' ? [lab('n')] : undefined) });
+        expect(r.outsideAnchors?.get('a')).toEqual({ s: 's' });
+    });
+});
+
 describe('measureOutsideLabels: the outside labels a node paints, as drawn', () => {
     // A stub of the canvas DOM, enough for the helper: the selectors it asks, the classes, the sizes and the rects.
     const rect = (left: number, top: number, width: number, height: number) => ({ left, top, width, height, right: left + width, bottom: top + height });
