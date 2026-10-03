@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-10-03-1304
 Chat: C-2026-10-01-1725
 Lane: full (two-phase: Phase 1 discovery read-only with the Layer Impact Report, hard stop, Phase 2 after the chat's GO in the same session). Tier: heavy (RC-32: a full lane, and the work may touch `viewpoint/ir/`, declared critical on 2026-10-03). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane derived-notations-edges · e767c8c24 (discovery), 0562a2612, 104f2c0cf, 5691c3992, e7c0761cc, d914d540c, 1127b2903, 567423cd6, 3d4eefe06, 2d967f267, 7d7d8e23d, f4d768817, 5ac537e8e · gates: typecheck 14 (the §17 set), vitest 7088 passed (9 red at import, the §17 nine), build exit 0, probe 26/26 · verifica visiva passata 2026-10-03 (Alfonso)
 Worktree: `~/jjodel-w-dnotC`, branch `derived-notations-edges`, cut from the trunk at `c56f4fc63` (`frontend/node_modules` symlinked, P14).
 
 ## COSA
