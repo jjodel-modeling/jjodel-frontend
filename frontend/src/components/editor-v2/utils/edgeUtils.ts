@@ -2498,6 +2498,254 @@ export function handleCenterOf(node: any, handleId: string | null | undefined, t
     return { x: pos.x + h.x + h.width / 2, y: pos.y + h.y + h.height / 2 };
 }
 
+/** The chord of an arc between its two ends; `id`, its edge's, orders a fan (P-2026-10-03-1304). */
+export interface ArcChord {
+    start: Point;
+    end: Point;
+    id?: string;
+}
+
+/**
+ * What else an arc reads (P-2026-10-03-1304, docs/discovery/discovery_2026-10-03_derived_notations_edges.md §3.5,
+ * §3.8): its own id, the arcs between the same two nodes in its own direction, and the boxes of the other nodes,
+ * which a single arc's chord must not cross. Absent: the arc of R-VP-22, as before.
+ */
+export interface ArcContext {
+    id?: string;
+    same?: ReadonlyArray<ArcChord>;
+    obstacles?: ReadonlyArray<{ x: number; y: number; width: number; height: number }>;
+    /** The drawn curves of the other arcs, sampled (`sampleArcPath`): a single arc bowing round a box crosses none. */
+    avoid?: ReadonlyArray<ReadonlyArray<Point>>;
+    /** The label boxes of the other arcs: the curve and its own label keep off them. */
+    avoidBoxes?: ReadonlyArray<{ x: number; y: number; width: number; height: number }>;
+    /** This arc's own label, to keep it off the boxes above when the arc bows. */
+    labelSize?: { width: number; height: number };
+}
+
+/** What a single arc keeps between itself and a box it bows round, and the most it bows to do so. */
+export const ARC_CLEARANCE = 12;
+export const ARC_CLEAR_MAX = 240;
+
+type ArcBox = { x: number; y: number; width: number; height: number };
+
+/** Whether the segment from `s` to `e` enters the box (Liang-Barsky). */
+function segmentEntersBox(s: Point, e: Point, r: ArcBox): boolean {
+    const dx = e.x - s.x, dy = e.y - s.y;
+    const p = [-dx, dx, -dy, dy];
+    const q = [s.x - r.x, r.x + r.width - s.x, s.y - r.y, r.y + r.height - s.y];
+    let t0 = 0, t1 = 1;
+    for (let i = 0; i < 4; i++) {
+        if (p[i] === 0) {
+            if (q[i] < 0) return false;
+            continue;
+        }
+        const t = q[i] / p[i];
+        if (p[i] < 0) {
+            if (t > t1) return false;
+            if (t > t0) t0 = t;
+        } else {
+            if (t < t0) return false;
+            if (t < t1) t1 = t;
+        }
+    }
+    return t1 - t0 > 1e-6;
+}
+
+/**
+ * What a bow needs on each side (1: the chord's left normal, -1: its right) to take the quadratic from `s` to `e`
+ * round every box its chord enters, with ARC_CLEARANCE to spare: for each box, its farthest corner on that side, reached
+ * where the box's span on the chord comes nearest an end (the curve stands 2t(1-t) of its bow off the chord at t).
+ * Null when the chord enters no box.
+ */
+function boxNeed(s: Point, e: Point, boxes: ReadonlyArray<ArcBox>): Map<number, number> | null {
+    const dx = e.x - s.x, dy = e.y - s.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) return null;
+    const u = { x: dx / len, y: dy / len };
+    const n = { x: dy / len, y: -dx / len };
+    const hit = boxes.filter(r => segmentEntersBox(s, e, r));
+    if (hit.length === 0) return null;
+    const need = new Map<number, number>([[1, 0], [-1, 0]]);
+    for (const r of hit) {
+        const corners = [[r.x, r.y], [r.x + r.width, r.y], [r.x, r.y + r.height], [r.x + r.width, r.y + r.height]];
+        const ts = corners.map(([x, y]) => Math.min(0.98, Math.max(0.02, ((x - s.x) * u.x + (y - s.y) * u.y) / len)));
+        const os = corners.map(([x, y]) => (x - s.x) * n.x + (y - s.y) * n.y);
+        const t0 = Math.min(...ts), t1 = Math.max(...ts);
+        const tm = Math.abs(t0 - 0.5) > Math.abs(t1 - 0.5) ? t0 : t1;
+        const factor = 2 * tm * (1 - tm);
+        for (const side of [1, -1]) {
+            const depth = Math.max(0, ...os.map(o => side * o)) + ARC_CLEARANCE;
+            need.set(side, Math.max(need.get(side) as number, depth / factor));
+        }
+    }
+    return need;
+}
+
+/** The step of the bow search, in px of bow. */
+const ARC_BOW_STEP = 4;
+/** A crossing this close to the arc's own ends is its meeting with an edge at the same node, not a crossing. */
+const ARC_END_SLACK = 6;
+
+function properCross(a: Point, b: Point, c: Point, d: Point): Point | null {
+    const r = { x: b.x - a.x, y: b.y - a.y }, q = { x: d.x - c.x, y: d.y - c.y };
+    const den = r.x * q.y - r.y * q.x;
+    if (Math.abs(den) < 1e-9) return null;
+    const t = ((c.x - a.x) * q.y - (c.y - a.y) * q.x) / den;
+    const v = ((c.x - a.x) * r.y - (c.y - a.y) * r.x) / den;
+    return t > 0 && t < 1 && v > 0 && v < 1 ? { x: a.x + t * r.x, y: a.y + t * r.y } : null;
+}
+
+/**
+ * The bow of a single arc whose chord enters a box (P-2026-10-03-1304, Q5): on the side the boxes ask less of first,
+ * the smallest bow from what they ask, in steps of ARC_BOW_STEP up to ARC_CLEAR_MAX, whose curve enters no box,
+ * crosses none of the `avoid` curves away from its own ends, and keeps itself and its own label off `labelBoxes` (its
+ * label off the boxes too). When no bow does, the first that drops the labels; then the one that only clears the boxes;
+ * null when the chord enters no box, or nothing clears them within ARC_CLEAR_MAX.
+ */
+function searchBow(s: Point, e: Point, boxes: ReadonlyArray<ArcBox>, avoid: ReadonlyArray<ReadonlyArray<Point>>, labelBoxes: ReadonlyArray<ArcBox> = [], labelSize?: { width: number; height: number }): number | null {
+    const need = boxNeed(s, e, boxes);
+    if (!need) return null;
+    const dx = e.x - s.x, dy = e.y - s.y;
+    const len = Math.hypot(dx, dy);
+    const n = { x: dy / len, y: -dx / len };
+    const mid = { x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 };
+    const curve = (b: number): Point[] => {
+        const c = { x: mid.x + n.x * b, y: mid.y + n.y * b };
+        const out: Point[] = [];
+        for (let i = 0; i <= 48; i++) {
+            const t = i / 48;
+            out.push({ x: (1 - t) ** 2 * s.x + 2 * t * (1 - t) * c.x + t ** 2 * e.x, y: (1 - t) ** 2 * s.y + 2 * t * (1 - t) * c.y + t ** 2 * e.y });
+        }
+        return out;
+    };
+    const clearOfBoxes = (pts: Point[]) => !pts.some(p => boxes.some(r => p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height));
+    const clearOfCurves = (pts: Point[]) => {
+        for (const other of avoid) {
+            for (let i = 1; i < pts.length; i++) {
+                for (let j = 1; j < other.length; j++) {
+                    const x = properCross(pts[i - 1], pts[i], other[j - 1], other[j]);
+                    if (x && Math.hypot(x.x - s.x, x.y - s.y) > ARC_END_SLACK && Math.hypot(x.x - e.x, x.y - e.y) > ARC_END_SLACK) return false;
+                }
+            }
+        }
+        return true;
+    };
+    const inBox = (p: Point, r: ArcBox) => p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height;
+    const overlaps = (a: ArcBox, r: ArcBox) => a.x < r.x + r.width && r.x < a.x + a.width && a.y < r.y + r.height && r.y < a.y + a.height;
+    // The label where bowedArc puts it, ARC_LABEL_GAP past the apex, outwards.
+    const ownLabel = (b: number): ArcBox | null => {
+        if (!labelSize) return null;
+        const g = ARC_LABEL_GAP * Math.sign(b);
+        const x = mid.x + n.x * (b / 2 + g), y = mid.y + n.y * (b / 2 + g);
+        return { x: x - labelSize.width / 2, y: y - labelSize.height / 2, width: labelSize.width, height: labelSize.height };
+    };
+    const clearOfLabels = (pts: Point[], b: number) => {
+        if (pts.some(p => labelBoxes.some(r => inBox(p, r)))) return false;
+        const own = ownLabel(b);
+        return !own || (!labelBoxes.some(r => overlaps(own, r)) && !boxes.some(r => overlaps(own, r)));
+    };
+    const sides = (need.get(1) as number) <= (need.get(-1) as number) ? [1, -1] : [-1, 1];
+    for (const side of sides) {
+        for (let h = Math.max(need.get(side) as number, ARC_BOW_MIN); h <= ARC_CLEAR_MAX; h += ARC_BOW_STEP) {
+            const pts = curve(side * h);
+            if (clearOfBoxes(pts) && clearOfCurves(pts) && clearOfLabels(pts, side * h)) return side * h;
+        }
+    }
+    // Then the curves without the labels, then the boxes alone.
+    for (const side of sides) {
+        for (let h = Math.max(need.get(side) as number, ARC_BOW_MIN); h <= ARC_CLEAR_MAX; h += ARC_BOW_STEP) {
+            const pts = curve(side * h);
+            if (clearOfBoxes(pts) && clearOfCurves(pts)) return side * h;
+        }
+    }
+    for (const side of sides) {
+        const h = need.get(side) as number;
+        if (h <= ARC_CLEAR_MAX && clearOfBoxes(curve(side * h))) return side * h;
+    }
+    return null;
+}
+
+/**
+ * Points along an arc's `d` as the arc helpers write it (`M L`, `M Q`, `M C`), `n` steps: the curve another arc
+ * must not cross (P-2026-10-03-1304). Any other path gives its first point only.
+ */
+export function sampleArcPath(d: string, n = 32): Point[] {
+    const v = (d.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? []).map(Number);
+    const cmd = (d.match(/[LQC]/) ?? [])[0];
+    const P = (i: number) => ({ x: v[i], y: v[i + 1] });
+    if (v.length < 2) return [];
+    const at = (t: number): Point => {
+        if (cmd === 'L') { const [a, b] = [P(0), P(2)]; return { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) }; }
+        if (cmd === 'Q') { const [a, c, b] = [P(0), P(2), P(4)]; return { x: (1 - t) ** 2 * a.x + 2 * t * (1 - t) * c.x + t ** 2 * b.x, y: (1 - t) ** 2 * a.y + 2 * t * (1 - t) * c.y + t ** 2 * b.y }; }
+        if (cmd === 'C') {
+            const [a, c1, c2, b] = [P(0), P(2), P(4), P(6)];
+            const k = [(1 - t) ** 3, 3 * t * (1 - t) ** 2, 3 * t ** 2 * (1 - t), t ** 3];
+            return { x: k[0] * a.x + k[1] * c1.x + k[2] * c2.x + k[3] * b.x, y: k[0] * a.y + k[1] * c1.y + k[2] * c2.y + k[3] * b.y };
+        }
+        return P(0);
+    };
+    if (!cmd) return [P(0)];
+    const out: Point[] = [];
+    for (let i = 0; i <= n; i++) out.push(at(i / n));
+    return out;
+}
+
+/** The quadratic of a bow `b` on the chord's left normal, its label `ARC_LABEL_GAP` past the apex, outwards. */
+function bowedArc(start: Point, end: Point, normal: Point, b: number, isHorizontal: boolean): ArcEdgeGeometry {
+    const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    const c = { x: mid.x + normal.x * b, y: mid.y + normal.y * b };
+    const apex = { x: (start.x + 2 * c.x + end.x) / 4, y: (start.y + 2 * c.y + end.y) / 4 };
+    const s = Math.sign(b);
+    const label = { x: apex.x + normal.x * s * ARC_LABEL_GAP, y: apex.y + normal.y * s * ARC_LABEL_GAP };
+    return { d: `M ${pt(start)} Q ${pt(c)} ${pt(end)}`, start, end, label, nudge: false, isHorizontal };
+}
+
+/**
+ * An arc alone between its two nodes (P-2026-10-03-1304): a chord that enters another node's box bows round it,
+ * crossing none of the `avoid` curves and keeping its curve and label off `avoidBoxes` where it can (`searchBow`);
+ * otherwise the straight line of R-VP-22, from handle centre to handle centre.
+ */
+function singleArcGeometry(start: Point, end: Point, ctx: ArcContext): ArcEdgeGeometry {
+    const b = searchBow(start, end, ctx.obstacles ?? [], ctx.avoid ?? [], ctx.avoidBoxes ?? [], ctx.labelSize);
+    if (b !== null) {
+        const dx = end.x - start.x, dy = end.y - start.y;
+        const len = Math.hypot(dx, dy);
+        return bowedArc(start, end, { x: dy / len, y: -dx / len }, b, Math.abs(dx) >= Math.abs(dy));
+    }
+    const isHorizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
+    return { d: `M ${pt(start)} L ${pt(end)}`, start, end, label: { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }, nudge: true, isHorizontal };
+}
+
+/**
+ * The fan of n arcs between one pair of nodes (P-2026-10-03-1304): every member sorts the same chords the same way,
+ * by their midpoints along the left normal of the lowest id's chord (an id that is absent, this arc's own first), ties
+ * by id, and the k-th bows by ((n-1)/2 - k)/((n-1)/2) of its own height on that normal: the outer two by the full
+ * height, the middle one of an odd fan straight. The chords keep the order of their slots (computeSidePositions orders
+ * a side by edge id when the opposite node is the same), so no two cross.
+ */
+function fanArcGeometry(start: Point, end: Point, opposite: ReadonlyArray<ArcChord>, same: ReadonlyArray<ArcChord>, id: string | undefined): ArcEdgeGeometry {
+    const self = { start, end, id };
+    const chords: ArcChord[] = [self, ...opposite, ...same];
+    const byId = (a: ArcChord, b: ArcChord) => (a.id === b.id ? 0 : a.id === undefined ? 1 : b.id === undefined ? -1 : a.id < b.id ? -1 : 1);
+    const ref = [...chords].sort(byId)[0];
+    const rl = Math.hypot(ref.end.x - ref.start.x, ref.end.y - ref.start.y) || 1;
+    const rn = { x: (ref.end.y - ref.start.y) / rl, y: -(ref.end.x - ref.start.x) / rl };
+    const midOf = (c: ArcChord) => ({ x: (c.start.x + c.end.x) / 2, y: (c.start.y + c.end.y) / 2 });
+    const mean = chords.reduce((acc, c) => ({ x: acc.x + midOf(c).x / chords.length, y: acc.y + midOf(c).y / chords.length }), { x: 0, y: 0 });
+    const keyed = chords.map(c => ({ c, p: (midOf(c).x - mean.x) * rn.x + (midOf(c).y - mean.y) * rn.y }));
+    keyed.sort((a, b) => (Math.abs(a.p - b.p) >= 0.5 ? b.p - a.p : byId(a.c, b.c)));
+    const rank = keyed.findIndex(k => k.c === self);
+    const half = (chords.length - 1) / 2;
+    const f = (half - rank) / half;
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+    if (Math.abs(f) < 1e-9) {
+        return { d: `M ${pt(start)} L ${pt(end)}`, start, end, label: midOf(self), nudge: true, isHorizontal };
+    }
+    const h = Math.min(ARC_BOW_MAX, Math.max(ARC_BOW_MIN, ARC_BOW_RATIO * Math.hypot(dx, dy)));
+    return bowedArc(start, end, rn, f * h, isHorizontal);
+}
+
 /**
  * An arc edge from `start` to `end`. With no opposite edge: a straight line, its label at the
  * midpoint. With one or more (their chords in `opposite`, each from its own start to its own end):
@@ -2505,15 +2753,24 @@ export function handleCenterOf(node: any, handleId: string | null | undefined, t
  * of the opposite chords, so the two arcs bow apart whichever slot each one got; on coincident
  * chords, to the left of the direction of travel, which is opposite for the two directions. The
  * label stands `ARC_LABEL_GAP` past the apex, outwards.
+ * P-2026-10-03-1304: the single arc bows round the boxes in `ctx.obstacles`
+ * (`singleArcGeometry`); three or more arcs between one pair, or two the same way (`ctx.same`), fan
+ * out (`fanArcGeometry`); the pair above is unchanged.
  */
-export function computeArcEdgeGeometry(start: Point, end: Point, opposite: ReadonlyArray<{ start: Point; end: Point }>): ArcEdgeGeometry {
+export function computeArcEdgeGeometry(start: Point, end: Point, opposite: ReadonlyArray<ArcChord>, ctx: ArcContext = {}): ArcEdgeGeometry {
     const dx = end.x - start.x, dy = end.y - start.y;
     const len = Math.hypot(dx, dy);
     const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
     const isHorizontal = Math.abs(dx) >= Math.abs(dy);
-    if (opposite.length === 0 || len < 1) {
+    if (len < 1) {
         return { d: `M ${pt(start)} L ${pt(end)}`, start, end, label: mid, nudge: true, isHorizontal };
     }
+    const same = ctx.same ?? [];
+    // P-2026-10-03-1304: alone between its two nodes, bowed clear of the boxes on its chord.
+    if (opposite.length === 0 && same.length === 0) return singleArcGeometry(start, end, ctx);
+    // Three or more between one pair, or two the same way: the fan.
+    if (opposite.length + same.length > 1 || same.length > 0) return fanArcGeometry(start, end, opposite, same, ctx.id);
+    // The pair of R-VP-22, as before.
     // Left of the direction of travel, in screen coordinates (y down).
     const n = { x: dy / len, y: -dx / len };
     const other = opposite.reduce((acc, o) => ({ x: acc.x + (o.start.x + o.end.x) / 2 / opposite.length, y: acc.y + (o.start.y + o.end.y) / 2 / opposite.length }), { x: 0, y: 0 });
