@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { isConsumerMode } from '../environment/consumerMode';
 import './notification-widget.scss';
 
 interface NotificationPost {
@@ -117,7 +118,7 @@ export const NotificationWidget: React.FC = () => {
   useEffect(() => {
     const shouldShow = isVisible && posts.length > 0 && !isLoading;
     const hasSystemNotice = posts.filter(p => p.category === 'system-notice' && !dismissedIds.includes(p.id)).length > 0;
-    const hasTipToShow = tipsQueue.length > 0 && queueIndex < tipsQueue.length;
+    const hasTipToShow = !isConsumerMode() && tipsQueue.length > 0 && queueIndex < tipsQueue.length;
     const isActuallyVisible = shouldShow && (hasSystemNotice || hasTipToShow);
 
     if (isActuallyVisible) {
@@ -223,7 +224,9 @@ export const NotificationWidget: React.FC = () => {
   }
 
   // TIPS
-  if (tipsQueue.length > 0 && currentTip) {
+  // #168 J7 (D4): no Quick tip in the stand-alone consumer; system notices stay. A tip skipped here
+  // is not marked as seen (only Next and close do that), so the developer still gets it.
+  if (!isConsumerMode() && tipsQueue.length > 0 && currentTip) {
     return (
       <div className="notification-widget is-tip">
         <div className="notification-header">

@@ -37,6 +37,7 @@ import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { consoleLanguageRegistry } from './console/languageRegistry';
 import type { ConsoleContext } from './console/types';
+import { consumerHelpText } from './consumerVoice';
 import './JodieWindow.css';
 
 // Generate unique message ID
@@ -148,6 +149,19 @@ export function Jodie(): JSX.Element {
 
     // Root ref used by the Cmd+J listener to detect "focus is inside Jjodie".
     const jodieRootRef = useRef<HTMLDivElement>(null);
+
+    // #168 J7 — `isConsumerMode()` reads the hash live, but Jodie re-renders only on its own state:
+    // re-render on a hash change (the header, the input and the welcome read the mode at render),
+    // and in the consumer go back to natural language. Same tick as Navbar.tsx and LeftBar.tsx.
+    const [, forceHashTick] = useState(0);
+    useEffect(() => {
+        const onHash = () => {
+            forceHashTick((t) => t + 1);
+            if (isConsumerMode()) setConsoleMode('jjodie');
+        };
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
 
     // using state just for caching, so user/userName are not re-computed.
     const user = useMemo(()=> (L.fromPointer(DUser.current) as LUser), []);
@@ -411,6 +425,8 @@ export function Jodie(): JSX.Element {
     // goes through here so it announces itself on the bus — groundwork for 2b.3,
     // no consumer yet. Programmatic promotions use setConsoleMode directly.
     const setMode = useCallback((next: ConsoleMode, via?: ConsoleModeSwitchVia) => {
+        // #168 J7: the consumer has natural language only.
+        if (isConsumerMode() && next !== 'jjodie') return;
         if (consoleMode !== next) {
             window.dispatchEvent(new CustomEvent(JjodieEvents.CONSOLE_MODE_CHANGE, {
                 detail: { from: consoleMode, to: next, via },
@@ -434,6 +450,8 @@ export function Jodie(): JSX.Element {
             const isCmdJ = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j';
             const isCtrlDot = e.ctrlKey && !e.metaKey && (e.key === '.' || e.code === 'Period');
             if (!isCmdJ && !isCtrlDot) return;
+            // #168 J7: no modes to cycle in the consumer; the keys are left alone.
+            if (isConsumerMode()) return;
 
             const target = e.target as HTMLElement | null;
             const focusInJjodie = !!jodieRootRef.current && !!target && jodieRootRef.current.contains(target);
@@ -465,6 +483,8 @@ export function Jodie(): JSX.Element {
     // Promotion: from a Jjodie chat reply with a code block, switch to Code mode
     // and prefill the input with the extracted snippet (no auto-run).
     const handleTestInCode = useCallback((code: string, _language: string | null) => {
+        // #168 J7: the consumer has no console mode (the button is not rendered there either).
+        if (isConsumerMode()) return;
         // TODO stadio 3: when JS flavor is enabled, route 'js'/'javascript' tags to flavor 'js'.
         // For now everything goes to JjEL; JS-tagged snippets may show JjEL syntax errors,
         // which the user can refine in place.
@@ -490,7 +510,8 @@ export function Jodie(): JSX.Element {
             id: generateMessageId(),
             kind: 'chat',
             role: 'assistant',
-            content: CONSOLE_HELP_TEXT,
+            // #168 J7: the consumer reads what it can ask, not the modes.
+            content: isConsumerMode() ? consumerHelpText() : CONSOLE_HELP_TEXT,
             timestamp: Date.now(),
         };
         setChatState(prev => ({ ...prev, messages: [...prev.messages, helpMessage] }));
@@ -536,7 +557,8 @@ export function Jodie(): JSX.Element {
     // Send message
     const handleSendMessage = useCallback(async (content: string, images?: ChatImage[], documents?: ChatDocument[]) => {
         // Explicit JjScript mode routes ALL input to the jjscript provider.
-        if (consoleMode === 'jjscript') {
+        // #168 J7: never in the consumer, whatever mode a developer session left behind.
+        if (consoleMode === 'jjscript' && !isConsumerMode()) {
             // Add user message
             const userMessage: ChatMessage = {
                 id: generateMessageId(),
@@ -592,7 +614,8 @@ export function Jodie(): JSX.Element {
         // Jjodie mode: if the input parses as a complete JjScript command, OFFER
         // to run it — never execute and never call the LLM until the user taps a
         // button. Deterministic (strict parse), not silent.
-        if (jjscriptProvider.detect?.(content)) {
+        // #168 J7: in the consumer there is no offer; the input is a question for the AI.
+        if (!isConsumerMode() && jjscriptProvider.detect?.(content)) {
             const offerMessage: ChatMessage = {
                 id: generateMessageId(),
                 kind: 'chat',
