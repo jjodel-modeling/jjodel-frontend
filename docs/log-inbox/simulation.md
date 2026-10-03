@@ -231,3 +231,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3075, DemoESM, 1600×1000, light, 17 PASS 0 FAIL; the chat's visual check pending, RC-23; crops in `~/.jjodel-lanes/P-2026-10-03-1520/`, outside the tree)
 **Notes**: `patchOf` is not testable in the bench (SimRolesModal.tsx imports the joiner), so the rule lives in the codec and the wiring is covered by the probe only, derived row included by cell count. The four demo exports carry no `sim*` key, so no initial outside its domain; the run still starts on one and reports an `initial` defect. Open: derived to stored leaves initial empty (`formPatch`, simInputs.ts).
 **Prompt document name**: 2026-10-03 15:20
+
+## 2026-10-03 — merge: sim-initial-default into alfonso-frontend-jjtl (P-2026-10-03-1535)
+**Prompt**: `claude_2026-10-03_1535_prompt_merge_sim-initial-default.md`, a direct merge by `lane-run merge --direct`, no session: `sim-initial-default` at `095840d88` into `alfonso-frontend-jjtl`, merge base `cceec3f05`, 3 commits on the branch side.
+**Files touched**: merge `f614230e8`: 5 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_1520_prompt_sim_initial_default.md`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/model/simulation/__tests__/stateAttributesCodec.test.ts`, `frontend/src/model/simulation/stateAttributesCodec.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f614230e8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6962 tests in 277 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat smoke on 3001: HTTP 200, the served stateAttributesCodec carries defaultInitialOf; all eight gates green; Alfonso look pending
+**Notes**: Rollback tag `pre-sim-initial-default` on `cceec3f05` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1535/result.json`.
+**Prompt document name**: 2026-10-03 15:35
