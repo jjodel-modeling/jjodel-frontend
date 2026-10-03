@@ -74,7 +74,7 @@ describe('the synthesis moves a vertex\'s outside label off the sides its ends t
         const nodes: any[] = [node('V1', opt.p1Y ?? 0, opt.p1Data), node('V2', 300), node('VQ', 600)];
         const index = getIRIndex(state, sig)!;
         const res = synthesizeObjectAsEdges(nodes, [], new Map([['V1', 'p1'], ['V2', 'p2'], ['VQ', 'q']]), new Map([['p1', 'V1'], ['p2', 'V2'], ['q', 'VQ']]),
-            index, makeDrawReadCtx(state.idlookup), state.idlookup, undefined, new Map(), new Set(['a1', 'a2']), () => undefined);
+            index, makeDrawReadCtx(state.idlookup), state.idlookup, undefined, new Map(), new Set(['a1', 'a2']));
         return Object.fromEntries(res.nodes.map(n => [n.id, n]));
     }
 

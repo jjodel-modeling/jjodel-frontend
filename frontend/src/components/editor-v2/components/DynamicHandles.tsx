@@ -64,17 +64,11 @@ export function barHoverSide(x: number, y: number, w: number, h: number, orienta
 
 /**
  * The fields of an edge that this component reads: `edgeTopologyKey` below lists them, and
- * `computeSideEndpoints` (handlePosition.ts) reads no other, the ELK pins on `data` included
- * (P-2026-10-03-1920). Two edges with the same key draw the same handles.
+ * `computeSideEndpoints` (handlePosition.ts) reads no other. Two edges with the same key draw
+ * the same handles.
  */
 const edgeKey = (e: Edge): string =>
-    `${e.id}:${e.source}:${e.target}:${e.type}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}${pinsKey(e)}`;
-
-/** The ELK pins of an edge (P-2026-10-03-1920, D-B; handlePosition.ts reads them): a moved pin moves a handle. */
-const pinsKey = (e: Edge): string => {
-    const d = e.data as { irSourcePin?: unknown; irTargetPin?: unknown } | undefined;
-    return d && (d.irSourcePin !== undefined || d.irTargetPin !== undefined) ? `:${String(d.irSourcePin ?? '')}:${String(d.irTargetPin ?? '')}` : '';
-};
+    `${e.id}:${e.source}:${e.target}:${e.type}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}`;
 
 /**
  * The edges that touch `nodeId`, in store order. Every computation below filters the flow's
@@ -193,7 +187,7 @@ function DynamicHandles({ nodeId, shapeForm, barOrientation, barThickness }: Dyn
     const edgeTopologyKey = useMemo(() => {
         const relevant = edges
             .filter(e => e.source === nodeId || e.target === nodeId)
-            .map(e => `${e.id}:${e.source}:${e.target}:${e.type}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}${pinsKey(e)}`)
+            .map(e => `${e.id}:${e.source}:${e.target}:${e.type}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}`)
             .sort()
             .join('|');
         return relevant;

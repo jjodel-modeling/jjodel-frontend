@@ -31,7 +31,7 @@ import { resolveEdgeView, resolveIRView, resolveObjectAsEdgeView, type IRViewpoi
 import { resolveTextStyle } from './irCompile';
 import { assignActivityJunctions, isActivityActionView, isActivityFlowView } from './irJunctions';
 import { barOrientation, rememberBarOrientation, rememberedBarOrientation, type BarOrientation } from './barOrientation';
-import { getElkRoute, isElkRouteValid, outsideAnchorFor, type ElkRoute } from '../../utils/elkLayout';
+import { outsideAnchorFor } from '../../utils/elkLayout';
 
 type Idlookup = Record<string, any>;
 
@@ -197,30 +197,6 @@ export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>,
     };
 }
 
-/** A node's rect as the edge renderer reads it (edgeUtils.getNodeRect), so a route valid there is valid here. */
-function rectOfNode(n: Node): { x: number; y: number; width: number; height: number } {
-    const pos = (n as any).internals?.positionAbsolute ?? (n as any).positionAbsolute ?? n.position;
-    return { x: pos.x, y: pos.y, width: n.measured?.width ?? (n.width as number) ?? 180, height: n.measured?.height ?? (n.height as number) ?? 80 };
-}
-
-/** The rect a node draws: a bar that declares a thickness its ink, turned in its square box (Q3); any other its box. */
-function drawnRectOf(r: { x: number; y: number; width: number; height: number }, thickness: number | undefined, orientation: BarOrientation | undefined) {
-    if (thickness === undefined || !orientation) return r;
-    return orientation === 'upright'
-        ? { x: r.x + (r.width - thickness) / 2, y: r.y, width: thickness, height: r.height }
-        : { x: r.x, y: r.y + (r.height - thickness) / 2, width: r.width, height: thickness };
-}
-
-/** Whether point `p` lies on `side` of rect `r`, within 1 px. */
-function onBorder(p: { x: number; y: number }, r: { x: number; y: number; width: number; height: number }, side: EndSide): boolean {
-    const TOL = 1;
-    const alongX = p.x >= r.x - TOL && p.x <= r.x + r.width + TOL, alongY = p.y >= r.y - TOL && p.y <= r.y + r.height + TOL;
-    if (side === 'left') return Math.abs(p.x - r.x) <= TOL && alongY;
-    if (side === 'right') return Math.abs(p.x - r.x - r.width) <= TOL && alongY;
-    if (side === 'top') return Math.abs(p.y - r.y) <= TOL && alongX;
-    return Math.abs(p.y - r.y - r.height) <= TOL && alongX;
-}
-
 /** Pass 1: style M1 reference edges from resolved edge views. */
 export function decorateReferenceEdges(
     edges: Edge[],
@@ -288,8 +264,6 @@ export function synthesizeObjectAsEdges(
     /** Every object of that walk: the vertex-less nested objects reach the synthesis
      *  through this set and through it only (R-B14). */
     walkedObjects?: Set<string>,
-    /** The ELK route of an edge, the toolbar Auto layout's session store by default (P-2026-10-03-1920, D-B). */
-    routeOf: (edgeId: string) => ElkRoute | undefined = getElkRoute,
 ): ObjectAsEdgeResult {
     if (index.objectAsEdgeByMetaclass.size === 0) return { nodes, edges, edgeObjects: new Set(), edgeObjectDeps: [] };
     // Candidates (R-B14): the objects on canvas first, in node order (handle indices
@@ -444,39 +418,6 @@ export function synthesizeObjectAsEdges(
                 },
             };
         }
-        // P-2026-10-03-1920 (D-B, A3 amending R-VP-49): an edge whose ELK route is valid (a toolbar Auto layout, session
-        // only) takes the route's sides, and says on its data where the route meets each side, a fraction along it
-        // (`irSourcePin` / `irTargetPin`), so DynamicHandles draws the handles on the drawn ends. Only an end the route
-        // brings onto the node's drawn border (a turned bar's ink): a junction branch ends on ELK's junction node, and its
-        // side was the one before the layout. A diamond end keeps the side rule above (one end per side, its slot the
-        // vertex) and takes no pin. A move or a resize drops the route and the geometry above stands.
-        const route = e.source !== e.target ? routeOf(e.id) : undefined;
-        const sn = route ? nodesById.get(e.source) : undefined, tn = route ? nodesById.get(e.target) : undefined;
-        if (route && sn && tn && route.points.length >= 2
-            && isElkRouteValid(route, rectOfNode(sn), rectOfNode(tn), { source: barOf(e.source), target: barOf(e.target) })) {
-            const pins: Record<string, number> = {};
-            const at = (role: 'source' | 'target'): string | undefined => {
-                const node = role === 'source' ? sn : tn;
-                const id = role === 'source' ? e.source : e.target;
-                const side = role === 'source' ? route.sourceSide : route.targetSide;
-                const p = role === 'source' ? route.points[0] : route.points[route.points.length - 1];
-                const r = rectOfNode(node);
-                if (!onBorder(p, drawnRectOf(r, endOf(id).thickness, barOf(id)), side)) return undefined;
-                const t = side === 'top' || side === 'bottom' ? (p.x - r.x) / r.width : (p.y - r.y) / r.height;
-                pins[role === 'source' ? 'irSourcePin' : 'irTargetPin'] = Math.min(1, Math.max(0, t));
-                return `${side}-${freeHandleIndex(id, side, role, placed)}`;
-            };
-            const sh = sf === 'diamond' ? undefined : at('source');
-            const th = tf === 'diamond' ? undefined : at('target');
-            if (sh || th) {
-                withHandles = {
-                    ...withHandles,
-                    ...(sh ? { sourceHandle: sh } : {}),
-                    ...(th ? { targetHandle: th } : {}),
-                    data: { ...(withHandles.data ?? {}), ...pins },
-                };
-            }
-        }
         const objectId = (e.data as any)?.irObjectId as string | undefined;
         const override = objectId ? anchorOverrides?.get(objectId) : undefined;
         if (override) {
@@ -484,15 +425,13 @@ export function synthesizeObjectAsEdges(
                 ?? (override.sourceSide ? `${override.sourceSide}-${freeHandleIndex(e.source, override.sourceSide, 'source', placed)}` : undefined);
             const tgtHandle = override.targetHandle
                 ?? (override.targetSide ? `${override.targetSide}-${freeHandleIndex(e.target, override.targetSide, 'target', placed)}` : undefined);
-            // The user's anchors win over the route's ends too: no pin under an override.
-            const { irSourcePin: _sp, irTargetPin: _tp, ...unpinned } = (withHandles.data ?? {}) as Record<string, unknown>;
             withHandles = {
                 ...withHandles,
                 sourceHandle: srcHandle ?? withHandles.sourceHandle,
                 targetHandle: tgtHandle ?? withHandles.targetHandle,
                 data: override.waypoints
-                    ? { ...unpinned, waypoints: override.waypoints }
-                    : unpinned,
+                    ? { ...(withHandles.data ?? {}), waypoints: override.waypoints }
+                    : withHandles.data,
             };
         }
         placed.push(withHandles);
