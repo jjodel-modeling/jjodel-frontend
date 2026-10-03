@@ -578,3 +578,36 @@ worse on DemoFlowB and mixed on the Petri panes, and identical after Auto layout
 DemoFlowB after Auto layout); take Activity's and Flowchart's fork and join out of the turn (their `barThickness` and
 square box dropped in the derive, two constants), which restores the measured pre-Q3 pane; or open the router item
 (node avoidance on the one-bend routes), which is the cause on all three panes and is not in this lane.
+
+### 11.1 Decision taken: fork and join out of the turn (Alfonso, options 2 and 3)
+
+Commit `5ac537e8e`: Activity (UML)'s and Flowchart's fork and join keep the bar of before (120 by 7 under DOWN, no
+`barThickness`), so they are not turned; both Petri notations keep the turn. The trunk was taken first (`d0fe030cc`, tip
+`95f06e6a7`). The LIR's §3 row for Activity's bars (120 x 120, thickness 7) is superseded by this decision.
+
+Measured on DemoFlowB as Activity (UML), probe run `q3_merged` against the pre-Q3 baseline `q3_before` (`4bd9aa66f`):
+
+| | crossings | through a node | spine bends | hidden labels | height | fork and join |
+|---|---|---|---|---|---|---|
+| no layout | 7 | 0 | 7 | 0 | 624 | box 120 x 7, ink 118 x 5, at 50,350 and 50,650 |
+| after Auto layout | 0 | 0 | 0 | 0 | 680 | box 120 x 7, ink 118 x 5, at 248,480 and 248,640 |
+
+Identical to the baseline in both phases: the 8 nodes (position, box, ink, handles), the 9 edge paths and the 2 labels,
+byte for byte at 0.01 px; ELK's input identical (no label gap on these bars, none of them carries an ink). The four
+default panes and both Statechart panes identical too.
+
+Flowchart has no pre-Q3 probe run (the pane is new in `f9829587f`); its equality rests on the derive pins (its documents'
+digests are back to the pre-Q3 values) and on the code path (a bar without a thickness carries no orientation, no node
+data, no ELK size of its own, no ink: the bytes pinned in irBarInk). Measured now: fork and join 120 x 7, ink 118 x 5,
+no end on a short side; after Auto layout 0 crossings, 0 through a node, 4 spine bends, height 464. Its "no layout" pane
+opens on the positions Activity's Auto layout left (vertex positions are shared), where its wider boxes overlap; not a
+Q3 effect.
+
+### 11.2 Open item: routes avoid nodes (option 3, a ticket, not in this lane)
+
+Without a layout, the router's straight and one-bend routes cross the node between their ends: measured on the Petri
+panes with the turn (p1->t1 through p2, 40 to 50 px; lock->t2 through t1, 56 to 74 px) and on DemoFlowB with the turned
+fork (447 px, before it was taken out), and already before Q3 (DemoFlowB before Q2: d1->fk through `work` and `left`,
+158 px; Flowchart now: 72 px). Asked: a route between two ends that would cross a third node takes a detour around it,
+on the router of the synthetic edges (UnifiedEdge's orthogonal path), measured by the probe's `throughPx`. Priority
+medium; not started, no code in this lane.
