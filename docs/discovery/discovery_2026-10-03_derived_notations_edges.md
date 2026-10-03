@@ -445,3 +445,76 @@ Findings of the step:
   (`const shapeForm = resolveNodeForm(...)`), and neither `UnifiedEdge.tsx` nor `elkLayout.ts` receives it. It can
   ride with Q4 (a): `irEdgeViews.ts` already resolves the vertex view for the side rule and can write the end forms on
   the synthetic edge for `UnifiedEdge.tsx` to read.
+
+## 10. Addendum 2026-10-03, Q3 design (no code), for the chat's approval
+
+Alfonso brought Q3 forward (his answer on DemoFlowB without a layout). Layer Impact Report:
+`docs/lir/lir_2026-10-03_bar_orientation.md`. Prototype: `frontend/scripts/probe/bar-orientation-proto.ts`, offline, on
+the geometry the probe measured (`d_after`, merged tree at `534698e2f`), no app file touched.
+
+**The rule.** Orientation is the dominant axis of the sum of the unit vectors from the bar's centre to its connected
+neighbours, by absolute component: neighbours across (sx > sy) want it upright, along (sy > sx) lying. Hysteresis: an
+upright bar turns lying only when sy > 1.2 sx, a lying one upright only when sx > 1.2 sy; the start is the declared
+orientation. L = 56, S = 12 for both Petri notations (`PETRI_BAR_LONG`, `PETRI_BAR_SHORT`, on the trunk since lane 1300);
+Activity's fork and join are 120 and 7 (R-VP-36).
+
+**Which layer owns it: a host mechanism, not the IR.** A Conditional resolves over the read context (slots, paths,
+`isKind`, comparisons); it reads the model, never the canvas, and the compile cache keys on the IR's hash, not on
+positions. An orientation from the neighbours' positions has nothing to read there. It lives in the decoration pass,
+which already has the nodes, their positions and the synthetic edges (`synthesizeObjectAsEdges`, where the side rule
+of Q2 resolves each endpoint's form): one session memo per vertex (the previous orientation, for the hysteresis),
+written to the bar's RF node data, read by the paint, the handles, the side rule and ELK.
+
+**How a turn changes the drawing: option B, a square box.** Two ways were weighed.
+- A, the RF box swaps width and height. The box's top-left is the vertex's stored position, shared by every viewpoint;
+  keeping the centre means moving it by (L - S) / 2 = 22 px at each turn. Written back, that is persisted state and a
+  layout shift; held as a view offset, every position write (drag stop, multi-drag, Auto layout, nudges) must remove it
+  first, or the stored position drifts by 22 px at each drag of a turned bar.
+- B, recommended: every bar has an L x L box (56 x 56 for Petri) and paints its S x L ink centred inside it, upright or
+  lying; its handles sit on the painted long sides, inset 22 px, as a diamond's handles are already inset to its
+  outline (measured: d1's at x 899 on a box at 890). A turn moves no box and no position, writes nothing, shifts
+  nothing. Costs: a larger hit box; the selection outline must follow the ink; ELK must lay out the painted size and
+  convert back; the router's obstacle is the box (routes keep 22 px further from a bar); and once, on adoption, the
+  ink moves to the box's centre relative to today's S x L box (22 px right for the classic upright bar). For
+  Activity's 120 px bars the box would be 120 x 120: either accept it, or leave Activity's fork and join out of the
+  rotation (their orientation follows the layout direction already, and after Auto layout they agree with it).
+
+**Handle slots, portDistribution, the side rule.** A turn moves every end of the bar to the other pair of sides
+(measured: 1 to 3 ends per bar); the handle ids change (`left-0` to `top-0`) and DynamicHandles re-slots them with
+`computeSidePositions`, unchanged. portDistribution is not on the synthetic edges' path. The side rule of Q2 keeps its
+long-side logic but reads the orientation from the node data (with B the box is square and cannot tell). The ELK
+routes of a turned bar's edges are dropped (their rects did not change, so `isElkRouteValid` alone would keep routes
+that end on the old sides).
+
+**What can oscillate.** Nothing feeds back: the decision reads only neighbours' centres, and with B a turn moves no
+centre, so a bar never moves its own input; two connected bars do not move each other. The only flicker source is a
+neighbour hovering at the diagonal, which the hysteresis takes. Measured on a neighbour shaken by +-3 px at the
+diagonal of a one-neighbour bar for 1000 frames: 511 or 512 turns with no hysteresis, 0 with 20 percent.
+
+**Live during a drag, or at release.** Measured cost of one evaluation of every bar of a pane: 0.15 to 0.21
+microseconds (2 or 3 bars). A full drag of a neighbour round a bar turns it 4 or 5 times with no hysteresis and 0 to 5
+with it (0 where other neighbours anchor the decision). The arithmetic is free; the cost of a turn is the bar's edges
+re-slotting and re-routing mid-gesture. Recommended: at drag release, on open and after Auto layout; live as a later
+option. The memo holds while any node reports `dragging`.
+
+**No layout shift.** With B: a turn changes no node box and no position; edges re-route, as on any drag.
+
+**Measured on the demos (decision per bar, ratio of the winning axis).**
+
+| Pane | Turns | Stays |
+|---|---|---|
+| Petri net (classic), no layout | t1 to lying (1.89), t3 to lying (19.13) | t2 upright (1.15, inside the hysteresis) |
+| Petri net, no layout | t1, t2, t3 to upright (4.32, 2.23, 2.60) | |
+| Activity (UML), no layout (DemoFlowB) | fork and join to upright (7.32, 3.15) | |
+| any of the three after Auto layout | none | every bar (2.13 to 40) |
+
+DemoFlowB without a layout is the case Alfonso asked about: its fork and join would turn upright, so their ends face
+their row neighbours on the long sides.
+
+**Decisions this design asks for.**
+1. Option B (square box) or A (box swap with a view offset). Recommended: B.
+2. Activity's fork and join in the rotation with a 120 x 120 box, or out of it. Recommended: in, since DemoFlowB without
+   a layout is the case that brought Q3 forward; the alternative leaves that drawing as measured in the Q2 step.
+3. At release only, or live too. Recommended: release, on open, after Auto layout.
+4. The painted thickness as an IR key on the bar document (the box becomes L x L, the ink needs S): a persisted name
+   (R-B9). Recommended: `shape.barThickness?: number`, absent = today's bar filling its box.
