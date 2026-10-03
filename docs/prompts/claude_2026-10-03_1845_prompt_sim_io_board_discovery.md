@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1845
 Chat: C-2026-10-03-1610
 Lane: full (Phase 1 discovery read-only, hard stop; Phase 2 in two later lanes on disjoint files, written by the chat from this report). Tier: heavy (RC-32: a discovery across the simulator modules). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane sim-io-board · discovery only · probe ba0668d80 (frontend/scripts/probe/io-board-outputs.ts, DemoESM on 3079, ALL GREEN) · report bf8ed5b78 docs/discovery/discovery_2026-10-03_sim_io_board.md, measured on bb20f1a12 · hard-stop, ten decisions taken unattended and one awaiting Alfonso (the MODELS demo) in §0, one question with Recommended, two sequential Phase 2 lanes in §8 · non fuso
 
 Worktree: `~/jjodel-w-ioboard`, branch `sim-io-board`, cut by the chat from `alfonso-frontend-jjtl` at `7a249ef87`, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 

@@ -276,3 +276,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: roles counter 11 of 13 assigned, Configuration on DemoESM and Marking on DemoPetri, attribute tag whole, presentation to semantic initial false; eight gates of the direct worker green (vitest 6996)
 **Notes**: Rollback tag `pre-sim-polish` on `49957d340` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1730/result.json`.
 **Prompt document name**: 2026-10-03 17:30
+
+## 2026-10-03 — discovery: the simulator's I/O board, R-SIM-110..115 (P-2026-10-03-1845)
+**Prompt**: `claude_2026-10-03_1845_prompt_sim_io_board_discovery.md`, heavy tier, read-only on `~/jjodel-w-ioboard`, branch `sim-io-board`: R-SIM-115's eight questions (mount point, persistence key, binding resolution, output evaluation, input machinery reuse, keypad modes, nuXmv mapping, Phase 2 split), a probe where a number decides.
+**Files touched**: probe `ba0668d80`: `frontend/scripts/probe/io-board-outputs.ts`, `frontend/scripts/probe/fixtures/scene_3_DemoESM.jjodel` (byte copy). Report `bf8ed5b78`: `docs/discovery/discovery_2026-10-03_sim_io_board.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (no file under `frontend/src`; check:scripts PASS, typecheck:scripts exit 0, whose scope excludes `probe/`)
+**Out-of-scope changes**: yes — no file outside DOVE, but two scratch writes outside the worktree, `/tmp/io-board-outputs.json` (the probe's first default) and an empty `/tmp/claude-ioboard`, both deleted; the output now goes to the gitignored `frontend/scripts/smoke/`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe on 3079, DemoESM, final run ALL GREEN: ten outputs 5.2 µs a step (press 120 µs), X.[marked] reads under State machine, a sim* key moves runSignature and ioBoard does not, ioBoard survives save, import (event id remapped) and reopen. 50 console errors a run (ecore serialize loop at save), no baseline. Report §0, §8, §10.
+**Prompt document name**: 2026-10-03 18:45
