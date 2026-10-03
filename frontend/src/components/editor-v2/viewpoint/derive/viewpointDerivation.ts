@@ -672,7 +672,8 @@ const centredName = (fontSize: number, fontWeight: 'semibold' | 'medium'): Label
 export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
     const attributesOf = attributesHeld(lookup, metamodelId);
     const events = triggerClasses(lookup, metamodelId, roles);
-    return deriveViewpointIRs(lookup, metamodelId, roles).map((v): DerivedView => {
+    const guardKey = roles.bag.simGuard;
+    return deriveViewpointIRs(lookup, metamodelId, roles).map((v): DerivedView | DerivedView[] => {
         // P-2026-10-03-1304 (Q7, Alfonso's A3): an event is the label of the transitions it fires, not a box of its own;
         // the instance stays in the model and in the tree.
         if (v.ir.kind === 'vertex' && events.has(v.classId)) return { ...v, ir: { ...v.ir, visible: false } };
@@ -685,7 +686,24 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             };
             // The label style of C2 for an event; a guard keeps the mono style the base document gives it (P-2026-10-03-1300).
             if (labels?.center) edge.labels = { center: labels.center, style: labels.style ?? EDGE_LABEL_STYLE() };
-            return { ...v, ir: { ...v.ir, edge } };
+            const plain: DerivedView = { ...v, ir: { ...v.ir, edge } };
+            // P-2026-10-03-1304 (Q6, amends R-VP-22 (2)): labelled by its event, a transition whose guard is set reads
+            // `event [guard]`, UML's trigger and guard, through a second document with priority 1 (Activity's pattern). The
+            // effect stays out. A transition with neither is a completion transition, unlabelled.
+            const guard = typeof guardKey === 'string' ? attributesOf(v.classId).find(a => a.id === guardKey) : undefined;
+            const center = labels?.center;
+            if (!guard || !center || center.from !== 'path' || center.expr === path(guard.name)) return plain;
+            const guarded: EdgeViewIR['edge'] = {
+                ...edge,
+                labels: {
+                    template: [center, { from: 'literal', text: ' [' }, { from: 'path', expr: path(guard.name) }, { from: 'literal', text: ']' }],
+                    style: EDGE_LABEL_STYLE(),
+                },
+            };
+            return [plain, {
+                ...v,
+                ir: { ...v.ir, label: `View for ${v.className} (guard)`, edge: guarded, priority: 1, predicate: { op: 'exists', path: path(guard.name) } },
+            }];
         }
         if (role !== 'node' && role !== 'initial' && role !== 'terminal') return v;
         const compartment = role !== 'terminal' && attributesOf(v.classId).some(a => !isIdentity(a));
@@ -709,7 +727,7 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             ir.structure = { emptyBehavior: 'hide' };
         }
         return { ...v, ir };
-    });
+    }).flat();
 }
 
 /** The class the bound Trigger reference is typed by, and its subclasses: the events of a state machine. Empty when unbound. */

@@ -476,8 +476,10 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
     // key alone set to undefined every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
+    // suppressed every digest below was the one before, measured on the lane.
     const PINNED: Record<string, string> = {
-        DemoPEST: '0e123f6496e06e3a', DemoPetri: 'c03dae1789798ecb', DemoESM: 'a5687622189170a7', DemoFlowB: '0686c16f9969bb93',
+        DemoPEST: '0e123f6496e06e3a', DemoPetri: 'c03dae1789798ecb', DemoESM: 'a8bbf693f25c8f14', DemoFlowB: '0686c16f9969bb93',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -684,10 +686,12 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
     // key alone set to undefined every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
+    // suppressed every digest below was the one before, measured on the lane.
     const PINNED_D: Record<string, string> = {
         'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': 'f0ba4426cae26d2f', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
         'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'fcc0009cc695e6b4', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'd2b745a44e81558d',
-        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': 'cb9d2babcb9678b2', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '95040925ad077303', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
         'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '124d96bbb07f4e44',
     };
 
@@ -804,6 +808,27 @@ describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
         expect(irOf(esm, 'State').fieldCompartments.map((c: any) => c.source)).toEqual([{ from: 'attributes' }]);
         expect(irOf(esm, 'Initial').shape.entry).toBe('dot');
         expect(irOf(esm, 'Terminal').fieldCompartments).toBeUndefined();
+    });
+
+    it('a transition with an event and a guard reads `event [guard]` where the guard is set (P-2026-10-03-1304, Q6, amends R-VP-22 (2))', () => {
+        const esm = derivedWith(ESM, 'extendedStateMachine', 'statechart').views;
+        const docs = esm.filter((v: any) => v.className === 'Transition').map((v: any) => v.ir);
+        expect(docs).toHaveLength(2);
+        const [plain, guarded] = docs;
+        // The plain one as before: the event, in the C2 label style, for a transition whose guard is unset.
+        expect(plain.edge.labels).toEqual({ center: { from: 'path', expr: '$event.value' }, style: LABEL_STYLE });
+        expect(plain.priority).toBeUndefined();
+        // The second: the same line, the UML label, chosen where the guard is set.
+        expect(guarded.edge.labels).toEqual({
+            template: [{ from: 'path', expr: '$event.value' }, { from: 'literal', text: ' [' }, { from: 'path', expr: '$guard.value' }, { from: 'literal', text: ']' }],
+            style: LABEL_STYLE,
+        });
+        expect(guarded.priority).toBe(1);
+        expect(guarded.predicate).toEqual({ op: 'exists', path: '$guard.value' });
+        expect({ ...guarded.edge, labels: undefined }).toEqual({ ...plain.edge, labels: undefined });
+        expect(guarded.label).toBe('View for Transition (guard)');
+        // DemoPEST's transitions have no guard slot: one document, as before.
+        expect(derivedWith(PEST, 'stateMachine', 'statechart').views.filter((v: any) => v.className === 'Transition')).toHaveLength(1);
     });
 
     it('the class the Trigger is typed by is not drawn; nothing else changes visibility (P-2026-10-03-1304, Q7)', () => {

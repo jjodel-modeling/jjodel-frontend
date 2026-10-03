@@ -195,13 +195,15 @@ describe('A4 leaves every other notation as it was', () => {
     // every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
     // key alone set to undefined every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
+    // suppressed every digest below was the one before, measured on the lane.
     const PINNED: Record<string, string> = {
         'DemoESM flowchart': '7e215bccf0811354',
         'DemoESM flowchartIso': '369ee94b0ae560fc',
         'DemoESM generic': 'f5b415d0f3a7512c',
         'DemoESM petri': 'a9967d96094069ab',
-        'DemoESM stateMachine': 'cb9d2babcb9678b2',
-        'DemoESM statechart': '84c50ee0a8af74e5',
+        'DemoESM stateMachine': '95040925ad077303',
+        'DemoESM statechart': '1e8c563561566411',
         'DemoFlowB flowchart': '124d96bbb07f4e44',
         'DemoFlowB flowchartIso': '0f3b13332e902f0f',
         'DemoFlowB generic': '1ebd123804dc75a1',
