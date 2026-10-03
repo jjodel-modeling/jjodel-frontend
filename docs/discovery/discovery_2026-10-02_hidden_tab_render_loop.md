@@ -380,7 +380,7 @@ Neither file is in the critical-zone table, and the new exports only add. The ac
 
 Scope added by the chat (RC-21): `edgeUtils.ts`, `UnifiedEdge.tsx`, and `useTreeLayout.ts` if needed, plus a test.
 
-`useTreeLayout.ts` was needed: its two crossings memos (`:203-217`, `:219-242`) depend on `allEdges` too, and its tree segments register in an effect (`:168-192`). Commit `334a7e444`.
+`useTreeLayout.ts` was needed: its two crossings memos (`:203-217`, `:219-242`) depend on `allEdges` too, and its tree segments register in an effect (`:170-194`). Commit `334a7e444`.
 
 ### What it does
 
