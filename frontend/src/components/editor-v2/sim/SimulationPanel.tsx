@@ -989,7 +989,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 <button type="button" className="sim-panel__hint-action" onClick={() => setDataModal({ undeclared })}>Declare in State…</button>
                             </div>
                         )}
-                        {stateHint && <div className="sim-panel__hint sim-panel__hint--line" title={stateHint.title}>{stateHint.line}</div>}
+                        {/* The remedy is the point of this line, so it wraps into the halt line's two-row slot instead of
+                            ending in an ellipsis; the slot sits above the buttons, so none of them moves. */}
+                        {stateHint && <div className="sim-panel__hint sim-panel__hint--halt" title={stateHint.title}>{stateHint.line}</div>}
                         {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line sim-panel__hint--halt" title={view.halt.title}>{view.halt.line}</div>}
                         {/* R-SIM-104: up to four pinned attributes, globals first by default; a range draws its domain bar,
                             DEFINE and IVAR say their kind, a value the last step changed reads before → after. */}
