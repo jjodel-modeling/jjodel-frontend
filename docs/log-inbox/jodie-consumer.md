@@ -319,3 +319,16 @@ active log is not touched by these lanes.
 **Smoke visivo**: passato — verifica visiva di Juri sulla lane D (2026-10-03, voci 1-7 e i due ritocchi); `npm run smoke` non applicabile qui (fisso sulla 3000), da eseguire sull'albero di feat/157 dopo l'integrazione.
 **Notes**: Le sonde di A, scritte prima di D, davano 4 rossi sul trunk completo: il loro filtro `/looking at/` contava anche l'help per il fruitore di D («Explain what you are looking at»). Con il filtro ristretto a «Now looking at» 21/21 e 23/23: difetto della sonda, non del prodotto. `check:docs`: stessi 5 errori della baseline; chiusura scritta a mano dall'orchestratore.
 **Prompt document name**: 2026-10-03 23:52
+
+## 2026-10-04 — merge: feat/168-jodie-consumer into feat/157-environment-config
+**Prompt**: integrazione approvata da Juri in chat (2026-10-02: «ok l'integrazione 157->staging»): il trunk #168 completo entra in `feat/157-environment-config`, poi `staging`.
+**Files touched**: merge `9b4aad014` (47 commit del trunk #168, 48 file, zero conflitti; feat/157 fermo sulla base `98ebb132e`); tag `pre-feat-168-jodie-consumer` su `98ebb132e`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — albero del merge identico alla punta del trunk #168 (`git diff` vuoto contro `885f69589`), i cui gate e sonde sono verdi; `npm run smoke` sul dev server della 3000 che serve il merge: GREEN, 12 passati, 0 falliti, 3 salti dichiarati, console nella baseline.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel trunk #168.
+**Smoke visivo**: passato — `npm run smoke` GREEN 12/12; verifiche visive di Juri sulle lane A, C2, D.
+**Notes**: Merge a mano (`--no-ff`) e non con `lane-run merge --direct`, che rifiuta un albero ricevente non pulito: l'albero principale contiene `docs/discovery/andrea.json`, non tracciato e non di questa sessione, lasciato com'è. Nessun push in questo passo.
+**Prompt document name**: 2026-10-02 (chat)
