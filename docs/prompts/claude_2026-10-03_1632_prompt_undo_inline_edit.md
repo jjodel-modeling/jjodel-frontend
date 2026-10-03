@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1632
 Chat: C-2026-10-03-1610
 Lane: full (two-phase: Phase 1 discovery read-only with the Layer Impact Report, hard stop; Phase 2 after the chat's GO in the same session). Tier: heavy (RC-32: critical zone). Model: the default of `.claude/settings.json`, no deviation. Critical-zone go-ahead: RC-30, given by the chat at launch (`--critical-zone-goahead P-2026-10-03-1632`); the Layer Impact Report is still the first step of Phase 2.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane undo-inline-edit · ac64b213b · non fuso: hard-stop, fix (A) of the report adopted as recommended (RC-21, unattended), gates green (typecheck 14, vitest 6990 with the 9 known import reds and 4 env-only hook reds, build), lane probe on 3077 (light) 33/33 (Phase 1 base 21 PASS / 12 FAIL, the fix patched in flight 35/35), mutation bench 6/6, the four default scenes 0 px from the d2a1866b6 reducer (second pair; DemoFlowB varies run to run on the same code), crops in ~/.jjodel-lanes/P-2026-10-03-1632/crops/, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-undoinline`, branch `undo-inline-edit`, cut by the chat from `alfonso-frontend-jjtl` at `d2a1866b6`, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 

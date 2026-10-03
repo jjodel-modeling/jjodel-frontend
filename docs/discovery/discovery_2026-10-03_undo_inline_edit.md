@@ -248,3 +248,51 @@ Files, all in DOVE:
 
 1. Fix (A) in `reducer.ts`, which widens the effect beyond the canvas, against (B) the `isMirage` guard in
    `LModelElement.tsx` (outside DOVE) or (C) a canvas-only bypass in `canvasToJjom.ts`. Recommended: (A).
+
+## 7. Phase 2 addendum (2026-10-03, same lane and session)
+
+GO of the chat: question 1 answered with its recommendation (RC-21, unattended), fix (A); (B) and (C) not done.
+Commits: trunk `49957d340` taken in `e2154ebaf` (lane-run and docs only), LIR amended `0eac2931b` before the edit,
+fix `ac64b213b`. Measured on `ac64b213b` [M].
+
+- **The fix**, `reducer.ts` `CompositeActionReducer`: `let lastApplied` before the loop, `const prevAction = lastApplied`,
+  and `if (tmp !== newState) lastApplied = action;` before `newState = tmp;`. Six lines with the comment.
+- **Tests first.** `frontend/src/redux/reducer/__tests__/reducerCopyOnWrite.test.ts` runs the real `_reducer` and the
+  real `Uobj` under stubs of the `joiner` barrel and of the reducer's other imports. Its batches are the ones the
+  probe recorded:
+  - the IR row, the path label, the ObjectNode cell, and a non-canvas `L(o).note.value =` on a slot that holds a
+    value;
+  - a no-op on one element ahead of a write on another;
+  - a root field changed ahead of the no-op.
+  Each test asserts the previous state object is not mutated (snapshot and identity), the undo entry holds the
+  slot, undo restores and redo reapplies. Controls: a single-action write, a rename, the first write of a mirage
+  slot, one copy per element per batch, and an all-no-op batch. Before the fix 11 red and 4 green, after 15/15.
+- **Mutation bench, 6/6 killed.** M1 `actions[i-1]` back (11 red). M2 set unconditionally (11). M3 condition
+  inverted (12). M4 never set (1, copied once per batch). M5 `tmp !== oldState` (1, root field ahead of the no-op).
+  M6 the check after the assignment (1). Each was applied in place, the test file run, and the file restored by
+  copy (`cmp` identical).
+- **Gates.**
+  - Typecheck exit 2, the 14 of §17 by file and code.
+  - Vitest 6990 passed and 4 failed in 278 files: the 9 known import reds, plus `scripts/hooks/__tests__/criticalZone.test.ts`
+    4 red only because this session carries `JJODEL_CRITICAL_ZONE_GOAHEAD`; it passes 70/70 with `env -u`. A
+    ticket is in the inbox entry.
+  - Build exit 0.
+- **Probe, step 2**, `lane-run probe … --port 3077`: **33/33**, all eight cases restore on Cmd+Z and reapply on
+  Cmd+Shift+Z. The 35 of §2.4 included the two checks of the in-flight patch, which on the fixed tree match nothing
+  by design. Crops, 4 per case: `~/.jjodel-lanes/P-2026-10-03-1632/crops/`, for example `row_1_before`
+  (`tokens = 2`), `row_2_written` (`7`), `row_3_undone` (`2`), `row_4_redone` (`7`).
+- **The four demo scenes** (`_tmp_undo_scenes.ts`, gitignored): DemoPEST, DemoPetri, DemoESM and DemoFlowB imported
+  from `~/jjodel-demo-exports/`, the M1 in the default viewpoint, a `.react-flow` shot after fit view.
+  - «before» serves `reducer.ts` with the fix reverted in flight. That is the `d2a1866b6` code, the only app file
+    that differs; the revert was asserted once per load.
+  - Every load opens with nodes and no console error but the load-time `init_dash`.
+  - First pair: three scenes 0 px, DemoFlowB 891 px.
+  - Control: the reverted code against itself (before against before2) gives DemoFlowB 881 px, the others 0. So
+    DemoFlowB's edges vary run to run (box at 2x `[1067, 78, 1801, 510]`).
+  - Second pair (before2 against after2): **all four 0 px**.
+  - P12 control: two different scenes differ by 826428 px.
+
+The inbox entry goes at the end of `docs/log-inbox/symbol-editor.md`, where the fold expects it. The prompt's
+«append under the ticket» is read as «in the ticket's inbox», and the entry names the ticket. The `log-entry` skill
+says to commit the inbox alone; P13 (RC-17) puts the Status flip and the entry in one closure commit, and the prompt
+asks for that, so this commit follows P13.
