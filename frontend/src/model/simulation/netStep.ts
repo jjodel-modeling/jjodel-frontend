@@ -44,6 +44,16 @@ export function isMarked(state: SimState, id: string): boolean {
 }
 
 /**
+ * An element's presentation attribute (`node.[x]`, R-SIM-18): the stored value
+ * first, then the derived one (R-SIM-73); `undefined` when σ has neither. The
+ * one precedence rule of the presentation space: the accessor of an action's
+ * site and the run-state reader of the viewpoints (R-SIM-108) both read it here.
+ */
+export function presentationOf(state: SimState, element: string, attr: string): SimValue | undefined {
+    return state.presentation.get(element)?.get(attr) ?? state.derived?.presentation.get(element)?.get(attr);
+}
+
+/**
  * The read-only accessor of σ (R-SIM-30). `site` is the element an action is
  * attached to: only its presentation is readable (locality, R-SIM-18); without
  * a site no presentation is. A stored value first, then the derived one of the
@@ -52,9 +62,7 @@ export function isMarked(state: SimState, id: string): boolean {
 export function stateAccess(state: SimState, site?: string): SimStateAccess {
     return {
         read: (elementId, attr) => state.attrs.get(elementId)?.get(attr) ?? state.derived?.attrs.get(elementId)?.get(attr),
-        readPresentation: attr => (site === undefined
-            ? undefined
-            : state.presentation.get(site)?.get(attr) ?? state.derived?.presentation.get(site)?.get(attr)),
+        readPresentation: attr => (site === undefined ? undefined : presentationOf(state, site, attr)),
         isMarked: elementId => isMarked(state, elementId),
         tokens: elementId => tokens(state, elementId),
     };

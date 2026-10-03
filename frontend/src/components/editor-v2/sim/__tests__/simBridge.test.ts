@@ -14,11 +14,13 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason,
-    markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput, pressRandom,
-    pressStep, runSignature, runStatus, startRun, stopReason, undeclaredGlobals,
+    markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
+    pressRandom, pressStep, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchRows,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, PlayStop, RunStart } from '../simBridge';
-import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, setSimPolicy, simClear, simReset } from '../simRunState';
+import {
+    __resetSimRunsForTests, configAt, getSimActiveIds, getSimRun, getSimVersion, getSimView, setSimPolicy, simClear, simReset, simSetView,
+} from '../simRunState';
 import type { SimTraceStep } from '../simRunState';
 import { uniform } from '../../../../model/simulation/simRandom';
 import { candidates, netRunStatus, step } from '../../../../model/simulation/netStep';
@@ -1200,6 +1202,68 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             const t = reset(tight);
             expect(eps(tight).outcome?.kind).toBe('halted');
             expect(markingLine(getSimRun('M')!.config.state, t.run.net, tight).line).toBe('Marking: p1 ×3 · p1.visits = 0, p2.visits = 0, total = 0');
+        });
+    });
+
+    describe('the face\'s builders: Watch rows, Marking chips, the status line (P-2026-10-03-0040, R-SIM-102, R-SIM-104)', () => {
+        const SUM = { name: 'sum', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 6 }, equation: 'p1.[visits] + p2.[visits]' };
+        const GLOW = { name: 'glow', metaclass: null, space: 'presentation', domain: null, initial: '1' };
+        const BUMP2 = 'p2.[visits] := p2.[visits] + 1';
+        const at = (n: number) => configAt(getSimRun('M')!, n)!.state;
+        const rows = (lookup: Lookup, n: number, pins: Parameters<typeof watchRows>[3] = null) =>
+            watchRows(getSimRun('M')!.net, at(n), n === 0 ? null : at(n - 1), pins, lookup);
+
+        it('default pins: σ globals first, then the metaclass ones per owner by name; kind, domain and value on the shown σ (mutants: the derived value unread; owners unsorted)', () => {
+            const lookup = cnet({ decls: [VISITS, F, SUM, GLOW], t1: [BUMP2] });
+            expect(reset(lookup).compileDefects).toEqual([]);
+            expect(rows(lookup, 0)).toEqual([
+                { element: 'M', attr: 'f', name: 'f', space: 'semantic', kind: 'VAR', domain: { kind: 'boolean' }, value: false, before: null, changed: false },
+                { element: 'M', attr: 'sum', name: 'sum', space: 'semantic', kind: 'DEFINE', domain: { kind: 'range', min: 0, max: 6 }, value: 0, before: null, changed: false },
+                { element: 'P1x', attr: 'visits', name: 'p1.visits', space: 'semantic', kind: 'VAR', domain: { kind: 'range', min: 0, max: 3 }, value: 0, before: null, changed: false },
+                { element: 'P2x', attr: 'visits', name: 'p2.visits', space: 'semantic', kind: 'VAR', domain: { kind: 'range', min: 0, max: 3 }, value: 0, before: null, changed: false },
+            ]);
+        });
+
+        it('a step\'s changes: before → after on the values it changed, nothing on the others (mutants: before read on the shown σ; changed on every row)', () => {
+            const lookup = cnet({ decls: [VISITS, F, SUM], t1: [BUMP2] });
+            reset(lookup);
+            expect(eps(lookup).outcome?.kind).toBe('fired');
+            const changed = rows(lookup, 1).filter(r => r.changed).map(r => [r.name, r.before, r.value]);
+            expect(changed).toEqual([['sum', 0, 1], ['p2.visits', 0, 1]]);
+            expect(rows(lookup, 1).find(r => r.name === 'f')).toMatchObject({ before: null, changed: false });
+        });
+
+        it('explicit pins in their order, the presentation included when pinned; a pin no longer declared is skipped (mutant: the default pins over explicit ones)', () => {
+            const lookup = cnet({ decls: [VISITS, F, SUM, GLOW], t1: [BUMP2] });
+            reset(lookup);
+            const pins = [
+                { metaclass: null, name: 'glow', space: 'presentation' as const },
+                { metaclass: null, name: 'gone', space: 'semantic' as const },
+                { metaclass: null, name: 'sum', space: 'semantic' as const },
+            ];
+            expect(rows(lookup, 0, pins).map(r => [r.name, r.space, r.value])).toEqual([['glow', 'presentation', 1], ['sum', 'semantic', 0]]);
+            expect(rows(lookup, 0, []).length).toBe(0);
+        });
+
+        it('Marking chips: one per marked place by name, ×n from two tokens, as the marking line lists them (mutants: ×1 written; a 0-token place)', () => {
+            const lookup = cnet({ decls: [VISITS], t1: [BUMP2] });
+            const r = reset(lookup);
+            eps(lookup);
+            const state = getSimRun('M')!.config.state;
+            expect(markingChips(state, lookup)).toEqual([
+                { place: 'P1x', name: 'p1', tokens: 2, text: 'p1 ×2' }, { place: 'P2x', name: 'p2', tokens: 1, text: 'p2' },
+            ]);
+            expect(`Marking: ${markingChips(state, lookup).map(c => c.text).join(', ')}`).toBe(markingLine(state, r.run.net, lookup).line.split(' · ')[0]);
+            expect(markingChips({ ...state, marking: new Map([['P1x', 0]]) }, lookup)).toEqual([]);
+        });
+
+        it('the status line: step n, the seed, the last step; its title the «Last step» text of today (R-SIM-104; mutant: the title of the line itself)', () => {
+            const last = { text: 'ε: t1 (p1 → p2) fired', title: 'ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1' };
+            expect(statusLine(3, 12345, last)).toEqual({
+                line: 'step 3 · seed 12345 · ε: t1 (p1 → p2) fired', title: 'Last step: ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1',
+            });
+            expect(statusLine(0, 7, null)).toEqual({ line: 'step 0 · seed 7', title: 'step 0 · seed 7' });
+            expect(statusLine(1, undefined, last).line).toBe('step 1 · ε: t1 (p1 → p2) fired');
         });
     });
 });
@@ -2661,5 +2725,98 @@ describe('R-SIM-101: the run policy, Step under Random and Play (P-2026-09-29-19
         } finally {
             spy.mockRestore();
         }
+    });
+});
+
+describe('R-SIM-106: the inputs of a step on the trace, the replay, and a press while a past step is shown (P-2026-10-03-0040)', () => {
+    /** S -e1-> D; D -e2 [D.[decision]]-> A, D -e3 [else]-> B; `decision` an input of every State. */
+    const DECISION = { name: 'decision', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    const lookupOf = (): Lookup => buildLookup({
+        ...ROLES, simGuard: 'A_guard', simTerminal: 'C_Final', simStateAttributes: JSON.stringify({ v: 1, attrs: [DECISION] }),
+    }, {
+        S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+        D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+        A: { cls: 'C_Final' },
+        B: { cls: 'C_Final' },
+        e1: { cls: 'C_Trans', slots: { R_next: ['D'] } },
+        e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: ['D.[decision]'] } },
+        e3: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: ['else'] } },
+    });
+    const record = () => {
+        const h: Record<string, any> = {};
+        for (const id of ['S', 'D', 'A', 'B', 'e1', 'e2', 'e3']) h[id] = { id, __type: 'Object', name: id };
+        h.e1.next = h.D; h.e2.next = h.A; h.e3.next = h.B;
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', () => record());
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r.run;
+    };
+    const eps = (lookup: Lookup, values?: Array<{ element: string; attr: string; value: boolean }>) => pressInput('M', null, undefined, lookup, 'ε', values);
+    const answer = (value: boolean) => [{ element: 'D', attr: 'decision', value }];
+
+    it('press records the values it was given on the step it commits; a step given none has no field (mutant: the values not passed to the store)', () => {
+        const lookup = lookupOf();
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup).asks).toHaveLength(1);
+        eps(lookup, answer(false));
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([
+            { event: null, selector: 'e1', kind: 'fired' },
+            { event: null, selector: 'e3', kind: 'fired', inputs: answer(false) },
+        ]);
+    });
+
+    it('a step that read an input replays with the value it was given: e2, not the else (mutant: the replay ignores the inputs)', () => {
+        const lookup = lookupOf();
+        reset(lookup);
+        eps(lookup);
+        eps(lookup, answer(true));
+        expect(getSimActiveIds('M')).toEqual(['A']);
+        const run = { ...getSimRun('M')!, keptConfigs: [] };
+        expect([...configAt(run, 1)!.state.marking]).toEqual([['D', 1]]);
+        expect([...configAt(run, 2)!.state.marking]).toEqual([['A', 1]]);
+        expect(configAt(run, 0)!.state).toBe(run.net.initial);
+    });
+
+    it('a press while a past step is shown acts on the live configuration and returns the view to live (mutant: the press reads the viewed record)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        simReset('M', started(lookup));
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        pressInput('M', 'push', undefined, lookup, 'Push');
+        simSetView('M', 1);
+        expect(getSimActiveIds('M')).toEqual(['Unlocked']);
+        const r = pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect(r.lastStep).toBe('Coin: tCoin (Locked → Unlocked) fired');
+        expect(getSimView('M')).toBeNull();
+        expect(getSimActiveIds('M')).toEqual(['Unlocked']);
+        expect(getSimRun('M')!.trace).toHaveLength(3);
+    });
+
+    it('a press that commits nothing returns to live too: the list or the dialog are the live step\'s (mutant: only a commit returns)', () => {
+        const lookup = lookupOf();
+        reset(lookup);
+        eps(lookup);
+        simSetView('M', 0);
+        expect(getSimActiveIds('M')).toEqual(['S']);
+        expect(eps(lookup).asks).toHaveLength(1);
+        expect(getSimView('M')).toBeNull();
+        expect(getSimActiveIds('M')).toEqual(['D']);
+    });
+
+    it('watchRows: an input is IVAR, its value the one its step was given, never a change (R-SIM-102)', () => {
+        const lookup = lookupOf();
+        reset(lookup);
+        eps(lookup);
+        eps(lookup, answer(true));
+        const run = getSimRun('M')!;
+        const pins = [{ metaclass: 'C_State', name: 'decision', space: 'semantic' as const }];
+        const out = watchRows(run.net, configAt(run, 2)!.state, configAt(run, 1)!.state, pins, lookup, run.trace![1].inputs);
+        expect(out.map(r => [r.name, r.kind, r.value, r.changed])).toEqual([
+            ['A.decision', 'IVAR', null, false], ['B.decision', 'IVAR', null, false], ['D.decision', 'IVAR', true, false], ['S.decision', 'IVAR', null, false],
+        ]);
+        expect(watchRows(run.net, configAt(run, 1)!.state, configAt(run, 0)!.state, pins, lookup).every(r => r.value === null)).toBe(true);
     });
 });

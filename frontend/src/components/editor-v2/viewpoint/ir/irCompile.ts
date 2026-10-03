@@ -36,7 +36,7 @@ import type {
 } from './irTypes';
 import type { CSSProperties } from 'react';
 import type { ReadCtx } from './irReadCtx';
-import { parsePathExpr } from './pathExpr';
+import { parsePathExpr, presentationAttrOf } from './pathExpr';
 import { labelEditsFeature, labelEditsName } from './irLabelEdit';
 import { proxyToIdReplacer } from '../../../../model/unproxy';
 
@@ -102,8 +102,20 @@ function harvestChannels(): string[] | null {
  * KNOWN LIMIT (v1.1, to be fixed in spec v1.2 dependency-set work): only
  * single-hop self paths are fully reactive; multi-hop navigation reads the
  * target eagerly but changes on the *navigated* object do not invalidate self.
+ *
+ * `node.[x]` (R-SIM-108), recognized by the JjEL parser and not by the PathExpr
+ * grammar, reads the element's presentation in the simulation run. It is not a
+ * feature: no `featureNames`, no cross path; it declares the 'mark' channel, the
+ * version every run change bumps, as `marked` does. `presentation: false` is for
+ * an operand that must be an element (`isKind.path`): there it falls through to
+ * parsePathExpr and keeps the error it had.
  */
-function compilePath(expr: PathExpr): { fn: CompiledAccessor; featureNames: string[] } {
+function compilePath(expr: PathExpr, presentation = true): { fn: CompiledAccessor; featureNames: string[] } {
+    const attr = presentation ? presentationAttrOf(expr) : null;
+    if (attr !== null) {
+        channelSink?.add('mark');
+        return { fn: (ctx: ReadCtx, elementId: string) => ctx.getPresentation?.(elementId, attr), featureNames: [] };
+    }
     const { steps, featureNames } = parsePathExpr(expr);
     const fn: CompiledAccessor = (ctx: ReadCtx, elementId: string) => {
         let currentId = elementId;
@@ -146,12 +158,12 @@ function isLiteral(x: PathExpr | Literal): x is Literal {
     return typeof x === 'object' && x !== null && 'kind' in x;
 }
 
-function compileOperand(x: PathExpr | Literal, deps: Set<string>): CompiledAccessor {
+function compileOperand(x: PathExpr | Literal, deps: Set<string>, presentation = true): CompiledAccessor {
     if (isLiteral(x)) {
         const v = x.value;
         return () => v;
     }
-    const { fn, featureNames } = compilePath(x);
+    const { fn, featureNames } = compilePath(x, presentation);
     featureNames.forEach(f => deps.add(f));
     return fn;
 }
@@ -188,7 +200,8 @@ function compilePredicate(p: Predicate | undefined, deps: Set<string>): Compiled
         case 'isKind': {
             const cls = p.class;
             if (p.path) {
-                const acc = compileOperand(p.path, deps);
+                // The path names an element, and `node.[x]` is a value: refused (R-SIM-108).
+                const acc = compileOperand(p.path, deps, false);
                 return (ctx, id) => {
                     const target = acc(ctx, id);
                     return typeof target === 'string' ? ctx.isKindOf(target, cls) : false;
@@ -702,6 +715,10 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
     const e = ir.edge ?? {};
     const compileExpr = (expr: string | undefined): CompiledAccessor | null => {
         if (!expr) return null;
+        // An endpoint names an element; `node.[x]` is a value of one (R-SIM-108).
+        if (presentationAttrOf(expr) !== null) {
+            throw new Error(`[ir] ${expr} is a presentation value, not an edge endpoint`);
+        }
         const { fn, featureNames } = compilePath(expr);
         featureNames.forEach(f => deps.add(f));
         return fn;

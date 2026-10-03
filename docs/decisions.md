@@ -2523,7 +2523,7 @@ Evidence: the design canvas «Simulator UI and state data» (Claude Design, six 
 - **R-SIM-107** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
   **The σ overlay on the canvas is opt-in per attribute. Amends the σ card of S15 slice A1.** The overlay stays the simulator's own (R-SIM-3 pattern): token, enabled transitions, marked border. The `attr = value` card under every node is replaced by tags for the attributes the viewer turns on (default: none, except the attributes changed by the last step, for that step only); globals may be shown in one card pinned to the canvas corner. Viewer preferences, as the pins of R-SIM-104.
 - **R-SIM-108** (2026-10-02, decided by the chat on Alfonso's delegation 2026-10-02, «procedi tu, decidi tu», evidence: read, verified: none, reversible: branch). **Amends R-SIM-4; Alfonso keeps the veto.**
-  **`node.[x]` reaches the viewpoints, read-only.** The run-state singleton exports a reader of an element's presentation (stored then derived, as `netStep.ts` resolves it), and the IR interpreter exposes it to view expressions with the engine's syntax, `node.[x]`, absent when no run knows the element (the view gives its own default). The lane opens with a discovery and a Layer Impact Report (how a view expression reads it, how the view re-renders on the `'mark'` version without re-rendering the canvas, what a derived viewpoint does with it); its Phase 2 waits for that report. Views never write it (R-SIM-6, R-SIM-18 unchanged).
+  **`node.[x]` reaches the viewpoints, read-only.** The run-state singleton exports a reader of an element's presentation (stored then derived, as `netStep.ts` resolves it), and the IR interpreter exposes it to view expressions with the engine's syntax, `node.[x]`, absent when no run knows the element (the view gives its own default). The lane opens with a discovery and a Layer Impact Report (how a view expression reads it, how the view re-renders on the `'mark'` version without re-rendering the canvas, what a derived viewpoint does with it); its Phase 2 waits for that report. Views never write it (R-SIM-6, R-SIM-18 unchanged). Interpreter side (P-2026-10-03-0121, `bf81fc979`): Alfonso said «go», 2026-10-03, on decision 2 of `docs/discovery/discovery_2026-10-02_sim_node_presentation.md` (`editor-v2/viewpoint/ir/` counts as a critical-zone edit, LIR `docs/lir/lir_2026-10-03_sim_node_read.md`, RC-30 go-ahead), his veto on this row stays open, and decision 3 (no binding proposed by «Derive viewpoint») is adopted as recommended (ratified as recommended, unattended).
 - **R-SIM-109** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: read, verified: none, reversible: branch).
   **An «Inspect node.[x]» switch on the canvas**, off by default: on, every element with presentation state carries dashed pink tags naming each value, so data and notation can be told apart. A viewer preference; the tags work without R-SIM-108, the drawing needs it.
   Lanes: discovery D1 (R-SIM-102..107, 109) and discovery D2 (R-SIM-108) in parallel, read-only; Phase 2 in cascade on disjoint file sets as the reports split them. Alfonso, 2026-10-02 about 23:55, «prima della demo», and 2026-10-03, «vai»: the lanes merge into the trunk before the MODELS demo, one at a time, each tagged `pre-<branch>` for rollback; the demo shows the dialog and the M1 face as built, the inspector and the navigable trace an optional beat. Adopted from `docs/discovery/discovery_2026-10-02_sim_state_ui.md` §0 by the chat (RC-25, 2026-10-03): the inspector is a floating card mounted by the panel, right of it, 400 px wide, clamped clear of the MiniMap and the rail; the `.smv` Export preview of R-SIM-103 is dropped; «Written by»/«Read by» come from `compileAction`, `compileGuard`, `compileDerived` plus one exported StateAccess walk, computed on row selection only; kept configurations are capped at 1000 in `simCommit`, rebuilt by replay over the recorded selectors with `inputs?` added to the trace step (an implementation of R-SIM-106, not an amendment of R-SIM-100); viewer preferences live in `simViewerPrefs.ts` with their own version channel, never the `'mark'` one; «Data» is renamed in its visible strings only, identifiers and classes unchanged; Lane A exports `getSimPresentation(objectId)` on the viewed configuration for R-SIM-108. Lanes: A `sim-state-model` and B `sim-state-dialog` in parallel, then C `sim-state-face` after both.
@@ -4853,6 +4853,66 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     and the four default scenes 0 px from `7c9ae4e0d`. Tests 8 of 16 red first, then green; mutation bench 13/14, the
     survivor an equivalent mutant (the dark declaration dropped, the light block being `:root`). Prompt
     P-2026-10-02-2356, commit `cce1ecfef`.
+- **R-VP-48** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  **The toolbar auto-layout uses ELK in full, in one lane, merged before the 2026-10-07 freeze (Q1).** Alfonso, 2026-10-02,
+  «ok alle raccomandazioni» on `docs/discovery/discovery_2026-10-01_elk_layout_quality.md` §10. One lane: ELK's input
+  (real sizes, hidden nodes out, labels in, model order off), ELK's routes drawn in session, the per-notation profile as
+  data, the 8 px snap. It may change what the MODELS demo scenes show after an auto-layout (RC-26), not at rest. Prompt
+  P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+  Was R-VP-37 on the branch, renumbered by P-2026-10-02-1718.
+- **R-VP-49** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  **Aligning React Flow's handles with ELK's ports waits for a critical-zone lane (D-B).** Until then an ELK route is drawn
+  from ELK's own ports and the edge's endpoint grips sit on the drawn ends; the handles keep their uniform slots
+  (`handlePosition.ts`), the side of each comes from the route. `portDistribution.ts` and `handlePosition.ts` untouched.
+  Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+  Was R-VP-38 on the branch, renumbered by P-2026-10-02-1718.
+- **R-VP-52** (2026-10-02, ratified by Alfonso 2026-10-02, evidence: measured, verified: none, reversible: branch).
+  **The Activity (UML) fork and join bar lies across the layout direction: 120 by 7 under a flow that runs down (Q7, D-C);
+  amends R-VP-26 (2) on the orientation, the thickness staying R-VP-36's 7 px.** The text of R-VP-26 is not edited
+  (add-only). `ACTIVITY_LAYOUT_DIRECTION` (`viewpointDerivation.ts`) is read by both the bar size and the notation's
+  profile, so the two cannot drift. The prompt's «120 x 5» predates R-VP-36; 7 is kept. Viewpoints already derived keep
+  the bar they saved (the size is copied onto each view at derivation, as R-VP-36 measured). Measured at rest on the
+  rest probe: a fresh Activity (UML) derivation of DemoFlowB draws both bars 120×7; the other seven rest scenes 0 px.
+  Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+  Was R-VP-39 on the branch, renumbered by P-2026-10-02-1718.
+  Was R-VP-50 on the branch, renumbered by P-2026-10-03-0050.
+- **R-VP-40** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **A notation's layout profile is an optional `layout` on `DerivedNotation` (`notations.ts`), copied into the derived
+  viewpoint's `_state` as `derivedLayout`, a JSON string (Q2).** Profiles for Flowchart, Activity (UML), Petri net
+  (classic), Statechart (UML) and ER (Chen); the others have none and keep today's strategy. `notationCatalog.ts` (symbol
+  presets) is not the place. Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+- **R-VP-41** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **ELK's routes are drawn, never persisted (Q3).** A session store in `elkLayout.ts` keyed by edge id, not `edge.data`:
+  `useJjomSync.ts` rebuilds patched edges keeping only waypoints, anchors, `jjomRefId` and `reference`. A route holds while
+  both end nodes keep the rects it was computed for (0.5 px); a move or a resize drops it and the router takes over.
+  Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+- **R-VP-42** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **The toolbar auto-layout puts every node on the 8 px grid; the 16 px drag snap is unchanged (Q4).** A route's ends on
+  real nodes move with their node's snap along their own axis. Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+- **R-VP-43** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **No fixed-side ports; each edge's sides come from its ELK route (Q5).** Phase 1 V5 measured no gain and more bends.
+  Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+- **R-VP-44** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **ER (Chen) lays out with stress, then ELK's overlap removal, and straight lines (Q6).** The Chen lines keep their ends
+  on the handles (a stress route ends on the box, not on a diamond's or an ellipse's outline). Prompt P-2026-10-01-2215
+  Phase 2, commit `803b84e3a`.
+- **R-VP-45** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Only the toolbar runs the full layout.** The first-open layout and the late-edge re-layout (`autoLayoutRef`) keep
+  today's `computeElkLayout`, unchanged, so opening a project or a viewpoint renders as before: measured on the rest
+  probe against a baseline server serving the five changed files from `5c9aadb1c`, 0 px outside Jodie's animated avatar
+  on the four demo scenes and three DemoFlowB derived viewpoints (the same avatar noise baseline against baseline).
+  Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+- **R-VP-46** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **A metamodel canvas without a derived profile takes the class view profile (DOWN, NETWORK_SIMPLEX, compact spacing);
+  every other canvas without one keeps today's strategy with the input fixes.** Phase 1 §5.1: V4-ns best on both class
+  scenes. Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+- **R-VP-47** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **Three renderings follow the route's ends.** (1) Activity (UML)'s view-only merge and decision are laid out as a
+  28 px ELK node each, the branches routed to it and fitted to the diamond's vertex. (2) A `curve: 'arc'` edge (Statechart
+  (UML), Petri net (classic)) draws its chord between the route's ends, the opposite edge of a pair read the same way so
+  the two bow apart; Statechart's profile widens node and edge spacing (80, 32) so neighbouring chords and their labels
+  stay apart. (3) The labels ELK is given are matched to edges in the DOM by their text, then by distance: the edge
+  markup stays byte-identical (the IR render digests pin it). Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 
