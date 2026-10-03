@@ -140,3 +140,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: the face checked on the branch at 02:31 and 02:49 (RC-23), before the merge; the merge adds trunk code on files disjoint from the branch's, not re-probed on this tree
 **Notes**: Corregge/Causa for the test commit only: since `6eedc4bf3` (R-SIM-107) `SimNodeRunState` reads `getSimRun`, missing from the test's mock, and the σ card the test pinned is gone; the 0120 lane ran the sim suites only. Fix: the mock stub, the σ fixtures with `before`, `cornerSigma` re-pinned to `f19f2252a2347426`. Mutation bench not run. §4 stale `Data…` fixed in a docs commit (P13: never with code).
 **Prompt document name**: 2026-10-03 03:04
+
+## 2026-10-03 — merge: sim-state-face into alfonso-frontend-jjtl (P-2026-10-03-0345)
+**Prompt**: `claude_2026-10-03_0345_prompt_merge_sim-state-face.md`, a direct merge by `lane-run merge --direct`, no session: `sim-state-face` at `fabcef855` into `alfonso-frontend-jjtl`, merge base `04dd1c7e5`, 12 commits on the branch side.
+**Files touched**: merge `d90138dea`: 12 files from the branch side (`docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_0120_prompt_sim_state_face.md`, `docs/prompts/claude_2026-10-03_0304_prompt_sim-state-face_take_trunk.md`, `frontend/src/components/editor-v2/sim/SimCanvasLayer.tsx`, `frontend/src/components/editor-v2/sim/SimInspector.scss`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimNodeRunState.tsx`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d90138dea` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6883 tests in 275 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Lane C checked visually on its branch at 02:31 and 02:49; take-trunk P-2026-10-03-0304 changed docs and one test only; 9 gates green, 6883 tests; no visual probe on the merged tree, Alfonso round on 3001 is the check
+**Notes**: Rollback tag `pre-sim-state-face-P-2026-10-03-0345` on `f564a83d6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0345/result.json`.
+**Prompt document name**: 2026-10-03 03:45
