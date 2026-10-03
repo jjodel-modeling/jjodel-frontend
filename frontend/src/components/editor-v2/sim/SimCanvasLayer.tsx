@@ -84,7 +84,7 @@ export function SimCanvasLayer({ modelId }: SimCanvasLayerProps): ReactElement |
                         return (
                             <div className="sim-canvas-globals__row" key={d.name} title={`model.[${d.name}] · ${kind} = ${text}`}>
                                 <span className={`sim-canvas-globals__name${kind === 'DEFINE' ? ' sim-canvas-globals__name--define' : ''}`}>{d.name}</span>
-                                {kind !== 'VAR' && <span className="sim-state-chip">{kind}</span>}
+                                {kind !== 'VAR' && <span className={`sim-state-chip sim-state-chip--${kind.toLowerCase()}`}>{kind}</span>}
                                 <span className={`sim-canvas-globals__value${changed ? ' sim-canvas-globals__value--changed' : ''}`}>{text}</span>
                             </div>
                         );

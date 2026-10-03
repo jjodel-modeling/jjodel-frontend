@@ -185,7 +185,11 @@ export function SimInspector({ modelId, modelName, inputLabel, onClose }: SimIns
                 title={title}
             >
                 <span className={`sim-inspector__name${row.kind === 'DEFINE' ? ' sim-inspector__name--define' : ''}`}>{row.attr}</span>
-                {row.kind && <span className={`sim-state-chip${space === 'presentation' ? ' sim-state-chip--presentation' : ''}`}>{row.kind}</span>}
+                {row.kind && (
+                    <span className={`sim-state-chip sim-state-chip--${row.kind.toLowerCase()}${space === 'presentation' ? ' sim-state-chip--presentation' : ''}`}>
+                        {row.kind}
+                    </span>
+                )}
                 {range && (
                     <span className={`sim-inspector__bar${out ? ' sim-inspector__bar--out' : ''}`} aria-hidden="true">
                         <span className="sim-inspector__fill" style={{ width: `${Math.round(fill * 100)}%` }} />

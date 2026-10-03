@@ -999,7 +999,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                                 >
                                                     <i className="bi bi-chevron-right" />
                                                     <span>{e.label}</span>
-                                                    {on && asks && <span className="sim-state-chip sim-panel__event-chip" title={`Asks: ${asks}`}>IVAR</span>}
+                                                    {on && asks && <span className="sim-state-chip sim-state-chip--ivar sim-panel__event-chip" title={`Asks: ${asks}`}>IVAR</span>}
                                                 </button>
                                             );
                                         })}
@@ -1106,7 +1106,7 @@ function WatchRow({ row }: { row: SimWatchRow }): ReactElement {
             title={title}
         >
             <span className={`sim-panel__watch-name${row.kind === 'DEFINE' ? ' sim-panel__watch-name--define' : ''}`}>{row.name}</span>
-            {row.kind !== 'VAR' && <span className="sim-state-chip">{row.kind}</span>}
+            {row.kind !== 'VAR' && <span className={`sim-state-chip sim-state-chip--${row.kind.toLowerCase()}`}>{row.kind}</span>}
             {range && (
                 <span className={`sim-panel__watch-bar${out ? ' sim-panel__watch-bar--out' : ''}`} aria-hidden="true">
                     <span className="sim-panel__watch-fill" style={{ width: `${Math.round(fill * 100)}%` }} />
