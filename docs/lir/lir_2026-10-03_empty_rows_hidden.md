@@ -56,3 +56,12 @@ Smoke-test scenarios potentially affected:
   - DemoPEST as Statechart (UML): no compartment before or after.
   - The four default scenes (default viewpoint, native rows): identical at 0.01 px.
 ```
+
+## 3. Addendum after the edit
+
+One change beyond the report above, inside the same file and the same item: when 'hide' leaves no row in any
+compartment of a node (and none holds children), a label the compartment put on top (`position: 'top'`) is drawn as
+`center`, the position the derivation gives the name when there is no compartment. Measured on the probe: without it
+DemoESM's `locked` and `unlocked` drew their names high in a 42 px box. Views without the key are untouched (the R-VP-20
+case of every slot excluded keeps its name on top, tested). Committed with the code in the commit that follows this
+report's `cd38655ea`.
