@@ -311,3 +311,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-03-1300
 **Detail**: docs/discovery/discovery_2026-10-03_derived_notations_polish_a.md
+
+## 2026-10-03 — merge: derived-notations-polish into alfonso-frontend-jjtl (P-2026-10-03-1405)
+**Prompt**: `claude_2026-10-03_1405_prompt_merge_derived-notations-polish.md`, a lane-run merge session: `derived-notations-polish` at `839b8fbf3` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `c56f4fc63`, 10 commits on the branch side, 0 on the trunk side besides this merge's prompt `6dab80d9f`.
+**Files touched**: merge `5408f4a69`: 15 files from the branch side (`notations.ts`, `viewpointDerivation.ts`, `DeriveViewpointDialog.tsx`, 9 test files, the discovery report, `docs/log-inbox/views.md`, the branch prompt); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5408f4a69`: typecheck 14 errors, the §17 set (exit 2); typecheck:scripts exit 0; vitest 6937 passed in 276 files, 9 red at import, the §17 set (expected 6883 on the trunk tip plus 54 from the branch); hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts, check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, on 3001: server up (pid 61660), HTTP 200, serves the merged `notations.ts` (hidden flag) and `viewpointDerivation.ts` (PETRI_BAR_LONG); Alfonso's visual OK on the branch (ok 1300) before the merge
+**Notes**: Merge-tree zero conflicts, tree d9586537d equal to the index; governance diff empty; no file on both sides; probes 1/1 each; union none. Branch delta measured 54 tests, its prompt says 53. No rollback tag: the session path does not tag (RC-31); pre-merge trunk c56f4fc63. npm run build ran in this tree with 3001 up (ticket of P-2026-10-03-1300); 3001 not restarted.
+**Prompt document name**: 2026-10-03 14:05
