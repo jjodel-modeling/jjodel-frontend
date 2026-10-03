@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1920
 Chat: C-2026-10-03-1610
 Lane: full (two-phase: Phase 1 re-measure and Layer Impact Report, hard stop; Phase 2 after the chat's GO in the same session). Tier: heavy (RC-32: critical zone). Model: the default of `.claude/settings.json`, no deviation. Critical-zone go-ahead: RC-30, given by the chat at launch (`--critical-zone-goahead P-2026-10-03-1920`), Alfonso's «esegui tutto adesso in lane auto» of 2026-10-03; the Layer Impact Report stays the first step of Phase 2.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane petri-ink-ports · 7bc8a6f3b (item 1), 6756eddd2 (item 3), 679d68710 (item 2), probe 5fda3c12f, dc893ce3c · non fuso: hard-stop, A1-A3 provisional (R-VP-58, R-VP-60, R-VP-59) awaiting Alfonso · gates: typecheck 14 (the §17 set), vitest 7184 passed (the §17 nine at import, criticalZone.test.ts red only under this lane's go-ahead variable, 70/70 without), build exit 0 · probe on 3080 64/64: glyphs 12.59:1 dark and 16.3:1 light (min), no outside label within 4 px of an arrowhead (rest, RIGHT, DOWN), handles on the drawn ends along the side but work->d1 (6 px), 0 extra bends, the four default panes identical light and dark (dump and crops byte for byte) · mutation bench 28/29 (the survivor equivalent) · crops in ~/.jjodel-lanes/P-2026-10-03-1920/crops/ · verifica visiva alla chat
 
 Worktree: `~/jjodel-w-petriports`, branch `petri-ink-ports`, cut by the chat from `alfonso-frontend-jjtl` at `106aae181` (right after the merge of `derived-notations-edges`, P-2026-10-03-1304/1901), `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 

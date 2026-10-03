@@ -308,3 +308,54 @@ Layer Impact Report: `docs/lir/lir_2026-10-03_petri_ink_ports.md`.
    route (its memo never sees one).
 4. The ELK second pass for item 2? Recommended: yes, once, only when a route takes a reserved side.
 5. Commit order 1, 3, 2? Recommended: yes.
+
+## 10. Addendum 2026-10-03, Phase 2 (implemented, measured)
+
+GO of the chat: decisions (a) to (d) stand; questions 1 to 5 adopted as recommended; `ObjectNode.tsx` and
+`DynamicHandles.tsx` in DOVE; A1 to A3 on the branch as provisional rows awaiting Alfonso (R-VP-58, R-VP-60, R-VP-59), one
+item per commit. LIR confirmed `40d39b6d1`. Commits: item 1 `7bc8a6f3b`, item 3 `6756eddd2`, item 2 `679d68710`, probe
+`dc893ce3c`, trunk taken `ad776870f` (one docs commit, `48eec06d5`).
+
+**Deviations from §3, each measured.**
+- Item 1 leaves State machine's named Initial in the catalogue ink: R-VP-17 (5) keeps it «unchanged» and the GO named
+  R-VP-15 and R-VP-24 only. Hidden notation, not in the four scenes.
+- Item 3, first run in the app: Activity drew 2 bends over ELK's. A junction branch's route ends on ELK's junction node,
+  and its side is the pre-layout one; taking it moved the merge diamond. The route end is now taken only when it lies on
+  the node's drawn border (a bar's ink), within 1 px: 0 extra bends in every pane. The junction pin-strip written first
+  was removed (the border rule covers it; no test could reach it).
+- Item 3 leaves classic edges (not synthetic) as they were: `handleAutoLayout` already gives them the route's side
+  (`EditorV2.tsx:3736`, outside DOVE); no scene of the four has one.
+- Item 2's rule lives in `elkLayout.ts` (`outsideAnchorFor`), which `irEdgeViews.ts` already imports: no new file, no
+  import cycle.
+
+**Measured, lane probe on 3080 after the code (`probe_after.json`, 64/64), against Phase 1 (`probe_before.json`, 63/63).**
+
+| | before | after |
+|---|---|---|
+| glyph contrast, dark, against the canvas (min) | 1.41 (Petri bars, Flowchart disc) | 12.59; the bull's-eye dot 9.07 on its disc |
+| glyph contrast, light (min) | 9.45 | 16.3 |
+| «Color by metaclass» on: glyphs painted as off | 6/6 panes | 6/6 panes |
+| outside labels within 4 px of an arrowhead: classic rest, RIGHT, DOWN | 4, 0, 3 | 0, 0, 0 (min 17.5 px) |
+| outside labels on a line: classic rest, DOWN; Petri net after layout | 4, 5; 2 | 1 (t1, a line passing under), 0; 0 |
+| non-junction ends whose handle is off the drawn end along the side (> 1 px) | 34 of 68 | 2 (work->d1, 6 px) |
+| handles on another side than the drawn end, off the diamonds | 5 | 0 |
+| bends drawn over ELK's | 0 | 0 |
+| drawn end vs the route given | 0 but the diamond refit (work->d1, 6 px) | same |
+| ELK calls per Auto layout | 1 | 1; 2 where a label moves (Petri net, classic DOWN) |
+
+Across the side, a handle on a circle sits on the outline (DynamicHandles' inset) while ELK's end sits on the box: lock's
+two ends, 1.1 px (classic) and 1.9 to 2.7 px (Petri net). Not gated: the dot is on the shape, the line on the box, as
+before this lane.
+
+**Default viewpoint at rest.** The four default panes in light and dark: the probe's dump identical (8/8), and the crops
+`pip_before_<scene>_default_<theme>.png` against `pip_after_...` identical byte for byte (8/8). Control with signal: the
+classic Petri pane's labels and its dark ink differ before and after, and so do its crops.
+
+**Gates.** Typecheck 14, the §17 set (before and after the trunk). Vitest 7184 passed; red: the nine §17 import files and
+`scripts/hooks/__tests__/criticalZone.test.ts` (4 tests), which reads the ambient `JJODEL_CRITICAL_ZONE_GOAHEAD` of this
+go-ahead lane: 70/70 with the variable unset (the ticket of 2026-09-30 in `docs/log-inbox/views.md`). Build exit 0.
+Mutation bench: item 1 5/5; item 3 12/12 (one killed by the probe on DemoPEST); item 2 11/12, the survivor equivalent (the
+moves applied to an inside label, which compiles no anchor).
+
+**Crops** in `~/.jjodel-lanes/P-2026-10-03-1920/crops/`: `pip_before_*` and `pip_after_*`, each scene, the default
+viewpoint and every derived notation at rest and after Auto layout, light and dark; the classic DOWN layout in light.

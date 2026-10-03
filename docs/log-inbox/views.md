@@ -417,3 +417,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: the dev server on 3001 (`/Users/alfonso/jjodel-release`) serves the merged code, `barOrientation.ts` answers 200 with the merged identifiers; Alfonso in the morning digest.
 **Notes**: Rollback tag `pre-derived-notations-edges` on `67fa607de` (RC-31). No union resolution: `docs/decisions.md`, changed on both sides, auto-merged; probes 6/6 once, control RC-42 absent. Second cause, for 18:38: (g), the branch lane's closure commit not yet made. `frontend/scripts/auto-intake.config.json` rewritten in this tree from 19:10 by another session (mode live, ratifiedBy set), after the merge commit; left uncommitted (P13).
 **Prompt document name**: 2026-10-03 19:01
+
+## 2026-10-03 — fix(derive, editor-v2): Petri ink in dark, outside labels off the edge ends, handles on ELK ends (P-2026-10-03-1920)
+**Prompt**: `claude_2026-10-03_1920_prompt_petri_ink_ports.md`: re-measure three defects of the derived notations after P-2026-10-03-1304 (the catalogue ink unreadable in dark, the place name on an arrowhead, D-B handles off ELK's ports), report and LIR (Phase 1), then fix each in its own commit after the chat's GO (Phase 2), hard stop for the visual check, no merge.
+**Files touched**: `5fda3c12f` `dc893ce3c` the probe `frontend/scripts/probe/petri-ink-ports.ts`; `86f72070f` `40d39b6d1` the report and `docs/lir/lir_2026-10-03_petri_ink_ports.md`; `7bc8a6f3b` `viewpointDerivation.ts` and four derive tests; `6756eddd2` `irEdgeViews.ts`, `handlePosition.ts`, `DynamicHandles.tsx`, `irElkPorts.test.ts`; `679d68710` `elkLayout.ts`, `irEdgeViews.ts`, `IRNodeContent.tsx`, `ObjectNode.tsx`, three tests; `ad776870f` the trunk taken; this commit: `docs/decisions.md` (R-VP-58 to R-VP-60), the report's addendum, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes, caught in the lane and not committed: the first in-app run of item 3 drew 2 bends over ELK's on Activity (a junction branch's route end taken); fixed by the border rule before the commit. Committed state: 0 extra bends; typecheck 14, the §17 set; vitest 7184 passed, the §17 nine red at import and criticalZone.test.ts red only under this lane's go-ahead variable (70/70 unset); build exit 0.
+**Out-of-scope changes**: yes — 15 code and test files over three commits (rule 19, RC-11, listed in the report §6): `ObjectNode.tsx` and `DynamicHandles.tsx` were not in the prompt's DOVE, added by the chat's GO; `erChen.test.ts`, `notations.test.ts`, `notationsPolishA.test.ts` moved with the derive pins.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — lane probe on 3080, unattended: 64/64 after the code, the four default panes identical in light and dark (dump 8/8, crops byte for byte 8/8); the chat's visual check is its own
+**Notes**: Glyphs 1.41:1 → 12.59:1 dark. Labels within 4 px of an arrowhead: classic rest 4 → 0, DOWN 3 → 0. Handles off the drawn end along the side: 34/68 → 2 (work->d1, the diamond refit). A1-A3 provisional, awaiting Alfonso. State machine's named Initial keeps the catalogue ink (R-VP-17 (5)). Bench 28/29, survivor equivalent. Gate logs, probe JSON and the bench script under /tmp, outside the tree. Detail: report §10.
+**Prompt document name**: 2026-10-03 19:20
