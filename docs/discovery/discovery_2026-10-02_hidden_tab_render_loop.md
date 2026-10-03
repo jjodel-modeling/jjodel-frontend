@@ -430,3 +430,52 @@ The version now moves **once per burst** (`setTimeout 0`), and **only on a net c
 - D13. `useTreeLayout.ts` is included, for the reason above, under «only if needed».
 - D14. The version moves once per burst and only on a net change. That is the chat's design, version plus subscription, with the timing the measured loop required.
 - D15. The equivalent survivor V7 stays in the code. The guard saves redundant timers and has no observable effect.
+
+## Addendum 2026-10-03, interaction smoke (the chat's step before closure)
+
+A scripted stand-in for the human visual check: `hidden-tab-loop.ts` gains `LOOP_VARIANTS=interact` and `LOOP_VARIANTS=compare` (commit `4afbb321a`). No `src` file changed in this step.
+
+- **Before:** trunk tip `07bca00e2`, the commit this branch merged and the source of every earlier baseline. It was served from a temporary detached worktree, `/tmp/hl-before-tree`, with a temporary `node_modules` symlink and a `_tmp_` Vite config on port 3017. All three were removed afterwards (`git worktree remove`, `prune`). `/Users/alfonso/jjodel-release` was not touched. The trunk has since moved to `ff93dc482`; that tip is neither merged nor compared here.
+- **After:** this branch (code `334a7e444`), Vite on 3014.
+- **Same probe, same steps, both sides:** for `scene_2_DemoPetri` and `scene_4_DemoFlowB`, M2 then M1 opened, M1 active.
+
+### Phases and results
+
+| phase | what the probe does | before vs after |
+|---|---|---|
+| rest | dump and crop of the M1 pane | identical |
+| 1 drag | first reachable M1 node, by the pointer, +60/+40 screen px, released | identical (Petri node `_USER_70` moved to `translate(576px, 128px)` on both sides) |
+| 2 resize | the dragged node +40/+30, through React Flow's `triggerNodeChanges` (`dimensions`, `resizing` true then false) | identical; box 100x39 → 120x54 (Petri), 100x25 → 120x40 (FlowB), on both sides |
+| 3 rename | another node: double click, type `probeRenamed`, Enter | identical; label and model name `probeRenamed` on both sides; edges unchanged |
+| 4 tabs | M2 to the front (M1 hidden), back to M1, renders/s each side, then a dump | identical; within the after run the dump equals the one before the switch (no stale edge) |
+| 5 add / delete | on M2, JjScript `create class ProbeTmp` + `create reference probeRef in ProbeTmp type <first class>`, then `delete class ProbeTmp` | identical: +1 node and +1 edge, then back to the counts |
+
+Compare: **16 of 16 steps identical** in node transforms, sizes, boxes, text and connected handles. Edge paths are equal within 0.000015 px.
+
+**Renders/s of each editor, every phase:** before 110.8-120 in both editors; after **0**.
+
+**Crops:** byte-identical before and after (same MD5 for both the full and the 600 px files of each scene).
+- `frontend/scripts/smoke/_tmp_hiddenloop_crops/before_scene_4_DemoFlowB_demoFlowB_600.png`
+- `frontend/scripts/smoke/_tmp_hiddenloop_crops/after_scene_4_DemoFlowB_demoFlowB_600.png`
+- `frontend/scripts/smoke/_tmp_hiddenloop_crops/before_scene_2_DemoPetri_demoNet_600.png`
+- `frontend/scripts/smoke/_tmp_hiddenloop_crops/after_scene_2_DemoPetri_demoNet_600.png`
+
+### What the smoke had to work around (declared)
+
+- **Resize is not a pointer gesture.**
+  - No node type in the demo scenes mounts a `NodeResizer`: class, object and enum nodes adapt to their content (`nodeSizing.ts:12-14`).
+  - JjScript `create package` failed in both scenes (`[false]`), so a package node could not stand in.
+  - The probe therefore calls the store change `NodeResizer` itself emits. That path reaches EditorV2's `onNodesChange` and `syncSizeToJjom` (`EditorV2.tsx:4007-4014`), but not the pointer handling of the control.
+- **Grabbing.** At the default viewport, FlowB's first M1 nodes sit under the editor toolbar. The probe takes the first node, in id-allocation order, whose grab point is not covered.
+- **Ordering.** An id is `Pointer<ms>_USER_<n>`, and the `<ms>` part varies between imports. With a string sort, the first compare paired different nodes (and the rename hit a different node). Ordering by `<n>` fixed both.
+- The crop directory got a trailing-slash fix after these runs. It is cosmetic: same directory.
+
+### Found, not this lane's
+
+**Add then delete leaves a handle slot** (before and after alike). After `delete class ProbeTmp`, the class that was the reference's target keeps the slot distribution of one more edge: bottom handles at 20/40/60% instead of 25/50/75% (Petri). Two edges stay routed to the shifted ports.
+
+The probe's «delete restored the pane» check FAILs on both sides, and the `m2-deleted` compare is identical, so this is **pre-existing**. Proposed as a ticket. No fix here: the chat's instruction for this step.
+
+### Verdict
+
+**Identical.** Every interaction leaves the same nodes, handles, edge paths and labels, before and after, and the crops are byte-identical. The only difference is renders/s at rest: about 120 per editor before, 0 after.
