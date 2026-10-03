@@ -444,7 +444,7 @@ A scripted stand-in for the human visual check: `hidden-tab-loop.ts` gains `LOOP
 | phase | what the probe does | before vs after |
 |---|---|---|
 | rest | dump and crop of the M1 pane | identical |
-| 1 drag | first reachable M1 node, by the pointer, +60/+40 screen px, released | identical (Petri node `_USER_70` moved to `translate(576px, 128px)` on both sides) |
+| 1 drag | first reachable M1 node, by the pointer, +60/+40 screen px, released | identical (Petri `_USER_70` to `translate(576px, 128px)`, FlowB `_USER_95` to `translate(160px, 416px)`, on both sides) |
 | 2 resize | the dragged node +40/+30, through React Flow's `triggerNodeChanges` (`dimensions`, `resizing` true then false) | identical; box 100x39 → 120x54 (Petri), 100x25 → 120x40 (FlowB), on both sides |
 | 3 rename | another node: double click, type `probeRenamed`, Enter | identical; label and model name `probeRenamed` on both sides; edges unchanged |
 | 4 tabs | M2 to the front (M1 hidden), back to M1, renders/s each side, then a dump | identical; within the after run the dump equals the one before the switch (no stale edge) |
@@ -452,7 +452,7 @@ A scripted stand-in for the human visual check: `hidden-tab-loop.ts` gains `LOOP
 
 Compare: **16 of 16 steps identical** in node transforms, sizes, boxes, text and connected handles. Edge paths are equal within 0.000015 px.
 
-**Renders/s of each editor, every phase:** before 110.8-120 in both editors; after **0**.
+**Renders/s of each editor, every phase:** before 118.1-120 in both editors; after **0**.
 
 **Crops:** byte-identical before and after (same MD5 for both the full and the 600 px files of each scene).
 - `frontend/scripts/smoke/_tmp_hiddenloop_crops/before_scene_4_DemoFlowB_demoFlowB_600.png`
