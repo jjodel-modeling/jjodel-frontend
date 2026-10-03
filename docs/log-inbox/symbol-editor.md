@@ -121,3 +121,31 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended (C-2026-10-01-2349): 3001 answers 200; vite serves the merged `irLabelEdit.ts`, so the merged code compiles on the running server; the behaviour was measured by the probe on the synced branch (35/36, the one failure the known undo ticket); Alfonso in the morning digest.
 **Notes**: Clean merge, no union resolution: the committed tree is the merge-tree result `abb42b858`. Probes 4/4 once each (R-IRN-41, the three headings in this inbox), control R-IRN-42 absent. Rollback tag `pre-path-label-edit` on `936a1b947` (RC-31), set by lane-run. check:docs printed 5 non-blocking warnings.
 **Prompt document name**: 2026-10-02 21:57
+
+## 2026-10-03 — fix(redux): undo restores a slot written inline, copy-on-write never writes into the previous state (P-2026-10-03-1632)
+**Prompt**: `claude_2026-10-03_1632_prompt_undo_inline_edit.md`, full lane (critical-zone go-ahead, RC-30) on `~/jjodel-w-undoinline` branch `undo-inline-edit`: the ticket «one undo does not restore a slot value written by syncUpdateFeatureValue» (P-2026-10-02-1647, above in this inbox). Phase 1 discovery, Phase 2 after the chat's GO adopting fix (A) (RC-21, unattended).
+**Files touched**: probe `d073925e7` (`frontend/scripts/probe/undo-inline-edit.ts`, `frontend/scripts/probe/fixtures/scene_2_DemoPetri.jjodel`); report and LIR `389519169`, LIR amended `0eac2931b` (`docs/discovery/discovery_2026-10-03_undo_inline_edit.md`, `docs/lir/lir_2026-10-03_undo_inline_edit.md`); trunk taken `e2154ebaf` (49957d340); fix `ac64b213b` (`frontend/src/redux/reducer/reducer.ts`, new `frontend/src/redux/reducer/__tests__/reducerCopyOnWrite.test.ts`). This commit: this entry, the prompt's Status, row R-UNDO-8 in `docs/decisions.md`, report addendum §7.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck exit 2, the 14 of §17; vitest 6990 passed, 4 red in `criticalZone.test.ts` only with this session's go-ahead variable set (70/70 without it), the 9 known import reds; build exit 0; probe 33/33; four scenes 0 px from the d2a1866b6 reducer. Every slot write path changes, and only the probe's eight and the suite exercise it.
+**Out-of-scope changes**: yes — nine files over the lane (RC-11, listed above); `docs/decisions.md` (R-UNDO-8, the RC-21 record of the adoption) is not in DOVE. The trunk merge is step 8 of the prompt.
+**Layer Impact Report**: produced
+**Smoke visivo**: chat, pending: lane probe 33/33 on 3077 (light), 8 cases restore on Cmd+Z and reapply on Cmd+Shift+Z, canvas text follows; crops in `~/.jjodel-lanes/P-2026-10-03-1632/crops/` (32), scenes in `.../scenes/`.
+**Notes**: Cause and measures: report §0 and §7. A slot write's no-op `isMirage` made `values.N` copy-on-write into the previous state; `prevAction` is now the last action that changed it. Mutation bench 6/6 killed (commit body). Scenes: DemoFlowB differs run to run on the same code (881 px before vs before), 0 px in the second pair. Inbox entry at the end of the file, below the ticket's batch, as the fold requires. Typo in `ac64b213b`'s body («the 17 baseline set»).
+**Prompt document name**: 2026-10-03 16:32
+
+**Ticket** (low, harness): `frontend/scripts/hooks/__tests__/criticalZone.test.ts` reads the process environment, so a lane started with `--critical-zone-goahead` (RC-30) sees 4 tests red in the full suite («kills "bypass not read"…», «kills "deny limited to the six files"…»): measured here, 70/70 with `env -u JJODEL_CRITICAL_ZONE_GOAHEAD`. Fix: clear the variable in the test's `beforeEach`, or pass the env to the hook explicitly.
+
+## 2026-10-03 — merge: undo-inline-edit takes alfonso-frontend-jjtl at 26b62ea01, second take (P-2026-10-03-1632)
+**Prompt**: step 8 of `claude_2026-10-03_1632_prompt_undo_inline_edit.md` (RC-14): the trunk moved after the closure commit `bb7a3f985`, 5 commits (sim-polish: `editor-v2/sim/` code and tests, docs), taken into the lane branch before the hard stop.
+**Files touched**: merge `22a3b33b4`: 11 files from the trunk side (`frontend/src/components/editor-v2/sim/` six code files and two tests, `docs/log-inbox/simulation.md`, two prompts). This commit: this entry, the prompt's Status, report addendum §7.1.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `22a3b33b4`: typecheck exit 2, the 14 of §17; vitest 7007 passed, 4 red in `criticalZone.test.ts` only with the go-ahead variable (70/70 without), the 9 known import reds; build exit 0; probe 33/33; four scenes opened clean.
+**Out-of-scope changes**: no — 11 files, above five (RC-11), all from the trunk side; the take is the prompt's step 8.
+**Layer Impact Report**: not-required (no file of the LIR changed on the trunk side)
+**Smoke visivo**: chat, pending: probe 33/33 on 3077 (light) on the merged tree; crops in `~/.jjodel-lanes/P-2026-10-03-1632/crops/` regenerated there.
+**Notes**: Clean merge, no hand resolution. Scenes: three 0 px; DemoFlowB renders in run-to-run variants (870 to 891 px between two runs of the same reverted code), and the fixed shots are byte-identical to reverted ones (`m-after2` = `before`, `after2` = `before2`). Report §7.1.
+**Prompt document name**: 2026-10-03 16:32
