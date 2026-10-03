@@ -345,7 +345,8 @@ describe('item 4: the flowchart Initial is 20 by 20 and the Terminal 24 by 24', 
         const initial = irOf(flowchart(), 'InitialNode');
         const terminal = irOf(flowchart(), 'FinalNode');
         expect(initial.shape.form).toBe('circle');
-        expect(initial.shape.fill).toBe('#334155');
+        // P-2026-10-03-1920 (A1): the disc is drawn in the name ink, as Activity (UML)'s is, not the catalogue's #334155.
+        expect(initial.shape.fill).toBe('var(--color-inode-name)');
         expect(terminal.shape.marker).toBe('dot');
         expect(terminal.shape.fill).toBe('var(--color-inode-surface)');
         expect(isNotationGlyph(initial) && isNotationGlyph(terminal)).toBe(true);

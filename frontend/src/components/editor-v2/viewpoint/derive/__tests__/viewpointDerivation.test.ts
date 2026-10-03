@@ -19,6 +19,7 @@ import { DERIVED_NOTATIONS } from '../notations';
 import type { AnyDerivedView, DerivationRoles, DerivedView } from '../viewpointDerivation';
 import { validateIR } from '../../ir/irValidate';
 import { recognizeSymbol } from '../../ir/symbolRecognition';
+import { isNotationGlyph } from '../../../../../view/viewPoint/metaclassPalette';
 import { compileView, compileEdgeView, compileRowView, clearCompileCache } from '../../ir/irCompile';
 import { rowRenderedChildren } from '../../ir/irContainment';
 import { makeDrawReadCtx } from '../../ir/irReadCtx';
@@ -514,6 +515,40 @@ describe('deriveViewpointIRs — forms from the roles, colours from the tokens',
     });
 });
 
+describe('the solid glyphs draw in the name ink, which reads in both themes (P-2026-10-03-1920, A1; amends R-VP-15 (4), R-VP-24 (3))', () => {
+    const NAME = 'var(--color-inode-name)';
+    const generated = (v: DerivedView) => ({ ...vertex(v), generated: { notation: 'test' } });
+    const petri = () => deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri'));
+    const classic = () => deriveViewpointForBinding(PETRI.lookup, PETRI.id, { ...boundRoles(PETRI, 'petri'), notation: 'petriClassic' }) as DerivedView[];
+    const flow = () => deriveViewpointIRs(FLOWB.lookup, FLOWB.id, boundRoles(FLOWB, 'flowchart'));
+
+    it('the Petri transition bar of both notations: fill and border in the name ink, no catalogue ink (mutation: the preset fill kept)', () => {
+        for (const views of [petri(), classic()]) {
+            const t = vertex(byClass(views, 'Transition'));
+            expect(t.shape.fill).toBe(NAME);
+            expect((t.shape.border as { color?: unknown }).color).toBe(NAME);
+        }
+    });
+
+    it('the flowchart initial disc: fill and border in the name ink (mutation: the disc left out of the rule)', () => {
+        const v = vertex(byClass(flow(), 'InitialNode'));
+        expect(v.shape.fill).toBe(NAME);
+        expect((v.shape.border as { color?: unknown }).color).toBe(NAME);
+    });
+
+    it('the state machine named Initial keeps the catalogue ink, R-VP-17 (5) not amended here (mutation: every solid preset inked)', () => {
+        for (const [mm, profile] of [[PEST, 'stateMachine'], [ESM, 'extendedStateMachine']] as const) {
+            expect(vertex(byClass(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)), 'Initial')).shape.fill).toBe(INK);
+        }
+    });
+
+    it('each stays a notation glyph, so «Color by metaclass» keeps leaving it alone (R-VP-50)', () => {
+        expect(isNotationGlyph(generated(byClass(petri(), 'Transition')))).toBe(true);
+        expect(isNotationGlyph(generated(byClass(classic(), 'Transition')))).toBe(true);
+        expect(isNotationGlyph(generated(byClass(flow(), 'InitialNode')))).toBe(true);
+    });
+});
+
 describe('deriveViewpointIRs — pure: nothing it reads is touched', () => {
     it('the ERD lookup, hand-written viewpoint included, is read frozen and left identical', () => {
         const before = JSON.stringify(ERD.lookup);
@@ -605,7 +640,9 @@ describe('deriveViewpointIRs — without roles the documents are byte-equal to b
         // '997f12afe5b58db0' to 'c03dae1789798ecb' (the Transition document, pinned whole below, is the one that changed).
         // P-2026-10-03-1304 (Q3): the bar's box is 56 by 56 and it declares barThickness 12; with the old box and no
         // thickness the digest was 'c03dae1789798ecb', measured on the lane.
-        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('023be3c14750b11d');
+        // P-2026-10-03-1920 (A1): the Transition bar in the name ink, fill and border; with that block removed the digest was
+        // '023be3c14750b11d', measured on the lane.
+        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('f3bc9e413e2a5676');
     });
 
     it('a control-flow shape with no role bound keeps the boxes: the notation is keyed on the roles, not the shape', () => {
@@ -682,15 +719,15 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         });
     });
 
-    it('Transition, as a whole document: a 56 by 56 box with a 12 px bar in the catalogue ink (Q3), the name outside below it in the label style', () => {
+    it('Transition, as a whole document: a 56 by 56 box with a 12 px bar in the name ink (Q3; P-2026-10-03-1920, A1), the name outside below it in the label style', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
             exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 56 },
             shape: {
-                form: 'bar', fill: INK,
-                border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' },
+                form: 'bar', fill: NAME_INK,
+                border: { color: NAME_INK, width: 1, style: 'solid' },
                 labels: [{ position: 'outside', anchor: 's', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
                 barThickness: 12,
             },
@@ -735,7 +772,7 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         }
     });
 
-    it('the ink and the routing on the compiled views; the bar keeps the catalogue hex', () => {
+    it('the ink and the routing on the compiled views; the bar in the name ink (P-2026-10-03-1920, A1)', () => {
         clearCompileCache();
         const { ctx } = petriWorld();
         const all = views();
@@ -752,7 +789,7 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
             expect(ce.routing, n).toBeNull();
         }
         const bar = compileView('derived:Transition', vertex(byClass(all, 'Transition')));
-        expect(bar.fill!(ctx, 't1')).toBe(INK);
+        expect(bar.fill!(ctx, 't1')).toBe(NAME_INK);
         expect(bar.form(ctx, 't1')).toBe('bar');
         // P-2026-10-03-1300: the name sits outside below the bar, in the label style (quiet ink), not over it in the name ink.
         expect(bar.labels.map(l => l.position)).toEqual(['outside']);
@@ -828,15 +865,15 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         });
     });
 
-    it('Transition, as a whole document: a 56 by 56 box with a 12 px bar in the catalogue ink (Q3), its name outside above (R-VP-53)', () => {
+    it('Transition, as a whole document: a 56 by 56 box with a 12 px bar in the name ink (Q3; P-2026-10-03-1920, A1), its name outside above (R-VP-53)', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
             exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 56 },
             shape: {
-                form: 'bar', fill: INK,
-                border: { color: INK, width: 1, style: 'solid' },
+                form: 'bar', fill: NAME_INK,
+                border: { color: NAME_INK, width: 1, style: 'solid' },
                 labels: [{ position: 'outside', anchor: 'n', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
                 barThickness: 12,
             },
@@ -894,7 +931,7 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         expect(cv.labels.map(l => [l.position, l.anchor ?? null])).toEqual([['outside', 's'], ['center', null]]);
     });
 
-    it('the compiled arcs: the ink, 1 px, no curve (the router, Q1), the ends; the bar keeps the catalogue hex', () => {
+    it('the compiled arcs: the ink, 1 px, no curve (the router, Q1), the ends; the bar in the name ink (P-2026-10-03-1920, A1)', () => {
         clearCompileCache();
         const { ctx } = petriWorld();
         for (const [n, id, end] of [['Arc', 'a1', 'openArrow'], ['InhibitorArc', 'i1', 'hollowCircle']]) {
@@ -905,7 +942,7 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
             expect(ce.terminations, n).toEqual({ sourceEnd: 'none', targetEnd: end });
         }
         const bar = compileView('derived:TransitionClassic', vertex(byClass(views(), 'Transition')));
-        expect(bar.fill!(ctx, 't1')).toBe(INK);
+        expect(bar.fill!(ctx, 't1')).toBe(NAME_INK);
         expect(bar.form(ctx, 't1')).toBe('bar');
     });
 
@@ -1022,10 +1059,9 @@ describe('deriveViewpointIRs — the state machine notation with the roles bound
 describe('deriveViewpointIRs — the activity notation with the roles bound (DemoFlowB)', () => {
     const flow = () => deriveViewpointIRs(FLOWB.lookup, FLOWB.id, boundRoles(FLOWB, 'flowchart'));
 
-    it('InitialNode: the nameless solid disc, still the catalogue initial', () => {
+    it('InitialNode: the nameless solid disc in the name ink, fill and border (P-2026-10-03-1920, A1; the catalogue ink read 1.41:1 in dark)', () => {
         const v = vertex(byClass(flow(), 'InitialNode'));
-        expect(v.shape).toEqual({ form: 'circle', fill: INK, border: { color: BORDER, width: 1, style: 'solid' }, labels: [] });
-        expect(recognizeSymbol(v.shape).map(p => p.id)).toContain('uml-initial-state');
+        expect(v.shape).toEqual({ form: 'circle', fill: NAME_INK, border: { color: NAME_INK, width: 1, style: 'solid' }, labels: [] });
     });
 
     it('FinalNode: the nameless bull\'s-eye, ring and dot in the name ink, still the catalogue final state', () => {
@@ -1768,10 +1804,13 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
         // P-2026-10-03-1304 (Q3): DemoPetri's bar takes a square box and a barThickness; with the old box and no thickness
         // its digest was the one before, measured on the lane. DemoFlowB's fork and join stay out of the turn.
+        // P-2026-10-03-1920 (A1): the Petri transition and the flowchart Initial disc draw fill and border in the name ink; the
+        // lists holding one moved (Petri net and Petri net (classic) of DemoPetri, Flowchart of DemoPEST, DemoESM, DemoFlowB),
+        // every other list kept its digest; with the one derive block removed every digest below was the one before, measured.
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: '023be3c14750b11d', DemoESM: '0908707066b1a90e', DemoFlowB: '0686c16f9969bb93',
+            DemoPEST: '99e03cfb52856542', DemoPetri: 'f3bc9e413e2a5676', DemoESM: '0908707066b1a90e', DemoFlowB: 'befcd3cc6fff9f95',
         });
     });
 });

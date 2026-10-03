@@ -397,6 +397,13 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
             shapeSpec.fill = NAME_INK;
             shapeSpec.border = { color: NAME_INK, width: 1, style: 'solid' };
         }
+        // P-2026-10-03-1920 (A1, amends R-VP-15 (4)): the Petri transition and the activity's Initial disc draw fill and border
+        // in the name ink, as the fork and join do: the catalogue's #334155 is also the dark node surface and read 1.41:1 on the
+        // dark canvas. The state machine's named Initial keeps the catalogue ink (R-VP-17 (5)).
+        if (petriTransition || initialDisc) {
+            shapeSpec.fill = NAME_INK;
+            shapeSpec.border = { color: NAME_INK, width: 1, style: 'solid' };
+        }
         // A CSS double border draws two lines from a width of 3 (irTypes.ts).
         if (terminalBox) shapeSpec.border = { color: NAME_INK, width: 3, style: 'double' };
         const form = shapeSpec.form as string;
@@ -982,7 +989,7 @@ const CLASSIC_BAR_SIZE = { width: PETRI_BAR_LONG, height: PETRI_BAR_LONG } as co
  * - A place (Node): a white circle of 44 px, 1 px in the ink, its name outside below in 13 px 500 in the
  *   ink; the initial marking (the Initial marking role) as one to four dots (`dot`, `dots-2..4`, in the
  *   border ink) and as the number from five, 15 px 600 in the ink; nothing at zero or unset.
- * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`, 12 by 56) in the catalogue ink (R-VP-15 (4)), its name
+ * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`, 12 by 56) in the name ink (P-2026-10-03-1920, A1), its name
  *   outside above, in the label style of C2 (12 px 500, the quiet ink): the profile runs RIGHT, so the arcs use
  *   the bar's left and right sides and the name takes a side they leave free (R-VP-53, P-2026-10-03-1415).
  * - An arc: a line in the ink, 1 px, the open arrowhead (R-VP-25), on the orthogonal router as Petri net's arcs
@@ -1053,7 +1060,7 @@ export function deriveClassicPetriViewpointIRs(lookup: Lookup, metamodelId: stri
             continue;
         }
         if (role === 'transition' && v.ir.kind === 'vertex') {
-            // The catalogue ink of the Petri bar (R-VP-15 (4)), on the border too: one solid bar.
+            // The Petri bar's ink (the name ink since P-2026-10-03-1920, A1), on the border too: one solid bar.
             const ink = v.ir.shape.fill as string;
             const ir: VertexViewIR = {
                 irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: pins, exclusive: true, label,

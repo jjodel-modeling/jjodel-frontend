@@ -199,20 +199,23 @@ describe('A4 leaves every other notation as it was', () => {
     // suppressed every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
     // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
+    // P-2026-10-03-1920 (A1): the Petri transition and the flowchart Initial disc draw fill and border in the name ink; the
+    // lists holding one moved (Petri net and Petri net (classic) of DemoPetri, Flowchart of DemoPEST, DemoESM, DemoFlowB),
+    // every other list kept its digest; with the one derive block removed every digest below was the one before, measured.
     const PINNED: Record<string, string> = {
-        'DemoESM flowchart': '7e215bccf0811354',
+        'DemoESM flowchart': '7f7083166195b9d9',
         'DemoESM flowchartIso': '369ee94b0ae560fc',
         'DemoESM generic': 'f5b415d0f3a7512c',
         'DemoESM petri': 'a9967d96094069ab',
         'DemoESM stateMachine': '95040925ad077303',
         'DemoESM statechart': '1e8c563561566411',
-        'DemoFlowB flowchart': '124d96bbb07f4e44',
+        'DemoFlowB flowchart': '4fd064fbcfe88758',
         'DemoFlowB flowchartIso': '0f3b13332e902f0f',
         'DemoFlowB generic': '1ebd123804dc75a1',
         'DemoFlowB petri': 'b8415f0e187edacc',
         'DemoFlowB stateMachine': '404822a92420400a',
         'DemoFlowB statechart': 'cfc672a4b14ce13a',
-        'DemoPEST flowchart': 'd2ba7ef28c065754',
+        'DemoPEST flowchart': '9344cdd843bbc37a',
         'DemoPEST flowchartIso': '042f60bcc91d9e26',
         'DemoPEST generic': '6d66ed919a80875b',
         'DemoPEST petri': '0d845ed009b85a0a',
@@ -221,7 +224,7 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoPetri flowchart': 'd2b745a44e81558d',
         'DemoPetri flowchartIso': '02ed35a22d5bcf3f',
         'DemoPetri generic': 'dab0b1ddf3a00c38',
-        'DemoPetri petri': '4ea473651a70adc7',
+        'DemoPetri petri': '9b66e969321d4ae6',
         'DemoPetri stateMachine': 'fcc0009cc695e6b4',
         'DemoPetri statechart': 'af986487f87ae4b8',
         'ERDLanguage ERD flowchart': '-',
@@ -281,7 +284,7 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoPEST erChen': '-',
         'DemoPEST petriClassic': 'e838a4e40d369fad',
         'DemoPetri erChen': '-',
-        'DemoPetri petriClassic': 'eee6dd3c7f3c9c84', // R-VP-53 (P-2026-10-03-1415), then Q3: the 56 by 56 box, 12 thick
+        'DemoPetri petriClassic': '83ca70fcde4525b3', // R-VP-53 (P-2026-10-03-1415), then Q3: the 56 by 56 box, 12 thick, then A1 (P-2026-10-03-1920): the bar in the name ink
         'ERDLanguage ERD erChen': '61c73fe96b150683',
         'ERDLanguage ERD petriClassic': 'ac8a06d17f46633c',
         'ERDLanguage Library erChen': '-',
