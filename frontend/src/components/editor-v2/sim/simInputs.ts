@@ -6,7 +6,8 @@
  *   named as Last step names it; the text of each control parsed by the domain
  *   of its input; the values given only when every row has one.
  * - The form of a Data row in the Simulation roles dialog (SimRolesModal.tsx):
- *   stored, derived or input, and what choosing one writes into the row.
+ *   stored, derived or input, and what choosing one writes into the row; the
+ *   same for its space, semantic or presentation.
  *
  * Pure: no React, no store, no import from the joiner, so it runs under the
  * node test bench (sim/__tests__/simInputs.test.ts).
@@ -15,6 +16,7 @@
 import { inputLabel } from './simBridge';
 import type { InputValue } from './simBridge';
 import type { CompiledNet, Domain, InputRead, SimValue } from '../../../model/simulation/netTypes';
+import { defaultInitialOf, initialFollowingDomain } from '../../../model/simulation/stateAttributesCodec';
 import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 
 // ---------------------------------------------------------------------------
@@ -80,6 +82,8 @@ export function declarationForm(row: StateAttributeRecord): DeclarationForm {
  * What choosing a form writes into the row. A derived row has no initial
  * (R-SIM-72); back to stored, the equation goes; an input has neither and is
  * semantic, with a domain (R-SIM-88): the row's own, boolean when it had none.
+ * A derived or an input row back to stored starts at its domain's default
+ * (`defaultInitialOf`), boolean's when it has none, never at an empty initial.
  */
 export function formPatch(row: StateAttributeRecord, form: string): Partial<StateAttributeRecord> {
     switch (form) {
@@ -88,6 +92,23 @@ export function formPatch(row: StateAttributeRecord, form: string): Partial<Stat
         case 'input':
             return { initial: '', equation: undefined, input: true, space: 'semantic', domain: row.domain ?? { kind: 'boolean' } };
         default:
-            return { equation: undefined, input: undefined };
+            return declarationForm(row) === 'stored'
+                ? { equation: undefined, input: undefined }
+                : { equation: undefined, input: undefined, initial: defaultInitialOf(row.domain ?? { kind: 'boolean' }) };
     }
+}
+
+/**
+ * What choosing a space writes into the row. Presentation has no domain
+ * (R-SIM-18); back to semantic a domain is needed, the row's own or boolean,
+ * and a stored row's initial follows it (`initialFollowingDomain`): a value of
+ * the domain stays, anything else becomes its default. A derived or an input
+ * row has no initial (R-SIM-72, R-SIM-88), so none is written into it.
+ */
+export function spacePatch(row: StateAttributeRecord, space: string): Partial<StateAttributeRecord> {
+    if (space === 'presentation') return { space: 'presentation', domain: null };
+    const domain = row.domain ?? { kind: 'boolean' as const };
+    return declarationForm(row) === 'stored'
+        ? { space: 'semantic', domain, initial: initialFollowingDomain(row.initial, row.domain, domain) }
+        : { space: 'semantic', domain };
 }
