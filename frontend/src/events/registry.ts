@@ -129,6 +129,10 @@ export const EnvGenEvents = {
    *  (`ConsumerSelection`), or null when the page unmounts; the last one is also kept by
    *  `getConsumerSelection()` (components/environment/consumerJodieContext.ts). */
   CONFIGURATOR_SELECTION_CHANGED: 'envgen-configurator-selection-changed',
+  /** #168 J4 — show an element in the Configurator page: its row, or the row of its nearest
+   *  top-level ancestor drilled down to it (`configuratorTargetOf`, components/Jodie/consumerProposalModel.ts).
+   *  Sent by Jodie's proposal after «Apply». detail: { instanceId } */
+  CONFIGURATOR_SELECT_INSTANCE: 'envgen-configurator-select-instance',
 } as const;
 
 // ─── Avatar ─────────────────────────────────────────────────────
