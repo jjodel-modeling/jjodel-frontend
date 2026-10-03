@@ -1,7 +1,8 @@
 /**
  * simViewerPrefs — what the viewer of a run chose to see (P-2026-10-03-0040):
  * the Watch pins of the panel (R-SIM-104), the tags and the globals card of the
- * canvas (R-SIM-107), and the «Inspect node.[x]» switch (R-SIM-109).
+ * canvas (R-SIM-107), the «Inspect node.[x]» switch (R-SIM-109), and the skin of
+ * the I/O board with its «Show bindings» (R-SIM-114, P-2026-10-03-2000).
  *
  * Module singleton per model, beside the run policy of simRunState.ts and kept
  * the same way: outside Redux, never in a bag, so a preference never moves
@@ -27,6 +28,9 @@ export interface SimAttrRef {
     readonly space: 'semantic' | 'presentation';
 }
 
+/** R-SIM-114: the skins of the I/O board, Variant A the working surface, Variant B the front panel. */
+export type SimBoardSkin = 'board' | 'panel';
+
 /** The viewer preferences of one model. */
 export interface SimViewerPrefs {
     /** R-SIM-104, at most `MAX_SIM_PINS`; `null` is the default, `defaultSimPins` over the run's declarations. */
@@ -37,9 +41,15 @@ export interface SimViewerPrefs {
     readonly globalsCard: boolean;
     /** R-SIM-109: the dashed tags of every element's presentation state. */
     readonly inspectNode: boolean;
+    /** R-SIM-114: the skin the I/O board shows, `'board'` (Variant A) by default. */
+    readonly boardSkin?: SimBoardSkin;
+    /** R-SIM-114: Variant B's «Show bindings», which outlines each device and names its binding; off by default. */
+    readonly showBindings?: boolean;
 }
 
-export const DEFAULT_SIM_VIEWER_PREFS: SimViewerPrefs = { pins: null, tags: [], globalsCard: false, inspectNode: false };
+export const DEFAULT_SIM_VIEWER_PREFS: SimViewerPrefs = {
+    pins: null, tags: [], globalsCard: false, inspectNode: false, boardSkin: 'board', showBindings: false,
+};
 
 /** The Watch rows of the panel name four attributes at most (R-SIM-104). */
 export const MAX_SIM_PINS = 4;

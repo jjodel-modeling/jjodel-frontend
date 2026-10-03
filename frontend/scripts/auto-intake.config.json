@@ -5,8 +5,8 @@
   "skipLabels": ["needs-alfonso", "auto-parked"],
   "allowlist": ["apierantonio", "jdirocco"],
   "nightWindow": { "start": "01:00", "end": "07:00" },
-  "mode": "shadow",
-  "laneByMode": { "shadow": "discovery", "live": "full" },
+  "mode": "live",
+  "laneByMode": { "shadow": "discovery", "live": "discovery" },
   "dataCap": 8000,
   "budget": {
     "paceMargin": 0.05,
@@ -20,6 +20,6 @@
     "fiveHourCeiling": 0.80,
     "staleHours": 6
   },
-  "ratifiedBy": null,
-  "ratifiedOn": null
+  "ratifiedBy": "apierantonio",
+  "ratifiedOn": "2026-10-03"
 }

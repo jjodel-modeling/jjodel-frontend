@@ -1,0 +1,820 @@
+// The I/O board (R-SIM-110..115, R-SIM-119; P-2026-10-03-2000), painted by simBoardDevices.tsx: the card
+// `SimBoard` and its device faces `BoardDevice`.
+//
+// The card takes the run inspector's slot, one of the two open at a time (R-SIM-119), with the inspector's
+// geometry as SimInspector.scss measured it: a sibling of the simulation panel inside `.editor-switch-container`,
+// `position: absolute`, z-index 850 in the dock's stacking context, so it hides with its editor's tab; right of the
+// panel (left 584), bottom 16, 400 wide, clamped clear of the MiniMap and of the rail (`--jj-canvas-right-inset`,
+// READ here, never defined: design-system rule), its top 16 px under the editor's toolbar.
+//
+// Variant A, `.sim-board--board`, the working surface: design-system tokens only, in both themes; the buttons in
+// the vocabulary of the panel's event buttons (simulation-panel.scss `__event`), the switch the design system's
+// `.jjodel-switch` (styles/components/_switch.scss). Variant B, `.sim-board--panel`, the front panel: a physical
+// rendering, the same dark slate in both themes as the run buttons' gradient (design system §7.1), so its colours
+// are literals, written once each below; lamps and digits glow as hardware does. «Show bindings» outlines each device
+// dashed and shows its caption.
+//
+// ICON COLOUR — declared on the icon, with a `:hover` twin, as simulation-panel.scss explains.
+
+$sim-board-mono: 'IBM Plex Mono', Monaco, Consolas, monospace;
+// Variant B's hardware, the same in both themes.
+$sim-board-metal-top: #334155;     // slate-700
+$sim-board-metal-bottom: #1e293b;  // slate-800
+$sim-board-ink: #e2e8f0;           // slate-200
+$sim-board-ink-dim: #94a3b8;       // slate-400
+$sim-board-glass: #0b1220;         // the display's dark glass
+$sim-board-lit: #22c55e;           // green-500, a lamp lit
+$sim-board-pulse: #f59e0b;         // amber-500, a pulse lit
+$sim-board-err: #ef4444;           // red-500, Err
+$sim-board-digit: #f87171;         // red-400, the 7-segment's digits
+$sim-board-lcd-bg: #b7c4a1;        // a reflective LCD
+$sim-board-lcd-ink: #1f2a12;
+
+.sim-board {
+    position: absolute;
+    left: 584px;
+    bottom: 16px;
+    z-index: 850;
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+    max-width: calc(100% - 584px - var(--jj-canvas-right-inset, 0px) - 234px);
+    max-height: calc(100% - var(--jj-toolbar-height, 40px) - 32px);
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+    color: var(--color-text-primary);
+    font-family: inherit;
+
+    // -- header ---------------------------------------------------------------------
+    &__header {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+
+        > .bi,
+        > .bi:hover {
+            font-size: 12px;
+            line-height: 1;
+            color: var(--color-text-placeholder);
+        }
+    }
+
+    &__title {
+        flex: 0 0 auto;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    &__subtitle {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    // The skin switch (R-SIM-114): two segments, the one shown pressed.
+    &__skins {
+        display: inline-flex;
+        flex: 0 0 auto;
+        overflow: hidden;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+    }
+
+    &__skin {
+        height: 20px;
+        padding: 0 8px;
+        border: none;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+
+        & + & {
+            border-left: 1px solid var(--color-border-primary);
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &[aria-pressed="true"] {
+            background: var(--color-accent);
+            color: var(--color-text-inverse);
+            font-weight: 600;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: -2px;
+        }
+    }
+
+    &__edit {
+        flex: 0 0 auto;
+        height: 22px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    &__close {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    // «Show bindings», Variant B only: the design system's switch, its label on the left.
+    &__toolbar {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+    }
+
+    &__toolbar-label {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+
+    // -- body -----------------------------------------------------------------------
+    &__body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 8px 12px 12px;
+    }
+
+    &__warning {
+        margin-bottom: 8px;
+        font-size: 11px;
+        color: var(--color-warning-text);
+    }
+
+    &__empty {
+        padding: 8px 0;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__group + &__group {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__group-head {
+        margin-bottom: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    // Variant B: the front panel, every device at its cell of the four-column grid.
+    &__front {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        padding: 12px;
+        border-radius: 6px;
+        background: linear-gradient(180deg, $sim-board-metal-top, $sim-board-metal-bottom);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    &__slot {
+        min-width: 0;
+    }
+
+    // -- foot: the status block, the step shown and «Back to live» (R-SIM-106, R-SIM-113) ---
+    &__foot {
+        flex: 0 0 auto;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__viewing {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--color-sim-sigma-border);
+        background: var(--color-sim-sigma-bg);
+        color: var(--color-sim-sigma-fg);
+        font-size: 11px;
+    }
+
+    &__viewing-text {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    &__live {
+        flex: 0 0 auto;
+        height: 22px;
+        padding: 0 8px;
+        border: none;
+        border-radius: 4px;
+        background: var(--color-accent);
+        color: var(--color-text-inverse);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-accent-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    &__status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 20px;
+        padding: 6px 12px;
+    }
+}
+
+// -- one device: Variant A ----------------------------------------------------------------
+.sim-board-device {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 6px 4px;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    background: var(--color-bg-primary);
+
+    &--flagged {
+        border-color: var(--color-warning);
+    }
+
+    &__face {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 26px;
+    }
+
+    &__name {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        max-width: 100%;
+        overflow: hidden;
+        font-size: 11px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    &__caption {
+        max-width: 100%;
+        overflow: hidden;
+        font-family: $sim-board-mono;
+        font-size: 10px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    &__flag,
+    &__flag:hover {
+        font-size: 10px;
+        color: var(--color-warning);
+    }
+
+    // Button: the panel's event button, full width.
+    &__button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
+        height: 24px;
+        padding: 0 6px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            line-height: 1;
+            color: inherit;
+        }
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    // LED and Pulse LED.
+    &__lamp-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__lamp {
+        width: 16px;
+        height: 16px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 50%;
+        background: var(--color-bg-tertiary);
+
+        &--pulse {
+            width: 12px;
+            height: 12px;
+        }
+
+        &--lit {
+            border-color: var(--color-success);
+            background: var(--color-success);
+            box-shadow: 0 0 6px var(--color-success);
+        }
+
+        &--pulse.sim-board-device__lamp--lit {
+            border-color: var(--color-warning);
+            background: var(--color-warning);
+            box-shadow: 0 0 6px var(--color-warning);
+        }
+
+        &--err {
+            border-color: var(--color-error);
+            background: var(--color-error-muted);
+        }
+    }
+
+    &__err {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-error-text);
+    }
+
+    // 7-segment: four digits, right-aligned, Err in red (R-SIM-111).
+    &__digits {
+        min-width: 56px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--color-bg-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 20px;
+        letter-spacing: 0.08em;
+        text-align: right;
+        color: var(--color-text-primary);
+
+        &--err {
+            color: var(--color-error-text);
+        }
+
+        &--off {
+            color: var(--color-text-placeholder);
+        }
+    }
+
+    // Text display: two lines at most, the whole text in the title.
+    &__lcd {
+        display: -webkit-box;
+        width: 100%;
+        min-height: 28px;
+        max-height: 28px;
+        overflow: hidden;
+        padding: 0 4px;
+        border-radius: 4px;
+        background: var(--color-bg-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 11px;
+        line-height: 14px;
+        text-align: center;
+        word-break: break-word;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+
+        &--err {
+            color: var(--color-error-text);
+        }
+    }
+
+    // Gauge (Variant A) and Slider: a bar and the value.
+    &__gauge,
+    &__slider {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+
+        input[type="range"] {
+            flex: 1 1 auto;
+            min-width: 0;
+            accent-color: var(--color-accent);
+        }
+    }
+
+    &__bar {
+        flex: 1 1 auto;
+        height: 6px;
+        overflow: hidden;
+        border-radius: 3px;
+        background: var(--color-bg-tertiary);
+
+        &--err .sim-board-device__bar-fill {
+            background: var(--color-error);
+        }
+    }
+
+    &__bar-fill {
+        display: block;
+        height: 100%;
+        background: var(--color-accent);
+    }
+
+    &__readout {
+        flex: 0 0 auto;
+        font-family: $sim-board-mono;
+        font-size: 11px;
+        color: var(--color-text-primary);
+    }
+
+    // Keypad: the buffer, then three columns of keys.
+    &__keypad {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    &__buffer {
+        min-width: 60px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: var(--color-bg-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 12px;
+        text-align: right;
+    }
+
+    &__keys {
+        display: grid;
+        grid-template-columns: repeat(3, 22px);
+        gap: 3px;
+    }
+
+    &__key {
+        width: 22px;
+        height: 20px;
+        padding: 0;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 3px;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-primary);
+        font-family: $sim-board-mono;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        &--enter {
+            background: var(--color-accent);
+            color: var(--color-text-inverse);
+        }
+
+        &--blank {
+            border: none;
+            background: transparent;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+}
+
+// -- one device: Variant B, the front panel -----------------------------------------------------------
+.sim-board--panel .sim-board-device {
+    padding: 6px 2px;
+    border: 1px solid transparent;
+    background: transparent;
+
+    &--flagged {
+        border-color: $sim-board-pulse;
+    }
+
+    &__name {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: $sim-board-ink;
+    }
+
+    &__caption {
+        color: $sim-board-ink-dim;
+    }
+
+    // A round push button, its cap raised.
+    &__button {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 2px solid #0f172a;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #fca5a5, #dc2626 60%, #991b1b);
+        box-shadow: 0 2px 0 #0f172a, 0 3px 6px rgba(0, 0, 0, 0.4);
+
+        &:hover:not(:disabled) {
+            border-color: #0f172a;
+            background: radial-gradient(circle at 35% 30%, #fecaca, #ef4444 60%, #b91c1c);
+        }
+
+        &:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 1px 0 #0f172a, 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        &:disabled {
+            opacity: 1;
+            background: radial-gradient(circle at 35% 30%, #94a3b8, #475569 60%, #334155);
+        }
+    }
+
+    // A toggle lever: the knob down, or up when on.
+    &__lever {
+        position: relative;
+        width: 18px;
+        height: 32px;
+        padding: 0;
+        border: 2px solid #0f172a;
+        border-radius: 9px;
+        background: #0f172a;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid $sim-board-ink;
+            outline-offset: 2px;
+        }
+    }
+
+    &__lever-knob {
+        position: absolute;
+        left: 1px;
+        bottom: 1px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: linear-gradient(180deg, #f1f5f9, #94a3b8);
+        transition: bottom 150ms ease;
+    }
+
+    // Written out: under a descendant parent a second `&` would repeat `.sim-board--panel`.
+    .sim-board-device__lever--up .sim-board-device__lever-knob {
+        bottom: 15px;
+    }
+
+    &__lamp {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #0f172a;
+        background: radial-gradient(circle at 35% 30%, #475569, #1e293b);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+
+        &--pulse {
+            width: 14px;
+            height: 14px;
+        }
+
+        &--lit {
+            border-color: #0f172a;
+            background: radial-gradient(circle at 35% 30%, #bbf7d0, $sim-board-lit 60%);
+            box-shadow: 0 0 10px $sim-board-lit;
+        }
+
+        &--pulse.sim-board-device__lamp--lit {
+            border-color: #0f172a;
+            background: radial-gradient(circle at 35% 30%, #fde68a, $sim-board-pulse 60%);
+            box-shadow: 0 0 10px $sim-board-pulse;
+        }
+
+        &--err {
+            border-color: $sim-board-err;
+            background: #1e293b;
+        }
+    }
+
+    &__err {
+        color: $sim-board-err;
+    }
+
+    // The 7-segment's glass and its glowing digits.
+    &__digits {
+        min-width: 64px;
+        padding: 3px 8px;
+        border: 2px solid #0f172a;
+        background: $sim-board-glass;
+        font-size: 20px;
+        color: $sim-board-digit;
+        text-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+
+        &--err {
+            color: $sim-board-err;
+        }
+
+        &--off {
+            color: #334155;
+            text-shadow: none;
+        }
+    }
+
+    &__lcd {
+        border: 2px solid #0f172a;
+        background: $sim-board-lcd-bg;
+        color: $sim-board-lcd-ink;
+
+        &--err {
+            color: #991b1b;
+        }
+
+        &--off {
+            background: #6b7563;
+        }
+    }
+
+    &__slider input[type="range"] {
+        accent-color: $sim-board-ink;
+    }
+
+    &__readout {
+        color: $sim-board-ink;
+    }
+
+    &__buffer {
+        border: 1px solid #0f172a;
+        background: $sim-board-glass;
+        color: $sim-board-digit;
+    }
+
+    &__key {
+        border-color: #0f172a;
+        background: linear-gradient(180deg, #475569, #334155);
+        color: $sim-board-ink;
+        box-shadow: 0 1px 0 #0f172a;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(180deg, #64748b, #475569);
+        }
+
+        &--enter {
+            background: linear-gradient(180deg, #16a34a, #15803d);
+        }
+
+        &--blank {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+        }
+    }
+
+    // The dial: a half circle and its needle.
+    &__dial {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    &__dial-arc {
+        fill: none;
+        stroke: $sim-board-ink-dim;
+        stroke-width: 3;
+    }
+
+    &__dial-needle {
+        stroke: $sim-board-pulse;
+        stroke-width: 2;
+        stroke-linecap: round;
+    }
+
+    .sim-board-device__dial--err .sim-board-device__dial-arc {
+        stroke: $sim-board-err;
+    }
+}
+
+// «Show bindings» (R-SIM-114): each device outlined, its binding named under it.
+.sim-board__front--bindings .sim-board-device {
+    border: 1px dashed rgba(148, 163, 184, 0.7);
+    border-radius: 6px;
+}

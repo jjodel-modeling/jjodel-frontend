@@ -1,6 +1,7 @@
 /**
  * simViewerPrefs — the viewer preferences of the run (P-2026-10-03-0040; R-SIM-104
- * pins, R-SIM-107 tags and globals card, R-SIM-109 «Inspect node.[x]»).
+ * pins, R-SIM-107 tags and globals card, R-SIM-109 «Inspect node.[x]»; the I/O
+ * board's skin and «Show bindings», R-SIM-114, P-2026-10-03-2000).
  *
  * Executes the module (P11) beside the run store: the prefs are per model, on a
  * channel of their own, untouched by the run primitives and never read by
@@ -38,7 +39,11 @@ const NET: CompiledNet = {
 const RUN: SimRun = { net: NET, config: { state: NET.initial, event: null }, halt: null, guards: TRUE, actions: NONE, alphabet: [], signature: 'sig' };
 
 const pin = (name: string, metaclass: string | null = null, space: SimAttrRef['space'] = 'semantic'): SimAttrRef => ({ metaclass, name, space });
-const EVERY: Partial<SimViewerPrefs> = { pins: [pin('coins')], tags: [pin('heat', 'C_State', 'presentation')], globalsCard: true, inspectNode: true };
+const EVERY: Partial<SimViewerPrefs> = {
+    pins: [pin('coins')], tags: [pin('heat', 'C_State', 'presentation')], globalsCard: true, inspectNode: true, boardSkin: 'panel', showBindings: true,
+};
+/** The defaults in full, the board's two included (R-SIM-114). */
+const DEFAULTS: SimViewerPrefs = { pins: null, tags: [], globalsCard: false, inspectNode: false, boardSkin: 'board', showBindings: false };
 
 beforeEach(() => {
     __resetSimRunsForTests();
@@ -46,10 +51,24 @@ beforeEach(() => {
 });
 
 describe('the prefs of a model: defaults, per model, a change keeps what it does not name', () => {
-    it('a model without prefs reads the defaults: default pins, no tag, no globals card, inspector off (mutant: another default)', () => {
-        expect(getSimViewerPrefs('M')).toEqual<SimViewerPrefs>({ pins: null, tags: [], globalsCard: false, inspectNode: false });
-        expect(DEFAULT_SIM_VIEWER_PREFS).toEqual<SimViewerPrefs>({ pins: null, tags: [], globalsCard: false, inspectNode: false });
+    it('a model without prefs reads the defaults: default pins, no tag, no globals card, inspector off, the board skin, bindings hidden (mutant: another default)', () => {
+        expect(getSimViewerPrefs('M')).toEqual<SimViewerPrefs>(DEFAULTS);
+        expect(DEFAULT_SIM_VIEWER_PREFS).toEqual<SimViewerPrefs>(DEFAULTS);
         expect(MAX_SIM_PINS).toBe(4);
+    });
+
+    it('the board\'s skin defaults to Variant A, \'board\', and «Show bindings» to off (R-SIM-114; mutants: the front panel first, bindings shown)', () => {
+        expect(getSimViewerPrefs('M').boardSkin).toBe('board');
+        expect(getSimViewerPrefs('M').showBindings).toBe(false);
+    });
+
+    it('the skin and «Show bindings» are per model and kept apart from the other prefs (mutant: the skin shared by every model)', () => {
+        setSimViewerPrefs('M1', { boardSkin: 'panel' });
+        setSimViewerPrefs('M1', { showBindings: true });
+        expect(getSimViewerPrefs('M1')).toEqual({ ...DEFAULTS, boardSkin: 'panel', showBindings: true });
+        expect(getSimViewerPrefs('M2')).toEqual(DEFAULTS);
+        expect(setSimViewerPrefs('M1', { pins: [pin('coins')] }).boardSkin).toBe('panel');
+        expect(setSimViewerPrefs('M1', { boardSkin: 'board' })).toEqual({ ...DEFAULTS, pins: [pin('coins')], showBindings: true });
     });
 
     it('per model: a change of one model leaves another at the defaults, and a model switch back finds its own (mutant: one prefs for every model)', () => {
@@ -91,6 +110,16 @@ describe('the channel of the prefs: their own, never the \'mark\' one', () => {
         setSimViewerPrefs('M', EVERY);
         expect(getSimViewerPrefsVersion()).toBe(v + 1);
         setSimViewerPrefs('M', { inspectNode: false });
+        expect(getSimViewerPrefsVersion()).toBe(v + 2);
+        expect(getSimVersion()).toBe(mark);
+    });
+
+    it('the skin switch and «Show bindings» bump the prefs version, never the \'mark\' one, with a run in the store (R-SIM-114; mutant: the board\'s prefs on \'mark\')', () => {
+        simReset('M', RUN);
+        const mark = getSimVersion();
+        const v = getSimViewerPrefsVersion();
+        setSimViewerPrefs('M', { boardSkin: 'panel' });
+        setSimViewerPrefs('M', { showBindings: true });
         expect(getSimViewerPrefsVersion()).toBe(v + 2);
         expect(getSimVersion()).toBe(mark);
     });

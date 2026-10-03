@@ -648,6 +648,8 @@ export function startRun(
             seed,
             draws: 0,
             trace: [],
+            // The I/O board's outputs read σ on the same frozen M (P-2026-10-03-1845, report §4).
+            snapshot,
         },
         compileDefects: [
             ...guardDefectsOf(guards, scope),
@@ -1077,6 +1079,21 @@ const STOPPED: ReadonlySet<NetRunStatus> = new Set<NetRunStatus>(['Terminated', 
 export function panelInputs(status: NetRunStatus, structural: PanelInputs | null): PanelInputs {
     if (structural === null || status === 'Not started' || STOPPED.has(status)) return NO_INPUTS;
     return structural;
+}
+
+/**
+ * The title of an input that is on (R-SIM-60, R-SIM-88): why it has no candidate when it has none, else what its
+ * press asks, else the base. The panel's words, lifted so that the I/O board's devices say the same
+ * (P-2026-10-03-1845, report §5).
+ */
+export function inputPressTitle(base: string, why?: string, asks?: string): string {
+    return why ? `${base}\nNo candidate. ${why}` : asks ? `${base}\nAsks: ${asks}` : base;
+}
+
+/** The title of an input that is off (R-SIM-104): the run's reason while it runs, its status otherwise. */
+export function inputOffTitle(base: string, why: string | undefined, status: NetRunStatus | null): string {
+    if (why) return `${base}\nOff. ${why}`;
+    return `${base}\nOff. ${status === 'Not started' || status === null ? 'Reset starts the run.' : `The run is ${status}.`}`;
 }
 
 // ---------------------------------------------------------------------------
