@@ -306,3 +306,16 @@ active log is not touched by these lanes.
 **Smoke visivo**: passato — verifica visiva di Juri del 2026-10-03 su `f4e2254e9`, le 2 voci del rework (pulsante centrato, menu dei provider che segue le Impostazioni con Jodie aperto; vite 3048); sonda `_tmp_168_d_rework` 11/11 su 3048.
 **Notes**: Misurato: salvare una chiave emette ai-provider-changed (17, uno per tasto) e mai ai-settings-changed, quindi l'ascolto del solo SETTINGS_CHANGED chiesto non bastava (mutazione A). Menu, invito, pallino e pulsante di invio ascoltano anche PROVIDER_CHANGED. Pulsante centrato da un `<div>`, nessuna regola CSS. Banco 3/3.
 **Prompt document name**: 2026-10-02 22:16
+
+## 2026-10-04 — merge: 168-voice into feat/168-jodie-consumer, e controllo finale del trunk #168
+**Prompt**: `claude_2026-10-03_2352_prompt_merge_168-voice.md` (P-2026-10-03-2352) — merge diretto (`lane-run merge --direct`) della lane D (J7: Jodie senza strumenti da developer in modalità consumer) nel trunk #168, ultimo dell'ordine C1 → C2 → D; poi il controllo finale sul trunk completo.
+**Files touched**: merge `3638bac6a` (4 commit di D: referto `bc1d879bf`, codice `13ea8c0a5` e `f4e2254e9`, chiusura `6ce5b02f1`); conflitto su `docs/log-inbox/jodie-consumer.md` risolto per unione; tag `pre-168-voice` su `0fdfda531`. Sonde rieseguite non committate (`_tmp_*`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gate del worker sul merge: typecheck 14 (insieme della punta ricevente), typecheck:scripts, vitest (5619 test, 9 rossi all'import noti), build, check:agents, check:scripts verdi. Controllo finale sul trunk completo, sonde di tutte le lane: C1 24/24, C2 19/19, D verify 31/31 e fixture 8/8, A verify 21/21 e drill 23/23 con il filtro delle righe ristretto a «Now looking at».
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — verifica visiva di Juri sulla lane D (2026-10-03, voci 1-7 e i due ritocchi); `npm run smoke` non applicabile qui (fisso sulla 3000), da eseguire sull'albero di feat/157 dopo l'integrazione.
+**Notes**: Le sonde di A, scritte prima di D, davano 4 rossi sul trunk completo: il loro filtro `/looking at/` contava anche l'help per il fruitore di D («Explain what you are looking at»). Con il filtro ristretto a «Now looking at» 21/21 e 23/23: difetto della sonda, non del prodotto. `check:docs`: stessi 5 errori della baseline; chiusura scritta a mano dall'orchestratore.
+**Prompt document name**: 2026-10-03 23:52
