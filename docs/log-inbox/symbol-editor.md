@@ -149,3 +149,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: chat, pending: probe 33/33 on 3077 (light) on the merged tree; crops in `~/.jjodel-lanes/P-2026-10-03-1632/crops/` regenerated there.
 **Notes**: Clean merge, no hand resolution. Scenes: three 0 px; DemoFlowB renders in run-to-run variants (870 to 891 px between two runs of the same reverted code), and the fixed shots are byte-identical to reverted ones (`m-after2` = `before`, `after2` = `before2`). Report §7.1.
 **Prompt document name**: 2026-10-03 16:32
+
+## 2026-10-03 — merge: undo-inline-edit into alfonso-frontend-jjtl (P-2026-10-03-1750)
+**Prompt**: `claude_2026-10-03_1750_prompt_merge_undo-inline-edit.md`, a direct merge by `lane-run merge --direct`, no session: `undo-inline-edit` at `14adb5da5` into `alfonso-frontend-jjtl`, merge base `b4c59c572`, 10 commits on the branch side.
+**Files touched**: merge `3d62a8f13`: 9 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-03_undo_inline_edit.md`, `docs/lir/lir_2026-10-03_undo_inline_edit.md`, `docs/log-inbox/symbol-editor.md`, `docs/prompts/claude_2026-10-03_1632_prompt_undo_inline_edit.md`, `frontend/scripts/probe/fixtures/scene_2_DemoPetri.jjodel`, `frontend/scripts/probe/undo-inline-edit.ts`, `frontend/src/redux/reducer/__tests__/reducerCopyOnWrite.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3d62a8f13` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7011 tests in 279 files, 9 red at import, hooks 352; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: IR row 2 to 7, Cmd+Z 2, Cmd+Shift+Z 7; path label beta, Cmd+Z alpha; lane probe 33/33; four scenes 0 px (DemoFlowB run-to-run variance only); eight gates of the direct worker green (vitest 7011)
+**Notes**: Rollback tag `pre-undo-inline-edit` on `c41c63a7a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1750/result.json`.
+**Prompt document name**: 2026-10-03 17:50
