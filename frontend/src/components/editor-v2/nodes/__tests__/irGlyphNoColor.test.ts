@@ -152,7 +152,8 @@ describe('a derived glyph node paints with coloring on exactly as with coloring 
         ['Flowchart initial disc (catalogue ink)', FLOWB, 'flowchart', 'InitialNode'],
         ['Flowchart fork bar', FLOWB, 'flowchart', 'Fork'],
         ['Flowchart final bull\'s-eye (dot)', FLOWB, 'flowchart', 'FinalNode'],
-        ['State machine initial disc, named', PEST, 'stateMachine', 'Initial'],
+        // State machine is drawn as Statechart (UML) since P-2026-10-03-1300 and draws no disc: the named glyph is the Petri Terminal's.
+        ['Petri net terminal bull\'s-eye, named', PEST, 'petri', 'Terminal'],
         ['Petri net (classic) transition bar', PETRI, 'petriClassic', 'Transition'],
         ['Petri net transition bar, name on it', PETRI, 'petri', 'Transition'],
     ];

@@ -290,3 +290,65 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat on 3001 (built-in browser, trunk 788570c06) after Alfonso visual GO (2026-10-03 01:25): DemoFlowB copy re-derived on Activity (UML): fork and join bars 120x7 horizontal; toolbar auto-layout runs top-down with ELK, initial at top, merge and decision diamonds on the spine, guard labels [model.count < 2] and >= 2 clear of edges and nodes, fork and join bars across the flow, final at the bottom; no console error; every gate green (vitest 6794, 9 known red at import)
 **Notes**: Rollback tag `pre-elk-layout-disc` on `f7131a405` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0126/result.json`.
 **Prompt document name**: 2026-10-03 01:26
+
+## 2026-10-03 — feat(derive): derived notations polish, pass 1 (P-2026-10-03-1300)
+**Prompt**: `claude_2026-10-03_1300_prompt_derived_notations_polish_a.md`, fast lane, light tier, Phase 1 and 2 in one run on `~/jjodel-w-dnotA` (branch `derived-notations-polish`, cut at `c56f4fc63`): six fixes in the derived notation definitions for the MODELS demo (the `name` row, State machine drawn as Statechart and hidden, Petri bars 56 by 12 with the name outside, flowchart Initial 20 and Terminal 24, guards and attribute rows in mono, fork and join as the Activity bar). Report first, then one commit per item.
+**Files touched**: report `5e536da10` (`docs/discovery/discovery_2026-10-03_derived_notations_polish_a.md`, addendum in the closure commit). Item 1 `d55e87af8`: `viewpointDerivation.ts` and the tests `viewpointDerivation.test.ts`, `notations.test.ts`, `erChen.test.ts`. Item 2 `c5e879925`: `notations.ts`, `sim/DeriveViewpointDialog.tsx`, and the tests `notations.test.ts`, `erChen.test.ts`, `activityUml.test.ts`, `sim/__tests__/DeriveViewpointDialog.test.ts`, `nodes/__tests__/irGlyphNoColor.test.ts`, `view/viewPoint/__tests__/notationGlyph.test.ts`. Item 3 `94849c6b3`, item 4 `84e9dbdb4`, item 5 `26fca4b5e`, item 6 `79e4caf6d`: `viewpointDerivation.ts` and the pinned tests (`viewpointDerivation.test.ts`, `notations.test.ts`, `erChen.test.ts`, plus `nodes/__tests__/nodeSizing.test.ts` for items 3 and 4). Tests `a3a94f230`: `notationsPolishA.test.ts` (new, 53 tests). Closure commit: this entry, the Status of the prompt, the report addendum.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a3a94f230`: typecheck 14 errors, the §17 set (exit 2); typecheck:scripts exit 0; vitest of the combined affected set 22 files 881 tests before, 23 files 935 after (derive folder 305, dialog folder 445); full vitest 276 files, 6937 tests passed, the nine known files red at import and no other; build exit 0; check:docs and check:scripts exit 0. Mutation bench 33 mutants, 32 killed (30 by the new file, 2 by the dialog test), 1 equivalent survivor. Generic is byte-identical on every hash pin.
+**Out-of-scope changes**: yes — more than five files over eight commits (rule 19, RC-11), each item's files named above; three test files sit outside the prompt's DOVE (`nodes/__tests__/irGlyphNoColor.test.ts`, `nodes/__tests__/nodeSizing.test.ts`, `view/viewPoint/__tests__/notationGlyph.test.ts`) and moved with their pins as a direct consequence of the change; `git diff --stat` of every other path is empty.
+**Layer Impact Report**: not-required (`viewpoint/derive/` is not in the §3.1 table)
+**Smoke visivo**: passato (lane probe on 3021, light and dark, DOM measures on the four demo scenes for the six items and the real Derive dialog, before and after on the same counts; screenshots in `/tmp/dnotA/shots_after/`); the chat's visual GO and Alfonso's are pending. Dev server of this tree left running on 3021.
+**Notes**: Items 1 (Generic rows), 3 (20x8 is 48x12 at zoom 0.5) and 6 (pastel; bars were already ink) did not reproduce on 2e75c44ca; fixes follow the measures. Deviations: the State machine map is in derivationRolesOf, the dialog opens on the Statechart twin, role-keyed rows are mono 11, a box left with no row loses its compartment. Mutation bench 32/33 (1 equivalent). decisions.md row owed. Report: docs/discovery/discovery_2026-10-03_derived_notations_polish_a.md.
+**Prompt document name**: 2026-10-03 13:00
+
+**Ticket** (item 5, found while measuring): Petri net (classic) `t1`'s name is crossed by an arc, 8 of 2412 edge samples under the label with the old 10 by 44 bar and 6 with 12 by 56, so pre-existing; it is the open ticket of 2026-10-02 above, and routing is the lane P-2026-10-03-1304's.
+
+## 2026-10-03 — ticket: npm run build leaves the dev server of the same tree stale
+**Ticket**: `npm run build` run while `vite` serves the same tree (here on 3021) left the server in a state where the model tab opened with no canvas, 0 `.react-flow__node`, no page error, until the server was restarted. `.vite-cache` is per tree (P14) but shared by the build and the dev server of that tree. A lane that measures in the browser should build first and start the server after, or restart it.
+**Priority**: low
+**Found in**: P-2026-10-03-1300
+**Detail**: docs/discovery/discovery_2026-10-03_derived_notations_polish_a.md
+
+## 2026-10-03 — merge: derived-notations-polish into alfonso-frontend-jjtl (P-2026-10-03-1405)
+**Prompt**: `claude_2026-10-03_1405_prompt_merge_derived-notations-polish.md`, a lane-run merge session: `derived-notations-polish` at `839b8fbf3` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `c56f4fc63`, 10 commits on the branch side, 0 on the trunk side besides this merge's prompt `6dab80d9f`.
+**Files touched**: merge `5408f4a69`: 15 files from the branch side (`notations.ts`, `viewpointDerivation.ts`, `DeriveViewpointDialog.tsx`, 9 test files, the discovery report, `docs/log-inbox/views.md`, the branch prompt); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5408f4a69`: typecheck 14 errors, the §17 set (exit 2); typecheck:scripts exit 0; vitest 6937 passed in 276 files, 9 red at import, the §17 set (expected 6883 on the trunk tip plus 54 from the branch); hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts, check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, on 3001: server up (pid 61660), HTTP 200, serves the merged `notations.ts` (hidden flag) and `viewpointDerivation.ts` (PETRI_BAR_LONG); Alfonso's visual OK on the branch (ok 1300) before the merge
+**Notes**: Merge-tree zero conflicts, tree d9586537d equal to the index; governance diff empty; no file on both sides; probes 1/1 each; union none. Branch delta measured 54 tests, its prompt says 53. No rollback tag: the session path does not tag (RC-31); pre-merge trunk c56f4fc63. npm run build ran in this tree with 3001 up (ticket of P-2026-10-03-1300); 3001 not restarted.
+**Prompt document name**: 2026-10-03 14:05
+
+## 2026-10-03 — fix(viewpoint): derived viewpoints named after their notation, Border as ui Checkbox (P-2026-10-03-1302)
+**Prompt**: `claude_2026-10-03_1302_prompt_viewpoint_panel_naming.md`, fast lane, light tier, on `~/jjodel-w-vpname` (branch `viewpoint-panel-naming`, cut from the trunk at `c56f4fc63`). Two fixes from Alfonso's review of the derived viewpoints: the name `<metamodel> (derived)` becomes `<metamodel> / <notation label>` (` (1)`, ` (2)` on a duplicate, through `uniqueModelName`), and the Border control of the viewpoint panel becomes `ui/Checkbox`. Inbox lane `views` by the chat's answer to the lane question.
+**Files touched**: code `ff2f39c99`: `frontend/src/utils/deriveViewpoint.ts`, `frontend/src/utils/__tests__/deriveViewpoint.test.ts` (new, 9 tests). Code `ace72caec`: `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx`. This commit: this entry and the Status line of the prompt file. Nothing under `viewpoint/derive/` or `viewpoint/ir/`; no SCSS.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ace72caec`: typecheck exit 2, 14 errors, the same set by file and code as the trunk's run before the change; vitest of `src/utils`, `src/components/editors/viewpoint`, `src/components/ui` and the DeriveViewpointDialog test 96 to 105 tests, 7 to 8 files, the one known import failure (`UDComparator`); build exit 0; check:docs 4/4. A grep of `(derived)` finds no code or test that reads the name (the `notations.test.ts` hit builds its own fixture name). Mutation bench on `deriveViewpoint.ts` 12/12 killed, one survivor of the first test set killed by a test added.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no §3.1 file touched)
+**Smoke visivo**: chat (pending), Alfonso's GO pending (RC-23). Lane probe on 3022, light, 1440x900, scene DemoFlowB: names `DemoFlowB / Generic`, `/ Generic (1)`, `/ Activity (UML)`, `/ Statechart (UML)`, `/ Petri net (classic)`, `/ Flowchart (ISO 5807)` (the trunk gave `DemoFlowB (derived)` three times); Border row 327x20 with the native box 20x20 at x 1404 before, 327x18 with the box 18x18 at x 1097 and the label at x 1123 after, the field under it 2 px up; clicking the box writes border false then true. Crops in `/tmp/vpname/` (`before_*`, `after_*`, light and dark), not committed; dev server on 3022 left running.
+**Notes**: Open, out of scope: (1) the Border label is weight 400 and #0f172a, the «Color by metaclass» label above is 500 and #334155; (2) ui/Checkbox in dark: the checked box fill is rgb(15,16,18) and the tick rgb(100,116,139), low contrast (its dark rule overrides the checked fill). Not merged.
+**Prompt document name**: 2026-10-03 13:02
+
+**Ticket** (observation, low, not a ticket of its own): two `createDerivedViewpoint` calls in the same tick both read `... / Generic (2)`, because the first viewpoint is not in the project's list until its TRANSACTION END, after the function returns. The dialog's confirm cannot do it (separate tasks); a console script can. One such back-to-back run also logged a reducer «Invalid action path» (a SetFieldAction2 on the project) that two runs without the step did not repeat; not investigated.
+
+## 2026-10-03 — merge: viewpoint-panel-naming into alfonso-frontend-jjtl (P-2026-10-03-1421)
+**Prompt**: `claude_2026-10-03_1421_prompt_merge_viewpoint-panel-naming.md`, a lane-run merge session: `viewpoint-panel-naming` at `2bf3c10ad` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `c56f4fc63`, 4 commits on the branch side, 13 on the trunk side plus this merge's prompt `703fe5323`.
+**Files touched**: merge `7e856190d`: 5 files from the branch side (`deriveViewpoint.ts`, `__tests__/deriveViewpoint.test.ts`, `ViewpointProperties.tsx`, `docs/log-inbox/views.md`, the branch prompt), `docs/log-inbox/views.md` resolved by union; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7e856190d`: typecheck 14 errors, the §17 set (exit 2); typecheck:scripts exit 0; vitest 6946 passed in 277 files, 9 red at import, the §17 set (expected 6937 in 276 on the trunk tip plus 9 in 1 new file from the branch); hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts, check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, on 3001: server up (pid 61660), HTTP 200, serves the merged `deriveViewpoint.ts` and the `ViewpointProperties` Checkbox; Alfonso's visual OK on the branch (ok 1302) before the merge
+**Notes**: Merge-tree 1 conflict, docs/log-inbox/views.md (tree d42067c03); governance diff empty; on both sides only views.md; probes 1/1 each. Union: trunk's three entries first, then the branch's, checked byte for byte. No rollback tag (RC-31); pre-merge trunk 764e00502. npm run build ran in this tree with 3001 up (ticket of P-2026-10-03-1300); 3001 not restarted.
+**Prompt document name**: 2026-10-03 14:21

@@ -75,6 +75,11 @@ export interface DerivedNotation {
      * docs/discovery/discovery_2026-10-01_elk_layout_quality.md §5.1.
      */
     readonly layout?: ElkLayoutProfile;
+    /**
+     * Not offered by the dialog's select (P-2026-10-03-1300): the id stays valid, so a viewpoint saved under it keeps
+     * working and a lookup by id finds it. A hidden notation is drawn as its twin (`HIDDEN_TWIN`).
+     */
+    readonly hidden?: true;
 }
 
 /** The compact spacing the profiles share (Phase 1 V4): node 40, layer 56, edge-node 24, edge-edge 16, label 4. */
@@ -83,7 +88,8 @@ const COMPACT = { node: 40, layer: 56, edgeNode: 24, edgeEdge: 16, label: 4 } as
 /** The notations of the dialog's select, in its order; Generic is the default. */
 export const DERIVED_NOTATIONS: readonly DerivedNotation[] = [
     { id: 'generic', label: 'Generic', profile: null, nodeLabel: 'Node' },
-    { id: 'stateMachine', label: 'State machine', profile: 'stateMachine', nodeLabel: 'State' },
+    // P-2026-10-03-1300 (amends R-VP-22): drawn as Statechart (UML) and no longer offered; the id is never renamed (R-B9).
+    { id: 'stateMachine', label: 'State machine', profile: 'stateMachine', nodeLabel: 'State', hidden: true },
     // A1 (P-2026-09-30-0355, R-VP-22): beside State machine, on its profile and prefill.
     { id: 'statechart', label: 'Statechart (UML)', profile: 'stateMachine', nodeLabel: 'State',
         // Its transitions are arcs between the route's ends: wider edge and node spacing keep neighbouring chords, and
@@ -136,6 +142,11 @@ export interface DialogPrefill {
 }
 
 const notationOf = (id: unknown): DerivedNotation | undefined => DERIVED_NOTATIONS.find(n => n.id === id);
+
+/** The notation a hidden one is drawn as (P-2026-10-03-1300): State machine draws as Statechart (UML). */
+const HIDDEN_TWIN: Readonly<Partial<Record<DerivedNotationId, DerivedNotationId>>> = { stateMachine: 'statechart' };
+/** The notation the dialog shows for `id`: its visible twin when it is hidden, so the select never stands on a hidden entry. */
+const shown = (id: DerivedNotationId): DerivedNotationId => HIDDEN_TWIN[id] ?? id;
 const profileOf = (id: unknown): SimProfile | undefined => {
     const p = notationOf(id)?.profile;
     return p ? systemProfile(p) : undefined;
@@ -263,16 +274,16 @@ function withActivitySignals(lookup: Lookup, metamodelId: string, notation: Deri
 /** The notation the select opens on: the latest derived viewpoint's, else the stored binding's, else Generic. */
 export function initialNotation(lookup: Lookup, metamodelId: string, viewpointIds: readonly string[]): DerivedNotationId {
     const latest = latestDerived(lookup, metamodelId, viewpointIds);
-    if (latest) return latest.notation;
+    if (latest) return shown(latest.notation);
     const bag = storedBinding(lookup, metamodelId);
-    return bag ? notationOfBinding(bag) : 'generic';
+    return bag ? shown(notationOfBinding(bag)) : 'generic';
 }
 
 /** The table of `notation` as the dialog shows it on open or on a change of the select. Generic has none. */
 export function dialogPrefill(lookup: Lookup, metamodelId: string, notation: DerivedNotationId, viewpointIds: readonly string[]): DialogPrefill {
     if (notationRoles(notation).length === 0) return { roles: {}, from: 'none' };
     const latest = latestDerived(lookup, metamodelId, viewpointIds);
-    if (latest && latest.notation === notation) {
+    if (latest && shown(latest.notation) === shown(notation)) {
         const entries = Object.entries(latest.state)
             .filter(([k]) => k.startsWith(DERIVED_ROLE_PREFIX))
             .map(([k, v]): [string, unknown] => [k.slice(DERIVED_ROLE_PREFIX.length), v]);
@@ -319,8 +330,10 @@ function derivationRolesOf(lookup: Lookup, metamodelId: string, choice: DeriveCh
         if (d.key !== null && d.kind !== 'class' && b?.status === 'bound') bag[d.key] = b.value;
     }
     // A1 and A3 (R-VP-22), A2 (R-VP-24), Activity (UML) (R-VP-26): the notations drawn over their sibling's documents say so.
-    const notation = choice.notation === 'statechart' || choice.notation === 'flowchartIso' || choice.notation === 'petriClassic'
-        || choice.notation === 'activityUml' ? choice.notation : undefined;
+    // P-2026-10-03-1300: a hidden notation (State machine) is drawn as its twin (Statechart (UML)).
+    const drawn = HIDDEN_TWIN[choice.notation] ?? choice.notation;
+    const notation = drawn === 'statechart' || drawn === 'flowchartIso' || drawn === 'petriClassic'
+        || drawn === 'activityUml' ? drawn : undefined;
     return { bag, shape: profile.shape, classRoles, ...(notation ? { notation } : {}) };
 }
 

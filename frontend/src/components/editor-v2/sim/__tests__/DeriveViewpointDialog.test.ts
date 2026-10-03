@@ -54,20 +54,31 @@ describe('DeriveViewpointForm — the notation select and the table', () => {
         expect(html).toMatch(new RegExp(`id="${title}"[^>]*>Derive viewpoint — DemoPEST<`));
     });
 
-    it('the notation select lists the nine notations, the chosen one selected, with a real label', () => {
+    it('the notation select lists the eight visible notations, the chosen one selected, with a real label', () => {
         const html = render({ notation: 'petri' });
         const [notation] = selects(html);
         // A1 and A3 (P-2026-09-30-0355, R-VP-22): Statechart (UML) and Flowchart (ISO 5807) beside their siblings.
         // A4 (P-2026-09-30-0440, R-VP-23): ER (Chen) last.
         // A2 (P-2026-09-30-1521, R-VP-24): Petri net (classic) after Petri net.
         // P-2026-09-30-1552 (R-VP-26): Activity (UML) after Flowchart (ISO 5807).
+        // P-2026-10-03-1300: State machine is hidden, drawn as Statechart (UML).
         expect(notation.options.map(o => [o.value, o.text])).toEqual([
-            ['generic', 'Generic'], ['stateMachine', 'State machine'], ['statechart', 'Statechart (UML)'],
+            ['generic', 'Generic'], ['statechart', 'Statechart (UML)'],
             ['petri', 'Petri net'], ['petriClassic', 'Petri net (classic)'], ['flowchart', 'Flowchart'], ['flowchartIso', 'Flowchart (ISO 5807)'],
             ['activityUml', 'Activity (UML)'], ['erChen', 'ER (Chen)'],
         ]);
         expect(notation.options.filter(o => o.selected).map(o => o.value)).toEqual(['petri']);
         expect(labelsFor(html)).toContainEqual([notation.id, 'Notation']);
+    });
+
+    it('a hidden notation is listed only while it is the one showing (mutation: the hidden entry always listed, or never)', () => {
+        const [shownHidden] = selects(render({ notation: 'stateMachine' }));
+        expect(shownHidden.options.map(o => o.value)).toContain('stateMachine');
+        expect(shownHidden.options.filter(o => o.selected).map(o => o.value)).toEqual(['stateMachine']);
+        for (const notation of ['generic', 'statechart'] as const) {
+            const [other] = selects(render({ notation }));
+            expect(other.options.map(o => o.value), notation).not.toContain('stateMachine');
+        }
     });
 
     it('Activity (UML) offers the flowchart roles, Node read as Action, and Decision / merge last (R-VP-26)', () => {
