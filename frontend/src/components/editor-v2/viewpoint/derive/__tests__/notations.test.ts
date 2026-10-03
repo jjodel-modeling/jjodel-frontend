@@ -471,8 +471,11 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // generic notation»), measured on 58aa78ba9: today's role-keyed documents from the Apply bag.
     // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
     // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
+    // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
+    // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
+    // every digest below was the one before, measured on the lane.
     const PINNED: Record<string, string> = {
-        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '264e79d9edff4d44', DemoFlowB: '0686c16f9969bb93',
+        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '35709411d5879c0a', DemoFlowB: '0686c16f9969bb93',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -674,10 +677,13 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // R-VP-25 (P-2026-09-30-1521): Generic ×4, DemoPetri petri and DemoFlowB petri moved with the open arrowhead,
     // each to the digest predicted on 2cde09984's code, before any A2 edit: every closedArrow an openArrow and
     // the provenance hash recomputed.
+    // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
+    // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
+    // every digest below was the one before, measured on the lane.
     const PINNED_D: Record<string, string> = {
         'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '859ed7219f226f01', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
-        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': '1f551e40ba793093', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'd2b745a44e81558d',
-        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '9a9fdc00b24bcb39', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
+        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'fcc0009cc695e6b4', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'd2b745a44e81558d',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '0ae5462394ea94b2', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
         'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '124d96bbb07f4e44',
     };
 
@@ -794,6 +800,17 @@ describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
         expect(irOf(esm, 'State').fieldCompartments.map((c: any) => c.source)).toEqual([{ from: 'attributes' }]);
         expect(irOf(esm, 'Initial').shape.entry).toBe('dot');
         expect(irOf(esm, 'Terminal').fieldCompartments).toBeUndefined();
+    });
+
+    it('a state with a compartment hides the rows with no value; one without carries no structure (P-2026-10-03-1304, Q9a)', () => {
+        const esm = derivedWith(ESM, 'extendedStateMachine', 'statechart').views;
+        expect(irOf(esm, 'State').structure).toEqual({ emptyBehavior: 'hide' });
+        expect(irOf(esm, 'Initial').structure).toEqual({ emptyBehavior: 'hide' });
+        expect(irOf(esm, 'Terminal').structure).toBeUndefined();
+        // State machine is drawn as Statechart (UML) since P-2026-10-03-1300: it carries the key too.
+        expect(irOf(derivedWith(ESM, 'extendedStateMachine', 'stateMachine').views, 'State').structure).toEqual({ emptyBehavior: 'hide' });
+        // DemoPEST's states hold no slot but the name: no compartment, no key.
+        expect(irOf(derivedWith(PEST, 'stateMachine', 'statechart').views, 'State').structure).toBeUndefined();
     });
 });
 

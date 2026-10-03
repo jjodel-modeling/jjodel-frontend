@@ -698,8 +698,12 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: { [v.className]: v.classId },
             exclusive: true, label: `View for ${v.className}`, shape,
         };
-        // The name label is the title of all three, so the identity slot's row is left out.
-        if (compartment) ir.fieldCompartments = [attributesCompartment(attributesOf(v.classId).some(isIdentity))];
+        // The name label is the title of all three, so the identity slot's row is left out. A slot with no value draws no
+        // row (`entry = ` and its dash on every DemoESM state), and a compartment left with none no box (P-2026-10-03-1304, Q9a).
+        if (compartment) {
+            ir.fieldCompartments = [attributesCompartment(attributesOf(v.classId).some(isIdentity))];
+            ir.structure = { emptyBehavior: 'hide' };
+        }
         return { ...v, ir };
     });
 }

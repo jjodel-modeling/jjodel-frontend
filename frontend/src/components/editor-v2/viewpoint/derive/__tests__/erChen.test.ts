@@ -190,13 +190,16 @@ describe('A4 leaves every other notation as it was', () => {
     // R-VP-25 (P-2026-09-30-1521): the 24 lists that held a filled arrowhead moved with the open one, each to the
     // digest predicted on 2cde09984's code, before any A2 edit: the tip's documents with every closedArrow an
     // openArrow and their provenance hash recomputed.
+    // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
+    // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
+    // every digest below was the one before, measured on the lane.
     const PINNED: Record<string, string> = {
         'DemoESM flowchart': '7e215bccf0811354',
         'DemoESM flowchartIso': '369ee94b0ae560fc',
         'DemoESM generic': 'f5b415d0f3a7512c',
         'DemoESM petri': 'a9967d96094069ab',
-        'DemoESM stateMachine': '9a9fdc00b24bcb39',
-        'DemoESM statechart': '3066e031283faeb7',
+        'DemoESM stateMachine': '0ae5462394ea94b2',
+        'DemoESM statechart': 'ec8ee178256b4803',
         'DemoFlowB flowchart': '124d96bbb07f4e44',
         'DemoFlowB flowchartIso': '0f3b13332e902f0f',
         'DemoFlowB generic': '1ebd123804dc75a1',
@@ -213,8 +216,8 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoPetri flowchartIso': '02ed35a22d5bcf3f',
         'DemoPetri generic': 'dab0b1ddf3a00c38',
         'DemoPetri petri': '42781fdee36ad040',
-        'DemoPetri stateMachine': '1f551e40ba793093',
-        'DemoPetri statechart': '69a58852d0d9ee91',
+        'DemoPetri stateMachine': 'fcc0009cc695e6b4',
+        'DemoPetri statechart': 'af986487f87ae4b8',
         'ERDLanguage ERD flowchart': '-',
         'ERDLanguage ERD flowchartIso': '-',
         'ERDLanguage ERD generic': 'a718dff62a153ed7',

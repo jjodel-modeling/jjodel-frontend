@@ -275,6 +275,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // fill their box and on a vertex resized by hand. See useContentSize.ts.
     const contentRef = useRef<HTMLDivElement>(null);
     useContentDrivenSize(vertexId, form, contentRef, 'defaultSize' in compiled.ir ? compiled.ir.defaultSize : undefined);
+    // Q9a: the view's choice for a slot with no value; only 'hide' changes the IR compartment (the dash otherwise).
+    const hideEmptyRows = 'structure' in compiled.ir && compiled.ir.structure?.emptyBehavior === 'hide';
 
     // Compartment rows come from the object's D-layer features (name/type/value).
     const compartmentSig = useSelector((state: any) => {
@@ -315,6 +317,17 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
         }
         return { attributes, references };
     }, [compartmentSig]);
+
+    // The rows a slot compartment draws: the exclude (R-VP-20) and, under 'hide' (Q9a), the slots with no value left out.
+    const shownRows = (fc: { source: 'attributes' | 'references' | 'children'; exclude?: string[] }) => {
+        const slots = fc.source === 'references' ? rows.references : rows.attributes;
+        const kept = fc.exclude ? slots.filter(r => !fc.exclude!.includes(r.name)) : slots;
+        return hideEmptyRows ? kept.filter(r => r.value.trim() !== '') : kept;
+    };
+    // Q9a: 'hide' left no row in any compartment (and none holds children): a name the compartment put on top is
+    // centred, as on the same node without a compartment.
+    const noRowsLeft = hideEmptyRows && compiled.fieldCompartments.length > 0
+        && compiled.fieldCompartments.every(fc => fc.source !== 'children' && shownRows(fc).length === 0);
 
     // Row-dispatch (Fase R2): child object ids rendered as inline rows for a
     // `children`-source compartment. SAME rowRenderedChildren as the presentation
@@ -630,6 +643,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 // Outside label (R-VP-15 (1)): the side rides on a class of its own, so an
                 // inside label keeps exactly the class list it had (irStyle.ts places it).
                 const anchorClass = l.anchor ? ` ir-label--anchor-${l.anchor}` : '';
+                // Q9a: with no row left under 'hide', a name on top is centred (`noRowsLeft`).
+                const position = noRowsLeft && l.position === 'top' ? 'center' : l.position;
                 // Editable: intrinsic name/qualifiedName labels edit the element
                 // name unless the IR opts out (spec v1.2 sez. 5); a one-step path
                 // label that opts in edits its attribute (R-IRN-41).
@@ -638,12 +653,12 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     return (
                         <input
                             key={`label_${i}`}
-                            className={`ir-label ir-label--${l.position}${anchorClass} ir-label__input`}
+                            className={`ir-label ir-label--${position}${anchorClass} ir-label__input`}
                             // Same authored style as the span it replaces: the node-level
                             // style already reaches the field by inheritance, this carries
                             // the label's own one, so the text does not change face on
                             // entering the edit.
-                            style={overText(resolveTextStyle(l.style, readCtx, objectId), l.position)}
+                            style={overText(resolveTextStyle(l.style, readCtx, objectId), position)}
                             autoFocus
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
@@ -656,8 +671,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 return (
                     <span
                         key={`label_${i}`}
-                        className={`ir-label ir-label--${l.position}${anchorClass}`}
-                        style={overText(resolveTextStyle(l.style, readCtx, objectId), l.position)}
+                        className={`ir-label ir-label--${position}${anchorClass}`}
+                        style={overText(resolveTextStyle(l.style, readCtx, objectId), position)}
                         onDoubleClick={l.editsName ? () => {
                             setEditingLabel(i);
                             setEditValue(readCtx.getName(objectId) ?? '');
@@ -699,11 +714,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     );
                 }
                 const isReferenceCompartment = fc.source === 'references';
-                const slots = isReferenceCompartment ? rows.references : rows.attributes;
                 // R-VP-20: the attributes exclude keeps the named slots out of the rows (the identity
                 // slot the name label shows). Every slot excluded draws no compartment, as none does.
-                const exclude = fc.exclude;
-                const source = exclude ? slots.filter(r => !exclude.includes(r.name)) : slots;
+                // P-2026-10-03-1304 (Q9a): under `structure.emptyBehavior: 'hide'` a slot with no value draws no row
+                // either, as the native rows do (ObjectNode.tsx); `shownRows` applies both.
+                const source = shownRows(fc);
                 if (source.length === 0) return null;
                 return (
                     <div
