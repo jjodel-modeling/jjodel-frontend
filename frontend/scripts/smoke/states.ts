@@ -12,7 +12,9 @@ import type { Browser, BrowserContext, Page } from '@playwright/test';
 
 // The dev server listens on [::1] only: `localhost` resolves there, 127.0.0.1
 // does not. See frontend/vite.config.ts (server.port) and docs/PROTOCOL.md P8.
-export const BASE_URL = 'http://localhost:3000';
+// SMOKE_URL overrides the address; port 3001 is refused, the seeding writes projects.
+export const BASE_URL = (process.env.SMOKE_URL || 'http://localhost:3000').replace(/\/$/, '');
+if (new URL(BASE_URL).port === '3001') throw new Error(`SMOKE_URL ${BASE_URL}: never 3001, the smoke creates projects`);
 
 // Measurements are only comparable across runs at a fixed viewport.
 export const VIEWPORT_WIDTH = 1440;

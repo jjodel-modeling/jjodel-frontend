@@ -20,6 +20,12 @@ npm run smoke:calibrate    # measurements only, never fails
 npm run typecheck:scripts  # type coverage for these files
 ```
 
+The smoke opens `http://localhost:3000` unless `SMOKE_URL` names another address,
+for a dev server on a different port, for example
+`SMOKE_URL=http://localhost:3016 npm run smoke`. Port 3001 is refused with an
+error before anything runs, because the seeding creates projects and 3001 is the
+server in use.
+
 ### The verdict has three values
 
 | Verdict | Exit | Meaning |
