@@ -480,8 +480,11 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // suppressed every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
     // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
+    // P-2026-10-03-1920 (A1): the Petri transition and the flowchart Initial disc draw fill and border in the name ink; the
+    // lists holding one moved (Petri net and Petri net (classic) of DemoPetri, Flowchart of DemoPEST, DemoESM, DemoFlowB),
+    // every other list kept its digest; with the one derive block removed every digest below was the one before, measured.
     const PINNED: Record<string, string> = {
-        DemoPEST: '0e123f6496e06e3a', DemoPetri: '023be3c14750b11d', DemoESM: 'a8bbf693f25c8f14', DemoFlowB: '0686c16f9969bb93',
+        DemoPEST: '0e123f6496e06e3a', DemoPetri: 'f3bc9e413e2a5676', DemoESM: 'a8bbf693f25c8f14', DemoFlowB: 'befcd3cc6fff9f95',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -692,11 +695,14 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // suppressed every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
     // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
+    // P-2026-10-03-1920 (A1): the Petri transition and the flowchart Initial disc draw fill and border in the name ink; the
+    // lists holding one moved (Petri net and Petri net (classic) of DemoPetri, Flowchart of DemoPEST, DemoESM, DemoFlowB),
+    // every other list kept its digest; with the one derive block removed every digest below was the one before, measured.
     const PINNED_D: Record<string, string> = {
-        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': 'f0ba4426cae26d2f', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
-        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'fcc0009cc695e6b4', 'DemoPetri petri': '4ea473651a70adc7', 'DemoPetri flowchart': 'd2b745a44e81558d',
-        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '95040925ad077303', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
-        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '124d96bbb07f4e44',
+        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': 'f0ba4426cae26d2f', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': '9344cdd843bbc37a',
+        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'fcc0009cc695e6b4', 'DemoPetri petri': '9b66e969321d4ae6', 'DemoPetri flowchart': 'd2b745a44e81558d',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '95040925ad077303', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7f7083166195b9d9',
+        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '4fd064fbcfe88758',
     };
 
     it('Generic, State machine, Petri net and Flowchart derive the D tip\'s documents, byte for byte, provenance included', () => {

@@ -5066,6 +5066,59 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Measured: DemoFlowB as Activity (UML) byte-identical to the pre-Q3 baseline without a layout and after Auto layout;
     after Auto layout Petri net (classic) the same size, its places 8 px lower, and Petri net 8 px taller (the label gap read
     from the ink); the four default scenes identical. Commits `2d967f267`, `7d7d8e23d`, `f4d768817`, `5ac537e8e`.
+- **R-VP-58** (2026-10-03, ratified by Alfonso 2026-10-04, delegated to the chat C-2026-10-03-1610, evidence: measured, verified: none, reversible: branch).
+  **The Petri transition bar of both notations and the flowchart Initial disc draw fill and border in the name ink;
+  amends R-VP-15 (4) («the bar keeps `#334155`», kept by R-VP-16) and R-VP-24 (3) (the catalogue ink on fill and border).**
+  A1 of P-2026-10-03-1920, the chat's GO adopting question 1 as recommended (RC-21, RC-25); Alfonso has not answered. The
+  texts of R-VP-15 and R-VP-24 are not edited (add-only). Source: `docs/discovery/discovery_2026-10-03_petri_ink_ports.md`
+  §3.1. The catalogue's `#334155` is also the dark node surface: 1.41:1 on the dark canvas `#1e293b` (9.45:1 light),
+  measured on the three bars of each Petri pane and Flowchart's disc. `deriveViewpointIRs` (`viewpointDerivation.ts`)
+  writes `var(--color-inode-name)` on fill and border for the Petri transition (the classic derive copies it) and the
+  flowchart Initial disc, as Activity (UML)'s glyphs already were: 16.3:1 light, 12.59:1 dark. State machine's named
+  Initial keeps the catalogue ink (R-VP-17 (5) not amended). Still glyphs for «Color by metaclass» (`isNotationGlyph`
+  lists the name ink; measured equal on and off). Saved derived viewpoints keep what they saved (R-VP-25, R-VP-36). No
+  key, no `irVersion` bump, no migration. Tests 7 red first; mutation bench 5/5. Prompt P-2026-10-03-1920, commit
+  `7bc8a6f3b`.
+  - Ratified 2026-10-04 by the chat on Alfonso's delegation («decidi tu ma non portare problemi con la demo», 00:05),
+    P-2026-10-04-0010: kept as measured; the lane probe after the A3 revert reads 16.3:1 light, 12.59:1 dark (min).
+- **R-VP-59** (2026-10-03, ratified by Alfonso 2026-10-04, delegated to the chat C-2026-10-03-1610, evidence: measured, verified: none, reversible: branch).
+  **An outside label's anchor is a preference: the label takes its declared side when no edge end holds it, else a free
+  side, and the toolbar Auto layout reserves the side it will paint on; amends R-VP-53 (the classic transition's name
+  above the bar «a constant here»).** A2 of P-2026-10-03-1920, adopted by the chat's GO (RC-21, RC-25). The text of
+  R-VP-53 is not edited. Source: the report §3.2.
+  - The rule, `outsideAnchorFor(declared, ends)` (`elkLayout.ts`): the declared side when no end holds it, else the first
+    free of the opposite and the other two (`e`, `w` for `n` and `s`; `s`, `n` for `e` and `w`), else the least used.
+  - The synthesis (`irEdgeViews.ts`) counts each vertex's ends by side on the handles and writes the moves on the node
+    data (`irLabelAnchors`, declared to chosen, session only); `ObjectNode.tsx` hands them to `IRNodeContent.tsx`, which
+    paints the moved side; absent, the markup of before.
+  - `computeElkAutoLayout` reserves the declared side (read back through `irLabelAnchors`) and runs ELK once more where a
+    route takes it (`outsideAnchors` reports the sides); stress layouts run once.
+  - Measured on the lane probe: classic Petri at rest, p2 and p3 0 px from an arrowhead before, 54 px after; with the
+    profile turned DOWN, six names on a line or arrowhead before, none after; Petri net's t1, t2 off their lines after its
+    layout; classic RIGHT one ELK run, as before. Left: classic t1 at rest crossed by a line passing under it.
+  - No persisted key. Tests 10 red first; mutation bench 11/12, the survivor equivalent. Commit `679d68710`.
+  - Ratified 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010: kept as measured. Without R-VP-60 the
+    ends are counted on the trunk's handles; the lane probe after the A3 revert finds no outside label within 4 px of an
+    arrowhead at rest, after Auto layout, under DOWN (min 17.52 px), as with it.
+- **R-VP-60** (2026-10-03, withdrawn 2026-10-04, after Málaga, evidence: measured, verified: none, reversible: branch).
+  **The React Flow handles of an ELK-routed edge sit on its drawn ends (D-B); amends R-VP-49 («the handles keep their
+  uniform slots»), the critical-zone lane R-VP-49 deferred to.** A3 of P-2026-10-03-1920, adopted by the chat's GO (RC-21,
+  RC-25), RC-30 go-ahead, LIR `docs/lir/lir_2026-10-03_petri_ink_ports.md`. The text of R-VP-49 is not edited. Source: the
+  report §3.3.
+  - A synthetic edge whose ELK route is valid takes the route's sides and writes, per end, where the route meets the side
+    (`irSourcePin` / `irTargetPin`, session data, `irEdgeViews.ts`); only an end on the node's drawn border (a junction
+    branch ends on ELK's junction node), never a diamond end; a user anchor override drops them.
+  - `handlePosition.ts`: `SideEndpoint.pin?` (optional, Rule 11); a pinned endpoint sits at its pin, the others keep their
+    slots. `DynamicHandles.tsx`: the pins in its edge and positions keys.
+  - Measured after a real Auto layout on the four demos: handles off the drawn end over 1 px 34 of 68 before (up to 101 px,
+    5 on another side), after 0 along the side but work->d1 (6 px, the leg slid onto the diamond's vertex by
+    `UnifiedEdge.tsx`); across the side the circle outline inset (1.1 to 2.7 px); bends drawn over ELK's 0 everywhere.
+    The drawn ends stay the route's; ELK's raw port moved by the snap is reported, not gated (`keepStraight`).
+  - Classic (non-synthetic) edges keep today's handles: `handleAutoLayout` already gives them the route's side.
+  - Tests 6 red first; mutation bench 12/12, one killed by the probe. Commit `6756eddd2`.
+  - Withdrawn 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010 (revert `04c13e039`): it touches the
+    handle code in the critical zone for a few pixels after an Auto layout, days before the MODELS demo; it returns after
+    Málaga (2026-10-09) as a lane of its own. R-VP-49 stands: handles as on the trunk (34 of 68 ends off after Auto layout).
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 

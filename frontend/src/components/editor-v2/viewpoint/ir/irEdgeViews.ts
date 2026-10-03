@@ -26,11 +26,12 @@
 
 import { type Edge, type Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
-import type { CompiledCrossPath, CompiledEdgeView } from './irTypes';
+import type { CompiledCrossPath, CompiledEdgeView, LabelAnchor } from './irTypes';
 import { resolveEdgeView, resolveIRView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
 import { resolveTextStyle } from './irCompile';
 import { assignActivityJunctions, isActivityActionView, isActivityFlowView } from './irJunctions';
 import { barOrientation, rememberBarOrientation, rememberedBarOrientation, type BarOrientation } from './barOrientation';
+import { outsideAnchorFor } from '../../utils/elkLayout';
 
 type Idlookup = Record<string, any>;
 
@@ -352,8 +353,8 @@ export function synthesizeObjectAsEdges(
     const nodesById = new Map(outNodes.map(n => [n.id, n] as const));
     // P-2026-10-03-1304 (Q2, Q4): the form of an endpoint vertex, resolved once per vertex as isAction does below; with
     // it (Q3) the thickness a bar declares, undefined for every other form and for a bar without one.
-    const formMemo = new Map<string, { form: string | undefined; thickness: number | undefined }>();
-    const endOf = (vertexId: string): { form: string | undefined; thickness: number | undefined } => {
+    const formMemo = new Map<string, { form: string | undefined; thickness: number | undefined; outside: LabelAnchor[] }>();
+    const endOf = (vertexId: string): { form: string | undefined; thickness: number | undefined; outside: LabelAnchor[] } => {
         const hit = formMemo.get(vertexId);
         if (hit) return hit;
         const objectId = objByVertex.get(vertexId);
@@ -361,8 +362,12 @@ export function synthesizeObjectAsEdges(
         const view = objectId && typeof metaclassId === 'string' ? resolveIRView(objectId, metaclassId, index, readCtx, idlookup) : null;
         let form: string | undefined;
         try { form = view && objectId ? String(view.form(readCtx, objectId)) : undefined; } catch { form = undefined; }
-        const t: unknown = form === 'bar' ? (view?.ir as { shape?: { barThickness?: unknown } } | undefined)?.shape?.barThickness : undefined;
-        const out = { form, thickness: typeof t === 'number' && Number.isFinite(t) && t > 0 ? t : undefined };
+        const shape = (view?.ir as { shape?: { barThickness?: unknown; labels?: unknown } } | undefined)?.shape;
+        const t: unknown = form === 'bar' ? shape?.barThickness : undefined;
+        // P-2026-10-03-1920 (item 2): the declared sides of the view's outside labels (an absent anchor is 's', irTypes.ts).
+        const outside = (Array.isArray(shape?.labels) ? shape!.labels as Array<{ position?: unknown; anchor?: unknown }> : [])
+            .filter(l => l.position === 'outside').map(l => (typeof l.anchor === 'string' ? l.anchor : 's') as LabelAnchor);
+        const out = { form, thickness: typeof t === 'number' && Number.isFinite(t) && t > 0 ? t : undefined, outside };
         formMemo.set(vertexId, out);
         return out;
     };
@@ -450,13 +455,50 @@ export function synthesizeObjectAsEdges(
         };
         junctioned = assignActivityJunctions(syntheticWithHandles, outEdges, isAction);
     }
-    // Q3: the orientation and the thickness on the bar's node data, a new node only where they differ from what it carries.
-    const finalNodes = orientations.size === 0 ? outNodes : outNodes.map(n => {
+    // P-2026-10-03-1920 (item 2, A2 amending R-VP-53): an outside label whose declared side an edge end holds moves to a
+    // free side (outsideAnchorFor, elkLayout.ts), counted on the handles of every edge at the vertex; ObjectNode hands the
+    // moves (`irLabelAnchors`, declared -> chosen, session only) to IRNodeContent. Only a moved label is written.
+    const endsBySide = new Map<string, Partial<Record<EndSide, number>>>();
+    const countEnd = (vertexId: string, handle: string | null | undefined) => {
+        const side = typeof handle === 'string' ? handle.split('-')[0] : '';
+        if (side !== 'left' && side !== 'right' && side !== 'top' && side !== 'bottom') return;
+        const c = endsBySide.get(vertexId) ?? {};
+        c[side] = (c[side] ?? 0) + 1;
+        endsBySide.set(vertexId, c);
+    };
+    for (const x of [...outEdges, ...junctioned]) { countEnd(x.source, x.sourceHandle); countEnd(x.target, x.targetHandle); }
+    const labelAnchors = new Map<string, Partial<Record<LabelAnchor, LabelAnchor>>>();
+    for (const [vertexId, ends] of endsBySide) {
+        if (nodesById.get(vertexId)?.hidden) continue;
+        for (const declared of endOf(vertexId).outside) {
+            const chosen = outsideAnchorFor(declared, ends);
+            if (chosen !== declared) labelAnchors.set(vertexId, { ...labelAnchors.get(vertexId), [declared]: chosen });
+        }
+    }
+    const sameAnchors = (a: unknown, b: Partial<Record<LabelAnchor, LabelAnchor>>) =>
+        !!a && typeof a === 'object' && Object.keys(a).length === Object.keys(b).length
+        && Object.entries(b).every(([k, v]) => (a as Record<string, unknown>)[k] === v);
+    // Q3: the orientation and the thickness on the bar's node data, and the label moves; a new node only where they differ
+    // from what it carries, and a map of moves no longer needed dropped.
+    const finalNodes = orientations.size === 0 && labelAnchors.size === 0 && !outNodes.some(n => (n.data as any)?.irLabelAnchors !== undefined) ? outNodes : outNodes.map(n => {
         const orientation = orientations.get(n.id);
         const thickness = orientation ? endOf(n.id).thickness : undefined;
-        const data = n.data as Record<string, unknown> | undefined;
-        if (!orientation || (data?.irBarOrientation === orientation && data?.irBarThickness === thickness)) return n;
-        return { ...n, data: { ...(data ?? {}), irBarOrientation: orientation, irBarThickness: thickness } };
+        let data = n.data as Record<string, unknown> | undefined;
+        let changed = false;
+        if (orientation && (data?.irBarOrientation !== orientation || data?.irBarThickness !== thickness)) {
+            data = { ...(data ?? {}), irBarOrientation: orientation, irBarThickness: thickness };
+            changed = true;
+        }
+        const moves = labelAnchors.get(n.id);
+        if (moves && !sameAnchors(data?.irLabelAnchors, moves)) {
+            data = { ...(data ?? {}), irLabelAnchors: moves };
+            changed = true;
+        } else if (!moves && data?.irLabelAnchors !== undefined) {
+            const { irLabelAnchors: _stale, ...rest } = data;
+            data = rest;
+            changed = true;
+        }
+        return changed ? { ...n, data: data ?? {} } : n;
     });
     return { nodes: finalNodes, edges: [...outEdges, ...junctioned], edgeObjects, edgeObjectDeps };
 }
