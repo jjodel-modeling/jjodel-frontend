@@ -3,7 +3,7 @@
   "trunk": "alfonso-frontend-jjtl",
   "intakeLabel": "auto",
   "skipLabels": ["needs-alfonso", "auto-parked"],
-  "allowlist": ["apierantonio"],
+  "allowlist": ["apierantonio", "jdirocco"],
   "nightWindow": { "start": "01:00", "end": "07:00" },
   "mode": "shadow",
   "laneByMode": { "shadow": "discovery", "live": "full" },
