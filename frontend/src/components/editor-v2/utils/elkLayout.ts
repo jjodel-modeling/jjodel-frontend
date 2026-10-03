@@ -251,7 +251,13 @@ export interface ElkRoute {
     straight?: boolean;
     /** Where ELK put the centre label: the label's centre. */
     centerLabel?: ElkPoint;
+    /** A bar end that declares a thickness (Q3): the orientation ELK laid it out with. Absent on any other end. */
+    sourceBar?: BarOrientation;
+    targetBar?: BarOrientation;
 }
+
+/** The orientation of a bar drawn turned in its square box (Q3, viewpoint/ir/barOrientation.ts). */
+export type BarOrientation = 'upright' | 'lying';
 
 export interface ElkAutoLayoutResult {
     positions: Map<string, ElkPoint>;
@@ -273,6 +279,24 @@ function realSizeOf(n: Node): { width: number; height: number } {
     return { width: w && w > 0 ? w : DEFAULT_NODE_W, height: h && h > 0 ? h : DEFAULT_NODE_H };
 }
 
+/**
+ * A bar that declares a thickness (Q3, P-2026-10-03-1304; the thickness and the orientation on its node data,
+ * irEdgeViews.ts) is laid out as it is drawn, not as its square box: lying across a DOWN or UP flow (no profile is
+ * DOWN), upright across RIGHT or LEFT, as it is drawn now under stress, which has no direction. Those are the sizes the
+ * bars of before declared, so ELK sees the graph it saw. Null for any other node.
+ */
+function barLayoutOf(n: Node, profile: ElkLayoutProfile | null): { orientation: BarOrientation; drawn: { width: number; height: number }; box: { width: number; height: number } } | null {
+    const d = (n.data ?? {}) as { irBarThickness?: unknown; irBarOrientation?: unknown };
+    const t = d.irBarThickness;
+    if (typeof t !== 'number' || !Number.isFinite(t) || t <= 0) return null;
+    const box = realSizeOf(n);
+    const orientation: BarOrientation = profile?.algorithm === 'stress'
+        ? (d.irBarOrientation === 'lying' ? 'lying' : 'upright')
+        : (profile?.direction === 'RIGHT' || profile?.direction === 'LEFT' ? 'upright' : 'lying');
+    const drawn = orientation === 'upright' ? { width: t, height: box.height } : { width: box.width, height: t };
+    return { orientation, drawn, box };
+}
+
 const junctionNodeId = (nodeId: string, kind: 'merge' | 'decision') => `::junction::${nodeId}::${kind}`;
 
 /** The junction ends of an edge (irJunctions.ts `JunctionEnd` on `data`), on a non-self-loop only. */
@@ -290,7 +314,7 @@ export function buildElkGraph(nodes: Node[], edges: Edge[], input: ElkAutoLayout
     const constraints = profile?.layerConstraints;
 
     const children: ElkNode[] = visible.map(n => {
-        const child: ElkNode = { id: n.id, ...realSizeOf(n) };
+        const child: ElkNode = { id: n.id, ...(barLayoutOf(n, profile)?.drawn ?? realSizeOf(n)) };
         const role = constraints ? input.roleOf?.(n.id) : undefined;
         if (role && constraints?.first?.includes(role)) child.layoutOptions = { 'elk.layered.layering.layerConstraint': 'FIRST' };
         else if (role && constraints?.last?.includes(role)) child.layoutOptions = { 'elk.layered.layering.layerConstraint': 'LAST' };
@@ -402,8 +426,11 @@ export function measureOutsideLabels(container: ParentNode): Map<string, ElkNode
     container.querySelectorAll<HTMLElement>('.react-flow__node[data-id]').forEach(nodeEl => {
         const id = nodeEl.getAttribute('data-id');
         if (!id) return;
-        const box = nodeEl.getBoundingClientRect();
-        const zoom = nodeEl.offsetWidth > 0 && box.width > 0 ? box.width / nodeEl.offsetWidth : 1;
+        const nodeBox = nodeEl.getBoundingClientRect();
+        const zoom = nodeEl.offsetWidth > 0 && nodeBox.width > 0 ? nodeBox.width / nodeEl.offsetWidth : 1;
+        // Q3 (P-2026-10-03-1304): a turned bar places its labels against its ink, which is what ELK lays out.
+        const ink = nodeEl.querySelector<HTMLElement>('.ir-node-content.ir-bar-ink');
+        const box = ink ? ink.getBoundingClientRect() : nodeBox;
         nodeEl.querySelectorAll<HTMLElement>('.ir-node-content > .ir-label--outside').forEach(el => {
             const anchor = (['n', 'e', 's', 'w'] as const).find(a => el.classList.contains(`ir-label--anchor-${a}`));
             if (!anchor || !el.offsetWidth || !el.offsetHeight) return;
@@ -463,19 +490,27 @@ function keepStraight(points: ElkPoint[], vertical: boolean, sr: ElkRect | null,
         : [{ x: first.x, y: c }, { x: last.x, y: c }];
 }
 
-function readElkResult(out: ElkNode, edges: Edge[], input: ElkAutoLayoutInput): ElkAutoLayoutResult {
+function readElkResult(out: ElkNode, edges: Edge[], input: ElkAutoLayoutInput, bars: Map<string, NonNullable<ReturnType<typeof barLayoutOf>>> = new Map()): ElkAutoLayoutResult {
     const straight = input.profile?.algorithm === 'stress';
     const orthogonal = !straight && (input.profile?.edgeRouting ?? 'ORTHOGONAL') === 'ORTHOGONAL';
     const raw = new Map<string, ElkRect>();
     const snapped = new Map<string, ElkRect>();
     const positions = new Map<string, ElkPoint>();
+    // The rects the routes record, as React Flow measures the nodes: a bar's box (Q3), every other node's own rect.
+    const boxes = new Map<string, ElkRect>();
     for (const c of out.children ?? []) {
         if (c.id.startsWith('::junction::')) continue;
         const r = { x: c.x ?? 0, y: c.y ?? 0, width: c.width ?? DEFAULT_NODE_W, height: c.height ?? DEFAULT_NODE_H };
         raw.set(c.id, r);
         const p = { x: snapToGrid(r.x), y: snapToGrid(r.y) };
-        positions.set(c.id, p);
         snapped.set(c.id, { ...p, width: r.width, height: r.height });
+        // A bar's ink lands on the grid where the bar of before did; its box is centred on it, so the position is the box's.
+        const bar = bars.get(c.id);
+        const box = bar
+            ? { x: p.x + (r.width - bar.box.width) / 2, y: p.y + (r.height - bar.box.height) / 2, width: bar.box.width, height: bar.box.height }
+            : { ...p, width: r.width, height: r.height };
+        positions.set(c.id, { x: box.x, y: box.y });
+        boxes.set(c.id, box);
     }
     const rfEdges = new Map(edges.map(e => [e.id, e] as const));
     const routes = new Map<string, ElkRoute>();
@@ -525,13 +560,16 @@ function readElkResult(out: ElkNode, edges: Edge[], input: ElkAutoLayoutInput): 
             }
         }
         const centre = ee.labels?.find(l => l.id === LABEL_ID(e.id, 'center'));
+        const sb = bars.get(e.source), tb = bars.get(e.target);
         routes.set(e.id, {
             points,
             sourceSide,
             targetSide,
-            sourceRect: sr,
-            targetRect: tr,
+            sourceRect: boxes.get(e.source) ?? sr,
+            targetRect: boxes.get(e.target) ?? tr,
             orthogonal,
+            ...(sb ? { sourceBar: sb.orientation } : {}),
+            ...(tb ? { targetBar: tb.orientation } : {}),
             ...(straight ? { straight: true } : {}),
             ...(centre && centre.x !== undefined && centre.y !== undefined
                 ? { centerLabel: { x: centre.x + (centre.width ?? 0) / 2, y: centre.y + (centre.height ?? 0) / 2 } }
@@ -562,7 +600,12 @@ export async function computeElkAutoLayout(nodes: Node[], edges: Edge[], input: 
         const moved = new Map((second.children ?? []).map(c => [c.id, c] as const));
         out = { ...out, children: (out.children ?? []).map(c => ({ ...c, x: moved.get(c.id)?.x ?? c.x, y: moved.get(c.id)?.y ?? c.y })) };
     }
-    return readElkResult(out, edges, input);
+    const bars = new Map<string, NonNullable<ReturnType<typeof barLayoutOf>>>();
+    for (const n of nodes) {
+        const b = n.hidden ? null : barLayoutOf(n, input.profile ?? null);
+        if (b) bars.set(n.id, b);
+    }
+    return readElkResult(out, edges, input, bars);
 }
 
 // ── Route validity and fitting ─────────────────────────────────────────────
@@ -572,8 +615,12 @@ const sameRect = (a: ElkRect, b: ElkRect) =>
     Math.abs(a.x - b.x) <= RECT_TOLERANCE && Math.abs(a.y - b.y) <= RECT_TOLERANCE
     && Math.abs(a.width - b.width) <= RECT_TOLERANCE && Math.abs(a.height - b.height) <= RECT_TOLERANCE;
 
-/** A route holds while both end nodes keep the rects it was computed for; a move or a resize drops it. */
-export function isElkRouteValid(route: ElkRoute, sourceRect: ElkRect, targetRect: ElkRect): boolean {
+/**
+ * A route holds while both end nodes keep the rects it was computed for; a move or a resize drops it. With `bars`, the
+ * current orientation of each end that is a turned bar (Q3), a turn drops it too: its ends were on the other sides.
+ */
+export function isElkRouteValid(route: ElkRoute, sourceRect: ElkRect, targetRect: ElkRect, bars?: { source?: BarOrientation; target?: BarOrientation }): boolean {
+    if (bars && ((route.sourceBar ?? null) !== (bars.source ?? null) || (route.targetBar ?? null) !== (bars.target ?? null))) return false;
     return sameRect(route.sourceRect, sourceRect) && sameRect(route.targetRect, targetRect);
 }
 

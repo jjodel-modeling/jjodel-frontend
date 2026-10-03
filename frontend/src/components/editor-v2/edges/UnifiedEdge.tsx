@@ -56,7 +56,15 @@ import { SegmentHandles } from './SegmentHandles';
 import { EndpointHandles } from './EndpointHandles';
 import { junctionGeometry, junctionTrunkPath, junctionVertex, type JunctionEnd } from '../viewpoint/ir/irJunctions';
 import { endGlyphOf, endGlyphMarker, glyphPathD, glyphCircles } from './edgeEndGlyphs';
-import { getElkRoute, elkRoutesRevision, isElkRouteValid, fitRouteToEnds } from '../utils/elkLayout';
+import { getElkRoute, elkRoutesRevision, isElkRouteValid, fitRouteToEnds, type BarOrientation } from '../utils/elkLayout';
+
+/** Q3 (P-2026-10-03-1304): the orientation of an end node that is a turned bar (irEdgeViews.ts writes it on the node data). */
+function barOrientationOf(n: any): BarOrientation | undefined {
+    const d = n?.data;
+    return typeof d?.irBarThickness === 'number' && (d.irBarOrientation === 'upright' || d.irBarOrientation === 'lying') ? d.irBarOrientation : undefined;
+}
+/** The two ends' bar orientations, for isElkRouteValid: a route whose bar end has turned since is not drawn. */
+const barEndsOf = (s: any, t: any) => ({ source: barOrientationOf(s), target: barOrientationOf(t) });
 
 // Bundle spread lives in ./bundleSpread (pure, testable). It fans the middle
 // corridor of parallel same-pair edges by physical anchor order (see that module).
@@ -304,7 +312,7 @@ function UnifiedEdge(props: EdgeProps) {
         if (isSelfLoop || isNonOrthogonalIR || (isInheritance && isGrouped)) return null;
         const route = getElkRoute(id);
         if (!route || !sourceNode || !targetNode) return null;
-        return isElkRouteValid(route, getNodeRect(sourceNode), getNodeRect(targetNode)) ? route : null;
+        return isElkRouteValid(route, getNodeRect(sourceNode), getNodeRect(targetNode), barEndsOf(sourceNode, targetNode)) ? route : null;
     }, [id, elkRouteRev, isSelfLoop, isNonOrthogonalIR, isInheritance, isGrouped, sourceNode, targetNode]);
     // The other edges between this edge's two nodes, either way: an arc with none is alone (P-2026-10-03-1304).
     const arcAlone = useMemo(
@@ -333,7 +341,7 @@ function UnifiedEdge(props: EdgeProps) {
                 if (e.hidden || e.source === e.target || (e.source !== nodeId && e.target !== nodeId)) continue;
                 const r = getElkRoute(e.id);
                 const sN = getInternalNode(e.source), tN = getInternalNode(e.target);
-                if (!r || !r.orthogonal || !sN || !tN || !isElkRouteValid(r, getNodeRect(sN), getNodeRect(tN))) continue;
+                if (!r || !r.orthogonal || !sN || !tN || !isElkRouteValid(r, getNodeRect(sN), getNodeRect(tN), barEndsOf(sN, tN))) continue;
                 const p = r.points;
                 if (e.source === nodeId) ends.push({ key: `${e.id}:source`, side: r.sourceSide, point: p[0], route: p });
                 if (e.target === nodeId) ends.push({ key: `${e.id}:target`, side: r.targetSide, point: p[p.length - 1], route: [...p].reverse() });
@@ -576,7 +584,7 @@ function UnifiedEdge(props: EdgeProps) {
             .map(e => {
                 // An opposite edge drawn on its ELK route's ends is read there too, so the pair bows apart.
                 const r = elkArcEnds ? getElkRoute(e.id) : undefined;
-                if (r && targetNode && sourceNode && isElkRouteValid(r, getNodeRect(targetNode), getNodeRect(sourceNode))) {
+                if (r && targetNode && sourceNode && isElkRouteValid(r, getNodeRect(targetNode), getNodeRect(sourceNode), barEndsOf(targetNode, sourceNode))) {
                     return { start: r.points[0], end: r.points[r.points.length - 1], id: e.id };
                 }
                 return {
@@ -590,7 +598,7 @@ function UnifiedEdge(props: EdgeProps) {
             .filter(e => e.id !== id && !e.hidden && e.source === source && e.target === target)
             .map(e => {
                 const r = elkArcEnds ? getElkRoute(e.id) : undefined;
-                if (r && sourceNode && targetNode && isElkRouteValid(r, getNodeRect(sourceNode), getNodeRect(targetNode))) {
+                if (r && sourceNode && targetNode && isElkRouteValid(r, getNodeRect(sourceNode), getNodeRect(targetNode), barEndsOf(sourceNode, targetNode))) {
                     return { start: r.points[0], end: r.points[r.points.length - 1], id: e.id };
                 }
                 return {
