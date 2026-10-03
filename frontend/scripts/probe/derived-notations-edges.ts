@@ -22,6 +22,8 @@
  *       DNE_OUT     JSON output (default /tmp/dnotC/probe.json)
  *       DNE_CROPS   crop directory (default frontend/scripts/smoke/_tmp_dnotC_crops, gitignored)
  *       DNE_TAG     label of the run in crop names (default before)
+ *       DNE_COMPARE <before.json>,<after.json>: the default panes compared (PASS when identical) and the
+ *                   acceptance numbers of every pane, before then after (P-2026-10-03-1304 Phase 2)
  */
 import { chromium, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -377,7 +379,7 @@ function analyse(m: any) {
             }
             if (inside >= 2) through[n.name] = Math.round(inside);
         }
-        return { id: e.id, name: `${nm(e.source)}->${nm(e.target)}`, self: e.source === e.target, ...edgeShape(e.pts), src: end(first, s), tgt: end(last, t), marker: e.markerEnd?.inner ?? null, polygons: e.polygons.length, through };
+        return { id: e.id, name: `${nm(e.source)}->${nm(e.target)}`, self: e.source === e.target, ...edgeShape(e.pts), src: end(first, s), tgt: end(last, t), marker: e.markerEnd?.inner ?? null, polygons: e.polygons.length, through, lineSlopes: lineSlopes(e.d) };
     });
     const visibleEdges = m.edges.filter((e: any) => e.pts.length > 1);
     const pairs: any[] = [];
@@ -439,6 +441,78 @@ function report(label: string, a: any) {
     const diamondEnds = a.edges.flatMap((e: any) => [e.src && { e: e.name, end: 'src', ...e.src }, e.tgt && { e: e.name, end: 'tgt', ...e.tgt }]).filter((x: any) => x && x.form === 'diamond');
     meas(`${label} diamond ends`, diamondEnds.map((x: any) => [x.node, x.e, x.end, x.side, x.at, x.offOutline]));
     meas(`${label} nodes`, a.nodes.map((n: any) => [n.name, n.cls, n.form, Math.round(n.x), Math.round(n.y), n.w, n.h, n.rows.length ? n.rows : '']));
+    meas(`${label} acceptance`, acceptance(a));
+}
+
+/**
+ * The straight segments of a path (its `L` commands) that are almost but not quite level or upright: off by more
+ * than 0.3 px and by less than 3 degrees. A curve (Q, C, A) only moves the pen. The slope Phase 2 removes.
+ */
+function lineSlopes(d: string | null): { dx: number; dy: number }[] {
+    if (!d) return [];
+    const out: { dx: number; dy: number }[] = [];
+    const tokens = d.match(/[MLQCAZ]|-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? [];
+    let cmd = ''; let cur = { x: 0, y: 0 }; const nums: number[] = [];
+    const arity: Record<string, number> = { M: 2, L: 2, Q: 4, C: 6, A: 7 };
+    const flush = () => {
+        while (cmd && arity[cmd] && nums.length >= arity[cmd]) {
+            const a = nums.splice(0, arity[cmd]);
+            const next = { x: a[a.length - 2], y: a[a.length - 1] };
+            if (cmd === 'L') {
+                const dx = next.x - cur.x, dy = next.y - cur.y, lo = Math.min(Math.abs(dx), Math.abs(dy)), hi = Math.max(Math.abs(dx), Math.abs(dy));
+                if (lo > 0.3 && lo / hi <= Math.tan((3 * Math.PI) / 180)) out.push({ dx: Math.round(dx * 10) / 10, dy: Math.round(dy * 10) / 10 });
+            }
+            cur = next;
+        }
+    };
+    for (const t of tokens) { if (/[A-Z]/.test(t)) { flush(); cmd = t; } else nums.push(Number(t)); }
+    flush();
+    return out;
+}
+
+/** The numbers Phase 2 is accepted on (P-2026-10-03-1304 GO): crossings, length through other nodes, slight slopes, the Activity spine bends. */
+function acceptance(a: any) {
+    const spine = ['i0->work', 'work->d1', 'd1->fk', 'jn->fin'];
+    const spineEdges = a.edges.filter((e: any) => spine.includes(e.name));
+    return {
+        crossings: a.crossings.reduce((n: number, c: any) => n + c.n, 0),
+        throughPx: a.edges.reduce((n: number, e: any) => n + Object.values<number>(e.through).reduce((x, y) => x + y, 0), 0),
+        slopes: a.edges.filter((e: any) => e.lineSlopes.length).map((e: any) => `${e.name} ${JSON.stringify(e.lineSlopes)}`),
+        spineBends: spineEdges.length ? spineEdges.reduce((n: number, e: any) => n + (e.bends ?? 99), 0) : null,
+        hiddenLabels: Object.values<string[]>(a.labelsByEdge).flat().filter((l) => l.includes(' under ')).length,
+    };
+}
+
+/** Every number of a path rounded to 0.01 px: below that, two runs of the same code differ (measured, Phase 2). */
+const round2 = (d: string | null) => (d ?? '').replace(/-?\d+\.\d+/g, (x) => String(Math.round(Number(x) * 100) / 100));
+
+/** The default viewpoint's pane, by names: what must not move unless a layout change says so. */
+function defaultDump(m: any) {
+    const byId = new Map<string, any>(m.nodes.map((n: any) => [n.id, n]));
+    const nm = (id: string) => byId.get(id)?.name ?? id;
+    return {
+        nodes: m.nodes.map((n: any) => [n.name, Math.round(n.x * 100) / 100, Math.round(n.y * 100) / 100, n.w, n.h, n.text]).sort((p: any, q: any) => String(p[0]).localeCompare(String(q[0]))),
+        edges: m.edges.map((e: any) => [`${nm(e.source)}->${nm(e.target)}`, e.paths.map((p: any) => round2(p.d))]).sort((p: any, q: any) => JSON.stringify(p).localeCompare(JSON.stringify(q))),
+        labels: m.labels.filter((l: any) => l.visible).map((l: any) => [l.text, Math.round(l.x * 10) / 10, Math.round(l.y * 10) / 10]).sort((p: any, q: any) => JSON.stringify(p).localeCompare(JSON.stringify(q))),
+    };
+}
+
+// ── Compare: DNE_COMPARE=<before.json>,<after.json> pairs the default panes and the acceptance numbers ─────
+if (process.env.DNE_COMPARE) {
+    const [b, a] = process.env.DNE_COMPARE.split(',').map((f) => JSON.parse(readFileSync(f, 'utf8')));
+    for (const key of Object.keys(b.scenes ?? {})) {
+        // Rounded to 0.01 px at compare time too, so a dump of an earlier run compares on the same footing.
+        const x = round2(JSON.stringify(b.scenes[key]?.defaultPane)), y = round2(JSON.stringify(a.scenes?.[key]?.defaultPane));
+        check(`${key}: the default viewpoint's pane identical before and after`, !!x && x === y, x === y ? 'identical' : { before: x?.slice(0, 600), after: y?.slice(0, 600) });
+        for (const notation of Object.keys(b.scenes[key].notations ?? {})) {
+            for (const phase of ['rest', 'elk']) {
+                const nb = b.scenes[key].notations[notation]?.raw?.[phase], na = a.scenes?.[key]?.notations?.[notation]?.raw?.[phase];
+                if (nb && na) meas(`${key}/${notation} ${phase} acceptance before -> after`, [acceptance(analyse(nb)), acceptance(analyse(na))]);
+            }
+        }
+    }
+    console.log(`RESULT ${pass}/${pass + fail}`);
+    process.exit(fail ? 1 : 0);
 }
 
 // ── Offline: DNE_ANALYSE=<json>[,<json>] re-reads the raw measures of an earlier run ──────────────
@@ -473,7 +547,9 @@ for (const sc of SCENES) {
     const m1 = models.find((m) => !m.meta)!.id;
     const defaultVp = await page.evaluate(() => (window as any).windoww.store.getState().viewpoint ?? null);
     await openModel(page, m1);
-    const sceneOut: any = { mm, m1, notations: {} };
+    await fit(page, m1);
+    const sceneOut: any = { mm, m1, notations: {}, defaultPane: defaultDump(await measure(page, m1)) };
+    await crop(page, m1, `dne_${TAG}_${sc.key}_default`);
     for (const notation of sc.notations) {
         await activate(page, defaultVp);
         const d = await derive(page, mm, sc.profile, notation);
