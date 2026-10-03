@@ -5,6 +5,10 @@
 - Tree: `~/jjodel-w-petriports`, branch `petri-ink-ports`, HEAD `517a7fb4d` at measure (code of the trunk `106aae181`)
 - Go-ahead: RC-30, given by the chat at launch (`--critical-zone-goahead P-2026-10-03-1920`)
 - Source: `docs/discovery/discovery_2026-10-03_petri_ink_ports.md` §3 and §6; probe `frontend/scripts/probe/petri-ink-ports.ts`
+- Phase 2 GO (chat, 2026-10-03): decisions (a) to (d) stand; questions 1 to 5 adopted as recommended; `ObjectNode.tsx`
+  and `DynamicHandles.tsx` added to DOVE for this lane; A1, A2, A3 implemented on the branch as provisional R-VP rows
+  awaiting Alfonso, one item per commit (order 1, 3, 2) so any can be dropped. This report is unchanged in substance by
+  the GO and is committed again, with this line, before the first code edit.
 
 ## 1. Files
 
