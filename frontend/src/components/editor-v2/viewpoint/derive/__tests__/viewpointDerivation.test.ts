@@ -569,11 +569,11 @@ describe('deriveViewpointIRs — without roles the documents are byte-equal to b
     const BEFORE: Record<string, string> = {
         'DemoPEST, structure only': '8e32f9410c28c283',
         'DemoPetri, structure only': 'efca0aebb7252be6',
-        'DemoESM, structure only': 'ed94b7c91af53994',
+        'DemoESM, structure only': '76ba55a4ff75b7e3',
         'DemoFlowB, structure only': 'aced3058b1d1d8e7',
-        'ERD, structure only': '12424010412fddd8',
+        'ERD, structure only': '918c8d169dd46e0f',
         'Families, structure only': 'b2e49ba38211ad25',
-        'Persons, structure only': 'c149f74b4ff3fbc6',
+        'Persons, structure only': 'b2940217cd3d41ff',
         'Composite, structure only': '6a6854ef45e31b7c',
         'Cars, structure only': 'e4c9e39d921875d2',
         'Graph, structure only': 'ddc40a8c323eb1e1',
@@ -984,10 +984,11 @@ describe('deriveViewpointIRs — the state machine notation with the roles bound
             expect(vertex(byClass(pest(), n)).fieldCompartments, n).toBeUndefined();
         }
         // DemoESM: State holds entry, Event holds name.
-        for (const n of ['State', 'Event']) {
-            expect(vertex(byClass(esm(), n)).shape.labels, n).toEqual([{ position: 'top', source: NAME }]);
-            expect(vertex(byClass(esm(), n)).fieldCompartments, n).toHaveLength(1);
-        }
+        expect(vertex(byClass(esm(), 'State')).shape.labels).toEqual([{ position: 'top', source: NAME }]);
+        expect(vertex(byClass(esm(), 'State')).fieldCompartments).toHaveLength(1);
+        // The name label is Event's title and already shows its only slot: no row, so no compartment (P-2026-10-03-1300).
+        expect(vertex(byClass(esm(), 'Event')).shape.labels).toEqual(CENTRED);
+        expect(vertex(byClass(esm(), 'Event')).fieldCompartments).toBeUndefined();
     });
 });
 
@@ -1735,7 +1736,7 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: '997f12afe5b58db0', DemoESM: 'a9bd2541f1f94b09', DemoFlowB: '58aeb562c91a731f',
+            DemoPEST: '99e03cfb52856542', DemoPetri: '997f12afe5b58db0', DemoESM: 'e5af5300d2a65474', DemoFlowB: '58aeb562c91a731f',
         });
     });
 });

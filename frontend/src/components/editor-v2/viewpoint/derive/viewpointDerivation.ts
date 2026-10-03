@@ -162,10 +162,13 @@ const NO_COMPARTMENT: ReadonlySet<string> = new Set(['circle', 'ellipse', 'diamo
 const SOURCE_NAME = /src|source|from/;
 const TARGET_NAME = /tgt|target|to$|dest|next/;
 
-/** The attribute rows, as `defaultObjectViewIR` writes them; a new object per view, nothing shared. */
-const attributesCompartment = (): FieldCompartmentSpec => ({
+/**
+ * The attribute rows, as `defaultObjectViewIR` writes them; a new object per view, nothing shared. `hidesName`:
+ * the box's title is the name label, which already shows the identity slot, so its row is left out (P-2026-10-03-1300).
+ */
+const attributesCompartment = (hidesName = false): FieldCompartmentSpec => ({
     id: 'attributes',
-    source: { from: 'attributes' },
+    source: hidesName ? { from: 'attributes', exclude: ['name'] } : { from: 'attributes' },
     rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
     separator: true,
 });
@@ -384,8 +387,10 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         const form = shapeSpec.form as string;
         const solid = preset?.values.fill !== undefined;
         const boxed = !NO_COMPARTMENT.has(form) && !solid;
-        // A final state holds no behaviour (UML), so the Terminal box takes no compartment.
-        const compartment = boxed && !terminalBox && attributesOf(c.id).length > 0;
+        // A final state holds no behaviour (UML), so the Terminal box takes no compartment. A box that shows its
+        // name as the title leaves the identity slot's row out, and a box with no other slot has no compartment.
+        const hidesName = !nameless && attributesOf(c.id).some(isIdentity);
+        const compartment = boxed && !terminalBox && attributesOf(c.id).some(a => !(hidesName && isIdentity(a)));
         shapeSpec.labels = [{ position: boxed ? (flow && !compartment ? 'center' : 'top') : 'bottom', source: { from: 'intrinsic', prop: 'name' } }];
         // A label sits inside the shape at every position, so on the ink it takes the
         // text-on-dark token (measured on the lane probe: the default text did not read).
@@ -401,7 +406,7 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label,
             shape: shapeSpec,
         };
-        if (compartment) ir.fieldCompartments = [attributesCompartment()];
+        if (compartment) ir.fieldCompartments = [attributesCompartment(hidesName)];
         out.push({ classId: c.id, className: c.name, rule: preset ? `role:${role}` : 'structure:default', ir });
     }
     return out;
@@ -668,7 +673,8 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: { [v.className]: v.classId },
             exclusive: true, label: `View for ${v.className}`, shape,
         };
-        if (compartment) ir.fieldCompartments = [attributesCompartment()];
+        // The name label is the title of all three, so the identity slot's row is left out.
+        if (compartment) ir.fieldCompartments = [attributesCompartment(attributesOf(v.classId).some(isIdentity))];
         return { ...v, ir };
     });
 }
