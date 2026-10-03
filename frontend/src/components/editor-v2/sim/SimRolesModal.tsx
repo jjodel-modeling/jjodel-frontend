@@ -54,7 +54,7 @@ import type { StateGroup } from './simRoleStatus';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import {
     bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus,
-    isFirstOpen, isModified, matchLine, multiRow, multiRowLabels, pillTitle, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
+    isFirstOpen, isModified, multiRow, multiRowLabels, pillTitle, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
     withAdded, withPrimary, withProfileName, withRemoved, withRoleMode,
 } from './simRolesDraft';
 import type { DraftEdits, DraftInput, MultiRow, RoleBadge, RowValue } from './simRolesDraft';
@@ -63,7 +63,8 @@ import { roleDescriptor } from '../../../model/simulation/roleCatalog';
 import { systemProfile, validateProfile } from '../../../model/simulation/simProfiles';
 import { defaultInitialOf, encodeStateAttributes, initialFollowingDomain, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
 import type { Domain } from '../../../model/simulation/netTypes';
-import { declarationForm, formPatch } from './simInputs';
+import { declarationForm, formPatch, spacePatch } from './simInputs';
+import { assignedRoles } from './simLabels';
 import { runBag } from './simBridge';
 import {
     declarationKind, metamodelModels, rowUsage, stateAccessPath, stateRowFlags, stateUses, usageLabel, usageTexts,
@@ -189,8 +190,8 @@ function patchOf(row: StateAttributeRecord, field: DeclField, typed: string): Pa
         // A derived row has no initial (R-SIM-72); back to stored, the equation goes; an input has neither (R-SIM-88).
         case 'form': return formPatch(row, typed);
         case 'metaclass': return { metaclass: typed === '' ? null : typed };
-        // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed.
-        case 'space': return typed === 'presentation' ? { space: 'presentation', domain: null } : { space: 'semantic', domain: row.domain ?? { kind: 'boolean' } };
+        // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed and a stored row's initial follows it.
+        case 'space': return spacePatch(row, typed);
         // The initial follows the domain: a new kind starts at its default, a bound or a literal keeps a value still inside.
         case 'kind': {
             const domain: Domain = typed === 'range' ? { kind: 'range', min: 0, max: 1 }
@@ -599,7 +600,8 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const status = draftStatus(input, sketch);
     const sections = roleSections(profile, edited);
     const defects = validateProfile(profile);
-    const match = matchLine(bindings);
+    // The roles assigned now, by hand, stored or proposed: a manual assign or clear moves the line (P-2026-10-03-1630).
+    const match = assignedRoles(input, proposals);
     const help = boundHelp(proposals);
     // The actions write state attributes and none is declared: the first firing would halt (R-SIM-81(3), G9).
     // Unreadable (D6) shows nothing, not the hint for an empty declaration (S8); a draft's rows are always readable.
@@ -714,7 +716,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                     <div className="sim-roles-modal__attrs" role="list" aria-label={names.strip}>
                         {row.shown.map(id => (
                             <span className={`sim-roles-modal__attr sim-roles-modal__attr--${v.source}`} role="listitem" key={id} title={nameOf(id)}>
-                                <span className="sim-roles-modal__attr-name">{nameOf(id)}</span>
+                                <span className="sim-roles-modal__attr-name" title={nameOf(id)}>{nameOf(id)}</span>
                                 <button
                                     type="button"
                                     className="sim-roles-modal__attr-remove"
@@ -976,8 +978,8 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                     </>
                 ) : (
                     <>
-                        <span title="Matched from the metamodel's structure, then by name; Apply writes the proposals on the roles not set.">
-                            {`${match.matched} of ${match.total} roles matched`}
+                        <span title="Set here, stored, or matched from the metamodel's structure, then by name; Apply writes the proposals on the roles not set.">
+                            {`${match.assigned} of ${match.total} roles assigned`}
                         </span>
                         <span>·</span>
                         <button type="button" className="sim-roles-modal__link" onClick={() => setMatchOff(true)}>Undo</button>

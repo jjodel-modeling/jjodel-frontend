@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { declarationForm, formPatch, inputRows, inputValues, parseInputValue } from '../simInputs';
+import { declarationForm, formPatch, inputRows, inputValues, parseInputValue, spacePatch } from '../simInputs';
 import type { InputRead } from '../../../../model/simulation/netTypes';
 import type { StateAttributeRecord } from '../../../../model/simulation/stateAttributesCodec';
 
@@ -72,5 +72,52 @@ describe('the form of a Data row: stored, derived or input', () => {
         expect(declarationForm(apply(input, 'derived'))).toBe('derived');
         expect(apply(STORED, 'derived')).toMatchObject({ initial: '', equation: '' });
         expect(apply({ ...STORED, initial: '', equation: 'x' }, 'stored').equation).toBeUndefined();
+    });
+
+    // P-2026-10-03-1630, point 4: the initial a stored row gets back is its domain's (`defaultInitialOf`, P-2026-10-03-1520).
+    const derived = (domain: StateAttributeRecord['domain'], space: StateAttributeRecord['space'] = 'semantic'): StateAttributeRecord =>
+        ({ name: 'd', metaclass: null, space, domain, initial: '', equation: 'x' });
+
+    it('derived to stored on boolean, range and enum: the domain\'s default, never empty (mutants: the initial left out, a fixed false)', () => {
+        expect(apply(derived({ kind: 'boolean' }), 'stored')).toMatchObject({ initial: 'false', equation: undefined });
+        expect(apply(derived({ kind: 'range', min: 3, max: 9 }), 'stored').initial).toBe('3');
+        expect(apply(derived({ kind: 'range', min: -3, max: 5 }), 'stored').initial).toBe('-3');
+        expect(apply(derived({ kind: 'enum', literals: ['B', 'C'] }), 'stored').initial).toBe('B');
+    });
+
+    it('input to stored takes the default too; a presentation row, with no domain, takes the boolean\'s (mutant: the domain read without its fallback)', () => {
+        expect(apply(apply(STORED, 'input'), 'stored').initial).toBe('0');
+        expect(apply(derived(null, 'presentation'), 'stored')).toMatchObject({ initial: 'false', domain: null, space: 'presentation' });
+    });
+
+    it('a stored row chosen as stored keeps the initial typed (mutant: the default written on every stored)', () => {
+        expect(apply(STORED, 'stored').initial).toBe('1');
+    });
+});
+
+describe('the space of a Data row (P-2026-10-03-1630, point 5)', () => {
+    const PRES: StateAttributeRecord = { name: 'p', metaclass: null, space: 'presentation', domain: null, initial: 'true' };
+    const apply = (row: StateAttributeRecord, space: string): StateAttributeRecord => ({ ...row, ...spacePatch(row, space) });
+
+    it('presentation to semantic: a domain, boolean without one, and an initial inside it is kept (mutant: the default written over a value)', () => {
+        expect(apply(PRES, 'semantic')).toMatchObject({ space: 'semantic', domain: { kind: 'boolean' }, initial: 'true' });
+    });
+
+    it('presentation to semantic: an initial outside the domain becomes its default (mutant: the stale initial kept)', () => {
+        expect(apply({ ...PRES, initial: "'red'" }, 'semantic').initial).toBe('false');
+        expect(apply({ ...PRES, initial: '7' }, 'semantic').initial).toBe('false');
+        expect(apply({ ...PRES, initial: '' }, 'semantic').initial).toBe('false');
+        const range = { ...PRES, domain: { kind: 'range' as const, min: 1, max: 4 }, initial: '9' };
+        expect(apply(range, 'semantic')).toMatchObject({ domain: range.domain, initial: '1' });
+        expect(apply({ ...range, initial: '3' }, 'semantic').initial).toBe('3');
+    });
+
+    it('a derived row has no initial whatever its space (R-SIM-72) (mutant: the initial added to a derived row)', () => {
+        const row: StateAttributeRecord = { ...PRES, initial: '', equation: "'red'" };
+        expect(spacePatch(row, 'semantic')).toEqual({ space: 'semantic', domain: { kind: 'boolean' } });
+    });
+
+    it('semantic to presentation drops the domain and keeps the initial, as before', () => {
+        expect(spacePatch({ ...PRES, space: 'semantic', domain: { kind: 'boolean' } }, 'presentation')).toEqual({ space: 'presentation', domain: null });
     });
 });
