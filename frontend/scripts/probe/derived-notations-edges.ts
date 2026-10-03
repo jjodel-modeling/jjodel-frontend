@@ -237,7 +237,9 @@ async function measure(page: Page, m1: string) {
             const covered = top && !span.contains(top) && top !== span ? (top.closest('.react-flow__node')?.getAttribute('data-id') ?? top.className?.toString().slice(0, 40) ?? top.tagName) : null;
             return { kind: [...el.classList].filter((c) => c.startsWith('edge-')).join('.'), text: (span.textContent ?? '').trim(), visible: vis && r.width > 0, covered, x: fx(r.left), y: fy(r.top), w: r.width / zoom, h: r.height / zoom };
         });
-        return { zoom, calib: { OX, OY, spread }, nodes, edges, labels };
+        // Q7: the event objects of the model (the tree lists a model's objects, never the canvas: TreeViewContent buildInstanceForest).
+        const events = { inModel: Object.values(idl).filter((d: any) => d?.className === 'DObject' && idl[d.instanceof]?.name === 'Event').length };
+        return { zoom, calib: { OX, OY, spread }, nodes, edges, labels, events };
     }, paneSel(m1));
 }
 
@@ -442,7 +444,7 @@ function analyse(m: any) {
     });
     const box = (ns: any[]) => ns.length ? { x0: Math.min(...ns.map((n) => n.x)), y0: Math.min(...ns.map((n) => n.y)), x1: Math.max(...ns.map((n) => n.x + n.w)), y1: Math.max(...ns.map((n) => n.y + n.h)) } : null;
     const nodes = m.nodes.map((n: any) => ({ name: n.name, cls: n.cls, form: n.form, x: n.x, y: n.y, w: n.w, h: n.h, cx: n.x + n.w / 2, cy: n.y + n.h / 2, rows: n.rows, entry: n.entry, handles: n.handles.map((h: any) => `${h.type}:${h.id}`) }));
-    return { calib: m.calib, zoom: m.zoom, nodes, edges, crossings: pairs, labelsByEdge: labelOf, sharedEnds: shared, bars, bbox: box(m.nodes), labels: m.labels.filter((l: any) => l.visible) };
+    return { calib: m.calib, zoom: m.zoom, events: m.events, nodes, edges, crossings: pairs, labelsByEdge: labelOf, sharedEnds: shared, bars, bbox: box(m.nodes), labels: m.labels.filter((l: any) => l.visible) };
 }
 
 /** The MEAS lines of one measured phase, the same online and offline (DNE_ANALYSE). */
@@ -499,6 +501,11 @@ function acceptance(a: any) {
         slopes: a.edges.filter((e: any) => e.lineSlopes.length).map((e: any) => `${e.name} ${JSON.stringify(e.lineSlopes)}`),
         spineBends: spineEdges.length ? spineEdges.reduce((n: number, e: any) => n + (e.bends ?? 99), 0) : null,
         hiddenLabels: Object.values<string[]>(a.labelsByEdge).flat().filter((l) => l.includes(' under ')).length,
+        // Q7: the nodes drawn, the Event boxes among them, the Event objects in the model and in the tree, the canvas height.
+        drawn: a.nodes.length,
+        eventBoxes: a.nodes.filter((n: any) => n.cls === 'Event').length,
+        events: a.events ?? null,
+        height: a.bbox ? Math.round(a.bbox.y1 - a.bbox.y0) : null,
         // Q2: the connected handles of every bar, and the drawn ends on it, on a short side.
         barHandles: (() => {
             const bars = a.nodes.filter((n: any) => n.form === 'bar');
