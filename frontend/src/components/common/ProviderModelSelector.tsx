@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
+import { AIEvents } from '../../events/registry';
 import './ProviderSelector.scss';
 import './ProviderModelSelector.scss';
 import {
@@ -47,6 +48,20 @@ export function ProviderModelSelector({
 
     // Only providers with valid API keys appear in the sub-select
     const enabledProviders = useMemo(() => JodieConfig.getEnabledProviders(), [tick]);
+
+    // Re-read when providers or preferences change outside this menu. A key saved in Settings fires
+    // PROVIDER_CHANGED only (AIConfig.save); a preference set elsewhere fires SETTINGS_CHANGED
+    // (AIConfig.setPreferred). Without them the menu kept «Configure a provider» until it remounted
+    // (#168, measured 2026-10-03).
+    useEffect(() => {
+        const reread = () => setTick(t => t + 1);
+        window.addEventListener(AIEvents.SETTINGS_CHANGED, reread);
+        window.addEventListener(AIEvents.PROVIDER_CHANGED, reread);
+        return () => {
+            window.removeEventListener(AIEvents.SETTINGS_CHANGED, reread);
+            window.removeEventListener(AIEvents.PROVIDER_CHANGED, reread);
+        };
+    }, []);
 
     // Provider used for the popover's model list. Starts from selectedProvider but may diverge
     // when the user switches providers inside the popover (before picking a model).

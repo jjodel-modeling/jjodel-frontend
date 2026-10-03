@@ -8,8 +8,11 @@ import { ProviderModelSelector } from '../common/ProviderModelSelector';
 import { TAIProvider, AIProvider, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CONSOLE_MODES, CONSOLE_MODE_LABELS } from '../../types/jodie';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
-import { JjodelEvents } from '../../events/registry';
+import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { getActiveModel } from '../../jjscript/executor/utils';
+import { isConsumerMode } from '../environment/consumerMode';
+import { describeConsumerSelection, getConsumerSelection } from '../environment/consumerJodieContext';
+import { consumerFocusLabel } from './consumerVoice';
 
 
 interface JodieHeaderProps {
@@ -140,6 +143,42 @@ function useMetamodelContext(): MetamodelContext {
     return context;
 }
 
+/** #168 J7 — what the consumer is looking at in the Configurator, as the chat line says it. */
+function readConsumerFocus(): { text: string; title: string } | null {
+    if (!isConsumerMode()) return null;
+    try {
+        return consumerFocusLabel(describeConsumerSelection(getConsumerSelection(), (store.getState() as any).idlookup));
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * The consumer's focus, refreshed when the Configurator publishes a selection, when the store
+ * changes (a rename) and when the hash changes (`&profile=` added or removed).
+ */
+function useConsumerFocus(): { text: string; title: string } | null {
+    const [focus, setFocus] = useState(() => readConsumerFocus());
+
+    useEffect(() => {
+        const refresh = () => {
+            const next = readConsumerFocus();
+            setFocus(prev => (prev?.text === next?.text && prev?.title === next?.title ? prev : next));
+        };
+        refresh();
+        const unsubscribe = store.subscribe(refresh);
+        window.addEventListener(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, refresh);
+        window.addEventListener('hashchange', refresh);
+        return () => {
+            unsubscribe();
+            window.removeEventListener(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, refresh);
+            window.removeEventListener('hashchange', refresh);
+        };
+    }, []);
+
+    return focus;
+}
+
 export function JodieHeader({
     activeProvider,
     onProviderChange,
@@ -159,6 +198,9 @@ export function JodieHeader({
     canClearCurrentMode,
 }: JodieHeaderProps): JSX.Element {
     const context = useMetamodelContext();
+    // #168 J7: the consumer has one mode and sees its focus, not a metamodel.
+    const consumer = isConsumerMode();
+    const consumerFocus = useConsumerFocus();
     const aliveTitle = isAlive
         ? 'AI provider connected'
         : 'No AI provider configured. Open Settings to add one.';
@@ -187,27 +229,38 @@ export function JodieHeader({
                 </div>
 
                 {/* Console mode switcher — segmented pill, always visible.
-                    All three options shown → active highlight moves, no layout shift. */}
-                <div className="jodie-mode-switch" role="tablist" aria-label="Console mode">
-                    {CONSOLE_MODES.map(m => (
-                        <button
-                            key={m}
-                            type="button"
-                            role="tab"
-                            aria-selected={consoleMode === m}
-                            className={`jodie-mode-switch__opt${consoleMode === m ? ' jodie-mode-switch__opt--active' : ''}`}
-                            onClick={() => onConsoleModeChange(m, 'pill')}
-                            title={`Switch to ${CONSOLE_MODE_LABELS[m]} (Cmd+J / Ctrl+.)`}
-                        >
-                            {CONSOLE_MODE_LABELS[m]}
-                        </button>
-                    ))}
-                </div>
+                    All three options shown → active highlight moves, no layout shift.
+                    #168 J7: not in the consumer, who has natural language only. */}
+                {!consumer && (
+                    <div className="jodie-mode-switch" role="tablist" aria-label="Console mode">
+                        {CONSOLE_MODES.map(m => (
+                            <button
+                                key={m}
+                                type="button"
+                                role="tab"
+                                aria-selected={consoleMode === m}
+                                className={`jodie-mode-switch__opt${consoleMode === m ? ' jodie-mode-switch__opt--active' : ''}`}
+                                onClick={() => onConsoleModeChange(m, 'pill')}
+                                title={`Switch to ${CONSOLE_MODE_LABELS[m]} (Cmd+J / Ctrl+.)`}
+                            >
+                                {CONSOLE_MODE_LABELS[m]}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {/* Metamodel Context Indicator */}
+            {/* Metamodel Context Indicator. #168 J7: in the consumer, the focus of the
+                Configurator in the chat line's words, or nothing. */}
             <div className="jodie-header-center">
-                {context.hasProject ? (
+                {consumer ? (
+                    consumerFocus && (
+                        <div className="jodie-metamodel-indicator" title={consumerFocus.title}>
+                            <i className="bi bi-eye" />
+                            <span className="jodie-metamodel-name">{consumerFocus.text}</span>
+                        </div>
+                    )
+                ) : context.hasProject ? (
                     context.metamodelName ? (
                         <div className="jodie-metamodel-indicator" title={`Target: ${context.metamodelName}${context.metamodelCount > 1 ? ` (${context.metamodelCount} metamodels)` : ''}`}>
                             <i className="bi bi-diagram-3" />

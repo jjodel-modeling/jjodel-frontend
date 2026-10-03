@@ -14,6 +14,9 @@ import { Selectors } from '../../redux/selectors/selectors';
 import { ProviderIcon } from '../icons';
 import { useAvatar } from '../../hooks/useAvatar';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
+import { findProfile } from '../../joiner/environmentConfig';
+import { activeProfileId, isConsumerMode } from '../environment/consumerMode';
+import { CONSUMER_NO_SCOPE, CONSUMER_PROVIDER_INVITE, consumerGreeting } from './consumerVoice';
 
 interface ChatMessagesProps {
     messages: ConsoleEntry[];
@@ -30,6 +33,10 @@ interface ChatMessagesProps {
     onOfferAsk?: (messageId: string, input: string) => void;
     /** Parse-error card [Chiedi a Jjodie] (D6): one-shot LLM for the input, no mode change. */
     onAskFromError?: (input: string) => void;
+    /** #168 J7: opens the settings on Providers, from the consumer's invitation. */
+    onOpenSettings?: () => void;
+    /** #168 J7: no AI provider is configured; the consumer's welcome invites to set one up. */
+    providerMissing?: boolean;
 }
 
 type ExtractedCodeBlock = { language: string | null; content: string };
@@ -74,9 +81,12 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
         [onJjScriptExecute, scope]
     );
 
+    // #168 J7: the consumer has no console mode to promote into, and no «Source» to read.
+    const consumer = isConsumerMode();
+
     // Promotion is shown only on real assistant replies (not user messages, not
     // JjScript success/error feedback) and only when the reply contains a fenced code block.
-    const promoteCodeBlock = !isUser && !isJjScript ? extractFirstCodeBlock(message.content) : null;
+    const promoteCodeBlock = !isUser && !isJjScript && !consumer ? extractFirstCodeBlock(message.content) : null;
 
     // Offer card: the input parsed as a complete JjScript command in Jjodie mode.
     // Rendered instead of a normal bubble; nothing runs until a button is tapped.
@@ -176,6 +186,7 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                             content={message.content}
                             isUser={isUser}
                             onJjScriptExecute={onJjScriptExecute ? executeInScope : undefined}
+                            showSourceToggle={!consumer}
                         />
                     </div>
                 </div>
@@ -327,7 +338,51 @@ function TypingIndicator(): JSX.Element {
     );
 }
 
-export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestInCode, onAskJjodie, onOfferExecute, onOfferAsk, onAskFromError }: ChatMessagesProps): JSX.Element {
+/**
+ * #168 J7 — the empty-chat welcome of the consumer: the project and the profile by name, what can
+ * be asked, and, without an AI provider, the invitation to set one up (D1: the key is the user's).
+ * The developer's classes, so no new style.
+ */
+function ConsumerWelcome({ providerMissing, onOpenSettings }: { providerMissing?: boolean; onOpenSettings?: () => void }): JSX.Element {
+    let projectName: string | undefined;
+    let profileName: string | undefined;
+    try {
+        projectName = (L.fromPointer(DUser.current) as LUser)?.project?.name;
+        profileName = findProfile((store.getState() as any).idlookup, activeProfileId())?.name;
+    } catch { /* no project yet: the greeting falls back */ }
+    const greeting = consumerGreeting(projectName, profileName);
+    return (
+        <div className="jodie-welcome">
+            <div className="jodie-welcome-icon">
+                <i className="bi bi-chat-heart" />
+            </div>
+            <h3>{greeting.title}</h3>
+            <p>{greeting.intro}</p>
+            <ul>
+                {greeting.items.map(item => (
+                    <li key={item.text}><i className={`bi ${item.icon}`} /> {item.text}</li>
+                ))}
+            </ul>
+            {providerMissing ? (
+                <>
+                    <p>{CONSUMER_PROVIDER_INVITE.text}</p>
+                    {/* The wrapper is the welcome's flex item, so the column centres it: the
+                        button's own `align-self: flex-start` (JodieWindow.css) no longer applies. */}
+                    <div>
+                        <button className="jodie-promote-btn" onClick={onOpenSettings}>
+                            <i className="bi bi-key" />
+                            <span>{CONSUMER_PROVIDER_INVITE.action}</span>
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <p>{greeting.hint}</p>
+            )}
+        </div>
+    );
+}
+
+export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestInCode, onAskJjodie, onOfferExecute, onOfferAsk, onAskFromError, onOpenSettings, providerMissing }: ChatMessagesProps): JSX.Element {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when new messages arrive
@@ -420,7 +475,10 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
             return [{
                 command: commands[0] || '',
                 success: false,
-                message: 'Jjodie answered with no metamodel or model in focus, so this script has no scope to run in. Open the metamodel or model you want to change, then ask Jjodie again.',
+                // #168 J7: the consumer works in the Configurator, not on metamodels and models.
+                message: isConsumerMode()
+                    ? CONSUMER_NO_SCOPE
+                    : 'Jjodie answered with no metamodel or model in focus, so this script has no scope to run in. Open the metamodel or model you want to change, then ask Jjodie again.',
             }];
         }
 
@@ -463,7 +521,9 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
 
     return (
         <div className="jodie-messages">
-            {messages.length === 0 ? (
+            {messages.length === 0 && isConsumerMode() ? (
+                <ConsumerWelcome providerMissing={providerMissing} onOpenSettings={onOpenSettings} />
+            ) : messages.length === 0 ? (
                 <div className="jodie-welcome">
                     <div className="jodie-welcome-icon">
                         <i className="bi bi-chat-heart" />

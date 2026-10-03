@@ -39,6 +39,8 @@ import InstanceDetail, { type DetailPermission } from '../abstract/tabs/Instance
 import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
 import { createM1 } from '../../pages/components/Navbar';
 import { EnvGenEvents } from '../../events/registry';
+import { consumerFocusOf, consumerSelectionOf, setConsumerSelection } from './consumerJodieContext';
+import { configuratorTargetOf } from '../Jodie/consumerProposalModel';
 import type { DeleteOptions, DeletePreflight, NavState } from '../../jjform';
 import './configuratorTab.scss';
 
@@ -51,6 +53,9 @@ export interface ConfiguratorTabProps {
      *  window opened from the sidebar. */
     variant?: 'overlay' | 'page';
 }
+
+/** #168 J4 — how long a request to show an element waits for the store to hold it. */
+const SELECT_INSTANCE_WAIT_MS = 3000;
 
 /** The `profile` hash param, read via the app's canonical parser (same one `getProjectID_URL` uses). */
 function profileIdFromUrl(): string | null {
@@ -163,6 +168,62 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
      *  Data Manager clears it from its selection gestures. */
     const [nav, setNav] = useState<NavState | null>(null);
     useEffect(() => { setNav(null); }, [selectedInstanceId]);
+
+    // #168 J4 — after «Apply», Jodie's proposal asks the page to show the element it created or
+    // changed (`EnvGenEvents.CONFIGURATOR_SELECT_INSTANCE`): its row, or the row of its nearest
+    // top-level ancestor drilled down to it (`configuratorTargetOf`). The effect below applies one
+    // state per commit (type, then row, then drill-in) and is declared after the two reset effects
+    // above, so that in the commit where they clear the row or the drill-in its own write comes
+    // last. The run may still be landing in the store: a request that does not resolve yet waits
+    // for the next `idlookup`, until its deadline.
+    const pendingSelectRef = useRef<{ instanceId: string; deadline: number } | null>(null);
+    const [selectTick, setSelectTick] = useState(0);
+    useEffect(() => {
+        if (!isPage) return;
+        const onSelect = (e: Event) => {
+            const instanceId = (e as CustomEvent).detail?.instanceId;
+            if (typeof instanceId !== 'string') return;
+            pendingSelectRef.current = { instanceId, deadline: Date.now() + SELECT_INSTANCE_WAIT_MS };
+            setSelectTick((t) => t + 1);
+        };
+        window.addEventListener(EnvGenEvents.CONFIGURATOR_SELECT_INSTANCE, onSelect);
+        return () => window.removeEventListener(EnvGenEvents.CONFIGURATOR_SELECT_INSTANCE, onSelect);
+    }, [isPage]);
+    useEffect(() => {
+        const pending = pendingSelectRef.current;
+        if (!isPage || !pending) return;
+        if (Date.now() > pending.deadline) { pendingSelectRef.current = null; return; }
+        const target = configuratorTargetOf(idlookup, topTypeIds, pending.instanceId,
+            (classId) => resolveTypePermission(profile, classId) === 'hidden');
+        if (!target) return;
+        if (selectedTypeId !== target.typeId) { setSelectedTypeId(target.typeId); return; }
+        if (selectedInstanceId !== target.rowId) { setSelectedInstanceId(target.rowId); return; }
+        setNav(target.nav);
+        pendingSelectRef.current = null;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPage, idlookup, selectedTypeId, selectedInstanceId, selectTick]);
+
+    // #168 J1 — what is on screen, for Jodie: the element in the detail (the breadcrumb's current
+    // step after a drill-in, otherwise the selected row), its exact type, its model
+    // (`consumerFocusOf`). Written to `consumerJodieContext` (a Jodie that recomputes later still
+    // reads it) and announced by event. The page only: the overlay is the developer's, who Jodie
+    // follows through the Dock. Primitive deps, so a store update that changes none of them is silent.
+    const focus = consumerFocusOf(idlookup, profile, selectedTypeId, selectedInstanceId, nav);
+    const selection = consumerSelectionOf(idlookup, projectModelIds, focus.typeId, focus.instanceId);
+    useEffect(() => {
+        if (!isPage) return;
+        const detail = { typeId: selection.typeId, instanceId: selection.instanceId, modelId: selection.modelId };
+        setConsumerSelection(detail);
+        window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, { detail }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPage, selection.typeId, selection.instanceId, selection.modelId]);
+    useEffect(() => {
+        if (!isPage) return;
+        return () => {
+            setConsumerSelection(null);
+            window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, { detail: null }));
+        };
+    }, [isPage]);
 
     /** The detail column is the element that scrolls: Back restores its offset. */
     const detailRef = useRef<HTMLDivElement | null>(null);
