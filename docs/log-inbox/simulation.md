@@ -153,3 +153,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: Lane C checked visually on its branch at 02:31 and 02:49; take-trunk P-2026-10-03-0304 changed docs and one test only; 9 gates green, 6883 tests; no visual probe on the merged tree, Alfonso round on 3001 is the check
 **Notes**: Rollback tag `pre-sim-state-face-P-2026-10-03-0345` on `f564a83d6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0345/result.json`.
 **Prompt document name**: 2026-10-03 03:45
+
+## 2026-10-03 — fix: the run inspector's trace scrolls in six rows (P-2026-10-03-1015)
+**Prompt**: `claude_2026-10-03_1015_prompt_sim_inspector_trace_scroll.md`, light tier, fast lane, `~/jjodel-w-simtrace` on `sim-trace-scroll`: the inspector's trace a fixed scroll area showing the latest six steps, the card's height free of the trace, the newest step in view on a commit unless the reader scrolled down, a chosen step scrolled into view, «N steps» kept.
+**Files touched**: code `f507a382f`: `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimInspector.scss`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 01:20
+**Causa**: (a)
+**Regressions**: unknown. Typecheck 14 errors, the §17 set; sim suites and `irActivityRender.test.ts` 1019/1019 in 30 files; build exit 0, chunk-size warning only; lane probe on 3072, light, 1600×1000, DemoESM, 20/20. Not run: the dark theme, the rail collapsed, the other three scenes, Lane C's probe.
+**Out-of-scope changes**: yes — no file outside DOVE; one write outside the worktree: the baseline probe log renamed to `probe-_tmp_simtrace_probe.base.log` in the lane folder `~/.jjodel-lanes/P-2026-10-03-1015/`, which `lane-run` writes.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 GO 2026-10-03 on the crops at step 12 and at step 12 viewing step 1 (trace area six rows, newest first, scrollable, viewed row in view; card 442 px at steps 2, 6, 12 per the probe); lane probe 20/20 on 3072, light, 1600×1000; crops `docs/discovery/harness/_tmp_simtrace_step3.png`, `_step12.png`, `_step12_viewed.png`, the `_base_` ones before the fix, gitignored
+**Notes**: Card 442 px at steps 0..12 and 14, before 332..596; at steps 2, 6, 12: 442, 442, 442. Trace area 132 px (6 × 22, the row measured), scrollHeight 286 at step 12. Lane's choice: Back to live also scrolls the live row into view, as a step shown without a commit; the row's focus outline moves inside it. The scrollbar is not painted in the crops (Playwright hides it), its 3 px gutter measured. Corregge 0120: its prompt left the trace unbounded.
+**Prompt document name**: 2026-10-03 10:15

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1015
 Chat: C-2026-10-02-2340
 Lane: fast (two files, the inspector's trace list, visual check by the chat). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane sim-trace-scroll · f507a382f · the trace a scroll area 6 × 22 px at every step, the card 442 px from step 0 to 12 (before 332..596), the newest step in view on a commit, the rows kept where the reader scrolled down, a chosen step and Back to live scrolled into view; typecheck 14 (the §17 set), sim suites and irActivityRender 1019/1019, build exit 0, lane probe on 3072 (light, 1600×1000, DemoESM) 20/20; crops docs/discovery/harness/_tmp_simtrace_*.png (gitignored) · verifica visiva passata 2026-10-03 (chat, unattended, RC-23: crops at step 12 and at step 12 viewing step 1, trace area six rows, newest first, scrollable, viewed row in view; card 442 px at steps 2, 6, 12 per the probe) · non fuso
 
 Worktree: `~/jjodel-w-simtrace`, branch `sim-trace-scroll`, cut by the chat from `alfonso-frontend-jjtl` at `4d190162f`, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 
