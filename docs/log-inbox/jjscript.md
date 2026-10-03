@@ -71,3 +71,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: interact probe on port 3014 from the trunk `cd348df03` against the branch's after2 dumps, ALL GREEN on every phase (scenes 2 and 4: rest, drag, resize, rename, tabs, m2-rest, m2-added, m2-deleted; max path delta 3e-5). Two FAILs of «delete restored the pane» (scenes 2 and 4), nodes and edges equal to rest, dumps identical to after2: the residual handle slot, the Low ticket of P-2026-10-02-1450, pre-existing. `npm run smoke` targets localhost:3000 (down): its RED does not count. Alfonso in the morning digest.
 **Notes**: No rollback tag at the merge: the prompt named none (lane-run tags only in `--direct` mode), pre-merge tip `69265f7fb`. Tag `pre-hidden-tab-loop` created on `69265f7fb` after the chat's GO (RC-31). No union resolution. Probes on the merge-tree in `docs/log-inbox/jjscript.md`, each once: the T9 fix entry and its two tickets. Expected vitest total stated before the merge, measured read-only on `08f442052` in `~/jjodel-w-hiddenloop`.
 **Prompt document name**: 2026-10-03 03:08
+
+## 2026-10-03 — chore(probe): tree-connector crossings follow the edge path registry (P-2026-10-03-1002)
+**Prompt**: `claude_2026-10-03_1002_prompt_tree_crossing_scene.md`, full lane on `~/jjodel-w-treecross`, branch `tree-crossing-scene`. The `useTreeLayout` side of the registry version (P-2026-10-02-1450) was wired but unmeasured: build a scene where an edge crosses a tree connector, probe it, verdict with numbers. GO: close with the probe and fixture as acceptance, no app code.
+**Files touched**: `9c9fd905c`: `frontend/scripts/probe/tree-crossing.ts` (new), `frontend/scripts/probe/fixtures/tree-crossing.jjodel` (new). `71a45088f`: `docs/discovery/discovery_2026-10-03_tree_crossing_scene.md` (new). Closure commit: the report's Phase 2 addendum, this file, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. No `src` file changed (`git diff fba1549ee` empty under `frontend` outside the probe). typecheck 14, the §17 set; typecheck:scripts and check:scripts exit 0; vitest `src/components/editor-v2` 120 files / 2938 tests passed (probe folder: no tests); build exit 0; demo scenes 8/8 panes identical across two dumps, interact 16/16 identical to the trunk dump at `cd348df03`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3017, unattended: seed 62/62, fixture 59/59; the chat's visual check is its own
+**Notes**: Verdict yes: 11 states (6 pointer, 4 keyboard), drawn bus arcs = registry oracle = geometry; 0 editor and edge renders/s at rest. Bench: `mut-bar` killed 6/11 (keyboard moves, re-anchoring releases), `mut-trunk` equivalent (trunk horizontal at most 4 px). Corregge is a dash: this measures P-2026-10-02-1450's declared gap, it fixes no result. Report and addendum.
+**Prompt document name**: 2026-10-03 10:02
+
+## 2026-10-03 — ticket: the DemoFlowB metamodel loses its edge lanes after an M1 session
+**Ticket**: In `scene_4_DemoFlowB`, the metamodel pane draws the two references that end on one class's right side, at (194,64) and (194,78), in separate lanes when dumped right after opening (verticals x=218 and 222.5, horizontals y=617.5 and 622), but on one line (x=218, y=622, about 400 px and 300 px of overlap) after M1 is opened and worked and the M2 tab is brought back (interact `m2-rest`). Deterministic both ways; the trunk dump at `cd348df03` shows the overlap too. The step that drops the lanes is not isolated.
+**Priority**: medium
+**Found in**: P-2026-10-03-1002
+**Detail**: docs/discovery/discovery_2026-10-03_tree_crossing_scene.md
