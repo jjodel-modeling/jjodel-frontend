@@ -33,3 +33,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: 12-run check on the branch tip 7bd293e37 (localhost:3002): runs 1-9 at 2.1-2.7 s, runs 10-12 at 3.0-5.5 s against 9-12 s on the trunk at run 12; edges attached on the visible canvas; four demo scenes identical per the lane dumps; the check ran on the branch tip, and the merge shares no code file with the trunk side
 **Notes**: Union in `docs/log-inbox/jjscript.md`: the trunk's preamble, then the branch's entry P-2026-10-01-2136 and ticket T9; the base's two entries, folded by `d2eb5fb83` and byte-identical in the active log, not carried back; accepted by the chat at the GO. No rollback tag: the prompt names none, pre-merge tip `9449073e4`. The tip then moved by another chat's merge of ir-corner-clip (`eaead2d71`, `3db161e62`), no file shared with this one.
 **Prompt document name**: 2026-10-02 14:45
+
+## 2026-10-03 — fix(editor-v2): T9, the idle render loop of every editor holding an edge (P-2026-10-02-1450)
+**Prompt**: `claude_2026-10-02_1450_prompt_hidden_tab_render_loop.md`, full lane on `~/jjodel-w-hiddenloop`, branch `hidden-tab-loop`. T9: a hidden metamodel editor re-rendered at ~60 Hz with nothing dispatched. Phase 1 found the loop in every editor holding an edge, hidden or visible, demo scenes included. The GO named fix B. The chat then extended the scope to the line jumps (RC-21) and asked for a scripted interaction smoke.
+**Files touched**: `a114b7bf9`, `5921a6c06`, `4afbb321a`: `frontend/scripts/probe/hidden-tab-loop.ts` (new). `c99cb758b`: `frontend/src/components/editor-v2/utils/syncPatchIdentity.ts` (new), `utils/__tests__/syncPatchIdentity.test.ts` (new). `c7380822c`: `hooks/useJjomSync.ts`. `334a7e444`: `utils/edgeUtils.ts`, `edges/UnifiedEdge.tsx`, `hooks/useTreeLayout.ts`, `utils/__tests__/edgePathRegistry.test.ts` (new). Docs: `docs/discovery/discovery_2026-10-02_hidden_tab_render_loop.md` (report and addenda). Merges of the trunk: `ec57a268d`, `1b40b2a03`. Closure commit: this file, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Everything measured is identical to the trunk tip: four scene dumps, and the 16-step interaction smoke on Petri and FlowB, with line jumps checked geometrically. typecheck 14, the known set; vitest editor-v2 120 files / 2938 tests; build; check:docs, agents, scripts, addonly green on `1b40b2a03`. No demo case crosses a tree connector, so that wiring is unmeasured.
+**Out-of-scope changes**: no. Every file was declared before it was touched, by the report or by the chat's extension (RC-21). The before servers ran from temporary detached worktrees in /tmp, removed afterwards.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — lane, scripted interaction smoke and scene dumps against the trunk tip (16/16 identical), crops md5-checked by the chat; Alfonso's own check pending in the morning digest
+**Notes**: Idle renders/s per editor: 120 → 0 hidden and visible; demo scenes 99.6-100% → 0.9-4.2% busy. two-mm run 12: 7839 → 3529 ms. Mutation benches: 16/16, 3/3 (hook, through the probe), 15/16 (one equivalent), wiring 1/1. Fix B alone made 2 line jumps stale; the first registry version looped (Maximum update depth); both fixed and measured. Report addenda.
+**Prompt document name**: 2026-10-02 14:50
+
+## 2026-10-03 — ticket: a selected edge keeps half of T9's loop running until a pane click
+**Ticket**: After fix B, an edge selected by a click still re-renders its editor at 60/s, hidden or visible, until a click on the pane. EditorV2's `setEdges` wrapper re-adds `selected` to every edge while `selectedEdgeIdRef` is set, and the sync merge never carries it, so the merged edge never equals the current one. Keeping `selected` through the merge stops it. It would also keep edges box-selected by React Flow highlighted, which today the next patch clears: Alfonso's decision (RC-26).
+**Priority**: medium
+**Found in**: P-2026-10-02-1450
+**Detail**: docs/discovery/discovery_2026-10-02_hidden_tab_render_loop.md
+
+## 2026-10-03 — ticket: adding then deleting a reference leaves a handle slot on its target class
+**Ticket**: On the M2 canvas, `create class X` + `create reference r in X type C`, then `delete class X`, leaves C's handles distributed for one more edge (Petri: bottom slots at 20/40/60% instead of 25/50/75%), and two edges stay routed to the shifted ports. It is identical on the trunk tip and on the T9 branch, so it predates T9.
+**Priority**: low
+**Found in**: P-2026-10-02-1450
+**Detail**: docs/discovery/discovery_2026-10-02_hidden_tab_render_loop.md

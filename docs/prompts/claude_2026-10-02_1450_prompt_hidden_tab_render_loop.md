@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-02-1450
 Chat: C-2026-10-01-1725
 Lane: full (two-phase: Phase 1 finds who drives the loop, Phase 2 after the chat's GO, same session). Tier: heavy.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane hidden-tab-loop · 4afbb321a · verifica visiva passata 2026-10-03 (scripted interaction smoke and scene dumps by the lane, crops md5-checked by the chat; Alfonso's own check pending in the morning digest)
 
 Worktree: `~/jjodel-w-hiddenloop`, branch `hidden-tab-loop` (cut by the chat from `jjscript-run-perf` at `7bd293e37`, so the run-slowdown probe and fix 2 are in the tree; `frontend/node_modules` symlinked as P14 allows), a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-hiddenloop`, branch `hidden-tab-loop`, `git log -1` is the docs commit that added this prompt; if any of the three differs, stop with `Outcome: blocked` and say which.
 
