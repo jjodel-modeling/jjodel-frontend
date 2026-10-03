@@ -603,7 +603,9 @@ describe('deriveViewpointIRs — without roles the documents are byte-equal to b
         // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
         // P-2026-10-03-1300: the Transition bar is declared 56 by 12 and its name sits outside, below it; the digest moved from
         // '997f12afe5b58db0' to 'c03dae1789798ecb' (the Transition document, pinned whole below, is the one that changed).
-        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('c03dae1789798ecb');
+        // P-2026-10-03-1304 (Q3): the bar's box is 56 by 56 and it declares barThickness 12; with the old box and no
+        // thickness the digest was 'c03dae1789798ecb', measured on the lane.
+        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('023be3c14750b11d');
     });
 
     it('a control-flow shape with no role bound keeps the boxes: the notation is keyed on the roles, not the shape', () => {
@@ -680,16 +682,17 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         });
     });
 
-    it('Transition, as a whole document: a flat 56 by 12 bar in the catalogue ink, the name outside below it in the label style', () => {
+    it('Transition, as a whole document: a 56 by 56 box with a 12 px bar in the catalogue ink (Q3), the name outside below it in the label style', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
-            exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 12 },
+            exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 56 },
             shape: {
                 form: 'bar', fill: INK,
                 border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' },
                 labels: [{ position: 'outside', anchor: 's', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
+                barThickness: 12,
             },
         });
     });
@@ -825,16 +828,17 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         });
     });
 
-    it('Transition, as a whole document: an upright bar 12×56 in the catalogue ink, its name outside above (R-VP-53)', () => {
+    it('Transition, as a whole document: a 56 by 56 box with a 12 px bar in the catalogue ink (Q3), its name outside above (R-VP-53)', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
-            exclusive: true, label: 'View for Transition', defaultSize: { width: 12, height: 56 },
+            exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 56 },
             shape: {
                 form: 'bar', fill: INK,
                 border: { color: INK, width: 1, style: 'solid' },
                 labels: [{ position: 'outside', anchor: 'n', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
+                barThickness: 12,
             },
         });
     });
@@ -846,14 +850,15 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         const arcSides = direction === 'RIGHT' || direction === 'LEFT' ? ['e', 'w'] : ['n', 's'];
         const anchor = t.shape.labels?.[0]?.anchor;
         expect(direction).toBe('RIGHT');
-        expect(t.defaultSize!.height).toBeGreaterThan(t.defaultSize!.width!);
+        // Q3: the bar is turned by its neighbours in a square box; Auto layout lays it upright across RIGHT (elkLayout.ts).
+        expect(t.shape.barThickness).toBeLessThan(t.defaultSize!.height!);
         expect(arcSides).not.toContain(anchor);
         expect(anchor).toBe('n');
     });
 
-    it('Arc: an arc in the ink ending in the open arrowhead; a second document labels a weight above 1', () => {
+    it('Arc: a line in the ink on the orthogonal router (P-2026-10-03-1304, Q1), the open arrowhead; a second document labels a weight above 1', () => {
         const [plain, weighted] = all('Arc').map(edge);
-        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' };
+        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 } };
         expect(all('Arc')).toHaveLength(2);
         expect(plain.edge).toEqual(line);
         expect(plain.predicate).toBeUndefined();
@@ -866,7 +871,7 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
 
     it('InhibitorArc: the same two documents, ending in the hollow circle', () => {
         const [plain, weighted] = all('InhibitorArc').map(edge);
-        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'hollowCircle' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' };
+        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'hollowCircle' }, line: { color: NAME_INK, width: 1 } };
         expect(all('InhibitorArc').map(v => v.rule)).toEqual(['role:inhibitorArc', 'role:inhibitorArc']);
         expect(plain.edge).toEqual(line);
         expect(weighted.edge).toEqual({ ...line, labels: WEIGHT_LABEL });
@@ -889,14 +894,14 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         expect(cv.labels.map(l => [l.position, l.anchor ?? null])).toEqual([['outside', 's'], ['center', null]]);
     });
 
-    it('the compiled arcs: the ink, 1 px, the arc, the ends; the bar keeps the catalogue hex', () => {
+    it('the compiled arcs: the ink, 1 px, no curve (the router, Q1), the ends; the bar keeps the catalogue hex', () => {
         clearCompileCache();
         const { ctx } = petriWorld();
         for (const [n, id, end] of [['Arc', 'a1', 'openArrow'], ['InhibitorArc', 'i1', 'hollowCircle']]) {
             const ce = compileEdgeView(`derived:${n}Classic`, edge(all(n)[0]));
             expect(ce.lineColor!(ctx, id), n).toBe(NAME_INK);
             expect(ce.lineWidth!(ctx, id), n).toBe(1);
-            expect(ce.curve, n).toBe('arc');
+            expect(ce.curve, n).toBeUndefined();
             expect(ce.terminations, n).toEqual({ sourceEnd: 'none', targetEnd: end });
         }
         const bar = compileView('derived:TransitionClassic', vertex(byClass(views(), 'Transition')));
@@ -1761,10 +1766,12 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         // Measured on the derivation of 58aa78ba9, before P-2026-09-29-2350 touched it.
         // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
         // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
+        // P-2026-10-03-1304 (Q3): DemoPetri's bar takes a square box and a barThickness; with the old box and no thickness
+        // its digest was the one before, measured on the lane. DemoFlowB's fork and join stay out of the turn.
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: 'c03dae1789798ecb', DemoESM: '0908707066b1a90e', DemoFlowB: '0686c16f9969bb93',
+            DemoPEST: '99e03cfb52856542', DemoPetri: '023be3c14750b11d', DemoESM: '0908707066b1a90e', DemoFlowB: '0686c16f9969bb93',
         });
     });
 });

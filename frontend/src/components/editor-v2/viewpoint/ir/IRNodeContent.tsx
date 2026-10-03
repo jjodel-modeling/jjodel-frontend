@@ -15,7 +15,7 @@ import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import { useEditorContextSafe } from '../../contexts/EditorContext';
 import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
-import type { BadgePosition, CompiledView, ShapeForm } from './irTypes';
+import type { BadgePosition, CompiledView, ShapeForm, VertexViewIR } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
@@ -126,7 +126,8 @@ const BADGE_STYLE: React.CSSProperties = { position: 'absolute', zIndex: 2 };
  * edge on the box's left border and its middle on the box's middle, so the arrow's tip, the layer's
  * rightmost point, touches the border and nothing more. Placed inline, as the badge is, so no in-flow
  * rule of the SVG-painted forms can take it back into the flow; irStyle.ts only lifts the two clips.
- * `dot`: a filled dot (UML initial pseudostate), then the line; `arrow`: the line alone.
+ * `dot`: a filled dot (UML initial pseudostate), then the line; `arrow`: the line alone. The head is the open
+ * arrowhead of the transitions (R-VP-25, P-2026-10-03-1304): two strokes, no fill, the line running into its tip.
  */
 const ENTRY_W = 40;
 const ENTRY_H = 14;
@@ -195,6 +196,12 @@ export interface IRNodeContentProps {
      * alone, as before and as in the authoring preview.
      */
     colorOverride?: MetaclassColorOverride;
+    /**
+     * The orientation of a bar that declares a thickness (Q3, P-2026-10-03-1304), computed by the edge synthesis
+     * (irEdgeViews.ts) and handed over by the host from the node data. Absent = upright. Ignored by every other form
+     * and by a bar without a thickness, which paints its box as before.
+     */
+    barOrientation?: 'upright' | 'lying';
 }
 
 /**
@@ -250,7 +257,7 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride }: IRNodeContentProps) {
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride, barOrientation }: IRNodeContentProps) {
     const form = resolveNodeForm(compiled, readCtx, objectId, collapsed);
     // A collapsed fill that resolves empty (a conditional with no match) falls back to the
     // expanded fill, the same convention as an empty fill falling back to the box colour.
@@ -274,6 +281,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // fill their box and on a vertex resized by hand. See useContentSize.ts.
     const contentRef = useRef<HTMLDivElement>(null);
     useContentDrivenSize(vertexId, form, contentRef, 'defaultSize' in compiled.ir ? compiled.ir.defaultSize : undefined);
+    // Q9a: the view's choice for a slot with no value; only 'hide' changes the IR compartment (the dash otherwise).
+    const hideEmptyRows = 'structure' in compiled.ir && compiled.ir.structure?.emptyBehavior === 'hide';
 
     // Compartment rows come from the object's D-layer features (name/type/value).
     const compartmentSig = useSelector((state: any) => {
@@ -314,6 +323,17 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
         }
         return { attributes, references };
     }, [compartmentSig]);
+
+    // The rows a slot compartment draws: the exclude (R-VP-20) and, under 'hide' (Q9a), the slots with no value left out.
+    const shownRows = (fc: { source: 'attributes' | 'references' | 'children'; exclude?: string[] }) => {
+        const slots = fc.source === 'references' ? rows.references : rows.attributes;
+        const kept = fc.exclude ? slots.filter(r => !fc.exclude!.includes(r.name)) : slots;
+        return hideEmptyRows ? kept.filter(r => r.value.trim() !== '') : kept;
+    };
+    // Q9a: 'hide' left no row in any compartment (and none holds children): a name the compartment put on top is
+    // centred, as on the same node without a compartment.
+    const noRowsLeft = hideEmptyRows && compiled.fieldCompartments.length > 0
+        && compiled.fieldCompartments.every(fc => fc.source !== 'children' && shownRows(fc).length === 0);
 
     // Row-dispatch (Fase R2): child object ids rendered as inline rows for a
     // `children`-source compartment. SAME rowRenderedChildren as the presentation
@@ -537,10 +557,22 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // .ir-node-content itself apply and the markup of an unauthored view is unchanged.
     const padClass = compiled.padding === 'normal' ? '' : ` ir-pad--${compiled.padding}`;
 
+    // Q3 (P-2026-10-03-1304): a bar that declares a thickness keeps its square box and paints its ink T px across,
+    // upright or lying, centred in the box. The ink is this element, so the selection ring and the run's outline,
+    // drawn on it, follow the bar; irStyle.ts gives the pointer to the ink alone.
+    const barThickness = form === 'bar' ? (compiled.ir as VertexViewIR).shape?.barThickness : undefined;
+    const barInk = typeof barThickness === 'number' && Number.isFinite(barThickness) && barThickness > 0;
+    if (barInk) {
+        const half = `calc(50% - ${barThickness / 2}px)`;
+        Object.assign(inlineStyle, barOrientation === 'lying'
+            ? { position: 'absolute', top: half, left: 0, width: '100%', height: `${barThickness}px` }
+            : { position: 'absolute', left: half, top: 0, width: `${barThickness}px`, height: '100%' });
+    }
+
     return (
         <div
             ref={contentRef}
-            className={`ir-node-content ir-shape--${form}${padClass}`}
+            className={`ir-node-content ir-shape--${form}${padClass}${barInk ? ' ir-bar-ink' : ''}`}
             style={inlineStyle}
         >
             {svgPainter && (
@@ -603,8 +635,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
             {compiled.entry && (
                 <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={colorOverride ? { ...ENTRY_STYLE, ...metaclassOutsideInkVars() } : ENTRY_STYLE} aria-hidden="true">
                     {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={inkColor} />}
-                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W - ENTRY_HEAD}`} stroke={inkColor} strokeWidth={1} fill="none" />
-                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4} Z`} fill={inkColor} />
+                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W}`} stroke={inkColor} strokeWidth={1} fill="none" />
+                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4}`} stroke={inkColor} strokeWidth={1} fill="none" />
                 </svg>
             )}
             {compiled.badges.map((b, i) => {
@@ -629,6 +661,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 // Outside label (R-VP-15 (1)): the side rides on a class of its own, so an
                 // inside label keeps exactly the class list it had (irStyle.ts places it).
                 const anchorClass = l.anchor ? ` ir-label--anchor-${l.anchor}` : '';
+                // Q9a: with no row left under 'hide', a name on top is centred (`noRowsLeft`).
+                const position = noRowsLeft && l.position === 'top' ? 'center' : l.position;
                 // Editable: intrinsic name/qualifiedName labels edit the element
                 // name unless the IR opts out (spec v1.2 sez. 5); a one-step path
                 // label that opts in edits its attribute (R-IRN-41).
@@ -637,12 +671,12 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     return (
                         <input
                             key={`label_${i}`}
-                            className={`ir-label ir-label--${l.position}${anchorClass} ir-label__input`}
+                            className={`ir-label ir-label--${position}${anchorClass} ir-label__input`}
                             // Same authored style as the span it replaces: the node-level
                             // style already reaches the field by inheritance, this carries
                             // the label's own one, so the text does not change face on
                             // entering the edit.
-                            style={overText(resolveTextStyle(l.style, readCtx, objectId), l.position)}
+                            style={overText(resolveTextStyle(l.style, readCtx, objectId), position)}
                             autoFocus
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
@@ -655,8 +689,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 return (
                     <span
                         key={`label_${i}`}
-                        className={`ir-label ir-label--${l.position}${anchorClass}`}
-                        style={overText(resolveTextStyle(l.style, readCtx, objectId), l.position)}
+                        className={`ir-label ir-label--${position}${anchorClass}`}
+                        style={overText(resolveTextStyle(l.style, readCtx, objectId), position)}
                         onDoubleClick={l.editsName ? () => {
                             setEditingLabel(i);
                             setEditValue(readCtx.getName(objectId) ?? '');
@@ -698,11 +732,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     );
                 }
                 const isReferenceCompartment = fc.source === 'references';
-                const slots = isReferenceCompartment ? rows.references : rows.attributes;
                 // R-VP-20: the attributes exclude keeps the named slots out of the rows (the identity
                 // slot the name label shows). Every slot excluded draws no compartment, as none does.
-                const exclude = fc.exclude;
-                const source = exclude ? slots.filter(r => !exclude.includes(r.name)) : slots;
+                // P-2026-10-03-1304 (Q9a): under `structure.emptyBehavior: 'hide'` a slot with no value draws no row
+                // either, as the native rows do (ObjectNode.tsx); `shownRows` applies both.
+                const source = shownRows(fc);
                 if (source.length === 0) return null;
                 return (
                     <div

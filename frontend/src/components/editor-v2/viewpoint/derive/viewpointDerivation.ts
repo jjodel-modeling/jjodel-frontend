@@ -417,14 +417,18 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         if (petriPlace) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { fontStyle: 'italic', fontWeight: 'normal' } };
         if (petriTransition) shapeSpec.labels[0] = { position: 'outside', anchor: 's', source: shapeSpec.labels[0].source, style: EDGE_LABEL_STYLE() };
         if (nameless) shapeSpec.labels = [];
+        // Q3 (P-2026-10-03-1304): the Petri bar is drawn at its thickness inside a square box and turned by its neighbours.
+        // The fork and join stay out of the turn (Alfonso's decision): their box of before, no thickness.
+        if (petriTransition) shapeSpec.barThickness = PETRI_BAR_SHORT;
 
         const ir: VertexViewIR = {
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label,
             shape: shapeSpec,
         };
         if (compartment) ir.fieldCompartments = [attributesCompartment(hidesName)];
-        // The Petri transition is a flat bar, its long axis across (P-2026-10-03-1300).
-        if (petriTransition) ir.defaultSize = { width: PETRI_BAR_LONG, height: PETRI_BAR_SHORT };
+        // The Petri transition was a flat bar, its long axis across (P-2026-10-03-1300); since Q3 (P-2026-10-03-1304) its
+        // box is square, the bar drawn in it 12 thick and turned by its neighbours.
+        if (petriTransition) ir.defaultSize = { width: PETRI_BAR_LONG, height: PETRI_BAR_LONG };
         // The activity's Initial disc and final bull's-eye are drawn at the sizes Activity (UML) declares, 20 and 24 px,
         // not after their content (64 px); the fill and the marker are untouched (P-2026-10-03-1300). The state machine's
         // named Initial is neither: it keeps its size.
@@ -671,7 +675,12 @@ const centredName = (fontSize: number, fontWeight: 'semibold' | 'medium'): Label
  */
 export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
     const attributesOf = attributesHeld(lookup, metamodelId);
-    return deriveViewpointIRs(lookup, metamodelId, roles).map((v): DerivedView => {
+    const events = triggerClasses(lookup, metamodelId, roles);
+    const guardKey = roles.bag.simGuard;
+    return deriveViewpointIRs(lookup, metamodelId, roles).map((v): DerivedView | DerivedView[] => {
+        // P-2026-10-03-1304 (Q7, Alfonso's A3): an event is the label of the transitions it fires, not a box of its own;
+        // the instance stays in the model and in the tree.
+        if (v.ir.kind === 'vertex' && events.has(v.classId)) return { ...v, ir: { ...v.ir, visible: false } };
         const role = roleOfRule(v.rule);
         if (v.ir.kind === 'edge') {
             if (role !== 'transition') return v;
@@ -681,7 +690,24 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             };
             // The label style of C2 for an event; a guard keeps the mono style the base document gives it (P-2026-10-03-1300).
             if (labels?.center) edge.labels = { center: labels.center, style: labels.style ?? EDGE_LABEL_STYLE() };
-            return { ...v, ir: { ...v.ir, edge } };
+            const plain: DerivedView = { ...v, ir: { ...v.ir, edge } };
+            // P-2026-10-03-1304 (Q6, amends R-VP-22 (2)): labelled by its event, a transition whose guard is set reads
+            // `event [guard]`, UML's trigger and guard, through a second document with priority 1 (Activity's pattern). The
+            // effect stays out. A transition with neither is a completion transition, unlabelled.
+            const guard = typeof guardKey === 'string' ? attributesOf(v.classId).find(a => a.id === guardKey) : undefined;
+            const center = labels?.center;
+            if (!guard || !center || center.from !== 'path' || center.expr === path(guard.name)) return plain;
+            const guarded: EdgeViewIR['edge'] = {
+                ...edge,
+                labels: {
+                    template: [center, { from: 'literal', text: ' [' }, { from: 'path', expr: path(guard.name) }, { from: 'literal', text: ']' }],
+                    style: EDGE_LABEL_STYLE(),
+                },
+            };
+            return [plain, {
+                ...v,
+                ir: { ...v.ir, label: `View for ${v.className} (guard)`, edge: guarded, priority: 1, predicate: { op: 'exists', path: path(guard.name) } },
+            }];
         }
         if (role !== 'node' && role !== 'initial' && role !== 'terminal') return v;
         const compartment = role !== 'terminal' && attributesOf(v.classId).some(a => !isIdentity(a));
@@ -698,10 +724,33 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: { [v.className]: v.classId },
             exclusive: true, label: `View for ${v.className}`, shape,
         };
-        // The name label is the title of all three, so the identity slot's row is left out.
-        if (compartment) ir.fieldCompartments = [attributesCompartment(attributesOf(v.classId).some(isIdentity))];
+        // The name label is the title of all three, so the identity slot's row is left out. A slot with no value draws no
+        // row (`entry = ` and its dash on every DemoESM state), and a compartment left with none no box (P-2026-10-03-1304, Q9a).
+        if (compartment) {
+            ir.fieldCompartments = [attributesCompartment(attributesOf(v.classId).some(isIdentity))];
+            ir.structure = { emptyBehavior: 'hide' };
+        }
         return { ...v, ir };
-    });
+    }).flat();
+}
+
+/** The class the bound Trigger reference is typed by, and its subclasses: the events of a state machine. Empty when unbound. */
+function triggerClasses(lookup: Lookup, metamodelId: string, roles: DerivationRoles): Set<string> {
+    const id = roles.bag.simTrigger;
+    const out = new Set<string>();
+    if (typeof id !== 'string' || id === '') return out;
+    const sketch = sketchOfMetamodel(lookup, metamodelId);
+    const type = sketch.references.find(r => r.id === id)?.type;
+    if (!type) return out;
+    const byId = new Map<string, SketchClass>(sketch.classes.map(c => [c.id, c]));
+    const kindOf = (c: string, seen = new Set<string>()): boolean => {
+        if (c === type) return true;
+        if (seen.has(c)) return false;
+        seen.add(c);
+        return (byId.get(c)?.supers ?? []).some(x => kindOf(x, seen));
+    };
+    for (const c of sketch.classes) if (kindOf(c.id)) out.add(c.id);
+    return out;
 }
 
 /** The name signals of ISO 5807, in their order: the first group a word of the class name is in decides. */
@@ -812,7 +861,8 @@ export const ACTIVITY_LAYOUT_DIRECTION = 'DOWN' as const;
  * Fork and join: a bar declared 7 px thick and 120 long, painted 5 by 118 (the wrapper keeps a 1 px border each side).
  * The IR has no orientation and `defaultSize` is per view, so the bar lies across the layout direction: 120 by 7
  * under a flow that runs down (Q7, P-2026-10-01-2215), 7 by 120 under one that runs across. Drawn as declared
- * since P-2026-09-30-1720; 7, not 5, since P-2026-10-01-2230 (R-VP-36).
+ * since P-2026-09-30-1720; 7, not 5, since P-2026-10-01-2230 (R-VP-36). Not turned by Q3 (P-2026-10-03-1304): on
+ * DemoFlowB without a layout the turned fork routed through its row (discovery 2026-10-03 §11), Alfonso's decision.
  */
 const ACTIVITY_BAR_SIZE = (ACTIVITY_LAYOUT_DIRECTION as string) === 'DOWN' || (ACTIVITY_LAYOUT_DIRECTION as string) === 'UP'
     ? { width: 120, height: 7 } as const
@@ -919,10 +969,11 @@ const CLASSIC_PLACE_SIZE = { width: 44, height: 44 } as const;
 export const PETRI_BAR_LONG = 56;
 export const PETRI_BAR_SHORT = 12;
 /**
- * The transition of mockup A: an upright bar, 12×56 since P-2026-10-03-1300 (10×44 before). The IR has no orientation,
- * so the bar is upright for every transition; drawn as declared (nodes/nodeSizing.ts `defaultBoxFor`, P-2026-09-30-1720).
+ * The transition of mockup A: an upright bar, 12×56 since P-2026-10-03-1300 (10×44 before), drawn as declared
+ * (nodes/nodeSizing.ts `defaultBoxFor`, P-2026-09-30-1720). Since Q3 (P-2026-10-03-1304) its box is 56 by 56 and the bar
+ * is drawn in it 12 thick, turned by its neighbours; Auto layout, which runs RIGHT, lays it upright.
  */
-const CLASSIC_BAR_SIZE = { width: PETRI_BAR_SHORT, height: PETRI_BAR_LONG } as const;
+const CLASSIC_BAR_SIZE = { width: PETRI_BAR_LONG, height: PETRI_BAR_LONG } as const;
 
 /**
  * Petri net (classic), slice A2 (R-VP-24, mockup docs/mockups/derived-viewpoints/petri-A.svg): the Petri
@@ -934,7 +985,8 @@ const CLASSIC_BAR_SIZE = { width: PETRI_BAR_SHORT, height: PETRI_BAR_LONG } as c
  * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`, 12 by 56) in the catalogue ink (R-VP-15 (4)), its name
  *   outside above, in the label style of C2 (12 px 500, the quiet ink): the profile runs RIGHT, so the arcs use
  *   the bar's left and right sides and the name takes a side they leave free (R-VP-53, P-2026-10-03-1415).
- * - An arc: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the open arrowhead (R-VP-25); an inhibitor arc
+ * - An arc: a line in the ink, 1 px, the open arrowhead (R-VP-25), on the orthogonal router as Petri net's arcs
+ *   (P-2026-10-03-1304, Q1, amends R-VP-24 (4): the `curve: 'arc'` chord drew long diagonals); an inhibitor arc
  *   the same, ending in the hollow circle. A weight above 1 (the Arc weight role) is the arc's label, in
  *   the C2 label style: a second document per arc class, a predicate on the weight and priority 1, so the
  *   resolver picks it where it holds, a subclass's own over its superclass's (priority, then specificity).
@@ -958,7 +1010,7 @@ export function deriveClassicPetriViewpointIRs(lookup: Lookup, metamodelId: stri
             const base = (): EdgeViewIR['edge'] => ({
                 source, target,
                 terminations: { sourceEnd: 'none', targetEnd: role === 'inhibitorArc' ? 'hollowCircle' : 'openArrow' },
-                line: { color: NAME_INK, width: 1 }, curve: 'arc',
+                line: { color: NAME_INK, width: 1 },
             });
             const edge = base();
             if (labels?.center) edge.labels = { center: labels.center, style: EDGE_LABEL_STYLE() };
@@ -1009,6 +1061,7 @@ export function deriveClassicPetriViewpointIRs(lookup: Lookup, metamodelId: stri
                 shape: {
                     form: 'bar', fill: ink, border: { color: ink, width: 1, style: 'solid' },
                     labels: [{ position: 'outside', anchor: 'n', source: NAME_SOURCE(), style: EDGE_LABEL_STYLE() }],
+                    barThickness: PETRI_BAR_SHORT,
                 },
             };
             out.push({ ...v, ir });

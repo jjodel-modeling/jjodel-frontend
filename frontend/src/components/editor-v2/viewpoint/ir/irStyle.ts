@@ -241,6 +241,12 @@ const BASE_CSS = `
    as for the outside label. Appended after every other rule, so the rules above stay byte-identical. */
 .ir-node-content:has(> .ir-entry-svg) { overflow: visible; }
 .mm-node:has(> .ir-node-content > .ir-entry-svg) { overflow: visible; }
+/* Q3 (P-2026-10-03-1304): a bar that declares a thickness paints its ink turned inside a square box
+   (IRNodeContent, inline). The box takes no pointer, the ink does, and the handles keep their own rules:
+   the hit area, the hover and the drag start are the ink's. !important because React Flow writes
+   pointer-events inline on its node. Appended after every other rule, so the rules above stay byte-identical. */
+.react-flow__node:has(.ir-node-content.ir-bar-ink) { pointer-events: none !important; }
+.ir-node-content.ir-bar-ink { pointer-events: auto; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

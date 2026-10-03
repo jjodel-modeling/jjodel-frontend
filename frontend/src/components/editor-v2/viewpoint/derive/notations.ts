@@ -98,7 +98,8 @@ export const DERIVED_NOTATIONS: readonly DerivedNotation[] = [
     { id: 'petri', label: 'Petri net', profile: 'petri', nodeLabel: 'Place' },
     // A2 (P-2026-09-30-1521, R-VP-24): beside Petri net, on its profile and prefill.
     { id: 'petriClassic', label: 'Petri net (classic)', profile: 'petri', nodeLabel: 'Place',
-        layout: { direction: 'RIGHT', edgeRouting: 'POLYLINE', nodePlacement: 'NETWORK_SIMPLEX', spacing: { ...COMPACT } } },
+        // ORTHOGONAL since P-2026-10-03-1304 (Q1): its arcs take ELK's right-angled routes, as Petri net's the router.
+        layout: { direction: 'RIGHT', edgeRouting: 'ORTHOGONAL', nodePlacement: 'NETWORK_SIMPLEX', spacing: { ...COMPACT } } },
     { id: 'flowchart', label: 'Flowchart', profile: 'flowchart', nodeLabel: 'Node',
         layout: { direction: 'DOWN', edgeRouting: 'ORTHOGONAL', nodePlacement: 'NETWORK_SIMPLEX', layerConstraints: { first: ['initial'], last: ['terminal', 'activityFinal'] }, spacing: { ...COMPACT } } },
     // A3 (P-2026-09-30-0355, R-VP-22): beside Flowchart, on its profile and prefill.

@@ -4978,6 +4978,70 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     byte-identical to the baseline; DemoPetri under Petri net (classic) differs at the three names only. Tests went red
     first, then green. Mutation bench 28/29, the survivor equivalent. Prompt P-2026-10-03-1415, commits `79e18efb9`,
     `1c33f3f46`, `db2ae3577`.
+- **R-VP-54** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: visual OK by Alfonso 2026-10-03,
+  reversible: branch).
+  **Statechart (UML) as the demo draws it: State machine converges on it, a transition reads `event [guard]`, the Event
+  objects are not drawn; amends R-VP-22.** Alfonso's answers A3, A4, A5 to P-2026-10-03-1304 Phase 1, 2026-10-03. The text
+  of R-VP-22 is not edited (add-only). Source: `docs/discovery/discovery_2026-10-03_derived_notations_edges.md` §3.5-3.7,
+  §3.9, §9.
+  - State machine converges on Statechart (UML): since P-2026-10-03-1300 the notation is hidden and drawn as Statechart
+    (UML) (`notations.ts`, the hidden twin), and since P-2026-10-03-1550 `statechart` is labelled «State machine (UML
+    statechart)»; the ids are unchanged (R-B9). Recorded here; neither change is this lane's.
+  - The label: a transition class with both the Trigger reference and the Guard attribute gets a second document, priority
+    1, chosen where the guard is set (`exists $guard.value`), labelled by the template `event [guard]` in the C2 label
+    style; the effect stays out; a transition with neither is a completion transition, unlabelled. State machine reads the
+    same. Commit `3d4eefe06`.
+  - The Event objects: a new persisted key `VertexViewIR.visible?: Conditional<boolean>`, absent = drawn (Rule 11, R-B9; no
+    `irVersion` bump, no migration; the validator refuses a value that is neither a boolean nor a Conditional). The Event
+    document of Statechart (UML) and State machine carries `visible: false`; the objects stay in the model and in the tree.
+    Commit `1127b2903`, LIR `docs/lir/lir_2026-10-03_vertex_visible.md`.
+  - Also in this lane, inside R-VP-22's keys: the Statechart documents that keep a compartment carry
+    `structure.emptyBehavior: 'hide'` (no row for a slot with no value, no compartment left empty; `e7c0761cc`); the entry
+    mark ends in the open arrowhead of R-VP-25 (`5691c3992`); three or more `curve: 'arc'` edges between one pair fan out, an
+    arc alone bows round the nodes and labels its chord would cross, and an arc alone between its two nodes takes ELK's route
+    after an Auto layout (`104f2c0cf`). The pair of R-VP-22 is drawn as before, byte for byte.
+- **R-VP-55** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: visual OK by Alfonso 2026-10-03,
+  reversible: branch).
+  **Petri net (classic) arcs on the orthogonal router; amends R-VP-24 (4).** Alfonso's A1 to P-2026-10-03-1304 Phase 1,
+  2026-10-03. The text of R-VP-24 is not edited (add-only). The arc and inhibitor arc documents lose `curve: 'arc'`, so they
+  take the orthogonal router as Petri net's arcs do, and the notation's layout profile routes ORTHOGONAL (`notations.ts`).
+  Measured: the long diagonals and the few-px slants of the chords gone. Commit `567423cd6`.
+- **R-VP-56** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: visual OK by Alfonso 2026-10-03,
+  reversible: branch).
+  **The side an edge end takes on a bar and on a diamond.** Alfonso's A2 to P-2026-10-03-1304 Phase 1 and his acceptance of
+  the cost on DemoFlowB without a layout, 2026-10-03. `endSideFor` (`viewpoint/ir/irEdgeViews.ts`): an end on a `bar` takes
+  one of its two long sides only (left or right upright, top or bottom lying, by the sign across the bar), two ends sharing
+  a long side rather than taking a short one; an end on a `diamond` takes the free side that faces the other end (cosine at
+  least 0.3), sharing its best side only when none is free; every other end keeps the dominant axis byte for byte. Such ends
+  are tagged on the edge (`irSourceForm` / `irTargetForm`, session only), and an ELK route ending on a diamond is refitted so
+  each end has a vertex of its own (`edgeUtils.ts`, `UnifiedEdge.tsx`). Commit `d914d540c`, LIR
+  `docs/lir/lir_2026-10-03_end_side_rule.md`.
+- **R-VP-57** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: visual OK by Alfonso 2026-10-03,
+  reversible: branch).
+  **A Petri transition bar turns by its neighbours inside a square box (Q3, option B); Activity's and Flowchart's fork and
+  join do not turn.** Alfonso's approval of the Q3 design and his decision on its report (options 2 and 3), 2026-10-03.
+  Source: the report §10-11, LIR `docs/lir/lir_2026-10-03_bar_orientation.md` (its §3 row for Activity superseded by §11.1).
+  - The persisted name, permanent once saved (R-B9): `ShapeSpec.barThickness?: number`, a finite number above 0 or absent;
+    absent is the bar of before, drawn as its box, never turned (every view saved before Q3). Additive (Rule 11, R-IRN-32:
+    no `irVersion` bump, no migration).
+  - The turn: the dominant axis of the sum of the unit vectors from the bar's centre to its connected neighbours' centres, a
+    tie upright, 1.2 hysteresis on the axis ratio (`barOrientation.ts`); held while any node is dragged, so it changes on
+    open, after Auto layout and at drag release only; written on the RF node data only (`irBarOrientation`,
+    `irBarThickness`): nothing persisted, no box and no position moved; the memo is per vertex and dropped on a viewpoint
+    change.
+  - The drawing: the ink is `.ir-node-content`, T px across and centred in the box, so the selection ring, the hover, the
+    hit area and the ports are the ink's; the handles, connected and ghost, sit on its long sides.
+  - Auto layout: ELK sees the drawn bar (lying across DOWN or UP, upright across RIGHT or LEFT, as drawn under stress), the
+    position returned is the box around the ink; a route records each bar end's orientation and is dropped when the bar
+    has turned since; an outside label's gap is read from the ink.
+  - The derive: Petri net and Petri net (classic) transitions 56 by 56 with `barThickness` 12; Activity (UML)'s and
+    Flowchart's fork and join keep 120 by 7 under DOWN and no `barThickness` (they routed through their row on DemoFlowB
+    without a layout). A viewpoint derived before keeps its old bar until derived again.
+  - Open: the router's straight and one-bend routes cross the node between their ends, without a layout (report §11.2, a
+    ticket for a lane of its own, no code here).
+  - Measured: DemoFlowB as Activity (UML) byte-identical to the pre-Q3 baseline without a layout and after Auto layout;
+    after Auto layout Petri net (classic) the same size, its places 8 px lower, and Petri net 8 px taller (the label gap read
+    from the ink); the four default scenes identical. Commits `2d967f267`, `7d7d8e23d`, `f4d768817`, `5ac537e8e`.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 

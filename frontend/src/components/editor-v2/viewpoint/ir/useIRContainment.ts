@@ -19,11 +19,13 @@ import {
     buildContainmentModel,
     computeHidden,
     computeRowHiddenChildren,
+    computeViewHidden,
     decorateEdges,
     decorateNodes,
     type ContainmentModel,
 } from './irContainment';
 import { decorateReferenceEdges, synthesizeObjectAsEdges } from './irEdgeViews';
+import { resetBarOrientations } from './barOrientation';
 import { deriveIRInteraction, type IRInteractionPlan } from './irInteraction';
 import { getCollapsedSet, useCollapseVersion } from './irCollapseState';
 import { getIREdgeAnchorOverride, isSyntheticEdgeSelected, useEdgeInteractionVersion } from './irEdgeInteraction';
@@ -130,6 +132,8 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         // ObjectNodes, so clearing here and letting everyone re-publish in the
         // same commit avoids leaking the previous viewpoint's deps.
         resetCrossDepsEpoch(irSig);
+        // Q3 (P-2026-10-03-1304): the bars' remembered orientations belong to one viewpoint, dropped on a change as above.
+        resetBarOrientations(irSig);
         if (!irSig) return { nodes, edges, model: EMPTY_MODEL, names: EMPTY_NAMES };
         const state: any = store.getState();
         const index = getIRIndex(state, irSig);
@@ -147,17 +151,21 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         // IRNodeContent (which renders exactly this set). Fast path: empty when no view
         // declares a children compartment (Machine/State etc. pay nothing).
         const rowHidden = computeRowHiddenChildren(nodes, state.idlookup, index, readCtx);
+        // Q7 (P-2026-10-03-1304): an object whose vertex view resolves `visible` false is not drawn either, by the same
+        // pass. Empty at once when no view declares the key.
+        const viewHidden = computeViewHidden(nodes, model.objByVertex, index, readCtx, state.idlookup);
 
         // Containment (collapse) + row-suppression pass. Unioning the two hidden sets
         // lets decorateEdges lift/suppress dangling edges to row children with no new
         // logic. A child both inside a collapsed hull and a row of another node is
         // handled by the union — no special precedence.
-        if (model.containers.size > 0 || rowHidden.size > 0) {
+        if (model.containers.size > 0 || rowHidden.size > 0 || viewHidden.size > 0) {
             for (const objectId of model.containers.keys()) {
                 names.set(objectId, readCtx.getName(objectId) ?? '');
             }
             const hidden = computeHidden(model, getCollapsedSet());
             for (const r of rowHidden) hidden.add(r);
+            for (const v of viewHidden) hidden.add(v);
             outNodes = decorateNodes(outNodes, model, hidden);
             outEdges = decorateEdges(outEdges, model, hidden, outNodes);
         }

@@ -931,6 +931,12 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         // inside it: the token as a dot, the marked node's own outline in cyan (simNodeRunState.scss). The default
         // viewpoint and user views keep the corner pill and the outline.
         const derivedView = !!(irResolution.compiled.ir as VertexViewIR).generated;
+        // Q3 (P-2026-10-03-1304): a bar that declares a thickness paints its ink turned inside its square box; the edge
+        // synthesis puts the orientation on the node data (irEdgeViews.ts), upright until it has. The ink and the
+        // handles read the same pair, so they cannot disagree.
+        const declaredBarThickness = shapeForm === 'bar' ? (irResolution.compiled.ir as VertexViewIR).shape?.barThickness : undefined;
+        const barThickness = typeof declaredBarThickness === 'number' && Number.isFinite(declaredBarThickness) && declaredBarThickness > 0 ? declaredBarThickness : undefined;
+        const barOrientation = barThickness !== undefined ? ((data as { irBarOrientation?: 'upright' | 'lying' }).irBarOrientation ?? 'upright') : undefined;
         return (
             <>
             <div
@@ -947,7 +953,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         handleClassName="node-resize-handle"
                     />
                 )}
-                <DynamicHandles nodeId={id} shapeForm={shapeForm} />
+                <DynamicHandles nodeId={id} shapeForm={shapeForm} barOrientation={barOrientation} barThickness={barThickness} />
                 <NodeProblemIndicator nodeId={id} />
                 <IRNodeContent
                     compiled={irResolution.compiled}
@@ -959,6 +965,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     collapsed={collapsedLook}
                     // R-VP-50: a node its derived notation draws as a glyph (bar, disc, bull's-eye) is not coloured.
                     colorOverride={metaclassColor && !isNotationGlyph(irResolution.compiled.ir) ? metaclassColor : undefined}
+                    barOrientation={barOrientation}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'

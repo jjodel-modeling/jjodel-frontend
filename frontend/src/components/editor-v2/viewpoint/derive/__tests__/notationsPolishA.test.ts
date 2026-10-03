@@ -293,15 +293,19 @@ describe('item 3: Petri transitions are 56 by 12 and the name sits outside', () 
         expect(PETRI_BAR_SHORT).toBe(12);
     });
 
-    it('Petri net: a flat bar, long axis across, declared 56 by 12 (mutation: the size not declared, or the axes swapped)', () => {
+    // Q3 (P-2026-10-03-1304): both bars are turned by their neighbours, a square box of the long length and the short
+    // one as the drawn thickness (ShapeSpec.barThickness); before, Petri net declared 56 by 12 and classic 12 by 56.
+    it('Petri net: a 56 by 56 box, 12 thick (mutation: the size not declared, the old flat box kept, or the thickness dropped)', () => {
         const t = irOf(derivedWith(PETRI(), 'petri'), 'Transition');
-        expect(t.defaultSize).toEqual({ width: PETRI_BAR_LONG, height: PETRI_BAR_SHORT });
+        expect(t.defaultSize).toEqual({ width: PETRI_BAR_LONG, height: PETRI_BAR_LONG });
+        expect(t.shape.barThickness).toBe(PETRI_BAR_SHORT);
         expect(t.shape.form).toBe('bar');
     });
 
-    it('Petri net (classic): upright, declared 12 by 56, the two constants (mutation: the classic bar kept 10 by 44)', () => {
+    it('Petri net (classic): the same box and thickness, the two constants (mutation: the classic bar kept upright 12 by 56)', () => {
         const t = irOf(derivedWith(PETRI(), 'petriClassic'), 'Transition');
-        expect(t.defaultSize).toEqual({ width: PETRI_BAR_SHORT, height: PETRI_BAR_LONG });
+        expect(t.defaultSize).toEqual({ width: PETRI_BAR_LONG, height: PETRI_BAR_LONG });
+        expect(t.shape.barThickness).toBe(PETRI_BAR_SHORT);
         expect(t.shape.form).toBe('bar');
     });
 

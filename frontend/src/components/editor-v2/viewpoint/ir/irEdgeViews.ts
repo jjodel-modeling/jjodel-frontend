@@ -30,6 +30,7 @@ import type { CompiledCrossPath, CompiledEdgeView } from './irTypes';
 import { resolveEdgeView, resolveIRView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
 import { resolveTextStyle } from './irCompile';
 import { assignActivityJunctions, isActivityActionView, isActivityFlowView } from './irJunctions';
+import { barOrientation, rememberBarOrientation, rememberedBarOrientation, type BarOrientation } from './barOrientation';
 
 type Idlookup = Record<string, any>;
 
@@ -111,14 +112,60 @@ export function freeHandleIndex(nodeId: string, side: string, role: 'source' | '
     return count;
 }
 
-export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>, assigned: Edge[]): Edge {
+export type EndSide = 'left' | 'right' | 'top' | 'bottom';
+
+const END_SIDES: readonly EndSide[] = ['right', 'bottom', 'left', 'top'];
+const END_NORMAL: Record<EndSide, { x: number; y: number }> = { right: { x: 1, y: 0 }, left: { x: -1, y: 0 }, bottom: { x: 0, y: 1 }, top: { x: 0, y: -1 } };
+/** A diamond's side faces the other end when the angle between them is under about 72 degrees. */
+const DIAMOND_FACING = 0.3;
+
+/**
+ * The side of a node an edge end takes (P-2026-10-03-1304, Q2 and Q4 (a), docs/lir/lir_2026-10-03_end_side_rule.md):
+ * `towards` runs from the node's centre to the other end's, `taken` holds the sides other ends of the node already use.
+ * - `bar`: its two long sides only, left/right when upright (height at least width), top/bottom when lying, by the
+ *   sign of `towards` across the bar; two ends share a long side rather than take a short one. A bar that declares a
+ *   thickness has a square box and draws its ink turned (Q3, barOrientation.ts): `orientation` says which way, and
+ *   wins over the box.
+ * - `diamond`: the free side that faces the other end the most (a corner of the diamond each), sharing its best side
+ *   only when no free side faces it.
+ * - any other form: the dominant axis, the tie to the horizontal side (what every end took before).
+ */
+export function endSideFor(form: string | undefined, size: { width: number; height: number }, towards: { x: number; y: number }, taken: ReadonlySet<EndSide> = new Set(), orientation?: BarOrientation): EndSide {
+    const { x: dx, y: dy } = towards;
+    if (form === 'bar') {
+        const upright = orientation ? orientation === 'upright' : size.height >= size.width;
+        return upright ? (dx >= 0 ? 'right' : 'left') : (dy >= 0 ? 'bottom' : 'top');
+    }
+    const dominant: EndSide = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'right' : 'left') : (dy >= 0 ? 'bottom' : 'top');
+    if (form !== 'diamond' || !taken.has(dominant)) return dominant;
+    const len = Math.hypot(dx, dy) || 1;
+    const facing = END_SIDES
+        .map(side => ({ side, cos: (dx * END_NORMAL[side].x + dy * END_NORMAL[side].y) / len }))
+        .filter(c => c.cos >= DIAMOND_FACING && !taken.has(c.side))
+        .sort((a, b) => b.cos - a.cos);
+    return facing.length > 0 ? facing[0].side : dominant;
+}
+
+/** The sides of `nodeId` the edges of `assigned` already hold, either role. */
+function sidesTaken(nodeId: string, assigned: Edge[]): Set<EndSide> {
+    const out = new Set<EndSide>();
+    const add = (h: string | null | undefined) => {
+        const side = typeof h === 'string' ? h.split('-')[0] : '';
+        if (side === 'left' || side === 'right' || side === 'top' || side === 'bottom') out.add(side);
+    };
+    for (const e of assigned) {
+        if (e.source === nodeId) add(e.sourceHandle);
+        if (e.target === nodeId) add(e.targetHandle);
+    }
+    return out;
+}
+
+export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>, assigned: Edge[], formOf?: (vertexId: string) => string | undefined, barOf?: (vertexId: string) => BarOrientation | undefined): Edge {
     const s = nodesById.get(edge.source);
     const t = nodesById.get(edge.target);
     if (!s || !t) return edge;
-    const center = (n: Node) => ({
-        x: n.position.x + ((n.measured?.width ?? (n.width as number) ?? 160) / 2),
-        y: n.position.y + ((n.measured?.height ?? (n.height as number) ?? 60) / 2),
-    });
+    const sizeOf = (n: Node) => ({ width: n.measured?.width ?? (n.width as number) ?? 160, height: n.measured?.height ?? (n.height as number) ?? 60 });
+    const center = (n: Node) => ({ x: n.position.x + sizeOf(n).width / 2, y: n.position.y + sizeOf(n).height / 2 });
     const sc = center(s), tc = center(t);
     const dx = tc.x - sc.x, dy = tc.y - sc.y;
     let sourceSide: string, targetSide: string;
@@ -128,12 +175,19 @@ export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>,
     if (edge.source === edge.target && (edge.data as any)?.irCurve === 'arc') {
         sourceSide = 'top';
         targetSide = 'top';
-    } else if (Math.abs(dx) >= Math.abs(dy)) {
-        sourceSide = dx >= 0 ? 'right' : 'left';
-        targetSide = dx >= 0 ? 'left' : 'right';
     } else {
-        sourceSide = dy >= 0 ? 'bottom' : 'top';
-        targetSide = dy >= 0 ? 'top' : 'bottom';
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            sourceSide = dx >= 0 ? 'right' : 'left';
+            targetSide = dx >= 0 ? 'left' : 'right';
+        } else {
+            sourceSide = dy >= 0 ? 'bottom' : 'top';
+            targetSide = dy >= 0 ? 'top' : 'bottom';
+        }
+        // P-2026-10-03-1304 (Q2, Q4 (a)): an end on a bar or a diamond takes the side its form allows (endSideFor);
+        // every other end keeps the dominant axis above, byte for byte.
+        const sf = formOf?.(edge.source), tf = formOf?.(edge.target);
+        if (sf === 'bar' || sf === 'diamond') sourceSide = endSideFor(sf, sizeOf(s), { x: dx, y: dy }, sidesTaken(edge.source, assigned), barOf?.(edge.source));
+        if (tf === 'bar' || tf === 'diamond') targetSide = endSideFor(tf, sizeOf(t), { x: -dx, y: -dy }, sidesTaken(edge.target, assigned), barOf?.(edge.target));
     }
     return {
         ...edge,
@@ -296,9 +350,69 @@ export function synthesizeObjectAsEdges(
     // Orthogonal entry: give synthetic edges geometric handles (side + free
     // index); user-chosen anchors (reconnect gesture) override the geometry.
     const nodesById = new Map(outNodes.map(n => [n.id, n] as const));
+    // P-2026-10-03-1304 (Q2, Q4): the form of an endpoint vertex, resolved once per vertex as isAction does below; with
+    // it (Q3) the thickness a bar declares, undefined for every other form and for a bar without one.
+    const formMemo = new Map<string, { form: string | undefined; thickness: number | undefined }>();
+    const endOf = (vertexId: string): { form: string | undefined; thickness: number | undefined } => {
+        const hit = formMemo.get(vertexId);
+        if (hit) return hit;
+        const objectId = objByVertex.get(vertexId);
+        const metaclassId = objectId ? idlookup[objectId]?.instanceof : undefined;
+        const view = objectId && typeof metaclassId === 'string' ? resolveIRView(objectId, metaclassId, index, readCtx, idlookup) : null;
+        let form: string | undefined;
+        try { form = view && objectId ? String(view.form(readCtx, objectId)) : undefined; } catch { form = undefined; }
+        const t: unknown = form === 'bar' ? (view?.ir as { shape?: { barThickness?: unknown } } | undefined)?.shape?.barThickness : undefined;
+        const out = { form, thickness: typeof t === 'number' && Number.isFinite(t) && t > 0 ? t : undefined };
+        formMemo.set(vertexId, out);
+        return out;
+    };
+    const formOf = (vertexId: string): string | undefined => endOf(vertexId).form;
+    // Q3 (P-2026-10-03-1304, docs/lir/lir_2026-10-03_bar_orientation.md): every bar at an edge end that declares a
+    // thickness turns so its long sides face its connected neighbours (barOrientation.ts), from their box centres;
+    // the box does not move. While any node is dragged, a bar that has an orientation keeps it: the turn waits for
+    // the release. The orientation goes on the bar's RF node data (session state, never persisted) and to the side rule.
+    const orientations = new Map<string, BarOrientation>();
+    const neighbours = new Map<string, Node[]>();
+    for (const e of [...outEdges, ...synthetic]) {
+        if (e.source === e.target) continue;
+        for (const [self, other] of [[e.source, e.target], [e.target, e.source]] as const) {
+            if (endOf(self).thickness === undefined) continue;
+            const n = nodesById.get(other);
+            if (!n || n.hidden) continue;
+            if (!neighbours.has(self)) neighbours.set(self, []);
+            neighbours.get(self)!.push(n);
+        }
+    }
+    for (const e of synthetic) for (const v of [e.source, e.target]) if (endOf(v).thickness !== undefined && !neighbours.has(v)) neighbours.set(v, []);
+    if (neighbours.size > 0) {
+        const dragging = nodes.some(n => n.dragging);
+        const boxOf = (n: Node) => ({ width: n.measured?.width ?? (n.width as number) ?? 160, height: n.measured?.height ?? (n.height as number) ?? 60 });
+        const centreOf = (n: Node) => ({ x: n.position.x + boxOf(n).width / 2, y: n.position.y + boxOf(n).height / 2 });
+        for (const [vertexId, ns] of neighbours) {
+            const bar = nodesById.get(vertexId);
+            if (!bar) continue;
+            const previous = rememberedBarOrientation(vertexId);
+            const orientation = dragging && previous ? previous : barOrientation(centreOf(bar), ns.map(centreOf), previous);
+            rememberBarOrientation(vertexId, orientation);
+            orientations.set(vertexId, orientation);
+        }
+    }
+    const barOf = (vertexId: string): BarOrientation | undefined => orientations.get(vertexId);
     const placed: Edge[] = [...outEdges];
     const syntheticWithHandles = synthetic.map(e => {
-        let withHandles = assignGeometricHandles(e, nodesById, placed);
+        let withHandles = assignGeometricHandles(e, nodesById, placed, formOf, barOf);
+        // The ends on a bar or a diamond say so, for UnifiedEdge's fit of an ELK route (Q4 (b)); no other end writes a key.
+        const sf = formOf(e.source), tf = formOf(e.target);
+        if (sf === 'bar' || sf === 'diamond' || tf === 'bar' || tf === 'diamond') {
+            withHandles = {
+                ...withHandles,
+                data: {
+                    ...(withHandles.data ?? {}),
+                    ...(sf === 'bar' || sf === 'diamond' ? { irSourceForm: sf } : {}),
+                    ...(tf === 'bar' || tf === 'diamond' ? { irTargetForm: tf } : {}),
+                },
+            };
+        }
         const objectId = (e.data as any)?.irObjectId as string | undefined;
         const override = objectId ? anchorOverrides?.get(objectId) : undefined;
         if (override) {
@@ -336,5 +450,13 @@ export function synthesizeObjectAsEdges(
         };
         junctioned = assignActivityJunctions(syntheticWithHandles, outEdges, isAction);
     }
-    return { nodes: outNodes, edges: [...outEdges, ...junctioned], edgeObjects, edgeObjectDeps };
+    // Q3: the orientation and the thickness on the bar's node data, a new node only where they differ from what it carries.
+    const finalNodes = orientations.size === 0 ? outNodes : outNodes.map(n => {
+        const orientation = orientations.get(n.id);
+        const thickness = orientation ? endOf(n.id).thickness : undefined;
+        const data = n.data as Record<string, unknown> | undefined;
+        if (!orientation || (data?.irBarOrientation === orientation && data?.irBarThickness === thickness)) return n;
+        return { ...n, data: { ...(data ?? {}), irBarOrientation: orientation, irBarThickness: thickness } };
+    });
+    return { nodes: finalNodes, edges: [...outEdges, ...junctioned], edgeObjects, edgeObjectDeps };
 }

@@ -290,9 +290,12 @@ const NODE_TEXT_OUTSIDE = handView({
 });
 const BADGED = handView({ badges: [{ icon: 'bi-star', position: 'tl', visible: true }] });
 
-/** The off markup of every fixture, taken on `7c9ae4e0d` before any edit of this lane: coloring off is unchanged. */
+/**
+ * The off markup of every fixture, taken on `7c9ae4e0d` before any edit of this lane: coloring off is unchanged.
+ * `initial` retaken on P-2026-10-03-1304 (Q9b), whose open entry head is the only change to that markup.
+ */
 const OFF_PIN: Record<string, string> = {
-    place: 'fe28427b06c820e4', initial: 'be9f2a91feca48ab', unstyled: '5cf02e858e7b0cac', nodeText: '86f3e2adc88bb29b', badged: '80a003bbc1751568',
+    place: 'fe28427b06c820e4', initial: 'f161aeb9da3838a6', unstyled: '5cf02e858e7b0cac', nodeText: '86f3e2adc88bb29b', badged: '80a003bbc1751568',
 };
 
 // ---------------------------------------------------------------------------
@@ -324,7 +327,9 @@ describe('the entry mark of a Statechart (UML) Initial keeps the ink', () => {
                 const [line, head] = findAll(svg[0], e => e.tag === 'path');
                 expect(paintOf(dot, 'fill', theme), `dot, coloring ${coloring}`).toBe(INK(theme));
                 expect(paintOf(line, 'stroke', theme), `line, coloring ${coloring}`).toBe(INK(theme));
-                expect(paintOf(head, 'fill', theme), `head, coloring ${coloring}`).toBe(INK(theme));
+                // P-2026-10-03-1304 (Q9b): the head is the open one, stroked in the ink, unfilled.
+                expect(paintOf(head, 'stroke', theme), `head, coloring ${coloring}`).toBe(INK(theme));
+                expect(head.attrs.fill, `head fill, coloring ${coloring}`).toBe('none');
             }
         });
     }

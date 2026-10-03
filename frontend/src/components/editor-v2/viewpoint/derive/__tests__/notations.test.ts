@@ -471,8 +471,17 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // generic notation»), measured on 58aa78ba9: today's role-keyed documents from the Apply bag.
     // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
     // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
+    // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
+    // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
+    // every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
+    // key alone set to undefined every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
+    // suppressed every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
+    // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
     const PINNED: Record<string, string> = {
-        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '264e79d9edff4d44', DemoFlowB: '0686c16f9969bb93',
+        DemoPEST: '0e123f6496e06e3a', DemoPetri: '023be3c14750b11d', DemoESM: 'a8bbf693f25c8f14', DemoFlowB: '0686c16f9969bb93',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -674,10 +683,19 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // R-VP-25 (P-2026-09-30-1521): Generic ×4, DemoPetri petri and DemoFlowB petri moved with the open arrowhead,
     // each to the digest predicted on 2cde09984's code, before any A2 edit: every closedArrow an openArrow and
     // the provenance hash recomputed.
+    // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
+    // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
+    // every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
+    // key alone set to undefined every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
+    // suppressed every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
+    // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
     const PINNED_D: Record<string, string> = {
-        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '859ed7219f226f01', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
-        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': '1f551e40ba793093', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'd2b745a44e81558d',
-        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '9a9fdc00b24bcb39', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
+        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': 'f0ba4426cae26d2f', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
+        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'fcc0009cc695e6b4', 'DemoPetri petri': '4ea473651a70adc7', 'DemoPetri flowchart': 'd2b745a44e81558d',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '95040925ad077303', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
         'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '124d96bbb07f4e44',
     };
 
@@ -794,6 +812,59 @@ describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
         expect(irOf(esm, 'State').fieldCompartments.map((c: any) => c.source)).toEqual([{ from: 'attributes' }]);
         expect(irOf(esm, 'Initial').shape.entry).toBe('dot');
         expect(irOf(esm, 'Terminal').fieldCompartments).toBeUndefined();
+    });
+
+    it('a transition with an event and a guard reads `event [guard]` where the guard is set (P-2026-10-03-1304, Q6, amends R-VP-22 (2))', () => {
+        const esm = derivedWith(ESM, 'extendedStateMachine', 'statechart').views;
+        const docs = esm.filter((v: any) => v.className === 'Transition').map((v: any) => v.ir);
+        expect(docs).toHaveLength(2);
+        const [plain, guarded] = docs;
+        // The plain one as before: the event, in the C2 label style, for a transition whose guard is unset.
+        expect(plain.edge.labels).toEqual({ center: { from: 'path', expr: '$event.value' }, style: LABEL_STYLE });
+        expect(plain.priority).toBeUndefined();
+        // The second: the same line, the UML label, chosen where the guard is set.
+        expect(guarded.edge.labels).toEqual({
+            template: [{ from: 'path', expr: '$event.value' }, { from: 'literal', text: ' [' }, { from: 'path', expr: '$guard.value' }, { from: 'literal', text: ']' }],
+            style: LABEL_STYLE,
+        });
+        expect(guarded.priority).toBe(1);
+        expect(guarded.predicate).toEqual({ op: 'exists', path: '$guard.value' });
+        expect({ ...guarded.edge, labels: undefined }).toEqual({ ...plain.edge, labels: undefined });
+        expect(guarded.label).toBe('View for Transition (guard)');
+        // DemoPEST's transitions have no guard slot: one document, as before.
+        expect(derivedWith(PEST, 'stateMachine', 'statechart').views.filter((v: any) => v.className === 'Transition')).toHaveLength(1);
+    });
+
+    it('the class the Trigger is typed by is not drawn; nothing else changes visibility (P-2026-10-03-1304, Q7)', () => {
+        for (const [make, stored] of [[PEST, 'stateMachine'], [ESM, 'extendedStateMachine']] as const) {
+            const views = derivedWith(make, stored, 'statechart').views;
+            expect(irOf(views, 'Event').visible, stored).toBe(false);
+            for (const name of ['State', 'Initial', 'Terminal']) expect(irOf(views, name).visible, name).toBeUndefined();
+            // State machine is drawn as Statechart (UML) since P-2026-10-03-1300: the same.
+            expect(irOf(derivedWith(make, stored, 'stateMachine').views, 'Event').visible).toBe(false);
+        }
+        // Generic draws every class.
+        expect(derivedWith(PEST, 'stateMachine', 'generic').views.some((v: any) => 'visible' in v.ir)).toBe(false);
+        // A subclass of the event class is an event too.
+        const PEST_SUB = () => metamodel('PESTS', 'DemoPEST', [
+            cls('State', { refs: [ref('transitions', 'Transition', { composition: true, upper: -1 })] }),
+            cls('Initial', { supers: ['State'] }), cls('Terminal', { supers: ['State'] }),
+            cls('Transition', { refs: [ref('nextState', 'State'), ref('event', 'Event')] }),
+            cls('Event'), cls('TimeEvent', { supers: ['Event'] }),
+        ]);
+        const sub = derivedWith(PEST_SUB, 'stateMachine', 'statechart').views;
+        expect([irOf(sub, 'Event').visible, irOf(sub, 'TimeEvent').visible]).toEqual([false, false]);
+    });
+
+    it('a state with a compartment hides the rows with no value; one without carries no structure (P-2026-10-03-1304, Q9a)', () => {
+        const esm = derivedWith(ESM, 'extendedStateMachine', 'statechart').views;
+        expect(irOf(esm, 'State').structure).toEqual({ emptyBehavior: 'hide' });
+        expect(irOf(esm, 'Initial').structure).toEqual({ emptyBehavior: 'hide' });
+        expect(irOf(esm, 'Terminal').structure).toBeUndefined();
+        // State machine is drawn as Statechart (UML) since P-2026-10-03-1300: it carries the key too.
+        expect(irOf(derivedWith(ESM, 'extendedStateMachine', 'stateMachine').views, 'State').structure).toEqual({ emptyBehavior: 'hide' });
+        // DemoPEST's states hold no slot but the name: no compartment, no key.
+        expect(irOf(derivedWith(PEST, 'stateMachine', 'statechart').views, 'State').structure).toBeUndefined();
     });
 });
 
@@ -988,8 +1059,9 @@ describe('Petri net (classic) in the list and the dialog (R-VP-24)', () => {
             return [id, cv.labelText ? String(cv.labelText(ctx, id) ?? '') : null, cv.terminations.targetEnd, cv.curve ?? null];
         });
         expect(seen).toEqual([
-            ['a1', null, 'openArrow', 'arc'], ['a2', '2', 'openArrow', 'arc'], ['a0', null, 'openArrow', 'arc'],
-            ['i1', null, 'hollowCircle', 'arc'], ['i3', '3', 'hollowCircle', 'arc'],
+            // No curve since P-2026-10-03-1304 (Q1): the classic arcs take the orthogonal router.
+            ['a1', null, 'openArrow', null], ['a2', '2', 'openArrow', null], ['a0', null, 'openArrow', null],
+            ['i1', null, 'hollowCircle', null], ['i3', '3', 'hollowCircle', null],
         ]);
     });
 });

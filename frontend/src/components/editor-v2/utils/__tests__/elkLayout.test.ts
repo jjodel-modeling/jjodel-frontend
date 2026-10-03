@@ -89,7 +89,7 @@ describe('buildElkGraph: the input ELK receives', () => {
         const g = buildElkGraph([sized('i', 20, 20), sized('a', 100, 40), sized('f', 24, 24)], [], { profile, roleOf: (id) => roles[id] });
         expect(rootOpt(g, 'direction')).toBe('RIGHT');
         expect(rootOpt(g, 'layered.nodePlacement.strategy')).toBe('BRANDES_KOEPF');
-        expect(rootOpt(g, 'layered.nodePlacement.bk.fixedAlignment')).toBe('BALANCED');
+        expect(rootOpt(g, 'layered.nodePlacement.bk.fixedAlignment')).toBe('NONE');
         expect(rootOpt(g, 'edgeRouting')).toBe('POLYLINE');
         expect(rootOpt(g, 'spacing.nodeNode')).toBe('40');
         expect(rootOpt(g, 'layered.spacing.nodeNodeBetweenLayers')).toBe('56');
@@ -269,9 +269,11 @@ describe('measureOutsideLabels: the outside labels a node paints, as drawn', () 
     const rect = (left: number, top: number, width: number, height: number) => ({ left, top, width, height, right: left + width, bottom: top + height });
     const labelEl = (classes: string[], text: string, w: number, h: number, r: ReturnType<typeof rect>) =>
         ({ classList: { contains: (c: string) => classes.includes(c) }, textContent: ` ${text} `, offsetWidth: w, offsetHeight: h, getBoundingClientRect: () => r });
-    const nodeEl = (id: string, w: number, h: number, r: ReturnType<typeof rect>, labels: unknown[]) => ({
+    const nodeEl = (id: string, w: number, h: number, r: ReturnType<typeof rect>, labels: unknown[], ink?: ReturnType<typeof rect>) => ({
         getAttribute: (k: string) => (k === 'data-id' ? id : null), offsetWidth: w, offsetHeight: h, getBoundingClientRect: () => r,
         querySelectorAll: (sel: string) => (sel === '.ir-node-content > .ir-label--outside' ? labels : []),
+        // Q3: the ink of a turned bar, the element its outside labels are placed against.
+        querySelector: (sel: string) => (sel === '.ir-node-content.ir-bar-ink' && ink ? { getBoundingClientRect: () => ink } : null),
     });
     const container = (nodes: unknown[]) => ({ querySelectorAll: (sel: string) => (sel === '.react-flow__node[data-id]' ? nodes : []) }) as unknown as ParentNode;
 
@@ -294,6 +296,16 @@ describe('measureOutsideLabels: the outside labels a node paints, as drawn', () 
             { anchor: 'w', text: 'l', width: 8, height: 16, gap: 2 },
         ]);
         expect(out.has('plain')).toBe(false);
+    });
+
+    it('a turned bar (Q3): the gap is read from its ink, not from its square box (mutation: the box kept)', () => {
+        // Zoom 1: a 56 x 56 box at (0, 0), its ink lying 56 x 12 at (0, 22); the name 8 px above the ink.
+        const out = measureOutsideLabels(container([
+            nodeEl('t1', 56, 56, rect(0, 0, 56, 56), [
+                labelEl(['ir-label', 'ir-label--outside', 'ir-label--anchor-n'], 't1', 14, 16, rect(21, 22 - 8 - 16, 14, 16)),
+            ], rect(0, 22, 56, 12)),
+        ]));
+        expect(out.get('t1')).toEqual([{ anchor: 'n', text: 't1', width: 14, height: 16, gap: 8 }]);
     });
 
     it('a label with no anchor class or no size is left out (mutation: the size guard dropped)', () => {
@@ -438,6 +450,8 @@ describe('the notation profiles (Q2), copied into the derived viewpoint', () => 
         expect(layoutOf('flowchart')?.direction).toBe('DOWN');
         expect(layoutOf('activityUml')?.direction).toBe('DOWN');
         expect(layoutOf('petriClassic')?.direction).toBe('RIGHT');
+        // P-2026-10-03-1304 (Q1): its arcs on ELK's orthogonal routes, as Petri net's on the router.
+        expect(layoutOf('petriClassic')?.edgeRouting).toBe('ORTHOGONAL');
         expect(layoutOf('statechart')?.direction).toBe('RIGHT');
         expect(layoutOf('erChen')).toMatchObject({ algorithm: 'stress', overlapRemoval: true });
         for (const id of ['flowchart', 'activityUml']) {
@@ -457,5 +471,118 @@ describe('the notation profiles (Q2), copied into the derived viewpoint', () => 
     it('the stored key reads back the profile', () => {
         expect(DERIVED_LAYOUT_KEY).toBe('derivedLayout');
         expect(JSON.parse(JSON.stringify(layoutOf('activityUml')))).toEqual(layoutOf('activityUml'));
+    });
+});
+
+// P-2026-10-03-1304 (Q8 (i), A5): Brandes-Koepf takes the one alignment that gives the narrowest layout
+// (`fixedAlignment: NONE`) instead of the average of the four (BALANCED), which pulled `work` 56 px off the
+// main path of DemoFlowB (docs/discovery/discovery_2026-10-03_derived_notations_edges.md §3.8).
+describe('Activity (UML) under its profile: the main path in one column', () => {
+    const activity = DERIVED_NOTATIONS.find((n) => n.id === 'activityUml')!.layout!;
+    const merge = (primary: boolean) => ({ irActivityFlow: true, irJunctionTarget: { kind: 'merge', side: 'top', primary } });
+    // DemoFlowB as the probe measured it: the node sizes drawn, the two guard labels' boxes.
+    const nodes = [
+        sized('i0', 20, 20), sized('work', 142, 44), sized('d1', 36, 36), sized('fk', 120, 7),
+        sized('left', 142, 44), sized('right', 142, 44), sized('jn', 120, 7), sized('fin', 24, 24),
+    ];
+    const flows = [
+        { ...edge('f1', 'i0', 'work'), data: merge(true) }, edge('f2', 'work', 'd1'), { ...edge('f3', 'd1', 'work'), data: merge(false) },
+        edge('f4', 'd1', 'fk'), edge('f5', 'fk', 'left'), edge('f6', 'fk', 'right'), edge('f7', 'left', 'jn'), edge('f8', 'right', 'jn'),
+        edge('f9', 'jn', 'fin'),
+    ] as Edge[];
+    const roles: Record<string, string> = { i0: 'initial', fin: 'terminal' };
+    const labels: Record<string, { kind: 'center'; text: string; width: number; height: number }[]> = {
+        f3: [{ kind: 'center', text: '[model.[count] < 2]', width: 151, height: 21 }],
+        f4: [{ kind: 'center', text: '[model.[count] >= 2]', width: 158, height: 21 }],
+    };
+    const centreX = (r: Awaited<ReturnType<typeof computeElkAutoLayout>>, id: string) =>
+        r.positions.get(id)!.x + (nodes.find((n) => n.id === id)!.measured!.width as number) / 2;
+
+    it('asks Brandes-Koepf for no fixed alignment, not the balanced average', () => {
+        const g = buildElkGraph(nodes, flows, { profile: activity, roleOf: (id) => roles[id] });
+        expect(rootOpt(g, 'layered.nodePlacement.bk.fixedAlignment')).toBe('NONE');
+    });
+
+    it('the centres of i0, work, d1, fork, join and final lie within 16 px across the flow (BALANCED: 60)', async () => {
+        const r = await computeElkAutoLayout(nodes, flows, { profile: activity, roleOf: (id) => roles[id], labelsOf: (id) => labels[id] });
+        const xs = ['i0', 'work', 'd1', 'fk', 'jn', 'fin'].map((id) => centreX(r, id));
+        expect(Math.max(...xs) - Math.min(...xs), JSON.stringify(xs)).toBeLessThanOrEqual(16);
+    });
+
+    it('a leg ELK drew straight stays straight on the 8 px grid: the main path has no jog, the merge member lands on the action\'s centre', async () => {
+        const r = await computeElkAutoLayout(nodes, flows, { profile: activity, roleOf: (id) => roles[id], labelsOf: (id) => labels[id] });
+        for (const id of ['f1', 'f2', 'f4', 'f9']) {
+            const pts = r.routes.get(id)!.points;
+            expect(pts.length, `${id} ${JSON.stringify(pts)}`).toBe(2);
+            expect(pts[0].x, id).toBe(pts[1].x);
+        }
+        // The merge diamond is drawn at the action's shared handle, its top centre (irJunctions.ts): f1 ends under it.
+        expect(r.routes.get('f1')!.points[1].x).toBe(centreX(r, 'work'));
+        // Every node still on the grid.
+        for (const [id, p] of r.positions) expect([p.x % ELK_GRID, p.y % ELK_GRID], id).toEqual([0, 0]);
+    });
+});
+
+describe('Q3 (P-2026-10-03-1304): ELK lays out the drawn bar, the box keeps its centre', () => {
+    // A bar that declares a thickness: a 56 x 56 box, 12 px of ink, its orientation on the node data (irEdgeViews.ts).
+    const bar = (id: string, orientation: 'upright' | 'lying' = 'upright') =>
+        sized(id, 56, 56, { data: { irBarThickness: 12, irBarOrientation: orientation } });
+    const DOWN: ElkLayoutProfile = { direction: 'DOWN', edgeRouting: 'ORTHOGONAL', nodePlacement: 'NETWORK_SIMPLEX' };
+    const RIGHT: ElkLayoutProfile = { ...DOWN, direction: 'RIGHT' };
+
+    it('the size ELK sees: across the direction (lying under DOWN, UP and no profile, upright under RIGHT and LEFT), the current orientation under stress', () => {
+        const size = (profile: ElkLayoutProfile | null, o: 'upright' | 'lying' = 'upright') => {
+            const c = childOf(buildElkGraph([bar('t', o)], [], { profile }), 't');
+            return [c.width, c.height];
+        };
+        expect(size(DOWN)).toEqual([56, 12]);
+        expect(size({ ...DOWN, direction: 'UP' })).toEqual([56, 12]);
+        expect(size(null)).toEqual([56, 12]);
+        expect(size(RIGHT, 'lying')).toEqual([12, 56]);
+        expect(size({ ...DOWN, direction: 'LEFT' }, 'lying')).toEqual([12, 56]);
+        expect(size({ algorithm: 'stress' }, 'upright')).toEqual([12, 56]);
+        expect(size({ algorithm: 'stress' }, 'lying')).toEqual([56, 12]);
+        // Anything else keeps its box, a bar without a thickness (a saved view) included.
+        const g = buildElkGraph([sized('a', 56, 56), sized('b', 12, 56, { data: { irBarOrientation: 'lying' } })], [], { profile: DOWN });
+        expect([childOf(g, 'a').width, childOf(g, 'a').height, childOf(g, 'b').width, childOf(g, 'b').height]).toEqual([56, 56, 12, 56]);
+    });
+
+    it('the same layout as the bar of before: every other node where it was, the ink where the old bar was, the box around it', async () => {
+        const others = [sized('p1', 44, 44), sized('p2', 44, 44), sized('p3', 44, 44)];
+        const edges = [edge('a1', 'p1', 't'), edge('a2', 't', 'p2'), edge('a3', 't', 'p3')];
+        const old = await computeElkAutoLayout([...others, sized('t', 56, 12)], edges, { profile: DOWN });
+        const now = await computeElkAutoLayout([...others, bar('t', 'upright')], edges, { profile: DOWN });
+        for (const id of ['p1', 'p2', 'p3']) expect(now.positions.get(id), id).toEqual(old.positions.get(id));
+        const o = old.positions.get('t')!, n = now.positions.get('t')!;
+        // The ink (56 x 12, lying) is centred in the 56 x 56 box: its top-left is the box's plus (0, 22).
+        expect({ x: n.x, y: n.y + 22 }).toEqual(o);
+        // The routes are the old ones, point for point; their rects are the boxes, as React Flow measures them.
+        for (const id of ['a1', 'a2', 'a3']) {
+            expect(now.routes.get(id)!.points, id).toEqual(old.routes.get(id)!.points);
+        }
+        expect(now.routes.get('a2')!.sourceRect).toEqual({ x: n.x, y: n.y, width: 56, height: 56 });
+    });
+
+    it('a route records the orientation ELK laid each bar end out with; none on any other end', async () => {
+        const res = await computeElkAutoLayout([sized('p1', 44, 44), bar('t', 'upright'), sized('p2', 44, 44)], [edge('a1', 'p1', 't'), edge('a2', 't', 'p2')], { profile: DOWN });
+        expect(res.routes.get('a1')!.targetBar).toBe('lying');
+        expect(res.routes.get('a1')!.sourceBar).toBeUndefined();
+        expect(res.routes.get('a2')!.sourceBar).toBe('lying');
+        const right = await computeElkAutoLayout([sized('p1', 44, 44), bar('t', 'lying')], [edge('a1', 'p1', 't')], { profile: RIGHT });
+        expect(right.routes.get('a1')!.targetBar).toBe('upright');
+    });
+
+    it('route invalidation: a bar end that has turned since drops the route; no orientation passed, the rects alone decide', () => {
+        const r: ElkRoute = {
+            points: [{ x: 28, y: 34 }, { x: 28, y: 200 }], sourceSide: 'bottom', targetSide: 'top', orthogonal: true,
+            sourceRect: { x: 0, y: 0, width: 56, height: 56 }, targetRect: { x: 6, y: 200, width: 44, height: 44 }, sourceBar: 'lying',
+        };
+        expect(isElkRouteValid(r, r.sourceRect, r.targetRect, { source: 'lying' })).toBe(true);
+        expect(isElkRouteValid(r, r.sourceRect, r.targetRect, { source: 'upright' })).toBe(false);
+        expect(isElkRouteValid(r, r.sourceRect, r.targetRect, {})).toBe(false);
+        expect(isElkRouteValid(r, r.sourceRect, r.targetRect)).toBe(true);
+        // A route with no bar end and a node that has become one: dropped too.
+        const plain: ElkRoute = { ...r, sourceBar: undefined };
+        expect(isElkRouteValid(plain, r.sourceRect, r.targetRect, { target: 'upright' })).toBe(false);
     });
 });

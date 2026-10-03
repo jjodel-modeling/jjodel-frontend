@@ -429,6 +429,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     channelSink = new Set<string>();
     const predicate = compilePredicate(ir.predicate, deps);
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
+    // Q7 (P-2026-10-03-1304): compiled only when declared, so a view without it compiles to the key list it had.
+    const declaredVisible = ir.kind === 'vertex' ? ir.visible : undefined;
+    const visible = declaredVisible !== undefined ? compileConditional<boolean>(declaredVisible, true, deps) : undefined;
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
     // Border, one compile per axis (slice 2, D1): the same three lines compileEdgeView
     // runs for `line`, with the same fallbacks — '' for the colour (the "no override"
@@ -585,6 +588,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     // compiles to the key list it had; a value outside it renders as absent (R-B9-bis).
     const entry: unknown = ir.shape.entry;
     if (entry === 'dot' || entry === 'arrow') compiled.entry = entry;
+    if (visible) compiled.visible = visible;
     compileCache.set(key, compiled);
     return compiled;
 }

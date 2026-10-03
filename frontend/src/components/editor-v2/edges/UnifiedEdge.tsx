@@ -39,6 +39,10 @@ import {
     computeArcEdgeGeometry,
     computeArcSelfLoopGeometry,
     topLoopEnds,
+    sampleArcPath,
+    spreadDiamondEnds,
+    refitRouteEnd,
+    type DiamondEnd,
     trimPathEnds,
     type Side,
 } from '../utils/edgeUtils';
@@ -52,7 +56,15 @@ import { SegmentHandles } from './SegmentHandles';
 import { EndpointHandles } from './EndpointHandles';
 import { junctionGeometry, junctionTrunkPath, junctionVertex, type JunctionEnd } from '../viewpoint/ir/irJunctions';
 import { endGlyphOf, endGlyphMarker, glyphPathD, glyphCircles } from './edgeEndGlyphs';
-import { getElkRoute, elkRoutesRevision, isElkRouteValid, fitRouteToEnds } from '../utils/elkLayout';
+import { getElkRoute, elkRoutesRevision, isElkRouteValid, fitRouteToEnds, type BarOrientation } from '../utils/elkLayout';
+
+/** Q3 (P-2026-10-03-1304): the orientation of an end node that is a turned bar (irEdgeViews.ts writes it on the node data). */
+function barOrientationOf(n: any): BarOrientation | undefined {
+    const d = n?.data;
+    return typeof d?.irBarThickness === 'number' && (d.irBarOrientation === 'upright' || d.irBarOrientation === 'lying') ? d.irBarOrientation : undefined;
+}
+/** The two ends' bar orientations, for isElkRouteValid: a route whose bar end has turned since is not drawn. */
+const barEndsOf = (s: any, t: any) => ({ source: barOrientationOf(s), target: barOrientationOf(t) });
 
 // Bundle spread lives in ./bundleSpread (pure, testable). It fans the middle
 // corridor of parallel same-pair edges by physical anchor order (see that module).
@@ -70,6 +82,10 @@ const REFERENCE_ROUNDING = { approachRun: MARKER_APPROACH_RUN, interiorStraight:
 // P-2026-09-30-1935: the guard of an Activity (UML) flow sits on a patch of the label background, so the line
 // never runs through the text; it replaces the halo's shadow. Applied only on an edge with the Activity flag.
 const ACTIVITY_LABEL_PATCH: React.CSSProperties = { background: 'var(--color-edge-label-bg)', padding: '1px 4px', borderRadius: 2, textShadow: 'none' };
+
+// P-2026-10-03-1304: the width of a character of an arc's label in the C2 label style (12 px, 500), to size the label
+// boxes a single arc keeps off; measured 6.1 px on `coin`, rounded up.
+const ARC_LABEL_CHAR = 6.4;
 
 // E-route: React Flow's Position enum carries the same four strings as the
 // codebase's Side type; the map keeps the conversion explicit instead of casting.
@@ -180,7 +196,7 @@ function UnifiedEdge(props: EdgeProps) {
     // keep the current behavior.
     const labelEditable = !isIREdge;
 
-    const { setEdges, getNodes } = useReactFlow();
+    const { setEdges, getNodes, getInternalNode } = useReactFlow();
     const notation = useEditorContextSafe()?.notation ?? 'uml';
     const selectEdge = useEditorContextSafe()?.selectEdge;
     const showEdgeLabels = useEditorContextSafe()?.showEdgeLabels ?? false;
@@ -288,34 +304,81 @@ function UnifiedEdge(props: EdgeProps) {
     // computed for; a move or a resize of either node drops it and the router below takes over. Its ends are
     // ELK's own ports: the handles keep their uniform slots until the critical-zone lane aligns them (D-B), so the
     // endpoint grips sit on the drawn ends, as an arc's do. A junction branch is fitted to its diamond's vertex.
-    // An arc keeps its curve between the route's two ends; self-loops, non-orthogonal IR edges and grouped
-    // inheritance keep their own geometry (the route gave them their sides only).
+    // An arc keeps its curve between the route's two ends, but an arc alone between its two nodes takes the route
+    // itself (P-2026-10-03-1304, Q8 (iii)); self-loops, non-orthogonal IR edges and grouped inheritance keep their own
+    // geometry (the route gave them their sides only).
     const elkRouteRev = elkRoutesRevision();
     const elkRouteAny = useMemo(() => {
         if (isSelfLoop || isNonOrthogonalIR || (isInheritance && isGrouped)) return null;
         const route = getElkRoute(id);
         if (!route || !sourceNode || !targetNode) return null;
-        return isElkRouteValid(route, getNodeRect(sourceNode), getNodeRect(targetNode)) ? route : null;
+        return isElkRouteValid(route, getNodeRect(sourceNode), getNodeRect(targetNode), barEndsOf(sourceNode, targetNode)) ? route : null;
     }, [id, elkRouteRev, isSelfLoop, isNonOrthogonalIR, isInheritance, isGrouped, sourceNode, targetNode]);
-    const elkRoute = elkRouteAny && elkRouteAny.orthogonal && !isArcIR ? elkRouteAny : null;
+    // The other edges between this edge's two nodes, either way: an arc with none is alone (P-2026-10-03-1304).
+    const arcAlone = useMemo(
+        () => isArcIR && !isSelfLoop && !allEdges.some(e => e.id !== id && !e.hidden
+            && ((e.source === source && e.target === target) || (e.source === target && e.target === source))),
+        [isArcIR, isSelfLoop, allEdges, id, source, target],
+    );
+    const arcOnElkRoute = arcAlone && !!elkRouteAny && elkRouteAny.orthogonal;
+    const elkRoute = elkRouteAny && elkRouteAny.orthogonal && (!isArcIR || arcOnElkRoute) ? elkRouteAny : null;
+    // P-2026-10-03-1304 (Q4 (b)): an end on a diamond (irEdgeViews tags it) takes a vertex of its own among the ELK ends
+    // of that node (spreadDiamondEnds), the route refitted to it (refitRouteEnd). Read before a junction branch's fit,
+    // which then moves its other end. No diamond end: the route as ELK gave it.
+    const irSourceForm = irData.irSourceForm as string | undefined;
+    const irTargetForm = irData.irTargetForm as string | undefined;
+    const elkDiamondFit = useMemo(() => {
+        if (!elkRoute || (irSourceForm !== 'diamond' && irTargetForm !== 'diamond')) return null;
+        let pts: Array<{ x: number; y: number }> = elkRoute.points;
+        let sourceSideFit: Side = elkRoute.sourceSide, targetSideFit: Side = elkRoute.targetSide;
+        for (const role of ['source', 'target'] as const) {
+            if ((role === 'source' ? irSourceForm : irTargetForm) !== 'diamond') continue;
+            const nodeId = role === 'source' ? source : target;
+            const node = role === 'source' ? sourceNode : targetNode;
+            if (!node) continue;
+            const ends: DiamondEnd[] = [];
+            for (const e of allEdges) {
+                if (e.hidden || e.source === e.target || (e.source !== nodeId && e.target !== nodeId)) continue;
+                const r = getElkRoute(e.id);
+                const sN = getInternalNode(e.source), tN = getInternalNode(e.target);
+                if (!r || !r.orthogonal || !sN || !tN || !isElkRouteValid(r, getNodeRect(sN), getNodeRect(tN), barEndsOf(sN, tN))) continue;
+                const p = r.points;
+                if (e.source === nodeId) ends.push({ key: `${e.id}:source`, side: r.sourceSide, point: p[0], route: p });
+                if (e.target === nodeId) ends.push({ key: `${e.id}:target`, side: r.targetSide, point: p[p.length - 1], route: [...p].reverse() });
+            }
+            const mine = spreadDiamondEnds(getNodeRect(node), ends).get(`${id}:${role}`);
+            if (!mine) continue;
+            // A straight leg slides whole when the other end's side can take the vertex's coordinate (corners kept clear).
+            const other = role === 'source' ? targetNode : sourceNode;
+            const or = other ? getNodeRect(other) : null;
+            const span: [number, number] | undefined = or
+                ? (mine.side === 'top' || mine.side === 'bottom' ? [or.x + 4, or.x + or.width - 4] : [or.y + 4, or.y + or.height - 4])
+                : undefined;
+            pts = refitRouteEnd(pts, role === 'source' ? 'start' : 'end', mine.point, mine.side, span);
+            if (role === 'source') sourceSideFit = mine.side; else targetSideFit = mine.side;
+        }
+        return { points: pts, sourceSide: sourceSideFit, targetSide: targetSideFit };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [elkRoute, irSourceForm, irTargetForm, allEdges, elkRouteRev, id, source, target, sourceNode, targetNode, getInternalNode]);
     const elkPoints = useMemo(() => {
         if (!elkRoute) return null;
-        if (!branchEnds) return elkRoute.points;
-        const pts = elkRoute.points;
+        const base = elkDiamondFit ?? { points: elkRoute.points, sourceSide: elkRoute.sourceSide, targetSide: elkRoute.targetSide };
+        if (!branchEnds) return base.points;
+        const pts = base.points;
         return fitRouteToEnds(
-            { ...elkRoute, sourceSide: branchEnds.start?.side ?? elkRoute.sourceSide, targetSide: branchEnds.end?.side ?? elkRoute.targetSide },
+            { ...elkRoute, points: pts, sourceSide: branchEnds.start?.side ?? base.sourceSide, targetSide: branchEnds.end?.side ?? base.targetSide },
             branchEnds.start?.point ?? pts[0],
             branchEnds.end?.point ?? pts[pts.length - 1],
         );
-    }, [elkRoute, branchEnds]);
+    }, [elkRoute, elkDiamondFit, branchEnds]);
     const elkCenterLabel = elkRoute?.centerLabel ?? null;
     // An arc's chord between the route's ends: ELK ordered those ports, the handles' uniform slots did not. A straight
     // (stress) route ends on the box, not on a diamond's or an ellipse's outline: there the handles' ends stay.
     const elkArcEnds = useMemo(
-        () => (isArcIR && !isSelfLoop && elkRouteAny && !elkRouteAny.straight
+        () => (isArcIR && !isSelfLoop && !arcOnElkRoute && elkRouteAny && !elkRouteAny.straight
             ? { start: elkRouteAny.points[0], end: elkRouteAny.points[elkRouteAny.points.length - 1] }
             : null),
-        [isArcIR, isSelfLoop, elkRouteAny],
+        [isArcIR, isSelfLoop, arcOnElkRoute, elkRouteAny],
     );
 
     // ─── Compute base path — Manhattan routing ───
@@ -508,7 +571,7 @@ function UnifiedEdge(props: EdgeProps) {
     // else at the top centre; an edge bowed away from the edges between the same nodes the other
     // way, whose chords are read the same way; otherwise straight.
     const arcGeom = useMemo(() => {
-        if (!isArcIR) return null;
+        if (!isArcIR || arcOnElkRoute) return null;
         const start = elkArcEnds?.start ?? handleCenterOf(sourceNode, sourceHandleId, 'source') ?? { x: sourceX, y: sourceY };
         const end = elkArcEnds?.end ?? handleCenterOf(targetNode, targetHandleId, 'target') ?? { x: targetX, y: targetY };
         if (isSelfLoop) {
@@ -521,16 +584,63 @@ function UnifiedEdge(props: EdgeProps) {
             .map(e => {
                 // An opposite edge drawn on its ELK route's ends is read there too, so the pair bows apart.
                 const r = elkArcEnds ? getElkRoute(e.id) : undefined;
-                if (r && targetNode && sourceNode && isElkRouteValid(r, getNodeRect(targetNode), getNodeRect(sourceNode))) {
-                    return { start: r.points[0], end: r.points[r.points.length - 1] };
+                if (r && targetNode && sourceNode && isElkRouteValid(r, getNodeRect(targetNode), getNodeRect(sourceNode), barEndsOf(targetNode, sourceNode))) {
+                    return { start: r.points[0], end: r.points[r.points.length - 1], id: e.id };
                 }
                 return {
                     start: handleCenterOf(targetNode, e.sourceHandle, 'source') ?? end,
                     end: handleCenterOf(sourceNode, e.targetHandle, 'target') ?? start,
+                    id: e.id,
                 };
             });
-        return computeArcEdgeGeometry(start, end, opposite);
-    }, [isArcIR, isSelfLoop, sourceNode, targetNode, sourceHandleId, targetHandleId, sourceSide, targetSide, allEdges, id, source, target, sourceX, sourceY, targetX, targetY, elkArcEnds]);
+        // P-2026-10-03-1304 (Q5): the arcs the same way, read as the opposite ones, so a fan orders them all alike.
+        const same = allEdges
+            .filter(e => e.id !== id && !e.hidden && e.source === source && e.target === target)
+            .map(e => {
+                const r = elkArcEnds ? getElkRoute(e.id) : undefined;
+                if (r && sourceNode && targetNode && isElkRouteValid(r, getNodeRect(sourceNode), getNodeRect(targetNode), barEndsOf(sourceNode, targetNode))) {
+                    return { start: r.points[0], end: r.points[r.points.length - 1], id: e.id };
+                }
+                return {
+                    start: handleCenterOf(sourceNode, e.sourceHandle, 'source') ?? start,
+                    end: handleCenterOf(targetNode, e.targetHandle, 'target') ?? end,
+                    id: e.id,
+                };
+            });
+        if (opposite.length > 0 || same.length > 0) return computeArcEdgeGeometry(start, end, opposite, { id, same });
+        // An arc alone bows round the other nodes its chord would cross (Q5), read as routedPoints reads them, and
+        // crosses none of the other arcs where it can: their curves as they are drawn at rest, each from its own
+        // handles (an arc alone among them as its chord). ELK route ends are not read here: after an Auto layout an
+        // arc alone runs on its route (Q8 (iii)).
+        const obstacles = getNodes().filter(n => !n.hidden && n.id !== source && n.id !== target).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0);
+        const at = (nid: string, hid: string | null | undefined, type: 'source' | 'target') => handleCenterOf(getInternalNode(nid), hid, type);
+        const others = allEdges
+            .filter(e => e.id !== id && !e.hidden && (e.data as Record<string, unknown> | undefined)?.irCurve === 'arc')
+            .map(e => {
+                if (e.source === e.target) {
+                    const s0 = at(e.source, e.sourceHandle, 'source'), t0 = at(e.target, e.targetHandle, 'target');
+                    if (getSideFromHandle(e.sourceHandle) === 'top' && getSideFromHandle(e.targetHandle) === 'top' && s0 && t0) return { e, g: computeArcSelfLoopGeometry(s0, t0) };
+                    const n = getInternalNode(e.source);
+                    if (!n) return null;
+                    const ends = topLoopEnds(getNodeRect(n));
+                    return { e, g: computeArcSelfLoopGeometry(ends.start, ends.end) };
+                }
+                const s0 = at(e.source, e.sourceHandle, 'source'), t0 = at(e.target, e.targetHandle, 'target');
+                if (!s0 || !t0) return null;
+                const between = (a: string, b: string) => allEdges
+                    .filter(x => x.id !== e.id && !x.hidden && x.source === a && x.target === b)
+                    .map(x => ({ start: at(x.source, x.sourceHandle, 'source') ?? (a === e.source ? s0 : t0), end: at(x.target, x.targetHandle, 'target') ?? (a === e.source ? t0 : s0), id: x.id }));
+                return { e, g: computeArcEdgeGeometry(s0, t0, between(e.target, e.source), { id: e.id, same: between(e.source, e.target) }) };
+            })
+            .filter((x): x is { e: (typeof allEdges)[number]; g: ReturnType<typeof computeArcEdgeGeometry> } => !!x);
+        const avoid = others.map(x => sampleArcPath(x.g.d));
+        // Their labels and this one's, sized from the text (the C2 label style, about 6.4 px a character, 15 high).
+        const labelBox = (text: string, at: { x: number; y: number }) => ({ x: at.x - (text.length * ARC_LABEL_CHAR + 4) / 2, y: at.y - 7.5, width: text.length * ARC_LABEL_CHAR + 4, height: 15 });
+        const avoidBoxes = others.filter(x => String(x.e.label ?? '').trim()).map(x => labelBox(String(x.e.label).trim(), x.g.label));
+        const own = String(label ?? '').trim();
+        const labelSize = own ? { width: own.length * ARC_LABEL_CHAR + 4, height: 15 } : undefined;
+        return computeArcEdgeGeometry(start, end, opposite, { id, same, obstacles, avoid, avoidBoxes, labelSize });
+    }, [isArcIR, arcOnElkRoute, getInternalNode, label, isSelfLoop, sourceNode, targetNode, sourceHandleId, targetHandleId, sourceSide, targetSide, allEdges, id, source, target, sourceX, sourceY, targetX, targetY, elkArcEnds]);
 
     // ─── Final path with rounding and bridge arcs ───
     const path = useMemo(() => {

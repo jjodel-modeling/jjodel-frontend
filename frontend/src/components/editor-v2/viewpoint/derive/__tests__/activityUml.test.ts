@@ -295,6 +295,7 @@ describe('Activity (UML) — the documents on DemoFlowB', () => {
 
     it('fork and join: a filled bar in the ink, 7 px thick, across the layout direction (DOWN: 120 by 7), no name', () => {
         // P-2026-10-01-2215 (Q7, amends R-VP-26 (2); thickness R-VP-36): the bar follows the layout direction.
+        // Q3 (P-2026-10-03-1304) leaves Activity's fork and join out of the turn (Alfonso's decision): no barThickness.
         expect(DERIVED_NOTATIONS.find(n => n.id === 'activityUml')!.layout!.direction).toBe('DOWN');
         for (const name of ['Fork', 'Join']) {
             const ir = irOf(views, name);

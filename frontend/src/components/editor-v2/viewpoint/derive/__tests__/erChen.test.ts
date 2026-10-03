@@ -190,13 +190,22 @@ describe('A4 leaves every other notation as it was', () => {
     // R-VP-25 (P-2026-09-30-1521): the 24 lists that held a filled arrowhead moved with the open one, each to the
     // digest predicted on 2cde09984's code, before any A2 edit: the tip's documents with every closedArrow an
     // openArrow and their provenance hash recomputed.
+    // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
+    // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
+    // every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
+    // key alone set to undefined every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
+    // suppressed every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
+    // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
     const PINNED: Record<string, string> = {
         'DemoESM flowchart': '7e215bccf0811354',
         'DemoESM flowchartIso': '369ee94b0ae560fc',
         'DemoESM generic': 'f5b415d0f3a7512c',
         'DemoESM petri': 'a9967d96094069ab',
-        'DemoESM stateMachine': '9a9fdc00b24bcb39',
-        'DemoESM statechart': '3066e031283faeb7',
+        'DemoESM stateMachine': '95040925ad077303',
+        'DemoESM statechart': '1e8c563561566411',
         'DemoFlowB flowchart': '124d96bbb07f4e44',
         'DemoFlowB flowchartIso': '0f3b13332e902f0f',
         'DemoFlowB generic': '1ebd123804dc75a1',
@@ -207,14 +216,14 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoPEST flowchartIso': '042f60bcc91d9e26',
         'DemoPEST generic': '6d66ed919a80875b',
         'DemoPEST petri': '0d845ed009b85a0a',
-        'DemoPEST stateMachine': '859ed7219f226f01',
-        'DemoPEST statechart': '6018e49cd52e7a9c',
+        'DemoPEST stateMachine': 'f0ba4426cae26d2f',
+        'DemoPEST statechart': '262e2ac7f3bf9303',
         'DemoPetri flowchart': 'd2b745a44e81558d',
         'DemoPetri flowchartIso': '02ed35a22d5bcf3f',
         'DemoPetri generic': 'dab0b1ddf3a00c38',
-        'DemoPetri petri': '42781fdee36ad040',
-        'DemoPetri stateMachine': '1f551e40ba793093',
-        'DemoPetri statechart': '69a58852d0d9ee91',
+        'DemoPetri petri': '4ea473651a70adc7',
+        'DemoPetri stateMachine': 'fcc0009cc695e6b4',
+        'DemoPetri statechart': 'af986487f87ae4b8',
         'ERDLanguage ERD flowchart': '-',
         'ERDLanguage ERD flowchartIso': '-',
         'ERDLanguage ERD generic': 'a718dff62a153ed7',
@@ -262,21 +271,23 @@ describe('A4 leaves every other notation as it was', () => {
 
     // Measured on the A2 tip (d4daecaf7's code) before any edit of P-2026-09-30-1552: the two notations the
     // table above leaves out, the documents WITH their provenance.
+    // P-2026-10-03-1304 (Q1): the three petriClassic lists retaken; the code change is the classic arc documents'
+    // `curve: 'arc'` dropped (and the provenance hash it moves), nothing else.
     const PINNED_A2: Record<string, string> = {
         'DemoESM erChen': '-',
         'DemoESM petriClassic': '4f197c31b7a2a94c',
         'DemoFlowB erChen': '-',
-        'DemoFlowB petriClassic': 'b098e7f609b2e4d7',
+        'DemoFlowB petriClassic': 'af7b64d11135bcd8',
         'DemoPEST erChen': '-',
         'DemoPEST petriClassic': 'e838a4e40d369fad',
         'DemoPetri erChen': '-',
-        'DemoPetri petriClassic': '3e3943cd76b54bcd', // R-VP-53: the transition name above the bar (P-2026-10-03-1415)
+        'DemoPetri petriClassic': 'eee6dd3c7f3c9c84', // R-VP-53 (P-2026-10-03-1415), then Q3: the 56 by 56 box, 12 thick
         'ERDLanguage ERD erChen': '61c73fe96b150683',
         'ERDLanguage ERD petriClassic': 'ac8a06d17f46633c',
         'ERDLanguage Library erChen': '-',
         'ERDLanguage Library petriClassic': '-',
         'ERDLanguage Relational erChen': 'c82afdad857005ab',
-        'ERDLanguage Relational petriClassic': 'a878d399b9a78f31',
+        'ERDLanguage Relational petriClassic': '10a06083aaa944f6',
         'MDE ERD (1) erChen': '23a31f1c3f487daa',
         'MDE ERD (1) petriClassic': 'fe7361076e5a1b00',
         'MDE ERD erChen': '4299e38db1cad805',
