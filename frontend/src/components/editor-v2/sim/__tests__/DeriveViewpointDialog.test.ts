@@ -63,7 +63,7 @@ describe('DeriveViewpointForm — the notation select and the table', () => {
         // P-2026-09-30-1552 (R-VP-26): Activity (UML) after Flowchart (ISO 5807).
         // P-2026-10-03-1300: State machine is hidden, drawn as Statechart (UML).
         expect(notation.options.map(o => [o.value, o.text])).toEqual([
-            ['generic', 'Generic'], ['statechart', 'Statechart (UML)'],
+            ['generic', 'Generic'], ['statechart', 'State machine (UML statechart)'],
             ['petri', 'Petri net'], ['petriClassic', 'Petri net (classic)'], ['flowchart', 'Flowchart'], ['flowchartIso', 'Flowchart (ISO 5807)'],
             ['activityUml', 'Activity (UML)'], ['erChen', 'ER (Chen)'],
         ]);
