@@ -455,7 +455,7 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                     </aside>
                 </div>
                 <div className="sim-roles-modal__footer">
-                    <span className="sim-roles-modal__note">A Pulse LED reads the trace, a configuration display the marking: neither is exported.</span>
+                    <span className="sim-roles-modal__note">A Pulse LED reads the trace and a configuration display shows the marking; neither is exported.</span>
                     <div className="sim-roles-modal__actions sim-roles-modal__actions--end">
                         <button type="button" className="sim-roles-modal__btn sim-roles-modal__btn--secondary" onClick={onClose}>Cancel</button>
                         <button

@@ -34,8 +34,10 @@
  * one status line (`statusLine`). The face reads the live run; the builders are
  * simBridge.ts's, the pins simViewerPrefs.ts's. The expand button of the header
  * opens the run inspector (SimInspector.tsx, R-SIM-105, R-SIM-106), a card beside
- * the panel; while a run exists the panel also mounts the canvas layer
- * (SimCanvasLayer.tsx, R-SIM-107, R-SIM-109). Both are rendered here, siblings of
+ * the panel; the board button beside it opens the I/O board (`SimBoard` of
+ * simBoardDevices.tsx, R-SIM-110..115) in the same slot, one of the two at a time
+ * (R-SIM-119, P-2026-10-03-2000); while a run exists the panel also mounts the canvas layer
+ * (SimCanvasLayer.tsx, R-SIM-107, R-SIM-109). All are rendered here, siblings of
  * the panel in the editor, so they hide with its tab as the panel does.
  *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
@@ -60,9 +62,9 @@ import {
     profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
-    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView,
-    markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep, runSignature, runStatus, startRun,
-    statusLine, stopReason, undeclaredGlobals, watchRows,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
+    inputPressTitle, inputReason, makeNetModelView, markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep,
+    runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchRows,
 } from './simBridge';
 import type { CompileDefect, InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -75,6 +77,7 @@ import { structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
 import { systemProfile } from '../../../model/simulation/simProfiles';
+import { IO_BOARD_KEY } from '../../../model/simulation/boardCodec';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { SimProfile } from '../../../model/simulation/simProfiles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
@@ -86,6 +89,7 @@ import { SimInputDialog } from './SimInputDialog';
 import { SimDataModal } from './SimDataModal';
 import { facePins, SimInspector } from './SimInspector';
 import { SimCanvasLayer } from './SimCanvasLayer';
+import { SimBoard } from './simBoardDevices';
 import './simulation-panel.scss';
 
 // Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
@@ -264,6 +268,8 @@ interface AskingInputs {
     event: string | null;
     input: string;
     asks: readonly InputRead[];
+    /** The values the I/O board's held devices gave (R-SIM-120): the dialog asks the rest, its confirm sends both. */
+    given?: readonly InputValue[];
 }
 
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -271,7 +277,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
         modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
-        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading,
+        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading, modelBoardRaw,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -314,6 +320,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // R-SIM-105: the run inspector, opened by the header's expand button.
     const [inspectorOpen, setInspectorOpen] = useState(false);
     useEffect(() => { setInspectorOpen(false); }, [modelid]);
+    // R-SIM-119: the I/O board, in the inspector's slot; one of the two is open at a time.
+    const [boardOpen, setBoardOpen] = useState(false);
+    useEffect(() => { setBoardOpen(false); }, [modelid]);
     // R-SIM-104: the Watch rows read the pins, a viewer preference with its own channel, never the 'mark' one.
     const prefsVersion = useSimViewerPrefsVersion();
 
@@ -713,22 +722,36 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const reason: StopReason | null = view?.reason ?? null;
     const policy = getSimPolicy(modelid);
     const isPlaying = playing === modelid;
-    /** A button's title, and why its input has no candidate when it is on without one (R-SIM-60). */
-    const inputTitle = (base: string, event: string | null): string => {
-        const why = view?.noCandidate.get(event);
-        const asks = view?.asks.get(event);
-        return why ? `${base}\nNo candidate. ${why}` : asks ? `${base}\nAsks: ${asks}` : base;
-    };
+    /** A button's title, and why its input has no candidate when it is on without one (R-SIM-60); the board's devices say the same. */
+    const inputTitle = (base: string, event: string | null): string => inputPressTitle(base, view?.noCandidate.get(event), view?.asks.get(event));
     /** An event button that is off says why in its title (R-SIM-104): the run's reason while it runs, its status otherwise. */
-    const offTitle = (base: string, event: string): string => {
-        const why = view?.noCandidate.get(event);
-        if (why) return `${base}\nOff. ${why}`;
-        return `${base}\nOff. ${status === 'Not started' || status === null ? 'Reset starts the run.' : `The run is ${status}.`}`;
-    };
+    const offTitle = (base: string, event: string): string => inputOffTitle(base, view?.noCandidate.get(event), status);
     /** Closing the inspector, or the panel, shows the live step again (R-SIM-106): no past step is left on the canvas unsaid. */
     const closeInspector = (): void => {
         setInspectorOpen(false);
         simSetView(modelid, null);
+    };
+    /**
+     * R-SIM-119: the board and the inspector share one slot. Opening one closes the other and keeps the step shown, so a
+     * past step chosen in the inspector is read on the board's outputs; closing the last one returns to live.
+     */
+    const openInspector = (): void => {
+        setBoardOpen(false);
+        setInspectorOpen(true);
+    };
+    const openBoard = (): void => {
+        setInspectorOpen(false);
+        setBoardOpen(true);
+    };
+    const closeBoard = (): void => {
+        setBoardOpen(false);
+        simSetView(modelid, null);
+    };
+    /** The input dialog for a board press: the inputs its held devices leave unanswered, their values carried (R-SIM-120). */
+    const askInputs = (event: string, asks: readonly InputRead[], given: readonly InputValue[]): void => {
+        setPending(null);
+        simSetPending(modelid, null);
+        setAsking({ event, input: labelOf(event), asks, given });
     };
     /** The label of an input, the panel's: `ε`, or the event's. */
     const labelOf: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
@@ -773,6 +796,18 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             <div className="sim-panel__header">
                 <i className="bi bi-play-circle" />
                 <span className="sim-panel__title">Simulation</span>
+                {/* R-SIM-114, R-SIM-119: the I/O board, in the inspector's slot; the M1 face only. */}
+                {isModelMode && rolesComplete && (
+                    <button
+                        type="button"
+                        className="sim-panel__expand"
+                        title={boardOpen ? 'Close the I/O board' : 'Open the I/O board: the machine\'s inputs and outputs'}
+                        aria-pressed={boardOpen}
+                        onClick={() => (boardOpen ? closeBoard() : openBoard())}
+                    >
+                        <i className="bi bi-motherboard" />
+                    </button>
+                )}
                 {/* R-SIM-105: the run inspector, a card beside the panel; the M1 face only. */}
                 {isModelMode && rolesComplete && (
                     <button
@@ -780,7 +815,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         className="sim-panel__expand"
                         title={inspectorOpen ? 'Close the run inspector' : 'Open the run inspector: the whole state and the trace'}
                         aria-pressed={inspectorOpen}
-                        onClick={() => (inspectorOpen ? closeInspector() : setInspectorOpen(true))}
+                        onClick={() => (inspectorOpen ? closeInspector() : openInspector())}
                     >
                         <i className={`bi ${inspectorOpen ? 'bi-arrows-angle-contract' : 'bi-arrows-angle-expand'}`} />
                     </button>
@@ -789,7 +824,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     type="button"
                     className="sim-panel__collapse"
                     title="Collapse"
-                    onClick={() => { setOpen(false); if (inspectorOpen) closeInspector(); }}
+                    onClick={() => { setOpen(false); if (inspectorOpen) closeInspector(); if (boardOpen) closeBoard(); }}
                 >
                     <i className="bi bi-chevron-down" />
                 </button>
@@ -979,7 +1014,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 action={asking.event === null ? 'Step' : `Fire ${asking.input}`}
                                 rows={inputRows(asking.asks, run.net, lookupNow)}
                                 onCancel={() => setAsking(null)}
-                                onConfirm={values => { const a = asking; setAsking(null); fire(a.event, undefined, values); }}
+                                onConfirm={values => { const a = asking; setAsking(null); fire(a.event, undefined, a.given ? [...a.given, ...values] : values); }}
                             />
                         )}
                         {runWarning && <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={runWarning}>{runWarning}</div>}
@@ -1133,6 +1168,20 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 modelId={modelid} modelName={modelName} inputLabel={labelOf} stateHint={stateHint} markingHeading={modelStateHeading} onClose={closeInspector}
             />
         )}
+        {isModelMode && rolesComplete && boardOpen && view && (
+            <SimBoard
+                modelId={modelid}
+                modelName={modelName}
+                configModelId={configModelId}
+                boardRaw={modelBoardRaw}
+                inputs={{ status, eventsOn: view.inputs.events, noCandidate: view.noCandidate, asks: view.asks }}
+                statusLine={line}
+                contextKey={eventSig}
+                fire={fire}
+                ask={askInputs}
+                onClose={closeBoard}
+            />
+        )}
         {canvasLayer}
         </>
     );
@@ -1227,6 +1276,8 @@ interface StateProps {
     modelProfileName: string;
     /** The heading of the run's marked places under that profile: `Marking` for Petri, `Configuration` for control flow. */
     modelStateHeading: StateHeading;
+    /** The raw `ioBoard` string of the M1 model's own bag (R-SIM-115), `null` when unset or on the M2 face: a primitive. */
+    modelBoardRaw: string | null;
 }
 
 interface DispatchProps { }
@@ -1270,6 +1321,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         modelDataOff: ownProps.isModelMode && storedProfile(rawState).profile.modes.stateAttributes.mode === 'off',
         modelProfileName: ownProps.isModelMode ? storedProfile(rawState).profile.name : '',
         modelStateHeading: ownProps.isModelMode ? stateHeading(storedProfile(rawState).profile) : 'Marking',
+        modelBoardRaw: ownProps.isModelMode && typeof dModel?._state?.[IO_BOARD_KEY] === 'string' ? dModel._state[IO_BOARD_KEY] : null,
     };
 }
 
