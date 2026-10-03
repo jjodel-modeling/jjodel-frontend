@@ -478,10 +478,10 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // key alone set to undefined every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
     // suppressed every digest below was the one before, measured on the lane.
-    // P-2026-10-03-1304 (Q3): the bars of Petri net and of Flowchart's fork and join take a square box and a barThickness;
-    // with the old box and no thickness every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
+    // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
     const PINNED: Record<string, string> = {
-        DemoPEST: '0e123f6496e06e3a', DemoPetri: '023be3c14750b11d', DemoESM: 'a8bbf693f25c8f14', DemoFlowB: 'a796eb253ccbeb20',
+        DemoPEST: '0e123f6496e06e3a', DemoPetri: '023be3c14750b11d', DemoESM: 'a8bbf693f25c8f14', DemoFlowB: '0686c16f9969bb93',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -690,13 +690,13 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // key alone set to undefined every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
     // suppressed every digest below was the one before, measured on the lane.
-    // P-2026-10-03-1304 (Q3): the bars of Petri net and of Flowchart's fork and join take a square box and a barThickness;
-    // with the old box and no thickness every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
+    // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
     const PINNED_D: Record<string, string> = {
         'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': 'f0ba4426cae26d2f', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
         'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'fcc0009cc695e6b4', 'DemoPetri petri': '4ea473651a70adc7', 'DemoPetri flowchart': 'd2b745a44e81558d',
         'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '95040925ad077303', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
-        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': 'c3934a5c797c9561',
+        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '124d96bbb07f4e44',
     };
 
     it('Generic, State machine, Petri net and Flowchart derive the D tip\'s documents, byte for byte, provenance included', () => {

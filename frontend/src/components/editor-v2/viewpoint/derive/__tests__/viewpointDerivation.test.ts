@@ -1038,8 +1038,8 @@ describe('deriveViewpointIRs — the activity notation with the roles bound (Dem
     it('Fork and Join: nameless bars in the name ink, 120 by 7, the bar of Activity (UML) (P-2026-10-03-1300)', () => {
         for (const n of ['Fork', 'Join']) {
             expect(byClass(flow(), n).rule, n).toBe(`role:${n.toLowerCase()}`);
-            expect(vertex(byClass(flow(), n)).shape, n).toEqual({ form: 'bar', fill: NAME_INK, border: { color: NAME_INK, width: 1, style: 'solid' }, labels: [], barThickness: 7 });
-            expect(vertex(byClass(flow(), n)).defaultSize, n).toEqual({ width: 120, height: 120 });
+            expect(vertex(byClass(flow(), n)).shape, n).toEqual({ form: 'bar', fill: NAME_INK, border: { color: NAME_INK, width: 1, style: 'solid' }, labels: [] });
+            expect(vertex(byClass(flow(), n)).defaultSize, n).toEqual({ width: 120, height: 7 });
             expect(vertex(byClass(flow(), n)).fieldCompartments, n).toBeUndefined();
         }
     });
@@ -1766,12 +1766,12 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         // Measured on the derivation of 58aa78ba9, before P-2026-09-29-2350 touched it.
         // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
         // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
-        // P-2026-10-03-1304 (Q3): DemoPetri's bar and DemoFlowB's fork and join take a square box and a barThickness;
-        // with the old box and no thickness both digests were the ones before, measured on the lane.
+        // P-2026-10-03-1304 (Q3): DemoPetri's bar takes a square box and a barThickness; with the old box and no thickness
+        // its digest was the one before, measured on the lane. DemoFlowB's fork and join stay out of the turn.
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: '023be3c14750b11d', DemoESM: '0908707066b1a90e', DemoFlowB: 'a796eb253ccbeb20',
+            DemoPEST: '99e03cfb52856542', DemoPetri: '023be3c14750b11d', DemoESM: '0908707066b1a90e', DemoFlowB: '0686c16f9969bb93',
         });
     });
 });

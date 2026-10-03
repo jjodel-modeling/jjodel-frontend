@@ -417,9 +417,9 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         if (petriPlace) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { fontStyle: 'italic', fontWeight: 'normal' } };
         if (petriTransition) shapeSpec.labels[0] = { position: 'outside', anchor: 's', source: shapeSpec.labels[0].source, style: EDGE_LABEL_STYLE() };
         if (nameless) shapeSpec.labels = [];
-        // Q3 (P-2026-10-03-1304): the bars are drawn at their thickness inside a square box and turned by their neighbours.
+        // Q3 (P-2026-10-03-1304): the Petri bar is drawn at its thickness inside a square box and turned by its neighbours.
+        // The fork and join stay out of the turn (Alfonso's decision): their box of before, no thickness.
         if (petriTransition) shapeSpec.barThickness = PETRI_BAR_SHORT;
-        if (bar) shapeSpec.barThickness = ACTIVITY_BAR_THICKNESS;
 
         const ir: VertexViewIR = {
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label,
@@ -858,13 +858,15 @@ const ACTIVITY_DECISION_SIZE = { width: 36, height: 36 } as const;
  */
 export const ACTIVITY_LAYOUT_DIRECTION = 'DOWN' as const;
 /**
- * Fork and join: a bar 7 px thick (R-VP-36, P-2026-10-01-2230) and 120 long. Until Q3 the IR had no orientation, so the
- * bar lay across the layout direction, 120 by 7 under DOWN (Q7, P-2026-10-01-2215), painted 5 by 118 (the wrapper kept
- * a 1 px border each side). Since Q3 (P-2026-10-03-1304) the box is 120 by 120 and the bar is drawn in it, 7 thick as
- * declared, turned by its neighbours; Auto layout lays it across the direction still (elkLayout.ts).
+ * Fork and join: a bar declared 7 px thick and 120 long, painted 5 by 118 (the wrapper keeps a 1 px border each side).
+ * The IR has no orientation and `defaultSize` is per view, so the bar lies across the layout direction: 120 by 7
+ * under a flow that runs down (Q7, P-2026-10-01-2215), 7 by 120 under one that runs across. Drawn as declared
+ * since P-2026-09-30-1720; 7, not 5, since P-2026-10-01-2230 (R-VP-36). Not turned by Q3 (P-2026-10-03-1304): on
+ * DemoFlowB without a layout the turned fork routed through its row (discovery 2026-10-03 §11), Alfonso's decision.
  */
-const ACTIVITY_BAR_SIZE = { width: 120, height: 120 } as const;
-const ACTIVITY_BAR_THICKNESS = 7;
+const ACTIVITY_BAR_SIZE = (ACTIVITY_LAYOUT_DIRECTION as string) === 'DOWN' || (ACTIVITY_LAYOUT_DIRECTION as string) === 'UP'
+    ? { width: 120, height: 7 } as const
+    : { width: 7, height: 120 } as const;
 /** The action: 44 px high, its width from its name; radius 14, clamped at render to half the height (P-2026-09-30-1720). */
 const ACTIVITY_ACTION_SIZE = { height: 44 } as const;
 const ACTIVITY_ACTION_RADIUS = 14;
@@ -933,7 +935,7 @@ export function deriveActivityViewpointIRs(lookup: Lookup, metamodelId: string, 
             shape = { form: 'diamond', fill: SURFACE, border: ink(), labels: [] };
             size = ACTIVITY_DECISION_SIZE;
         } else if (role === 'fork' || role === 'join') {
-            shape = { form: 'bar', fill: NAME_INK, border: ink(), labels: [], barThickness: ACTIVITY_BAR_THICKNESS };
+            shape = { form: 'bar', fill: NAME_INK, border: ink(), labels: [] };
             size = ACTIVITY_BAR_SIZE;
         } else if (role === 'node') {
             shape = { form: 'rounded', fill: SURFACE, border: ink(), cornerRadius: ACTIVITY_ACTION_RADIUS, labels: [centredName(13, 'medium')] };

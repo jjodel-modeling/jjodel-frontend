@@ -197,8 +197,8 @@ describe('A4 leaves every other notation as it was', () => {
     // key alone set to undefined every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
     // suppressed every digest below was the one before, measured on the lane.
-    // P-2026-10-03-1304 (Q3): the bars of Petri net and of Flowchart's fork and join take a square box and a barThickness;
-    // with the old box and no thickness every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q3): the bars of Petri net take a square box and a barThickness; with the old box and no
+    // thickness every digest below was the one before, measured on the lane. Flowchart's fork and join stay out.
     const PINNED: Record<string, string> = {
         'DemoESM flowchart': '7e215bccf0811354',
         'DemoESM flowchartIso': '369ee94b0ae560fc',
@@ -206,7 +206,7 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoESM petri': 'a9967d96094069ab',
         'DemoESM stateMachine': '95040925ad077303',
         'DemoESM statechart': '1e8c563561566411',
-        'DemoFlowB flowchart': 'c3934a5c797c9561',
+        'DemoFlowB flowchart': '124d96bbb07f4e44',
         'DemoFlowB flowchartIso': '0f3b13332e902f0f',
         'DemoFlowB generic': '1ebd123804dc75a1',
         'DemoFlowB petri': 'b8415f0e187edacc',

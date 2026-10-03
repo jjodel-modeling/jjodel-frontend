@@ -424,7 +424,7 @@ describe('item 6: fork and join are the same solid ink bar as Activity (UML)', (
     it('Fork and Join: bar, fill and border in the name ink, nameless (mutation: the catalogue ink kept)', () => {
         for (const name of ['Fork', 'Join']) {
             expect(irOf(flowchart(), name).shape, name).toEqual({
-                form: 'bar', fill: INK, border: { color: INK, width: 1, style: 'solid' }, labels: [], barThickness: 7,
+                form: 'bar', fill: INK, border: { color: INK, width: 1, style: 'solid' }, labels: [],
             });
         }
     });
@@ -433,7 +433,7 @@ describe('item 6: fork and join are the same solid ink bar as Activity (UML)', (
         for (const name of ['Fork', 'Join']) {
             expect(irOf(flowchart(), name).defaultSize, name).toEqual(irOf(activity(), name).defaultSize);
         }
-        expect(irOf(flowchart(), 'Fork').shape.barThickness).toBe(7);
+        expect(irOf(flowchart(), 'Fork').defaultSize.height).toBe(7);
         expect(bare(irOf(flowchart(), 'Fork')).shape).toEqual(bare(irOf(flowchart(), 'Join')).shape);
         expect(irOf(flowchart(), 'Fork').defaultSize).toEqual(irOf(flowchart(), 'Join').defaultSize);
     });
