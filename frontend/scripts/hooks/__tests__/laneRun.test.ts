@@ -34,6 +34,9 @@ const FAKE_CLAUDE = `#!/bin/sh
   echo "cwd=$(pwd -P)"
   echo "path=$PATH"
   echo "goahead=\${JJODEL_CRITICAL_ZONE_GOAHEAD-unset}"
+  echo "ghtoken=\${GH_TOKEN-unset}"
+  echo "githubtoken=\${GITHUB_TOKEN-unset}"
+  echo "ghconfig=\${GH_CONFIG_DIR-unset}"
   for a in "$@"; do echo "arg=$a"; done
   echo "stdin=$(cat | tr '\\n' ' ')"
 } >> "$FAKE_STATE/calls.txt"
@@ -115,6 +118,9 @@ function calls(l: Lab) {
                 args: lines.filter((x) => x.startsWith('arg=')).map((x) => x.slice(4)),
                 stdin: one('stdin'),
                 goahead: one('goahead'),
+                ghtoken: one('ghtoken'),
+                githubtoken: one('githubtoken'),
+                ghconfig: one('ghconfig'),
             };
         });
 }
@@ -1614,5 +1620,78 @@ describe('lane-run monitor', { timeout: 60000 }, () => {
         const lane = idx.nodes.find((n: { type: string; id: string }) => n.type === 'lane' && n.id === ID);
         expect(lane.outcome).toBe('done');
         process.kill(pid, 'SIGTERM');
+    });
+});
+
+// ── start --auto (RC-36) ─────────────────────────────────────────────────────
+
+const AUTO_FLAGS = ['--disallowedTools', 'WebFetch,WebSearch', '--strict-mcp-config'];
+const GH_ENV = { GH_TOKEN: 'tok-1', GITHUB_TOKEN: 'tok-2', GH_CONFIG_DIR: '/somewhere/with/credentials' };
+
+describe('lane-run start --auto (RC-36)', () => {
+    test('kills "the go-ahead allowed with --auto": --auto with --critical-zone-goahead is refused before anything runs', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md', '--auto', '--critical-zone-goahead', ID]);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('--auto refuses --critical-zone-goahead');
+        expect(existsSync(laneDir(l))).toBe(false);
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "a dry render launched": --auto refuses a prompt whose Status is not da eseguire', () => {
+        const l = lab();
+        writeFileSync(join(l.worktree, 'dry.md'), PROMPT.replace('Status: da eseguire', 'Status: dry render, not launchable'));
+        const r = laneRun(l, ['start', l.worktree, 'dry.md', '--auto']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('Status: da eseguire');
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "the web tools kept", "the MCP servers kept", "GH_TOKEN kept", "GITHUB_TOKEN kept", "GH_CONFIG_DIR not emptied", "no auto.json", "a go-ahead inherited": the call claude receives under --auto', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md', '--auto'], { env: { ...GH_ENV, JJODEL_CRITICAL_ZONE_GOAHEAD: ID } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        const [c] = calls(l);
+        expect(c.args).toEqual(['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', ...AUTO_FLAGS]);
+        expect(c.ghtoken).toBe('unset');
+        expect(c.githubtoken).toBe('unset');
+        expect(c.goahead).toBe('unset');
+        const empty = join(laneDir(l), 'gh-empty');
+        expect(c.ghconfig).toBe(empty);
+        expect(readdirSync(empty)).toEqual([]);
+        const auto = JSON.parse(readFileSync(join(laneDir(l), 'auto.json'), 'utf8'));
+        expect(auto.flags).toEqual(AUTO_FLAGS);
+        expect(auto.ghConfigDir).toBe(empty);
+        expect(typeof auto.at).toBe('number');
+        expect(r.stdout).toContain('auto: ');
+    });
+
+    test('kills "resume drops the auto flags", "resume restores the credentials", "resume passes a go-ahead": a resume of an --auto lane keeps its flags and environment', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md', '--auto'], { env: GH_ENV }).status).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        // A goahead.txt that appears in an automatic lane is flagged by the ledger and never passed on.
+        writeFileSync(join(laneDir(l), 'goahead.txt'), ID + '\n');
+        const r = laneRun(l, ['resume', ID, '--text', 'GO'], { env: GH_ENV });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        const c = calls(l)[1];
+        expect(c.args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', ...AUTO_FLAGS]);
+        expect(c.ghtoken).toBe('unset');
+        expect(c.githubtoken).toBe('unset');
+        expect(c.ghconfig).toBe(join(laneDir(l), 'gh-empty'));
+        expect(c.goahead).toBe('unset');
+    });
+
+    test('kills "auto by default": without --auto the GitHub variables pass through, no auto flag, no auto.json', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: GH_ENV }).status).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        const [c] = calls(l);
+        expect(c.args).not.toContain('--strict-mcp-config');
+        expect(c.ghtoken).toBe('tok-1');
+        expect(c.ghconfig).toBe('/somewhere/with/credentials');
+        expect(existsSync(join(laneDir(l), 'auto.json'))).toBe(false);
     });
 });

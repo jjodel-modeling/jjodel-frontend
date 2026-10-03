@@ -7,7 +7,7 @@
  * says so (merge, with --launch, moves the prompt it rendered into the tree and
  * commits it alone).
  *
- *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light]
+ *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--auto]
  *                runs `claude -p` in <worktree> with the prompt file on stdin
  *                (the path as given, absolute or relative to the caller's
  *                directory, then relative to the worktree; refused, naming both,
@@ -20,6 +20,16 @@
  *                Refused, before anything runs, when the prompt header has no
  *                `Prompt-ID: P-YYYY-MM-DD-HHmm`, and when the lane already has a
  *                session.
+ *                --auto (RC-36, the lanes of auto-intake.mjs): refused with
+ *                --critical-zone-goahead and unless the prompt reads `Status: da
+ *                eseguire` (a dry render is not launchable). The session runs
+ *                with GH_TOKEN and GITHUB_TOKEN removed, GH_CONFIG_DIR set to the
+ *                empty folder gh-empty/ of the lane folder (gh reads the keyring
+ *                otherwise), and `--disallowedTools WebFetch,WebSearch
+ *                --strict-mcp-config` (no web tools, no MCP server: measured in
+ *                the report of P-2026-10-03-1705, section 7). auto.json in the
+ *                lane folder records the flags, that folder and the time; a
+ *                resume of the lane re-applies them and never passes a go-ahead.
  *   resume <Prompt-ID> <message-file> | --text "<message>" | -
  *                `claude -p --resume <session id>` with the message on stdin, in
  *                the worktree recorded at start: a resume runs in the caller's
@@ -27,7 +37,9 @@
  *                section 5). An inline message (--text, or - for stdin) is first
  *                written to msg-<n>.md in the lane folder, so the log stays
  *                reproducible. Appends to the same log. Refused without
- *                session.txt or worktree.txt, and while a run is live.
+ *                session.txt or worktree.txt, and while a run is live. A lane
+ *                started with --auto is resumed with the flags and environment
+ *                of --auto (its auto.json), and without a go-ahead.
  *   go <Prompt-ID> --smoke "<what the chat verified>" [--step <n>] [--front <inbox>]
  *                resumes with the standard GO: `[<Prompt-ID>] GO.`, the smoke
  *                sentence, and step <n> of the prompt's COME (of its `### Steps`
@@ -206,6 +218,8 @@ const PROMPT_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
 const HEADER_PROMPT_ID = /^Prompt-ID: (P-\d{4}-\d{2}-\d{2}-\d{4})\s*$/;
 const OUTCOME = /^Outcome:\s*(done|hard-stop|question|blocked)\b/;
 const FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions'];
+// RC-36: what --auto adds to every run of an automatic lane, start and resume alike.
+const AUTO_FLAGS = ['--disallowedTools', 'WebFetch,WebSearch', '--strict-mcp-config'];
 const SELF = fileURLToPath(import.meta.url);
 const TEMPLATES = join(dirname(SELF), 'lane-templates');
 const DEFAULT_TRUNK = 'alfonso-frontend-jjtl';
@@ -262,6 +276,7 @@ function laneFiles(id) {
         goahead: join(dir, 'goahead.txt'),
         prompt: join(dir, 'prompt.txt'),
         tier: join(dir, 'tier.txt'),
+        auto: join(dir, 'auto.json'),
     };
 }
 
@@ -349,13 +364,19 @@ function closingInput(f, input) {
     return path;
 }
 
-function launch(f, claude, cwd, input, args, goAhead = null) {
+function launch(f, claude, cwd, input, args, goAhead = null, auto = null) {
     if (existsSync(f.exit)) unlinkSync(f.exit);
     const stdin = closingInput(f, input);
     keepInput(f, stdin);
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
     if (goAhead) env.JJODEL_CRITICAL_ZONE_GOAHEAD = goAhead;
     else delete env.JJODEL_CRITICAL_ZONE_GOAHEAD;
+    // An automatic lane (RC-36) runs without GitHub credentials: the variables go, and gh finds no hosts.yml.
+    if (auto) {
+        delete env.GH_TOKEN;
+        delete env.GITHUB_TOKEN;
+        env.GH_CONFIG_DIR = auto.ghConfigDir;
+    }
     const child = spawn('/bin/sh', ['-c', WRAPPER, 'lane-run', stdin, f.log, f.err, f.exit, claude, ...args], {
         cwd,
         env,
@@ -400,6 +421,20 @@ function goAheadOption(rest, id) {
     if (!v || !PROMPT_ID.test(v)) refuse('--critical-zone-goahead needs the Prompt-ID of this lane');
     if (id && v !== id) refuse('--critical-zone-goahead ' + v + ' is not the Prompt-ID of this lane (' + id + ')');
     return v;
+}
+
+/** The auto.json of a lane started with --auto (RC-36), its gh-empty/ folder made sure of; null for any other lane. */
+function readAuto(f) {
+    if (!existsSync(f.auto)) return null;
+    let a;
+    try {
+        a = JSON.parse(readFileSync(f.auto, 'utf8'));
+    } catch {
+        refuse(f.auto + ' does not parse: an automatic lane is not resumed without its flags');
+    }
+    const ghConfigDir = a && typeof a.ghConfigDir === 'string' && a.ghConfigDir !== '' ? a.ghConfigDir : join(f.dir, 'gh-empty');
+    mkdirSync(ghConfigDir, { recursive: true });
+    return { ...a, ghConfigDir };
 }
 
 // ── the model tier (RC-32) ───────────────────────────────────────────────────
@@ -486,7 +521,7 @@ function tierOption(rest) {
 }
 
 async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
-    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light]');
+    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--auto]');
     const worktree = resolve(worktreeArg);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
     // As given (absolute, or relative to the caller's directory), then relative to the worktree.
@@ -496,6 +531,9 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     const text = readFileSync(promptFile, 'utf8');
     const id = headerPromptId(text);
     if (!id) refuse('the prompt header has no "Prompt-ID: P-YYYY-MM-DD-HHmm" line: ' + promptFile);
+    const auto = rest.includes('--auto');
+    if (auto && rest.includes('--critical-zone-goahead')) refuse('--auto refuses --critical-zone-goahead: an automatic lane never edits the critical zone (RC-36)');
+    if (auto && headerStatus(text) !== 'da eseguire') refuse('--auto starts only a prompt that reads `Status: da eseguire`: ' + promptFile + ' reads `Status: ' + headerStatus(text) + '`');
     const goAhead = goAheadOption(rest, id);
     const tier = chooseTier(text, { ...ctx, goahead: Boolean(goAhead) }, tierOption(rest));
 
@@ -511,9 +549,16 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
 
     if (goAhead) writeFileSync(f.goahead, goAhead + '\n');
     writeFileSync(f.tier, tier.line + '\n');
-    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS, ...(tier.model ? ['--model', tier.model] : [])], goAhead);
+    let autoRun = null;
+    if (auto) {
+        autoRun = { flags: AUTO_FLAGS, ghConfigDir: join(f.dir, 'gh-empty'), at: clock().getTime(), prompt: promptFile };
+        mkdirSync(autoRun.ghConfigDir, { recursive: true });
+        writeFileSync(f.auto, JSON.stringify(autoRun, null, 2) + '\n');
+    }
+    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS, ...(autoRun ? AUTO_FLAGS : []), ...(tier.model ? ['--model', tier.model] : [])], goAhead, autoRun);
     console.log('prompt: ' + promptFile);
     console.log('tier: ' + tier.line);
+    if (autoRun) console.log('auto: ' + AUTO_FLAGS.join(' ') + '; GH_TOKEN and GITHUB_TOKEN removed; GH_CONFIG_DIR ' + autoRun.ghConfigDir);
     console.log('log: ' + f.log);
 
     const end = Date.now() + START_WAIT_MS;
@@ -578,8 +623,10 @@ function resume(idArg, rest) {
         message = resolve(messageArg);
     }
 
-    const goAhead = existsSync(f.goahead) ? readTrim(f.goahead) : null;
-    launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS], goAhead || null);
+    // An automatic lane keeps the flags and environment of --auto and never gets a go-ahead (RC-36).
+    const autoRun = readAuto(f);
+    const goAhead = !autoRun && existsSync(f.goahead) ? readTrim(f.goahead) : null;
+    launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS, ...(autoRun ? AUTO_FLAGS : [])], goAhead || null, autoRun);
     console.log('log: ' + f.log);
     console.log('session: ' + session);
     return 0;
