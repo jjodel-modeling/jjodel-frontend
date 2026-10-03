@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1545
 Chat: C-2026-10-01-2215
 Lane: full (merge; 1 conflict: `docs/log-inbox/views.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane merge · ddf22bd2f · verifica visiva passata 2026-10-03 (Visual GO waived by Alfonso (2026-10-03 14:13, merge authorized on measured conditions). Chat checked the lane crop after_wired1_petri_petriClassic_600.png: t1, t2, t3 above the bars, clear of arcs. Lane probe on 3241: 7 scenes 0 collisions after toolbar auto-layout, rest only DemoPetri classic names moved. Merge gates all green.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-03-1545 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

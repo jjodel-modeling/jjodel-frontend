@@ -365,3 +365,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — lane probe on 3241, unattended: after-layout 17/17 twice, rest 10/10 against the baseline run; the chat's visual check is its own
 **Notes**: Petri classic label-edge 2 → 0. Activity bends 1.89 on the lane and on a baseline server with the pre-lane sources (2 runs each); the first baseline's 1.78 not reproduced. Gap measured 6 px, not the CSS 8. Mutation bench 28/29, survivor equivalent. One typecheck log was written to /tmp, outside the worktree, and deleted at once; the rest stayed under _tmp_ paths. Detail: the report's §8.
 **Prompt document name**: 2026-10-03 14:15
+
+## 2026-10-03 — merge: petri-transition-name into alfonso-frontend-jjtl (P-2026-10-03-1545)
+**Prompt**: `claude_2026-10-03_1545_prompt_merge_petri-transition-name.md`, a direct merge by `lane-run merge --direct`, no session: `petri-transition-name` at `44f7e9f3d` into `alfonso-frontend-jjtl`, merge base `764e00502`, 6 commits on the branch side.
+**Files touched**: merge `ddf22bd2f`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-03_petri_transition_name.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-03_1415_prompt_petri_transition_name.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/utils/__tests__/elkLayout.test.ts`, `frontend/src/components/editor-v2/utils/elkLayout.ts`, `frontend/src/components/editor-v2/viewpoint/derive/__tests__/erChen.test.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ddf22bd2f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6971 tests in 277 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Visual GO waived by Alfonso (2026-10-03 14:13, merge authorized on measured conditions). Chat checked the lane crop after_wired1_petri_petriClassic_600.png: t1, t2, t3 above the bars, clear of arcs. Lane probe on 3241: 7 scenes 0 collisions after toolbar auto-layout, rest only DemoPetri classic names moved. Merge gates all green.
+**Notes**: Rollback tag `pre-petri-transition-name-P-2026-10-03-1545` on `433594c84` (RC-31). Union: `docs/log-inbox/views.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1545/result.json`.
+**Prompt document name**: 2026-10-03 15:45
