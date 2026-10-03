@@ -179,3 +179,29 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: trace scroll checked on its branch (card 442 px at steps 2, 6, 12; six rows; viewed row in view); 9 gates green
 **Notes**: Rollback tag `pre-sim-trace-scroll` on `39ae40a83` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1031/result.json`.
 **Prompt document name**: 2026-10-03 10:31
+
+## 2026-10-03 — fix: the panel and the inspector explain a profile without state attributes (P-2026-10-03-1420)
+**Prompt**: `claude_2026-10-03_1420_prompt_sim_profile_state_hint.md`, fast lane, light tier, `~/jjodel-w-simhint` on `sim-profile-hint`: under a profile whose `stateAttributes` mode is off, one hint line where the Undeclared line sits and once at the top of the inspector's σ section; with it on, nothing changes.
+**Files touched**: code `ff8e22e22`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (`stateAccessHint`, the `stateHint` state, `modelProfileName`), `frontend/src/components/editor-v2/sim/SimInspector.tsx` (optional prop `stateHint`; no SCSS rule needed: `sim-panel__hint` wraps in the card); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ff8e22e22`: typecheck exit 2 with 14 errors, the §17 set, none under `sim/`; vitest on `editor-v2/sim`, `model/simulation` and `irActivityRender.test.ts` 30 files, 1020 of 1020; build exit 0. After the round trip back to Extended state machine the panel lines are identical to those before it.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe 19 PASS, 0 FAIL on 3073, DemoESM imported read-only, 1600×1000, default theme, light in the crops; the chat's visual check pending, RC-23; crops `docs/discovery/harness/_tmp_simhint_panel_statemachine.png`, `_inspector_statemachine.png`, `_panel_extended.png`, gitignored)
+**Notes**: Matched reason: 'undeclared' only ('declaration' cannot arise under off: runBag and modelRunBag drop the key). On DemoESM under State machine 3 defects become 1 (actions off); the hint names model.[paid]. Panel line clamped at 288 px (scrollWidth 362 over 262), full text in the title. SimulationPanel does not import in the bench (window, monaco): helper run through esbuild. Console: one reducer 'Invalid action path', not compared against the base.
+**Prompt document name**: 2026-10-03 14:20
+
+## 2026-10-03 — fix: the state hint wraps in two rows so its remedy is readable (P-2026-10-03-1420)
+**Prompt**: the chat's check of `claude_2026-10-03_1420_prompt_sim_profile_state_hint.md` after `ff8e22e22`, same lane: the hint ended in an ellipsis at `use Ext…` in the 288 px panel; drop `--line` for this hint only so it wraps to two rows at most, text unchanged, re-measure the hint height and the transport row top before and after Reset, recrop.
+**Files touched**: code `1c4212b43`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (the hint takes `sim-panel__hint--halt`, no `--line`), `frontend/src/components/editor-v2/sim/simulation-panel.scss` (one declaration, `overflow: hidden`, in the existing `&__hint--halt`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 14:20 (`claude_2026-10-03_1420_prompt_sim_profile_state_hint.md`, its first pass `ff8e22e22`: the hint reused `--line`)
+**Causa**: (a)
+**Regressions**: no. Gates on `1c4212b43`: typecheck exit 2 with 14 errors, the §17 set, none under `sim/`; vitest on `editor-v2/sim`, `model/simulation` and `irActivityRender.test.ts` 30 files, 1020 of 1020; build exit 0; check:docs exit 0. The halt line is unchanged: it had `overflow: hidden` from `--line` already.
+**Out-of-scope changes**: yes — `simulation-panel.scss` is outside the first prompt's DOVE; the chat's follow-up put it in scope for one rule, and the change is one declaration on an existing rule, not a new class.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe 21 PASS, 0 FAIL on 3073, DemoESM, 1600×1000, default theme; the chat's visual check pending, RC-23; crops `docs/discovery/harness/_tmp_simhint_panel_statemachine.png`, `_panel_statemachine_long.png`, `_inspector_statemachine.png`, `_panel_extended.png`, gitignored)
+**Notes**: Measures on 3073, DemoESM under State machine: hint 41 px, two rows, not clamped sideways; transport row top 873 at Not started and 873 after Reset. --halt alone does not clip: a long name injected laid out 3 rows (scrollHeight 54 over 41) and the third painted over MARKING until overflow: hidden went into the --halt rule; the halt line already had it. A speck of that third row's top shows in the 4 px bottom padding. The SetFieldAction2 console error is left to the chat's ticket.
+**Prompt document name**: 2026-10-03 14:20

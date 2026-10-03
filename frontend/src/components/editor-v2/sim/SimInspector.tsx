@@ -42,6 +42,8 @@ export interface SimInspectorProps {
     modelName: string;
     /** The panel's label of an input: `ε`, or the event's. */
     inputLabel: InputLabel;
+    /** The panel's hint of a profile without state attributes (P-2026-10-03-1420), said once at the top of σ; the card computes nothing. */
+    stateHint?: { line: string; title: string } | null;
     /** Closes the card; the panel returns the view to live. */
     onClose: () => void;
 }
@@ -150,7 +152,7 @@ function grouped(run: SimRun, state: SimState, rows: Map<string, InspectorRow[]>
     return { globals, classes };
 }
 
-export function SimInspector({ modelId, modelName, inputLabel, onClose }: SimInspectorProps): ReactElement {
+export function SimInspector({ modelId, modelName, inputLabel, stateHint, onClose }: SimInspectorProps): ReactElement {
     // The view, a commit, Reset and Stop bump the 'mark' version; the pins and tags their own channel.
     useSimVersion();
     useSimViewerPrefsVersion();
@@ -309,6 +311,7 @@ export function SimInspector({ modelId, modelName, inputLabel, onClose }: SimIns
                         <span>Abstract state</span>
                         <span className="sim-inspector__step">{`step ${n}`}</span>
                     </div>
+                    {stateHint && <div className="sim-panel__hint" title={stateHint.title}>{stateHint.line}</div>}
                     <div className="sim-inspector__group-head">Marking</div>
                     <div className="sim-inspector__chips">
                         {chips.length === 0
