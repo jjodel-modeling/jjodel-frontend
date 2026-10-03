@@ -375,3 +375,58 @@ Fix the line-jump staleness in this lane before the visual check? It needs files
 - a test of the registry.
 
 Neither file is in the critical-zone table, and the new exports only add. The acceptance is the same scene dumps: the 2 hops back to the before shapes, 0 renders/s idle unchanged.
+
+## Addendum 2026-10-03, Phase 2 extension (the chat's answer: fix the line jumps)
+
+Scope added by the chat (RC-21): `edgeUtils.ts`, `UnifiedEdge.tsx`, and `useTreeLayout.ts` if needed, plus a test.
+
+`useTreeLayout.ts` was needed: its two crossings memos (`:203-217`, `:219-242`) depend on `allEdges` too, and its tree segments register in an effect (`:168-192`). Commit `334a7e444`.
+
+### What it does
+
+- `edgeUtils.ts` gives the path registry a version and two new exports, `subscribeEdgePaths` and `getEdgePathsVersion`. `registerEdgePath` and `unregisterEdgePath` keep their signatures.
+- `UnifiedEdge` and `useTreeLayout` read the version through `useSyncExternalStore` and add it to their crossings memos. The server snapshot is the same getter, so server-rendered markup is unchanged: the IR render tests that compare markup byte for byte stay green.
+
+### The first version looped, and why
+
+The first version moved the version synchronously on every call. That ended in **«Maximum update depth exceeded»** on demo scenes 3 and 4: one pane empty in each.
+
+A scout logged every content-changing registration through a served-module rewrite. Edge `…_28` of `scene_4_DemoFlowB` registered the same five points 51 times, with `prev` null each time. Its `drawnPoints` gets a new identity on every render, so its effect unregisters and re-registers on every render. Each call moved the version, and React Flow's store subscription re-rendered the edges inside the passive-effect flush.
+
+The version now moves **once per burst** (`setTimeout 0`), and **only on a net change**. An unregister followed by a re-registration of the same content cancels out.
+
+### Tests and benches
+
+- `utils/__tests__/edgePathRegistry.test.ts`, 12 tests. R1 and R10 (the cancelling re-registration) were red on the per-call version. R9 pins that crossings read the latest path.
+- Mutation bench: **15/16 killed**. The survivor drops the «flush already pending» guard, and it is **equivalent**: the extra timers find nothing changed and notify nobody.
+- Wiring mutation: the crossings memo of `UnifiedEdge` without the version brings back the same 2 stale arcs in `demoFlowB`. **Killed.** No demo scene has a tree-connector crossing, so the `useTreeLayout` wiring has no measured kill: **declared gap**.
+
+### Measurements, with fix B and the jump fix together
+
+| measure | before T9 | fix B alone | fix B + jumps |
+|---|---|---|---|
+| scene dumps: path shapes differing from before | — | 2 of 80 | **0 of 80** (nodes, handles identical; max 0.00016 px) |
+| `ref` / `extends` / `selfref` idle, renders/s, hidden and visible | 120 / 60 / 120 | 0 | **0**, ~0 commits/s, ≤0.2% busy |
+| demo scenes idle (both panes mounted) | 53-108 per editor, 99.6-100% | 0 | **0**, 0.3 commits/s, 0.9-2.6% |
+| selected edge, until a pane click | (inside the 120/s loop) | 60/s | 60/s, unchanged (Alfonso's item) |
+| two-mm, run 12 wall | 7839 ms | 2684 ms | **3529 ms** |
+| two-mm, run 12 React render, hidden / visible | 3302 / 376 ms | 403 / 258 ms | 638 / 488 ms |
+
+- The jump fix costs part of fix B's gain during a Run. Every command changes some path, and each changed burst re-renders every mounted edge once, the hidden tab's too. Two identical baselines of this probe differed by 32% at run 12 (§3 of the run-slowdown report), so the 2684-to-3529 gap is within noise and is not claimed as a measure.
+- A narrower signal is possible: a per-edge snapshot that changes only when that edge's crossings do. It is not done here.
+
+### Gates
+
+- typecheck: 14, the known set, unchanged.
+- vitest `src/components/editor-v2`: 116 files / 2806 tests, all green.
+- `npm run build`: exit 0. The last edit before the commit was a doc comment, and the registry tests were rerun after it (12/12).
+
+### Not done, still listed
+
+- **The selected-edge residual stays Alfonso's** (RC-26, the chat's answer): keeping `selected` through the merge would change what box-selected edges show. Not implemented.
+
+### Decisions taken (unattended)
+
+- D13. `useTreeLayout.ts` is included, for the reason above, under «only if needed».
+- D14. The version moves once per burst and only on a net change. That is the chat's design, version plus subscription, with the timing the measured loop required.
+- D15. The equivalent survivor V7 stays in the code. The guard saves redundant timers and has no observable effect.
