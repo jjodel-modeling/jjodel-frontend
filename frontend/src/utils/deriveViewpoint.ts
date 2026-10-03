@@ -2,7 +2,7 @@
  * deriveViewpoint — «Derive viewpoint» on a metamodel (P-2026-09-29-0135; the notation
  * dialog, slice D, P-2026-09-30-0255, R-VP-21).
  *
- * Creates a NEW viewpoint named `<metamodel> (derived)` with one IR view per
+ * Creates a NEW viewpoint named `<metamodel> / <notation label>` with one IR view per
  * concrete class, the documents of the choice the dialog confirms
  * (`derivedDocuments`, notations.ts: the notation picked and its metaclass → role
  * table), created in their order (deepest class first), each with its provenance
@@ -26,13 +26,25 @@ import DockManager from '../components/abstract/DockManager';
 import { toast } from '../components/Toast/toastDispatch';
 import { appliableToForIRKind } from '../view/viewElement/view';
 import { isDerivableMetamodel } from '../components/editor-v2/viewpoint/derive/viewpointDerivation';
-import { canDerive, defaultChoice, derivedDocuments, derivedViewpointState } from '../components/editor-v2/viewpoint/derive/notations';
-import type { DeriveChoice } from '../components/editor-v2/viewpoint/derive/notations';
+import { DERIVED_NOTATIONS, canDerive, defaultChoice, derivedDocuments, derivedViewpointState } from '../components/editor-v2/viewpoint/derive/notations';
+import type { DeriveChoice, DerivedNotationId } from '../components/editor-v2/viewpoint/derive/notations';
+import { uniqueModelName } from '../model/nameLookup';
 
 /** The project's viewpoints, in its order: where the dialog looks for the latest derived viewpoint. */
 export function projectViewpointIds(): string[] {
     const ids = (DProject.getProject() as any)?.viewpoints;
     return Array.isArray(ids) ? ids.filter((x: unknown): x is string => typeof x === 'string') : [];
+}
+
+/**
+ * The name of a viewpoint derived from `metamodelName` in `notation`: `<metamodel> / <notation label>`,
+ * so two derivations of one metamodel in different notations read apart. The label comes from the full
+ * list by id, so a notation the dialog hides still resolves. Made unique among `taken` (the project's
+ * viewpoint names) with the suffix the codebase uses for duplicate model names: ` (1)`, ` (2)`.
+ */
+export function derivedViewpointName(metamodelName: string, notation: DerivedNotationId, taken: string[]): string {
+    const label = DERIVED_NOTATIONS.find(n => n.id === notation)?.label ?? notation;
+    return uniqueModelName(`${metamodelName} / ${label}`, taken);
 }
 
 /**
@@ -56,7 +68,8 @@ export function createDerivedViewpoint(metamodelId: string, choice?: DeriveChoic
         return null;
     }
 
-    const name = `${metamodel.name} (derived)`;
+    const taken = projectViewpointIds().map(id => lookup[id]?.name).filter((x: unknown): x is string => typeof x === 'string');
+    const name = derivedViewpointName(metamodel.name, picked.notation, taken);
     const state = derivedViewpointState(lookup, metamodelId, picked);
     // A syntax viewpoint, set as New Viewpoint sets the type 'syntax'.
     const viewpoint = DViewPoint.newVP(name, (vp) => {

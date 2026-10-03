@@ -1,7 +1,7 @@
 import React, { useCallback, useId, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { LViewPoint } from '../../../../joiner';
-import { JjSelect } from '../../../ui';
+import { Checkbox, JjSelect } from '../../../ui';
 import { ViewpointType, getViewpointType } from '../../../../view/viewPoint/viewpoint';
 import {
     PASTEL_SWATCHES,
@@ -175,15 +175,15 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                         </div>
                     </div>
 
-                    <label className="wp-toggle">
-                        <span className="wp-toggle__label">Border</span>
-                        <input
-                            type="checkbox"
+                    <div className="wp-toggle">
+                        <Checkbox
+                            id={`${colorId}-border`}
                             checked={coloring.border}
-                            onChange={(e) => writeColoring({ border: e.target.checked })}
+                            onChange={(checked) => writeColoring({ border: checked })}
                             disabled={readOnly}
+                            label="Border"
                         />
-                    </label>
+                    </div>
 
                     <div className="wp-field">
                         <label className="wp-field__label" id={`${colorId}-metaclass`}>Metaclass color</label>
