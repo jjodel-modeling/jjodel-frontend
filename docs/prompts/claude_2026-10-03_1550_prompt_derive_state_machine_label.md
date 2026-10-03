@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1550
 Chat: C-2026-10-02-2340
 Lane: fast (one visible string and its test pins; no IR, no id). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane derive-sm-label · 8deddcf0d · verifica visiva passata 2026-10-03
 
 Worktree: `~/jjodel-w-smlabel`, branch `derive-sm-label`, cut by the chat from `alfonso-frontend-jjtl` at `ddf22bd2f`, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 
