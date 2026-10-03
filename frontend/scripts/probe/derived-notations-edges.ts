@@ -174,7 +174,11 @@ async function measure(page: Page, m1: string) {
             const r = h.getBoundingClientRect();
             const entry = h.querySelector('.ir-entry-svg');
             const rows = [...h.querySelectorAll('.ir-compartment .ir-row')].map((x) => (x.textContent ?? '').trim());
+            const ir = c ? c.getBoundingClientRect() : null;
+            // Q3: the vertex as stored (numbers and key names), to show a turn saves nothing on it.
+            const stored = d ? Object.fromEntries(Object.keys(d).sort().filter((k) => typeof d[k] !== 'object' || d[k] === null).map((k) => [k, d[k]])) : null;
             return {
+                inkCl: ir ? { left: ir.left, top: ir.top, width: ir.width, height: ir.height } : null, stored,
                 id, objId, x: t ? Number(t[1]) : NaN, y: t ? Number(t[2]) : NaN, w: h.offsetWidth, h: h.offsetHeight,
                 cl: { left: r.left, top: r.top },
                 name: nameOfObj(objId) || (h.textContent ?? '').trim().slice(0, 30),
@@ -195,7 +199,11 @@ async function measure(page: Page, m1: string) {
         const spread = Math.max(0, ...ox.map((v) => Math.abs(v - OX)), ...oy.map((v) => Math.abs(v - OY)));
         const fx = (x: number) => Math.round(((x - OX) / zoom) * 100) / 100;
         const fy = (y: number) => Math.round(((y - OY) / zoom) * 100) / 100;
-        for (const n of nodes as any[]) { n.handles = n.handles.map((hh: any) => ({ id: hh.id, type: hh.type, x: fx(hh.cx), y: fy(hh.cy) })); delete n.cl; }
+        for (const n of nodes as any[]) {
+            n.handles = n.handles.map((hh: any) => ({ id: hh.id, type: hh.type, x: fx(hh.cx), y: fy(hh.cy) }));
+            n.ink = n.inkCl ? { x: fx(n.inkCl.left), y: fy(n.inkCl.top), w: n.inkCl.width / zoom, h: n.inkCl.height / zoom } : null;
+            delete n.cl; delete n.inkCl;
+        }
         // The labels a node paints outside its box (a classic Petri transition's name), in flow units.
         const outsideLabels = [...pane.querySelectorAll('.react-flow__node .ir-label--outside')].map((el) => {
             const r = el.getBoundingClientRect();
@@ -296,6 +304,90 @@ async function cropEntries(page: Page, m1: string, name: string) {
     return files;
 }
 
+/**
+ * Q3 (a): on the first bar of the pane, what the hit test, the selection ring and the hover answer, against the ink.
+ * A point inside the node's box and outside its ink (when the box is larger) must not hit the node; the ring is the
+ * ink's outline; hovering that point shows no ghost handle, hovering the ink near a long side shows one on it.
+ */
+async function barChecks(page: Page, m1: string) {
+    const geo = await page.evaluate((sel: string) => {
+        const pane = document.querySelector(sel)!;
+        const ink = pane.querySelector('.react-flow__node .ir-node-content.ir-shape--bar') as HTMLElement | null;
+        if (!ink) return null;
+        const node = ink.closest('.react-flow__node') as HTMLElement;
+        const b = node.getBoundingClientRect(), r = ink.getBoundingClientRect();
+        const off = [b.left + 3, b.top + 3];
+        const offInk = off[0] < r.left || off[0] > r.right || off[1] < r.top || off[1] > r.bottom;
+        return { id: node.getAttribute('data-id'), box: [b.left, b.top, b.width, b.height], ink: [r.left, r.top, r.width, r.height], off: offInk ? off : null };
+    }, paneSel(m1));
+    if (!geo) return null;
+    const at = (x: number, y: number) => page.evaluate(([px, py, id]: any[]) => {
+        const e = document.elementFromPoint(px, py);
+        if (!e) return 'none';
+        if (e.closest('.react-flow__node')?.getAttribute('data-id') === id) return 'node';
+        // Q3: an SVG element's className is an SVGAnimatedString; say what it is, and the edge it belongs to.
+        const cls = typeof (e as any).className === 'string' ? (e as any).className : (e as any).className?.baseVal ?? '';
+        const edge = e.closest('.react-flow__edge')?.getAttribute('data-id');
+        return `${e.tagName.toLowerCase()}.${String(cls).split(' ')[0]}${edge ? ` of edge ${edge}` : ''}`.slice(0, 80);
+    }, [x, y, geo.id]);
+    const ghosts = () => page.evaluate((id: string) => [...document.querySelectorAll(`.react-flow__node[data-id="${id}"] .mm-anchor--ghost-visible`)].map((g) => { const r = g.getBoundingClientRect(); return [Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)]; }), geo.id);
+    const out: any = { box: geo.box.map(Math.round), ink: geo.ink.map(Math.round) };
+    out.hitOffInk = geo.off ? await at(geo.off[0], geo.off[1]) : 'box equals ink';
+    out.hitInk = await at(geo.ink[0] + geo.ink[2] / 2, geo.ink[1] + geo.ink[3] / 2);
+    if (geo.off) { await page.mouse.move(geo.off[0], geo.off[1]); await page.waitForTimeout(300); out.ghostsOffInk = (await ghosts()).length; }
+    const upright = geo.ink[3] >= geo.ink[2];
+    const nearLong = upright ? [geo.ink[0] + 1, geo.ink[1] + geo.ink[3] * 0.5] : [geo.ink[0] + geo.ink[2] * 0.5, geo.ink[1] + 1];
+    await page.mouse.move(nearLong[0], nearLong[1]); await page.waitForTimeout(300);
+    const g = await ghosts();
+    // A ghost on the ink's long side: its centre within 6 px of that side's line.
+    out.ghostOnInkLongSide = g.map((p) => (upright ? Math.min(Math.abs(p[0] - geo.ink[0]), Math.abs(p[0] - geo.ink[0] - geo.ink[2])) : Math.min(Math.abs(p[1] - geo.ink[1]), Math.abs(p[1] - geo.ink[1] - geo.ink[3]))) <= 6);
+    await page.mouse.click(geo.ink[0] + geo.ink[2] / 2, geo.ink[1] + geo.ink[3] / 2); await page.waitForTimeout(500);
+    out.ring = await page.evaluate((id: string) => {
+        const node = document.querySelector(`.react-flow__node[data-id="${id}"]`)!;
+        const mm = node.querySelector('.mm-node') as HTMLElement, c = node.querySelector('.ir-node-content') as HTMLElement;
+        const cs = getComputedStyle(c), ms = getComputedStyle(mm);
+        return { selected: mm.classList.contains('selected'), onInk: `${cs.outlineStyle} ${cs.outlineWidth} offset ${cs.outlineOffset}`, onWrapper: `${ms.outlineStyle} ${ms.outlineWidth} shadow ${ms.boxShadow === 'none' ? 'none' : 'some'}` };
+    }, geo.id);
+    await page.mouse.click(5, 300).catch(() => {});
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(300);
+    return out;
+}
+
+/**
+ * Q3 (d): drag a bar's only neighbour across it and back to where it lies along: the bar's ink sampled mid-drag and
+ * after release, its box and its stored vertex compared before and after (no layout shift, nothing saved on it).
+ */
+async function dragTurn(page: Page, m1: string, barName: string, neighbourName: string) {
+    const read = () => page.evaluate(([sel, bar, nb]: string[]) => {
+        const w = window as any; const idl = w.windoww.store.getState().idlookup;
+        const name = (el: Element) => { const id = el.getAttribute('data-id')!; const d = idl[id]; const o = d?.className === 'DObject' ? id : (d?.model ?? d?.data); try { return String(w.LPointerTargetable.fromPointer(o)?.name ?? ''); } catch { return ''; } };
+        const nodes = [...document.querySelectorAll(`${sel} .react-flow__node`)];
+        const b = nodes.find((n) => name(n) === bar), n = nodes.find((x) => name(x) === nb);
+        if (!b || !n) return null;
+        const ink = b.querySelector('.ir-node-content')!.getBoundingClientRect(), box = b.getBoundingClientRect(), nr = n.getBoundingClientRect();
+        const id = b.getAttribute('data-id')!; const d = idl[id];
+        const stored = d ? JSON.stringify(Object.fromEntries(Object.keys(d).sort().filter((k) => typeof d[k] !== 'object' || d[k] === null).map((k) => [k, d[k]]))) : null;
+        return { orientation: ink.height >= ink.width ? 'upright' : 'lying', box: [box.left, box.top, box.width, box.height].map(Math.round), inkCentre: [ink.left + ink.width / 2, ink.top + ink.height / 2], nb: [nr.left + nr.width / 2, nr.top + nr.height / 2], stored };
+    }, [paneSel(m1), barName, neighbourName]);
+    const before = await read();
+    if (!before) return { skipped: 'no bar or neighbour' };
+    const [bx, by] = before.inkCentre; const [nx, ny] = before.nb;
+    // Across the bar's current long axis: to its left when it lies, above it when it stands.
+    const target = before.orientation === 'lying' ? [bx - 160, by] : [bx, by - 160];
+    await page.mouse.move(nx, ny); await page.mouse.down();
+    for (let i = 1; i <= 12; i++) { await page.mouse.move(nx + ((target[0] - nx) * i) / 12, ny + ((target[1] - ny) * i) / 12); await page.waitForTimeout(16); }
+    await page.waitForTimeout(400);
+    const mid = await read();
+    await page.mouse.up(); await page.waitForTimeout(1500);
+    const after = await read();
+    return {
+        before: before.orientation, midDrag: mid?.orientation, afterRelease: after?.orientation,
+        boxMoved: JSON.stringify(before.box) !== JSON.stringify(after?.box), box: [before.box, after?.box],
+        storedChanged: before.stored !== after?.stored,
+    };
+}
+
 // ── Analysis (node side, pure) ──────────────────────────────────────────────────────────────────────
 
 type Pt = number[];
@@ -389,8 +481,10 @@ function analyse(m: any) {
         const first = e.pts[0], last = e.pts[e.pts.length - 1];
         const end = (p: Pt, n: any) => {
             if (!n) return null;
-            const sd = sideOf(p, n);
-            const long = n.form === 'bar' ? (n.h > n.w ? (sd.side === 'left' || sd.side === 'right') : (sd.side === 'top' || sd.side === 'bottom')) : null;
+            // A bar is judged on its drawn ink (Q3: its box may be square).
+            const box = n.form === 'bar' && n.ink ? n.ink : n;
+            const sd = sideOf(p, box);
+            const long = n.form === 'bar' ? (box.h > box.w ? (sd.side === 'left' || sd.side === 'right') : (sd.side === 'top' || sd.side === 'bottom')) : null;
             return { node: n.name, form: n.form, ...sd, longSide: long, offOutline: offOutline(p, n), at: [Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10] };
         };
         // The length of the drawn line inside a node box other than its two ends (a line through a node).
@@ -445,13 +539,17 @@ function analyse(m: any) {
             const L = Math.hypot(dx, dy) || 1;
             sx += Math.abs(dx) / L; sy += Math.abs(dy) / L;
         }
-        return { name: b.name, w: b.w, h: b.h, upright: b.h > b.w, sumAbs: [Math.round(sx * 100) / 100, Math.round(sy * 100) / 100], wantsUpright: sx > sy, ratio: Math.round((Math.max(sx, sy) / Math.max(1e-6, Math.min(sx, sy))) * 100) / 100 };
+        // Q3: a turned bar's orientation is its ink's, the box being square.
+        const k = b.ink ?? b;
+        return { name: b.name, w: b.w, h: b.h, upright: k.h > k.w, sumAbs: [Math.round(sx * 100) / 100, Math.round(sy * 100) / 100], wantsUpright: sx > sy, ratio: Math.round((Math.max(sx, sy) / Math.max(1e-6, Math.min(sx, sy))) * 100) / 100 };
     });
     const box = (ns: any[]) => ns.length ? { x0: Math.min(...ns.map((n) => n.x)), y0: Math.min(...ns.map((n) => n.y)), x1: Math.max(...ns.map((n) => n.x + n.w)), y1: Math.max(...ns.map((n) => n.y + n.h)) } : null;
-    const nodes = m.nodes.map((n: any) => ({ name: n.name, cls: n.cls, form: n.form, x: n.x, y: n.y, w: n.w, h: n.h, cx: n.x + n.w / 2, cy: n.y + n.h / 2, rows: n.rows, entry: n.entry, handles: n.handles.map((h: any) => `${h.type}:${h.id}`) }));
+    const nodes = m.nodes.map((n: any) => ({ name: n.name, cls: n.cls, form: n.form, x: n.x, y: n.y, w: n.w, h: n.h, ink: n.ink, stored: n.stored, cx: n.x + n.w / 2, cy: n.y + n.h / 2, rows: n.rows, entry: n.entry, handles: n.handles.map((h: any) => `${h.type}:${h.id}`) }));
     // An edge whose drawn line runs through a node's outside label (its own node's included).
     const labelsCrossed = (m.outsideLabels ?? []).flatMap((l: any) => m.edges.filter((e: any) => e.pts.some((p: Pt) => p[0] > l.x + 0.5 && p[0] < l.x + l.w - 0.5 && p[1] > l.y + 0.5 && p[1] < l.y + l.h - 0.5)).map((e: any) => `${l.text} by ${nm(e.source)}->${nm(e.target)}`));
-    return { calib: m.calib, zoom: m.zoom, events: m.events, labelsCrossed, nodes, edges, crossings: pairs, labelsByEdge: labelOf, sharedEnds: shared, bars, bbox: box(m.nodes), labels: m.labels.filter((l: any) => l.visible) };
+    // Q3: the drawn extent, a turned bar by its ink, beside the box extent.
+    const drawn = m.nodes.map((n: any) => (n.form === 'bar' && n.ink ? { ...n, x: n.ink.x, y: n.ink.y, w: n.ink.w, h: n.ink.h } : n));
+    return { calib: m.calib, zoom: m.zoom, events: m.events, labelsCrossed, nodes, edges, crossings: pairs, labelsByEdge: labelOf, sharedEnds: shared, bars, bbox: box(m.nodes), drawnBbox: box(drawn), labels: m.labels.filter((l: any) => l.visible) };
 }
 
 /** The MEAS lines of one measured phase, the same online and offline (DNE_ANALYSE). */
@@ -515,13 +613,15 @@ function acceptance(a: any) {
         eventBoxes: a.nodes.filter((n: any) => n.cls === 'Event').length,
         events: a.events ?? null,
         height: a.bbox ? Math.round(a.bbox.y1 - a.bbox.y0) : null,
+        drawnSize: a.drawnBbox ? [Math.round(a.drawnBbox.x1 - a.drawnBbox.x0), Math.round(a.drawnBbox.y1 - a.drawnBbox.y0)] : null,
         // Q2: the connected handles of every bar, and the drawn ends on it, on a short side.
         barHandles: (() => {
             const bars = a.nodes.filter((n: any) => n.form === 'bar');
-            const hs = bars.flatMap((n: any) => n.handles.map((h: string) => ({ upright: n.h > n.w, side: h.split(':')[1].split('-')[0] })));
+            const hs = bars.flatMap((n: any) => n.handles.map((h: string) => ({ upright: (n.ink ?? n).h > (n.ink ?? n).w, side: h.split(':')[1].split('-')[0] })));
             const short = hs.filter((h: any) => (h.upright ? h.side === 'top' || h.side === 'bottom' : h.side === 'left' || h.side === 'right'));
             return { total: hs.length, short: short.length };
         })(),
+        barInk: a.nodes.filter((n: any) => n.form === 'bar').map((n: any) => `${n.name} box ${Math.round(n.w)}x${Math.round(n.h)} ink ${n.ink ? `${Math.round(n.ink.w)}x${Math.round(n.ink.h)}` : '-'}`),
         barEnds: (() => { const e = a.edges.flatMap((x: any) => [x.src, x.tgt]).filter((x: any) => x && x.form === 'bar'); return { total: e.length, short: e.filter((x: any) => x.longSide === false).length }; })(),
         // Q4: the drawn ends on each diamond: side, distance off the outline, and the closest two ends.
         diamonds: a.nodes.filter((n: any) => n.form === 'diamond').map((n: any) => {
@@ -611,6 +711,11 @@ for (const sc of SCENES) {
         const restRaw = await measure(page, m1);
         if (restRaw.error) { check(`${sc.key}/${notation}: pane measured`, false, restRaw.error); continue; }
         const rest = analyse(restRaw);
+        // Q3: the bar checks at rest, on the three notations that draw bars.
+        if (['petriClassic', 'petri', 'activityUml'].includes(notation)) {
+            sceneOut.barChecks = { ...(sceneOut.barChecks ?? {}), [notation]: await barChecks(page, m1) };
+            meas(`${sc.key}/${notation} bar checks`, sceneOut.barChecks[notation]);
+        }
         await crop(page, m1, `dne_${TAG}_${sc.key}_${notation}_rest`);
         meas(`${sc.key}/${notation} entry crops`, await cropEntries(page, m1, `dne_${TAG}_${sc.key}_${notation}`));
         const wrapped = await installWrapper(page);
@@ -625,6 +730,11 @@ for (const sc of SCENES) {
         check(`${sc.key}/${notation}: calibration spread < 1 px (rest, elk)`, rest.calib.spread < 1 && elk.calib.spread < 1, [rest.calib.spread, elk.calib.spread]);
         check(`${sc.key}/${notation}: the toolbar auto-layout ran ELK once and the input was captured`, calls === 1 && !!cap, { calls, wrapped });
         sceneOut.notations[notation] = { derive: d, rest, elk, elkInput: cap?.input ?? null, elkOutput: cap?.out ?? null, raw: { rest: restRaw, elk: elkRaw } };
+        // Q3 (d): a drag that should turn a bar at release, not before; last, as it moves a node.
+        if (notation === 'petriClassic' || notation === 'petri') {
+            sceneOut.notations[notation].drag = await dragTurn(page, m1, 't3', 'lock');
+            meas(`${sc.key}/${notation} drag`, sceneOut.notations[notation].drag);
+        }
         for (const [phase, a] of [['rest', rest], ['elk', elk]] as const) report(`${sc.key}/${notation} ${phase}`, a);
         result.scenes[sc.key] = sceneOut;
         writeFileSync(OUT, JSON.stringify(result, null, 0));
