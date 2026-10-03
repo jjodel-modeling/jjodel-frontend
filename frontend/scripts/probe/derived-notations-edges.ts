@@ -499,6 +499,21 @@ function acceptance(a: any) {
         slopes: a.edges.filter((e: any) => e.lineSlopes.length).map((e: any) => `${e.name} ${JSON.stringify(e.lineSlopes)}`),
         spineBends: spineEdges.length ? spineEdges.reduce((n: number, e: any) => n + (e.bends ?? 99), 0) : null,
         hiddenLabels: Object.values<string[]>(a.labelsByEdge).flat().filter((l) => l.includes(' under ')).length,
+        // Q2: the connected handles of every bar, and the drawn ends on it, on a short side.
+        barHandles: (() => {
+            const bars = a.nodes.filter((n: any) => n.form === 'bar');
+            const hs = bars.flatMap((n: any) => n.handles.map((h: string) => ({ upright: n.h > n.w, side: h.split(':')[1].split('-')[0] })));
+            const short = hs.filter((h: any) => (h.upright ? h.side === 'top' || h.side === 'bottom' : h.side === 'left' || h.side === 'right'));
+            return { total: hs.length, short: short.length };
+        })(),
+        barEnds: (() => { const e = a.edges.flatMap((x: any) => [x.src, x.tgt]).filter((x: any) => x && x.form === 'bar'); return { total: e.length, short: e.filter((x: any) => x.longSide === false).length }; })(),
+        // Q4: the drawn ends on each diamond: side, distance off the outline, and the closest two ends.
+        diamonds: a.nodes.filter((n: any) => n.form === 'diamond').map((n: any) => {
+            const ends = a.edges.flatMap((x: any) => [x.src && { e: x.name, ...x.src }, x.tgt && { e: x.name, ...x.tgt }]).filter((x: any) => x && x.node === n.name);
+            let gap = Infinity;
+            for (let i = 0; i < ends.length; i++) for (let j = i + 1; j < ends.length; j++) gap = Math.min(gap, Math.hypot(ends[i].at[0] - ends[j].at[0], ends[i].at[1] - ends[j].at[1]));
+            return { node: n.name, ends: ends.map((x: any) => `${x.e} ${x.side} off${x.offOutline}`), minGap: Number.isFinite(gap) ? Math.round(gap * 10) / 10 : null, handles: n.handles };
+        }),
     };
 }
 
