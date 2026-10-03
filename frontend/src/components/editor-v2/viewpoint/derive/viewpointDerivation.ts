@@ -26,9 +26,9 @@
  *   docs/discovery/discovery_2026-09-29_petri_notation.md §6, R-VP-15, amended
  *   by R-VP-16, P-2026-09-29-1021), under the `petri` shape and on the bound
  *   roles only: a place has the name ink as border and its name centred, in
- *   italic, and draws no token marks; a transition is a `bar` in the catalogue
- *   ink with its name centred in the name ink, drawn over the bar where it does
- *   not fit; an arc and an inhibitor arc are a 1 px line in the same ink, on the
+ *   italic, and draws no token marks; a transition is a flat `bar` in the catalogue
+ *   ink, 56 by 12, with its name outside below it in the label style of C2 (it sat
+ *   centred over the bar until P-2026-10-03-1300); an arc and an inhibitor arc are a 1 px line in the same ink, on the
  *   default (orthogonal) router, both ending in the open arrowhead (R-VP-25,
  *   P-2026-09-30-1521). With no role bound every class keeps the structure's box.
  * - **The control-flow notation** (P-2026-09-29-1331, lane V1 of
@@ -395,11 +395,12 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         // A label sits inside the shape at every position, so on the ink it takes the
         // text-on-dark token (measured on the lane probe: the default text did not read).
         if (solid) shapeSpec.labels[0].style = { color: INVERSE_TEXT };
-        // The Petri names sit centred on the shape (R-VP-16), in the regular weight the
-        // centre position would otherwise make bold (irStyle.ts). The place's is italic;
-        // the transition's takes the name ink, since it is drawn over the bar and past it.
+        // The Petri place's name sits centred on the shape (R-VP-16), in the regular weight the
+        // centre position would otherwise make bold (irStyle.ts), in italic. The transition's name
+        // sits outside, below the flat bar, in the label style of C2 as Petri net (classic)'s does
+        // (P-2026-10-03-1300): the arcs meet the bar at its ends and its top, so the side below is free.
         if (petriPlace) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { fontStyle: 'italic', fontWeight: 'normal' } };
-        if (petriTransition) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { color: NAME_INK, fontWeight: 'normal' } };
+        if (petriTransition) shapeSpec.labels[0] = { position: 'outside', anchor: 's', source: shapeSpec.labels[0].source, style: EDGE_LABEL_STYLE() };
         if (nameless) shapeSpec.labels = [];
 
         const ir: VertexViewIR = {
@@ -407,6 +408,8 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
             shape: shapeSpec,
         };
         if (compartment) ir.fieldCompartments = [attributesCompartment(hidesName)];
+        // The Petri transition is a flat bar, its long axis across (P-2026-10-03-1300).
+        if (petriTransition) ir.defaultSize = { width: PETRI_BAR_LONG, height: PETRI_BAR_SHORT };
         out.push({ classId: c.id, className: c.name, rule: preset ? `role:${role}` : 'structure:default', ir });
     }
     return out;
@@ -886,10 +889,17 @@ const TOKEN_MARKERS: readonly string[] = ['dot', 'dots-2', 'dots-3', 'dots-4'];
 /** The place of mockup A: a circle of radius 22. */
 const CLASSIC_PLACE_SIZE = { width: 44, height: 44 } as const;
 /**
- * The transition of mockup A: an upright bar 10×44. The IR has no orientation, so the bar is upright for
- * every transition; drawn as declared (nodes/nodeSizing.ts `defaultBoxFor`, P-2026-09-30-1720).
+ * The Petri transition bar (P-2026-10-03-1300): 56 long and 12 thick, in both Petri notations, so a later lane
+ * (the bar turned by its neighbours) reuses the two lengths. Petri net draws it flat (`width` the long one),
+ * Petri net (classic) upright.
  */
-const CLASSIC_BAR_SIZE = { width: 10, height: 44 } as const;
+export const PETRI_BAR_LONG = 56;
+export const PETRI_BAR_SHORT = 12;
+/**
+ * The transition of mockup A: an upright bar, 12×56 since P-2026-10-03-1300 (10×44 before). The IR has no orientation,
+ * so the bar is upright for every transition; drawn as declared (nodes/nodeSizing.ts `defaultBoxFor`, P-2026-09-30-1720).
+ */
+const CLASSIC_BAR_SIZE = { width: PETRI_BAR_SHORT, height: PETRI_BAR_LONG } as const;
 
 /**
  * Petri net (classic), slice A2 (R-VP-24, mockup docs/mockups/derived-viewpoints/petri-A.svg): the Petri
@@ -898,7 +908,7 @@ const CLASSIC_BAR_SIZE = { width: 10, height: 44 } as const;
  * - A place (Node): a white circle of 44 px, 1 px in the ink, its name outside below in 13 px 500 in the
  *   ink; the initial marking (the Initial marking role) as one to four dots (`dot`, `dots-2..4`, in the
  *   border ink) and as the number from five, 15 px 600 in the ink; nothing at zero or unset.
- * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`) in the catalogue ink (R-VP-15 (4)), its name
+ * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`, 12 by 56) in the catalogue ink (R-VP-15 (4)), its name
  *   outside to the right, in the label style of C2 (12 px 500, the quiet ink).
  * - An arc: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the open arrowhead (R-VP-25); an inhibitor arc
  *   the same, ending in the hollow circle. A weight above 1 (the Arc weight role) is the arc's label, in

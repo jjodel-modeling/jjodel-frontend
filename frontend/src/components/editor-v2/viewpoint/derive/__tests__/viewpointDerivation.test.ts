@@ -594,7 +594,9 @@ describe('deriveViewpointIRs — without roles the documents are byte-equal to b
         // Measured on the derivation of f8e041498, before V1 (P-2026-09-29-1331) touched it (R-VP-16).
         // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
         // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
-        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('997f12afe5b58db0');
+        // P-2026-10-03-1300: the Transition bar is declared 56 by 12 and its name sits outside, below it; the digest moved from
+        // '997f12afe5b58db0' to 'c03dae1789798ecb' (the Transition document, pinned whole below, is the one that changed).
+        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('c03dae1789798ecb');
     });
 
     it('a control-flow shape with no role bound keeps the boxes: the notation is keyed on the roles, not the shape', () => {
@@ -671,16 +673,16 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         });
     });
 
-    it('Transition, as a whole document: a bar in the catalogue ink, the name centred in the name ink', () => {
+    it('Transition, as a whole document: a flat 56 by 12 bar in the catalogue ink, the name outside below it in the label style', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
-            exclusive: true, label: 'View for Transition',
+            exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 12 },
             shape: {
                 form: 'bar', fill: INK,
                 border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' },
-                labels: [{ position: 'center', source: NAME, style: { color: NAME_INK, fontWeight: 'normal' } }],
+                labels: [{ position: 'outside', anchor: 's', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
             },
         });
     });
@@ -742,8 +744,9 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         const bar = compileView('derived:Transition', vertex(byClass(all, 'Transition')));
         expect(bar.fill!(ctx, 't1')).toBe(INK);
         expect(bar.form(ctx, 't1')).toBe('bar');
-        expect(bar.labels.map(l => l.position)).toEqual(['center']);
-        expect(bar.labels[0].style!.color!(ctx, 't1')).toBe(NAME_INK);
+        // P-2026-10-03-1300: the name sits outside below the bar, in the label style (quiet ink), not over it in the name ink.
+        expect(bar.labels.map(l => l.position)).toEqual(['outside']);
+        expect(bar.labels[0].style!.color!(ctx, 't1')).toBe('var(--color-inode-quiet)');
     });
 
     it('the bar is a thin box of about 4:1 at a fixed size, much smaller than the smallest place', () => {
@@ -815,12 +818,12 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         });
     });
 
-    it('Transition, as a whole document: an upright bar 10×44 in the catalogue ink, its name outside to the right', () => {
+    it('Transition, as a whole document: an upright bar 12×56 in the catalogue ink, its name outside to the right', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
-            exclusive: true, label: 'View for Transition', defaultSize: { width: 10, height: 44 },
+            exclusive: true, label: 'View for Transition', defaultSize: { width: 12, height: 56 },
             shape: {
                 form: 'bar', fill: INK,
                 border: { color: INK, width: 1, style: 'solid' },
@@ -1736,7 +1739,7 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: '997f12afe5b58db0', DemoESM: 'e5af5300d2a65474', DemoFlowB: '58aeb562c91a731f',
+            DemoPEST: '99e03cfb52856542', DemoPetri: 'c03dae1789798ecb', DemoESM: 'e5af5300d2a65474', DemoFlowB: '58aeb562c91a731f',
         });
     });
 });

@@ -209,8 +209,8 @@ describe('Activity (UML) on DemoFlowB: the declared sizes draw as declared', () 
 describe('Petri net (classic) on DemoPetri: the declared sizes draw as declared', () => {
     const views = opened(PETRI());
 
-    it('the transition bar: 10x44, no 24 px floor', () => {
-        expect(nodeBox(irOf(views, 'Transition'))).toEqual({ w: 10, h: 44 });
+    it('the transition bar: 12x56, no 24 px floor', () => {
+        expect(nodeBox(irOf(views, 'Transition'))).toEqual({ w: 12, h: 56 });
     });
 
     it('the place: 44x44, unchanged', () => {
@@ -219,7 +219,7 @@ describe('Petri net (classic) on DemoPetri: the declared sizes draw as declared'
 });
 
 describe('what the three limits reach among the derived documents', () => {
-    it('only Activity (UML) and Petri net (classic) declare a size or a radius: every other view keeps its box', () => {
+    it('only Activity (UML), Petri net and Petri net (classic) declare a size or a radius: every other view keeps its box', () => {
         const got = new Set<string>();
         for (const make of [PEST, PETRI, FLOWB]) {
             const mm = make();
@@ -233,6 +233,7 @@ describe('what the three limits reach among the derived documents', () => {
                 }
             }
         }
-        expect([...got].sort()).toEqual(['activityUml', 'petriClassic']);
+        // P-2026-10-03-1300: Petri net declares its transition bar, 56 by 12.
+        expect([...got].sort()).toEqual(['activityUml', 'petri', 'petriClassic']);
     });
 });
