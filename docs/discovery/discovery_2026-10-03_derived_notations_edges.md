@@ -412,3 +412,36 @@ Smoke-test scenarios potentially affected:
 5. Q8: `fixedAlignment: NONE` for the BK profiles, near-level chords snapped, single arcs on ELK's route? Recommended: yes.
 6. Q5: fan by edge id and bow clear of crossed nodes, for every arc notation? Recommended: yes.
 7. Q4: one end per diamond vertex, router and ELK path? Recommended: yes.
+
+## 9. Addendum 2026-10-03, Phase 2 step 1 (the host items)
+
+GO of the chat: A1 to A5 decided by Alfonso; step 1 is the host items Q8 (i), Q5, Q8 (ii)(iii), Q4 (b); RC-30 one
+critical item at a time afterwards. Commits: `0562a2612` (Q8 (i)), `104f2c0cf` (Q5, Q8 (iii)), `52934d83f` (probe).
+
+Measured with the probe on 3023, before (the three source files at `e767c8c24`, put back after, `cmp` identical) and
+after (`52934d83f`), 23/23 each:
+
+| Pane | before | after |
+|---|---|---|
+| DemoPEST, Statechart, at rest | crossings 1, through-node 201 px, 1 label under a node, slope 10.5/640 | 0, 0, 0, none |
+| DemoESM, Statechart, at rest | crossings 1, through-node 201 px, 1 label under a node, slope 6.7/640 | 0, 0, 0, none |
+| both turnstiles, after Auto layout | locked->off a 178/181 px diagonal chord | ELK's orthogonal route; crossings 0 |
+| DemoFlowB, Activity, after Auto layout | main path bends 4 | 0 |
+| Petri net (classic), after Auto layout | slopes p2->t2 7/164, lock->t3 1/60 | unchanged (Q1 removes them) |
+| the four default scenes | | identical at 0.01 px (below that two runs of one code differ) |
+
+Findings of the step:
+- The 8 px grid snap turned legs ELK drew straight into 1 to 7 px jogs; `readElkResult` now keeps them straight (ends
+  move along their sides by up to 8 px, nodes stay on the grid). Without it, `fixedAlignment: NONE` alone left the
+  Activity spine at 2 bends per leg.
+- A single arc bowed only round the box it crossed still crossed the steep `coin` arc near `locked` and, on DemoPEST,
+  `unlocked`'s self-loop, and its label landed on the loop's; the bow search now also avoids the other arcs' curves
+  and labels.
+- Q8 (ii), the level snap, was implemented and taken out: `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irA1Render.test.ts:258-266`,
+  «a single edge stays straight, from handle centre to handle centre, whatever the snap would do», pins the opposite
+  (R-VP-22, C3 cause 3: the tip on the anchor) under `viewpoint/ir/`. With Q5 and Q8 (iii) no turnstile pane keeps a
+  slope; Petri net (classic) keeps two until Q1.
+- Q4 (b) was not done: the form of a node is resolved only in `ObjectNode.tsx:924`
+  (`const shapeForm = resolveNodeForm(...)`), and neither `UnifiedEdge.tsx` nor `elkLayout.ts` receives it. It can
+  ride with Q4 (a): `irEdgeViews.ts` already resolves the vertex view for the side rule and can write the end forms on
+  the synthetic edge for `UnifiedEdge.tsx` to read.
