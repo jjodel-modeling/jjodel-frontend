@@ -205,3 +205,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe 21 PASS, 0 FAIL on 3073, DemoESM, 1600×1000, default theme; the chat's visual check pending, RC-23; crops `docs/discovery/harness/_tmp_simhint_panel_statemachine.png`, `_panel_statemachine_long.png`, `_inspector_statemachine.png`, `_panel_extended.png`, gitignored)
 **Notes**: Measures on 3073, DemoESM under State machine: hint 41 px, two rows, not clamped sideways; transport row top 873 at Not started and 873 after Reset. --halt alone does not clip: a long name injected laid out 3 rows (scrollHeight 54 over 41) and the third painted over MARKING until overflow: hidden went into the --halt rule; the halt line already had it. A speck of that third row's top shows in the 4 px bottom padding. The SetFieldAction2 console error is left to the chat's ticket.
 **Prompt document name**: 2026-10-03 14:20
+
+## 2026-10-03 — merge: sim-profile-hint into alfonso-frontend-jjtl (P-2026-10-03-1452)
+**Prompt**: `claude_2026-10-03_1452_prompt_merge_sim-profile-hint.md`, a direct merge by `lane-run merge --direct`, no session: `sim-profile-hint` at `91c8964ae` into `alfonso-frontend-jjtl`, merge base `764e00502`, 5 commits on the branch side.
+**Files touched**: merge `aefaddcf5`: 5 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_1420_prompt_sim_profile_state_hint.md`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/simulation-panel.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `aefaddcf5` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6946 tests in 277 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat check (RC-23) on the lane probe of P-2026-10-03-1420: hint on two rows 41 px, transport row 873 before and after Reset under both profiles; gates of the direct merge green; Alfonso look on 3001 pending
+**Notes**: Rollback tag `pre-sim-profile-hint` on `ccb15ff9c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1452/result.json`.
+**Prompt document name**: 2026-10-03 14:52
