@@ -36,6 +36,7 @@ vi.mock('../../../sim/simRunState', () => ({
     isSimPending: (id: string) => sim.pending.has(id),
     useSimVersion: () => 0,
     useSimChoiceVersion: () => 0,
+    getSimRun: () => undefined,
 }));
 vi.mock('@xyflow/react', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@xyflow/react')>();
@@ -143,7 +144,9 @@ const trunks = (html: string) => [...html.matchAll(/<path[^>]*class="reference-e
 /** Markup digests on `17a70f2ad`, before any edit of this lane. */
 const PIN = {
     flow: 'caf5def28c3734f9', guarded: '2e1e2309013c58be', mergeF3Plain: '2bd355a08d918527',
-    corner1: 'f11e8975fcf90659', corner0: '97cbca8e2b710577', cornerRing: 'ae2ef15e27c8d200', cornerSigma: '7dc5e97a97fe6183',
+    // cornerSigma re-pinned on `536e27cf1` (P-2026-10-03-0304): R-SIM-107 (`6eedc4bf3`) replaced the σ card with tags,
+    // so its row is a changed one (`before`), the σ tag; it was '7dc5e97a97fe6183', the card.
+    corner1: 'f11e8975fcf90659', corner0: '97cbca8e2b710577', cornerRing: 'ae2ef15e27c8d200', cornerSigma: 'f19f2252a2347426',
     cornerPending: 'a8c140b875a5f5e4',
 };
 
@@ -167,7 +170,7 @@ describe('the bytes of before: an edge without the new keys, the overlay in its 
             corner1: draw({ modelId: 'M', tokens: 1, sigma: [], enabled: false }),
             corner0: draw({ modelId: 'M', tokens: 0, sigma: [], enabled: false }),
             cornerRing: draw({ modelId: 'M', tokens: null, sigma: [], enabled: true }),
-            cornerSigma: draw({ modelId: 'M', tokens: 2, sigma: [{ attr: 'visits', value: '3' }], enabled: true }),
+            cornerSigma: draw({ modelId: 'M', tokens: 2, sigma: [{ attr: 'visits', value: '3', before: '2' }], enabled: true }),
             cornerPending: draw({ modelId: 'M', tokens: null, sigma: [], enabled: true }, true),
         }).toEqual({
             corner1: PIN.corner1, corner0: PIN.corner0, cornerRing: PIN.cornerRing, cornerSigma: PIN.cornerSigma, cornerPending: PIN.cornerPending,
@@ -318,6 +321,7 @@ describe('SimNodeRunState inside the node (a derived view)', () => {
     it('the enabled ring, the pending ring and the σ card stay as they are', () => {
         expect(draw({ modelId: 'M', tokens: null, sigma: [], enabled: true })).toContain('class="sim-node-run__ring"');
         expect(draw({ modelId: 'M', tokens: null, sigma: [], enabled: true }, true)).toContain('class="sim-node-run__pending"');
-        expect(draw({ modelId: 'M', tokens: 1, sigma: [{ attr: 'visits', value: '3' }], enabled: false })).toContain('class="sim-node-run__sigma"');
+        expect(draw({ modelId: 'M', tokens: 1, sigma: [{ attr: 'visits', value: '3', before: '2' }], enabled: false })).toContain('sim-node-run__tag--sigma');
+        expect(draw({ modelId: 'M', tokens: 1, sigma: [{ attr: 'visits', value: '3' }], enabled: false })).not.toContain('sim-node-run__tags');
     });
 });

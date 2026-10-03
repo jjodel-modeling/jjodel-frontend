@@ -113,3 +113,30 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: sim-node-read: no change on the demo scenes (default viewpoint), probe on 3070 by the lane; 9 gates green
 **Notes**: Rollback tag `pre-sim-node-read` on `f74c7a198` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0208/result.json`.
 **Prompt document name**: 2026-10-03 02:08
+
+## 2026-10-03 — feat: the M1 face, run inspector and canvas tags of the state UI, Lane C (P-2026-10-03-0120)
+**Prompt**: `claude_2026-10-03_0120_prompt_sim_state_face.md`, heavy tier, Phase 2 Lane C on `~/jjodel-w-simface`, branch `sim-state-face`: report §8.3 as R-SIM-109 adopts it, R-SIM-104, 105, 106 (UI), 107, 109 and R-SIM-102 on the face and the canvas, rendering Lane A's builders; lane probe on the four demo exports; the chat's visual check, then its two fixes (the seed in the title only, Watch four rows with the globals by default).
+**Files touched**: code `6eedc4bf3`, fixes `d7ff4f821`, `16539631f`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `simulation-panel.scss`, `SimInspector.tsx` (new), `SimInspector.scss` (new), `SimNodeRunState.tsx`, `simNodeRunState.scss`, `SimCanvasLayer.tsx` (new). Demo `eb7d54c6b`, `d9e344274`: `docs/demo/models_2026_simulator_demo.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Typecheck 14 errors, the §17 set, none in `sim/`; sim suites 978/978 in 28 files; build exit 0, chunk-size warning only; lane probe on 3068, light, 1600×1000, 138/138, the four scenes' readings line for line as the script's. Not run: Play, the reasons list, the dark theme.
+**Out-of-scope changes**: yes — no file outside DOVE (ten files over six commits, above five, DOVE taken as the confirmation), but three scratch outputs (a typecheck log, two probe stdouts) were first written to `/tmp`, outside the worktree, then deleted; later ones went to the gitignored `frontend/scripts/smoke/`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 GO 2026-10-03 on the fresh crops (status line with step and last step, seed in the title only; Watch at most four rows; panel, Marking chips, Events, inspector with the viewed step, trace, canvas tags and Inspect switch as checked at 02:31), after two fixes asked on the first crops (`16539631f`); lane probe 138/138 on 3068, light, 1600×1000; crops `docs/discovery/harness/_tmp_simface_*.png`, gitignored
+**Notes**: Amends R-SIM-104 on the seed: in the status line's title only, as R-SIM-100 had it. Watch: the globals by default, at most four rows (`facePins`). The chat adopted the lane's four choices as recommended: the panel stays live while a step is viewed; closing the inspector or collapsing the panel returns to live; the canvas layer under the toolbar; the inspector clamped at 234 (MiniMap 202 px). Demo lines 62, 270, 403 also rewritten by Lane B: union at the second merge.
+**Prompt document name**: 2026-10-03 01:20
+**Ticket** (P-2026-10-03-0120): with the seed gone the last step still loses its tail in 184 px of status line: PEST and ESM by 23-71 px, Flow B's step 6 by 17 px, Petri's step 4 behind the Deadlock reason (61 px left); it reads whole in Petri's steps 1-3 and Flow B's 1-5. The title carries it whole; a perceptual item for Alfonso.
+
+## 2026-10-03 — merge: sim-state-face takes alfonso-frontend-jjtl (P-2026-10-03-0304)
+**Prompt**: `claude_2026-10-03_0304_prompt_sim-state-face_take_trunk.md`, full lane, `~/jjodel-w-simface` on `sim-state-face`: RC-14, the trunk at `04dd1c7e5` into the branch with one `--no-ff` merge, base `f7131a405`; the demo-script conflict resolved with the chat's text (RC-21); then, on the chat's two answers, the test red the merge gates found and the three `Data…` left in §4 of the demo script.
+**Files touched**: merge `536e27cf1`: the trunk's 39 files (37 clean, equal to the trunk's; resolved `docs/demo/models_2026_simulator_demo.md` by the chat's text, `docs/log-inbox/simulation.md` by union). `9b5386835`: `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irActivityRender.test.ts`. `6edc4b34c`: `docs/demo/models_2026_simulator_demo.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 01:20
+**Causa**: (c)
+**Regressions**: unknown. Gates on `6edc4b34c`: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6847/6847 in 273 files, the 9 red at import, equal to the trunk tip's count measured read-only in `~/jjodel-release`; hooks 344; build exit 0, chunk-size warning only; check:docs 4/4, check:scripts PASS, check:addonly PASS. No visual probe ran on the merged tree.
+**Out-of-scope changes**: yes — the test file and the three §4 lines of the demo script, beyond the prompt's DOVE, authorized by the chat; the merge itself carries 39 files, above five, the trunk's, listed in the prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the face checked on the branch at 02:31 and 02:49 (RC-23), before the merge; the merge adds trunk code on files disjoint from the branch's, not re-probed on this tree
+**Notes**: Corregge/Causa for the test commit only: since `6eedc4bf3` (R-SIM-107) `SimNodeRunState` reads `getSimRun`, missing from the test's mock, and the σ card the test pinned is gone; the 0120 lane ran the sim suites only. Fix: the mock stub, the σ fixtures with `before`, `cornerSigma` re-pinned to `f19f2252a2347426`. Mutation bench not run. §4 stale `Data…` fixed in a docs commit (P13: never with code).
+**Prompt document name**: 2026-10-03 03:04
