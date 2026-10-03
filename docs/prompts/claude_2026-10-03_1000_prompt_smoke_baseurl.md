@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-10-03-1000
 Chat: C-2026-10-01-1725
 Lane: fast. Tier: light (scripts only, no app code). Model: Sonnet 5, declared deviation from RC-16 (peripheral lane, RC-32 light tier).
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane smoke-baseurl · 582ecb569 · non fuso
 Worktree: `~/jjodel-w-smokeurl`, branch `smoke-baseurl`, cut from the trunk at `fba1549ee` (`frontend/node_modules` symlinked, P14).
 
 ## COSA
