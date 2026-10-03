@@ -267,3 +267,16 @@ active log is not touched by these lanes.
 **Ticket**: Misurato in consumer: `set Scenario_0.pathway = Antonio` mette un Learner nello slot `pathway`, che è di tipo Phase, e riesce. Il controllo di C2 prima di «Apply» verifica il tipo solo per gli elementi che la proposta crea; per un elemento esistente decide il core, che non controlla il tipo. La conformità lo segnala solo alla rivalidazione.
 **Priority**: low
 **Found in**: P-2026-10-02-2215
+
+## 2026-10-03 — merge: 168-proposal into feat/168-jodie-consumer
+**Prompt**: `claude_2026-10-03_2348_prompt_merge_168-proposal.md` (P-2026-10-03-2348) — merge diretto (`lane-run merge --direct`) della lane C2 (J4: la proposta di Jodie come elenco leggibile con «Apply» e «Discard» in modalità consumer) nel trunk #168, secondo nell'ordine C1 → C2 → D.
+**Files touched**: merge `c23bb0e5c` (3 commit di C2: referto `ae1978693`, codice `f7fde9973`, chiusura `224fc8da8`); conflitto su `docs/log-inbox/jodie-consumer.md` risolto per unione; tag `pre-168-proposal` su `e84d4b80a`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gate del worker sul merge: typecheck 14 (insieme della punta ricevente), typecheck:scripts, vitest (5600 test, 9 rossi all'import noti), build, check:agents, check:scripts verdi; sonda di C2 `_tmp_168_c2_verify` rieseguita sul trunk unito con C1 (porta 3047): 19/19.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — verifica visiva di Juri sulla lane (2026-10-03, voci 1-7); sul trunk unito la sonda della lane, non `npm run smoke` (fisso sulla 3000).
+**Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B su `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40). Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
+**Prompt document name**: 2026-10-03 23:48
