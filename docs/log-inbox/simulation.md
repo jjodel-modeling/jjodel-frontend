@@ -263,3 +263,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Priority**: medium
 **Found in**: P-2026-10-03-1630
 **Detail**: ~/.jjodel-lanes/P-2026-10-03-1630/probe-_tmp_simpolish_probe.head.log
+
+## 2026-10-03 — merge: sim-polish into alfonso-frontend-jjtl (P-2026-10-03-1730)
+**Prompt**: `claude_2026-10-03_1730_prompt_merge_sim-polish.md`, a direct merge by `lane-run merge --direct`, no session: `sim-polish` at `c482d7785` into `alfonso-frontend-jjtl`, merge base `d2a1866b6`, 3 commits on the branch side.
+**Files touched**: merge `26b62ea01`: 10 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_1630_prompt_sim_polish.md`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimRolesModal.scss`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simInputs.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simLabels.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `26b62ea01` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6996 tests in 278 files, 9 red at import, hooks 352; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: roles counter 11 of 13 assigned, Configuration on DemoESM and Marking on DemoPetri, attribute tag whole, presentation to semantic initial false; eight gates of the direct worker green (vitest 6996)
+**Notes**: Rollback tag `pre-sim-polish` on `49957d340` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1730/result.json`.
+**Prompt document name**: 2026-10-03 17:30
