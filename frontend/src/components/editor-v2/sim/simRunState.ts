@@ -55,6 +55,7 @@ import { choiceElements, nodeStateOf, type SimNodeState } from './simCanvasState
 import type {
     ActionOracle, CompiledNet, DerivedOracle, GuardOracle, HaltReason, InputRead, NetConfiguration, SimState, SimStateAccess, SimValue, StepOutcome,
 } from '../../../model/simulation/netTypes';
+import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import type { InputValue } from './simBridge';
 
 /** Who chose a step among two or more candidates (R-SIM-100): a click on the list, or a draw. */
@@ -103,6 +104,11 @@ export interface SimRun {
      * last one `config`; step 0, `net.initial`, is never kept, and an older step is rebuilt by `configAt`.
      */
     readonly keptConfigs?: readonly NetConfiguration[];
+    /**
+     * The M frozen at Reset that the oracles close over (R-SIM-14), for the I/O board's outputs, evaluated as a
+     * global DEFINE on it (P-2026-10-03-1845, report §4); absent on a record built without the bridge.
+     */
+    readonly snapshot?: SimSnapshot;
 }
 
 /** How a run resolves an ε choice among two or more candidates (R-SIM-101): the list asks, or a draw decides. */
