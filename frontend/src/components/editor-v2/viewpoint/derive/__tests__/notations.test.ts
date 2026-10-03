@@ -1030,8 +1030,9 @@ describe('Petri net (classic) in the list and the dialog (R-VP-24)', () => {
             return [id, cv.labelText ? String(cv.labelText(ctx, id) ?? '') : null, cv.terminations.targetEnd, cv.curve ?? null];
         });
         expect(seen).toEqual([
-            ['a1', null, 'openArrow', 'arc'], ['a2', '2', 'openArrow', 'arc'], ['a0', null, 'openArrow', 'arc'],
-            ['i1', null, 'hollowCircle', 'arc'], ['i3', '3', 'hollowCircle', 'arc'],
+            // No curve since P-2026-10-03-1304 (Q1): the classic arcs take the orthogonal router.
+            ['a1', null, 'openArrow', null], ['a2', '2', 'openArrow', null], ['a0', null, 'openArrow', null],
+            ['i1', null, 'hollowCircle', null], ['i3', '3', 'hollowCircle', null],
         ]);
     });
 });

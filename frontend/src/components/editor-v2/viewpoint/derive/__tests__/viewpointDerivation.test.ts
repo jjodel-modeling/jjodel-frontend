@@ -851,9 +851,9 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         expect(anchor).toBe('n');
     });
 
-    it('Arc: an arc in the ink ending in the open arrowhead; a second document labels a weight above 1', () => {
+    it('Arc: a line in the ink on the orthogonal router (P-2026-10-03-1304, Q1), the open arrowhead; a second document labels a weight above 1', () => {
         const [plain, weighted] = all('Arc').map(edge);
-        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' };
+        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 } };
         expect(all('Arc')).toHaveLength(2);
         expect(plain.edge).toEqual(line);
         expect(plain.predicate).toBeUndefined();
@@ -866,7 +866,7 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
 
     it('InhibitorArc: the same two documents, ending in the hollow circle', () => {
         const [plain, weighted] = all('InhibitorArc').map(edge);
-        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'hollowCircle' }, line: { color: NAME_INK, width: 1 }, curve: 'arc' };
+        const line = { source: '$src.value', target: '$tgt.value', terminations: { sourceEnd: 'none', targetEnd: 'hollowCircle' }, line: { color: NAME_INK, width: 1 } };
         expect(all('InhibitorArc').map(v => v.rule)).toEqual(['role:inhibitorArc', 'role:inhibitorArc']);
         expect(plain.edge).toEqual(line);
         expect(weighted.edge).toEqual({ ...line, labels: WEIGHT_LABEL });
@@ -889,14 +889,14 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         expect(cv.labels.map(l => [l.position, l.anchor ?? null])).toEqual([['outside', 's'], ['center', null]]);
     });
 
-    it('the compiled arcs: the ink, 1 px, the arc, the ends; the bar keeps the catalogue hex', () => {
+    it('the compiled arcs: the ink, 1 px, no curve (the router, Q1), the ends; the bar keeps the catalogue hex', () => {
         clearCompileCache();
         const { ctx } = petriWorld();
         for (const [n, id, end] of [['Arc', 'a1', 'openArrow'], ['InhibitorArc', 'i1', 'hollowCircle']]) {
             const ce = compileEdgeView(`derived:${n}Classic`, edge(all(n)[0]));
             expect(ce.lineColor!(ctx, id), n).toBe(NAME_INK);
             expect(ce.lineWidth!(ctx, id), n).toBe(1);
-            expect(ce.curve, n).toBe('arc');
+            expect(ce.curve, n).toBeUndefined();
             expect(ce.terminations, n).toEqual({ sourceEnd: 'none', targetEnd: end });
         }
         const bar = compileView('derived:TransitionClassic', vertex(byClass(views(), 'Transition')));

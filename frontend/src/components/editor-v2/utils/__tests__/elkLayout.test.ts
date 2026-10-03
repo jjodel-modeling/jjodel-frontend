@@ -438,6 +438,8 @@ describe('the notation profiles (Q2), copied into the derived viewpoint', () => 
         expect(layoutOf('flowchart')?.direction).toBe('DOWN');
         expect(layoutOf('activityUml')?.direction).toBe('DOWN');
         expect(layoutOf('petriClassic')?.direction).toBe('RIGHT');
+        // P-2026-10-03-1304 (Q1): its arcs on ELK's orthogonal routes, as Petri net's on the router.
+        expect(layoutOf('petriClassic')?.edgeRouting).toBe('ORTHOGONAL');
         expect(layoutOf('statechart')?.direction).toBe('RIGHT');
         expect(layoutOf('erChen')).toMatchObject({ algorithm: 'stress', overlapRemoval: true });
         for (const id of ['flowchart', 'activityUml']) {

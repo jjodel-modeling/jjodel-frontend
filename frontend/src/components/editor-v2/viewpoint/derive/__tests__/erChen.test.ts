@@ -267,21 +267,23 @@ describe('A4 leaves every other notation as it was', () => {
 
     // Measured on the A2 tip (d4daecaf7's code) before any edit of P-2026-09-30-1552: the two notations the
     // table above leaves out, the documents WITH their provenance.
+    // P-2026-10-03-1304 (Q1): the three petriClassic lists retaken; the code change is the classic arc documents'
+    // `curve: 'arc'` dropped (and the provenance hash it moves), nothing else.
     const PINNED_A2: Record<string, string> = {
         'DemoESM erChen': '-',
         'DemoESM petriClassic': '4f197c31b7a2a94c',
         'DemoFlowB erChen': '-',
-        'DemoFlowB petriClassic': 'b098e7f609b2e4d7',
+        'DemoFlowB petriClassic': 'af7b64d11135bcd8',
         'DemoPEST erChen': '-',
         'DemoPEST petriClassic': 'e838a4e40d369fad',
         'DemoPetri erChen': '-',
-        'DemoPetri petriClassic': '3e3943cd76b54bcd', // R-VP-53: the transition name above the bar (P-2026-10-03-1415)
+        'DemoPetri petriClassic': '48bae3ebfeaa0939', // R-VP-53: the transition name above the bar (P-2026-10-03-1415)
         'ERDLanguage ERD erChen': '61c73fe96b150683',
         'ERDLanguage ERD petriClassic': 'ac8a06d17f46633c',
         'ERDLanguage Library erChen': '-',
         'ERDLanguage Library petriClassic': '-',
         'ERDLanguage Relational erChen': 'c82afdad857005ab',
-        'ERDLanguage Relational petriClassic': 'a878d399b9a78f31',
+        'ERDLanguage Relational petriClassic': '10a06083aaa944f6',
         'MDE ERD (1) erChen': '23a31f1c3f487daa',
         'MDE ERD (1) petriClassic': 'fe7361076e5a1b00',
         'MDE ERD erChen': '4299e38db1cad805',

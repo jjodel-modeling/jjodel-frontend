@@ -961,7 +961,8 @@ const CLASSIC_BAR_SIZE = { width: PETRI_BAR_SHORT, height: PETRI_BAR_LONG } as c
  * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`, 12 by 56) in the catalogue ink (R-VP-15 (4)), its name
  *   outside above, in the label style of C2 (12 px 500, the quiet ink): the profile runs RIGHT, so the arcs use
  *   the bar's left and right sides and the name takes a side they leave free (R-VP-53, P-2026-10-03-1415).
- * - An arc: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the open arrowhead (R-VP-25); an inhibitor arc
+ * - An arc: a line in the ink, 1 px, the open arrowhead (R-VP-25), on the orthogonal router as Petri net's arcs
+ *   (P-2026-10-03-1304, Q1, amends R-VP-24 (4): the `curve: 'arc'` chord drew long diagonals); an inhibitor arc
  *   the same, ending in the hollow circle. A weight above 1 (the Arc weight role) is the arc's label, in
  *   the C2 label style: a second document per arc class, a predicate on the weight and priority 1, so the
  *   resolver picks it where it holds, a subclass's own over its superclass's (priority, then specificity).
@@ -985,7 +986,7 @@ export function deriveClassicPetriViewpointIRs(lookup: Lookup, metamodelId: stri
             const base = (): EdgeViewIR['edge'] => ({
                 source, target,
                 terminations: { sourceEnd: 'none', targetEnd: role === 'inhibitorArc' ? 'hollowCircle' : 'openArrow' },
-                line: { color: NAME_INK, width: 1 }, curve: 'arc',
+                line: { color: NAME_INK, width: 1 },
             });
             const edge = base();
             if (labels?.center) edge.labels = { center: labels.center, style: EDGE_LABEL_STYLE() };
