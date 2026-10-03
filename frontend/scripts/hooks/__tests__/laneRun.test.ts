@@ -1492,6 +1492,68 @@ describe('lane-run status, the brief of the report', () => {
     });
 });
 
+// ── status: the prompt's Status after the lane closed ────────────────────────
+
+/** An exited lane in l.worktree closing on `Outcome: <word>`, its prompt reading `Status: <status>` (named by prompt.txt, or found under docs/prompts). */
+function closedLane(l: Lab, status: string, word: string, viaPromptTxt = true) {
+    const rel = viaPromptTxt ? 'prompt.md' : 'docs/prompts/claude_2026-09-26_1640_prompt_a_lane.md';
+    mkdirSync(dirname(join(l.worktree, rel)), { recursive: true });
+    writeFileSync(join(l.worktree, rel), PROMPT.replace('Status: da eseguire', 'Status: ' + status));
+    const dir = laneDir(l);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'log.jsonl'), assistant('Closing report.\nOutcome: ' + word) + '\n');
+    writeFileSync(join(dir, 'worktree.txt'), l.worktree + '\n');
+    if (viaPromptTxt) writeFileSync(join(dir, 'prompt.txt'), join(l.worktree, rel) + '\n');
+    writeFileSync(join(dir, 'started.txt'), String(Date.now() - 60000) + '\n');
+    writeFileSync(join(dir, 'pid.txt'), '999999\n');
+    writeFileSync(join(dir, 'exit.txt'), '0\n');
+    return rel;
+}
+
+describe('lane-run status, the prompt Status after the close', () => {
+    test('kills "no warning on an unflipped prompt", "the warning on a flipped prompt", "the warning on question or blocked", "the hard-stop not warned": an exited lane on done or hard-stop whose prompt still reads da eseguire is warned, and only that one', () => {
+        const FLIPPED = 'eseguito 2026-09-26 · lane feat · 1234567 · verifica visiva passata 2026-09-26 (chat)';
+        for (const [status, word, warned] of [
+            ['da eseguire', 'done', true],
+            ['da eseguire', 'hard-stop', true],
+            [FLIPPED, 'done', false],
+            [FLIPPED, 'hard-stop', false],
+            ['da eseguire', 'question', false],
+            ['da eseguire', 'blocked', false],
+        ] as const) {
+            const l = lab();
+            const rel = closedLane(l, status, word);
+            const r = laneRun(l, ['status', ID]);
+            expect(r.status, r.stderr).toBe(0);
+            const lines = r.stdout.split('\n').filter((x) => x.startsWith('warning:'));
+            expect(lines, status + ' / ' + word).toEqual(warned ? [`warning: ${rel}: \`Status: da eseguire\` after \`Outcome: ${word}\`; the closure commit owes the flip (P16, RC-17)`] : []);
+        }
+    });
+
+    test('kills "the docs/prompts fallback dropped": a lane with no prompt.txt is judged on the docs/prompts file whose header holds its id', () => {
+        const l = lab();
+        const rel = closedLane(l, 'da eseguire', 'hard-stop', false);
+        const r = laneRun(l, ['status', ID]);
+        expect(r.stdout.split('\n').filter((x) => x.startsWith('warning:'))).toEqual([
+            `warning: ${rel}: \`Status: da eseguire\` after \`Outcome: hard-stop\`; the closure commit owes the flip (P16, RC-17)`,
+        ]);
+    });
+
+    test('kills "the warning while the lane runs": a running lane whose prompt reads da eseguire is not warned', () => {
+        const l = lab();
+        const hold = join(l.state, 'release');
+        const events = join(l.state, 'events.jsonl');
+        writeFileSync(events, assistant('Phase 1.\nOutcome: done') + '\n');
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_HOLD: hold, FAKE_EVENTS: events } }).status).toBe(0);
+        const r = laneRun(l, ['status', ID]);
+        writeFileSync(hold, '');
+        expect(r.stdout).toContain('state: running');
+        expect(r.stdout).not.toContain('warning:');
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(laneRun(l, ['status', ID]).stdout).toContain('warning: ');
+    });
+});
+
 // ── monitor ──────────────────────────────────────────────────────────────────
 
 describe('lane-run monitor', { timeout: 60000 }, () => {
