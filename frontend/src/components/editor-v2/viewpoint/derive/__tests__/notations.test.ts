@@ -472,7 +472,7 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
     // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
     const PINNED: Record<string, string> = {
-        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '13db72e86e2fa96b', DemoFlowB: '58aeb562c91a731f',
+        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '13db72e86e2fa96b', DemoFlowB: 'fc6be52903c81177',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -673,10 +673,10 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // each to the digest predicted on 2cde09984's code, before any A2 edit: every closedArrow an openArrow and
     // the provenance hash recomputed.
     const PINNED_D: Record<string, string> = {
-        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '859ed7219f226f01', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'e1dcb9c59b5a3f7b',
+        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '859ed7219f226f01', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
         'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'b3a4db87af089b89', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'c7f24aeb60cfb60b',
-        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '7c9995dcf7935ec6', 'DemoESM petri': 'ae8b9f79a275c716', 'DemoESM flowchart': '42459bd72a617f2f',
-        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': 'c14102114d435a6d', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '7e7715ad457a678a',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '7c9995dcf7935ec6', 'DemoESM petri': 'ae8b9f79a275c716', 'DemoESM flowchart': '3f536b8c32d0744b',
+        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': 'c14102114d435a6d', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '3dd329e0a53f2eaf',
     };
 
     it('Generic, State machine, Petri net and Flowchart derive the D tip\'s documents, byte for byte, provenance included', () => {

@@ -219,7 +219,7 @@ describe('Petri net (classic) on DemoPetri: the declared sizes draw as declared'
 });
 
 describe('what the three limits reach among the derived documents', () => {
-    it('only Activity (UML), Petri net and Petri net (classic) declare a size or a radius: every other view keeps its box', () => {
+    it('only Activity (UML), Flowchart, Petri net and Petri net (classic) declare a size or a radius: every other view keeps its box', () => {
         const got = new Set<string>();
         for (const make of [PEST, PETRI, FLOWB]) {
             const mm = make();
@@ -233,7 +233,7 @@ describe('what the three limits reach among the derived documents', () => {
                 }
             }
         }
-        // P-2026-10-03-1300: Petri net declares its transition bar, 56 by 12.
-        expect([...got].sort()).toEqual(['activityUml', 'petri', 'petriClassic']);
+        // P-2026-10-03-1300: Petri net declares its transition bar, 56 by 12; Flowchart its Initial and Terminal, 20 and 24 px.
+        expect([...got].sort()).toEqual(['activityUml', 'flowchart', 'petri', 'petriClassic']);
     });
 });

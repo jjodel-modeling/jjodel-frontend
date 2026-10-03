@@ -191,19 +191,19 @@ describe('A4 leaves every other notation as it was', () => {
     // digest predicted on 2cde09984's code, before any A2 edit: the tip's documents with every closedArrow an
     // openArrow and their provenance hash recomputed.
     const PINNED: Record<string, string> = {
-        'DemoESM flowchart': '42459bd72a617f2f',
+        'DemoESM flowchart': '3f536b8c32d0744b',
         'DemoESM flowchartIso': '7b89007086b38e02',
         'DemoESM generic': 'f5b415d0f3a7512c',
         'DemoESM petri': 'ae8b9f79a275c716',
         'DemoESM stateMachine': '7c9995dcf7935ec6',
         'DemoESM statechart': 'c4de3ba17221210b',
-        'DemoFlowB flowchart': '7e7715ad457a678a',
+        'DemoFlowB flowchart': '3dd329e0a53f2eaf',
         'DemoFlowB flowchartIso': 'b7cb2ce5f5a14bd0',
         'DemoFlowB generic': '1ebd123804dc75a1',
         'DemoFlowB petri': 'b8415f0e187edacc',
         'DemoFlowB stateMachine': 'c14102114d435a6d',
         'DemoFlowB statechart': '90451f737522f3cc',
-        'DemoPEST flowchart': 'e1dcb9c59b5a3f7b',
+        'DemoPEST flowchart': 'd2ba7ef28c065754',
         'DemoPEST flowchartIso': '042f60bcc91d9e26',
         'DemoPEST generic': '6d66ed919a80875b',
         'DemoPEST petri': '0d845ed009b85a0a',

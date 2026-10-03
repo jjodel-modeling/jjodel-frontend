@@ -370,7 +370,8 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         const terminalBox = stateMachine && role === 'terminal';
         const bullseye = flow && (role === 'activityFinal' || (role === 'terminal' && !stateMachine));
         const bar = flow && (role === 'fork' || role === 'join');
-        const nameless = bullseye || bar || (flow && role === 'initial' && !stateMachine);
+        const initialDisc = flow && role === 'initial' && !stateMachine;
+        const nameless = bullseye || bar || initialDisc;
         const presetId = terminalBox ? 'uml-state' : role ? ROLE_PRESET[shape][role] : undefined;
         const preset = presetId ? getCatalogPreset(presetId) : undefined;
         const petriPlace = shape === 'petri' && role === 'node';
@@ -410,6 +411,11 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         if (compartment) ir.fieldCompartments = [attributesCompartment(hidesName)];
         // The Petri transition is a flat bar, its long axis across (P-2026-10-03-1300).
         if (petriTransition) ir.defaultSize = { width: PETRI_BAR_LONG, height: PETRI_BAR_SHORT };
+        // The activity's Initial disc and final bull's-eye are drawn at the sizes Activity (UML) declares, 20 and 24 px,
+        // not after their content (64 px); the fill and the marker are untouched (P-2026-10-03-1300). The state machine's
+        // named Initial is neither: it keeps its size.
+        if (initialDisc) ir.defaultSize = { ...ACTIVITY_INITIAL_SIZE };
+        if (bullseye) ir.defaultSize = { ...ACTIVITY_FINAL_SIZE };
         out.push({ classId: c.id, className: c.name, rule: preset ? `role:${role}` : 'structure:default', ir });
     }
     return out;
