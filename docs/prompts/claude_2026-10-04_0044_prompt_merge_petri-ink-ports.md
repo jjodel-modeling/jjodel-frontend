@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-0044
 Chat: C-2026-10-03-1610
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane merge · 544fbd19f · verifica visiva passata 2026-10-04 (Chat smoke 2026-10-04 00:55 on 544fbd19f: 3001 HTTP 200; IRNodeContent.tsx, irEdgeViews.ts, handlePosition.ts served and compiled (200). Visual check (RC-23) done by the chat on the branch crops of P-2026-10-04-0010 (Petri classic at rest light and dark, Activity after Auto layout dark): Petri bars readable in both themes, place names off the arrowheads, handles as on the trunk. Eight gates green. GO.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-04-0044 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

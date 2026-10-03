@@ -443,3 +443,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — lane probe on 3080, unattended, 64/64; the four default panes identical to the trunk-code run of P-2026-10-03-1920 (dump 8/8, crops byte for byte 16/16), control with signal (classic Petri and Flowchart crops differ); the chat's visual check is its own
 **Notes**: Causa (c) second: the prompt did not foresee A2's test calling A3's parameter. `git revert --quit` cleared REVERT_HEAD before the stop: bash-guard skips commit checks while it exists, which made 32 bashGuard tests red. The probe needed no change: it asserts nothing on handles. The trunk reference is `probe_before.json` (code of 106aae181); the trunk's code since moved only in `sim/`. LIR file not written: `docs/lir/` outside DOVE.
 **Prompt document name**: 2026-10-04 00:10
+
+## 2026-10-04 — merge: petri-ink-ports into alfonso-frontend-jjtl (P-2026-10-04-0044)
+**Prompt**: `claude_2026-10-04_0044_prompt_merge_petri-ink-ports.md`, a direct merge by `lane-run merge --direct`, no session: `petri-ink-ports` at `a24c5d5b5` into `alfonso-frontend-jjtl`, merge base `95c38845d`, 14 commits on the branch side.
+**Files touched**: merge `544fbd19f`: 19 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-03_petri_ink_ports.md`, `docs/lir/lir_2026-10-03_petri_ink_ports.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-03_1920_prompt_petri_ink_ports.md`, `docs/prompts/claude_2026-10-04_0010_prompt_petri_drop_a3.md`, `frontend/scripts/probe/petri-ink-ports.ts`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, and 11 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `544fbd19f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7273 tests in 294 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat smoke 2026-10-04 00:55 on 544fbd19f: 3001 HTTP 200; IRNodeContent.tsx, irEdgeViews.ts, handlePosition.ts served and compiled (200). Visual check (RC-23) done by the chat on the branch crops of P-2026-10-04-0010 (Petri classic at rest light and dark, Activity after Auto layout dark): Petri bars readable in both themes, place names off the arrowheads, handles as on the trunk. Eight gates green. GO.
+**Notes**: Rollback tag `pre-petri-ink-ports` on `95c38845d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-0044/result.json`.
+**Prompt document name**: 2026-10-04 00:44
