@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1631
 Chat: C-2026-10-03-1610
 Lane: fast (harness script and its templates, tests first; no app code). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane lane-run-hygiene · d414c934d · gates: typecheck:scripts exit 0, check:scripts PASS, hook and gate tests 640/640 (632 plus 8), check:docs 4/4; no visual check (harness)
 
 Worktree: `~/jjodel-w-lanehyg`, branch `lane-run-hygiene`, cut by the chat from `alfonso-frontend-jjtl` at `d2a1866b6`, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 
