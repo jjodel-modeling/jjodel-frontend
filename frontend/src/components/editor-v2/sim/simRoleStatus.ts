@@ -8,6 +8,7 @@
  */
 
 import { STATE_ATTRIBUTES_KEY, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 import { ROLE_CATALOG, roleDescriptor, roleValues } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
 import { checkability, systemProfile } from '../../../model/simulation/simProfiles';
@@ -592,7 +593,7 @@ export function profileSummaryText(summary: ProfileSummary, nameOf: (id: string)
         kept: summary.kept.length > 0 ? `Kept: ${summary.kept.map(k => `${k.label} (${keptValues(k.role, k.value).map(nameOf).join(', ')})`).join(', ')}.` : null,
         setButOff: summary.setButOff.length > 0 ? `Set but off: ${summary.setButOff.join(', ')}.` : null,
         // R-SIM-94: the metamodel cannot see its models' declarations, so the hint says where a global goes.
-        declare: summary.declareHint ? "Declare the state attributes the actions write (a model's globals go in its Data…):" : null,
+        declare: summary.declareHint ? "Declare the state attributes the actions write (a model's globals go in its State…):" : null,
     };
 }
 
@@ -622,4 +623,44 @@ export function profilePatch(
     const verdict = overlapVerdict(lookup, withDerivedEventRole({ ...bag, ...patch }, lookup), classIds);
     if (verdict?.refuse) return { kind: 'refused', overlap: verdict.overlap };
     return { kind: 'write', patch, overlap: verdict?.overlap ?? null };
+}
+
+// ---------------------------------------------------------------------------
+// The State page of the roles dialog and of the model's dialog (R-SIM-103)
+// ---------------------------------------------------------------------------
+
+/** One group of a column: the rows of one owner, by index into the table; `metaclass` `null` for the model's own. */
+export interface StateGroup {
+    readonly metaclass: string | null;
+    readonly rows: readonly number[];
+}
+
+/** The two columns: abstract (semantic, σ) and concrete (presentation, `node`), never mixed (R-SIM-102). */
+export interface StateColumns {
+    readonly abstract: readonly StateGroup[];
+    readonly concrete: readonly StateGroup[];
+}
+
+/**
+ * The rows of the table in two columns, each with the model's own group first
+ * (the globals `model`), then one group per metaclass in the order its first
+ * row appears; rows by their index, so a row keeps its number («state
+ * attribute n») wherever it is drawn. A group exists only with a row.
+ */
+export function stateColumns(rows: readonly Pick<StateAttributeRecord, 'metaclass' | 'space'>[]): StateColumns {
+    const column = (space: 'semantic' | 'presentation'): StateGroup[] => {
+        const groups = new Map<string | null, number[]>();
+        rows.forEach((r, i) => {
+            if ((r.space === 'presentation') !== (space === 'presentation')) return;
+            const list = groups.get(r.metaclass) ?? [];
+            if (list.length === 0) groups.set(r.metaclass, list);
+            list.push(i);
+        });
+        const own = groups.get(null);
+        return [
+            ...(own ? [{ metaclass: null, rows: own }] : []),
+            ...[...groups].filter(([m]) => m !== null).map(([metaclass, list]) => ({ metaclass, rows: list })),
+        ];
+    };
+    return { abstract: column('semantic'), concrete: column('presentation') };
 }

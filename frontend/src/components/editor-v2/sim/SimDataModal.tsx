@@ -1,13 +1,19 @@
 /**
- * SimDataModal — the «Data» dialog of the M1 face: the globals of one model
- * (R-SIM-94, P-2026-09-29-0110, docs/discovery/discovery_2026-09-29_sim_data_level.md §5).
+ * SimDataModal — the «State» dialog of the M1 face (the «Data» dialog until
+ * R-SIM-103): the globals of one model (R-SIM-94, P-2026-09-29-0110,
+ * docs/discovery/discovery_2026-09-29_sim_data_level.md §5).
  *
  * The model carries its own `simStateAttributes` key, with the record form of
  * R-SIM-67; the run merges it over the metamodel's (`mergeDeclarations`): a
  * global declared here overrides the metamodel's global of the same name, and
  * a global declared in the metamodel is the default of every model that
  * declares none. A model declares globals only: the table is the metamodel's
- * (`Declarations`, SimRolesModal.tsx) with its metaclass select fixed to Global.
+ * (`Declarations`, SimRolesModal.tsx) with its metaclass select fixed to Global,
+ * in the same two columns and as wide (R-SIM-103, P-2026-10-03-0041). Its
+ * context is the metamodel's declarations the model does not shadow
+ * (`modelDeclarationScope`): their presentation names count for E-NODE, their
+ * equations for «Read by»; «Written by» and «Read by» read this model's texts,
+ * on row selection only.
  *
  * A draft over the model's key: Add attribute, the undeclared names of the
  * Reset line (added as rows when the dialog opens from them), the rows as
@@ -20,12 +26,14 @@
  * for the same reason: the editor's own handlers would otherwise receive them.
  */
 
-import { ReactElement, SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactElement, SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { LPointerTargetable } from '../../../joiner';
-import { stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
-import { modelDataPatch, modelDataRows, newGlobalRow } from './simBridge';
+import { LPointerTargetable, store } from '../../../joiner';
+import { STATE_ATTRIBUTES_KEY, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import { modelDataPatch, modelDataRows, newGlobalRow, runBag } from './simBridge';
 import { Declarations } from './SimRolesModal';
+import { modelDeclarationScope, usageTexts } from './simStateUsage';
+import type { UsageText } from './simStateUsage';
 import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 import './SimRolesModal.scss';
 
@@ -57,6 +65,18 @@ export function SimDataModal(props: SimDataModalProps): ReactElement {
     const [focusRow, setFocusRow] = useState<number | null>(() => (draft ? stored.rows.length : null));
     const rows = draft ?? stored.rows;
     const dialogRef = useRef<HTMLDivElement>(null);
+    // The metamodel's declarations, read once on open (the dialog is modal), and those this model leaves in scope.
+    const metamodelRows = useMemo(() => {
+        const lookup: any = (store.getState() as any).idlookup ?? {};
+        const raw = lookup[lookup[modelId]?.instanceof]?._state?.[STATE_ATTRIBUTES_KEY];
+        return stateAttributeRows(typeof raw === 'string' ? raw : undefined).rows;
+    }, [modelId]);
+    const context = useMemo(() => modelDeclarationScope(rows, metamodelRows), [rows, metamodelRows]);
+    // This model's texts for the features the metamodel's run bag binds, on row selection only.
+    const readTexts = useCallback((): readonly UsageText[] => {
+        const lookup: any = (store.getState() as any).idlookup ?? {};
+        return usageTexts(lookup, runBag(lookup[lookup[modelId]?.instanceof]?._state ?? {}, lookup), [modelId]);
+    }, [modelId]);
     const addRef = useRef<HTMLButtonElement>(null);
 
     // Escape closes without writing: from inside, the root's onKeyDown; with the focus outside, this listener.
@@ -85,7 +105,7 @@ export function SimDataModal(props: SimDataModalProps): ReactElement {
         onApplied();
     };
 
-    const title = modelName ? `Data of ${modelName}` : 'Data';
+    const title = modelName ? `State of ${modelName}` : 'State';
 
     return createPortal(
         <div
@@ -94,7 +114,7 @@ export function SimDataModal(props: SimDataModalProps): ReactElement {
             onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') onClose(); }} onKeyUp={stop} onMouseDown={stop} onMouseUp={stop} onClick={stop} onDoubleClick={stop}
             onPointerDown={stop} onPointerUp={stop} onContextMenu={stop} onWheel={stop}
         >
-            <div className="sim-roles-modal" role="dialog" aria-modal="true" aria-labelledby="sim-data-modal-title" tabIndex={-1} ref={dialogRef}>
+            <div className="sim-roles-modal sim-roles-modal--wide" role="dialog" aria-modal="true" aria-labelledby="sim-data-modal-title" tabIndex={-1} ref={dialogRef}>
                 <div className="sim-roles-modal__header">
                     <div className="sim-roles-modal__title-row">
                         <h2 className="sim-roles-modal__title" id="sim-data-modal-title">{title}</h2>
@@ -122,7 +142,10 @@ export function SimDataModal(props: SimDataModalProps): ReactElement {
                         {!stored.readable && draft === null && (
                             <div className="sim-roles-modal__warning">The stored declarations are not readable. Adding an attribute replaces them.</div>
                         )}
-                        <Declarations rows={rows} classes={[]} onChange={setDraft} focusRow={focusRow} onFocused={() => setFocusRow(null)} globalsOnly />
+                        <Declarations
+                            rows={rows} classes={[]} onChange={setDraft} focusRow={focusRow} onFocused={() => setFocusRow(null)} globalsOnly
+                            context={context} readTexts={readTexts}
+                        />
                     </div>
                 </div>
                 <div className="sim-roles-modal__footer">

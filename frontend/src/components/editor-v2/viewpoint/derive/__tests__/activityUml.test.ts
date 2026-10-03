@@ -226,6 +226,7 @@ describe('dialogPrefill — the binder, then the name signals on the classes tha
         const state = derivedViewpointState(mm.lookup, mm.id, choice);
         expect(state[`${DERIVED_ROLE_PREFIX}${mm.classId('Decision')}`]).toBe('decision');
         expect(state.derivedNotation).toBe('activityUml');
+        expect(JSON.parse(state.derivedLayout)).toEqual(DERIVED_NOTATIONS.find(n => n.id === 'activityUml')!.layout);
         mm.lookup.vp1 = { className: 'DViewPoint', id: 'vp1', _state: state };
         expect(initialNotation(mm.lookup, mm.id, ['vp1'])).toBe('activityUml');
         expect(dialogPrefill(mm.lookup, mm.id, 'activityUml', ['vp1'])).toEqual({ roles: choice.classRoles, from: 'derived' });
@@ -292,11 +293,13 @@ describe('Activity (UML) — the documents on DemoFlowB', () => {
         expect(ir.defaultSize).toEqual({ width: 36, height: 36 });
     });
 
-    it('fork and join: a filled bar in the ink, upright, 7 by 120, no name', () => {
+    it('fork and join: a filled bar in the ink, 7 px thick, across the layout direction (DOWN: 120 by 7), no name', () => {
+        // P-2026-10-01-2215 (Q7, amends R-VP-26 (2); thickness R-VP-36): the bar follows the layout direction.
+        expect(DERIVED_NOTATIONS.find(n => n.id === 'activityUml')!.layout!.direction).toBe('DOWN');
         for (const name of ['Fork', 'Join']) {
             const ir = irOf(views, name);
             expect(ir.shape, name).toEqual({ form: 'bar', fill: INK, border: INK_BORDER, labels: [] });
-            expect(ir.defaultSize, name).toEqual({ width: 7, height: 120 });
+            expect(ir.defaultSize, name).toEqual({ width: 120, height: 7 });
         }
     });
 
