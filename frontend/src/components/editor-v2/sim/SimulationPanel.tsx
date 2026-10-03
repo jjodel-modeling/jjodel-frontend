@@ -53,7 +53,7 @@ import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joi
 import { buildEvalContext } from '../../../jjscript';
 import { configAt, getSimPolicy, getSimRun, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView } from './simRunState';
 import type { SimChoices } from './simRunState';
-import { getSimViewerPrefs, useSimViewerPrefsVersion } from './simViewerPrefs';
+import { getSimViewerPrefs, MAX_SIM_PINS, useSimViewerPrefsVersion } from './simViewerPrefs';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
     profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
@@ -81,7 +81,7 @@ import type { RoleKey, Roles } from './simRoleStatus';
 import { SimRolesModal } from './SimRolesModal';
 import { SimInputDialog } from './SimInputDialog';
 import { SimDataModal } from './SimDataModal';
-import { SimInspector } from './SimInspector';
+import { facePins, SimInspector } from './SimInspector';
 import { SimCanvasLayer } from './SimCanvasLayer';
 import './simulation-panel.scss';
 
@@ -451,6 +451,10 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         // R-SIM-104: the face reads the live run; the changes are the last step's, against the σ before it.
         const step = r.trace?.length ?? 0;
         const prev = step > 0 ? configAt(r, step - 1)?.state ?? null : null;
+        const output = outputLine(r.config.state, r.net, lookup);
+        // Four rows at most, Moore's output among them: the globals by default, an instance's attribute once pinned.
+        const watch = watchRows(r.net, r.config.state, prev, facePins(getSimViewerPrefs(modelid).pins, r.net.attributes), lookup,
+            step > 0 ? r.trace?.[step - 1]?.inputs ?? [] : []).slice(0, MAX_SIM_PINS - (output ? 1 : 0));
         return {
             status,
             inputs,
@@ -460,12 +464,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             asks,
             // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3), as rows
             // and chips (R-SIM-104); the marking line stays the title of the chips, so its readers change a selector only.
-            watch: watchRows(r.net, r.config.state, prev, getSimViewerPrefs(modelid).pins, lookup, step > 0 ? r.trace?.[step - 1]?.inputs ?? [] : []),
+            watch,
             chips: markingChips(r.config.state, lookup),
             markingTitle: markingLine(r.config.state, r.net, lookup).title,
             // R-SIM-91, R-SIM-92: the accepting mark of the status row, and Moore's output, a Watch row from Reset to Stop or never.
             accepting: acceptingMark(r.net, r.config.state),
-            output: outputLine(r.config.state, r.net, lookup),
+            output,
             step,
             seed: r.seed,
         };
@@ -717,8 +721,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
 
     const lookupNow: any = (store.getState() as any).idlookup ?? {};
     const head = pending ? choiceHead(pending.input) : null;
-    // R-SIM-104: the one status line under the buttons, `step n · seed s · last step`, while a run exists.
-    const line = run && view ? statusLine(view.step, view.seed, lastStep) : null;
+    // R-SIM-104: the one status line under the buttons, `step n · last step`, while a run exists. The seed is in its
+    // title only, as R-SIM-100 had it (the chat's visual check, P-2026-10-03-0120): on the line it cut the last step.
+    const shownLine = run && view ? statusLine(view.step, undefined, lastStep) : null;
+    const line = shownLine && view?.seed !== undefined && !shownLine.title.includes(`seed ${view.seed}`)
+        ? { ...shownLine, title: `${shownLine.title}\nseed ${view.seed}` }
+        : shownLine;
     const watching = (view?.watch.length ?? 0) > 0 || !!view?.output;
 
     return (
@@ -1035,8 +1043,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             </button>
                         </div>
                         {/* In Deadlock the row says why, on its one line, and opens the list per input (R-SIM-58). The one
-                            status line of R-SIM-104: the pill, then `step n · seed s · last step`; the R-SIM-66 slot is its last
-                            part, so a refused Reset or the interruption takes the place of the last step, one at a time. */}
+                            status line of R-SIM-104: the pill, then `step n · last step`, the seed in the title; the R-SIM-66 slot
+                            is its last part, so a refused Reset or the interruption takes the place of the last step. */}
                         <div
                             className={`sim-panel__status${reason ? ' sim-panel__status--clickable' : ''}`}
                             role={reason ? 'button' : undefined}

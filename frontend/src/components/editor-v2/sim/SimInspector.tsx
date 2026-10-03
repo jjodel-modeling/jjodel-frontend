@@ -65,6 +65,15 @@ interface InspectorInstance {
 
 type Lookup = Record<string, any>;
 
+/**
+ * The pins the face reads (R-SIM-104 as the chat's visual check of P-2026-10-03-0120 reads it): the viewer's own,
+ * else the globals of `defaultSimPins`, at most four, and nothing else; an attribute of a metaclass, stored or
+ * derived, reaches Watch only when pinned here. The panel shows four rows at most whatever the pins give.
+ */
+export function facePins(pins: readonly SimAttrRef[] | null, attributes: readonly StateAttributeDecl[]): readonly SimAttrRef[] {
+    return pins ?? defaultSimPins(attributes).filter(p => p.metaclass === null);
+}
+
 const nameOf = (lookup: Lookup, id: string | null | undefined): string => {
     const name = id ? lookup[id]?.name : undefined;
     return typeof name === 'string' && name ? name : id ?? '';
@@ -151,7 +160,7 @@ export function SimInspector({ modelId, modelName, inputLabel, onClose }: SimIns
     const config = run ? configAt(run, n) : null;
     const prev = run && n > 0 ? configAt(run, n - 1)?.state ?? null : null;
     const prefs = getSimViewerPrefs(modelId);
-    const pins = run ? prefs.pins ?? defaultSimPins(run.net.attributes) : [];
+    const pins = run ? facePins(prefs.pins, run.net.attributes) : [];
 
     const pinned = (decl: StateAttributeDecl) => pins.some(p => sameRef(p, refOf(decl)));
     const tagged = (decl: StateAttributeDecl) => prefs.tags.some(t => sameRef(t, refOf(decl)));
