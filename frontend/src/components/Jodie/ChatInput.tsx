@@ -179,7 +179,12 @@ export function ChatInput({
         const refresh = () => setHasProvider(JodieConfig.hasEnabledProviders());
         refresh();
         window.addEventListener(AIEvents.SETTINGS_CHANGED, refresh);
-        return () => window.removeEventListener(AIEvents.SETTINGS_CHANGED, refresh);
+        // #168: a key saved in Settings fires PROVIDER_CHANGED only (AIConfig.save).
+        window.addEventListener(AIEvents.PROVIDER_CHANGED, refresh);
+        return () => {
+            window.removeEventListener(AIEvents.SETTINGS_CHANGED, refresh);
+            window.removeEventListener(AIEvents.PROVIDER_CHANGED, refresh);
+        };
     }, []);
 
     // Switching console mode or code flavor invalidates the in-flight history

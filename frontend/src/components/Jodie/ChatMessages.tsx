@@ -366,10 +366,14 @@ function ConsumerWelcome({ providerMissing, onOpenSettings }: { providerMissing?
             {providerMissing ? (
                 <>
                     <p>{CONSUMER_PROVIDER_INVITE.text}</p>
-                    <button className="jodie-promote-btn" onClick={onOpenSettings}>
-                        <i className="bi bi-key" />
-                        <span>{CONSUMER_PROVIDER_INVITE.action}</span>
-                    </button>
+                    {/* The wrapper is the welcome's flex item, so the column centres it: the
+                        button's own `align-self: flex-start` (JodieWindow.css) no longer applies. */}
+                    <div>
+                        <button className="jodie-promote-btn" onClick={onOpenSettings}>
+                            <i className="bi bi-key" />
+                            <span>{CONSUMER_PROVIDER_INVITE.action}</span>
+                        </button>
+                    </div>
                 </>
             ) : (
                 <p>{greeting.hint}</p>
