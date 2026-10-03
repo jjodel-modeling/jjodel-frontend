@@ -270,7 +270,7 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoPEST erChen': '-',
         'DemoPEST petriClassic': 'e838a4e40d369fad',
         'DemoPetri erChen': '-',
-        'DemoPetri petriClassic': '65092dd45826e20a',
+        'DemoPetri petriClassic': '3e3943cd76b54bcd', // R-VP-53: the transition name above the bar (P-2026-10-03-1415)
         'ERDLanguage ERD erChen': '61c73fe96b150683',
         'ERDLanguage ERD petriClassic': 'ac8a06d17f46633c',
         'ERDLanguage Library erChen': '-',

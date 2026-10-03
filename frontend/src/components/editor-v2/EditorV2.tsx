@@ -99,7 +99,7 @@ import {
     setModelUri,
     reconcileJjomAfterUndoRedo,
 } from './sync/canvasToJjom';
-import { computeElkLayout, computeElkAutoLayout, setElkRoutes, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
+import { computeElkLayout, computeElkAutoLayout, setElkRoutes, measureOutsideLabels, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
 import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/notations';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
@@ -3703,7 +3703,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 });
             }
 
-            const result = await computeElkAutoLayout(currentNodes, currentEdges, { profile, roleOf, labelsOf: id => labelMap.get(id) });
+            // The vertices' outside labels (R-VP-53), measured on the same container: ELK reserves their room.
+            const outsideMap = container ? measureOutsideLabels(container) : new Map();
+            const result = await computeElkAutoLayout(currentNodes, currentEdges, { profile, roleOf, labelsOf: id => labelMap.get(id), outsideLabelsOf: id => outsideMap.get(id) });
             const placed = currentNodes.map(n => {
                 const p = result.positions.get(n.id);
                 return p ? { ...n, position: p } : n;

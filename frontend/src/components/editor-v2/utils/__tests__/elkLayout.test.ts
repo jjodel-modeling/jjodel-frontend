@@ -8,10 +8,12 @@ import {
     setElkRoutes,
     getElkRoute,
     elkRoutesRevision,
+    measureOutsideLabels,
     CLASS_VIEW_PROFILE,
     ELK_GRID,
     type ElkRoute,
     type ElkLayoutProfile,
+    type ElkNodeLabelInput,
 } from '../elkLayout';
 import { DERIVED_NOTATIONS, DERIVED_LAYOUT_KEY } from '../../viewpoint/derive/notations';
 
@@ -188,6 +190,122 @@ describe('computeElkAutoLayout: positions and routes', () => {
         for (const route of r.routes.values()) { expect(route.points.length).toBe(2); expect(route.orthogonal).toBe(false); expect(route.straight).toBe(true); }
         const layered = await computeElkAutoLayout(nodes, edges);
         for (const route of layered.routes.values()) expect(route.straight).toBeUndefined();
+    });
+});
+
+// P-2026-10-03-1415 (R-VP-53): a vertex's outside labels are reserved in the toolbar auto-layout's ELK input.
+describe('outside vertex labels: ELK reserves them, the positions stay the node boxes', () => {
+    const lab = (anchor: ElkNodeLabelInput['anchor'], width: number, height: number, gap = 6, text = 't'): ElkNodeLabelInput => ({ anchor, text, width, height, gap });
+
+    it('each goes in as an ELK node label with its measured size, placed outside on its anchor\'s side (mutation: a placement swapped)', () => {
+        const labels: Record<string, ElkNodeLabelInput[]> = {
+            n: [lab('n', 14, 16, 6, 't1')], s: [lab('s', 20, 17, 6, 'p1')], e: [lab('e', 30, 15, 6, 'x')], w: [lab('w', 31, 13, 6, 'y')],
+        };
+        const g = buildElkGraph(['n', 's', 'e', 'w'].map((id) => sized(id, 12, 56)), [], { outsideLabelsOf: (id) => labels[id] });
+        const row = (id: string) => childOf(g, id).labels.map((l: any) => [l.text, l.width, l.height, l.layoutOptions['elk.nodeLabels.placement']]);
+        expect(row('n')).toEqual([['t1', 14, 16, 'OUTSIDE V_TOP H_CENTER']]);
+        expect(row('s')).toEqual([['p1', 20, 17, 'OUTSIDE V_BOTTOM H_CENTER']]);
+        expect(row('e')).toEqual([['x', 30, 15, 'OUTSIDE H_RIGHT V_CENTER']]);
+        expect(row('w')).toEqual([['y', 31, 13, 'OUTSIDE H_LEFT V_CENTER']]);
+        // The node keeps its own size: the label is beside the box, not in it.
+        expect([childOf(g, 'n').width, childOf(g, 'n').height]).toEqual([12, 56]);
+    });
+
+    it('the gap the label is painted at is the node\'s label spacing, the largest of its labels, rounded (mutation: the gap dropped or the smallest taken)', () => {
+        const g = buildElkGraph([sized('a', 44, 44)], [], { outsideLabelsOf: () => [lab('s', 20, 17, 5.6), lab('n', 20, 17, 8.2)] });
+        expect(childOf(g, 'a').layoutOptions['elk.spacing.individual']).toBe('elk.spacing.labelNode:8');
+        // A label painted over its box (a negative distance) asks for no gap, never a negative one.
+        const over = buildElkGraph([sized('a', 44, 44)], [], { outsideLabelsOf: () => [lab('s', 20, 17, -3)] });
+        expect(childOf(over, 'a').layoutOptions['elk.spacing.individual']).toBe('elk.spacing.labelNode:0');
+    });
+
+    it('a label with no size stays out; a node without labels gets neither labels nor a spacing override', () => {
+        const g = buildElkGraph([sized('a', 44, 44), sized('b', 44, 44)], [], { outsideLabelsOf: (id) => (id === 'a' ? [lab('s', 0, 16), lab('s', 20, 0)] : undefined) });
+        for (const id of ['a', 'b']) {
+            expect(childOf(g, id).labels, id).toBeUndefined();
+            expect(childOf(g, id).layoutOptions?.['elk.spacing.individual'], id).toBeUndefined();
+        }
+    });
+
+    it('a layer constraint and the labels coexist on one node (mutation: one overwrites the other)', () => {
+        const g = buildElkGraph([sized('i', 20, 20)], [], {
+            profile: { direction: 'RIGHT', layerConstraints: { first: ['initial'] } }, roleOf: () => 'initial', outsideLabelsOf: () => [lab('s', 20, 16)],
+        });
+        expect(childOf(g, 'i').layoutOptions['elk.layered.layering.layerConstraint']).toBe('FIRST');
+        expect(childOf(g, 'i').layoutOptions['elk.spacing.individual']).toBe('elk.spacing.labelNode:6');
+        expect(childOf(g, 'i').labels).toHaveLength(1);
+    });
+
+    it('the position mapped back is the node box, not the box with its label (mutation: the label\'s room read as the node)', async () => {
+        const profile: ElkLayoutProfile = { direction: 'RIGHT' };
+        const bare = await computeElkAutoLayout([sized('t', 12, 56)], [], { profile });
+        // 18 high at 6 px, 60 wide on a 12 px bar: 24 above, 24 overhang on the left, both on the 8 px grid.
+        const labelled = await computeElkAutoLayout([sized('t', 12, 56)], [], { profile, outsideLabelsOf: () => [lab('n', 60, 18, 6)] });
+        expect(bare.positions.get('t')).toEqual({ x: 48, y: 48 });
+        expect(labelled.positions.get('t')).toEqual({ x: 72, y: 72 });
+    });
+
+    it('a neighbour clears the label: two bars in one layer, the name above the lower one stays off the upper bar (mutation: labels not passed)', async () => {
+        const nodes = [sized('p', 44, 44), sized('t1', 12, 56), sized('t2', 12, 56), sized('q', 44, 44)];
+        const edges = [edge('a', 'p', 't1'), edge('b', 'p', 't2'), edge('c', 't1', 'q'), edge('d', 't2', 'q')];
+        const profile: ElkLayoutProfile = { direction: 'RIGHT', spacing: { node: 8, layer: 40 } };
+        const names: Record<string, ElkNodeLabelInput[]> = { t1: [lab('n', 40, 18, 6)], t2: [lab('n', 40, 18, 6)] };
+        const overlaps = (r: Awaited<ReturnType<typeof computeElkAutoLayout>>) => ['t1', 't2'].some((id) => {
+            const p = r.positions.get(id)!;
+            const label = { x: p.x + 6 - 20, y: p.y - 6 - 18, w: 40, h: 18 };
+            return nodes.some((n) => {
+                if (n.id === id) return false;
+                const q = r.positions.get(n.id)!; const w = n.measured!.width!, h = n.measured!.height!;
+                return Math.min(label.x + label.w, q.x + w) - Math.max(label.x, q.x) > 0 && Math.min(label.y + label.h, q.y + h) - Math.max(label.y, q.y) > 0;
+            });
+        });
+        expect(overlaps(await computeElkAutoLayout(nodes, edges, { profile }))).toBe(true);
+        expect(overlaps(await computeElkAutoLayout(nodes, edges, { profile, outsideLabelsOf: (id) => names[id] }))).toBe(false);
+    });
+});
+
+describe('measureOutsideLabels: the outside labels a node paints, as drawn', () => {
+    // A stub of the canvas DOM, enough for the helper: the selectors it asks, the classes, the sizes and the rects.
+    const rect = (left: number, top: number, width: number, height: number) => ({ left, top, width, height, right: left + width, bottom: top + height });
+    const labelEl = (classes: string[], text: string, w: number, h: number, r: ReturnType<typeof rect>) =>
+        ({ classList: { contains: (c: string) => classes.includes(c) }, textContent: ` ${text} `, offsetWidth: w, offsetHeight: h, getBoundingClientRect: () => r });
+    const nodeEl = (id: string, w: number, h: number, r: ReturnType<typeof rect>, labels: unknown[]) => ({
+        getAttribute: (k: string) => (k === 'data-id' ? id : null), offsetWidth: w, offsetHeight: h, getBoundingClientRect: () => r,
+        querySelectorAll: (sel: string) => (sel === '.ir-node-content > .ir-label--outside' ? labels : []),
+    });
+    const container = (nodes: unknown[]) => ({ querySelectorAll: (sel: string) => (sel === '.react-flow__node[data-id]' ? nodes : []) }) as unknown as ParentNode;
+
+    it('size in flow units, the side from the anchor class, the gap from the rects divided by the zoom (mutations: a side, the zoom)', () => {
+        // Zoom 2: the 12x56 bar is 24x112 on screen at (100, 200).
+        const bar = rect(100, 200, 24, 112);
+        const out = measureOutsideLabels(container([
+            nodeEl('t1', 12, 56, bar, [
+                labelEl(['ir-label', 'ir-label--outside', 'ir-label--anchor-n'], 't1', 14, 16, rect(98, 200 - 16 - 32, 28, 32)),
+                labelEl(['ir-label', 'ir-label--outside', 'ir-label--anchor-e'], 'r', 8, 16, rect(124 + 12, 220, 16, 32)),
+                labelEl(['ir-label', 'ir-label--outside', 'ir-label--anchor-s'], 'b', 8, 16, rect(100, 312 + 10, 16, 32)),
+                labelEl(['ir-label', 'ir-label--outside', 'ir-label--anchor-w'], 'l', 8, 16, rect(100 - 4 - 16, 220, 16, 32)),
+            ]),
+            nodeEl('plain', 44, 44, rect(0, 0, 88, 88), []),
+        ]));
+        expect(out.get('t1')).toEqual([
+            { anchor: 'n', text: 't1', width: 14, height: 16, gap: 8 },
+            { anchor: 'e', text: 'r', width: 8, height: 16, gap: 6 },
+            { anchor: 's', text: 'b', width: 8, height: 16, gap: 5 },
+            { anchor: 'w', text: 'l', width: 8, height: 16, gap: 2 },
+        ]);
+        expect(out.has('plain')).toBe(false);
+    });
+
+    it('a label with no anchor class or no size is left out (mutation: the size guard dropped)', () => {
+        const box = rect(0, 0, 44, 44);
+        const out = measureOutsideLabels(container([
+            nodeEl('p', 44, 44, box, [
+                labelEl(['ir-label', 'ir-label--outside'], 'x', 10, 10, rect(0, 50, 10, 10)),
+                labelEl(['ir-label', 'ir-label--outside', 'ir-label--anchor-s'], 'y', 0, 10, rect(0, 50, 0, 10)),
+                labelEl(['ir-label', 'ir-label--outside', 'ir-label--anchor-s'], 'z', 10, 0, rect(0, 50, 10, 0)),
+            ]),
+        ]));
+        expect(out.has('p')).toBe(false);
     });
 });
 

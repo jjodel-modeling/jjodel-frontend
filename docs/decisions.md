@@ -4936,6 +4936,34 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   the two bow apart; Statechart's profile widens node and edge spacing (80, 32) so neighbouring chords and their labels
   stay apart. (3) The labels ELK is given are matched to edges in the DOM by their text, then by distance: the edge
   markup stays byte-identical (the IR render digests pin it). Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+- **R-VP-53** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: none, reversible: branch).
+  **The Petri net (classic) transition name sits above the upright bar, on a side its arcs do not use, and the outside
+  labels of vertices are reserved in the toolbar auto-layout's ELK input; amends R-VP-24 (3) on the anchor.** Alfonso's
+  answer to question 1 of P-2026-10-01-2215 Phase 2, 2026-10-03, verbatim: «si». The text of R-VP-24 is not edited
+  (add-only). Source: `docs/discovery/discovery_2026-10-03_petri_transition_name.md`.
+  - The anchor: `'e'` becomes `'n'` in `deriveClassicPetriViewpointIRs` (`viewpointDerivation.ts`). The rule is that the
+    name goes above a vertical bar (arcs left and right) and beside a horizontal one (arcs above and below). It is a
+    constant here: the bar is upright 12×56, the classic profile runs RIGHT (`notations.ts`), and P-2026-10-03-1304
+    deferred the bar rotation. A viewpoint derived before keeps the documents it saved.
+  - The reservation: `buildElkGraph` (`elkLayout.ts`) takes `outsideLabelsOf`, which is optional and additive. Each
+    label goes on its ELK child with its measured size. `elk.nodeLabels.placement` follows the anchor: `OUTSIDE V_TOP
+    H_CENTER`, `OUTSIDE V_BOTTOM H_CENTER`, `OUTSIDE H_RIGHT V_CENTER`, `OUTSIDE H_LEFT V_CENTER`. The painted gap is set
+    as `elk.spacing.individual: elk.spacing.labelNode:<gap>`; measured, layered ignores the plain node option. The node
+    keeps its box, so the positions mapped back are the box.
+  - `measureOutsideLabels` reads the labels from the canvas DOM. Size is offsetWidth/Height; the gap comes from the rects
+    divided by the zoom, 6 px measured where the CSS says 8. Only the full branch of `handleAutoLayout` (`EditorV2.tsx`)
+    passes them; the first open and the late-edge re-layout keep `computeElkLayout` (R-VP-45).
+  - Adopted unattended (RC-21, RC-25): the gap measured, not constant; the helper exported from `elkLayout.ts`; the one
+    call in `EditorV2.tsx`, the report's question 1, adopted by chat C-2026-10-01-2215.
+  - Measured with the lane probe on 3241, light theme, a real toolbar auto-layout, two runs at 17/17. The seven scenes
+    have 0 node overlaps, 0 edge-node intersections, 0 label collisions (vertex outside labels included) and 0
+    crossings. Petri net (classic): label-edge 2 → 0, height 179 → 216 px. Activity (UML) bends 1.89 mean on the lane
+    and on a baseline server serving the pre-lane sources, two runs each; the 1.78 of the first baseline run was not
+    reproduced. Petri net (non-classic) and user views with outside labels are reserved too, not among the scenes.
+  - Rest: the four demo scenes and DemoFlowB under Generic, Flowchart, Flowchart (ISO 5807) and Activity (UML) are
+    byte-identical to the baseline; DemoPetri under Petri net (classic) differs at the three names only. Tests went red
+    first, then green. Mutation bench 28/29, the survivor equivalent. Prompt P-2026-10-03-1415, commits `79e18efb9`,
+    `1c33f3f46`, `db2ae3577`.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 
