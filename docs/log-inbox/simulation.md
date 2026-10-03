@@ -166,3 +166,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: RC-23 GO 2026-10-03 on the crops at step 12 and at step 12 viewing step 1 (trace area six rows, newest first, scrollable, viewed row in view; card 442 px at steps 2, 6, 12 per the probe); lane probe 20/20 on 3072, light, 1600×1000; crops `docs/discovery/harness/_tmp_simtrace_step3.png`, `_step12.png`, `_step12_viewed.png`, the `_base_` ones before the fix, gitignored
 **Notes**: Card 442 px at steps 0..12 and 14, before 332..596; at steps 2, 6, 12: 442, 442, 442. Trace area 132 px (6 × 22, the row measured), scrollHeight 286 at step 12. Lane's choice: Back to live also scrolls the live row into view, as a step shown without a commit; the row's focus outline moves inside it. The scrollbar is not painted in the crops (Playwright hides it), its 3 px gutter measured. Corregge 0120: its prompt left the trace unbounded.
 **Prompt document name**: 2026-10-03 10:15
+
+## 2026-10-03 — merge: sim-trace-scroll into alfonso-frontend-jjtl (P-2026-10-03-1031)
+**Prompt**: `claude_2026-10-03_1031_prompt_merge_sim-trace-scroll.md`, a direct merge by `lane-run merge --direct`, no session: `sim-trace-scroll` at `c44875905` into `alfonso-frontend-jjtl`, merge base `4d190162f`, 3 commits on the branch side.
+**Files touched**: merge `f02502d10`: 4 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_1015_prompt_sim_inspector_trace_scroll.md`, `frontend/src/components/editor-v2/sim/SimInspector.scss`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f02502d10` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6883 tests in 275 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: trace scroll checked on its branch (card 442 px at steps 2, 6, 12; six rows; viewed row in view); 9 gates green
+**Notes**: Rollback tag `pre-sim-trace-scroll` on `39ae40a83` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1031/result.json`.
+**Prompt document name**: 2026-10-03 10:31
