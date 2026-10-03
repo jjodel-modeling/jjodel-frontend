@@ -63,7 +63,7 @@ import {
     markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep, runSignature, runStatus, startRun,
     statusLine, stopReason, undeclaredGlobals, watchRows,
 } from './simBridge';
-import type { InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
+import type { CompileDefect, InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
 import { sketchOfMetamodel } from './metamodelSketch';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
@@ -207,6 +207,34 @@ function overlapMessage(lookup: any, overlap: RoleOverlap): string {
     return `Roles overlap: ${name} matches the ${overlap.sorts.join(' and ')} roles.`;
 }
 
+/**
+ * The hint of a profile without state attributes (R-SIM-78, `stateAttributes` off): a guard or an action that reads or
+ * assigns `.[x]` leaves the run's compile defects with a name no declaration can have, since the run reads none. The
+ * state accesses there are the `'undeclared'` defects whose one-line form names the attribute (`undeclared 'x'`, with or
+ * without `on <element>`, the forms `undeclaredGlobals` reads); `'declaration'` cannot arise, the key being dropped by
+ * `runBag` and `modelRunBag`, and the other reasons are not about declarations. Each access is quoted as its guard or
+ * action wrote it, from the defect's source. `null` when the defects name none.
+ */
+export function stateAccessHint(profileName: string, defects: readonly CompileDefect[]): { line: string; title: string } | null {
+    const accessed: string[] = [];
+    for (const d of defects) {
+        if (d.reason !== 'undeclared' || d.short === undefined) continue;
+        const m = /^undeclared '([^']+)'(?: on .+)?$/.exec(d.short);
+        if (!m) continue;
+        // A JjEL identifier is [A-Za-z_][A-Za-z0-9_]*, so the name needs no escaping.
+        const written = new RegExp(`([A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*)*)\\.\\[${m[1]}\\]`).exec(d.source);
+        const path = `${written ? written[1] : ''}.[${m[1]}]`;
+        if (!accessed.includes(path)) accessed.push(path);
+    }
+    if (accessed.length === 0) return null;
+    const names = `${accessed.slice(0, 4).join(', ')}${accessed.length > 4 ? ', …' : ''}`;
+    return {
+        line: `«${profileName}» has no state attributes: use Extended state machine.`,
+        title: `The profile «${profileName}» has no state attributes, so ${names} cannot be read or assigned. `
+            + `Choose Extended state machine (or a profile with state attributes) in the metamodel's Simulation roles.`,
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -240,7 +268,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
         modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
-        modelName, modelStateAttributesRaw, modelDataOff,
+        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -260,6 +288,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const [defects, setDefects] = useState<{ line: string; title: string } | null>(null);
     // The globals the Reset line finds undeclared (R-SIM-94), which lead to the model's Data dialog.
     const [undeclared, setUndeclared] = useState<string[]>([]);
+    // Under a profile without state attributes the same defects lead nowhere in this model: the line says why instead.
+    const [stateHint, setStateHint] = useState<{ line: string; title: string } | null>(null);
     // The model's Data dialog (M1 face), with the undeclared names it opens with.
     const [dataModal, setDataModal] = useState<{ undeclared: string[] } | null>(null);
     const [interrupted, setInterrupted] = useState(false);
@@ -270,7 +300,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // «Configure…» opens the «Simulation roles» dialog; the declarations hint opens it on Data (R-SIM-81(3)).
     const [modal, setModal] = useState<{ onData: boolean } | null>(null);
     useEffect(() => { setChosen(null); setModal(null); }, [configModelId]);
-    useEffect(() => { setDataModal(null); setUndeclared([]); }, [modelid]);
+    useEffect(() => { setDataModal(null); setUndeclared([]); setStateHint(null); }, [modelid]);
     // R-SIM-101: the model Play runs on, null when it does not; why it stopped, for the status row; the k field while typed.
     const [playing, setPlaying] = useState<string | null>(null);
     const [playNote, setPlayNote] = useState<string | null>(null);
@@ -404,6 +434,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setLastStep(null);
         setDefects(null);
         setUndeclared([]);
+        setStateHint(null);
         setRunError(null);
         setRunWarning(null);
         setInterrupted(true);
@@ -486,6 +517,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setLastStep(null);
         setDefects(null);
         setUndeclared([]);
+        setStateHint(null);
         setInterrupted(false);
         setReasonsOpen(false);
         // R-SIM-16: the roles are checked again at run start, since the
@@ -520,10 +552,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setDefects(line === null ? null : { line, title: defectsTitle(started.run.net, lookup, started.compileDefects) ?? line });
         // The globals no declaration has lead to the model's Data dialog (R-SIM-94), unless the profile turns the declarations off.
         setUndeclared(modelDataOff ? [] : undeclaredGlobals(started.compileDefects ?? [], lookup, modelid));
+        // ... and then the hint says why there is nothing to declare them in, and where to get it (P-2026-10-03-1420).
+        setStateHint(modelDataOff ? stateAccessHint(modelProfileName, started.compileDefects ?? []) : null);
         // The run's seed in the Reset line's title only (R-SIM-100): no visible line.
         setLastStep({ text: 'Reset', title: `Reset\nseed ${started.run.seed}` });
         setTick(t => t + 1);
-    }, [modelid, roles, configModelId, modelDataOff]);
+    }, [modelid, roles, configModelId, modelDataOff, modelProfileName]);
 
     const onStop = useCallback((): void => {
         setPlaying(null);
@@ -536,6 +570,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setLastStep(null);
         setDefects(null);
         setUndeclared([]);
+        setStateHint(null);
         setInterrupted(false);
         setReasonsOpen(false);
         simClear(modelid);
@@ -954,6 +989,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 <button type="button" className="sim-panel__hint-action" onClick={() => setDataModal({ undeclared })}>Declare in State…</button>
                             </div>
                         )}
+                        {stateHint && <div className="sim-panel__hint sim-panel__hint--line" title={stateHint.title}>{stateHint.line}</div>}
                         {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line sim-panel__hint--halt" title={view.halt.title}>{view.halt.line}</div>}
                         {/* R-SIM-104: up to four pinned attributes, globals first by default; a range draws its domain bar,
                             DEFINE and IVAR say their kind, a value the last step changed reads before → after. */}
@@ -1088,7 +1124,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             </div>
         </div>
         {isModelMode && rolesComplete && inspectorOpen && (
-            <SimInspector modelId={modelid} modelName={modelName} inputLabel={labelOf} onClose={closeInspector} />
+            <SimInspector modelId={modelid} modelName={modelName} inputLabel={labelOf} stateHint={stateHint} onClose={closeInspector} />
         )}
         {canvasLayer}
         </>
@@ -1180,6 +1216,8 @@ interface StateProps {
     modelStateAttributesRaw: string | null;
     /** The metamodel's profile turns the declarations off (R-SIM-78): the run reads no Data, the M1 face offers none. */
     modelDataOff: boolean;
+    /** The name of that profile, for the hint a run under it shows; '' on the M2 face. */
+    modelProfileName: string;
 }
 
 interface DispatchProps { }
@@ -1221,6 +1259,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             ? dModel._state[STATE_ATTRIBUTES_SPEC.key]
             : null,
         modelDataOff: ownProps.isModelMode && storedProfile(rawState).profile.modes.stateAttributes.mode === 'off',
+        modelProfileName: ownProps.isModelMode ? storedProfile(rawState).profile.name : '',
     };
 }
 
