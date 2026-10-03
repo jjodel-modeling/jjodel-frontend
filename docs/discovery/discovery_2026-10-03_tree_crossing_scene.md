@@ -183,3 +183,48 @@ None: no app change is proposed.
    Recommended: yes; the GO's first option.
 2. Measure the reverse direction (R3) in a lane of its own?
    Recommended: no, a ticket at most; that memo already has a kill on a demo scene.
+
+## Addendum 2026-10-03, Phase 2 (GO of the chat: close as recommended)
+
+GO: «close with frontend/scripts/probe/tree-crossing.ts and its fixture as the acceptance measure, no app code change», as recommended in §0 (RC-21). No file under `frontend/src` changed: `git diff fba1549ee HEAD --name-only -- frontend ':!frontend/scripts/probe'` prints nothing (0 lines). The acceptance measure is the seed and fixture runs of §4.1 (62/62, 59/59) and the bench of §4.2.
+
+### Gates (on `71a45088f`, app code as the trunk `fba1549ee`)
+
+- `npm run typecheck`: exit 2, **14** errors, the §17 set by file and code.
+- `npm run typecheck:scripts`: exit 0. The probe folder is outside `scripts/tsconfig.json`'s include, so a scratch config including `tree-crossing.ts` and `hidden-tab-loop.ts` (both listed by `--listFilesOnly`) was also run: exit 0. The config was deleted afterwards.
+- vitest of the touched folders: `frontend/scripts/probe/` has 0 test files and is outside `vitest.config.ts:16`'s include, so there is nothing to run there.
+  - The subject folder instead, `npx vitest run src/components/editor-v2`: **120 files, 2938 tests, all passed**. That is 120 of the 120 test files on disk.
+  - Positive control: `edgePathRegistry.test.ts` alone gives 12/12.
+  - Before equals after by construction: no file vitest collects changed in this lane.
+- `npm run build`: exit 0, with only the pre-existing chunk warnings.
+- `npm run check:scripts`: exit 0, 41 files. `npm run check:docs`: run after the closure entry was written (see the log entry).
+
+### The four demo scenes
+
+- **Scene dumps, twice.** `jjscript-run-slowdown.ts` was run with `RUNPERF_VARIANT=scenes` through `lane-run probe` on 3017, twice, on fresh Vites.
+  - Both runs: ALL GREEN, every pane rendered, 0 page errors.
+  - 74 nodes, 80 edges, 152 connected handles: the totals of P-2026-10-02-1450's dumps.
+  - Paired by id counter (`_tmp_tc_scene_compare.mjs`, gitignored): **8/8 panes identical**, max path delta 0.0001 px.
+  - Control: one transform and one path planted in a copy are reported as `DIFF` (7/8).
+- **Against the trunk.** `hidden-tab-loop.ts` was run with `LOOP_VARIANTS=interact` on this tree, then compared (`LOOP_VARIANTS=compare`) with the trunk's interact dump `/tmp/hl_trunk.json`.
+  - That dump was taken at 03:30 on the trunk at `cd348df03`. Between `cd348df03` and `fba1549ee`, `frontend/src` differs only in `editor-v2/sim/` (7 files) and one IR test.
+  - Result: **16/16 steps identical** (Petri and FlowB: rest, drag, resize, rename, tabs, m2-rest, m2-added, m2-deleted), max path delta 3e-5 px.
+  - The two «delete restored the pane» FAILs are the pre-existing Low ticket of P-2026-10-02-1450, the same on the trunk.
+
+### Found on the way (measured, not this lane's)
+
+1. **A demo scene does hold a tree-connector crossing, a static one.** The DemoFlowB metamodel pane has a tree under one class: six inheritance edges, bus at y=112 from x 120 to 960. Two references run vertically at x≈218 and cross that bus, and the tree draws one bridge there (`… L 228.5 112 A 6 6 0 0 0 216.5 112 L 120 112`). That bridge was in every dump of P-2026-10-02-1450, before and after. No scene moves an edge across it, so the conclusion of §4.2 stands: the wiring needed a moving edge to be measured.
+2. **The same pane draws its two references apart or on one line, depending on the sequence.**
+   - Dumped right after opening (scenes mode), the two references take separate lanes: verticals at x=218 and x=222.5, horizontals at y=617.5 and y=622.
+   - Dumped after the interaction sequence (interact `m2-rest`: M1 opened and worked, tabs switched, M2 back to the front), both run on one line, x=218 and y=622. They overlap for about 400 px vertical and 300 px horizontal.
+   - Both procedures are deterministic. The trunk dump at `cd348df03` shows the same overlap.
+   - So it predates this lane and is not caused by it. Which step drops the lanes was not isolated. Proposed as a ticket.
+
+### Decisions taken (unattended)
+
+- D7. «Unchanged against the trunk» is shown in two ways: by code identity (no `src` file differs from `fba1549ee`), and by measurement against the latest interaction dump the trunk has (`cd348df03`, which differs from `fba1549ee` only under `sim/`). No trunk server was started: 3001 is excluded, and serving another tree would write into it.
+- D8. The lane-separation difference goes to a ticket, not to a fix: the GO allows no app code.
+
+### Decisions awaiting Alfonso
+
+None.

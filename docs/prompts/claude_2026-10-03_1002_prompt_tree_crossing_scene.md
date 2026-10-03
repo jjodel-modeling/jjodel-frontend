@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-10-03-1002
 Chat: C-2026-10-01-1725
 Lane: full (two-phase: Phase 1 finds or builds a scene where an edge crosses a tree connector and writes the report, Phase 2 after the chat's GO, same session). Tier: heavy (RC-32 forces it on a full lane; probe and fixture only, no app code unless the report shows a defect and the GO names it). Model: the default of .claude/settings.json.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane tree-crossing-scene · 9c9fd905c, 71a45088f · non fuso: verdict yes, the tree-connector bus arcs follow an edge moved across it (11 states, pointer and keyboard, drawn = registry oracle = geometry, 0 editor and edge renders/s at rest); probe and fixture kept as the acceptance measure (seed 62/62, fixture 59/59), `mut-bar` killed 6/11, `mut-trunk` equivalent; no app code; gates green; demo scenes 8/8 identical across two dumps and 16/16 against the trunk dump; one ticket (DemoFlowB metamodel lanes)
 Worktree: `~/jjodel-w-treecross`, branch `tree-crossing-scene`, cut from the trunk at `fba1549ee` (`frontend/node_modules` symlinked, P14).
 
 ## COSA
