@@ -2528,6 +2528,29 @@ Evidence: the design canvas «Simulator UI and state data» (Claude Design, six 
   **An «Inspect node.[x]» switch on the canvas**, off by default: on, every element with presentation state carries dashed pink tags naming each value, so data and notation can be told apart. A viewer preference; the tags work without R-SIM-108, the drawing needs it.
   Lanes: discovery D1 (R-SIM-102..107, 109) and discovery D2 (R-SIM-108) in parallel, read-only; Phase 2 in cascade on disjoint file sets as the reports split them. Alfonso, 2026-10-02 about 23:55, «prima della demo», and 2026-10-03, «vai»: the lanes merge into the trunk before the MODELS demo, one at a time, each tagged `pre-<branch>` for rollback; the demo shows the dialog and the M1 face as built, the inspector and the navigable trace an optional beat. Adopted from `docs/discovery/discovery_2026-10-02_sim_state_ui.md` §0 by the chat (RC-25, 2026-10-03): the inspector is a floating card mounted by the panel, right of it, 400 px wide, clamped clear of the MiniMap and the rail; the `.smv` Export preview of R-SIM-103 is dropped; «Written by»/«Read by» come from `compileAction`, `compileGuard`, `compileDerived` plus one exported StateAccess walk, computed on row selection only; kept configurations are capped at 1000 in `simCommit`, rebuilt by replay over the recorded selectors with `inputs?` added to the trace step (an implementation of R-SIM-106, not an amendment of R-SIM-100); viewer preferences live in `simViewerPrefs.ts` with their own version channel, never the `'mark'` one; «Data» is renamed in its visible strings only, identifiers and classes unchanged; Lane A exports `getSimPresentation(objectId)` on the viewed configuration for R-SIM-108. Lanes: A `sim-state-model` and B `sim-state-dialog` in parallel, then C `sim-state-face` after both.
 
+### Decisions 2026-10-03: the I/O board (R-SIM-110..115)
+
+Evidence: the design canvas «Simulator UI and state data» (Claude Design), row «I/O board: the machine's environment» added on 2026-10-03 with five artboards on the invented Turnstile model: Variant A (docked board, interactive), Variant B (front panel, interactive), Variant C (a Board tab in the compact panel), the device library, the board editor with its bindings table. Alfonso, 2026-10-03, proposed «una libreria di oggetti da associare agli eventi … qualcosa che assomiglia ad una I/O board», asked for a mock-up with variants first, then «sono d'accordo» on the chat's recommendation: Variant A as the working surface, Variant B as a second skin over the same bindings, Variant C dropped, the work after the MODELS demo. The details below are adopted by the chat (RC-25, provisional, unattended) and stay open to his veto.
+
+- **R-SIM-110** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: read, verified: none, reversible: branch).
+  **The I/O board is the machine's environment, not a view.** Its devices bind to what a run already has: inputs to events and IVAR, outputs to read-only expressions over σ. The board adds no VAR, never writes σ or M (R-SIM-6 holds), and every press is a step recorded in the trace and replayable from the seed (R-SIM-100, R-SIM-106). It is not a viewpoint component: views stay read-only (R-SIM-18, R-SIM-108), the notation draws the model, the board draws the system's interface to its environment.
+
+- **R-SIM-111** (2026-10-03, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **A fixed device library in the first cut.** Inputs: Button (an event), Switch (a boolean IVAR, or two events on/off; it keeps its position between steps and each step reads it as an input), Slider (a ranged IVAR), Numeric keypad (R-SIM-112). Outputs: LED (a boolean over σ, a Moore output; `X.[marked]` works on the State machine profile without state attributes), Pulse LED (lit for the one step in which a named transition or event fired, a Mealy output; it reads the trace, not σ, so it is presentation only and absent from the `.smv` export), 7-segment display (an integer expression; a value out of domain shows `Err` in red), Text display (a state name, an enum or a short template, two lines), Gauge (an attribute with a range domain, the Watch bar of R-SIM-104). Mapping to nuXmv: inputs to the event set or IVAR the model already declares, outputs to DEFINE. User-defined and composite devices are out of the first cut.
+
+- **R-SIM-112** (2026-10-03, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The keypad declares its mode in the binding.** Value: the digit buffer lives in the device, the keypad answers one IVAR and Enter fires the event the binding names (the input dialog of R-SIM-88 with another face). Events: every key fires an event carrying its digit and the machine keeps the buffer in σ (the PIN lock exercise). Keys outside the IVAR's domain are shown and rejected with the reason by default, or hidden.
+
+- **R-SIM-113** (2026-10-03, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Devices follow the panel's rules.** An input device is off when no transition accepts its event, with the reason in the title; an input out of domain or a false guard shows its reason and fires nothing. Choices Ask | Random (R-SIM-101) applies to presses. While a past step is viewed (R-SIM-106) the outputs show that step, and a press acts on the live configuration and returns the view to live.
+
+- **R-SIM-114** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: read, verified: none, reversible: branch).
+  **One board, two skins.** Variant A, the working surface: a docked board opened from the run panel like the inspector, outputs above, inputs below, the binding caption under each device, the status block at the foot. Variant B: a front-panel skin of the same board (same devices, same bindings, a physical rendering) with a «Show bindings» toggle that outlines each device and names its binding. The skin is a viewer preference beside the pins of R-SIM-104. Variant C (a Board tab inside the compact panel) is dropped; the compact panel gains only the button that opens the board.
+
+- **R-SIM-115** (2026-10-03, provisional, unattended, evidence: inferred, verified: none, reversible: branch).
+  **The board is saved with the model.** Devices, positions and bindings persist with the model, where its own state declarations live (R-SIM-94), not in M2, because bindings name that model's events and states; the discovery names the key. An editor opens from the board: a palette of the library, the board in edit mode, a binding inspector, and a table device → binding → nuXmv. A binding that no longer resolves (a renamed event, a deleted state) flags its device and never breaks the run. A device whose binding needs state attributes is flagged under a profile without them.
+  Lanes: after the MODELS demo. One read-only discovery (where the board mounts, the persistence key, binding resolution, output evaluation in the guard context with `event` null, reuse of the panel's event and input machinery), then Phase 2 in two lanes on disjoint files: the board model and editor, then the two skins.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
@@ -4913,6 +4936,34 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   the two bow apart; Statechart's profile widens node and edge spacing (80, 32) so neighbouring chords and their labels
   stay apart. (3) The labels ELK is given are matched to edges in the DOM by their text, then by distance: the edge
   markup stays byte-identical (the IR render digests pin it). Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
+- **R-VP-53** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: none, reversible: branch).
+  **The Petri net (classic) transition name sits above the upright bar, on a side its arcs do not use, and the outside
+  labels of vertices are reserved in the toolbar auto-layout's ELK input; amends R-VP-24 (3) on the anchor.** Alfonso's
+  answer to question 1 of P-2026-10-01-2215 Phase 2, 2026-10-03, verbatim: «si». The text of R-VP-24 is not edited
+  (add-only). Source: `docs/discovery/discovery_2026-10-03_petri_transition_name.md`.
+  - The anchor: `'e'` becomes `'n'` in `deriveClassicPetriViewpointIRs` (`viewpointDerivation.ts`). The rule is that the
+    name goes above a vertical bar (arcs left and right) and beside a horizontal one (arcs above and below). It is a
+    constant here: the bar is upright 12×56, the classic profile runs RIGHT (`notations.ts`), and P-2026-10-03-1304
+    deferred the bar rotation. A viewpoint derived before keeps the documents it saved.
+  - The reservation: `buildElkGraph` (`elkLayout.ts`) takes `outsideLabelsOf`, which is optional and additive. Each
+    label goes on its ELK child with its measured size. `elk.nodeLabels.placement` follows the anchor: `OUTSIDE V_TOP
+    H_CENTER`, `OUTSIDE V_BOTTOM H_CENTER`, `OUTSIDE H_RIGHT V_CENTER`, `OUTSIDE H_LEFT V_CENTER`. The painted gap is set
+    as `elk.spacing.individual: elk.spacing.labelNode:<gap>`; measured, layered ignores the plain node option. The node
+    keeps its box, so the positions mapped back are the box.
+  - `measureOutsideLabels` reads the labels from the canvas DOM. Size is offsetWidth/Height; the gap comes from the rects
+    divided by the zoom, 6 px measured where the CSS says 8. Only the full branch of `handleAutoLayout` (`EditorV2.tsx`)
+    passes them; the first open and the late-edge re-layout keep `computeElkLayout` (R-VP-45).
+  - Adopted unattended (RC-21, RC-25): the gap measured, not constant; the helper exported from `elkLayout.ts`; the one
+    call in `EditorV2.tsx`, the report's question 1, adopted by chat C-2026-10-01-2215.
+  - Measured with the lane probe on 3241, light theme, a real toolbar auto-layout, two runs at 17/17. The seven scenes
+    have 0 node overlaps, 0 edge-node intersections, 0 label collisions (vertex outside labels included) and 0
+    crossings. Petri net (classic): label-edge 2 → 0, height 179 → 216 px. Activity (UML) bends 1.89 mean on the lane
+    and on a baseline server serving the pre-lane sources, two runs each; the 1.78 of the first baseline run was not
+    reproduced. Petri net (non-classic) and user views with outside labels are reserved too, not among the scenes.
+  - Rest: the four demo scenes and DemoFlowB under Generic, Flowchart, Flowchart (ISO 5807) and Activity (UML) are
+    byte-identical to the baseline; DemoPetri under Petri net (classic) differs at the three names only. Tests went red
+    first, then green. Mutation bench 28/29, the survivor equivalent. Prompt P-2026-10-03-1415, commits `79e18efb9`,
+    `1c33f3f46`, `db2ae3577`.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 

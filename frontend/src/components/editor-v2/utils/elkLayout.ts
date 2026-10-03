@@ -22,6 +22,7 @@ import type { ElkNode, ElkExtendedEdge } from 'elkjs';
 import type { Node, Edge } from '@xyflow/react';
 import type { AnchorSide } from '../types';
 import { JUNCTION_HALF } from '../viewpoint/ir/irJunctions';
+import type { LabelAnchor } from '../viewpoint/ir/irTypes';
 
 const elk = new ELK();
 
@@ -208,6 +209,20 @@ export interface ElkLabelInput {
     height: number;
 }
 
+/**
+ * A label a vertex paints outside its box (`position: 'outside'`, irStyle.ts), measured in the DOM, in flow units
+ * (P-2026-10-03-1415, R-VP-53).
+ */
+export interface ElkNodeLabelInput {
+    /** The side of the box it sits on. */
+    anchor: LabelAnchor;
+    text: string;
+    width: number;
+    height: number;
+    /** The painted distance between the label and the node's box. */
+    gap: number;
+}
+
 export interface ElkAutoLayoutInput {
     /** The viewpoint's profile; null or absent keeps today's strategy. */
     profile?: ElkLayoutProfile | null;
@@ -215,6 +230,8 @@ export interface ElkAutoLayoutInput {
     roleOf?: (nodeId: string) => string | undefined;
     /** The visible labels of an edge, with their measured size. */
     labelsOf?: (edgeId: string) => ElkLabelInput[] | undefined;
+    /** The outside labels of a vertex, with their measured size and gap: ELK reserves their room. */
+    outsideLabelsOf?: (nodeId: string) => ElkNodeLabelInput[] | undefined;
 }
 
 export interface ElkRect { x: number; y: number; width: number; height: number }
@@ -242,6 +259,11 @@ export interface ElkAutoLayoutResult {
 }
 
 const LABEL_ID = (edgeId: string, kind: ElkLabelInput['kind']) => `${edgeId}::elk-${kind}`;
+const NODE_LABEL_ID = (nodeId: string, i: number) => `${nodeId}::elk-outside-${i}`;
+/** Where ELK puts an outside label, by its anchor: on that side of the box, centred along it. */
+const NODE_LABEL_PLACEMENT: Record<LabelAnchor, string> = {
+    n: 'OUTSIDE V_TOP H_CENTER', s: 'OUTSIDE V_BOTTOM H_CENTER', e: 'OUTSIDE H_RIGHT V_CENTER', w: 'OUTSIDE H_LEFT V_CENTER',
+};
 const snapToGrid = (v: number) => Math.round(v / ELK_GRID) * ELK_GRID + 0;
 
 /** Measured first, then the width/height the size contract writes (useContentSize.ts), today's 180x120 last. */
@@ -272,6 +294,17 @@ export function buildElkGraph(nodes: Node[], edges: Edge[], input: ElkAutoLayout
         const role = constraints ? input.roleOf?.(n.id) : undefined;
         if (role && constraints?.first?.includes(role)) child.layoutOptions = { 'elk.layered.layering.layerConstraint': 'FIRST' };
         else if (role && constraints?.last?.includes(role)) child.layoutOptions = { 'elk.layered.layering.layerConstraint': 'LAST' };
+        // The vertex's outside labels (R-VP-53): ELK reserves their room on their side, at the gap they are painted at
+        // (a node-level label spacing; a plain node option is ignored by layered). The node keeps its own box.
+        const outside = (input.outsideLabelsOf?.(n.id) ?? []).filter(l => l.width > 0 && l.height > 0);
+        if (outside.length) {
+            child.labels = outside.map((l, i) => ({
+                id: NODE_LABEL_ID(n.id, i), text: l.text, width: l.width, height: l.height,
+                layoutOptions: { 'elk.nodeLabels.placement': NODE_LABEL_PLACEMENT[l.anchor] },
+            }));
+            const gap = Math.round(Math.max(0, ...outside.map(l => l.gap)));
+            child.layoutOptions = { ...child.layoutOptions, 'elk.spacing.individual': `elk.spacing.labelNode:${gap}` };
+        }
         return child;
     });
 
@@ -357,6 +390,31 @@ export function buildElkGraph(nodes: Node[], edges: Edge[], input: ElkAutoLayout
         };
     }
     return { id: 'root', layoutOptions, children, edges: elkEdges };
+}
+
+/**
+ * The outside labels each node of `container` paints (`.ir-label--outside`, irStyle.ts), as drawn: the size in flow
+ * units (offsetWidth/Height, which the zoom does not scale), the side from the anchor class, the gap from the rects
+ * divided by the zoom. Read by the toolbar auto-layout, beside the edge labels (R-VP-53).
+ */
+export function measureOutsideLabels(container: ParentNode): Map<string, ElkNodeLabelInput[]> {
+    const out = new Map<string, ElkNodeLabelInput[]>();
+    container.querySelectorAll<HTMLElement>('.react-flow__node[data-id]').forEach(nodeEl => {
+        const id = nodeEl.getAttribute('data-id');
+        if (!id) return;
+        const box = nodeEl.getBoundingClientRect();
+        const zoom = nodeEl.offsetWidth > 0 && box.width > 0 ? box.width / nodeEl.offsetWidth : 1;
+        nodeEl.querySelectorAll<HTMLElement>('.ir-node-content > .ir-label--outside').forEach(el => {
+            const anchor = (['n', 'e', 's', 'w'] as const).find(a => el.classList.contains(`ir-label--anchor-${a}`));
+            if (!anchor || !el.offsetWidth || !el.offsetHeight) return;
+            const r = el.getBoundingClientRect();
+            const gap = anchor === 'n' ? box.top - r.bottom : anchor === 's' ? r.top - box.bottom : anchor === 'e' ? r.left - box.right : box.left - r.right;
+            const list = out.get(id) ?? [];
+            list.push({ anchor, text: (el.textContent ?? '').trim(), width: el.offsetWidth, height: el.offsetHeight, gap: gap / zoom });
+            out.set(id, list);
+        });
+    });
+    return out;
 }
 
 /** The side of a rect a point on (or near) its border sits on. */

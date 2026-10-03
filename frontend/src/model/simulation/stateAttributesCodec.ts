@@ -33,6 +33,7 @@
  */
 
 import { parseExpressionStrict } from '../../jjel/parser';
+import { inDomain } from './netStep';
 import type { DeclarationDefect, Domain, SimValue, StateAttributeDecl } from './netTypes';
 
 /** The bag key (R-SIM-67). */
@@ -100,6 +101,31 @@ export function parseInitialLiteral(text: string): SimValue | null {
     if (e.type === 'Unary' && e.operator === '-' && e.operand.type === 'Literal' && typeof e.operand.value === 'number') return -e.operand.value;
     if (e.type === 'Identifier') return e.name;
     return null;
+}
+
+/**
+ * The initial value a domain starts at, as the JjEL text a record stores: `false` for a boolean, the
+ * minimum for a range (`0`, `-3`), the first literal for an enumeration as a bare identifier (`A`), and
+ * `''` for an enumeration with no literals yet, which stays a defect until it has one.
+ */
+export function defaultInitialOf(domain: Domain): string {
+    switch (domain.kind) {
+        case 'boolean': return 'false';
+        case 'range': return String(domain.min);
+        case 'enum': return domain.literals[0] ?? '';
+    }
+}
+
+/**
+ * The initial text of a stored row whose domain `prev` became `next` by an edit of a bound or of the
+ * literals: the new domain's default when the text is not a value of the new domain, or is the previous
+ * domain's default (it follows the minimum or the first literal); a value typed inside the domain stays.
+ * A change of kind does not come here: it takes `defaultInitialOf` outright.
+ */
+export function initialFollowingDomain(initial: string, prev: Domain | null, next: Domain): string {
+    const value = parseInitialLiteral(initial);
+    const isValue = value !== null && inDomain(value, next);
+    return !isValue || (prev !== null && initial === defaultInitialOf(prev)) ? defaultInitialOf(next) : initial;
 }
 
 /** The array of records, or why the key itself is unreadable. */

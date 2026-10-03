@@ -310,9 +310,9 @@ describe('item 3: Petri transitions are 56 by 12 and the name sits outside', () 
         expect(t.shape.labels).toEqual([{ position: 'outside', anchor: 's', source: { from: 'intrinsic', prop: 'name' }, style: LABEL_STYLE }]);
     });
 
-    it('Petri net (classic): the name stays outside to the right of the upright bar', () => {
+    it('Petri net (classic): the name stays outside, above the upright bar since P-2026-10-03-1415 (R-VP-53)', () => {
         const t = irOf(derivedWith(PETRI(), 'petriClassic'), 'Transition');
-        expect(t.shape.labels).toEqual([{ position: 'outside', anchor: 'e', source: { from: 'intrinsic', prop: 'name' }, style: LABEL_STYLE }]);
+        expect(t.shape.labels).toEqual([{ position: 'outside', anchor: 'n', source: { from: 'intrinsic', prop: 'name' }, style: LABEL_STYLE }]);
     });
 
     it('both bars stay notation glyphs, kept out of Color by metaclass (R-VP-50)', () => {

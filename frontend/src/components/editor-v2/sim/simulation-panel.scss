@@ -607,6 +607,9 @@
         -webkit-line-clamp: 2;
         line-clamp: 2;
         white-space: normal;
+        // The halt line takes this from `--line`; the state-attributes hint (P-2026-10-03-1420) does not carry
+        // `--line`, so a third row of a long profile name would paint over the heading below without it.
+        overflow: hidden;
         box-sizing: content-box;
         height: 3em;
     }

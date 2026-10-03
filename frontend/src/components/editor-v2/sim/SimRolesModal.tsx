@@ -61,7 +61,8 @@ import type { DraftEdits, DraftInput, MultiRow, RoleBadge, RowValue } from './si
 import { bindingVerdicts } from '../../../model/simulation/bindingCompat';
 import { roleDescriptor } from '../../../model/simulation/roleCatalog';
 import { systemProfile, validateProfile } from '../../../model/simulation/simProfiles';
-import { encodeStateAttributes, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import { defaultInitialOf, encodeStateAttributes, initialFollowingDomain, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import type { Domain } from '../../../model/simulation/netTypes';
 import { declarationForm, formPatch } from './simInputs';
 import { runBag } from './simBridge';
 import {
@@ -174,6 +175,11 @@ function freshName(rows: readonly StateAttributeRecord[]): string {
     for (let n = 1; ; n++) if (!rows.some(r => r.name === `x${n}`)) return `x${n}`;
 }
 
+/** A domain edit of a stored row carries its initial along; a derived or an input row has none (R-SIM-72, R-SIM-88). */
+function domainPatch(row: StateAttributeRecord, domain: Domain, initial: string): Partial<StateAttributeRecord> {
+    return row.equation !== undefined || row.input === true ? { domain } : { domain, initial };
+}
+
 /** One cell typed into its row (the rules of the panel's table, lane C1 and C2). */
 function patchOf(row: StateAttributeRecord, field: DeclField, typed: string): Partial<StateAttributeRecord> | null {
     switch (field) {
@@ -185,17 +191,22 @@ function patchOf(row: StateAttributeRecord, field: DeclField, typed: string): Pa
         case 'metaclass': return { metaclass: typed === '' ? null : typed };
         // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed.
         case 'space': return typed === 'presentation' ? { space: 'presentation', domain: null } : { space: 'semantic', domain: row.domain ?? { kind: 'boolean' } };
-        case 'kind':
-            return {
-                domain: typed === 'range' ? { kind: 'range', min: 0, max: 1 }
-                    : typed === 'enum' ? { kind: 'enum', literals: [] } : { kind: 'boolean' },
-            };
-        case 'literals': return { domain: { kind: 'enum', literals: typed.split(',').map(x => x.trim()).filter(x => x !== '') } };
+        // The initial follows the domain: a new kind starts at its default, a bound or a literal keeps a value still inside.
+        case 'kind': {
+            const domain: Domain = typed === 'range' ? { kind: 'range', min: 0, max: 1 }
+                : typed === 'enum' ? { kind: 'enum', literals: [] } : { kind: 'boolean' };
+            return domainPatch(row, domain, defaultInitialOf(domain));
+        }
+        case 'literals': {
+            const domain: Domain = { kind: 'enum', literals: typed.split(',').map(x => x.trim()).filter(x => x !== '') };
+            return domainPatch(row, domain, initialFollowingDomain(row.initial, row.domain, domain));
+        }
         case 'min':
         case 'max': {
             const n = Number(typed);
             if (typed.trim() === '' || !Number.isFinite(n) || row.domain?.kind !== 'range') return null;
-            return { domain: { kind: 'range', min: field === 'min' ? n : row.domain.min, max: field === 'max' ? n : row.domain.max } };
+            const domain: Domain = { kind: 'range', min: field === 'min' ? n : row.domain.min, max: field === 'max' ? n : row.domain.max };
+            return domainPatch(row, domain, initialFollowingDomain(row.initial, row.domain, domain));
         }
     }
 }
