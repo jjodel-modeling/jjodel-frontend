@@ -11,9 +11,12 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    decodeStateAttributes, encodeStateAttributes, mergeDeclarations, parseInitialLiteral, stateAttributeRows, STATE_ATTRIBUTES_KEY,
+    decodeStateAttributes, defaultInitialOf, encodeStateAttributes, initialFollowingDomain, mergeDeclarations, parseInitialLiteral,
+    stateAttributeRows, STATE_ATTRIBUTES_KEY,
 } from '../stateAttributesCodec';
 import type { StateAttributeRecord } from '../stateAttributesCodec';
+import { inDomain } from '../netStep';
+import type { Domain } from '../netTypes';
 
 const VISITS: StateAttributeRecord = { name: 'visits', metaclass: 'C_Place', space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' };
 const COLOR: StateAttributeRecord = { name: 'color', metaclass: 'C_PTr', space: 'presentation', domain: null, initial: "'grey'" };
@@ -330,5 +333,109 @@ describe("R-SIM-94: the model's globals merged over the metamodel's (P-2026-09-2
         const before = JSON.stringify([mm, model]);
         mergeDeclarations(mm, model);
         expect(JSON.stringify([mm, model])).toBe(before);
+    });
+});
+
+describe('defaultInitialOf: the initial value a domain starts at', () => {
+    const range = (min: number, max: number): Domain => ({ kind: 'range', min, max });
+    const enumOf = (...literals: string[]): Domain => ({ kind: 'enum', literals });
+
+    it('a boolean starts at false (mutant: true)', () => {
+        expect(defaultInitialOf({ kind: 'boolean' })).toBe('false');
+    });
+
+    it('a range starts at its minimum, not its maximum, written as an integer literal; a negative one keeps its sign (mutants: max, abs)', () => {
+        expect(defaultInitialOf(range(0, 100))).toBe('0');
+        expect(defaultInitialOf(range(5, 100))).toBe('5');
+        expect(defaultInitialOf(range(-3, 5))).toBe('-3');
+    });
+
+    it('an enumeration starts at its first literal as a bare identifier, not the last or a quoted one (mutants: last, quoted)', () => {
+        expect(defaultInitialOf(enumOf('A', 'B', 'C'))).toBe('A');
+        expect(defaultInitialOf(enumOf('B', 'A'))).toBe('B');
+    });
+
+    it('an enumeration with no literals yet starts at the empty text, which stays a defect until it has one', () => {
+        expect(defaultInitialOf(enumOf())).toBe('');
+        expect(parseInitialLiteral('')).toBeNull();
+    });
+
+    it('every default parses with parseInitialLiteral and is a value of its own domain, the empty enumeration apart', () => {
+        const cases: [Domain, unknown][] = [
+            [{ kind: 'boolean' }, false], [range(0, 100), 0], [range(-3, 5), -3], [enumOf('A', 'B', 'C'), 'A'],
+        ];
+        for (const [domain, value] of cases) {
+            const parsed = parseInitialLiteral(defaultInitialOf(domain));
+            expect([domain, parsed]).toEqual([domain, value]);
+            expect(inDomain(parsed as boolean | number | string, domain)).toBe(true);
+        }
+    });
+
+    it('the encoded record of a default is a record the decoder reads without a defect (the default is what a row stores)', () => {
+        for (const domain of [{ kind: 'boolean' }, range(-3, 5), enumOf('A', 'B')] as Domain[]) {
+            const row: StateAttributeRecord = { name: 'x', metaclass: null, space: 'semantic', domain, initial: defaultInitialOf(domain) };
+            expect(decodeStateAttributes(encodeStateAttributes([row])).defects).toEqual([]);
+        }
+    });
+});
+
+describe('initialFollowingDomain: an edit of a bound or a literal carries the initial along', () => {
+    const range = (min: number, max: number): Domain => ({ kind: 'range', min, max });
+    const enumOf = (...literals: string[]): Domain => ({ kind: 'enum', literals });
+
+    it('the initial that is the previous default follows the new minimum: 0..100 at 0, min set to 5, gives 5 (mutant: the previous-default clause dropped)', () => {
+        expect(initialFollowingDomain('0', range(0, 100), range(5, 100))).toBe('5');
+        // the default is also a value of the new domain here: only the previous-default clause moves it
+        expect(initialFollowingDomain('0', range(0, 100), range(-3, 100))).toBe('-3');
+    });
+
+    it('a value typed inside the new domain is kept: 7 with min 5 set to 2 stays 7 (mutant: always the default)', () => {
+        expect(initialFollowingDomain('7', range(5, 100), range(2, 100))).toBe('7');
+        expect(initialFollowingDomain('7', range(0, 100), range(0, 50))).toBe('7');
+    });
+
+    it('a value that the new domain leaves out becomes the new default: 7 with max set to 5 gives 0, with min set to 9 gives 9 (mutant: the not-a-value clause dropped)', () => {
+        expect(initialFollowingDomain('7', range(0, 100), range(0, 5))).toBe('0');
+        expect(initialFollowingDomain('7', range(0, 100), range(9, 100))).toBe('9');
+    });
+
+    it('an edit that leaves the default where it was changes nothing: the max of 0..100 at 0', () => {
+        expect(initialFollowingDomain('0', range(0, 100), range(0, 50))).toBe('0');
+    });
+
+    it('an enumeration follows its first literal and keeps a literal that is still there (mutants: first literal ignored, literal not checked)', () => {
+        expect(initialFollowingDomain('A', enumOf('A', 'B'), enumOf('X', 'A'))).toBe('X');
+        expect(initialFollowingDomain('B', enumOf('A', 'B'), enumOf('B', 'C'))).toBe('B');
+        expect(initialFollowingDomain('A', enumOf('A', 'B'), enumOf('B', 'C'))).toBe('B');
+        expect(initialFollowingDomain('', enumOf(), enumOf('A', 'B'))).toBe('A');
+    });
+
+    it('an enumeration that loses every literal goes back to the empty text', () => {
+        expect(initialFollowingDomain('A', enumOf('A', 'B'), enumOf())).toBe('');
+    });
+
+    it('a text that is no JjEL literal is not a value of any domain, so it takes the default (mutant: parse failure kept)', () => {
+        expect(initialFollowingDomain('', range(0, 100), range(5, 100))).toBe('5');
+        expect(initialFollowingDomain('1 +', range(0, 100), range(0, 50))).toBe('0');
+    });
+
+    it('a text of the wrong type is not a value: a boolean text under a range, a number under an enumeration', () => {
+        expect(initialFollowingDomain('false', range(0, 100), range(2, 100))).toBe('2');
+        expect(initialFollowingDomain('1', enumOf('A', 'B'), enumOf('B', 'A'))).toBe('B');
+    });
+
+    it('no previous domain has no previous default: the typed value inside stays, a value outside takes the default', () => {
+        expect(initialFollowingDomain('7', null, range(0, 10))).toBe('7');
+        expect(initialFollowingDomain('x', null, range(0, 10))).toBe('0');
+    });
+
+    it('every result of a range edit is a value of the new domain when the new domain has one', () => {
+        for (const [initial, prev, next] of [
+            ['0', range(0, 100), range(5, 100)], ['7', range(5, 100), range(2, 100)], ['7', range(0, 100), range(0, 5)],
+            ['-3', range(-3, 5), range(0, 5)],
+        ] as [string, Domain, Domain][]) {
+            const out = parseInitialLiteral(initialFollowingDomain(initial, prev, next));
+            expect([initial, next, out !== null && inDomain(out, next)]).toEqual([initial, next, true]);
+        }
     });
 });
