@@ -29,7 +29,8 @@
  *
  * The M1 face shows state, not a line (R-SIM-104, P-2026-10-03-0120): above the
  * transport row, from the top, «Watch» (the pinned attributes, `watchRows`),
- * «Marking» (one chip per marked place, `markingChips`) and «Events»; under it
+ * «Marking» (one chip per marked place, `markingChips`; «Configuration» under a
+ * control-flow profile, `stateHeading` of simLabels.ts) and «Events»; under it
  * one status line (`statusLine`). The face reads the live run; the builders are
  * simBridge.ts's, the pins simViewerPrefs.ts's. The expand button of the header
  * opens the run inspector (SimInspector.tsx, R-SIM-105, R-SIM-106), a card beside
@@ -65,6 +66,8 @@ import {
 } from './simBridge';
 import type { CompileDefect, InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
+import { headedStateLine, stateHeading } from './simLabels';
+import type { StateHeading } from './simLabels';
 import { sketchOfMetamodel } from './metamodelSketch';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import { eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
@@ -268,7 +271,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
         modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
-        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName,
+        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -1014,8 +1017,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {/* R-SIM-104: one chip per marked place, `×n` from two tokens; the marking line is the title. */}
                         {run && view && (
                             <>
-                                <div className="sim-panel__section">Marking</div>
-                                <div className="sim-panel__chips" title={view.markingTitle ?? undefined}>
+                                <div className="sim-panel__section">{modelStateHeading}</div>
+                                <div className="sim-panel__chips" title={view.markingTitle === null ? undefined : headedStateLine(view.markingTitle, modelStateHeading)}>
                                     {view.chips.length === 0
                                         ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
                                         : view.chips.map(c => <span className="sim-panel__marking-chip" key={c.place}>{c.text}</span>)}
@@ -1126,7 +1129,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             </div>
         </div>
         {isModelMode && rolesComplete && inspectorOpen && (
-            <SimInspector modelId={modelid} modelName={modelName} inputLabel={labelOf} stateHint={stateHint} onClose={closeInspector} />
+            <SimInspector
+                modelId={modelid} modelName={modelName} inputLabel={labelOf} stateHint={stateHint} markingHeading={modelStateHeading} onClose={closeInspector}
+            />
         )}
         {canvasLayer}
         </>
@@ -1220,6 +1225,8 @@ interface StateProps {
     modelDataOff: boolean;
     /** The name of that profile, for the hint a run under it shows; '' on the M2 face. */
     modelProfileName: string;
+    /** The heading of the run's marked places under that profile: `Marking` for Petri, `Configuration` for control flow. */
+    modelStateHeading: StateHeading;
 }
 
 interface DispatchProps { }
@@ -1262,6 +1269,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             : null,
         modelDataOff: ownProps.isModelMode && storedProfile(rawState).profile.modes.stateAttributes.mode === 'off',
         modelProfileName: ownProps.isModelMode ? storedProfile(rawState).profile.name : '',
+        modelStateHeading: ownProps.isModelMode ? stateHeading(storedProfile(rawState).profile) : 'Marking',
     };
 }
 

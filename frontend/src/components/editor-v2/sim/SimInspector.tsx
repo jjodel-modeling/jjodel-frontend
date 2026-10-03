@@ -33,6 +33,7 @@ import { defaultSimPins, getSimViewerPrefs, MAX_SIM_PINS, setSimViewerPrefs, use
 import type { SimAttrRef } from './simViewerPrefs';
 import { candidateLabel, markingChips } from './simBridge';
 import type { InputLabel } from './simBridge';
+import type { StateHeading } from './simLabels';
 import type { SimState, SimValue, StateAttributeDecl } from '../../../model/simulation/netTypes';
 import './SimInspector.scss';
 
@@ -44,6 +45,8 @@ export interface SimInspectorProps {
     inputLabel: InputLabel;
     /** The panel's hint of a profile without state attributes (P-2026-10-03-1420), said once at the top of σ; the card computes nothing. */
     stateHint?: { line: string; title: string } | null;
+    /** The heading of the marked places, the panel's `stateHeading` of the run's profile (simLabels.ts); `Marking` when absent. */
+    markingHeading?: StateHeading;
     /** Closes the card; the panel returns the view to live. */
     onClose: () => void;
 }
@@ -152,7 +155,7 @@ function grouped(run: SimRun, state: SimState, rows: Map<string, InspectorRow[]>
     return { globals, classes };
 }
 
-export function SimInspector({ modelId, modelName, inputLabel, stateHint, onClose }: SimInspectorProps): ReactElement {
+export function SimInspector({ modelId, modelName, inputLabel, stateHint, markingHeading = 'Marking', onClose }: SimInspectorProps): ReactElement {
     // The view, a commit, Reset and Stop bump the 'mark' version; the pins and tags their own channel.
     useSimVersion();
     useSimViewerPrefsVersion();
@@ -312,7 +315,7 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, onClos
                         <span className="sim-inspector__step">{`step ${n}`}</span>
                     </div>
                     {stateHint && <div className="sim-panel__hint" title={stateHint.title}>{stateHint.line}</div>}
-                    <div className="sim-inspector__group-head">Marking</div>
+                    <div className="sim-inspector__group-head">{markingHeading}</div>
                     <div className="sim-inspector__chips">
                         {chips.length === 0
                             ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
@@ -339,7 +342,7 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, onClos
                         </div>
                     ))}
                     {semantic.globals.length === 0 && semantic.classes.length === 0 && (
-                        <div className="sim-inspector__empty">No state attribute: σ is the marking alone.</div>
+                        <div className="sim-inspector__empty">{`No state attribute: σ is the ${markingHeading.toLowerCase()} alone.`}</div>
                     )}
                 </section>
                 {/* node, the concrete state (R-SIM-102): the viewpoint pink, dashed; it belongs to the view. */}
