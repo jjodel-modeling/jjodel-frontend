@@ -484,7 +484,12 @@ describe('deriveViewpointIRs — forms from the roles, colours from the tokens',
         expect(place.shape.labels).toEqual([{ position: 'top', source: { from: 'intrinsic', prop: 'name' } }]);
         expect(place.fieldCompartments).toEqual([{
             id: 'attributes', source: { from: 'attributes' },
-            rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] }, separator: true,
+            // P-2026-10-03-1300: the rows are mono 11 px in the quiet ink, as the Generic notation's (they drew in the sans default).
+            rowFormat: {
+                segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }],
+                style: { fontFamily: 'mono', fontSize: 11, color: 'var(--color-inode-quiet)' },
+            },
+            separator: true,
         }]);
         // A class with no attribute has no compartment (DemoPEST State).
         expect(vertex(byClass(deriveViewpointIRs(PEST.lookup, PEST.id, null), 'State')).fieldCompartments).toBeUndefined();
@@ -568,11 +573,11 @@ describe('deriveViewpointIRs — without roles the documents are byte-equal to b
     // notation (P-2026-09-29-1331); their documents are pinned in the control-flow block below.
     const BEFORE: Record<string, string> = {
         'DemoPEST, structure only': '8e32f9410c28c283',
-        'DemoPetri, structure only': 'efca0aebb7252be6',
-        'DemoESM, structure only': '76ba55a4ff75b7e3',
+        'DemoPetri, structure only': 'a91ffdc6b3052bbd',
+        'DemoESM, structure only': 'cfb599c19a358d97',
         'DemoFlowB, structure only': 'aced3058b1d1d8e7',
-        'ERD, structure only': '918c8d169dd46e0f',
-        'Families, structure only': 'b2e49ba38211ad25',
+        'ERD, structure only': '83e3cc96054f0b8c',
+        'Families, structure only': '39c439108e60f408',
         'Persons, structure only': 'b2940217cd3d41ff',
         'Composite, structure only': '6a6854ef45e31b7c',
         'Cars, structure only': 'e4c9e39d921875d2',
@@ -1025,10 +1030,15 @@ describe('deriveViewpointIRs — the activity notation with the roles bound (Dem
         }
     });
 
-    it('ControlFlow is labelled with its guard as raw text, on a line in the name ink', () => {
+    it('ControlFlow is labelled with its guard as raw text in mono 11.5 px, on a line in the name ink', () => {
         expect(edge(byClass(flow(), 'ControlFlow')).edge).toEqual({
             source: '$source.value', target: '$target.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
-            labels: { center: { from: 'path', expr: '$guard.value' } }, line: INK_LINE,
+            // P-2026-10-03-1300: the guard is code, drawn as Activity (UML)'s is (mono 11.5 px, slate-700).
+            labels: {
+                center: { from: 'path', expr: '$guard.value' },
+                style: { fontFamily: 'mono', fontSize: 11.5, fontWeight: 'normal', color: 'var(--color-text-secondary)' },
+            },
+            line: INK_LINE,
         });
     });
 });
@@ -1739,7 +1749,7 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: 'c03dae1789798ecb', DemoESM: 'e5af5300d2a65474', DemoFlowB: 'fc6be52903c81177',
+            DemoPEST: '99e03cfb52856542', DemoPetri: 'c03dae1789798ecb', DemoESM: '0908707066b1a90e', DemoFlowB: 'a4ad1850b25eaeb2',
         });
     });
 });

@@ -472,7 +472,7 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
     // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
     const PINNED: Record<string, string> = {
-        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '13db72e86e2fa96b', DemoFlowB: 'fc6be52903c81177',
+        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '264e79d9edff4d44', DemoFlowB: 'a4ad1850b25eaeb2',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -658,6 +658,8 @@ const INK = 'var(--color-inode-name)';
 const QUIET = 'var(--color-inode-quiet)';
 const SURFACE = 'var(--color-inode-surface)';
 const LABEL_STYLE = { fontSize: 12, fontWeight: 'medium', color: QUIET };
+/** A guard (P-2026-10-03-1300): mono 11.5 px, normal, slate-700, as Activity (UML)'s. */
+const GUARD_STYLE = { fontFamily: 'mono', fontSize: 11.5, fontWeight: 'normal', color: 'var(--color-text-secondary)' };
 
 /** Each demo with its binding applied, derived with `notation` and that notation's prefill. */
 function derivedWith(make: () => Fixture, stored: string, notation: DerivedNotationId) {
@@ -674,9 +676,9 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // the provenance hash recomputed.
     const PINNED_D: Record<string, string> = {
         'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '859ed7219f226f01', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
-        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'b3a4db87af089b89', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'c7f24aeb60cfb60b',
-        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '7c9995dcf7935ec6', 'DemoESM petri': 'ae8b9f79a275c716', 'DemoESM flowchart': '3f536b8c32d0744b',
-        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': 'c14102114d435a6d', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '3dd329e0a53f2eaf',
+        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': '1f551e40ba793093', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'd2b745a44e81558d',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '9a9fdc00b24bcb39', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
+        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': 'c97f3bde9a11032f',
     };
 
     it('Generic, State machine, Petri net and Flowchart derive the D tip\'s documents, byte for byte, provenance included', () => {
@@ -783,7 +785,7 @@ describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
         expect(irOf(sc, 'Initial').shape).toEqual({ ...box, border: { color: INK, width: 1, style: 'solid' }, entry: 'dot' });
         expect(irOf(sc, 'Terminal').shape.border).toEqual({ color: INK, width: 3, style: 'double' });
         // No event: the guard labels the transition (R-VP-17 (2)).
-        expect(irOf(sc, 'Transition').edge.labels).toEqual({ center: { from: 'path', expr: '$guard.value' }, style: LABEL_STYLE });
+        expect(irOf(sc, 'Transition').edge.labels).toEqual({ center: { from: 'path', expr: '$guard.value' }, style: GUARD_STYLE });
     });
 
     it('a state with slots other than the name keeps a compartment, its name then on top (DemoESM)', () => {
@@ -822,7 +824,7 @@ describe('Flowchart (ISO 5807) — A3', () => {
         const flows = views.filter(v => v.className === 'ControlFlow');
         expect(flows.map(v => v.ir.label)).toEqual(['View for ControlFlow', 'View for ControlFlow (yes)', 'View for ControlFlow (no)']);
         const base = { source: '$source.value', target: '$target.value', terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: INK, width: 1 } };
-        expect(irOf(views, 'ControlFlow', 0).edge).toEqual({ ...base, labels: { template: [{ from: 'path', expr: '$guard.value' }], style: LABEL_STYLE } });
+        expect(irOf(views, 'ControlFlow', 0).edge).toEqual({ ...base, labels: { template: [{ from: 'path', expr: '$guard.value' }], style: GUARD_STYLE } });
         expect(irOf(views, 'ControlFlow', 0).predicate).toBeUndefined();
         for (const [n, word] of [[1, 'yes'], [2, 'no']] as const) {
             const ir = irOf(views, 'ControlFlow', n);

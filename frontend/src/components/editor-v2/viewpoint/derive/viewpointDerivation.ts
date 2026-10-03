@@ -165,11 +165,16 @@ const TARGET_NAME = /tgt|target|to$|dest|next/;
 /**
  * The attribute rows, as `defaultObjectViewIR` writes them; a new object per view, nothing shared. `hidesName`:
  * the box's title is the name label, which already shows the identity slot, so its row is left out (P-2026-10-03-1300).
+ * The rows are mono 11 px in the quiet ink, as the Generic notation's: before P-2026-10-03-1300 only Generic set that
+ * style, and the rows of every role-keyed notation drew in the sans default.
  */
 const attributesCompartment = (hidesName = false): FieldCompartmentSpec => ({
     id: 'attributes',
     source: hidesName ? { from: 'attributes', exclude: ['name'] } : { from: 'attributes' },
-    rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
+    rowFormat: {
+        segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }],
+        style: { fontFamily: 'mono', fontSize: 11, color: QUIET },
+    },
     separator: true,
 });
 
@@ -354,8 +359,11 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
             }
             if (flow && role === 'transition') {
                 // One part only: `event [guard] / action` needs a template the IR lacks (V4).
-                const labelled = boundReference('simTrigger', c.id) ?? boundAttribute('simGuard', c.id);
-                if (labelled) edge.labels = { center: { from: 'path', expr: path(labelled) } };
+                // A guard is code: mono 11.5 px as Activity (UML)'s, in every flow notation (P-2026-10-03-1300); an event
+                // has no style here, and each notation gives it its own.
+                const event = boundReference('simTrigger', c.id);
+                const labelled = event ?? boundAttribute('simGuard', c.id);
+                if (labelled) edge.labels = { center: { from: 'path', expr: path(labelled) }, ...(event ? {} : { style: ACTIVITY_GUARD_STYLE() }) };
                 edge.line = { color: NAME_INK, width: 1 };
             }
             out.push({
@@ -664,7 +672,8 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             const edge: EdgeViewIR['edge'] = {
                 source, target, terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc',
             };
-            if (labels?.center) edge.labels = { center: labels.center, style: EDGE_LABEL_STYLE() };
+            // The label style of C2 for an event; a guard keeps the mono style the base document gives it (P-2026-10-03-1300).
+            if (labels?.center) edge.labels = { center: labels.center, style: labels.style ?? EDGE_LABEL_STYLE() };
             return { ...v, ir: { ...v.ir, edge } };
         }
         if (role !== 'node' && role !== 'initial' && role !== 'terminal') return v;
@@ -731,7 +740,8 @@ export function deriveIsoFlowchartViewpointIRs(lookup: Lookup, metamodelId: stri
             });
             const guard = typeof guardKey === 'string' ? attributesOf(v.classId).find(a => a.id === guardKey) : undefined;
             const edge = base();
-            if (guard) edge.labels = { template: [{ from: 'path', expr: path(guard.name) }], style: EDGE_LABEL_STYLE() };
+            // The guard is code, mono as Activity (UML)'s (P-2026-10-03-1300); the yes and no words below keep the label style.
+            if (guard) edge.labels = { template: [{ from: 'path', expr: path(guard.name) }], style: ACTIVITY_GUARD_STYLE() };
             out.push({ ...v, ir: { ...v.ir, edge } });
             if (!guard) continue;
             for (const [literal, word] of [['true', 'yes'], ['false', 'no']] as const) {
