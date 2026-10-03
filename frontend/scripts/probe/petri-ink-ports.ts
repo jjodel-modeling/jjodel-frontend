@@ -652,6 +652,9 @@ function portReport(m: any, cap: any) {
         const hs = handleAt(rf.source, rf.sourceHandle, 'source'), ht = handleAt(rf.target, rf.targetHandle, 'target');
         const sbox = byId.get(rf.source), tbox = byId.get(rf.target);
         const boxOf = (n: any) => (n?.form === 'bar' && n.ink ? n.ink : n);
+        // The handle against the drawn end along the side only: across it the handle is pulled in onto a curved outline
+        // (DynamicHandles' inset), while ELK's end sits on the box.
+        const along = (a: Pt | null, b: Pt | null, side: string | null) => (a && b && side ? Math.round(Math.abs(side === 'left' || side === 'right' ? a[1] - b[1] : a[0] - b[0]) * 100) / 100 : null);
         rows.push({
             edge: `${nm(rf.source)}->${nm(rf.target)}`, id: e.id,
             junction: rf.junctionIn || rf.junctionOut ? { in: rf.junctionIn, out: rf.junctionOut } : null,
@@ -659,10 +662,12 @@ function portReport(m: any, cap: any) {
             source: {
                 drawnVsRoute: dist(drawnStart, rs), drawnVsElk: dist(drawnStart, elkStart), drawnVsHandle: dist(drawnStart, hs), routeVsElk: dist(rs, elkStart),
                 drawnSide: sbox ? sideOf(drawnStart, boxOf(sbox)) : null, routeSide: route?.sourceSide ?? null, handleSide: sideOfHandle(rf.sourceHandle), handleFound: !!hs,
+                handleAlong: along(drawnStart, hs, sbox ? sideOf(drawnStart, boxOf(sbox)) : null),
             },
             target: {
                 drawnVsRoute: dist(drawnEnd, re), drawnVsElk: dist(drawnEnd, elkEnd), drawnVsHandle: dist(drawnEnd, ht), routeVsElk: dist(re, elkEnd),
                 drawnSide: tbox ? sideOf(drawnEnd, boxOf(tbox)) : null, routeSide: route?.targetSide ?? null, handleSide: sideOfHandle(rf.targetHandle), handleFound: !!ht,
+                handleAlong: along(drawnEnd, ht, tbox ? sideOf(drawnEnd, boxOf(tbox)) : null),
             },
             bends: { drawn: bendsOf(e.pts), route: route?.points ? Math.max(0, route.points.length - 2) : null, elk: elkBends },
         });
@@ -679,6 +684,11 @@ function acceptance(ink: any[] | null, labels: any[], ports: any[] | null) {
         labelsNearHead: labels.filter((l) => l.headDist !== null && l.headDist < 4).map((l) => `${l.node}:${l.text} ${l.headDist} ${l.headEdge}`),
         labelsOnLine: labels.filter((l) => l.lineDist !== null && l.lineDist < 1).map((l) => `${l.node}:${l.text} ${l.lineEdge}`),
         endsOffHandle: ends.filter((x) => x.drawnVsHandle === null || x.drawnVsHandle > 1).length,
+        // Junction ends left out (the diamond is drawn at the action's shared handle): along the side, and on another side.
+        nonJunctionEnds: ends.filter((x) => !x.j).length,
+        nonJunctionOffHandleAlong: ends.filter((x) => !x.j && (x.handleAlong === null || x.handleAlong > 1)).map((x) => `${x.e} ${x.end} ${x.handleAlong}`),
+        nonJunctionOffHandle: ends.filter((x) => !x.j && (x.drawnVsHandle === null || x.drawnVsHandle > 1)).map((x) => `${x.e} ${x.end} ${x.drawnVsHandle}`),
+        nonJunctionOffRoute: ends.filter((x) => !x.j && x.drawnVsRoute !== null && x.drawnVsRoute > 1).map((x) => `${x.e} ${x.end} ${x.drawnVsRoute}`),
         endsOffElk: ends.filter((x) => x.drawnVsElk !== null && x.drawnVsElk > 1).length,
         ends: ends.length,
         handleSideMismatch: ends.filter((x) => x.handleSide && x.drawnSide && x.handleSide !== x.drawnSide).length,
@@ -812,8 +822,11 @@ for (const sc of SCENES) {
         await fit(page, m1);
         await wait(page, 800);
         const elkRaw = await measure(page, m1);
-        const cap = await page.evaluate((k: number) => (window as any).__pipCaps?.[k] ?? null, capBefore);
-        check(`${sc.key}/${notation}: the toolbar auto-layout ran ELK once and the call was captured`, calls === 1 && !!cap, { calls, wrapped });
+        // The last call is the layout drawn: since P-2026-10-03-1920 ELK runs a second time when a route takes the side an
+        // outside label is reserved on.
+        const cap = await page.evaluate(() => { const c = (window as any).__pipCaps; return c?.length ? c[c.length - 1] : null; });
+        check(`${sc.key}/${notation}: the toolbar auto-layout ran ELK (once, or twice with the label pass) and the call was captured`, (calls === 1 || calls === 2) && !!cap, { calls, wrapped });
+        n.elkCalls = calls;
         check(`${sc.key}/${notation}: calibration spread < 1 px (rest, elk)`, restRaw.calib.spread < 1 && elkRaw.calib.spread < 1, [restRaw.calib.spread, elkRaw.calib.spread]);
         check(`${sc.key}/${notation}: the React Flow store and the route store were read`, Array.isArray(elkRaw.rfEdges) && !elkRaw.routes?.error && Object.keys(elkRaw.routes ?? {}).length > 0, { rf: elkRaw.rfEdges?.length ?? null, routes: elkRaw.routes?.error ?? Object.keys(elkRaw.routes ?? {}).length });
         n.labels.elk = labelReport(elkRaw);
@@ -837,8 +850,9 @@ for (const sc of SCENES) {
             await fit(page, m1);
             await wait(page, 800);
             const downRaw = await measure(page, m1);
-            const capD = await page.evaluate((k: number) => (window as any).__pipCaps?.[k] ?? null, capDown);
-            check(`${sc.key}/${notation}: the DOWN layout ran with direction DOWN`, callsDown === 1 && capD?.input?.layoutOptions?.['elk.direction'] === 'DOWN', { callsDown, dir: capD?.input?.layoutOptions?.['elk.direction'] });
+            const capD = await page.evaluate(() => { const c = (window as any).__pipCaps; return c?.length ? c[c.length - 1] : null; });
+            check(`${sc.key}/${notation}: the DOWN layout ran with direction DOWN`, (callsDown === 1 || callsDown === 2) && capD?.input?.layoutOptions?.['elk.direction'] === 'DOWN', { callsDown, dir: capD?.input?.layoutOptions?.['elk.direction'] });
+            n.elkCallsDown = callsDown;
             n.labels.elkDown = labelReport(downRaw);
             n.portsDown = portReport(downRaw, capD);
             n.raw.elkDown = downRaw;
