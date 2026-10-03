@@ -1,0 +1,25 @@
+{
+  "repository": "jjodel-modeling/jjodel-frontend",
+  "trunk": "alfonso-frontend-jjtl",
+  "intakeLabel": "auto",
+  "skipLabels": ["needs-alfonso", "auto-parked"],
+  "allowlist": ["apierantonio"],
+  "nightWindow": { "start": "01:00", "end": "07:00" },
+  "mode": "shadow",
+  "laneByMode": { "shadow": "discovery", "live": "full" },
+  "dataCap": 8000,
+  "budget": {
+    "paceMargin": 0.05,
+    "ceiling": 0.70,
+    "resetGuardHours": 24,
+    "nightlyDelta": 0.03,
+    "nightMinutes": 240,
+    "residualMinutes": 30,
+    "laneLimitMinutes": 90,
+    "parallelCap": 2,
+    "fiveHourCeiling": 0.80,
+    "staleHours": 6
+  },
+  "ratifiedBy": null,
+  "ratifiedOn": null
+}

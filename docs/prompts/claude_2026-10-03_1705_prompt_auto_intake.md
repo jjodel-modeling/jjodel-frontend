@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1705
 Chat: C-2026-10-03-1705
 Lane: full (new harness capability, two-phase; no app code). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane auto-intake · c5bb487a8 (discovery), 630d82e19 · gates: typecheck:scripts exit 0, check:scripts PASS (41 files), hook and gate tests 712/712 (640 plus 72), check:docs 4/4; no visual check (harness); Lane of shadow prompts provisional, awaiting Alfonso (laneByMode)
 
 Worktree: `~/jjodel-w-autointake`, branch `auto-intake`, cut by the chat from `alfonso-frontend-jjtl` at the docs commit that added this prompt, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (that docs commit); if any differs, stop with `Outcome: blocked`.
 
