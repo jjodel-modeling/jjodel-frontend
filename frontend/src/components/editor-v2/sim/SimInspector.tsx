@@ -10,7 +10,8 @@
  *   per metaclass per instance, a marked instance flagged;
  * - node, the concrete state, in the viewpoint pink, dashed;
  * - the trace, one button per step: choosing one shows it (`simSetView`), under
- *   «Viewing step n. The run is still at step m» and «Back to live».
+ *   «Viewing step n. The run is still at step m» and «Back to live»; newest first,
+ *   in an area six rows tall that scrolls (P-2026-10-03-1015).
  *
  * It reads the run-state singleton on the `'mark'` version, which a view, a
  * commit, Reset and Stop bump, and is re-rendered by the panel after every press,
@@ -21,6 +22,7 @@
  * returns the view to live (simBridge.ts).
  */
 
+import { useLayoutEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
 import { store } from '../../../joiner';
 import { configAt, getSimRun, getSimView, simSetView, useSimVersion } from './simRunState';
@@ -161,6 +163,23 @@ export function SimInspector({ modelId, modelName, inputLabel, onClose }: SimIns
     const prev = run && n > 0 ? configAt(run, n - 1)?.state ?? null : null;
     const prefs = getSimViewerPrefs(modelId);
     const pins = run ? facePins(prefs.pins, run.net.attributes) : [];
+
+    // The trace's scroll area (P-2026-10-03-1015), newest first. A commit leaves a list at its top there, the new
+    // step in view, and keeps the rows in view where the reader scrolled down (the browser's scroll anchoring is
+    // off on the list); a step shown without a commit, chosen or «Back to live», is scrolled into view.
+    const traceRef = useRef<HTMLOListElement>(null);
+    const traceWas = useRef({ live, n, height: 0 });
+    useLayoutEffect(() => {
+        const list = traceRef.current;
+        const was = traceWas.current;
+        if (list && live !== was.live) {
+            if (live > was.live && list.scrollTop >= 1) list.scrollTop += list.scrollHeight - was.height;
+            else list.scrollTop = 0;
+        } else if (list && n !== was.n) {
+            list.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest' });
+        }
+        traceWas.current = { live, n, height: list?.scrollHeight ?? 0 };
+    }, [live, n]);
 
     const pinned = (decl: StateAttributeDecl) => pins.some(p => sameRef(p, refOf(decl)));
     const tagged = (decl: StateAttributeDecl) => prefs.tags.some(t => sameRef(t, refOf(decl)));
@@ -352,7 +371,7 @@ export function SimInspector({ modelId, modelName, inputLabel, onClose }: SimIns
                         <span>Trace</span>
                         <span className="sim-inspector__step">{`${live} ${live === 1 ? 'step' : 'steps'}`}</span>
                     </div>
-                    <ol className="sim-inspector__trace">
+                    <ol className="sim-inspector__trace" ref={traceRef}>
                         {steps.map(s => (
                             <li key={s.i}>
                                 <button

@@ -14,6 +14,12 @@
 //
 // ICON COLOUR — declared on the icon, with a `:hover` twin, as simulation-panel.scss explains.
 
+// The trace scrolls in an area six rows tall at every step, so the card does not grow with the run
+// (P-2026-10-03-1015). A row is 22 px, its min-height, measured by the lane probe: border-box, the 16 px
+// `live` chip plus 2 + 2 padding and 1 + 1 border.
+$sim-inspector-trace-row: 22px;
+$sim-inspector-trace-rows: 6;
+
 .sim-inspector {
     position: absolute;
     left: 584px;
@@ -372,8 +378,14 @@
 
     // -- the trace (R-SIM-106) ------------------------------------------------------------
     &__trace {
+        height: $sim-inspector-trace-rows * $sim-inspector-trace-row;
         margin: 0;
         padding: 0;
+        overflow-y: auto;
+        // A commit keeps the rows a reader scrolled to in place: SimInspector.tsx does it, not the browser's anchoring.
+        overflow-anchor: none;
+        // The scrollbar's room is kept from the first step, so the rows do not narrow at the seventh.
+        scrollbar-gutter: stable;
         list-style: none;
     }
 
@@ -382,7 +394,7 @@
         align-items: center;
         gap: 8px;
         width: 100%;
-        min-height: 22px;
+        min-height: $sim-inspector-trace-row;
         padding: 2px 6px;
         border: 1px solid transparent;
         border-radius: 4px;
@@ -398,9 +410,10 @@
             color: var(--color-text-primary);
         }
 
+        // Inside the row: the scroll area clips what lies outside it.
         &:focus-visible {
             outline: 2px solid var(--color-border-focus);
-            outline-offset: 1px;
+            outline-offset: -2px;
         }
 
         // The step the canvas shows: the run's cyan, as an active indicator.
