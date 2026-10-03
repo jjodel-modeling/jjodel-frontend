@@ -126,7 +126,8 @@ const BADGE_STYLE: React.CSSProperties = { position: 'absolute', zIndex: 2 };
  * edge on the box's left border and its middle on the box's middle, so the arrow's tip, the layer's
  * rightmost point, touches the border and nothing more. Placed inline, as the badge is, so no in-flow
  * rule of the SVG-painted forms can take it back into the flow; irStyle.ts only lifts the two clips.
- * `dot`: a filled dot (UML initial pseudostate), then the line; `arrow`: the line alone.
+ * `dot`: a filled dot (UML initial pseudostate), then the line; `arrow`: the line alone. The head is the open
+ * arrowhead of the transitions (R-VP-25, P-2026-10-03-1304): two strokes, no fill, the line running into its tip.
  */
 const ENTRY_W = 40;
 const ENTRY_H = 14;
@@ -603,8 +604,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
             {compiled.entry && (
                 <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={colorOverride ? { ...ENTRY_STYLE, ...metaclassOutsideInkVars() } : ENTRY_STYLE} aria-hidden="true">
                     {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={inkColor} />}
-                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W - ENTRY_HEAD}`} stroke={inkColor} strokeWidth={1} fill="none" />
-                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4} Z`} fill={inkColor} />
+                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W}`} stroke={inkColor} strokeWidth={1} fill="none" />
+                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4}`} stroke={inkColor} strokeWidth={1} fill="none" />
                 </svg>
             )}
             {compiled.badges.map((b, i) => {

@@ -87,7 +87,7 @@ describe('IRNodeContent — the entry mark (ShapeSpec.entry)', () => {
         expect(digest(html)).toBe(PIN.stateBox);
     });
 
-    it('dot: a filled dot, then a line and a filled arrowhead whose tip is the layer\'s right edge', () => {
+    it('dot: a filled dot, then a line and an open arrowhead whose tip is the layer\'s right edge', () => {
         const svg = entrySvg(renderState({ entry: 'dot' }))!;
         expect(svg).not.toBeNull();
         const width = num(svg.match(/ width="([\d.]+)"/)?.[1]);
@@ -101,9 +101,15 @@ describe('IRNodeContent — the entry mark (ShapeSpec.entry)', () => {
         expect(2 * r).toBeLessThanOrEqual(14);
         // The arrowhead's tip is the rightmost point, on the right edge, at mid height: placed at
         // `right: 100%` of the box (irStyle.ts), it touches the box's left border and nothing more.
-        const head = svg.match(/<path d="M ([\d.]+) ([\d.]+) L ([\d.]+) ([\d.]+) L ([\d.]+) ([\d.]+) Z"/);
+        // P-2026-10-03-1304 (Q9b, R-VP-25): the open head of the transitions, two strokes and no fill, and the
+        // line runs into its tip, as an edge's line runs into its open marker.
+        const head = svg.match(/<path d="M ([\d.]+) ([\d.]+) L ([\d.]+) ([\d.]+) L ([\d.]+) ([\d.]+)" stroke="([^"]+)" stroke-width="1" fill="none"/);
         expect(head).not.toBeNull();
         expect([num(head![3]), num(head![4])]).toEqual([width, height / 2]);
+        expect(head![7]).toBe(INK);
+        expect(svg).not.toMatch(/ Z"/);
+        const shaft = svg.match(/<path d="M ([\d.]+) ([\d.]+) H ([\d.]+)"/);
+        expect(num(shaft![3])).toBe(width);
         // Drawn in the border colour, as the marker is.
         expect(circle![4]).toBe(INK);
         expect(svg).toContain(`fill="${INK}"`);
@@ -116,7 +122,8 @@ describe('IRNodeContent — the entry mark (ShapeSpec.entry)', () => {
         const svg = entrySvg(renderState({ entry: 'arrow' }))!;
         expect(svg).not.toBeNull();
         expect(svg).not.toContain('<circle');
-        expect(svg).toMatch(/<path d="M [\d.]+ [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+ Z"/);
+        expect(svg).toMatch(/<path d="M [\d.]+ [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+" stroke="[^"]+" stroke-width="1" fill="none"/);
+        expect(svg).not.toMatch(/ Z"/);
     });
 
     it('the rest of the node is the node without the mark', () => {
