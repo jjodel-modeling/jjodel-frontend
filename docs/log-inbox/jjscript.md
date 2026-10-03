@@ -90,3 +90,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-03-1002
 **Detail**: docs/discovery/discovery_2026-10-03_tree_crossing_scene.md
+
+## 2026-10-03 — merge: tree-crossing-scene into alfonso-frontend-jjtl (P-2026-10-03-1052)
+**Prompt**: `claude_2026-10-03_1052_prompt_merge_tree-crossing-scene.md`, a direct merge by `lane-run merge --direct`, no session: `tree-crossing-scene` at `9a752d000` into `alfonso-frontend-jjtl`, merge base `fba1549ee`, 4 commits on the branch side.
+**Files touched**: merge `c927f4be1`: 5 files from the branch side (`docs/discovery/discovery_2026-10-03_tree_crossing_scene.md`, `docs/log-inbox/jjscript.md`, `docs/prompts/claude_2026-10-03_1002_prompt_tree_crossing_scene.md`, `frontend/scripts/probe/fixtures/tree-crossing.jjodel`, `frontend/scripts/probe/tree-crossing.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c927f4be1` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6883 tests in 275 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: probe and docs merge; gates green; no app code; no demo scene affected
+**Notes**: Rollback tag `pre-tree-crossing-scene` on `ffae7072a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1052/result.json`.
+**Prompt document name**: 2026-10-03 10:52
