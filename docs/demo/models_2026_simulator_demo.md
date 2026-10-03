@@ -59,17 +59,26 @@
   or Initial marking, Source or Owned transitions.` [M, P-2026-09-29-1225].
 - **Reset starts the run: before Reset every input is off.** The M1 face reads `Not started` with every event
   button off, e.g. `coin(off)`, `push(off)`, `stop(off)` [M].
-- **Data on the model tab (R-SIM-94).** A model declares its own globals in the `Data…` entry, the first line of the
-  M1 face, which opens the dialog `Data of <model>`; one Apply is one undo step, and an edit interrupts a running
+- **State on the model tab (R-SIM-94, R-SIM-103).** A model declares its own globals in the `State…` entry (`Data…`
+  until P-2026-10-03-0120) [M, P-2026-10-03-0120], the first line of the M1 face, which opens the dialog
+  `Data of <model>`; one Apply is one undo step, and an edit interrupts a running
   simulation (`Run interrupted: the model changed. Reset to run again.`). A global declared in the metamodel stays
   the default of every model that does not declare its own [M, P-2026-09-29-0110,
   `docs/discovery/discovery_2026-09-29_sim_data_level.md` §8]. §2.3 and §2.4 declare on this route and keep the
   metamodel path as the fallback (§4).
 - **Buttons** [R]: ⏮ Reset, ▶ Step, ⏩ Play, ■ Stop. Above them, from the panel's first open, one row: `Choices`
   (`Ask` | `Random`, Ask by default) and Play's step limit `100` (R-SIM-101) [M, P-2026-09-29-1943]. During a run the
-  M1 face reads, top to bottom: `Data…` where the profile keeps it, the `Choices` row, the choice list (Petri, on a
-  conflict), the `Marking:` line, the buttons, `Events` (SM, ESM), `Last step:`, the status [M]. Play fires one ε step
-  every 500 ms until the run stops; under `Ask` it stops at the first list, as ▶ does [M].
+  M1 face reads, top to bottom (R-SIM-104): `State…` where the profile keeps it, the `Choices` row, the choice list
+  (Petri, on a conflict), the lines that come and go (defects, `Undeclared`, the halt), `WATCH` (ESM, Flow B: one row
+  per attribute, a range with its domain bar, a derived one in italics with the chip `DEFINE`, a value the last step
+  changed as `before → after` in cyan), `MARKING` (one chip per marked place, `p2 ×2` from two tokens; its hover title
+  is the marking line `Marking: …` the tables below quote), `EVENTS` (SM, ESM; an event that is off says why in its
+  title), the buttons, and one status line: the pill (`Running`), then `· step n · seed s · <last step>`, cut after
+  the seed at the panel's width, its hover title `Last step: …` as the tables quote it [M, P-2026-10-03-0120]. The
+  `Marking:` line and the `Last step:` line are gone. Step's top is 873 from `Not started` to the last step in all
+  four scenes, the choice list open or closed; it was 854.5 with `Last step:` under the buttons [M,
+  P-2026-10-03-0120]. Play fires one ε step every 500 ms until the run stops; under `Ask` it stops at the first list,
+  as ▶ does [M]. The header's ⤢ button opens the run inspector beside the panel, an optional beat (§2.3).
 
 ---
 
@@ -116,11 +125,12 @@ Count: 7 clicks, no keystroke (canvas 1, toggle 1, chip 1, `Configure…` 1, kin
 
 **Run** (tab `demoSM`). Before Reset: `Not started`, `coin(off)`, `push(off)`, `stop(off)` [M].
 
-Reset: `Marking: locked`, `Last step: Reset`, `Running`, events `coin`, `push`, `stop` [M]. ▶ stays disabled for
+Reset: the chip `locked` (`Marking: locked`), the status line `Running · step 0 · seed <n> · Reset`
+(`Last step: Reset`), events `coin`, `push`, `stop` [M, P-2026-10-03-0120]. ▶ stays disabled for
 the whole run: every edge has a trigger [M].
 **Say** "Reset starts the run. The machine is in locked. The inputs are the events of the model."
 
-| # | Click | `Last step:` line [M] | `Marking:` line [M] | Events off after [M] | Say |
+| # | Click | `Last step:`, the status line's title [M] | `Marking:`, the chips' title [M] | Events off after [M] | Say |
 |---|---|---|---|---|---|
 | 1 | `push` | `Last step: push: t3 (locked → locked) fired` | `Marking: locked` | none | "push in locked is a self-loop." |
 | 2 | `coin` | `Last step: coin: t1 (locked → unlocked) fired` | `Marking: unlocked` | `stop` | "coin unlocks. No stop edge leaves unlocked, so stop is off." |
@@ -182,34 +192,39 @@ option, ⏩ [M, P-2026-09-29-1943].
 
 **Run** (tab `demoNet`). Before Reset: `Not started`, ▶ disabled, no line [M, P-2026-09-27-1738].
 
-Reset: `Marking: lock, p1 ×2`, `Last step: Reset`, `Running` [M].
+Reset: the chips `lock`, `p1 ×2` (`Marking: lock, p1 ×2`), `Running · step 0 · seed <n> · Reset`
+[M, P-2026-10-03-0120].
 **Say** "Two tokens on p1, one on lock. The panel shows the marking of the run."
 
-On a conflict ▶ opens a list above the Marking line, headed `NONDETERMINISTIC CHOICE (ε)` (U+03B5), with the line
+On a conflict ▶ opens a list above `MARKING`, headed `NONDETERMINISTIC CHOICE (ε)` (U+03B5), with the line
 `Choose a transition` under the heading, `Cancel` under the options and `Random` right of it (R-SIM-98 on 3051,
-R-SIM-100 on 3057). While it is open, `Last step:` still shows the previous step and the buttons do not move (Step's
-top 854.5) [M]. Random fires one option, drawn: `Last step: ε (random): t1 (p1 → p2 ×2) fired`, the seed in its title [M].
+R-SIM-100 on 3057). While it is open, the status line still shows the previous step and the buttons do not move
+(Step's top 873) [M, P-2026-10-03-0120]. Random fires one option, drawn: `Last step: ε (random): t1 (p1 → p2 ×2)
+fired`, the seed in its title [M]; since P-2026-10-03-0120 that is the status line's title, the seed on the line
+itself [R].
 
-| # | Click | List offered [M] | `Marking:` line after [M] | `Last step:` line [M] | Say |
+| # | Click | List offered [M] | `Marking:`, the chips' title after [M] | `Last step:`, the status line's title [M] | Say |
 |---|---|---|---|---|---|
 | 1 | ▶, then `t1 (p1 → p2 ×2)` | `t1 (p1 → p2 ×2)`, `t3 (lock → ∅)` | `Marking: lock, p1, p2 ×2` | `Last step: ε: t1 (p1 → p2 ×2) fired` | "Two transitions are enabled, so I choose. t1 puts two tokens on p2." |
 | 2 | ▶, then `t3 (lock → ∅)` | the same | `Marking: p1, p2 ×2` | `Last step: ε: t3 (lock → ∅) fired` | "t3 empties lock. The inhibitor arc from lock no longer holds t2." |
 | 3 | ▶, then `t2 (p2 ×2 → p3)` | `t1 (p1 → p2 ×2)`, `t2 (p2 ×2 → p3)` | `Marking: p1, p3` | `Last step: ε: t2 (p2 ×2 → p3) fired` | "t2 takes two tokens from p2." |
 | 4 | ▶ | none | `Marking: p2 ×2, p3` | `Last step: ε: t1 (p1 → p2 ×2) fired` | "t1 is the only enabled transition. t2 has its tokens, but its guard is false." |
 
-After step 4 the status reads `Deadlock · ε: t2 guard false`, with the title `ε: t2 (p2 ×2 → p3) false
+After step 4 the status line reads `Deadlock · ε: t2 guard false · step 4 · …` [M, P-2026-10-03-0120], the reason
+with the title `ε: t2 (p2 ×2 → p3) false
 [p3.[tokens] < 1]` [M, P-2026-09-29-1022, R-SIM-96]. ▶ is disabled [M]. The table and this status read the same line for line after the dialog's Apply
 [M, P-2026-09-27-2105].
 **Say** "Deadlock. The panel names the transition and the guard that stops it."
 
 Optional, Random (R-SIM-101): Reset, `Choices` → `Random`, then ⏩. Play fires one ε step every 500 ms and draws every
 choice, its glyph ⏸ while it plays; it stops by itself in `Deadlock` at `Marking: p2 ×2, p3` after 4 steps, whatever
-it draws, Step's top still 854.5 [M, P-2026-09-29-1943, three seeds]. A drawn step reads `Last step: ε (random): …`.
+it draws, Step's top still 854.5 [M, P-2026-09-29-1943, three seeds; 873 since P-2026-10-03-0120, not re-measured
+under Play]. A drawn step reads `Last step: ε (random): …`.
 `Choices` stays `Random` for this model until set back, and under it ▶ draws too.
 **Say** "Now the simulator chooses. Whatever it draws, this net ends in the same deadlock."
 
 Optional: click the status row. The reasons list reads `ε: t2 (p2 ×2 → p3) false` and moves Step's top from 854.5
-to 830 [M]. Click it again to close.
+to 830 [M; from 873 since P-2026-10-03-0120, not re-measured]. Click it again to close.
 
 ### 2.3 Extended state machine
 
@@ -246,17 +261,19 @@ declarations on the model tab, 9 interactions and 34 keystrokes, 0 scrolls; the 
 
 **Optional: Reset before declaring** (tab `demoESM`). Reset shows `3 defects: tp guard (undeclared 'paid'); tc action
 (undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M,
-P-2026-09-28-0023]. `coin` then shows `Halted: the
+P-2026-09-28-0023] (the chip `locked` since P-2026-10-03-0120). `coin` then shows `Halted: the
 transition action of tc failed: 'coins' is not a state attribute of demoESM.` and `Last step: coin: tc (locked →
-locked) halted the run` [M]. The halt line reads whole on two lines [M, P-2026-09-27-2225]; the defects line is
+locked) halted the run` [M], the status line's title since P-2026-10-03-0120. The halt line reads whole on two
+lines [M, P-2026-09-27-2225]; the defects line is
 cut on screen, its title holds the whole text [M, P-2026-09-27-2105]. Under the defects the panel reads `Undeclared:
-paid, coins. Declare in Data…` [M, P-2026-09-29-0110]. <!-- not measured: the ESM `Undeclared` line clicked through;
-the walk reads it and declares through the `Data…` entry -->
+paid, coins. Declare in State…` [M, P-2026-09-29-0110; `Declare in Data…` until P-2026-10-03-0120, R]. <!-- not
+measured: the ESM `Undeclared` line clicked through; the walk reads it and declares through the `State…` entry -->
 **Say** "Without the declarations the run names the missing attribute and stops at the first action."
 
 **Declarations on the model tab** (tab `demoESM`, the model). The tab switch to `demoESM` that the run needs comes
 first.
-1. Click `Data…`, the first line of the M1 face; no Reset is needed first. The dialog `Data of demoESM` opens, its
+1. Click `State…`, the first line of the M1 face [M, P-2026-10-03-0120]; no Reset is needed first. The dialog
+   `Data of demoESM` opens, its
    `Add attribute` focused. The dialog's Apply is off, `Nothing to write` [M, P-2026-09-29-0110].
 2. Click `Add attribute`. Row 1 reads `x1 · Global · stored`, the name selected: type `coins`, Enter. Domain `range`:
    the minimum reads `0`, the maximum `1`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter. Row 1
@@ -294,12 +311,14 @@ The labels `range`, `derived`, `stored` are the options of the dialog's selects 
 **Run** (tab `demoESM`). After the optional Reset above, the M1 face reads `Run interrupted: the model changed.
 Reset to run again.` [M].
 
-Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M]. Declared on the model tab, Reset reads
+Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M]. On the face since P-2026-10-03-0120:
+`WATCH` `coins` `0` with its domain bar 0..3 empty, `paid` in italics, `DEFINE`, `false`; the chip `locked`; the
+status line `Running · step 0 · seed <n> · Reset` [M, P-2026-10-03-0120]. Declared on the model tab, Reset reads
 the same with no defect, and the ten events below give the table line for line, to `Halted: coins of demoESM would be
 4, outside its domain.` with `Marking: locked · coins = 3, paid = true` [M, P-2026-09-29-0110].
-**Say** "After the dot, the state attributes: σ."
+**Say** "Above the marking, the state attributes: σ."
 
-| # | Click | `Marking:` line after [M] | `Last step:` line [M] | Say |
+| # | Click | `Marking:`, the chips' title after [M] | `Last step:`, the status line's title [M] | Say |
 |---|---|---|---|---|
 | 1 | `push` | `Marking: locked · coins = 0, paid = false` | `Last step: push: discarded, tp guard false` [M, P-2026-09-29-1022] | "push is discarded: the guard of tp reads paid, and paid is false." |
 | 2 | `coin` | `Marking: locked · coins = 1, paid = false` | `Last step: coin: tc (locked → locked) fired` | "The action adds one coin." |
@@ -316,10 +335,19 @@ the same with no defect, and the ten events below give the table line for line, 
   the model-tab route not re-run]. The other eight lines and the final readings are unchanged [M].
 - After step 5 only `push` is on: `coin(off)`, `stop(off)` [M].
 - After step 10 the halt line reads `Halted: coins of demoESM would be 4, outside its domain.` and every event is
-  off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; `Last step:` is cut at `halted the r…`,
-  its title is the whole line [M, P-2026-09-27-2105: 264 px of text in 262].
-- The hover title of `Last step:` adds the writes, e.g. after step 4 `assignments: demoESM.coins = 2` and
-  `derived: demoESM.paid = true` [M].
+  off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; the status line is cut after the seed, its
+  title is the whole `Last step:` line [M, P-2026-10-03-0120].
+- `WATCH` follows the table: step 2 `coins` `0 → 1` in cyan, its bar a third full; step 4 `paid` `false → true`; step
+  5 `coins` `2 → 0` and `paid` `true → false`; step 10 `coins` `3`, the bar full [M, P-2026-10-03-0120].
+- Optional, the run inspector, after step 5: click ⤢ in the panel's header. A card opens right of the panel (400 px,
+  372 with the rail open, clear of the MiniMap): `σ ABSTRACT STATE` with the chip `unlocked`, `coins` `VAR` `2 → 0`,
+  `paid` `DEFINE` `true → false`; `node CONCRETE STATE`, `No presentation state.`; `TRACE`, steps 5 to 0. Click step
+  4: `Viewing step 4. The run is still at step 5.`, the card shows `locked`, `coins 1 → 2`, `paid false → true`, and
+  the canvas marks `locked`, while the panel stays on step 5; `Back to live` returns. Step 6 (`push`) pressed while a
+  step is viewed acts on the run and returns the view to live [M, P-2026-10-03-0120].
+  **Say** "The run keeps its past. I can look at any step; the run stays where it is."
+- The hover title of the status line (`Last step:` until P-2026-10-03-0120) adds the writes, e.g. after step 4
+  `assignments: demoESM.coins = 2` and `derived: demoESM.paid = true` [M].
 
 **Say** "The halt names the attribute, the element and the value."
 
@@ -367,13 +395,13 @@ of the route below; the declaration from the Reset line, 5 interactions and 4 ke
 clicks [M, P-2026-09-29-1225].
 
 **Reset before declaring** (tab `demoFlowB`, the model): `3 defects: f3 guard (undeclared 'count'); f4 guard
-(undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023]. Under
-the defects the panel reads `Undeclared: count. Declare in Data…` [M, P-2026-09-29-0110].
+(undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023], the
+chip `i0`. Under the defects the panel reads `Undeclared: count. Declare in State…` [M, P-2026-10-03-0120].
 **Say** "The panel names what the model leaves undeclared, and takes me to the data of the model."
 
 **Declaration on the model tab** (tab `demoFlowB`, from the Reset line).
-1. Click `Declare in Data…`. The dialog `Data of demoFlowB` opens with row 1 already there, `count · Global · stored ·
-   boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110].
+1. Click `Declare in State…` [M, P-2026-10-03-0120]. The dialog `Data of demoFlowB` opens with row 1 already there,
+   `count · Global · stored · boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110].
 2. Select Domain `range`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter.
 3. Apply, in the dialog. The model's bag holds `count`; the undo stack goes from 3 to 4 [M, P-2026-09-29-1225], as in
    §2.3.
@@ -394,10 +422,11 @@ value, `0`, Enter. Apply, in the dialog: the declarations line is gone [M]. 6 in
 attribute`, 1 select choice, 2 cells, 1 Apply; 10 keystrokes; 1 scroll [M, P-2026-09-27-2105].
 **Say** "count, from 0 to 3, starts at 0."
 
-**Run** (tab `demoFlowB`). Reset: `Marking: i0 · count = 0`, `Last step: Reset` [M]. No choice list opens in this
+**Run** (tab `demoFlowB`). Reset: `Marking: i0 · count = 0`, `Last step: Reset` [M]; `WATCH` `count` `0`, the chip
+`i0` [M, P-2026-10-03-0120]. No choice list opens in this
 run [M].
 
-| # | Click | `Last step:` line [M] | `Marking:` line after [M] | Say |
+| # | Click | `Last step:`, the status line's title [M] | `Marking:`, the chips' title after [M] | Say |
 |---|---|---|---|---|
 | 1 | ▶ | `Last step: ε: f1 (i0 → work) fired` | `Marking: work · count = 0` | "One token, one step at a time." |
 | 2 | ▶ | `Last step: ε: f2 (work → d1) fired` | `Marking: d1 · count = 1` | "The edge action increments count." |
@@ -406,8 +435,9 @@ run [M].
 | 5 | ▶ | `Last step: ε: fk (d1 → left, right) fired` | `Marking: left, right · count = 2` | "The decision edge and the fork fire as one transition. Two tokens." |
 | 6 | ▶ | `Last step: ε: jn (left, right → fin) fired` | `Marking: fin · count = 2` | "The join takes both. The token reaches the final node." |
 
-After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover title of `Last step:` after step 2 adds
-`assignments: demoFlowB.count = 1` [M].
+After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover title of the status line after step 2
+adds `assignments: demoFlowB.count = 1` [M]. `WATCH` reads `count` `0 → 1` in cyan at step 2, `1 → 2` at step 4,
+`2` at the end [M, P-2026-10-03-0120].
 
 **Two variants run the same** [M, P-2026-09-27-1738]. With the final class named `ActivityFinal` (G6, closed by E1),
 Apply proposes `Activity final → ActivityFinal` in place of `Terminal → FinalNode`. With `f4` guarded `else` in place
@@ -426,8 +456,9 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
   marking, with a reason that says so. The project holds `demoNet` alone, as the builder makes it. If the Bound row
   reads a lower number, type 4 over it before Apply: click the cell, Cmd+A, `4`, 1 click and 2 keystrokes; a click
   alone leaves the caret after the digit, `45` [M, P-2026-09-27-2105, typed with 5 over the stored 4, then Cancel].
-  With `Bound → 4`, taking `t1` twice before `t2` reads `Marking: lock, p2 ×4` at step 2 and the run goes on
-  to `Deadlock` at step 4, no `unsafe` halt [M, P-2026-09-27-1738]; under Bound 2 the readiness run halted `unsafe`
+  With `Bound → 4`, taking `t1` twice before `t2` reads `Marking: lock, p2 ×4` at step 2 (the chips `lock`, `p2 ×4`
+  since P-2026-10-03-0120, not re-measured) and the run goes on to `Deadlock` at step 4, no `unsafe` halt [M,
+  P-2026-09-27-1738]; under Bound 2 the readiness run halted `unsafe`
   at step 2.
 - **Flowchart: `FinalNode` and the explicit complement are the script's model, no longer a constraint.** E1 lifted
   decision E: the engine reads the activity final (G6, R-SIM-83) and resolves `[else]` on the edge into a Fork or out
