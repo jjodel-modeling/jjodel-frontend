@@ -62,3 +62,31 @@ Smoke-test scenarios potentially affected:
   - After Auto layout: no bar turns in any of the three (ratios 2.13 to 40 for the declared orientation).
   - The four default scenes: identical (no bar in the default viewpoint).
 ```
+
+## 3. Addendum: the implementation, after the chat's approval of 2026-10-03
+
+Approved: option B, Activity's fork and join included, recomputed on open, after Auto layout and at drag release
+(not live), `shape.barThickness?: number` (absent = today's bar). RC-30 go-ahead for the implementation. The chat's
+conditions: (a) the ring, hover, hit area and port highlight follow the drawn bar; (b) Auto layout spacing measured
+before and after; (c) saved views keep the old box until derived again; (d) tests red first, probe numbers, no
+layout shift, nothing saved on the node, mutation bench, crops.
+
+Files, refined from section 1 after reading the code:
+
+| File | Change |
+|---|---|
+| `viewpoint/ir/barOrientation.ts` (new) | the rule (no previous: the dominant axis, a tie upright; then the 1.2 hysteresis) and the session memo per vertex, reset on a viewpoint change |
+| `viewpoint/ir/irTypes.ts`, `irValidate.ts` | `ShapeSpec.barThickness?: number`, a positive number or absent |
+| `viewpoint/ir/irEdgeViews.ts` | the synthesis computes the orientation of every bar that declares a thickness from its connected neighbours' centres (the memo held while any node is `dragging`, so a drag turns nothing until release), writes `irBarOrientation` and `irBarThickness` on the bar's RF node data only when they change, and hands the orientation to the side rule (`endSideFor` takes it, the box being square) |
+| `viewpoint/ir/useIRContainment.ts` | resets the memo on a viewpoint change |
+| `viewpoint/ir/IRNodeContent.tsx` | a bar with a thickness paints its ink T wide (upright) or T high (lying), centred in the box, as `.ir-node-content`: the selection ring and the run's outline are drawn on that element, so they follow the ink |
+| `viewpoint/ir/irStyle.ts` | the RF node of such a bar takes no pointer events, its ink and its handles do: the hit area and the hover are the ink |
+| `nodes/ObjectNode.tsx` | passes the orientation to IRNodeContent and the orientation and inset to DynamicHandles |
+| `components/DynamicHandles.tsx` | a bar's handles, connected and ghost, inset onto the ink's long sides; the hovered side only a long side |
+| `utils/elkLayout.ts` | ELK lays out the drawn bar, across the profile's direction (lying under DOWN or UP, upright under RIGHT or LEFT), and its position comes back as the box's top-left; the route records the orientation it was laid out with |
+| `edges/UnifiedEdge.tsx` | a route whose end bar has since turned is no longer drawn (the router takes over) |
+| `viewpoint/derive/viewpointDerivation.ts` | the bars of Petri net (56 x 56, thickness 12), Petri net (classic) (56 x 56, 12) and Activity (UML) (120 x 120, 7) |
+| tests | the rule, the side rule, the synthesis, the paint, the ELK sizes, and the derive and sizing pins of the old bar boxes, changed and declared |
+
+What this changes about section 2: the ELK input keeps today's drawn size for a bar, so Auto layout spacing should not
+move (measured in the report); the RF node box of a bar is L x L in newly derived viewpoints.
