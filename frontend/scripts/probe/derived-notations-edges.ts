@@ -47,7 +47,8 @@ const meas = (name: string, v: unknown) => console.log(`MEAS  ${name}  ${typeof 
 
 const SCENES = [
     { key: 'petri', file: 'scene_2_DemoPetri.jjodel', profile: 'petri', notations: ['petriClassic', 'petri'] },
-    { key: 'flowB', file: 'scene_4_DemoFlowB.jjodel', profile: 'flowchart', notations: ['activityUml'] },
+    // Flowchart since Q3's decision (its fork and join share Activity's bar, out of the turn): crops and acceptance.
+    { key: 'flowB', file: 'scene_4_DemoFlowB.jjodel', profile: 'flowchart', notations: ['activityUml', 'flowchart'] },
     { key: 'pest', file: 'scene_1_DemoPEST.jjodel', profile: 'stateMachine', notations: ['statechart'] },
     { key: 'esm', file: 'scene_3_DemoESM.jjodel', profile: 'stateMachine', notations: ['statechart'] },
 ].filter((s) => !ONLY.length || ONLY.includes(s.key));
