@@ -339,3 +339,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-03 13:02
 
 **Ticket** (observation, low, not a ticket of its own): two `createDerivedViewpoint` calls in the same tick both read `... / Generic (2)`, because the first viewpoint is not in the project's list until its TRANSACTION END, after the function returns. The dialog's confirm cannot do it (separate tasks); a console script can. One such back-to-back run also logged a reducer «Invalid action path» (a SetFieldAction2 on the project) that two runs without the step did not repeat; not investigated.
+
+## 2026-10-03 — merge: viewpoint-panel-naming into alfonso-frontend-jjtl (P-2026-10-03-1421)
+**Prompt**: `claude_2026-10-03_1421_prompt_merge_viewpoint-panel-naming.md`, a lane-run merge session: `viewpoint-panel-naming` at `2bf3c10ad` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `c56f4fc63`, 4 commits on the branch side, 13 on the trunk side plus this merge's prompt `703fe5323`.
+**Files touched**: merge `7e856190d`: 5 files from the branch side (`deriveViewpoint.ts`, `__tests__/deriveViewpoint.test.ts`, `ViewpointProperties.tsx`, `docs/log-inbox/views.md`, the branch prompt), `docs/log-inbox/views.md` resolved by union; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7e856190d`: typecheck 14 errors, the §17 set (exit 2); typecheck:scripts exit 0; vitest 6946 passed in 277 files, 9 red at import, the §17 set (expected 6937 in 276 on the trunk tip plus 9 in 1 new file from the branch); hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts, check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, on 3001: server up (pid 61660), HTTP 200, serves the merged `deriveViewpoint.ts` and the `ViewpointProperties` Checkbox; Alfonso's visual OK on the branch (ok 1302) before the merge
+**Notes**: Merge-tree 1 conflict, docs/log-inbox/views.md (tree d42067c03); governance diff empty; on both sides only views.md; probes 1/1 each. Union: trunk's three entries first, then the branch's, checked byte for byte. No rollback tag (RC-31); pre-merge trunk 764e00502. npm run build ran in this tree with 3001 up (ticket of P-2026-10-03-1300); 3001 not restarted.
+**Prompt document name**: 2026-10-03 14:21
