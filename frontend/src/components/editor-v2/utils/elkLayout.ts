@@ -349,7 +349,9 @@ export function buildElkGraph(nodes: Node[], edges: Edge[], input: ElkAutoLayout
             'elk.padding': padding,
             'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
             'elk.layered.nodePlacement.strategy': placement,
-            ...(placement === 'BRANDES_KOEPF' ? { 'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED' } : {}),
+            // NONE, not BALANCED (P-2026-10-03-1304, Q8): BK keeps the one alignment that gives the narrowest
+            // layout; the balanced average of the four pulled DemoFlowB's `work` 56 px off its main path.
+            ...(placement === 'BRANDES_KOEPF' ? { 'elk.layered.nodePlacement.bk.fixedAlignment': 'NONE' } : {}),
             // Phase 1 §4.7: NODES_AND_EDGES never changed a crossing count and cost area; off.
             'elk.layered.considerModelOrder.strategy': 'NONE',
         };
@@ -374,6 +376,33 @@ function clipToBorder(r: ElkRect, to: ElkPoint): ElkPoint {
     if (dx === 0 && dy === 0) return { x: cx, y: cy };
     const t = Math.min(dx ? (r.width / 2) / Math.abs(dx) : Infinity, dy ? (r.height / 2) / Math.abs(dy) : Infinity);
     return { x: cx + dx * t, y: cy + dy * t };
+}
+
+/** The ends of a leg are kept this far from the corners of the side they move along. */
+const STRAIGHT_CORNER = 4;
+
+/**
+ * A leg ELK drew straight, kept straight after the grid snap (P-2026-10-03-1304, Q8): the snap moves its two nodes by
+ * different amounts across the leg, and the fit turns it into a jog of up to the grid step. Both ends take one cross
+ * coordinate: `pin` when given (the action's centre under a junction end, where the diamond is drawn), else the end on
+ * the narrower node, when it falls on the other node's side away from its corners. A null rect is a junction end, which
+ * takes any coordinate. `points` back unchanged when no coordinate fits both sides.
+ */
+function keepStraight(points: ElkPoint[], vertical: boolean, sr: ElkRect | null, tr: ElkRect | null, pin?: number): ElkPoint[] {
+    const first = points[0], last = points[points.length - 1];
+    const across = (p: ElkPoint) => (vertical ? p.x : p.y);
+    const span = (r: ElkRect | null): [number, number] => (r
+        ? (vertical ? [r.x + STRAIGHT_CORNER, r.x + r.width - STRAIGHT_CORNER] : [r.y + STRAIGHT_CORNER, r.y + r.height - STRAIGHT_CORNER])
+        : [-Infinity, Infinity]);
+    const fits = (c: number, r: ElkRect | null) => { const [lo, hi] = span(r); return c >= lo - 0.01 && c <= hi + 0.01; };
+    const size = (r: ElkRect | null) => (r ? (vertical ? r.width : r.height) : Infinity);
+    const candidates = pin !== undefined ? [pin]
+        : size(sr) <= size(tr) ? [across(first), across(last)] : [across(last), across(first)];
+    const c = candidates.find(v => fits(v, sr) && fits(v, tr));
+    if (c === undefined) return points;
+    return vertical
+        ? [{ x: c, y: first.y }, { x: c, y: last.y }]
+        : [{ x: first.x, y: c }, { x: last.x, y: c }];
 }
 
 function readElkResult(out: ElkNode, edges: Edge[], input: ElkAutoLayoutInput): ElkAutoLayoutResult {
@@ -427,7 +456,15 @@ function readElkResult(out: ElkNode, edges: Edge[], input: ElkAutoLayoutInput): 
             const first = points[0], last = points[points.length - 1];
             const start = decision ? first : { x: first.x + sr.x - rs.x, y: first.y + sr.y - rs.y };
             const end = merge ? last : { x: last.x + tr.x - rt.x, y: last.y + tr.y - rt.y };
+            const straightLeg = orthogonal && points.length === 2 && (Math.abs(first.x - last.x) < 0.01 || Math.abs(first.y - last.y) < 0.01);
             points = fitRouteToEnds({ points, sourceSide, targetSide, sourceRect: sr, targetRect: tr, orthogonal }, start, end);
+            if (straightLeg && points.length > 2 && vertical(sourceSide) === vertical(targetSide)) {
+                const v = vertical(sourceSide);
+                // A junction end is drawn at the action's shared handle, the centre of its side (irJunctions.ts).
+                const action = merge ? tr : decision ? sr : null;
+                const pin = action ? (v ? action.x + action.width / 2 : action.y + action.height / 2) : undefined;
+                points = keepStraight(points, v, decision ? null : sr, merge ? null : tr, pin);
+            }
         }
         const centre = ee.labels?.find(l => l.id === LABEL_ID(e.id, 'center'));
         routes.set(e.id, {

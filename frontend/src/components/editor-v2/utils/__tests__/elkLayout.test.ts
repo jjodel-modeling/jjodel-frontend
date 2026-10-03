@@ -87,7 +87,7 @@ describe('buildElkGraph: the input ELK receives', () => {
         const g = buildElkGraph([sized('i', 20, 20), sized('a', 100, 40), sized('f', 24, 24)], [], { profile, roleOf: (id) => roles[id] });
         expect(rootOpt(g, 'direction')).toBe('RIGHT');
         expect(rootOpt(g, 'layered.nodePlacement.strategy')).toBe('BRANDES_KOEPF');
-        expect(rootOpt(g, 'layered.nodePlacement.bk.fixedAlignment')).toBe('BALANCED');
+        expect(rootOpt(g, 'layered.nodePlacement.bk.fixedAlignment')).toBe('NONE');
         expect(rootOpt(g, 'edgeRouting')).toBe('POLYLINE');
         expect(rootOpt(g, 'spacing.nodeNode')).toBe('40');
         expect(rootOpt(g, 'layered.spacing.nodeNodeBetweenLayers')).toBe('56');
@@ -339,5 +339,54 @@ describe('the notation profiles (Q2), copied into the derived viewpoint', () => 
     it('the stored key reads back the profile', () => {
         expect(DERIVED_LAYOUT_KEY).toBe('derivedLayout');
         expect(JSON.parse(JSON.stringify(layoutOf('activityUml')))).toEqual(layoutOf('activityUml'));
+    });
+});
+
+// P-2026-10-03-1304 (Q8 (i), A5): Brandes-Koepf takes the one alignment that gives the narrowest layout
+// (`fixedAlignment: NONE`) instead of the average of the four (BALANCED), which pulled `work` 56 px off the
+// main path of DemoFlowB (docs/discovery/discovery_2026-10-03_derived_notations_edges.md §3.8).
+describe('Activity (UML) under its profile: the main path in one column', () => {
+    const activity = DERIVED_NOTATIONS.find((n) => n.id === 'activityUml')!.layout!;
+    const merge = (primary: boolean) => ({ irActivityFlow: true, irJunctionTarget: { kind: 'merge', side: 'top', primary } });
+    // DemoFlowB as the probe measured it: the node sizes drawn, the two guard labels' boxes.
+    const nodes = [
+        sized('i0', 20, 20), sized('work', 142, 44), sized('d1', 36, 36), sized('fk', 120, 7),
+        sized('left', 142, 44), sized('right', 142, 44), sized('jn', 120, 7), sized('fin', 24, 24),
+    ];
+    const flows = [
+        { ...edge('f1', 'i0', 'work'), data: merge(true) }, edge('f2', 'work', 'd1'), { ...edge('f3', 'd1', 'work'), data: merge(false) },
+        edge('f4', 'd1', 'fk'), edge('f5', 'fk', 'left'), edge('f6', 'fk', 'right'), edge('f7', 'left', 'jn'), edge('f8', 'right', 'jn'),
+        edge('f9', 'jn', 'fin'),
+    ] as Edge[];
+    const roles: Record<string, string> = { i0: 'initial', fin: 'terminal' };
+    const labels: Record<string, { kind: 'center'; text: string; width: number; height: number }[]> = {
+        f3: [{ kind: 'center', text: '[model.[count] < 2]', width: 151, height: 21 }],
+        f4: [{ kind: 'center', text: '[model.[count] >= 2]', width: 158, height: 21 }],
+    };
+    const centreX = (r: Awaited<ReturnType<typeof computeElkAutoLayout>>, id: string) =>
+        r.positions.get(id)!.x + (nodes.find((n) => n.id === id)!.measured!.width as number) / 2;
+
+    it('asks Brandes-Koepf for no fixed alignment, not the balanced average', () => {
+        const g = buildElkGraph(nodes, flows, { profile: activity, roleOf: (id) => roles[id] });
+        expect(rootOpt(g, 'layered.nodePlacement.bk.fixedAlignment')).toBe('NONE');
+    });
+
+    it('the centres of i0, work, d1, fork, join and final lie within 16 px across the flow (BALANCED: 60)', async () => {
+        const r = await computeElkAutoLayout(nodes, flows, { profile: activity, roleOf: (id) => roles[id], labelsOf: (id) => labels[id] });
+        const xs = ['i0', 'work', 'd1', 'fk', 'jn', 'fin'].map((id) => centreX(r, id));
+        expect(Math.max(...xs) - Math.min(...xs), JSON.stringify(xs)).toBeLessThanOrEqual(16);
+    });
+
+    it('a leg ELK drew straight stays straight on the 8 px grid: the main path has no jog, the merge member lands on the action\'s centre', async () => {
+        const r = await computeElkAutoLayout(nodes, flows, { profile: activity, roleOf: (id) => roles[id], labelsOf: (id) => labels[id] });
+        for (const id of ['f1', 'f2', 'f4', 'f9']) {
+            const pts = r.routes.get(id)!.points;
+            expect(pts.length, `${id} ${JSON.stringify(pts)}`).toBe(2);
+            expect(pts[0].x, id).toBe(pts[1].x);
+        }
+        // The merge diamond is drawn at the action's shared handle, its top centre (irJunctions.ts): f1 ends under it.
+        expect(r.routes.get('f1')!.points[1].x).toBe(centreX(r, 'work'));
+        // Every node still on the grid.
+        for (const [id, p] of r.positions) expect([p.x % ELK_GRID, p.y % ELK_GRID], id).toEqual([0, 0]);
     });
 });
