@@ -509,12 +509,12 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
   values: after step 4 `p1 : Place` reads `tokens 2` under `Marking: p2 ×2, p3` [M]. Point at the panel line.
   **Say** "The panel shows the run. The canvas shows the model; the run on the canvas comes after MODELS."
 - **`∅` reads like `ø` at 11-12 px** in `t3 (lock → ∅)` [M]. **Say** "t3 has an empty postset."
-- **The `Data…` route is the primary path; the metamodel path is the fallback.** If the route misbehaves (the dialog
+- **The `State…` route is the primary path; the metamodel path is the fallback.** If the route misbehaves (the dialog
   does not open, Apply stays off, the Reset line still reads `Undeclared` after Apply), declare in the metamodel as
   before, with the Fallback blocks of §2.3 and §2.4. Both routes give the same runs [M, P-2026-09-29-0110]. The model's
   record overrides a metamodel record of the same name, by name and with no defect, so a demo project that holds both
   reads the model's (R-SIM-94).
-- **Not measured on the `Data…` route:** Save and reload of a non-empty model key, the collaborative sync of the
+- **Not measured on the `State…` route:** Save and reload of a non-empty model key, the collaborative sync of the
   model's bag, the dark theme (discovery §8). The §1 Save check covers the first on rehearsal: declare, Cmd+S, reload
   once, Reset. Every run logs one console error at load, `failed to get project {project: null}`, a known ticket, not a
   demo defect [M, P-2026-09-29-0110].
@@ -522,7 +522,7 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
   1600×1000: row 1's second line, 728-760 against the body's 735, on ESM and Flow B, and row 2's second line, 743-775,
   on ESM [M, P-2026-09-27-2105]. Scroll the dialog body to its end before Domain and before the equation, as the
   Fallback blocks say. The summary line's `Add attribute` brings the dialog's own button into view and focuses it [M].
-  The `Data…` dialog needed 0 scrolls on ESM and on Flow B [M, P-2026-09-29-0110].
+  The `State…` dialog needed 0 scrolls on ESM and on Flow B [M, P-2026-09-29-0110].
 - **The hint path through the dialog (the Fallback blocks) is measured on ESM and on Flow B** by P-2026-09-27-2105 on 3024 (headless,
   1600×1000, one fresh page per scene): every value of §2.3 and §2.4 holds [M]. The RC-23 browser check re-reads the
   below-the-fold positions before the freeze. Rehearse §2.3 and §2.4 on 3001 before the freeze. If a target is out
