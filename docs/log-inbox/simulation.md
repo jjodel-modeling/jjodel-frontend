@@ -218,3 +218,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: chat check (RC-23) on the lane probe of P-2026-10-03-1420: hint on two rows 41 px, transport row 873 before and after Reset under both profiles; gates of the direct merge green; Alfonso look on 3001 pending
 **Notes**: Rollback tag `pre-sim-profile-hint` on `ccb15ff9c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1452/result.json`.
 **Prompt document name**: 2026-10-03 14:52
+
+## 2026-10-03 — fix: a state attribute's initial value follows its domain (P-2026-10-03-1520)
+**Prompt**: `claude_2026-10-03_1520_prompt_sim_initial_default.md`, fast, light tier, `~/jjodel-w-siminit` on `sim-initial-default`: a new state attribute started at `false` whatever its domain, and an edit of kind, min, max or literals left the stale initial in place; the initial now takes the domain's default (false, the range minimum, the first enum literal) and keeps a value typed inside the domain.
+**Files touched**: code `777a5da2f`: `frontend/src/model/simulation/stateAttributesCodec.ts` (two additive exports, `defaultInitialOf` and `initialFollowingDomain`), `frontend/src/model/simulation/__tests__/stateAttributesCodec.test.ts`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx` (`patchOf`, a `domainPatch` helper); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `777a5da2f`: typecheck exit 2 with 14 errors, the §17 set; vitest on `model/simulation` and `editor-v2/sim` 29 files, 1022 of 1022; build exit 0. Tests 16 of 48 red first, then green. Mutation bench on the two helpers 12/12 killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3075, DemoESM, 1600×1000, light, 17 PASS 0 FAIL; the chat's visual check pending, RC-23; crops in `~/.jjodel-lanes/P-2026-10-03-1520/`, outside the tree)
+**Notes**: `patchOf` is not testable in the bench (SimRolesModal.tsx imports the joiner), so the rule lives in the codec and the wiring is covered by the probe only, derived row included by cell count. The four demo exports carry no `sim*` key, so no initial outside its domain; the run still starts on one and reports an `initial` defect. Open: derived to stored leaves initial empty (`formPatch`, simInputs.ts).
+**Prompt document name**: 2026-10-03 15:20
