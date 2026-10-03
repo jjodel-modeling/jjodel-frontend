@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1415
 Chat: C-2026-10-01-2215
 Lane: full (short discovery with a saved report, then implementation in the same session, hard stop before any merge). Tier: heavy (touches `elkLayout.ts` and the derive folder; stop before any file under `viewpoint/ir/` or the critical zone). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane petri-transition-name · 79e18efb9, 1c33f3f46, db2ae3577 · non fuso: hard-stop, Petri net (classic) transition names above the bars and outside vertex labels reserved in ELK, lane probe on 3241 after a real auto-layout 17/17 twice with every scene at 0 collisions (Petri label-edge 2 → 0), rest 10/10, mutation bench 28/29 (the survivor equivalent), crops in frontend/scripts/smoke/_tmp_petriname_crops/ (gitignored), R-VP-53, verifica visiva alla chat
 
 Worktree: `~/jjodel-w-petriname`, branch `petri-transition-name`, created from the trunk `alfonso-frontend-jjtl` after the merges of `derived-notations-polish` (P-2026-10-03-1405) and of the lane P-2026-10-03-1304 (derived notations, edges, anchors and layout) if it has merged. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this file); if any differs, stop with `Outcome: blocked`.
 

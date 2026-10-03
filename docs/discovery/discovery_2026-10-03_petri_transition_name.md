@@ -177,3 +177,45 @@ The other `R-VP-53` strings in `docs/` are «control: `- **R-VP-53**` none» lin
 ## 7. Questions
 
 1. May the lane touch `EditorV2.tsx`, one call at `:3706` passing the measured outside labels? Recommended: yes.
+
+## 8. Addendum 2026-10-03, results (measured)
+
+Code: `79e18efb9` (anchor), `1c33f3f46` (ELK input and `measureOutsideLabels`), `db2ae3577` (the call in `EditorV2.tsx`,
+question 1 adopted by chat C-2026-10-01-2215 under RC-21). Decision row R-VP-53.
+
+- **In-app ELK input** (the wrapper in pass mode): Petri net (classic) sends 7 node labels, places `OUTSIDE V_BOTTOM
+  H_CENTER` and bars `OUTSIDE V_TOP H_CENTER`, gap `elk.spacing.labelNode:6`. The six other scenes send none: no outside
+  label. The anchor-only run sends none in Petri either. That run is the wiring's own mutant, killed by the probe.
+- **After a real toolbar auto-layout**, Vite of this tree on 3241, probe 17/17 on every run:
+
+| scene | label-edge before → anchor → wired1 / wired2 | other collision metrics, crossings | W×H before → wired |
+|---|---|---|---|
+| petri_petriClassic | 2 → 0 → 0 / 0 | 0 | 564×179 → 564×216 |
+| flowB_flowchart, pest_statechart, er_erChen, class_DemoFlowB, class_DemoERD | 0 | 0 | unchanged |
+| flowB_activityUml | 0 | 0 | unchanged; bends 1.78 / 5 → 1.89 / 5 |
+
+- **Activity (UML) bends.** One edge differs, `i0` to the merge junction. In the first baseline run its first segment
+  lies along `i0`'s bottom border, with float noise in its coordinates (1 bend). In every later run it has a stub and a
+  jog (2 bends). Node positions and labels are equal. The 1.89 is measured on:
+  - the anchor run, wired1 and wired2;
+  - a forced re-optimization of Vite's dependencies (`--force`), which falsifies the cold-cache hypothesis;
+  - two runs against a baseline server on 3242 that serves `elkLayout.ts`, `viewpointDerivation.ts` and `EditorV2.tsx`
+    from `4f43eb718` through a Vite load plugin (`_tmp_petriname_base_vite.config.ts`, its cache inside this tree).
+    Control: the served `elkLayout.ts` lacks `measureOutsideLabels`, and Petri keeps its 2 collisions there.
+
+  So the lane's code does not move Activity; the 1.78 was the first run's one-off.
+- **Rest**: `_tmp_petriname_rest.ts` against the baseline run b1. The four demo scenes and DemoFlowB under Generic,
+  Flowchart, Flowchart (ISO 5807) and Activity (UML) are the same bytes on a2. On a1 they are 0 px outside Jodie's
+  avatar button (497 px inside it, an animation; the avatar mask of §4.5 did not match its class). DemoPetri under
+  Petri net (classic) differs by 2151 px, the three names, measured above the bars at a 6 px gap. a1 against a2 on
+  that view: 0 px outside the avatar, so the wiring does not touch the rest.
+- **Mutation bench** (`_tmp_petriname_mutate.mjs`, file restored and hash-checked): 28/29. The anchor 4/4; the ELK
+  builder and the helper 24/25. The survivor gives every node's labels the same ids; ELK lays out the same and the
+  label positions are never read, so it is equivalent. One first-pass survivor was a redundant 0 floor in the helper,
+  now kept only in the builder and tested there.
+- **Crops** under `frontend/scripts/smoke/_tmp_petriname_crops/` (gitignored, 600 px): after a layout,
+  `after_before_petri_petriClassic_600.png`, `after_anchor_…` and `after_wired1_…`; at rest,
+  `rest/rest_b1_petri_petriClassic_rest_600.png` and `rest/rest_a2_…`.
+- **Deviation**: one typecheck log went to `/tmp`, outside the worktree, which the prompt forbids. It was deleted at
+  once; every later log is under `_tmp_` paths in this tree. An `rm -rf` of this tree's `.vite-cache` was refused by
+  the harness and not retried; `--force` replaced it.

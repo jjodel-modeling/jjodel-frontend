@@ -324,3 +324,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended, on 3001: server up (pid 61660), HTTP 200, serves the merged `notations.ts` (hidden flag) and `viewpointDerivation.ts` (PETRI_BAR_LONG); Alfonso's visual OK on the branch (ok 1300) before the merge
 **Notes**: Merge-tree zero conflicts, tree d9586537d equal to the index; governance diff empty; no file on both sides; probes 1/1 each; union none. Branch delta measured 54 tests, its prompt says 53. No rollback tag: the session path does not tag (RC-31); pre-merge trunk c56f4fc63. npm run build ran in this tree with 3001 up (ticket of P-2026-10-03-1300); 3001 not restarted.
 **Prompt document name**: 2026-10-03 14:05
+
+## 2026-10-03 — feat(derive, elk): Petri classic transition name above the bar, outside vertex labels reserved in ELK (P-2026-10-03-1415)
+**Prompt**: `claude_2026-10-03_1415_prompt_petri_transition_name.md`: short discovery, then the classic Petri transition name on a side its arcs do not use (amends R-VP-24), and every vertex's outside labels passed to the toolbar auto-layout's ELK input as node labels with their measured size, placed by anchor.
+**Files touched**: `909c67588` the discovery report; `79e18efb9` `viewpointDerivation.ts`, `viewpointDerivation.test.ts`, `notationsPolishA.test.ts`, `erChen.test.ts`; `1c33f3f46` `elkLayout.ts`, `elkLayout.test.ts`; `db2ae3577` `EditorV2.tsx`; this commit: `docs/decisions.md` (R-VP-53), the report's addendum, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set; vitest 6946 passed, 9 red at import, the §17 set; build exit 0; probe after a real auto-layout 17/17 twice, every scene 0 on every collision metric; rest 10/10.
+**Out-of-scope changes**: yes — 10 files over five commits (rule 19, RC-11). `EditorV2.tsx` (one call, question 1, adopted by chat C-2026-10-01-2215 under RC-21); `notationsPolishA.test.ts` and `erChen.test.ts`, derive tests not named in the DOVE, moved with the pins of the anchor.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3241, unattended: after-layout 17/17 twice, rest 10/10 against the baseline run; the chat's visual check is its own
+**Notes**: Petri classic label-edge 2 → 0. Activity bends 1.89 on the lane and on a baseline server with the pre-lane sources (2 runs each); the first baseline's 1.78 not reproduced. Gap measured 6 px, not the CSS 8. Mutation bench 28/29, survivor equivalent. One typecheck log was written to /tmp, outside the worktree, and deleted at once; the rest stayed under _tmp_ paths. Detail: the report's §8.
+**Prompt document name**: 2026-10-03 14:15
