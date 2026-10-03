@@ -2,7 +2,10 @@
 
 - Prompt-ID: `P-2026-10-03-1632` (chat `C-2026-10-03-1610`), written at the end of Phase 1 with the report
   `docs/discovery/discovery_2026-10-03_undo_inline_edit.md`; Phase 2 commits it again first if the GO amends it
-- Tree: `~/jjodel-w-undoinline`, branch `undo-inline-edit`, HEAD `4cba26044`
+- Tree: `~/jjodel-w-undoinline`, branch `undo-inline-edit`, HEAD `4cba26044` at Phase 1; at Phase 2 `e2154ebaf`, the
+  trunk `49957d340` taken (lane-run and docs only, no file of this report)
+- Phase 2 GO (chat, 2026-10-03): question 1 of the report adopted as recommended (RC-21, unattended): fix (A), every
+  slot write undoable accepted; (B) and (C) not done. This report is committed again, amended, before the code edit.
 - Go-ahead: `lane-run --critical-zone-goahead P-2026-10-03-1632` (RC-30), `goahead.txt` in the lane folder. The
   file the fix edits, `frontend/src/redux/reducer/reducer.ts`, is not in the §3.1 table. It is the core reducer
   (rule 5), named in the prompt's DOVE. This report is written because the change reaches the D-layer write path
@@ -13,7 +16,7 @@
 | File | Change |
 |---|---|
 | `frontend/src/redux/reducer/reducer.ts` | `CompositeActionReducer`: the `prevAction` handed to `deepCopyButOnlyFollowingPath` is the last action whose copy changed the state, no longer `actions[i-1]` |
-| `frontend/src/redux/reducer/__tests__/reducerCopyOnWrite.test.ts` (new) | the real `_reducer` under `vi.mock` stubs: the old state stays untouched, the delta holds the slot, undo and redo, the controls |
+| `frontend/src/redux/reducer/__tests__/reducerCopyOnWrite.test.ts` (new) | the real `_reducer` under `vi.mock` stubs, red first: the batch of a canvas write (`syncUpdateFeatureValue`, row and path label) and of a non-canvas write (a direct `L(o).x.value =` on a slot that already holds a value) leave the previous state object unmutated, their delta holds the slot, `UndoAction` restores and `RedoAction` reapplies; controls: a single-action batch and a rename unchanged; one element copied once per batch |
 
 ## 2. Report
 
