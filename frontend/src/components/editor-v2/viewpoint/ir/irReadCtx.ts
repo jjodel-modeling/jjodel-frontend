@@ -40,6 +40,18 @@ export interface ReadCtx {
      * imports — the function is injected by makeReadCtx, which is impure already.
      */
     isMarked(elementId: string): boolean;
+    /**
+     * The presentation attribute `attr` of the element, as the simulation run that
+     * knows it shows it: what `node.[attr]` reads in a view (R-SIM-108, R-SIM-18).
+     * `undefined` when no run knows the element or its configuration has no such
+     * value, and the view gives its own default (`else`, `default`, `exists`).
+     *
+     * Read-only, and not model data: like the marking, it lives in the run-state
+     * singleton outside Redux and is injected by makeReadCtx. Optional (rule 11):
+     * a ReadCtx without it reads `undefined`, which is what the compiled accessor
+     * returns through `?.`.
+     */
+    getPresentation?(elementId: string, attr: string): unknown;
 }
 
 type Idlookup = Record<string, any>;
@@ -146,10 +158,14 @@ function metaclassIdOf(idlookup: Idlookup, elementId: string): string | null {
  * neutral element of a total predicate, and applies only to direct draw
  * constructions (the tests); production always goes through makeReadCtx, which
  * injects isSimActive.
+ *
+ * `getPresentation` is injected beside it for the same reason (R-SIM-108);
+ * without it every presentation read answers `undefined`, the absent value.
  */
 export function makeDrawReadCtx(
     idlookup: Idlookup,
     isMarked: (elementId: string) => boolean = () => false,
+    getPresentation: (elementId: string, attr: string) => unknown = () => undefined,
 ): ReadCtx {
     const getValue = (elementId: string, featureName: string): unknown => {
         const dValue = findFeatureRaw(idlookup, elementId, featureName);
@@ -185,6 +201,7 @@ export function makeDrawReadCtx(
             return navigateRefHop(idlookup, elementId, featureName, take);
         },
         isMarked,
+        getPresentation,
     };
 }
 
