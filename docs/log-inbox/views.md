@@ -365,3 +365,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — lane probe on 3241, unattended: after-layout 17/17 twice, rest 10/10 against the baseline run; the chat's visual check is its own
 **Notes**: Petri classic label-edge 2 → 0. Activity bends 1.89 on the lane and on a baseline server with the pre-lane sources (2 runs each); the first baseline's 1.78 not reproduced. Gap measured 6 px, not the CSS 8. Mutation bench 28/29, survivor equivalent. One typecheck log was written to /tmp, outside the worktree, and deleted at once; the rest stayed under _tmp_ paths. Detail: the report's §8.
 **Prompt document name**: 2026-10-03 14:15
+
+## 2026-10-03 — fix(derive): Statechart notation labelled State machine (UML statechart) (P-2026-10-03-1550)
+**Prompt**: `claude_2026-10-03_1550_prompt_derive_state_machine_label.md`, fast lane, light tier, on `~/jjodel-w-smlabel` (branch `derive-sm-label`, cut from the trunk at `ddf22bd2f`). Alfonso: the Derive viewpoint dialog lists no «State machine»; since P-2026-10-03-1300 that notation is hidden and drawn as Statechart (UML). The visible label of `statechart` becomes `State machine (UML statechart)`; id, hidden entry, `HIDDEN_TWIN`, preselection and `ir.generated.notation` unchanged (R-B9).
+**Files touched**: code `8deddcf0d`: `frontend/src/components/editor-v2/viewpoint/derive/notations.ts` (the label), `.../derive/__tests__/notations.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/DeriveViewpointDialog.test.ts`, `frontend/src/utils/__tests__/deriveViewpoint.test.ts` (the pins). `deriveViewpoint.ts` builds the viewpoint name from the label and is unchanged. This commit: `docs/log-inbox/views.md`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 13:00 (`claude_2026-10-03_1300_prompt_derived_notations_polish_a.md`, its hiding of State machine left no label a user of the simulation panel recognises)
+**Causa**: (a)
+**Regressions**: no. Gates on `8deddcf0d`: typecheck exit 2, 14 errors, the §17 set by file and code; vitest 277 files, 268 passed, 9 red at import (the §17 nine), 6971 of 6971 tests passed; build exit 0 (chunk-size warning only).
+**Out-of-scope changes**: yes — `frontend/src/utils/__tests__/deriveViewpoint.test.ts` is not among the three files the DOVE names: it pinned `Turnstile / Statechart (UML)`, a name built from the label by `deriveViewpoint.ts`, covered by the DOVE's «any file that builds a visible string from the label (report it)». One line changed, reported here. Four code files, under rule 19's five.
+**Layer Impact Report**: not-required (`viewpoint/derive/` is not in the §3.1 table)
+**Smoke visivo**: passato (lane probe on 3074, crop `docs/discovery/harness/_tmp_smlabel_select.png`, gitignored; the chat's visual check pending, RC-23)
+**Notes**: DOM, light, 1600x1000, DemoESM and DemoPEST: the options read Generic, State machine (UML statechart), Petri net, Petri net (classic), Flowchart, Flowchart (ISO 5807), Activity (UML), ER (Chen); none reads State machine alone. With the binding set both open on it. Six ecore-loop console errors after the roles Apply, not compared with the trunk. Status flip not done: /status-flip is user-only.
+**Prompt document name**: 2026-10-03 15:50
