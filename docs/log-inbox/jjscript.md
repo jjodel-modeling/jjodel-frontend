@@ -58,3 +58,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-02-1450
 **Detail**: docs/discovery/discovery_2026-10-02_hidden_tab_render_loop.md
+
+## 2026-10-03 — merge: hidden-tab-loop into alfonso-frontend-jjtl (P-2026-10-03-0308)
+**Prompt**: `claude_2026-10-03_0308_prompt_merge_hidden-tab-loop.md`, a merge session started by `lane-run`: `hidden-tab-loop` at `08f442052` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `ff93dc482`, 17 commits on the branch side, zero conflicts measured.
+**Files touched**: merge `cd348df03`: 11 files from the branch side (`docs/discovery/discovery_2026-10-02_hidden_tab_render_loop.md`, `docs/log-inbox/jjscript.md`, `docs/prompts/claude_2026-10-02_1450_prompt_hidden_tab_render_loop.md`, `frontend/scripts/probe/hidden-tab-loop.ts`, `editor-v2/edges/UnifiedEdge.tsx`, `editor-v2/hooks/useJjomSync.ts`, `editor-v2/hooks/useTreeLayout.ts`, `editor-v2/utils/edgeUtils.ts`, `editor-v2/utils/syncPatchIdentity.ts`, and two new tests); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `cd348df03` in this session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6883 tests in 275 files (trunk tip 6847 in 273, plus the branch's 36 in two new files), 0 failed, the same 9 red at import; hooks 344; build exit 0; check:docs 4/4; check:agents, check:scripts, check:addonly exit 0.
+**Out-of-scope changes**: no. 11 files, above Rule 19's five: all from the branch side, listed above; the merge is the prompt's scope.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: interact probe on port 3014 from the trunk `cd348df03` against the branch's after2 dumps, ALL GREEN on every phase (scenes 2 and 4: rest, drag, resize, rename, tabs, m2-rest, m2-added, m2-deleted; max path delta 3e-5). Two FAILs of «delete restored the pane» (scenes 2 and 4), nodes and edges equal to rest, dumps identical to after2: the residual handle slot, the Low ticket of P-2026-10-02-1450, pre-existing. `npm run smoke` targets localhost:3000 (down): its RED does not count. Alfonso in the morning digest.
+**Notes**: No rollback tag at the merge: the prompt named none (lane-run tags only in `--direct` mode), pre-merge tip `69265f7fb`. Tag `pre-hidden-tab-loop` created on `69265f7fb` after the chat's GO (RC-31). No union resolution. Probes on the merge-tree in `docs/log-inbox/jjscript.md`, each once: the T9 fix entry and its two tickets. Expected vitest total stated before the merge, measured read-only on `08f442052` in `~/jjodel-w-hiddenloop`.
+**Prompt document name**: 2026-10-03 03:08
