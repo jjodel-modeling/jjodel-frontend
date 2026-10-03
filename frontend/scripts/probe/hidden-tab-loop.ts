@@ -43,11 +43,25 @@
  *       LOOP_EDGE_PHASES "1": before closing, select an edge of metamodel_1 by a click and sample
  *                      visible and hidden, then click the pane and sample again
  *       LOOP_PATCH also takes mut-nodeguard | mut-edgekeep | mut-dedupe: fix B's mutation bench
+ *
+ * Interaction mode (LOOP_VARIANTS=interact), the scripted stand-in for a visual check: for each
+ * export of LOOP_INTERACT_SCENES it opens M2 then M1 (M1 active), saves a crop of the M1 pane,
+ * then on the M1 pane drags a node, resizes it, renames another (double click, type, Enter),
+ * switches to the M2 tab and back sampling renders/s each side, and on the M2 pane adds a class
+ * with one reference through JjScript and deletes it. After each step it dumps the pane (node
+ * transforms and sizes, connected handles, edge paths, node texts). LOOP_TAG names the run
+ * (before | after); run it once against each server, then LOOP_VARIANTS=compare with
+ * LOOP_COMPARE=<before.json>,<after.json> pairs the dumps by position (an import allocates ids in
+ * the same order) and prints what differs.
+ *       LOOP_INTERACT_SCENES comma list of export file names (default scene_2_DemoPetri.jjodel,scene_4_DemoFlowB.jjodel)
+ *       LOOP_TAG       label of the run, used in crop names (default run)
+ *       LOOP_CROPS     crop directory (default frontend/scripts/smoke/_tmp_hiddenloop_crops)
  *       LOOP_SAMPLE_MS sample length per phase (default 5000)
  *       LOOP_OUT       JSON output path (default /tmp/hidden-tab-loop.json)
  */
 import { chromium, type Page } from '@playwright/test';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { seed, VIEWPORT_WIDTH, VIEWPORT_HEIGHT } from '../smoke/states.ts';
 
 const URL = (process.env.PROBE_URL || 'http://localhost:3014/').replace(/\/$/, '');
@@ -552,11 +566,255 @@ async function runScenes(): Promise<void> {
     }
 }
 
+// ── Interaction mode ───────────────────────────────────────────────────────────────────────────
+/** Everything that says how a pane is drawn: node boxes, connected handles, edge paths, node text. */
+// An import allocates ids `Pointer<ms>_USER_<n>` in the same order every time, but the <ms> part
+// varies, so a string sort orders two imports differently: order by the counter <n>.
+const BY_COUNTER = `const counterOf = (id) => { const m = /_(\\d+)$/.exec(String(id || '')); return m ? Number(m[1]) : Number.MAX_SAFE_INTEGER; };
+  const byCounter = (a, b) => (counterOf(a.id) - counterOf(b.id)) || String(a.id).localeCompare(String(b.id));`;
+
+async function dumpPane(page: Page, modelId: string): Promise<any> {
+    return page.evaluate(`(() => {
+      ${BY_COUNTER}
+      const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"]');
+      if (!pane) return null;
+      const nodes = [...pane.querySelectorAll('.react-flow__node')].map(n => ({
+        id: n.getAttribute('data-id'), transform: n.style.transform, w: n.style.width, h: n.style.height,
+        box: (() => { const r = n.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })(),
+        text: (n.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 80),
+        handles: [...n.querySelectorAll('.react-flow__handle.mm-anchor--connected')].map(h => ({
+          id: h.getAttribute('data-handleid'), type: h.classList.contains('source') ? 'source' : 'target', style: h.getAttribute('style'),
+        })).sort((a, b) => (a.id + a.type).localeCompare(b.id + b.type)),
+      })).sort(byCounter);
+      const edges = [...pane.querySelectorAll('.react-flow__edge')].map(e => ({
+        id: e.getAttribute('data-id') || e.getAttribute('data-testid'),
+        d: [...e.querySelectorAll('path')].map(p => p.getAttribute('d')).filter(Boolean),
+      })).sort(byCounter);
+      return { nodes, edges };
+    })()`);
+}
+
+/** A point that grabs a node itself (away from handles and inputs, not under the toolbar): the
+ *  first node from `index` on, in allocation order, that has one; `exclude` skips a node already used. */
+async function nodeGrabPoint(page: Page, modelId: string, index: number, exclude = ''): Promise<any> {
+    return page.evaluate(`(() => {
+      ${BY_COUNTER}
+      const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"]');
+      const nodes = pane ? [...pane.querySelectorAll('.react-flow__node')].map(n => ({ id: n.getAttribute('data-id'), n })).sort(byCounter).map(x => x.n) : [];
+      for (let i = ${index}; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n.getAttribute('data-id') === ${JSON.stringify(exclude)}) continue;
+        const r = n.getBoundingClientRect();
+        for (const fy of [0.15, 0.25, 0.4, 0.5]) for (const fx of [0.5, 0.35, 0.65]) {
+          const x = r.left + r.width * fx, y = r.top + r.height * fy;
+          const el = document.elementFromPoint(x, y);
+          if (el && n.contains(el) && !el.closest('.react-flow__handle, input, .react-flow__resize-control, button')) return { index: i, id: n.getAttribute('data-id'), x, y, w: r.width, h: r.height };
+        }
+      }
+      return null;
+    })()`);
+}
+
+async function drag(page: Page, from: { x: number; y: number }, dx: number, dy: number) {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 12; i++) { await page.mouse.move(from.x + (dx * i) / 12, from.y + (dy * i) / 12); await page.waitForTimeout(16); }
+    await page.mouse.up();
+}
+
+async function openSceneFile(page: Page, file: string): Promise<{ project: string | null; models: Array<{ id: string; name: string; meta: boolean }> }> {
+    await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(5000);
+    const text = readFileSync(file, 'utf8');
+    const project = await page.evaluate(`(async () => {
+      const api = await import('/src/api/persistance/projects.ts');
+      const count = () => JSON.parse(localStorage.getItem('projects') || '[]').length;
+      const before = count();
+      await api.ProjectsApi.importFromText(${JSON.stringify(text)});
+      for (let i = 0; i < 75 && count() <= before; i++) await new Promise(r => setTimeout(r, 200));
+      const a = JSON.parse(localStorage.getItem('projects') || '[]');
+      return a.length > before ? a[a.length - 1].id : null;
+    })()`) as string | null;
+    if (!project) return { project, models: [] };
+    await page.goto(`${URL}/#/project?id=${project}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(9000);
+    const models: any = await page.evaluate(`(async () => {
+      const j = await import('/src/joiner/index.ts');
+      const pr = j.L.fromPointer(j.DUser.current).project;
+      return [...(pr.metamodels || []).map(m => ({ id: m.id, name: m.name, meta: true })), ...(pr.models || []).filter(m => !m.isMetamodel).map(m => ({ id: m.id, name: m.name, meta: false }))];
+    })()`);
+    for (const m of models) {
+        await page.evaluate(`(async () => { const j = await import('/src/joiner/index.ts'); const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(j.LModel.fromPointer(${JSON.stringify(m.id)})); })()`).catch(() => {});
+        await page.waitForTimeout(5000);
+    }
+    await page.waitForTimeout(3000);
+    return { project, models };
+}
+
+async function runInteract(): Promise<void> {
+    const dir = process.env.LOOP_SCENES || `${process.env.HOME}/jjodel-demo-exports`;
+    const files = (process.env.LOOP_INTERACT_SCENES || 'scene_2_DemoPetri.jjodel,scene_4_DemoFlowB.jjodel').split(',').filter(Boolean);
+    const tag = process.env.LOOP_TAG || 'run';
+    const crops = (process.env.LOOP_CROPS || new globalThis.URL('../smoke/_tmp_hiddenloop_crops/', import.meta.url).pathname).replace(/\/$/, '');
+    mkdirSync(crops, { recursive: true });
+    result.interact = { tag, dir, crops, scenes: {} };
+    for (const f of files) {
+        const scene = f.replace(/\.jjodel$/, '');
+        const { ctx } = await newContext(f);
+        const page: Page = await ctx.newPage();
+        const errs: string[] = [];
+        page.on('pageerror', (e: Error) => errs.push(e.message));
+        const out: any = { steps: {}, notes: {}, samples: {} };
+        result.interact.scenes[scene] = out;
+        const { project, models } = await openSceneFile(page, `${dir}/${f}`);
+        const m2 = models.find((m) => m.meta);
+        const m1 = models.find((m) => !m.meta);
+        check(`${tag} ${scene}: imported with an M2 and an M1`, !!project && !!m2 && !!m1, JSON.stringify(models));
+        if (!m1 || !m2) { await ctx.close(); continue; }
+        out.notes.models = { m2: m2.name, m1: m1.name };
+        const step = async (name: string, modelId: string) => {
+            out.steps[name] = await dumpPane(page, modelId);
+            const d = out.steps[name];
+            note(`${tag} ${scene} ${name}`, d ? `nodes=${d.nodes.length} edges=${d.edges.length}` : 'no pane');
+        };
+        const runM2 = (src: string) => page.evaluate(`(async () => {
+          const svc = await import('/src/jjscript/services/JjScriptService.ts');
+          const out = [];
+          for (const line of ${JSON.stringify(src)}.split('\\n')) { const r = await svc.JjScriptService.execute(line, { level: 'M2', metamodelId: ${JSON.stringify(m2.id)}, metamodelName: ${JSON.stringify(m2.name)} }); out.push(!!r.success); await new Promise(r => setTimeout(r, 800)); }
+          return out;
+        })()`);
+        // 0. At rest, M1 active: dump and crop.
+        await step('rest', m1.id);
+        const png = `${crops}/${tag}_${scene}_${m1.name}.png`;
+        await page.locator(`[role="tabpanel"][aria-labelledby$="-tab-${m1.id}"]`).screenshot({ path: png }).catch((e: any) => { out.notes.cropError = String(e); });
+        try { execFileSync('sips', ['-Z', '600', png, '--out', png.replace(/\.png$/, '_600.png')], { stdio: 'ignore' }); out.notes.crop = png.replace(/\.png$/, '_600.png'); } catch (e) { out.notes.cropError = String(e); }
+        out.samples.rest = await sample(page);
+        // 1. Drag node #1 by (+60, +40) and release.
+        const g1 = await nodeGrabPoint(page, m1.id, 1);
+        out.notes.drag = g1;
+        if (g1) { await drag(page, g1, 60, 40); await page.waitForTimeout(1500); }
+        check(`${tag} ${scene}: drag grabbed a node`, !!g1, JSON.stringify(g1));
+        await step('drag', m1.id);
+        // 2. Resize the dragged node by (+40, +30). Class, object and enum nodes adapt to their
+        //    content and mount no NodeResizer (nodeSizing.ts:12-14), so the probe does what
+        //    NodeResizer does on a gesture: React Flow's triggerNodeChanges with a `dimensions`
+        //    change, resizing true then false, which reaches EditorV2's onNodesChange and
+        //    syncSizeToJjom exactly as a pointer resize would.
+        const before2 = (out.steps.drag?.nodes || []).find((n: any) => n.id === (g1 && g1.id));
+        out.notes.resize = g1 ? await page.evaluate(`(async () => {
+          const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m1.id}"]');
+          const rf = pane && pane.querySelector('.react-flow');
+          const key = rf && Object.keys(rf).find(k => k.startsWith('__reactFiber$'));
+          let f = key && rf[key], store = null;
+          for (let i = 0; f && i < 60 && !store; i++, f = f.return) {
+            const v = f.memoizedProps && f.memoizedProps.value;
+            if (v && typeof v.getState === 'function' && typeof v.getState().triggerNodeChanges === 'function') store = v;
+          }
+          if (!store) return { error: 'no React Flow store' };
+          const id = ${JSON.stringify(g1 ? g1.id : '')};
+          const node = store.getState().nodeLookup.get(id);
+          if (!node) return { error: 'no node ' + id };
+          const w0 = node.measured.width, h0 = node.measured.height;
+          const dims = { width: w0 + 40, height: h0 + 30 };
+          store.getState().triggerNodeChanges([{ id, type: 'dimensions', resizing: true, setAttributes: true, dimensions: dims }]);
+          await new Promise(r => setTimeout(r, 100));
+          store.getState().triggerNodeChanges([{ id, type: 'dimensions', resizing: false, setAttributes: true, dimensions: dims }]);
+          return { from: [w0, h0], to: [dims.width, dims.height] };
+        })()`) : null;
+        await page.waitForTimeout(1500);
+        await step('resize', m1.id);
+        const after2 = (out.steps.resize?.nodes || []).find((n: any) => n.id === (g1 && g1.id));
+        out.notes.resizeBox = [before2 && before2.box, after2 && after2.box];
+        check(`${tag} ${scene}: the resized node took the new size`, !!out.notes.resize && !out.notes.resize.error && !!after2 && !!before2 && after2.box[0] > before2.box[0] && after2.box[1] > before2.box[1], JSON.stringify({ resize: out.notes.resize, box: out.notes.resizeBox }));
+        // 3. Rename another node: double click its header, type, Enter.
+        const g3 = await nodeGrabPoint(page, m1.id, 2, g1 ? g1.id : '');
+        let renamed = false;
+        if (g3) {
+            await page.mouse.dblclick(g3.x, g3.y);
+            await page.waitForTimeout(600);
+            const input = page.locator(`[role="tabpanel"][aria-labelledby$="-tab-${m1.id}"] .react-flow__node[data-id="${g3.id}"] input.mm-node__input`).first();
+            if (await input.count()) { await input.fill('probeRenamed'); await input.press('Enter'); renamed = true; }
+            await page.waitForTimeout(1500);
+        }
+        out.notes.rename = { node: g3 && g3.id, renamed };
+        await step('rename', m1.id);
+        const renamedText = (out.steps.rename?.nodes || []).find((n: any) => n.id === (g3 && g3.id))?.text || '';
+        out.notes.renameStore = await page.evaluate(`(async () => { const j = await import('/src/joiner/index.ts'); const v = j.LPointerTargetable.fromPointer(${JSON.stringify(g3 ? g3.id : '')}); const o = v && v.model; return o ? o.name : null; })()`).catch((e: any) => 'error ' + e);
+        check(`${tag} ${scene}: rename reached the node and the model`, renamed && renamedText.includes('probeRenamed') && out.notes.renameStore === 'probeRenamed', JSON.stringify({ renamed, renamedText, store: out.notes.renameStore }));
+        // 4. M2 tab to the front (M1 hidden), then back; sample each side, then dump M1 again.
+        out.notes.toM2 = await clickTab(page, m2.name);
+        await page.waitForTimeout(2000);
+        out.samples.m1Hidden = await sample(page);
+        out.notes.toM1 = await clickTab(page, m1.name);
+        await page.waitForTimeout(2000);
+        out.samples.m1Back = await sample(page);
+        await step('tabs', m1.id);
+        // 5. On the M2 pane: add a class with one reference to an existing class, then delete it.
+        await clickTab(page, m2.name);
+        await page.waitForTimeout(2000);
+        await step('m2-rest', m2.id);
+        const target: any = await page.evaluate(`(async () => { const j = await import('/src/joiner/index.ts'); const mm = j.LModel.fromPointer(${JSON.stringify(m2.id)}); const c = (mm.classes || [])[0]; return c ? c.name : null; })()`);
+        out.notes.add = await runM2(`create class ProbeTmp\ncreate reference probeRef in ProbeTmp type ${target}`);
+        await page.waitForTimeout(2500);
+        await step('m2-added', m2.id);
+        out.notes.del = await runM2('delete class ProbeTmp');
+        await page.waitForTimeout(2500);
+        await step('m2-deleted', m2.id);
+        const a = out.steps['m2-rest'], b = out.steps['m2-added'], c = out.steps['m2-deleted'];
+        check(`${tag} ${scene}: add drew one more node and one more edge`, !!a && !!b && b.nodes.length === a.nodes.length + 1 && b.edges.length === a.edges.length + 1, JSON.stringify({ rest: a && [a.nodes.length, a.edges.length], added: b && [b.nodes.length, b.edges.length], add: out.notes.add }));
+        check(`${tag} ${scene}: delete restored the pane`, !!a && !!c && JSON.stringify(a.nodes.map((n: any) => [n.transform, n.w, n.h, n.handles])) === JSON.stringify(c.nodes.map((n: any) => [n.transform, n.w, n.h, n.handles])) && JSON.stringify(a.edges.map((e: any) => e.d)) === JSON.stringify(c.edges.map((e: any) => e.d)), JSON.stringify({ deleted: c && [c.nodes.length, c.edges.length], del: out.notes.del }));
+        await clickTab(page, m1.name);
+        await page.waitForTimeout(2000);
+        out.samples.end = await sample(page);
+        const ed = (s: any) => Object.entries(s.editorRenders).map(([k, v]: any) => `${k.split(' ')[1]}=${v.perSec}`).join(' ') || '0';
+        note(`${tag} ${scene} renders/s`, `rest ${ed(out.samples.rest)} | m1 hidden ${ed(out.samples.m1Hidden)} | m1 back ${ed(out.samples.m1Back)} | end ${ed(out.samples.end)}`);
+        out.pageErrors = errs;
+        check(`${tag} ${scene}: no page error`, errs.length === 0, JSON.stringify(errs).slice(0, 300));
+        writeFileSync(OUT, JSON.stringify(result, null, 1));
+        await ctx.close();
+    }
+}
+
+/** Pair two interact runs' dumps by position and print every difference beyond float noise. */
+function runCompare(): void {
+    const [fa, fb] = (process.env.LOOP_COMPARE || '').split(',');
+    const A = JSON.parse(readFileSync(fa, 'utf8')).interact, B = JSON.parse(readFileSync(fb, 'utf8')).interact;
+    const nums = (s: string) => (s.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) || []).map(Number);
+    const shape = (s: string) => s.replace(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g, '#');
+    const TOL = 0.01;
+    for (const scene of Object.keys(A.scenes)) {
+        for (const step of Object.keys(A.scenes[scene].steps)) {
+            const x = A.scenes[scene].steps[step], y = B.scenes[scene]?.steps?.[step];
+            if (!x || !y) { check(`compare ${scene} ${step}: both dumps present`, false, `${!!x} ${!!y}`); continue; }
+            const issues: string[] = [];
+            if (x.nodes.length !== y.nodes.length) issues.push(`nodes ${x.nodes.length}/${y.nodes.length}`);
+            if (x.edges.length !== y.edges.length) issues.push(`edges ${x.edges.length}/${y.edges.length}`);
+            x.nodes.forEach((n: any, i: number) => {
+                const m = y.nodes[i]; if (!m) return;
+                if (n.transform !== m.transform || n.w !== m.w || n.h !== m.h) issues.push(`node #${i} ${n.transform} ${n.w}x${n.h} vs ${m.transform} ${m.w}x${m.h}`);
+                if (JSON.stringify(n.box) !== JSON.stringify(m.box)) issues.push(`node #${i} box ${n.box} vs ${m.box}`);
+                if (n.text !== m.text) issues.push(`node #${i} text «${n.text}» vs «${m.text}»`);
+                if (JSON.stringify(n.handles) !== JSON.stringify(m.handles)) issues.push(`node #${i} handles differ`);
+            });
+            let maxDelta = 0;
+            x.edges.forEach((e: any, i: number) => {
+                const q = y.edges[i]; if (!q) return;
+                if (e.d.length !== q.d.length || e.d.some((s: string, k: number) => shape(s) !== shape(q.d[k]))) { issues.push(`edge #${i} path shape differs: ${JSON.stringify(e.d[e.d.length - 1]).slice(0, 120)} vs ${JSON.stringify(q.d[q.d.length - 1]).slice(0, 120)}`); return; }
+                e.d.forEach((s: string, k: number) => { const u = nums(s), v = nums(q.d[k]); u.forEach((z, j) => { maxDelta = Math.max(maxDelta, Math.abs(z - v[j])); }); });
+            });
+            if (maxDelta > TOL) issues.push(`edge path numbers differ by up to ${maxDelta}`);
+            check(`compare ${scene} ${step}`, issues.length === 0, issues.length ? issues.slice(0, 6).join('; ') : `nodes ${x.nodes.length}, edges ${x.edges.length}, max path delta ${maxDelta}`);
+        }
+    }
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────────────────────
 const browser = await chromium.launch();
 const result: any = { url: URL, sampleMs: SAMPLE_MS, patch: PATCH, variants: {} };
 for (const variant of VARIANTS) {
     if (variant === 'scenes') { await runScenes(); continue; }
+    if (variant === 'interact') { await runInteract(); continue; }
+    if (variant === 'compare') { runCompare(); continue; }
     const { ctx, patched } = await newContext(variant);
     const page = await ctx.newPage();
     const pageErrors: string[] = [];
