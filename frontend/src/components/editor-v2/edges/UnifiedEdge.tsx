@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useSyncExternalStore } from 'react';
 import {
     EdgeLabelRenderer,
     useReactFlow,
@@ -31,6 +31,8 @@ import {
     registerEdgePath,
     unregisterEdgePath,
     getEdgeCrossings,
+    subscribeEdgePaths,
+    getEdgePathsVersion,
     buildFinalPath,
     avoidNodeRects,
     handleCenterOf,
@@ -419,11 +421,15 @@ function UnifiedEdge(props: EdgeProps) {
     // `getNodes()` reads the flow instance's store imperatively (tab-local, always
     // current) — no subscription, so membership is fresh at every recompute without
     // re-rendering this edge on unrelated node changes. Recompute triggers: own
-    // path (spreadPoints) and any edges-array change (allEdges).
+    // path (spreadPoints), any edges-array change (allEdges), and any change of the
+    // path registry: the other edges register in an effect, after this render, so
+    // without the version their new paths reached these crossings only at the next
+    // edges-array change (P-2026-10-02-1450, T9).
+    const edgePathsVersion = useSyncExternalStore(subscribeEdgePaths, getEdgePathsVersion, getEdgePathsVersion);
     const crossings = useMemo(
         () => (isNonOrthogonalIR || isArcIR ? [] : getEdgeCrossings(id, drawnPoints, new Set(getNodes().map(n => n.id)))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, drawnPoints, allEdges, isNonOrthogonalIR, isArcIR]
+        [id, drawnPoints, allEdges, edgePathsVersion, isNonOrthogonalIR, isArcIR]
     );
 
     // ─── Self-loop corner geometry (source === target) ───

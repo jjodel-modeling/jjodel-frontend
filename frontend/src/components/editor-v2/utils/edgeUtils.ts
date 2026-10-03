@@ -1741,6 +1741,59 @@ interface EdgePathEntry {
 /** Module-level registry of computed edge paths for crossing detection. */
 const edgePathRegistry = new Map<string, EdgePathEntry>();
 
+// Version of the registry (P-2026-10-02-1450, T9). A path registers in an effect,
+// after the render in which the other edges computed their crossings from the
+// previous paths: without a signal those crossings stayed stale until the edges array
+// changed again, which the sync loop T9 removed used to do on every frame. The version
+// moves once per burst, in a task of its own, and only when the burst changed the
+// registry: an edge whose effect re-runs on every render unregisters and registers
+// the same path again, and a version moved by each call made the edges re-render each
+// other without end ("Maximum update depth exceeded", measured on two demo scenes).
+let edgePathsVersion = 0;
+const edgePathListeners = new Set<() => void>();
+/** Entries removed in the current burst, as they were: a re-registration with the
+ *  same content cancels the removal. */
+const edgePathsRemoved = new Map<string, EdgePathEntry>();
+let edgePathsChanged = false;
+let edgePathsFlushPending = false;
+
+function sameEdgePathEntry(a: EdgePathEntry, b: EdgePathEntry): boolean {
+    if (a.sourceNode !== b.sourceNode || a.targetNode !== b.targetNode || a.treeGroupId !== b.treeGroupId) return false;
+    if (a.points === b.points) return true;
+    if (a.points.length !== b.points.length) return false;
+    for (let i = 0; i < a.points.length; i++) {
+        if (a.points[i].x !== b.points[i].x || a.points[i].y !== b.points[i].y) return false;
+    }
+    return true;
+}
+
+function flushEdgePaths(): void {
+    edgePathsFlushPending = false;
+    const changed = edgePathsChanged || edgePathsRemoved.size > 0;
+    edgePathsChanged = false;
+    edgePathsRemoved.clear();
+    if (!changed) return;
+    edgePathsVersion++;
+    for (const listener of Array.from(edgePathListeners)) listener();
+}
+
+function scheduleEdgePathsFlush(): void {
+    if (edgePathsFlushPending) return;
+    edgePathsFlushPending = true;
+    setTimeout(flushEdgePaths, 0);
+}
+
+/** Subscribe to changes of the path registry (for `useSyncExternalStore`). */
+export function subscribeEdgePaths(listener: () => void): () => void {
+    edgePathListeners.add(listener);
+    return () => { edgePathListeners.delete(listener); };
+}
+
+/** Current version of the path registry: moves once after each burst that changed a registered path. */
+export function getEdgePathsVersion(): number {
+    return edgePathsVersion;
+}
+
 /** Register an edge's computed path segments for crossing detection by other edges.
  *  @param treeGroupId - Optional group ID; entries with the same group skip crossing detection. */
 export function registerEdgePath(
@@ -1750,12 +1803,23 @@ export function registerEdgePath(
     targetNode: string,
     treeGroupId?: string,
 ): void {
-    edgePathRegistry.set(edgeId, { points, sourceNode, targetNode, treeGroupId });
+    const next = { points, sourceNode, targetNode, treeGroupId };
+    const prev = edgePathRegistry.get(edgeId) ?? edgePathsRemoved.get(edgeId);
+    edgePathRegistry.set(edgeId, next);
+    edgePathsRemoved.delete(edgeId);
+    if (!prev || !sameEdgePathEntry(prev, next)) {
+        edgePathsChanged = true;
+        scheduleEdgePathsFlush();
+    }
 }
 
 /** Unregister an edge's path (call on unmount). */
 export function unregisterEdgePath(edgeId: string): void {
+    const prev = edgePathRegistry.get(edgeId);
+    if (!prev) return;
     edgePathRegistry.delete(edgeId);
+    if (!edgePathsRemoved.has(edgeId)) edgePathsRemoved.set(edgeId, prev);
+    scheduleEdgePathsFlush();
 }
 
 /**
