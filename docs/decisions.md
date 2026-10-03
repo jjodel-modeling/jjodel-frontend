@@ -5066,7 +5066,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Measured: DemoFlowB as Activity (UML) byte-identical to the pre-Q3 baseline without a layout and after Auto layout;
     after Auto layout Petri net (classic) the same size, its places 8 px lower, and Petri net 8 px taller (the label gap read
     from the ink); the four default scenes identical. Commits `2d967f267`, `7d7d8e23d`, `f4d768817`, `5ac537e8e`.
-- **R-VP-58** (2026-10-03, provisional, awaiting Alfonso, evidence: measured, verified: none, reversible: branch).
+- **R-VP-58** (2026-10-03, ratified by Alfonso 2026-10-04, delegated to the chat C-2026-10-03-1610, evidence: measured, verified: none, reversible: branch).
   **The Petri transition bar of both notations and the flowchart Initial disc draw fill and border in the name ink;
   amends R-VP-15 (4) («the bar keeps `#334155`», kept by R-VP-16) and R-VP-24 (3) (the catalogue ink on fill and border).**
   A1 of P-2026-10-03-1920, the chat's GO adopting question 1 as recommended (RC-21, RC-25); Alfonso has not answered. The
@@ -5079,7 +5079,9 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   lists the name ink; measured equal on and off). Saved derived viewpoints keep what they saved (R-VP-25, R-VP-36). No
   key, no `irVersion` bump, no migration. Tests 7 red first; mutation bench 5/5. Prompt P-2026-10-03-1920, commit
   `7bc8a6f3b`.
-- **R-VP-59** (2026-10-03, provisional, awaiting Alfonso, evidence: measured, verified: none, reversible: branch).
+  - Ratified 2026-10-04 by the chat on Alfonso's delegation («decidi tu ma non portare problemi con la demo», 00:05),
+    P-2026-10-04-0010: kept as measured; the lane probe after the A3 revert reads 16.3:1 light, 12.59:1 dark (min).
+- **R-VP-59** (2026-10-03, ratified by Alfonso 2026-10-04, delegated to the chat C-2026-10-03-1610, evidence: measured, verified: none, reversible: branch).
   **An outside label's anchor is a preference: the label takes its declared side when no edge end holds it, else a free
   side, and the toolbar Auto layout reserves the side it will paint on; amends R-VP-53 (the classic transition's name
   above the bar «a constant here»).** A2 of P-2026-10-03-1920, adopted by the chat's GO (RC-21, RC-25). The text of
@@ -5095,7 +5097,10 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     profile turned DOWN, six names on a line or arrowhead before, none after; Petri net's t1, t2 off their lines after its
     layout; classic RIGHT one ELK run, as before. Left: classic t1 at rest crossed by a line passing under it.
   - No persisted key. Tests 10 red first; mutation bench 11/12, the survivor equivalent. Commit `679d68710`.
-- **R-VP-60** (2026-10-03, provisional, awaiting Alfonso, evidence: measured, verified: none, reversible: branch).
+  - Ratified 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010: kept as measured. Without R-VP-60 the
+    ends are counted on the trunk's handles; the lane probe after the A3 revert finds no outside label within 4 px of an
+    arrowhead at rest, after Auto layout, under DOWN (min 17.52 px), as with it.
+- **R-VP-60** (2026-10-03, withdrawn 2026-10-04, after Málaga, evidence: measured, verified: none, reversible: branch).
   **The React Flow handles of an ELK-routed edge sit on its drawn ends (D-B); amends R-VP-49 («the handles keep their
   uniform slots»), the critical-zone lane R-VP-49 deferred to.** A3 of P-2026-10-03-1920, adopted by the chat's GO (RC-21,
   RC-25), RC-30 go-ahead, LIR `docs/lir/lir_2026-10-03_petri_ink_ports.md`. The text of R-VP-49 is not edited. Source: the
@@ -5111,6 +5116,9 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     The drawn ends stay the route's; ELK's raw port moved by the snap is reported, not gated (`keepStraight`).
   - Classic (non-synthetic) edges keep today's handles: `handleAutoLayout` already gives them the route's side.
   - Tests 6 red first; mutation bench 12/12, one killed by the probe. Commit `6756eddd2`.
+  - Withdrawn 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010 (revert `04c13e039`): it touches the
+    handle code in the critical zone for a few pixels after an Auto layout, days before the MODELS demo; it returns after
+    Málaga (2026-10-09) as a lane of its own. R-VP-49 stands: handles as on the trunk (34 of 68 ends off after Auto layout).
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 

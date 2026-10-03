@@ -430,3 +430,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — lane probe on 3080, unattended: 64/64 after the code, the four default panes identical in light and dark (dump 8/8, crops byte for byte 8/8); the chat's visual check is its own
 **Notes**: Glyphs 1.41:1 → 12.59:1 dark. Labels within 4 px of an arrowhead: classic rest 4 → 0, DOWN 3 → 0. Handles off the drawn end along the side: 34/68 → 2 (work->d1, the diamond refit). A1-A3 provisional, awaiting Alfonso. State machine's named Initial keeps the catalogue ink (R-VP-17 (5)). Bench 28/29, survivor equivalent. Gate logs, probe JSON and the bench script under /tmp, outside the tree. Detail: report §10.
 **Prompt document name**: 2026-10-03 19:20
+
+## 2026-10-04 — revert(editor-v2): A3 dropped, handles as on the trunk; R-VP-58 and R-VP-59 ratified (P-2026-10-04-0010)
+**Prompt**: `claude_2026-10-04_0010_prompt_petri_drop_a3.md`: on Alfonso's delegation («decidi tu ma non portare problemi con la demo»), keep A1 and A2 of P-2026-10-03-1920 and drop A3 (`6756eddd2`, R-VP-60) before the MODELS demo; take the trunk, revert, gates, probe, decisions and closure; hard stop, no merge. RC-30 go-ahead; Layer Impact Report in chat.
+**Files touched**: `00de5a681` the trunk taken (17 commits, no code file in common); `04c13e039` `handlePosition.ts`, `DynamicHandles.tsx` (byte-identical to the trunk), `irEdgeViews.ts` (A3 hunks out, A2 hunks kept), `irElkPorts.test.ts` (deleted), `irLabelAnchors.test.ts` (one argument); this commit: `docs/decisions.md` (R-VP-58 to R-VP-60), this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 19:20
+**Causa**: (f)
+**Regressions**: no — on `04c13e039`: typecheck 14, the §17 set; `irLabelAnchors.test.ts` 7/7, the A1 and A2 test files 373/373; build exit 0. Probe 64/64: handles back to the trunk's (34 of 68 ends off after Auto layout, the same ends and maximum, 5 on another side), A1 and A2 as measured with A3. Full vitest re-run once after this commit, in the closing report.
+**Out-of-scope changes**: yes — `irLabelAnchors.test.ts:77`, outside the prompt's DOVE: A2's test passed A3's no-route stub as an 11th argument (TS2554, typecheck 15 without A3); stopped with a question, added by the chat's GO option 1, the argument dropped.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — lane probe on 3080, unattended, 64/64; the four default panes identical to the trunk-code run of P-2026-10-03-1920 (dump 8/8, crops byte for byte 16/16), control with signal (classic Petri and Flowchart crops differ); the chat's visual check is its own
+**Notes**: Causa (c) second: the prompt did not foresee A2's test calling A3's parameter. `git revert --quit` cleared REVERT_HEAD before the stop: bash-guard skips commit checks while it exists, which made 32 bashGuard tests red. The probe needed no change: it asserts nothing on handles. The trunk reference is `probe_before.json` (code of 106aae181); the trunk's code since moved only in `sim/`. LIR file not written: `docs/lir/` outside DOVE.
+**Prompt document name**: 2026-10-04 00:10

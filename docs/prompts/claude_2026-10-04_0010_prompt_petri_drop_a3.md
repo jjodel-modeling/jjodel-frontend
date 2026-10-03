@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-0010
 Chat: C-2026-10-03-1610
 Lane: light-weight full (revert of one commit on a finished branch, gates, probe; no new design). Tier: heavy (RC-32: the revert touches critical-zone files `handlePosition.ts`, `DynamicHandles.tsx`, `viewpoint/ir/`). Model: the default of `.claude/settings.json`, no deviation. Critical-zone go-ahead: RC-30, given by the chat at launch (`--critical-zone-goahead P-2026-10-04-0010`) on Alfonso's «decidi tu ma non portare problemi con la demo» (2026-10-04 00:05); the change only returns those files to their trunk behaviour.
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane petri-ink-ports · trunk taken 00de5a681, revert of A3 04c13e039 (irLabelAnchors.test.ts:77 added by the chat's GO option 1) · non fuso: hard-stop · R-VP-58 and R-VP-59 ratified, R-VP-60 withdrawn until after Málaga · gates: typecheck 14 (the §17 set), build exit 0, vitest full re-run after the commits (closing report) · probe on 3080 64/64: A1 16.3:1 light, 12.59:1 dark; A2 no outside label within 4 px of an arrowhead (rest, Auto layout, DOWN; min 17.52 px); handles 34 of 68 ends off after Auto layout, the trunk's ends and figures; the four default panes identical to the trunk-code run (8/8, crops byte for byte 16/16) · crops in ~/.jjodel-lanes/P-2026-10-04-0010/crops/
 
 Worktree: `~/jjodel-w-petriports`, branch `petri-ink-ports` at `17969f5d7` (closure of P-2026-10-03-1920), `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt, on top of `17969f5d7`); if any differs, stop with `Outcome: blocked`.
 
