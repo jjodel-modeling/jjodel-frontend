@@ -932,7 +932,8 @@ const CLASSIC_BAR_SIZE = { width: PETRI_BAR_SHORT, height: PETRI_BAR_LONG } as c
  *   ink; the initial marking (the Initial marking role) as one to four dots (`dot`, `dots-2..4`, in the
  *   border ink) and as the number from five, 15 px 600 in the ink; nothing at zero or unset.
  * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`, 12 by 56) in the catalogue ink (R-VP-15 (4)), its name
- *   outside to the right, in the label style of C2 (12 px 500, the quiet ink).
+ *   outside above, in the label style of C2 (12 px 500, the quiet ink): the profile runs RIGHT, so the arcs use
+ *   the bar's left and right sides and the name takes a side they leave free (R-VP-53, P-2026-10-03-1415).
  * - An arc: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the open arrowhead (R-VP-25); an inhibitor arc
  *   the same, ending in the hollow circle. A weight above 1 (the Arc weight role) is the arc's label, in
  *   the C2 label style: a second document per arc class, a predicate on the weight and priority 1, so the
@@ -1007,7 +1008,7 @@ export function deriveClassicPetriViewpointIRs(lookup: Lookup, metamodelId: stri
                 defaultSize: { ...CLASSIC_BAR_SIZE },
                 shape: {
                     form: 'bar', fill: ink, border: { color: ink, width: 1, style: 'solid' },
-                    labels: [{ position: 'outside', anchor: 'e', source: NAME_SOURCE(), style: EDGE_LABEL_STYLE() }],
+                    labels: [{ position: 'outside', anchor: 'n', source: NAME_SOURCE(), style: EDGE_LABEL_STYLE() }],
                 },
             };
             out.push({ ...v, ir });

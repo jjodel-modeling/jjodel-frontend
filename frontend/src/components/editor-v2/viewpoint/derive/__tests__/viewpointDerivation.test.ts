@@ -15,6 +15,7 @@
 import { createHash } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
 import { deriveGenericViewpointIRs, deriveViewpointForBinding, deriveViewpointIRs, isDerivableMetamodel, rolesFromTable } from '../viewpointDerivation';
+import { DERIVED_NOTATIONS } from '../notations';
 import type { AnyDerivedView, DerivationRoles, DerivedView } from '../viewpointDerivation';
 import { validateIR } from '../../ir/irValidate';
 import { recognizeSymbol } from '../../ir/symbolRecognition';
@@ -824,7 +825,7 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         });
     });
 
-    it('Transition, as a whole document: an upright bar 12×56 in the catalogue ink, its name outside to the right', () => {
+    it('Transition, as a whole document: an upright bar 12×56 in the catalogue ink, its name outside above (R-VP-53)', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
@@ -833,9 +834,21 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
             shape: {
                 form: 'bar', fill: INK,
                 border: { color: INK, width: 1, style: 'solid' },
-                labels: [{ position: 'outside', anchor: 'e', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
+                labels: [{ position: 'outside', anchor: 'n', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
             },
         });
+    });
+
+    it('the transition name sits on a side no arc uses: the profile runs across the upright bar, the name above it (R-VP-53; mutation: anchor e or w)', () => {
+        const direction = DERIVED_NOTATIONS.find(n => n.id === 'petriClassic')?.layout?.direction;
+        const t = vertex(byClass(views(), 'Transition'));
+        // A flow RIGHT or LEFT enters and leaves the bar by its left and right sides; DOWN or UP by its top and bottom.
+        const arcSides = direction === 'RIGHT' || direction === 'LEFT' ? ['e', 'w'] : ['n', 's'];
+        const anchor = t.shape.labels?.[0]?.anchor;
+        expect(direction).toBe('RIGHT');
+        expect(t.defaultSize!.height).toBeGreaterThan(t.defaultSize!.width!);
+        expect(arcSides).not.toContain(anchor);
+        expect(anchor).toBe('n');
     });
 
     it('Arc: an arc in the ink ending in the open arrowhead; a second document labels a weight above 1', () => {
