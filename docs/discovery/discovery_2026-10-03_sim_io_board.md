@@ -313,3 +313,15 @@ The one visible change is Lane 2's header icon. Lane 1 changes nothing on screen
 ### Questions
 
 1. Should Variant B, the front panel, survive a collapsed panel for presenting? Recommended: no in the first cut. The choice list and the dialog live in the panel's open branch (`SimulationPanel.tsx:937-984`).
+
+---
+
+## Addendum 2026-10-03: Phase 2 Lane 1 (`sim-io-board-model`)
+
+Built in the same session on the chat's GO: `879b591ef` (feat), `f03462c33` (test), `2b3ea44e9` (comment fix), probe `6b2a1f53c`; rows R-SIM-116..121. What the lane found against this report:
+
+1. **§4 and H6, R2.** The report said that with the run's snapshot `stcChecks.checkGuard` adds the reads it can fold. It folds none at the model: its fold binds `self` to the site's pool handle, and the model has none (`guardContext.ts:166`), so with the model as site R2 and R6 never run [R, confirmed by the RC-27 agent]. The call was inert; `boardOutputs.ts` folds the element left of `.[x]` itself, `self` the model root. With a run, `tc.[marked]` is now a compile defect, `'marked' on tc, not a place`; without a run (the editor before Reset) it still fails only when evaluated, as H6 measured [M, unit tests].
+2. **§2, a model made by a transformation.** `ProjectEditor.tsx:1724` writes `_state` only on a model it has just created, so there is no board to lose (RC-27 agent). The sentence of §2 overstated it.
+3. **The undo of the editor's Apply** is one step, and the undo removes the key and redo restores it [M, editor probe]. Probes must raise the app's undo gate first (`U.userHasInteracted` and a document mouseup), as the simulator's walks do; without it the history records nothing.
+4. **Outputs reject NaN and ±Infinity**, which a DEFINE accepts (`derivedEvaluator.ts:534-536`): a DEFINE holding NaN shows as a defect on the board (RC-27 agent). Kept: the board shows values, and NaN is none.
+5. **Demo scenes [M].** On the four exports, configured as the script does and read through the panel's builders at every step (34 rows), the readings before the lane (`bb20f1a12`) and after it (`6b2a1f53c`) are byte-identical JSON. The editor is not in the build (its strings absent from `dist/`).

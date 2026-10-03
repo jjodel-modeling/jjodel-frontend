@@ -289,3 +289,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: Probe on 3079, DemoESM, final run ALL GREEN: ten outputs 5.2 µs a step (press 120 µs), X.[marked] reads under State machine, a sim* key moves runSignature and ioBoard does not, ioBoard survives save, import (event id remapped) and reopen. 50 console errors a run (ecore serialize loop at save), no baseline. Report §0, §8, §10.
 **Prompt document name**: 2026-10-03 18:45
+
+## 2026-10-03 — feat: the I/O board's model and editor, Lane 1 (P-2026-10-03-1845)
+**Prompt**: the chat's GO on `claude_2026-10-03_1845_prompt_sim_io_board_discovery.md`, same session and branch `sim-io-board`: Phase 2 Lane 1 `sim-io-board-model` of the report's §8, decisions 1-6 and question 1 adopted; tests first, mutation bench, harness probe on 3079, demo scenes byte-identical, R-SIM rows; no merge.
+**Files touched**: `879b591ef`: `boardCodec.ts`, `boardOutputs.ts` (new, `model/simulation/`), `sim/simBoard.ts`, `SimBoardEditor.tsx`, `SimBoardEditor.scss` (new), `simRunState.ts`, `simBridge.ts`. `f03462c33`: `boardCodec.test.ts`, `boardOutputs.test.ts`, `simBoard.test.ts` (new), `simBridge.test.ts`. `2b3ea44e9`: `boardOutputs.ts`, a comment. `6b2a1f53c`: `scripts/probe/io-board-lane1.ts`, `io-board-editor-harness.tsx`, two fixtures. This commit: `docs/decisions.md`, the report's addendum, the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7077/7077 in 273 files, the 9 known suites red at import; build exit 0, chunk-size warning only, the editor absent from `dist/`; the four demo scenes' readings byte-identical to the base, 34 rows.
+**Out-of-scope changes**: yes — the eleven code and test files are the GO's DOVE (it counts SimBoardEditor.tsx/.scss as one), the probe its harness probe; beyond its list, the report's addendum; one scratch write outside the worktree, `/tmp/ioboard_msg.txt`, a commit message, deleted at once.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3079, light, 1600×1000, DemoESM through the harness: 12/12, Apply one undo step, signature unchanged; crops light and dark in `~/.jjodel-lanes/P-2026-10-03-1845/`; the chat's visual check pending, RC-23)
+**Notes**: Bench 58/58 (codec 15, outputs 18, resolution 22, seams 3), one survivor killed by a test added. checkGuard folds nothing at the model, so outputs fold their own R2. R-SIM-116 and 118 verified by an RC-27 agent. Six first reds were the fixture's (`initial: ''` on derived and input records). The undo needs `U.userHasInteracted` in a probe. Report addendum.
+**Prompt document name**: 2026-10-03 18:45
