@@ -187,3 +187,29 @@ active log is not touched by these lanes.
 **Smoke visivo**: passato — verifica visiva di Juri sulla lane (2026-10-02, voci 1-6 del rework e 1-6 della navigazione nel dettaglio); sul trunk unito le sonde della lane, non `npm run smoke` (fisso sulla 3000).
 **Notes**: Il worker ha chiuso `blocked` solo per `check:docs` exit 1: stessi 5 errori della baseline del trunk (FAIL B su `docs/claude-code-log.md:245` e `:267`, FAIL D 74 entry su 40). Chiusura scritta a mano dall'orchestratore perché `go` rifiuta un merge bloccato.
 **Prompt document name**: 2026-10-02 21:47
+
+## 2026-10-02 — feat(#168): Jodie parla al fruitore senza strumenti da developer (J7, lane D)
+**Prompt**: `claude_2026-10-02_2216_prompt_168_d_voice.md` (P-2026-10-02-2216) — nello stand-alone Jodie senza modalità di console, senza scheda «Run», senza gergo, senza Quick tip e senza «Source»; invito al provider; developer identico. Fase 1: referto `discovery_2026-10-02_168_d_voice.md` (`bc1d879bf`); GO di Juri del 2026-10-02 con le otto raccomandazioni del §0 adottate e i 9 file di codice confermati (Rule 19).
+**Files touched**: `13ea8c0a5`: `Jodie/consumerVoice.ts` (nuovo), `Jodie/__tests__/consumerVoice.test.ts` (nuovo), `Jodie/Jodie.tsx`, `Jodie/JodieWindow.tsx`, `Jodie/JodieHeader.tsx`, `Jodie/ChatInput.tsx`, `Jodie/ChatMessages.tsx`, `Jodie/MarkdownMessage.tsx`, `NotificationWidget/NotificationWidget.tsx`; commit di chiusura: questa entry e la riga Status. Sonde e fixture `_tmp_168_d_*` non committate.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` output completo **14**, stesso insieme della baseline; build exit 0; vitest 45/45; record developer della sonda di Fase 1 identici byte per byte (`dev`, `dev-noprovider`).
+**Out-of-scope changes**: no — i 9 file di codice confermati al GO; nessun CSS, `types/jodie.ts` intatto.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — verifica visiva di Juri del 2026-10-03 su `13ea8c0a5`, voci 1-7 (vite 3048, fixture `_tmp_168_d_setup.js`); due ritocchi chiesti, corretti da `f4e2254e9`; sonde su 3048: `_tmp_168_d_verify` 31/31, `_tmp_168_d_fixture` 8/8.
+**Notes**: Testi in `consumerVoice.ts`, puro, banco 11/11 mutazioni uccise; banco sui componenti attraverso la sonda 4/4 (detect, Source, tip, selettore). Trovati in Fase 1 e inclusi: il backtick che passava a JjEL e «Test in console mode» sotto le risposte con codice. «Source» sparisce sotto ogni messaggio del fruitore, quindi anche sotto la proposta di C2.
+**Prompt document name**: 2026-10-02 22:16
+
+## 2026-10-03 — fix(#168): il menu dei provider segue le Impostazioni, l'invito è centrato
+**Prompt**: rework di Fase 2 di `P-2026-10-02-2216` dopo la verifica visiva passata di `13ea8c0a5`: due ritocchi chiesti da Juri, il menu dei provider in testata fermo su «Configure a provider» dopo il salvataggio di una chiave con Jodie aperto, e il pulsante «Set up an AI provider» non centrato.
+**Files touched**: `f4e2254e9`: `common/ProviderModelSelector.tsx`, `Jodie/JodieWindow.tsx`, `Jodie/ChatInput.tsx`, `Jodie/ChatMessages.tsx`. Sonda `_tmp_168_d_rework.ts`, non committata.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-02 22:16 (Fase 2, `13ea8c0a5`)
+**Causa**: (d)
+**Regressions**: no — `npx tsc --noEmit` output completo **14**, stesso insieme; build exit 0; vitest 45/45; sonde 11/11 (rework), 31/31, 8/8; record developer identici byte per byte alla Fase 1.
+**Out-of-scope changes**: yes — `ProviderModelSelector.tsx`, decimo file fuori dalla lista del GO, approvato da Juri per questo rework (Rule 19); il difetto valeva anche per il developer.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — verifica visiva di Juri del 2026-10-03 su `f4e2254e9`, le 2 voci del rework (pulsante centrato, menu dei provider che segue le Impostazioni con Jodie aperto; vite 3048); sonda `_tmp_168_d_rework` 11/11 su 3048.
+**Notes**: Misurato: salvare una chiave emette ai-provider-changed (17, uno per tasto) e mai ai-settings-changed, quindi l'ascolto del solo SETTINGS_CHANGED chiesto non bastava (mutazione A). Menu, invito, pallino e pulsante di invio ascoltano anche PROVIDER_CHANGED. Pulsante centrato da un `<div>`, nessuna regola CSS. Banco 3/3.
+**Prompt document name**: 2026-10-02 22:16
