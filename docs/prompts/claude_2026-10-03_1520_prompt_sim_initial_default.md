@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1520
 Chat: C-2026-10-03-1520
 Lane: fast (one pure helper with its tests, the declaration editors that change a domain; visual check by the chat). Tier: light.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane sim-initial-default · 777a5da2f · `defaultInitialOf` and `initialFollowingDomain` in `stateAttributesCodec.ts` (pure, tested), `patchOf` in `SimRolesModal.tsx` uses them (the model's State dialog shares it through `Declarations`; `simBridge.ts` untouched, new rows stay boolean `false`); typecheck 14 (the §17 set), sim and simulation suites 1022/1022, build exit 0, mutation bench 12/12 killed, lane probe on 3075 (light, 1600×1000, DemoESM) 17 PASS 0 FAIL: range 0..100 shows 0, min 5 shows 5, typed 7 kept at min 2, enum A, B shows A, boolean shows false, the model's State dialog follows too; crops `~/.jjodel-lanes/P-2026-10-03-1520/` · verifica visiva della chat in attesa (RC-23) · non fuso
 Worktree: `~/jjodel-w-siminit`, branch `sim-initial-default`, cut by the chat from `alfonso-frontend-jjtl` at `cceec3f05`, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 
 ## COSA
