@@ -186,7 +186,7 @@ describe('the notations offered in slice D', () => {
         expect(DERIVED_NOTATIONS.map(n => [n.id, n.label, n.profile])).toEqual([
             ['generic', 'Generic', null],
             ['stateMachine', 'State machine', 'stateMachine'],
-            ['statechart', 'Statechart (UML)', 'stateMachine'],
+            ['statechart', 'State machine (UML statechart)', 'stateMachine'],
             ['petri', 'Petri net', 'petri'],
             // A2 (P-2026-09-30-1521, R-VP-24): beside Petri net, which stays.
             ['petriClassic', 'Petri net (classic)', 'petri'],

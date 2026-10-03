@@ -91,7 +91,7 @@ export const DERIVED_NOTATIONS: readonly DerivedNotation[] = [
     // P-2026-10-03-1300 (amends R-VP-22): drawn as Statechart (UML) and no longer offered; the id is never renamed (R-B9).
     { id: 'stateMachine', label: 'State machine', profile: 'stateMachine', nodeLabel: 'State', hidden: true },
     // A1 (P-2026-09-30-0355, R-VP-22): beside State machine, on its profile and prefill.
-    { id: 'statechart', label: 'Statechart (UML)', profile: 'stateMachine', nodeLabel: 'State',
+    { id: 'statechart', label: 'State machine (UML statechart)', profile: 'stateMachine', nodeLabel: 'State',
         // Its transitions are arcs between the route's ends: wider edge and node spacing keep neighbouring chords, and
         // the labels at their middles, apart.
         layout: { direction: 'RIGHT', edgeRouting: 'ORTHOGONAL', nodePlacement: 'BRANDES_KOEPF', layerConstraints: { first: ['initial'], last: ['terminal'] }, spacing: { ...COMPACT, node: 80, edgeEdge: 32 } } },
