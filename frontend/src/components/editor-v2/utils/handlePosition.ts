@@ -92,6 +92,14 @@ interface EndpointEdge {
     sourceHandle?: string | null;
     targetHandle?: string | null;
     type?: string | null;
+    /** Read for `irSourcePin` / `irTargetPin` only (P-2026-10-03-1920, D-B): where an ELK route meets the side. */
+    data?: unknown;
+}
+
+/** A pin is a fraction along the side, 0 to 1; anything else is no pin. */
+function pinOf(data: unknown, role: 'source' | 'target'): number | undefined {
+    const v = (data as { irSourcePin?: unknown; irTargetPin?: unknown } | null | undefined)?.[role === 'source' ? 'irSourcePin' : 'irTargetPin'];
+    return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1 ? v : undefined;
 }
 
 /**
@@ -115,6 +123,11 @@ export interface SideEndpoint {
      *  Optional only for backward-compat of the exported interface — always set by
      *  computeSideEndpoints in practice. */
     edgeId?: string;
+    /**
+     * Where the endpoint sits along the side, 0 to 1, when its edge is drawn on an ELK route (P-2026-10-03-1920, D-B):
+     * the route's end, written by the IR synthesis on the edge's data. computeSidePositions puts it there.
+     */
+    pin?: number;
 }
 
 /**
@@ -135,19 +148,19 @@ export function computeSideEndpoints(
     side: Side,
 ): SideEndpoint[] {
     const byKey = new Map<string, SideEndpoint>();
-    const note = (handleId: string, role: 'source' | 'target', type: string | null | undefined, oppositeNodeId: string, edgeId: string | undefined) => {
+    const note = (handleId: string, role: 'source' | 'target', type: string | null | undefined, oppositeNodeId: string, edgeId: string | undefined, pin: number | undefined) => {
         const edgeType: SideEndpoint['edgeType'] = type === 'inheritance' ? 'inheritance' : 'reference';
         const key = `${handleId}:${role}`;
         const existing = byKey.get(key);
-        if (!existing) byKey.set(key, { handleId, role, edgeType, oppositeNodeId, edgeId });
+        if (!existing) byKey.set(key, { handleId, role, edgeType, oppositeNodeId, edgeId, ...(pin !== undefined ? { pin } : {}) });
         else if (edgeType === 'inheritance') existing.edgeType = 'inheritance';
     };
     for (const e of edges) {
         if (e.source === nodeId && e.sourceHandle && getBaseSide(e.sourceHandle) === side) {
-            note(e.sourceHandle, 'source', e.type, e.target, e.id);
+            note(e.sourceHandle, 'source', e.type, e.target, e.id, pinOf(e.data, 'source'));
         }
         if (e.target === nodeId && e.targetHandle && getBaseSide(e.targetHandle) === side) {
-            note(e.targetHandle, 'target', e.type, e.source, e.id);
+            note(e.targetHandle, 'target', e.type, e.source, e.id, pinOf(e.data, 'target'));
         }
     }
     return Array.from(byKey.values());
@@ -246,6 +259,9 @@ export function computeSidePositions(
     // order degrades to byPairStable → bySortKey, unchanged from before.
     const ordered = [...endpoints].sort(byGeometry);
     ordered.forEach((e, k) => result.set(key(e), (k + 1) / (N + 1)));
+    // D-B (P-2026-10-03-1920): an endpoint drawn on an ELK route sits where the route meets the side; every other one
+    // keeps the slot above. After a toolbar Auto layout every routed end of a side is pinned, so they do not meet.
+    for (const e of endpoints) if (e.pin !== undefined) result.set(key(e), e.pin);
 
     return result;
 }
