@@ -91,7 +91,8 @@ export function DeriveViewpointForm(props: DeriveViewpointFormProps): ReactEleme
                         value={notation}
                         onChange={e => onNotation(e.target.value as DerivedNotationId)}
                     >
-                        {DERIVED_NOTATIONS.map(n => <option value={n.id} key={n.id}>{n.label}</option>)}
+                        {/* A hidden notation (notations.ts) is listed only while it is the one showing. */}
+                        {DERIVED_NOTATIONS.filter(n => !n.hidden || n.id === notation).map(n => <option value={n.id} key={n.id}>{n.label}</option>)}
                     </select>
                 </div>
             </div>

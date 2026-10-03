@@ -127,7 +127,8 @@ const DEMOS: [string, () => Fixture, string, DerivedNotationId][] = [
     ['DemoPEST', PEST, 'stateMachine', 'statechart'],
     // A2 (P-2026-09-30-1521, R-VP-24): a stored Petri binding opens on Petri net (classic).
     ['DemoPetri', PETRI, 'petri', 'petriClassic'],
-    ['DemoESM', ESM, 'extendedStateMachine', 'stateMachine'],
+    // P-2026-10-03-1300 (amends R-VP-22): State machine is hidden and drawn as Statechart (UML); the dialog opens on its twin.
+    ['DemoESM', ESM, 'extendedStateMachine', 'statechart'],
     // P-2026-09-30-1552 (R-VP-26): a stored Flowchart binding opens on Activity (UML).
     ['DemoFlowB', FLOWB, 'flowchart', 'activityUml'],
 ];
@@ -321,7 +322,8 @@ describe('initialNotation — the select opens on the stored binding\'s notation
         const smBag = appliedBag(sm, 'stateMachine');
         delete smBag.simProfile;
         sm.lookup[sm.id]._state = smBag;
-        expect(initialNotation(sm.lookup, sm.id, [])).toBe('stateMachine');
+        // A Trigger binding is a state machine, and State machine is hidden: the dialog opens on its twin (P-2026-10-03-1300).
+        expect(initialNotation(sm.lookup, sm.id, [])).toBe('statechart');
 
         const flow = FLOWB();
         const flowBag = appliedBag(flow, 'flowchart');
@@ -343,9 +345,10 @@ describe('initialNotation — the select opens on the stored binding\'s notation
     it('every system profile names one notation', () => {
         const mm = PEST();
         // P-2026-09-30-1552 (R-VP-26): flowchart opens on Activity (UML), stateMachine on Statechart (UML); the others as before.
+        // P-2026-10-03-1300: State machine is hidden, so the four machines that opened on it open on its twin, Statechart (UML).
         const want: Record<string, DerivedNotationId> = {
-            petri: 'petriClassic', flowchart: 'activityUml', stateMachine: 'statechart', extendedStateMachine: 'stateMachine',
-            dfa: 'stateMachine', nfa: 'stateMachine', moore: 'stateMachine', mealy: 'stateMachine',
+            petri: 'petriClassic', flowchart: 'activityUml', stateMachine: 'statechart', extendedStateMachine: 'statechart',
+            dfa: 'statechart', nfa: 'statechart', moore: 'statechart', mealy: 'statechart',
         };
         for (const [profile, notation] of Object.entries(want)) {
             mm.lookup[mm.id]._state = { simProfile: profile, simNode: mm.classId('State') };
@@ -367,7 +370,8 @@ describe('regeneration — the dialog opens on the latest derived viewpoint of t
             derivedFrom: mm.id, derivedNotation: 'stateMachine',
             [roleKey(mm, 'State')]: 'node', [roleKey(mm, 'Initial')]: 'terminal', [roleKey(mm, 'Transition')]: 'transition',
         });
-        expect(initialNotation(mm.lookup, mm.id, ['vp1'])).toBe('stateMachine');
+        // The saved viewpoint names the hidden id; the dialog opens on its twin with the saved table (P-2026-10-03-1300).
+        expect(initialNotation(mm.lookup, mm.id, ['vp1'])).toBe('statechart');
         const got = dialogPrefill(mm.lookup, mm.id, 'stateMachine', ['vp1']);
         expect(byName(mm, got.roles)).toEqual({ Initial: 'terminal', State: 'node', Transition: 'transition' });
         expect(got.from).toBe('derived');
@@ -468,7 +472,7 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
     // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
     const PINNED: Record<string, string> = {
-        DemoPEST: '99e03cfb52856542', DemoPetri: '997f12afe5b58db0', DemoESM: 'e5af5300d2a65474', DemoFlowB: '58aeb562c91a731f',
+        DemoPEST: '500b1001deebfb42', DemoPetri: '997f12afe5b58db0', DemoESM: '13db72e86e2fa96b', DemoFlowB: '58aeb562c91a731f',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -669,10 +673,10 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // each to the digest predicted on 2cde09984's code, before any A2 edit: every closedArrow an openArrow and
     // the provenance hash recomputed.
     const PINNED_D: Record<string, string> = {
-        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '6fb489cf0bf7c6ab', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'e1dcb9c59b5a3f7b',
-        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': '67fe6343eba8001a', 'DemoPetri petri': '8e7711ee80601155', 'DemoPetri flowchart': 'c7f24aeb60cfb60b',
-        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '7f67ea03ad6d5109', 'DemoESM petri': 'ae8b9f79a275c716', 'DemoESM flowchart': '42459bd72a617f2f',
-        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '723e4c4e2883e64b', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '7e7715ad457a678a',
+        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '859ed7219f226f01', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'e1dcb9c59b5a3f7b',
+        'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'b3a4db87af089b89', 'DemoPetri petri': '8e7711ee80601155', 'DemoPetri flowchart': 'c7f24aeb60cfb60b',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '7c9995dcf7935ec6', 'DemoESM petri': 'ae8b9f79a275c716', 'DemoESM flowchart': '42459bd72a617f2f',
+        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': 'c14102114d435a6d', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '7e7715ad457a678a',
     };
 
     it('Generic, State machine, Petri net and Flowchart derive the D tip\'s documents, byte for byte, provenance included', () => {
@@ -702,7 +706,8 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
         // P-2026-09-30-1552 (R-VP-26, amending R-VP-22): State machine's binding opens on Statechart (UML).
         expect(initialNotation(mm.lookup, mm.id, [])).toBe('statechart');
         mm.lookup.vp0 = derivedVp('vp0', { derivedFrom: mm.id, derivedNotation: 'stateMachine' });
-        expect(initialNotation(mm.lookup, mm.id, ['vp0'])).toBe('stateMachine');
+        // A viewpoint saved under the hidden id opens on its twin (P-2026-10-03-1300).
+        expect(initialNotation(mm.lookup, mm.id, ['vp0'])).toBe('statechart');
         mm.lookup.vp1 = derivedVp('vp1', { derivedFrom: mm.id, derivedNotation: 'statechart' });
         expect(initialNotation(mm.lookup, mm.id, ['vp1'])).toBe('statechart');
         const flow = configured(FLOWB, 'flowchart');
@@ -763,7 +768,8 @@ describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
     });
 
     it('the drawing follows the notation picked, not the presence of a Trigger (D, question 1)', () => {
-        // No event anywhere: State machine draws the activity look (a nameless disc for the Initial).
+        // No event anywhere: State machine drew the activity look (a nameless disc for the Initial) until P-2026-10-03-1300;
+        // it is drawn as Statechart (UML) now, whatever the binding says about a Trigger.
         const mm = metamodel('NT', 'NoTrigger', [
             cls('State', { refs: [ref('transitions', 'Transition', { composition: true, upper: -1 })] }),
             cls('Initial', { supers: ['State'] }),
@@ -773,7 +779,7 @@ describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
         const table = { 'NT.State': 'node', 'NT.Initial': 'initial', 'NT.Terminal': 'terminal', 'NT.Transition': 'transition' } as ClassRoles;
         const sm = derivedDocuments(mm.lookup, mm.id, { notation: 'stateMachine', classRoles: table });
         const sc = derivedDocuments(mm.lookup, mm.id, { notation: 'statechart', classRoles: table });
-        expect(irOf(sm, 'Initial').shape.labels).toEqual([]);
+        expect(irOf(sm, 'Initial').shape).toEqual(irOf(sc, 'Initial').shape);
         expect(irOf(sc, 'Initial').shape).toEqual({ ...box, border: { color: INK, width: 1, style: 'solid' }, entry: 'dot' });
         expect(irOf(sc, 'Terminal').shape.border).toEqual({ color: INK, width: 3, style: 'double' });
         // No event: the guard labels the transition (R-VP-17 (2)).
@@ -943,10 +949,10 @@ describe('Petri net (classic) in the list and the dialog (R-VP-24)', () => {
         expect(dialogPrefill(mm.lookup, mm.id, 'petriClassic', ['vp1', 'vp2'])).toEqual({ roles: { [mm.classId('Place')]: 'node' }, from: 'derived' });
     });
 
-    it('DemoPEST opens on Statechart (UML) and DemoFlowB on Activity (UML) (R-VP-26, amending R-VP-22); DemoESM on State machine', () => {
+    it('DemoPEST opens on Statechart (UML) and DemoFlowB on Activity (UML) (R-VP-26, amending R-VP-22); DemoESM too, State machine being hidden', () => {
         expect(initialNotation(configured(PEST, 'stateMachine').lookup, 'PEST', [])).toBe('statechart');
         expect(initialNotation(configured(FLOWB, 'flowchart').lookup, 'FLOWB', [])).toBe('activityUml');
-        expect(initialNotation(configured(ESM, 'extendedStateMachine').lookup, 'ESM', [])).toBe('stateMachine');
+        expect(initialNotation(configured(ESM, 'extendedStateMachine').lookup, 'ESM', [])).toBe('statechart');
     });
 
     it('stores its id as the notation, and stamps every document with it; every document is valid', () => {

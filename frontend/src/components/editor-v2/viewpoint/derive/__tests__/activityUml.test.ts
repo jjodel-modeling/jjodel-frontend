@@ -248,7 +248,7 @@ describe('the preselection on the four demos (R-VP-26)', () => {
             const mm = configured(make, stored);
             return [name, defaultChoice(mm.lookup, mm.id, []).notation];
         }));
-        expect(got).toEqual({ DemoPEST: 'statechart', DemoPetri: 'petriClassic', DemoESM: 'stateMachine', DemoFlowB: 'activityUml' });
+        expect(got).toEqual({ DemoPEST: 'statechart', DemoPetri: 'petriClassic', DemoESM: 'statechart', DemoFlowB: 'activityUml' });
     });
 
     it('the exported demos (empty bags) still open on Generic', () => {
