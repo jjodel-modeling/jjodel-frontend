@@ -472,7 +472,7 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
     // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
     const PINNED: Record<string, string> = {
-        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '264e79d9edff4d44', DemoFlowB: 'a4ad1850b25eaeb2',
+        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '264e79d9edff4d44', DemoFlowB: '0686c16f9969bb93',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -678,7 +678,7 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
         'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '859ed7219f226f01', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
         'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': '1f551e40ba793093', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'd2b745a44e81558d',
         'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '9a9fdc00b24bcb39', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
-        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': 'c97f3bde9a11032f',
+        'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '124d96bbb07f4e44',
     };
 
     it('Generic, State machine, Petri net and Flowchart derive the D tip\'s documents, byte for byte, provenance included', () => {

@@ -390,7 +390,13 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         if (preset) shapeSpec = applyPresetToShape(shapeSpec, preset);
         // The Petri transition keeps the catalogue fill as a `bar`, a fixed small box (R-VP-16).
         if (petriTransition) shapeSpec.form = 'bar';
-        if (bar) shapeSpec.form = 'bar';
+        // Fork and join: the same solid ink bar Activity (UML) draws, 7 px thick (P-2026-10-03-1300), fill and border in the
+        // name ink, size declared below. A bar is a notation glyph, which «Color by metaclass» leaves alone (R-VP-50).
+        if (bar) {
+            shapeSpec.form = 'bar';
+            shapeSpec.fill = NAME_INK;
+            shapeSpec.border = { color: NAME_INK, width: 1, style: 'solid' };
+        }
         // A CSS double border draws two lines from a width of 3 (irTypes.ts).
         if (terminalBox) shapeSpec.border = { color: NAME_INK, width: 3, style: 'double' };
         const form = shapeSpec.form as string;
@@ -424,6 +430,7 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         // named Initial is neither: it keeps its size.
         if (initialDisc) ir.defaultSize = { ...ACTIVITY_INITIAL_SIZE };
         if (bullseye) ir.defaultSize = { ...ACTIVITY_FINAL_SIZE };
+        if (bar) ir.defaultSize = { ...ACTIVITY_BAR_SIZE };
         out.push({ classId: c.id, className: c.name, rule: preset ? `role:${role}` : 'structure:default', ir });
     }
     return out;

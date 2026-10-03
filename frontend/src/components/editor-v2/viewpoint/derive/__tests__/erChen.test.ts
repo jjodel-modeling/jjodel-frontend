@@ -197,7 +197,7 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoESM petri': 'a9967d96094069ab',
         'DemoESM stateMachine': '9a9fdc00b24bcb39',
         'DemoESM statechart': '3066e031283faeb7',
-        'DemoFlowB flowchart': 'c97f3bde9a11032f',
+        'DemoFlowB flowchart': '124d96bbb07f4e44',
         'DemoFlowB flowchartIso': '0f3b13332e902f0f',
         'DemoFlowB generic': '1ebd123804dc75a1',
         'DemoFlowB petri': 'b8415f0e187edacc',

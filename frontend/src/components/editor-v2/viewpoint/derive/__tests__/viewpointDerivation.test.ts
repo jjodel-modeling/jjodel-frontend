@@ -500,8 +500,9 @@ describe('deriveViewpointIRs — forms from the roles, colours from the tokens',
             for (const roles of [null, profile ? boundRoles(mm, profile) : null]) {
                 for (const v of deriveViewpointIRs(mm.lookup, mm.id, roles)) {
                     for (const [path, value] of colours(v.ir)) {
-                        // The Petri bar (R-VP-16) keeps the catalogue ink and matches no preset.
-                        const solid = v.ir.kind === 'vertex' && (vertex(v).shape.form === 'bar'
+                        // The Petri bar (R-VP-16) keeps the catalogue ink and matches no preset. The control-flow bar of
+                        // fork and join is drawn in the name ink token since P-2026-10-03-1300, so it is no solid symbol here.
+                        const solid = v.ir.kind === 'vertex' && ((vertex(v).shape.form === 'bar' && vertex(v).shape.fill === INK)
                             || SOLID_PRESETS.some(p => recognizeSymbol(vertex(v).shape).some(r => r.id === p)));
                         if (path === 'shape.fill' && solid) expect(value).toBe(INK);
                         else expect(value, `${v.className} ${path}`).toMatch(/^var\(--[a-z0-9-]+\)$/);
@@ -1016,10 +1017,11 @@ describe('deriveViewpointIRs — the activity notation with the roles bound (Dem
         expect(recognizeSymbol(v.shape).map(p => p.id)).toContain('uml-final-state');
     });
 
-    it('Fork and Join: nameless bars in the catalogue ink', () => {
+    it('Fork and Join: nameless bars in the name ink, 120 by 7, the bar of Activity (UML) (P-2026-10-03-1300)', () => {
         for (const n of ['Fork', 'Join']) {
             expect(byClass(flow(), n).rule, n).toBe(`role:${n.toLowerCase()}`);
-            expect(vertex(byClass(flow(), n)).shape, n).toEqual({ form: 'bar', fill: INK, border: { color: BORDER, width: 1, style: 'solid' }, labels: [] });
+            expect(vertex(byClass(flow(), n)).shape, n).toEqual({ form: 'bar', fill: NAME_INK, border: { color: NAME_INK, width: 1, style: 'solid' }, labels: [] });
+            expect(vertex(byClass(flow(), n)).defaultSize, n).toEqual({ width: 120, height: 7 });
             expect(vertex(byClass(flow(), n)).fieldCompartments, n).toBeUndefined();
         }
     });
@@ -1749,7 +1751,7 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: 'c03dae1789798ecb', DemoESM: '0908707066b1a90e', DemoFlowB: 'a4ad1850b25eaeb2',
+            DemoPEST: '99e03cfb52856542', DemoPetri: 'c03dae1789798ecb', DemoESM: '0908707066b1a90e', DemoFlowB: '0686c16f9969bb93',
         });
     });
 });
