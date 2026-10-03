@@ -14,7 +14,7 @@
  * `.[x]` that names it directly (an identifier no lambda or quantifier binds) is
  * folded over M with `self` the model root, and must be a model element carrying
  * the attribute, a place for `marked` and `tokens`. `stcChecks.checkGuard` cannot
- * do it here: its fold binds `self` to a transition's handle, which the model has
+ * do it here: its fold binds `self` to the site's pool handle, which the model has
  * not, so it folds nothing at the model (found in Lane 1). Without the snapshot a
  * read that passes every check can still fail when evaluated (`tc.[marked]` on a
  * transition, report H6): that is a reading, not a compile defect.
