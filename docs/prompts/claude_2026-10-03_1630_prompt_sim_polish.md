@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-1630
 Chat: C-2026-10-03-1610
 Lane: full (five small fixes in the simulation UI, tests first, lane probe; visual check by the chat). Tier: heavy (RC-32 default). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane sim-polish · 26e05dba3 · (1) the cut tags are the R-SIM-90 attribute tags (120 px cap), now as wide as their name inside the strip, title on the name; role labels measured, none cut (widest Owned transitions 111 of 160 px) · (2) `assignedRoles`, line `N of M roles assigned` · (3) `stateHeading` in the new `simLabels.ts`: Marking for Petri, Configuration for control flow, panel, chips title, inspector and its σ-alone line · (4) `formPatch` derived or input to stored takes `defaultInitialOf` · (5) `spacePatch` presentation to semantic follows `initialFollowingDomain`; typecheck 14 (the §17 set), sim and simulation suites 1039/1039, build exit 0, mutation bench 22/22 killed; lane probe on 3076, four demo scenes, 1600×1000: dark 106 PASS 0 FAIL, light 105 PASS 1 FAIL (a reducer error at DemoPEST open, the same on HEAD); crops `~/.jjodel-lanes/P-2026-10-03-1630/` · verifica visiva della chat in attesa (RC-23) · non fuso
 
 Worktree: `~/jjodel-w-simpolish`, branch `sim-polish`, cut by the chat from `alfonso-frontend-jjtl` at `d2a1866b6`, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 
