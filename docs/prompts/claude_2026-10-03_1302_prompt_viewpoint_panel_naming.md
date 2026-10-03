@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-10-03-1302
 Chat: C-2026-10-01-1725
 Lane: fast. Tier: light (UI and one util, no critical-zone file). Model: Sonnet 5, declared deviation from RC-16 (peripheral lane, RC-32 light tier).
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane viewpoint-panel-naming · ace72caec · gate verdi · verifica visiva di Alfonso in attesa (RC-23) · non mergiato
 Worktree: `~/jjodel-w-vpname`, branch `viewpoint-panel-naming`, cut from the trunk at `c56f4fc63` (`frontend/node_modules` symlinked, P14).
 
 ## COSA
