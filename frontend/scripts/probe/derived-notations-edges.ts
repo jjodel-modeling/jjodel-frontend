@@ -271,6 +271,24 @@ async function crop(page: Page, m1: string, name: string) {
     return file;
 }
 
+/** A close-up of every entry mark (`.ir-entry-svg`) with its node and the edge leaving it, for the visual check. */
+async function cropEntries(page: Page, m1: string, name: string) {
+    const clips = await page.evaluate((sel: string) => [...document.querySelectorAll(`${sel} .ir-entry-svg`)].map((svg) => {
+        const node = svg.closest('.react-flow__node')!.getBoundingClientRect();
+        const r = svg.getBoundingClientRect();
+        const x0 = Math.min(node.left, r.left) - 16, y0 = Math.min(node.top, r.top) - 16;
+        return { x: x0, y: y0, width: Math.max(node.right, r.right) + 48 - x0, height: Math.max(node.bottom, r.bottom) + 16 - y0 };
+    }), paneSel(m1));
+    const files: string[] = [];
+    for (const [i, clip] of clips.entries()) {
+        const file = `${CROPS}/${name}_entry${i}.png`;
+        await page.screenshot({ path: file, clip });
+        try { execFileSync('sips', ['-Z', '600', file, '--out', file.replace(/\.png$/, '_600.png')], { stdio: 'ignore' }); } catch { /* sips absent */ }
+        files.push(file);
+    }
+    return files;
+}
+
 // ── Analysis (node side, pure) ──────────────────────────────────────────────────────────────────────
 
 type Pt = number[];
@@ -440,6 +458,7 @@ function report(label: string, a: any) {
     meas(`${label} bar ends`, { total: barEnds.length, short: barEnds.filter((x: any) => x.longSide === false).length });
     const diamondEnds = a.edges.flatMap((e: any) => [e.src && { e: e.name, end: 'src', ...e.src }, e.tgt && { e: e.name, end: 'tgt', ...e.tgt }]).filter((x: any) => x && x.form === 'diamond');
     meas(`${label} diamond ends`, diamondEnds.map((x: any) => [x.node, x.e, x.end, x.side, x.at, x.offOutline]));
+    meas(`${label} entry marks`, a.nodes.filter((n: any) => n.entry).map((n: any) => [n.name, n.entry]));
     meas(`${label} nodes`, a.nodes.map((n: any) => [n.name, n.cls, n.form, Math.round(n.x), Math.round(n.y), n.w, n.h, n.rows.length ? n.rows : '']));
     meas(`${label} acceptance`, acceptance(a));
 }
@@ -562,6 +581,7 @@ for (const sc of SCENES) {
         if (restRaw.error) { check(`${sc.key}/${notation}: pane measured`, false, restRaw.error); continue; }
         const rest = analyse(restRaw);
         await crop(page, m1, `dne_${TAG}_${sc.key}_${notation}_rest`);
+        meas(`${sc.key}/${notation} entry crops`, await cropEntries(page, m1, `dne_${TAG}_${sc.key}_${notation}`));
         const wrapped = await installWrapper(page);
         const capBefore = await page.evaluate(() => (window as any).__dneCaps?.length ?? 0);
         const calls = await clickLayout(page, m1);
