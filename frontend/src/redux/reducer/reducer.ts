@@ -502,8 +502,12 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
 
     // destrutturo solo i nodi intermedi e solo la prima volta che li incontro (richiede le azioni ordinate in base al path)
 
+    // The previous action whose copies the next one reuses must be the last one that CHANGED the state: a no-op
+    // returns the state it got and drops its copies, so reusing its path would write into the previous state
+    // (P-2026-10-03-1632: a slot write's no-op `isMirage` made `values.N` land in it, and undo lost the write).
+    let lastApplied: ParsedAction = undefined as any;
     for (let i = 0; i < actions.length; i++) {
-        const prevAction: ParsedAction = actions[i-1];
+        const prevAction: ParsedAction = lastApplied;
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
         // if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
@@ -540,6 +544,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case SetFieldAction.type:
                 let tmp: false | DState = deepCopyButOnlyFollowingPath(newState, action, prevAction, action.value);
                 if (!tmp) return oldState; // rollback due to invalid action in transaction
+                if (tmp !== newState) lastApplied = action;
                 newState = tmp;
                 break;
         }
