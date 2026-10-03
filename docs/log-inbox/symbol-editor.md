@@ -136,3 +136,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-03 16:32
 
 **Ticket** (low, harness): `frontend/scripts/hooks/__tests__/criticalZone.test.ts` reads the process environment, so a lane started with `--critical-zone-goahead` (RC-30) sees 4 tests red in the full suite («kills "bypass not read"…», «kills "deny limited to the six files"…»): measured here, 70/70 with `env -u JJODEL_CRITICAL_ZONE_GOAHEAD`. Fix: clear the variable in the test's `beforeEach`, or pass the env to the hook explicitly.
+
+## 2026-10-03 — merge: undo-inline-edit takes alfonso-frontend-jjtl at 26b62ea01, second take (P-2026-10-03-1632)
+**Prompt**: step 8 of `claude_2026-10-03_1632_prompt_undo_inline_edit.md` (RC-14): the trunk moved after the closure commit `bb7a3f985`, 5 commits (sim-polish: `editor-v2/sim/` code and tests, docs), taken into the lane branch before the hard stop.
+**Files touched**: merge `22a3b33b4`: 11 files from the trunk side (`frontend/src/components/editor-v2/sim/` six code files and two tests, `docs/log-inbox/simulation.md`, two prompts). This commit: this entry, the prompt's Status, report addendum §7.1.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — on `22a3b33b4`: typecheck exit 2, the 14 of §17; vitest 7007 passed, 4 red in `criticalZone.test.ts` only with the go-ahead variable (70/70 without), the 9 known import reds; build exit 0; probe 33/33; four scenes opened clean.
+**Out-of-scope changes**: no — 11 files, above five (RC-11), all from the trunk side; the take is the prompt's step 8.
+**Layer Impact Report**: not-required (no file of the LIR changed on the trunk side)
+**Smoke visivo**: chat, pending: probe 33/33 on 3077 (light) on the merged tree; crops in `~/.jjodel-lanes/P-2026-10-03-1632/crops/` regenerated there.
+**Notes**: Clean merge, no hand resolution. Scenes: three 0 px; DemoFlowB renders in run-to-run variants (870 to 891 px between two runs of the same reverted code), and the fixed shots are byte-identical to reverted ones (`m-after2` = `before`, `after2` = `before2`). Report §7.1.
+**Prompt document name**: 2026-10-03 16:32

@@ -296,3 +296,21 @@ The inbox entry goes at the end of `docs/log-inbox/symbol-editor.md`, where the 
 «append under the ticket» is read as «in the ticket's inbox», and the entry names the ticket. The `log-entry` skill
 says to commit the inbox alone; P13 (RC-17) puts the Status flip and the entry in one closure commit, and the prompt
 asks for that, so this commit follows P13.
+
+### 7.1 Second trunk take (2026-10-03)
+
+The trunk moved after the closure commit `bb7a3f985`, to `26b62ea01` (sim-polish, `editor-v2/sim/`). It was taken in
+`22a3b33b4`, a clean merge, and everything was rerun there [M]:
+- typecheck exit 2, the 14 of §17;
+- vitest 7007 passed and 4 failed in 279 files: the 9 known import reds plus the 4 env-only reds of
+  `criticalZone.test.ts`, 70/70 with `env -u`;
+- build exit 0;
+- probe 33/33, crops regenerated.
+
+The scenes on the merged tree:
+- Pairs `m-before` (fix reverted in flight, asserted) against `m-after` and `m-after2`: DemoPEST, DemoPetri and
+  DemoESM 0 px.
+- DemoFlowB renders in a few variants from run to run: 17, 870, 881 and 891 px between runs, the same box at the
+  top of the canvas, 870 and 881 between two runs of the same reverted code.
+- Byte comparison of the seven DemoFlowB shots (`cmp`): `before` = `m-after2` and `before2` = `after2`. Each variant
+  the fixed reducer draws is byte-identical to one the `d2a1866b6` reducer draws.
