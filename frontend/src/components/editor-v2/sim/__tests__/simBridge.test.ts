@@ -13,7 +13,8 @@
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
-    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputReason,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
+    inputPressTitle, inputReason,
     markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
     pressRandom, pressStep, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchRows,
 } from '../simBridge';
@@ -2818,5 +2819,34 @@ describe('R-SIM-106: the inputs of a step on the trace, the replay, and a press 
             ['A.decision', 'IVAR', null, false], ['B.decision', 'IVAR', null, false], ['D.decision', 'IVAR', true, false], ['S.decision', 'IVAR', null, false],
         ]);
         expect(watchRows(run.net, configAt(run, 1)!.state, configAt(run, 0)!.state, pins, lookup).every(r => r.value === null)).toBe(true);
+    });
+});
+
+describe('the I/O board\'s seams (P-2026-10-03-1845 Lane 1, report §4 and §5)', () => {
+    it('the run carries the snapshot its oracles were built over: frozen, of this model, with its handles (mutant: snapshot not stored)', () => {
+        const run = started(buildLookup(ROLES, TURNSTILE));
+        expect(run.snapshot).toBeDefined();
+        expect(run.snapshot!.modelId).toBe('M');
+        expect(Object.isFrozen(run.snapshot)).toBe(true);
+        expect([...run.snapshot!.handleById.keys()].sort()).toEqual(Object.keys(TURNSTILE).sort());
+    });
+
+    it('one freeze per Reset: the snapshot is the one the builder was called for, not a second one (mutant: a second build)', () => {
+        const spy = spyBuilder();
+        started(buildLookup(ROLES, TURNSTILE), spy.build);
+        expect(spy.calls).toHaveLength(1);
+    });
+
+    it('inputPressTitle: the title of an input that is on, the panel\'s words (mutant: the reason or the asks dropped)', () => {
+        expect(inputPressTitle('Fire Coin')).toBe('Fire Coin');
+        expect(inputPressTitle('Fire Coin', 'Coin: t1 guard false', 'D.decision')).toBe('Fire Coin\nNo candidate. Coin: t1 guard false');
+        expect(inputPressTitle('Step (ε)', undefined, 'D.decision')).toBe('Step (ε)\nAsks: D.decision');
+    });
+
+    it('inputOffTitle: the title of an input that is off says why, the run\'s reason first, its status otherwise (R-SIM-104)', () => {
+        expect(inputOffTitle('Fire Coin', 'Coin: nothing enabled', 'Running')).toBe('Fire Coin\nOff. Coin: nothing enabled');
+        expect(inputOffTitle('Fire Coin', undefined, 'Not started')).toBe('Fire Coin\nOff. Reset starts the run.');
+        expect(inputOffTitle('Fire Coin', undefined, null)).toBe('Fire Coin\nOff. Reset starts the run.');
+        expect(inputOffTitle('Fire Coin', undefined, 'Terminated')).toBe('Fire Coin\nOff. The run is Terminated.');
     });
 });

@@ -276,3 +276,42 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: roles counter 11 of 13 assigned, Configuration on DemoESM and Marking on DemoPetri, attribute tag whole, presentation to semantic initial false; eight gates of the direct worker green (vitest 6996)
 **Notes**: Rollback tag `pre-sim-polish` on `49957d340` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1730/result.json`.
 **Prompt document name**: 2026-10-03 17:30
+
+## 2026-10-03 — discovery: the simulator's I/O board, R-SIM-110..115 (P-2026-10-03-1845)
+**Prompt**: `claude_2026-10-03_1845_prompt_sim_io_board_discovery.md`, heavy tier, read-only on `~/jjodel-w-ioboard`, branch `sim-io-board`: R-SIM-115's eight questions (mount point, persistence key, binding resolution, output evaluation, input machinery reuse, keypad modes, nuXmv mapping, Phase 2 split), a probe where a number decides.
+**Files touched**: probe `ba0668d80`: `frontend/scripts/probe/io-board-outputs.ts`, `frontend/scripts/probe/fixtures/scene_3_DemoESM.jjodel` (byte copy). Report `bf8ed5b78`: `docs/discovery/discovery_2026-10-03_sim_io_board.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (no file under `frontend/src`; check:scripts PASS, typecheck:scripts exit 0, whose scope excludes `probe/`)
+**Out-of-scope changes**: yes — no file outside DOVE, but two scratch writes outside the worktree, `/tmp/io-board-outputs.json` (the probe's first default) and an empty `/tmp/claude-ioboard`, both deleted; the output now goes to the gitignored `frontend/scripts/smoke/`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe on 3079, DemoESM, final run ALL GREEN: ten outputs 5.2 µs a step (press 120 µs), X.[marked] reads under State machine, a sim* key moves runSignature and ioBoard does not, ioBoard survives save, import (event id remapped) and reopen. 50 console errors a run (ecore serialize loop at save), no baseline. Report §0, §8, §10.
+**Prompt document name**: 2026-10-03 18:45
+
+## 2026-10-03 — feat: the I/O board's model and editor, Lane 1 (P-2026-10-03-1845)
+**Prompt**: the chat's GO on `claude_2026-10-03_1845_prompt_sim_io_board_discovery.md`, same session and branch `sim-io-board`: Phase 2 Lane 1 `sim-io-board-model` of the report's §8, decisions 1-6 and question 1 adopted; tests first, mutation bench, harness probe on 3079, demo scenes byte-identical, R-SIM rows; no merge.
+**Files touched**: `879b591ef`: `boardCodec.ts`, `boardOutputs.ts` (new, `model/simulation/`), `sim/simBoard.ts`, `SimBoardEditor.tsx`, `SimBoardEditor.scss` (new), `simRunState.ts`, `simBridge.ts`. `f03462c33`: `boardCodec.test.ts`, `boardOutputs.test.ts`, `simBoard.test.ts` (new), `simBridge.test.ts`. `2b3ea44e9`: `boardOutputs.ts`, a comment. `6b2a1f53c`: `scripts/probe/io-board-lane1.ts`, `io-board-editor-harness.tsx`, two fixtures. This commit: `docs/decisions.md`, the report's addendum, the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7077/7077 in 273 files, the 9 known suites red at import; build exit 0, chunk-size warning only, the editor absent from `dist/`; the four demo scenes' readings byte-identical to the base, 34 rows.
+**Out-of-scope changes**: yes — the eleven code and test files are the GO's DOVE (it counts SimBoardEditor.tsx/.scss as one), the probe its harness probe; beyond its list, the report's addendum; one scratch write outside the worktree, `/tmp/ioboard_msg.txt`, a commit message, deleted at once.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3079, light, 1600×1000, DemoESM through the harness: 12/12, Apply one undo step, signature unchanged; crops light and dark in `~/.jjodel-lanes/P-2026-10-03-1845/`; the chat's visual check pending, RC-23)
+**Notes**: Bench 58/58 (codec 15, outputs 18, resolution 22, seams 3), one survivor killed by a test added. checkGuard folds nothing at the model, so outputs fold their own R2. R-SIM-116 and 118 verified by an RC-27 agent. Six first reds were the fixture's (`initial: ''` on derived and input records). The undo needs `U.userHasInteracted` in a probe. Report addendum.
+**Prompt document name**: 2026-10-03 18:45
+
+## 2026-10-03 — feat: the I/O board's two skins and the panel wiring, Lane 2 (P-2026-10-03-2000)
+**Prompt**: `claude_2026-10-03_2000_prompt_sim_io_board_skins.md`, heavy tier, `~/jjodel-w-ioskins` on `sim-io-board-skins` (from `11b4df6ce`): Lane 2 of the I/O board report §8, the card with Variants A and B, the device faces, the skin prefs, the panel wiring; tests first, mutation bench, lane probe on 3081 light and dark, the four demo scenes against the base; no merge.
+**Files touched**: `8c3a0e561`: `sim/SimBoard.scss`, `sim/simBoardDevices.tsx`, `sim/simBoardFace.ts` (new), `SimulationPanel.tsx`, `simViewerPrefs.ts`, `SimBoardEditor.tsx` (the footer string). `734294d19`: `__tests__/simBoardFace.test.ts` (new), `__tests__/simViewerPrefs.test.ts`. This commit: the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7106/7106 in 283 files, the 9 known suites red at import; build exit 0, chunk-size warning only; the four demo scenes' face, State dialog, inspector (372/400 × 442) and canvas readings equal to the base, 0 differing paths, Step's top 873.
+**Out-of-scope changes**: yes — eight files, all in the DOVE (rule 19), but `SimBoard.tsx` was not created: its card lives in `simBoardDevices.tsx` (Notes). Four scratch writes outside the worktree, three gate outputs and a backup in `/tmp`, moved into the gitignored `frontend/scripts/smoke/` or deleted.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3081, 1600×1000, DemoESM with a board: 50/50, the ten presses from the board equal to the hand run, Variants A and B, «Show bindings» on and off, a viewed step, the two cards never together; crops light and dark in `~/.jjodel-lanes/P-2026-10-03-2000/`; the chat's visual check pending, RC-23)
+**Notes**: `SimBoard.tsx` beside Lane 1's `simBoard.ts` differs only in case: on this disk `./SimBoard` resolves to `simBoard.ts` (tsc TS1149, Vite tries .ts first), so the card is `SimBoard` in `simBoardDevices.tsx`; a rename to a new file waits for Alfonso. Bench 36/36 on `simBoardFace.ts`, prefs 2/2. Held Switch and Slider values and `AskingInputs.given` are unit-tested only: DemoESM has no input. The prompt's 854.5 px is 873 since P-2026-10-03-0120.
+**Prompt document name**: 2026-10-03 20:00
