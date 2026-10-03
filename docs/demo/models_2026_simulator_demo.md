@@ -73,8 +73,10 @@
   per attribute, a range with its domain bar, a derived one in italics with the chip `DEFINE`, a value the last step
   changed as `before → after` in cyan), `MARKING` (one chip per marked place, `p2 ×2` from two tokens; its hover title
   is the marking line `Marking: …` the tables below quote), `EVENTS` (SM, ESM; an event that is off says why in its
-  title), the buttons, and one status line: the pill (`Running`), then `· step n · seed s · <last step>`, cut after
-  the seed at the panel's width, its hover title `Last step: …` as the tables quote it [M, P-2026-10-03-0120]. The
+  title), the buttons, and one status line: the pill (`Running`), then `· step n · <last step>`, the seed in its
+  hover title only, which reads `Last step: …` as the tables quote it [M, P-2026-10-03-0120]. The last step reads whole
+  in Petri's steps 1-3 and Flow B's 1-5 and loses its tail elsewhere: PEST and ESM 23-71 px, Flow B's step 6 17 px
+  (the wider `Terminated` pill), Petri's step 4 behind the Deadlock reason [M]. The
   `Marking:` line and the `Last step:` line are gone. Step's top is 873 from `Not started` to the last step in all
   four scenes, the choice list open or closed; it was 854.5 with `Last step:` under the buttons [M,
   P-2026-10-03-0120]. Play fires one ε step every 500 ms until the run stops; under `Ask` it stops at the first list,
@@ -125,7 +127,7 @@ Count: 7 clicks, no keystroke (canvas 1, toggle 1, chip 1, `Configure…` 1, kin
 
 **Run** (tab `demoSM`). Before Reset: `Not started`, `coin(off)`, `push(off)`, `stop(off)` [M].
 
-Reset: the chip `locked` (`Marking: locked`), the status line `Running · step 0 · seed <n> · Reset`
+Reset: the chip `locked` (`Marking: locked`), the status line `Running · step 0 · Reset`
 (`Last step: Reset`), events `coin`, `push`, `stop` [M, P-2026-10-03-0120]. ▶ stays disabled for
 the whole run: every edge has a trigger [M].
 **Say** "Reset starts the run. The machine is in locked. The inputs are the events of the model."
@@ -192,7 +194,7 @@ option, ⏩ [M, P-2026-09-29-1943].
 
 **Run** (tab `demoNet`). Before Reset: `Not started`, ▶ disabled, no line [M, P-2026-09-27-1738].
 
-Reset: the chips `lock`, `p1 ×2` (`Marking: lock, p1 ×2`), `Running · step 0 · seed <n> · Reset`
+Reset: the chips `lock`, `p1 ×2` (`Marking: lock, p1 ×2`), `Running · step 0 · Reset`
 [M, P-2026-10-03-0120].
 **Say** "Two tokens on p1, one on lock. The panel shows the marking of the run."
 
@@ -200,8 +202,7 @@ On a conflict ▶ opens a list above `MARKING`, headed `NONDETERMINISTIC CHOICE 
 `Choose a transition` under the heading, `Cancel` under the options and `Random` right of it (R-SIM-98 on 3051,
 R-SIM-100 on 3057). While it is open, the status line still shows the previous step and the buttons do not move
 (Step's top 873) [M, P-2026-10-03-0120]. Random fires one option, drawn: `Last step: ε (random): t1 (p1 → p2 ×2)
-fired`, the seed in its title [M]; since P-2026-10-03-0120 that is the status line's title, the seed on the line
-itself [R].
+fired`, the seed in its title [M]; since P-2026-10-03-0120 that is the status line's title [R].
 
 | # | Click | List offered [M] | `Marking:`, the chips' title after [M] | `Last step:`, the status line's title [M] | Say |
 |---|---|---|---|---|---|
@@ -313,7 +314,7 @@ Reset to run again.` [M].
 
 Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M]. On the face since P-2026-10-03-0120:
 `WATCH` `coins` `0` with its domain bar 0..3 empty, `paid` in italics, `DEFINE`, `false`; the chip `locked`; the
-status line `Running · step 0 · seed <n> · Reset` [M, P-2026-10-03-0120]. Declared on the model tab, Reset reads
+status line `Running · step 0 · Reset` [M, P-2026-10-03-0120]. Declared on the model tab, Reset reads
 the same with no defect, and the ten events below give the table line for line, to `Halted: coins of demoESM would be
 4, outside its domain.` with `Marking: locked · coins = 3, paid = true` [M, P-2026-09-29-0110].
 **Say** "Above the marking, the state attributes: σ."
@@ -335,8 +336,8 @@ the same with no defect, and the ten events below give the table line for line, 
   the model-tab route not re-run]. The other eight lines and the final readings are unchanged [M].
 - After step 5 only `push` is on: `coin(off)`, `stop(off)` [M].
 - After step 10 the halt line reads `Halted: coins of demoESM would be 4, outside its domain.` and every event is
-  off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; the status line is cut after the seed, its
-  title is the whole `Last step:` line [M, P-2026-10-03-0120].
+  off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; the status line is cut in the last step (263 px
+  of text in 192), its title is the whole `Last step:` line [M, P-2026-10-03-0120].
 - `WATCH` follows the table: step 2 `coins` `0 → 1` in cyan, its bar a third full; step 4 `paid` `false → true`; step
   5 `coins` `2 → 0` and `paid` `true → false`; step 10 `coins` `3`, the bar full [M, P-2026-10-03-0120].
 - Optional, the run inspector, after step 5: click ⤢ in the panel's header. A card opens right of the panel (400 px,
