@@ -46,7 +46,7 @@ describe('derivedViewpointName', () => {
     it('reads "<metamodel> / <label>" for the notations of the review (killed by a name that ignores the notation)', () => {
         expect(derivedViewpointName('DemoFlowB', 'activityUml', [])).toBe('DemoFlowB / Activity (UML)');
         expect(derivedViewpointName('DemoPetri', 'petriClassic', [])).toBe('DemoPetri / Petri net (classic)');
-        expect(derivedViewpointName('Turnstile', 'statechart', [])).toBe('Turnstile / Statechart (UML)');
+        expect(derivedViewpointName('Turnstile', 'statechart', [])).toBe('Turnstile / State machine (UML statechart)');
     });
 
     it('reads "Generic" for Generic (killed by a missing Generic label)', () => {
