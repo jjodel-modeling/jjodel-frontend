@@ -26,9 +26,9 @@
  *   docs/discovery/discovery_2026-09-29_petri_notation.md §6, R-VP-15, amended
  *   by R-VP-16, P-2026-09-29-1021), under the `petri` shape and on the bound
  *   roles only: a place has the name ink as border and its name centred, in
- *   italic, and draws no token marks; a transition is a `bar` in the catalogue
- *   ink with its name centred in the name ink, drawn over the bar where it does
- *   not fit; an arc and an inhibitor arc are a 1 px line in the same ink, on the
+ *   italic, and draws no token marks; a transition is a flat `bar` in the catalogue
+ *   ink, 56 by 12, with its name outside below it in the label style of C2 (it sat
+ *   centred over the bar until P-2026-10-03-1300); an arc and an inhibitor arc are a 1 px line in the same ink, on the
  *   default (orthogonal) router, both ending in the open arrowhead (R-VP-25,
  *   P-2026-09-30-1521). With no role bound every class keeps the structure's box.
  * - **The control-flow notation** (P-2026-09-29-1331, lane V1 of
@@ -162,11 +162,19 @@ const NO_COMPARTMENT: ReadonlySet<string> = new Set(['circle', 'ellipse', 'diamo
 const SOURCE_NAME = /src|source|from/;
 const TARGET_NAME = /tgt|target|to$|dest|next/;
 
-/** The attribute rows, as `defaultObjectViewIR` writes them; a new object per view, nothing shared. */
-const attributesCompartment = (): FieldCompartmentSpec => ({
+/**
+ * The attribute rows, as `defaultObjectViewIR` writes them; a new object per view, nothing shared. `hidesName`:
+ * the box's title is the name label, which already shows the identity slot, so its row is left out (P-2026-10-03-1300).
+ * The rows are mono 11 px in the quiet ink, as the Generic notation's: before P-2026-10-03-1300 only Generic set that
+ * style, and the rows of every role-keyed notation drew in the sans default.
+ */
+const attributesCompartment = (hidesName = false): FieldCompartmentSpec => ({
     id: 'attributes',
-    source: { from: 'attributes' },
-    rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
+    source: hidesName ? { from: 'attributes', exclude: ['name'] } : { from: 'attributes' },
+    rowFormat: {
+        segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }],
+        style: { fontFamily: 'mono', fontSize: 11, color: QUIET },
+    },
     separator: true,
 });
 
@@ -351,8 +359,11 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
             }
             if (flow && role === 'transition') {
                 // One part only: `event [guard] / action` needs a template the IR lacks (V4).
-                const labelled = boundReference('simTrigger', c.id) ?? boundAttribute('simGuard', c.id);
-                if (labelled) edge.labels = { center: { from: 'path', expr: path(labelled) } };
+                // A guard is code: mono 11.5 px as Activity (UML)'s, in every flow notation (P-2026-10-03-1300); an event
+                // has no style here, and each notation gives it its own.
+                const event = boundReference('simTrigger', c.id);
+                const labelled = event ?? boundAttribute('simGuard', c.id);
+                if (labelled) edge.labels = { center: { from: 'path', expr: path(labelled) }, ...(event ? {} : { style: ACTIVITY_GUARD_STYLE() }) };
                 edge.line = { color: NAME_INK, width: 1 };
             }
             out.push({
@@ -367,7 +378,8 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         const terminalBox = stateMachine && role === 'terminal';
         const bullseye = flow && (role === 'activityFinal' || (role === 'terminal' && !stateMachine));
         const bar = flow && (role === 'fork' || role === 'join');
-        const nameless = bullseye || bar || (flow && role === 'initial' && !stateMachine);
+        const initialDisc = flow && role === 'initial' && !stateMachine;
+        const nameless = bullseye || bar || initialDisc;
         const presetId = terminalBox ? 'uml-state' : role ? ROLE_PRESET[shape][role] : undefined;
         const preset = presetId ? getCatalogPreset(presetId) : undefined;
         const petriPlace = shape === 'petri' && role === 'node';
@@ -378,30 +390,47 @@ export function deriveViewpointIRs(lookup: Lookup, metamodelId: string, roles: D
         if (preset) shapeSpec = applyPresetToShape(shapeSpec, preset);
         // The Petri transition keeps the catalogue fill as a `bar`, a fixed small box (R-VP-16).
         if (petriTransition) shapeSpec.form = 'bar';
-        if (bar) shapeSpec.form = 'bar';
+        // Fork and join: the same solid ink bar Activity (UML) draws, 7 px thick (P-2026-10-03-1300), fill and border in the
+        // name ink, size declared below. A bar is a notation glyph, which «Color by metaclass» leaves alone (R-VP-50).
+        if (bar) {
+            shapeSpec.form = 'bar';
+            shapeSpec.fill = NAME_INK;
+            shapeSpec.border = { color: NAME_INK, width: 1, style: 'solid' };
+        }
         // A CSS double border draws two lines from a width of 3 (irTypes.ts).
         if (terminalBox) shapeSpec.border = { color: NAME_INK, width: 3, style: 'double' };
         const form = shapeSpec.form as string;
         const solid = preset?.values.fill !== undefined;
         const boxed = !NO_COMPARTMENT.has(form) && !solid;
-        // A final state holds no behaviour (UML), so the Terminal box takes no compartment.
-        const compartment = boxed && !terminalBox && attributesOf(c.id).length > 0;
+        // A final state holds no behaviour (UML), so the Terminal box takes no compartment. A box that shows its
+        // name as the title leaves the identity slot's row out, and a box with no other slot has no compartment.
+        const hidesName = !nameless && attributesOf(c.id).some(isIdentity);
+        const compartment = boxed && !terminalBox && attributesOf(c.id).some(a => !(hidesName && isIdentity(a)));
         shapeSpec.labels = [{ position: boxed ? (flow && !compartment ? 'center' : 'top') : 'bottom', source: { from: 'intrinsic', prop: 'name' } }];
         // A label sits inside the shape at every position, so on the ink it takes the
         // text-on-dark token (measured on the lane probe: the default text did not read).
         if (solid) shapeSpec.labels[0].style = { color: INVERSE_TEXT };
-        // The Petri names sit centred on the shape (R-VP-16), in the regular weight the
-        // centre position would otherwise make bold (irStyle.ts). The place's is italic;
-        // the transition's takes the name ink, since it is drawn over the bar and past it.
+        // The Petri place's name sits centred on the shape (R-VP-16), in the regular weight the
+        // centre position would otherwise make bold (irStyle.ts), in italic. The transition's name
+        // sits outside, below the flat bar, in the label style of C2 as Petri net (classic)'s does
+        // (P-2026-10-03-1300): the arcs meet the bar at its ends and its top, so the side below is free.
         if (petriPlace) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { fontStyle: 'italic', fontWeight: 'normal' } };
-        if (petriTransition) shapeSpec.labels[0] = { position: 'center', source: shapeSpec.labels[0].source, style: { color: NAME_INK, fontWeight: 'normal' } };
+        if (petriTransition) shapeSpec.labels[0] = { position: 'outside', anchor: 's', source: shapeSpec.labels[0].source, style: EDGE_LABEL_STYLE() };
         if (nameless) shapeSpec.labels = [];
 
         const ir: VertexViewIR = {
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [c.name], authoringMetaclassPins: pins, exclusive: true, label,
             shape: shapeSpec,
         };
-        if (compartment) ir.fieldCompartments = [attributesCompartment()];
+        if (compartment) ir.fieldCompartments = [attributesCompartment(hidesName)];
+        // The Petri transition is a flat bar, its long axis across (P-2026-10-03-1300).
+        if (petriTransition) ir.defaultSize = { width: PETRI_BAR_LONG, height: PETRI_BAR_SHORT };
+        // The activity's Initial disc and final bull's-eye are drawn at the sizes Activity (UML) declares, 20 and 24 px,
+        // not after their content (64 px); the fill and the marker are untouched (P-2026-10-03-1300). The state machine's
+        // named Initial is neither: it keeps its size.
+        if (initialDisc) ir.defaultSize = { ...ACTIVITY_INITIAL_SIZE };
+        if (bullseye) ir.defaultSize = { ...ACTIVITY_FINAL_SIZE };
+        if (bar) ir.defaultSize = { ...ACTIVITY_BAR_SIZE };
         out.push({ classId: c.id, className: c.name, rule: preset ? `role:${role}` : 'structure:default', ir });
     }
     return out;
@@ -650,7 +679,8 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             const edge: EdgeViewIR['edge'] = {
                 source, target, terminations: { sourceEnd: 'none', targetEnd: 'openArrow' }, line: { color: NAME_INK, width: 1 }, curve: 'arc',
             };
-            if (labels?.center) edge.labels = { center: labels.center, style: EDGE_LABEL_STYLE() };
+            // The label style of C2 for an event; a guard keeps the mono style the base document gives it (P-2026-10-03-1300).
+            if (labels?.center) edge.labels = { center: labels.center, style: labels.style ?? EDGE_LABEL_STYLE() };
             return { ...v, ir: { ...v.ir, edge } };
         }
         if (role !== 'node' && role !== 'initial' && role !== 'terminal') return v;
@@ -668,7 +698,8 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
             irVersion: IR_VERSION, kind: 'vertex', metaclasses: [v.className], authoringMetaclassPins: { [v.className]: v.classId },
             exclusive: true, label: `View for ${v.className}`, shape,
         };
-        if (compartment) ir.fieldCompartments = [attributesCompartment()];
+        // The name label is the title of all three, so the identity slot's row is left out.
+        if (compartment) ir.fieldCompartments = [attributesCompartment(attributesOf(v.classId).some(isIdentity))];
         return { ...v, ir };
     });
 }
@@ -716,7 +747,8 @@ export function deriveIsoFlowchartViewpointIRs(lookup: Lookup, metamodelId: stri
             });
             const guard = typeof guardKey === 'string' ? attributesOf(v.classId).find(a => a.id === guardKey) : undefined;
             const edge = base();
-            if (guard) edge.labels = { template: [{ from: 'path', expr: path(guard.name) }], style: EDGE_LABEL_STYLE() };
+            // The guard is code, mono as Activity (UML)'s (P-2026-10-03-1300); the yes and no words below keep the label style.
+            if (guard) edge.labels = { template: [{ from: 'path', expr: path(guard.name) }], style: ACTIVITY_GUARD_STYLE() };
             out.push({ ...v, ir: { ...v.ir, edge } });
             if (!guard) continue;
             for (const [literal, word] of [['true', 'yes'], ['false', 'no']] as const) {
@@ -880,10 +912,17 @@ const TOKEN_MARKERS: readonly string[] = ['dot', 'dots-2', 'dots-3', 'dots-4'];
 /** The place of mockup A: a circle of radius 22. */
 const CLASSIC_PLACE_SIZE = { width: 44, height: 44 } as const;
 /**
- * The transition of mockup A: an upright bar 10×44. The IR has no orientation, so the bar is upright for
- * every transition; drawn as declared (nodes/nodeSizing.ts `defaultBoxFor`, P-2026-09-30-1720).
+ * The Petri transition bar (P-2026-10-03-1300): 56 long and 12 thick, in both Petri notations, so a later lane
+ * (the bar turned by its neighbours) reuses the two lengths. Petri net draws it flat (`width` the long one),
+ * Petri net (classic) upright.
  */
-const CLASSIC_BAR_SIZE = { width: 10, height: 44 } as const;
+export const PETRI_BAR_LONG = 56;
+export const PETRI_BAR_SHORT = 12;
+/**
+ * The transition of mockup A: an upright bar, 12×56 since P-2026-10-03-1300 (10×44 before). The IR has no orientation,
+ * so the bar is upright for every transition; drawn as declared (nodes/nodeSizing.ts `defaultBoxFor`, P-2026-09-30-1720).
+ */
+const CLASSIC_BAR_SIZE = { width: PETRI_BAR_SHORT, height: PETRI_BAR_LONG } as const;
 
 /**
  * Petri net (classic), slice A2 (R-VP-24, mockup docs/mockups/derived-viewpoints/petri-A.svg): the Petri
@@ -892,7 +931,7 @@ const CLASSIC_BAR_SIZE = { width: 10, height: 44 } as const;
  * - A place (Node): a white circle of 44 px, 1 px in the ink, its name outside below in 13 px 500 in the
  *   ink; the initial marking (the Initial marking role) as one to four dots (`dot`, `dots-2..4`, in the
  *   border ink) and as the number from five, 15 px 600 in the ink; nothing at zero or unset.
- * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`) in the catalogue ink (R-VP-15 (4)), its name
+ * - A transition: an upright `bar` (`CLASSIC_BAR_SIZE`, 12 by 56) in the catalogue ink (R-VP-15 (4)), its name
  *   outside to the right, in the label style of C2 (12 px 500, the quiet ink).
  * - An arc: an arc (`edge.curve: 'arc'`) in the ink, 1 px, the open arrowhead (R-VP-25); an inhibitor arc
  *   the same, ending in the hollow circle. A weight above 1 (the Arc weight role) is the arc's label, in

@@ -155,15 +155,16 @@ function storeWith(mm: Fixture, notation: DerivedNotationId, vpId: string, color
 
 /**
  * Every derived bar and circle of the four demos, measured by the Phase 1 enumeration (report §3), less
- * the two Petri places: the white circle with no marker and the one with the conditional token marker.
+ * the two Petri places: the white circle with no marker and the one with the conditional token marker. State machine
+ * is drawn as Statechart (UML) since P-2026-10-03-1300 and draws no glyph node: its four glyphs are gone from the list.
  */
 const EXPECTED_GLYPHS = [
-    'DemoPEST/stateMachine/Initial', 'DemoPEST/petri/Terminal', 'DemoPEST/petriClassic/Terminal',
+    'DemoPEST/petri/Terminal', 'DemoPEST/petriClassic/Terminal',
     'DemoPEST/flowchart/Initial', 'DemoPEST/flowchart/Terminal', 'DemoPEST/activityUml/Initial', 'DemoPEST/activityUml/Terminal',
     'DemoPetri/petri/Transition', 'DemoPetri/petriClassic/Transition',
-    'DemoESM/stateMachine/Initial', 'DemoESM/petri/Terminal', 'DemoESM/petriClassic/Terminal',
+    'DemoESM/petri/Terminal', 'DemoESM/petriClassic/Terminal',
     'DemoESM/flowchart/Initial', 'DemoESM/flowchart/Terminal', 'DemoESM/activityUml/Initial', 'DemoESM/activityUml/Terminal',
-    'DemoFlowB/stateMachine/InitialNode', 'DemoFlowB/stateMachine/FinalNode', 'DemoFlowB/petri/FinalNode', 'DemoFlowB/petriClassic/FinalNode',
+    'DemoFlowB/petri/FinalNode', 'DemoFlowB/petriClassic/FinalNode',
     'DemoFlowB/flowchart/InitialNode', 'DemoFlowB/flowchart/Fork', 'DemoFlowB/flowchart/Join', 'DemoFlowB/flowchart/FinalNode',
     'DemoFlowB/activityUml/InitialNode', 'DemoFlowB/activityUml/Fork', 'DemoFlowB/activityUml/Join', 'DemoFlowB/activityUml/FinalNode',
 ];
