@@ -518,3 +518,63 @@ their row neighbours on the long sides.
 3. At release only, or live too. Recommended: release, on open, after Auto layout.
 4. The painted thickness as an IR key on the bar document (the box becomes L x L, the ink needs S): a persisted name
    (R-B9). Recommended: `shape.barThickness?: number`, absent = today's bar filling its box.
+
+## 11. Addendum 2026-10-03, Q3 implemented (option B), measured
+
+Commits `2d967f267` (IR: the rule, the turn, the ink, the handles), `7d7d8e23d` (ELK and the route validity),
+`f4d768817` (derive: the square boxes and the thickness), `c8285f5cf` (probe). LIR: `docs/lir/lir_2026-10-03_bar_orientation.md`
+§3. Probe runs `q3_before` (merged tree at `4bd9aa66f`) and `q3_after`, 23/23 each; the four default panes identical at
+0.01 px (DNE_COMPARE 4/4). Unit gates: 3104 passed, the one known import red (UDComparator); typecheck 14 (baseline);
+build green; mutation bench 17/17 killed (listed in the commit messages).
+
+**One deviation from the design text.** The design started from "the declared orientation"; with a square box there is
+none to declare, so a bar with no history takes the dominant axis, a tie upright (LIR §3), and the 1.2 hysteresis
+applies from there. On these scenes the outcome is the one the design table gave for Petri net (classic); for Petri
+net the table's row (all three upright) was taken on another geometry (`d_after`), and on this run's geometry the rule
+gives t1 lying (1.90), t2 upright (1.16), t3 lying (59).
+
+**(a) Ring, hover, hit area, port highlight: on the drawn bar.** The ink is `.ir-node-content`, where the selection ring
+is drawn; the RF node takes no pointer, the ink does.
+
+| Pane (screen px) | box | ink | hit off the ink | hit on the ink | ghosts off the ink | ghost on a long side | ring |
+|---|---|---|---|---|---|---|---|
+| Petri (classic), t1 | 31 x 31 | 31 x 7 (lying) | an edge's reconnect grip, not the node | node | 0 | yes, both | on the ink, wrapper none |
+| Petri net, t1 | 56 x 56 | 56 x 12 (lying) | an edge's reconnect grip, not the node | node | 0 | yes, both | on the ink, wrapper none |
+| Activity, fk | 60 x 60 | 4 x 60 (upright) | the pane | node | 0 | yes, both | on the ink, wrapper none |
+
+**(b) Auto layout spacing: unchanged but for one grid step.** ELK's input is the one of before except the outside-label
+gap of the Petri transitions, 6 to 7 px (now measured from the drawn bar ELK lays out; before from the old box, 1 px
+outside its drawn bar). Activity (UML): every position, route and bend identical, the ink on the old bar's place
+(fork 248,480; join 248,640). Petri net (classic): 556 x 184, bends 2, crossings 0, no label crossed, as before; the bars
+where they were, the four places 8 px lower (one grid step, the gap). Petri net: height 746 to 754 (p3 8 px lower), bends 2, crossings 0, the same two labels
+crossed. No bar turns after Auto layout (ratios 2.13 to 55.7 for the laid-out orientation), so no route is dropped.
+
+**(c) Saved views.** A viewpoint derived before Q3 keeps its old bar (no `barThickness`), unturned, byte-identical
+(irBarInk digest); the turn starts when the viewpoint is derived again.
+
+**(d) Turn, drag, persistence, ends.** At rest: Petri (classic) t1 and t3 lying, t2 upright; Petri net the same; Activity's
+fork and join upright. Drag of `lock` round t3: classic upright, upright mid-drag, lying after release; Petri net lying,
+lying, upright; the box did not move (screen rect equal before and after) and no vertex field changed (stored fields
+equal). Every bar end on a long side of the ink (short ends 0, all panes).
+
+**The cost, at rest (no layout), on the three demo panes.** Measured before and after (crops listed in the closing
+report):
+
+| Pane, no layout | crossings | route through a node | labels crossed | hidden labels |
+|---|---|---|---|---|
+| Petri (classic) | 0 to 1 | 0 to 114 px (p1->t1 through p2, lock->t2 through t1) | 3 to 5 | 0 |
+| Petri net | 0 | 0 to 106 px (p1->t1 through p2, lock->t2 through t1) | 2 to 0 | 0 |
+| Activity (DemoFlowB) | 7 to 11 | 0 to 447 px (d1->fk, fk->right, right->jn through `left`) | 0 | 0 to 1 (the `>= 2` guard under `left`) |
+
+Two causes, both measured. First, the router's one-bend and straight routes do not avoid nodes: an end that now faces
+its row (fork's right side, t1's top) is routed along the row through the node between. Second, the shift the design
+named "once, on adoption": the square box grows from the stored top-left, so on positions laid out for the old bar the
+ink is drawn (L - T) / 2 further along its thin axis, 22 px for the Petri bars and 56.5 px for Activity's; on DemoFlowB
+the fork's centre falls 38 px below its row's. Before Q2 (fork ends on any side, `q2_before`) the same pane measured 4
+crossings and 158 px through nodes.
+
+**Decision for Alfonso (RC-26).** The approved design is in and works as specified; the drawing without a layout is
+worse on DemoFlowB and mixed on the Petri panes, and identical after Auto layout. Options: keep it as is (the demo shows
+DemoFlowB after Auto layout); take Activity's and Flowchart's fork and join out of the turn (their `barThickness` and
+square box dropped in the derive, two constants), which restores the measured pre-Q3 pane; or open the router item
+(node avoidance on the one-bend routes), which is the cause on all three panes and is not in this lane.
