@@ -318,6 +318,12 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             };
         }
 
+        // Q7 (P-2026-10-03-1304): `visible` is a boolean or a Conditional; the render reads anything else as absent.
+        const visible: unknown = (ir as { visible?: unknown }).visible;
+        if (visible !== undefined && typeof visible !== 'boolean' && !isConditionalValue(visible)) {
+            return { ok: false, error: `[ir] visible must be a boolean or a Conditional, or absent for drawn, read ${JSON.stringify(visible)}` };
+        }
+
         // Corner radius (slice 3, D5): numeric guard, same criterion as padding. The render
         // reads an invalid value as absent (authoredCornerRadius), the authoring surface
         // rejects it here through the same function, so the two cannot disagree on what

@@ -538,6 +538,12 @@ export interface VertexViewIR {
     defaultSize?: { width?: number; height?: number };
     shape: ShapeSpec;
     /**
+     * Whether an object this view resolves is drawn (P-2026-10-03-1304, Q7): false hides its node (the containment pass,
+     * irContainment `computeViewHidden`); the object stays in the model and in the tree. A Conditional decides per object.
+     * Absent = drawn. Additive optional field: no irVersion bump, no migration; the spelling is permanent (R-B9).
+     */
+    visible?: Conditional<boolean>;
+    /**
      * Level-2 structure supplement (2026-08-29, Turno 7). Absent = every field at its
      * per-Symbol default. Additive optional field: no irVersion bump, no migration.
      */
@@ -943,6 +949,8 @@ export interface CompiledView {
     padding: PaddingToken;
     /** `shape.entry` (R-VP-22); absent when the view declares none, or a value outside the vocabulary. */
     entry?: EntryMark;
+    /** `visible` of a vertex view (Q7, P-2026-10-03-1304); absent when the view declares none. */
+    visible?: CompiledConditional<boolean>;
     /** Compiled node-level text style; undefined when the view declares none. */
     text?: CompiledTextStyle;
     labels: CompiledLabel[];

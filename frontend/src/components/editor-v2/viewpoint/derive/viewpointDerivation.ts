@@ -671,7 +671,11 @@ const centredName = (fontSize: number, fontWeight: 'semibold' | 'medium'): Label
  */
 export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string, roles: DerivationRoles): DerivedView[] {
     const attributesOf = attributesHeld(lookup, metamodelId);
+    const events = triggerClasses(lookup, metamodelId, roles);
     return deriveViewpointIRs(lookup, metamodelId, roles).map((v): DerivedView => {
+        // P-2026-10-03-1304 (Q7, Alfonso's A3): an event is the label of the transitions it fires, not a box of its own;
+        // the instance stays in the model and in the tree.
+        if (v.ir.kind === 'vertex' && events.has(v.classId)) return { ...v, ir: { ...v.ir, visible: false } };
         const role = roleOfRule(v.rule);
         if (v.ir.kind === 'edge') {
             if (role !== 'transition') return v;
@@ -706,6 +710,25 @@ export function deriveStatechartViewpointIRs(lookup: Lookup, metamodelId: string
         }
         return { ...v, ir };
     });
+}
+
+/** The class the bound Trigger reference is typed by, and its subclasses: the events of a state machine. Empty when unbound. */
+function triggerClasses(lookup: Lookup, metamodelId: string, roles: DerivationRoles): Set<string> {
+    const id = roles.bag.simTrigger;
+    const out = new Set<string>();
+    if (typeof id !== 'string' || id === '') return out;
+    const sketch = sketchOfMetamodel(lookup, metamodelId);
+    const type = sketch.references.find(r => r.id === id)?.type;
+    if (!type) return out;
+    const byId = new Map<string, SketchClass>(sketch.classes.map(c => [c.id, c]));
+    const kindOf = (c: string, seen = new Set<string>()): boolean => {
+        if (c === type) return true;
+        if (seen.has(c)) return false;
+        seen.add(c);
+        return (byId.get(c)?.supers ?? []).some(x => kindOf(x, seen));
+    };
+    for (const c of sketch.classes) if (kindOf(c.id)) out.add(c.id);
+    return out;
 }
 
 /** The name signals of ISO 5807, in their order: the first group a word of the class name is in decides. */

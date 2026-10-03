@@ -193,13 +193,15 @@ describe('A4 leaves every other notation as it was', () => {
     // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
     // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
     // every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
+    // key alone set to undefined every digest below was the one before, measured on the lane.
     const PINNED: Record<string, string> = {
         'DemoESM flowchart': '7e215bccf0811354',
         'DemoESM flowchartIso': '369ee94b0ae560fc',
         'DemoESM generic': 'f5b415d0f3a7512c',
         'DemoESM petri': 'a9967d96094069ab',
-        'DemoESM stateMachine': '0ae5462394ea94b2',
-        'DemoESM statechart': 'ec8ee178256b4803',
+        'DemoESM stateMachine': 'cb9d2babcb9678b2',
+        'DemoESM statechart': '84c50ee0a8af74e5',
         'DemoFlowB flowchart': '124d96bbb07f4e44',
         'DemoFlowB flowchartIso': '0f3b13332e902f0f',
         'DemoFlowB generic': '1ebd123804dc75a1',
@@ -210,8 +212,8 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoPEST flowchartIso': '042f60bcc91d9e26',
         'DemoPEST generic': '6d66ed919a80875b',
         'DemoPEST petri': '0d845ed009b85a0a',
-        'DemoPEST stateMachine': '859ed7219f226f01',
-        'DemoPEST statechart': '6018e49cd52e7a9c',
+        'DemoPEST stateMachine': 'f0ba4426cae26d2f',
+        'DemoPEST statechart': '262e2ac7f3bf9303',
         'DemoPetri flowchart': 'd2b745a44e81558d',
         'DemoPetri flowchartIso': '02ed35a22d5bcf3f',
         'DemoPetri generic': 'dab0b1ddf3a00c38',

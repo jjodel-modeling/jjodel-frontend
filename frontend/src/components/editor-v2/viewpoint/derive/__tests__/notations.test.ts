@@ -474,8 +474,10 @@ describe('derivedDocuments — the role-keyed renderings, unchanged, now applied
     // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
     // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
     // every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
+    // key alone set to undefined every digest below was the one before, measured on the lane.
     const PINNED: Record<string, string> = {
-        DemoPEST: '500b1001deebfb42', DemoPetri: 'c03dae1789798ecb', DemoESM: '35709411d5879c0a', DemoFlowB: '0686c16f9969bb93',
+        DemoPEST: '0e123f6496e06e3a', DemoPetri: 'c03dae1789798ecb', DemoESM: 'a5687622189170a7', DemoFlowB: '0686c16f9969bb93',
     };
 
     it('the dialog\'s default on each configured demo derives the pinned documents, provenance aside', () => {
@@ -680,10 +682,12 @@ describe('A1 and A3 leave the notations of slice D as they were', () => {
     // P-2026-10-03-1304 (Q9a): the Statechart (UML) documents that keep a compartment (and State machine, drawn as
     // Statechart since P-2026-10-03-1300) carry structure.emptyBehavior 'hide'; with the key alone set to undefined
     // every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q7): the Event document of Statechart (UML) and State machine carries visible: false; with the
+    // key alone set to undefined every digest below was the one before, measured on the lane.
     const PINNED_D: Record<string, string> = {
-        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': '859ed7219f226f01', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
+        'DemoPEST generic': '6d66ed919a80875b', 'DemoPEST stateMachine': 'f0ba4426cae26d2f', 'DemoPEST petri': '0d845ed009b85a0a', 'DemoPEST flowchart': 'd2ba7ef28c065754',
         'DemoPetri generic': 'dab0b1ddf3a00c38', 'DemoPetri stateMachine': 'fcc0009cc695e6b4', 'DemoPetri petri': '42781fdee36ad040', 'DemoPetri flowchart': 'd2b745a44e81558d',
-        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': '0ae5462394ea94b2', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
+        'DemoESM generic': 'f5b415d0f3a7512c', 'DemoESM stateMachine': 'cb9d2babcb9678b2', 'DemoESM petri': 'a9967d96094069ab', 'DemoESM flowchart': '7e215bccf0811354',
         'DemoFlowB generic': '1ebd123804dc75a1', 'DemoFlowB stateMachine': '404822a92420400a', 'DemoFlowB petri': 'b8415f0e187edacc', 'DemoFlowB flowchart': '124d96bbb07f4e44',
     };
 
@@ -800,6 +804,27 @@ describe('Statechart (UML) — A1 on DemoPEST, the turnstile', () => {
         expect(irOf(esm, 'State').fieldCompartments.map((c: any) => c.source)).toEqual([{ from: 'attributes' }]);
         expect(irOf(esm, 'Initial').shape.entry).toBe('dot');
         expect(irOf(esm, 'Terminal').fieldCompartments).toBeUndefined();
+    });
+
+    it('the class the Trigger is typed by is not drawn; nothing else changes visibility (P-2026-10-03-1304, Q7)', () => {
+        for (const [make, stored] of [[PEST, 'stateMachine'], [ESM, 'extendedStateMachine']] as const) {
+            const views = derivedWith(make, stored, 'statechart').views;
+            expect(irOf(views, 'Event').visible, stored).toBe(false);
+            for (const name of ['State', 'Initial', 'Terminal']) expect(irOf(views, name).visible, name).toBeUndefined();
+            // State machine is drawn as Statechart (UML) since P-2026-10-03-1300: the same.
+            expect(irOf(derivedWith(make, stored, 'stateMachine').views, 'Event').visible).toBe(false);
+        }
+        // Generic draws every class.
+        expect(derivedWith(PEST, 'stateMachine', 'generic').views.some((v: any) => 'visible' in v.ir)).toBe(false);
+        // A subclass of the event class is an event too.
+        const PEST_SUB = () => metamodel('PESTS', 'DemoPEST', [
+            cls('State', { refs: [ref('transitions', 'Transition', { composition: true, upper: -1 })] }),
+            cls('Initial', { supers: ['State'] }), cls('Terminal', { supers: ['State'] }),
+            cls('Transition', { refs: [ref('nextState', 'State'), ref('event', 'Event')] }),
+            cls('Event'), cls('TimeEvent', { supers: ['Event'] }),
+        ]);
+        const sub = derivedWith(PEST_SUB, 'stateMachine', 'statechart').views;
+        expect([irOf(sub, 'Event').visible, irOf(sub, 'TimeEvent').visible]).toEqual([false, false]);
     });
 
     it('a state with a compartment hides the rows with no value; one without carries no structure (P-2026-10-03-1304, Q9a)', () => {
