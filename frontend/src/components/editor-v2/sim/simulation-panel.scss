@@ -149,6 +149,38 @@
         color: var(--color-text-primary);
     }
 
+    // The run inspector's button (R-SIM-105), beside Collapse and in its vocabulary; pressed while the card shows.
+    &__expand {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &:hover,
+        &[aria-pressed="true"] {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 1px;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
     &__collapse {
         display: inline-flex;
         align-items: center;
@@ -579,17 +611,171 @@
         height: 3em;
     }
 
+    // TODO: cleanup — unused since the marking line and the Output line became the Marking chips and a Watch row
+    // (P-2026-10-03-0120, R-SIM-104).
     // The run's marking and σ (R-SIM-82): the line the audience reads, in the primary text token.
     &__hint--marking {
         color: var(--color-text-primary);
+    }
+
+    // -- open: the state above the buttons (M1, R-SIM-104) ------------------------
+    // Watch: one row per pinned attribute, one line each whatever the value, so a step changes no height.
+    &__watch {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 0 0 8px;
+    }
+
+    &__watch-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 20px;
+        min-width: 0;
+        font-size: 11px;
+    }
+
+    &__watch-name {
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        // A DEFINE is never assigned: its name in italics (R-SIM-102). The italic leans past the advance width and
+        // the clip cut the ascender of the last letter (`paid` painted `paiɑ`, lane probe crop): room on the right.
+        &--define {
+            padding-right: 0.2em;
+            font-style: italic;
+        }
+    }
+
+    // A pinned presentation attribute: node's pink (R-SIM-102).
+    &__watch-row--presentation &__watch-name {
+        color: var(--color-opt-4-fg);
+    }
+
+    // A range's domain bar: the value's place between min and max; out of the domain in the error token.
+    &__watch-bar {
+        position: relative;
+        flex: 0 0 48px;
+        height: 4px;
+        overflow: hidden;
+        border-radius: 2px;
+        background: var(--color-border-primary);
+
+        &--out {
+            background: var(--color-error);
+        }
+    }
+
+    &__watch-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        background: var(--color-accent);
+    }
+
+    &__watch-value {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin-left: auto;
+        padding: 0 4px;
+        overflow: hidden;
+        border-radius: 3px;
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-variant-numeric: tabular-nums;
+
+        // Changed by the last step (R-SIM-102): the run's cyan, `before → after`.
+        &--changed {
+            background: var(--color-sim-sigma-bg);
+            color: var(--color-sim-sigma-fg);
+            box-shadow: inset 0 0 0 1px var(--color-sim-sigma-border);
+        }
+    }
+
+    // Marking: one chip per marked place, `×n` from two tokens; the marking line is the title.
+    &__chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 0 0 8px;
+    }
+
+    &__marking-chip {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--color-sim-token-bg);
+        color: var(--color-sim-token-fg);
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+
+        &--empty {
+            border: 1px solid var(--color-sim-token-empty-border);
+            background: var(--color-sim-token-empty-bg);
+            color: var(--color-sim-token-empty-fg);
+        }
+    }
+
+    // The input chip of an event whose press asks an input (R-SIM-104): the IVAR kind, at the event's size.
+    &__event-chip {
+        height: 16px;
+        margin-left: 2px;
     }
 
     &__status {
         display: flex;
         align-items: center;
         gap: 8px;
+        height: 20px;
         padding-top: 8px;
         border-top: 1px solid var(--color-border-secondary);
+        // The pill's 20 px, under the padding and the border: one line whatever it carries (R-SIM-104).
+        box-sizing: content-box;
+    }
+
+    // The status pill (R-SIM-104): the dot and the status word, one shape, never shrunk.
+    &__status-pill {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 6px;
+        height: 20px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--color-bg-tertiary);
+        white-space: nowrap;
+    }
+
+    // `step n · seed s · last step`, or a refused Reset, or the interruption, in the same place (R-SIM-66, R-SIM-104).
+    &__status-line {
+        flex: 1 1 0;
+        min-width: 48px;
+        overflow: hidden;
+        font-size: 11px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        &--error {
+            color: var(--color-error-text);
+        }
+
+        &--warning {
+            color: var(--color-warning-text);
+        }
     }
 
     &__status-text {
@@ -615,9 +801,10 @@
         }
     }
 
-    // The reason after the status, on the row's one line; the full text is the row's `title`.
+    // The reason after the status, on the row's one line; the full text is the row's `title`. It shares the line
+    // with the status line since R-SIM-104: it takes its own width first, and the line what is left.
     &__status-reason {
-        flex: 1;
+        flex: 0 1 auto;
         min-width: 0;
         font-size: 11px;
         color: var(--color-text-tertiary);
@@ -968,6 +1155,63 @@
         &--terminated { background: #22c55e; }
         &--deadlock { background: #f59e0b; }
         &--halted { background: var(--color-error); }
+    }
+}
+
+// The visual key of the run's state (R-SIM-102, P-2026-10-03-0120), shared by the panel, the run inspector
+// (SimInspector.tsx) and the canvas layer (SimCanvasLayer.tsx), all mounted by the panel, so this sheet is loaded with
+// them. The kind chip names an attribute as nuXmv does, `VAR`, `DEFINE`, `IVAR`, as the dialogs' chip
+// (SimRolesModal.scss `__decl-kind`); the glyph is σ's solid slate, or node's viewpoint pink, dashed. Tokens only:
+// `--color-accent` is slate-700 in light and slate-400 in dark, `--color-text-inverse` the text on it in both.
+.sim-state-chip {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 16px;
+    padding: 0 4px;
+    border: 1px solid var(--color-border-primary);
+    border-radius: 3px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: 0.02em;
+
+    &--presentation {
+        border: 1px dashed var(--color-opt-4-fg);
+        background: var(--color-opt-4-bg);
+        color: var(--color-opt-4-fg);
+    }
+}
+
+.sim-state-glyph {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border: 1px solid var(--color-accent);
+    border-radius: 4px;
+    background: var(--color-accent);
+    color: var(--color-text-inverse);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+
+    &--presentation {
+        border-style: dashed;
+        border-color: var(--color-opt-4-fg);
+        background: var(--color-opt-4-bg);
+        color: var(--color-opt-4-fg);
     }
 }
 

@@ -19,12 +19,23 @@
  *   (R-SIM-1). The simulation NEVER writes to the model nor to any bag (R-SIM-6,
  *   prototype invariant). A press that reads an input opens the input dialog
  *   (SimInputDialog.tsx, R-SIM-88), portaled: nothing in the panel moves.
- *   «Data…» opens the model's own data dialog (SimDataModal.tsx, R-SIM-94): the
- *   globals of the model in its bag's `simStateAttributes`, authoring as the M2
- *   face is, never the run; the undeclared globals of the Reset line lead to it.
+ *   «State…» (the label of R-SIM-103; the entry of R-SIM-94) opens the model's
+ *   own data dialog (SimDataModal.tsx): the globals of the model in its bag's
+ *   `simStateAttributes`, authoring as the M2 face is, never the run; the
+ *   undeclared globals of the Reset line lead to it.
  *   The Choices row sets the model's run policy (R-SIM-101): Ask opens an ε
  *   list, Random draws it; Play, between Step and Stop, presses ε every 500 ms
  *   on a timer that reads the store at each tick (simBridge.ts `playPress`).
+ *
+ * The M1 face shows state, not a line (R-SIM-104, P-2026-10-03-0120): above the
+ * transport row, from the top, «Watch» (the pinned attributes, `watchRows`),
+ * «Marking» (one chip per marked place, `markingChips`) and «Events»; under it
+ * one status line (`statusLine`). The face reads the live run; the builders are
+ * simBridge.ts's, the pins simViewerPrefs.ts's. The expand button of the header
+ * opens the run inspector (SimInspector.tsx, R-SIM-105, R-SIM-106), a card beside
+ * the panel; while a run exists the panel also mounts the canvas layer
+ * (SimCanvasLayer.tsx, R-SIM-107, R-SIM-109). Both are rendered here, siblings of
+ * the panel in the editor, so they hide with its tab as the panel does.
  *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
@@ -40,18 +51,19 @@ import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useRef, useSta
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
-import { getSimPolicy, getSimRun, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending } from './simRunState';
+import { configAt, getSimPolicy, getSimRun, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView } from './simRunState';
 import type { SimChoices } from './simRunState';
+import { getSimViewerPrefs, useSimViewerPrefsVersion } from './simViewerPrefs';
 import {
     PANEL_PROFILE_IDS, PROFILE_KEY, ROLE_SPECS, STATE_ATTRIBUTES_SPEC, boundProposalBag, boundProposalInputs, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles,
     profileBindings, profilePatch, profileSummary, profileSummaryText, staleEventWarning, storedProfile,
 } from './simRoleStatus';
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputReason, makeNetModelView,
-    markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep, runSignature, runStatus, startRun, stopReason,
-    undeclaredGlobals,
+    markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep, runSignature, runStatus, startRun,
+    statusLine, stopReason, undeclaredGlobals, watchRows,
 } from './simBridge';
-import type { InputLabel, InputPress, InputValue, StopReason } from './simBridge';
+import type { InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
 import { sketchOfMetamodel } from './metamodelSketch';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
@@ -69,6 +81,8 @@ import type { RoleKey, Roles } from './simRoleStatus';
 import { SimRolesModal } from './SimRolesModal';
 import { SimInputDialog } from './SimInputDialog';
 import { SimDataModal } from './SimDataModal';
+import { SimInspector } from './SimInspector';
+import { SimCanvasLayer } from './SimCanvasLayer';
 import './simulation-panel.scss';
 
 // Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
@@ -264,6 +278,11 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // The steps of the current Play press: written by its timer only, never read by a render.
     const playSteps = useRef(0);
     useEffect(() => { setPlaying(null); setPlayNote(null); setKDraft(null); }, [modelid]);
+    // R-SIM-105: the run inspector, opened by the header's expand button.
+    const [inspectorOpen, setInspectorOpen] = useState(false);
+    useEffect(() => { setInspectorOpen(false); }, [modelid]);
+    // R-SIM-104: the Watch rows read the pins, a viewer preference with its own channel, never the 'mark' one.
+    const prefsVersion = useSimViewerPrefsVersion();
 
     const roles: Roles = useMemo(() => {
         try { return JSON.parse(roleSig) as Roles; } catch { return {}; }
@@ -402,8 +421,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             return {
                 status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as { line: string; title: string } | null,
                 reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(),
-                marking: null as { line: string; title: string } | null,
+                watch: [] as SimWatchRow[], chips: [] as SimMarkingChip[], markingTitle: null as string | null,
                 accepting: null as 'accepting' | null, output: null as { line: string; title: string } | null,
+                step: 0, seed: undefined as number | undefined,
             };
         }
         // A run waiting for an input is Running, not Deadlock (R-SIM-88).
@@ -418,7 +438,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         // R-SIM-90: every Guard attribute, decoded from the bag's key.
         const guards = roleValues(roles.simGuard);
         if (status === 'Running') {
-            for (const e of [...(inputs.epsilon ? [null] : []), ...inputs.events]) {
+            // R-SIM-104: an event that is off says why in its title too, so every event is asked, not only the enabled ones.
+            for (const e of [...(inputs.epsilon ? [null] : []), ...events.map(x => x.id)]) {
                 const why = inputReason(r, e, lookup, label, guards);
                 if (why) noCandidate.set(e, why.full);
                 const read = inputAsks(r, e);
@@ -427,6 +448,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         }
         // The halt names elements, never ids; the action that stopped the run is in its title only (R-SIM-62, R-SIM-70).
         const features = { actions: roleValues(roles.simAction), entries: roleValues(roles.simEntry), exits: roleValues(roles.simExit) };
+        // R-SIM-104: the face reads the live run; the changes are the last step's, against the σ before it.
+        const step = r.trace?.length ?? 0;
+        const prev = step > 0 ? configAt(r, step - 1)?.state ?? null : null;
         return {
             status,
             inputs,
@@ -434,14 +458,19 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             reason: status === 'Deadlock' ? stopReason(r, lookup, label, guards) : null,
             noCandidate,
             asks,
-            // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3).
-            marking: markingLine(r.config.state, r.net, lookup),
-            // R-SIM-91, R-SIM-92: the accepting mark of the status row, and Moore's line, there from Reset to Stop or never.
+            // The run's σ for the audience, from Reset to Stop; a halt keeps the σ it halted on (R-SIM-82, G3), as rows
+            // and chips (R-SIM-104); the marking line stays the title of the chips, so its readers change a selector only.
+            watch: watchRows(r.net, r.config.state, prev, getSimViewerPrefs(modelid).pins, lookup, step > 0 ? r.trace?.[step - 1]?.inputs ?? [] : []),
+            chips: markingChips(r.config.state, lookup),
+            markingTitle: markingLine(r.config.state, r.net, lookup).title,
+            // R-SIM-91, R-SIM-92: the accepting mark of the status row, and Moore's output, a Watch row from Reset to Stop or never.
             accepting: acceptingMark(r.net, r.config.state),
             output: outputLine(r.config.state, r.net, lookup),
+            step,
+            seed: r.seed,
         };
-        // tick is the real input of this memo: the run changes only through this panel.
-    }, [isModelMode, rolesComplete, modelid, tick, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit]);
+        // tick is the real input of this memo: the run changes only through this panel; prefsVersion re-reads the pins.
+    }, [isModelMode, rolesComplete, modelid, tick, prefsVersion, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit]);
 
     const onReset = useCallback((): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
@@ -648,39 +677,73 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         const asks = view?.asks.get(event);
         return why ? `${base}\nNo candidate. ${why}` : asks ? `${base}\nAsks: ${asks}` : base;
     };
+    /** An event button that is off says why in its title (R-SIM-104): the run's reason while it runs, its status otherwise. */
+    const offTitle = (base: string, event: string): string => {
+        const why = view?.noCandidate.get(event);
+        if (why) return `${base}\nOff. ${why}`;
+        return `${base}\nOff. ${status === 'Not started' || status === null ? 'Reset starts the run.' : `The run is ${status}.`}`;
+    };
+    /** Closing the inspector, or the panel, shows the live step again (R-SIM-106): no past step is left on the canvas unsaid. */
+    const closeInspector = (): void => {
+        setInspectorOpen(false);
+        simSetView(modelid, null);
+    };
+    /** The label of an input, the panel's: `ε`, or the event's. */
+    const labelOf: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
+    // R-SIM-107, R-SIM-109: the canvas layer, while a run of this model exists, whether the panel is open or closed.
+    const canvasLayer = isModelMode && rolesComplete && getSimRun(modelid) ? <SimCanvasLayer modelId={modelid} /> : null;
 
     if (!open) {
         return (
-            <div className="sim-panel sim-panel--closed">
-                <button
-                    type="button"
-                    className="sim-panel__chip"
-                    title="Simulation"
-                    onClick={() => setOpen(true)}
-                >
-                    <i className="bi bi-play-circle" />
-                    <span>Simulation</span>
-                    {isModelMode && status && status !== 'Not started' && (
-                        <span className={`sim-panel__dot sim-panel__dot--${status.toLowerCase().replace(' ', '-')}`} />
-                    )}
-                </button>
-            </div>
+            <>
+                <div className="sim-panel sim-panel--closed">
+                    <button
+                        type="button"
+                        className="sim-panel__chip"
+                        title="Simulation"
+                        onClick={() => setOpen(true)}
+                    >
+                        <i className="bi bi-play-circle" />
+                        <span>Simulation</span>
+                        {isModelMode && status && status !== 'Not started' && (
+                            <span className={`sim-panel__dot sim-panel__dot--${status.toLowerCase().replace(' ', '-')}`} />
+                        )}
+                    </button>
+                </div>
+                {canvasLayer}
+            </>
         );
     }
 
     const lookupNow: any = (store.getState() as any).idlookup ?? {};
     const head = pending ? choiceHead(pending.input) : null;
+    // R-SIM-104: the one status line under the buttons, `step n · seed s · last step`, while a run exists.
+    const line = run && view ? statusLine(view.step, view.seed, lastStep) : null;
+    const watching = (view?.watch.length ?? 0) > 0 || !!view?.output;
 
     return (
+        <>
         <div className="sim-panel sim-panel--open">
             <div className="sim-panel__header">
                 <i className="bi bi-play-circle" />
                 <span className="sim-panel__title">Simulation</span>
+                {/* R-SIM-105: the run inspector, a card beside the panel; the M1 face only. */}
+                {isModelMode && rolesComplete && (
+                    <button
+                        type="button"
+                        className="sim-panel__expand"
+                        title={inspectorOpen ? 'Close the run inspector' : 'Open the run inspector: the whole state and the trace'}
+                        aria-pressed={inspectorOpen}
+                        onClick={() => (inspectorOpen ? closeInspector() : setInspectorOpen(true))}
+                    >
+                        <i className={`bi ${inspectorOpen ? 'bi-arrows-angle-contract' : 'bi-arrows-angle-expand'}`} />
+                    </button>
+                )}
                 <button
                     type="button"
                     className="sim-panel__collapse"
                     title="Collapse"
-                    onClick={() => setOpen(false)}
+                    onClick={() => { setOpen(false); if (inspectorOpen) closeInspector(); }}
                 >
                     <i className="bi bi-chevron-down" />
                 </button>
@@ -774,7 +837,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 onClick={() => setDataModal({ undeclared: [] })}
                             >
                                 <i className="bi bi-database" />
-                                <span>Data…</span>
+                                {/* R-SIM-103: «Data» collided with the Data Manager; the label only, every identifier kept. */}
+                                <span>State…</span>
                             </button>
                         )}
                         {dataModal && (
@@ -822,8 +886,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         {/* The lines that add to the others sit above the buttons: the panel is anchored at the
                             bottom and grows upward, so they never move the buttons (R-SIM-65, R-SIM-66). One row
                             each, the full text in the title (R-SIM-63). The choice list opens above them too, so Step
-                            stays where it is (R-SIM-82, G8); the marking line sits last, for the run's whole lifetime,
-                            with Moore's Output line under it when the net has state outputs (R-SIM-92). */}
+                            stays where it is (R-SIM-82, G8). Then the state, right above the buttons, for the run's
+                            whole lifetime (R-SIM-104): Watch, with Moore's output as a row (R-SIM-92), Marking, Events. */}
                         {pending && run && head && (
                             <>
                                 <div className="sim-panel__section">{head.heading} (<span className="sim-panel__section-input">{head.input}</span>)</div>
@@ -877,17 +941,71 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             <div className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line" title={defects.title}>{defects.line}</div>
                         )}
                         {undeclared.length > 0 && (
-                            <div className="sim-panel__hint sim-panel__hint--line" title={`Undeclared: ${undeclared.join(', ')}. Declare them in the model's data.`}>
+                            <div className="sim-panel__hint sim-panel__hint--line" title={`Undeclared: ${undeclared.join(', ')}. Declare them in the model's state.`}>
                                 {`Undeclared: ${undeclared.join(', ')}. `}
-                                <button type="button" className="sim-panel__hint-action" onClick={() => setDataModal({ undeclared })}>Declare in Data…</button>
+                                <button type="button" className="sim-panel__hint-action" onClick={() => setDataModal({ undeclared })}>Declare in State…</button>
                             </div>
                         )}
                         {view?.halt && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line sim-panel__hint--halt" title={view.halt.title}>{view.halt.line}</div>}
-                        {view?.marking && (
-                            <div className="sim-panel__hint sim-panel__hint--line sim-panel__hint--marking" title={view.marking.title}>{view.marking.line}</div>
+                        {/* R-SIM-104: up to four pinned attributes, globals first by default; a range draws its domain bar,
+                            DEFINE and IVAR say their kind, a value the last step changed reads before → after. */}
+                        {run && watching && (
+                            <>
+                                <div className="sim-panel__section">Watch</div>
+                                <div className="sim-panel__watch">
+                                    {view?.watch.map(w => (
+                                        <WatchRow key={`${w.element}\u0000${w.attr}\u0000${w.space}`} row={w} />
+                                    ))}
+                                    {view?.output && (
+                                        <div className="sim-panel__watch-row" title={view.output.title}>
+                                            <span className="sim-panel__watch-name">output</span>
+                                            <span className="sim-panel__watch-value">{view.output.line.replace(/^Output: /, '')}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         )}
-                        {view?.output && (
-                            <div className="sim-panel__hint sim-panel__hint--line sim-panel__hint--marking" title={view.output.title}>{view.output.line}</div>
+                        {/* R-SIM-104: one chip per marked place, `×n` from two tokens; the marking line is the title. */}
+                        {run && view && (
+                            <>
+                                <div className="sim-panel__section">Marking</div>
+                                <div className="sim-panel__chips" title={view.markingTitle ?? undefined}>
+                                    {view.chips.length === 0
+                                        ? <span className="sim-panel__marking-chip sim-panel__marking-chip--empty">∅</span>
+                                        : view.chips.map(c => <span className="sim-panel__marking-chip" key={c.place}>{c.text}</span>)}
+                                </div>
+                            </>
+                        )}
+                        {/* Events above the buttons (R-SIM-104): an event that is off says why in its title, and a press that
+                            asks an input carries the input chip. */}
+                        {eventRole && (
+                            <>
+                                <div className="sim-panel__section">Events</div>
+                                {events.length === 0 ? (
+                                    <div className="sim-panel__hint">No event instances in the model.</div>
+                                ) : (
+                                    <div className="sim-panel__events">
+                                        {events.map(e => {
+                                            const on = !!view?.inputs.events.has(e.id);
+                                            const asks = view?.asks.get(e.id);
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    className="sim-panel__event"
+                                                    key={e.id}
+                                                    title={on ? inputTitle(`Fire ${e.label}`, e.id) : offTitle(`Fire ${e.label}`, e.id)}
+                                                    onClick={() => fire(e.id)}
+                                                    disabled={!on}
+                                                >
+                                                    <i className="bi bi-chevron-right" />
+                                                    <span>{e.label}</span>
+                                                    {on && asks && <span className="sim-state-chip sim-panel__event-chip" title={`Asks: ${asks}`}>IVAR</span>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
                         )}
                         <div className="sim-panel__actions">
                             <button type="button" className="sim-panel__btn" title="Reset" onClick={onReset}>
@@ -916,45 +1034,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 <i className="bi bi-stop-fill" />
                             </button>
                         </div>
-                        {eventRole && (
-                            <>
-                                <div className="sim-panel__section">Events</div>
-                                {events.length === 0 ? (
-                                    <div className="sim-panel__hint">No event instances in the model.</div>
-                                ) : (
-                                    <div className="sim-panel__events">
-                                        {events.map(e => (
-                                            <button
-                                                type="button"
-                                                className="sim-panel__event"
-                                                key={e.id}
-                                                title={inputTitle(`Fire ${e.label}`, e.id)}
-                                                onClick={() => fire(e.id)}
-                                                disabled={!view?.inputs.events.has(e.id)}
-                                            >
-                                                <i className="bi bi-chevron-right" />
-                                                <span>{e.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        {/* One slot for the outcome of the last action (R-SIM-66): a refused Reset, the
-                            interruption or «Last step», one at a time, replacing each other in place. */}
-                        {runError && <div className="sim-panel__hint sim-panel__hint--error sim-panel__hint--line" title={runError}>{runError}</div>}
-                        {interrupted && (
-                            <div
-                                className="sim-panel__hint sim-panel__hint--warning sim-panel__hint--line"
-                                title="Run interrupted: the model changed. Reset to run again."
-                            >
-                                Run interrupted: the model changed. Reset to run again.
-                            </div>
-                        )}
-                        {lastStep && (
-                            <div className="sim-panel__hint sim-panel__hint--line" title={`Last step: ${lastStep.title}`}>{`Last step: ${lastStep.text}`}</div>
-                        )}
-                        {/* In Deadlock the row says why, on its one line, and opens the list per input (R-SIM-58). */}
+                        {/* In Deadlock the row says why, on its one line, and opens the list per input (R-SIM-58). The one
+                            status line of R-SIM-104: the pill, then `step n · seed s · last step`; the R-SIM-66 slot is its last
+                            part, so a refused Reset or the interruption takes the place of the last step, one at a time. */}
                         <div
                             className={`sim-panel__status${reason ? ' sim-panel__status--clickable' : ''}`}
                             role={reason ? 'button' : undefined}
@@ -966,13 +1048,24 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setReasonsOpen(o => !o); }
                             }) : undefined}
                         >
-                            <span className={`sim-panel__dot sim-panel__dot--${(status ?? 'not started').toLowerCase().replace(' ', '-')}`} />
-                            <span className="sim-panel__status-text">{status}</span>
-                            {/* R-SIM-91: on the row's one line, in the status text's style; the run goes on. */}
-                            {view?.accepting && <span className="sim-panel__status-text sim-panel__status-accepting">{`· ${view.accepting}`}</span>}
+                            <span className={`sim-panel__status-pill sim-panel__status-pill--${(status ?? 'not started').toLowerCase().replace(' ', '-')}`}>
+                                <span className={`sim-panel__dot sim-panel__dot--${(status ?? 'not started').toLowerCase().replace(' ', '-')}`} />
+                                <span className="sim-panel__status-text">{status}</span>
+                                {/* R-SIM-91: on the row's one line, in the status text's style; the run goes on. */}
+                                {view?.accepting && <span className="sim-panel__status-text sim-panel__status-accepting">{`· ${view.accepting}`}</span>}
+                            </span>
                             {/* R-SIM-101: why Play stopped while the run goes on; a status, a list or no run say it themselves. */}
                             {playNote && status === 'Running' && <span className="sim-panel__status-reason" title={playNote}>{`· ${playNote}`}</span>}
                             {reason && <span className="sim-panel__status-reason">{`· ${reason.line}`}</span>}
+                            {runError ? (
+                                <span className="sim-panel__status-line sim-panel__status-line--error" title={runError}>{`· ${runError}`}</span>
+                            ) : interrupted ? (
+                                <span className="sim-panel__status-line sim-panel__status-line--warning" title="Run interrupted: the model changed. Reset to run again.">
+                                    · Run interrupted: the model changed. Reset to run again.
+                                </span>
+                            ) : line && (
+                                <span className="sim-panel__status-line" title={line.title}>{`· ${line.line}`}</span>
+                            )}
                             {reason && <i className={`bi bi-chevron-${reasonsOpen ? 'down' : 'up'} sim-panel__status-toggle`} />}
                         </div>
                         {reason && reasonsOpen && (
@@ -985,6 +1078,41 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     </>
                 )}
             </div>
+        </div>
+        {isModelMode && rolesComplete && inspectorOpen && (
+            <SimInspector modelId={modelid} modelName={modelName} inputLabel={labelOf} onClose={closeInspector} />
+        )}
+        {canvasLayer}
+        </>
+    );
+}
+
+/**
+ * One Watch row (R-SIM-104), from `watchRows`: the name, italic for a DEFINE; the kind chip of a DEFINE or an
+ * IVAR; a range's domain bar; the value, `before → after` and the run's cyan when the last step changed it.
+ */
+function WatchRow({ row }: { row: SimWatchRow }): ReactElement {
+    const shown = row.value === null ? '—' : String(row.value);
+    const text = row.changed ? `${row.before === null ? '—' : String(row.before)} → ${shown}` : shown;
+    const range = row.domain?.kind === 'range' ? row.domain : null;
+    const n = typeof row.value === 'number' ? row.value : null;
+    const out = range !== null && n !== null && (n < range.min || n > range.max);
+    const fill = range !== null && n !== null && range.max > range.min ? Math.min(1, Math.max(0, (n - range.min) / (range.max - range.min))) : 0;
+    const title = `${row.name}${row.space === 'presentation' ? ' (node)' : ''} · ${row.kind}`
+        + `${range ? ` · ${range.min}..${range.max}` : ''} = ${text}${row.kind === 'IVAR' ? ' (given at the step)' : ''}`;
+    return (
+        <div
+            className={`sim-panel__watch-row${row.space === 'presentation' ? ' sim-panel__watch-row--presentation' : ''}`}
+            title={title}
+        >
+            <span className={`sim-panel__watch-name${row.kind === 'DEFINE' ? ' sim-panel__watch-name--define' : ''}`}>{row.name}</span>
+            {row.kind !== 'VAR' && <span className="sim-state-chip">{row.kind}</span>}
+            {range && (
+                <span className={`sim-panel__watch-bar${out ? ' sim-panel__watch-bar--out' : ''}`} aria-hidden="true">
+                    <span className="sim-panel__watch-fill" style={{ width: `${Math.round(fill * 100)}%` }} />
+                </span>
+            )}
+            <span className={`sim-panel__watch-value${row.changed ? ' sim-panel__watch-value--changed' : ''}`}>{text}</span>
         </div>
     );
 }

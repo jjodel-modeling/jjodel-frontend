@@ -67,6 +67,7 @@
     }
 }
 
+// TODO: cleanup — `__sigma` to `__sigma-attr`: unused since the σ card became tags (P-2026-10-03-0120, R-SIM-107).
 // The element's semantic σ, under the node.
 .sim-node-run__sigma {
     position: absolute;
@@ -91,6 +92,216 @@
 
 .sim-node-run__sigma-attr {
     font-weight: 600;
+}
+
+// The tags under the node (P-2026-10-03-0120, R-SIM-107, R-SIM-109), in place of the σ card: σ's tagged and changed
+// attributes, solid slate with the glyph σ; node's presentation values, dashed in the viewpoint pink (R-SIM-102). One
+// row that wraps, under the node's box, as the card sat; `pointer-events: none` from the layer, the title is a record.
+.sim-node-run__tags {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: max-content;
+    max-width: 240px;
+}
+
+.sim-node-run__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 18px;
+    max-width: 100%;
+    padding: 0 6px 0 0;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+
+    &--sigma {
+        border: 1px solid var(--color-accent);
+    }
+
+    &--node {
+        padding-left: 6px;
+        border: 1px dashed var(--color-opt-4-fg);
+        background: var(--color-opt-4-bg);
+        color: var(--color-opt-4-fg);
+    }
+}
+
+// σ's glyph, the tag's first cell: the solid slate of the key.
+.sim-node-run__tag-glyph {
+    align-self: stretch;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 4px;
+    background: var(--color-accent);
+    color: var(--color-text-inverse);
+}
+
+.sim-node-run__tag-attr {
+    font-weight: 600;
+
+    // A DEFINE is never assigned: its name in italics (R-SIM-102).
+    &--define {
+        font-style: italic;
+    }
+}
+
+.sim-node-run__tag-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+// Changed by the step shown, for that step only: the run's cyan, `before → after`.
+.sim-node-run__tag--changed .sim-node-run__tag-value {
+    padding: 0 3px;
+    border-radius: 3px;
+    background: var(--color-sim-sigma-bg);
+    color: var(--color-sim-sigma-fg);
+    box-shadow: inset 0 0 0 1px var(--color-sim-sigma-border);
+}
+
+// The canvas layer (SimCanvasLayer.tsx, R-SIM-107, R-SIM-109): mounted by the simulation panel, a sibling of it in
+// `.editor-switch-container`, positioned as the panel is (simulation-panel.scss: absolute on the editor's box, z-index
+// 850 inside the dock). The canvas's top-right corner, 16 px in: under the editor's toolbar, whose height is
+// `--jj-toolbar-height` (tokens/_layout.scss; at 16 px from the editor's top the layer covered the toolbar's «Hide
+// panel» button, measured by the lane probe), and clear of the rail: `--jj-canvas-right-inset` is the rail's width
+// plus 8, set on <body> by PropertiesWithTreeView. Both are read here, never defined. The box lets the canvas take
+// every gesture but on its own controls and card.
+.sim-canvas-layer {
+    position: absolute;
+    top: calc(var(--jj-toolbar-height, 40px) + 16px);
+    right: calc(var(--jj-canvas-right-inset, 0px) + 16px);
+    z-index: 850;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: none;
+    font-family: inherit;
+    color: var(--color-text-primary);
+}
+
+.sim-canvas-layer__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--color-border-primary);
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+    pointer-events: auto;
+}
+
+.sim-canvas-layer__switch-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-opt-4-fg);
+}
+
+// The globals card's toggle: a text button in the panel's vocabulary, pressed when the card shows.
+.sim-canvas-layer__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 6px 0 2px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-text-tertiary);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--color-bg-hover);
+        color: var(--color-text-primary);
+    }
+
+    &[aria-pressed="true"] {
+        border-color: var(--color-border-primary);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-primary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--color-border-focus);
+        outline-offset: 1px;
+    }
+}
+
+// The globals in one card pinned to the canvas corner (R-SIM-107): σ's key, solid slate.
+.sim-canvas-globals {
+    min-width: 160px;
+    max-width: 240px;
+    padding: 6px 8px;
+    border: 1px solid var(--color-accent);
+    border-radius: 6px;
+    background: var(--color-bg-secondary);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+    pointer-events: auto;
+}
+
+.sim-canvas-globals__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+}
+
+.sim-canvas-globals__step {
+    margin-left: auto;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.sim-canvas-globals__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 20px;
+    font-size: 11px;
+}
+
+.sim-canvas-globals__name {
+    font-family: var(--font-mono);
+
+    &--define {
+        font-style: italic;
+    }
+}
+
+.sim-canvas-globals__value {
+    margin-left: auto;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+
+    &--changed {
+        background: var(--color-sim-sigma-bg);
+        color: var(--color-sim-sigma-fg);
+        box-shadow: inset 0 0 0 1px var(--color-sim-sigma-border);
+    }
 }
 
 // The initial-marking row of a place during a run: the model's M0, muted, so

@@ -24,10 +24,18 @@
  * left edge, vertically centred, with the count beside it from two; an empty place
  * paints nothing. The rings and the σ card are the corner placement's. Without the
  * prop the overlay renders as before.
+ *
+ * P-2026-10-03-0120 (R-SIM-107, R-SIM-109): the σ card under every node is gone.
+ * Under the node, tags instead: σ's for the attributes the viewer tagged
+ * (simViewerPrefs.ts) and for those the step shown changed, for that step only,
+ * solid slate with the glyph σ and the change in the run's cyan; with the canvas
+ * switch «Inspect node.[x]» on, node's, one per presentation value, dashed pink
+ * (R-SIM-102). The overlay follows the viewer preferences' channel too.
  */
 
-import { getSimNodeState, isSimPending, useSimChoiceVersion, useSimVersion } from './simRunState';
-import type { SimNodeState } from './simCanvasState';
+import { getSimNodeState, getSimRun, isSimPending, useSimChoiceVersion, useSimVersion } from './simRunState';
+import type { SimNodeState, SimSigmaRow } from './simCanvasState';
+import { getSimViewerPrefs, useSimViewerPrefsVersion } from './simViewerPrefs';
 import './simNodeRunState.scss';
 
 export interface SimNodeRunStateProps {
@@ -38,9 +46,10 @@ export interface SimNodeRunStateProps {
 }
 
 export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
-    // Unconditional (rules of hooks): the overlay re-reads the store on every bump of either channel.
+    // Unconditional (rules of hooks): the overlay re-reads the store on every bump of any of its channels.
     useSimVersion();
     useSimChoiceVersion();
+    useSimViewerPrefsVersion();
     if (typeof objectId !== 'string') return null;
     const found = getSimNodeState(objectId);
     const pending = isSimPending(objectId);
@@ -49,6 +58,16 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
     const s: Pick<SimNodeState, 'tokens' | 'sigma' | 'enabled'> = found ?? { tokens: null, sigma: [], enabled: false };
     const tokensTitle = s.tokens === null ? '' : `${s.tokens} ${s.tokens === 1 ? 'token' : 'tokens'} in the run`;
     const inside = placement === 'inside';
+    // R-SIM-107: σ's tags, the attributes tagged by the viewer (by metaclass and name) and those the step shown changed.
+    const prefs = found ? getSimViewerPrefs(found.modelId) : null;
+    const declared = found ? getSimRun(found.modelId)?.net.declared.get(objectId) : undefined;
+    const sigmaTags: SimSigmaRow[] = prefs
+        ? s.sigma.filter(r => r.before !== undefined || prefs.tags.some(t => t.space === 'semantic' && t.name === r.attr
+            && t.metaclass === (declared?.get(r.attr)?.metaclass ?? null)))
+        : [];
+    // R-SIM-109: node's tags, every presentation value, while the canvas switch is on.
+    const nodeTags: readonly SimSigmaRow[] = prefs?.inspectNode ? found?.presentation ?? [] : [];
+    const valueText = (r: SimSigmaRow) => (r.before !== undefined ? `${r.before ?? '—'} → ${r.value}` : r.value);
     return (
         <div
             className={inside ? 'sim-node-run sim-node-run--inside' : 'sim-node-run'}
@@ -75,14 +94,28 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
                     {s.tokens}
                 </span>
             )}
-            {s.sigma.length > 0 && (
-                <div className="sim-node-run__sigma" title={s.sigma.map(r => `${r.attr} = ${r.value}`).join('\n')}>
-                    {s.sigma.map(r => (
-                        <div key={r.attr} className="sim-node-run__sigma-row">
-                            <span className="sim-node-run__sigma-attr">{r.attr}</span>
-                            {' = '}
-                            <span className="sim-node-run__sigma-value">{r.value}</span>
-                        </div>
+            {(sigmaTags.length > 0 || nodeTags.length > 0) && (
+                <div className="sim-node-run__tags">
+                    {sigmaTags.map(r => (
+                        <span
+                            key={`σ\u0000${r.attr}`}
+                            className={`sim-node-run__tag sim-node-run__tag--sigma${r.before !== undefined ? ' sim-node-run__tag--changed' : ''}`}
+                            title={`σ: self.[${r.attr}]${r.kind ? ` · ${r.kind}` : ''} = ${valueText(r)}${r.before !== undefined ? ' (changed by this step)' : ''}`}
+                        >
+                            <span className="sim-node-run__tag-glyph">σ</span>
+                            <span className={`sim-node-run__tag-attr${r.kind === 'DEFINE' ? ' sim-node-run__tag-attr--define' : ''}`}>{r.attr}</span>
+                            <span className="sim-node-run__tag-value">{valueText(r)}</span>
+                        </span>
+                    ))}
+                    {nodeTags.map(r => (
+                        <span
+                            key={`node\u0000${r.attr}`}
+                            className={`sim-node-run__tag sim-node-run__tag--node${r.before !== undefined ? ' sim-node-run__tag--changed' : ''}`}
+                            title={`node.[${r.attr}]${r.kind ? ` · ${r.kind}` : ''} = ${valueText(r)}`}
+                        >
+                            <span className={`sim-node-run__tag-attr${r.kind === 'DEFINE' ? ' sim-node-run__tag-attr--define' : ''}`}>{r.attr}</span>
+                            <span className="sim-node-run__tag-value">{valueText(r)}</span>
+                        </span>
                     ))}
                 </div>
             )}
