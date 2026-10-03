@@ -40,6 +40,9 @@ import {
     computeArcSelfLoopGeometry,
     topLoopEnds,
     sampleArcPath,
+    spreadDiamondEnds,
+    refitRouteEnd,
+    type DiamondEnd,
     trimPathEnds,
     type Side,
 } from '../utils/edgeUtils';
@@ -311,16 +314,55 @@ function UnifiedEdge(props: EdgeProps) {
     );
     const arcOnElkRoute = arcAlone && !!elkRouteAny && elkRouteAny.orthogonal;
     const elkRoute = elkRouteAny && elkRouteAny.orthogonal && (!isArcIR || arcOnElkRoute) ? elkRouteAny : null;
+    // P-2026-10-03-1304 (Q4 (b)): an end on a diamond (irEdgeViews tags it) takes a vertex of its own among the ELK ends
+    // of that node (spreadDiamondEnds), the route refitted to it (refitRouteEnd). Read before a junction branch's fit,
+    // which then moves its other end. No diamond end: the route as ELK gave it.
+    const irSourceForm = irData.irSourceForm as string | undefined;
+    const irTargetForm = irData.irTargetForm as string | undefined;
+    const elkDiamondFit = useMemo(() => {
+        if (!elkRoute || (irSourceForm !== 'diamond' && irTargetForm !== 'diamond')) return null;
+        let pts: Array<{ x: number; y: number }> = elkRoute.points;
+        let sourceSideFit: Side = elkRoute.sourceSide, targetSideFit: Side = elkRoute.targetSide;
+        for (const role of ['source', 'target'] as const) {
+            if ((role === 'source' ? irSourceForm : irTargetForm) !== 'diamond') continue;
+            const nodeId = role === 'source' ? source : target;
+            const node = role === 'source' ? sourceNode : targetNode;
+            if (!node) continue;
+            const ends: DiamondEnd[] = [];
+            for (const e of allEdges) {
+                if (e.hidden || e.source === e.target || (e.source !== nodeId && e.target !== nodeId)) continue;
+                const r = getElkRoute(e.id);
+                const sN = getInternalNode(e.source), tN = getInternalNode(e.target);
+                if (!r || !r.orthogonal || !sN || !tN || !isElkRouteValid(r, getNodeRect(sN), getNodeRect(tN))) continue;
+                const p = r.points;
+                if (e.source === nodeId) ends.push({ key: `${e.id}:source`, side: r.sourceSide, point: p[0], route: p });
+                if (e.target === nodeId) ends.push({ key: `${e.id}:target`, side: r.targetSide, point: p[p.length - 1], route: [...p].reverse() });
+            }
+            const mine = spreadDiamondEnds(getNodeRect(node), ends).get(`${id}:${role}`);
+            if (!mine) continue;
+            // A straight leg slides whole when the other end's side can take the vertex's coordinate (corners kept clear).
+            const other = role === 'source' ? targetNode : sourceNode;
+            const or = other ? getNodeRect(other) : null;
+            const span: [number, number] | undefined = or
+                ? (mine.side === 'top' || mine.side === 'bottom' ? [or.x + 4, or.x + or.width - 4] : [or.y + 4, or.y + or.height - 4])
+                : undefined;
+            pts = refitRouteEnd(pts, role === 'source' ? 'start' : 'end', mine.point, mine.side, span);
+            if (role === 'source') sourceSideFit = mine.side; else targetSideFit = mine.side;
+        }
+        return { points: pts, sourceSide: sourceSideFit, targetSide: targetSideFit };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [elkRoute, irSourceForm, irTargetForm, allEdges, elkRouteRev, id, source, target, sourceNode, targetNode, getInternalNode]);
     const elkPoints = useMemo(() => {
         if (!elkRoute) return null;
-        if (!branchEnds) return elkRoute.points;
-        const pts = elkRoute.points;
+        const base = elkDiamondFit ?? { points: elkRoute.points, sourceSide: elkRoute.sourceSide, targetSide: elkRoute.targetSide };
+        if (!branchEnds) return base.points;
+        const pts = base.points;
         return fitRouteToEnds(
-            { ...elkRoute, sourceSide: branchEnds.start?.side ?? elkRoute.sourceSide, targetSide: branchEnds.end?.side ?? elkRoute.targetSide },
+            { ...elkRoute, points: pts, sourceSide: branchEnds.start?.side ?? base.sourceSide, targetSide: branchEnds.end?.side ?? base.targetSide },
             branchEnds.start?.point ?? pts[0],
             branchEnds.end?.point ?? pts[pts.length - 1],
         );
-    }, [elkRoute, branchEnds]);
+    }, [elkRoute, elkDiamondFit, branchEnds]);
     const elkCenterLabel = elkRoute?.centerLabel ?? null;
     // An arc's chord between the route's ends: ELK ordered those ports, the handles' uniform slots did not. A straight
     // (stress) route ends on the box, not on a diamond's or an ellipse's outline: there the handles' ends stay.

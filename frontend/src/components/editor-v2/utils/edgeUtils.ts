@@ -2799,6 +2799,146 @@ export function computeArcSelfLoopGeometry(start: Point, end: Point): ArcEdgeGeo
     };
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ELK route ends on a diamond (P-2026-10-03-1304, Q4 (b))
+// ═══════════════════════════════════════════════════════════════
+//
+// ELK lays a diamond out as its box, so two routes may end side by side at the tip, off the outline. Each end takes a
+// vertex instead: the end nearest a side's vertex keeps it, another end on that side moves to the free adjacent vertex
+// its route turns towards, and with none free it stays on its side, moved onto the outline. Pure: UnifiedEdge gathers
+// the ends of the routes in the store and refits its own route with refitRouteEnd.
+
+/** An ELK route's end on a diamond: `route` runs from that end outwards. */
+export interface DiamondEnd {
+    key: string;
+    side: Side;
+    point: Point;
+    route: ReadonlyArray<Point>;
+}
+
+const SIDE_NORMAL: Record<Side, Point> = { top: { x: 0, y: -1 }, bottom: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+/** How far a route leaves a vertex along its side's normal before it turns. */
+export const DIAMOND_STUB = 16;
+
+function diamondVertex(r: ArcBox, side: Side): Point {
+    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+    return side === 'top' ? { x: cx, y: r.y } : side === 'bottom' ? { x: cx, y: r.y + r.height }
+        : side === 'left' ? { x: r.x, y: cy } : { x: r.x + r.width, y: cy };
+}
+
+/** `p` on the diamond's edge of `side`'s half, at the same coordinate along the side. */
+function onDiamondOutline(p: Point, r: ArcBox, side: Side): Point {
+    const cx = r.x + r.width / 2, cy = r.y + r.height / 2, hw = r.width / 2, hh = r.height / 2;
+    if (side === 'top' || side === 'bottom') {
+        const x = Math.min(r.x + r.width, Math.max(r.x, p.x));
+        const dy = hh * (1 - Math.abs(x - cx) / hw);
+        return { x, y: side === 'top' ? cy - dy : cy + dy };
+    }
+    const y = Math.min(r.y + r.height, Math.max(r.y, p.y));
+    const dx = hw * (1 - Math.abs(y - cy) / hh);
+    return { x: side === 'left' ? cx - dx : cx + dx, y };
+}
+
+/** Each end of `ends` on the diamond `rect`, by key: the vertex it takes and its side (see above). */
+export function spreadDiamondEnds(rect: ArcBox, ends: ReadonlyArray<DiamondEnd>): Map<string, { point: Point; side: Side }> {
+    const out = new Map<string, { point: Point; side: Side }>();
+    const taken = new Set<Side>(ends.map(e => e.side));
+    for (const side of ['top', 'right', 'bottom', 'left'] as Side[]) {
+        const v = diamondVertex(rect, side);
+        const list = ends.filter(e => e.side === side)
+            .sort((a, b) => (Math.hypot(a.point.x - v.x, a.point.y - v.y) - Math.hypot(b.point.x - v.x, b.point.y - v.y)) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+        if (list.length === 0) continue;
+        out.set(list[0].key, { point: v, side });
+        const across = side === 'top' || side === 'bottom';
+        for (const e of list.slice(1)) {
+            // Where the route turns: its first point off the end's own line, along the side.
+            const turn = e.route.find(p => (across ? Math.abs(p.x - e.point.x) : Math.abs(p.y - e.point.y)) > 1);
+            const along = turn ? (across ? turn.x - v.x : turn.y - v.y) : 0;
+            const prefs: Side[] = across ? (along < 0 ? ['left', 'right'] : ['right', 'left']) : (along < 0 ? ['top', 'bottom'] : ['bottom', 'top']);
+            const free = prefs.find(p => !taken.has(p));
+            if (free) {
+                taken.add(free);
+                out.set(e.key, { point: diamondVertex(rect, free), side: free });
+            } else {
+                out.set(e.key, { point: onDiamondOutline(e.point, rect, side), side });
+            }
+        }
+    }
+    return out;
+}
+
+/** The points without repeats and without a middle point on a straight run. */
+function simplifyOrthogonal(pts: Point[]): Point[] {
+    const out: Point[] = [];
+    for (const p of pts) {
+        const q = out[out.length - 1];
+        if (q && Math.abs(q.x - p.x) < 0.01 && Math.abs(q.y - p.y) < 0.01) continue;
+        out.push(p);
+        while (out.length >= 3) {
+            const [a, b, c] = out.slice(-3);
+            const sameX = Math.abs(a.x - b.x) < 0.01 && Math.abs(b.x - c.x) < 0.01;
+            const sameY = Math.abs(a.y - b.y) < 0.01 && Math.abs(b.y - c.y) < 0.01;
+            if (!sameX && !sameY) break;
+            out.splice(out.length - 2, 1);
+        }
+    }
+    return out;
+}
+
+/**
+ * An orthogonal route with one end moved to `point` on `side` of its node (`at` says which end). On the side the
+ * last leg already enters, the leg slides across; a lone leg slides whole when its other end can move to the same
+ * coordinate within `otherSpan` (that end's side, corners kept clear), else it gets a jog. On another side the route leaves the vertex
+ * along that side's normal: as far as the run it already makes there when that run lies beyond DIAMOND_STUB, else
+ * DIAMOND_STUB, then joins the route with one turn.
+ */
+export function refitRouteEnd(points: ReadonlyArray<Point>, at: 'start' | 'end', point: Point, side: Side, otherSpan?: readonly [number, number]): Point[] {
+    const pts = (at === 'start' ? [...points].reverse() : [...points]).map(p => ({ ...p }));
+    const n = pts.length;
+    if (n < 2) {
+        const lone = [...pts, point];
+        return at === 'start' ? lone.reverse() : lone;
+    }
+    const vertical = side === 'top' || side === 'bottom';
+    const last = pts[n - 1], prev = pts[n - 2];
+    const lastLegVertical = Math.abs(prev.x - last.x) < 0.01;
+    const nrm = SIDE_NORMAL[side];
+    const fromOutside = (prev.x - point.x) * nrm.x + (prev.y - point.y) * nrm.y > 0;
+    let out: Point[];
+    if (vertical === lastLegVertical && fromOutside) {
+        const c = vertical ? point.x : point.y;
+        if (n === 2 && otherSpan && c >= otherSpan[0] - 0.01 && c <= otherSpan[1] + 0.01) {
+            out = vertical ? [{ x: c, y: prev.y }, point] : [{ x: prev.x, y: c }, point];
+        } else if (n === 2) {
+            const mid = vertical ? (prev.y + point.y) / 2 : (prev.x + point.x) / 2;
+            out = vertical
+                ? [prev, { x: prev.x, y: mid }, { x: point.x, y: mid }, point]
+                : [prev, { x: mid, y: prev.y }, { x: mid, y: point.y }, point];
+        } else {
+            pts[n - 1] = point;
+            if (vertical) pts[n - 2].x = point.x; else pts[n - 2].y = point.y;
+            out = pts;
+        }
+    } else {
+        const head = pts.slice(0, n - 1);
+        const a = head[head.length - 1];
+        const b = head.length >= 2 ? head[head.length - 2] : null;
+        const beyond = (p: Point) => (p.x - point.x) * nrm.x + (p.y - point.y) * nrm.y;
+        // The route already runs along the normal past the stub (b to a): leave the vertex straight to b's line.
+        const parallel = b && (vertical ? Math.abs(b.x - a.x) < 0.01 : Math.abs(b.y - a.y) < 0.01);
+        if (b && parallel && beyond(b) >= DIAMOND_STUB) {
+            const t = vertical ? { x: point.x, y: b.y } : { x: b.x, y: point.y };
+            out = [...head.slice(0, -1), t, point];
+        } else {
+            const t = { x: point.x + nrm.x * DIAMOND_STUB, y: point.y + nrm.y * DIAMOND_STUB };
+            const corner = vertical ? { x: a.x, y: t.y } : { x: t.x, y: a.y };
+            out = [...head, corner, t, point];
+        }
+    }
+    const simple = simplifyOrthogonal(out);
+    return at === 'start' ? simple.reverse() : simple;
+}
+
 /** The ends of a self-loop drawn at the centre of the top edge of `rect`, when its handles are not both on top. */
 export function topLoopEnds(rect: Rect): { start: Point; end: Point } {
     const cx = rect.x + rect.width / 2;
