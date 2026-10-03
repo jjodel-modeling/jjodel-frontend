@@ -48,7 +48,10 @@
  *                for each discovery report it wrote (its log's Write and Edit
  *                calls, else the commits carrying its Prompt-ID) whose brief, `## 0.
  *                Answer in brief`, is missing, not the first section, or above 40
- *                lines (P16).
+ *                lines (P16). Once the lane has exited on `done` or `hard-stop`, a
+ *                warning line when its prompt (prompt.txt, else the docs/prompts
+ *                file whose header holds its id) still reads `Status: da eseguire`:
+ *                the closure commit owes the flip (P16, RC-17).
  *   status --all [--limit <minutes>]
  *                every lane folder of ~/.jjodel-lanes in one table (id, state,
  *                outcome, elapsed), newest Prompt-ID first; a chain is one row,
@@ -120,7 +123,14 @@
  *                on the merge, and writes result.json, a synthetic `Outcome:
  *                hard-stop` (or `blocked` on a red gate, the merge commit left in
  *                place) in log.jsonl and exit.txt, so status and wait read it as
- *                a lane. A failed precondition falls back, saying why: the
+ *                a lane. Before its first gate the worker checks
+ *                frontend/node_modules in every tree it runs a gate in (the
+ *                receiving tree, the incoming side's when it counts tests there):
+ *                missing, it is linked to the shared one (the receiving tree's
+ *                own link, else the main worktree's) and the link removed after
+ *                the gates (P14); a directory or a link elsewhere is left alone;
+ *                both are named in result.json and the merge commit body.
+ *                A failed precondition falls back, saying why: the
  *                rendered prompt is launched with --launch, parked without.
  *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light]
  *                validates every prompt (a header Prompt-ID, no id twice, no lane
@@ -175,8 +185,8 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import {
-    accessSync, closeSync, constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync,
-    realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync,
+    accessSync, closeSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync,
+    readlinkSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync,
 } from 'node:fs';
 import { get as httpGet } from 'node:http';
 import { homedir, tmpdir } from 'node:os';
@@ -632,6 +642,12 @@ function status(idArg, rest) {
         const w = briefWarning(path);
         if (w) console.log('warning: ' + (tree ? relative(tree, path) : path) + ': ' + w + ' (P16)');
     }
+    // A lane closed on done or hard-stop whose prompt was never flipped (P-2026-10-02-1718, P-2026-10-03-0050).
+    const closed = s.outcome === null ? null : OUTCOME.exec(s.outcome);
+    const promptFile = closed && (closed[1] === 'done' || closed[1] === 'hard-stop') && tree ? findLanePrompt(f, id) : null;
+    if (promptFile && headerStatus(readFileSync(promptFile, 'utf8')) === 'da eseguire') {
+        console.log('warning: ' + relative(tree, promptFile) + ': `Status: da eseguire` after `Outcome: ' + closed[1] + '`; the closure commit owes the flip (P16, RC-17)');
+    }
     return 0;
 }
 
@@ -889,8 +905,8 @@ function option(rest, name) {
 
 // ── go ───────────────────────────────────────────────────────────────────────
 
-/** The lane's prompt: prompt.txt, or for a lane started before it, the docs/prompts file whose header holds the id. */
-function lanePrompt(f, id) {
+/** The lane's prompt: prompt.txt, or for a lane started before it, the docs/prompts file whose header holds the id; null when neither. */
+function findLanePrompt(f, id) {
     const recorded = readTrim(f.prompt);
     if (recorded && existsSync(recorded)) return recorded;
     const dir = join(readTrim(f.worktree), 'docs', 'prompts');
@@ -900,7 +916,13 @@ function lanePrompt(f, id) {
             if (name.endsWith('.md') && headerPromptId(readFileSync(path, 'utf8')) === id) return path;
         }
     }
-    refuse('no prompt file for ' + id + ': neither prompt.txt nor a header in ' + dir);
+    return null;
+}
+
+function lanePrompt(f, id) {
+    const found = findLanePrompt(f, id);
+    if (found) return found;
+    refuse('no prompt file for ' + id + ': neither prompt.txt nor a header in ' + join(readTrim(f.worktree), 'docs', 'prompts'));
 }
 
 /** Step n of the COME section (of its `### Steps` when it has one), continuation lines kept. */
@@ -1570,6 +1592,62 @@ function writeJson(path, value) {
     renameSync(path + '.tmp', path);
 }
 
+/** lstat, or null when nothing is at the path (a dangling link is something). */
+function lstatOf(path) {
+    try {
+        return lstatSync(path);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * The shared node_modules of P14, never a hard-coded path: the target of the
+ * receiving tree's own frontend/node_modules link, else the main worktree's
+ * frontend/node_modules (the first of `git worktree list`); null when neither is there.
+ */
+function sharedModules(top) {
+    const own = join(top, 'frontend', 'node_modules');
+    const st = lstatOf(own);
+    if (st && st.isSymbolicLink() && existsSync(own)) return resolve(dirname(own), readlinkSync(own));
+    const main = worktrees(top)[0];
+    const there = main ? join(main.path, 'frontend', 'node_modules') : null;
+    return there && existsSync(there) ? there : null;
+}
+
+/**
+ * P14 before the gates of a tree (ticket of 2026-10-02, docs/log-inbox/merge-gate.md:
+ * a lane removed its temporary link, and the incoming vitest of the next direct
+ * merge found no vitest): a missing frontend/node_modules is linked to the shared
+ * one, the link removed after the gates; a directory, or a link elsewhere, is left alone.
+ */
+function linkModules(tree, shared) {
+    const path = join(tree, 'frontend', 'node_modules');
+    const st = lstatOf(path);
+    if (!st) {
+        if (!shared) return { tree, state: 'missing', detail: 'missing, with no shared node_modules to link to' };
+        symlinkSync(shared, path);
+        return { tree, state: 'created', target: shared };
+    }
+    if (!shared || (existsSync(path) && realpathSync(path) === realpathSync(shared))) return { tree, state: 'present' };
+    return { tree, state: 'left', detail: st.isSymbolicLink() ? 'a link to ' + readlinkSync(path) + ', not to ' + shared : 'a directory, not a link to ' + shared };
+}
+
+/** The line a tree whose node_modules was not already the shared one leaves in the commit body and the summary. */
+function modulesLine(x) {
+    const path = join(x.tree, 'frontend', 'node_modules');
+    if (x.state === 'created') return 'node_modules: ' + path + ' was missing; linked to ' + x.target + ' for the gates, the link removed after them (P14).';
+    return 'node_modules: ' + path + ' left as it is: ' + x.detail + ' (P14).';
+}
+
+/** The measured body with the node_modules lines above its Model trailer. */
+function withModules(message, records) {
+    const lines = records.filter((x) => x.state !== 'present').map(modulesLine);
+    const at = message.lastIndexOf('\n\nModel: ');
+    if (!lines.length || at === -1) return message;
+    return message.slice(0, at) + '\n' + lines.join('\n') + message.slice(at);
+}
+
 /**
  * The detached worker of a direct merge: the template's steps 4 to 7 without a
  * session. Its stdout is the lane's log.jsonl, so it prints events only.
@@ -1581,12 +1659,16 @@ async function directRun(idArg) {
     const res = {
         kind: 'direct', mode: plan.mode, promptId: id, branch: plan.branch, trunk: plan.trunk, tree: plan.top, tag: plan.tag,
         promptCommit: plan.promptCommit, merge: null, union: Object.keys(plan.union), gates: [], ok: false, outcome: 'blocked',
-        reason: null, port3001: null, closure: null,
+        reason: null, port3001: null, closure: null, nodeModules: [],
     };
     console.log(JSON.stringify({ type: 'system', subtype: 'direct', prompt_id: id }));
     try {
         const npm = findNpm();
         const frontend = join(plan.top, 'frontend');
+        // P14: every tree a gate runs in has its node_modules before the first gate, one record each.
+        const shared = sharedModules(plan.top);
+        const gateTrees = [plan.top, ...(plan.incomingTests.length && plan.incomingTree !== plan.top ? [plan.incomingTree] : [])];
+        for (const tree of gateTrees) res.nodeModules.push(linkModules(tree, shared));
         const run = (name, cwd, args) => {
             const log = join(f.dir, 'gate-' + name + '.log');
             const fd = openSync(log, 'w');
@@ -1633,7 +1715,7 @@ async function directRun(idArg) {
             throw new Error('probes on the index, merge aborted: ' + failed.join('; '));
         }
         const messageFile = join(f.dir, 'merge-message.txt');
-        writeFileSync(messageFile, plan.message);
+        writeFileSync(messageFile, withModules(plan.message, res.nodeModules));
         git(plan.top, ['commit', '-q', '-F', messageFile]);
         res.merge = git(plan.top, ['rev-parse', 'HEAD']).out.trim();
 
@@ -1690,6 +1772,13 @@ async function directRun(idArg) {
     } catch (err) {
         res.reason = err && err.message ? err.message : String(err);
     }
+    // P14: a link the worker created goes once the gates are done, and only if it is still the one it made.
+    for (const x of res.nodeModules.filter((r) => r.state === 'created')) {
+        const path = join(x.tree, 'frontend', 'node_modules');
+        const st = lstatOf(path);
+        x.removed = Boolean(st && st.isSymbolicLink() && readlinkSync(path) === x.target);
+        if (x.removed) unlinkSync(path);
+    }
     try {
         res.port3001 = portInUse(3001) ? 'up' : 'down';
     } catch {
@@ -1700,6 +1789,7 @@ async function directRun(idArg) {
         '[' + id + '] direct merge of ' + (plan.mode === 'into' ? plan.branch + ' into ' + plan.trunk : plan.trunk + ' into ' + plan.branch) +
             (res.merge ? ': merge ' + res.merge.slice(0, 9) : ': no merge commit') + (res.tag ? ', rollback tag ' + res.tag : '') + '.',
         ...res.gates.map((g) => '- ' + g.name + ': ' + (g.ok ? 'ok' : 'RED') + ', ' + g.detail),
+        ...res.nodeModules.filter((x) => x.state !== 'present').map(modulesLine),
         res.reason ? 'Reason: ' + res.reason : 'Every gate green. 3001 is ' + res.port3001 + '; the chat runs the visual check, then `lane-run go ' + id + ' --smoke "..."`.',
         'Outcome: ' + res.outcome,
     ];
