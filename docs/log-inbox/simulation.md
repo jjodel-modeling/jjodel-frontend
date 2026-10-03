@@ -127,3 +127,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Amends R-SIM-104 on the seed: in the status line's title only, as R-SIM-100 had it. Watch: the globals by default, at most four rows (`facePins`). The chat adopted the lane's four choices as recommended: the panel stays live while a step is viewed; closing the inspector or collapsing the panel returns to live; the canvas layer under the toolbar; the inspector clamped at 234 (MiniMap 202 px). Demo lines 62, 270, 403 also rewritten by Lane B: union at the second merge.
 **Prompt document name**: 2026-10-03 01:20
 **Ticket** (P-2026-10-03-0120): with the seed gone the last step still loses its tail in 184 px of status line: PEST and ESM by 23-71 px, Flow B's step 6 by 17 px, Petri's step 4 behind the Deadlock reason (61 px left); it reads whole in Petri's steps 1-3 and Flow B's 1-5. The title carries it whole; a perceptual item for Alfonso.
+
+## 2026-10-03 — merge: sim-state-face takes alfonso-frontend-jjtl (P-2026-10-03-0304)
+**Prompt**: `claude_2026-10-03_0304_prompt_sim-state-face_take_trunk.md`, full lane, `~/jjodel-w-simface` on `sim-state-face`: RC-14, the trunk at `04dd1c7e5` into the branch with one `--no-ff` merge, base `f7131a405`; the demo-script conflict resolved with the chat's text (RC-21); then, on the chat's two answers, the test red the merge gates found and the three `Data…` left in §4 of the demo script.
+**Files touched**: merge `536e27cf1`: the trunk's 39 files (37 clean, equal to the trunk's; resolved `docs/demo/models_2026_simulator_demo.md` by the chat's text, `docs/log-inbox/simulation.md` by union). `9b5386835`: `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irActivityRender.test.ts`. `6edc4b34c`: `docs/demo/models_2026_simulator_demo.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 01:20
+**Causa**: (c)
+**Regressions**: unknown. Gates on `6edc4b34c`: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6847/6847 in 273 files, the 9 red at import, equal to the trunk tip's count measured read-only in `~/jjodel-release`; hooks 344; build exit 0, chunk-size warning only; check:docs 4/4, check:scripts PASS, check:addonly PASS. No visual probe ran on the merged tree.
+**Out-of-scope changes**: yes — the test file and the three §4 lines of the demo script, beyond the prompt's DOVE, authorized by the chat; the merge itself carries 39 files, above five, the trunk's, listed in the prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the face checked on the branch at 02:31 and 02:49 (RC-23), before the merge; the merge adds trunk code on files disjoint from the branch's, not re-probed on this tree
+**Notes**: Corregge/Causa for the test commit only: since `6eedc4bf3` (R-SIM-107) `SimNodeRunState` reads `getSimRun`, missing from the test's mock, and the σ card the test pinned is gone; the 0120 lane ran the sim suites only. Fix: the mock stub, the σ fixtures with `before`, `cornerSigma` re-pinned to `f19f2252a2347426`. Mutation bench not run. §4 stale `Data…` fixed in a docs commit (P13: never with code).
+**Prompt document name**: 2026-10-03 03:04
