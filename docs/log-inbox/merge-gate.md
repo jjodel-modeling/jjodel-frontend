@@ -22,3 +22,16 @@ parallel lanes are running (P9). To be merged into the active log by whoever rot
 **Smoke visivo**: non applicabile
 **Notes**: Tests first, 8 red before the fix; mutation bench 20/20 killed (commit body). Measured, unchanged: `trunk-into-branch.md` already carries the flip clause in step 9 in the words of `merge-into-trunk.md`, and `merge --trunk-into --direct` already flips in `go`; the two prompts stayed unflipped because no GO followed their hard-stop. Dry render of `merge --trunk-into lane-run-hygiene` showed step 9; its pending file was deleted.
 **Prompt document name**: 2026-10-03 16:31
+
+## 2026-10-03 — merge: lane-run-hygiene into alfonso-frontend-jjtl (P-2026-10-03-1650)
+**Prompt**: `claude_2026-10-03_1650_prompt_merge_lane-run-hygiene.md`, a direct merge by `lane-run merge --direct`, no session: `lane-run-hygiene` at `ec5d412cb` into `alfonso-frontend-jjtl`, merge base `d2a1866b6`, 3 commits on the branch side.
+**Files touched**: merge `ac601d867`: 5 files from the branch side (`docs/log-inbox/merge-gate.md`, `docs/prompts/claude_2026-10-03_1631_prompt_lane_run_hygiene.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ac601d867` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6979 tests in 277 files, 9 red at import, hooks 352; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only harness change, no app code; eight gates of the direct worker green (vitest 6979, typecheck 14 baseline, build 0), 3001 up
+**Notes**: Rollback tag `pre-lane-run-hygiene` on `d2a1866b6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1650/result.json`.
+**Prompt document name**: 2026-10-03 16:50
