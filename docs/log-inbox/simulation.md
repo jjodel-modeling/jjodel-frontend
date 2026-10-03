@@ -302,3 +302,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3079, light, 1600×1000, DemoESM through the harness: 12/12, Apply one undo step, signature unchanged; crops light and dark in `~/.jjodel-lanes/P-2026-10-03-1845/`; the chat's visual check pending, RC-23)
 **Notes**: Bench 58/58 (codec 15, outputs 18, resolution 22, seams 3), one survivor killed by a test added. checkGuard folds nothing at the model, so outputs fold their own R2. R-SIM-116 and 118 verified by an RC-27 agent. Six first reds were the fixture's (`initial: ''` on derived and input records). The undo needs `U.userHasInteracted` in a probe. Report addendum.
 **Prompt document name**: 2026-10-03 18:45
+
+## 2026-10-03 — feat: the I/O board's two skins and the panel wiring, Lane 2 (P-2026-10-03-2000)
+**Prompt**: `claude_2026-10-03_2000_prompt_sim_io_board_skins.md`, heavy tier, `~/jjodel-w-ioskins` on `sim-io-board-skins` (from `11b4df6ce`): Lane 2 of the I/O board report §8, the card with Variants A and B, the device faces, the skin prefs, the panel wiring; tests first, mutation bench, lane probe on 3081 light and dark, the four demo scenes against the base; no merge.
+**Files touched**: `8c3a0e561`: `sim/SimBoard.scss`, `sim/simBoardDevices.tsx`, `sim/simBoardFace.ts` (new), `SimulationPanel.tsx`, `simViewerPrefs.ts`, `SimBoardEditor.tsx` (the footer string). `734294d19`: `__tests__/simBoardFace.test.ts` (new), `__tests__/simViewerPrefs.test.ts`. This commit: the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7106/7106 in 283 files, the 9 known suites red at import; build exit 0, chunk-size warning only; the four demo scenes' face, State dialog, inspector (372/400 × 442) and canvas readings equal to the base, 0 differing paths, Step's top 873.
+**Out-of-scope changes**: yes — eight files, all in the DOVE (rule 19), but `SimBoard.tsx` was not created: its card lives in `simBoardDevices.tsx` (Notes). Four scratch writes outside the worktree, three gate outputs and a backup in `/tmp`, moved into the gitignored `frontend/scripts/smoke/` or deleted.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3081, 1600×1000, DemoESM with a board: 50/50, the ten presses from the board equal to the hand run, Variants A and B, «Show bindings» on and off, a viewed step, the two cards never together; crops light and dark in `~/.jjodel-lanes/P-2026-10-03-2000/`; the chat's visual check pending, RC-23)
+**Notes**: `SimBoard.tsx` beside Lane 1's `simBoard.ts` differs only in case: on this disk `./SimBoard` resolves to `simBoard.ts` (tsc TS1149, Vite tries .ts first), so the card is `SimBoard` in `simBoardDevices.tsx`; a rename to a new file waits for Alfonso. Bench 36/36 on `simBoardFace.ts`, prefs 2/2. Held Switch and Slider values and `AskingInputs.given` are unit-tested only: DemoESM has no input. The prompt's 854.5 px is 873 since P-2026-10-03-0120.
+**Prompt document name**: 2026-10-03 20:00

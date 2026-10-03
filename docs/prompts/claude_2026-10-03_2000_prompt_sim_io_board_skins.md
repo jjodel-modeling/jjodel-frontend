@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-03-2000
 Chat: C-2026-10-03-1610
 Lane: full (implementation from a ratified discovery; visual, RC-23 by the chat). Tier: heavy (RC-32). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane sim-io-board-skins · feat 8c3a0e561, test 734294d19 · the card `SimBoard` lives in simBoardDevices.tsx, not SimBoard.tsx (beside Lane 1's simBoard.ts the name differs only in case; on this disk ./SimBoard resolves to simBoard.ts, tsc TS1149) · typecheck 14, the §17 set; vitest 7106/7106 in 283 files, the 9 known suites red at import; build exit 0, chunk-size warning only; mutation bench simBoardFace.ts 36/36, simViewerPrefs.ts 2/2 · lane probe on 3081 (frontend/scripts/smoke/_tmp_ioskins_probe.ts, gitignored): board 50/50, ten presses from the board equal to the hand run, Variants A and B, «Show bindings» on and off, a viewed step, the two cards never together; the four demo scenes equal to the base but for the header icon (0 differing paths, Step's top 873, inspector 372/400 × 442); crops light and dark in ~/.jjodel-lanes/P-2026-10-03-2000/ · hard-stop for the chat's visual check (RC-23) · non fuso: the merge waits for Alfonso
 
 Worktree: `~/jjodel-w-ioskins`, branch `sim-io-board-skins`, cut by the chat from `sim-io-board` at `11b4df6ce` (Lane 1 of P-2026-10-03-1845, not merged), `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 
