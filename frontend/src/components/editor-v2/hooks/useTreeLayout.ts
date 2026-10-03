@@ -1,10 +1,12 @@
-import { useMemo, useEffect, useCallback } from 'react';
+import { useMemo, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useStore, useEdges, useStoreApi, type Node, type ReactFlowState } from '@xyflow/react';
 import {
     computeTreeConnectorPath,
     registerEdgePath,
     unregisterEdgePath,
     getEdgeCrossings,
+    subscribeEdgePaths,
+    getEdgePathsVersion,
     buildFinalPath,
     roundManhattanPath,
     parsePathPoints,
@@ -193,6 +195,9 @@ export function useTreeLayout(
 
     // Active-canvas filter for crossing detection (see getEdgeCrossings docs).
     const activeNodeIds = useMemo(() => new Set(allNodes.map(n => n.id)), [allNodes]);
+    // Paths register in effects, after these crossings were computed: re-read them
+    // when the registry changes, as UnifiedEdge does (P-2026-10-02-1450, T9).
+    const edgePathsVersion = useSyncExternalStore(subscribeEdgePaths, getEdgePathsVersion, getEdgePathsVersion);
 
     // Compute crossings for tree segments so they also get bridge arcs
     const trunkPathFinal = useMemo(() => {
@@ -209,7 +214,7 @@ export function useTreeLayout(
         }
         return roundManhattanPath(treeGeometry.trunkPath, elbow);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [edgeId, isPrimary, isGrouped, treeGeometry, activeNodeIds, allEdges]);
+    }, [edgeId, isPrimary, isGrouped, treeGeometry, activeNodeIds, allEdges, edgePathsVersion]);
 
     const barBranchesPathFinal = useMemo(() => {
         if (!isPrimary || !isGrouped || !treeGeometry?.barAndBranchesPath) return treeGeometry?.barAndBranchesPath || '';
@@ -234,7 +239,7 @@ export function useTreeLayout(
         }
         return finalParts.join(' ');
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges]);
+    }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges, edgePathsVersion]);
 
     return {
         isGrouped,
