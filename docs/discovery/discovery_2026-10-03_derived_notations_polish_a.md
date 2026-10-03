@@ -148,3 +148,38 @@ are in the prompt file; positive control, same command: `CLASSIC_BAR_SIZE` 3 hit
 4. Item 4 says the Initial and Terminal «keep the fill of Color by metaclass»; R-VP-50 keeps glyph circles out of it, and the fill is untouched. Recommended: leave R-VP-50 as ratified.
 5. Which build and which project did the screenshots come from (pastel bars, `name = a`, bars 20×8)? On `2e75c44ca` and the exports they do not reproduce. Recommended: judge on 3021.
 6. A `decisions.md` row is owed: State machine drawn as Statechart (amends R-VP-22), and the polish decisions of this pass. Out of this prompt's scope. Recommended: the chat writes it from the closing report.
+
+## Addendum 2026-10-03 — Phase 2 results (same Prompt-ID, written after the code)
+
+Commits on `derived-notations-polish`: report `5e536da10`; item 1 `d55e87af8`; item 2 `c5e879925`; item 3 `94849c6b3`; item 4 `84e9dbdb4`;
+item 5 `26fca4b5e`; item 6 `79e4caf6d`; the new tests `a3a94f230`. Measured on those commits, dev server of this worktree on 3021, light theme with
+Color by metaclass on, the four scene files, probe `_tmp_dnotA_measure.ts` (gitignored; `/tmp/dnotA/measure_before.json`, `measure_after.json`; screenshots
+light and dark in `/tmp/dnotA/shots_after/`). [M] throughout; the before and after runs show the same node and edge-text counts on every scene.
+
+| Item | Before | After | Where to look |
+|---|---|---|---|
+| 1 | DemoESM State machine and Statechart: `Event` nodes 200×56, 1 compartment, row `name = coin`, title top | 200×42, 0 compartments, no row, title centred. Generic unchanged (0 rows before and after) | DemoESM, notations State machine and Statechart |
+| 2 | State machine: Initial circle 66×66, labels Inter 10 px | State machine and Statechart: nodes and edge labels equal on DemoPEST and DemoESM. The real dialog lists 8 notations (no State machine) and opens on Statechart for DemoPEST and DemoESM | DemoPEST, DemoESM; the Derive dialog |
+| 3 | Petri net bar node 50×14 (content 48×12), name centred; classic 10×44 | Petri net 56×12, name outside `anchor-s`: 0 of 2412 edge samples under any of the three labels, no bar overlap. Classic 12×56, name `anchor-e` | DemoPetri, notations Petri net and Petri net (classic) |
+| 4 | Flowchart Initial and Terminal 66×66 | 20×20 (`rgb(51,65,85)`) and 24×24 (white, bull's-eye), fills untouched | DemoFlowB, Flowchart |
+| 5 | Flowchart guard Inter 10 px `rgb(15,23,42)`; ISO Inter 12 px quiet; rows Inter 13 px | Flowchart and ISO guard IBM Plex Mono 11.5 px `rgb(51,65,85)` (Activity unchanged); State machine and Statechart rows IBM Plex Mono 11 px, as Generic's | DemoFlowB, Flowchart and ISO; DemoESM |
+| 6 | Fork and join node 50×14, `rgb(51,65,85)`, border light grey | 120×7 (content 118×5), `rgb(15,23,42)`, border the same ink, equal to the Activity (UML) bars, with coloring on | DemoFlowB, Flowchart |
+
+Tests: 53 new (`notationsPolishA.test.ts`), 35 red on the unmodified tree, the 18 that passed being controls and boundaries. Existing pins moved only where the
+fix says they must: hash maps re-measured per file by a helper that prints every key it changes (it over-replaced one pin once, caught by the suite and restored),
+the select's list, the initial notations, the four State machine glyphs, the named disc case of `irGlyphNoColor.test.ts` (re-pointed to a named Petri bull's-eye),
+the Petri and flowchart box sizes. Mutation bench: 33 mutants, 30 killed by the new file, 2 by the dialog test, 1 equivalent survivor (the `nameless` guard of `hidesName`).
+Gates: typecheck 14 errors, the same set as the baseline (exit 2); typecheck:scripts exit 0; vitest of the combined affected set 22 files 881 tests before, 23 files 935 after
+(derive folder 5 files 305 tests, dialog folder 11 files 445 after); full vitest 276 files, 6937 tests passed, the nine known files red at import and no other;
+build exit 0; check:docs and check:scripts exit 0.
+
+Deviations from the prompt, all vetoable:
+- Item 2 lives in `derivationRolesOf` (`notations.ts`), not in `deriveViewpointForBinding`, which never sees the id; the dialog opens on the twin (Q1). `deriveViewpointForBinding` is unchanged.
+- Item 1 also drops a compartment left with no row (Q3), which moves the label of a role-keyed box from top to centre; item 5 changes every role-keyed attribute row, not only the guard (Q2).
+- Three test files outside `derive/__tests__` and the dialog's folder moved with their pins: `nodes/__tests__/irGlyphNoColor.test.ts`, `nodes/__tests__/nodeSizing.test.ts`, `view/viewPoint/__tests__/notationGlyph.test.ts`.
+- The prompt's screenshot facts for items 1 (Generic), 3 (size) and 6 (pastel) did not reproduce, see §0; the fixes were written to the measures.
+
+Findings that outlive the lane:
+- Petri net (classic) `t1`'s name is crossed by an arc: 8 of 2412 samples under the label with the old 10×44 bar (measured by mutating the constant back and restoring it from HEAD), 6 with 12×56. Pre-existing, so no regression; it is the open ticket of 2026-10-02 in `docs/log-inbox/views.md`, and routing and handle sides are the discovery lane P-2026-10-03-1304's.
+- `npm run build` run while the dev server of the same tree is up left the server stale: after it the model tab opened with no canvas (0 nodes, no page error) until the server was restarted. `.vite-cache` is per tree, not per process (P14). The server left on 3021 was restarted after the last measure.
+- A `decisions.md` row is owed (State machine drawn as Statechart, amending R-VP-22; the polish decisions). Not written here: out of the prompt's scope.

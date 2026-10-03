@@ -2,7 +2,7 @@
 Prompt-ID: P-2026-10-03-1300
 Chat: C-2026-10-01-1725
 Lane: fast. Tier: light (notation definitions only, no file under `viewpoint/ir/`, none of the critical-zone files of CLAUDE.md section 21.2). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-03 · lane derived-notations-polish · a3a94f230 · non fuso: hard-stop, the six items measured on 3021 (light and dark), 53 new tests, mutation bench 32/33, visual GO pending; dev server left on 3021
 Worktree: `~/jjodel-w-dnotA`, branch `derived-notations-polish`, cut from the trunk at `c56f4fc63` (`frontend/node_modules` symlinked, P14).
 
 ## COSA
