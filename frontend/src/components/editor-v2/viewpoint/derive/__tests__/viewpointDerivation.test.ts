@@ -603,7 +603,9 @@ describe('deriveViewpointIRs — without roles the documents are byte-equal to b
         // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
         // P-2026-10-03-1300: the Transition bar is declared 56 by 12 and its name sits outside, below it; the digest moved from
         // '997f12afe5b58db0' to 'c03dae1789798ecb' (the Transition document, pinned whole below, is the one that changed).
-        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('c03dae1789798ecb');
+        // P-2026-10-03-1304 (Q3): the bar's box is 56 by 56 and it declares barThickness 12; with the old box and no
+        // thickness the digest was 'c03dae1789798ecb', measured on the lane.
+        expect(digest(deriveViewpointIRs(PETRI.lookup, PETRI.id, boundRoles(PETRI, 'petri')))).toBe('023be3c14750b11d');
     });
 
     it('a control-flow shape with no role bound keeps the boxes: the notation is keyed on the roles, not the shape', () => {
@@ -680,16 +682,17 @@ describe('deriveViewpointIRs — the Petri notation with the roles bound (R-VP-1
         });
     });
 
-    it('Transition, as a whole document: a flat 56 by 12 bar in the catalogue ink, the name outside below it in the label style', () => {
+    it('Transition, as a whole document: a 56 by 56 box with a 12 px bar in the catalogue ink (Q3), the name outside below it in the label style', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
-            exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 12 },
+            exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 56 },
             shape: {
                 form: 'bar', fill: INK,
                 border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' },
                 labels: [{ position: 'outside', anchor: 's', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
+                barThickness: 12,
             },
         });
     });
@@ -825,16 +828,17 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         });
     });
 
-    it('Transition, as a whole document: an upright bar 12×56 in the catalogue ink, its name outside above (R-VP-53)', () => {
+    it('Transition, as a whole document: a 56 by 56 box with a 12 px bar in the catalogue ink (Q3), its name outside above (R-VP-53)', () => {
         const t = byClass(views(), 'Transition');
         expect(t.rule).toBe('role:transition');
         expect(t.ir).toEqual({
             irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'], authoringMetaclassPins: { Transition: 'PETRI.Transition' },
-            exclusive: true, label: 'View for Transition', defaultSize: { width: 12, height: 56 },
+            exclusive: true, label: 'View for Transition', defaultSize: { width: 56, height: 56 },
             shape: {
                 form: 'bar', fill: INK,
                 border: { color: INK, width: 1, style: 'solid' },
                 labels: [{ position: 'outside', anchor: 'n', source: NAME, style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)' } }],
+                barThickness: 12,
             },
         });
     });
@@ -846,7 +850,8 @@ describe('deriveViewpointForBinding — Petri net (classic), over the Petri docu
         const arcSides = direction === 'RIGHT' || direction === 'LEFT' ? ['e', 'w'] : ['n', 's'];
         const anchor = t.shape.labels?.[0]?.anchor;
         expect(direction).toBe('RIGHT');
-        expect(t.defaultSize!.height).toBeGreaterThan(t.defaultSize!.width!);
+        // Q3: the bar is turned by its neighbours in a square box; Auto layout lays it upright across RIGHT (elkLayout.ts).
+        expect(t.shape.barThickness).toBeLessThan(t.defaultSize!.height!);
         expect(arcSides).not.toContain(anchor);
         expect(anchor).toBe('n');
     });
@@ -1033,8 +1038,8 @@ describe('deriveViewpointIRs — the activity notation with the roles bound (Dem
     it('Fork and Join: nameless bars in the name ink, 120 by 7, the bar of Activity (UML) (P-2026-10-03-1300)', () => {
         for (const n of ['Fork', 'Join']) {
             expect(byClass(flow(), n).rule, n).toBe(`role:${n.toLowerCase()}`);
-            expect(vertex(byClass(flow(), n)).shape, n).toEqual({ form: 'bar', fill: NAME_INK, border: { color: NAME_INK, width: 1, style: 'solid' }, labels: [] });
-            expect(vertex(byClass(flow(), n)).defaultSize, n).toEqual({ width: 120, height: 7 });
+            expect(vertex(byClass(flow(), n)).shape, n).toEqual({ form: 'bar', fill: NAME_INK, border: { color: NAME_INK, width: 1, style: 'solid' }, labels: [], barThickness: 7 });
+            expect(vertex(byClass(flow(), n)).defaultSize, n).toEqual({ width: 120, height: 120 });
             expect(vertex(byClass(flow(), n)).fieldCompartments, n).toBeUndefined();
         }
     });
@@ -1761,10 +1766,12 @@ describe('deriveViewpointForBinding — rule 1: the generic notation with no rol
         // Measured on the derivation of 58aa78ba9, before P-2026-09-29-2350 touched it.
         // R-VP-25 (P-2026-09-30-1521): DemoPetri moved with the open arrowhead of its Arc, to the digest predicted on
         // 2cde09984, before any A2 edit, as the tip's documents with every closedArrow an openArrow.
+        // P-2026-10-03-1304 (Q3): DemoPetri's bar and DemoFlowB's fork and join take a square box and a barThickness;
+        // with the old box and no thickness both digests were the ones before, measured on the lane.
         const got: Record<string, string> = {};
         for (const [name, mm, profile] of DEMOS) got[name] = digest(deriveViewpointIRs(mm.lookup, mm.id, boundRoles(mm, profile)));
         expect(got).toEqual({
-            DemoPEST: '99e03cfb52856542', DemoPetri: 'c03dae1789798ecb', DemoESM: '0908707066b1a90e', DemoFlowB: '0686c16f9969bb93',
+            DemoPEST: '99e03cfb52856542', DemoPetri: '023be3c14750b11d', DemoESM: '0908707066b1a90e', DemoFlowB: 'a796eb253ccbeb20',
         });
     });
 });

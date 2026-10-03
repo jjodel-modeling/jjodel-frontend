@@ -197,6 +197,8 @@ describe('A4 leaves every other notation as it was', () => {
     // key alone set to undefined every digest below was the one before, measured on the lane.
     // P-2026-10-03-1304 (Q6): DemoESM's Statechart and State machine lists gain the guarded transition document; with it
     // suppressed every digest below was the one before, measured on the lane.
+    // P-2026-10-03-1304 (Q3): the bars of Petri net and of Flowchart's fork and join take a square box and a barThickness;
+    // with the old box and no thickness every digest below was the one before, measured on the lane.
     const PINNED: Record<string, string> = {
         'DemoESM flowchart': '7e215bccf0811354',
         'DemoESM flowchartIso': '369ee94b0ae560fc',
@@ -204,7 +206,7 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoESM petri': 'a9967d96094069ab',
         'DemoESM stateMachine': '95040925ad077303',
         'DemoESM statechart': '1e8c563561566411',
-        'DemoFlowB flowchart': '124d96bbb07f4e44',
+        'DemoFlowB flowchart': 'c3934a5c797c9561',
         'DemoFlowB flowchartIso': '0f3b13332e902f0f',
         'DemoFlowB generic': '1ebd123804dc75a1',
         'DemoFlowB petri': 'b8415f0e187edacc',
@@ -219,7 +221,7 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoPetri flowchart': 'd2b745a44e81558d',
         'DemoPetri flowchartIso': '02ed35a22d5bcf3f',
         'DemoPetri generic': 'dab0b1ddf3a00c38',
-        'DemoPetri petri': '42781fdee36ad040',
+        'DemoPetri petri': '4ea473651a70adc7',
         'DemoPetri stateMachine': 'fcc0009cc695e6b4',
         'DemoPetri statechart': 'af986487f87ae4b8',
         'ERDLanguage ERD flowchart': '-',
@@ -279,7 +281,7 @@ describe('A4 leaves every other notation as it was', () => {
         'DemoPEST erChen': '-',
         'DemoPEST petriClassic': 'e838a4e40d369fad',
         'DemoPetri erChen': '-',
-        'DemoPetri petriClassic': '48bae3ebfeaa0939', // R-VP-53: the transition name above the bar (P-2026-10-03-1415)
+        'DemoPetri petriClassic': 'eee6dd3c7f3c9c84', // R-VP-53 (P-2026-10-03-1415), then Q3: the 56 by 56 box, 12 thick
         'ERDLanguage ERD erChen': '61c73fe96b150683',
         'ERDLanguage ERD petriClassic': 'ac8a06d17f46633c',
         'ERDLanguage Library erChen': '-',

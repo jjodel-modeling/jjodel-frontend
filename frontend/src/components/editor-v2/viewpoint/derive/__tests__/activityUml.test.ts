@@ -293,13 +293,14 @@ describe('Activity (UML) — the documents on DemoFlowB', () => {
         expect(ir.defaultSize).toEqual({ width: 36, height: 36 });
     });
 
-    it('fork and join: a filled bar in the ink, 7 px thick, across the layout direction (DOWN: 120 by 7), no name', () => {
-        // P-2026-10-01-2215 (Q7, amends R-VP-26 (2); thickness R-VP-36): the bar follows the layout direction.
+    it('fork and join: a filled bar in the ink, 7 px thick in a 120 by 120 box, turned by its neighbours, no name', () => {
+        // P-2026-10-01-2215 (Q7, amends R-VP-26 (2); thickness R-VP-36) laid the bar across the layout direction, 120 by 7;
+        // Q3 (P-2026-10-03-1304) turns it by its neighbours in a square box, and Auto layout lays it across DOWN still.
         expect(DERIVED_NOTATIONS.find(n => n.id === 'activityUml')!.layout!.direction).toBe('DOWN');
         for (const name of ['Fork', 'Join']) {
             const ir = irOf(views, name);
-            expect(ir.shape, name).toEqual({ form: 'bar', fill: INK, border: INK_BORDER, labels: [] });
-            expect(ir.defaultSize, name).toEqual({ width: 120, height: 7 });
+            expect(ir.shape, name).toEqual({ form: 'bar', fill: INK, border: INK_BORDER, labels: [], barThickness: 7 });
+            expect(ir.defaultSize, name).toEqual({ width: 120, height: 120 });
         }
     });
 
