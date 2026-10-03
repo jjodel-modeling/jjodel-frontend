@@ -25,6 +25,7 @@ import {
     type ContainmentModel,
 } from './irContainment';
 import { decorateReferenceEdges, synthesizeObjectAsEdges } from './irEdgeViews';
+import { resetBarOrientations } from './barOrientation';
 import { deriveIRInteraction, type IRInteractionPlan } from './irInteraction';
 import { getCollapsedSet, useCollapseVersion } from './irCollapseState';
 import { getIREdgeAnchorOverride, isSyntheticEdgeSelected, useEdgeInteractionVersion } from './irEdgeInteraction';
@@ -131,6 +132,8 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         // ObjectNodes, so clearing here and letting everyone re-publish in the
         // same commit avoids leaking the previous viewpoint's deps.
         resetCrossDepsEpoch(irSig);
+        // Q3 (P-2026-10-03-1304): the bars' remembered orientations belong to one viewpoint, dropped on a change as above.
+        resetBarOrientations(irSig);
         if (!irSig) return { nodes, edges, model: EMPTY_MODEL, names: EMPTY_NAMES };
         const state: any = store.getState();
         const index = getIRIndex(state, irSig);

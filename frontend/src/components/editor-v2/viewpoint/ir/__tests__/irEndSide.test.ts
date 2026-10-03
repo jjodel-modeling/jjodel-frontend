@@ -12,6 +12,8 @@ import { describe, expect, it } from 'vitest';
 import { clearCompileCache } from '../irCompile';
 import { assignGeometricHandles, endSideFor, synthesizeObjectAsEdges } from '../irEdgeViews';
 import { getIRIndex } from '../irResolveCore';
+import { validateIR } from '../irValidate';
+import { resetBarOrientations } from '../barOrientation';
 import { makeDrawReadCtx } from '../irReadCtx';
 import type { EdgeViewIR, VertexViewIR } from '../irTypes';
 
@@ -145,5 +147,102 @@ describe('synthesizeObjectAsEdges: the sides and the form tags', () => {
         expect('irSourceForm' in (e.irobj_a1.data as any)).toBe(false);
         expect([e.irobj_a2.sourceHandle, e.irobj_a2.targetHandle]).toEqual(['right-0', 'left-0']);
         expect(['irSourceForm', 'irTargetForm'].some(k => k in (e.irobj_a2.data as any))).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Q3 (P-2026-10-03-1304): a bar that declares a thickness turns in its square box
+// ---------------------------------------------------------------------------
+
+describe('Q3: the side rule reads the orientation when the box is square', () => {
+    const SQUARE_BAR = { width: 56, height: 56 };
+    it('upright: left or right, lying: top or bottom, whatever the square box says', () => {
+        expect(endSideFor('bar', SQUARE_BAR, { x: 10, y: -300 }, new Set(), 'upright')).toBe('right');
+        expect(endSideFor('bar', SQUARE_BAR, { x: 300, y: 10 }, new Set(), 'lying')).toBe('bottom');
+        // Without an orientation, the box decides as before (a square reads upright).
+        expect(endSideFor('bar', SQUARE_BAR, { x: 10, y: -300 })).toBe('right');
+    });
+});
+
+describe('Q3: ShapeSpec.barThickness in the validator', () => {
+    const bar = (t: unknown): VertexViewIR => ({ irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['T'], shape: { form: 'bar', labels: [], barThickness: t as never } });
+    it('a positive number or absent; anything else refused', () => {
+        expect(validateIR('q3_ok', bar(12))).toEqual({ ok: true });
+        expect(validateIR('q3_abs', { ...bar(1), shape: { form: 'bar', labels: [] } })).toEqual({ ok: true });
+        for (const v of [0, -3, '12', null, Number.NaN]) {
+            const r = validateIR('q3_bad', bar(v));
+            expect(r.ok, String(v)).toBe(false);
+            expect(!r.ok && r.error).toContain('barThickness');
+        }
+    });
+});
+
+describe('Q3: the synthesis turns a bar with a thickness, and holds it during a drag', () => {
+    function world(placeAt: { x: number; y: number }, thickness: number | undefined, dragging = false) {
+        const idlookup: Record<string, any> = {
+            C_Place: { id: 'C_Place', name: 'Place', extends: [] },
+            C_Trans: { id: 'C_Trans', name: 'Transition', extends: [] },
+            C_Arc: { id: 'C_Arc', name: 'Arc', extends: [] },
+            R_src: { id: 'R_src', name: 'src', className: 'DReference', composition: false },
+            R_tgt: { id: 'R_tgt', name: 'tgt', className: 'DReference', composition: false },
+            p1: { id: 'p1', name: 'p1', instanceof: 'C_Place', features: [] },
+            t1: { id: 't1', name: 't1', instanceof: 'C_Trans', features: [] },
+            a1: { id: 'a1', name: 'a1', instanceof: 'C_Arc', features: ['a1_src', 'a1_tgt'] },
+            a1_src: { id: 'a1_src', instanceof: 'R_src', values: ['p1'] },
+            a1_tgt: { id: 'a1_tgt', instanceof: 'R_tgt', values: ['t1'] },
+        };
+        const barView: VertexViewIR = {
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Transition'],
+            shape: { form: 'bar', labels: [], ...(thickness ? { barThickness: thickness } : {}) },
+        };
+        const placeView: VertexViewIR = { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Place'], shape: { form: 'circle', labels: [] } };
+        const arcView: EdgeViewIR = { irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Arc'], edge: { source: '$src.value', target: '$tgt.value' } };
+        const state = {
+            viewpoint: 'VP', viewelements: ['V_arc', 'V_place', 'V_bar'],
+            idlookup: { ...idlookup, V_arc: { id: 'V_arc', viewpoint: 'VP', ir: arcView }, V_place: { id: 'V_place', viewpoint: 'VP', ir: placeView }, V_bar: { id: 'V_bar', viewpoint: 'VP', ir: barView } },
+        };
+        const nodes: any[] = [
+            { id: 'V1', type: 'objectNode', position: placeAt, measured: { width: 44, height: 44 }, data: {}, ...(dragging ? { dragging: true } : {}) },
+            { id: 'VT', type: 'objectNode', position: { x: 300, y: 300 }, measured: { width: 56, height: 56 }, data: {} },
+        ];
+        return { state, nodes, objByVertex: new Map([['V1', 'p1'], ['VT', 't1']]), vertexByObj: new Map([['p1', 'V1'], ['t1', 'VT']]) };
+    }
+    function run(placeAt: { x: number; y: number }, thickness: number | undefined, sig: string, dragging = false) {
+        const { state, nodes, objByVertex, vertexByObj } = world(placeAt, thickness, dragging);
+        const index = getIRIndex(state, sig)!;
+        const res = synthesizeObjectAsEdges(nodes, [], objByVertex, vertexByObj, index, makeDrawReadCtx(state.idlookup), state.idlookup, undefined, new Map(), new Set(['a1']));
+        return { bar: res.nodes.find(n => n.id === 'VT')!, arc: res.edges.find(e => e.id === 'irobj_a1')! };
+    }
+
+    it('a place above: the bar lies, its node data says so with the thickness, the arc enters its top', () => {
+        resetBarOrientations('q3_synth_1');
+        clearCompileCache();
+        const { bar, arc } = run({ x: 306, y: 0 }, 12, 'q3_synth_1');
+        expect((bar.data as any).irBarOrientation).toBe('lying');
+        expect((bar.data as any).irBarThickness).toBe(12);
+        expect(arc.targetHandle).toBe('top-0');
+    });
+
+    it('a place to the left: the bar stands, the arc enters its left', () => {
+        resetBarOrientations('q3_synth_2');
+        clearCompileCache();
+        const { bar, arc } = run({ x: 0, y: 306 }, 12, 'q3_synth_2');
+        expect((bar.data as any).irBarOrientation).toBe('upright');
+        expect(arc.targetHandle).toBe('left-0');
+    });
+
+    it('while any node is dragged the bar keeps its orientation; released, it turns', () => {
+        resetBarOrientations('q3_synth_3');
+        clearCompileCache();
+        expect((run({ x: 306, y: 0 }, 12, 'q3_synth_3').bar.data as any).irBarOrientation).toBe('lying');
+        expect((run({ x: 0, y: 306 }, 12, 'q3_synth_3', true).bar.data as any).irBarOrientation).toBe('lying');
+        expect((run({ x: 0, y: 306 }, 12, 'q3_synth_3', false).bar.data as any).irBarOrientation).toBe('upright');
+    });
+
+    it('a bar without a thickness (a saved view) is not turned and carries no key', () => {
+        resetBarOrientations('q3_synth_4');
+        clearCompileCache();
+        const { bar } = run({ x: 306, y: 0 }, undefined, 'q3_synth_4');
+        expect(['irBarOrientation', 'irBarThickness'].some(k => k in ((bar.data ?? {}) as any))).toBe(false);
     });
 });

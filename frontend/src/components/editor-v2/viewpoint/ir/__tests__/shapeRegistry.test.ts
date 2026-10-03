@@ -765,6 +765,10 @@ const OUTSIDE_LABEL_CSS_START = 17954;
  *  P-2026-09-30-0355): where the outside label's section ends and the entry mark's begins. */
 const ENTRY_MARK_CSS_START = 20461;
 
+/** Length of the injected CSS before the turned bar's rules (Q3), measured at 4bd9aa66f (P-2026-10-03-1304): where
+ *  the entry mark's section ends and the turned bar's begins. */
+const BAR_INK_CSS_START = 20896;
+
 /**
  * The bar (R-VP-16, P-2026-09-29-1021): the Petri transition as a thin solid box drawn at a
  * fixed size. The CSS is read as irStyle.ts injects it, through a stand-in `document` (the
@@ -901,7 +905,8 @@ describe('irStyle: the entry mark (P-2026-09-30-0355)', () => {
         const css = injectedCss();
         // The whole injected CSS of the D tip (c676fc6f6), 20461 characters.
         expect(createHash('sha256').update(css.slice(0, ENTRY_MARK_CSS_START)).digest('hex').slice(0, 16)).toBe('9389262213aac4a4');
-        const added = [...rulesOf(css.slice(ENTRY_MARK_CSS_START)).keys()];
+        // The turned bar's section ends it since Q3 (P-2026-10-03-1304): this check is bounded to the entry mark's rules.
+        const added = [...rulesOf(css.slice(ENTRY_MARK_CSS_START, BAR_INK_CSS_START)).keys()];
         expect(added).toEqual(['.ir-node-content:has(> .ir-entry-svg)', '.mm-node:has(> .ir-node-content > .ir-entry-svg)']);
     });
 
@@ -909,5 +914,22 @@ describe('irStyle: the entry mark (P-2026-09-30-0355)', () => {
         const rules = rulesOf(injectedCss().slice(ENTRY_MARK_CSS_START));
         expect(rules.get('.ir-node-content:has(> .ir-entry-svg)')).toEqual({ overflow: 'visible' });
         expect(rules.get('.mm-node:has(> .ir-node-content > .ir-entry-svg)')).toEqual({ overflow: 'visible' });
+    });
+});
+
+/**
+ * Q3 (P-2026-10-03-1304): a bar that declares a thickness paints its ink inside a square box (IRNodeContent); the box
+ * takes no pointer, the ink does, so the hit area and the hover are the ink's. Measured in the browser by the lane
+ * probe (frontend/scripts/probe/derived-notations-edges.ts, barChecks); here, the rules as injected.
+ */
+describe('irStyle: the turned bar (Q3)', () => {
+    it('every rule written before it is byte-identical: the turned bar only appends', () => {
+        const css = injectedCss();
+        // The whole injected CSS at 4bd9aa66f, before Q3's edit, 20896 characters.
+        expect(createHash('sha256').update(css.slice(0, BAR_INK_CSS_START)).digest('hex').slice(0, 16)).toBe('8010dd5f370cb8f9');
+        const rules = rulesOf(css.slice(BAR_INK_CSS_START));
+        expect([...rules.keys()]).toEqual(['.react-flow__node:has(.ir-node-content.ir-bar-ink)', '.ir-node-content.ir-bar-ink']);
+        expect(rules.get('.react-flow__node:has(.ir-node-content.ir-bar-ink)')).toEqual({ 'pointer-events': 'none !important' });
+        expect(rules.get('.ir-node-content.ir-bar-ink')).toEqual({ 'pointer-events': 'auto' });
     });
 });

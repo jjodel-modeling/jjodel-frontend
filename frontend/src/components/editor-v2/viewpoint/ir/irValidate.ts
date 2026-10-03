@@ -364,6 +364,17 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             }
         }
 
+        // Bar thickness (Q3, P-2026-10-03-1304): a finite number > 0 (px), by the same function as
+        // the default size, or absent for a bar drawn as its box.
+        const barThickness: unknown = (ir as NodeViewIR).shape?.barThickness;
+        if (barThickness !== undefined && usableSizeAxis(barThickness) === undefined) {
+            const read = typeof barThickness === 'number' ? String(barThickness) : JSON.stringify(barThickness);
+            return {
+                ok: false,
+                error: `[ir] shape.barThickness must be a finite number > 0 (px), or absent for a bar drawn as its box, read ${read}`,
+            };
+        }
+
         // Label position and anchor (P-2026-09-29-1245): authoring-time by the R-B9-bis
         // criterion, like padding. The render stays permissive (an unknown anchor draws 's',
         // resolveLabelAnchor; an unknown position gets no rule and stays in the flow), the

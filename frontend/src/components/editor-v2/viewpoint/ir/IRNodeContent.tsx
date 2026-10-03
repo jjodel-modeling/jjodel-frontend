@@ -15,7 +15,7 @@ import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import { useEditorContextSafe } from '../../contexts/EditorContext';
 import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
-import type { BadgePosition, CompiledView, ShapeForm } from './irTypes';
+import type { BadgePosition, CompiledView, ShapeForm, VertexViewIR } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
@@ -196,6 +196,12 @@ export interface IRNodeContentProps {
      * alone, as before and as in the authoring preview.
      */
     colorOverride?: MetaclassColorOverride;
+    /**
+     * The orientation of a bar that declares a thickness (Q3, P-2026-10-03-1304), computed by the edge synthesis
+     * (irEdgeViews.ts) and handed over by the host from the node data. Absent = upright. Ignored by every other form
+     * and by a bar without a thickness, which paints its box as before.
+     */
+    barOrientation?: 'upright' | 'lying';
 }
 
 /**
@@ -251,7 +257,7 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride }: IRNodeContentProps) {
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride, barOrientation }: IRNodeContentProps) {
     const form = resolveNodeForm(compiled, readCtx, objectId, collapsed);
     // A collapsed fill that resolves empty (a conditional with no match) falls back to the
     // expanded fill, the same convention as an empty fill falling back to the box colour.
@@ -551,10 +557,22 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // .ir-node-content itself apply and the markup of an unauthored view is unchanged.
     const padClass = compiled.padding === 'normal' ? '' : ` ir-pad--${compiled.padding}`;
 
+    // Q3 (P-2026-10-03-1304): a bar that declares a thickness keeps its square box and paints its ink T px across,
+    // upright or lying, centred in the box. The ink is this element, so the selection ring and the run's outline,
+    // drawn on it, follow the bar; irStyle.ts gives the pointer to the ink alone.
+    const barThickness = form === 'bar' ? (compiled.ir as VertexViewIR).shape?.barThickness : undefined;
+    const barInk = typeof barThickness === 'number' && Number.isFinite(barThickness) && barThickness > 0;
+    if (barInk) {
+        const half = `calc(50% - ${barThickness / 2}px)`;
+        Object.assign(inlineStyle, barOrientation === 'lying'
+            ? { position: 'absolute', top: half, left: 0, width: '100%', height: `${barThickness}px` }
+            : { position: 'absolute', left: half, top: 0, width: `${barThickness}px`, height: '100%' });
+    }
+
     return (
         <div
             ref={contentRef}
-            className={`ir-node-content ir-shape--${form}${padClass}`}
+            className={`ir-node-content ir-shape--${form}${padClass}${barInk ? ' ir-bar-ink' : ''}`}
             style={inlineStyle}
         >
             {svgPainter && (

@@ -254,6 +254,16 @@ export interface ShapeSpec {
      */
     entry?: EntryMark;
     /**
+     * Drawn thickness of a `bar` (Q3, P-2026-10-03-1304, docs/lir/lir_2026-10-03_bar_orientation.md):
+     * a bar that declares it keeps a square box and paints its ink this many px across, upright or
+     * lying inside the box, turned automatically so its long sides face its connected neighbours
+     * (barOrientation.ts; recomputed on open, after Auto layout and at drag release, never persisted).
+     * Absent = the bar of before, drawn as its box, never turned (every view saved before Q3).
+     * Ignored by every other form. Scalar, never Conditional. Persisted, never renamed (R-B9);
+     * additive optional field: no irVersion bump, no migration.
+     */
+    barThickness?: number;
+    /**
      * Typographic style of the whole symbol (ir-1.3, node-level cascade root).
      * Applied inline on `.ir-node-content` and inherited by every text surface
      * (labels, compartment rows, inline editors). A label's own `style` wins over
