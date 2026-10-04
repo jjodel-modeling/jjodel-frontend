@@ -9,7 +9,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { BINDING_KINDS, DEVICE_KINDS, IO_BOARD_KEY, bindingFits, decodeBoard, encodeBoard, isInputKind } from '../boardCodec';
+import {
+    BINDING_KINDS, CLOCK_PERIOD_DEFAULT, CLOCK_PERIOD_MAX, CLOCK_PERIOD_MIN, DEVICE_KINDS, IO_BOARD_KEY, bindingFits, decodeBoard, encodeBoard, isClockPeriod,
+    isInputKind,
+} from '../boardCodec';
 import type { BoardBinding, BoardDevice, DeviceKind } from '../boardCodec';
 
 const dev = (id: string, kind: DeviceKind, cell: [number, number], binding: BoardBinding | null, label = ''): BoardDevice =>
@@ -31,6 +34,7 @@ const ALL: BoardDevice[] = [
     dev('d12', 'text', [3, 2], { kind: 'configuration' }),
     dev('d13', 'gauge', [0, 3], { kind: 'attr', element: 'M', attr: 'coins' }),
     dev('d14', 'led', [1, 3], null),
+    { ...dev('d15', 'clock', [2, 3], { kind: 'event', event: 'Ev_tick' }, 'Timer'), period: 2500 },
 ];
 
 describe('the key and the kinds', () => {
@@ -39,9 +43,16 @@ describe('the key and the kinds', () => {
         expect(IO_BOARD_KEY.startsWith('sim')).toBe(false);
     });
 
-    it('nine kinds, four inputs then five outputs (R-SIM-111)', () => {
-        expect(DEVICE_KINDS).toEqual(['button', 'switch', 'slider', 'keypad', 'led', 'pulse', 'seven', 'text', 'gauge']);
-        expect(DEVICE_KINDS.filter(isInputKind)).toEqual(['button', 'switch', 'slider', 'keypad']);
+    it('ten kinds, five inputs then five outputs: the clock is the fifth input (R-SIM-111 as amended by R-SIM-122; mutant: clock an output)', () => {
+        expect(DEVICE_KINDS).toEqual(['button', 'switch', 'slider', 'keypad', 'clock', 'led', 'pulse', 'seven', 'text', 'gauge']);
+        expect(DEVICE_KINDS.filter(isInputKind)).toEqual(['button', 'switch', 'slider', 'keypad', 'clock']);
+    });
+
+    it('a clock takes the Button\'s binding, one event instance, and nothing else (R-SIM-122 decision 2; mutant: a clock accepting an ivar)', () => {
+        expect(BINDING_KINDS.clock).toEqual(['event']);
+        expect(bindingFits('clock', { kind: 'event', event: 'e' })).toBe(true);
+        expect(bindingFits('clock', { kind: 'ivar', element: 'M', attr: 'x' })).toBe(false);
+        expect(bindingFits('clock', { kind: 'events', on: 'a', off: 'b' })).toBe(false);
     });
 
     it('each kind accepts its bindings only (mutant: a gauge accepting an expression, a button accepting an ivar)', () => {
@@ -52,6 +63,53 @@ describe('the key and the kinds', () => {
         expect(bindingFits('button', { kind: 'ivar', element: 'M', attr: 'x' })).toBe(false);
         expect(bindingFits('gauge', { kind: 'expr', text: 'model.[x]' })).toBe(false);
         expect(bindingFits('pulse', { kind: 'transition', transition: 't' })).toBe(true);
+    });
+});
+
+describe('the clock\'s period (R-SIM-122 decision 2)', () => {
+    it('milliseconds, integer, 100..60000, default 1000 (mutant: bounds shifted by one; mutant: a fraction accepted)', () => {
+        expect([CLOCK_PERIOD_MIN, CLOCK_PERIOD_MAX, CLOCK_PERIOD_DEFAULT]).toEqual([100, 60000, 1000]);
+        expect([100, 1000, 60000].map(isClockPeriod)).toEqual([true, true, true]);
+        expect([99, 60001, 0, -1000, 1000.5, NaN, Infinity].map(isClockPeriod)).toEqual([false, false, false, false, false, false, false]);
+        expect(isClockPeriod('1000')).toBe(false);
+        expect(isClockPeriod(null)).toBe(false);
+    });
+
+    it('a clock writes its period after the binding; every other kind writes none, so an existing board keeps its bytes (mutant: period on every device)', () => {
+        const clock: BoardDevice = { ...dev('d1', 'clock', [0, 0], { kind: 'event', event: 'E' }), period: 1000 };
+        expect(encodeBoard([clock])).toBe('{"v":1,"devices":[{"id":"d1","kind":"clock","cell":[0,0],"label":"","binding":{"kind":"event","event":"E"},"period":1000}]}');
+        const button: BoardDevice = { ...dev('d1', 'button', [0, 0], { kind: 'event', event: 'E' }, 'Coin'), period: 500 };
+        expect(encodeBoard([button])).toBe('{"v":1,"devices":[{"id":"d1","kind":"button","cell":[0,0],"label":"Coin","binding":{"kind":"event","event":"E"}}]}');
+    });
+
+    it('a stored clock without a period reads the default, with no defect; an unbound clock keeps its period (mutant: absent period a defect)', () => {
+        const raw = JSON.stringify({ v: 1, devices: [
+            { id: 'd1', kind: 'clock', cell: [0, 0], label: '', binding: { kind: 'event', event: 'E' } },
+            { id: 'd2', kind: 'clock', cell: [1, 0], label: '', binding: null, period: 250 },
+        ] });
+        const d = decodeBoard(raw);
+        expect(d.defects).toEqual([]);
+        expect(d.devices.map(x => [x.id, x.period, x.binding])).toEqual([['d1', 1000, { kind: 'event', event: 'E' }], ['d2', 250, null]]);
+    });
+
+    it('a stored period that is not a whole number in 100..60000 is a defect of its device, never a clamp: the device is not read, the others are (mutant: clamped to the range)', () => {
+        const bad: unknown[] = [50, 60001, 1.5, '1000', null, 0];
+        const raw = JSON.stringify({ v: 1, devices: [
+            ...bad.map((period, i) => ({ id: `c${i}`, kind: 'clock', cell: [i % 4, Math.floor(i / 4)], label: '', binding: { kind: 'event', event: 'E' }, period })),
+            { id: 'ok', kind: 'clock', cell: [3, 3], label: '', binding: { kind: 'event', event: 'E' }, period: 60000 },
+        ] });
+        const d = decodeBoard(raw);
+        expect(d.devices.map(x => [x.id, x.period])).toEqual([['ok', 60000]]);
+        expect(d.defects.map(x => [x.index, x.code])).toEqual(bad.map((_, i) => [i, 'device']));
+        expect(d.defects[0].message).toBe('c0: the period is not a whole number of milliseconds in 100..60000.');
+        expect(d.readable).toBe(true);
+    });
+
+    it('a period stored on another kind is an unknown field: ignored, not read onto the device', () => {
+        const raw = JSON.stringify({ v: 1, devices: [{ id: 'd1', kind: 'button', cell: [0, 0], label: '', binding: null, period: 5 }] });
+        const d = decodeBoard(raw);
+        expect(d.defects).toEqual([]);
+        expect('period' in d.devices[0]).toBe(false);
     });
 });
 
