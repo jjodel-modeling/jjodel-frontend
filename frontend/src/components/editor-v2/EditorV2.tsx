@@ -112,6 +112,8 @@ import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } 
 import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
 import { simPillVisible } from './sim/simRoleStatus';
+import { getSimRun, useSimVersion } from './sim/simRunState';
+import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -1301,7 +1303,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 type: e.type,
             })),
             positions,
-            currentNodes.filter(n => !n.hidden).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0),
+            // A node the run hides keeps its box (P-2026-10-04-0935), so the lanes do not move with the events.
+            currentNodes.filter(occupiesCanvas).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0),
         )));
 
         return edgeList.map(edge => {
@@ -1545,6 +1548,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // the active viewpoint has IR graphVertex views. Pass-through (same array
     // references) otherwise — zero cost for non-IR sessions.
     const irContainment = useIRContainment(stableNodes, stableEdges);
+
+    // The run's events are not drawn while a run of this model exists (R-SIM-16, R-SIM-29; P-2026-10-04-0935):
+    // flagged hidden on the arrays handed to React Flow only, so nothing is written, laid out or persisted. Keyed on
+    // the run's alphabet, which a step keeps: a step recomputes nothing, and Stop gives back the arrays of before.
+    useSimVersion();
+    const simEvents = modelid ? getSimRun(modelid)?.alphabet : undefined;
+    const flowElements = useMemo(
+        () => hideRunEvents(irContainment.nodes, irContainment.edges, simEvents,
+            nodeId => (store.getState() as any).idlookup?.[nodeId]?.model),
+        [irContainment.nodes, irContainment.edges, simEvents],
+    );
 
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
@@ -4316,8 +4330,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={irContainment.nodes}
-                edges={irContainment.edges}
+                nodes={flowElements.nodes}
+                edges={flowElements.edges}
                 onNodesChange={handleNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
