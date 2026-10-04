@@ -94,6 +94,150 @@ $sim-board-cell-height: 56px;
         border-radius: var(--radius-md, 8px);
     }
 
+    // -- the front panel's look (R-SIM-133): theme, accent swatches, columns, above the grid -----------
+    &__look {
+        display: flex;
+        flex: none;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 8px 16px;
+        margin-bottom: 8px;
+
+        .sim-board-editor__hint {
+            flex: 1 1 100%;
+        }
+    }
+
+    &__swatches {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 30px;
+    }
+
+    &__swatch {
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: 2px solid var(--color-bg-primary);
+        border-radius: 50%;
+        box-shadow: 0 0 0 1px var(--color-border-primary);
+        cursor: pointer;
+
+        &[aria-checked="true"] {
+            box-shadow: 0 0 0 2px var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+
+        &--auto {
+            width: auto;
+            height: 22px;
+            padding: 0 8px;
+            border: 1px solid var(--color-border-primary);
+            border-radius: 11px;
+            background: var(--color-bg-secondary);
+            color: var(--color-text-secondary);
+            font-family: inherit;
+            font-size: 11px;
+            box-shadow: none;
+        }
+    }
+
+    // -- the style of the device chosen (R-SIM-126, R-SIM-133) ---------------------------------
+    &__style {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    &__pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    &__icon-choices {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+    }
+
+    &__icon-choice,
+    &__icon-current {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+
+        .bi {
+            font-size: 13px;
+        }
+    }
+
+    &__icon-choice {
+        cursor: pointer;
+
+        &[aria-checked="true"] {
+            border-color: var(--color-text-primary);
+            color: var(--color-text-primary);
+            font-weight: 600;
+        }
+    }
+
+    &__icon-current {
+        border-color: var(--color-text-primary);
+        color: var(--color-text-primary);
+    }
+
+    &__icons {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+        gap: 4px;
+        max-height: 140px;
+        overflow-y: auto;
+    }
+
+    &__icon {
+        height: 30px;
+        padding: 0;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+
+        .bi {
+            font-size: 15px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &[aria-selected="true"] {
+            border-color: var(--color-text-primary);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
     &__tile {
         box-sizing: border-box;
         display: flex;

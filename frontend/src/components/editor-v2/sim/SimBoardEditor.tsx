@@ -20,6 +20,15 @@
  * on open (`boardContextOf`, the model's net as Reset would compile it): the
  * dialog is modal, and a model edit interrupts a run anyway.
  *
+ * The styles of the front panel (R-SIM-133, P-2026-10-04-1131): above the grid,
+ * the board's theme, accent (five swatches and Auto) and columns; the grid on the
+ * board's columns, each tile over its span, the cells it covers not drawn as
+ * targets; in the inspector, the style fields of the device's kind (simBoard.ts
+ * `setStyle`), its span (`setSpan`, refused off the grid or over another device),
+ * and for a Button or a Clock an icon picker over the installed Bootstrap icons,
+ * loaded on first use, with Auto (the suggestion and its rule) and None. The
+ * palette gains the Buzzer under Outputs and the Silkscreen under Panel.
+ *
  * Opened from the board (Lane 2, `sim-io-board-skins`); nothing in the app mounts
  * it before that lane. Portaled onto `document.body` with the classes of the
  * roles dialog (SimRolesModal.scss), and it stops keyboard and pointer events at
@@ -30,14 +39,17 @@ import { DragEvent, KeyboardEvent, ReactElement, SyntheticEvent, useEffect, useM
 import { createPortal } from 'react-dom';
 import { LPointerTargetable, store } from '../../../joiner';
 import {
-    BINDING_KINDS, BOARD_COLUMNS, BOARD_ROWS, CLOCK_PERIOD_DEFAULT, CLOCK_PERIOD_MAX, CLOCK_PERIOD_MIN, DEVICE_KINDS, IO_BOARD_KEY, KEYPAD_KEYS, decodeBoard,
-    encodeBoard, isClockPeriod, isInputKind,
+    BINDING_KINDS, BOARD_COLS, BOARD_ROWS, BOARD_THEMES, BUTTON_ROLES, BUTTON_SHAPES, CLOCK_PERIOD_DEFAULT, CLOCK_PERIOD_MAX, CLOCK_PERIOD_MIN, DEVICE_KINDS,
+    DISPLAY_FACES, DISPLAY_SIZES, ICON_MODES, IO_BOARD_KEY, KEYPAD_KEYS, LED_COLORS, LED_SHAPES, SPAN_MAX_COLUMNS, SPAN_MAX_ROWS, STYLE_FIELDS, boardCols,
+    decodeBoard, encodeBoard, isClockPeriod, isInputKind, spanOf,
 } from '../../../model/simulation/boardCodec';
-import type { BindingKind, BoardBinding, BoardDevice, DeviceKind } from '../../../model/simulation/boardCodec';
+import type { BindingKind, BoardBinding, BoardCols, BoardDevice, BoardSettings, BoardTheme, DeviceKind, StyleField } from '../../../model/simulation/boardCodec';
 import {
-    DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, clockPeriodText, moveDevice, nuxmvRows, removeDevice, resolveDevice, setBinding, setLabel, setPeriod,
+    DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, clockPeriodText, moveDevice, nuxmvRows, removeDevice, resolveDevice, setAccent, setBinding,
+    setBoardCols, setBoardTheme, setLabel, setPeriod, setSpan, setStyle,
 } from './simBoard';
-import type { BoardContext, BoardIvarChoice, DeviceStatus } from './simBoard';
+import type { BoardContext, BoardIvarChoice, DeviceStatus, DeviceStyleChange } from './simBoard';
+import { pressLook } from './simBoardLook';
 import './SimRolesModal.scss';
 import './SimBoardEditor.scss';
 
@@ -70,6 +82,29 @@ const FORM_LABEL: Readonly<Record<BindingKind, string>> = {
     configuration: 'The configuration', attr: 'An attribute',
 };
 
+/** R-SIM-133: the accent's five swatches beside Auto, the theme's own. */
+const ACCENTS: ReadonlyArray<{ color: string; name: string }> = [
+    { color: '#e8590c', name: 'Orange' }, { color: '#1c7ed6', name: 'Blue' }, { color: '#2f9e44', name: 'Green' },
+    { color: '#ae3ec9', name: 'Violet' }, { color: '#f59f00', name: 'Amber' },
+];
+
+const THEME_LABEL: Readonly<Record<BoardTheme, string>> = { graphite: 'Graphite', appliance: 'Appliance', instrument: 'Instrument', print: 'Print' };
+
+/** The words of each style field and of its values (R-SIM-126). */
+const STYLE_LABEL: Readonly<Record<StyleField, string>> = {
+    shape: 'Shape', role: 'Role', icon: 'Icon', iconMode: 'Icon and text', key: 'Shortcut key', size: 'Size', face: 'Face', color: 'Colour',
+};
+
+/** The icons the picker shows at once; a search narrows them. */
+const PICKER_LIMIT = 60;
+
+/** The installed Bootstrap icon names, loaded on first use: the picker's list (no new dependency, report H4). */
+let iconNames: Promise<string[]> | null = null;
+function loadIconNames(): Promise<string[]> {
+    iconNames ??= import('bootstrap-icons/font/bootstrap-icons.json').then(m => Object.keys((m as { default?: Record<string, number> }).default ?? m).sort());
+    return iconNames;
+}
+
 /** A context with nothing to bind to: the roles of the metamodel make no STC. */
 function emptyContext(modelId: string): BoardContext {
     return {
@@ -95,6 +130,13 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
     const { modelId, modelName, boardRaw, onClose, onApplied } = props;
     const stored = useMemo(() => decodeBoard(boardRaw), [boardRaw]);
     const [draft, setDraft] = useState<BoardDevice[]>(() => stored.devices);
+    // R-SIM-123: the board's own fields, beside its devices; the grid's columns are its.
+    const [settings, setSettings] = useState<BoardSettings>(() => stored.settings ?? {});
+    const cols = boardCols(settings);
+    const [colsRefused, setColsRefused] = useState<BoardCols | null>(null);
+    // The icon picker's search and the installed names, loaded when a Button or a Clock is chosen.
+    const [iconQuery, setIconQuery] = useState('');
+    const [icons, setIcons] = useState<string[] | null>(null);
     const [selected, setSelected] = useState<string | null>(null);
     // The form chosen per device while its fields are not: a device's binding, once complete, says its own form.
     const [forms, setForms] = useState<Record<string, BindingKind>>({});
@@ -113,7 +155,7 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
     }, [modelId]);
     const statuses = useMemo(() => new Map(draft.map(d => [d.id, resolveDevice(d, ctx)] as [string, DeviceStatus])), [draft, ctx]);
     const rows = useMemo(() => nuxmvRows(draft, ctx), [draft, ctx]);
-    const changed = encodeBoard(draft) !== encodeBoard(stored.devices) || !stored.readable;
+    const changed = encodeBoard(draft, settings) !== encodeBoard(stored.devices, stored.settings) || !stored.readable;
     const device = draft.find(d => d.id === selected) ?? null;
     const form: BindingKind | null = device ? device.binding?.kind ?? forms[device.id] ?? BINDING_KINDS[device.kind][0] : null;
 
@@ -126,9 +168,17 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
     useEffect(() => { dialogRef.current?.focus(); }, []);
     useEffect(() => { setExprDraft(null); }, [selected]);
     useEffect(() => { setPeriodDraft(null); }, [selected]);
+    useEffect(() => { setIconQuery(''); }, [selected]);
+    const picks = device !== null && (device.kind === 'button' || device.kind === 'clock');
+    useEffect(() => {
+        if (!picks || icons !== null) return;
+        let live = true;
+        loadIconNames().then(names => { if (live) setIcons(names); }, () => { if (live) setIcons([]); });
+        return () => { live = false; };
+    }, [picks, icons]);
 
     const add = (kind: DeviceKind): void => {
-        const r = addDevice(draft, kind);
+        const r = addDevice(draft, kind, cols);
         if (r.id === '') return;
         setDraft(r.devices);
         setSelected(r.id);
@@ -150,25 +200,30 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
     const apply = (): void => {
         const lmodel: any = LPointerTargetable.fromPointer(modelId as any);
         if (!lmodel || !changed) return;
-        lmodel.state = { [IO_BOARD_KEY]: encodeBoard(draft) };
+        lmodel.state = { [IO_BOARD_KEY]: encodeBoard(draft, settings) };
         onApplied();
     };
 
-    // The grid: every row up to the last one used, and one more to drop into, within the board's rows.
-    const lastRow = draft.reduce((m, d) => Math.max(m, d.cell[1]), -1);
+    // The grid: every row up to the last one covered, and one more to drop into, within the board's rows.
+    const lastRow = draft.reduce((m, d) => Math.max(m, d.cell[1] + spanOf(d)[1] - 1), -1);
     const shownRows = Math.min(BOARD_ROWS, Math.max(2, lastRow + 2));
     const at = (column: number, row: number) => draft.find(d => d.cell[0] === column && d.cell[1] === row) ?? null;
+    // A cell a device covers beyond its own: neither a target nor a tile (R-SIM-125).
+    const covered = (column: number, row: number) => draft.some(d => {
+        const [w, h] = spanOf(d);
+        return column >= d.cell[0] && column < d.cell[0] + w && row >= d.cell[1] && row < d.cell[1] + h && !(column === d.cell[0] && row === d.cell[1]);
+    });
     const drop = (e: DragEvent, column: number, row: number): void => {
         e.preventDefault();
         const id = e.dataTransfer.getData('text/plain');
-        if (id) setDraft(d => moveDevice(d, id, [column, row]));
+        if (id) setDraft(d => moveDevice(d, id, [column, row], cols));
     };
     const onTileKey = (e: KeyboardEvent, d: BoardDevice): void => {
         const delta: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
         const step = delta[e.key];
         if (!step) return;
         e.preventDefault();
-        setDraft(all => moveDevice(all, d.id, [d.cell[0] + step[0], d.cell[1] + step[1]]));
+        setDraft(all => moveDevice(all, d.id, [d.cell[0] + step[0], d.cell[1] + step[1]], cols));
     };
 
     const title = modelName ? `Board of ${modelName}` : 'Board';
@@ -311,6 +366,147 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
 
     const status = device ? statuses.get(device.id) ?? null : null;
 
+    const chooseCols = (next: BoardCols): void => {
+        const after = setBoardCols(settings, draft, next);
+        setColsRefused(boardCols(after) === next ? null : next);
+        setSettings(after);
+    };
+    const restyle = (d: BoardDevice, change: DeviceStyleChange): void => setDraft(all => setStyle(all, d.id, change));
+    /** A select of a style field's values, with the default or Auto first (`null`: the field removed). */
+    const styleSelect = (d: BoardDevice, field: StyleField, values: readonly string[], first: string): ReactElement => {
+        const value = (d.style as Record<string, string> | undefined)?.[field] ?? '';
+        return (
+            <label className="sim-board-editor__field" key={field}>
+                <span className="sim-board-editor__field-label">{STYLE_LABEL[field]}</span>
+                <select
+                    className="sim-roles-modal__select"
+                    aria-label={STYLE_LABEL[field]}
+                    value={value}
+                    onChange={e => restyle(d, { [field]: e.target.value === '' ? null : e.target.value } as DeviceStyleChange)}
+                >
+                    <option value="">{first}</option>
+                    {values.map(v => <option value={v} key={v}>{v}</option>)}
+                </select>
+            </label>
+        );
+    };
+    /** The style of the device chosen (R-SIM-126, R-SIM-133): its kind's fields, its span, the icon picker. */
+    const styleFields = (d: BoardDevice): ReactElement => {
+        const fields = STYLE_FIELDS[d.kind];
+        const [w, h] = spanOf(d);
+        const pressed = d.binding?.kind === 'event' ? d.binding.event : null;
+        const look = picks ? pressLook(d, pressed === null ? null : ctx.events.find(e => e.id === pressed)?.label ?? ctx.nameOf(pressed)) : null;
+        const current = d.style?.icon;
+        const query = iconQuery.trim().toLowerCase();
+        const shown = (icons ?? []).filter(n => query === '' || n.includes(query)).slice(0, PICKER_LIMIT);
+        const spanSelect = (axis: 0 | 1): ReactElement => (
+            <label className="sim-board-editor__field">
+                <span className="sim-board-editor__field-label">{axis === 0 ? 'Width (cells)' : 'Height (cells)'}</span>
+                <select
+                    className="sim-roles-modal__select"
+                    aria-label={axis === 0 ? 'Span width' : 'Span height'}
+                    value={axis === 0 ? w : h}
+                    onChange={e => {
+                        const v = Number(e.target.value);
+                        setDraft(all => setSpan(all, d.id, axis === 0 ? [v, h] : [w, v], cols));
+                    }}
+                >
+                    {Array.from({ length: axis === 0 ? SPAN_MAX_COLUMNS : SPAN_MAX_ROWS }, (_, i) => i + 1).map(v => <option value={v} key={v}>{v}</option>)}
+                </select>
+            </label>
+        );
+        return (
+            <div className="sim-board-editor__style" role="group" aria-label="Style">
+                <div className="sim-roles-modal__section">Style</div>
+                <div className="sim-board-editor__pair">
+                    {spanSelect(0)}
+                    {spanSelect(1)}
+                </div>
+                <span className="sim-board-editor__hint">A span that leaves the grid or covers another device is refused.</span>
+                {fields.includes('shape') && styleSelect(d, 'shape', d.kind === 'button' || d.kind === 'clock' ? BUTTON_SHAPES : LED_SHAPES, d.kind === 'button' || d.kind === 'clock' ? 'key (default)' : 'round (default)')}
+                {fields.includes('role') && styleSelect(d, 'role', BUTTON_ROLES, look?.suggestion.role ? `Auto: ${look.suggestion.role}` : 'Auto: neutral')}
+                {fields.includes('iconMode') && styleSelect(d, 'iconMode', ICON_MODES.filter(m => m !== 'both'), 'both (default)')}
+                {fields.includes('key') && (
+                    <label className="sim-board-editor__field">
+                        <span className="sim-board-editor__field-label">{STYLE_LABEL.key}</span>
+                        <select
+                            className="sim-roles-modal__select"
+                            aria-label={STYLE_LABEL.key}
+                            value={d.style?.key ?? ''}
+                            onChange={e => restyle(d, { key: e.target.value === '' ? null : e.target.value })}
+                        >
+                            <option value="">Auto</option>
+                            <option value="none">None</option>
+                            {[...'abcdefghijklmnopqrstuvwxyz0123456789'].map(k => (
+                                <option value={k} key={k} disabled={draft.some(x => x.id !== d.id && x.style?.key === k)}>{k.toUpperCase()}</option>
+                            ))}
+                        </select>
+                    </label>
+                )}
+                {fields.includes('size') && styleSelect(d, 'size', DISPLAY_SIZES.filter(v => v !== 'M'), 'M (default)')}
+                {fields.includes('face') && styleSelect(d, 'face', DISPLAY_FACES, "Auto: the theme's")}
+                {fields.includes('color') && styleSelect(d, 'color', LED_COLORS.filter(c => c !== (d.kind === 'pulse' ? 'amber' : 'green')), d.kind === 'pulse' ? 'amber (default)' : 'green (default)')}
+                {picks && look && (
+                    <div className="sim-board-editor__field">
+                        <span className="sim-board-editor__field-label">{STYLE_LABEL.icon}</span>
+                        <div className="sim-board-editor__icon-choices" role="radiogroup" aria-label="Icon">
+                            <button
+                                type="button"
+                                role="radio"
+                                aria-checked={current === undefined}
+                                className="sim-board-editor__icon-choice"
+                                title={look.suggestion.icon ? `Auto: ${look.suggestion.icon}, from the event's name (${look.suggestion.rule})` : "Auto: the event's name suggests no icon"}
+                                onClick={() => restyle(d, { icon: null })}
+                            >
+                                {look.suggestion.icon && <i className={`bi bi-${look.suggestion.icon}`} />}
+                                <span>Auto</span>
+                            </button>
+                            <button
+                                type="button"
+                                role="radio"
+                                aria-checked={current === 'none'}
+                                className="sim-board-editor__icon-choice"
+                                title="No icon"
+                                onClick={() => restyle(d, { icon: 'none' })}
+                            >
+                                <span>None</span>
+                            </button>
+                            {current !== undefined && current !== 'none' && (
+                                <span className="sim-board-editor__icon-current" title={current}><i className={`bi bi-${current}`} /><span>{current}</span></span>
+                            )}
+                        </div>
+                        <span className="sim-board-editor__hint">
+                            {look.suggestion.icon ? `Suggested: ${look.suggestion.icon}, ${look.suggestion.rule}.` : "The event's name suggests no icon."}
+                        </span>
+                        <input
+                            type="search"
+                            className="sim-roles-modal__input"
+                            aria-label="Search the icons"
+                            placeholder={icons === null ? 'Loading the icons…' : `Search ${icons.length} icons`}
+                            value={iconQuery}
+                            onChange={e => setIconQuery(e.target.value)}
+                        />
+                        <div className="sim-board-editor__icons" role="listbox" aria-label="Icons">
+                            {shown.map(name => (
+                                <button
+                                    type="button"
+                                    role="option"
+                                    aria-selected={current === name}
+                                    key={name}
+                                    className="sim-board-editor__icon"
+                                    title={name}
+                                    onClick={() => restyle(d, { icon: name })}
+                                >
+                                    <i className={`bi bi-${name}`} />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return createPortal(
         <div
             className="sim-roles-modal-backdrop"
@@ -335,10 +531,10 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                 </div>
                 <div className="sim-roles-modal__body sim-board-editor__body">
                     <nav className="sim-board-editor__palette" aria-label="Device library">
-                        {(['Inputs', 'Outputs'] as const).map(group => (
+                        {(['Inputs', 'Outputs', 'Panel'] as const).map(group => (
                             <div className="sim-board-editor__group" key={group}>
                                 <div className="sim-roles-modal__section">{group}</div>
-                                {DEVICE_KINDS.filter(k => isInputKind(k) === (group === 'Inputs')).map(k => (
+                                {DEVICE_KINDS.filter(k => (k === 'silk' ? 'Panel' : isInputKind(k) ? 'Inputs' : 'Outputs') === group).map(k => (
                                     <button type="button" className="sim-board-editor__palette-item" key={k} title={`Add a ${DEVICE_LABELS[k]}`} onClick={() => add(k)}>
                                         <i className={`bi ${KIND_ICON[k]}`} />
                                         <span>{DEVICE_LABELS[k]}</span>
@@ -359,8 +555,61 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                                 {`${stored.defects.length} stored ${stored.defects.length === 1 ? 'device was' : 'devices were'} not read as written.`}
                             </div>
                         )}
-                        <div className="sim-board-editor__grid" style={{ gridTemplateColumns: `repeat(${BOARD_COLUMNS}, 1fr)` }} role="grid" aria-label="Board in edit mode">
-                            {Array.from({ length: shownRows }, (_, row) => Array.from({ length: BOARD_COLUMNS }, (__, column) => {
+                        <div className="sim-board-editor__look" role="group" aria-label="Front panel">
+                            <label className="sim-board-editor__field">
+                                <span className="sim-board-editor__field-label">Theme</span>
+                                <select
+                                    className="sim-roles-modal__select"
+                                    aria-label="Theme"
+                                    value={settings.theme ?? 'graphite'}
+                                    onChange={e => setSettings(x => setBoardTheme(x, e.target.value as BoardTheme))}
+                                >
+                                    {BOARD_THEMES.map(t => <option value={t} key={t}>{THEME_LABEL[t]}</option>)}
+                                </select>
+                            </label>
+                            <div className="sim-board-editor__field">
+                                <span className="sim-board-editor__field-label">Accent</span>
+                                <div className="sim-board-editor__swatches" role="radiogroup" aria-label="Accent">
+                                    <button
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={settings.accent === undefined}
+                                        className="sim-board-editor__swatch sim-board-editor__swatch--auto"
+                                        title="Auto: the theme's own accent"
+                                        onClick={() => setSettings(x => setAccent(x, null))}
+                                    >
+                                        Auto
+                                    </button>
+                                    {ACCENTS.map(a => (
+                                        <button
+                                            type="button"
+                                            role="radio"
+                                            key={a.color}
+                                            aria-checked={settings.accent === a.color}
+                                            aria-label={a.name}
+                                            className="sim-board-editor__swatch"
+                                            title={settings.theme === 'print' ? `${a.name}: Print draws in black, it keeps no accent` : a.name}
+                                            style={{ backgroundColor: a.color }}
+                                            onClick={() => setSettings(x => setAccent(x, a.color))}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <label className="sim-board-editor__field">
+                                <span className="sim-board-editor__field-label">Columns</span>
+                                <select className="sim-roles-modal__select" aria-label="Columns" value={cols} onChange={e => chooseCols(Number(e.target.value) as BoardCols)}>
+                                    {BOARD_COLS.map(c => <option value={c} key={c}>{c}</option>)}
+                                </select>
+                            </label>
+                            <span className="sim-board-editor__hint">
+                                {colsRefused !== null
+                                    ? `Not ${colsRefused}: a device covers a column beyond it. Move it first.`
+                                    : cols > 4 ? `${cols} columns: the board opens as a window over the canvas.` : 'Theme and accent dress the front panel only.'}
+                            </span>
+                        </div>
+                        <div className="sim-board-editor__grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }} role="grid" aria-label="Board in edit mode">
+                            {Array.from({ length: shownRows }, (_, row) => Array.from({ length: cols }, (__, column) => {
+                                if (covered(column, row)) return null;
                                 const d = at(column, row);
                                 if (!d) {
                                     return (
@@ -368,8 +617,9 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                                             key={`${column},${row}`}
                                             className="sim-board-editor__cell"
                                             role="gridcell"
+                                            style={{ gridColumn: column + 1, gridRow: row + 1 }}
                                             title={device ? `Move ${device.label || device.id} here` : undefined}
-                                            onClick={() => { if (device) setDraft(all => moveDevice(all, device.id, [column, row])); }}
+                                            onClick={() => { if (device) setDraft(all => moveDevice(all, device.id, [column, row], cols)); }}
                                             onDragOver={e => e.preventDefault()}
                                             onDrop={e => drop(e, column, row)}
                                         />
@@ -377,12 +627,14 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                                 }
                                 const s = statuses.get(d.id);
                                 const flagged = !!s && !s.ok;
+                                const [w, h] = spanOf(d);
                                 return (
                                     <button
                                         type="button"
                                         key={d.id}
                                         role="gridcell"
                                         data-device={d.id}
+                                        style={{ gridColumn: `${column + 1} / span ${w}`, gridRow: `${row + 1} / span ${h}` }}
                                         draggable
                                         className={`sim-board-editor__tile sim-board-editor__tile--${isInputKind(d.kind) ? 'input' : 'output'}`
                                             + `${flagged ? ' sim-board-editor__tile--flagged' : ''}${d.id === selected ? ' sim-board-editor__tile--selected' : ''}`}
@@ -486,6 +738,7 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                                         </label>
                                     );
                                 })()}
+                                {styleFields(device)}
                                 {status && (
                                     <div className={`sim-board-editor__status sim-board-editor__status--${status.ok ? 'ok' : 'flagged'}`} role="status">
                                         <i className={`bi ${status.ok ? 'bi-check-circle' : 'bi-exclamation-triangle'}`} />

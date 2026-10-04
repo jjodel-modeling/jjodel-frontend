@@ -223,13 +223,16 @@ export function styleValueFits(kind: DeviceKind, field: StyleField, value: unkno
     }
 }
 
-/** The value a field takes when absent, where there is one: never written. `role`, `icon`, `key` and `face` have none. */
+/**
+ * The value a field takes when absent, where there is one: never written. `role`, `icon`, `key` and `face` have none.
+ * A Pulse LED's colour is amber, its lamp's colour before styles (P-2026-10-04-1131), so green stays a choice it keeps.
+ */
 function styleDefault(kind: DeviceKind, field: StyleField): string | undefined {
     const button = kind === 'button' || kind === 'clock';
     if (field === 'shape') return button ? 'key' : 'round';
     if (field === 'iconMode') return 'both';
     if (field === 'size') return 'M';
-    if (field === 'color') return 'green';
+    if (field === 'color') return kind === 'pulse' ? 'amber' : 'green';
     return undefined;
 }
 
