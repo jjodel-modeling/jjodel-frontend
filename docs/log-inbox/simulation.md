@@ -452,13 +452,28 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 
 ## 2026-10-04 — feat: an implicit Clock on the I/O board, auto-start and idle ticks (P-2026-10-04-1625)
 **Prompt**: `claude_2026-10-04_1625_prompt_sim_clock_auto.md`, heavy tier, `~/jjodel-w-clockauto` on `sim-clock-auto`, lane auto: R-SIM-134 (an optional `autoStart`, on for new clocks, armed with the run), R-SIM-135 (the clocks owned by the panel, ticking with the board closed), R-SIM-136 (a tick that enables nothing is not a step); discovery committed first, tests first, probe on 3085, no merge.
-**Files touched**: `c106cb329`: `docs/discovery/discovery_2026-10-04_sim_clock_auto.md` (new). `3a71b2a21`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardClock.ts`, `sim/simBoardFace.ts`, `sim/simBoardDevices.tsx`, `sim/SimulationPanel.tsx`, `sim/SimBoardEditor.tsx`. `7aa9e4889`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardClock.test.ts`, `simBoardFace.test.ts`. `836d36936` (fix after RC-23): `sim/SimBoard.scss`. Closure: `docs/decisions.md`, the report's addendum, the prompt's Status, this entry.
+**Files touched**: `c106cb329`: `docs/discovery/discovery_2026-10-04_sim_clock_auto.md` (new). `3a71b2a21`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardClock.ts`, `sim/simBoardFace.ts`, `sim/simBoardDevices.tsx`, `sim/SimulationPanel.tsx`, `sim/SimBoardEditor.tsx`. `7aa9e4889`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardClock.test.ts`, `simBoardFace.test.ts`. This commit: `docs/decisions.md`, the report's addendum, the prompt's Status, this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Typecheck 14, the §17 set; vitest 7458/7458 in 301 files, the 9 known suites red at import; build exit 0; mutation bench 33/35, two survivors equivalent; the four demo scenes 50/50 base and after, 0 differing paths. After the fix: typecheck 14; vitest 7458/7458, the 9 known red at import; build exit 0.
-**Out-of-scope changes**: no (seven code files and four test files over two commits, above five (rule 19), each named by the report's §6 inside the DOVE, which asked for that list; `sim/SimBoard.scss`, outside §6 and inside the DOVE, for the fix the chat asked)
+**Regressions**: no. Typecheck 14, the §17 set; vitest 7458/7458 in 301 files, the 9 known suites red at import; build exit 0; mutation bench 33/35, two survivors equivalent; the four demo scenes 50/50 base and after, 0 differing paths.
+**Out-of-scope changes**: no (seven code files and four test files over two commits, above five (rule 19), each named by the report's §6 inside the DOVE, which asked for that list)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended: RC-23 on the six crops, one fix (the Clock's keycap over its counter on Variant B, `836d36936`) accepted on the after crops, graphite and print; lane probe on 3085: microwave 20/20, scenes diff 0
+**Smoke visivo**: passato (lane probe on 3085, 1600×1000, light: microwave 20/20, scenes diff 0; crops in `~/.jjodel-lanes/P-2026-10-04-1625/`; the chat's visual check pending, RC-23)
 **Notes**: Owner: the panel, not a singleton. Manual clocks freed from the card too. Collapse does not unmount the panel: it switches the clocks off with reason `panel`. Idle test = the button's grey test, structural: a guard-refused tick is still a discard step (report R3). The panel does not import under the node bench: its wiring is measured by the probe only. Report §5 and addendum.
 **Prompt document name**: 2026-10-04 16:25
+
+## 2026-10-04 — fix: the Clock's keycap above its corner on the front panel (P-2026-10-04-1625)
+**Prompt**: the chat's RC-23 on the six crops of P-2026-10-04-1625, pass with one fix: on Variant B the Clock's keycap covered its tick counter; move the keycap or the counter, both readable on the four themes and Variant A, face and cell sizes unchanged; one fix commit, the B crops retaken, typecheck, tests, build. Same prompt file, same session.
+**Files touched**: `836d36936`: `sim/SimBoard.scss`. This commit: `a43bf38f2`'s rewrite of the lane's entry above undone verbatim (`Log-Repair: a43bf38f2`), this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-04 16:25
+**Causa**: (d)
+**Regressions**: no. After the fix: typecheck 14, the §17 set; vitest 7458/7458 in 301 files, the 9 known suites red at import; build exit 0, chunk-size warning only.
+**Out-of-scope changes**: no (`sim/SimBoard.scss`, outside the report's §6 and inside the DOVE, is the file of the fix the chat asked)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the after crops, Variant B graphite and print, keycap T and counter both readable; Variant A, the keycap over the toggle's corner as before
+**Notes**: On Variant B the device has no edge: only the Clock's keycap moves, `top: -9px`, into the front's 12 px padding or the 10 px gap between rows. Probe on the four themes and Variant A, before and after: no keycap over a counter, period, name, switch or another device; every cell, face, counter and switch box as before; Variant A's keycap where it was.
+**Prompt document name**: 2026-10-04 16:25
+
+**Ticket** (low, found in P-2026-10-04-1625): the lane probe's check «the keycap is the topmost element at its pixel» fails on every clock, Variant A included, which the fix did not move; the chat read the Variant A after crop and found the T keycap fully visible over the button's corner, so the check is a probe artifact (the keycap takes `pointer-events: none`; toggling it for the measure did not change the reading), no code change. A later probe of keycaps should read the pixel colour instead.
