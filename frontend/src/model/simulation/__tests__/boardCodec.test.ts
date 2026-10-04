@@ -424,6 +424,9 @@ describe('R-SIM-124, R-SIM-126: the values and the kinds that take them', () => 
         expect(canonicalStyle('button', { key: 'q', shape: 'round', size: 'L' } as DeviceStyle)).toEqual({ shape: 'round', key: 'q' });
         expect(Object.keys(canonicalStyle('button', { key: 'q', role: 'go', shape: 'round' })!)).toEqual(['shape', 'role', 'key']);
         expect(canonicalStyle('led', { shape: 'round', color: 'green' })).toBeUndefined();
+        // P-2026-10-04-1131: a Pulse LED is amber when its colour is absent (today's look), so green is a choice it keeps.
+        expect(canonicalStyle('pulse', { shape: 'round', color: 'amber' })).toBeUndefined();
+        expect(canonicalStyle('pulse', { color: 'green' })).toEqual({ color: 'green' });
         expect(canonicalStyle('text', { size: 'M', face: 'lcd' })).toEqual({ face: 'lcd' });
         expect(canonicalStyle('gauge', { size: 'L' })).toBeUndefined();
         expect(canonicalStyle('button', undefined)).toBeUndefined();

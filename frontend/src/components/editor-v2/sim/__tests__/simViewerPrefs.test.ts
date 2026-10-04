@@ -12,8 +12,8 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    __resetSimViewerPrefsForTests, DEFAULT_SIM_VIEWER_PREFS, defaultSimPins, getSimViewerPrefs, getSimViewerPrefsVersion, MAX_SIM_PINS,
-    setSimViewerPrefs,
+    __resetSimViewerPrefsForTests, BOARD_SLOT_LEFT, clampBoardWindow, DEFAULT_SIM_VIEWER_PREFS, defaultBoardWindow, defaultSimPins, getSimViewerPrefs,
+    getSimViewerPrefsVersion, MAX_SIM_PINS, setSimViewerPrefs,
 } from '../simViewerPrefs';
 import type { SimAttrRef, SimViewerPrefs } from '../simViewerPrefs';
 import {
@@ -188,5 +188,42 @@ describe('defaultSimPins: what Watch shows with pins null (R-SIM-104)', () => {
 
     it('a name declared twice for the same owner is pinned once (mutant: one pin per declaration)', () => {
         expect(defaultSimPins([decl('coins', null), decl('coins', null), decl('coins', 'C_State')])).toEqual([pin('coins'), pin('coins', 'C_State')]);
+    });
+});
+
+describe('the I/O board\'s window: floating, its place and the sound are viewer prefs (R-SIM-132, R-SIM-133)', () => {
+    it('round trip per model, kept across the run\'s primitives, never in the run\'s version (mutants: one window for every model; Reset clears it)', () => {
+        setSimViewerPrefs('M', { boardFloating: true, boardWindow: { x: 700, y: 90 }, boardSound: true });
+        simReset('M', RUN);
+        simClear('M');
+        expect(getSimViewerPrefs('M')).toMatchObject({ boardFloating: true, boardWindow: { x: 700, y: 90 }, boardSound: true });
+        expect(getSimViewerPrefs('N').boardWindow).toBeUndefined();
+        setSimViewerPrefs('M', { boardFloating: false });
+        expect(getSimViewerPrefs('M')).toMatchObject({ boardFloating: false, boardWindow: { x: 700, y: 90 } });
+    });
+
+    it('muted and docked by default: no sound, no float, no place (mutants: sound on by default; floating by default)', () => {
+        const p = getSimViewerPrefs('M');
+        expect([p.boardSound ?? false, p.boardFloating ?? false, p.boardWindow]).toEqual([false, false, undefined]);
+        expect(DEFAULT_SIM_VIEWER_PREFS.boardSound ?? false).toBe(false);
+    });
+
+    it('clamped to the canvas: never left of it, above it, or past its right and bottom edges (mutants: no clamp on the right; no clamp at the top)', () => {
+        const bounds = { left: 0, top: 40, width: 1200, height: 800 };
+        const size = { width: 582, height: 300 };
+        expect(clampBoardWindow({ x: 100, y: 100 }, size, bounds)).toEqual({ x: 100, y: 100 });
+        expect(clampBoardWindow({ x: -50, y: 0 }, size, bounds)).toEqual({ x: 0, y: 40 });
+        expect(clampBoardWindow({ x: 900, y: 700 }, size, bounds)).toEqual({ x: 618, y: 540 });
+        expect(clampBoardWindow({ x: 100.6, y: 99.4 }, size, bounds)).toEqual({ x: 101, y: 99 });
+    });
+
+    it('a window larger than the canvas sits at its top left corner (mutant: negative place)', () => {
+        expect(clampBoardWindow({ x: 300, y: 300 }, { width: 900, height: 900 }, { left: 10, top: 40, width: 800, height: 600 })).toEqual({ x: 10, y: 40 });
+    });
+
+    it('the first place is the card slot\'s left, 16 px under the top, clamped (mutant: the origin)', () => {
+        expect(BOARD_SLOT_LEFT).toBe(584);
+        expect(defaultBoardWindow({ width: 400, height: 300 }, { left: 0, top: 40, width: 1400, height: 900 })).toEqual({ x: 584, y: 56 });
+        expect(defaultBoardWindow({ width: 762, height: 300 }, { left: 0, top: 40, width: 1100, height: 900 })).toEqual({ x: 338, y: 56 });
     });
 });
