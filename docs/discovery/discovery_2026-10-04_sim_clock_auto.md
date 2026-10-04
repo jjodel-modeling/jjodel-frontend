@@ -92,3 +92,23 @@ Closure: `docs/decisions.md` (R-SIM-134..136), this report's addendum, the promp
 ## 8. Questions
 
 None open. Decisions awaiting Alfonso: none; decision 3 of R-SIM-122 is provisional, so its amendment is not an RC-26 item.
+
+## Addendum 2026-10-04: Phase 2 (`sim-clock-auto`)
+
+Built by the same session: `3a71b2a21` (feat), `7aa9e4889` (test); rows R-SIM-134..136. The files are the eleven of §6, no other.
+
+1. **As planned [M].** §5's nine decisions hold as written; none needed a question.
+2. **Tests first [M].** 27 red at the base over the four test files, green after; the existing test «a tick whose event enables nothing is discarded» is replaced by the idle tests (R-SIM-136 amends what it pinned), and «two clocks» moved its second clock to `tick`, the only event `cooking` enables.
+3. **Mutation bench [M].** 35 mutants, 33 killed. K6 (enabledness without the run's status) survived the first pass: no test read a Halted run; the Halted assertion added before the commit kills it. Equivalent: K11 (a run not Running never becomes Running again), K13 (`start` refuses after dispose). Log: `frontend/scripts/smoke/_tmp_clockauto_bench.log` (gitignored).
+4. **The microwave [M].** Built in the probe on DemoESM's metamodel through the L proxies: `ts` deleted, `tt` created in Cooking by `addObject(json, classId, true)` (without `forceCreation` the containment value returns nothing, measured), the rest rewired by slot values; `secs` declared in the model's bag. Probe 20/20: the auto clock on at Reset; 5.2 s idle, step 0, 5 idle in the title; `plus` ×3 and `start`, 5 s later `01:25` and step 9, four presses and five ticks; the board closed 3 s, three steps more; the hand's pause held 2 s; Reset re-armed it in Idle, step 0; the collapse switched it off, said so; the editor's Auto-start checked, and checked on a new clock. The first run read `01:24` because the display was read 5.6 s after `start`: a timing of the probe, re-timed from the click.
+5. **Scenes [M].** The four demo exports 50/50 on the base (the seven code files written from `aa17dc715` by copy, the index untouched, then restored and compared clean against HEAD) and after; 0 differing paths, header and board card included; positive control: one reading altered is told apart.
+
+Probe: `frontend/scripts/smoke/_tmp_clockauto_probe.ts` (gitignored), run by `lane-run probe` on 3085, 1600×1000, light theme. Logs and crops in `~/.jjodel-lanes/P-2026-10-04-1625/`: `_tmp_clockauto_A_clock_on_idle`, `_A_clock_on`, `_A_clock_paused`, `_A_microwave`, `_B_clock_on`, `_editor_inspector` (each at most 600 px). The title of a face does not show in a crop: its text is in the probe log.
+
+## Decisions taken (unattended)
+
+R-SIM-134..136 as written in `docs/decisions.md`, and §5 of this report: the panel as owner, manual clocks freed from the card, arming once per run, the collapse as an explicit stop with the reason `panel`, idle in the title only, the held values through a ref, the two unread props kept, the codec's field rules, the auto note on the face.
+
+## Decisions awaiting Alfonso
+
+None (RC-26): no critical-zone file, no exported interface broken outside `sim/`, decision 3 of R-SIM-122 was provisional, nothing deleted, the demo scenes unchanged.
