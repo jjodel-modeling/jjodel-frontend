@@ -40,7 +40,7 @@ import { waitForDependencies } from './elementWaiter';
 import { checkBoundScope } from './scopeGuard';
 import { getMetamodelById } from './resolvers';
 import { getProject } from './utils';
-import { checkCommandPermission, metaclassesNamed } from './permissionGuard';
+import { checkCommandPermission, containedTypes, metaclassesNamed } from './permissionGuard';
 import type { GuardCommand, GuardType, GuardUnresolved } from './permissionGuard';
 import { resolveTargetModel, resolveInstanceHandle } from './commands/instance';
 import { activeProfileId } from '../../components/environment/consumerMode';
@@ -384,6 +384,12 @@ function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCom
     const resolved = resolveInstanceHandle(model, instanceName);
     cmd.subject = instanceType(resolved, instanceName);
 
+    // A `delete` touches what the instance contains too (#157, 2026-10-04): read from the store
+    // the guard already reads the profile from, through the containment the L-layer names.
+    if (ast.command === 'delete' && resolved.ok && typeof resolved.value?.id === 'string') {
+        cmd.cascade = containedTypes((store.getState() as any).idlookup, resolved.value.id);
+    }
+
     // A `set` writes a link when the property is a reference (an attribute of the same name wins,
     // as in `classifyMetaclassProperty`) and the value names an instance: a string literal or,
     // like the handler, anything that is not a literal, by its `raw`. `null` unlinks, and any
@@ -392,8 +398,8 @@ function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCom
         const metaclass: any = resolved.value?.instanceof;
         const attributes: any[] = metaclass?.allAttributes ?? metaclass?.attributes ?? [];
         const references: any[] = metaclass?.allReferences ?? metaclass?.references ?? [];
-        const isReference = !attributes.some((a) => a?.name === args.property)
-            && references.some((r) => r?.name === args.property);
+        const reference = references.find((r) => r?.name === args.property);
+        const isReference = !attributes.some((a) => a?.name === args.property) && !!reference;
         const value: any = args.value;
         const isLiteral = !!value && typeof value === 'object' && 'kind' in value
             && ['string', 'number', 'boolean', 'null', 'array', 'enumLiteral'].includes(value.kind);
@@ -403,6 +409,8 @@ function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCom
             cmd.linkTarget = typeof targetName === 'string'
                 ? instanceType(resolveInstanceHandle(model, targetName), targetName)
                 : { unresolved: `Reference '${args.property}' expects an instance name` };
+            // `LReference.containment` is `composition || aggregation`: such a link re-fathers the target.
+            cmd.linkIsContainment = !!reference?.containment;
         }
     }
     return cmd;

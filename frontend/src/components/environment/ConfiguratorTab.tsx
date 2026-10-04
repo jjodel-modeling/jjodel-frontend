@@ -29,7 +29,7 @@ import {
     resolveTypePermission,
 } from '../../joiner';
 import { newDraft, paletteAttr } from '../../jjform';
-import { metamodelOfClass, modelsForType, topLevelReason } from '../../joiner/environmentConfig';
+import { metamodelOfClass, modelsForType, restrictDeleteForProfile, topLevelReason } from '../../joiner/environmentConfig';
 import { instancesOfClass, modelIdOfObject } from '../abstract/tabs/instanceManagerModel';
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
 import { applyCreate } from '../editor-v2/hooks/createAdapter';
@@ -241,13 +241,18 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
 
     /** Delete, with the Data Manager's confirmation (12d): the preflight lists who points
      *  at the instance and offers to reassign or clear those references. `InstanceDetail`
-     *  offers it only on a type the profile may edit. */
+     *  offers it only on a type the profile may edit. With a profile, the preflight is the
+     *  profile's (`restrictDeleteForProfile`, 2026-10-04): refused when the cascade holds an
+     *  element it cannot change, and no hidden element named. */
     const [pendingDelete, setPendingDelete] = useState<DeletePreflight | null>(null);
     const [reassignTo, setReassignTo] = useState('');
     const openDelete = (instanceId: string) => {
         const mid = modelIdOfObject(idlookup, instanceId) ?? modelId;
         if (!mid) return;
-        const pre = preflightFor(mid, makeShapeCtx(mid).shape(), instanceId);
+        const raw = preflightFor(mid, makeShapeCtx(mid).shape(), instanceId);
+        const pre: DeletePreflight = profile
+            ? { ...raw, ...restrictDeleteForProfile(raw, (id) => resolveTypePermission(profile, (idlookup as any)?.[id]?.instanceof)) }
+            : raw;
         setReassignTo(pre.reassignCandidates[0]?.id ?? '');
         setPendingDelete(pre);
     };

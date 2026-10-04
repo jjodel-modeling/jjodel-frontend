@@ -159,3 +159,37 @@ export function topLevelReason(cls: any): string | null {
     if (cls.isSingleton) return 'a singleton';
     return 'not allowed at the model root by its metamodel';
 }
+
+/** The reason a profile's delete is refused when it would take with it an element the profile
+ *  cannot change. Names no type: one of them may be hidden. */
+export const CASCADE_LOCKED_REASON = "It contains elements you can't change with this profile, so it can't be deleted here.";
+
+/**
+ * A delete preflight as a profile may see it (#157, 2026-10-04): what the Configurator's
+ * confirmation shows and what its plan writes.
+ *
+ * Measured on `705502f0f`: the confirmation offered a delete that took read and hidden contained
+ * elements with it, and named the hidden ones. So:
+ * - `blocked` gets {@link CASCADE_LOCKED_REASON} when a descendant is not `edit` (a reason
+ *   already there wins: the singleton's comes from the metamodel);
+ * - descendants and referrers of a `hidden` type leave the lists. A hidden referrer is therefore
+ *   neither reassigned nor cleared by the plan; the core's delete still removes its pointer;
+ * - `canReassign` holds only while a referrer is left to reassign.
+ *
+ * Generic over the entries, so this module keeps its zero imports; the caller spreads the
+ * answer over its preflight. `permissionOfInstance` is the profile's rule on the instance's
+ * exact class, as everywhere in the Configurator.
+ */
+export function restrictDeleteForProfile<D extends { id: string }, R extends { instanceId: string }>(
+    pre: { blocked: string | null; canReassign: boolean; descendants: D[]; referencedBy: R[] },
+    permissionOfInstance: (instanceId: string) => EnvPermission,
+): { blocked: string | null; canReassign: boolean; descendants: D[]; referencedBy: R[] } {
+    const locked = pre.descendants.some((d) => permissionOfInstance(d.id) !== 'edit');
+    const referencedBy = pre.referencedBy.filter((r) => permissionOfInstance(r.instanceId) !== 'hidden');
+    return {
+        blocked: pre.blocked ?? (locked ? CASCADE_LOCKED_REASON : null),
+        canReassign: pre.canReassign && referencedBy.length > 0,
+        descendants: pre.descendants.filter((d) => permissionOfInstance(d.id) !== 'hidden'),
+        referencedBy,
+    };
+}

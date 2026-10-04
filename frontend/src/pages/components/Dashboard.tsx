@@ -646,14 +646,21 @@ function ProjectDashboard(props: DashProps): any {
             </>
         </Try>
         <Try><Navbar /></Try>
-        <div className={`dashboard-container two-column${hideLeftBar ? ' hide-leftbar' : ''}`}>
+        {/* #157 — in consumer the LeftBar is always there (the Types column), so the grid keeps
+            its two columns even when a developer editor tab, opened before `&profile=`, set
+            hideLeftBar: one column would drop the Configurator page below the viewport. */}
+        <div className={`dashboard-container two-column${hideLeftBar && !consumer ? ' hide-leftbar' : ''}`}>
             {(consumer || !hideLeftBar) && <LeftBar active={'Project'} project={project} />}
             <div className={`project-dock-wrapper${consumer ? ' project-dock-wrapper--consumer' : ''}`}>
                 <Try><Dock /></Try>
                 {/* F2 floating panels (2026-07-29): Properties + Tree render as a floating
                     overlay over the full-width canvas (portaled to <body>). Sibling of
-                    <Dock/>, inside Redux + TreeViewPanelProvider — no context barrier. */}
-                <Try><PropertiesWithTreeView mode={'floating'} /></Try>
+                    <Dock/>, inside Redux + TreeViewPanelProvider — no context barrier.
+                    #157 — not mounted in consumer: the portal escapes the wrapper's
+                    `visibility`, and a tab left open by the developer would keep the
+                    metamodel's tree and Properties on screen. Its state lives in the
+                    provider, so it comes back as it was when `&profile=` is removed. */}
+                {!consumer && <Try><PropertiesWithTreeView mode={'floating'} /></Try>}
                 {/* #157 R5 — the consumer lands on the Configurator: it covers the Dock, which
                     stays mounted underneath (`.project-dock-wrapper--consumer`). Nothing to close. */}
                 {consumer && <ConfiguratorTab variant="page" open onClose={() => {}} />}

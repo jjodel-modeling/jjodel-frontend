@@ -60,6 +60,12 @@ export interface GuardCommand {
     subject?: GuardType | GuardUnresolved;
     /** `set` at M1 on a reference whose value names an instance: that instance's metaclass. */
     linkTarget?: GuardType | GuardUnresolved;
+    /** `set` at M1: the reference is a containment, so the link MOVES the target into the subject
+     *  (#157, 2026-10-04). Absent or false: a plain link. */
+    linkIsContainment?: boolean;
+    /** `delete` at M1: the exact metaclass of every element in the instance's containment subtree
+     *  (`containedTypes`), which the delete takes with it (#157, 2026-10-04). Absent: not checked. */
+    cascade?: GuardType[] | GuardUnresolved;
 }
 
 export interface GuardEnvironment {
@@ -94,7 +100,9 @@ const NO_RESOLUTION = 'This change could not be matched to an element of the mod
  *   element type other than `instance`: refused as changes to the language.
  * - At M1: `create instance of X` needs every class named X to be `edit`; `set`, `rename` and
  *   `delete` need the instance's exact class to be `edit`; a `set` that links to an instance
- *   needs that instance's class not to be `hidden`.
+ *   needs that instance's class not to be `hidden`, and to be `edit` when the reference is a
+ *   containment (the link moves the target); a `delete` needs every element of its containment
+ *   subtree to be `edit` (#157, 2026-10-04: measured, both went through on read elements).
  * - Every other command (`let`, `forall`, `undo`, `redo`, `clear`, an unknown one): refused.
  */
 export function checkCommandPermission(cmd: GuardCommand, env: GuardEnvironment): PermissionRefusal | null {
@@ -149,14 +157,81 @@ export function checkCommandPermission(cmd: GuardCommand, env: GuardEnvironment)
     if (cmd.command === 'set' && cmd.linkTarget !== undefined) {
         const target = cmd.linkTarget;
         if (!isType(target)) return unresolved(target?.unresolved ?? NO_RESOLUTION);
-        if (resolveTypePermission(env.profile, target.id) === 'hidden') {
+        const targetPermission = resolveTypePermission(env.profile, target.id);
+        if (targetPermission === 'hidden') {
             return {
                 code: 'PROFILE_HIDDEN_TARGET',
                 message: `You can't link to ${typeName(target)} elements in this environment.`
             };
         }
+        // A containment link re-fathers the target: it changes the target, not only the subject.
+        if (cmd.linkIsContainment && targetPermission !== 'edit') return typeLocked('move', target);
+    }
+
+    if (cmd.command === 'delete' && cmd.cascade !== undefined) {
+        const cascade = cmd.cascade;
+        if (!Array.isArray(cascade)) return unresolved(cascade?.unresolved ?? NO_RESOLUTION);
+        const locked = cascade.find((t) => resolveTypePermission(env.profile, t.id) !== 'edit');
+        if (locked) {
+            // A hidden type is never named: the viewer is not supposed to know it exists.
+            const what = resolveTypePermission(env.profile, locked.id) === 'hidden'
+                ? 'elements'
+                : `${typeName(locked)} elements`;
+            return {
+                code: 'PROFILE_TYPE_LOCKED',
+                message: `You can't delete this ${typeName(subject)}: it contains ${what} you can't change in this environment.`
+            };
+        }
     }
     return null;
+}
+
+/**
+ * The exact metaclass of every element in the containment subtree of `objectId`, as the guard of
+ * a `delete` checks it (#157, 2026-10-04).
+ *
+ * Walks the D-layer the way the L-layer names containment: DObject → its `features` (DValue
+ * slots) → the slot's values, through a slot whose feature is a `DReference` with `composition`
+ * or `aggregation` (`LReference.get_containment`), or a slot with no feature at all
+ * (`LValue.get_containment` answers true for a shapeless slot). Depth first, each object once,
+ * `depthCap` as a cycle belt. A contained element whose metaclass does not resolve makes the
+ * whole answer unresolved, so the guard refuses rather than lets an unknown type through.
+ * Duplicate types are kept: the guard stops at the first locked one.
+ */
+export function containedTypes(
+    idlookup: Record<string, any>,
+    objectId: string,
+    depthCap = 64,
+): GuardType[] | GuardUnresolved {
+    const found: GuardType[] = [];
+    if (!idlookup || !objectId) return found;
+    const seen = new Set<string>([objectId]);
+    const stack: Array<[string, number]> = [[objectId, 0]];
+
+    while (stack.length > 0) {
+        const [ownerId, depth] = stack.pop()!;
+        if (depth >= depthCap) continue;
+        const owner = idlookup[ownerId];
+        for (const slotId of (Array.isArray(owner?.features) ? owner.features : [])) {
+            const slot = idlookup[slotId];
+            if (slot?.className !== 'DValue') continue;
+            const feature = slot.instanceof ? idlookup[slot.instanceof] : null;
+            if (feature && !(feature.className === 'DReference' && (feature.composition || feature.aggregation))) continue;
+            for (const value of (Array.isArray(slot.values) ? slot.values : [])) {
+                if (typeof value !== 'string' || seen.has(value)) continue;
+                const child = idlookup[value];
+                if (child?.className !== 'DObject') continue;
+                seen.add(value);
+                const metaclass = child.instanceof ? idlookup[child.instanceof] : null;
+                if (!metaclass || typeof metaclass.id !== 'string') {
+                    return { unresolved: `Cannot resolve metaclass for the contained element '${child.name ?? value}'` };
+                }
+                found.push({ id: metaclass.id, name: metaclass.name ?? '' });
+                stack.push([value, depth + 1]);
+            }
+        }
+    }
+    return found;
 }
 
 /**
@@ -209,7 +284,7 @@ function languageLocked(): PermissionRefusal {
     };
 }
 
-function typeLocked(verb: 'create' | 'change' | 'delete', t: GuardType): PermissionRefusal {
+function typeLocked(verb: 'create' | 'change' | 'delete' | 'move', t: GuardType): PermissionRefusal {
     return {
         code: 'PROFILE_TYPE_LOCKED',
         message: `You can't ${verb} ${typeName(t)} elements in this environment.`

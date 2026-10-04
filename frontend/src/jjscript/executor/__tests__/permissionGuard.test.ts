@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { checkCommandPermission, metaclassesNamed } from '../permissionGuard';
+import { checkCommandPermission, containedTypes, metaclassesNamed } from '../permissionGuard';
 import type { GuardCommand, GuardEnvironment, GuardType } from '../permissionGuard';
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
@@ -124,6 +124,70 @@ describe('checkCommandPermission — a set that links to another instance', () =
             onInstance('set', EDIT, { linkTarget: { unresolved: "No instance named 'p9' in 'm'" } }), CONSUMER);
         expect(r?.code).toBe('PROFILE_UNRESOLVED');
         expect(r?.message).toBe("No instance named 'p9' in 'm'");
+    });
+});
+
+// ─── containment (#157, 2026-10-04) ──────────────────────────────────────────
+
+describe('checkCommandPermission — a link into a containment moves its target', () => {
+    const into = (target: GuardType) => onInstance('set', EDIT, { linkTarget: target, linkIsContainment: true });
+
+    it('a read target is refused: the link re-fathers it, which changes it', () => {
+        const r = checkCommandPermission(into(READ), CONSUMER);
+        expect(r?.code).toBe('PROFILE_TYPE_LOCKED');
+        expect(r?.message).toBe("You can't move Competency elements in this environment.");
+    });
+
+    it('CONTROL: an edit target and an unlisted one pass; a read target of a plain link passes', () => {
+        expect(code(into(EDIT))).toBeNull();
+        expect(code(into(UNLISTED))).toBeNull();
+        expect(code(onInstance('set', EDIT, { linkTarget: READ, linkIsContainment: false }))).toBeNull();
+    });
+
+    it('a hidden target keeps its own refusal', () => {
+        expect(code(into(HIDDEN))).toBe('PROFILE_HIDDEN_TARGET');
+    });
+
+    it('CONTROL: in developer mode the move passes', () => {
+        expect(code(into(READ), DEVELOPER)).toBeNull();
+    });
+});
+
+describe('checkCommandPermission — a delete and what it contains', () => {
+    const del = (...cascade: GuardType[]) => onInstance('delete', EDIT, { cascade });
+
+    it('a read element in the subtree refuses the delete, naming its type', () => {
+        const r = checkCommandPermission(del(EDIT, READ), CONSUMER);
+        expect(r?.code).toBe('PROFILE_TYPE_LOCKED');
+        expect(r?.message).toBe("You can't delete this Course: it contains Competency elements you can't change in this environment.");
+    });
+
+    it('a hidden element in the subtree refuses it without naming the hidden type', () => {
+        const r = checkCommandPermission(del(HIDDEN), CONSUMER);
+        expect(r?.code).toBe('PROFILE_TYPE_LOCKED');
+        expect(r?.message).toBe("You can't delete this Course: it contains elements you can't change in this environment.");
+        expect(r?.message).not.toContain('Grade');
+    });
+
+    it('CONTROL: a subtree of edit and unlisted types passes, and so does an empty one', () => {
+        expect(code(del(EDIT, UNLISTED))).toBeNull();
+        expect(code(del())).toBeNull();
+    });
+
+    it('a subtree that did not resolve is refused with its sentence', () => {
+        const r = checkCommandPermission(
+            onInstance('delete', EDIT, { cascade: { unresolved: "Cannot resolve metaclass for the contained element 'x'" } }), CONSUMER);
+        expect(r?.code).toBe('PROFILE_UNRESOLVED');
+        expect(r?.message).toBe("Cannot resolve metaclass for the contained element 'x'");
+    });
+
+    it('the subject is checked first: a read subject is a type refusal on the subject', () => {
+        const r = checkCommandPermission(onInstance('delete', READ, { cascade: [HIDDEN] }), CONSUMER);
+        expect(r?.message).toBe("You can't delete Competency elements in this environment.");
+    });
+
+    it('CONTROL: in developer mode the delete passes whatever it contains', () => {
+        expect(code(del(READ, HIDDEN), DEVELOPER)).toBeNull();
     });
 });
 
@@ -259,5 +323,69 @@ describe('metaclassesNamed — every class with the exact name, where the handle
     it('is total on an empty or absent metamodel', () => {
         expect(metaclassesNamed(null, 'Course')).toEqual([]);
         expect(metaclassesNamed({ id: 'empty' }, 'Course')).toEqual([]);
+    });
+});
+
+// ─── the containment walker (#157, 2026-10-04) ───────────────────────────────
+
+describe('containedTypes — what a delete takes with it, through the containment the L-layer names', () => {
+    const cls = (id: string, name: string) => ({ id, name, className: 'DClass' });
+    const obj = (id: string, name: string, instanceOf: string | null, features: string[] = []) =>
+        ({ id, name, className: 'DObject', instanceof: instanceOf, features });
+    const slot = (id: string, feature: string | null, values: unknown[]) =>
+        ({ id, className: 'DValue', instanceof: feature, values });
+
+    const idlookup: Record<string, any> = {
+        'c-course': cls('c-course', 'Course'),
+        'c-module': cls('c-module', 'Module'),
+        'c-lesson': cls('c-lesson', 'Lesson'),
+        'c-team': cls('c-team', 'Team'),
+        'c-teacher': cls('c-teacher', 'Teacher'),
+        'c-note': cls('c-note', 'Note'),
+        'r-modules': { id: 'r-modules', className: 'DReference', composition: true },
+        'r-team': { id: 'r-team', className: 'DReference', aggregation: true },
+        'r-teacher': { id: 'r-teacher', className: 'DReference' },
+        'r-lessons': { id: 'r-lessons', className: 'DReference', composition: true },
+        'r-back': { id: 'r-back', className: 'DReference', composition: true },
+        'a-title': { id: 'a-title', className: 'DAttribute' },
+        course: obj('course', 'C1', 'c-course', ['s-modules', 's-team', 's-teacher', 's-title', 's-loose']),
+        's-modules': slot('s-modules', 'r-modules', ['module']),
+        's-team': slot('s-team', 'r-team', ['team']),
+        's-teacher': slot('s-teacher', 'r-teacher', ['teacher']),
+        's-title': slot('s-title', 'a-title', ['module']),
+        's-loose': slot('s-loose', null, ['note', 'not-an-object', 42]),
+        module: obj('module', 'M1', 'c-module', ['s-lessons']),
+        's-lessons': slot('s-lessons', 'r-lessons', ['lesson']),
+        lesson: obj('lesson', 'L1', 'c-lesson', ['s-back']),
+        's-back': slot('s-back', 'r-back', ['course']),
+        team: obj('team', 'T1', 'c-team'),
+        teacher: obj('teacher', 'Ann', 'c-teacher'),
+        note: obj('note', 'N1', 'c-note'),
+    };
+    const names = (r: ReturnType<typeof containedTypes>) =>
+        (Array.isArray(r) ? r.map((t) => t.name).sort() : r);
+
+    it('follows composition, aggregation and a slot with no feature, down every level', () => {
+        expect(names(containedTypes(idlookup, 'course'))).toEqual(['Lesson', 'Module', 'Note', 'Team']);
+    });
+
+    it('does not follow a plain reference or an attribute slot, and does not return the root', () => {
+        const got = names(containedTypes(idlookup, 'course')) as string[];
+        expect(got).not.toContain('Teacher');
+        expect(got).not.toContain('Course');
+        expect(got.filter((n) => n === 'Module')).toHaveLength(1);
+    });
+
+    it('a contained element with no metaclass makes the answer unresolved', () => {
+        const broken = { ...idlookup, team: { ...idlookup.team, instanceof: null } };
+        const r = containedTypes(broken, 'course');
+        expect(Array.isArray(r)).toBe(false);
+        expect((r as { unresolved: string }).unresolved).toContain("'T1'");
+    });
+
+    it('is total on a leaf, an unknown id and an empty lookup', () => {
+        expect(containedTypes(idlookup, 'teacher')).toEqual([]);
+        expect(containedTypes(idlookup, 'nobody')).toEqual([]);
+        expect(containedTypes({}, 'course')).toEqual([]);
     });
 });
