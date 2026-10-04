@@ -18,7 +18,15 @@
  * - the keypad's value mode (R-SIM-112): the buffer is the device's, Enter gives
  *   the IVAR its value, a key that would leave the domain is off with its reason.
  * - the editor's operations on a draft: add, move, bind, label, remove, and a
- *   Clock's period (R-SIM-122).
+ *   Clock's period (R-SIM-122); a device's span and style, the board's theme,
+ *   accent and columns (R-SIM-123..126, P-2026-10-04-1130). Occupancy is by the
+ *   cells a device covers over its span, on the board's columns: a span or a move
+ *   that would leave the grid or overlap is refused and nothing changes, a move
+ *   onto another device swaps the two when the swapped board fits.
+ * - `maxDisplayLength`: the longest value a display's binding can produce, so the
+ *   face sizes its glyphs once (R-SIM-126).
+ * - the Silkscreen never flags and binds nothing; the Buzzer resolves as an LED and
+ *   stays out of the export, as the Pulse LED (R-SIM-128).
  * - the caption of a binding and the table device → binding → nuXmv (R-SIM-111):
  *   inputs are the event set or an IVAR the model declares, outputs DEFINE, the
  *   Pulse LED and the configuration out of the export.
@@ -27,9 +35,13 @@
  * test bench (sim/__tests__/simBoard.test.ts).
  */
 
-import { BOARD_COLUMNS, BOARD_ROWS, CLOCK_PERIOD_DEFAULT, CLOCK_PERIOD_MAX, CLOCK_PERIOD_MIN, bindingFits, isClockPeriod, onGrid } from '../../../model/simulation/boardCodec';
-import type { BoardBinding, BoardDevice, DeviceKind } from '../../../model/simulation/boardCodec';
+import {
+    BOARD_COLUMNS, BOARD_ROWS, CLOCK_PERIOD_DEFAULT, CLOCK_PERIOD_MAX, CLOCK_PERIOD_MIN, STYLE_FIELDS, bindingFits, boardCols, canonicalStyle, coveredCells,
+    fitsGrid, isAccent, isBoardCols, isBoardTheme, isClockPeriod, isSpan, spanOf, styleValueFits,
+} from '../../../model/simulation/boardCodec';
+import type { BoardBinding, BoardCols, BoardDevice, BoardSettings, BoardTheme, DeviceKind, DeviceStyle, StyleField } from '../../../model/simulation/boardCodec';
 import { compileOutput } from '../../../model/simulation/boardOutputs';
+import { STATE_RESERVED } from '../../../jjel/stateReserved';
 import { compileNet, eventAlphabet, netStcFromRoles } from '../../../model/simulation/netCompile';
 import { objectLabel } from '../../../model/simulation/objectSlots';
 import { decodeStateAttributes, mergeDeclarations, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
@@ -46,7 +58,7 @@ type Lookup = Record<string, any>;
 /** The words of the palette, the table and the captions. */
 export const DEVICE_LABELS: Readonly<Record<DeviceKind, string>> = {
     button: 'Button', switch: 'Switch', slider: 'Slider', keypad: 'Keypad', clock: 'Clock',
-    led: 'LED', pulse: 'Pulse LED', seven: '7-segment', text: 'Text display', gauge: 'Gauge',
+    led: 'LED', pulse: 'Pulse LED', seven: '7-segment', text: 'Text display', gauge: 'Gauge', buzzer: 'Buzzer', silk: 'Silkscreen',
 };
 
 export interface BoardChoice {
@@ -247,6 +259,8 @@ function bindingStatus(kind: DeviceKind, b: BoardBinding, ctx: BoardContext): De
 
 /** Whether a device's binding resolves in the context; the reason, for its title, when it does not. */
 export function resolveDevice(device: BoardDevice, ctx: BoardContext): DeviceStatus {
+    // A silkscreen binds nothing and never flags (R-SIM-128).
+    if (device.kind === 'silk') return OK;
     if (device.binding === null) return flag('Not bound.');
     if (!bindingFits(device.kind, device.binding)) return flag(`A ${DEVICE_LABELS[device.kind]} does not take this binding.`);
     // A Clock's period only a draft can carry out of range: the codec drops such a record (R-SIM-122).
@@ -298,18 +312,34 @@ export function keypadEnterValue(domain: Domain, buffer: string): { value: SimVa
 // The editor's operations
 // ---------------------------------------------------------------------------
 
-/** The first free cell, row by row; `null` when the grid is full. */
-export function firstFreeCell(devices: readonly BoardDevice[]): [number, number] | null {
-    const taken = new Set(devices.map(d => `${d.cell[0]},${d.cell[1]}`));
+/** The cells a device covers, as `column,row` keys. */
+const cellKeys = (d: BoardDevice): string[] => coveredCells(d.cell, spanOf(d)).map(c => c.join(','));
+
+/** No device leaves a grid of `cols` columns and no two cover the same cell. */
+function boardFits(devices: readonly BoardDevice[], cols: number): boolean {
+    const taken = new Set<string>();
+    for (const d of devices) {
+        if (!fitsGrid(d.cell, spanOf(d), cols)) return false;
+        for (const k of cellKeys(d)) {
+            if (taken.has(k)) return false;
+            taken.add(k);
+        }
+    }
+    return true;
+}
+
+/** The first free cell, row by row, on `cols` columns (four by default); `null` when the grid is full. Every covered cell is taken. */
+export function firstFreeCell(devices: readonly BoardDevice[], cols: number = BOARD_COLUMNS): [number, number] | null {
+    const taken = new Set(devices.flatMap(cellKeys));
     for (let row = 0; row < BOARD_ROWS; row++) {
-        for (let column = 0; column < BOARD_COLUMNS; column++) if (!taken.has(`${column},${row}`)) return [column, row];
+        for (let column = 0; column < cols; column++) if (!taken.has(`${column},${row}`)) return [column, row];
     }
     return null;
 }
 
 /** A new unbound device in the first free cell, with the first free id `d1`, `d2`, …; `id` `''` when the grid is full. A Clock gets the default period. */
-export function addDevice(devices: readonly BoardDevice[], kind: DeviceKind): { devices: BoardDevice[]; id: string } {
-    const cell = firstFreeCell(devices);
+export function addDevice(devices: readonly BoardDevice[], kind: DeviceKind, cols: number = BOARD_COLUMNS): { devices: BoardDevice[]; id: string } {
+    const cell = firstFreeCell(devices, cols);
     if (cell === null) return { devices: [...devices], id: '' };
     let n = 1;
     while (devices.some(d => d.id === `d${n}`)) n++;
@@ -320,12 +350,89 @@ export function addDevice(devices: readonly BoardDevice[], kind: DeviceKind): { 
     return { devices: [...devices, device], id };
 }
 
-/** A device moved to a cell; onto another device the two swap; off the grid, or unknown, nothing changes. */
-export function moveDevice(devices: BoardDevice[], id: string, cell: readonly [number, number]): BoardDevice[] {
+/**
+ * A device moved to a cell, on `cols` columns (R-SIM-125). Its span must stay on the grid. Over free cells, or its own,
+ * it moves; onto another device, the one covering the cell dropped on and the only one it would overlap, the two swap
+ * when the swapped board fits; anything else, or an unknown id, changes nothing.
+ */
+export function moveDevice(devices: BoardDevice[], id: string, cell: readonly [number, number], cols: number = BOARD_COLUMNS): BoardDevice[] {
     const moving = devices.find(d => d.id === id);
-    if (!moving || !onGrid(cell)) return devices;
-    const other = devices.find(d => d.id !== id && d.cell[0] === cell[0] && d.cell[1] === cell[1]);
-    return devices.map(d => (d.id === id ? { ...d, cell: [cell[0], cell[1]] } : d === other ? { ...d, cell: moving.cell } : d));
+    if (!moving || !fitsGrid(cell, spanOf(moving), cols)) return devices;
+    const target = new Set(coveredCells(cell, spanOf(moving)).map(c => c.join(',')));
+    const overlapped = devices.filter(d => d.id !== id && cellKeys(d).some(k => target.has(k)));
+    if (overlapped.length === 0) return devices.map(d => (d.id === id ? { ...d, cell: [cell[0], cell[1]] } : d));
+    const other = overlapped[0];
+    if (overlapped.length > 1 || !cellKeys(other).includes(`${cell[0]},${cell[1]}`)) return devices;
+    const swapped = devices.map(d => (d.id === id ? { ...d, cell: [cell[0], cell[1]] as [number, number] } : d === other ? { ...d, cell: moving.cell } : d));
+    return boardFits(swapped, cols) ? swapped : devices;
+}
+
+/** A device's span (R-SIM-125): `[w, h]` in its domain, on the grid and over free cells; `[1, 1]` removes it. Anything else changes nothing. */
+export function setSpan(devices: BoardDevice[], id: string, span: readonly [number, number], cols: number = BOARD_COLUMNS): BoardDevice[] {
+    const device = devices.find(d => d.id === id);
+    if (!device || !isSpan(span)) return devices;
+    const next = devices.map(d => {
+        if (d.id !== id) return d;
+        const { span: _old, ...rest } = d;
+        return span[0] === 1 && span[1] === 1 ? rest : { ...rest, span: [span[0], span[1]] as [number, number] };
+    });
+    return boardFits(next, cols) ? next : devices;
+}
+
+/** A change of style: a field's new value, or `null` to remove it (back to the default or the suggestion). */
+export type DeviceStyleChange = { readonly [K in StyleField]?: DeviceStyle[K] | null };
+
+/**
+ * A device's style (R-SIM-126): every field named must be one its kind takes, with a valid value, or `null`; an
+ * explicit key another device holds is refused (R-SIM-127). One field wrong and nothing changes. Defaults are not
+ * stored: a style left with none is removed.
+ */
+export function setStyle(devices: BoardDevice[], id: string, change: DeviceStyleChange): BoardDevice[] {
+    const device = devices.find(d => d.id === id);
+    if (!device) return devices;
+    const merged: Record<string, string> = { ...(device.style ?? {}) } as Record<string, string>;
+    for (const [field, value] of Object.entries(change) as Array<[StyleField, string | null | undefined]>) {
+        if (value === undefined) continue;
+        if (!STYLE_FIELDS[device.kind].includes(field)) return devices;
+        if (value === null) {
+            delete merged[field];
+            continue;
+        }
+        if (!styleValueFits(device.kind, field, value)) return devices;
+        if (field === 'key' && value !== 'none' && devices.some(d => d.id !== id && d.style?.key === value)) return devices;
+        merged[field] = value;
+    }
+    const style = canonicalStyle(device.kind, merged as DeviceStyle);
+    return devices.map(d => {
+        if (d.id !== id) return d;
+        const { style: _old, ...rest } = d;
+        return style ? { ...rest, style } : rest;
+    });
+}
+
+/** Board settings without one field. */
+function without(settings: BoardSettings, field: keyof BoardSettings): BoardSettings {
+    const { [field]: _gone, ...rest } = settings;
+    return rest;
+}
+
+/** The front panel's theme (R-SIM-124): one of the four; `graphite`, the default, removes it. Anything else changes nothing. */
+export function setBoardTheme(settings: BoardSettings, theme: BoardTheme): BoardSettings {
+    if (!isBoardTheme(theme)) return settings;
+    return theme === 'graphite' ? without(settings, 'theme') : { ...settings, theme };
+}
+
+/** The accent (R-SIM-124): a colour `#rrggbb`, stored in lower case; `null` removes it. Anything else changes nothing. */
+export function setAccent(settings: BoardSettings, accent: string | null): BoardSettings {
+    if (accent === null) return without(settings, 'accent');
+    return isAccent(accent) ? { ...settings, accent: accent.toLowerCase() } : settings;
+}
+
+/** The board's columns (R-SIM-125): 4, 6 or 8; narrowing is refused while a device covers a removed column. 4 removes the field. */
+export function setBoardCols(settings: BoardSettings, devices: readonly BoardDevice[], cols: BoardCols): BoardSettings {
+    if (!isBoardCols(cols)) return settings;
+    if (cols < boardCols(settings) && devices.some(d => d.cell[0] + spanOf(d)[0] > cols)) return settings;
+    return cols === BOARD_COLUMNS ? without(settings, 'cols') : { ...settings, cols };
 }
 
 /** The binding of a device; one its kind does not take is refused and nothing changes. */
@@ -377,6 +484,8 @@ export function clockPeriodText(ms: number): string {
 
 /** What a device is bound to, in a few words: the caption under it on the board, the binding column of the table. */
 export function bindingCaption(device: BoardDevice, ctx: BoardContext): string {
+    // A silkscreen has no binding to name (R-SIM-128).
+    if (device.kind === 'silk') return '';
     const b = device.binding;
     if (b === null) return 'unbound';
     switch (b.kind) {
@@ -401,8 +510,11 @@ export function bindingCaption(device: BoardDevice, ctx: BoardContext): string {
 
 /** What a device is in nuXmv: an input names the event set or an IVAR the model declares, an output is a DEFINE. */
 function nuxmvOf(device: BoardDevice, ctx: BoardContext): string {
+    if (device.kind === 'silk') return '— (a silkscreen; not exported)';
     const b = device.binding;
     if (b === null) return '—';
+    // R-SIM-128: the buzzer is presentation, as the Pulse LED: it sounds on the rising edge of its boolean.
+    if (device.kind === 'buzzer') return '— (sounds on the rising edge; not exported)';
     const ivarDomain = (element: string, attr: string) => {
         const ivar = ctx.ivars.find(i => i.element === element && i.attr === attr);
         return ivar ? ` : ${domainText(ivar.domain)}` : '';
@@ -444,4 +556,42 @@ export function nuxmvRows(devices: readonly BoardDevice[], ctx: BoardContext): N
     return devices.map(d => ({
         id: d.id, device: `${DEVICE_LABELS[d.kind]} ${d.label || d.id}`, binding: bindingCaption(d, ctx), nuxmv: nuxmvOf(d, ctx),
     }));
+}
+
+// ---------------------------------------------------------------------------
+// The length a display sizes its glyphs for (R-SIM-126)
+// ---------------------------------------------------------------------------
+
+/** The longest text a value of the domain can take: the longer of a range's bounds, an enum's longest literal, `false`. */
+function domainLength(domain: Domain): number | null {
+    switch (domain.kind) {
+        case 'boolean': return 'false'.length;
+        case 'range': return Math.max(String(domain.min).length, String(domain.max).length);
+        case 'enum': return domain.literals.length > 0 ? Math.max(...domain.literals.map(l => l.length)) : null;
+    }
+}
+
+/**
+ * The longest value a Text display or a 7-segment can show for its binding, so that the face sizes its glyphs once
+ * and the box keeps its size while the value runs (R-SIM-126). The configuration: the longest state label. An
+ * expression: the domain of the one attribute it reads when it is nothing but `X.[attr]`, `model` and `self` naming
+ * the model's globals and another identifier the element of that name; `marked` is a boolean. `null` for anything
+ * else (an expression without a known domain, one that does not compile, an unbound or another kind of device): the
+ * face then uses the cell's width.
+ */
+export function maxDisplayLength(device: BoardDevice, ctx: BoardContext): number | null {
+    if ((device.kind !== 'text' && device.kind !== 'seven') || device.binding === null) return null;
+    const b = device.binding;
+    if (b.kind === 'configuration') return ctx.places.length > 0 ? Math.max(...ctx.places.map(p => p.label.length)) : null;
+    if (b.kind !== 'expr') return null;
+    const compiled = compileOutput(b.text, { net: ctx.net, snapshot: ctx.snapshot, nameOf: ctx.nameOf });
+    const e = compiled.expr as unknown as Record<string, any> | null;
+    if (!e || e.type !== 'StateAccess' || typeof e.attribute !== 'string' || e.object?.type !== 'Identifier' || typeof e.object.name !== 'string') return null;
+    const attr: string = e.attribute;
+    const name: string = e.object.name;
+    if (attr === 'marked') return 'false'.length;
+    if ((STATE_RESERVED.readOnlyAttributes as readonly string[]).includes(attr)) return null;
+    const global = name === 'model' || name === 'self';
+    const read = ctx.attrs.find(a => a.attr === attr && (global ? a.element === ctx.modelId : a.element !== ctx.modelId && ctx.nameOf(a.element) === name));
+    return read ? domainLength(read.domain) : null;
 }

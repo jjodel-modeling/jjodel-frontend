@@ -59,6 +59,8 @@ const stop = (e: SyntheticEvent) => e.stopPropagation();
 const KIND_ICON: Readonly<Record<DeviceKind, string>> = {
     button: 'bi-record-circle', switch: 'bi-toggle-on', slider: 'bi-sliders', keypad: 'bi-grid-3x3-gap', clock: 'bi-stopwatch',
     led: 'bi-lightbulb', pulse: 'bi-lightning-charge', seven: 'bi-123', text: 'bi-card-text', gauge: 'bi-speedometer2',
+    buzzer: 'bi-bell',
+    silk: 'bi-fonts',
 };
 
 /** The words of each binding form in the inspector's select. */

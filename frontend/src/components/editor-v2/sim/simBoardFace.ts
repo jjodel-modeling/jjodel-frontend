@@ -25,6 +25,9 @@
  *   event enables: its switch follows the run, not the event's button. It shows its
  *   period, the ticks since it was switched on, the ticks dropped while a press
  *   waited on the user, and why it went off (simBoardClock.ts `ClockState`).
+ * - A Silkscreen (R-SIM-128) shows its label and nothing else: never flagged, never
+ *   off, with or without a run. A Buzzer reads as an LED, lit while its boolean
+ *   holds; its sound is the skin's (P-2026-10-04-1131).
  *
  * `heldInputs` and `planPress` are the board's press: the inputs a press asks are
  * answered by the values the board holds (`heldAnswer`, R-SIM-120); all answered,
@@ -187,6 +190,13 @@ function flaggedKeys(device: BoardDevice, reason: string): KeyFace[] {
 /** What a device shows (R-SIM-111, R-SIM-113). */
 export function deviceFace(device: BoardDevice, scene: BoardScene): DeviceFace {
     const { ctx } = scene;
+    if (device.kind === 'silk') {
+        const name = device.label || DEVICE_LABELS.silk;
+        return {
+            id: device.id, kind: device.kind, name, caption: '', flag: null, on: true, text: device.label,
+            title: device.label === '' ? DEVICE_LABELS.silk : `${DEVICE_LABELS.silk} · ${device.label}`,
+        };
+    }
     const status = ctx ? resolveDevice(device, ctx) : { ok: false as const, reason: NO_CONTEXT };
     const caption = ctx ? bindingCaption(device, ctx) : device.binding === null ? 'unbound' : '(missing)';
     const name = ctx ? deviceName(device, ctx) : device.label || DEVICE_LABELS[device.kind];
@@ -309,7 +319,8 @@ function outputFace(device: BoardDevice, scene: BoardScene, ctx: BoardContext, b
     }
     const viewing = scene.n !== (run.trace?.length ?? 0) ? `\nViewing step ${scene.n}.` : '';
     const shown = (reading: string, x: Partial<DeviceFace>): DeviceFace => ({ ...ok, on: true, ...x, title: `${head}\n${reading}${viewing}` });
-    const error = (why: string, x: Partial<DeviceFace> = {}): DeviceFace => shown(`Err. ${why}`, { err: true, text: 'Err', ...(device.kind === 'led' ? { lit: false } : {}), ...x });
+    const lamp = device.kind === 'led' || device.kind === 'buzzer';
+    const error = (why: string, x: Partial<DeviceFace> = {}): DeviceFace => shown(`Err. ${why}`, { err: true, text: 'Err', ...(lamp ? { lit: false } : {}), ...x });
     const state = config.state;
     switch (b.kind) {
         case 'marked': {
@@ -329,7 +340,7 @@ function outputFace(device: BoardDevice, scene: BoardScene, ctx: BoardContext, b
             const r = readExpr(b.text, run, ctx, state);
             if (r.kind === 'defect') return error(r.detail);
             const v = r.value;
-            if (device.kind === 'led') {
+            if (lamp) {
                 return typeof v === 'boolean' ? shown(v ? 'Lit.' : 'Dark.', { lit: v }) : error(`The value is ${typeName(v)}, not a boolean.`);
             }
             if (device.kind === 'seven') {

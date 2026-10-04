@@ -273,6 +273,8 @@ function GaugeFace({ face, skin }: BoardDeviceProps): ReactElement {
 const FACES: Readonly<Record<DeviceFace['kind'], (p: BoardDeviceProps) => ReactElement>> = {
     button: ButtonFace, switch: SwitchFace, slider: SliderFace, keypad: KeypadFace, clock: ClockFace,
     led: LampFace, pulse: LampFace, seven: SevenFace, text: TextFace, gauge: GaugeFace,
+    buzzer: LampFace,
+    silk: TextFace,
 };
 
 /**
