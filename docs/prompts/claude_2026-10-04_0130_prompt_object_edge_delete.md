@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-0130
 Chat: C-2026-10-04-0125
 Lane: full (critical zone possible: `canvasToJjom.ts`; bug fix with discovery, tests first, probe). Tier: heavy (RC-32). Model: the default of `.claude/settings.json`, no deviation. Critical-zone go-ahead: RC-30, given by the chat at launch (`--critical-zone-goahead P-2026-10-04-0130`) on Alfonso's request «fixa il problema con una lane auto» (2026-10-04 01:20); the Layer Impact Report stays the first step before any edit of a §3.2 file.
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane object-edge-delete · fix 5557a714b, test 5d4e8b0b6, probe 04acc1815, dc489a6b3 · report 86d15831b docs/discovery/discovery_2026-10-04_object_edge_delete.md (§10 D2 revised by measurement, R-B17 provisional) · gates: typecheck 14 (the §17 set), vitest 7289 passed (the §17 nine at import, criticalZone.test.ts green with the go-ahead variable unset), build exit 0 · probe on 3084 17/17 after, 10/10 before (the bug measured), the four default panes identical to the trunk-code run 4/4 · mutation bench 15/15 canvasToJjom.ts, 4/4 EditorV2.tsx · crops in ~/.jjodel-lanes/P-2026-10-04-0130/crops/ · non fuso: hard-stop, verifica visiva alla chat e GO di Alfonso (critical zone)
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

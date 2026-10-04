@@ -29,6 +29,8 @@ lane probe `frontend/scripts/probe/object-edge-delete.ts` (`lane-run probe`, por
   a nested edge-object with no vertex there (R-B14 form (b)) goes to the same DObject cascade alone. Delete,
   Backspace, the toolbar trash and Cut route a selected object-as-edge there. M2 references, inheritance edges and
   M1 links keep `syncDeleteEdge` untouched.
+- **Revised in Phase 2 (§10)**: the delete takes the object's vertex and its link DEdges out of `subElements`, then
+  runs the cascade; the node path left them as ghosts and its React Flow filter looped the canvas (measured).
 - **Files**: `EditorV2.tsx` (menu branch, `deleteObjectAsEdge`, `deleteSelected` partition); `sync/canvasToJjom.ts`
   (two helpers, so both branches run under vitest: `EditorV2.tsx` does not import there); test
   `sync/__tests__/syncDeleteObjectAsEdge.test.ts`; the probe. Layer Impact Report in §6.
@@ -193,3 +195,81 @@ critical-zone lane is his (RC-23).
 `ContextMenu.tsx` (1-70), `problems/registry.ts` (40-60, 180-300), `sync/__tests__/syncDeleteEdge.test.ts` (whole),
 `docs/discovery/discovery_2026-09-30_reference_delete.md`, `docs/decisions.md` (RC-14, RC-21..30, R-B10..16),
 `docs/PROTOCOL.md`, `frontend/src/components/editor-v2/CLAUDE.md`.
+
+## 10. Addendum, Phase 2: D2 revised by measurement, and its Layer Impact Report
+
+**Measured** (scratch `frontend/scripts/smoke/_tmp_oed_debug.ts`, log `probe-_tmp_oed_debug.log`, DemoESM statechart):
+
+| Run | What it does | Canvas after 2.5 s | DObjects |
+|---|---|---|---|
+| fix as in §5 | RF filter of the hidden vertex + `syncDeleteVertex` | **crash**: «Maximum update depth exceeded» in `StoreUpdater`, `CanvasErrorBoundary`, 0 nodes, 0 edges | 9 |
+| D | `syncDeleteVertex(vTc)` alone | ghost: the vertex unhidden, 2 RF edges to it (`composition locked->tc`, `instanceRef tc->locked`); the DVertex still in `idlookup` | 9 |
+| A | `LObject.delete()` alone | same ghost | 9 |
+| C | default viewpoint, the node menu «Delete» on `tc` | clean (10→9 nodes, 12→9 edges) | 9 |
+| G | the vertex's 3 DEdges and the vertex out of `subElements` and deleted (one TRANSACTION), then `LObject.delete()` | clean: 9 nodes (3 visible), 3 synthetic edges | 9 |
+
+The transitions of DemoESM are nested (`father` = DValue) and still have a hidden vertex. On this loaded project the
+cascade removes neither the vertex nor its link DEdges from `subElements`: the class of the 2026-09-30 ghost ticket
+(`Dummy.get_delete` rides on `pointedBy`). `deleteM1Link` already takes the edge out of `subElements` for that reason.
+
+**D2 revised** (unattended, the prompt's recommendation proved wrong by measurement): the delete removes every vertex
+of the object (any graph) and every DEdge starting or ending on one of them, each out of the `subElements` that lists it
+and deleted, in ONE TRANSACTION of pure actions; clears the M1 pair guard of those edges; then runs the DObject cascade
+(`LObject.delete()`, its own TRANSACTION, last, never wrapped). A singleton is refused by the cascade's guard before
+anything is stripped, as `syncDeleteVertex` does. EditorV2 makes no React Flow removal of its own: the sync drops the
+vertex and the edges when their ids leave `subElements`.
+
+```
+LAYER IMPACT REPORT (replaces §6 for canvasToJjom.ts)
+
+Layers touched:
+  [x] D-layer (Redux raw data)      one TRANSACTION: SetFieldAction subElements '-=' + DeleteElementAction, then LObject.delete()
+  [ ] L-layer (computed proxies)    LObject.delete called (unchanged)
+  [ ] JjOM (model entities)
+  [x] Canvas v2-flow (ReactFlow nodes/edges)   via the sync's removal pass only
+  [ ] Canvas classic                 a vertex of the object in another graph is deleted too (the object is gone)
+  [x] Sync layer (useJjomSync hooks)  read only: clearCanvasEdgePair on the removed edges (rule 13)
+  [ ] Persistence (VersionFixer / jsxString)
+```
+
+- **D-layer.** Changes: an `irobj_` delete writes the object's vertices and their edges out of their graphs and deletes
+  them, then deletes the object. Does not change: `syncDeleteEdge`, `syncDeleteVertex`, `deleteM1Link`, `Dummy.ts`.
+  Safety: no creator; the pure TRANSACTION precedes `.delete()` (the order of `syncDeleteVertex`), nothing runs after it.
+- **Canvas.** No RF-local filter (the measured loop trigger). `useJjomSync`'s removal pass compares `subElements`
+  snapshots, so the vertex and the link edges leave the canvas; the synthetic edge leaves because synthesis skips an
+  object absent from `idlookup`.
+- **Sync layer.** Not edited; the pair guard of each removed M1 edge is cleared as `deleteM1Link` does.
+
+## 11. Addendum, closure: measured after the fix
+
+Code `5557a714b` (fix), `5d4e8b0b6` (test), probe `04acc1815` and `dc489a6b3`.
+
+**Probe** (`lane-run probe`, 3084, 1600x1000, light, `probe_after.json`): 17/17. Menu on a transition: `Delete
+Transition` only (danger, `bi-trash`); with a waypoint: `Reset routing`, `Delete Transition`. Menu delete: 4 → 3
+synthetic edges and 4 → 3 `Transition` DObjects at 300 ms, the same after 3 s; problems unchanged (`simulation: 2`);
+undo stack 0 → 1. One Cmd+Z: stack 1 → 0, 4 edges and 4 objects, `tc` back as `locked->locked` with its hidden vertex,
+its slots (`event: coin`, `nextState: locked`, `effect`) and the four labels identical. Second transition `tp` selected
+by a click, Delete: 4 → 3 edges and objects, the same after 3 s. «Reset routing»: waypoints 1 → 0. The four default
+panes identical to the trunk-code run, 4/4 (`OED_COMPARE`). Console errors per scene identical before and after
+(`init_dash`, `Invalid action path 0` at import, and on DemoESM after the derive 12 lines of `Cannot serialize in
+ecore, found loop`), none new; no page error. Crops: `crops/oed_before_menu.png` (trunk code) and
+`crops/oed_after_menu.png`, `_waypoints` variants beside them.
+
+**Gates**: typecheck 14 errors, the §17 set (identical to the baseline by file and code); vitest 7273 → 7289 passed,
+the same 9 files red at import, `criticalZone.test.ts` green with the go-ahead variable unset; build exit 0, chunk-size
+warning only; `typecheck:scripts` and `check:scripts` exit 0.
+
+**Mutation bench**: `canvasToJjom.ts` through vitest 15/15 killed (two only after the tests «only the irobj_ prefix»
+and «a class with a vertex is not deleted» were added); `EditorV2.tsx` through the probe on DemoESM 4/4 killed (menu
+branch off, `deleteSelected` partition dropped, «Reset routing» dropped, sync call dropped). The first run of «menu
+branch off» died at import (`SyntaxError: Unexpected token '*'` in the probe's `page.evaluate`, before any gesture),
+rerun clean and killed (5 FAIL): an environment flake, not a verdict.
+
+**Not covered**: the item list of the menu is built in `EditorV2.tsx`, which does not import under vitest; it is pinned
+by the probe from the DOM only. The edge-object without a vertex (R-B14 form (b)) is covered by a unit test, not by the
+probe (DemoESM's nested transitions all have a hidden vertex).
+
+**Tickets** (inbox `views.md`): «Reset routing» of a persisted route comes back at reload when the edge has no side pin
+(`persistIREdgeLayout` returns on an empty layout, read); the node delete (`syncDeleteVertex`) leaves the vertex and its
+link DEdges in `subElements` on a loaded project under an IR viewpoint (measured D, the class of the 2026-09-30 ghost
+ticket, reached here through a node).
