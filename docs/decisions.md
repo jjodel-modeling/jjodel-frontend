@@ -501,7 +501,7 @@ the chat `C-2026-09-30-1940` in the prompt `P-2026-09-30-1940` under RC-25, adop
   **Aggiornamento 2026-08-18**: l'«estensione futura con ratifica propria» annunciata qui è
   R-MK-5, che assorbe la dipendenza dal contenitore nella nozione unica di canale dichiarato. Il
   debito non prende una ratifica separata; la migrazione è la fetta M3 di R-MK-9.
-- **R-B17** (2026-10-04, provisional, unattended) — **An object-as-edge is deleted as the object it is.** Its
+- **R-B17** (2026-10-04, ratified by Alfonso 2026-10-04) — **An object-as-edge is deleted as the object it is.** Its
   context menu holds «Reset routing» (only with waypoints, through `handleEdgeChange`'s synthetic branch) and
   «Delete <Metaclass>»; no «Convert to …», «Delete reference» or «Create edge view». Delete, Backspace, the toolbar
   trash and Cut route a selected `irobj_` edge to the same delete. The delete takes every vertex of the object and
