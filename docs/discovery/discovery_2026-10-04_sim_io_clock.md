@@ -116,3 +116,25 @@ More than five files (rule 19): the prompt's DOVE names both folders and asks th
 ## 8. Questions
 
 None open. The microwave scene of the probe is attempted within the prompt's 15 minutes; the outcome goes in the Phase 2 addendum.
+
+## Addendum 2026-10-04: Phase 2 (`sim-io-clock`)
+
+Built by the same session: `52ddd7163` (feat, 8 files), `bed918e5f` (test, 4 files). Row R-SIM-122. What Phase 2 found against this report:
+
+1. **§6, files.** As listed, except `SimBoardEditor.scss`: the period field reuses `sim-board-editor__field`, `__field-label` and `__hint`, so the file is untouched. Twelve files changed.
+2. **§5 decision 5, the board edit.** Not in §5 as written: an edit of the board record switches every clock off (reason `the board changed`). Without it, a clock removed or re-timed by the editor's Apply would keep ticking with the old event or period, unseen [R]. Covered by a unit test and the mutation bench.
+3. **Variant A's first layout [M].** The probe's first crop showed the toggle and the counter side by side, overflowing the 160 px tile. Fixed before the commit by stacking them in Variant A; Variant B keeps the row.
+4. **R3, closed in the probe [M].** The microwave gained an ε loop in `Cooking`. With Play on and the clock on, Play still reads `Pause` after three ticks: 8 ε steps and 3 tick steps. Run again with `keepPlay` ignored in the panel, the same check fails: Play reads `Play`, 3 ε steps. The control log is `~/.jjodel-lanes/P-2026-10-04-0150/probe-control-keepPlay.log`.
+5. **R2, the 100 ms floor [M].** 21 ticks in 2195 ms on, ticks equal to steps, no page error. The panel keeps up at ten presses a second.
+6. **The microwave [M].** Built in the probe through the L proxies on DemoESM's metamodel, about a minute per run. The `mm:ss` display is `(if m < 10 then '0' else '') + m + ':' + (if s < 10 then '0' else '') + s`, with `m = (model.[secs] - model.[secs] % 60) / 60` and `s = model.[secs] % 60`. It compiles as an output and reads `00:00`, `01:30` after `plus` ×3, and `01:25` five seconds after the switch-on.
+7. **A write outside the worktree.** One `npx sass` syntax check wrote `/tmp/ioclock_sass_check.css`. It was deleted at once; later scratch went to the gitignored `frontend/scripts/smoke/`.
+
+Probe: `frontend/scripts/smoke/_tmp_ioclock_probe.ts` (gitignored), run by `lane-run probe` on 3083, 1600×1000. Results: clock 22/22, micro 8/8, scenes 50/50 on the base (the seven code files checked out at `51b074753`, then restored) and 50/50 after, diff 0 differing paths. Crops, light and dark, in `~/.jjodel-lanes/P-2026-10-04-0150/`: `_tmp_ioclock_A_*`, `_B_*`, `_B_bindings_*`, `_editor_*`, `_micro_*`.
+
+## Decisions taken (unattended)
+
+The six of §5, plus point 2 above (a board edit switches every clock off). All are recorded in R-SIM-122.
+
+## Decisions awaiting Alfonso
+
+None of the RC-26 list. The merge waits for the chat's visual check (RC-23).

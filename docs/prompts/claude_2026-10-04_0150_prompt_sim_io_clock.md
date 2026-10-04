@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-0150
 Chat: C-2026-10-04-0145
 Lane: full (new device kind across the board model, editor, faces and panel wiring; tests first; probe; visual, RC-23 by the chat). Tier: heavy (RC-32). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane sim-io-clock · report 51b074753, feat 52ddd7163, test bed918e5f · R-SIM-122 · typecheck 14, the §17 set; vitest 7310/7310 in 295 files, the 9 known suites red at import; build exit 0, chunk-size warning only; mutation bench 48/48 (simBoardClock.ts 24, boardCodec.ts 11, simBoard.ts 6, simBoardFace.ts 7); check:scripts exit 0 · lane probe on 3083 (frontend/scripts/smoke/_tmp_ioclock_probe.ts, gitignored): clock 22/22 (5 ticks and step 5 at 1000 ms, 21 ticks in 2195 ms at 100 ms, off at Reset, board close, Halted), microwave 8/8 (01:25 after 5 s; Play and the clock together, control without keepPlay fails), the four demo scenes 50/50 base and after, 0 differing paths, header and board card included; crops light and dark in ~/.jjodel-lanes/P-2026-10-04-0150/ · SimBoardEditor.scss untouched · hard-stop for the chat's visual check (RC-23) · non fuso
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: the Phase 1 hard stop of P4 does not apply (motivo: Alfonso asked for this lane in lane auto, 2026-10-04 01:40, and the chat cannot poll this conversation; RC-11). The discovery report is still written and committed first, then Phase 2 starts on this prompt's GO. Stop with `Outcome: question` instead, before any code, if the discovery finds an RC-26 item or contradicts a decision below.
