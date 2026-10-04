@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-0939
 Chat: —
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane merge · 1bd0b33c0 · verifica visiva passata 2026-10-04 (chat check RC-23 on the lane probe from the DOM, 17/17 after the fix (menu Delete Transition only, Reset routing with waypoints; DObject removed, not redrawn after two syncs; one Cmd+Z restores slots and ends; Delete key works); four demo default panes identical to the trunk)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-04-0939 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

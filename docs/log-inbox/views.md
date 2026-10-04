@@ -481,3 +481,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-04-0130
 **Detail**: docs/discovery/discovery_2026-10-04_object_edge_delete.md
+
+## 2026-10-04 — merge: object-edge-delete into alfonso-frontend-jjtl (P-2026-10-04-0939)
+**Prompt**: `claude_2026-10-04_0939_prompt_merge_object-edge-delete.md`, a direct merge by `lane-run merge --direct`, no session: `object-edge-delete` at `cd387ab59` into `alfonso-frontend-jjtl`, merge base `43685438b`, 7 commits on the branch side.
+**Files touched**: merge `1bd0b33c0`: 8 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_object_edge_delete.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-04_0130_prompt_object_edge_delete.md`, `frontend/scripts/probe/object-edge-delete.ts`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/sync/__tests__/syncDeleteObjectAsEdge.test.ts`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1bd0b33c0` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7289 tests in 295 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat check RC-23 on the lane probe from the DOM, 17/17 after the fix (menu Delete Transition only, Reset routing with waypoints; DObject removed, not redrawn after two syncs; one Cmd+Z restores slots and ends; Delete key works); four demo default panes identical to the trunk
+**Notes**: Rollback tag `pre-object-edge-delete` on `43685438b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-0939/result.json`.
+**Prompt document name**: 2026-10-04 09:39
