@@ -84,6 +84,8 @@ import {
     syncDeleteVertex,
     syncDeleteEdge,
     syncDeleteReferenceById,
+    resolveObjectAsEdge,
+    syncDeleteObjectAsEdge,
     syncCreateClass,
     syncCreateEnum,
     syncCreatePackage,
@@ -2458,11 +2460,29 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         event.dataTransfer.dropEffect = 'move';
     }, []);
 
+    // Delete an object rendered as an edge (`irobj_<objectId>`, P-2026-10-04-0130): the edge IS the M1
+    // object, deleted with its hidden vertex and that vertex's edges (syncDeleteObjectAsEdge). No React
+    // Flow filter here: the sync drops them when their ids leave subElements, and a local filter of the
+    // hidden vertex was measured to send the canvas into an update-depth loop (report §10).
+    const deleteObjectAsEdge = useCallback(
+        (edgeId: string) => {
+            const target = resolveObjectAsEdge(edgeId, (store.getState() as any).idlookup);
+            if (!target) return;
+            takeSnapshot();
+            setSyntheticEdgeSelected(edgeId, false);
+            if (isJjomMode) syncDeleteObjectAsEdge(target.objectId);
+        },
+        [takeSnapshot, isJjomMode]
+    );
+
     // Delete selected nodes and edges
     const deleteSelected = useCallback(() => {
         const selectedNodes = getNodes().filter((n) => n.selected);
-        const selectedEdges = getEdges().filter((e) => e.selected);
+        // A selected object-as-edge is an M1 object, not an edge: it leaves with its object.
+        const objectAsEdges = getEdges().filter((e) => e.selected && e.id.startsWith('irobj_'));
+        const selectedEdges = getEdges().filter((e) => e.selected && !e.id.startsWith('irobj_'));
 
+        for (const e of objectAsEdges) deleteObjectAsEdge(e.id);
         if (selectedNodes.length === 0 && selectedEdges.length === 0) return;
 
         // In JjOM mode, route classNode deletions through co-evolution
@@ -2511,7 +2531,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 )
             ));
         }
-    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution, isJjomMode, handleClassRemoval]);
+    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution, isJjomMode, handleClassRemoval, deleteObjectAsEdge]);
 
     // Delete specific node by ID
     const deleteNode = useCallback(
@@ -3429,6 +3449,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const isInheritance = edge?.type === 'inheritance';
             const edgeData = edge?.data as ReferenceEdgeData | InheritanceEdgeData | undefined;
             const hasWaypoints = edgeData?.waypoints && edgeData.waypoints.length > 0;
+            // An object-as-edge (`irobj_<objectId>`) is an M1 object, not a reference or an inheritance,
+            // and it already has its view: its menu resets the route it keeps in the IR session store
+            // (handleEdgeChange's synthetic branch) and deletes the object (P-2026-10-04-0130).
+            const objectAsEdge = resolveObjectAsEdge(contextMenu.edgeId, (store.getState() as any).idlookup);
+            if (objectAsEdge) {
+                return [
+                    ...(hasWaypoints ? [{
+                        label: 'Reset routing',
+                        icon: 'bi-arrow-counterclockwise',
+                        onClick: () => handleEdgeChange(contextMenu.edgeId!, { data: { waypoints: [] } }),
+                    }] : []),
+                    {
+                        label: `Delete ${objectAsEdge.metaclassName}`,
+                        icon: 'bi-trash',
+                        danger: true,
+                        onClick: () => deleteObjectAsEdge(contextMenu.edgeId!),
+                    },
+                ];
+            }
             // Resolved ONCE for the «Create edge view» entry below: gate and destination from
             // the same answer, so the view cannot land anywhere but where the entry promised.
             const edgeViewVp = hasCreatableViewpoint() ? resolveParentViewpoint() : null;

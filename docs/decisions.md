@@ -173,7 +173,7 @@ Source: `docs/ratifiche/claude_ratifiche_2026-09-26_orchestrated_lanes.md`, rati
 - **RC-23** (2026-09-26): **The visual checklist runs in the built-in browser, by the chat.** The numbered
   visual steps of a prompt are executed by the chat in the desktop app's built-in browser against the lane's
   dev server on the Mac; every item is read from the DOM or the console, never from a screenshot; screenshots
-  in light and dark are attached as a record. The browser profile is empty and separate from Alfonso's:
+  in the light theme are attached as a record (D-UI-15, 2026-10-04: no dark). The browser profile is empty and separate from Alfonso's:
   fixtures are built with the console script the prompt names or imported from an exported file. The log
   entry records `Smoke visivo: passato — chat, unattended, <n>/<n>`. Alfonso's GO stays mandatory on
   critical-zone lanes, on items marked as perceptual judgements, and on items the chat could not close for a
@@ -501,6 +501,15 @@ the chat `C-2026-09-30-1940` in the prompt `P-2026-09-30-1940` under RC-25, adop
   **Aggiornamento 2026-08-18**: l'«estensione futura con ratifica propria» annunciata qui è
   R-MK-5, che assorbe la dipendenza dal contenitore nella nozione unica di canale dichiarato. Il
   debito non prende una ratifica separata; la migrazione è la fetta M3 di R-MK-9.
+- **R-B17** (2026-10-04, ratified by Alfonso 2026-10-04) — **An object-as-edge is deleted as the object it is.** Its
+  context menu holds «Reset routing» (only with waypoints, through `handleEdgeChange`'s synthetic branch) and
+  «Delete <Metaclass>»; no «Convert to …», «Delete reference» or «Create edge view». Delete, Backspace, the toolbar
+  trash and Cut route a selected `irobj_` edge to the same delete. The delete takes every vertex of the object and
+  every DEdge on them out of the `subElements` that list them and deletes them in one pure TRANSACTION, clears their
+  pair guards, then runs the DObject cascade; no React Flow filter of its own. Adopted as recommended by the prompt,
+  with the delete path revised by measurement: the object node's path (`syncDeleteVertex`) left the hidden vertex and
+  its links as ghosts on a loaded project, and its React Flow filter sent the canvas into an update-depth loop. Source:
+  `docs/discovery/discovery_2026-10-04_object_edge_delete.md` §7, §10 (P-2026-10-04-0130); code `5557a714b`.
 
 ## Uniformazione delle due property card (arco U, dal 2026-08-08)
 
@@ -926,7 +935,7 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   di assenza e di presenza, R-RAIL-36 il caso in cui si misura l'elemento sbagliato; R-RAIL-43
   copre il terzo caso, **la stima mai eseguita**, e ha in più la parte sulla propagazione, che le
   altre due non hanno.
-- **R-RAIL-44** (2026-08-13) — **Il dark theme è sospeso: i componenti nuovi non scrivono
+- **R-RAIL-44** (2026-08-13, **superata il 2026-10-04 da D-UI-15**: il dark theme non esiste più) — **Il dark theme è sospeso: i componenti nuovi non scrivono
   varianti dark.** Sospeso e non deprecato: i blocchi `[data-theme="dark"]` esistenti restano in
   albero e non si rimuovono (Regola 9), semplicemente non si manutengono e non si verificano. Il
   freeze era già vero a codice prima di essere scritto qui: `e682047a1` toglie il sottomenu Theme
@@ -3190,6 +3199,19 @@ bag `_state`, che non contiene affatto il run-state.
   sospetto: un prompt che chiede «controlla se e' colpa di X» avrebbe fatto fermare la misura al primo
   sospetto plausibile. **Nominare il sospetto va bene solo se la misura richiesta e' piu' larga del
   sospetto.**
+
+- **D-UI-15** (2026-10-04) — **Jjodel has no dark theme. The decision is final and supersedes
+  R-RAIL-44** (Alfonso, 2026-10-04: «il tema scuro non c'è più. Questa è una decisione definitiva»).
+  R-RAIL-44 suspended the theme and kept it recoverable; that reserve is gone. Consequences, all
+  in force from today: no prompt, component or SCSS block writes a dark variant; visual checklists,
+  crops, screenshots and contrast measures are taken in the light theme only, and a log entry or a
+  report does not quote a dark figure; a defect visible only under `data-theme="dark"` is not a
+  ticket; no document, normative or user-facing, describes a dark theme as a feature or a support
+  target. Rows and reports written before this date keep their dark measurements as history; they
+  bind nothing. The code that still carries the theme (`services/ThemeService.ts`, the Dark radio of
+  `pages/settings/AppearanceSettings.tsx`, `_colors-dark.scss`, the `[data-theme="dark"]` blocks, the
+  `theme === 'dark'` branches) stays in the tree until a lane removes it: removal is a deletion and
+  waits for Alfonso's yes (RC-26); until then, Regola 9 applies and nobody edits it.
 
 ## R-LAY — layout per viewpoint
 
@@ -5573,5 +5595,7 @@ Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homony
 **R-MCID-2** (2026-09-19) — **Un array vuoto non è un pin: `pinAccepts` e `withMetaclassPins` lo leggono in modo diverso, di proposito.** `pinAccepts` applica `includes` come scritto, quindi un `[]` scritto a mano non accetta nessuna classe (la view non matcha nulla); `withMetaclassPins` e `metaclassEntries` lo leggono come «nessun pin» (ricade sulla catena, la riga resta visibile e rimovibile). L'authoring non scrive mai `[]`: un array che si svuota toglie la chiave e il nome dalla lista. La differenza è dichiarata nel commento di `AuthoringMetaclassPins` in `irTypes.ts`.
 
 ## Superate
+
+- **R-RAIL-44** (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

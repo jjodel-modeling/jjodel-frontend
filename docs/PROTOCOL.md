@@ -91,7 +91,7 @@ Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerar
 **The visual checklist, amended 2026-09-26 by RC-23.** The numbered visual steps of a prompt (its §11.5) are a
 checklist that the project chat runs in the built-in browser of the desktop app, against the lane's dev server on
 the Mac. Each item is read from the DOM or the console: positions, presence, texts, button states. A screenshot
-is never the evidence. Screenshots in light and dark are attached for Alfonso as a record. The browser profile is
+is never the evidence. Screenshots in the light theme are attached for Alfonso as a record (D-UI-15: Jjodel has no dark theme). The browser profile is
 empty and separate from Alfonso's, so the prompt names the console script or the exported file that builds each
 fixture; a fixture is never assumed to exist. The log entry names the source in `Smoke visivo`, in the form
 `passato — chat, unattended, <n>/<n>`. Alfonso's GO stays mandatory on critical-zone lanes, on the items a prompt

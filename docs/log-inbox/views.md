@@ -456,3 +456,41 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Chat smoke 2026-10-04 00:55 on 544fbd19f: 3001 HTTP 200; IRNodeContent.tsx, irEdgeViews.ts, handlePosition.ts served and compiled (200). Visual check (RC-23) done by the chat on the branch crops of P-2026-10-04-0010 (Petri classic at rest light and dark, Activity after Auto layout dark): Petri bars readable in both themes, place names off the arrowheads, handles as on the trunk. Eight gates green. GO.
 **Notes**: Rollback tag `pre-petri-ink-ports` on `95c38845d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-0044/result.json`.
 **Prompt document name**: 2026-10-04 00:44
+
+## 2026-10-04 — fix(editor-v2): an object-as-edge deletes its object from its own menu and the Delete key (P-2026-10-04-0130)
+**Prompt**: `claude_2026-10-04_0130_prompt_object_edge_delete.md`, discovery then fix in one lane, critical zone with the RC-30 go-ahead. Alfonso: an M1 transition rendered as an edge offers «Convert to Inheritance» and «Delete reference», and neither deletes it.
+**Files touched**: `86d15831b` report `docs/discovery/discovery_2026-10-04_object_edge_delete.md`. `5557a714b` `frontend/src/components/editor-v2/EditorV2.tsx` (edge menu branch, `deleteObjectAsEdge`, `deleteSelected` partition), `frontend/src/components/editor-v2/sync/canvasToJjom.ts` (`resolveObjectAsEdge`, `syncDeleteObjectAsEdge`). `5d4e8b0b6` `sync/__tests__/syncDeleteObjectAsEdge.test.ts` (new). `04acc1815`, `dc489a6b3` `frontend/scripts/probe/object-edge-delete.ts` (new). This commit: report §10-§11, R-B17, this entry, two tickets, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc 14 (the §17 set, identical by file and code); vitest 7289 passed, the 9 known red at import, `criticalZone.test.ts` green with the go-ahead variable unset; build exit 0; typecheck:scripts and check:scripts exit 0; bench 15/15 (vitest) and 4/4 (probe); the four default panes identical to the trunk-code run.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — lane probe on 3084, unattended, 17/17 after (10/10 before, the bug measured): menu «Delete Transition», delete held after two syncs, one Cmd+Z restores endpoints, slots and labels, Delete key, «Reset routing»; crops in `~/.jjodel-lanes/P-2026-10-04-0130/crops/`; Alfonso's GO due (critical zone)
+**Notes**: The prompt's delete path (the object node's, `syncDeleteVertex`) was measured wrong: on loaded DemoESM it left the hidden vertex and its links as ghosts, and with `deleteNode`'s React Flow filter it looped the canvas (update depth, empty pane). Revised (report §10, R-B17). Undo is one step here. LIR in the report (§6, §10): `docs/lir/` is outside DOVE.
+**Prompt document name**: 2026-10-04 01:30
+
+## 2026-10-04 — ticket: «Reset routing» of a persisted object-as-edge route comes back at reload
+**Ticket**: `persistIREdgeLayout` (`EditorV2.tsx`, the `if (!layout || …) return;` guard) writes nothing when the session override reduces to nothing, so «Reset routing» on an object-as-edge with persisted waypoints and no side pin leaves `DVertex.irEdgeLayout` as it was, and the waypoints come back at the next load. Read, not measured; the same holds for the segment gesture that empties a route.
+**Priority**: low
+**Found in**: P-2026-10-04-0130
+**Detail**: docs/discovery/discovery_2026-10-04_object_edge_delete.md
+
+## 2026-10-04 — ticket: an object node delete leaves its vertex and link edges as ghosts under an IR viewpoint
+**Ticket**: on loaded DemoESM with the statechart active, `syncDeleteVertex` on a nested object's vertex (run D of report §10) deletes the DObject but leaves the DVertex in `idlookup` and in `subElements`, unhidden, with two RF edges to it. The class of the 2026-09-30 ghost-edge ticket (`Dummy.get_delete` rides on `pointedBy`), reached through a node. `syncDeleteObjectAsEdge` strips them itself; the node path does not.
+**Priority**: medium
+**Found in**: P-2026-10-04-0130
+**Detail**: docs/discovery/discovery_2026-10-04_object_edge_delete.md
+
+## 2026-10-04 — merge: object-edge-delete into alfonso-frontend-jjtl (P-2026-10-04-0939)
+**Prompt**: `claude_2026-10-04_0939_prompt_merge_object-edge-delete.md`, a direct merge by `lane-run merge --direct`, no session: `object-edge-delete` at `cd387ab59` into `alfonso-frontend-jjtl`, merge base `43685438b`, 7 commits on the branch side.
+**Files touched**: merge `1bd0b33c0`: 8 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_object_edge_delete.md`, `docs/log-inbox/views.md`, `docs/prompts/claude_2026-10-04_0130_prompt_object_edge_delete.md`, `frontend/scripts/probe/object-edge-delete.ts`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/sync/__tests__/syncDeleteObjectAsEdge.test.ts`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1bd0b33c0` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7289 tests in 295 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat check RC-23 on the lane probe from the DOM, 17/17 after the fix (menu Delete Transition only, Reset routing with waypoints; DObject removed, not redrawn after two syncs; one Cmd+Z restores slots and ends; Delete key works); four demo default panes identical to the trunk
+**Notes**: Rollback tag `pre-object-edge-delete` on `43685438b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-0939/result.json`.
+**Prompt document name**: 2026-10-04 09:39

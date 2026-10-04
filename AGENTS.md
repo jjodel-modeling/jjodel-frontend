@@ -623,7 +623,6 @@ These anti-patterns are consolidated in the canonical **NON-NEGOTIABLE RULES** b
 ### 20.2 Best practices
 
 - ✅ Accessibility (WCAG)
-- ✅ Dark mode support
 - ✅ Lazy loading where appropriate
 - ✅ Memoization for performance
 - ✅ `console.log` with prefixes `[Component]` for debug — **remove before commit**
