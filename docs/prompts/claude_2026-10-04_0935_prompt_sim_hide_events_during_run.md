@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-0935
 Chat: C-2026-10-04-0935
 Lane: fast (cosmetic, view-only; hard stop if the only path is in the critical zone). Tier: heavy. Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane sim-hide-events · 8d0021987 · verifica visiva passata 2026-10-04
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
