@@ -501,6 +501,15 @@ the chat `C-2026-09-30-1940` in the prompt `P-2026-09-30-1940` under RC-25, adop
   **Aggiornamento 2026-08-18**: l'«estensione futura con ratifica propria» annunciata qui è
   R-MK-5, che assorbe la dipendenza dal contenitore nella nozione unica di canale dichiarato. Il
   debito non prende una ratifica separata; la migrazione è la fetta M3 di R-MK-9.
+- **R-B17** (2026-10-04, provisional, unattended) — **An object-as-edge is deleted as the object it is.** Its
+  context menu holds «Reset routing» (only with waypoints, through `handleEdgeChange`'s synthetic branch) and
+  «Delete <Metaclass>»; no «Convert to …», «Delete reference» or «Create edge view». Delete, Backspace, the toolbar
+  trash and Cut route a selected `irobj_` edge to the same delete. The delete takes every vertex of the object and
+  every DEdge on them out of the `subElements` that list them and deletes them in one pure TRANSACTION, clears their
+  pair guards, then runs the DObject cascade; no React Flow filter of its own. Adopted as recommended by the prompt,
+  with the delete path revised by measurement: the object node's path (`syncDeleteVertex`) left the hidden vertex and
+  its links as ghosts on a loaded project, and its React Flow filter sent the canvas into an update-depth loop. Source:
+  `docs/discovery/discovery_2026-10-04_object_edge_delete.md` §7, §10 (P-2026-10-04-0130); code `5557a714b`.
 
 ## Uniformazione delle due property card (arco U, dal 2026-08-08)
 
