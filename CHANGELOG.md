@@ -23,6 +23,12 @@ Planned as 3.1.0. The entries below cover the trunk `alfonso-frontend-jjtl` sinc
 - State and input declarations: stored or derived attributes, a model's globals declared in its own Data dialog.
 - Nondeterministic choice list, Random with a seeded draw, a per-model run policy (Ask or Random) and Play.
 - A Simulation toggle in the metamodel's Semantic Type Class section gates the feature.
+- State face of the simulator: the semantic state σ and the presentation state `node` shown as two spaces, a State page in the roles dialog, a Watch block with up to four pinned attributes, a run inspector with the whole σ and a navigable trace, an opt-in σ overlay per attribute on the canvas (R-SIM-102..107, R-SIM-109).
+- `node.[x]` readable from viewpoints: view expressions read an element's presentation state, read-only (R-SIM-108).
+- Event instances are hidden on the canvas while a run is active.
+- I/O board: the machine's environment as a board of devices bound to events, inputs and expressions over σ (Button, Switch, Slider, Numeric keypad, LED, Pulse LED, 7-segment, Text display, Gauge), with a Board skin, a front Panel skin and an editor; saved with the model (R-SIM-110..121).
+- Clock device on the I/O board: presses a bound event at a fixed period, from 100 ms to 60 s, so a countdown runs in real time without time in the model (R-SIM-122).
+- Front panel styles: four themes (Graphite, Appliance, Instrument, Print) with an accent colour, button shapes and colour roles, a Bootstrap icon suggested from the event's name and overridable, display sizes and faces, devices spanning several cells, boards of 4, 6 or 8 columns with a floating window, keyboard shortcuts, silkscreen captions and a buzzer (R-SIM-123..133, D-UI-16).
 
 #### Viewpoints and notation
 - «Derive viewpoint» on a metamodel row: one IR view per class, with a control-flow notation and a Petri notation.
