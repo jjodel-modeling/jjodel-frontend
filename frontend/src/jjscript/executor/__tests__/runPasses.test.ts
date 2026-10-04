@@ -12,6 +12,7 @@ import {
     isDeferrable,
     findSupersedingSet,
     DEFERRABLE_ERROR_CODES,
+    M1_DEFERRABLE_ERROR_CODES,
     MAX_RETRY_PASSES,
     type PassResult,
 } from '../runPasses';
@@ -240,5 +241,67 @@ describe('findSupersedingSet', () => {
 
     it('answers only for a set command', () => {
         expect(findSupersedingSet(commands, 1, new Set([2, 3]))).toBeUndefined();
+    });
+});
+
+describe('isDeferrable — M1 (R-JS-8)', () => {
+    const failed = (code: string) => ({ success: false, errors: [{ code }] });
+
+    it('defers exactly the two M1 codes, kept apart from the twelve M2 ones', () => {
+        expect([...M1_DEFERRABLE_ERROR_CODES].sort()).toEqual(['CONTAINER_NOT_READY', 'INSTANCE_NOT_FOUND']);
+        for (const code of M1_DEFERRABLE_ERROR_CODES) expect(DEFERRABLE_ERROR_CODES.has(code)).toBe(false);
+    });
+
+    it('defers a set naming an instance a later line creates, as target or as value', () => {
+        expect(isDeferrable('set tStart.event = evStart', failed('INSTANCE_NOT_FOUND'))).toBe(true);
+        expect(isDeferrable('set idle.transitions += tStart', failed('INSTANCE_NOT_FOUND'))).toBe(true);
+    });
+
+    it('defers a create inside a container that is missing or not ready yet', () => {
+        expect(isDeferrable('create instance of Transition "t" in idle.transitions', failed('INSTANCE_NOT_FOUND'))).toBe(true);
+        expect(isDeferrable('create instance of Transition "t" in idle.transitions', failed('CONTAINER_NOT_READY'))).toBe(true);
+    });
+
+    it('never defers a destructive verb on a missing instance', () => {
+        for (const cmd of ['delete instance x', 'rename instance x to y', 'delete x']) {
+            expect(isDeferrable(cmd, failed('INSTANCE_NOT_FOUND'))).toBe(false);
+        }
+    });
+
+    it('keeps final the M1 codes that a later line cannot fix', () => {
+        for (const code of ['AMBIGUOUS_INSTANCE', 'CLASS_NOT_FOUND', 'NO_METACLASS', 'UNKNOWN_PROPERTY', 'TYPE_MISMATCH',
+            'NOT_A_CONTAINMENT', 'MULTIPLICITY_EXCEEDED', 'HANDLE_IN_USE', 'WRONG_LEVEL']) {
+            expect(isDeferrable('create instance of Transition "t" in idle.transitions', failed(code))).toBe(false);
+            expect(isDeferrable('set t.event = e', failed(code))).toBe(false);
+        }
+    });
+
+    it('a forward instance reference completes on a later pass', async () => {
+        // The microwave of the discovery report, reduced: the containment and the event lines
+        // name instances that later lines create.
+        const commands = [
+            'create instance of State "idle"',
+            'set idle.transitions += tStart',
+            'create instance of Transition "tStart"',
+            'set tStart.event = evStart',
+            'create instance of Event "evStart"',
+        ];
+        const made = new Set<string>();
+        const links: string[] = [];
+        const execOne = async (i: number) => {
+            const c = commands[i];
+            let m: RegExpMatchArray | null;
+            if ((m = c.match(/^create instance of \w+ "(\w+)"$/))) { made.add(m[1]); return { command: c, success: true }; }
+            if ((m = c.match(/^set (\w+)\.(\w+) \+?= (\w+)$/))) {
+                if (!made.has(m[1]) || !made.has(m[3])) return { command: c, success: false, errors: [{ code: 'INSTANCE_NOT_FOUND' }] };
+                links.push(`${m[1]}.${m[2]}=${m[3]}`);
+                return { command: c, success: true };
+            }
+            return { command: c, success: false, errors: [{ code: 'OPERATION_FAILED' }] };
+        };
+        const r = await runPasses(commands, execOne, isDeferrable);
+        expect(r.outcomes.every(o => o.status === 'success')).toBe(true);
+        expect(r.outcomes.filter(o => o.pass === 2).map(o => o.index)).toEqual([1, 3]);
+        expect(links).toEqual(['idle.transitions=tStart', 'tStart.event=evStart']);
     });
 });

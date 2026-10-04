@@ -644,3 +644,55 @@ describe('Parser: error handling', () => {
         expect(r).toBeDefined();
     });
 });
+
+// ─── CREATE INSTANCE IN A CONTAINER (R-JS-9) ─────────────────
+
+describe('Parser: create instance … in <Parent>.<ref>', () => {
+    const container = { segments: ['idle'], member: 'transitions', raw: 'idle.transitions' };
+
+    it('reads the documented order, the container after the instance name', () => {
+        const a = args<CreateArgs>('create instance of Transition "tStart" in idle.transitions');
+        expect(a.elementType).toBe('instance');
+        expect(a.name).toBe('Transition');
+        expect(a.options?.defaultValue).toEqual({ kind: 'string', value: 'tStart' });
+        expect(a.parent).toEqual(container);
+    });
+
+    it('reads the other order, the container before the instance name', () => {
+        const a = args<CreateArgs>('create instance of Transition in idle.transitions "tStart"');
+        expect(a.options?.defaultValue).toEqual({ kind: 'string', value: 'tStart' });
+        expect(a.parent).toEqual(container);
+    });
+
+    it('reads an auto-named instance in a container', () => {
+        const a = args<CreateArgs>('create instance of Transition in idle.transitions');
+        expect(a.options?.defaultValue).toBeUndefined();
+        expect(a.parent).toEqual(container);
+    });
+
+    it('consumes the whole line in strict mode, so nothing is dropped', () => {
+        expect(parse('create instance of Transition "tStart" in idle.transitions', { strict: true }).success).toBe(true);
+    });
+
+    it('refuses a container without its reference: no inference of the slot', () => {
+        for (const line of ['create instance of Transition "t" in idle', 'create instance of Transition in idle "t"']) {
+            const r = parse(line);
+            expect(r.success).toBe(false);
+            expect(r.errors![0].message).toMatch(/in <Parent>\.<reference>/);
+        }
+    });
+
+    it('a qualified class name does not take the place of the container', () => {
+        const a = args<CreateArgs>('create instance of esm::Transition "t" in idle.transitions');
+        expect(a.name).toBe('Transition');
+        expect(a.parent).toEqual(container);
+        expect(args<CreateArgs>('create instance of esm::Transition "t"').parent).toBeUndefined();
+    });
+
+    it('leaves the M2 `in` form as it was', () => {
+        const a = args<CreateArgs>('create class Node in pkg');
+        expect(a.parent).toEqual({ segments: ['pkg'], raw: 'pkg' });
+        const q = args<CreateArgs>('create attribute name in pkg::Node type String');
+        expect(q.parent?.segments).toEqual(['pkg', 'Node']);
+    });
+});

@@ -99,6 +99,17 @@ export const DEFERRABLE_ERROR_CODES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The M1 handlers' codes for a name that did not resolve (R-JS-8), each emitted before anything
+ * is written (`docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md` §4.2): an instance
+ * a later line creates (`INSTANCE_NOT_FOUND`, on a `set` target or value or on the container of
+ * `create instance … in`), and a container created by an earlier line whose slots the store has
+ * not committed yet (`CONTAINER_NOT_READY`). Kept apart from the M2 set, whose list R-JS-3 fixes.
+ */
+export const M1_DEFERRABLE_ERROR_CODES: ReadonlySet<string> = new Set([
+    'INSTANCE_NOT_FOUND', 'CONTAINER_NOT_READY',
+]);
+
+/**
  * Verbs that only add to the model. `delete`, `rename`, `move`, `copy` and `remove` change
  * the meaning of a script when they succeed late; `abstract` toggles, so a late success can
  * undo a later line; `forall`, blocks, `let` and `eval` hide what they do.
@@ -125,7 +136,7 @@ function parseCommand(command: string): CommandNode | undefined {
 export function isDeferrable(command: string, result: PassResult): boolean {
     if (result.success) return false;
     const code = result.errors?.[0]?.code;
-    if (!code || !DEFERRABLE_ERROR_CODES.has(code)) return false;
+    if (!code || !(DEFERRABLE_ERROR_CODES.has(code) || M1_DEFERRABLE_ERROR_CODES.has(code))) return false;
     const ast = parseCommand(command);
     return !!ast && CONSTRUCTIVE_VERBS.has(ast.command);
 }

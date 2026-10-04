@@ -103,3 +103,34 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: probe and docs merge; gates green; no app code; no demo scene affected
 **Notes**: Rollback tag `pre-tree-crossing-scene` on `ffae7072a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1052/result.json`.
 **Prompt document name**: 2026-10-03 10:52
+
+## 2026-10-04 — feat(jjscript): M1 Run defers forward references, instances born in their container (P-2026-10-04-0946)
+**Prompt**: `claude_2026-10-04_0946_prompt_jjscript_m1_containment.md`, full lane on `~/jjodel-w-jjsm1`, branch `jjscript-m1`. A generated microwave state machine left its 4 `Transition` at the M1 root with 8 failed lines. Phase 1 measured why (report `8f84740c6`); the GO adopted D1-D4, Q3, Q5 as R-JS-8..11 and sent D5 to tickets.
+**Files touched**: probe `4cd1fce10`, `ffb23e6dd`: `frontend/scripts/probe/jjscript-m1-containment.ts`, `fixtures/jjscript-m1-esm.jjodel` (new). `602f64413`: `jjscript/executor/runPasses.ts`, `__tests__/runPasses.test.ts`. `9916cefce`: `jjscript/parser/parser.ts`, `executor/commands/instance.ts`, `executor/handleRegistry.ts`, `executor/dependencies.ts`, `executor/elementWaiter.ts`, `__tests__/parser.test.ts`, `executor/__tests__/m1Containment.test.ts` (new). `9163f0b28`: `constants/defaultPrompts.ts`, `jjodie-integration/jjscriptGenerationPrompt.ts`. Docs: the report, `docs/decisions.md`, this file, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Typecheck 14, the §17 set; vitest 7330 passed, 0 failed, the 9 §17 files red at import; build exit 0. Every M2 test unchanged and green. Unknown because the legacy `set +=` script now succeeds on retry into the pre-existing hybrid and lost-update states (tickets below) where it used to fail loudly.
+**Out-of-scope changes**: no. 13 files above Rule 19's five, all listed in report §5 and adopted by the GO.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non eseguito — to the chat: crops after_E1/E2 tree and canvas, 600 px, in ~/.jjodel-lanes/P-2026-10-04-0946/crops/; lane probe on 3096 all PASS
+**Notes**: Probe after: the microwave with `in` 0 errors, every Transition in its State's slot and not in model.objects, tree nested; the original script, no `not found` after the retries. Bench 28/28 (dedupe-removal not run: loops on the cycle test). Commit types chosen from lane precedent, the prompt names none (P6). Console error «Invalid action path 0» on every fixture import, before and after, not investigated. Report addendum.
+**Prompt document name**: 2026-10-04 09:46
+
+## 2026-10-04 — ticket: `set <parent>.<containment> += <child>` leaves an incoherent containment
+**Ticket**: On a root child the M1 link sets its father to the slot but never removes it from `model.objects` (`LModelElement.tsx:7916`, no detach from a DModel); a second `+=` lists it twice (the dedupe at `:8010` returns true on both branches); `=` appends like `+=` (`instance.ts` link branch); a `State` is accepted into a `Transition` slot (type check commented out at `:7910`). Probable cause of the canvas defect that draws a contained Transition as a node after a reparent (the canvas shows it as node and chip). R-JS-8 makes legacy scripts reach it on retry. L-layer core: no change without approval.
+**Priority**: medium
+**Found in**: P-2026-10-04-0946
+**Detail**: docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md
+
+## 2026-10-04 — ticket: two M1 links into one slot 20 ms apart keep only the second
+**Ticket**: The M1 link reads the slot's committed values and writes them back plus one id; a link reaches the store 84-89 ms after its command returns, so `set s.transitions += b` then `set s.transitions += c` through Run leave `[a, c]`, with `b` pointing at the slot but absent from it. Measured identical on `8f84740c6` and on the lane tip: pre-existing. `create instance … in` is not affected (the constructor appends).
+**Priority**: medium
+**Found in**: P-2026-10-04-0946
+**Detail**: docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md
+
+## 2026-10-04 — ticket: the Run summary miscounts and does not flag M1 instances by containment
+**Ticket**: The `instances` figure of the summary is `model.objects.length` (`runFigures.ts:100`, as `StatusBar.tsx:173-175`), so instances born in a slot are not counted: the microwave with `in` shows +8 for 12. And an instance a Run leaves at the root while its class is reachable only through a composition is not flagged; `topLevelReason` (`joiner/environmentConfig.ts:149`) already answers «created inside State». Amends R-JS-6: a decision of its own.
+**Priority**: medium
+**Found in**: P-2026-10-04-0946
+**Detail**: docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md

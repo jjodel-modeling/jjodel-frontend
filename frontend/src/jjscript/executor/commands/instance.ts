@@ -2,7 +2,7 @@
  * JjScript M1 Instance Command Handlers
  *
  * Handles operations on DObject instances inside an M1 model:
- *   create instance <ClassName> ["<instanceName>"]
+ *   create instance <ClassName> ["<instanceName>"] [in <Parent>.<reference>]
  *   delete <InstanceName>          (in M1 context)
  *   rename <InstanceName> to <newName>   (in M1 context)
  *   set <InstanceName>.<attrName> = <value>   (in M1 context, attribute or reference)
@@ -33,6 +33,7 @@ import { qualifiedNameToString, literalValueToString } from '../../parser/gramma
 import {
     DObject,
     DModel,
+    DValue,
     SetFieldAction,
     TRANSACTION,
     LPointerTargetable,
@@ -47,6 +48,9 @@ import {
     unregisterHandle,
     renameHandle,
     getReservedHandles,
+    registerPendingChild,
+    getPendingChildren,
+    forgetPendingChild,
 } from '../handleRegistry';
 
 // ============================================
@@ -105,18 +109,63 @@ function findMetaclassByName(metamodel: LModel, className: string): LClass | nul
 /**
  * Every instance of the target M1 model carrying this name — the RAW lookup.
  *
- * Returns the LIST, never one of them (R-S1-5). A name is not a key: `model.objects`
- * can legitimately hold several instances that share one, and the `.find` this used to
+ * Returns the LIST, never one of them (R-S1-5). A name is not a key: a model can
+ * legitimately hold several instances that share one, and the `.find` this used to
  * be answered "the first" to a question that has no single answer. Whoever needs ONE
  * goes through `resolveInstanceHandle`, which turns the list into a verdict.
  *
- * `model.objects` is `data.objects` (`LModelElement.tsx:5561`), i.e. the ROOTS of one
- * model — not the nested instances, and not other models. That scope is unchanged by
- * this slice; only the arity of the answer is.
+ * The scope is the whole model, roots and contained instances (R-JS-10, amending
+ * R-S1-5's «roots of one model»): `model.objects` holds the roots only, and an
+ * instance born in a containment slot (`create instance … in`, the UI's «Add») is
+ * never listed there, so a roots-only lookup could not address it from a later run.
  */
 export function findInstanceByName(model: LModel, instanceName: string): any[] {
-    const objects = (model as any).objects ?? [];
-    return objects.filter((o: any) => o?.name === instanceName);
+    return allModelInstances(model).filter((o: any) => o?.name === instanceName);
+}
+
+/**
+ * The instances of one M1 model: its roots (`model.objects`) in their order, then, level by
+ * level, every object its containment slots hold (`LObject.subObjects`, the source the tree
+ * uses), each once. An object listed both as a root and in a slot (what `set p.ref += x` leaves
+ * behind, report §4.3) is one instance. A containment cycle ends at the first repeat.
+ */
+export function allModelInstances(model: LModel): any[] {
+    const queue: any[] = [...((model as any)?.objects ?? [])];
+    const seen = new Set<string>();
+    const out: any[] = [];
+    for (let i = 0; i < queue.length; i++) {
+        const o = queue[i];
+        if (!o) continue;
+        if (typeof o.id === 'string') {
+            if (seen.has(o.id)) continue;
+            seen.add(o.id);
+        }
+        out.push(o);
+        let subs: any[] = [];
+        try { subs = o.subObjects ?? []; } catch { /* proxy not resolvable */ }
+        for (const sub of subs) {
+            // A slot can hold primitives and literals as well: only objects are instances.
+            if (sub && typeof sub.id === 'string' && sub.className === 'DObject') queue.push(sub);
+        }
+    }
+    return out;
+}
+
+/**
+ * Whether an instance can be waited for as present (R-JS-11): one the model already shows
+ * (roots or contained, committed by construction), or the handle this run created, once its
+ * metaclass is in the store. `DObject.new` puts the object in the store at once, but its
+ * `instanceof`, its slots and its place in the model land together about 300 ms later
+ * (report §4.5); a handler reached before that answers `NO_METACLASS`.
+ */
+export function hasReadyInstance(model: LModel, instanceName: string): boolean {
+    // `.length > 0`, never the bare value: an empty list is truthy.
+    if (findInstanceByName(model, instanceName).length > 0) return true;
+    const id = getHandleId(instanceName);
+    if (!id) return false;
+    const obj = LPointerTargetable.fromPointer(id) as any;
+    const raw = obj?.__raw ?? obj;
+    return !!(obj && obj.id && raw?.instanceof);
 }
 
 /** One of several instances a name could have meant. */
@@ -212,7 +261,8 @@ export function resolveInstanceHandle(model: LModel, handle: string): InstanceRe
  * auto-named creates in a batch would both pick `<ClassName>`.
  */
 function generateInstanceName(className: string, model: LModel, reserved: Set<string>): string {
-    const objects = (model as any).objects ?? [];
+    // Model-wide (R-JS-10): a name a contained instance holds would make the new one ambiguous.
+    const objects = allModelInstances(model);
     const taken = new Set<string>(
         objects.map((o: any) => o?.name).filter((n: any) => typeof n === 'string')
     );
@@ -250,6 +300,98 @@ function literalToPrimitive(value: LiteralValue): string | number | boolean | nu
         case 'string':  return value.value;
         default:        return null;
     }
+}
+
+// ============================================
+// CONTAINER OF A NEW INSTANCE (R-JS-9)
+// ============================================
+
+/**
+ * The slot an instance is born in, for `create instance of <Class> … in <Parent>.<ref>`, or the
+ * failure that refuses the line. Every check runs before anything is written:
+ *
+ *  - the parent resolves (handle of this run, else by name, model-wide): `INSTANCE_NOT_FOUND`,
+ *    deferrable, when a later line may create it; `AMBIGUOUS_INSTANCE` when two hold the name;
+ *  - its metaclass and its slot are in the store: `CONTAINER_NOT_READY`, deferrable, for a parent
+ *    created by an earlier line whose slots land about 300 ms after it (report §4.5);
+ *  - `<ref>` is a reference of the parent's class, its superclasses included (`UNKNOWN_PROPERTY`),
+ *    a containment (`NOT_A_CONTAINMENT`), whose type the new class conforms to (`TYPE_MISMATCH`);
+ *  - the slot has room: committed values plus the children this run created into it
+ *    (`MULTIPLICITY_EXCEEDED`).
+ *
+ * The father of the new instance is the slot, a `DValue`, as `LValue.addObject` makes it
+ * (`LModelElement.tsx:7277`), never the parent object and never the model.
+ */
+function resolveContainerSlot(
+    parentName: QualifiedName,
+    metaclass: LClass,
+    className: string,
+    model: LModel
+): { slot: any; label: string } | { failure: ExecutionResult } {
+    const fail = (code: string, message: string, detail: string): { failure: ExecutionResult } => ({
+        failure: { success: false, command: 'create', message, errors: [{ code, message: detail }] },
+    });
+    const refName = parentName.member;
+    const handle = parentName.segments.join('::');
+    const label = `${handle}.${refName ?? ''}`;
+    if (!refName || !handle) {
+        return fail('CONTAINER_REF_REQUIRED', `Name the container as <Parent>.<reference>, got '${parentName.raw}'`,
+            "Syntax: create instance of <ClassName> \"<instanceName>\" in <Parent>.<reference>");
+    }
+
+    const resolved = resolveInstanceHandle(model, handle);
+    if (!resolved.ok && resolved.candidates) {
+        return fail('AMBIGUOUS_INSTANCE', `Cannot create inside '${handle}': the name is ambiguous`, resolved.reason!);
+    }
+    const parent = resolved.value;
+    if (!parent) {
+        return fail('INSTANCE_NOT_FOUND', `Container instance '${handle}' not found in active model`,
+            `No instance named '${handle}' in '${(model as any)?.name ?? 'the model'}'`);
+    }
+
+    const parentClass: any = parent.instanceof;
+    if (!parentClass) {
+        return fail('CONTAINER_NOT_READY', `Container '${handle}' is not ready yet`,
+            `'${handle}' was just created: its class and its slots are not in the model yet`);
+    }
+
+    const refs: any[] = parentClass.allReferences ?? parentClass.references ?? [];
+    const ref = refs.find((r: any) => r?.name === refName);
+    if (!ref) {
+        return fail('UNKNOWN_PROPERTY', `'${refName}' is not a reference of class '${parentClass.name}'`,
+            `'${parentClass.name}' has no reference named '${refName}' to contain '${className}'`);
+    }
+    if (!ref.containment) {
+        return fail('NOT_A_CONTAINMENT', `'${parentClass.name}.${refName}' is not a containment reference`,
+            `An instance is created inside a containment (composition) reference only`);
+    }
+    const slotType: any = ref.type;
+    const conforms = slotType && (typeof (metaclass as any).isExtending === 'function'
+        ? (metaclass as any).isExtending(slotType)
+        : (metaclass as any).id === slotType.id);
+    if (!conforms) {
+        return fail('TYPE_MISMATCH', `'${className}' does not conform to '${slotType?.name ?? '?'}', the type of ${parentClass.name}.${refName}`,
+            `${parentClass.name}.${refName} contains instances of '${slotType?.name ?? '?'}' and its subclasses`);
+    }
+
+    let slot: any;
+    try { slot = parent['$' + refName]; } catch { slot = undefined; }
+    if (!slot?.id) {
+        return fail('CONTAINER_NOT_READY', `Container '${label}' is not ready yet`,
+            `The slot '${refName}' of '${handle}' is not in the model yet`);
+    }
+
+    const upper = ref.upperBound;
+    if (typeof upper === 'number' && upper >= 0) {
+        const committed: any[] = (slot.__raw?.values ?? []).filter((v: any) => v != null && v !== '');
+        const pending = getPendingChildren(slot.id).filter(id => !committed.includes(id));
+        if (committed.length + pending.length >= upper) {
+            return fail('MULTIPLICITY_EXCEEDED', `'${label}' is full (at most ${upper})`,
+                `${parentClass.name}.${refName} holds at most ${upper} instance${upper === 1 ? '' : 's'}`);
+        }
+    }
+
+    return { slot, label };
 }
 
 // ============================================
@@ -340,6 +482,14 @@ export async function executeCreateInstance(
         };
     }
 
+    // R-JS-9: `in <Parent>.<ref>` — born inside its container, or refused before any write.
+    let container: { slot: any; label: string } | undefined;
+    if (args.parent) {
+        const c = resolveContainerSlot(args.parent, metaclass, className, targetModel);
+        if ('failure' in c) return c.failure;
+        container = c;
+    }
+
     const instanceName = explicitInstanceName ?? generateInstanceName(className, targetModel, getReservedHandles());
 
     // An explicit handle can only be claimed once per script run. Auto-generated names
@@ -360,10 +510,11 @@ export async function executeCreateInstance(
     try {
         // DObject.new(instanceof, father, fatherType, name, persist)
         // Pattern source: canvasToJjom.ts:1097 — do NOT wrap in outer TRANSACTION.
+        // The father is the model, or the container's slot (a DValue) for `in <Parent>.<ref>`.
         const dObject = (DObject as any).new(
             metaclass.id,
-            targetModel.id,
-            DModel,
+            container ? container.slot.id : targetModel.id,
+            container ? DValue : DModel,
             instanceName,
             true
         );
@@ -390,16 +541,18 @@ export async function executeCreateInstance(
 
         // Bind the creation handle to the stable DObject id for the rest of the run.
         registerHandle(instanceName, dObject.id);
+        if (container) registerPendingChild(container.slot.id, dObject.id);
 
         return {
             success: true,
             command: 'create',
-            message: `Created instance '${instanceName}' of ${className}`,
+            message: `Created instance '${instanceName}' of ${className}` + (container ? ` in ${container.label}` : ''),
             data: {
                 id: dObject.id,
                 name: instanceName,
                 type: 'instance',
-                className: className
+                className: className,
+                ...(container ? { container: container.label } : {})
             },
             affectedElements: [dObject.id],
             undoable: true
@@ -493,8 +646,10 @@ export async function executeDeleteInstance(
             // entry and left all of those dangling. .delete() opens its own
             // TRANSACTION, so no outer wrapper here (canvasToJjom idiom).
             (lObject as any).delete();
-            // Free the handle so it can be reused later in the same run.
+            // Free the handle so it can be reused later in the same run, and its place in the
+            // slot it was created into (R-JS-9).
             unregisterHandle(instanceName);
+            forgetPendingChild(lObject.id);
             resolve({
                 success: true,
                 command: 'delete',

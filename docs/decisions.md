@@ -5663,6 +5663,42 @@ and lowered in a `finally`), because the host chain (`ScriptBlock` → `onExecut
 executor) carries no pass number. Accepted cost: a retried command whose name never resolves waits
 `MAX_WAIT_MS` per retry pass. Amends R-JS-1 for retry passes only. Code `4bbf7e640`.
 
+R-JS-8..11 below: decided by the chat `C-2026-10-04-0946` in the GO of `P-2026-10-04-0946`, adopting the
+recommendations D1-D4 and Q3 of `docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md`. Marker:
+**provisional**.
+
+**R-JS-8** (2026-10-04, provisional) — **Run defers M1 lines too.** R-JS-3 extends to M1 with its rules unchanged
+(destructive verbs never deferred, a superseded `set` not retried, at most 3 retry passes, R-JS-7 wait). The M1
+codes sit in their own set, `M1_DEFERRABLE_ERROR_CODES = {INSTANCE_NOT_FOUND, CONTAINER_NOT_READY}`, read by
+`isDeferrable` beside the twelve M2 codes, which stay as R-JS-3 lists them. Both are emitted before anything is
+written (report §4.2). Cause: the microwave script of 2026-10-04 ended with 8 final `not found` errors and its 4
+`Transition` at the model root (report §4.1). Code `602f64413`.
+
+**R-JS-9** (2026-10-04, provisional) — **An M1 instance is born inside its container.**
+`create instance of <Class> "<name>" in <Parent>.<ref>` is the documented form; the order with the container
+before the name is accepted too; `.<ref>` is mandatory, the slot is never inferred, and a `create instance`
+without `in` stays at the root as before. The father is the parent's slot, a `DValue`, as `LValue.addObject`
+makes it, never the parent object. Checks before any write: parent found (`INSTANCE_NOT_FOUND`, deferrable) and
+not ambiguous (`AMBIGUOUS_INSTANCE`); parent class and slot in the store (`CONTAINER_NOT_READY`, deferrable: they
+land about 300 ms after the parent's create, report §4.5); `<ref>` a reference of the parent's class
+(`UNKNOWN_PROPERTY`), a containment (`NOT_A_CONTAINMENT`), whose type the class conforms to (`TYPE_MISMATCH`);
+room in the slot, counting the committed values plus the children this run created into it and the store has not
+listed yet (`MULTIPLICITY_EXCEEDED`, the count kept beside the handles in `handleRegistry.ts`). Code `9916cefce`.
+
+**R-JS-10** (2026-10-04, provisional) — **The M1 name lookup is model-wide.** `findInstanceByName` reads the roots
+of the model and every instance its containment slots hold, each once. **Amends R-S1-5's scope**, which was «the
+roots of one model»: an instance born in a slot is never in `model.objects`, and without this it could not be
+addressed by a later Jjodie reply (report §4.5, measured `INSTANCE_NOT_FOUND`). Accepted consequence: a name held
+by a root and by a contained instance is ambiguous and refused where it used to resolve the root; auto-names and
+the rename conflict check follow the same scope. Code `9916cefce`.
+
+**R-JS-11** (2026-10-04, provisional) — **The M1 wait waits for readiness.** The container of
+`create instance … in` is a required dependency, so pass 1 waits for a parent the previous line created. In the
+wait an instance is present when the model shows it (roots or contained) or when the run's handle names it and its
+metaclass is in the store: a bare handle hit is not enough, since before its metaclass lands the handler answers
+`NO_METACLASS` (report §4.5). Measured: a `set` on a contained child of the same run went from 522-549 ms to 1 ms.
+Code `9916cefce`.
+
 ## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homonyms.md`.
