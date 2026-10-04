@@ -57,6 +57,7 @@ import { EndpointHandles } from './EndpointHandles';
 import { junctionGeometry, junctionTrunkPath, junctionVertex, type JunctionEnd } from '../viewpoint/ir/irJunctions';
 import { endGlyphOf, endGlyphMarker, glyphPathD, glyphCircles } from './edgeEndGlyphs';
 import { getElkRoute, elkRoutesRevision, isElkRouteValid, fitRouteToEnds, type BarOrientation } from '../utils/elkLayout';
+import { occupiesCanvas } from '../sim/simHideEvents';
 
 /** Q3 (P-2026-10-03-1304): the orientation of an end node that is a turned bar (irEdgeViews.ts writes it on the node data). */
 function barOrientationOf(n: any): BarOrientation | undefined {
@@ -463,8 +464,9 @@ function UnifiedEdge(props: EdgeProps) {
     const routedPoints = useMemo(() => {
         if (isSelfLoop || isNonOrthogonalIR || isArcIR || waypoints.length > 0 || elkPoints) return spreadPoints;
         if (isInheritance && isGrouped) return spreadPoints;
+        // A node the run hides keeps its box here (P-2026-10-04-0935): no route moves while the run hides events.
         const rects = getNodes()
-            .filter(n => !n.hidden)
+            .filter(occupiesCanvas)
             .map(n => getNodeRect(n))
             .filter(r => r.width > 0 && r.height > 0);
         return avoidNodeRects(spreadPoints, rects);
@@ -612,7 +614,7 @@ function UnifiedEdge(props: EdgeProps) {
         // crosses none of the other arcs where it can: their curves as they are drawn at rest, each from its own
         // handles (an arc alone among them as its chord). ELK route ends are not read here: after an Auto layout an
         // arc alone runs on its route (Q8 (iii)).
-        const obstacles = getNodes().filter(n => !n.hidden && n.id !== source && n.id !== target).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0);
+        const obstacles = getNodes().filter(n => occupiesCanvas(n) && n.id !== source && n.id !== target).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0);
         const at = (nid: string, hid: string | null | undefined, type: 'source' | 'target') => handleCenterOf(getInternalNode(nid), hid, type);
         const others = allEdges
             .filter(e => e.id !== id && !e.hidden && (e.data as Record<string, unknown> | undefined)?.irCurve === 'arc')

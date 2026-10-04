@@ -328,3 +328,36 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended, 2026-10-03 23:55 on 3001 at `18926660a`: HTTP 200, `simBoardDevices.tsx` served with `SimBoard`, no new console error; the P-2026-10-03-2000 board probe on the merged trunk via lane-run probe on 3082, 50/50, ten presses equal to the hand run; crops Variant A light and B with bindings dark identical to the branch. Alfonso in the morning digest.
 **Notes**: Rollback tag `pre-sim-io-board-skins` on `53aed9baa` (RC-31). No union resolution; probes 21/21 once, control R-VP-58 absent. The first run of this prompt stopped blocked on a dirty tree (`auto-intake.config.json`); the chat committed it as `53aed9baa`. Step 6's reset target `48eec06d5` was stale after `5e33d9a88`; the pre-merge tip was `53aed9baa`, not needed. The build's 43 Sass @import deprecations come from older files, none from the branch.
 **Prompt document name**: 2026-10-03 23:27
+
+## 2026-10-04 — feat: event nodes and their edges hidden on the canvas during a run (P-2026-10-04-0935)
+**Prompt**: `claude_2026-10-04_0935_prompt_sim_hide_events_during_run.md`, heavy tier, fast lane, `~/jjodel-w-simhide` on `sim-hide-events`: while a run exists the canvas draws neither the event instances nor the edges incident to them, view-only, 0 px for every other element; tests first, mutation bench, probe on the four demo scenes and a hand-made statechart; hard stop for the visual check.
+**Files touched**: code `8d0021987`: `frontend/src/components/editor-v2/sim/simHideEvents.ts` (new), `sim/__tests__/simHideEvents.test.ts` (new), `EditorV2.tsx`, `edges/UnifiedEdge.tsx`. Closure commit after the visual GO (P13): the prompt's Status line, this entry.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. Typecheck 14, the §17 set by file and code; typecheck:scripts and check:scripts exit 0; vitest 7285 of 7289, the 9 known import failures, the 4 others lane-run harness timeouts at load 20-30, 121/121 on a rerun of their two files at load 6; build exit 0, chunk-size warning only; lane probe 309/309 against the base tree.
+**Out-of-scope changes**: yes — six files over two commits, above five (RC-11, rule 19): the four code files and the two closure files. `UnifiedEdge.tsx` is beyond the place the prompt suggests (`EditorV2.tsx`): it keeps the hidden events' boxes as route obstacles (Notes). No file outside the worktree; the dev server on 3097 ran from this tree.
+**Layer Impact Report**: not-required (no §3.1 file)
+**Smoke visivo**: passato (lane probe on 3097, light, 1600×1000: 309/309 on PEST, Petri, ESM, Flow B, PEST in its derived statechart and the hand-made scene; crops `frontend/scripts/smoke/_tmp_simhide_crops/<scene>_{before,reset,running,final,stop}_600.png` and `<scene>_running_dark_600.png`, gitignored; visual GO from Alfonso on the crops, 2026-10-04)
+**Notes**: Partial on the spec, not the code: Reset starts a run here (R-SIM-29), so 'after Reset equals Not started' contradicts item 1; read as after Stop. A collapsed panel keeps its run: events stay hidden. React Flow's hidden dropped the boxes from the router, so other edges re-routed (ESM, 2 boxes) and PEST kept stale lanes after Stop; occupiesCanvas keeps them as obstacles. Hops over hidden edges go. Bench 13/16, 3 equivalent. Type feat chosen (P6).
+**Prompt document name**: 2026-10-04 09:35
+
+**Inline check** (P-2026-10-04-0935, the prompt's ten lines):
+- Run state: `simRunState.ts`, a module singleton outside Redux, one record per model from Reset (`simReset`) to Stop or unmount (`simClear`): a record exists iff the status is Running, Terminated, Deadlock or Halted; Not started is no record (R-SIM-29).
+- The canvas learns it through `useSimVersion()` (the `'mark'` channel: Reset, a fired or halted step, Stop) and `getSimRun(modelid)`; the event ids are the run's `alphabet`, the instances of the `simEvent` class at Reset, `[]` without the role.
+- Narrowest filter: the arrays EditorV2 hands to React Flow, after `useIRContainment`: a node whose `idlookup[vertex].model` is an event, and every edge with such a node at an end, flagged `hidden`, never removed; memoised on the alphabet, which a step keeps.
+- `hidden` keeps the elements in React Flow's store (handles unchanged), but the route avoidance, the arc obstacles and the lane pass skip hidden nodes: `occupiesCanvas` keeps the run's hidden nodes there, so no other edge moves.
+- New identifiers `simHideEvents.ts`, `hideRunEvents`, `occupiesCanvas`, `simRunHidden`: a global grep found none before.
+
+## 2026-10-04 — merge: sim-hide-events takes alfonso-frontend-jjtl (P-2026-10-04-1213)
+**Prompt**: `claude_2026-10-04_1213_prompt_sim-hide-events_take_trunk.md`, full lane, a lane-run session in `~/jjodel-w-simhide` on `sim-hide-events`: RC-14, the trunk at the explicit sha `5b4d6c887` into the branch with one `--no-ff` merge, base `43685438b`, 12 commits on the trunk side (object-as-edge delete, R-B17, D-UI-15), 3 on the branch side and this prompt on top; hard stop for the chat's visual GO, then this closure.
+**Files touched**: merge `c53a5a8d1`, the trunk's 15 files, none resolved by hand: `AGENTS.md`, `CLAUDE.md`, `docs/DESIGN-SYSTEM.md`, `docs/PROTOCOL.md`, `docs/decisions.md`, `docs/log-inbox/views.md`, the object-edge-delete discovery and its two prompts, `frontend/scripts/probe/object-edge-delete.ts`, `EditorV2.tsx` (auto-merged, the only file on both sides), `canvasToJjom.ts`, `syncDeleteObjectAsEdge.test.ts`, `frontend/src/styles/CLAUDE.md` and `AGENTS.md`. This commit: the prompt's Status line, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c53a5a8d1`: typecheck exit 2, 14 errors, the §17 set by file and code; typecheck:scripts exit 0; vitest 7305 of 7305 in 296 files, the 9 red at import, as expected (trunk tip 7289 measured read-only in `~/jjodel-release`, plus the branch's 16); hooks 424, as expected (the trunk's 424, the branch adds none); build exit 0, chunk-size and Sass deprecation warnings only; check:docs 4/4; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries the trunk's 15 files, above five (RC-11), declared by the prompt's measurement; this commit carries the two files of step 9. Scratch gate outputs and the commit message went to `/tmp`; the trunk's counts were taken read-only in `~/jjodel-release`, as the prompt allows.
+**Layer Impact Report**: not-required (a merge of reviewed commits; `canvasToJjom.ts` comes with the trunk's `5557a714b`)
+**Smoke visivo**: passato — chat, unattended, GO on `c53a5a8d1` at step 8 (the branch's visual probes on the merged tree, RC-23); Alfonso in the morning digest
+**Notes**: Merge-tree zero conflicts, tree `700949a33`, the one the commit records; no union resolution. Probes once each, control R-RAIL-46 absent, but `- **R-RAIL-44**` counts 2, not the prompt's 1: the trunk tip has 2 (the row marked superseded and its pointer under «Superate», both `18a861da7`) and the merged `decisions.md` is the trunk's byte for byte. `EditorV2.tsx` read whole: disjoint hunks, each import and declaration once.
+**Prompt document name**: 2026-10-04 12:13
