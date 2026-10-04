@@ -18,7 +18,8 @@
  * - the keypad's value mode (R-SIM-112): the buffer is the device's, Enter gives
  *   the IVAR its value, a key that would leave the domain is off with its reason.
  * - the editor's operations on a draft: add, move, bind, label, remove, and a
- *   Clock's period (R-SIM-122); a device's span and style, the board's theme,
+ *   Clock's period (R-SIM-122) and auto-start, on for a new Clock (R-SIM-134,
+ *   P-2026-10-04-1625); a device's span and style, the board's theme,
  *   accent and columns (R-SIM-123..126, P-2026-10-04-1130). Occupancy is by the
  *   cells a device covers over its span, on the board's columns: a span or a move
  *   that would leave the grid or overlap is refused and nothing changes, a move
@@ -337,7 +338,10 @@ export function firstFreeCell(devices: readonly BoardDevice[], cols: number = BO
     return null;
 }
 
-/** A new unbound device in the first free cell, with the first free id `d1`, `d2`, …; `id` `''` when the grid is full. A Clock gets the default period. */
+/**
+ * A new unbound device in the first free cell, with the first free id `d1`, `d2`, …; `id` `''` when the grid is full. A Clock
+ * gets the default period and auto-start (R-SIM-134).
+ */
 export function addDevice(devices: readonly BoardDevice[], kind: DeviceKind, cols: number = BOARD_COLUMNS): { devices: BoardDevice[]; id: string } {
     const cell = firstFreeCell(devices, cols);
     if (cell === null) return { devices: [...devices], id: '' };
@@ -345,7 +349,7 @@ export function addDevice(devices: readonly BoardDevice[], kind: DeviceKind, col
     while (devices.some(d => d.id === `d${n}`)) n++;
     const id = `d${n}`;
     const device: BoardDevice = kind === 'clock'
-        ? { id, kind, cell, label: '', binding: null, period: CLOCK_PERIOD_DEFAULT }
+        ? { id, kind, cell, label: '', binding: null, period: CLOCK_PERIOD_DEFAULT, autoStart: true }
         : { id, kind, cell, label: '', binding: null };
     return { devices: [...devices, device], id };
 }
@@ -447,6 +451,18 @@ export function setPeriod(devices: BoardDevice[], id: string, ms: number): Board
     const device = devices.find(d => d.id === id);
     if (!device || device.kind !== 'clock' || !isClockPeriod(ms)) return devices;
     return devices.map(d => (d.id === id ? { ...d, period: ms } : d));
+}
+
+/** A Clock's auto-start (R-SIM-134), for a clock only; off removes the field, never stores false; anything else changes nothing. */
+export function setAutoStart(devices: BoardDevice[], id: string, on: boolean): BoardDevice[] {
+    const device = devices.find(d => d.id === id);
+    if (!device || device.kind !== 'clock') return devices;
+    return devices.map(d => {
+        if (d.id !== id) return d;
+        const next: { -readonly [K in keyof BoardDevice]: BoardDevice[K] } = { ...d };
+        if (on) next.autoStart = true; else delete next.autoStart;
+        return next;
+    });
 }
 
 export function setLabel(devices: BoardDevice[], id: string, label: string): BoardDevice[] {

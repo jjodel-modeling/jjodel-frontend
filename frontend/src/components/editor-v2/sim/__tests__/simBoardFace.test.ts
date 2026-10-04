@@ -500,6 +500,38 @@ describe('the clock\'s face: on or off, its period, the ticks since on, the drop
         expect(f.title).toBe(`${HEAD}\nOff. The run is Halted.`);
     });
 
+    it('idle ticks are counted in the title only, never on the counter (R-SIM-136; mutants: idle not said; idle added to the ticks)', () => {
+        const lookup = buildLookup();
+        const run = runOf(lookup);
+        const on = face(CLOCK, { ...scene(lookup, run), clocks: clocks({ on: true, ticks: 2, idle: 5 }) });
+        expect(on).toMatchObject({ ticking: true, ticks: 2, idle: 5, dropped: 0 });
+        expect(on.title).toBe(`${HEAD}\nOn: presses coin every 1 s. 2 ticks, 5 idle since on. An idle tick came while coin enabled nothing: no step.`);
+        const both = face(CLOCK, { ...scene(lookup, run), clocks: clocks({ on: true, ticks: 1, idle: 1, dropped: 2 }) });
+        expect(both.title).toBe(`${HEAD}\nOn: presses coin every 1 s. 1 tick, 1 idle, 2 dropped since on. `
+            + 'A dropped tick came while a press waited on the input dialog or a choice. An idle tick came while coin enabled nothing: no step.');
+        const off = face(CLOCK, { ...scene(lookup, run), clocks: clocks({ off: 'hand', ticks: 0, idle: 3 }) });
+        expect(off.title).toBe(`${HEAD}\nOff: switched off. 0 ticks, 3 idle. Switch it on to press coin every 1 s.`);
+        expect(face(CLOCK, { ...scene(lookup, run), clocks: clocks({ on: true, ticks: 3 }) }).idle).toBe(0);
+    });
+
+    it('an auto-start clock says when it switches itself on; a manual one says nothing new (R-SIM-134; mutant: the note on every clock)', () => {
+        const lookup = buildLookup();
+        const AUTO: BoardDevice = { ...CLOCK, autoStart: true };
+        const NOTE = ' Auto-start: on at the next Reset.';
+        expect(face(AUTO, scene(lookup, undefined)).title).toBe(`${HEAD}\nOff. Reset starts the run.${NOTE}`);
+        const run = runOf(lookup);
+        expect(face(AUTO, { ...scene(lookup, run), clocks: clocks({ off: 'hand', ticks: 4 }) }).title)
+            .toBe(`${HEAD}\nOff: switched off. 4 ticks. Switch it on to press coin every 1 s.${NOTE}`);
+        expect(face(AUTO, { ...scene(lookup, run), clocks: clocks({ on: true, ticks: 3 }) }).title).toBe(`${HEAD}\nOn: presses coin every 1 s. 3 ticks since on.`);
+        expect(face(CLOCK, scene(lookup, undefined)).title).toBe(`${HEAD}\nOff. Reset starts the run.`);
+    });
+
+    it('a clock off because the panel was collapsed says so (R-SIM-135; mutant: another reason\'s words)', () => {
+        const lookup = buildLookup();
+        const f = face(CLOCK, { ...scene(lookup, runOf(lookup)), clocks: clocks({ off: 'panel', ticks: 2 }) });
+        expect(f.title).toBe(`${HEAD}\nOff: the panel was collapsed. 2 ticks. Switch it on to press coin every 1 s.`);
+    });
+
     it('a clock whose event is gone, or unbound, is flagged and off, its period still shown (R-SIM-115; mutant: a flagged clock on)', () => {
         const lookup = buildLookup();
         const s = scene(lookup, runOf(lookup));

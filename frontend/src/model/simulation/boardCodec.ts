@@ -52,6 +52,13 @@
  * library (R-SIM-128): the silkscreen, a caption with no binding, and the buzzer,
  * an output bound as the LED is.
  *
+ * A Clock may switch itself on with its run (R-SIM-134, P-2026-10-04-1625,
+ * docs/discovery/discovery_2026-10-04_sim_clock_auto.md): `autoStart`, written
+ * after `period` and only when true, so a clock saved before it keeps its bytes. A
+ * stored false reads as absent; a stored value that is not a boolean drops the
+ * field with a defect naming it, never the device; on another kind it is an
+ * unknown field, as `period` is there.
+ *
  * Pure: no import.
  */
 
@@ -309,6 +316,8 @@ export interface BoardDevice {
     readonly binding: BoardBinding | null;
     /** A Clock's period in milliseconds (R-SIM-122); absent on every other kind. */
     readonly period?: number;
+    /** A Clock that switches itself on with its run (R-SIM-134); absent means false, and false is never stored. */
+    readonly autoStart?: boolean;
     /** The cells it covers from `cell`, `[w, h]` (R-SIM-125); absent means `[1, 1]` and is never stored as such. */
     readonly span?: readonly [number, number];
     /** Its style (R-SIM-126); absent, or without a field, means the default or the suggestion. */
@@ -322,7 +331,7 @@ export interface BoardDefect {
     readonly message: string;
     /**
      * Set when the defect drops one field and keeps the rest (R-SIM-123): the board (`index` null) or the device is
-     * read without it. `theme`, `accent`, `cols`, `span`, `style`, or `style.<field>`.
+     * read without it. `theme`, `accent`, `cols`, `span`, `style`, `style.<field>`, or a clock's `autoStart`.
      */
     readonly field?: string;
 }
@@ -370,6 +379,7 @@ export function encodeBoard(devices: readonly BoardDevice[], settings?: BoardSet
             return {
                 id: d.id, kind: d.kind, cell: [d.cell[0], d.cell[1]], label: d.label, binding: d.binding === null ? null : canonicalBinding(d.binding),
                 ...(d.kind === 'clock' ? { period: d.period ?? CLOCK_PERIOD_DEFAULT } : {}),
+                ...(d.kind === 'clock' && d.autoStart === true ? { autoStart: true } : {}),
                 ...(span ? { span } : {}),
                 ...(style ? { style } : {}),
             };
@@ -448,6 +458,9 @@ export function decodeBoard(raw: string | null | undefined): DecodedBoard {
         if (kind === 'clock' && d.period !== undefined && !isClockPeriod(d.period)) {
             return device(`${d.id}: the period is not a whole number of milliseconds in ${CLOCK_PERIOD_MIN}..${CLOCK_PERIOD_MAX}.`);
         }
+        if (kind === 'clock' && d.autoStart !== undefined && typeof d.autoStart !== 'boolean') {
+            drop('autoStart', 'auto-start is not true or false; the clock is switched on by hand.');
+        }
         let binding: BoardBinding | null = null;
         if (d.binding !== undefined && d.binding !== null) {
             binding = bindingOf(d.binding);
@@ -461,7 +474,7 @@ export function decodeBoard(raw: string | null | undefined): DecodedBoard {
         if (style?.key !== undefined && style.key !== 'none') keys.add(style.key);
         const label = text(d.label) ? d.label : '';
         const read: BoardDevice = kind === 'clock'
-            ? { id: d.id, kind, cell, label, binding, period: d.period === undefined ? CLOCK_PERIOD_DEFAULT : d.period as number }
+            ? { id: d.id, kind, cell, label, binding, period: d.period === undefined ? CLOCK_PERIOD_DEFAULT : d.period as number, ...(d.autoStart === true ? { autoStart: true } : {}) }
             : { id: d.id, kind, cell, label, binding };
         devices.push({ ...read, ...(span[0] !== 1 || span[1] !== 1 ? { span } : {}), ...(style ? { style } : {}) });
     });

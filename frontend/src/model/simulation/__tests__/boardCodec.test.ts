@@ -113,6 +113,52 @@ describe('the clock\'s period (R-SIM-122 decision 2)', () => {
     });
 });
 
+describe('the clock\'s auto-start (R-SIM-134)', () => {
+    const CLOCK = '{"v":1,"devices":[{"id":"d1","kind":"clock","cell":[0,0],"label":"","binding":{"kind":"event","event":"E"},"period":1000}]}';
+    const clock = (x: Partial<BoardDevice> = {}): BoardDevice => ({ ...dev('d1', 'clock', [0, 0], { kind: 'event', event: 'E' }), period: 1000, ...x });
+
+    it('absent or false is not written: a clock saved today keeps its bytes, and so does every board of the base commit (mutant: false written; mutant: autoStart always written)', () => {
+        expect(encodeBoard([clock()])).toBe(CLOCK);
+        expect(encodeBoard([clock({ autoStart: false })])).toBe(CLOCK);
+        expect(encodeBoard(ALL)).toBe(BASE_ALL);
+        expect(encodeBoard(ALL.map(d => (d.kind === 'clock' ? { ...d, autoStart: false } : d)))).toBe(BASE_ALL);
+    });
+
+    it('true is written after the period, before the span and the style, and round-trips (mutant: written before period; mutant: dropped by the decoder)', () => {
+        const raw = encodeBoard([clock({ autoStart: true, span: [2, 1], style: { shape: 'round' } })]);
+        expect(raw).toBe('{"v":1,"devices":[{"id":"d1","kind":"clock","cell":[0,0],"label":"","binding":{"kind":"event","event":"E"},"period":1000,"autoStart":true,"span":[2,1],"style":{"shape":"round"}}]}');
+        const back = decodeBoard(raw);
+        expect(back.defects).toEqual([]);
+        expect(back.devices[0].autoStart).toBe(true);
+        expect(encodeBoard(back.devices)).toBe(raw);
+    });
+
+    it('a stored false reads as absent, so it re-encodes to today\'s bytes (mutant: false kept and written back)', () => {
+        const d = decodeBoard(CLOCK.replace('"period":1000', '"period":1000,"autoStart":false'));
+        expect(d.defects).toEqual([]);
+        expect('autoStart' in d.devices[0]).toBe(false);
+        expect(encodeBoard(d.devices)).toBe(CLOCK);
+    });
+
+    it('a stored value that is not a boolean drops the field with a defect naming it, never the device (R-SIM-123; mutant: the device dropped; mutant: "true" read as true)', () => {
+        for (const bad of ['true', 1, null, {}]) {
+            const d = decodeBoard(CLOCK.replace('"period":1000', `"period":1000,"autoStart":${JSON.stringify(bad)}`));
+            expect(d.devices.map(x => [x.id, x.autoStart])).toEqual([['d1', undefined]]);
+            expect(d.defects.map(x => [x.index, x.code, x.field])).toEqual([[0, 'device', 'autoStart']]);
+            expect(d.defects[0].message).toBe('d1: auto-start is not true or false; the clock is switched on by hand.');
+        }
+    });
+
+    it('on another kind it is an unknown field, as the period is there: ignored, never read nor written (mutant: autoStart on every kind)', () => {
+        const raw = JSON.stringify({ v: 1, devices: [{ id: 'd1', kind: 'button', cell: [0, 0], label: '', binding: null, autoStart: true }] });
+        const d = decodeBoard(raw);
+        expect(d.defects).toEqual([]);
+        expect('autoStart' in d.devices[0]).toBe(false);
+        const button: BoardDevice = { ...dev('d1', 'button', [0, 0], null), autoStart: true };
+        expect(encodeBoard([button])).toBe('{"v":1,"devices":[{"id":"d1","kind":"button","cell":[0,0],"label":"","binding":null}]}');
+    });
+});
+
 describe('encodeBoard and decodeBoard', () => {
     it('round trip: every kind and every binding form decode to what was encoded, no defect', () => {
         const raw = encodeBoard(ALL);

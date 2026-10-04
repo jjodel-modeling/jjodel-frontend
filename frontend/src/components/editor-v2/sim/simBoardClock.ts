@@ -5,39 +5,50 @@
  * The simulator has no time by construction. A Clock is something in the
  * environment that presses one event on its own, every period: the engine sees
  * only the press, the step, σ, the trace and a future `.smv` export are those of
- * a hand press (decision 3). A tick whose event enables nothing is discarded as a
- * hand press is, and the clock goes on.
+ * a hand press (decision 3). A tick whose event enables nothing is not a step
+ * (R-SIM-136, P-2026-10-04-1625, amending decision 3): the clock asks the run first,
+ * with the test that greys the panel's button (`clockEnables`), and a tick nobody
+ * listens to presses nothing, counted `idle`; the clock goes on.
  *
- * `createClocks` keeps the clocks of one board card, by device id: one
+ * `createClocks` keeps the clocks of one model, by device id: one
  * `setInterval` per clock that is on, the first tick one period after switching
  * on. Each tick reads the live run from the store at that moment, as Play's
  * `playPress` does (simBridge.ts), never React state:
  * - `check` switches a clock off, and says why, when its run is gone (Stop, the
  *   interruption of a model edit), replaced (Reset: another `net`), or has reached
  *   `Terminated`, `Deadlock` or `Halted`. It runs before each tick, after each
- *   press, and whenever the card sees the run change, so a hand press or Play
+ *   press, and whenever the panel sees the run change, so a hand press or Play
  *   that ends the run switches the clocks off at once (decision 5);
  * - a tick while a press waits on the user, the input dialog of R-SIM-88 or a
  *   choice list, is dropped and counted, never queued (decision 7);
- * - otherwise one press of the bound event (`press`, the card's own press through
+ * - a tick whose event enables nothing is idle (R-SIM-136);
+ * - otherwise one press of the bound event (`press`, the board's press through
  *   the panel's `fire`, which leaves Play running: decision 6).
  * A hand press and Play leave the clocks on; `stopAll` is the board record
- * changing; `dispose` is the card going away (closed, the panel collapsed, the
- * model switched), which clears every timer without a word: what is not on screen
- * does not tick. On and off are view state of the board, never the model's and
- * never an undo step (decision 4).
+ * changing, or the panel collapsed; `dispose` is the model switched or the panel
+ * gone, which clears every timer without a word. On and off are view state of the
+ * board, never the model's and never an undo step (decision 4).
+ *
+ * The clocks belong to the run, not to the card (R-SIM-135): their owner is the
+ * simulation panel, so they tick with the board closed, and the card only shows
+ * and toggles them. A Clock with `autoStart` (R-SIM-134) switches itself on: `arm`,
+ * called by the panel whenever its run may have changed, switches the auto clocks
+ * on the first time it sees a run Running, once per run, so a Reset re-arms them
+ * and the hand's off holds until the next Reset.
  *
  * Pure: no React, no store write, so it runs under the node test bench with fake
  * timers (sim/__tests__/simBoardClock.test.ts).
  */
 
-import { isClockPeriod } from '../../../model/simulation/boardCodec';
+import { CLOCK_PERIOD_DEFAULT, isClockPeriod } from '../../../model/simulation/boardCodec';
+import type { BoardDevice } from '../../../model/simulation/boardCodec';
+import { structuralInputs } from '../../../model/simulation/netStep';
 import type { CompiledNet } from '../../../model/simulation/netTypes';
-import { runStatus } from './simBridge';
+import { panelInputs, runStatus } from './simBridge';
 import type { SimRun } from './simRunState';
 
-/** Why a clock went off: by hand, Reset, no run, the board edited, or the run's end. */
-export type ClockOff = 'hand' | 'reset' | 'cleared' | 'board' | 'Terminated' | 'Deadlock' | 'Halted';
+/** Why a clock went off: by hand, Reset, no run, the board edited, the panel collapsed, or the run's end. */
+export type ClockOff = 'hand' | 'reset' | 'cleared' | 'board' | 'panel' | 'Terminated' | 'Deadlock' | 'Halted';
 
 /** What one clock shows: on or off, the presses since it was switched on, the ticks dropped, why it is off. */
 export interface ClockState {
@@ -46,9 +57,37 @@ export interface ClockState {
     readonly dropped: number;
     /** `null` while on. */
     readonly off: ClockOff | null;
+    /** R-SIM-136: the ticks since on whose event enabled nothing, so nothing was pressed; never among `ticks`. */
+    readonly idle?: number;
 }
 
-/** What the clocks read and call; the card passes the store's run and its own press. */
+/** A clock of the board that switches itself on (R-SIM-134): its device, the event it presses, its period. */
+export interface AutoClock {
+    readonly id: string;
+    readonly event: string;
+    readonly period: number;
+}
+
+/** The Clocks of a board with `autoStart` bound to an event, in its order (R-SIM-134). */
+export function autoClocks(devices: readonly BoardDevice[]): AutoClock[] {
+    const out: AutoClock[] = [];
+    for (const d of devices) {
+        if (d.kind !== 'clock' || d.autoStart !== true || d.binding?.kind !== 'event') continue;
+        out.push({ id: d.id, event: d.binding.event, period: d.period ?? CLOCK_PERIOD_DEFAULT });
+    }
+    return out;
+}
+
+/**
+ * R-SIM-136: whether a press of `event` now reaches the machine, by the test that greys the panel's button of that
+ * event and the board's Button (`view.inputs.events`): structural, a transition on it whose preset is marked while the
+ * run is Running. Its guards are not read, so a tick they refuse is pressed and is a discard, as a hand press is.
+ */
+export function clockEnables(run: SimRun, event: string): boolean {
+    return panelInputs(runStatus(run), structuralInputs(run.net, run.config.state)).events.has(event);
+}
+
+/** What the clocks read and call; the panel passes the store's run and its own press. */
 export interface ClockDeps {
     /** The live run of the board's model, read from the store at each call. */
     readonly run: () => SimRun | undefined;
@@ -67,6 +106,11 @@ export interface Clocks {
     stop(id: string): void;
     /** Switches every clock off, with one reason. */
     stopAll(reason: ClockOff): void;
+    /**
+     * R-SIM-134: the check, then, the first time a run is seen Running, the clocks `auto` lists whose event that run
+     * knows switch on; once per run, so only a Reset arms them again. `auto` is read only then.
+     */
+    arm?(auto: () => readonly AutoClock[]): void;
     /** Switches off the clocks whose run is gone, replaced or ended. */
     check(): void;
     state(id: string): ClockState | undefined;
@@ -82,6 +126,7 @@ export function clockOffText(reason: ClockOff): string {
         case 'reset': return 'Reset';
         case 'cleared': return 'no run (Stop, or the model changed)';
         case 'board': return 'the board changed';
+        case 'panel': return 'the panel was collapsed';
         default: return `the run reached ${reason}`;
     }
 }
@@ -105,6 +150,8 @@ export function createClocks(deps: ClockDeps): Clocks {
     const ticking = new Map<string, Ticking>();
     const states = new Map<string, ClockState>();
     let disposed = false;
+    /** The net of the run the auto clocks were last armed for (R-SIM-134). */
+    let armed: CompiledNet | null = null;
 
     const halt = (id: string, reason: ClockOff): void => {
         const t = ticking.get(id);
@@ -136,24 +183,34 @@ export function createClocks(deps: ClockDeps): Clocks {
             deps.changed();
             return;
         }
+        const event = ticking.get(id)!.event;
+        // R-SIM-136: a tick nobody listens to equals no tick: nothing pressed, no step, counted idle.
+        const run = deps.run();
+        if (!run || !clockEnables(run, event)) {
+            states.set(id, { ...s, idle: (s.idle ?? 0) + 1 });
+            deps.changed();
+            return;
+        }
         states.set(id, { ...s, ticks: s.ticks + 1 });
-        deps.press(ticking.get(id)!.event);
+        deps.press(event);
         sweep();
         deps.changed();
     };
 
+    const start = (id: string, event: string, period: number): boolean => {
+        if (disposed || !isClockPeriod(period)) return false;
+        if (ticking.has(id)) return true;
+        const run = deps.run();
+        if (!run || runStatus(run) !== 'Running') return false;
+        const timer = setInterval(() => tick(id), period);
+        ticking.set(id, { event, net: run.net, timer });
+        states.set(id, { on: true, ticks: 0, dropped: 0, idle: 0, off: null });
+        deps.changed();
+        return true;
+    };
+
     return {
-        start(id, event, period) {
-            if (disposed || !isClockPeriod(period)) return false;
-            if (ticking.has(id)) return true;
-            const run = deps.run();
-            if (!run || runStatus(run) !== 'Running') return false;
-            const timer = setInterval(() => tick(id), period);
-            ticking.set(id, { event, net: run.net, timer });
-            states.set(id, { on: true, ticks: 0, dropped: 0, off: null });
-            deps.changed();
-            return true;
-        },
+        start,
         stop(id) {
             if (!ticking.has(id)) return;
             halt(id, 'hand');
@@ -166,6 +223,16 @@ export function createClocks(deps: ClockDeps): Clocks {
         },
         check() {
             if (sweep()) deps.changed();
+        },
+        arm(auto) {
+            if (disposed) return;
+            const went = sweep();
+            const run = deps.run();
+            if (run && run.net !== armed && runStatus(run) === 'Running') {
+                armed = run.net;
+                for (const c of auto()) if (run.alphabet.includes(c.event)) start(c.id, c.event, c.period);
+            }
+            if (went) deps.changed();
         },
         state: id => states.get(id),
         states: () => new Map(states),
