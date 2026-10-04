@@ -367,3 +367,13 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3084, 1600×1000, light: panel 32/32, scenes diff 0; crops in `~/.jjodel-lanes/P-2026-10-04-1131/`; the chat's visual check pending, RC-23)
 **Notes**: The mock-up was not visible to the lane: role colours, swatches and the faces by theme were chosen and listed in R-SIM-130. The base scenes ran on the six sources restored from HEAD by copy, the index untouched (P13), then restored and compared byte for byte. A wide window's first place can sit under the canvas layer's Globals control: for the visual check. No discovery of its own (RC-11).
 **Prompt document name**: 2026-10-04 11:31
+
+## 2026-10-04 — ticket: a front panel press with an icon truncates its label in one cell
+**Ticket**: On Variant B a key-shaped Button one cell wide (80.5 px on 4 columns) with an icon and a label of six characters or more shows the label cut with an ellipsis: «+ Coin» reads «+ C…» in the crop `_tmp_iopanel_B_graphite.png`. The text is still the title and the aria-label. Seen by the chat's visual check (RC-23) of P-2026-10-04-1131, no fix in that lane; the way out is a span of 2, the mode `icon`, or a smaller font or a tighter gap on the press.
+**Priority**: low
+**Found in**: P-2026-10-04-1131
+
+## 2026-10-04 — ticket: a wide floating board can open under the canvas layer's Globals control
+**Ticket**: A 6- or 8-column board opens as a floating window at the card slot's left, 16 px under the toolbar (R-SIM-132); its top right corner then sits under the canvas layer's Globals and «Inspect node.[x]» controls, which paint above it (crop `_tmp_iopanel_B_six_columns_window.png`). The window drags away and keeps its place as a viewer pref. Seen by the lane probe and the chat's visual check of P-2026-10-04-1131, no fix in that lane; the way out is a first place at the slot's bottom, or the window above that layer.
+**Priority**: low
+**Found in**: P-2026-10-04-1131
