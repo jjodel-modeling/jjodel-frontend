@@ -348,3 +348,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 - Narrowest filter: the arrays EditorV2 hands to React Flow, after `useIRContainment`: a node whose `idlookup[vertex].model` is an event, and every edge with such a node at an end, flagged `hidden`, never removed; memoised on the alphabet, which a step keeps.
 - `hidden` keeps the elements in React Flow's store (handles unchanged), but the route avoidance, the arc obstacles and the lane pass skip hidden nodes: `occupiesCanvas` keeps the run's hidden nodes there, so no other edge moves.
 - New identifiers `simHideEvents.ts`, `hideRunEvents`, `occupiesCanvas`, `simRunHidden`: a global grep found none before.
+
+## 2026-10-04 — merge: sim-hide-events takes alfonso-frontend-jjtl (P-2026-10-04-1213)
+**Prompt**: `claude_2026-10-04_1213_prompt_sim-hide-events_take_trunk.md`, full lane, a lane-run session in `~/jjodel-w-simhide` on `sim-hide-events`: RC-14, the trunk at the explicit sha `5b4d6c887` into the branch with one `--no-ff` merge, base `43685438b`, 12 commits on the trunk side (object-as-edge delete, R-B17, D-UI-15), 3 on the branch side and this prompt on top; hard stop for the chat's visual GO, then this closure.
+**Files touched**: merge `c53a5a8d1`, the trunk's 15 files, none resolved by hand: `AGENTS.md`, `CLAUDE.md`, `docs/DESIGN-SYSTEM.md`, `docs/PROTOCOL.md`, `docs/decisions.md`, `docs/log-inbox/views.md`, the object-edge-delete discovery and its two prompts, `frontend/scripts/probe/object-edge-delete.ts`, `EditorV2.tsx` (auto-merged, the only file on both sides), `canvasToJjom.ts`, `syncDeleteObjectAsEdge.test.ts`, `frontend/src/styles/CLAUDE.md` and `AGENTS.md`. This commit: the prompt's Status line, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c53a5a8d1`: typecheck exit 2, 14 errors, the §17 set by file and code; typecheck:scripts exit 0; vitest 7305 of 7305 in 296 files, the 9 red at import, as expected (trunk tip 7289 measured read-only in `~/jjodel-release`, plus the branch's 16); hooks 424, as expected (the trunk's 424, the branch adds none); build exit 0, chunk-size and Sass deprecation warnings only; check:docs 4/4; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries the trunk's 15 files, above five (RC-11), declared by the prompt's measurement; this commit carries the two files of step 9. Scratch gate outputs and the commit message went to `/tmp`; the trunk's counts were taken read-only in `~/jjodel-release`, as the prompt allows.
+**Layer Impact Report**: not-required (a merge of reviewed commits; `canvasToJjom.ts` comes with the trunk's `5557a714b`)
+**Smoke visivo**: passato — chat, unattended, GO on `c53a5a8d1` at step 8 (the branch's visual probes on the merged tree, RC-23); Alfonso in the morning digest
+**Notes**: Merge-tree zero conflicts, tree `700949a33`, the one the commit records; no union resolution. Probes once each, control R-RAIL-46 absent, but `- **R-RAIL-44**` counts 2, not the prompt's 1: the trunk tip has 2 (the row marked superseded and its pointer under «Superate», both `18a861da7`) and the merged `decisions.md` is the trunk's byte for byte. `EditorV2.tsx` read whole: disjoint hunks, each import and declaration once.
+**Prompt document name**: 2026-10-04 12:13

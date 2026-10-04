@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-1213
 Chat: C-2026-10-04-0935
 Lane: full (merge of the trunk into the branch; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane sim-hide-events · c53a5a8d1 · verifica visiva passata 2026-10-04 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-simhide`, branch `sim-hide-events`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-simhide`, branch `sim-hide-events`, `git log -1` is the commit that adds this file (its parent `94722697c`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-04-1213 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
