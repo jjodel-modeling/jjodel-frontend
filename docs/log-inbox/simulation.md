@@ -328,3 +328,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended, 2026-10-03 23:55 on 3001 at `18926660a`: HTTP 200, `simBoardDevices.tsx` served with `SimBoard`, no new console error; the P-2026-10-03-2000 board probe on the merged trunk via lane-run probe on 3082, 50/50, ten presses equal to the hand run; crops Variant A light and B with bindings dark identical to the branch. Alfonso in the morning digest.
 **Notes**: Rollback tag `pre-sim-io-board-skins` on `53aed9baa` (RC-31). No union resolution; probes 21/21 once, control R-VP-58 absent. The first run of this prompt stopped blocked on a dirty tree (`auto-intake.config.json`); the chat committed it as `53aed9baa`. Step 6's reset target `48eec06d5` was stale after `5e33d9a88`; the pre-merge tip was `53aed9baa`, not needed. The build's 43 Sass @import deprecations come from older files, none from the branch.
 **Prompt document name**: 2026-10-03 23:27
+
+## 2026-10-04 — discovery: two console errors on the demo scenes (P-2026-10-04-1025)
+**Prompt**: `claude_2026-10-04_1025_prompt_console_errors_discovery.md`, heavy tier, read-only on `~/jjodel-w-consoleerr`, branch `console-errors-disc`: who fires «Invalid action path 0» and «Cannot serialize in ecore, found loop», when per scene and demo step, what each costs, whether the MODELS demo shows it, the smallest fix.
+**Files touched**: probe `9e54b5d96`: `frontend/scripts/probe/console-errors-demo.ts`. Report `ecea25e93`: `docs/discovery/discovery_2026-10-04_console_errors_demo.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (no file under `frontend/src`; check:scripts PASS, typecheck:scripts exit 0, whose scope excludes `probe/`)
+**Out-of-scope changes**: no — the one write outside the worktree and the lane folder is lane-run's own vite cache `/tmp/lane-vite-cache-3084` (its probe config), not the probe's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 40 fresh pages on 3084 (light, 1600×1000), ALL GREEN. E1: 20/20 hash opens, 0/20 fresh; the reset's init_editor writes the Default viewpoint into a project its empty state lacks; the 56-action batch rolls back and the store after the project's LOAD is identical. E2: a false-positive loop (LModel.get_roots lists contained objects), 6 per Reset on PEST and ESM, 6 more at ESM's model tab; save and exports intact. Answers the 2026-10-03 ticket above.
+**Prompt document name**: 2026-10-04 10:25

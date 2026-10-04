@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-1025
 Chat: C-2026-10-03-1610
 Lane: full (Phase 1 discovery read-only, hard stop; any fix is a later lane written by the chat from this report). Tier: heavy (RC-32: the questions cross `reducer.ts`, `LModelElement.tsx` and the save path). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane console-errors-disc · discovery only · probe 9e54b5d96 (frontend/scripts/probe/console-errors-demo.ts, 40 fresh pages on 3084, light, ALL GREEN) · report ecea25e93 docs/discovery/discovery_2026-10-04_console_errors_demo.md · hard-stop, two decisions taken unattended and one awaiting Alfonso (fix before the freeze or after Málaga, recommended after) in §0
 
 Worktree: `~/jjodel-w-consoleerr`, branch `console-errors-disc`, cut by the chat from `alfonso-frontend-jjtl` at `5b4d6c887`, `frontend/node_modules` symlinked as P14 allows; a fresh session started by `lane-run`. Before anything else: `pwd`, branch and `git log -1` (the docs commit that added this prompt); if any differs, stop with `Outcome: blocked`.
 
