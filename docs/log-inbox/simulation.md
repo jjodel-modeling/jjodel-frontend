@@ -477,3 +477,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Prompt document name**: 2026-10-04 16:25
 
 **Ticket** (low, found in P-2026-10-04-1625): the lane probe's check «the keycap is the topmost element at its pixel» fails on every clock, Variant A included, which the fix did not move; the chat read the Variant A after crop and found the T keycap fully visible over the button's corner, so the check is a probe artifact (the keycap takes `pointer-events: none`; toggling it for the measure did not change the reading), no code change. A later probe of keycaps should read the pixel colour instead.
+
+## 2026-10-04 — merge: sim-clock-auto into alfonso-frontend-jjtl (P-2026-10-04-1832)
+**Prompt**: `claude_2026-10-04_1832_prompt_merge_sim-clock-auto.md`, a direct merge by `lane-run merge --direct`, no session: `sim-clock-auto` at `18f65f917` into `alfonso-frontend-jjtl`, merge base `0022fe5c3`, 8 commits on the branch side.
+**Files touched**: merge `32c70ea86`: 16 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_sim_clock_auto.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_1625_prompt_sim_clock_auto.md`, `frontend/src/components/editor-v2/sim/SimBoard.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBoard.test.ts`, and 8 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `32c70ea86` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7458 tests in 301 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: 3001 HTTP 200 at 18:44; eight gates green on 32c70ea86 (typecheck 14, vitest 7458, build 0, checks 0); keycap and implicit Clock already checked visually by the chat on the lane crops
+**Notes**: Rollback tag `pre-sim-clock-auto` on `0022fe5c3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1832/result.json`.
+**Prompt document name**: 2026-10-04 18:32
