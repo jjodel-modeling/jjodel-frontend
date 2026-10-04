@@ -354,3 +354,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile (no rendering in this lane beyond two placeholder map entries; what is drawn is P-2026-10-04-1131's, with its probe)
 **Notes**: Network loss near 11:51 ended the first session mid-test; resumed on the same tree, the one modified test file kept. The Write tool stored a regex range as literal combining marks; the bench exposed it (a mutant that could not apply), rewritten as escapes before the commit. D-UI-15 is on the trunk only: D-UI-16 sits after D-UI-14, a hunk at the merge. Report: docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md.
 **Prompt document name**: 2026-10-04 11:30
+
+## 2026-10-04 — feat: styles of the I/O board's front panel, what is drawn (P-2026-10-04-1131)
+**Prompt**: `claude_2026-10-04_1131_prompt_sim_io_panel_faces.md`, heavy tier, `~/jjodel-w-iopanel` on `sim-io-panel`, second of the chain after P-2026-10-04-1130, lane auto: R-SIM-130..133, themes, shapes, icons, display sizes, columns and the floating window, keycaps and shortcuts, silkscreen, buzzer, the editor's style controls and icon picker; tests first, probe on 3084, no merge.
+**Files touched**: `c79cf7774`: `model/simulation/boardCodec.ts`, `sim/SimBoard.scss`, `sim/SimBoardEditor.scss`, `sim/SimBoardEditor.tsx`, `sim/simBoardDevices.tsx`, `sim/simViewerPrefs.ts`, `sim/simBoardLook.ts` (new), `sim/simBoardSound.ts` (new). `372273fd8`: `boardCodec.test.ts`, `simViewerPrefs.test.ts`, `simBoardCard.test.ts`, `simBoardLook.test.ts`, `simBoardSound.test.ts` (new), two base markup fixtures (new). This commit: `docs/decisions.md` (R-SIM-130..133), the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set; vitest 7405/7405 in 299 files, the 9 known suites red at import; build exit 0; mutation bench 58/58; a board without the new fields renders the markup of `ab7907ad9` but for the keycaps, `aria-keyshortcuts`, the card's tabindex and the Pop out button; the four demo scenes 50/50 base and after, 0 differing paths.
+**Out-of-scope changes**: yes — `boardCodec.ts` and its test, outside `sim/`, for a bug found here as the DOVE allows (a Pulse LED's absent colour amber). Eight code files and seven test files over two commits, above five (rule 19), all in the DOVE by directory; `SimulationPanel.tsx` named by the prompt and untouched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3084, 1600×1000, light: panel 32/32, scenes diff 0; crops in `~/.jjodel-lanes/P-2026-10-04-1131/`; the chat's visual check pending, RC-23)
+**Notes**: The mock-up was not visible to the lane: role colours, swatches and the faces by theme were chosen and listed in R-SIM-130. The base scenes ran on the six sources restored from HEAD by copy, the index untouched (P13), then restored and compared byte for byte. A wide window's first place can sit under the canvas layer's Globals control: for the visual check. No discovery of its own (RC-11).
+**Prompt document name**: 2026-10-04 11:31
