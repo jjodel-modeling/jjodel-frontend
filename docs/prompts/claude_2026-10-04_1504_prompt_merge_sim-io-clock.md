@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-1504
 Chat: C-2026-10-04-0145
 Lane: full (merge; 1 conflict: `docs/log-inbox/simulation.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane merge · 6704563a8 · verifica visiva passata 2026-10-04 (RC-23 by the chat on the lane crops (light): editor palette and period field, Variant A with tick count equal to the step count, microwave display 01:25 at secs 85 after plus x3, start and five ticks, plus and start disabled while Cooking. Alfonso accepted decision 1 of R-SIM-122 (a tick answers inputs from the board's switch and slider values), 2026-10-04. Tickets, low: the clock's On face pairs a pause icon with the word On (state and action mixed, use Pause/Start); binding captions truncated, more visible on clock tiles. Note: R-RAIL-44 under Superate de-bolded on the trunk (c25c758f4) so the duplicate-row probe no longer trips on D-UI-15.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-04-1504 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

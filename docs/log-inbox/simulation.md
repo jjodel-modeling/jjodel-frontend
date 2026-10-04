@@ -387,3 +387,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3083, 1600×1000: clock 22/22, microwave 8/8 reading 01:25 after 5 s, Play beside the clock with a failing control without keepPlay, scenes diff 0; crops light and dark in `~/.jjodel-lanes/P-2026-10-04-0150/`; the chat's visual check pending, RC-23)
 **Notes**: fire gains keepPlay so a tick leaves Play running; the panel is outside the node bench, so the probe's control stands for its test. Ticks use the board's held values (provisional R-SIM-120 read as presses from the board); a choice list drops ticks as the dialog does; a board edit switches clocks off. Variant A's first layout overflowed its tile, fixed before the commit. Report: docs/discovery/discovery_2026-10-04_sim_io_clock.md.
 **Prompt document name**: 2026-10-04 01:50
+
+## 2026-10-04 — merge: sim-io-clock into alfonso-frontend-jjtl (P-2026-10-04-1504)
+**Prompt**: `claude_2026-10-04_1504_prompt_merge_sim-io-clock.md`, a direct merge by `lane-run merge --direct`, no session: `sim-io-clock` at `452efc6f1` into `alfonso-frontend-jjtl`, merge base `43685438b`, 5 commits on the branch side.
+**Files touched**: merge `6704563a8`: 16 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_sim_io_clock.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_0150_prompt_sim_io_clock.md`, `frontend/src/components/editor-v2/sim/SimBoard.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBoard.test.ts`, and 8 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6704563a8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7342 tests in 297 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 by the chat on the lane crops (light): editor palette and period field, Variant A with tick count equal to the step count, microwave display 01:25 at secs 85 after plus x3, start and five ticks, plus and start disabled while Cooking. Alfonso accepted decision 1 of R-SIM-122 (a tick answers inputs from the board's switch and slider values), 2026-10-04. Tickets, low: the clock's On face pairs a pause icon with the word On (state and action mixed, use Pause/Start); binding captions truncated, more visible on clock tiles. Note: R-RAIL-44 under Superate de-bolded on the trunk (c25c758f4) so the duplicate-row probe no longer trips on D-UI-15.
+**Notes**: Rollback tag `pre-sim-io-clock` on `c25c758f4` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1504/result.json`.
+**Prompt document name**: 2026-10-04 15:04
