@@ -361,3 +361,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended, GO on `c53a5a8d1` at step 8 (the branch's visual probes on the merged tree, RC-23); Alfonso in the morning digest
 **Notes**: Merge-tree zero conflicts, tree `700949a33`, the one the commit records; no union resolution. Probes once each, control R-RAIL-46 absent, but `- **R-RAIL-44**` counts 2, not the prompt's 1: the trunk tip has 2 (the row marked superseded and its pointer under «Superate», both `18a861da7`) and the merged `decisions.md` is the trunk's byte for byte. `EditorV2.tsx` read whole: disjoint hunks, each import and declaration once.
 **Prompt document name**: 2026-10-04 12:13
+
+## 2026-10-04 — merge: sim-hide-events into alfonso-frontend-jjtl (P-2026-10-04-1456)
+**Prompt**: `claude_2026-10-04_1456_prompt_merge_sim-hide-events.md`, a direct merge by `lane-run merge --direct`, no session: `sim-hide-events` at `452b810ac` into `alfonso-frontend-jjtl`, merge base `5b4d6c887`, 6 commits on the branch side.
+**Files touched**: merge `b3fe55c5d`: 7 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_0935_prompt_sim_hide_events_during_run.md`, `docs/prompts/claude_2026-10-04_1213_prompt_sim-hide-events_take_trunk.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simHideEvents.test.ts`, `frontend/src/components/editor-v2/sim/simHideEvents.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b3fe55c5d` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7305 tests in 296 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: 3001 HTTP 200, serves simHideEvents.ts from the merged trunk; eight gates green in result.json; visual GO by Alfonso on the branch crops (P-2026-10-04-0935)
+**Notes**: Rollback tag `pre-sim-hide-events` on `5b4d6c887` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1456/result.json`.
+**Prompt document name**: 2026-10-04 14:56
