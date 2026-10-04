@@ -236,7 +236,8 @@ async function menuItems(page: Page) {
 
 async function cropMenu(page: Page, at: { x: number; y: number }, name: string) {
     const clip = await page.evaluate(([x, y]: number[]) => {
-        const m = document.querySelector('.context-menu')?.getBoundingClientRect();
+        // The open menu: the last `.context-menu` holding items (another, empty one may sit at the origin).
+        const m = [...document.querySelectorAll('.context-menu')].filter((e) => e.querySelector('.context-menu__item')).pop()?.getBoundingClientRect();
         const x0 = Math.min(x, m?.left ?? x) - 160, y0 = Math.min(y, m?.top ?? y) - 120;
         const x1 = Math.max(x, m?.right ?? x) + 60, y1 = Math.max(y, m?.bottom ?? y) + 60;
         return { x: Math.max(0, x0), y: Math.max(0, y0), width: Math.min(1600, x1) - Math.max(0, x0), height: Math.min(1000, y1) - Math.max(0, y0) };
