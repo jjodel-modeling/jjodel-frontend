@@ -5596,6 +5596,6 @@ Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homony
 
 ## Superate
 
-- **R-RAIL-44** (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
+- R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
