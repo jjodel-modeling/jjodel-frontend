@@ -452,13 +452,13 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 
 ## 2026-10-04 — feat: an implicit Clock on the I/O board, auto-start and idle ticks (P-2026-10-04-1625)
 **Prompt**: `claude_2026-10-04_1625_prompt_sim_clock_auto.md`, heavy tier, `~/jjodel-w-clockauto` on `sim-clock-auto`, lane auto: R-SIM-134 (an optional `autoStart`, on for new clocks, armed with the run), R-SIM-135 (the clocks owned by the panel, ticking with the board closed), R-SIM-136 (a tick that enables nothing is not a step); discovery committed first, tests first, probe on 3085, no merge.
-**Files touched**: `c106cb329`: `docs/discovery/discovery_2026-10-04_sim_clock_auto.md` (new). `3a71b2a21`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardClock.ts`, `sim/simBoardFace.ts`, `sim/simBoardDevices.tsx`, `sim/SimulationPanel.tsx`, `sim/SimBoardEditor.tsx`. `7aa9e4889`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardClock.test.ts`, `simBoardFace.test.ts`. This commit: `docs/decisions.md`, the report's addendum, the prompt's Status, this entry.
+**Files touched**: `c106cb329`: `docs/discovery/discovery_2026-10-04_sim_clock_auto.md` (new). `3a71b2a21`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardClock.ts`, `sim/simBoardFace.ts`, `sim/simBoardDevices.tsx`, `sim/SimulationPanel.tsx`, `sim/SimBoardEditor.tsx`. `7aa9e4889`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardClock.test.ts`, `simBoardFace.test.ts`. `836d36936` (fix after RC-23): `sim/SimBoard.scss`. Closure: `docs/decisions.md`, the report's addendum, the prompt's Status, this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Typecheck 14, the §17 set; vitest 7458/7458 in 301 files, the 9 known suites red at import; build exit 0; mutation bench 33/35, two survivors equivalent; the four demo scenes 50/50 base and after, 0 differing paths.
-**Out-of-scope changes**: no (seven code files and four test files over two commits, above five (rule 19), each named by the report's §6 inside the DOVE, which asked for that list)
+**Regressions**: no. Typecheck 14, the §17 set; vitest 7458/7458 in 301 files, the 9 known suites red at import; build exit 0; mutation bench 33/35, two survivors equivalent; the four demo scenes 50/50 base and after, 0 differing paths. After the fix: typecheck 14; vitest 7458/7458, the 9 known red at import; build exit 0.
+**Out-of-scope changes**: no (seven code files and four test files over two commits, above five (rule 19), each named by the report's §6 inside the DOVE, which asked for that list; `sim/SimBoard.scss`, outside §6 and inside the DOVE, for the fix the chat asked)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato (lane probe on 3085, 1600×1000, light: microwave 20/20, scenes diff 0; crops in `~/.jjodel-lanes/P-2026-10-04-1625/`; the chat's visual check pending, RC-23)
+**Smoke visivo**: passato — chat, unattended: RC-23 on the six crops, one fix (the Clock's keycap over its counter on Variant B, `836d36936`) accepted on the after crops, graphite and print; lane probe on 3085: microwave 20/20, scenes diff 0
 **Notes**: Owner: the panel, not a singleton. Manual clocks freed from the card too. Collapse does not unmount the panel: it switches the clocks off with reason `panel`. Idle test = the button's grey test, structural: a guard-refused tick is still a discard step (report R3). The panel does not import under the node bench: its wiring is measured by the probe only. Report §5 and addendum.
 **Prompt document name**: 2026-10-04 16:25
