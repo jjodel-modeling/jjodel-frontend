@@ -286,6 +286,29 @@ export class Parser {
         // Parse options
         const options = this.parseCreateOptions(elementType);
 
+        // M1 (R-JS-9): the container of an instance, `in <Parent>.<reference>`. The documented
+        // order puts it after the instance name, where the option loop stops; the order with the
+        // container before the name is read above. The reference is mandatory: the slot is never
+        // inferred. A qualified class name never takes the place of the container.
+        if (elementType === 'instance') {
+            if (!parent && this.matchKeyword('in')) {
+                parent = this.parseQualifiedNameToken();
+            }
+            if (parent && !parent.member) {
+                throw new Error(
+                    "Expected 'in <Parent>.<reference>' after the instance. " +
+                    "Syntax: create instance of <ClassName> \"<instanceName>\" in <Parent>.<reference>"
+                );
+            }
+            return {
+                command: 'create',
+                elementType,
+                name: typeof name === 'string' ? name : name.segments[name.segments.length - 1],
+                parent,
+                options
+            };
+        }
+
         return {
             command: 'create',
             elementType,

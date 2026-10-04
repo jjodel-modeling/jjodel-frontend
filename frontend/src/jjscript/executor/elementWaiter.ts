@@ -7,7 +7,7 @@ import { ExecutionContext } from '../types';
 import { resolveElementInMetamodel, resolveElement } from './resolvers';
 import { getProject, getTargetMetamodel } from './utils';
 import { ElementDependency } from './dependencies';
-import { findInstanceByName, resolveTargetModel } from './commands/instance';
+import { hasReadyInstance, resolveTargetModel } from './commands/instance';
 import { LModel, LProject } from '../../joiner';
 import { isRetryPass } from './runPasses';
 
@@ -67,9 +67,9 @@ export async function waitForDependencies(
 
     const targetMetamodel = getTargetMetamodel(context, project);
 
-    // In an M1 model editor, dependency targets are DObject instances living in
-    // `model.objects` — invisible to the M2-only resolvers below. Resolve them with the
-    // SAME lookup the M1 command handlers use (findInstanceByName), so the poll exits at
+    // In an M1 model editor, dependency targets are DObject instances of the model —
+    // invisible to the M2-only resolvers below. Resolve them with the SAME lookup the M1
+    // command handlers use (model-wide name, then the run's handle), so the poll exits at
     // once when the instance already exists instead of burning the full MAX_WAIT_MS.
     const m1Model = context.level === 'M1' ? resolveTargetModel(context, project) : null;
 
@@ -116,21 +116,21 @@ function findUnresolved(
     boundM2: boolean
 ): ElementDependency[] {
     return deps.filter(dep => {
-        // M1: resolve instance targets against `model.objects` with the same lookup the
-        // handler uses. Mirrors executeSetInstance's `args.target.segments.join('::') ||
-        // args.target.raw` derivation of the instance name.
+        // M1: resolve instance targets with the same lookup the handler uses. Mirrors
+        // executeSetInstance's `args.target.segments.join('::') || args.target.raw`
+        // derivation of the instance name.
         if (m1Model) {
             const instanceName = dep.name.segments.join('::') || dep.name.raw;
-            // `.length > 0`, never the bare value: `findInstanceByName` returns the LIST of
-            // matches (R-S1-5), and an EMPTY ARRAY IS TRUTHY. Written as a truthiness test
-            // this would report every M1 dependency as resolved on the first poll — the
-            // waiter would exit at once and the commands would run before the instance
-            // exists, with no compile error to show for it.
+            // `hasReadyInstance` (R-JS-11): an instance of the model, roots or contained, or the
+            // handle this run created once its metaclass is in the store. A bare handle hit is
+            // not enough: before its metaclass lands the handler answers NO_METACLASS. Inside,
+            // the name list is tested with `.length > 0`, never for truthiness: an EMPTY ARRAY
+            // IS TRUTHY, and that test would report every M1 dependency resolved on the first poll.
             //
             // Ambiguity is deliberately NOT a refusal here: this is a wait, not a write.
             // Two instances carrying the name means the thing being waited for has arrived;
             // WHICH of them was meant is the question the command handler refuses on.
-            if (findInstanceByName(m1Model, instanceName).length > 0) return false; // resolved
+            if (hasReadyInstance(m1Model, instanceName)) return false; // resolved
         }
         // Try scoped resolution first (matching what the command handlers do)
         if (targetMetamodel) {

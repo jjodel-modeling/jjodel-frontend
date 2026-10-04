@@ -70,9 +70,33 @@ export function getReservedHandles(): Set<string> {
     return new Set(handleToId.keys());
 }
 
+// slot (DValue) id -> ids of the children this run created into it (R-JS-9). The store lists a
+// child in its slot's `values` about 300 ms after `DObject.new` (discovery_2026-10-04_jjscript_m1_
+// containment.md §4.5), so the upper bound of a slot counts these too, or two creates 20 ms apart
+// would both fit a 0..1 slot. Same lifetime as the handles: one run.
+const pendingBySlot = new Map<string, Set<string>>();
+
+/** Record a child created into a slot in this run. */
+export function registerPendingChild(slotId: string, childId: string): void {
+    let ids = pendingBySlot.get(slotId);
+    if (!ids) pendingBySlot.set(slotId, ids = new Set());
+    ids.add(childId);
+}
+
+/** The children this run created into a slot, committed or not. */
+export function getPendingChildren(slotId: string): string[] {
+    return [...(pendingBySlot.get(slotId) ?? [])];
+}
+
+/** Drop a child from every slot it was recorded in (e.g. on delete). No-op if absent. */
+export function forgetPendingChild(childId: string): void {
+    for (const ids of pendingBySlot.values()) ids.delete(childId);
+}
+
 /** Clear the whole registry. Called at each run boundary and by tests. */
 export function clearHandles(): void {
     handleToId.clear();
+    pendingBySlot.clear();
 }
 
 // Reset at the start of every script run. Guarded for non-DOM (test/node) environments.
