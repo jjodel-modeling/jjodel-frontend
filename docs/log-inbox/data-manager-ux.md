@@ -31,3 +31,21 @@ order** (RC-12) and empties this file. The active log is not touched by this lan
 **Smoke visivo**: non eseguito — né Playwright né Puppeteer in `node_modules`, nessun dev server; checklist consegnata in chat.
 **Notes**: Il figlio inline entra nel path come passo attraversato (`passThrough`): il breadcrumb lo nomina, `backOf` lo salta; cliccato nel breadcrumb diventa una form (`standOn`). Banchi: `backOf` senza ciclo 1 rosso, `standOn` senza clear 2 rossi, `clickRow` ridotto a `selectOnly` 1 rosso (test a testo sorgente aggiornato). Causa (a): P3 del 2026-09-28 aveva scelto l'opposto.
 **Prompt document name**: 2026-10-01 (chat)
+
+## 2026-10-04 — fix(#173): durante un drill-in testata e Delete agiscono sull'elemento a schermo
+**Prompt**: chat di Juri: «fix issue #173» (label `auto`). La issue: durante un drill-in la testata della form nomina la riga selezionata e il suo Delete cancella la riga, non l'elemento a schermo; Data Manager e Configurator (stesso `InstanceDetail`).
+**Files touched**: `88b295f6d`: `abstract/tabs/InstanceDetail.tsx`, `abstract/tabs/__tests__/instanceManagerFl6.test.ts`, `jjform/nav.ts`, `jjform/index.ts`, `jjform/__tests__/nav.test.ts`. Docs: questa inbox.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-31 19:30 (PROMPT_FL6_manager_layout.md)
+**Causa**: (c)
+**Regressions**: no — `npx tsc --noEmit` output COMPLETO **14**, l'insieme della baseline; vitest `src/jjform` + `src/components/abstract/tabs` + `src/components/environment` 829/829; `npm run build` exit 0; probe Playwright 14/14.
+**Out-of-scope changes**: yes — la issue cita solo `InstanceDetail.tsx`; in più `jjform/nav.ts`, `jjform/index.ts`, `jjform/__tests__/nav.test.ts` (la guarigione del breadcrumb come puro testabile, schema di `a48ac55c0`) e `instanceManagerFl6.test.ts` (fissava alla lettera `openDelete(subjectId)`, il difetto). 5 file di codice, alla soglia.
+**Layer Impact Report**: not-required — nessun file di §3.1; solo view (`abstract/tabs/`) e un puro in `jjform/nav.ts`; nessun D-layer, sync o persistenza.
+**Smoke visivo**: passato — probe `_tmp_173_verify.ts` sul dev server di questo albero (127.0.0.1:3001) 14/14, screenshot del drill-in guardato; `npm run smoke` non eseguito (punta a :3000, spento).
+**Notes**: Testata (nome, permesso, Delete) su `formSubjectId`, come il corpo. `survivorOf` (puro): morto l'elemento a schermo, la strada si taglia al primo passo morto e fa Back da li' (salta i pass-through); applicato dallo store perche' i delete arrivano differiti. Banco 7/7. Probe rossa sul codice pre-fix («Delete Scenario_0?» sopra la form di Bruno). L'effetto di guarigione non gira in nessun test unitario (InstanceDetail non importa sotto node): lo copre la sola probe.
+**Prompt document name**: 2026-10-04 (chat)
+
+## 2026-10-04 — ticket: Data Manager, durante un drill-in la barra «Add» crea figli nella riga selezionata
+**Ticket**: la barra «Add <Child>» sotto la form legge ancora `subjectId` (`childSlots` e `onCreate(child.of, subjectId, child.key)` in `InstanceDetail.tsx`): sulla form di Bruno (Learner, senza figli) compare «pathway Phase [1/*] + Add Phase», e il click creerebbe una Phase dentro Scenario_0. Stessa famiglia di #173, fuori dal suo perimetro (la issue nomina testata e Delete). Visto nello screenshot della probe `_tmp_173_verify.ts`, non cliccato.
+**Priority**: medium
+**Found in**: C-2026-10-04-1135
