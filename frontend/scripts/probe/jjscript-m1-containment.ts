@@ -32,6 +32,13 @@
  *   E5  Q6, what the Run summary would read: `projectFigures` instances against the DObjects of the
  *       model, and `topLevelReason` of each class of the metamodel.
  *
+ * Phase 2 (JSM1_TAG=after…): the same experiments assert the fix. E1, the script as written today:
+ * no `not found` left after the retry passes. E2, the machine with `in`: 0 errors, every Transition
+ * in the `transitions` slot of its source State and not in `model.objects`, the same in the tree;
+ * E2b, a second reply renames a contained Transition (found model-wide in a new run). E4: the nested
+ * child found by name in a new run, and without the 500 ms wait in the same run. Crops of the tree
+ * and of the canvas of E1 and E2, at most 600 px wide.
+ *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> \
  *         frontend/scripts/probe/jjscript-m1-containment.ts --port 3096 --id P-2026-10-04-0946
  * Env:  JSM1_MODE           seed | fixture (default seed)
@@ -44,6 +51,7 @@
 import { chromium, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { seed, VIEWPORT_WIDTH, VIEWPORT_HEIGHT } from '../smoke/states.ts';
 
 const URL = (process.env.PROBE_URL || 'http://localhost:3096/').replace(/\/$/, '');
@@ -52,6 +60,7 @@ const LANE = `${process.env.HOME}/.jjodel-lanes/P-2026-10-04-0946`;
 const MODE = process.env.JSM1_MODE || 'seed';
 const FIXTURE = process.env.JSM1_FIXTURE || new globalThis.URL('./fixtures/jjscript-m1-esm.jjodel', import.meta.url).pathname;
 const TAG = process.env.JSM1_TAG || 'before';
+const AFTER = TAG.startsWith('after');
 const OUT = process.env.JSM1_OUT || `${LANE}/probe_${TAG}.json`;
 const CROPS = (process.env.JSM1_CROPS || `${LANE}/crops`).replace(/\/$/, '');
 
@@ -247,6 +256,40 @@ async function cropTree(page: Page, file: string): Promise<string | null> {
     return path;
 }
 
+/**
+ * Crop of what the chat checks, at most 600 px wide: the M1 instance rows of the tree (scrolled
+ * into view), or the nodes of the model's canvas, with the Jjodie window hidden while shooting.
+ */
+async function cropShown(page: Page, kind: 'tree' | 'canvas', modelId: string, file: string): Promise<{ path: string; size: string; rect: any } | null> {
+    const rect: any = await page.evaluate(`(async () => {
+      const j = document.querySelector('.jodie-root');
+      if (j) j.style.visibility = 'hidden';
+      const els = ${JSON.stringify(kind)} === 'tree'
+        ? [...document.querySelectorAll('.tree-row--feature')]
+        : [...document.querySelectorAll(${JSON.stringify(`[id="${modelId}"].dock-tabpane-active .react-flow__node`)})];
+      if (!els.length) return null;
+      if (${JSON.stringify(kind)} === 'tree') els[0].scrollIntoView({ block: 'start' });
+      await new Promise(r => setTimeout(r, 300));
+      const bs = els.map(e => e.getBoundingClientRect()).filter(b => b.width && b.height);
+      const pad = 16;
+      const x = Math.max(0, Math.min(...bs.map(b => b.left)) - pad), y = Math.max(0, Math.min(...bs.map(b => b.top)) - pad);
+      const r = Math.min(innerWidth, Math.max(...bs.map(b => b.right)) + pad), b = Math.min(innerHeight, Math.max(...bs.map(b => b.bottom)) + pad);
+      return { x, y, width: r - x, height: b - y };
+    })()`);
+    let out: { path: string; size: string; rect: any } | null = null;
+    if (rect && rect.width > 0 && rect.height > 0) {
+        mkdirSync(CROPS, { recursive: true });
+        const path = `${CROPS}/${file}`;
+        await page.screenshot({ path, clip: rect });
+        const dims = (): string => execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', path], { encoding: 'utf8' })
+            .split('\n').map((l) => l.trim().split(': ')[1]).filter(Boolean).join('x');
+        if (Number(dims().split('x')[0]) > 600) execFileSync('sips', ['--resampleWidth', '600', path], { stdio: 'ignore' });
+        out = { path, size: dims(), rect };
+    }
+    await page.evaluate(`(() => { const j = document.querySelector('.jodie-root'); if (j) j.style.visibility = ''; })()`);
+    return out;
+}
+
 async function openJodie(page: Page): Promise<void> {
     if ((await page.locator('.jodie-window').count()) === 0) {
         await page.locator('.jodie-minimized').click();
@@ -287,6 +330,7 @@ async function jodieRun(page: Page, n: number, body: string, scope: any): Promis
       const s = [...document.querySelectorAll('.run-summary')].pop();
       const t = (el, sel) => ((el.querySelector(sel) || {}).textContent || '').trim();
       return {
+        text: (s.querySelector('.run-summary__content') || s).innerText,
         title: t(s, '.exec-error-header'),
         stats: t(s, '.exec-error-stats'),
         figures: [...s.querySelectorAll('.run-summary__figures tr')].map(tr => tr.textContent.trim().replace(/\\s+/g, ' ')),
@@ -421,15 +465,26 @@ const scopeOf = (m: { id: string }) => ({ level: 'M1', metamodelId: pr.mm.id, me
     const st = await readModel(page, m.id);
     const tree = await readTree(page);
     const crop = await cropTree(page, `${TAG}_E1_tree.png`);
-    result.experiments.E1 = { model: m, run, state: st, tree, crop };
+    const crops = { tree: await cropShown(page, 'tree', m.id, `${TAG}_E1_tree_600.png`), canvas: await cropShown(page, 'canvas', m.id, `${TAG}_E1_canvas_600.png`) };
+    meas('E1 crops', crops);
+    result.experiments.E1 = { model: m, run, state: st, tree, crop, crops };
     meas('E1 run', { wallMs: run.wallMs, title: run.summary?.title, stats: run.summary?.stats, figures: run.summary?.figures });
     for (const e of run.summary?.errors ?? []) meas('E1 final error', `${e.line} | ${e.command} | ${e.message}`);
     for (const l of brief(st)) meas('E1 object', l);
     meas('E1 tree', tree.map((r: any) => `${r.name}${r.parent ? ' < ' + r.parent : ''}`));
     const transitions = st.dobjects.filter((o: any) => o.cls === 'Transition');
-    check('E1 (before) four Transitions exist', transitions.length === 4, transitions.map((o: any) => o.name));
-    check('E1 (before) every Transition at the model root (father DModel)', transitions.every((o: any) => o.owner.kind === 'DModel'), transitions.map((o: any) => `${o.name}:${o.owner.kind}`));
-    check('E1 (before) final errors on the 4 containment and 4 event lines', (run.summary?.errors ?? []).length === 8, (run.summary?.errors ?? []).map((e: any) => e.line));
+    meas('E1 summary text', run.summary?.text ?? '');
+    check(`E1 (${TAG}) four Transitions exist`, transitions.length === 4, transitions.map((o: any) => o.name));
+    if (!AFTER) {
+        check('E1 (before) every Transition at the model root (father DModel)', transitions.every((o: any) => o.owner.kind === 'DModel'), transitions.map((o: any) => `${o.name}:${o.owner.kind}`));
+        check('E1 (before) final errors on the 4 containment and 4 event lines', (run.summary?.errors ?? []).length === 8, (run.summary?.errors ?? []).map((e: any) => e.line));
+    } else {
+        const notFound = (run.summary?.errors ?? []).filter((e: any) => /not found/i.test(e.message));
+        check('E1 (after) no `not found` left after the retry passes', notFound.length === 0, notFound);
+        check('E1 (after) zero final errors', (run.summary?.errors ?? []).length === 0, run.summary?.errors ?? []);
+        const events = Object.fromEntries(transitions.map((o: any) => [o.name, o.slots.event]));
+        check('E1 (after) every event linked once', ['tStart', 'tOpen', 'tClose', 'tDone'].every((n) => (events[n] ?? []).length === 1), events);
+    }
     save();
 }
 
@@ -455,13 +510,38 @@ const scopeOf = (m: { id: string }) => ({ level: 'M1', metamodelId: pr.mm.id, me
     const st = await readModel(page, m.id);
     const tree = await readTree(page);
     const crop = await cropTree(page, `${TAG}_E2_tree.png`);
-    result.experiments.E2 = { model: m, parsed, run, state: st, tree, crop };
+    const crops = { tree: await cropShown(page, 'tree', m.id, `${TAG}_E2_tree_600.png`), canvas: await cropShown(page, 'canvas', m.id, `${TAG}_E2_canvas_600.png`) };
+    meas('E2 crops', crops);
+    result.experiments.E2 = { model: m, parsed, run, state: st, tree, crop, crops };
     meas('E2 run', { wallMs: run.wallMs, title: run.summary?.title, stats: run.summary?.stats, figures: run.summary?.figures });
     for (const e of run.summary?.errors ?? []) meas('E2 final error', `${e.line} | ${e.command} | ${e.message}`);
     for (const l of brief(st)) meas('E2 object', l);
     meas('E2 tree', tree.map((r: any) => `${r.name}${r.parent ? ' < ' + r.parent : ''}`));
     const transitions = st.dobjects.filter((o: any) => o.cls === 'Transition');
-    check('E2 (before) the `in <Parent>.<ref>` clause is dropped: every Transition at the root', transitions.length === 4 && transitions.every((o: any) => o.owner.kind === 'DModel'), transitions.map((o: any) => `${o.name}:${o.owner.kind}`));
+    meas('E2 summary text', run.summary?.text ?? '');
+    const SOURCE: Record<string, string> = { tStart: 'idle', tOpen: 'cooking', tDone: 'cooking', tClose: 'doorOpen' };
+    if (!AFTER) {
+        check('E2 (before) the `in <Parent>.<ref>` clause is dropped: every Transition at the root', transitions.length === 4 && transitions.every((o: any) => o.owner.kind === 'DModel'), transitions.map((o: any) => `${o.name}:${o.owner.kind}`));
+    } else {
+        check('E2 (after) zero final errors', (run.summary?.errors ?? []).length === 0, run.summary?.errors ?? []);
+        check('E2 (after) every Transition in the transitions slot of its source State', transitions.length === 4
+            && transitions.every((o: any) => o.owner.kind === 'DValue' && o.owner.owner === SOURCE[o.name] && o.owner.slot === 'transitions'),
+            transitions.map((o: any) => `${o.name}@${o.owner.owner}.${o.owner.slot}`));
+        check('E2 (after) no Transition in model.objects', transitions.every((o: any) => !o.inObjects), transitions.map((o: any) => `${o.name}:${o.inObjects}`));
+        check('E2 (after) the tree shows every Transition under its source State', Object.entries(SOURCE).every(([t, s]) => tree.some((r: any) => r.name === t && r.parent === s))
+            && !tree.some((r: any) => SOURCE[r.name] && r.parent === null), tree.map((r: any) => `${r.name}${r.parent ? ' < ' + r.parent : ''}`));
+        const linked = Object.fromEntries(transitions.map((o: any) => [o.name, [o.slots.nextState, o.slots.event]]));
+        check('E2 (after) nextState and event linked once each', transitions.every((o: any) => o.slots.nextState.length === 1 && o.slots.event.length === 1), linked);
+    }
+    // E2b: a later reply (a new Run, handles cleared) addresses a contained Transition by name.
+    // Two lines: Jjodie offers «Run as JjScript» on multi-line blocks only (MarkdownRenderer.tsx:93).
+    const run2 = await jodieRun(page, 21, '# a later reply\nrename instance tClose to tCloseDoor', scopeOf(m));
+    await page.waitForTimeout(1000);
+    const st2 = await readModel(page, m.id);
+    const renamed = st2.dobjects.find((o: any) => o.name === 'tCloseDoor');
+    meas('E2b later reply', { errors: run2.summary?.errors, renamed: renamed && { owner: renamed.owner, inObjects: renamed.inObjects } });
+    if (AFTER) check('E2b (after) a later reply renames a contained Transition by name', (run2.summary?.errors ?? []).length === 0 && !!renamed && renamed.owner.owner === 'doorOpen', { errors: run2.summary?.errors, renamed });
+    result.experiments.E2.later = { run: run2, renamed };
     save();
 }
 
@@ -602,6 +682,10 @@ const scopeOf = (m: { id: string }) => ({ level: 'M1', metamodelId: pr.mm.id, me
     // Control: a root instance by name in the same new run, same command shape.
     const control = await exec(page, 'set tRoot.nextState = p2', scope);
     meas('E4 new run, set on a root instance (control)', { rootMade, control });
+    if (AFTER) {
+        check('E4 (after) the nested child is found by name in a new run', newRun.success, newRun);
+        check('E4 (after) the same-run set on the nested child no longer waits the 500 ms cap', sameRun.success && sameRun.ms < 450, sameRun);
+    }
     check('E4 control: a root instance resolves by name in a new run', rootMade.success && control.success, control);
     result.experiments.E4.lookups = { sameRun, newRun, rootMade, control };
     const tree = await readTree(page);
@@ -697,6 +781,45 @@ const scopeOf = (m: { id: string }) => ({ level: 'M1', metamodelId: pr.mm.id, me
     })()`);
     meas('E6 first ms after create returns', tl);
     result.experiments.E6 = { model: m, timeline: tl };
+    save();
+}
+
+// ── E7: two `set <s>.transitions += <x>` lines in a row (the legacy attach) ─────────────────────────
+// The M1 link reads the slot's committed values and writes them back plus the new id
+// (`instance.ts` link branch): when does a link land in the store, and does a second link 20 ms
+// later keep the first? Measured on the Run path; the `create … in` path appends instead.
+{
+    const m = await newModel(page);
+    await openModel(page, m.id);
+    const scope = scopeOf(m);
+    await newRunBoundary(page);
+    for (const line of ['create instance of State "s"', 'create instance of Transition "a"', 'create instance of Transition "b"', 'create instance of Transition "c"']) await exec(page, line, scope);
+    await page.waitForTimeout(800);
+    const listed: any = await page.evaluate(`(async () => {
+      const svc = await import('/src/jjscript/services/JjScriptService.ts');
+      const reg = await import('/src/jjscript/executor/handleRegistry.ts');
+      const j = await import('/src/joiner/index.ts');
+      const store = (window.store || window.windoww.store);
+      await svc.JjScriptService.execute('set s.transitions += a', ${JSON.stringify(scope)});
+      const slot = j.LPointerTargetable.fromPointer(reg.getHandleId('s')).$transitions;
+      const a = reg.getHandleId('a');
+      const t0 = performance.now();
+      while (performance.now() - t0 < 2000) {
+        const v = store.getState().idlookup[slot.id];
+        if (v && (v.values || []).includes(a)) return { listedMs: Math.round(performance.now() - t0) };
+        await new Promise(r => setTimeout(r, 5));
+      }
+      return { listedMs: null };
+    })()`);
+    meas('E7 first link listed in the store after', listed);
+    await page.waitForTimeout(600);
+    await openJodie(page);
+    const run = await jodieRun(page, 7, 'set s.transitions += b\nset s.transitions += c', scope);
+    await page.waitForTimeout(1500);
+    const st = await readModel(page, m.id);
+    const sObj = st.dobjects.find((o: any) => o.name === 's');
+    meas('E7 two links in a row through Run', { errors: run.summary?.errors, sTransitions: sObj?.slots.transitions, objects: brief(st) });
+    result.experiments.E7 = { model: m, listed, run, state: st };
     save();
 }
 
