@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-0946
 Chat: C-2026-10-04-0946
 Lane: full (grammar change, executor and parser, more than three files)
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane jjscript-m1 · 602f64413, 9916cefce, 9163f0b28 · non fuso: hard-stop, probe after 3096 all PASS (microwave with `in`: 0 errors, every Transition in its State, not in model.objects), mutation bench 28/28, crops in ~/.jjodel-lanes/P-2026-10-04-0946/crops/, verifica visiva alla chat
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

@@ -394,3 +394,41 @@ will show it.
    lane as the probable cause? Recommended: yes, no core change here (Rule 5).
 6. `jjscriptGenerationPrompt.ts` has no importer: align it or mark it `TODO: cleanup`? Recommended: align the M1
    section, fix the false «Mixed» line, keep the file.
+
+## Addendum 2026-10-04 — Phase 2
+
+The GO of the chat adopted D1-D4, Q3 (upper bound with this run's pending children) and Q5, as R-JS-8..11 (provisional), and
+kept D5 out of the lane as tickets. Code: `602f64413` (R-JS-8), `9916cefce` (R-JS-9..11), `9163f0b28` (prompts),
+probe `ffb23e6dd`.
+
+**Probe, `JSM1_TAG=after`, fixture mode, port 3096 [measured on `ffb23e6dd`]. All checks PASS, exit 0.**
+- E1, the script as written today: `Script executed`, 24 commands, «8 resolved on retry (lines 3, 5, 6, 8, 12, 15, 18, 21)», no
+  `not found` left, every event linked once. The containment lines now succeed on retry and leave the §4.3 hybrid: the
+  Transitions keep a place in `model.objects` and the canvas draws them as nodes as well as chips (`after_E1_canvas_600.png`).
+- E2, the microwave with `in`: `Script executed`, 20 commands, «7 resolved on retry (lines 7, 9, 10, 13, 14, 15, 16)», 0 errors;
+  `tStart@idle.transitions`, `tOpen@cooking.transitions`, `tDone@cooking.transitions`, `tClose@doorOpen.transitions`, none in
+  `model.objects`; the tree nests each under its State. The canvas shows them as chips of their State node, with no Transition
+  node (`after_E2_canvas_600.png`, `after_E2_tree_600.png`). E2b: a later reply renames `tClose` by name, 0 errors.
+- E4: the contained child found by name in a new run (was `INSTANCE_NOT_FOUND`); a same-run `set` on it in 1 ms (was 522-549 ms).
+- E6 unchanged: a fresh instance's metaclass and slots land 267-362 ms after its create; the handler called directly at return
+  still answers `NO_METACLASS` (it is the wait that covers it, R-JS-11).
+
+**New finding, E7 [measured on `ffb23e6dd` and on the base `8f84740c6`, identical].** A `set <s>.transitions += <x>` link
+reaches the store 84-89 ms after the command returns, and the M1 link reads the slot's committed values and writes them back
+plus one id (`instance.ts`, link branch, `refProxy.values = [...meaningful, targetInstance.id]`). Two such lines 20 ms apart
+through Run keep the second only: `s.transitions = [a, c]`, `b` with `s.transitions` as father but absent from it. Pre-existing;
+R-JS-8 makes legacy scripts reach it more often (E1: `tOpen` lost from `cooking.transitions`, line 5 then line 6 on pass 2).
+`create … in` is not affected: its child is appended by the constructor. Ticket in `docs/log-inbox/jjscript.md`. The base was
+measured in a temporary detached worktree of `8f84740c6` (`/tmp/jjsm1-base`, port 3097) with a temporary `node_modules`
+symlink, both removed after.
+
+**Mutation bench, 28/28 killed** (`runPasses.test.ts`, `parser.test.ts`, `m1Containment.test.ts`, `elementWaiter.test.ts`,
+`handleRegistry.test.ts`): the M1 set read or emptied, both parser branches, the class path override, father and father type,
+`args.parent` ignored, each of the six checks, the pending count (dropped, doubled, off by one, not recorded, kept after delete,
+kept across runs), the lookup roots-only, non-objects counted, roots-only auto-name, bare handle hit as ready, registry ignored,
+the wait never resolving, the dependency not required. Not run: removing the lookup's dedupe, which loops forever on the cycle
+test by construction.
+
+**Gates.** Typecheck 14, the §17 set. Full vitest 7330 passed, 0 failed, the 9 files of §17 red at import; jjscript 541 in 21 of
+22 files (500 before). Build exit 0 (14 min 35 s under load, chunk-size and Sass deprecation warnings only). `typecheck:scripts`
+exit 0, `check:scripts` PASS.
