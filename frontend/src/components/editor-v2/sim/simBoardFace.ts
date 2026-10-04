@@ -21,6 +21,10 @@
  *   number of four digits, `SEVEN_MIN..SEVEN_MAX`.
  * - A binding that does not resolve flags its device, which is off or dark with
  *   the reason in its title (R-SIM-115): a compile defect is a flag, never `Err`.
+ * - A Clock (R-SIM-122) presses its event on its own, every period, whatever that
+ *   event enables: its switch follows the run, not the event's button. It shows its
+ *   period, the ticks since it was switched on, the ticks dropped while a press
+ *   waited on the user, and why it went off (simBoardClock.ts `ClockState`).
  *
  * `heldInputs` and `planPress` are the board's press: the inputs a press asks are
  * answered by the values the board holds (`heldAnswer`, R-SIM-120); all answered,
@@ -32,13 +36,15 @@
  * (sim/__tests__/simBoardFace.test.ts).
  */
 
-import { isInputKind } from '../../../model/simulation/boardCodec';
+import { CLOCK_PERIOD_DEFAULT, isInputKind } from '../../../model/simulation/boardCodec';
 import type { BoardDevice, DeviceKind } from '../../../model/simulation/boardCodec';
 import { compileOutput, evaluateOutput, pulseLit } from '../../../model/simulation/boardOutputs';
 import type { OutputReading } from '../../../model/simulation/boardOutputs';
 import type { InputRead, NetRunStatus, SimState, SimValue } from '../../../model/simulation/netTypes';
-import { DEVICE_LABELS, bindingCaption, heldAnswer, keypadEnterValue, keypadKeyReason, resolveDevice } from './simBoard';
+import { DEVICE_LABELS, bindingCaption, clockPeriodText, heldAnswer, keypadEnterValue, keypadKeyReason, resolveDevice } from './simBoard';
 import type { BoardContext } from './simBoard';
+import { clockOffText } from './simBoardClock';
+import type { ClockState } from './simBoardClock';
 import { inputAsks, inputOffTitle, inputPressTitle, markingChips } from './simBridge';
 import type { InputValue } from './simBridge';
 import { stateValueOf } from './simCanvasState';
@@ -80,6 +86,8 @@ export interface BoardScene {
     readonly held: BoardHeld;
     /** The store's lookup, for the names of the marked states (`markingChips`). */
     readonly lookup: Record<string, any>;
+    /** The board's clocks by device id (R-SIM-122): view state of the card, absent while none was switched on. */
+    readonly clocks?: ReadonlyMap<string, ClockState>;
 }
 
 /** One key of a keypad: `0`..`9`, `C` (clear) and `↵` (Enter) in value mode. */
@@ -122,6 +130,11 @@ export interface DeviceFace {
     readonly mode?: 'value' | 'events';
     readonly buffer?: string;
     readonly keys?: readonly KeyFace[];
+    /** Clock (R-SIM-122): ticking now; its period in milliseconds; the presses since it was switched on, and the ticks dropped. */
+    readonly ticking?: boolean;
+    readonly period?: number;
+    readonly ticks?: number;
+    readonly dropped?: number;
 }
 
 const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -184,6 +197,7 @@ export function deviceFace(device: BoardDevice, scene: BoardScene): DeviceFace {
         return {
             ...base, flag: reason, title: `${head}\nOff. ${reason}`, on: false,
             ...(device.kind === 'keypad' ? { keys: flaggedKeys(device, reason), mode: device.binding?.kind === 'keypadEvents' ? 'events' as const : 'value' as const } : {}),
+            ...(device.kind === 'clock' ? { ticking: false, period: device.period ?? CLOCK_PERIOD_DEFAULT, ticks: 0, dropped: 0 } : {}),
         };
     }
     return isInputKind(device.kind) ? inputFace(device, scene, ctx, base, head) : outputFace(device, scene, ctx, base, head);
@@ -196,6 +210,7 @@ function inputFace(device: BoardDevice, scene: BoardScene, ctx: BoardContext, ba
     const ok = { ...base, flag: null };
     switch (b.kind) {
         case 'event': {
+            if (device.kind === 'clock') return clockFace(device, b.event, scene, ctx, base, head);
             const p = pressOf(b.event, `Fire ${eventLabel(ctx, b.event)}`, scene);
             return { ...ok, on: p.on, title: p.title, fires: b.event };
         }
@@ -247,6 +262,34 @@ function inputFace(device: BoardDevice, scene: BoardScene, ctx: BoardContext, ba
         default:
             return { ...ok, on: false, title: head };
     }
+}
+
+const countText = (ticks: number, dropped: number): string =>
+    `${ticks} ${ticks === 1 ? 'tick' : 'ticks'}${dropped > 0 ? `, ${dropped} dropped` : ''}`;
+
+/**
+ * A Clock (R-SIM-122): its switch is on while the clock ticks, or while the run is Running and it could; the event's
+ * own button does not matter, a tick it does not accept is discarded (decision 3). The title says what it presses and
+ * how often, the count since it was switched on, and why it is off.
+ */
+function clockFace(device: BoardDevice, event: string, scene: BoardScene, ctx: BoardContext, base: FaceBase, head: string): DeviceFace {
+    const period = device.period ?? CLOCK_PERIOD_DEFAULT;
+    const presses = `press ${eventLabel(ctx, event)} every ${clockPeriodText(period)}`;
+    const s = scene.clocks?.get(device.id);
+    const ticking = s?.on === true;
+    const ticks = s?.ticks ?? 0;
+    const dropped = s?.dropped ?? 0;
+    const status = scene.inputs.status;
+    const canStart = status === 'Running';
+    const face = { ...base, flag: null, fires: event, period, ticking, ticks, dropped, on: ticking || canStart };
+    if (ticking) {
+        const note = dropped > 0 ? ' A dropped tick came while a press waited on the input dialog or a choice.' : '';
+        return { ...face, title: `${head}\nOn: ${presses.replace(/^press/, 'presses')}. ${countText(ticks, dropped)} since on.${note}` };
+    }
+    const hint = canStart ? ` Switch it on to ${presses}.` : '';
+    if (s?.off) return { ...face, title: `${head}\nOff: ${clockOffText(s.off)}. ${countText(ticks, dropped)}.${hint}` };
+    const why = canStart ? `Switch it on to ${presses}.` : status === 'Not started' || status === null ? 'Reset starts the run.' : `The run is ${status}.`;
+    return { ...face, title: `${head}\nOff. ${why}` };
 }
 
 function readExpr(text: string, run: SimRun, ctx: BoardContext, state: SimState): OutputReading {

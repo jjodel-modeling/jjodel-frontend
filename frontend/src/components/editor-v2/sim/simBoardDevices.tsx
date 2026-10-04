@@ -39,19 +39,30 @@
  * commit, Reset and Stop bump, and is re-rendered by the panel after every press;
  * the skin on the prefs channel. It writes nothing but the view and the viewer
  * preferences; the board record only through the editor's Apply.
+ *
+ * The card owns the board's clocks (R-SIM-122, simBoardClock.ts): switched on and
+ * off on their faces, view state never written anywhere. A tick is the Button's
+ * press of the clock's event, held values included, through the panel's
+ * `clockFire`, which leaves Play running; while the panel's input dialog or choice
+ * list waits (`waiting`) a tick is dropped. Every change of the run makes the card
+ * check its clocks, so Reset, Stop, the interruption and the end of the run switch
+ * them off at once; an edit of the board switches them all off; the card's unmount
+ * clears their timers.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { store } from '../../../joiner';
-import { BOARD_ROWS, decodeBoard, isInputKind } from '../../../model/simulation/boardCodec';
+import { BOARD_ROWS, CLOCK_PERIOD_DEFAULT, decodeBoard, isInputKind } from '../../../model/simulation/boardCodec';
 import type { BoardDevice as BoardDeviceRecord } from '../../../model/simulation/boardCodec';
 import type { InputRead } from '../../../model/simulation/netTypes';
 import { getSimRun, getSimView, simSetView, useSimVersion } from './simRunState';
 import { getSimViewerPrefs, setSimViewerPrefs, useSimViewerPrefsVersion } from './simViewerPrefs';
 import type { SimBoardSkin } from './simViewerPrefs';
-import { boardContextOf, boardContextOfRun, keypadEnterValue, keypadPress } from './simBoard';
+import { boardContextOf, boardContextOfRun, clockPeriodText, keypadEnterValue, keypadPress } from './simBoard';
 import type { BoardContext } from './simBoard';
+import { createClocks } from './simBoardClock';
+import type { Clocks } from './simBoardClock';
 import { boardFaces, heldInputs, NO_HELD, planPress } from './simBoardFace';
 import type { BoardHeld, BoardInputsView, DeviceFace, KeyFace } from './simBoardFace';
 import type { InputValue } from './simBridge';
@@ -68,6 +79,8 @@ export interface DeviceActions {
     slide: (id: string, value: number) => void;
     /** Value keypad: a digit, `C` or `↵`. */
     key: (id: string, key: string) => void;
+    /** Clock: switched on, or off (R-SIM-122); no step. */
+    clock?: (id: string) => void;
 }
 
 export interface BoardDeviceProps {
@@ -169,6 +182,39 @@ function KeypadFace({ face, actions }: BoardDeviceProps): ReactElement {
     );
 }
 
+/**
+ * The Clock (R-SIM-122): an on/off switch, its period and the ticks since it was switched on; the dropped ticks and
+ * why it is off are in its title. Variant A a flat toggle in the panel's vocabulary; Variant B a power key with its
+ * lamp, which blinks at every tick, and a counter behind glass.
+ */
+function ClockFace({ face, skin, actions }: BoardDeviceProps): ReactElement {
+    const ticking = face.ticking === true;
+    const flagged = face.flag !== null;
+    const period = clockPeriodText(face.period ?? CLOCK_PERIOD_DEFAULT);
+    return (
+        <span className={`sim-board-device__clock${ticking ? ' sim-board-device__clock--on' : ''}`}>
+            <button
+                type="button"
+                role="switch"
+                aria-checked={ticking}
+                aria-label={face.name}
+                className={skin === 'board' ? 'sim-board-device__clock-toggle' : 'sim-board-device__clock-power'}
+                title={face.title}
+                disabled={!face.on}
+                onClick={() => actions.clock?.(face.id)}
+            >
+                {skin === 'board'
+                    ? <><i className={`bi ${flagged ? 'bi-exclamation-triangle sim-board-device__flag' : ticking ? 'bi-pause-fill' : 'bi-stopwatch'}`} /><span>{ticking ? 'On' : 'Off'}</span></>
+                    : <span key={face.ticks ?? 0} className="sim-board-device__clock-lamp" />}
+            </button>
+            <span className="sim-board-device__clock-read">
+                <span className="sim-board-device__clock-ticks" aria-label="Ticks since on">{String(face.ticks ?? 0)}</span>
+                <span className="sim-board-device__clock-period">{period}</span>
+            </span>
+        </span>
+    );
+}
+
 function LampFace({ face }: BoardDeviceProps): ReactElement {
     const lamp = `sim-board-device__lamp${face.kind === 'pulse' ? ' sim-board-device__lamp--pulse' : ''}`
         + `${face.lit ? ' sim-board-device__lamp--lit' : ''}${face.err ? ' sim-board-device__lamp--err' : ''}`;
@@ -225,7 +271,7 @@ function GaugeFace({ face, skin }: BoardDeviceProps): ReactElement {
 }
 
 const FACES: Readonly<Record<DeviceFace['kind'], (p: BoardDeviceProps) => ReactElement>> = {
-    button: ButtonFace, switch: SwitchFace, slider: SliderFace, keypad: KeypadFace,
+    button: ButtonFace, switch: SwitchFace, slider: SliderFace, keypad: KeypadFace, clock: ClockFace,
     led: LampFace, pulse: LampFace, seven: SevenFace, text: TextFace, gauge: GaugeFace,
 };
 
@@ -276,6 +322,10 @@ export interface SimBoardProps {
     contextKey: string;
     /** The panel's press (SimulationPanel.tsx `fire`). */
     fire: (event: string | null, selector?: string, values?: readonly InputValue[]) => void;
+    /** A Clock's tick (R-SIM-122): the panel's press that leaves Play running; without it a tick is a hand press. */
+    clockFire?: (event: string, values?: readonly InputValue[]) => void;
+    /** A press waits on the user, the input dialog or a choice list: a Clock's tick is dropped (R-SIM-122). */
+    waiting?: boolean;
     /** The panel's input dialog for the inputs the held values leave, the given carried (R-SIM-120). */
     ask: (event: string, asks: readonly InputRead[], given: readonly InputValue[]) => void;
     /** Closes the card; the panel returns the view to live. */
@@ -293,7 +343,7 @@ const withValue = (h: BoardHeld, id: string, value: InputValue['value']): BoardH
 const withBuffer = (h: BoardHeld, id: string, buffer: string): BoardHeld => ({ values: h.values, buffers: new Map(h.buffers).set(id, buffer) });
 
 export function SimBoard(props: SimBoardProps): ReactElement {
-    const { modelId, modelName, configModelId, boardRaw, inputs, statusLine, contextKey, fire, ask, onClose } = props;
+    const { modelId, modelName, configModelId, boardRaw, inputs, statusLine, contextKey, fire, clockFire, ask, waiting, onClose } = props;
     // The view, a commit, Reset and Stop bump the 'mark' version; the skin and «Show bindings» their own channel.
     useSimVersion();
     useSimViewerPrefsVersion();
@@ -321,15 +371,37 @@ export function SimBoard(props: SimBoardProps): ReactElement {
     // A keypad's buffer goes with the run it was typed for: Reset and Stop clear it (R-SIM-121); positions stay.
     useEffect(() => { setHeld(h => (h.buffers.size === 0 ? h : { values: h.values, buffers: new Map() })); }, [runSnapshot]);
 
-    const faces = boardFaces(decoded.devices, { run, n, ctx, inputs, held, lookup });
+    // R-SIM-122: the clocks of this card. A tick reads the run from the store and this render's press through `latest`,
+    // so the held values and the dialog's state it sees are the current ones; the card's unmount clears every timer.
+    const [, setClockVersion] = useState(0);
+    const clocksRef = useRef<Clocks | null>(null);
+    const latest = useRef<{ waiting: boolean; tick: (event: string) => void }>({ waiting: false, tick: () => undefined });
+    useEffect(() => {
+        const clocks = createClocks({
+            run: () => getSimRun(modelId),
+            waiting: () => latest.current.waiting,
+            press: event => latest.current.tick(event),
+            changed: () => setClockVersion(v => v + 1),
+        });
+        clocksRef.current = clocks;
+        return () => { clocks.dispose(); clocksRef.current = null; };
+    }, [modelId]);
+    // A new run (Reset), none (Stop, the interruption) or an ended one, whoever caused it, switches the clocks off now.
+    useEffect(() => { clocksRef.current?.check(); }, [run]);
+    // An edit of the board can remove, rebind or re-time a clock: every clock goes off.
+    useEffect(() => { clocksRef.current?.stopAll('board'); }, [boardRaw]);
+
+    const faces = boardFaces(decoded.devices, { run, n, ctx, inputs, held, lookup, clocks: clocksRef.current?.states() });
     const faceOf = new Map<string, DeviceFace>(faces.map(f => [f.id, f]));
 
-    /** A press of `event`, the values the board holds answering what it asks, `first` before them (R-SIM-120). */
-    const send = (event: string, first: readonly InputValue[] = []): void => {
+    /** A press of `event`, the values the board holds answering what it asks, `first` before them (R-SIM-120); `press` sends it. */
+    const send = (event: string, first: readonly InputValue[] = [], press = (e: string, values?: readonly InputValue[]) => fire(e, undefined, values)): void => {
         const plan = planPress(getSimRun(modelId), event, [...first, ...heldInputs(decoded.devices, ctx, held)]);
-        if (plan.kind === 'fire') fire(plan.event, undefined, plan.values);
+        if (plan.kind === 'fire') press(plan.event, plan.values);
         else ask(plan.event, plan.asks, plan.given);
     };
+    // A tick is the Button's press of the clock's event, sent by the panel's clock press so that Play goes on.
+    latest.current = { waiting: waiting ?? false, tick: event => (clockFire ? send(event, [], clockFire) : send(event)) };
     const actions: DeviceActions = {
         press: (id, event) => {
             const d = decoded.devices.find(x => x.id === id);
@@ -351,6 +423,13 @@ export function SimBoard(props: SimBoardProps): ReactElement {
             if (!entered || 'refused' in entered) return;
             setHeld(h => withBuffer(h, id, ''));
             send(b.enter, [{ element: b.element, attr: b.attr, value: entered.value }]);
+        },
+        clock: id => {
+            const clocks = clocksRef.current;
+            const d = decoded.devices.find(x => x.id === id);
+            if (!clocks || d?.kind !== 'clock' || d.binding?.kind !== 'event') return;
+            if (clocks.state(id)?.on) clocks.stop(id);
+            else clocks.start(id, d.binding.event, d.period ?? CLOCK_PERIOD_DEFAULT);
         },
     };
 

@@ -409,6 +409,90 @@ $sim-board-lcd-ink: #1f2a12;
         }
     }
 
+    // Clock (R-SIM-122): the on/off toggle in the Button's vocabulary, full width, the accent while it ticks; under it
+    // the ticks since on and the period, one row.
+    &__clock {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        width: 100%;
+    }
+
+    &__clock-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            line-height: 1;
+            color: inherit;
+        }
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    // Written out: a modifier of the face that colours the toggle inside it.
+    .sim-board-device__clock--on .sim-board-device__clock-toggle,
+    .sim-board-device__clock--on .sim-board-device__clock-toggle:hover:not(:disabled) {
+        border-color: var(--color-accent);
+        background: var(--color-accent);
+        color: var(--color-text-inverse);
+    }
+
+    &__clock-read {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 4px;
+        min-width: 0;
+        line-height: 1.1;
+    }
+
+    &__clock-ticks {
+        padding: 0 4px;
+        border-radius: 3px;
+        background: var(--color-bg-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    &__clock-period {
+        font-family: $sim-board-mono;
+        font-size: 10px;
+        color: var(--color-text-tertiary);
+    }
+
     // LED and Pulse LED.
     &__lamp-row {
         display: inline-flex;
@@ -685,6 +769,85 @@ $sim-board-lcd-ink: #1f2a12;
         bottom: 15px;
     }
 
+    // The Clock: a square power key with its lamp, which blinks at every tick (the lamp is remounted per tick), and the
+    // count behind glass, side by side.
+    &__clock {
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    &__clock-read {
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: flex-start;
+        gap: 0;
+    }
+
+    &__clock-power {
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 2px solid #0f172a;
+        border-radius: 5px;
+        background: linear-gradient(180deg, #475569, #334155);
+        box-shadow: 0 2px 0 #0f172a;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(180deg, #64748b, #475569);
+        }
+
+        &:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 1px 0 #0f172a;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid $sim-board-ink;
+            outline-offset: 2px;
+        }
+    }
+
+    &__clock-lamp {
+        display: block;
+        width: 8px;
+        height: 8px;
+        margin: auto;
+        border-radius: 50%;
+        background: #1e293b;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+    }
+
+    .sim-board-device__clock--on .sim-board-device__clock-lamp {
+        background: $sim-board-lit;
+        box-shadow: 0 0 6px $sim-board-lit;
+        animation: sim-board-clock-blink 300ms ease-out;
+
+        @media (prefers-reduced-motion: reduce) {
+            animation: none;
+        }
+    }
+
+    &__clock-ticks {
+        min-width: 40px;
+        border: 1px solid #0f172a;
+        background: $sim-board-glass;
+        text-align: right;
+        color: $sim-board-digit;
+        text-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+    }
+
+    &__clock-period {
+        color: $sim-board-ink-dim;
+    }
+
     &__lamp {
         width: 18px;
         height: 18px;
@@ -817,4 +980,12 @@ $sim-board-lcd-ink: #1f2a12;
 .sim-board__front--bindings .sim-board-device {
     border: 1px dashed rgba(148, 163, 184, 0.7);
     border-radius: 6px;
+}
+
+// The Clock's lamp at a tick (R-SIM-122): brighter, then its steady green.
+@keyframes sim-board-clock-blink {
+    from {
+        background: #bbf7d0;
+        box-shadow: 0 0 12px $sim-board-lit;
+    }
 }
