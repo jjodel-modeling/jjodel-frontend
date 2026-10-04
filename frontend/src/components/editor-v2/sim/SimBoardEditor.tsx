@@ -9,6 +9,10 @@
  * nuXmv. A tile moves by dragging it, or with the arrow keys, onto any cell; onto
  * another device the two swap (`moveDevice`).
  *
+ * A Clock (R-SIM-122) takes the Button's event picker and a period field in
+ * milliseconds: the field writes the draft only with a whole number in range, and
+ * says so while the text typed is not one.
+ *
  * A draft over the model's `ioBoard` key (boardCodec.ts): Apply writes it in one
  * `state` assignment, one undo step. The key is not a `sim*` key, so the write
  * never moves `runSignature`: a run of the model goes on (report §2). Cancel, the
@@ -25,10 +29,13 @@
 import { DragEvent, KeyboardEvent, ReactElement, SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LPointerTargetable, store } from '../../../joiner';
-import { BINDING_KINDS, BOARD_COLUMNS, BOARD_ROWS, DEVICE_KINDS, IO_BOARD_KEY, KEYPAD_KEYS, decodeBoard, encodeBoard, isInputKind } from '../../../model/simulation/boardCodec';
+import {
+    BINDING_KINDS, BOARD_COLUMNS, BOARD_ROWS, CLOCK_PERIOD_DEFAULT, CLOCK_PERIOD_MAX, CLOCK_PERIOD_MIN, DEVICE_KINDS, IO_BOARD_KEY, KEYPAD_KEYS, decodeBoard,
+    encodeBoard, isClockPeriod, isInputKind,
+} from '../../../model/simulation/boardCodec';
 import type { BindingKind, BoardBinding, BoardDevice, DeviceKind } from '../../../model/simulation/boardCodec';
 import {
-    DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, moveDevice, nuxmvRows, removeDevice, resolveDevice, setBinding, setLabel,
+    DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, clockPeriodText, moveDevice, nuxmvRows, removeDevice, resolveDevice, setBinding, setLabel, setPeriod,
 } from './simBoard';
 import type { BoardContext, BoardIvarChoice, DeviceStatus } from './simBoard';
 import './SimRolesModal.scss';
@@ -50,7 +57,7 @@ const stop = (e: SyntheticEvent) => e.stopPropagation();
 
 /** The glyph of each kind, Bootstrap Icons. */
 const KIND_ICON: Readonly<Record<DeviceKind, string>> = {
-    button: 'bi-record-circle', switch: 'bi-toggle-on', slider: 'bi-sliders', keypad: 'bi-grid-3x3-gap',
+    button: 'bi-record-circle', switch: 'bi-toggle-on', slider: 'bi-sliders', keypad: 'bi-grid-3x3-gap', clock: 'bi-stopwatch',
     led: 'bi-lightbulb', pulse: 'bi-lightning-charge', seven: 'bi-123', text: 'bi-card-text', gauge: 'bi-speedometer2',
 };
 
@@ -92,6 +99,8 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
     // The fields of a two-part binding chosen while the other part is not, per device: it binds once complete.
     const [partial, setPartial] = useState<Record<string, Partial<Record<'on' | 'off' | 'element' | 'attr' | 'enter', string>>>>({});
     const [exprDraft, setExprDraft] = useState<string | null>(null);
+    // A Clock's period while typed (R-SIM-122): the draft takes it only as a whole number in range.
+    const [periodDraft, setPeriodDraft] = useState<string | null>(null);
     const dialogRef = useRef<HTMLDivElement>(null);
 
     // What the board binds to, read once on open: the model's net as Reset would compile it.
@@ -114,6 +123,7 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
     }, [onClose]);
     useEffect(() => { dialogRef.current?.focus(); }, []);
     useEffect(() => { setExprDraft(null); }, [selected]);
+    useEffect(() => { setPeriodDraft(null); }, [selected]);
 
     const add = (kind: DeviceKind): void => {
         const r = addDevice(draft, kind);
@@ -444,6 +454,36 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                                     </label>
                                 )}
                                 {form && fields(device, form)}
+                                {device.kind === 'clock' && (() => {
+                                    const period = device.period ?? CLOCK_PERIOD_DEFAULT;
+                                    const typed = periodDraft === null || (periodDraft.trim() !== '' && isClockPeriod(Number(periodDraft)));
+                                    return (
+                                        <label className="sim-board-editor__field">
+                                            <span className="sim-board-editor__field-label">Period (ms)</span>
+                                            <input
+                                                type="number"
+                                                className="sim-roles-modal__input"
+                                                aria-label="Period in milliseconds"
+                                                title={`A whole number of milliseconds, ${CLOCK_PERIOD_MIN} to ${CLOCK_PERIOD_MAX}`}
+                                                min={CLOCK_PERIOD_MIN}
+                                                max={CLOCK_PERIOD_MAX}
+                                                step={100}
+                                                value={periodDraft ?? String(period)}
+                                                onChange={e => {
+                                                    const text = e.target.value;
+                                                    setPeriodDraft(text);
+                                                    if (text.trim() !== '' && isClockPeriod(Number(text))) setDraft(d => setPeriod(d, device.id, Number(text)));
+                                                }}
+                                                onBlur={() => setPeriodDraft(null)}
+                                            />
+                                            <span className="sim-board-editor__hint">
+                                                {typed
+                                                    ? `${CLOCK_PERIOD_MIN} to ${CLOCK_PERIOD_MAX} ms: the clock presses its event every ${clockPeriodText(period)} while it is on.`
+                                                    : `Not a whole number from ${CLOCK_PERIOD_MIN} to ${CLOCK_PERIOD_MAX}: the period stays ${period} ms.`}
+                                            </span>
+                                        </label>
+                                    );
+                                })()}
                                 {status && (
                                     <div className={`sim-board-editor__status sim-board-editor__status--${status.ok ? 'ok' : 'flagged'}`} role="status">
                                         <i className={`bi ${status.ok ? 'bi-check-circle' : 'bi-exclamation-triangle'}`} />

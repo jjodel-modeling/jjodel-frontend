@@ -14,8 +14,8 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, boardContextOfRun, heldAnswer, keypadEnterValue, keypadKeyReason, keypadPress,
-    moveDevice, nuxmvRows, removeDevice, resolveDevice, setBinding, setLabel, stateAttributesReason,
+    DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, boardContextOfRun, clockPeriodText, heldAnswer, keypadEnterValue, keypadKeyReason, keypadPress,
+    moveDevice, nuxmvRows, removeDevice, resolveDevice, setBinding, setLabel, setPeriod, stateAttributesReason,
 } from '../simBoard';
 import type { BoardContext } from '../simBoard';
 import { startRun } from '../simBridge';
@@ -321,6 +321,50 @@ describe('the editor\'s operations: pure, on a draft', () => {
     });
 });
 
+describe('the clock on the board (R-SIM-122): one event, a period', () => {
+    const clock = (binding: BoardBinding | null, period = 1000, id = 'c1'): BoardDevice => ({ ...dev(id, 'clock', binding), period });
+
+    it('add gives a new clock the default period, and no other kind a period at all (mutant: period missing; mutant: period on every kind)', () => {
+        const a = addDevice([], 'clock');
+        expect(a.devices[0]).toEqual({ id: 'd1', kind: 'clock', cell: [0, 0], label: '', binding: null, period: 1000 });
+        const b = addDevice(a.devices, 'button');
+        expect('period' in b.devices[1]).toBe(false);
+    });
+
+    it('setPeriod takes a whole number in 100..60000 for a clock only; anything else changes nothing (mutant: clamped; mutant: any kind)', () => {
+        const devices = [clock(null), dev('d2', 'button', null, [1, 0])];
+        expect(setPeriod(devices, 'c1', 250).map(d => d.period)).toEqual([250, undefined]);
+        for (const bad of [99, 60001, 1.5, NaN]) expect(setPeriod(devices, 'c1', bad)).toBe(devices);
+        expect(setPeriod(devices, 'd2', 500)).toBe(devices);
+        expect(setPeriod(devices, 'nope', 500)).toBe(devices);
+    });
+
+    it('resolves as the Button\'s event does; a period out of range flags it, never runs it (mutant: period not checked)', () => {
+        const ctx = ctxOf();
+        expect(ok(clock({ kind: 'event', event: 'coin' }), ctx)).toEqual({ ok: true });
+        expect(ok(clock(null), ctx)).toEqual({ ok: false, reason: 'Not bound.' });
+        expect(ok(clock({ kind: 'event', event: 'gone' }), ctx)).toEqual({ ok: false, reason: 'The event no longer exists.' });
+        expect(ok(clock({ kind: 'event', event: 'Locked' }), ctx)).toEqual({ ok: false, reason: 'Not an event of this model.' });
+        expect(ok(clock({ kind: 'event', event: 'coin' }, 50), ctx)).toEqual({ ok: false, reason: 'The period 50 ms is outside 100..60000 ms.' });
+        expect(ok({ ...dev('c2', 'clock', { kind: 'event', event: 'coin' }) }, ctx)).toEqual({ ok: true });
+    });
+
+    it('the period in words: whole seconds, decimal seconds from one second, milliseconds below (mutant: always ms)', () => {
+        expect([100, 250, 999, 1000, 1500, 1250, 60000].map(clockPeriodText)).toEqual(['100 ms', '250 ms', '999 ms', '1 s', '1.5 s', '1.25 s', '60 s']);
+    });
+
+    it('caption: the event and its period; nuXmv: an ordinary event, as the Button\'s (R-SIM-122 decision 3)', () => {
+        const ctx = ctxOf();
+        const devices = [clock({ kind: 'event', event: 'coin' }), clock({ kind: 'event', event: 'push' }, 250, 'c2'), clock(null, 1000, 'c3')];
+        expect(nuxmvRows(devices, ctx).map(r => [r.device, r.binding, r.nuxmv])).toEqual([
+            ['Clock c1', 'Coin every 1 s', 'event = Coin'],
+            ['Clock c2', 'Push every 250 ms', 'event = Push'],
+            ['Clock c3', 'unbound', '—'],
+        ]);
+        expect(bindingCaption(clock({ kind: 'event', event: 'gone' }), ctx)).toBe('(missing) every 1 s');
+    });
+});
+
 describe('the caption and the table device → binding → nuXmv (R-SIM-111, report §7)', () => {
     it('every kind, in the editor\'s words; the Pulse LED stays out of the export', () => {
         const ctx = ctxOf();
@@ -356,7 +400,7 @@ describe('the caption and the table device → binding → nuXmv (R-SIM-111, rep
 
     it('the device labels of the palette', () => {
         expect(DEVICE_LABELS).toEqual({
-            button: 'Button', switch: 'Switch', slider: 'Slider', keypad: 'Keypad',
+            button: 'Button', switch: 'Switch', slider: 'Slider', keypad: 'Keypad', clock: 'Clock',
             led: 'LED', pulse: 'Pulse LED', seven: '7-segment', text: 'Text display', gauge: 'Gauge',
         });
     });

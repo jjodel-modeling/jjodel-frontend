@@ -17,7 +17,8 @@
  *   asks (R-SIM-111); the rest goes to the input dialog of R-SIM-88.
  * - the keypad's value mode (R-SIM-112): the buffer is the device's, Enter gives
  *   the IVAR its value, a key that would leave the domain is off with its reason.
- * - the editor's operations on a draft: add, move, bind, label, remove.
+ * - the editor's operations on a draft: add, move, bind, label, remove, and a
+ *   Clock's period (R-SIM-122).
  * - the caption of a binding and the table device → binding → nuXmv (R-SIM-111):
  *   inputs are the event set or an IVAR the model declares, outputs DEFINE, the
  *   Pulse LED and the configuration out of the export.
@@ -26,7 +27,7 @@
  * test bench (sim/__tests__/simBoard.test.ts).
  */
 
-import { BOARD_COLUMNS, BOARD_ROWS, bindingFits, onGrid } from '../../../model/simulation/boardCodec';
+import { BOARD_COLUMNS, BOARD_ROWS, CLOCK_PERIOD_DEFAULT, CLOCK_PERIOD_MAX, CLOCK_PERIOD_MIN, bindingFits, isClockPeriod, onGrid } from '../../../model/simulation/boardCodec';
 import type { BoardBinding, BoardDevice, DeviceKind } from '../../../model/simulation/boardCodec';
 import { compileOutput } from '../../../model/simulation/boardOutputs';
 import { compileNet, eventAlphabet, netStcFromRoles } from '../../../model/simulation/netCompile';
@@ -44,7 +45,7 @@ type Lookup = Record<string, any>;
 
 /** The words of the palette, the table and the captions. */
 export const DEVICE_LABELS: Readonly<Record<DeviceKind, string>> = {
-    button: 'Button', switch: 'Switch', slider: 'Slider', keypad: 'Keypad',
+    button: 'Button', switch: 'Switch', slider: 'Slider', keypad: 'Keypad', clock: 'Clock',
     led: 'LED', pulse: 'Pulse LED', seven: '7-segment', text: 'Text display', gauge: 'Gauge',
 };
 
@@ -248,6 +249,10 @@ function bindingStatus(kind: DeviceKind, b: BoardBinding, ctx: BoardContext): De
 export function resolveDevice(device: BoardDevice, ctx: BoardContext): DeviceStatus {
     if (device.binding === null) return flag('Not bound.');
     if (!bindingFits(device.kind, device.binding)) return flag(`A ${DEVICE_LABELS[device.kind]} does not take this binding.`);
+    // A Clock's period only a draft can carry out of range: the codec drops such a record (R-SIM-122).
+    if (device.kind === 'clock' && device.period !== undefined && !isClockPeriod(device.period)) {
+        return flag(`The period ${device.period} ms is outside ${CLOCK_PERIOD_MIN}..${CLOCK_PERIOD_MAX} ms.`);
+    }
     return bindingStatus(device.kind, device.binding, ctx);
 }
 
@@ -302,14 +307,17 @@ export function firstFreeCell(devices: readonly BoardDevice[]): [number, number]
     return null;
 }
 
-/** A new unbound device in the first free cell, with the first free id `d1`, `d2`, …; `id` `''` when the grid is full. */
+/** A new unbound device in the first free cell, with the first free id `d1`, `d2`, …; `id` `''` when the grid is full. A Clock gets the default period. */
 export function addDevice(devices: readonly BoardDevice[], kind: DeviceKind): { devices: BoardDevice[]; id: string } {
     const cell = firstFreeCell(devices);
     if (cell === null) return { devices: [...devices], id: '' };
     let n = 1;
     while (devices.some(d => d.id === `d${n}`)) n++;
     const id = `d${n}`;
-    return { devices: [...devices, { id, kind, cell, label: '', binding: null }], id };
+    const device: BoardDevice = kind === 'clock'
+        ? { id, kind, cell, label: '', binding: null, period: CLOCK_PERIOD_DEFAULT }
+        : { id, kind, cell, label: '', binding: null };
+    return { devices: [...devices, device], id };
 }
 
 /** A device moved to a cell; onto another device the two swap; off the grid, or unknown, nothing changes. */
@@ -325,6 +333,13 @@ export function setBinding(devices: BoardDevice[], id: string, binding: BoardBin
     const device = devices.find(d => d.id === id);
     if (!device || (binding !== null && !bindingFits(device.kind, binding))) return devices;
     return devices.map(d => (d.id === id ? { ...d, binding } : d));
+}
+
+/** A Clock's period (R-SIM-122): a whole number of milliseconds in range, for a clock only; anything else changes nothing. */
+export function setPeriod(devices: BoardDevice[], id: string, ms: number): BoardDevice[] {
+    const device = devices.find(d => d.id === id);
+    if (!device || device.kind !== 'clock' || !isClockPeriod(ms)) return devices;
+    return devices.map(d => (d.id === id ? { ...d, period: ms } : d));
 }
 
 export function setLabel(devices: BoardDevice[], id: string, label: string): BoardDevice[] {
@@ -355,12 +370,20 @@ function domainText(domain: Domain): string {
     }
 }
 
+/** A Clock's period in words: whole or decimal seconds from one second, milliseconds below. */
+export function clockPeriodText(ms: number): string {
+    return ms >= 1000 ? `${ms / 1000} s` : `${ms} ms`;
+}
+
 /** What a device is bound to, in a few words: the caption under it on the board, the binding column of the table. */
 export function bindingCaption(device: BoardDevice, ctx: BoardContext): string {
     const b = device.binding;
     if (b === null) return 'unbound';
     switch (b.kind) {
-        case 'event': return eventCaption(ctx, b.event);
+        case 'event':
+            return device.kind === 'clock'
+                ? `${eventCaption(ctx, b.event)} every ${clockPeriodText(device.period ?? CLOCK_PERIOD_DEFAULT)}`
+                : eventCaption(ctx, b.event);
         case 'events': return `${eventCaption(ctx, b.on)} / ${eventCaption(ctx, b.off)}`;
         case 'ivar': return `IVAR ${ivarCaption(ctx, b.element, b.attr)}`;
         case 'keypadValue': return `IVAR ${ivarCaption(ctx, b.element, b.attr)} · Enter ${eventCaption(ctx, b.enter)}`;

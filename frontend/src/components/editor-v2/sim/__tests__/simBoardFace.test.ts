@@ -29,6 +29,7 @@ import type { SimRun } from '../simRunState';
 import { structuralInputs } from '../../../../model/simulation/netStep';
 import type { BoardBinding, BoardDevice, DeviceKind } from '../../../../model/simulation/boardCodec';
 import type { SimValue } from '../../../../model/simulation/netTypes';
+import type { ClockState } from '../simBoardClock';
 
 type Lookup = Record<string, any>;
 
@@ -437,5 +438,75 @@ describe('names and the press a device sends (R-SIM-120)', () => {
         if (plan.kind !== 'fire') throw new Error('expected a fire');
         expect(pressInput('M', plan.event, undefined, lookup, 'stop', plan.values).lastStep).toBe('stop: ts (locked → off) fired');
         expect(getSimRun('M')!.trace![0].inputs).toEqual(plan.values);
+    });
+});
+
+describe('the clock\'s face: on or off, its period, the ticks since on, the dropped ones, why it is off (R-SIM-122 decision 4)', () => {
+    const CLOCK: BoardDevice = { id: 'k1', kind: 'clock', cell: [0, 0], label: '', binding: { kind: 'event', event: 'coin' }, period: 1000 };
+    const clocks = (x: Partial<ClockState>): ReadonlyMap<string, ClockState> => new Map([['k1', { on: false, ticks: 0, dropped: 0, off: null, ...x }]]);
+    const HEAD = 'Clock · coin every 1 s';
+
+    it('before Reset: off, its period shown, nothing to switch on (mutant: the switch on without a run)', () => {
+        const lookup = buildLookup();
+        const f = face(CLOCK, scene(lookup, undefined));
+        expect(f).toMatchObject({ kind: 'clock', on: false, ticking: false, period: 1000, ticks: 0, dropped: 0, fires: 'coin', flag: null, name: 'coin' });
+        expect(f.title).toBe(`${HEAD}\nOff. Reset starts the run.`);
+    });
+
+    it('a run Running and the clock never on: the switch is on, the clock is not (mutant: ticking read from the run)', () => {
+        const lookup = buildLookup();
+        const f = face(CLOCK, scene(lookup, runOf(lookup)));
+        expect([f.on, f.ticking]).toEqual([true, false]);
+        expect(f.title).toBe(`${HEAD}\nOff. Switch it on to press coin every 1 s.`);
+    });
+
+    it('the switch follows the run, not the event: on while Running even where coin has no candidate (decision 3; mutant: on follows the event button)', () => {
+        const lookup = buildLookup();
+        const s = scene(lookup, runOf(lookup, ['coin', 'coin', 'push']));
+        expect(s.inputs.eventsOn.has('coin')).toBe(false);
+        expect(face(CLOCK, s).on).toBe(true);
+    });
+
+    it('ticking: its period and the ticks since on; dropped ticks are counted in the title (decision 7; mutants: ticks not shown; dropped not said)', () => {
+        const lookup = buildLookup();
+        const run = runOf(lookup);
+        const on = face(CLOCK, { ...scene(lookup, run), clocks: clocks({ on: true, ticks: 3 }) });
+        expect(on).toMatchObject({ on: true, ticking: true, ticks: 3, dropped: 0, period: 1000 });
+        expect(on.title).toBe(`${HEAD}\nOn: presses coin every 1 s. 3 ticks since on.`);
+        const one = face(CLOCK, { ...scene(lookup, run), clocks: clocks({ on: true, ticks: 1, dropped: 2 }) });
+        expect(one.dropped).toBe(2);
+        expect(one.title).toBe(`${HEAD}\nOn: presses coin every 1 s. 1 tick, 2 dropped since on. A dropped tick came while a press waited on the input dialog or a choice.`);
+    });
+
+    it('switched off: the reason in the title and the count kept until it is on again (decision 5; mutant: the reason dropped)', () => {
+        const lookup = buildLookup();
+        const running = scene(lookup, runOf(lookup));
+        const off = (x: Partial<ClockState>, s: BoardScene = running) => face(CLOCK, { ...s, clocks: clocks(x) });
+        expect(off({ off: 'hand', ticks: 4 }).title).toBe(`${HEAD}\nOff: switched off. 4 ticks. Switch it on to press coin every 1 s.`);
+        expect(off({ off: 'reset', ticks: 2, dropped: 1 }).title).toBe(`${HEAD}\nOff: Reset. 2 ticks, 1 dropped. Switch it on to press coin every 1 s.`);
+        expect(off({ off: 'board', ticks: 1 }).title).toBe(`${HEAD}\nOff: the board changed. 1 tick. Switch it on to press coin every 1 s.`);
+        expect(off({ off: 'cleared', ticks: 5 }, scene(lookup, undefined)).title).toBe(`${HEAD}\nOff: no run (Stop, or the model changed). 5 ticks.`);
+        const halted = scene(lookup, runOf(lookup, ['coin', 'coin', 'coin', 'coin']));
+        expect(halted.inputs.status).toBe('Halted');
+        const f = off({ off: 'Halted', ticks: 4 }, halted);
+        expect([f.on, f.ticking, f.ticks]).toEqual([false, false, 4]);
+        expect(f.title).toBe(`${HEAD}\nOff: the run reached Halted. 4 ticks.`);
+    });
+
+    it('a run that has ended and a clock never on: off, cannot be switched on, the run\'s status said (mutant: on after the end)', () => {
+        const lookup = buildLookup();
+        const f = face(CLOCK, scene(lookup, runOf(lookup, ['coin', 'coin', 'coin', 'coin'])));
+        expect([f.on, f.ticking]).toEqual([false, false]);
+        expect(f.title).toBe(`${HEAD}\nOff. The run is Halted.`);
+    });
+
+    it('a clock whose event is gone, or unbound, is flagged and off, its period still shown (R-SIM-115; mutant: a flagged clock on)', () => {
+        const lookup = buildLookup();
+        const s = scene(lookup, runOf(lookup));
+        const gone = face({ ...CLOCK, binding: { kind: 'event', event: 'gone' } }, s);
+        expect(gone).toMatchObject({ on: false, ticking: false, flag: 'The event no longer exists.', period: 1000 });
+        expect(gone.title).toBe('Clock · (missing) every 1 s\nOff. The event no longer exists.');
+        const unbound = face({ ...CLOCK, binding: null, period: 250 }, s);
+        expect(unbound).toMatchObject({ on: false, flag: 'Not bound.', period: 250, name: 'Clock' });
     });
 });

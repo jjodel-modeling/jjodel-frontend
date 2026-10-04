@@ -615,13 +615,16 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
      * the transition the user chose from the list; `drawFrom` the ε list Random
      * draws among (R-SIM-100). Step reads the model's policy, so under Random no
      * ε list opens (R-SIM-101); a hand press stops Play. The bridge commits the
-     * step and gives back the lines to show.
+     * step and gives back the lines to show. `keepPlay` is a Clock's tick
+     * (R-SIM-122): a press from the environment, not the hand, so Play goes on.
      */
-    const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[], drawFrom?: readonly Candidate[]): void => {
+    const fire = useCallback((event: string | null, selector?: string, values?: readonly InputValue[], drawFrom?: readonly Candidate[], keepPlay?: boolean): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
-        setPlaying(null);
-        setPlayNote(null);
+        if (!keepPlay) {
+            setPlaying(null);
+            setPlayNote(null);
+        }
         const pressed = drawFrom
             ? pressRandom(modelid, drawFrom, lookup, values)
             : event === null && selector === undefined
@@ -1178,7 +1181,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 statusLine={line}
                 contextKey={eventSig}
                 fire={fire}
+                clockFire={(event, values) => fire(event, undefined, values, undefined, true)}
                 ask={askInputs}
+                waiting={asking !== null || pending !== null}
                 onClose={closeBoard}
             />
         )}

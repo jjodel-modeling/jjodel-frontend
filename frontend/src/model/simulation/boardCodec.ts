@@ -30,6 +30,13 @@
  * its kind or misses a field leaves the device unbound, with a defect. Unknown
  * fields are ignored.
  *
+ * The Clock (R-SIM-122, P-2026-10-04-0150) is the fifth input: time as an
+ * environment source, not model time. It takes the Button's binding, one event
+ * instance, and its record alone carries `period`, after `binding`, so a board
+ * without a clock keeps its bytes. A clock stored without a period reads the
+ * default; a stored period that is not a whole number of milliseconds in range is
+ * a defect of its device, as a cell off the grid is, never a clamp.
+ *
  * Pure: no import.
  */
 
@@ -40,14 +47,14 @@ export const IO_BOARD_KEY = 'ioBoard';
 export const BOARD_COLUMNS = 4;
 export const BOARD_ROWS = 8;
 
-/** The fixed library of the first cut (R-SIM-111): four inputs, five outputs. */
-export type InputDeviceKind = 'button' | 'switch' | 'slider' | 'keypad';
+/** The fixed library of the first cut (R-SIM-111): five inputs, the Clock added by R-SIM-122, and five outputs. */
+export type InputDeviceKind = 'button' | 'switch' | 'slider' | 'keypad' | 'clock';
 export type OutputDeviceKind = 'led' | 'pulse' | 'seven' | 'text' | 'gauge';
 export type DeviceKind = InputDeviceKind | OutputDeviceKind;
 
-export const DEVICE_KINDS: readonly DeviceKind[] = ['button', 'switch', 'slider', 'keypad', 'led', 'pulse', 'seven', 'text', 'gauge'];
+export const DEVICE_KINDS: readonly DeviceKind[] = ['button', 'switch', 'slider', 'keypad', 'clock', 'led', 'pulse', 'seven', 'text', 'gauge'];
 
-const INPUT_KINDS: ReadonlySet<DeviceKind> = new Set<DeviceKind>(['button', 'switch', 'slider', 'keypad']);
+const INPUT_KINDS: ReadonlySet<DeviceKind> = new Set<DeviceKind>(['button', 'switch', 'slider', 'keypad', 'clock']);
 
 export function isInputKind(kind: DeviceKind): kind is InputDeviceKind {
     return INPUT_KINDS.has(kind);
@@ -80,6 +87,7 @@ export const BINDING_KINDS: Readonly<Record<DeviceKind, readonly BindingKind[]>>
     switch: ['ivar', 'events'],
     slider: ['ivar'],
     keypad: ['keypadValue', 'keypadEvents'],
+    clock: ['event'],
     led: ['marked', 'expr'],
     pulse: ['transition', 'event'],
     seven: ['expr'],
@@ -90,6 +98,15 @@ export const BINDING_KINDS: Readonly<Record<DeviceKind, readonly BindingKind[]>>
 /** The keys of the keypad in events mode: `0` to `9`. */
 export const KEYPAD_KEYS = 10;
 
+/** The Clock's period in milliseconds (R-SIM-122): a whole number in `CLOCK_PERIOD_MIN..CLOCK_PERIOD_MAX`. */
+export const CLOCK_PERIOD_MIN = 100;
+export const CLOCK_PERIOD_MAX = 60000;
+export const CLOCK_PERIOD_DEFAULT = 1000;
+
+export function isClockPeriod(ms: unknown): ms is number {
+    return typeof ms === 'number' && Number.isInteger(ms) && ms >= CLOCK_PERIOD_MIN && ms <= CLOCK_PERIOD_MAX;
+}
+
 export interface BoardDevice {
     readonly id: string;
     readonly kind: DeviceKind;
@@ -99,6 +116,8 @@ export interface BoardDevice {
     readonly label: string;
     /** `null`: dropped from the palette and not bound yet. */
     readonly binding: BoardBinding | null;
+    /** A Clock's period in milliseconds (R-SIM-122); absent on every other kind. */
+    readonly period?: number;
 }
 
 /** Why a stored board, or a device of it, was not read as written: `index` is the device's, `null` for the key. */
@@ -145,6 +164,7 @@ export function encodeBoard(devices: readonly BoardDevice[]): string {
         v: 1,
         devices: devices.map(d => ({
             id: d.id, kind: d.kind, cell: [d.cell[0], d.cell[1]], label: d.label, binding: d.binding === null ? null : canonicalBinding(d.binding),
+            ...(d.kind === 'clock' ? { period: d.period ?? CLOCK_PERIOD_DEFAULT } : {}),
         })),
     });
 }
@@ -202,6 +222,9 @@ export function decodeBoard(raw: string | null | undefined): DecodedBoard {
         const cell: [number, number] = [(d.cell as number[])[0], (d.cell as number[])[1]];
         if (ids.has(d.id)) return device(`${d.id}: the id is taken by an earlier device.`);
         if (cells.has(cell.join(','))) return device(`${d.id}: the cell is taken by an earlier device.`);
+        if (kind === 'clock' && d.period !== undefined && !isClockPeriod(d.period)) {
+            return device(`${d.id}: the period is not a whole number of milliseconds in ${CLOCK_PERIOD_MIN}..${CLOCK_PERIOD_MAX}.`);
+        }
         let binding: BoardBinding | null = null;
         if (d.binding !== undefined && d.binding !== null) {
             binding = bindingOf(d.binding);
@@ -210,7 +233,10 @@ export function decodeBoard(raw: string | null | undefined): DecodedBoard {
         }
         ids.add(d.id);
         cells.add(cell.join(','));
-        devices.push({ id: d.id, kind, cell, label: text(d.label) ? d.label : '', binding });
+        const label = text(d.label) ? d.label : '';
+        devices.push(kind === 'clock'
+            ? { id: d.id, kind, cell, label, binding, period: d.period === undefined ? CLOCK_PERIOD_DEFAULT : d.period as number }
+            : { id: d.id, kind, cell, label, binding });
     });
     return { devices, defects, readable: true };
 }
