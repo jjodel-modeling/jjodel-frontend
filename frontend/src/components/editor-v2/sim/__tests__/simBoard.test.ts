@@ -14,8 +14,9 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, boardContextOfRun, clockPeriodText, heldAnswer, keypadEnterValue, keypadKeyReason, keypadPress,
-    moveDevice, nuxmvRows, removeDevice, resolveDevice, setBinding, setLabel, setPeriod, stateAttributesReason,
+    DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, boardContextOfRun, clockPeriodText, firstFreeCell, heldAnswer, keypadEnterValue, keypadKeyReason,
+    keypadPress, maxDisplayLength, moveDevice, nuxmvRows, removeDevice, resolveDevice, setAccent, setBinding, setBoardCols, setBoardTheme, setLabel, setPeriod,
+    setSpan, setStyle, stateAttributesReason,
 } from '../simBoard';
 import type { BoardContext } from '../simBoard';
 import { startRun } from '../simBridge';
@@ -401,7 +402,189 @@ describe('the caption and the table device → binding → nuXmv (R-SIM-111, rep
     it('the device labels of the palette', () => {
         expect(DEVICE_LABELS).toEqual({
             button: 'Button', switch: 'Switch', slider: 'Slider', keypad: 'Keypad', clock: 'Clock',
-            led: 'LED', pulse: 'Pulse LED', seven: '7-segment', text: 'Text display', gauge: 'Gauge',
+            led: 'LED', pulse: 'Pulse LED', seven: '7-segment', text: 'Text display', gauge: 'Gauge', buzzer: 'Buzzer', silk: 'Silkscreen',
         });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// R-SIM-123..128 (P-2026-10-04-1130): spans, columns, styles, display lengths, the new kinds
+// ---------------------------------------------------------------------------
+
+const spanned = (id: string, kind: DeviceKind, cell: [number, number], span: [number, number]): BoardDevice => ({ ...dev(id, kind, null, cell), span });
+
+describe('occupancy by covered cells (R-SIM-125)', () => {
+    it('the first free cell skips every covered cell, row by row, within the board\'s columns (mutant: anchors only; mutant: four columns always)', () => {
+        const devices = [spanned('d1', 'seven', [0, 0], [3, 1]), spanned('d2', 'led', [3, 0], [1, 2])];
+        expect(firstFreeCell(devices)).toEqual([0, 1]);
+        expect(firstFreeCell([spanned('d1', 'seven', [0, 0], [4, 2])])).toEqual([0, 2]);
+        expect(firstFreeCell([spanned('d1', 'seven', [0, 0], [4, 1])], 6)).toEqual([4, 0]);
+        const full = Array.from({ length: 8 }, (_, r) => spanned(`r${r}`, 'seven', [0, r], [4, 1]));
+        expect(firstFreeCell(full)).toBeNull();
+        expect(addDevice(full, 'led')).toEqual({ devices: full, id: '' });
+        expect(addDevice([spanned('d1', 'seven', [0, 0], [4, 1])], 'led', 6).devices[1].cell).toEqual([4, 0]);
+    });
+
+    it('a move whose span leaves the grid or overlaps another device is refused; within its own cells it moves (mutant: overlap allowed)', () => {
+        const devices = [spanned('d1', 'seven', [0, 0], [2, 1]), dev('d2', 'led', null, [3, 0])];
+        expect(moveDevice(devices, 'd1', [1, 0]).map(d => d.cell)).toEqual([[1, 0], [3, 0]]);
+        expect(moveDevice(devices, 'd1', [2, 0])).toBe(devices);
+        expect(moveDevice(devices, 'd1', [3, 1])).toBe(devices);
+        expect(moveDevice(devices, 'd1', [3, 1], 6).map(d => d.cell)).toEqual([[3, 1], [3, 0]]);
+        expect(moveDevice(devices, 'd1', [0, 7]).map(d => d.cell)).toEqual([[0, 7], [3, 0]]);
+        expect(moveDevice([spanned('d1', 'led', [0, 0], [1, 2])], 'd1', [0, 7]).map(d => d.cell)).toEqual([[0, 0]]);
+    });
+
+    it('a move onto another device swaps the two when the swapped board fits; otherwise nothing changes (committed swap kept, mutant: swap dropped)', () => {
+        const ones = [dev('d1', 'button', null, [0, 0]), dev('d2', 'led', null, [1, 0])];
+        expect(moveDevice(ones, 'd1', [1, 0]).map(d => d.cell)).toEqual([[1, 0], [0, 0]]);
+        const wide = [spanned('d1', 'seven', [0, 0], [2, 1]), dev('d2', 'led', null, [3, 0])];
+        expect(moveDevice(wide, 'd2', [0, 0]).map(d => d.cell)).toEqual([[0, 0], [3, 0]]);
+        expect(moveDevice(wide, 'd2', [0, 0])).toBe(wide);
+        const pair = [spanned('d1', 'seven', [0, 0], [2, 1]), spanned('d2', 'seven', [2, 0], [2, 1])];
+        expect(moveDevice(pair, 'd1', [2, 0]).map(d => d.cell)).toEqual([[2, 0], [0, 0]]);
+    });
+});
+
+describe('setSpan (R-SIM-125)', () => {
+    it('a span within its domain, on the grid and over free cells is set; [1, 1] removes it (mutant: [1, 1] stored)', () => {
+        const devices = [dev('d1', 'seven', null, [0, 0]), dev('d2', 'led', null, [3, 1])];
+        const wide = setSpan(devices, 'd1', [4, 1]);
+        expect(wide[0].span).toEqual([4, 1]);
+        expect(wide[1]).toBe(devices[1]);
+        expect('span' in setSpan(wide, 'd1', [1, 1])[0]).toBe(false);
+    });
+
+    it('out of its domain, off the grid, over another device, or unknown: refused and nothing changes (mutants: clamped; overlap allowed)', () => {
+        const devices = [dev('d1', 'seven', null, [1, 0]), dev('d2', 'led', null, [1, 1])];
+        for (const bad of [[0, 1], [5, 1], [1, 3], [1.5, 1]] as Array<[number, number]>) expect(setSpan(devices, 'd1', bad)).toBe(devices);
+        expect(setSpan(devices, 'd1', [4, 1])).toBe(devices);
+        expect(setSpan(devices, 'd1', [4, 1], 6)[0].span).toEqual([4, 1]);
+        expect(setSpan(devices, 'd1', [1, 2])).toBe(devices);
+        expect(setSpan(devices, 'nope', [2, 1])).toBe(devices);
+    });
+});
+
+describe('setStyle (R-SIM-126, R-SIM-127)', () => {
+    const devices = [dev('b1', 'button', null, [0, 0]), dev('b2', 'button', null, [1, 0]), dev('t1', 'text', null, [2, 0]), dev('l1', 'led', null, [3, 0])];
+
+    it('sets the fields of its kind in their order; null removes one; a default leaves no style at all (mutant: defaults stored)', () => {
+        const a = setStyle(devices, 'b1', { key: 'q', shape: 'round', role: 'go' });
+        expect(a[0].style).toEqual({ shape: 'round', role: 'go', key: 'q' });
+        expect(Object.keys(a[0].style!)).toEqual(['shape', 'role', 'key']);
+        expect(a.slice(1)).toEqual(devices.slice(1));
+        const b = setStyle(a, 'b1', { role: null, key: null });
+        expect(b[0].style).toEqual({ shape: 'round' });
+        expect('style' in setStyle(b, 'b1', { shape: 'key' })[0]).toBe(false);
+        expect(setStyle(devices, 't1', { size: 'XL', face: 'vfd' })[2].style).toEqual({ size: 'XL', face: 'vfd' });
+        expect(setStyle(devices, 'l1', { shape: 'bar', color: 'red' })[3].style).toEqual({ shape: 'bar', color: 'red' });
+    });
+
+    it('a field another kind takes, or a value outside its field, refuses the whole change (mutant: the valid part applied)', () => {
+        expect(setStyle(devices, 'b1', { role: 'go', size: 'L' })).toBe(devices);
+        expect(setStyle(devices, 'b1', { shape: 'bar' })).toBe(devices);
+        expect(setStyle(devices, 'l1', { shape: 'key' })).toBe(devices);
+        expect(setStyle(devices, 'b1', { icon: 'bi-play' })).toBe(devices);
+        expect(setStyle(devices, 'b1', { key: 'Q' })).toBe(devices);
+        expect(setStyle(devices, 'nope', { role: 'go' })).toBe(devices);
+    });
+
+    it('an explicit key another device holds is refused; none is never taken (R-SIM-127; mutant: duplicates allowed)', () => {
+        const a = setStyle(devices, 'b1', { key: 'q' });
+        expect(setStyle(a, 'b2', { key: 'q' })).toBe(a);
+        expect(setStyle(a, 'b1', { key: 'q', role: 'stop' })[0].style).toEqual({ role: 'stop', key: 'q' });
+        const none = setStyle(setStyle(devices, 'b1', { key: 'none' }), 'b2', { key: 'none' });
+        expect(none.map(d => d.style?.key)).toEqual(['none', 'none', undefined, undefined]);
+    });
+});
+
+describe('the board\'s settings (R-SIM-124, R-SIM-125)', () => {
+    it('setBoardTheme: one of the four; graphite removes it; anything else changes nothing (mutant: an unknown theme stored)', () => {
+        expect(setBoardTheme({}, 'print')).toEqual({ theme: 'print' });
+        expect(setBoardTheme({ theme: 'print', cols: 6 }, 'graphite')).toEqual({ cols: 6 });
+        const s = { theme: 'appliance' as const };
+        expect(setBoardTheme(s, 'neon' as any)).toBe(s);
+    });
+
+    it('setAccent: a colour #rrggbb, lower case; null removes it; anything else changes nothing (mutant: case kept)', () => {
+        expect(setAccent({}, '#E11D48')).toEqual({ accent: '#e11d48' });
+        expect(setAccent({ accent: '#e11d48', theme: 'print' }, null)).toEqual({ theme: 'print' });
+        const s = { accent: '#e11d48' };
+        expect(setAccent(s, 'red')).toBe(s);
+        expect(setAccent(s, '#fff')).toBe(s);
+    });
+
+    it('setBoardCols: 4, 6 or 8; widening always; narrowing refused while a device covers a removed column (mutant: anchors only)', () => {
+        const devices = [dev('d1', 'led', null, [0, 0]), spanned('d2', 'seven', [2, 1], [3, 1])];
+        expect(setBoardCols({}, devices, 8)).toEqual({ cols: 8 });
+        const six = { cols: 6 as const };
+        expect(setBoardCols(six, devices, 4)).toBe(six);
+        expect(setBoardCols(six, [dev('d1', 'led', null, [3, 7])], 4)).toEqual({});
+        expect(setBoardCols({ cols: 8 }, [dev('d1', 'led', null, [5, 0])], 6)).toEqual({ cols: 6 });
+        expect(setBoardCols({ cols: 8 }, [dev('d1', 'led', null, [6, 0])], 6)).toEqual({ cols: 8 });
+        expect(setBoardCols(six, devices, 5 as any)).toBe(six);
+    });
+});
+
+describe('maxDisplayLength (R-SIM-126): the longest value the binding\'s domain can produce, never the current one', () => {
+    /** The turnstile with two more globals, an enum and a range below zero, for the displays. */
+    function displayCtx(): BoardContext {
+        const lookup = buildLookup(ESM);
+        const g = JSON.parse(GLOBALS);
+        g.attrs.push(
+            { name: 'phase', metaclass: null, space: 'semantic', domain: { kind: 'enum', literals: ['idle', 'cooking', 'done'] }, initial: 'idle' },
+            { name: 'temp', metaclass: null, space: 'semantic', domain: { kind: 'range', min: -100, max: 50 }, initial: '0' },
+        );
+        lookup.M._state.simStateAttributes = JSON.stringify(g);
+        const ctx = boardContextOf(lookup, 'M', 'MM');
+        if (!ctx) throw new Error('no context');
+        return ctx;
+    }
+    const len = (kind: DeviceKind, binding: BoardBinding | null, ctx = displayCtx()) => maxDisplayLength(dev('x', kind, binding), ctx);
+
+    it('a range: the longer of its minimum and its maximum as text (mutant: the maximum only)', () => {
+        expect(len('seven', { kind: 'expr', text: 'model.[coins]' })).toBe(1);
+        expect(len('text', { kind: 'expr', text: 'model.[temp]' })).toBe(4);
+        expect(len('text', { kind: 'expr', text: 'self.[temp]' })).toBe(4);
+    });
+
+    it('an enum: the longest literal; a boolean: false (mutant: the first literal)', () => {
+        expect(len('text', { kind: 'expr', text: 'model.[phase]' })).toBe(7);
+        expect(len('text', { kind: 'expr', text: 'model.[paid]' })).toBe(5);
+        expect(len('text', { kind: 'expr', text: 'Locked.[marked]' })).toBe(5);
+    });
+
+    it('a state name: the longest state label (mutant: the first place)', () => {
+        expect(len('text', { kind: 'configuration' })).toBe('Unlocked'.length);
+    });
+
+    it('an expression without a known domain, one that does not compile, an unbound or non-display device: null (mutant: a length guessed)', () => {
+        expect(len('seven', { kind: 'expr', text: 'model.[coins] * 10' })).toBeNull();
+        expect(len('text', { kind: 'expr', text: 'model.[nope]' })).toBeNull();
+        expect(len('text', null)).toBeNull();
+        expect(len('led', { kind: 'expr', text: 'model.[paid]' })).toBeNull();
+        expect(len('gauge', { kind: 'attr', element: 'M', attr: 'coins' })).toBeNull();
+    });
+});
+
+describe('the silkscreen and the buzzer (R-SIM-128)', () => {
+    it('a silkscreen never flags, unbound as it always is; a buzzer resolves as an LED does (mutant: a silkscreen flagged Not bound)', () => {
+        const ctx = ctxOf();
+        expect(ok(dev('k1', 'silk', null, [0, 0], 'COOK'), ctx)).toEqual({ ok: true });
+        expect(ok(dev('z1', 'buzzer', { kind: 'marked', place: 'Locked' }), ctx)).toEqual({ ok: true });
+        expect(ok(dev('z2', 'buzzer', { kind: 'expr', text: 'model.[nope]' }), ctx).ok).toBe(false);
+        expect(ok(dev('z3', 'buzzer', null), ctx)).toEqual({ ok: false, reason: 'Not bound.' });
+        expect(ok(dev('z4', 'buzzer', { kind: 'transition', transition: 'tCoin' }), ctx)).toEqual({ ok: false, reason: 'A Buzzer does not take this binding.' });
+        expect(setBinding([dev('k1', 'silk', null)], 'k1', { kind: 'expr', text: 'true' })[0].binding).toBeNull();
+    });
+
+    it('captions and the table: a silkscreen has no binding to name; a buzzer is presentation, out of the export (mutant: a buzzer as a DEFINE)', () => {
+        const ctx = ctxOf();
+        const devices = [dev('k1', 'silk', null, [0, 0], 'COOK'), dev('z1', 'buzzer', { kind: 'marked', place: 'Locked' }, [1, 0]), dev('z2', 'buzzer', { kind: 'expr', text: 'model.[paid]' }, [2, 0])];
+        expect(nuxmvRows(devices, ctx).map(r => [r.device, r.binding, r.nuxmv])).toEqual([
+            ['Silkscreen COOK', '', '— (a silkscreen; not exported)'],
+            ['Buzzer z1', 'Locked.[marked]', '— (sounds on the rising edge; not exported)'],
+            ['Buzzer z2', 'model.[paid]', '— (sounds on the rising edge; not exported)'],
+        ]);
     });
 });
