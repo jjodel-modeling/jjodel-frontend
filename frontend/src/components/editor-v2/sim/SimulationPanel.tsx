@@ -40,6 +40,13 @@
  * (SimCanvasLayer.tsx, R-SIM-107, R-SIM-109). All are rendered here, siblings of
  * the panel in the editor, so they hide with its tab as the panel does.
  *
+ * The board's clocks belong to the run, not to the card (R-SIM-135,
+ * P-2026-10-04-1625): this panel owns them (simBoardClock.ts `createClocks`), one
+ * set per model, so they tick with the board closed; the card shows and toggles
+ * them. A run seen Running for the first time switches the auto-start clocks on
+ * (R-SIM-134); collapsing the panel, an edit of the board and the run's changes
+ * switch them off as the card did.
+ *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
  * on the M2 face. `connect`-ed in the shape of components/editors/MetaData.tsx,
@@ -77,7 +84,7 @@ import { structuralInputs } from '../../../model/simulation/netStep';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
 import { systemProfile } from '../../../model/simulation/simProfiles';
-import { IO_BOARD_KEY } from '../../../model/simulation/boardCodec';
+import { IO_BOARD_KEY, decodeBoard } from '../../../model/simulation/boardCodec';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { SimProfile } from '../../../model/simulation/simProfiles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
@@ -90,6 +97,9 @@ import { SimDataModal } from './SimDataModal';
 import { facePins, SimInspector } from './SimInspector';
 import { SimCanvasLayer } from './SimCanvasLayer';
 import { SimBoard } from './simBoardDevices';
+import { autoClocks, createClocks } from './simBoardClock';
+import type { Clocks } from './simBoardClock';
+import { planPress } from './simBoardFace';
 import './simulation-panel.scss';
 
 // Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
@@ -454,6 +464,35 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setTick(t => t + 1);
     }, [liveSignature, modelid]);
 
+    // R-SIM-135: the clocks of this model's board live with the panel, board open or closed, made per model and disposed
+    // with it. A tick reads the run from the store and this render's press through `clockLatest`; the open card leaves
+    // the values it holds in `clockHeld` (R-SIM-120); the card shows and toggles the clocks.
+    const [, setClockVersion] = useState(0);
+    const clocksRef = useRef<Clocks | null>(null);
+    const clockHeld = useRef<readonly InputValue[]>([]);
+    const clockLatest = useRef<{ waiting: boolean; tick: (event: string) => void }>({ waiting: false, tick: () => undefined });
+    useEffect(() => {
+        const clocks = createClocks({
+            run: () => getSimRun(modelid),
+            waiting: () => clockLatest.current.waiting,
+            press: event => clockLatest.current.tick(event),
+            changed: () => setClockVersion(v => v + 1),
+        });
+        clocksRef.current = clocks;
+        return () => { clocks.dispose(); clocksRef.current = null; };
+    }, [modelid]);
+    // A new run (Reset), none (Stop, the interruption) or an ended one switches the clocks off now, and a run seen Running
+    // for the first time switches the auto clocks on (R-SIM-134). Collapsed, every clock goes off: the input dialog and
+    // the list a tick may open are drawn only by the open panel.
+    useEffect(() => {
+        const clocks = clocksRef.current;
+        if (!clocks) return;
+        if (!open) clocks.stopAll('panel');
+        else clocks.arm?.(() => autoClocks(decodeBoard(modelBoardRaw).devices));
+    }, [run, open]);
+    // An edit of the board can remove, rebind or re-time a clock: every clock goes off, until Reset or the hand.
+    useEffect(() => { clocksRef.current?.stopAll('board'); }, [modelBoardRaw]);
+
     // Status, enabled inputs and halt line from the Petri core (R-SIM-29), and why
     // an input has no candidate (R-SIM-58..60): computed here, once per panel
     // action, never in the render body and never on the version (report §3.4).
@@ -758,6 +797,16 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     };
     /** The label of an input, the panel's: `ε`, or the event's. */
     const labelOf: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
+    // R-SIM-135: a clock's tick is the board's press of its event, the values the open card holds answering its asks and
+    // the dialog the rest, sent as a press that leaves Play running (R-SIM-122 decision 6); dropped while a press waits.
+    clockLatest.current = {
+        waiting: asking !== null || pending !== null,
+        tick: event => {
+            const plan = planPress(getSimRun(modelid), event, clockHeld.current);
+            if (plan.kind === 'fire') fire(plan.event, undefined, plan.values, undefined, true);
+            else askInputs(plan.event, plan.asks, plan.given);
+        },
+    };
     // R-SIM-107, R-SIM-109: the canvas layer, while a run of this model exists, whether the panel is open or closed.
     const canvasLayer = isModelMode && rolesComplete && getSimRun(modelid) ? <SimCanvasLayer modelId={modelid} /> : null;
 
@@ -1181,9 +1230,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 statusLine={line}
                 contextKey={eventSig}
                 fire={fire}
-                clockFire={(event, values) => fire(event, undefined, values, undefined, true)}
                 ask={askInputs}
-                waiting={asking !== null || pending !== null}
+                clocks={clocksRef.current}
+                clockHeld={clockHeld}
                 onClose={closeBoard}
             />
         )}

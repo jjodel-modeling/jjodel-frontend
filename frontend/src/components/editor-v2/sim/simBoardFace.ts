@@ -21,10 +21,12 @@
  *   number of four digits, `SEVEN_MIN..SEVEN_MAX`.
  * - A binding that does not resolve flags its device, which is off or dark with
  *   the reason in its title (R-SIM-115): a compile defect is a flag, never `Err`.
- * - A Clock (R-SIM-122) presses its event on its own, every period, whatever that
- *   event enables: its switch follows the run, not the event's button. It shows its
- *   period, the ticks since it was switched on, the ticks dropped while a press
- *   waited on the user, and why it went off (simBoardClock.ts `ClockState`).
+ * - A Clock (R-SIM-122) presses its event on its own, every period: its switch
+ *   follows the run, not the event's button. It shows its period, the ticks since
+ *   it was switched on, the ticks dropped while a press waited on the user, the
+ *   idle ones whose event enabled nothing (R-SIM-136), and why it went off
+ *   (simBoardClock.ts `ClockState`); an auto-start clock says that the next Reset
+ *   switches it on (R-SIM-134, P-2026-10-04-1625).
  * - A Silkscreen (R-SIM-128) shows its label and nothing else: never flagged, never
  *   off, with or without a run. A Buzzer reads as an LED, lit while its boolean
  *   holds; its sound is the skin's (P-2026-10-04-1131).
@@ -138,6 +140,8 @@ export interface DeviceFace {
     readonly period?: number;
     readonly ticks?: number;
     readonly dropped?: number;
+    /** Clock (R-SIM-136): the ticks since on that pressed nothing, their event enabling nothing. */
+    readonly idle?: number;
 }
 
 const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -274,13 +278,16 @@ function inputFace(device: BoardDevice, scene: BoardScene, ctx: BoardContext, ba
     }
 }
 
-const countText = (ticks: number, dropped: number): string =>
-    `${ticks} ${ticks === 1 ? 'tick' : 'ticks'}${dropped > 0 ? `, ${dropped} dropped` : ''}`;
+const countText = (ticks: number, dropped: number, idle = 0): string =>
+    `${ticks} ${ticks === 1 ? 'tick' : 'ticks'}${idle > 0 ? `, ${idle} idle` : ''}${dropped > 0 ? `, ${dropped} dropped` : ''}`;
+
+/** R-SIM-134: what an auto-start clock adds while it is off. */
+const AUTO_NOTE = ' Auto-start: on at the next Reset.';
 
 /**
  * A Clock (R-SIM-122): its switch is on while the clock ticks, or while the run is Running and it could; the event's
- * own button does not matter, a tick it does not accept is discarded (decision 3). The title says what it presses and
- * how often, the count since it was switched on, and why it is off.
+ * own button does not matter, a tick its event does not enable presses nothing (R-SIM-136). The title says what it
+ * presses and how often, the count since it was switched on, the idle ticks among them, and why it is off.
  */
 function clockFace(device: BoardDevice, event: string, scene: BoardScene, ctx: BoardContext, base: FaceBase, head: string): DeviceFace {
     const period = device.period ?? CLOCK_PERIOD_DEFAULT;
@@ -289,17 +296,20 @@ function clockFace(device: BoardDevice, event: string, scene: BoardScene, ctx: B
     const ticking = s?.on === true;
     const ticks = s?.ticks ?? 0;
     const dropped = s?.dropped ?? 0;
+    const idle = s?.idle ?? 0;
     const status = scene.inputs.status;
     const canStart = status === 'Running';
-    const face = { ...base, flag: null, fires: event, period, ticking, ticks, dropped, on: ticking || canStart };
+    const face = { ...base, flag: null, fires: event, period, ticking, ticks, dropped, idle, on: ticking || canStart };
     if (ticking) {
-        const note = dropped > 0 ? ' A dropped tick came while a press waited on the input dialog or a choice.' : '';
-        return { ...face, title: `${head}\nOn: ${presses.replace(/^press/, 'presses')}. ${countText(ticks, dropped)} since on.${note}` };
+        const note = (dropped > 0 ? ' A dropped tick came while a press waited on the input dialog or a choice.' : '')
+            + (idle > 0 ? ` An idle tick came while ${eventLabel(ctx, event)} enabled nothing: no step.` : '');
+        return { ...face, title: `${head}\nOn: ${presses.replace(/^press/, 'presses')}. ${countText(ticks, dropped, idle)} since on.${note}` };
     }
     const hint = canStart ? ` Switch it on to ${presses}.` : '';
-    if (s?.off) return { ...face, title: `${head}\nOff: ${clockOffText(s.off)}. ${countText(ticks, dropped)}.${hint}` };
+    const auto = device.autoStart === true ? AUTO_NOTE : '';
+    if (s?.off) return { ...face, title: `${head}\nOff: ${clockOffText(s.off)}. ${countText(ticks, dropped, idle)}.${hint}${auto}` };
     const why = canStart ? `Switch it on to ${presses}.` : status === 'Not started' || status === null ? 'Reset starts the run.' : `The run is ${status}.`;
-    return { ...face, title: `${head}\nOff. ${why}` };
+    return { ...face, title: `${head}\nOff. ${why}${auto}` };
 }
 
 function readExpr(text: string, run: SimRun, ctx: BoardContext, state: SimState): OutputReading {

@@ -11,7 +11,8 @@
  *
  * A Clock (R-SIM-122) takes the Button's event picker and a period field in
  * milliseconds: the field writes the draft only with a whole number in range, and
- * says so while the text typed is not one.
+ * says so while the text typed is not one. Its Auto-start switch (R-SIM-134,
+ * P-2026-10-04-1625) is on for a new Clock: it switches itself on with the run.
  *
  * A draft over the model's `ioBoard` key (boardCodec.ts): Apply writes it in one
  * `state` assignment, one undo step. The key is not a `sim*` key, so the write
@@ -46,7 +47,7 @@ import {
 import type { BindingKind, BoardBinding, BoardCols, BoardDevice, BoardSettings, BoardTheme, DeviceKind, StyleField } from '../../../model/simulation/boardCodec';
 import {
     DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, clockPeriodText, moveDevice, nuxmvRows, removeDevice, resolveDevice, setAccent, setBinding,
-    setBoardCols, setBoardTheme, setLabel, setPeriod, setSpan, setStyle,
+    setAutoStart, setBoardCols, setBoardTheme, setLabel, setPeriod, setSpan, setStyle,
 } from './simBoard';
 import type { BoardContext, BoardIvarChoice, DeviceStatus, DeviceStyleChange } from './simBoard';
 import { pressLook } from './simBoardLook';
@@ -738,6 +739,25 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                                         </label>
                                     );
                                 })()}
+                                {device.kind === 'clock' && (
+                                    <div className="sim-board-editor__field">
+                                        <label className="sim-board-editor__check">
+                                            <input
+                                                type="checkbox"
+                                                role="switch"
+                                                aria-label="Auto-start"
+                                                checked={device.autoStart === true}
+                                                onChange={e => setDraft(d => setAutoStart(d, device.id, e.target.checked))}
+                                            />
+                                            <span>Auto-start</span>
+                                        </label>
+                                        <span className="sim-board-editor__hint">
+                                            {device.autoStart === true
+                                                ? 'On with the run, at Reset. Its switch on the board pauses it until the next Reset.'
+                                                : 'Off until switched on by hand on the board.'}
+                                        </span>
+                                    </div>
+                                )}
                                 {styleFields(device)}
                                 {status && (
                                     <div className={`sim-board-editor__status sim-board-editor__status--${status.ok ? 'ok' : 'flagged'}`} role="status">
