@@ -436,3 +436,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Ticket**: A 6- or 8-column board opens as a floating window at the card slot's left, 16 px under the toolbar (R-SIM-132); its top right corner then sits under the canvas layer's Globals and «Inspect node.[x]» controls, which paint above it (crop `_tmp_iopanel_B_six_columns_window.png`). The window drags away and keeps its place as a viewer pref. Seen by the lane probe and the chat's visual check of P-2026-10-04-1131, no fix in that lane; the way out is a first place at the slot's bottom, or the window above that layer.
 **Priority**: low
 **Found in**: P-2026-10-04-1131
+
+## 2026-10-04 — merge: sim-io-panel into alfonso-frontend-jjtl (P-2026-10-04-1540)
+**Prompt**: `claude_2026-10-04_1540_prompt_merge_sim-io-panel.md`, a direct merge by `lane-run merge --direct`, no session: `sim-io-panel` at `5525c3e7c` into `alfonso-frontend-jjtl`, merge base `452efc6f1`, 9 commits on the branch side.
+**Files touched**: merge `19b29dc2b`: 26 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_1130_prompt_sim_io_panel_model.md`, `docs/prompts/claude_2026-10-04_1131_prompt_sim_io_panel_faces.md`, `frontend/src/components/editor-v2/sim/SimBoard.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, and 18 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `19b29dc2b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7437 tests in 301 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Merge 19b29dc2b, eight gates green (typecheck 14, vitest 7437, build 0, checks 0); union on docs/decisions.md places D-UI-16 right after D-UI-15; 3001 answers 200. RC-23 already passed on the branch crops (5525c3e7c). GO for the closure.
+**Notes**: Rollback tag `pre-sim-io-panel` on `da3a18d72` (RC-31). Union: `docs/decisions.md`, `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1540/result.json`.
+**Prompt document name**: 2026-10-04 15:40
