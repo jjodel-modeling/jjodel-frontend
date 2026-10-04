@@ -900,6 +900,13 @@ $sim-board-vfd-digit: #67e8f9;
         color: $sim-board-ink-dim;
     }
 
+    // The Clock's keycap sits above its corner (P-2026-10-04-1625, the chat's visual check): inside it, it covered the
+    // counter's glass, which this face puts in that corner. The device has no edge here, so only the keycap moves, into
+    // the front's 12 px padding or the 10 px gap between rows; the face and the cell keep their size.
+    &.sim-board-device--clock .sim-board-device__keycap {
+        top: -9px;
+    }
+
     // A round push button, its cap raised.
     // TODO: cleanup — since P-2026-10-04-1131 Variant B draws a Button as `__press` (below); kept per rule 9.
     &__button {
