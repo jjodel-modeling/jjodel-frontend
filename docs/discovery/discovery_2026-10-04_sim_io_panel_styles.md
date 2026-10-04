@@ -134,3 +134,19 @@ More than five code files (rule 19), all in the DOVE by directory and kind excep
 - The intermediate commit of this lane shows Silkscreen and Buzzer in the editor's palette with placeholder faces until P-2026-10-04-1131 lands; no merge happens in between (the chain runs in this worktree).
 - `docs/decisions.md` will conflict at the D-UI rows on merge into the trunk (D1).
 - `suggestKeys` and `suggestIcon` read the event's label as the panel shows it, which is the event identifier's value when the role binds one (`objectLabel` with `eventIdentifier`), else the object's name.
+
+## Addendum 2026-10-04: answers and Phase 2
+
+**Answers** (chat C-2026-10-04-1126, adopted as recommended, RC-21, unattended, internal to the chain).
+
+1. Q1, yes: one entry per new kind in `KIND_ICON` (`SimBoardEditor.tsx`) and `FACES` (`simBoardDevices.tsx`), four lines, buzzer → `LampFace`, silk → `TextFace` with its label; those two files were widened into this lane's DOVE for exactly these entries, and P-2026-10-04-1131 replaces them.
+2. Q2: shortcut keys go to Button, Switch and Clock only; Slider and Keypad get none; `suggestKeys` works on the names its caller passes. Written into R-SIM-127. The explicit `key` stays a style field of Button and Clock (R-SIM-126), so a Switch always carries its suggested key.
+3. D-UI-16 after D-UI-14 on this branch; the merge places it after D-UI-15 (D1).
+
+**Phase 2, as built** (`906cb0f2e` feat, `c18397a5c` test; measured on this tree):
+
+- Files: the six of §6 items 1-4 and 6 (`boardCodec.ts`, `simBoard.ts`, `simBoardFace.ts`, `simBoardIcons.ts` new, `SimBoardEditor.tsx` and `simBoardDevices.tsx` two lines each) and the four test files of item 5 (`simBoardIcons.test.ts` new). Ten code files, above five (rule 19), all listed in §6 before the code.
+- The decisions of §7 held as written. Two readings were added while building: an icon name is checked by its form only in the codec (it cannot load the icon set and stay pure); `setStyle` refuses the whole change when one field is wrong.
+- Tests first: 37 of 122 red before the code. Gates: typecheck 14, the §17 set by file and code; vitest 7360/7360 in 296 files, the 9 known suites red at import; build exit 0, chunk-size warning only. Mutation bench 63/63 (boardCodec.ts 20, simBoard.ts 23, simBoardFace.ts 2, simBoardIcons.ts 18).
+- One defect of the writing tool, found by the bench: the accent-stripping range of `simBoardIcons.ts` had been written as literal combining characters instead of `̀-ͯ`; it matched the same characters, so no test saw it, but the mutant that removed it could not be applied. Rewritten as escapes before the commit, the mutant then killed.
+- For P-2026-10-04-1131: `DecodedBoard.settings` (absent when every board field is the default) feeds `encodeBoard(devices, settings)`; the column count is `boardCols(settings)`, and `firstFreeCell`, `addDevice` and `moveDevice` take it as an optional last argument; the editor's grid needs the spans of §4.2. The suggested icon and role come from `suggestIcon(eventLabel)` at face time (§4.3), the keys from `suggestKeys` over the Button, Switch and Clock devices in board order.

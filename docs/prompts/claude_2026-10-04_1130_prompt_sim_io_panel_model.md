@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-1130
 Chat: C-2026-10-04-1126
 Lane: full (board codec and pure modules, a new pure icon module, decisions; tests first; no probe). Tier: heavy (RC-32). Model: the default of `.claude/settings.json`, no deviation.
-Status: da eseguire
+Status: eseguito 2026-10-04 · lane sim-io-panel · report d03957dd1, feat 906cb0f2e, test c18397a5c · D-UI-16, R-SIM-123..129 · questions 1 and 2 answered by the chat as recommended (RC-21, unattended): two map entries per new kind in SimBoardEditor.tsx and simBoardDevices.tsx, keys on Button, Switch and Clock · typecheck 14, the §17 set; vitest 7360/7360 in 296 files, the 9 known suites red at import; build exit 0, chunk-size warning only; mutation bench 63/63 (boardCodec.ts 20, simBoard.ts 23, simBoardFace.ts 2, simBoardIcons.ts 18) · no visual check (no rendering change beyond two placeholder map entries) · non fuso
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: the Phase 1 hard stop of P4 does not apply (motivo: Alfonso asked for this work in lane auto, 2026-10-04 11:25, RC-11). The discovery report is still written and committed first, then Phase 2 starts. Stop with `Outcome: question` instead, before any code, if the discovery finds an RC-26 item or contradicts a decision below.
 Chain: first of two lanes run by `lane-run chain` in the same worktree; the second is P-2026-10-04-1131 (rendering, editor, extras). It starts only on `Outcome: done`, so this lane ends with `Outcome: done`, not hard-stop.

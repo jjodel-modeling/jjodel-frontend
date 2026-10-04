@@ -341,3 +341,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3083, 1600×1000: clock 22/22, microwave 8/8 reading 01:25 after 5 s, Play beside the clock with a failing control without keepPlay, scenes diff 0; crops light and dark in `~/.jjodel-lanes/P-2026-10-04-0150/`; the chat's visual check pending, RC-23)
 **Notes**: fire gains keepPlay so a tick leaves Play running; the panel is outside the node bench, so the probe's control stands for its test. Ticks use the board's held values (provisional R-SIM-120 read as presses from the board); a choice list drops ticks as the dialog does; a board edit switches clocks off. Variant A's first layout overflowed its tile, fixed before the commit. Report: docs/discovery/discovery_2026-10-04_sim_io_clock.md.
 **Prompt document name**: 2026-10-04 01:50
+
+## 2026-10-04 — feat: styles of the I/O board's front panel, the model (P-2026-10-04-1130)
+**Prompt**: `claude_2026-10-04_1130_prompt_sim_io_panel_model.md`, heavy tier, `~/jjodel-w-iopanel` on `sim-io-panel` (from `452efc6f1`), lane auto, first of a chain with P-2026-10-04-1131: report first, then tests first, the board record's theme, accent, cols, span and style, the kinds silk and buzzer, occupancy by span, the editor's pure operations, `maxDisplayLength`, `simBoardIcons.ts`; D-UI-16 and R-SIM-123..129; no merge.
+**Files touched**: report `d03957dd1`. `906cb0f2e`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardFace.ts`, `sim/simBoardIcons.ts` (new), `sim/SimBoardEditor.tsx` and `sim/simBoardDevices.tsx` (two map entries each). `c18397a5c`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardFace.test.ts`, `simBoardIcons.test.ts` (new). This commit: `docs/decisions.md` (D-UI-16, R-SIM-123..129), the report's addendum, the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7360/7360 in 296 files, the 9 known suites red at import; build exit 0, chunk-size warning only; every board saved today encodes byte for byte as on `b27138436`; mutation bench 63/63.
+**Out-of-scope changes**: yes — `SimBoardEditor.tsx` and `simBoardDevices.tsx` were outside the prompt's DOVE (no `.tsx`): widened by the chat's answer to the report's question 1, two lines each. Ten code files over two commits, above five (rule 19), all listed in the report's §6 before the code.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no rendering in this lane beyond two placeholder map entries; what is drawn is P-2026-10-04-1131's, with its probe)
+**Notes**: Network loss near 11:51 ended the first session mid-test; resumed on the same tree, the one modified test file kept. The Write tool stored a regex range as literal combining marks; the bench exposed it (a mutant that could not apply), rewritten as escapes before the commit. D-UI-15 is on the trunk only: D-UI-16 sits after D-UI-14, a hunk at the merge. Report: docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md.
+**Prompt document name**: 2026-10-04 11:30
