@@ -510,3 +510,25 @@ describe('the clock\'s face: on or off, its period, the ticks since on, the drop
         expect(unbound).toMatchObject({ on: false, flag: 'Not bound.', period: 250, name: 'Clock' });
     });
 });
+
+describe('the silkscreen and the buzzer (R-SIM-128, P-2026-10-04-1130)', () => {
+    it('a silkscreen is never flagged and never off: its label is its text, with a run, without one, without a context (mutant: flagged «Not bound.»)', () => {
+        const lookup = buildLookup();
+        for (const s of [scene(lookup, undefined), scene(lookup, runOf(lookup)), scene(lookup, undefined, { ctx: null })]) {
+            const f = face(dev('k1', 'silk', null, 'COOK'), s);
+            expect([f.flag, f.on, f.text, f.caption, f.title, f.name]).toEqual([null, true, 'COOK', '', 'Silkscreen · COOK', 'COOK']);
+        }
+        expect(face(dev('k2', 'silk', null), scene(lookup, undefined)).title).toBe('Silkscreen');
+    });
+
+    it('a buzzer reads as an LED: lit while its state is marked or its boolean holds, Err for a number (mutant: a buzzer read as a display)', () => {
+        const lookup = buildLookup();
+        expect(face(dev('z1', 'buzzer', { kind: 'marked', place: 'locked' }), scene(lookup, runOf(lookup))).lit).toBe(true);
+        const s = scene(lookup, runOf(lookup, ['coin', 'coin']));
+        expect(face(dev('z2', 'buzzer', { kind: 'expr', text: 'model.[paid]' }), s).lit).toBe(true);
+        expect(face(dev('z2', 'buzzer', { kind: 'expr', text: 'model.[paid]' }), scene(lookup, runOf(lookup, ['coin']))).lit).toBe(false);
+        const e = face(dev('z3', 'buzzer', { kind: 'expr', text: 'model.[coins]' }), s);
+        expect([e.err, e.lit, e.text]).toEqual([true, false, 'Err']);
+        expect(e.title).toBe('Buzzer · model.[coins]\nErr. The value is a number, not a boolean.');
+    });
+});

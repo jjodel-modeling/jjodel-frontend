@@ -400,3 +400,39 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: RC-23 by the chat on the lane crops (light): editor palette and period field, Variant A with tick count equal to the step count, microwave display 01:25 at secs 85 after plus x3, start and five ticks, plus and start disabled while Cooking. Alfonso accepted decision 1 of R-SIM-122 (a tick answers inputs from the board's switch and slider values), 2026-10-04. Tickets, low: the clock's On face pairs a pause icon with the word On (state and action mixed, use Pause/Start); binding captions truncated, more visible on clock tiles. Note: R-RAIL-44 under Superate de-bolded on the trunk (c25c758f4) so the duplicate-row probe no longer trips on D-UI-15.
 **Notes**: Rollback tag `pre-sim-io-clock` on `c25c758f4` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1504/result.json`.
 **Prompt document name**: 2026-10-04 15:04
+
+## 2026-10-04 — feat: styles of the I/O board's front panel, the model (P-2026-10-04-1130)
+**Prompt**: `claude_2026-10-04_1130_prompt_sim_io_panel_model.md`, heavy tier, `~/jjodel-w-iopanel` on `sim-io-panel` (from `452efc6f1`), lane auto, first of a chain with P-2026-10-04-1131: report first, then tests first, the board record's theme, accent, cols, span and style, the kinds silk and buzzer, occupancy by span, the editor's pure operations, `maxDisplayLength`, `simBoardIcons.ts`; D-UI-16 and R-SIM-123..129; no merge.
+**Files touched**: report `d03957dd1`. `906cb0f2e`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardFace.ts`, `sim/simBoardIcons.ts` (new), `sim/SimBoardEditor.tsx` and `sim/simBoardDevices.tsx` (two map entries each). `c18397a5c`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardFace.test.ts`, `simBoardIcons.test.ts` (new). This commit: `docs/decisions.md` (D-UI-16, R-SIM-123..129), the report's addendum, the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7360/7360 in 296 files, the 9 known suites red at import; build exit 0, chunk-size warning only; every board saved today encodes byte for byte as on `b27138436`; mutation bench 63/63.
+**Out-of-scope changes**: yes — `SimBoardEditor.tsx` and `simBoardDevices.tsx` were outside the prompt's DOVE (no `.tsx`): widened by the chat's answer to the report's question 1, two lines each. Ten code files over two commits, above five (rule 19), all listed in the report's §6 before the code.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no rendering in this lane beyond two placeholder map entries; what is drawn is P-2026-10-04-1131's, with its probe)
+**Notes**: Network loss near 11:51 ended the first session mid-test; resumed on the same tree, the one modified test file kept. The Write tool stored a regex range as literal combining marks; the bench exposed it (a mutant that could not apply), rewritten as escapes before the commit. D-UI-15 is on the trunk only: D-UI-16 sits after D-UI-14, a hunk at the merge. Report: docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md.
+**Prompt document name**: 2026-10-04 11:30
+
+## 2026-10-04 — feat: styles of the I/O board's front panel, what is drawn (P-2026-10-04-1131)
+**Prompt**: `claude_2026-10-04_1131_prompt_sim_io_panel_faces.md`, heavy tier, `~/jjodel-w-iopanel` on `sim-io-panel`, second of the chain after P-2026-10-04-1130, lane auto: R-SIM-130..133, themes, shapes, icons, display sizes, columns and the floating window, keycaps and shortcuts, silkscreen, buzzer, the editor's style controls and icon picker; tests first, probe on 3084, no merge.
+**Files touched**: `c79cf7774`: `model/simulation/boardCodec.ts`, `sim/SimBoard.scss`, `sim/SimBoardEditor.scss`, `sim/SimBoardEditor.tsx`, `sim/simBoardDevices.tsx`, `sim/simViewerPrefs.ts`, `sim/simBoardLook.ts` (new), `sim/simBoardSound.ts` (new). `372273fd8`: `boardCodec.test.ts`, `simViewerPrefs.test.ts`, `simBoardCard.test.ts`, `simBoardLook.test.ts`, `simBoardSound.test.ts` (new), two base markup fixtures (new). This commit: `docs/decisions.md` (R-SIM-130..133), the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set; vitest 7405/7405 in 299 files, the 9 known suites red at import; build exit 0; mutation bench 58/58; a board without the new fields renders the markup of `ab7907ad9` but for the keycaps, `aria-keyshortcuts`, the card's tabindex and the Pop out button; the four demo scenes 50/50 base and after, 0 differing paths.
+**Out-of-scope changes**: yes — `boardCodec.ts` and its test, outside `sim/`, for a bug found here as the DOVE allows (a Pulse LED's absent colour amber). Eight code files and seven test files over two commits, above five (rule 19), all in the DOVE by directory; `SimulationPanel.tsx` named by the prompt and untouched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3084, 1600×1000, light: panel 32/32, scenes diff 0; crops in `~/.jjodel-lanes/P-2026-10-04-1131/`; the chat's visual check pending, RC-23)
+**Notes**: The mock-up was not visible to the lane: role colours, swatches and the faces by theme were chosen and listed in R-SIM-130. The base scenes ran on the six sources restored from HEAD by copy, the index untouched (P13), then restored and compared byte for byte. A wide window's first place can sit under the canvas layer's Globals control: for the visual check. No discovery of its own (RC-11).
+**Prompt document name**: 2026-10-04 11:31
+
+## 2026-10-04 — ticket: a front panel press with an icon truncates its label in one cell
+**Ticket**: On Variant B a key-shaped Button one cell wide (80.5 px on 4 columns) with an icon and a label of six characters or more shows the label cut with an ellipsis: «+ Coin» reads «+ C…» in the crop `_tmp_iopanel_B_graphite.png`. The text is still the title and the aria-label. Seen by the chat's visual check (RC-23) of P-2026-10-04-1131, no fix in that lane; the way out is a span of 2, the mode `icon`, or a smaller font or a tighter gap on the press.
+**Priority**: low
+**Found in**: P-2026-10-04-1131
+
+## 2026-10-04 — ticket: a wide floating board can open under the canvas layer's Globals control
+**Ticket**: A 6- or 8-column board opens as a floating window at the card slot's left, 16 px under the toolbar (R-SIM-132); its top right corner then sits under the canvas layer's Globals and «Inspect node.[x]» controls, which paint above it (crop `_tmp_iopanel_B_six_columns_window.png`). The window drags away and keeps its place as a viewer pref. Seen by the lane probe and the chat's visual check of P-2026-10-04-1131, no fix in that lane; the way out is a first place at the slot's bottom, or the window above that layer.
+**Priority**: low
+**Found in**: P-2026-10-04-1131
