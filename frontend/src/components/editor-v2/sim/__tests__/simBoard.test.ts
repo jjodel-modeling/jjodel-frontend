@@ -15,7 +15,7 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
     DEVICE_LABELS, addDevice, bindingCaption, boardContextOf, boardContextOfRun, clockPeriodText, firstFreeCell, heldAnswer, keypadEnterValue, keypadKeyReason,
-    keypadPress, maxDisplayLength, moveDevice, nuxmvRows, removeDevice, resolveDevice, setAccent, setBinding, setBoardCols, setBoardTheme, setLabel, setPeriod,
+    keypadPress, maxDisplayLength, moveDevice, nuxmvRows, removeDevice, resolveDevice, setAccent, setAutoStart, setBinding, setBoardCols, setBoardTheme, setLabel, setPeriod,
     setSpan, setStyle, stateAttributesReason,
 } from '../simBoard';
 import type { BoardContext } from '../simBoard';
@@ -325,11 +325,23 @@ describe('the editor\'s operations: pure, on a draft', () => {
 describe('the clock on the board (R-SIM-122): one event, a period', () => {
     const clock = (binding: BoardBinding | null, period = 1000, id = 'c1'): BoardDevice => ({ ...dev(id, 'clock', binding), period });
 
-    it('add gives a new clock the default period, and no other kind a period at all (mutant: period missing; mutant: period on every kind)', () => {
+    it('add gives a new clock the default period and auto-start, and no other kind either (R-SIM-134; mutants: period missing; autoStart missing; both on every kind)', () => {
         const a = addDevice([], 'clock');
-        expect(a.devices[0]).toEqual({ id: 'd1', kind: 'clock', cell: [0, 0], label: '', binding: null, period: 1000 });
+        expect(a.devices[0]).toEqual({ id: 'd1', kind: 'clock', cell: [0, 0], label: '', binding: null, period: 1000, autoStart: true });
         const b = addDevice(a.devices, 'button');
-        expect('period' in b.devices[1]).toBe(false);
+        expect(['period' in b.devices[1], 'autoStart' in b.devices[1]]).toEqual([false, false]);
+    });
+
+    it('setAutoStart switches a clock\'s auto-start; off removes the field, so the board encodes as before; any other kind or id changes nothing (R-SIM-134; mutants: false stored; any kind)', () => {
+        const devices = [clock(null), dev('d2', 'button', null, [1, 0])];
+        const on = setAutoStart(devices, 'c1', true);
+        expect(on[0].autoStart).toBe(true);
+        expect(on[1]).toBe(devices[1]);
+        const off = setAutoStart(on, 'c1', false);
+        expect('autoStart' in off[0]).toBe(false);
+        expect(off[0]).toEqual(devices[0]);
+        expect(setAutoStart(devices, 'd2', true)).toBe(devices);
+        expect(setAutoStart(devices, 'nope', true)).toBe(devices);
     });
 
     it('setPeriod takes a whole number in 100..60000 for a clock only; anything else changes nothing (mutant: clamped; mutant: any kind)', () => {

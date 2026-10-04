@@ -10,15 +10,23 @@
  * the panel's `fire` makes it, and Play is the panel's `setTimeout` chain over
  * `playPress`. Time is vitest's fake clock. Each test name says which break of the
  * rule kills it; the mutation bench is in the commit message.
+ *
+ * P-2026-10-04-1625 (R-SIM-134..136): the auto clocks armed once per run, the idle
+ * tick that presses nothing, and the clocks owned by the panel. The panel does not
+ * import under this bench (the joiner), so «the board closed» is the clocks driven by
+ * the panel's press alone, with no card in their deps; the app is the lane probe's.
  */
 
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { clockOffText, createClocks } from '../simBoardClock';
-import type { ClockOff, Clocks } from '../simBoardClock';
-import { playPress, pressInput, runStatus, startRun } from '../simBridge';
+import { autoClocks, clockEnables, clockOffText, createClocks } from '../simBoardClock';
+import type { AutoClock, ClockOff, Clocks } from '../simBoardClock';
+import { panelInputs, playPress, pressInput, runStatus, startRun } from '../simBridge';
 import type { ContextBuilder } from '../simBridge';
+import { planPress } from '../simBoardFace';
 import { stateValueOf } from '../simCanvasState';
 import { __resetSimRunsForTests, getSimRun, simClear, simReset } from '../simRunState';
+import { structuralInputs } from '../../../../model/simulation/netStep';
+import type { BoardDevice } from '../../../../model/simulation/boardCodec';
 
 type Lookup = Record<string, any>;
 
@@ -147,7 +155,7 @@ describe('ticking: one press of the bound event per period, through the panel\'s
         expect(presses).toEqual(['tick']);
         vi.advanceTimersByTime(4000);
         expect(presses).toEqual(['tick', 'tick', 'tick', 'tick', 'tick']);
-        expect(c.state('k')).toEqual({ on: true, ticks: 5, dropped: 0, off: null });
+        expect(c.state('k')).toEqual({ on: true, ticks: 5, dropped: 0, idle: 0, off: null });
         expect([steps(), secs()]).toEqual([9, 85]);
     });
 
@@ -160,21 +168,11 @@ describe('ticking: one press of the bound event per period, through the panel\'s
         expect(secs()).toBe(26);
     });
 
-    it('a tick whose event enables nothing is discarded as a hand press is, and the clock keeps ticking (mutant: off at a discard)', () => {
-        reset();
-        const c = clocks();
-        c.start('k', 'tick', 1000);
-        vi.advanceTimersByTime(3000);
-        expect(presses).toHaveLength(3);
-        expect(getSimRun('M')!.trace!.map(t => t.kind)).toEqual(['discard', 'discard', 'discard']);
-        expect(c.state('k')?.on).toBe(true);
-    });
-
     it('two clocks tick independently, each at its own period', () => {
         reset(['plus', 'start']);
         const c = clocks();
         c.start('a', 'tick', 1000);
-        c.start('b', 'plus', 500);
+        c.start('b', 'tick', 500);
         vi.advanceTimersByTime(1000);
         expect([c.state('a')?.ticks, c.state('b')?.ticks]).toEqual([1, 2]);
     });
@@ -219,7 +217,7 @@ describe('off: when the run ends, at Reset, when the run goes, when the board ch
             c.start('k', event, 1000);
             vi.advanceTimersByTime(1000);
             expect(runStatus(getSimRun('M')!)).toBe(status);
-            expect(c.state('k')).toEqual({ on: false, ticks: 1, dropped: 0, off: status });
+            expect(c.state('k')).toEqual({ on: false, ticks: 1, dropped: 0, idle: 0, off: status });
             expect(vi.getTimerCount()).toBe(0);
             vi.advanceTimersByTime(5000);
             expect(presses).toEqual([event]);
@@ -233,7 +231,7 @@ describe('off: when the run ends, at Reset, when the run goes, when the board ch
         vi.advanceTimersByTime(2000);
         reset();
         c.check();
-        expect(c.state('k')).toEqual({ on: false, ticks: 2, dropped: 0, off: 'reset' });
+        expect(c.state('k')).toEqual({ on: false, ticks: 2, dropped: 0, idle: 0, off: 'reset' });
         vi.advanceTimersByTime(5000);
         expect(presses).toHaveLength(2);
     });
@@ -273,12 +271,12 @@ describe('off: when the run ends, at Reset, when the run goes, when the board ch
         c.start('k', 'tick', 1000);
         vi.advanceTimersByTime(3000);
         c.stop('k');
-        expect(c.state('k')).toEqual({ on: false, ticks: 3, dropped: 0, off: 'hand' });
+        expect(c.state('k')).toEqual({ on: false, ticks: 3, dropped: 0, idle: 0, off: 'hand' });
         expect(vi.getTimerCount()).toBe(0);
         vi.advanceTimersByTime(3000);
         expect(presses).toHaveLength(3);
         expect(c.start('k', 'tick', 1000)).toBe(true);
-        expect(c.state('k')).toEqual({ on: true, ticks: 0, dropped: 0, off: null });
+        expect(c.state('k')).toEqual({ on: true, ticks: 0, dropped: 0, idle: 0, off: null });
     });
 
     it('dispose clears every timer without a word: the card closed, the panel collapsed, the model switched (mutant: a timer left behind)', () => {
@@ -334,21 +332,204 @@ describe('beside the hand, Play and the input dialog (decisions 5, 6, 7)', () =>
         vi.advanceTimersByTime(1000);
         waiting = true;
         vi.advanceTimersByTime(2000);
-        expect(c.state('k')).toEqual({ on: true, ticks: 1, dropped: 2, off: null });
+        expect(c.state('k')).toEqual({ on: true, ticks: 1, dropped: 2, idle: 0, off: null });
         expect(presses).toHaveLength(1);
         waiting = false;
         vi.advanceTimersByTime(1000);
-        expect(c.state('k')).toEqual({ on: true, ticks: 2, dropped: 2, off: null });
+        expect(c.state('k')).toEqual({ on: true, ticks: 2, dropped: 2, idle: 0, off: null });
         expect(presses).toHaveLength(2);
     });
 });
 
 describe('why a clock is off, in words', () => {
     it('one phrase per reason, the run\'s status named (mutant: one phrase for all)', () => {
-        const all: ClockOff[] = ['hand', 'reset', 'cleared', 'board', 'Terminated', 'Deadlock', 'Halted'];
+        const all: ClockOff[] = ['hand', 'reset', 'cleared', 'board', 'panel', 'Terminated', 'Deadlock', 'Halted'];
         expect(all.map(clockOffText)).toEqual([
-            'switched off', 'Reset', 'no run (Stop, or the model changed)', 'the board changed',
+            'switched off', 'Reset', 'no run (Stop, or the model changed)', 'the board changed', 'the panel was collapsed',
             'the run reached Terminated', 'the run reached Deadlock', 'the run reached Halted',
         ]);
+    });
+});
+
+describe('idle ticks: a tick that enables nothing is not a step (R-SIM-136, amending decision 3)', () => {
+    it('it presses nothing: no step, no trace entry, no kept configuration; counted idle and announced, the clock goes on (mutants: pressed anyway; counted as a tick; off at an idle tick; not announced)', () => {
+        reset();
+        const c = clocks();
+        c.start('k', 'tick', 1000);
+        vi.advanceTimersByTime(2000);
+        const before = changes;
+        vi.advanceTimersByTime(1000);
+        expect(changes).toBeGreaterThan(before);
+        const run = getSimRun('M')!;
+        expect([presses, steps(), run.trace?.length ?? 0, run.keptConfigs?.length ?? 0]).toEqual([[], 0, 0, 0]);
+        expect(c.state('k')).toEqual({ on: true, ticks: 0, dropped: 0, idle: 3, off: null });
+        expect(vi.getTimerCount()).toBe(1);
+    });
+
+    it('a tick that enables a transition is a step as today; the clock follows the state between idle and pressing (mutant: the test read once at switch-on)', () => {
+        reset(['plus']);
+        const c = clocks();
+        c.start('k', 'tick', 1000);
+        vi.advanceTimersByTime(2000);
+        pressInput('M', 'start', undefined, lookup, 'start');
+        vi.advanceTimersByTime(3000);
+        expect([c.state('k')?.ticks, c.state('k')?.idle, steps(), secs()]).toEqual([3, 2, 5, 27]);
+        vi.advanceTimersByTime(27000);
+        expect([secs(), steps()]).toEqual([0, 32]);
+        vi.advanceTimersByTime(2000);
+        expect([c.state('k')?.ticks, c.state('k')?.idle, steps(), presses.length]).toEqual([30, 4, 32, 30]);
+    });
+
+    it('a hand press that enables nothing is still a step at unchanged state: hand presses are as they were (mutant: the idle rule applied to the hand)', () => {
+        reset();
+        pressInput('M', 'tick', undefined, lookup, 'tick');
+        expect([steps(), getSimRun('M')!.trace!.map(t => t.kind)]).toEqual([1, ['discard']]);
+    });
+
+    it('the test is the one that greys the panel\'s button, structural: a tick whose guard refuses it is still pressed, a discard step (report R3; mutants: candidates instead; any event enabled; the run\'s status not read)', () => {
+        reset();
+        const run = getSimRun('M')!;
+        const grey = (e: string) => panelInputs(runStatus(run), structuralInputs(run.net, run.config.state)).events.has(e);
+        expect(run.alphabet.map(e => clockEnables(run, e))).toEqual(run.alphabet.map(grey));
+        expect(['tick', 'plus', 'start'].map(e => clockEnables(run, e))).toEqual([false, true, true]);
+        const c = clocks();
+        c.start('k', 'start', 1000);
+        vi.advanceTimersByTime(1000);
+        expect([presses, getSimRun('M')!.trace!.map(t => t.kind)]).toEqual([['start'], ['discard']]);
+        for (const hand of [['quit'], ['plus', 'plus', 'plus', 'plus', 'plus']]) {
+            reset(hand);
+            const ended = getSimRun('M')!;
+            expect(ended.alphabet.some(e => clockEnables(ended, e))).toBe(false);
+        }
+        expect(runStatus(getSimRun('M')!)).toBe('Halted');
+    });
+
+    it('a tick while a press waits is dropped before the idle test: decision 7 as it was (mutant: the idle test first)', () => {
+        reset();
+        const c = clocks();
+        c.start('k', 'tick', 1000);
+        waiting = true;
+        vi.advanceTimersByTime(2000);
+        expect([c.state('k')?.dropped, c.state('k')?.idle]).toEqual([2, 0]);
+        waiting = false;
+        vi.advanceTimersByTime(1000);
+        expect([c.state('k')?.dropped, c.state('k')?.idle]).toEqual([2, 1]);
+    });
+});
+
+describe('auto-start: the clock switches itself on with its run (R-SIM-134, R-SIM-135)', () => {
+    const AUTO: AutoClock[] = [{ id: 'k', event: 'tick', period: 1000 }];
+    const arm = (c: Clocks, auto: readonly AutoClock[] = AUTO) => c.arm?.(() => auto);
+
+    it('not before Reset; at the run\'s first sight it is on, the first tick one period later (mutants: armed without a run; the first tick at the arm)', () => {
+        const c = clocks();
+        arm(c);
+        expect([c.state('k'), vi.getTimerCount()]).toEqual([undefined, 0]);
+        vi.advanceTimersByTime(5000);
+        reset(['plus', 'start']);
+        arm(c);
+        expect(c.state('k')).toEqual({ on: true, ticks: 0, dropped: 0, idle: 0, off: null });
+        vi.advanceTimersByTime(999);
+        expect(presses).toEqual([]);
+        vi.advanceTimersByTime(1);
+        expect(presses).toEqual(['tick']);
+    });
+
+    it('once per run: the hand\'s pause holds at the next sight of the same run, and Reset re-arms it with a fresh count, one timer (mutants: re-armed at every sight; Reset not re-arming; the old timer kept)', () => {
+        reset(['plus', 'plus', 'start']);
+        const c = clocks();
+        arm(c);
+        vi.advanceTimersByTime(2000);
+        c.stop('k');
+        arm(c);
+        expect(c.state('k')).toEqual({ on: false, ticks: 2, dropped: 0, idle: 0, off: 'hand' });
+        vi.advanceTimersByTime(3000);
+        expect(presses).toHaveLength(2);
+        reset(['plus', 'start']);
+        arm(c);
+        expect(c.state('k')).toEqual({ on: true, ticks: 0, dropped: 0, idle: 0, off: null });
+        expect(vi.getTimerCount()).toBe(1);
+        vi.advanceTimersByTime(1000);
+        expect(presses).toHaveLength(3);
+    });
+
+    it('Reset while it ticks: the arm turns the old one off and on again for the new run (mutant: the arm without the sweep keeps the old net)', () => {
+        reset(['plus', 'start']);
+        const c = clocks();
+        arm(c);
+        vi.advanceTimersByTime(2000);
+        reset(['plus', 'start']);
+        arm(c);
+        expect(c.state('k')).toEqual({ on: true, ticks: 0, dropped: 0, idle: 0, off: null });
+        vi.advanceTimersByTime(1000);
+        expect([presses.length, steps(), secs()]).toEqual([3, 3, 29]);
+    });
+
+    it('only the listed clocks whose event the run knows; any other clock is left as it is (mutants: an unknown event armed; a clock not listed armed)', () => {
+        reset(['plus', 'start']);
+        const c = clocks();
+        arm(c, [{ id: 'a', event: 'tick', period: 1000 }, { id: 'g', event: 'gone', period: 1000 }]);
+        expect([c.state('a')?.on, c.state('g'), c.state('m')]).toEqual([true, undefined, undefined]);
+    });
+
+    it('a run that is not Running arms nothing, and the next Reset does (mutant: armed on a Terminated run)', () => {
+        reset(['quit']);
+        const c = clocks();
+        arm(c);
+        expect([c.state('k'), vi.getTimerCount()]).toEqual([undefined, 0]);
+        reset();
+        arm(c);
+        expect(c.state('k')?.on).toBe(true);
+    });
+
+    it('an edit of the board and the panel collapsed switch it off until Reset or the hand, each with its reason (R-SIM-135; mutant: re-armed in the same run)', () => {
+        reset(['plus', 'start']);
+        const c = clocks();
+        arm(c);
+        c.stopAll('board');
+        arm(c);
+        expect(offOf(c)).toBe('board');
+        expect(c.start('k', 'tick', 1000)).toBe(true);
+        c.stopAll('panel');
+        arm(c);
+        expect(offOf(c)).toBe('panel');
+        vi.advanceTimersByTime(3000);
+        expect(presses).toEqual([]);
+        reset(['plus', 'start']);
+        arm(c);
+        expect(c.state('k')?.on).toBe(true);
+    });
+
+    it('the probe\'s microwave with no card in the deps (the board closed): idle 5 s at Reset is no step; plus x3, start, 5 s more read 85, the steps the presses plus the ticks that fired (R-SIM-135, R-SIM-136)', () => {
+        const panel = createClocks({
+            run: () => getSimRun('M'),
+            waiting: () => false,
+            press: event => {
+                const plan = planPress(getSimRun('M'), event, []);
+                if (plan.kind === 'fire') pressInput('M', plan.event, undefined, lookup, plan.event, plan.values);
+            },
+            changed: () => undefined,
+        });
+        reset();
+        panel.arm?.(() => AUTO);
+        vi.advanceTimersByTime(5000);
+        expect([steps(), panel.state('k')?.idle]).toEqual([0, 5]);
+        for (const e of ['plus', 'plus', 'plus', 'start']) pressInput('M', e, undefined, lookup, e);
+        vi.advanceTimersByTime(5000);
+        expect([secs(), steps(), steps() - 4]).toEqual([85, 9, panel.state('k')?.ticks]);
+    });
+});
+
+describe('autoClocks: the clocks of a board that switch themselves on (R-SIM-134)', () => {
+    it('a Clock with auto-start bound to an event, in board order, its period defaulted; manual, unbound and other kinds left out (mutants: manual listed; unbound listed; a button listed)', () => {
+        const ev = (event: string) => ({ kind: 'event' as const, event });
+        const devices: BoardDevice[] = [
+            { id: 'a', kind: 'clock', cell: [0, 0], label: '', binding: ev('tick'), period: 500, autoStart: true },
+            { id: 'b', kind: 'clock', cell: [1, 0], label: '', binding: ev('tick'), period: 500 },
+            { id: 'c', kind: 'clock', cell: [2, 0], label: '', binding: null, autoStart: true },
+            { id: 'd', kind: 'button', cell: [3, 0], label: '', binding: ev('tick'), autoStart: true },
+            { id: 'e', kind: 'clock', cell: [0, 1], label: '', binding: ev('plus'), autoStart: true },
+        ];
+        expect(autoClocks(devices)).toEqual([{ id: 'a', event: 'tick', period: 500 }, { id: 'e', event: 'plus', period: 1000 }]);
     });
 });
