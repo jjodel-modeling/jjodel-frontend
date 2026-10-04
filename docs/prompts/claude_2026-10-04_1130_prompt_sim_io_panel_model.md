@@ -1,0 +1,67 @@
+# Prompt: styles of the I/O board's front panel, the model (themes, spans, device styles, icons from event names)
+
+Prompt-ID: P-2026-10-04-1130
+Chat: C-2026-10-04-1126
+Lane: full (board codec and pure modules, a new pure icon module, decisions; tests first; no probe). Tier: heavy (RC-32). Model: the default of `.claude/settings.json`, no deviation.
+Status: da eseguire
+Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
+Deroga: the Phase 1 hard stop of P4 does not apply (motivo: Alfonso asked for this work in lane auto, 2026-10-04 11:25, RC-11). The discovery report is still written and committed first, then Phase 2 starts. Stop with `Outcome: question` instead, before any code, if the discovery finds an RC-26 item or contradicts a decision below.
+Chain: first of two lanes run by `lane-run chain` in the same worktree; the second is P-2026-10-04-1131 (rendering, editor, extras). It starts only on `Outcome: done`, so this lane ends with `Outcome: done`, not hard-stop.
+
+Worktree: `~/jjodel-w-iopanel`, branch `sim-io-panel`, cut by the chat from the tip of `sim-io-clock` at `452efc6f1` (the Clock lane, P-2026-10-04-0150, done and not yet merged: it touches the same files, so this branch carries it), `frontend/node_modules` symlinked as P14 allows. Before anything else: `pwd`, branch, `git log -1` (the docs commit that added the two prompts) and `git status` (clean) are as stated here. Otherwise stop with `Outcome: blocked`.
+
+## Lane discipline
+
+Every reply of this session opens with `[P-2026-10-04-1130 · session <id>]`.
+Every final message ends with one line: `Outcome: done | hard-stop | question | blocked`.
+Every question that has a recommendation carries it in one line: `Recommended: <one line>`.
+
+## Contesto (non rifare l'analisi)
+
+The I/O board (R-SIM-110..122) has two skins over the same record: Variant A, the working surface, and Variant B, the front panel (`SimBoard.scss`, fixed slate metal palette `$sim-board-metal-*`, dark glass, red digits). Every device takes one cell of a 4 by 8 grid (`boardCodec.ts`); the card is 400 px wide. Alfonso asked (2026-10-04) for: more than one theme for the front panel; more than one style for buttons and for the text display (sizes); a Bootstrap icon on a button, matched first from the event's name and overridable; some extras chosen by the chat; and panel sizes. He validated a mock-up (artifact «Front panel styles», a microwave bound to its machine) and said «procedi» in lane auto. This lane builds the model; P-2026-10-04-1131 builds what is drawn.
+
+## Decisions (rows written by this lane in `docs/decisions.md`)
+
+D-UI-16, ratified by Alfonso on 2026-10-04 («Corretto»), written right after the D-UI-15 row, text exactly:
+
+- **D-UI-16** (2026-10-04, ratified by Alfonso 2026-10-04): **D-UI-15 binds the application's chrome, not what a model or a simulated system looks like.** Alfonso, 2026-10-04, on the chat's reading: «Corretto». The I/O board's working surface (Variant A, R-SIM-114) is application UI and stays light only. The front panel (Variant B) draws a physical object, the system's interface to its environment (R-SIM-110), so its look is content, like the fill of a node in a notation: it may carry themes of its own, dark ones included, with closed palettes that never read the app's tokens and never switch on `data-theme`. The same holds for any colour a notation or a viewpoint assigns. Checklists and crops of such content are taken in the light app theme, with the content's own theme as set by the model.
+
+R-SIM-123..129, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25 (Alfonso keeps the veto), Simulator series after R-SIM-122:
+
+1. **R-SIM-123, the style is authoring, saved in `ioBoard`.** Theme, accent, columns, spans and device styles are optional fields of the board record (R-SIM-116). An absent field means the default and is never written, so every board saved today encodes to the same string, byte for byte (test it). `v` stays 1, no VersionFixer step, `ioBoard` still never moves `runSignature`. Decoding stays tolerant device by device (R-SIM-68): an unknown value of a style field drops that field with a defect, never the device. The skin choice A or B stays a viewer preference (R-SIM-114).
+2. **R-SIM-124, themes of the front panel.** Board field `theme`: `graphite` (default, today's look), `appliance`, `instrument`, `print`. Board field `accent`: a colour `#rrggbb`, absent means the theme's own. Themes apply to Variant B only (D-UI-16); Variant A ignores them.
+3. **R-SIM-125, panel size and spans.** Board field `cols`: 4 (default), 6 or 8; rows stay 8. Device field `span`: `[w, h]`, `1 <= w <= 4`, `1 <= h <= 2`, absent means `[1, 1]`; a device covers the cells from its `cell` over its span. Occupancy is by covered cells: the codec's cell-taken defect, `firstFreeCell`, `addDevice`, `moveDevice` and a new `setSpan` all use it; a span or a move that would leave the grid or overlap is refused and nothing changes. Narrowing `cols` is refused while a device covers a removed column.
+4. **R-SIM-126, device styles.** Device field `style`, an object with fields in a fixed order, each optional, each valid only on some kinds (a field on another kind is a defect that drops the field). Button, Clock: `shape` (`key` default, `membrane`, `round`, `text`), `role` (`neutral`, `go`, `stop`, `accent`; absent means the role suggested from the event's name, R-SIM-127), `icon` (a Bootstrap icon name without the `bi-` prefix, or `none`; absent means the suggested one), `iconMode` (`both` default, `icon`, `text`), `key` (one character `[a-z0-9]`, or `none`; absent means the suggested one). Text display and 7-segment: `size` (`S`, `M` default, `L`, `XL`), `face` (`plain`, `lcd`, `vfd`; absent means the theme's). LED and Pulse LED: `shape` (`round` default, `square`, `bar`), `color` (`green` default, `red`, `amber`, `blue`, `violet`). A text display sizes its glyphs for the longest value its binding's domain can produce, never the current value, so the box keeps its size while the value runs: this lane exposes the pure `maxDisplayLength(device, ctx)` (a range: the longer of min and max; an enum: the longest literal; a state name: the longest state label; an expression without a known domain: null, the face then uses the cell width).
+5. **R-SIM-127, an icon from the event's name.** A pure module `simBoardIcons.ts`: `eventWords(name)` splits camelCase, snake_case, kebab, spaces and letter-digit boundaries, strips accents, lowercases; `suggestIcon(name)` tries pairs first (`door open`, `open door`, `apri porta`, `door close`, `chiudi porta`), then the single words in the name's order against a curated English and Italian dictionary, the first hit wins, no hit gives no icon (never a random one); it returns `{ icon, role, rule }`. The dictionary of the mock-up is the starting set: start, go, run, play, begin, avvia, inizia, parti, cook, cuoci give `play-fill` and role go; stop, halt, ferma, arresta, abort give `stop-fill` and role stop; cancel, annulla, reject, esc, no give `x-lg` and role stop; ok, confirm, enter, conferma, invio, accept give `check-lg` and role go; pause, plus, minus, reset, coin, lock, unlock, door, timer, tick, light, power, heat, cool, temp, bell, next, the four arrows, key, coffee, water, fan, wait, buy, toggle as in the mock-up, each with its Italian synonyms. The suggestion is computed at render time from the event's label in the board context (`ctx.events`), never stored, so renaming the event updates it; only an explicit `icon` (or `none`) is stored. A test fails if any icon of the dictionary is missing from the installed `bootstrap-icons/font/bootstrap-icons.json`. `suggestKeys(names)` gives each input device a shortcut: a single-digit name keeps its digit, otherwise the first letter of the name not taken by an earlier device, in board order (row, then column); an explicit `key` wins and is reserved first; two explicit equal keys are a board defect on the second.
+6. **R-SIM-128, two new device kinds, amending R-SIM-111 (Alfonso asked for the extras).** `silk`, a silkscreen: no binding, a label, drawn as a caption with a rule; it never takes input and never flags. `buzzer`, an output: a boolean expression over σ like the LED (same binding forms as `led`), sounding on the rising edge in P-2026-10-04-1131; presentation only, absent from any `.smv` export like the Pulse LED.
+7. **R-SIM-129, what stays out of the first cut.** Export of the board as SVG or PNG (it needs either hand-written serialisation or a new dependency, and no dependency enters without Alfonso): parked as a question. User-defined themes beyond the accent: out.
+
+If the code shows that one of these cannot hold as written, stop with `Outcome: question` and a `Recommended:` line.
+
+## COSA
+
+1. Phase 1, read-only, short, for both lanes of the chain: read `boardCodec.ts`, `simBoard.ts`, `boardOutputs.ts`, `simBoardFace.ts`, `simBoardClock.ts`, `simBoardDevices.tsx`, `SimBoardEditor.tsx`, `SimBoard.scss`, `SimBoardEditor.scss`, `simViewerPrefs.ts`, `SimulationPanel.tsx` (the board's mount, `boardOpen`, the card slot), R-SIM-110..122, D-UI-15. Write `docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md` (P4 content; naming `discovery_<YYYY-MM-DD>_<slug>.md`) with: the exact files each lane will touch, how spans change occupancy and the editor's drag, where the event label reaches a device, whether the bootstrap-icons JSON can be imported by a test and lazily by the editor without a new dependency, the room for a 6 or 8 column board beside the rail (R-SIM-119, H1), and the decisions of P-2026-10-04-1131 that the code contradicts, if any. Commit it alone (`docs:`).
+2. Phase 2: the fields of R-SIM-123..126 and the kinds of R-SIM-128 in the codec (encode in canonical order, decode with defects); occupancy by span in `simBoard.ts` and the editor's operations (`setSpan`, `setStyle`, `setBoardTheme`, `setBoardCols`, `setAccent`, pure); `maxDisplayLength`; the module `simBoardIcons.ts`. Rows D-UI-16 and R-SIM-123..129 in `docs/decisions.md`.
+
+## DOVE
+
+Under `frontend/src/model/simulation/` and `frontend/src/components/editor-v2/sim/` only, pure `.ts` modules and their `__tests__/`; no `.tsx` and no `.scss` in this lane (those are P-2026-10-04-1131's). Plus `docs/decisions.md`, the discovery report, this prompt's Status and `docs/log-inbox/simulation.md`. The report names the exact files; Phase 2 touches only those. A file outside: stop with `Outcome: question`. No critical-zone file. Other lanes run in other worktrees (`~/jjodel-w-consoleerr` and others): never touch their trees, and do not touch `~/jjodel-w-ioclock`. Grep every new identifier first.
+
+## COME
+
+1. Read `CLAUDE.md` (sections 5, 6, 17, 21.2), P16, RC-17, RC-21, RC-25, RC-26, D-UI-15.
+2. After the report: tests first, red. Codec: today's boards (the fixtures of `boardCodec.test.ts` and the boards of the four demo exports in `~/jjodel-demo-exports/` if any carry one) encode byte-identical; every new field round-trips; each invalid value drops only its field with a defect; overlaps by span are defects. Operations: spans and moves refused off grid or overlapping; narrowing `cols` refused while occupied. Icons: the table of the mock-up (`plus30` plus with no role, `startCooking` play-fill go, `stop` stop-fill stop, `doorOpen` door-open by pair, `insertCoin` coin, `reset`, `avviaLavaggio` play-fill go, `apri_porta` door-open by pair, `tick` stopwatch, `e1` none, `5` none with key 5); keys with collisions and explicit reservations; dictionary icons all present in the installed set. `maxDisplayLength` per domain.
+3. Implement. Gates in the foreground: `npm run typecheck` (no new errors over §17's baseline of 14), the full vitest suite, `npm run build` exit 0; mutation bench on `simBoardIcons.ts` and on the codec changes.
+4. Commits `feat:` and `test:`, then the closure docs commit (Status flip with lane, shas and gates; D-UI-16, R-SIM-123..129; inbox entry); stage by explicit path. The report closes with «Decisions taken (unattended)» and «Decisions awaiting Alfonso». End with `Outcome: done` so the chain goes on. Do not merge.
+
+## HARD STOP
+
+Before any code if an RC-26 item appears (`Outcome: question`). Otherwise none: the chain continues.
+
+## NON FARE
+
+Never: `git add .`, `-A`, `-u`, `git stash`, `git reset --hard`, `git checkout -- .`, `git clean`, `--no-verify`, push, writes outside this worktree, a file outside DOVE, removing the `frontend/node_modules` link, a new dependency. No change to the engine's step, the trace, the STC, JjEL, or the Clock's timer.
+
+## RIFERIMENTI
+
+R-SIM-68, R-SIM-110..122, D-UI-15; discovery `docs/discovery/discovery_2026-10-03_sim_io_board.md` and `docs/discovery/discovery_2026-10-04_sim_io_clock.md`; the Clock lane `52ddd7163`, `bed918e5f`, `452efc6f1`.
