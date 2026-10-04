@@ -11,6 +11,7 @@ import {
     navFor,
     rendersInline,
     rootOf,
+    survivorOf,
     truncateTo,
     type NavStep,
 } from '../nav';
@@ -165,5 +166,46 @@ describe('Back — #158, il passo attraversato (field test 2026-09-29)', () => {
     it('il rientro su Phase_0 per ciclo la rende una form allo stesso modo', () => {
         const again = drillInto(road, Ph);
         expect(currentOf(again)?.passThrough).toBe(false);
+    });
+});
+
+describe('#173 — l\'elemento a schermo cancellato: la strada che sopravvive', () => {
+    // La form di D01, aperta dai mappedCompetencies di CompetencyGoal_0: il Delete
+    // della testata cancella D01, e la form deve tornare su un elemento che esiste.
+    const Cg = step('cg', 'CompetencyGoal_0', 'CompetencyGoal');
+    const D1 = step('d01', 'D01', 'Competency', 'mappedCompetencies');
+    const aliveBut = (...dead: string[]) => (id: string) => !dead.includes(id);
+
+    it('finche\' l\'elemento a schermo vive, la strada e\' la stessa, anche con un passo morto piu\' su', () => {
+        const nav = drillInto(drillInto(navFor(S), P), F);
+        expect(survivorOf(nav, aliveBut())).toBe(nav);
+        expect(survivorOf(nav, aliveBut('p2'))).toBe(nav);
+    });
+
+    it('D01 cancellato: la form torna su CompetencyGoal_0, senza breadcrumb', () => {
+        const next = survivorOf(drillInto(navFor(Cg), D1), aliveBut('d01'));
+        expect(next?.path).toEqual([Cg]);
+    });
+
+    it('a profondita\' 2 si risale di un livello: Filter cancellato, la form e\' Port', () => {
+        const next = survivorOf(drillInto(drillInto(navFor(S), P), F), aliveBut('f1'));
+        expect(next?.path.map(s => s.id)).toEqual(['s1', 'p2']);
+    });
+
+    it('la cascata taglia al PRIMO passo morto: Port e il suo Filter via, la form e\' Sensor', () => {
+        const next = survivorOf(drillInto(drillInto(navFor(S), P), F), aliveBut('p2', 'f1'));
+        expect(next?.path.map(s => s.id)).toEqual(['s1']);
+    });
+
+    it('il passo attraversato resta saltato: Antonio cancellato, la form e\' Scenario', () => {
+        const Sc = step('sc', 'Scenario_0', 'Scenario');
+        const Ph = { ...step('ph', 'Phase_0', 'Phase', 'pathway'), passThrough: true };
+        const An = step('an', 'Antonio', 'Learner', 'learners');
+        const next = survivorOf(drillInto(drillInto(navFor(Sc), Ph), An), aliveBut('an'));
+        expect(next?.path.map(s => s.id)).toEqual(['sc']);
+    });
+
+    it('morta anche la radice, non resta strada', () => {
+        expect(survivorOf(drillInto(navFor(Cg), D1), aliveBut('cg', 'd01'))).toBeNull();
     });
 });

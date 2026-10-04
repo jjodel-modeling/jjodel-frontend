@@ -237,6 +237,13 @@ describe('FL6 — l\'header della form', () => {
         expect(TSX).toContain('{subjectStep.cls}');
     });
 
+    it('#173 — nome e permesso della testata sono quelli dell\'elemento a schermo', () => {
+        // Durante un drill-in la testata nominava la riga selezionata sopra la form di
+        // D01, e il Delete lo offriva col permesso della riga.
+        expect(TSX).toContain('const subjectStep = navStepOf(idlookup, formSubjectId ?? subjectId);');
+        expect(TSX).toContain("permOfInstance(formSubjectId ?? subjectId) === 'edit';");
+    });
+
     it('il badge «Unsaved changes» e\' andato via con 10c (deviazione A3)', () => {
         // FL6 lo asseriva PRESENTE. 10c lo toglie, e non e' una regressione: A3
         // dice «dove la board mostra Save/Discard, non costruirli», e quel badge
@@ -257,7 +264,10 @@ describe('FL6 — l\'header della form', () => {
     });
 
     it('Delete e\' quello di 12d: apre la preflight, non cancella', () => {
-        expect(TSX).toContain('onClick={() => openDelete(subjectId)}');
+        // #173 — sull'elemento a schermo (`formSubjectId`), non sulla riga selezionata:
+        // durante un drill-in il Delete della testata cancellava la riga sotto la form di D01.
+        expect(TSX).toContain('onClick={() => openDelete(formSubjectId ?? subjectId)}');
+        expect(TSX).not.toContain('onClick={() => openDelete(subjectId)}');
         const open = TSX.slice(TSX.indexOf('const openDelete'));
         expect(open.slice(0, open.indexOf('\n    };'))).toContain('preflightFor(');
     });

@@ -53,6 +53,7 @@ import {
     navFor,
     newInstanceReason,
     rendersInline,
+    survivorOf,
     truncateTo,
 } from '../../../jjform';
 import { DATA_MANAGER_VIEWPOINT_ID } from '../../../joiner';
@@ -326,6 +327,20 @@ export function InstanceDetail({
         setNav(next);
     };
 
+    /** #173 — the element on screen can die under the form: the header's Delete deletes
+     *  it, and a cascade can take it too. The deletes land a tick after the confirmation
+     *  (`deleteAdapter` defers them), so the road is healed from the store and not from
+     *  the click: back to the form the user had on screen before (`survivorOf`), at the
+     *  offset it had. Declared before the scroll effect below, which applies that offset
+     *  in the same commit — `formSubjectId` has just fallen back to the subject. */
+    useLayoutEffect(() => {
+        if (!nav) return;
+        const next = survivorOf(nav, id => idlookup?.[id]?.className === 'DObject');
+        if (next === nav) return;
+        if (next) restoreScrollFor(depthOf(next));
+        setNav(next);
+    }, [nav, idlookup]);
+
     /** Applied before paint, so the form never shows one frame at the old offset. */
     useLayoutEffect(() => {
         const top = pendingScrollRef.current;
@@ -468,10 +483,13 @@ export function InstanceDetail({
 
     const isHidden = (id: string) => permOfInstance(id) === 'hidden';
 
-    /** The header names the instance the panel was opened on, by the naming rule the
-     *  neighborhood uses too (`makeDrawReadCtx`, through `navStepOf`). */
-    const subjectStep = navStepOf(idlookup, subjectId);
-    const canDelete = !!openDelete && permOfInstance(subjectId) === 'edit';
+    /** The header names the instance ON SCREEN — the drilled-into element during a
+     *  drill-in, the selected row otherwise — by the naming rule the neighborhood uses
+     *  too (`makeDrawReadCtx`, through `navStepOf`). Its Delete deletes that element,
+     *  under that element's permission: a header naming the row over D01's form deleted
+     *  the row (#173). */
+    const subjectStep = navStepOf(idlookup, formSubjectId ?? subjectId);
+    const canDelete = !!openDelete && permOfInstance(formSubjectId ?? subjectId) === 'edit';
 
     return (
         <>
@@ -552,8 +570,8 @@ export function InstanceDetail({
                         <button
                             type="button"
                             className="instance-manager__form-delete"
-                            title={`Delete ${subjectStep?.name || subjectId}`}
-                            onClick={() => openDelete(subjectId)}
+                            title={`Delete ${subjectStep?.name || (formSubjectId ?? subjectId)}`}
+                            onClick={() => openDelete(formSubjectId ?? subjectId)}
                         >
                             <i className="bi bi-trash" aria-hidden="true" />
                             Delete
