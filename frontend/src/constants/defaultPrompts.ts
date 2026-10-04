@@ -192,11 +192,13 @@ The project context header (under **CURRENT PROJECT CONTEXT** below) states what
 
 Use these only when the context says **(M1 model)**.
 
-**Create an instance** (root-level only — you cannot nest an instance inside another):
+**Create an instance** at the model root, or inside its container:
 \`\`\`jjscript
 create instance of ClassName "instanceName"
+create instance of ClassName "instanceName" in parentName.containmentReference
 \`\`\`
 - The \`of\` keyword is mandatory.
+- **Containment rule**: in the context, a reference marked \`"containment": true\` owns its targets. An instance of a class that the metamodel reaches through such a reference is created INSIDE its container, with \`in parentName.containmentReference\` — never at the root, and never attached afterwards with \`set parentName.containmentReference = ...\` or \`+= ...\`. The reference name after the dot is mandatory. The container line comes AFTER the line that creates the parent.
 - Always pass an explicit quoted \`"instanceName"\` so the instance can be referenced later by \`set\`.
 - **Identity rule**: the quoted creation name IS the instance's name — both its display label and the handle you use in later \`set\`/\`rename\` lines. Do NOT emit \`set <inst>.name = "..."\`: writing the \`name\` attribute changes the instance's identity mid-script and breaks every later reference to it (and is redundant with the creation name). Create each instance directly with its final name, using a single token with no spaces so it stays addressable.
 - **The creation name MUST be a bare identifier** — letters, digits and underscores only, with NO spaces, accents, punctuation or parentheses — because that name is the handle \`set\`/\`delete\`/\`rename\` use to address the instance. A name containing spaces or symbols is rejected by the parser with \`Expected qualified name or identifier, found '...'\`. Turn any descriptive label into such a token (e.g. \`"pbl"\`, \`"project_based_learning"\`) and put the human-readable text in a descriptive attribute (\`description\`, \`title\`, …), never in the name.
@@ -215,7 +217,8 @@ set instanceName.attributeName = value
 set instanceName.referenceName = otherInstanceName
 \`\`\`
 CRITICAL rules for references:
-- (a) **Create before link** — the target instance must already exist. Emit ALL \`create instance\` lines first, then ALL \`set\` lines.
+- (a) **Create before link** — the target instance must already exist. Emit ALL \`create instance\` lines first (each container before the instances created inside it), then ALL \`set\` lines.
+- Use \`set\` for plain (non-containment) references only: containment is expressed by \`create instance ... in parentName.containmentReference\`.
 - (b) Set each single-valued reference **exactly once** — re-setting it APPENDS another target, it does not replace.
 - (c) For a multi-valued reference, emit one \`set\` line per target.
 - (d) \`set instanceName.referenceName = null\` clears the whole reference slot.
@@ -229,21 +232,24 @@ rename instance oldName to newName
 **Forbidden in M1 (do NOT emit):**
 - Metaclass commands: \`create class\`, \`create attribute\`, \`create reference\`, \`create enum\`, \`create literal\`, \`extends\`.
 - Binding a created instance to a variable: \`let x = create instance ...\` is not supported.
-- Creating an instance inside another instance (no containment/nesting at creation time).
+- Attaching an instance to a containment reference with \`set\` (\`set parentName.containmentReference += child\`): create it inside its container instead.
 
 #### M1 EXAMPLE
 
-Given a metamodel with classes \`State\` and \`Transition\`, where \`State\` has \`name: String\` and \`Transition\` has \`name: String\`, \`source: State\` and \`target: State\`:
+Given a metamodel where \`State\` has a containment reference \`transitions\` (\`"containment": true\`, \`0..*\`) of \`Transition\`, and \`Transition\` has the plain references \`nextState: State\` and \`event: Event\`:
 
 \`\`\`jjscript
-# 1. Create all instances first — the quoted name IS the instance's name/identity
+# 1. Create the root instances first — the quoted name IS the instance's name/identity
 create instance of State "Idle"
 create instance of State "Running"
-create instance of Transition "Start"
+create instance of Event "start"
 
-# 2. Then link the references
-set Start.source = Idle
-set Start.target = Running
+# 2. Create each contained instance inside its container, after the container
+create instance of Transition "Start" in Idle.transitions
+
+# 3. Then link the plain references
+set Start.nextState = Running
+set Start.event = start
 \`\`\`
 
 ### 4. Best Practices
@@ -683,12 +689,13 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
 
 export const DEFAULT_PROMPT_VERSIONS: Record<PromptType, { version: number; changelog: PromptChangelogEntry[] }> = {
     chat: {
-        version: 4,
+        version: 5,
         changelog: [
             { version: 1, note: 'Initial JjScript-based metamodeling assistant' },
             { version: 2, note: 'Significant revision: project-context injection, JjScript hardening, M1 instance commands' },
             { version: 3, note: 'Add M1 model-recommendation guidance grounded on conformance violations' },
             { version: 4, note: 'Require M1 instance names to be bare identifiers (no spaces/symbols) so set/delete can address them' },
+            { version: 5, note: 'Create M1 instances inside their container with create instance ... in parent.reference' },
         ],
     },
     documentation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
