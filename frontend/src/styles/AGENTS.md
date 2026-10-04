@@ -26,7 +26,7 @@ block are the one-line versions that must be known before then.
 
 ### 7.2 Token system
 
-**Single source of truth**: `styles/tokens/_colors-light.scss` + `_colors-dark.scss` (both, always). Entry point: `styles/tokens/index.scss`. Active variables in `styles/variables.scss`.
+**Single source of truth**: `styles/tokens/_colors-light.scss`. Jjodel has no dark theme (D-UI-15, 2026-10-04, final): `_colors-dark.scss` is inert legacy, awaiting a removal lane; do not edit it. Entry point: `styles/tokens/index.scss`. Active variables in `styles/variables.scss`.
 
 **Legacy tokens — do NOT reintroduce**:
 - `--accent` (use `--color-accent`)
@@ -40,5 +40,5 @@ block are the one-line versions that must be known before then.
 
 **Rules for new tokens**:
 - `grep -r` before adding, to avoid collisions
-- Always add to both files (light + dark)
+- Add to `_colors-light.scss` only; never write a dark variant (D-UI-15)
 - Never define CSS variables inside component files — everything in `tokens/`
