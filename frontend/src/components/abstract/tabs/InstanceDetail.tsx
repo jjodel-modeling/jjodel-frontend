@@ -367,21 +367,26 @@ export function InstanceDetail({
 
     // ── Create (2c) ────────────────────────────────────────────────────────────
 
-    /** The `ClassShape` of the selected instance — where its child slots come from. */
+    /** The `ClassShape` of the instance ON SCREEN — where its child slots come from. The
+     *  drilled-into element during a drill-in, the selected row otherwise: the bar sits
+     *  under that element's form, and a bar of the row's slots under D01's form created
+     *  children in the row, past the cardinality of the slots on screen (#173). */
     const subjectShape: ClassShape | null = useMemo(() => {
-        if (!subjectId) return null;
-        const name = shapeCtx.classOf(subjectId);
+        const ownerId = formSubjectId ?? subjectId;
+        if (!ownerId) return null;
+        const name = shapeCtx.classOf(ownerId);
         return name ? shapeCtx.shape().classes[name] ?? null : null;
-    }, [shapeCtx, subjectId]);
+    }, [shapeCtx, subjectId, formSubjectId]);
 
-    /** One entry per child slot of the selected instance: how full it is, and why
-     *  Add is not offered when it is not. */
+    /** One entry per child slot of the instance on screen: how full it is, and why
+     *  Add is not offered when it is not — a full slot, by its upper bound, among them. */
     const childSlots = useMemo(() => {
-        if (!subjectId || !subjectShape) return [] as Array<{ child: RefShape; count: number; reason: string | null }>;
+        const ownerId = formSubjectId ?? subjectId;
+        if (!ownerId || !subjectShape) return [] as Array<{ child: RefShape; count: number; reason: string | null }>;
         const shape = shapeCtx.shape();
-        const ownerEditable = permOfInstance(subjectId) === 'edit';
+        const ownerEditable = permOfInstance(ownerId) === 'edit';
         return subjectShape.children.map(child => {
-            const count = childSlotCount(subjectId, child.key);
+            const count = childSlotCount(ownerId, child.key);
             // The third argument is the metaclass the slot is TYPED ON, and it is
             // what closes §2.6: without it the bar offered «Add Node» on an abstract
             // `Node` and the create produced a live instance of it. Resolved by name
@@ -393,7 +398,7 @@ export function InstanceDetail({
                 : addChildReason(child, count, target);
             return { child, count, reason };
         });
-    }, [subjectId, subjectShape, shapeCtx, idlookup, permissionOf]);
+    }, [subjectId, formSubjectId, subjectShape, shapeCtx, idlookup, permissionOf]);
 
     // ── Referenced elements (#142, #158 P3/P4) ─────────────────────────────────
 
@@ -714,7 +719,7 @@ export function InstanceDetail({
                                     <button
                                         type="button"
                                         className="instance-manager__add"
-                                        onClick={() => onCreate(child.of, subjectId, child.key)}
+                                        onClick={() => onCreate(child.of, formSubjectId ?? subjectId, child.key)}
                                     >
                                         <i className="bi bi-plus" aria-hidden="true" />
                                         Add {child.of}

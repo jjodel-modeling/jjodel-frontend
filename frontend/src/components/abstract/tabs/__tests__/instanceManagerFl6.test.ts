@@ -244,6 +244,13 @@ describe('FL6 — l\'header della form', () => {
         expect(TSX).toContain("permOfInstance(formSubjectId ?? subjectId) === 'edit';");
     });
 
+    it('#173 — la barra «Add» conta gli slot dell\'elemento a schermo: la cardinalita\' e\' la sua', () => {
+        // Forma e conteggi della barra: due letture dello stesso owner, quella di
+        // `subjectShape` e quella di `childSlots`.
+        expect(TSX.match(/const ownerId = formSubjectId \?\? subjectId;/g)?.length).toBe(2);
+        expect(TSX).toContain('const count = childSlotCount(ownerId, child.key);');
+    });
+
     it('il badge «Unsaved changes» e\' andato via con 10c (deviazione A3)', () => {
         // FL6 lo asseriva PRESENTE. 10c lo toglie, e non e' una regressione: A3
         // dice «dove la board mostra Save/Discard, non costruirli», e quel badge

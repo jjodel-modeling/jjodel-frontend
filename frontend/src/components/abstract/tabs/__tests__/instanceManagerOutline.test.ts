@@ -110,7 +110,9 @@ describe('10b — un solo evento di create, e il motore non sa da dove viene', (
         expect(TSX).toContain('onClick={() => openCreate(classShape.key, null, null)}');
         // 2026-09-28 — la barra dei figli vive in `InstanceDetail` ed emette `onCreate`,
         // che il tab collega a `openCreate`: la porta resta una.
-        expect(TSX).toContain('onClick={() => onCreate(child.of, subjectId, child.key)}');
+        // #173 — sull'elemento a schermo, non sulla riga: sotto la form di D01 la barra
+        // creava figli nella riga selezionata.
+        expect(TSX).toContain('onClick={() => onCreate(child.of, formSubjectId ?? subjectId, child.key)}');
         expect(TSX).toContain('onCreate={openCreate}');
         const outlineCreate = TSX.slice(TSX.indexOf('const outlineCreate'));
         expect(outlineCreate.slice(0, outlineCreate.indexOf('\n    };')))

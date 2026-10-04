@@ -28,11 +28,11 @@ import {
     visibleTopLevelTypes,
     resolveTypePermission,
 } from '../../joiner';
-import { newDraft, paletteAttr } from '../../jjform';
+import { addChildReason, newDraft, paletteAttr } from '../../jjform';
 import { metamodelOfClass, modelsForType, restrictDeleteForProfile, topLevelReason } from '../../joiner/environmentConfig';
 import { instancesOfClass, modelIdOfObject } from '../abstract/tabs/instanceManagerModel';
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
-import { applyCreate } from '../editor-v2/hooks/createAdapter';
+import { applyCreate, childSlotCount } from '../editor-v2/hooks/createAdapter';
 import { applyDelete, deletePlan, preflightFor } from '../editor-v2/hooks/deleteAdapter';
 import { appendValue } from '../editor-v2/viewpoint/ir/formWrite';
 import InstanceDetail, { type DetailPermission } from '../abstract/tabs/InstanceDetail';
@@ -56,6 +56,10 @@ export interface ConfiguratorTabProps {
 
 /** #168 J4 — how long a request to show an element waits for the store to hold it. */
 const SELECT_INSTANCE_WAIT_MS = 3000;
+
+/** #173 — how long a create of «Add <Child>» counts against its slot before the store
+ *  holds it. The app commits on a timer (300 ms, measured in #168 C1): this outlasts it. */
+const IN_FLIGHT_MS = 2000;
 
 /** The `profile` hash param, read via the app's canonical parser (same one `getProjectID_URL` uses). */
 function profileIdFromUrl(): string | null {
@@ -268,13 +272,37 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
         if (selectedInstanceId && plan.deletes.includes(selectedInstanceId)) setSelectedInstanceId(null);
     };
 
+    /** #173 — the creates of «Add <Child>» the store does not count yet, by `owner:slot`:
+     *  the slot's count when the first was issued (`base`), how many since (`n`), when. */
+    const inFlightRef = useRef<Record<string, { base: number; n: number; at: number }>>({});
+
     /** «Add <Child>» from the detail: created in place, like this screen's «New», without
-     *  the Data Manager's draft dialog. Bare call (editor-v2 §3.3). */
+     *  the Data Manager's draft dialog. Bare call (editor-v2 §3.3).
+     *
+     *  #173 — the slot's cardinality is checked HERE too, with the creates still in flight
+     *  counted in. The store lags a create, so the bar's own gate reads the old count:
+     *  measured, a double click on «Add Note» of a 0..1 slot read [0/1] twice, even from
+     *  the live store at click time, and left [2/1]. The Data Manager does not need it:
+     *  its draft dialog is modal, so a second click never reaches the bar. */
     const createIn = (cls: string, ownerId: string | null, childKey: string | null) => {
         const mid = (ownerId && modelIdOfObject(idlookup, ownerId)) || modelId;
         if (!mid) return;
-        const shape = makeShapeCtx(mid).shape();
-        applyCreate(mid, shape, newDraft(shape, cls, ownerId, childKey));
+        const ctx = makeShapeCtx(mid);
+        const shape = ctx.shape();
+        const slot = ownerId && childKey ? `${ownerId}:${childKey}` : null;
+        let base = 0;
+        let n = 0;
+        if (ownerId && childKey && slot) {
+            const live = childSlotCount(ownerId, childKey);
+            const prev = inFlightRef.current[slot];
+            const pending = prev && Date.now() - prev.at < IN_FLIGHT_MS ? Math.max(0, prev.base + prev.n - live) : 0;
+            if (prev && pending > 0) { base = prev.base; n = prev.n; } else base = live;
+            const owner = ctx.classOf(ownerId);
+            const child = owner ? shape.classes[owner]?.children.find(c => c.key === childKey) : undefined;
+            if (child && addChildReason(child, live + pending, shape.classes[child.of]) !== null) return;
+        }
+        const id = applyCreate(mid, shape, newDraft(shape, cls, ownerId, childKey));
+        if (id && slot) inFlightRef.current[slot] = { base, n: n + 1, at: Date.now() };
     };
 
     /** «New <Target> & link»: the target at model root, then the pointer appended to the
