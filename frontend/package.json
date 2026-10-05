@@ -105,6 +105,7 @@
     "check:addonly": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-addonly.ts",
     "log:rotate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/rotate-log.ts",
     "smoke": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/run.ts",
+    "lane-board": "node scripts/lane-board/lane-board.mjs",
     "smoke:calibrate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/calibrate.ts",
     "________________________________other_build_modes___________________________": "",
     "build_2": "ts-node esbuild.config.ts",

@@ -32,3 +32,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: harness only, no app change: the chat read result.json, all eight gates green on ef5cb6a6f; no visual check needed
 **Notes**: Rollback tag `pre-auto-intake` on `7a249ef87` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1840/result.json`.
 **Prompt document name**: 2026-10-03 18:40
+
+## 2026-10-05 — feat(harness): lane board in the repo (P-2026-10-05-2340)
+**Prompt**: `claude_2026-10-05_2340_prompt_lane_board_repo.md`: copy the read-only lane board of chat `C-2026-10-05-1116` byte for byte from `~/.jjodel-lanes/board/` into `frontend/scripts/lane-board/`, add its README and the `lane-board` npm script, no edit to the copied files, to `~/.jjodel-lanes/` or to the launchd agent.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/README.md`, `frontend/package.json` (`b5fc46477`); this commit: the Status of the prompt file and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: md5 checked at the source, after the copy and on the committed blobs. Live on 4701 with `LANE_BOARD_CACHE` on a temp file, so `~/.jjodel-lanes/` was not written: four 200s, `/api` 337 rows with an empty error, `/api/timeline` 338 lanes. `typecheck:scripts` does not reach `.mjs`/`.js` (include: smoke, gates). Seven files, as the prompt declares. The launchd agent still runs the `~/.jjodel-lanes/board/` copy until the chat repoints it.
+**Prompt document name**: 2026-10-05 23:40
