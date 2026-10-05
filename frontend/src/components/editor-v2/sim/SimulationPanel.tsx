@@ -65,6 +65,12 @@
  * clock, invariants and breakpoints do not stop it, its result goes to the
  * inspector's Scenarios section.
  *
+ * The timeline (R-SIM-142, P-2026-10-05-2350): under the transport row, from
+ * step 1, a slider over the run's steps (SimTimeline.tsx) shows a past step as
+ * the inspector's trace does; grabbing it stops Play, and «Continue from here»
+ * pops the run to the step shown, then closes what Step back closes. The rows
+ * above it move up by its height when it appears, the status line does not.
+ *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
  * on the M2 face. `connect`-ed in the shape of components/editors/MetaData.tsx,
@@ -120,6 +126,7 @@ import { facePins, SimInspector, traceStepText } from './SimInspector';
 import { replayScenario, scenarioKey } from './simScenarios';
 import type { ScenarioOutcome } from './simScenarios';
 import { SimCanvasLayer } from './SimCanvasLayer';
+import { continueFrom, SimTimeline } from './SimTimeline';
 import { SimBoard } from './simBoardDevices';
 import { autoClocks, createClocks } from './simBoardClock';
 import type { Clocks } from './simBoardClock';
@@ -670,6 +677,35 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     }, [modelid, events]);
 
     /**
+     * «Continue from here» of the timeline (R-SIM-142): the run popped to the step shown (SimTimeline.tsx
+     * `continueFrom`, `simStepBack` repeated), the later steps discarded; then as Step back: Play stopped, an open list
+     * or input dialog closed, the clocks left alone, the view live, the status line naming the step the run is at.
+     */
+    const onContinue = useCallback((target: number): void => {
+        setPlaying(null);
+        setPlayNote(null);
+        setPending(null);
+        setAsking(null);
+        simSetPending(modelid, null);
+        setReasonsOpen(false);
+        if (continueFrom(modelid, target)) {
+            const r = getSimRun(modelid);
+            const last = r?.trace?.[r.trace.length - 1];
+            const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
+            const text = r && last ? traceStepText(last, r.net, (store.getState() as any).idlookup ?? {}, label) : null;
+            setLastStep(text !== null ? { text, title: text } : { text: 'Reset', title: `Reset\nseed ${r?.seed}` });
+        }
+        setTick(t => t + 1);
+    }, [modelid, events]);
+
+    /** R-SIM-142: grabbing the timeline pauses Play, as the Pause button does; the run stays where it is. */
+    const onGrab = useCallback((): void => {
+        if (playing !== modelid) return;
+        setPlayNote(null);
+        setPlaying(null);
+    }, [playing, modelid]);
+
+    /**
      * A scenario replayed (R-SIM-139, C2): synchronously from Reset through the bridge's presses (simScenarios.ts),
      * the policy unread, invariants and breakpoints not stopping it; its Reset arms no clock, the auto clocks taking
      * its net at once. The status line shows the last step it pressed; the result goes to the Scenarios section.
@@ -965,7 +1001,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     type="button"
                     className="sim-panel__collapse"
                     title="Collapse"
-                    onClick={() => { setOpen(false); if (inspectorOpen) closeInspector(); if (boardOpen) closeBoard(); }}
+                    onClick={() => { setOpen(false); if (inspectorOpen) closeInspector(); if (boardOpen) closeBoard(); simSetView(modelid, null); }}
                 >
                     <i className="bi bi-chevron-down" />
                 </button>
@@ -1280,6 +1316,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 <i className="bi bi-stop-fill" />
                             </button>
                         </div>
+                        {/* R-SIM-142: the timeline, from step 1; nothing at step 0, so the panel is as it was there. */}
+                        {run && <SimTimeline modelId={modelid} onGrab={onGrab} onContinue={onContinue} />}
                         {/* In Deadlock the row says why, on its one line, and opens the list per input (R-SIM-58). The one
                             status line of R-SIM-104: the pill, then `step n · last step`, the seed in the title; the R-SIM-66 slot
                             is its last part, so a refused Reset or the interruption takes the place of the last step. */}
