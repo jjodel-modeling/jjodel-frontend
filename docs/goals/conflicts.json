@@ -1,0 +1,79 @@
+[
+  {
+    "a": "R-EDGE-2",
+    "b": "R-EDGE-3",
+    "softgoal": "SG-6",
+    "evidence": "read",
+    "why": "R-EDGE-2 makes the core refuse a non-class reference type; R-EDGE-3 leaves the saved ill-formed forms S1, S5b, S6 unmigrated, since retyping «cancella gli edge orfani»: reversibility (SG-4, RC-26) bought with conformance."
+  },
+  {
+    "a": "R-SIM-31",
+    "b": "R-SIM-20",
+    "softgoal": "SG-6",
+    "evidence": "inferred",
+    "why": "State machines follow UML on else («come [else] in UML», R-SIM-31) and leave it on run-to-completion, «senza di essa la verifica copre un sovrainsieme dei comportamenti UML» (R-SIM-20)."
+  },
+  {
+    "a": "R-UNDO-5",
+    "b": "R-SGL-10",
+    "softgoal": "SG-4",
+    "evidence": "inferred",
+    "why": "R-UNDO-5 makes a rename one dispatch so one ⌘Z takes back one gesture; R-SGL-10 accepts «Due passi di undo» for one select gesture, because the alternative puts a creator inside the transaction (CLAUDE.md §3.3)."
+  },
+  {
+    "a": "R-VP-39",
+    "b": "R-STR-2",
+    "softgoal": "SG-2",
+    "evidence": "inferred",
+    "why": "R-VP-39 keeps «Reset» «disabled, not hidden» and measures that nothing moves in the panel; R-STR-2 makes an unsupported option «assente, non disabilitata». Same split as R-FORM-14 against R-IRN-10: SG-1 against SG-2."
+  },
+  {
+    "a": "R-DMV-1",
+    "b": "R-VAL-2",
+    "softgoal": "SG-1",
+    "evidence": "read",
+    "why": "R-VAL-2 makes validation viewpoints multiple «diversamente da R-DMV-1», one per project, and accepts that «valido» becomes relative to the active set, «da dichiarare in interfaccia»."
+  },
+  {
+    "a": "R-SIM-18",
+    "b": "R-SIM-42",
+    "softgoal": "SG-1",
+    "evidence": "read",
+    "why": "R-SIM-18 gives one syntax per meaning and a fallback name if node collides; R-SIM-42 keeps node with the meaning it already has in Console, Jodie and validation, «si documenta accanto»: two readings of one name."
+  },
+  {
+    "a": "R-SIM-55",
+    "b": "R-SIM-79",
+    "softgoal": "SG-1",
+    "evidence": "read",
+    "why": "R-SIM-55 moves the four role groups into the modal; for the demo build R-SIM-79 reopens them inline under Configure…, «scostamento dichiarato da R-SIM-55 fino alla corsia del modale, dopo MODELS» (SG-3 over SG-1)."
+  },
+  {
+    "a": "R-B10",
+    "b": "R-VP-41",
+    "softgoal": "SG-2",
+    "evidence": "inferred",
+    "why": "R-B10 keeps persisted waypoints so they «tornano vivi al ritorno a orthogonal»; R-VP-41 keeps ELK routes «drawn, never persisted», so a reload or a move redraws them."
+  },
+  {
+    "a": "R-SIM-105",
+    "b": "R-SIM-101",
+    "softgoal": "SG-1",
+    "evidence": "inferred",
+    "why": "R-SIM-105 moves σ, state and trace to an inspector so «the compact panel stays the default»; R-SIM-101 adds to that compact panel a Choices row, a Play button and a k input."
+  },
+  {
+    "a": "R-VP-4",
+    "b": "R-VAL-12",
+    "softgoal": "SG-1",
+    "evidence": "read",
+    "why": "Viewpoints override (R-VP-4: «Il viewpoint è override»); validation rules accumulate with no override, and R-VAL-12 says «per analogia ci si aspetta l'override», so the asymmetry must be declared."
+  },
+  {
+    "a": "R-VP-27",
+    "b": "R-VP-39",
+    "softgoal": "SG-1",
+    "evidence": "inferred",
+    "why": "R-VP-27 keeps colour by metaclass off and its controls hidden; with it on, R-VP-39 lets one override move other classes' colours: «overriding Activity changed five other node classes» in DemoFlowB."
+  }
+]

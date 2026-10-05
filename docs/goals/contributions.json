@@ -1,0 +1,3610 @@
+[
+  {
+    "req": "R-E/E-1",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "An existing discovery report is «non riscriverlo» but completed with «un addendum con le sole cose non coperte»: no report is redone from scratch."
+  },
+  {
+    "req": "R-EDGE-1",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "A metamodel canvas connection is valid «solo se entrambi gli estremi sono nodi classe», rejecting classe→enum: the editor stops building references the metamodeling formalism does not admit."
+  },
+  {
+    "req": "R-EDGE-2",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Precondition before Phase 2: measure that load, undo/redo and VersionFixer replay avoid the guarded setters, «altrimenti i progetti salvati smetterebbero di aprirsi»."
+  },
+  {
+    "req": "R-EDGE-2",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«set_type di un DReference rifiuta un non-DClass» and datatypes get a rejecting set_extends: the core enforces the metamodel invariant on every path, in lane C2."
+  },
+  {
+    "req": "R-EDGE-3",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«Nessuna migrazione dei progetti salvati ora»; states S1, S5b, S6 «caricano, si disegnano» and S1 round-trips export; a deleting migration is left to RC-26."
+  },
+  {
+    "req": "R-EDGE-3",
+    "softgoal": "SG-6",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Ill-formed saved forms stay and the M2 well-formedness rule is only ticketed, «fissata alla chiusura della C2»: the checked semantics lags the formalism meanwhile."
+  },
+  {
+    "req": "R-ESEL-2",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "An M1 edge click shows «the reference slot», a view that «names the owner and edits the value», not the metamodel DReference «whose editor then opened inside the model tab»."
+  },
+  {
+    "req": "R-A",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«tutti i tab montati», inactive ones «display: none»; reset «al cambio di view, non di tab»; no autoFocus, focus(), scrollIntoView: a tab switch neither remounts nor moves focus."
+  },
+  {
+    "req": "R-D",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Endpoints written «entrambe le chiavi o nessuna»; with incomplete input «l'IR resta intatto» and the draft/IR divergence is declared, «non silenziosa né distruttiva»."
+  },
+  {
+    "req": "R-F",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Il pin di identità della metaclasse ... è escluso da canonicalize»: canonicalization never rewrites or drops the metaclass identity a view is bound to."
+  },
+  {
+    "req": "R-H",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "The Applies to tab «assorbe i controlli autoritativi del tab legacy», one place for Name/father; breadcrumb deferred «finché parent e viewpoint non sono distinguibili»."
+  },
+  {
+    "req": "R-2/3.6",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Global-css detection surfaces as «un toast warning per attivazione che aggrega gli N colpevoli, con dedup di sessione»: one notice, not N repeated ones; «informa e non scrive»."
+  },
+  {
+    "req": "R-B9",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Persisted routing ids «mai rinominati (le view IR salvate non hanno VersionFixer)»; «Campo assente ≡ orthogonal, resa identica»: saved IR views keep rendering."
+  },
+  {
+    "req": "R-B9-bis",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "IR validation lives in authoring, never in render: «il render resta permissivo verso i dati già persistiti»; in compile it «avrebbe scartato in silenzio le view già persistite»."
+  },
+  {
+    "req": "R-B10",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Waypoints kept in DVertex.irEdgeLayout «tornano vivi al ritorno a orthogonal»: the human-chosen edge geometry survives a routing round trip."
+  },
+  {
+    "req": "R-B10",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "With non-orthogonal routing persisted waypoints «non si cancellano né si riscrivono: tornano vivi al ritorno a orthogonal»: the routing change is taken back without loss."
+  },
+  {
+    "req": "R-B13",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«Grafia definitiva container, minuscolo, nudo (R-B9: nessun VersionFixer per le view IR)»: the persisted spelling is fixed once, so saved IR views never face a rename."
+  },
+  {
+    "req": "R-B15",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "A «controllo dedicato ... accanto al PathBuilder, mai voce sentinella dentro il componente condiviso»: the container endpoint does not become a second reading of the path picker."
+  },
+  {
+    "req": "R-B15",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Un container già persistito si preserva sempre nella UI, mai sanificato», and render is made permissive toward the token before it becomes authorable."
+  },
+  {
+    "req": "R-B15",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Due slice: 2a fino alla misura inclusa, hard stop, poi 2b»: a binding order with an added hard stop between slices."
+  },
+  {
+    "req": "R-B17",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The object-as-edge menu holds «Reset routing» and «Delete <Metaclass>»; «no Convert to …, Delete reference or Create edge view»: actions that do not apply are not offered."
+  },
+  {
+    "req": "R-RAIL-1",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "For legacy views the identity block «non si rende affatto — niente placeholder, niente spazio riservato»: the top of the inspector changes height with the selected view."
+  },
+  {
+    "req": "R-RAIL-2",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The identity block «sostituisce la riga che dichiara dove sta l'elemento», while «Applies to» keeps its distinct meaning: one statement of position, no conflated breadcrumb."
+  },
+  {
+    "req": "R-RAIL-3",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Arc 1 ships preset 2a only, «niente gear, niente popover»; «il segmented Basic/Advanced resta nella top bar»: no extra rail controls or second mode toggle."
+  },
+  {
+    "req": "R-RAIL-11",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Spariscono lo stato cardMaximized, i due toggleMaximize*, lo splitter e i due CollapsedPanelToggle»: fewer rail controls and states for the user to hold."
+  },
+  {
+    "req": "R-RAIL-11",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Width «minimo 360, clampato sia in lettura sia durante il resize»; «il canvas non deve spostarsi in modo diverso da prima quando il rail si apre e si chiude»."
+  },
+  {
+    "req": "R-RAIL-11",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Una chiave resa inerte dal ritiro e non nominata qui non si rimuove: si annota nell'entry di log»: retiring code deletes no stored user data."
+  },
+  {
+    "req": "R-RAIL-12",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«La sezione NODE resta nel guscio, gated su advanced, restilata come disclosure»; moving it «cambierebbe quando compare»: Basic keeps it hidden."
+  },
+  {
+    "req": "R-RAIL-13",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il rail legge solo Redux state.advanced; nessun consumatore nuovo di useInterfaceMode»: one Basic/Advanced source for the rail, no second mode reading added."
+  },
+  {
+    "req": "R-RAIL-14",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«PRESET_2A codifica solo geometria. Tree 392px ...; nessuna altezza trascinabile» (the clause that survives): fixed pane geometry, not a dragged height."
+  },
+  {
+    "req": "R-RAIL-18",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Header unico: si riusa quello della card PROPERTIES; l'header del tree diventa label di sezione senza azioni»: one header, one set of actions."
+  },
+  {
+    "req": "R-RAIL-19",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Conformance greps run «sul diff staged, mai sul file intero», since 82 pre-existing hex literals «renderebbero rossa la grep sempre»: no perpetual false red to triage."
+  },
+  {
+    "req": "R-RAIL-20",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il report di discovery si committa a sé, prima del passo di registro»: one more commit per lane."
+  },
+  {
+    "req": "R-RAIL-21",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«sparisce il codice, resta il dato nei localStorage; nessun cleanup»: retiring the feature deletes no stored user data."
+  },
+  {
+    "req": "R-RAIL-23",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Collapse toggles only the inspector; the rail «non scrive mai jjodel_treeview_visible», whose loss made the tree preference vanish «al reload»: the layout survives reloads."
+  },
+  {
+    "req": "R-RAIL-23",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "With the header kept on screen «nascondere l'inspector è reversibile da lì e non esiste il vicolo cieco» of the total collapse."
+  },
+  {
+    "req": "R-RAIL-24",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«La disclosure NODE resta chiusa di default», state not persisted and no new key: the Advanced-only section opens only on demand."
+  },
+  {
+    "req": "R-RAIL-27",
+    "softgoal": "SG-7",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Each guard declares its tolerance, «altrimenti si compra uno stop falso a ogni passo»; a bridge residue list is checked locally «prima di diventare una richiesta di decisione»."
+  },
+  {
+    "req": "R-RAIL-28",
+    "softgoal": "SG-7",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Absence/presence claims need a proven search; «Ratificata dopo quattro occorrenze in due giorni», five more in the arc: a rule against measured rework."
+  },
+  {
+    "req": "R-RAIL-29",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Records that interactive grep wraps «ugrep --ignore-files» and «--include non filtra», so searches stop yielding false silences; old absence claims are redone before citing."
+  },
+  {
+    "req": "R-RAIL-30",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The entity scale excludes the «banda cyan 210-250 ... perché prenotata dalla selezione»: a type colour cannot be read as the selection state."
+  },
+  {
+    "req": "R-RAIL-31",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Prompt shell commands quote globs and use -E: «Terza occorrenza in un arco della stessa specie di errore»; the rule lives in the prompt template, against measured rework."
+  },
+  {
+    "req": "R-RAIL-32",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The surface showing family members together «si cerca prima di ratificare la regola, non dopo», after the «New document» case: avoids re-ratifying a family rule."
+  },
+  {
+    "req": "R-RAIL-33",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il tree resta monocromo»: colour «sarebbe un terzo canale ridondante» on lists of hundreds of rows, and a fill «competerebbe con lo stato» of hover and selection."
+  },
+  {
+    "req": "R-RAIL-34",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The metamodel segment «cade sempre nel breadcrumb» since it «ripeteva l'header per costruzione»; caveat: a pre-existing pin divergence becomes «meno visibile»."
+  },
+  {
+    "req": "R-RAIL-35",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Abstractness via italic name, «stesso canale che il tree usa già», «non un badge, perché il badge porta il kind e mai i modificatori»: one channel per meaning."
+  },
+  {
+    "req": "R-RAIL-36",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Computed style is a measure «solo se quell'elemento è quello che dipinge»; born from tree glyphs where a colour change «non muove un pixel»: stops false verifications."
+  },
+  {
+    "req": "R-RAIL-37",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Enumerate «tutte le regole che sta battendo» before removing a declaration; born «dall'hard stop del passo 7», at a stated cost of «un giro di build»."
+  },
+  {
+    "req": "R-RAIL-38",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The posture code had been withdrawn «con un commit additivo, apposta perché restasse recuperabile», and is brought back into arc 2 rather than rewritten."
+  },
+  {
+    "req": "R-RAIL-39",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "No positional breadcrumb in Browse: it would be «la terza dichiarazione della stessa cosa in 40px, cioè il problema 5 che il redesign è nato per togliere»."
+  },
+  {
+    "req": "R-RAIL-41",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Signature chip only «dove una firma esiste»; «N features» stays plain since «la stessa forma per due significati diversi è il difetto che il redesign toglie»."
+  },
+  {
+    "req": "R-RAIL-41",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "For class, package, metamodel the chip is absent «senza placeholder e senza spazio riservato»: the header height varies with the selected element's kind."
+  },
+  {
+    "req": "R-RAIL-42",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A new rail surface «si guarda nei due temi prima di dichiararla finita»: an added closure check, after a Focus bar no one «l'aveva aperta in dark»."
+  },
+  {
+    "req": "R-RAIL-43",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A deferral repeating an earlier motive re-tests it; the «archeologia su git» estimate fell when tested, with «zero comandi git»: stops propagated cost estimates."
+  },
+  {
+    "req": "R-RAIL-44",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Sospeso e non deprecato: i blocchi [data-theme=\"dark\"] esistenti restano in albero e non si rimuovono»: the suspension can be taken back."
+  },
+  {
+    "req": "R-RAIL-44",
+    "softgoal": "SG-7",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«i componenti nuovi non scrivono varianti dark» and «la definition of done dell'arco 3 si misura in un tema, light»: the two-theme check and dark blocks drop out."
+  },
+  {
+    "req": "R-RAIL-45",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«si dà il criterio e si lascia che l'esecutore ne derivi le posizioni»; a positional order would have archived the newest entry, «indistinguibile da un'esecuzione corretta»."
+  },
+  {
+    "req": "R-IRN-3",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The canvas placeholder is dropped: degradation «si segnala nella superficie di authoring ..., non sul canvas»; the element renders abstract as the normative fallback."
+  },
+  {
+    "req": "R-IRN-4",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The seed writes the identity pin from the pointer and «non passa mai da appliableToClasses né da resolveMetaclassNames»: views bind to metaclass identity, not a name."
+  },
+  {
+    "req": "R-IRN-5",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Ritiro di EnableIRPanel» and of showIRTab's legacy clause: with every authored view born with ir (R-IRN-1), the user no longer meets an enable-IR step."
+  },
+  {
+    "req": "R-IRN-6",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Due superfici per due popolazioni disgiunte»: Source «advanced-gated» for IR views, a read-only Template for legacy ones; each view shows one surface."
+  },
+  {
+    "req": "R-IRN-8",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Il viewpoint Default Validation non si semina più»: an inert «circuito chiuso» of three views no longer appears in new projects."
+  },
+  {
+    "req": "R-IRN-8",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The due migration is conditional: it «purga solo i record identici al seed, conserva quelli modificati dall'autore»; the Pointer_* ids stay so it can find them."
+  },
+  {
+    "req": "R-IRN-9",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The Default viewpoint «sparisce dalle superfici utente finche' e' vuoto di contenuto autorato», with one definition (isSystemViewpoint), authored content still reachable."
+  },
+  {
+    "req": "R-IRN-9",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Restano intatti il seed, le venti view di default, ... e ogni percorso di persistenza»: hiding the system viewpoint changes no saved data."
+  },
+  {
+    "req": "R-IRN-10",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The viewpoint selector is the syntax control, empty option «Abstract syntax»; the pill goes because «non serve un secondo indicatore che lo ripeta»."
+  },
+  {
+    "req": "R-IRN-10",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Il selettore compare anche sui metamodelli, ... disabilitato»: the toolbar keeps the same control on M1 and M2 instead of a conditional mount."
+  },
+  {
+    "req": "R-IRN-15",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "updateDefaultView made inert «per costruzione» since its TypeError «impedisce al progetto di caricarsi»; the tail loop is removed so save-and-reopen cannot undo the retirement."
+  },
+  {
+    "req": "R-IRN-16",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The purge «Sbaglia nella direzione sicura» (over-conservation), never purges the Default viewpoint, keeps the 122 pointers, and logs «quante default ha conservato e perche'»."
+  },
+  {
+    "req": "R-IRN-17",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Removes the VersionFixer line by which «ogni apertura riscrive 2.227» over the user's project revision: opening a saved project no longer overwrites its data."
+  },
+  {
+    "req": "R-IRN-19",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The purge of persisted records leaves 2.228: it «non compra funzione, compra igiene» and «poggia su n=1»; deletion waits for a measured corpus."
+  },
+  {
+    "req": "R-IRN-20",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The 2.228 adapter test covers «viewpoint utente invariato, doppio run deep-equal (idempotenza), fixture pulita no-op»: saved-project preservation gets an automatic check."
+  },
+  {
+    "req": "R-IRN-22",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The default-view refresh button hides with the inert predicate: «un controllo che dichiara una cosa e non la fa e' un difetto visibile»."
+  },
+  {
+    "req": "R-IRN-25",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Commit 2b splits into 2b-i and 2b-ii with «Hard stop fra i due commit» and a byte-for-byte typecheck baseline gate: one more commit and one more wait."
+  },
+  {
+    "req": "R-IRN-27",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il commit 2c decade»: its premise is false by measurement, and it is not written even as hardening, since «scrivere per poi cancellare non e' un ordine, e' una collisione»."
+  },
+  {
+    "req": "R-IRN-29",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Parity covers chrome, not geometry: compartment height stays «27.19px contro 10px/14px e 36px nativi», so an object node changes size between native and IR rendering."
+  },
+  {
+    "req": "R-IRN-30",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "underline and label color optional «su ir-1.3, nessun bump»: «additivo sul campo ir, nessuna migrazione necessaria per un opzionale undefined»."
+  },
+  {
+    "req": "R-IRN-32",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Nessuna migrazione: solo le view create da qui in avanti»; VersionFixer.tsx untouched, «nessun nuovo metodo di migrazione»: saved projects open unchanged."
+  },
+  {
+    "req": "R-IRN-33",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Migrated default views had «silenziosamente» left the native renderer; frozen shapes then migratedHash fix it, «delegated = false prima del fix, true dopo», mutation-benched tests."
+  },
+  {
+    "req": "R-IRN-34",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Criterion extended to a pre-batch saved project; closed by Alfonso's visual check: migrated default views «rendono ancora via nativo. Nessuna differenza visibile»."
+  },
+  {
+    "req": "R-IRN-34",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The extension left the row «aperto per la conferma di Alfonso» until his end-to-end visual check: an added round trip."
+  },
+  {
+    "req": "R-IRN-35",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Radius is a Conditional because a scalar «sarebbe l'unico asse fuori dal meccanismo»: the author edits it in the rules table like every other axis."
+  },
+  {
+    "req": "R-IRN-35",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Assente non è zero: un raggio assente mantiene il rendering di base della forma»; «Il valore 8 del seed dell'oggetto è invariato»: existing views render as before."
+  },
+  {
+    "req": "R-IRN-37",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Nessun cambio di schema, nessuna migrazione»: the flat collapse fields leave saved projects as they are."
+  },
+  {
+    "req": "R-IRN-38",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "One predicate «so the panel and the canvas cannot disagree again»; the toggle reads the effective value, disabled with a one-line hint where the source cannot rename."
+  },
+  {
+    "req": "R-IRN-38",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Implemented before the 2026-10-07 freeze with «four demo scenes 0 px from the base run» measured by the lane probe."
+  },
+  {
+    "req": "R-IRN-38",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«No schema change, no migration»; ON removes the key «so the IR stays minimal»."
+  },
+  {
+    "req": "R-IRN-40",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "The toggle «reads the effective value», so panel and runtime agree; «the base reads OFF at rest on the real app and the fix ON»."
+  },
+  {
+    "req": "R-IRN-40",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Implemented before the 2026-10-07 freeze with «four demo scenes 0 px from the base run» measured by the lane probe."
+  },
+  {
+    "req": "R-IRN-40",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«No schema change, no migration»: «the canvas and every persisted value keep their meaning»."
+  },
+  {
+    "req": "R-IRN-39",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Before it, name and metaclassName labels after a rename «kept the old text»; the canvas now shows the name the model holds."
+  },
+  {
+    "req": "R-IRN-39",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Implemented before the 2026-10-07 freeze with «four demo scenes 0 px from adb5d9731» measured by the lane probe."
+  },
+  {
+    "req": "R-IRN-39",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«No schema change, no migration»."
+  },
+  {
+    "req": "R-IRN-41",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Implemented before the 2026-10-07 freeze; «the four demo scenes and DemoFlowB's derived viewpoint 0 px from adb5d9731» measured."
+  },
+  {
+    "req": "R-IRN-41",
+    "softgoal": "SG-4",
+    "kind": "some-",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "A new canvas edit whose undo fails: «probe 35/36 ... The failing item is undo», filed as a ticket; otherwise «No schema change, no migration»."
+  },
+  {
+    "req": "R-SIM-1",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Run-state «mai nel bag _state, mai in azioni ... niente persistenza, niente undo»: a run neither alters saved projects nor enters the edit undo stack."
+  },
+  {
+    "req": "R-SIM-2",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Flat keys, nested sub-object forbidden: the cited report's R3 shows nested mutations bypass the machinery, «nessun delta, nessun undo»."
+  },
+  {
+    "req": "R-SIM-6",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Keeps the invariant «la simulazione non tocca il modello»: running a simulation leaves the user's model unchanged."
+  },
+  {
+    "req": "R-SIM-7",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Interleaving with an explicit selector under a «vincolo di progresso»; discard and quiescence «sono passi a stato invariato, registrati»."
+  },
+  {
+    "req": "R-SIM-7",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Fire-all «è una semantica a step che la spec §10 esclude, e viene sostituito, non affiancato»."
+  },
+  {
+    "req": "R-SIM-8",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Roles recognised with «isKindOf con ascendenza», not «instanceof ===»: subclass instances count as their metaclass, as conformance requires."
+  },
+  {
+    "req": "R-SIM-9",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Per-kind rule: boolean marking for flowchart and state machine; for «reti di Petri» an integer initial marking, and «il finale non esiste»."
+  },
+  {
+    "req": "R-SIM-10",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Nuova chiave additiva simSource» ... «Nessuna migrazione»: saved bags keep reading as before."
+  },
+  {
+    "req": "R-SIM-14",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Guards on a separate context, «niente now(), date né conversioni»; the snapshot of M is built once per run and «si congela in profondità»."
+  },
+  {
+    "req": "R-SIM-16",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Decides the event buttons («un pulsante > per ogni istanza evento», structurally enabled) that the state machine and ESM scenes click, before the freeze."
+  },
+  {
+    "req": "R-SIM-16",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Total engine: «il passo resta definito per ogni evento in ogni configurazione»; an event enabling no arc gives a discard at unchanged state."
+  },
+  {
+    "req": "R-SIM-17",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A step's actions «formano un unico assegnamento parallelo letto sullo stato precedente»; «l'ordine di scrittura non conta»; a double target is a defect."
+  },
+  {
+    "req": "R-SIM-17",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A malformed guard «non vale true» and the arc leaves the candidates; the malformed value «è una violazione di conformità del modello»."
+  },
+  {
+    "req": "R-SIM-17",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«È una modifica del core: corsia dedicata con discovery e Layer Impact Report prima del passo 3»: an added lane and two documents."
+  },
+  {
+    "req": "R-SIM-18",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "One syntax per meaning: «e.f è sempre navigazione su M, e.[x] è sempre stato», with no collision with any feature."
+  },
+  {
+    "req": "R-SIM-18",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Una guardia che contiene node è un difetto, perché la semantica non dipende dalla presentazione»; presentation attributes stay out of the .smv export."
+  },
+  {
+    "req": "R-SIM-19",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "One equation per attribute; an unassigned attribute keeps its value via an explicit frame condition, «altrimenti nuXmv lo lascerebbe non deterministico»."
+  },
+  {
+    "req": "R-SIM-19",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Stored attributes are VAR, derived ones DEFINE, with the frame condition: the checked model keeps the engine's state semantics."
+  },
+  {
+    "req": "R-SIM-20",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "ε step and event step are «ingressi indipendenti scelti dall'ambiente»: no hidden priority, «coerente con l'esclusione delle priorità dal nucleo»."
+  },
+  {
+    "req": "R-SIM-20",
+    "softgoal": "SG-6",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Drops run-to-completion: «senza di essa la verifica copre un sovrainsieme dei comportamenti UML»; stability is only an optional exporter hypothesis."
+  },
+  {
+    "req": "R-SIM-21",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«uno scatto per passo»; actions run «come assegnamenti paralleli letti sullo stato precedente»."
+  },
+  {
+    "req": "R-SIM-21",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Standard Petri enabling and firing rule as the nucleus, flowchart and statechart as special cases; «coincide con la semantica a sequenze di firing»."
+  },
+  {
+    "req": "R-SIM-22",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "A nondeterministic fork becomes a visible conflict between transitions sharing a preset place, left to the selector, not a hidden choice."
+  },
+  {
+    "req": "R-SIM-22",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Fork and join compile into Petri transitions (multi-place postset, AND-join); a nondeterministic fork «è un conflitto fra transizioni»."
+  },
+  {
+    "req": "R-SIM-23",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Bounded natural marking and arc weights, «default 1 (reti safe)»; overflow is the «unsafe» error: «il run si ferma e lo segnala, non satura»."
+  },
+  {
+    "req": "R-SIM-24",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The inhibitor guard reads the marking «attraverso un accessore di sola lettura»: the guard stays side-effect free."
+  },
+  {
+    "req": "R-SIM-24",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Inhibitor arcs are kept as a guard reading the marking: the inhibitor condition holds without a new arc type in the nucleus."
+  },
+  {
+    "req": "R-SIM-25",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "External choice is «una politica del selettore ... mai un'espressione con effetti nella guardia: la guardia resta pura»."
+  },
+  {
+    "req": "R-SIM-25",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Flowchart constructs reduced to guard with explicit else, external choice and fork/join, compiled into the Petri nucleus; the exporter sees choice as nondeterminism."
+  },
+  {
+    "req": "R-SIM-26",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«La terminazione è una proprietà del marking», not of reaching an element with role Terminal."
+  },
+  {
+    "req": "R-SIM-27",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Terminated when every marked place is in F: «dopo un fork parallelo aspetta tutti i rami»; mirrored as DEFINE terminated in nuXmv."
+  },
+  {
+    "req": "R-SIM-28",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "simTerminal optional: without it «nessuna configurazione termina», fitting nets with no final state; closes the TFinal-without-instances ticket."
+  },
+  {
+    "req": "R-SIM-29",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "All buttons disabled in Terminated, Deadlock and Halted, «così un run bloccato dalle sole guardie non mostra pulsanti attivi»."
+  },
+  {
+    "req": "R-SIM-29",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Defines the five run states (Not started, Halted, Terminated, Running, Deadlock) whose labels the scenes read, before the freeze."
+  },
+  {
+    "req": "R-SIM-29",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«Terminazione e deadlock sono distinti»: the run status keeps proper termination apart from deadlock."
+  },
+  {
+    "req": "R-SIM-30",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "x.[marked] and x.[tokens] are «di sola lettura ... mai assegnabili»."
+  },
+  {
+    "req": "R-SIM-30",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "An inhibitor arc of weight w from p to t «compila nel congiunto di guardia tokens(p) < w»: the inhibitor enabling condition."
+  },
+  {
+    "req": "R-SIM-31",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "else is defined as the complement of its siblings and two else among siblings are a defect: no ambiguity on when the else arc fires."
+  },
+  {
+    "req": "R-SIM-31",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "else «come [else] in UML», the negation of the siblings' guards; a targetless arc is «mai un candidato né un pozzo che consuma il token»."
+  },
+  {
+    "req": "R-SIM-32",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Keys provisional: «nulla è cablato né persistito, quindi i nomi si possono rivedere nella 3b senza migrazione»."
+  },
+  {
+    "req": "R-SIM-32",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "One compiler for control flow and Petri form: «è la prova che flowchart e statechart sono casi particolari del nucleo»."
+  },
+  {
+    "req": "R-SIM-33",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "3b «cancella il vecchio step ... nella stessa corsia»; coexistence until then is «compatibile con R-SIM-7 perché uno solo è cablato»."
+  },
+  {
+    "req": "R-SIM-33",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Step 3 in three waves, 3b «con Layer Impact Report», 3c «critical zone, discovery propria»: added lanes and documents."
+  },
+  {
+    "req": "R-SIM-34",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A model change retires the run with one line: «Nessun sesto stato e nessun Halted che lasci un'evidenziazione vecchia»."
+  },
+  {
+    "req": "R-SIM-34",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Builds the line «Run interrupted: the model changed. Reset to run again.» that the ESM scene reads, before the freeze."
+  },
+  {
+    "req": "R-SIM-35",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Builds the choice list that the Petri scene opens on each conflict, before the freeze."
+  },
+  {
+    "req": "R-SIM-35",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The user picks from a list; «Nessuna politica random nella 3b: un run casuale si riproduce solo con un seme registrato»."
+  },
+  {
+    "req": "R-SIM-38",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "One field, Trigger; the event class is derived so «un cambio di tipo nel metamodello si riflette senza riconfigurare»; «Lo stato ruolo evento a metà scompare»."
+  },
+  {
+    "req": "R-SIM-38",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The Trigger role is what the roles dialog binds in the state machine and ESM scenes, decided before the freeze."
+  },
+  {
+    "req": "R-SIM-38",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "simEvent no longer written; «un valore già presente in un bag si ignora, senza migrazione»."
+  },
+  {
+    "req": "R-SIM-39",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Three waves (B1, A with migration and visual check, B2), and C «una corsia propria con discovery propria»: added lanes and documents."
+  },
+  {
+    "req": "R-SIM-40",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The action is a separate type, «quindi nessun valutatore vede un assegnamento»; an action target «non è mai marked o tokens»."
+  },
+  {
+    "req": "R-SIM-42",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "node keeps two meanings: «Il significato che node ha già in Console, Jodie e validazione (il vertice selezionato) si documenta accanto»."
+  },
+  {
+    "req": "R-SIM-43",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The action evaluator rejects «un bersaglio node su uno semantico (località, R-SIM-18)»: presentation cannot write semantic state."
+  },
+  {
+    "req": "R-SIM-44",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A malformed Expression or Action value «è il type_mismatch esistente», as int and boolean today: M1-to-M2 conformance covers the new types."
+  },
+  {
+    "req": "R-SIM-45",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The built-in types stay out of the import map: «una classe utente chiamata Action o Expression vince», so a user metaclass is not taken for a built-in."
+  },
+  {
+    "req": "R-SIM-47",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il catalogo dei ruoli della STC è uno solo ed è il superset»: one catalogue, profiles as named modes over it."
+  },
+  {
+    "req": "R-SIM-47",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Defines the profiles (system presets and Custom) that every scene picks and reads, before the freeze."
+  },
+  {
+    "req": "R-SIM-47",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Profili senza semantica»: «Motore ed esportatore leggono i ruoli risolti, mai il profilo»."
+  },
+  {
+    "req": "R-SIM-48",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Defines «Checkable» and the computed required roles that the M2 face and the dialog read in every scene, before the freeze."
+  },
+  {
+    "req": "R-SIM-49",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Profile constraints («deterministico», «un solo token») become validation rules on M1: the model is checked against the formalism its profile names."
+  },
+  {
+    "req": "R-SIM-50",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«Accettazione distinta dalla terminazione»: accepting «Non ferma il run», and the exporter gets DEFINE accepting, as in automata."
+  },
+  {
+    "req": "R-SIM-51",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Moore (state) and Mealy (transition) outputs as optional roles read from the run's frozen model, exported as DEFINE out."
+  },
+  {
+    "req": "R-SIM-53",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Activity final distinct from flow final: «un suo posto marcato porta il run in Terminated anche con altri token vivi»."
+  },
+  {
+    "req": "R-SIM-54",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Defines the system profiles the scenes pick; the 2026-09-27 amendment makes a net «con una guardia sulla transizione» checkable, as the Petri scene's net is."
+  },
+  {
+    "req": "R-SIM-55",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "On the metamodel the panel shows «il riassunto e Configure…, che apre il modale»; the four role groups move into the modal."
+  },
+  {
+    "req": "R-SIM-55",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Builds the summary and Configure… that each scene's Apply walks, before the freeze."
+  },
+  {
+    "req": "R-SIM-55",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Additive simProfile, «nessuna migrazione, nessun salto di VersionFixer»; «Cambiare profilo non cancella legami; il profilo si scrive solo con Apply»."
+  },
+  {
+    "req": "R-SIM-57",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Shows why an input is blocked and corrects the discard «no transition accepted it», wrong when a guard was false; option B dropped as not explaining a block."
+  },
+  {
+    "req": "R-SIM-57",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Decides the blocked-input reason that the Petri scene's Deadlock beat reads, before the freeze."
+  },
+  {
+    "req": "R-SIM-58",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«la lista dietro il clic è la sua forma di disclosure»: one line with ellipsis, the full text in the title, the list on a click."
+  },
+  {
+    "req": "R-SIM-58",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The reason sits in «una sola riga con ellissi e il testo intero nel title»: the status row keeps one line whatever the reason's length."
+  },
+  {
+    "req": "R-SIM-58",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Places the reason in the status line («Deadlock · ε: t1 false») that the Petri scene ends on, before the freeze."
+  },
+  {
+    "req": "R-SIM-61",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Solo difetti: gli avvisi del checker di sottoinsieme non si elencano»; the line no longer calls a defective guard «not compiled»."
+  },
+  {
+    "req": "R-SIM-61",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Shows guard defects after Reset in the defects line, the line the ESM scene's optional Reset reads, before the freeze."
+  },
+  {
+    "req": "R-SIM-62",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Guard source only in the title; transitions named «name (S → D)»; «un id di posto ... si risolve sempre in un nome»."
+  },
+  {
+    "req": "R-SIM-62",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Fixes the «name (S → D)» transition labels that every scene's step lines read, before the freeze."
+  },
+  {
+    "req": "R-SIM-63",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "A wrapping row «sposta i pulsanti di 17 px»; one-line rows, and the halt slot has fixed height so «i pulsanti non si muovono (misurato a 1600x1000 e 1280x800)»."
+  },
+  {
+    "req": "R-SIM-63",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Panel rows of the demo build, the halt slot measured at 1600x1000 on 2026-09-27 (P-2026-09-27-2225), before the freeze."
+  },
+  {
+    "req": "R-SIM-64",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "else in Petri form is the complement of its siblings; «oggi quella guardia ... diventa un difetto e il run va in Deadlock dove te dovrebbe scattare»."
+  },
+  {
+    "req": "R-SIM-65",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Appearing rows go above the buttons, «così crescono verso l'alto senza spostarli»; before, the defects row «spostava Step di 24,5 px»."
+  },
+  {
+    "req": "R-SIM-66",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Un solo posto per l'esito dell'ultima azione»."
+  },
+  {
+    "req": "R-SIM-66",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Last step, interruption and Reset refusal share one row: «Si sostituiscono a vicenda nella stessa riga e non spostano i pulsanti»."
+  },
+  {
+    "req": "R-SIM-67",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Declarations in «una chiave additiva del bag»; «R-SIM-2 resta intatta ..., nessun passo di VersionFixer»."
+  },
+  {
+    "req": "R-SIM-68",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A malformed record is its own defect and «gli altri compilano»; unknown fields ignored, «così la C2 aggiunge equation senza cambiare formato»."
+  },
+  {
+    "req": "R-SIM-70",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "HaltReason gets element and attribute «così la riga dice il nome e non il puntatore»; the action source goes in the title."
+  },
+  {
+    "req": "R-SIM-72",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Exactly one of initial and equation; a mandatory, ignored initial was rejected since «il pannello mostrerebbe un campo senza senso»."
+  },
+  {
+    "req": "R-SIM-72",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Rejected form since «l'esportatore emetterebbe VAR con init e DEFINE per lo stesso nome»: one definition per attribute in the checked model."
+  },
+  {
+    "req": "R-SIM-73",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Derived values recomputed on σ′ in dependency order, «ricostruita ogni volta e mai copiata in avanti»; a σ rebuilt from outside recomputes them."
+  },
+  {
+    "req": "R-SIM-73",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Eager evaluation «Coincide con il DEFINE di nuXmv (funzione pura dello stato corrente)»."
+  },
+  {
+    "req": "R-SIM-74",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Order «il topologico per (elemento, attributo), a parità il rango del nome ... e poi l'ordine degli elementi»: an explicit tie-break."
+  },
+  {
+    "req": "R-SIM-74",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Well-founded recursion accepted and a cycle on M a defect, «come in nuXmv dopo l'appiattimento»; a presentation failure «non ferma la semantica»."
+  },
+  {
+    "req": "R-SIM-75",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Chiude la perdita di dati misurata (§4.5: la tabella C1 riscrive ogni record senza equation al primo edit)»."
+  },
+  {
+    "req": "R-SIM-75",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "event forbidden in an equation («un DEFINE non dipende dall'input»), node E-NODE on a semantic one; a derived target is read-only."
+  },
+  {
+    "req": "R-SIM-76",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«se la demo di MODELS mostra il pannello, questa modifica alla tabella è un punto di RC-26»: the change waits for Alfonso."
+  },
+  {
+    "req": "R-SIM-76",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "The same change «va nel digest»: an added item waiting for Alfonso."
+  },
+  {
+    "req": "R-SIM-77",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Bindings proposed with a reason and listed before Apply; a tie stays «Not checkable: choose …», «mai un no-op silenzioso»."
+  },
+  {
+    "req": "R-SIM-77",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The binder proposes each role's binding with its reason: the core of the Apply step every scene walks, decided in the demo lane before the freeze."
+  },
+  {
+    "req": "R-SIM-78",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The Apply of the demo lane, one state assignment and one undo step; «Nella corsia demo il motore legge il bag come oggi»."
+  },
+  {
+    "req": "R-SIM-78",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Apply writes only unset keys, «mai sopra una chiave impostata», «un solo passo di undo»; changing profile «non cancella legami»."
+  },
+  {
+    "req": "R-SIM-79",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "DFA, NFA, Moore, Mealy «nascosti finché R-SIM-50 e 51 non sono nel motore»; «Custom è uno stato, non un'opzione»."
+  },
+  {
+    "req": "R-SIM-79",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«max-height con scroll sul corpo del pannello», which «a 1000 px di viewport è alto 1006 px con l'intestazione nascosta»."
+  },
+  {
+    "req": "R-SIM-79",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Forma M3 per la build demo»: Profile row with presets «quattro per la demo», Apply, summary, Configure…; panel max-height so its header shows."
+  },
+  {
+    "req": "R-SIM-80",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Labels fall back on the instance name «prima di shortId»: the user reads the name, not an id."
+  },
+  {
+    "req": "R-SIM-80",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Demo-readiness lane: event buttons and Last step read «coin e non …_136»; a constraint on the demo metamodel was the rejected alternative."
+  },
+  {
+    "req": "R-SIM-81",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Apply proposes Bound, abstract classes bind Node and Transition, and «Add attribute raggiungibile senza aprire Configure…»."
+  },
+  {
+    "req": "R-SIM-81",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Demo-readiness lane; «sulla rete della demo la proposta legge Bound → 4, e il passo 3 del copione diventa ridondante»."
+  },
+  {
+    "req": "R-SIM-82",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Marking line «clampata»; «la lista delle scelte sale sopra i pulsanti ... (Step non si muove: misurato 854.5 → 751.9 oggi)»."
+  },
+  {
+    "req": "R-SIM-82",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«La faccia M1 per il pubblico»: marking with counts and σ for the whole run, choice list above the buttons, ∅ for an empty side."
+  },
+  {
+    "req": "R-SIM-83",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Sui quattro preset della demo nulla cambia (report §2.6; Flow B identico)»."
+  },
+  {
+    "req": "R-SIM-83",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The engine reads activity final as R-SIM-53 wrote it: «terminated è vero quando uno di essi è marcato, qualunque altro token sia vivo»."
+  },
+  {
+    "req": "R-SIM-84",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "else resolved as ratified also on fused fork/join transitions; an else with no siblings by position is the defect else-position, not a silent guard."
+  },
+  {
+    "req": "R-SIM-85",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il branch sim-modal entra nel trunk prima del freeze ... e la demo MODELS percorre il dialogo Simulation roles»."
+  },
+  {
+    "req": "R-SIM-85",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«Punto di rollback: il tag locale pre-sim-modal su d9e88f792, la base del merge»."
+  },
+  {
+    "req": "R-SIM-85",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The script stays stale «finché la corsia docs che la chat lancia subito dopo non lo ripercorre»: an added docs lane."
+  },
+  {
+    "req": "R-SIM-86",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The run reads the bag through the profile «che il pannello nomina»: a role shown off is not read by the run."
+  },
+  {
+    "req": "R-SIM-86",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«le quattro scene e le righe dei difetti al Reset sono identiche a P-2026-09-28-0023 (misurate su 3033)»."
+  },
+  {
+    "req": "R-SIM-87",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Nessuna lettura della demo cambia: l'unico else dei preset (Flow B variante A, f4) ha il fratello f3»."
+  },
+  {
+    "req": "R-SIM-87",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "A lone else «non è più sempre vero in silenzio: è un difetto elencato al Reset»; the run does not change."
+  },
+  {
+    "req": "R-SIM-88",
+    "softgoal": "SG-3",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Merged before the freeze: «il select della forma nel passo 3 della scena ESM offre anche input, e il copione va allineato»."
+  },
+  {
+    "req": "R-SIM-88",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Inputs are explicit: «Un passo ha quindi tre ingressi: evento, selettore, valutazione degli input», asked before the step commits, never in σ."
+  },
+  {
+    "req": "R-SIM-88",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The input form is «l'IVAR di nuXmv»: the engine's input variables match the checked model's."
+  },
+  {
+    "req": "R-SIM-89",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Enters the MODELS build before the freeze»; condition: the verdicts on «the four demo metamodels are identical before and after»."
+  },
+  {
+    "req": "R-SIM-89",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«multiple inheritance is how a metamodel expresses a mixin, and the STC binds to the metamodel as it is»; incompatible when no concrete subclass exists."
+  },
+  {
+    "req": "R-SIM-90",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "SimRolesModal.tsx gets a «multi-select as chips, fixed height, no layout shift»."
+  },
+  {
+    "req": "R-SIM-90",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Ratified and «enters the MODELS build before the freeze of 2026-10-01»."
+  },
+  {
+    "req": "R-SIM-90",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«A plain string is read as a one-element list, so saved metamodels stay valid (additive key change, no migration)»."
+  },
+  {
+    "req": "R-SIM-90",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Assignments are parallel on the previous state, so «the order among attributes is irrelevant»; same-target writes stay a defect."
+  },
+  {
+    "req": "R-SIM-91",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«sui quattro preset della demo le sonde di readiness-2 danno righe di run identiche (State machine 13/13, Flow B 11/11, Petri 22/22, ...)»."
+  },
+  {
+    "req": "R-SIM-91",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Accepting read outside the step loop: «una configurazione che accetta prosegue», acceptance does not halt the run."
+  },
+  {
+    "req": "R-SIM-92",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«i quattro preset della demo identici come in R-SIM-91», with the mutation bench 18/18."
+  },
+  {
+    "req": "R-SIM-92",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Moore outputs come «nell'ordine della rete» and a fused transition's arcs «in ordine»: a fixed order, not a container's."
+  },
+  {
+    "req": "R-SIM-92",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Moore output of the marked places and Mealy output of the fired transition, read from the run's frozen model; «step non cambia»."
+  },
+  {
+    "req": "R-SIM-93",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The four hidden presets «restano nascosti: compaiono con la fetta delle facce dopo MODELS (decisione H)»."
+  },
+  {
+    "req": "R-SIM-94",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Lands «before the freeze»; the script moves the declarations once re-measured, and the metamodel path «stays supported»."
+  },
+  {
+    "req": "R-SIM-94",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Model globals override by name «(no migration: the four demo exports carry an empty model bag)»; the Data… dialog is «one undo step»."
+  },
+  {
+    "req": "R-SIM-96",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The status row says what is false, «Deadlock · ε: t2 guard false»; before, «ε: t2 false did not say what was false»."
+  },
+  {
+    "req": "R-SIM-96",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Fixes the Deadlock reading on «a DemoPetri-like net» to «Deadlock · ε: t2 guard false», built before the freeze."
+  },
+  {
+    "req": "R-SIM-97",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«The Simulation pill shows only in Advanced mode»: «one pure predicate» reading Redux state.advanced; the Semantic type field is «shown in Advanced mode»."
+  },
+  {
+    "req": "R-SIM-97",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«The demo sets the Semantic type live in each scene (D4, I say what kind of model this is)»; placement measured at 1600×1000."
+  },
+  {
+    "req": "R-SIM-97",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Semantic type is «one undo step»; «None removes simProfile only and keeps the role bag»; but undoing None «does not bring the key back» (a ticket)."
+  },
+  {
+    "req": "R-SIM-98",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "The list grows «+24.5 px at 1600×1000» above the Marking line, «so Step (top 854.5) and the status row (top 915) do not move, closed or open»."
+  },
+  {
+    "req": "R-SIM-98",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Renames the choice list the Petri scene opens («98.6 to 123.1 on the Petri scene at step 1»); asked by Alfonso, built before the freeze."
+  },
+  {
+    "req": "R-SIM-99",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Pill only «in Advanced mode on a metamodel whose Simulation toggle is on»; the SEMANTIC TYPE CLASS section shows in Advanced mode."
+  },
+  {
+    "req": "R-SIM-99",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "The four scenes: «64 of 71 readings identical and the other 7 different only by simEnabled: true»; 7 clicks per scene on the metamodel."
+  },
+  {
+    "req": "R-SIM-99",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Off writes false, «measured, one undo of off brings the toggle and the pill back»; a metamodel saved under R-SIM-97 «keeps its pill» (legacy bag probed)."
+  },
+  {
+    "req": "R-SIM-100",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The seed «has no visible line: it is in the title of the Reset line and of Last step after a drawn step»."
+  },
+  {
+    "req": "R-SIM-100",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Lane probe at 1600×1000: «Step's top 854.5 open and closed», Random right of Cancel on one 14 px row."
+  },
+  {
+    "req": "R-SIM-100",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«It enters the MODELS build»; the lane probe reads the Petri step 1 list and «sm, esm, flowB run readings identical»."
+  },
+  {
+    "req": "R-SIM-100",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Seeded mulberry32: «draw i of seed s is a function of (s, i)», «no Math.random», the seed in the trace; «the core never chooses (R-SIM-7)»."
+  },
+  {
+    "req": "R-SIM-101",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "adds a run mode «Choices: Ask | Random», a fourth button (Play) and a k number input to the panel, more the user must hold in mind"
+  },
+  {
+    "req": "R-SIM-101",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "k control «in one constant row above the lines and the buttons, so Step does not move»; probe: «Step's top 854.5 under Ask and Random with the row present»"
+  },
+  {
+    "req": "R-SIM-101",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«It enters the MODELS build before the freeze»; demo §2.2 gains an optional Random+Play beat; probe: sm, esm, flowB hand runs identical to trunk_readings_2026-09-29c"
+  },
+  {
+    "req": "R-SIM-101",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«a regression on the trial run on 3001 means rollback»: the decision is taken back if the trial run regresses"
+  },
+  {
+    "req": "R-SIM-101",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "drawn steps go through R-SIM-100's pressRandom and «records origin: 'random'»; the loop runs the «pure playTick», each tick «reads the store ..., never React state»"
+  },
+  {
+    "req": "R-SIM-102",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«one visual key»; σ and node «always shown apart»; an attribute's kind «named as in nuXmv wherever it shows»: one name per concept across surfaces"
+  },
+  {
+    "req": "R-SIM-103",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Data» becomes «State» because «Data» «collides with the Data Manager (R-DMV-1)»: one name for one thing"
+  },
+  {
+    "req": "R-SIM-104",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Watch, Marking and Events sit above the transport row: «the panel grows upward and the buttons never move»"
+  },
+  {
+    "req": "R-SIM-105",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the whole σ, the concrete state and the trace go to an inspector «opened from the panel»; «the compact panel stays the default»"
+  },
+  {
+    "req": "R-SIM-105",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "keeps the new inspector off the demo: «the compact panel stays the default and the demo path»"
+  },
+  {
+    "req": "R-SIM-107",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the attr = value card under every node becomes opt-in tags, «default: none, except the attributes changed by the last step, for that step only»"
+  },
+  {
+    "req": "R-SIM-108",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "decided by the chat on delegation, «Alfonso keeps the veto», «his veto on this row stays open»: the decision stays revocable"
+  },
+  {
+    "req": "R-SIM-108",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«The lane opens with a discovery and a Layer Impact Report ...; its Phase 2 waits for that report»: an added document and a wait"
+  },
+  {
+    "req": "R-SIM-109",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Inspect node.[x]» switch «off by default»; on, tags name presentation values «so data and notation can be told apart»"
+  },
+  {
+    "req": "R-SIM-109",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«the lanes merge into the trunk before the MODELS demo, one at a time, each tagged pre-<branch>»; «the demo shows the dialog and the M1 face as built», the new parts «an optional beat»."
+  },
+  {
+    "req": "R-SIM-109",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the lanes merge into the trunk «one at a time, each tagged pre-<branch> for rollback»"
+  },
+  {
+    "req": "R-SIM-109",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "kept configurations «rebuilt by replay over the recorded selectors with inputs? added to the trace step»: the trace carries what replay needs"
+  },
+  {
+    "req": "R-SIM-110",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«every press is a step recorded in the trace and replayable from the seed (R-SIM-100, R-SIM-106)»"
+  },
+  {
+    "req": "R-SIM-110",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the board is the environment, inputs bound to events and IVAR; it «adds no VAR, never writes σ or M (R-SIM-6 holds)»"
+  },
+  {
+    "req": "R-SIM-111",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "devices map to formal kinds, «inputs to the event set or IVAR the model already declares, outputs to DEFINE»; the trace-reading Pulse LED is «presentation only»"
+  },
+  {
+    "req": "R-SIM-113",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Devices follow the panel's rules»: off with the reason in the title, the same Choices, the same past-step viewing as the panel"
+  },
+  {
+    "req": "R-SIM-114",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Variant C (a Board tab inside the compact panel) is dropped; the compact panel gains only the button that opens the board»"
+  },
+  {
+    "req": "R-SIM-115",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the board's persistence and editor lanes run «after the MODELS demo»: the work stays out of the demo build"
+  },
+  {
+    "req": "R-SIM-116",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "positions are grid cells on four columns and eight rows, «so both skins draw the same record (R-SIM-114)»"
+  },
+  {
+    "req": "R-SIM-116",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«Written in one state assignment, one undo step»; «survives save, the .jjodel text, import ... and the reopen (measured), with no VersionFixer step»"
+  },
+  {
+    "req": "R-SIM-118",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "an output is a global DEFINE; «compileOutput applies the checks of a semantic equation (parse, subset with E-NODE, ...)»"
+  },
+  {
+    "req": "R-SIM-120",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "a switch flip or a keypad digit «is not a step, its value enters the trace on the step that reads it (SimTraceStep.inputs), so the run replays»"
+  },
+  {
+    "req": "R-SIM-122",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "The Clock lane probe reads «the four demo scenes byte-identical to the base, header and board card included»."
+  },
+  {
+    "req": "R-SIM-122",
+    "softgoal": "SG-5",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«The engine sees only events»: a tick is one press of the bound event, «each press one step in arrival order»; a tick during the dialog is dropped, «never queued»"
+  },
+  {
+    "req": "R-SIM-122",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«A Clock is an environment source, not model time»: «σ, the STC, the step, the trace and any future .smv export are unchanged»"
+  },
+  {
+    "req": "R-SIM-123",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "absent style fields are never written, «so every board saved today encodes to the same string, byte for byte (tested ...)»; «no VersionFixer step»"
+  },
+  {
+    "req": "R-SIM-126",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "a text display sizes its glyphs for the longest value of its domain, «never the current value, so the box keeps its size while the value runs»"
+  },
+  {
+    "req": "R-SIM-131",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "glyph box sized «from size and maxDisplayLength, never from its value: the probe measured the configuration display at 316 by 46 px reading locked and unlocked»"
+  },
+  {
+    "req": "R-SIM-131",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Variant A keeps its glyph when nothing resolves, «so a board without the new fields renders as before»"
+  },
+  {
+    "req": "R-SIM-134",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "autoStart written only when true, «so every board saved before encodes byte for byte as before (tested against the codec's base fixture)»"
+  },
+  {
+    "req": "R-SIM-136",
+    "softgoal": "SG-5",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "a refused tick «presses nothing: no step, no trace entry»; the probe read «step 0 after 5 s idle at Reset»: idle clock time stays out of the trace"
+  },
+  {
+    "req": "R-SIM-136",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«the environment may always not produce an event, so a tick nobody listens to equals no tick»"
+  },
+  {
+    "req": "R-J1",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Non si introduce un campo «espressione libera» accanto al PathBuilder»: JjEL is the one expression language, «il progetto toglie grammatiche invece di aggiungerne»"
+  },
+  {
+    "req": "R-J3",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "widening postfix() would freeze «proprio la forma da far sparire» and make $x.value a «null silenzioso» in the console: one path form, not two readings"
+  },
+  {
+    "req": "R-J4",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«ogni PathExpr single-hop persistito continua a compilare senza toccare né JjEL né il contesto di valutazione»"
+  },
+  {
+    "req": "R-MK-2",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "exposing _state later is «una ratifica additiva», withdrawing it «una migrazione su view che per R-B9 non hanno VersionFixer»; the bag risks include «pollution dell'undo»"
+  },
+  {
+    "req": "R-MK-3",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the named-marking extension point is declared «perché la forma dello schema lo permetta senza rottura», not written now"
+  },
+  {
+    "req": "R-MK-8",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "the sim-active highlight stays as the default of viewpoints that do not author marked: «comportamento committato e verificato non si degrada»"
+  },
+  {
+    "req": "R-MK-9",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«M2 dopo M1, non negoziabile»: a UI authoring an uncompiled operator «salva IR che non rende», and IR views have no VersionFixer «per ripulirlo»"
+  },
+  {
+    "req": "R-MK-9",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "M1 and M3 take a «corsia completa, two-phase con report in docs/discovery/, Layer Impact Report obbligatorio prima del diff, effort xhigh»"
+  },
+  {
+    "req": "R-MK-10",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Due path? con semantiche diverse a parità di aspetto»: marked.path and isKind's path look alike and read differently, «divergenza temporanea e dichiarata»"
+  },
+  {
+    "req": "R-MK-10",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the isKind convergence micro-slice «parte solo dopo la verifica in console di Alfonso»: a wait for Alfonso"
+  },
+  {
+    "req": "R-LAY-1",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Un gesto di disposizione compiuto mentre un viewpoint esclusivo è attivo non modifica la disposizione sotto gli altri viewpoint esclusivi»"
+  },
+  {
+    "req": "R-LAY-2",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "the abstract syntax has its own layout record, «Non è il record condiviso su cui gli altri ricadono»: arranging it does not move other viewpoints"
+  },
+  {
+    "req": "R-LAY-4",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«La taglia scelta dall'umano e il flag isResized sono per viewpoint esclusivo»; the amendment stops re-deriving the size of a node «ridimensionato a mano»"
+  },
+  {
+    "req": "R-LAY-5",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il record di layout non si cancella quando l'elemento non è renderizzato»: «il layout deve sopravvivere al ritorno»"
+  },
+  {
+    "req": "R-LAY-5",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«NOT IN THIS VIEWPOINT è reversibile e il layout deve sopravvivere al ritorno»: hiding an element does not destroy its layout"
+  },
+  {
+    "req": "R-LAY-10",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Nessuna implementazione finché non è accertato che esista una sola sorgente del viewpoint attivo»: a verification gate before any code"
+  },
+  {
+    "req": "R-LAY-12",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«La verifica visiva prescritta dal prompt delle 16:47 è sostituita da» a code-level measure and a gesture «già misurato»: a step removed"
+  },
+  {
+    "req": "R-LAY-13",
+    "softgoal": "SG-7",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the on-screen gesture «resta come conferma (b), non come condizione, e la sua assenza non blocca la prima slice»"
+  },
+  {
+    "req": "R-LAY-14",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the rectification closes «muovere un nodo in sintassi astratta lo muoveva sotto ogni viewpoint non ancora toccato»; the scalars are a seed «mai riscritto da editor-v2»"
+  },
+  {
+    "req": "R-LAY-14",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«Nessuna migrazione: il dizionario nasce assente, i progetti esistenti sono già conformi»; «un progetto senza dizionario vede il seme ..., cioè il layout che ha oggi»"
+  },
+  {
+    "req": "R-LAY-15",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "the first gesture writes the full record, «mai record parziali» (else w/h undefined); rectified: an untouched key sees the seed, abstract moves no longer leak"
+  },
+  {
+    "req": "R-LAY-15",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Nessun bump di versione, nemmeno no-op: un bump rigenera in blocco le default view non toccate»"
+  },
+  {
+    "req": "R-LAY-16",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«Scrittori e lettori passano da un resolver unico»; useContentSize.ts and SymbolEditorModal.tsx routed through it: one key decides position and size"
+  },
+  {
+    "req": "R-LAY-17",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "orphan records of a deleted viewpoint are kept, «nessuna pulizia nella slice 1»; any cleanup «è una decisione futura da prendere a registro»"
+  },
+  {
+    "req": "R-LAY-18",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "size follows the layout key (before «il nodo conservava la taglia dell'ultimo gesto sotto qualunque chiave»); fitView «non ri-adatta la vista»"
+  },
+  {
+    "req": "R-DEAD-4",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "joiner/components.tsx is what «le view persistite come jsxString possono nominare»: a symbol exported there is not deleted, so saved views keep resolving"
+  },
+  {
+    "req": "R-DEAD-4",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Metodo, vincolante per ogni slice»: «Prima di cancellare un simbolo si verifica che non sia esportato lì», an added check"
+  },
+  {
+    "req": "R-DEAD-5",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "removal split into three slices per RC-3 and Rule 19, «Nessuna slice parte senza un prompt suo»"
+  },
+  {
+    "req": "R-UNDO-1",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "a session history «sarebbe un secondo undo divergente che la tastiera non raggiunge mai»: one undo with one meaning"
+  },
+  {
+    "req": "R-UNDO-1",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«In modalità JjOM editor-v2 ha un solo undo, quello del D-layer»; the toolbar buttons go to UndoAction/RedoAction"
+  },
+  {
+    "req": "R-UNDO-2",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "boot writes «non devono diventare il primo passo di undo»; kill-switch withdrawn after measuring «l'undo del D-layer annulla esattamente quello che il delta contiene»"
+  },
+  {
+    "req": "R-UNDO-3",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Autosave is silent with no version bump «perché il bump è una SetFieldAction e diventava un passo di undo a sé»; the version advances only on explicit save."
+  },
+  {
+    "req": "R-UNDO-5",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "A rename becomes one dispatch writing the slot, «misurato completo e reversibile su tutte le superfici»; before, ⌘Z restored only DObject.name and lost the old slot value."
+  },
+  {
+    "req": "R-UNDO-7",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Probe measured that «un solo ⌘Z rimuove la view creata e riporta la selezione precedente»: the create-and-open gesture is already one undo step."
+  },
+  {
+    "req": "R-UNDO-8",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Fixes the copy-on-write so «ogni scrittura di slot diventa annullabile»; before, «⌘Z non ripristinava nulla» for every inline write on the canvas."
+  },
+  {
+    "req": "R-SGL-1",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "A singleton class «non è instanziabile per nessuna via» and «L'istanza esiste per costruzione», so M1 models keep the metamodel's singleton constraint."
+  },
+  {
+    "req": "R-SGL-2",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The toggle's creation branch «resta come fallback dichiarato per i modelli salvati prima della feature», so models saved earlier keep working."
+  },
+  {
+    "req": "R-SGL-2",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Il ciclo di vita dell'istanza segue il flag»: one instance per M1 when on, all removed when off, so the instances stay consistent with the metaclass flag."
+  },
+  {
+    "req": "R-SGL-3",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The «singleton» stereotype «sta solo sulla sintassi astratta» and disappears from ObjectNode in both branches: one mark fewer on M1 object nodes."
+  },
+  {
+    "req": "R-SGL-4",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Con i singleton nascosti, la reference si assegna da una select»: the user can keep singletons hidden and still assign references to them."
+  },
+  {
+    "req": "R-SGL-4",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The select offers «le istanze singleton conformi al tipo, sottotipi inclusi», so a reference assigned this way conforms to its declared type."
+  },
+  {
+    "req": "R-SGL-5",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Splits the work into «Due commit» and gives A «il suo hard stop visivo» before B: one more commit and one more wait for Alfonso."
+  },
+  {
+    "req": "R-SGL-6",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«La non-instanziabilità copre sei filtri di editor-v2 e JjScript», JjScript create instance included; concreteSubclasses stays unfiltered for «conformità degli endpoint»."
+  },
+  {
+    "req": "R-SGL-7",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il vincolo un solo passo di undo vale per lo spegnimento»; switching on still takes two steps, recorded as «debito registrato»."
+  },
+  {
+    "req": "R-SGL-8",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The switch-on guard «conta per modello, non per progetto»: two M1s with one instance each, «lo stato normale», no longer block the singleton flag."
+  },
+  {
+    "req": "R-SGL-10",
+    "softgoal": "SG-4",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Due passi di undo (valore, poi arco da useM1ReferenceEdges) accettati» for one select gesture, to keep a creator out of the transaction."
+  },
+  {
+    "req": "R-SGL-10",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Candidates are «istanze conformi al tipo (conformsToRefTarget)» in the «stesso M1», and a type is singleton-conforming «mai per vacuità»."
+  },
+  {
+    "req": "R-STR-1",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "structure is «Additivo-opzionale, nessun bump di irVersion, nessuna migrazione»: saved IR keeps opening unchanged."
+  },
+  {
+    "req": "R-STR-2",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "An option the Symbol does not support «è assente, non disabilitata», and «ogni assenza è dichiarata» with its reason: no dead controls in the tab."
+  },
+  {
+    "req": "R-STR-2",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Unsupported options are «assente, non disabilitata», so fields come and go with the chosen Symbol instead of keeping their box."
+  },
+  {
+    "req": "R-STR-2",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Un valore persistito non più ammesso resta nell'IR e non viene renderizzato: mai riscritture silenziose»."
+  },
+  {
+    "req": "R-STR-4",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Provenance shows «SOLO» when renderers differ («nessun badge» on agreement), and «Le due superfici leggono e scrivono la stessa chiave»: one state, one reading."
+  },
+  {
+    "req": "R-STR-6",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "(B) the IR value segment runs the same ladder as the native branch, «così i due rami non possono divergere su come si vede un valore»."
+  },
+  {
+    "req": "R-FORM-9",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The adapter deletes contained objects explicitly; the core alone left an «orfano invisibile» with «un father che non risolve» when the container died."
+  },
+  {
+    "req": "R-FORM-13",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Keeps the core's containment-loop filter on the edit picker, measured «2 opzioni prima della catena, 1 dopo, il contenitore sparito, il lecito rimasto»."
+  },
+  {
+    "req": "R-FORM-14",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "In the multi-form identity and containment are absent, not disabled: «un controllo grigio invita il gesto che poi rifiuta»; exclusions carry their reason."
+  },
+  {
+    "req": "R-FORM-15",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«Uno stato del contratto è UNA decisione»: canvas and table read missing differently; measured «nativo, IR e tabella danno la stessa classificazione sui tre stati»."
+  },
+  {
+    "req": "R-FORM-15",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "SlotShape carries required, «derivata dalla cardinalità — lower >= 1» and «mai vera per una feature derived», so every surface shows a missing required value."
+  },
+  {
+    "req": "R-WCX-5",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "validTargets sits on the write contract since an adapter without it «offrirebbe proprio i bersagli che poi rifiuta»; the rail picker no longer shows stale candidates."
+  },
+  {
+    "req": "R-DEL-4",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "The delete net also clears M1 reference slots holding the dead id; measured «il (c) del fixture passa da dangling 1 a dangling 0»."
+  },
+  {
+    "req": "R-S1-2",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The gate is not on DObject.new, where loading passes, since «rifiutare lì vorrebbe dire che un modello con duplicati preesistenti non si apre»."
+  },
+  {
+    "req": "R-S1-3",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "The form engine's per-class rule, where «ciascuno accetta ciò che l'altro rifiuta», yields to the core's; the draft check «non è un secondo verdetto»."
+  },
+  {
+    "req": "R-S1-4",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Nessuna migrazione: i duplicati già nel modello si aprono, si leggono e si dichiarano al primo tocco», «mai una riscrittura silenziosa del nome»."
+  },
+  {
+    "req": "R-S1-4",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Rejects the global pool, which «vieterebbe due Member chiamati John in due Family diverse, che è un modello legittimo in Families.ecore»."
+  },
+  {
+    "req": "R-GT-1",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "An untyped DReference no longer gets its container as type but «Defaults.Pointer_EOBJECT», the seed the constructor already used."
+  },
+  {
+    "req": "R-GT-2",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Lowering the flag in finally stops a bad .ecore from leaving «ogni create» pending, which then «spariva al primo reload, in silenzio»."
+  },
+  {
+    "req": "R-M2U-6",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "M2 duplicates feed «lo stesso registro duplicate-name, con la stessa forma degli M1»: one badge for one problem at both levels."
+  },
+  {
+    "req": "R-CR2-1",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "An isID EInt attribute numbers itself and «il campo sparisce dal modale di create»: one field fewer to fill."
+  },
+  {
+    "req": "R-CR2-1",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The id is computed on the attribute's space, «lo stesso che ConformanceValidator CHECK 11 giudica», so generated ids satisfy that check."
+  },
+  {
+    "req": "R-CR2-2",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "multiline is declared once on the metamodel, so a note no longer has to «ripetere un override in ogni viewpoint»."
+  },
+  {
+    "req": "R-CR2-2",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A multi-line EString «non deve più cambiare il tipo dell'attributo»: a presentation need no longer forces a change of the attribute's type."
+  },
+  {
+    "req": "R-CR2-4",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "A pure aggregation no longer reassigns the target's father; measured by contrast, «una composition continua a spostare il father come deve»."
+  },
+  {
+    "req": "R-CR2-5",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Slices 13a/1b dropped: «una seconda superficie di navigazione locale sarebbe un secondo canvas»."
+  },
+  {
+    "req": "R-VP-1",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "One placement criterion gives each concern one home, metamodel or viewpoint: «Il criterio è semantico, non visuale»."
+  },
+  {
+    "req": "R-VP-1",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«nel metamodello ciò che cambia significato o validità dei dati; nel viewpoint ciò che cambia solo come i dati vengono mostrati»: display cannot change semantics."
+  },
+  {
+    "req": "R-VP-2",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«unit, min, max → tipo scalare raffinato; renderer, multiline → viewpoint»: validity constraints live in the type, display hints in the viewpoint."
+  },
+  {
+    "req": "R-VP-4",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Il viewpoint è override, mai prerequisito»: the manager works with the type-derived default, nothing to configure first."
+  },
+  {
+    "req": "R-VP-6",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Annotation encoding frozen: «Un prompt che ne avesse bisogno si ferma» and places the key per R-VP-1, an added hard stop."
+  },
+  {
+    "req": "R-VP-7",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«sezione manager additiva senza bump» and «rimozione senza migrazione»: saved projects are not rewritten."
+  },
+  {
+    "req": "R-VP-14",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il Data Manager è l'unico host della form di editing M1»; the rail's Form tab «si toglie per intero» and Properties «resta l'unico rendering del rail»."
+  },
+  {
+    "req": "R-VP-15",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Textbook Petri notation for the derived views; Alfonso «approved lanes 1 and 2 before the freeze», lanes 3 and 4 only if lane 2 lands by 2026-10-01 12:00."
+  },
+  {
+    "req": "R-VP-16",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Reshapes the derived Petri views on Alfonso's review of lane 1, with «no catalogue row and no Shape select option until after the freeze»."
+  },
+  {
+    "req": "R-VP-16",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The dropped dot markers «stay in the registry, persisted vocabulary», so IR already saved with them stays valid."
+  },
+  {
+    "req": "R-VP-17",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Derived state machine, ESM and activity views drawn closer to the textbook; «Alfonso approved V1 before the freeze»."
+  },
+  {
+    "req": "R-VP-18",
+    "softgoal": "SG-3",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Legibility fix «approved by Alfonso before the freeze knowing it changes every demo screenshot», «Measured by the lane probe ... on the four demo scenes»."
+  },
+  {
+    "req": "R-VP-27",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Color by metaclass» is «off by default», and its two controls «are hidden while off»."
+  },
+  {
+    "req": "R-VP-27",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "The two controls «keep their values across off and on», measured «off then on then off keeps #f59e0b and Border»."
+  },
+  {
+    "req": "R-VP-28",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«one SetFieldAction, one undo step», «Off writes enabled: false, never a delete», «No VersionFixer migration»; undo, redo and save-load measured unchanged."
+  },
+  {
+    "req": "R-VP-30",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«Border off paints it transparent, keeping its width»; measured «Node boxes change by 0 px in every state»."
+  },
+  {
+    "req": "R-VP-31",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Measured «the default scenes are 0 px left of the rail», DemoFlowB against a same-run control: the new option leaves the scenes as they were."
+  },
+  {
+    "req": "R-VP-31",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«toggle off is 0 px»: measured «toggle off repaints every node as before, 0 px on the canvas»."
+  },
+  {
+    "req": "R-VP-19",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Generic notation only with no role bound: «with a binding the role-keyed path of R-VP-15..18 is unchanged, byte for byte»; edges keep «5/5 demo edge classes»."
+  },
+  {
+    "req": "R-VP-20",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Measured «the four demo scenes in the default viewpoint pixel-identical to the C1 tip» (12 of 12)."
+  },
+  {
+    "req": "R-VP-20",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«Every key optional; absent renders as before (... no irVersion bump, no migration)»; measured «the irHash of 59 fixture views and the compiled defaults unchanged»."
+  },
+  {
+    "req": "R-VP-21",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Measured: the default choice on «the four demos» derives the pinned documents «byte for byte», and «the four demo scenes ... byte-identical to the C2 tip»."
+  },
+  {
+    "req": "R-VP-21",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«One undo step»; measured «one undo removes the viewpoint and its views», binding «byte-identical before and after a derivation and its undo»; «no update in place»."
+  },
+  {
+    "req": "R-VP-22",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Two notations beside their siblings»: the dialog now offers two state-machine and two flowchart renderings of the same formalism to choose between."
+  },
+  {
+    "req": "R-VP-22",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«Alfonso chooses which of each pair the demo uses»; measured «the four demo scenes in the default viewpoint 0 px from the D tip»."
+  },
+  {
+    "req": "R-VP-22",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Both keys optional, «absent renders as before (... no migration)»; measured «the markup of nodes and edges without the keys pinned on the D tip»."
+  },
+  {
+    "req": "R-VP-23",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Measured «the four demo scenes in the default viewpoint 0 px from the A1+A3 tip left of the rail»."
+  },
+  {
+    "req": "R-VP-23",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Keys optional, «absent renders as before (... no migration)»; measured «the 54 documents of the six other notations ... identical» and edge markup pinned."
+  },
+  {
+    "req": "R-VP-24",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Dated 2026-09-30, DemoPetri preselects it; lane probe with «the four demo scenes in the default viewpoint byte-identical to the A4 tip's shots»: measured non-regression."
+  },
+  {
+    "req": "R-VP-24",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "New persisted names are «Additive (Rule 11, R-IRN-32: no irVersion bump, no migration)»; «Petri net» still derives its documents byte for byte, so saved projects keep opening."
+  },
+  {
+    "req": "R-VP-25",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The open arrowhead applies to new derivations only: «Viewpoints already derived keep what they saved»."
+  },
+  {
+    "req": "R-VP-26",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Dated 2026-09-30, the demo files open on the new notations; lane probe 22/22 with «the four demo scenes in the default viewpoint byte-identical to the A2 tip's shots»."
+  },
+  {
+    "req": "R-VP-26",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "New notation and role names persisted additively: «No IR key, no irVersion bump, no migration»; the eight other notations «derive their documents byte for byte»."
+  },
+  {
+    "req": "R-VP-32",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "View-only: «no model object, no IR key, no persisted value»; measured «the model's M1 and M2 JSON identical after rendering, a run, undo/redo and save/load»."
+  },
+  {
+    "req": "R-VP-34",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Scoped to derived views so «the MODELS demo runs in the default viewpoint and does not move»; measured the default view in the same run «keeps the pill «1» and the wrapper outline»."
+  },
+  {
+    "req": "R-VP-36",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Measured «the four demo scenes in the default viewpoint byte-identical to the run at 5 (0 px)»: non-regression of the scenes."
+  },
+  {
+    "req": "R-VP-36",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Viewpoints already derived keep the 5 they saved»; «no scene file, persisted project or migration is edited (no IR key, no irVersion bump)»."
+  },
+  {
+    "req": "R-VP-39",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«An override also moves the automatic colours of the other classes»: in DemoFlowB one override «changed five other node classes», a coupling the user must anticipate."
+  },
+  {
+    "req": "R-VP-39",
+    "softgoal": "SG-2",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Measured «Choosing a class, overriding it, or a 45-character name move nothing in the panel»; «Reset» buttons «disabled, not hidden»; swatch grid sized to the dropdown's height."
+  },
+  {
+    "req": "R-VP-39",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Measured «Undo and redo are one step each; the field and its map survive the save serializer, JSON.parse and VersionFixer.update»; «Reset» removes the key."
+  },
+  {
+    "req": "R-VP-50",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«an override stored on a glyph class is not painted while the class is a glyph, is kept in the data»; «No IR key, no persisted value, no migration»."
+  },
+  {
+    "req": "R-VP-48",
+    "softgoal": "SG-3",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The full ELK auto-layout «may change what the MODELS demo scenes show after an auto-layout (RC-26), not at rest»."
+  },
+  {
+    "req": "R-VP-52",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Viewpoints already derived keep the bar they saved (the size is copied onto each view at derivation, as R-VP-36 measured)»."
+  },
+  {
+    "req": "R-VP-41",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "ELK routes are «drawn, never persisted» (session store) and «a move or a resize drops it and the router takes over», so a reload or a small move redraws those edges."
+  },
+  {
+    "req": "R-VP-45",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "First-open and late-edge layout unchanged «so opening a project or a viewpoint renders as before»: measured 0 px on the four demo scenes and three derived viewpoints."
+  },
+  {
+    "req": "R-VP-45",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "First-open layout kept so the demo renders as before: «0 px outside Jodie's animated avatar on the four demo scenes» on the rest probe."
+  },
+  {
+    "req": "R-VP-53",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "«Rest: the four demo scenes and DemoFlowB under Generic, Flowchart ... are byte-identical to the baseline», before the 2026-10-07 freeze."
+  },
+  {
+    "req": "R-VP-53",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The anchor change touches new derivations only: «A viewpoint derived before keeps the documents it saved»; `outsideLabelsOf` is «optional and additive»."
+  },
+  {
+    "req": "R-VP-54",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "State machine «converges on» Statechart (UML) as «the hidden twin»; Event objects not drawn; «emptyBehavior: 'hide' (no row for a slot with no value, no compartment left empty)»."
+  },
+  {
+    "req": "R-VP-54",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Titled «Statechart (UML) as the demo draws it», visual OK by Alfonso on 2026-10-03, the day before Malaga; the text ties it to the demo, though after the 10-01 freeze."
+  },
+  {
+    "req": "R-VP-54",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "New persisted key `visible?` with «absent = drawn (Rule 11, R-B9; no irVersion bump, no migration)»; hidden Event objects «stay in the model and in the tree»."
+  },
+  {
+    "req": "R-VP-57",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "The bar turns «inside a square box», «held while any node is dragged» with 1.2 hysteresis, and «nothing persisted, no box and no position moved»."
+  },
+  {
+    "req": "R-VP-57",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«ShapeSpec.barThickness?» additive: «absent is the bar of before ... (every view saved before Q3)», «no irVersion bump, no migration»; «A viewpoint derived before keeps its old bar»."
+  },
+  {
+    "req": "R-VP-58",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Saved derived viewpoints keep what they saved (R-VP-25, R-VP-36). No key, no irVersion bump, no migration»."
+  },
+  {
+    "req": "R-VP-60",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Withdrawn 2026-10-04 because «it touches the handle code in the critical zone for a few pixels after an Auto layout, days before the MODELS demo»; it returns after Málaga."
+  },
+  {
+    "req": "R-EE-1",
+    "softgoal": "SG-3",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Dated 2026-09-30: lane probe 16/16 with «the four demo scenes in the default viewpoint 0 px from the pre-edit shots»."
+  },
+  {
+    "req": "R-EE-1",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Seven ends «additive, no migration»; «The seven ends of before keep their markers byte for byte», measured as «markup of edges without the additions equal to 77c2f946b (9 pins)»."
+  },
+  {
+    "req": "R-EE-2",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«A malformed Conditional renders as that static end, never drops the view (R-B9-bis)»; `terminations` keeps its type «so UnifiedEdge reads what it read»."
+  },
+  {
+    "req": "R-EE-3",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "measured",
+    "verified": "none",
+    "why": "Second-agent check on 16 end-label values, pre- and post-lane: «all old legal text sources behave the same»; the 3 test files 34/34."
+  },
+  {
+    "req": "R-EE-4",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Conditional ends and end labels edited «in Advanced»; «Basic: the grouped Select as before», the seven options «in their order and wording»."
+  },
+  {
+    "req": "R-DMV-1",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Un solo Data Manager Viewpoint per progetto»: not created, duplicated or deleted, «non compare tra le sintassi del canvas»; one place for the manager's configuration."
+  },
+  {
+    "req": "R-DMV-2",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«I viewpoint diagrammatici sono solo sintassi concreta» and «nessuna sezione del manager vi appartiene più»: each concern lives in one kind of viewpoint."
+  },
+  {
+    "req": "R-DMV-4",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The singleton's rail edits per-field widgets offering «solo widget compatibili col tipo», so choices that cannot apply are not shown."
+  },
+  {
+    "req": "R-DMV-5",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "The sidebar lists «solo le classi che deviano dal default» with only the touched features; «una view svuotata si pota ... e la classe sparisce»."
+  },
+  {
+    "req": "R-DMV-6",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Materializzazione alla prima scrittura, nessuna migrazione: il default implicito di R-VP-4 copre tutto finché nulla è personalizzato»."
+  },
+  {
+    "req": "R-SKIN-1",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "A skin is «un preset chiuso di ASPETTO» that «non offre nulla di customizzabile all'utente (né colori né slider)»: no new controls to hold in mind."
+  },
+  {
+    "req": "R-SKIN-2",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Slate è l'aspetto di oggi ed è il default: nessun progetto cambia»."
+  },
+  {
+    "req": "R-SKIN-3",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The name is persisted «come stringa su formSkin? del singleton ... (additivo, nessuna migrazione, R-DMV-6)»."
+  },
+  {
+    "req": "R-SKIN-4",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The per-view skins of irTypes.ts «non si toccano: sono literal definitivi (R-B9)», so saved views keep their values."
+  },
+  {
+    "req": "R-VAL-1",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Validation gets its own viewpoints because «tenere le regole accanto alle proprietà della classe aumenta il carico cognitivo»."
+  },
+  {
+    "req": "R-VAL-2",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "With multiple active validation viewpoints «valido» «è relativo all'insieme dei viewpoint di validazione attivi», a consequence «da dichiarare in interfaccia»."
+  },
+  {
+    "req": "R-VAL-5",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«una regola spenta individualmente resta spenta quando il viewpoint si riaccende»: toggling the viewpoint back restores the user's per-rule setup."
+  },
+  {
+    "req": "R-VAL-7",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Two channels: rule defects shown «in authoring», violations in the problems registry; «Il registro non è mai il posto dove si scopre che una regola è scritta male»."
+  },
+  {
+    "req": "R-VAL-9",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Cancellare una classe non cancella in silenzio le sue regole»: a modal offers to keep them as disabled documentation; «il default è conservare, mai cancellare»."
+  },
+  {
+    "req": "R-VAL-11",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Nessun cartello nel rail»: the class panel does not signal rules, since a read-only row «è il precedente per cui ogni concern che tocca la classe ne chiede una»."
+  },
+  {
+    "req": "R-VAL-12",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Rules accumulate with no override; «L'asimmetria con i viewpoint di sintassi va dichiarata in interfaccia, perché per analogia ci si aspetta l'override»."
+  },
+  {
+    "req": "R-VAL-12",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "Superclass rules hold on every subclass instance and «Indebolire una regola in una sottoclasse non si può»: inherited invariants are never weakened."
+  },
+  {
+    "req": "R-VAL-13",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The verdict requires a boolean, nothing converted: truthiness gave a «verdetto sbagliato in silenzio» on [true,false,true]; a conversion «sarebbe la terza semantica del sistema»."
+  },
+  {
+    "req": "R-VAL-14",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The surface always shows three numbers; without the unevaluable count the author «vedrebbe silenzio, indistinguibile da un modello valido»; a counter, «non un elenco»."
+  },
+  {
+    "req": "R-VAL-15",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«la superficie dichiara sempre quanto è parziale il verdetto, comprese le regole che non compilano e non hanno girato», a row for «chi legge il verdetto»."
+  },
+  {
+    "req": "R-VAL-15",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "`X.instances` sees the validated model, not the project: otherwise «esattamente uno stato iniziale» counts two on a project with two state machines «e le dichiara entrambe violate»."
+  },
+  {
+    "req": "R-VAL-16",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The restriction sits in buildEvalContext since a downstream filter «la validazione lo mancherebbe in silenzio»; identity by reference (self.instanceOf == State) is the acceptance constraint."
+  },
+  {
+    "req": "R-VAL-17",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "A rule with no instances gives zero violations, «indistinguibile da un modello sano», hidden by «N rules over M instances»; the surface now declares it."
+  },
+  {
+    "req": "R-VAL-18",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Stale dots withdrawn, with «UNA dichiarazione di freschezza, in un posto solo e mai per nodo»; per-item staleness discarded as it «introduce due vocabolari di pallino»."
+  },
+  {
+    "req": "R-VAL-19",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Three concerns under VIEWPOINTS, visible at zero so the tree shows «che la funzione esiste»; «I conteggi significano la stessa cosa a ogni livello»; the tree «nomina e naviga, non modifica»."
+  },
+  {
+    "req": "R-VAL-19",
+    "softgoal": "SG-2",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«I tre concern si vedono anche a zero»: the concern rows exist before content arrives instead of mounting when first filled."
+  },
+  {
+    "req": "R-VAL-19-bis",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Counts were not one species: concern rows count viewpoints and «il numero di classi personalizzate passa nel testo della riga di stato»; the tree «nomina e naviga senza eccezioni»."
+  },
+  {
+    "req": "R-NV-1",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Il tipo del viewpoint non è una scelta dell'utente»: only `syntax` stays selectable in New Viewpoint; types with no consumers are no longer offered."
+  },
+  {
+    "req": "R-NV-1",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Disabled types stay visible «perché un viewpoint salvato con quel tipo deve continuare a mostrare il proprio»; «i decorativi esistenti continuano a rendersi»."
+  },
+  {
+    "req": "R-NV-2",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "The form-theme select in ViewpointProperties «era UI morta» and is removed; the theme belongs to the Data Manager Viewpoint only."
+  },
+  {
+    "req": "R-NV-2",
+    "softgoal": "SG-4",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Il campo formTheme su DViewElement resta: nessuna migrazione, nessun bump del VersionFixer»."
+  },
+  {
+    "req": "R-NV-3",
+    "softgoal": "SG-1",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "The `+` asks what the view applies to; «una view creata dal + per la classe X è identica campo per campo a una creata dal menu contestuale di X»."
+  },
+  {
+    "req": "R-JS-5",
+    "softgoal": "SG-1",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "none",
+    "why": "«Run never pauses»: the interactive Skip dialog leaves Run, and recovery actions «sit on that error's row of the summary»."
+  },
+  {
+    "req": "R-JS-9",
+    "softgoal": "SG-6",
+    "kind": "some+",
+    "evidence": "read",
+    "verified": "none",
+    "why": "M1 creation in a container checks before any write that `<ref>` is «a containment (NOT_A_CONTAINMENT), whose type the class conforms to (TYPE_MISMATCH)», and the slot's multiplicity."
+  },
+  {
+    "req": "R-MCID-1",
+    "softgoal": "SG-4",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "Pins widen «additivo, nessun bump di irVersion»; «Un nome senza pin continua a significare «ogni classe con quel nome» (view autorate prima del pin)»."
+  },
+  {
+    "req": "R-MCID-1",
+    "softgoal": "SG-6",
+    "kind": "help",
+    "evidence": "read",
+    "verified": "none",
+    "why": "«Due metaclassi dichiarate da metamodelli diversi sono metaclassi diverse anche quando hanno lo stesso nome»; the resolver «onora esattamente la scelta»."
+  }
+]

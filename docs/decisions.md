@@ -5707,6 +5707,22 @@ Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homony
 
 **R-MCID-2** (2026-09-19) — **Un array vuoto non è un pin: `pinAccepts` e `withMetaclassPins` lo leggono in modo diverso, di proposito.** `pinAccepts` applica `includes` come scritto, quindi un `[]` scritto a mano non accetta nessuna classe (la view non matcha nulla); `withMetaclassPins` e `metaclassEntries` lo leggono come «nessun pin» (ricade sulla catena, la riga resta visibile e rimovibile). L'authoring non scrive mai `[]`: un array che si svuota toglie la chiave e il nome dalla lista. La differenza è dichiarata nel commento di `AuthoringMetaclassPins` in `irTypes.ts`.
 
+## R-GOAL — the goal model of the requirements (decision 2026-10-05)
+
+Evidence: `docs/goals/` and `docs/discovery/discovery_2026-10-05_goal_model.md` (P-2026-10-05-1725, chat
+`C-2026-10-05-1648`).
+
+- **R-GOAL-1** (2026-10-05, ratified by Alfonso 2026-10-05 («vai», on the chat's proposal of seven), evidence: read, verified: none, reversible: trunk).
+  **The requirements have a softgoal level, seven softgoals in `docs/goals/softgoals.json`.** SG-1 low cognitive
+  load, SG-2 no layout shift, SG-3 demo readiness, SG-4 reversibility, SG-5 determinism of the simulation engine,
+  SG-6 fidelity to the formalism, SG-7 cost of the harness. The R- rows contribute to them in
+  `docs/goals/contributions.json` (`{req, softgoal, kind, evidence, verified, why}`, `kind` on the GRL scale
+  `make|help|some+|some-|hurt|break`) and pull against each other in `docs/goals/conflicts.json`
+  (`{a, b, softgoal, why, evidence}`); evolution links (amends, supersedes, refines, renumbered) stay in the rows
+  and are not conflicts. A contribution is recorded only where the row, its memo or its discovery supports it;
+  `verified` reads `none`, `agent` (the RC-27 sample) or `alfonso`, and only Alfonso writes `alfonso`. RC rows
+  are harness rules and are not judged.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
