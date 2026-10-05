@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-04-2147
 Chat: C-2026-10-04-0946
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-05 · lane merge · 0e77734a2 · verifica visiva passata 2026-10-05 (chat check RC-23 on the lane probe from the DOM (E1, E2, E2b, E3, E4 all PASS: microwave with `in` has 0 errors, every Transition in the transitions slot of its source State and not in model.objects, tree nested; original script leaves no not-found after the retry passes); canvas edge rendering not measured, out of scope)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-04-2147 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

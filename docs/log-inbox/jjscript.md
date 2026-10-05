@@ -134,3 +134,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-04-0946
 **Detail**: docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md
+
+## 2026-10-05 — merge: jjscript-m1 into alfonso-frontend-jjtl (P-2026-10-04-2147)
+**Prompt**: `claude_2026-10-04_2147_prompt_merge_jjscript-m1.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-m1` at `05bf04ce8` into `alfonso-frontend-jjtl`, merge base `d6bd5c5f6`, 8 commits on the branch side.
+**Files touched**: merge `0e77734a2`: 17 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md`, `docs/log-inbox/jjscript.md`, `docs/prompts/claude_2026-10-04_0946_prompt_jjscript_m1_containment.md`, `frontend/scripts/probe/fixtures/jjscript-m1-esm.jjodel`, `frontend/scripts/probe/jjscript-m1-containment.ts`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjodie-integration/jjscriptGenerationPrompt.ts`, and 9 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0e77734a2` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7499 tests in 302 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat check RC-23 on the lane probe from the DOM (E1, E2, E2b, E3, E4 all PASS: microwave with `in` has 0 errors, every Transition in the transitions slot of its source State and not in model.objects, tree nested; original script leaves no not-found after the retry passes); canvas edge rendering not measured, out of scope
+**Notes**: Rollback tag `pre-jjscript-m1` on `c34a03ddb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-2147/result.json`.
+**Prompt document name**: 2026-10-04 21:47
