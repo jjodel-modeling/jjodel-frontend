@@ -4,7 +4,8 @@
  * canvas (R-SIM-107), the «Inspect node.[x]» switch (R-SIM-109), the skin of
  * the I/O board with its «Show bindings» (R-SIM-114, P-2026-10-03-2000), and the
  * board's window, docked or floating with its place, and its sound (R-SIM-132,
- * R-SIM-133, P-2026-10-04-1131).
+ * R-SIM-133, P-2026-10-04-1131), and the canvas's coverage switch (R-SIM-140,
+ * P-2026-10-06-0115).
  *
  * Module singleton per model, beside the run policy of simRunState.ts and kept
  * the same way: outside Redux, never in a bag, so a preference never moves
@@ -59,6 +60,8 @@ export interface SimViewerPrefs {
     readonly boardFloating?: boolean;
     /** R-SIM-132: where the floating window was left; absent until it is first moved. */
     readonly boardWindow?: SimBoardWindow;
+    /** R-SIM-140: the coverage of the runs laid over the nodes (simCoverage.ts); absent, off, by default. */
+    readonly coverage?: boolean;
 }
 
 export const DEFAULT_SIM_VIEWER_PREFS: SimViewerPrefs = {

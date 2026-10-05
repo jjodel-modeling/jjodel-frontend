@@ -666,3 +666,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: RC-23 della lane 0100 passata sui crop, merge senza altre differenze visive
 **Notes**: Rollback tag `pre-sim-board-ui` on `8af770a29` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0129/result.json`.
 **Prompt document name**: 2026-10-06 01:29
+
+## 2026-10-06 — feat: coverage of the runs in the simulator, lane sim-coverage (P-2026-10-06-0115)
+**Prompt**: `claude_2026-10-06_0115_prompt_sim_coverage.md`, heavy tier, `~/jjodel-w-simverif` on `sim-verif`: R-SIM-140 as V1, V2, Q2 and Q4 of the 2026-10-05 discovery fix it (the counts per model in `simCoverage.ts` on their own channel, observed from the canvas layer, the Coverage toggle and Clear, the node overlay, `coverage?`); tests first, mutation bench, probe on 3080-3099, no merge, no Status flip.
+**Files touched**: `2fc8c8f84`: `sim/__tests__/simCoverage.test.ts` (new), `sim/__tests__/simViewerPrefs.test.ts`. `42bad725c`: `sim/simCoverage.ts` (new), `sim/SimCanvasLayer.tsx`, `sim/SimNodeRunState.tsx`, `sim/simNodeRunState.scss`, `sim/simViewerPrefs.ts`, `sim/__tests__/simCoverage.test.ts`. This commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7630/7630 in 308 files, the 9 known reds at import; build exit 0; mutation bench on `simCoverage.ts` 26/26 killed by assertions. Red at the base: the coverage suite at import; the prefs tests at typecheck only (the store spreads any key).
+**Out-of-scope changes**: no (seven files, above five: the five of the prompt's COSA and the two tests it names, the rule 19 list)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3088, 1600×1000, light: four scenes with coverage off, base 16/16, after 16/16, 0 differing paths but the toggle (panel, layer, node boxes and overlays at step 0 and at the path's end, bag keys live and exported); coverage on ESM and Petri 30/30: `off` and `ts` veiled, 2/3 · 3/4 and 4/4 · 3/3, boxes 0 px, Reset and a step back keep, Clear empties, no dispatch; crops in `frontend/scripts/smoke/_tmp_simcov_crops/`; the chat's visual check pending, RC-23)
+**Notes**: Edges not covered in this lane (Q2): nodes only, edges a later measured slice. Counts are gathered with the switch on or off; Clear keeps the run seen, so a place marked before Clear stays veiled until a token arrives. The controls grow left by 77 px (on: the summary and Clear too), widening the 2026-10-04 ticket's overlap with a wide floating board. Base: f2c79606c's four files written into the tree, restored by git checkout HEAD; no stash. Probe gitignored, _tmp_simcov_*.
+**Prompt document name**: 2026-10-06 01:15
