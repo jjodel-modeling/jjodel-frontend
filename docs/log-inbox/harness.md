@@ -84,3 +84,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended, 2026-10-06: docs-only merge (P13 Depends bullet, RC-42, HARNESS-DOCS header fields, harness inbox union); gates green on c6d8ab56c; no visual check
 **Notes**: Union in `docs/log-inbox/harness.md`: the trunk's entries (2340, 2348) first, then the branch's (2341), verbatim; the result is byte-identical to the trunk's file plus the branch's block. `docs/PROTOCOL.md` changed on the branch: merged on Alfonso's go-ahead («procedi con tutte e tre», C-2026-10-05-1116). `git commit -- <paths>` is refused during a merge: the five-file index was committed without pathspec. No rollback tag; pre-merge tip `9ab14dcb0`.
 **Prompt document name**: 2026-10-05 23:53
+
+## 2026-10-06 — fix: the lane board pairs each turn with its own result (P-2026-10-06-0049)
+**Prompt**: `claude_2026-10-06_0049_prompt_board_turn_pairing.md`: `laneTimeline()` paired turn k with the k-th `result` of `log.jsonl` by position, so a task-notification result (`num_turns` 0, empty, 74 ms) shifted every later turn of `P-2026-10-05-1735` and drew a false same-worktree overlap with `P-2026-10-05-2315`; `results()` now skips non-turn results, a turn is clamped to the next input, cache key `v3` to `v4`.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs` (`c2ecea5e9`); this commit: the Status of the prompt file and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Old (`HEAD~1`) vs new timelines on all 343 lanes, scratch caches, port 4701: 333 identical, 8 changed (all with a skipped task-notification result), 1 live lane skipped, 1 unexited lane (`P-2026-09-29-1017`) differs by `now` alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Gates: `node --check` 0, `check:scripts` PASS (55). 1735 turns 17:37:00-18:06:49, 22:35:28-23:03:41, 23:06:35-23:07:05; it ends 11 min before 2315 starts. 13 lanes had a skipped task-notification result, 0 a num_turns-0 empty one of another origin, the guard clamped 0 turns. Not investigated: one other same-worktree overlap, in `~/jjodel-release` (`P-2026-10-02-1445` vs `1501`, 933 s). Scratch left in `/tmp` (`lb-*`).
+**Prompt document name**: 2026-10-06 00:49

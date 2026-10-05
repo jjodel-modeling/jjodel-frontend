@@ -141,6 +141,7 @@ function collect() {
 // One lane = one or more turns. Turn k starts at the mtime of input-k.md and lasts the
 // duration_ms of the k-th `result` event of log.jsonl. The gaps between turns are the
 // waits for a decision (GO, ACK, answer); input-k.md for k >= 2 is that decision.
+// A `result` that is not a turn (a task notification) is skipped, and a turn never runs past the next input.
 // Lanes from before the input files have one turn: started.txt to exit.txt.
 
 // The cache lives with the lanes, never in a worktree.
@@ -165,7 +166,8 @@ function results(log) {
         if (s1 === -1) s1 = buf.length;
         try {
             const e = JSON.parse(buf.subarray(s0, s1).toString('utf8'));
-            if (e.type === 'result') {
+            const notTurn = (e.origin && e.origin.kind === 'task-notification') || (e.num_turns === 0 && !e.result);
+            if (e.type === 'result' && !notTurn) {
                 const m = [...String(e.result || '').matchAll(/Outcome:\s*`?([a-z][a-z-]*)/gi)];
                 out.push({ ms: Number(e.duration_ms) || 0, outcome: m.length ? m[m.length - 1][1].toLowerCase() : '' });
             }
@@ -197,7 +199,7 @@ function laneTimeline(id, now) {
     const exitP = join(dir, 'exit.txt');
     const exited = existsSync(exitP);
     const inputs = readdirSync(dir).map((n) => /^input-(\d+)\.md$/.exec(n)).filter(Boolean).map((m) => Number(m[1])).sort((a, b) => a - b);
-    const key = ['v3', size(join(dir, 'log.jsonl')), mtime(exitP), inputs.length].join('/');
+    const key = ['v4', size(join(dir, 'log.jsonl')), mtime(exitP), inputs.length].join('/');
     const hit = tlCache[id];
     if (hit && hit.key === key && exited) return hit.v;
     const res = results(join(dir, 'log.jsonl'));
@@ -213,6 +215,7 @@ function laneTimeline(id, now) {
             let e;
             if (res[i] && res[i].ms) e = st + res[i].ms;
             else e = last ? end : starts[i + 1];
+            if (!last) e = Math.min(e, starts[i + 1]);
             if (last && !exited) e = now;
             turns.push({ s: st, e: Math.max(e, st), o: res[i] ? res[i].outcome : '', d: i ? decisionText(join(dir, 'input-' + inputs[i] + '.md')) : '' });
         });
