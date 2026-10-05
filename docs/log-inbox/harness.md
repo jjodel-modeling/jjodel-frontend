@@ -45,3 +45,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile — board probe on 4701: Lanes rows equal to 4700's (331, ids, states, outcomes, order), Requirements tab 476 rows, 277 realized, 0 console errors; crop `frontend/scripts/smoke/_tmp_reqtab_crops/requirements-1400.png` (gitignored)
 **Notes**: Gates: typecheck 14, the §17 set; typecheck:scripts, check:scripts exit 0; vitest 7519/7519, the 9 known import reds; build exit 0. Bench: lane-run 7/8 (survivor equivalent), req-trace 23/23, controls green. 277 realized vs the chat's 303: exact id tokens with ranges 277; substring matching (R-SIM-1 inside R-SIM-12) 298; code-touching commits of any type 285/308. Row set 476, not 436: the chat's row definition is not recorded. Decisions in the closing report.
 **Prompt document name**: 2026-10-05 17:20
+
+## 2026-10-05 — feat: one lane board, status strip (P-2026-10-05-1720, rework)
+**Prompt**: the chat's rework of P-2026-10-05-1720, same session, unattended: merge `harness-board-progress` (P-2026-10-05-1705) and consolidate onto its `frontend/scripts/lane-board.mjs`; Alfonso's status strip of 17:35 (six outcome pills at the end of the tab bar, a click filters the Lanes tab); tests first; probe on 4701 with a crop per tab.
+**Files touched**: merge `786107cfb` (1705's 8 files); `ec3ea7d08`: `frontend/scripts/lane-board.mjs`, `frontend/scripts/hooks/__tests__/laneBoardStrip.test.ts` (new), `frontend/scripts/board/lane-board.mjs` (deleted); this commit: this entry and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-05 17:20
+**Causa**: (f)
+**Regressions**: no
+**Out-of-scope changes**: no — the merge brings 1705's files by the chat's order; one CSS fix in 1705's board the merge needed (its `.seg` rule collapsed the Timeline and Insights controls), scoped under `.segs`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — RC-23 check of the crops by the chat pending; probe on 4701: /api equal to 4700 (333 rows), strip 577 px at x 747 on all four tabs and after a filter click, counts equal to the /api rows, 0 console errors
+**Notes**: Gates: typecheck 14, the §17 set; typecheck:scripts, check:scripts exit 0; vitest 7588/7588, the 9 known import reds; 1705's laneBoard 61/61; build exit 0. Strip tests 8 red first; board bench 10/10, control 69/69. Crops in `frontend/scripts/smoke/_tmp_reqtab_crops/strip-{lanes,timeline,insights,requirements,lanes-filtered}-1400.png` (gitignored). The resolved pill reads 0 on real data: no lane holds resolved.txt (resolve on old lanes parked).
+**Prompt document name**: 2026-10-05 17:20
