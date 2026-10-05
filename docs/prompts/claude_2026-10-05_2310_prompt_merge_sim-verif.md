@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-05-2310
 Chat: C-2026-10-05-1110
 Lane: full (merge; 1 conflict: `docs/log-inbox/simulation.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-05 · lane merge · b4fbccd80 · verifica visiva passata 2026-10-05 (RC-23 della lane 1 passata sui crop, merge senza altre differenze visive)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-05-2310 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

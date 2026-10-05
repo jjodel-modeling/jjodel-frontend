@@ -573,3 +573,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3091, 1600×1000, light: four scenes base 54/54 and after 54/54, 0 differing paths but the inspector's one header icon; Petri watches 19/19, Ask, Random seeds 1 and 2026 twice, save/export/import/reopen byte for byte; crops in `frontend/scripts/smoke/_tmp_simwatch_crops/`; the chat's visual check pending, RC-23)
 **Notes**: Step's top 873 px in this probe, base and after alike (854.5 is another setup); inspector 372 × 400.5 on PEST. «Absent key» read as no key until Apply, `[]` once emptied (W1). The session hit the time limit in the probe and was resumed. The feat message says «the 17 set» for «the §17 set». The probe is gitignored, not committed.
 **Prompt document name**: 2026-10-05 17:35
+
+## 2026-10-05 — merge: sim-verif into alfonso-frontend-jjtl (P-2026-10-05-2310)
+**Prompt**: `claude_2026-10-05_2310_prompt_merge_sim-verif.md`, a direct merge by `lane-run merge --direct`, no session: `sim-verif` at `ec6e92707` into `alfonso-frontend-jjtl`, merge base `57ff86f5d`, 9 commits on the branch side.
+**Files touched**: merge `b4fbccd80`: 18 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-05_sim_watches_scenarios_coverage.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-05_1655_prompt_discovery_sim_watches_scenarios_coverage.md`, `docs/prompts/claude_2026-10-05_1735_prompt_sim_watches.md`, `frontend/scripts/probe/sim-verif-bench.ts`, `frontend/src/components/editor-v2/sim/SimInspector.scss`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, and 10 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b4fbccd80` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7551 tests in 306 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane 1 passata sui crop, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-verif` on `a6fe2cf0d` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2310/result.json`.
+**Prompt document name**: 2026-10-05 23:10
