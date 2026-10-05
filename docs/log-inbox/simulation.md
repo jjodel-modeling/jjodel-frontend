@@ -516,3 +516,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: RC-23 passata sui crop della lane P-2026-10-05-1110 (bottone e header card, delta 0 px); merge senza altre differenze visive
 **Notes**: Rollback tag `pre-sim-board-icon` on `d92e5419e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-1444/result.json`.
 **Prompt document name**: 2026-10-05 14:44
+
+## 2026-10-05 — discovery: watches, step back, scenarios and coverage, R-SIM-137..140 (P-2026-10-05-1655)
+**Prompt**: `claude_2026-10-05_1655_prompt_discovery_sim_watches_scenarios_coverage.md`, heavy tier, read-only on `~/jjodel-w-simverif`, branch `sim-verif`: watch evaluation and storage, step back, scenarios, coverage, the Phase 2 split and the risks, with file and line and a measurement where one decides.
+**Files touched**: `frontend/scripts/probe/sim-verif-bench.ts` (new, `8511a9c16`), `docs/discovery/discovery_2026-10-05_sim_watches_scenarios_coverage.md` (new, `ac81aca96`), the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (a report and a node probe; nothing under `frontend/src`; check:scripts exit 0)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe on the four demo fixtures, 35 PASS: a pop of the kept configurations equals the earlier record 30/30, 6/6 past the cap, so no stack; watches read as board outputs, 1.6-2.1 µs; replay 4/4; coverage from labels equals coverage from the trace 4/4; runWatches and runScenarios leave runSignature, sim* keys move it. Kept configuration 285-1038 B, not reconciled with the 71-109 B of 2026-10-02. Runs 1-2 logged to /tmp, deleted. Report §0, §6, §8.
+**Prompt document name**: 2026-10-05 16:55

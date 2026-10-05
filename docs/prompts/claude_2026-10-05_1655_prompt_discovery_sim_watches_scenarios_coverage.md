@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-05-1655
 Chat: C-2026-10-05-1110
 Lane: full (Phase 1 discovery read-only, hard stop; Phase 2 in later lanes on disjoint files, written by the chat from this report). Tier: heavy (RC-32: a discovery across the simulator modules). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
-Status: da eseguire
+Status: eseguito 2026-10-05 · lane sim-verif · discovery only · probe 8511a9c16 (frontend/scripts/probe/sim-verif-bench.ts, node, the four demo fixtures, 35 PASS, 0 FAIL, EXIT=0; check:scripts exit 0) · report ac81aca96 docs/discovery/discovery_2026-10-05_sim_watches_scenarios_coverage.md, read on d48373101 · hard-stop: 12 decisions taken unattended (§8.1), none awaiting Alfonso, five questions with Recommended (§8.3), three Phase 2 lanes in §6 · nothing under frontend/src changed
 Worktree: `~/jjodel-w-simverif`, branch `sim-verif`, cut by the chat from `alfonso-frontend-jjtl` at `57ff86f5d`, `frontend/node_modules` symlinked (P14). Before anything else: `pwd`, branch, `git log -1` (the docs commit adding this prompt and R-SIM-137..141, on top of `57ff86f5d`) and a clean `git status`. Otherwise stop with `Outcome: blocked`.
 
 ## Lane discipline
