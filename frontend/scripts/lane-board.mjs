@@ -6,16 +6,23 @@
 // (/api/timeline, drawn by timeline.js next to this file) shows turns, decisions,
 // parallelism and dependencies; finished lanes are cached in timeline-cache.json.
 // A running lane's Progress is the ladder of milestones its log.jsonl has reached (below).
-// Usage: node ~/.jjodel-lanes/board/lane-board.mjs [--port 4700] [--refresh 30]
+// P-2026-10-05-1720 adds: the browser assets in board/ next to this file (timeline.js,
+// insights.js, requirements.js; timeline-cache.json, gitignored there), the outcome
+// `resolved` (a lane that exited blocked and holds resolved.txt), the Requirements tab
+// (/api/requirements, req-trace.mjs on this checkout and its trunk) and the status
+// strip at the end of the tab bar, counted from the /api rows (stripKey, below).
+// Usage: node <tree>/frontend/scripts/lane-board.mjs [--port 4700] [--refresh 30]
 
 import { createServer } from 'node:http';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, openSync, readSync, fstatSync, closeSync, realpathSync } from 'node:fs';
 import { homedir, loadavg } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+// The browser assets and the timeline cache (P-2026-10-05-1720).
+const BOARD_DIR = join(HERE, 'board');
 
 const arg = (name, dflt) => {
     const i = process.argv.indexOf(name);
@@ -24,7 +31,8 @@ const arg = (name, dflt) => {
 const PORT = Number(arg('--port', process.env.LANE_BOARD_PORT || 4700));
 const REFRESH_S = Number(arg('--refresh', process.env.LANE_BOARD_REFRESH || 30));
 const ROOT = process.env.JJODEL_LANES || join(homedir(), '.jjodel-lanes');
-const LANE_RUN = process.env.LANE_RUN || join(homedir(), 'jjodel-release/frontend/scripts/lane-run.mjs');
+// The lane-run of this checkout: the board and the `resolved` outcome travel together (P-2026-10-05-1720).
+const LANE_RUN = process.env.LANE_RUN || join(HERE, 'lane-run.mjs');
 const RECENT_H = 24;
 const CACHE_MS = 10_000;
 
@@ -428,6 +436,8 @@ function collect() {
             row.lane = h.lane; row.chat = h.chat; row.title = h.title;
             row.kind = kindOf(h.lane);
             row.tier = readTrim(join(dir, 'tier.txt')).split(/[\s:]/)[0];
+            // resolved (P-2026-10-05-1720): exited blocked and resolved afterwards, whichever lane-run printed the table.
+            if (outcome === 'blocked' && existsSync(join(dir, 'resolved.txt'))) row.outcome = 'resolved';
             if (live) {
                 row.phase = phaseOf(dir);
                 const log = join(dir, 'log.jsonl');
@@ -453,7 +463,7 @@ function collect() {
 // waits for a decision (GO, ACK, answer); input-k.md for k >= 2 is that decision.
 // Lanes from before the input files have one turn: started.txt to exit.txt.
 
-const TL_CACHE_FILE = join(HERE, 'timeline-cache.json');
+const TL_CACHE_FILE = join(BOARD_DIR, 'timeline-cache.json');
 let tlCache = {};
 try { tlCache = JSON.parse(readFileSync(TL_CACHE_FILE, 'utf8')); } catch { tlCache = {}; }
 let tlDirty = false;
@@ -667,6 +677,63 @@ function xesExport(days) {
     return out.join('\n');
 }
 
+// ── requirements ────────────────────────────────────────────────────────────
+// req-trace.mjs, run asynchronously so the other tabs keep answering; one run at a
+// time, its JSON kept for REQ_MS. Its own cache (the git side, keyed on the trunk
+// sha) lives outside the tree.
+const REQ_REPO = process.env.REQ_TRACE_REPO || join(HERE, '..', '..');
+const REQ_TRACE = join(HERE, 'req-trace.mjs');
+const REQ_TRUNK = process.env.REQ_TRACE_TRUNK || 'alfonso-frontend-jjtl';
+const REQ_MS = 60_000;
+let reqMem = { at: 0, body: null, pending: null };
+function requirements() {
+    if (reqMem.body && Date.now() - reqMem.at < REQ_MS) return Promise.resolve(reqMem.body);
+    if (reqMem.pending) return reqMem.pending;
+    reqMem.pending = new Promise((done) => {
+        const out = [], err = [];
+        const finish = (ok, body) => { reqMem = { at: ok ? Date.now() : 0, body: ok ? body : null, pending: null }; done(body); };
+        let child;
+        try { child = spawn(process.execPath, [REQ_TRACE, '--repo', REQ_REPO, '--trunk', REQ_TRUNK], { stdio: ['ignore', 'pipe', 'pipe'] }); }
+        catch (e) { return finish(false, JSON.stringify({ error: 'req-trace: ' + e.message, rows: [] })); }
+        const timer = setTimeout(() => child.kill('SIGKILL'), 120_000);
+        child.stdout.on('data', (b) => out.push(b));
+        child.stderr.on('data', (b) => err.push(b));
+        child.on('error', (e) => { clearTimeout(timer); finish(false, JSON.stringify({ error: 'req-trace: ' + e.message, rows: [] })); });
+        child.on('close', (code) => {
+            clearTimeout(timer);
+            if (code === 0) finish(true, Buffer.concat(out).toString('utf8'));
+            else finish(false, JSON.stringify({ error: ('req-trace exit ' + code + ': ' + Buffer.concat(err).toString('utf8')).trim(), rows: [] }));
+        });
+    });
+    return reqMem.pending;
+}
+
+// ── status strip ────────────────────────────────────────────────────────────
+// The pills at the end of the tab bar (Alfonso, 2026-10-05 17:35): key, label, the
+// class of the outcome colour the Lanes table already uses. Counted in the page from
+// the /api rows by stripKey, embedded in the page as written here.
+export const STRIP = [['running', 'running', 'running'], ['question', 'question', 'question'], ['hard-stop', 'hard-stop', 'hard-stop'],
+    ['blocked', 'blocked', 'blocked-o'], ['resolved', 'resolved', 'resolved'], ['done', 'done 24 h', 'done']];
+
+/** The pill of a row, or null: a chain by its state; a lane running or over its limit by its state; an exited lane by its outcome, done only within the last 24 hours. */
+export function stripKey(r) {
+    if (r.chain) return r.state === 'running' ? 'running' : r.state === 'done' && r.recent ? 'done' : null;
+    if (r.state === 'running') return 'running';
+    if (r.state === 'blocked') return 'blocked';
+    const o = String(r.outcome || '').split(' ')[0];
+    if (o === 'done') return r.recent ? 'done' : null;
+    return o === 'question' || o === 'hard-stop' || o === 'blocked' || o === 'resolved' ? o : null;
+}
+
+export function stripCounts(rows) {
+    const n = Object.fromEntries(STRIP.map(([k]) => [k, 0]));
+    for (const r of rows) {
+        const k = stripKey(r);
+        if (k) n[k]++;
+    }
+    return n;
+}
+
 const PAGE = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Jjodel Harness Lane Management</title>
@@ -684,25 +751,56 @@ th{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}tr:last-
 td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}
 .title{display:block;color:var(--muted);font-size:11px;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;max-width:320px;white-space:normal}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid currentColor}
-.running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done{color:var(--ok)}.question,.hard-stop{color:var(--warn)}.blocked-o,.unparsed,.failed{color:var(--bad)}
+.running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done,.resolved{color:var(--ok)}.question,.hard-stop{color:var(--warn)}.blocked-o,.unparsed,.failed{color:var(--bad)}
 .phase{max-width:340px}.empty{padding:16px;color:var(--muted)}.err{color:var(--bad);margin:8px 0}
-.prog{white-space:nowrap}.prog .n{font-variant-numeric:tabular-nums;margin-right:6px}.segs{display:inline-flex;gap:2px;vertical-align:middle}.seg{width:10px;height:8px;border-radius:2px;border:1px solid var(--muted)}.seg.reached{background:var(--run);border-color:var(--run)}.seg.skipped{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 3px)}.prog .cur{display:block;color:var(--muted);font-size:11px}
+.prog{white-space:nowrap}.prog .n{font-variant-numeric:tabular-nums;margin-right:6px}.segs{display:inline-flex;gap:2px;vertical-align:middle}.segs .seg{width:10px;height:8px;border-radius:2px;border:1px solid var(--muted)}.segs .seg.reached{background:var(--run);border-color:var(--run)}.segs .seg.skipped{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 3px)}.prog .cur{display:block;color:var(--muted);font-size:11px}
 .load-hi{color:var(--bad);font-weight:600}
+.strip{margin-left:auto;display:flex;gap:4px;align-items:center;flex:none;padding:4px 0}.strip .sp{text-decoration:none;white-space:nowrap;cursor:pointer;background:var(--card)}.strip .sp b{display:inline-block;min-width:3ch;text-align:right;font-variant-numeric:tabular-nums;margin-right:3px}.strip .sp.zero{opacity:.35}.strip .sp.on{box-shadow:0 0 0 2px currentColor}
+.filt{display:flex;gap:12px;align-items:baseline}.filt a{color:var(--accent);font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer}
 .tabs{display:flex;gap:4px;margin:0 0 8px;border-bottom:1px solid var(--line)}.tabs button,.seg button{font:inherit;font-size:12px;background:none;border:0;color:var(--muted);padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}.tabs button.on{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
 details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
 </style></head><body><main>
 <header><h1>Jjodel Harness Lane Management</h1><span class="meta" id="meta">loading…</span></header>
-<nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button></nav>
+<nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button><button data-tab="requirements">Requirements</button><div class="strip" id="strip" aria-label="Lanes by state">${STRIP.map(([k, label, cls]) => '<a href="#" role="button" class="pill sp ' + cls + ' zero" data-k="' + k + '" title="Show the ' + label + ' lanes"><b>0</b>' + label + '</a>').join('')}</div></nav>
 <div class="err" id="err"></div>
 <section id="tab-table">
+<div id="lanes-filt" hidden></div>
+<div id="lanes-all">
 <h2>Running</h2><div class="wrap" id="live"></div>
 <h2>Last ${RECENT_H} hours</h2><div class="wrap" id="recent"></div>
 <h2>Earlier lanes</h2><div id="older"></div>
+</div>
 </section>
 <section id="tab-timeline" hidden><div id="tl"></div></section>
 <section id="tab-insights" hidden><div id="ins"></div></section>
-</main><script src="/timeline.js"></script><script src="/insights.js"></script><script>
+<section id="tab-requirements" hidden><div id="req"></div></section>
+</main><script src="/timeline.js"></script><script src="/insights.js"></script><script src="/requirements.js"></script><script>
 const REFRESH=${REFRESH_S}*1000;
+const stripKey=${stripKey.toString()};
+const STRIP=${JSON.stringify(STRIP)};
+let laneFilter='',lastRows=[];
+function renderStrip(rows){
+  const n={};STRIP.forEach(([k])=>{n[k]=0});rows.forEach(r=>{const k=stripKey(r);if(k)n[k]++});
+  STRIP.forEach(([k])=>{const el=document.querySelector('#strip [data-k="'+k+'"]');if(!el)return;el.querySelector('b').textContent=n[k];el.classList.toggle('zero',!n[k]);el.classList.toggle('on',laneFilter===k)});
+}
+function renderLanes(rows){
+  const f=document.getElementById('lanes-filt'),all=document.getElementById('lanes-all');
+  f.hidden=!laneFilter;all.hidden=!!laneFilter;
+  if(laneFilter){
+    const label=(STRIP.find(s=>s[0]===laneFilter)||[,laneFilter])[1];
+    const rs=rows.filter(r=>stripKey(r)===laneFilter),L=rs.filter(r=>r.live),E=rs.filter(r=>!r.live);
+    f.innerHTML='<h2 class="filt"><span>'+esc(label)+' · '+rs.length+' lane'+(rs.length===1?'':'s')+'</span><a id="clearf">show all lanes</a></h2>'+
+      (rs.length?'':'<div class="wrap"><div class="empty">No lane in this state.</div></div>')+
+      (L.length?'<div class="wrap">'+table(L,true)+'</div>':'')+(E.length?'<div class="wrap"'+(L.length?' style="margin-top:8px"':'')+'>'+table(E,false)+'</div>':'');
+    document.getElementById('clearf').addEventListener('click',e=>{e.preventDefault();setFilter('')});
+    return;
+  }
+  document.getElementById('live').innerHTML=table(rows.filter(r=>r.live),true);
+  document.getElementById('recent').innerHTML=table(rows.filter(r=>!r.live&&r.recent),false);
+  renderOlder(rows.filter(r=>!r.live&&!r.recent));
+}
+function setFilter(k){laneFilter=k;renderStrip(lastRows);renderLanes(lastRows)}
+document.getElementById('strip').addEventListener('click',e=>{const a=e.target.closest('[data-k]');if(!a)return;e.preventDefault();showTab('table');setFilter(laneFilter===a.dataset.k?'':a.dataset.k)});
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pill=(t,cls)=>t?'<span class="pill '+esc(cls||t)+'">'+esc(t)+'</span>':'';
 const dur=m=>m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min';
@@ -732,9 +830,7 @@ async function tick(){
     const hi=Number(d.load[0])>20;
     document.getElementById('meta').innerHTML='updated at <b>'+t+'</b> · refresh every '+(REFRESH/1000)+' s · load <span class="'+(hi?'load-hi':'')+'">'+d.load.join(' ')+'</span>';
     document.getElementById('err').textContent=d.error||'';
-    document.getElementById('live').innerHTML=table(d.rows.filter(r=>r.live),true);
-    document.getElementById('recent').innerHTML=table(d.rows.filter(r=>!r.live&&r.recent),false);
-    renderOlder(d.rows.filter(r=>!r.live&&!r.recent));
+    lastRows=d.rows;renderStrip(d.rows);renderLanes(d.rows);
     const n=d.rows.filter(r=>r.live).length;document.title=(n?'('+n+') ':'')+'Jjodel Harness Lane Management';
   }catch(e){document.getElementById('err').textContent='lane-board unreachable: '+e.message}
 }
@@ -753,11 +849,11 @@ function renderOlder(rows){
 let openDays=new Set();
 try{openDays=new Set(JSON.parse(localStorage.getItem('laneBoardOpenDays')||'[]'))}catch(e){}
 function saveOpen(){try{localStorage.setItem('laneBoardOpenDays',JSON.stringify([...openDays]))}catch(e){}}
-function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['table','timeline','insights'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh()}
+function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['table','timeline','insights','requirements'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh();if(t==='requirements'&&window.REQ)REQ.refresh()}
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 let tab0='table';try{tab0=localStorage.getItem('laneBoardTab')||'table'}catch(e){}
 showTab(tab0);
-tick();setInterval(()=>{tick();if(!document.getElementById('tab-timeline').hidden&&window.TL)TL.refresh();if(!document.getElementById('tab-insights').hidden&&window.INS)INS.refresh()},REFRESH);
+tick();setInterval(()=>{tick();if(!document.getElementById('tab-timeline').hidden&&window.TL)TL.refresh();if(!document.getElementById('tab-insights').hidden&&window.INS)INS.refresh();if(!document.getElementById('tab-requirements').hidden&&window.REQ)REQ.refresh()},REFRESH);
 </script></body></html>`;
 
 // Listens when run (launchd, node lane-board.mjs), not when its tests import it.
@@ -768,7 +864,7 @@ const server = createServer((req, res) => {
     const days = Number(url.searchParams.get('days') || 0);
     if (url.pathname === '/insights.js') {
         res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
-        return res.end(readTrim(join(HERE, 'insights.js')));
+        return res.end(readTrim(join(BOARD_DIR, 'insights.js')));
     }
     if (url.pathname === '/export/trace.json' || url.pathname === '/export/lanes.xes') {
         const xes = url.pathname.endsWith('.xes');
@@ -781,7 +877,18 @@ const server = createServer((req, res) => {
     }
     if (req.url === '/timeline.js') {
         res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
-        return res.end(readTrim(join(HERE, 'timeline.js')));
+        return res.end(readTrim(join(BOARD_DIR, 'timeline.js')));
+    }
+    if (req.url === '/requirements.js') {
+        res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
+        return res.end(readTrim(join(BOARD_DIR, 'requirements.js')));
+    }
+    if (req.url === '/api/requirements') {
+        requirements().then((body) => {
+            res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+            res.end(body);
+        });
+        return;
     }
     if (req.url === '/api/timeline') {
         let body;
