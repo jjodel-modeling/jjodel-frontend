@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-05-1725
 Chat: C-2026-10-05-1648
 Lane: full (docs and data only, no code). Tier: heavy (RC-32: judgement over the whole register). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead: none needed.
-Status: da eseguire
+Status: eseguito 2026-10-05 · lane harness-goal-model · 097f3f187
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
