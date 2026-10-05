@@ -47,6 +47,15 @@
  * (R-SIM-134); collapsing the panel, an edit of the board and the run's changes
  * switch them off as the card did.
  *
+ * Invariants and breakpoints (R-SIM-137, P-2026-10-05-1735, W3, W4): after
+ * every committed step `show` reads the model's watches on the configuration
+ * the step left (simBridge.ts `watchResults`); a hit stops Play, whatever
+ * pressed (a hand, Play, a clock's tick, the board), and switches every clock
+ * off (`'watch'`), and a hand press is never refused. While the live
+ * configuration of a step hits, one line above the buttons names the first
+ * watch, the step and the firing (`watchHitLine`); the panel grows upward and
+ * no button moves. They are edited from the run inspector (SimWatchesModal.tsx).
+ *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
  * on the M2 face. `connect`-ed in the shape of components/editors/MetaData.tsx,
@@ -71,7 +80,7 @@ import {
 import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason, makeNetModelView, markingChips, markingLine, outputLine, panelInputs, playPress, playStopLine, pressInput, pressRandom, pressStep,
-    runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchRows,
+    runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchResults, watchRows,
 } from './simBridge';
 import type { CompileDefect, InputLabel, InputPress, InputValue, SimMarkingChip, SimWatchRow, StopReason } from './simBridge';
 import { inputRows } from './simInputs';
@@ -85,6 +94,8 @@ import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
 import { systemProfile } from '../../../model/simulation/simProfiles';
 import { IO_BOARD_KEY, decodeBoard } from '../../../model/simulation/boardCodec';
+import { RUN_WATCHES_KEY } from '../../../model/simulation/watchCodec';
+import type { WatchResult } from '../../../model/simulation/watchEvaluator';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { SimProfile } from '../../../model/simulation/simProfiles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
@@ -287,7 +298,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
         modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
-        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading, modelBoardRaw,
+        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading, modelBoardRaw, modelWatchesRaw,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -505,7 +516,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 reason: null as StopReason | null, noCandidate: new Map<string | null, string>(), asks: new Map<string | null, string>(),
                 watch: [] as SimWatchRow[], chips: [] as SimMarkingChip[], markingTitle: null as string | null,
                 accepting: null as 'accepting' | null, output: null as { line: string; title: string } | null,
-                step: 0, seed: undefined as number | undefined,
+                step: 0, seed: undefined as number | undefined, hits: [] as WatchResult[],
             };
         }
         // A run waiting for an input is Running, not Deadlock (R-SIM-88).
@@ -554,9 +565,12 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             output,
             step,
             seed: r.seed,
+            // R-SIM-137: what the live configuration of a step hits, for the line above the buttons; none at Reset.
+            hits: step > 0 ? watchResults(r, lookup).filter(x => x.hit) : [],
         };
-        // tick is the real input of this memo: the run changes only through this panel; prefsVersion re-reads the pins.
-    }, [isModelMode, rolesComplete, modelid, tick, prefsVersion, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit]);
+        // tick is the real input of this memo: the run changes only through this panel; prefsVersion re-reads the pins;
+        // an edit of the invariants and breakpoints, which interrupts nothing, reads them again.
+    }, [isModelMode, rolesComplete, modelid, tick, prefsVersion, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit, modelWatchesRaw]);
 
     const onReset = useCallback((): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
@@ -645,6 +659,15 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         // The canvas marks the list's candidates while it is open (S15 slice A2); a step that opens none closes it.
         simSetPending(modelid, pressed.pending ? pressed.pending.map(c => c.transition) : null);
         if (pressed.lastStep !== null) setLastStep({ text: pressed.lastStep, title: pressed.lastStepTitle ?? pressed.lastStep });
+        // R-SIM-137: a committed step that hits an invariant or a breakpoint stops Play and switches every clock off,
+        // whoever pressed; the step itself was never refused. Read on the configuration it left, never before it.
+        if (pressed.outcome !== null && pressed.outcome.kind !== 'inadmissible') {
+            const r = getSimRun(modelid);
+            if (r && watchResults(r, (store.getState() as any).idlookup ?? {}).some(x => x.hit)) {
+                setPlaying(null);
+                clocksRef.current?.stopAll('watch');
+            }
+        }
         setReasonsOpen(false);
         setTick(t => t + 1);
     }, [modelid]);
@@ -841,6 +864,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         ? { ...shownLine, title: `${shownLine.title}\nseed ${view.seed}` }
         : shownLine;
     const watching = (view?.watch.length ?? 0) > 0 || !!view?.output;
+    // R-SIM-137: the hit line, the first watch hit, the step and the firing, as «Last step» words it.
+    const hitLine = run && view && view.hits.length > 0 ? watchHitLine(view.hits, view.step, lastStep?.text ?? '') : null;
 
     return (
         <>
@@ -1143,6 +1168,17 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 )}
                             </>
                         )}
+                        {/* R-SIM-137: one row right above the buttons while the live step hits, the full list in its title; an
+                            invariant in the error text, a breakpoint in the warning text. The panel grows upward. */}
+                        {hitLine && view && (
+                            <div
+                                className={`sim-panel__hint sim-panel__hint--${view.hits[0].watch.kind === 'invariant' ? 'error' : 'warning'} sim-panel__hint--line`}
+                                role="status"
+                                title={hitLine.title}
+                            >
+                                {hitLine.line}
+                            </div>
+                        )}
                         <div className="sim-panel__actions">
                             <button type="button" className="sim-panel__btn" title="Reset" onClick={onReset}>
                                 <i className="bi bi-skip-backward-fill" />
@@ -1332,6 +1368,8 @@ interface StateProps {
     modelStateHeading: StateHeading;
     /** The raw `ioBoard` string of the M1 model's own bag (R-SIM-115), `null` when unset or on the M2 face: a primitive. */
     modelBoardRaw: string | null;
+    /** The raw `runWatches` string of the M1 model's own bag (R-SIM-137), `null` when unset or on the M2 face: a primitive. */
+    modelWatchesRaw: string | null;
 }
 
 interface DispatchProps { }
@@ -1376,6 +1414,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         modelProfileName: ownProps.isModelMode ? storedProfile(rawState).profile.name : '',
         modelStateHeading: ownProps.isModelMode ? stateHeading(storedProfile(rawState).profile) : 'Marking',
         modelBoardRaw: ownProps.isModelMode && typeof dModel?._state?.[IO_BOARD_KEY] === 'string' ? dModel._state[IO_BOARD_KEY] : null,
+        modelWatchesRaw: ownProps.isModelMode && typeof dModel?._state?.[RUN_WATCHES_KEY] === 'string' ? dModel._state[RUN_WATCHES_KEY] : null,
     };
 }
 

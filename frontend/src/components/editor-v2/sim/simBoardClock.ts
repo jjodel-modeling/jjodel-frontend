@@ -47,8 +47,12 @@ import type { CompiledNet } from '../../../model/simulation/netTypes';
 import { panelInputs, runStatus } from './simBridge';
 import type { SimRun } from './simRunState';
 
-/** Why a clock went off: by hand, Reset, no run, the board edited, the panel collapsed, or the run's end. */
-export type ClockOff = 'hand' | 'reset' | 'cleared' | 'board' | 'panel' | 'Terminated' | 'Deadlock' | 'Halted';
+/**
+ * Why a clock went off: by hand, Reset, no run, the board edited, the panel collapsed, the run's end, or a step that
+ * hit an invariant or a breakpoint (R-SIM-137, amending provisional R-SIM-122(5)): the panel switches every clock off
+ * there, so no tick moves the run past what the user has just been shown.
+ */
+export type ClockOff = 'hand' | 'reset' | 'cleared' | 'board' | 'panel' | 'Terminated' | 'Deadlock' | 'Halted' | 'watch';
 
 /** What one clock shows: on or off, the presses since it was switched on, the ticks dropped, why it is off. */
 export interface ClockState {
@@ -127,6 +131,8 @@ export function clockOffText(reason: ClockOff): string {
         case 'cleared': return 'no run (Stop, or the model changed)';
         case 'board': return 'the board changed';
         case 'panel': return 'the panel was collapsed';
+        // The UI's words (R-SIM-137, W4): «watch» is the Watch rows' (R-SIM-104).
+        case 'watch': return 'an invariant or a breakpoint was hit';
         default: return `the run reached ${reason}`;
     }
 }

@@ -74,6 +74,15 @@
  * step it commits, so `configAt` (simRunState.ts) can replay it, and returns a
  * past step shown to live, since it acts on the live configuration. The pure
  * builders of the M1 face: `watchRows`, `markingChips` and `statusLine`.
+ *
+ * Invariants and breakpoints (R-SIM-137, P-2026-10-05-1735): `watchResults`
+ * reads the model's watches (its bag's `runWatches`, read at each call, so an
+ * edit applies at the next press and interrupts nothing) on a configuration of
+ * the run, compiled against the run's declarations and the M frozen at Reset;
+ * `playPress` reads them after the press it committed, never on the
+ * configuration Play started from, and stops on a hit (`'watch'`), the same
+ * under Random for the same seed; `watchHitLine` is the panel's line naming the
+ * watch, the step and the firing; `watchHitSteps` the steps of the trace that hit.
  */
 
 import type { ExecutionContext } from '../../../jjscript/types';
@@ -100,9 +109,12 @@ import { objectLabel, objectReferences, objectSlotValues } from '../../../model/
 import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog';
 import { drawTransition, seededRng } from '../../../model/simulation/simRandom';
 import type { SimRng } from '../../../model/simulation/simRandom';
+import { decodeWatches, RUN_WATCHES_KEY } from '../../../model/simulation/watchCodec';
+import { compileWatch, readWatches } from '../../../model/simulation/watchEvaluator';
+import type { CompiledWatch, WatchResult } from '../../../model/simulation/watchEvaluator';
 import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, Domain, GuardOracle, HaltReason,
-    InputRead, NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
+    InputRead, NetConfiguration, NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import { getSimPolicy, getSimRun, simCommit, simSetView, withInputs } from './simRunState';
 import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
@@ -1422,8 +1434,11 @@ export function pressStep(modelId: string, lookup: Lookup, values?: readonly Inp
     return pressRandom(modelId, pressed.pending, lookup, values, rng);
 }
 
-/** Why Play stops (R-SIM-101): no run, a status that stops the run, k steps, an input asked, no ε candidate, a list under Ask. */
-export type PlayStop = 'cleared' | 'Terminated' | 'Deadlock' | 'Halted' | 'limit' | 'input' | 'event' | 'choice';
+/**
+ * Why Play stops (R-SIM-101): no run, a status that stops the run, k steps, an input asked, no ε candidate, a list
+ * under Ask; and an invariant or a breakpoint hit by the step it pressed (R-SIM-137).
+ */
+export type PlayStop = 'cleared' | 'Terminated' | 'Deadlock' | 'Halted' | 'limit' | 'input' | 'event' | 'choice' | 'watch';
 
 /** What one tick of Play does: one ε press, or stop and say why. */
 export type PlayTick = { readonly kind: 'press' } | { readonly kind: 'stop'; readonly reason: PlayStop };
@@ -1456,6 +1471,8 @@ export interface PlayPress {
     readonly press: InputPress | null;
     /** The steps of this Play press after the tick: one more when the press committed a step. */
     readonly steps: number;
+    /** R-SIM-137: the watches the committed step hit, in declaration order, when Play stops on them (`'watch'`). */
+    readonly hits?: readonly WatchResult[];
 }
 
 /**
@@ -1464,13 +1481,19 @@ export interface PlayPress {
  * of the policy between two ticks is read by the next one. A `press` is Step's
  * (`pressStep`). A list under Ask and an input ask are pressed as Step presses
  * them, committing nothing, so the panel opens the list or the dialog where
- * Play stops.
+ * Play stops. R-SIM-137: after a press that committed a step, the watches are
+ * read on the configuration it left; a hit stops Play there. Never before the
+ * press, so the configuration Play starts from never stops it, and a breakpoint
+ * still true stops it again one step later (level-triggered).
  */
 export function playPress(modelId: string, lookup: Lookup, steps: number, rng?: SimRng): PlayPress {
     const tick = playTick(getSimRun(modelId), getSimPolicy(modelId), steps);
     if (tick.kind === 'press') {
         const press = pressStep(modelId, lookup, undefined, rng);
-        return { stop: null, press, steps: press.outcome === null ? steps : steps + 1 };
+        if (press.outcome === null) return { stop: null, press, steps };
+        const run = press.outcome.kind === 'inadmissible' ? undefined : getSimRun(modelId);
+        const hits = run ? watchResults(run, lookup).filter(r => r.hit) : [];
+        return hits.length > 0 ? { stop: 'watch', press, steps: steps + 1, hits } : { stop: null, press, steps: steps + 1 };
     }
     if (tick.reason === 'choice' || tick.reason === 'input') {
         return { stop: tick.reason, press: pressInput(modelId, null, undefined, lookup, 'ε'), steps };
@@ -1478,7 +1501,10 @@ export function playPress(modelId: string, lookup: Lookup, steps: number, rng?: 
     return { stop: tick.reason, press: null, steps };
 }
 
-/** The status row's note after Play stops (R-SIM-101); `null` where the panel already shows why: a status, a list, no run. */
+/**
+ * The status row's note after Play stops (R-SIM-101); `null` where the panel already shows why: a status, a list, no
+ * run, a hit (the hit line, `watchHitLine`).
+ */
 export function playStopLine(stop: PlayStop | null, steps: number): string | null {
     switch (stop) {
         case 'limit':
@@ -1490,6 +1516,81 @@ export function playStopLine(stop: PlayStop | null, steps: number): string | nul
         default:
             return null;
     }
+}
+
+// ---------------------------------------------------------------------------
+// Invariants and breakpoints (R-SIM-137)
+// ---------------------------------------------------------------------------
+
+/** The watches of a run as last compiled, per net: the net and the snapshot are the run's until Reset. */
+const compiledWatches = new WeakMap<CompiledNet, { readonly raw: string | undefined; readonly watches: readonly CompiledWatch[] }>();
+
+/**
+ * The watches of a run's model (W1, W2): its bag's `runWatches` as it is now, so an edit applies at the next read
+ * and, the key being no `sim*` one, interrupts nothing; compiled as a board output against the run's declarations
+ * and the M frozen at Reset, once per value of the key. An unreadable key gives none.
+ */
+function runWatchesOf(run: SimRun, lookup: Lookup): readonly CompiledWatch[] {
+    const stored = lookup[run.net.modelId]?._state?.[RUN_WATCHES_KEY];
+    const raw = stored === undefined || stored === null ? undefined : String(stored);
+    const cached = compiledWatches.get(run.net);
+    if (cached && cached.raw === raw) return cached.watches;
+    const scope = { net: run.net, snapshot: run.snapshot, nameOf: (id: string) => elementName(lookup, id) };
+    const watches = decodeWatches(raw).watches.map(w => compileWatch(w, scope));
+    compiledWatches.set(run.net, { raw, watches });
+    return watches;
+}
+
+/**
+ * R-SIM-137: every watch of the run's model read on `state`, the live configuration by default, in declaration
+ * order, each with its reading and its hit. None without the M frozen at Reset, which the evaluator reads.
+ */
+export function watchResults(run: SimRun, lookup: Lookup, state: SimState = run.config.state): WatchResult[] {
+    if (!run.snapshot) return [];
+    const watches = runWatchesOf(run, lookup);
+    return watches.length === 0 ? [] : readWatches(watches, run.snapshot, run.net, state);
+}
+
+/** Per kept configuration, whether it hit, for the compiled watches it was read with. */
+const keptHits = new WeakMap<NetConfiguration, { readonly watches: readonly CompiledWatch[]; readonly hit: boolean }>();
+
+/**
+ * R-SIM-137: the steps of the trace whose configuration hits, for the inspector's marks; step 0 is not a step. Read
+ * over the kept configurations (the last `SIM_KEEP_CONFIGS`, simRunState.ts) and remembered per configuration, so a
+ * commit reads the new one only; an older step would need a replay each and is not marked.
+ */
+export function watchHitSteps(run: SimRun, lookup: Lookup): ReadonlySet<number> {
+    const out = new Set<number>();
+    const snapshot = run.snapshot;
+    if (!snapshot) return out;
+    const watches = runWatchesOf(run, lookup);
+    if (watches.length === 0) return out;
+    const kept = run.keptConfigs ?? [];
+    const first = (run.trace?.length ?? 0) - kept.length + 1;
+    kept.forEach((cfg, i) => {
+        let known = keptHits.get(cfg);
+        if (!known || known.watches !== watches) {
+            known = { watches, hit: readWatches(watches, snapshot, run.net, cfg.state).some(r => r.hit) };
+            keptHits.set(cfg, known);
+        }
+        if (known.hit) out.add(first + i);
+    });
+    return out;
+}
+
+const hitHead = (r: WatchResult): string => (r.watch.kind === 'invariant' ? `Invariant ${r.watch.name} false` : `Breakpoint ${r.watch.name}`);
+
+/**
+ * R-SIM-137: the panel's hit line, `Invariant coinsAtMost2 false at step 9 · coin: tc (locked → locked) fired`: the
+ * first hit in declaration order, the others counted on the line, the step and the firing that led there (`firing`,
+ * the step's «Last step» text). The title is the line, then one line per hit with its expression. `null` without a hit.
+ */
+export function watchHitLine(hits: readonly WatchResult[], step: number, firing: string): { line: string; title: string } | null {
+    if (hits.length === 0) return null;
+    const more = hits.length > 1 ? ` and ${hits.length - 1} more` : '';
+    const line = `${hitHead(hits[0])}${more} at step ${step}${firing === '' ? '' : ` · ${firing}`}`;
+    const each = hits.map(h => `${h.watch.kind === 'invariant' ? 'Invariant' : 'Breakpoint'} ${h.watch.name}: ${h.watch.text}`);
+    return { line, title: [line, ...each].join('\n') };
 }
 
 /** One press; `origin` says who chose `selector` when one is given: the list's click or Random's draw. */
