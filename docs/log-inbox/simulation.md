@@ -625,3 +625,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3087, 1600×1000, light: the four scenes byte-identical to the base with no run and at step 0, 0 differing paths; slider on Petri and ESM 33/33: drag to j shows the trace's step j with the run at k, trace click and Back to live move the thumb, keys, Continue from here leaves j entries at Running, a grab pauses Play; crops in `frontend/scripts/smoke/_tmp_simtl_crops/`; the chat's visual check pending, RC-23)
 **Notes**: The panel is anchored at the bottom, so from step 1 the rows above the slider move up 28 px (Step's top 873 to 845 on the four scenes) while the status line keeps 909: the contract's «everything above keeps its position» holds for the status line only. Continue from here sits beside the range, its box kept hidden at live, so no shift. A style="" on the Play limit input is written by Playwright's screenshot, not the app (measured). Probe gitignored, _tmp_simtl_*.
 **Prompt document name**: 2026-10-05 23:50
+
+## 2026-10-06 — merge: sim-verif into alfonso-frontend-jjtl (P-2026-10-06-0106)
+**Prompt**: `claude_2026-10-06_0106_prompt_merge_sim-verif.md`, a direct merge by `lane-run merge --direct`, no session: `sim-verif` at `913c22c89` into `alfonso-frontend-jjtl`, merge base `271df3cb9`, 5 commits on the branch side.
+**Files touched**: merge `5244ee5cb`: 7 files from the branch side (`docs/decisions.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-05_2350_prompt_sim_timeline_slider.md`, `frontend/src/components/editor-v2/sim/SimTimeline.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simTimeline.test.ts`, `frontend/src/components/editor-v2/sim/simulation-panel.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5244ee5cb` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7611 tests in 309 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane 2b passata, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-verif-P-2026-10-06-0106` on `c53647bb3` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0106/result.json`.
+**Prompt document name**: 2026-10-06 01:06
