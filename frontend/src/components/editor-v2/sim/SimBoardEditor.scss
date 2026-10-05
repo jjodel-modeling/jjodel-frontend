@@ -1,11 +1,12 @@
 // SimBoardEditor — the editor of a model's I/O board (R-SIM-115; P-2026-10-03-1845 Lane 1),
 // painted by SimBoardEditor.tsx.
 //
-// The shell is the roles dialog's (SimRolesModal.scss): `.sim-roles-modal--wide`, 1120 x 600, header,
-// footer, buttons, the select and the text input. Here only the body's three columns: the library
-// (160 px), the board in edit mode with the nuXmv table under it, and the binding inspector (320 px).
-// The body does not scroll: the board and the table scroll inside the middle column, the inspector in
-// its own, so the footer never moves.
+// The shell is the roles dialog's (SimRolesModal.scss): `.sim-roles-modal--wide`, header, footer,
+// buttons, the select and the text input. The layout of R-SIM-143 (P-2026-10-06-0100): 1080 px wide,
+// a one-row header with the Theme and Columns dropdowns, a body of 520 px in two columns, the live
+// preview (the front panel's own faces, SimBoard.scss, under `.sim-board--panel`) and the 400 px device
+// list, a slate-50 footer. Nothing scrolls inside the body at rest; the list scrolls alone when its
+// rows and an open Options outgrow it, the preview alone on a board of eight rows.
 //
 // Every rule nests under `.sim-board-editor`, which sits on the `.sim-roles-modal` element, (0,2,0) and
 // up as in SimRolesModal.scss. Only design-system tokens and the panel's literals are used; no variable
@@ -15,15 +16,23 @@
 $sim-board-cell-height: 56px;
 
 .sim-board-editor {
+    &.sim-roles-modal--wide {
+        width: 1080px;
+        height: auto;
+    }
+
     &.sim-roles-modal .sim-board-editor__body {
         display: grid;
-        grid-template-columns: 160px minmax(0, 1fr) 320px;
-        gap: 16px;
+        flex: none;
+        grid-template-columns: minmax(0, 1fr) 400px;
+        height: 520px;
         overflow: hidden;
-        padding: 8px 24px 16px;
+        padding: 0;
     }
 
     // -- the library ---------------------------------------------------------------
+    // TODO: cleanup — the palette, the edit grid's tiles, the nuXmv table and the inspector are unused since
+    // P-2026-10-06-0100 (R-SIM-143: the Add menu, the preview and the device list); kept per rule 9.
     &__palette {
         display: flex;
         flex-direction: column;
@@ -89,9 +98,10 @@ $sim-board-cell-height: 56px;
         padding: 2px;
     }
 
+    // R-SIM-143: an empty cell of the preview, faint on the front panel, never a dashed box.
     &__cell {
-        border: 1px dashed var(--color-border-secondary);
-        border-radius: var(--radius-md, 8px);
+        border-radius: var(--radius-control, 6px);
+        background: rgba(255, 255, 255, 0.03);
     }
 
     // -- the front panel's look (R-SIM-133): theme, accent swatches, columns, above the grid -----------
@@ -482,5 +492,701 @@ $sim-board-cell-height: 56px;
             background: var(--color-warning-muted);
             color: var(--color-warning-text);
         }
+    }
+
+    // ================================================================================================
+    // R-SIM-143 (P-2026-10-06-0100): header, preview, device list, footer
+    // ================================================================================================
+
+    // -- header: title and subtitle, the Theme and Columns dropdowns, close, one row -----------------
+    &.sim-roles-modal .sim-board-editor__header {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 16px 12px 24px;
+    }
+
+    &__heading {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+
+        .sim-roles-modal__title {
+            line-height: 22px;
+        }
+    }
+
+    &__subtitle {
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__tools {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+
+        .sim-roles-modal__close {
+            margin-left: 0;
+        }
+    }
+
+    &__dropdown {
+        position: relative;
+    }
+
+    &.sim-roles-modal .sim-board-editor__menu-toggle {
+        gap: 6px;
+        height: 30px;
+        padding: 0 10px;
+        font-size: 12px;
+
+        .bi-chevron-down {
+            font-size: 10px;
+            color: var(--color-text-placeholder);
+        }
+    }
+
+    // The theme's face (R-SIM-130's palettes, SimBoard.scss), or the accent chosen, as a small dot.
+    &__theme-swatch {
+        flex: none;
+        width: 12px;
+        height: 12px;
+        box-sizing: border-box;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-full, 9999px);
+
+        &--graphite { background: #334155; }
+        &--appliance { background: #fbfbf8; }
+        &--instrument { background: #efe8d6; }
+        &--print { background: #ffffff; }
+    }
+
+    &__menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        box-sizing: border-box;
+        min-width: 208px;
+        padding: 6px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-lg, 12px);
+        background: var(--color-bg-elevated);
+        box-shadow: var(--shadow-lg);
+
+        &--right {
+            right: 0;
+        }
+
+        .sim-board-editor__swatches {
+            padding: 0 8px;
+        }
+
+        .sim-board-editor__hint {
+            padding: 4px 8px 2px;
+            line-height: 16px;
+        }
+
+        // Two columns: the inputs over the panel on the left, the outputs on the right.
+        &--add {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 360px;
+            column-gap: 4px;
+
+            .sim-board-editor__menu-group:nth-child(2) {
+                grid-row: span 2;
+            }
+        }
+    }
+
+    &__menu-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    &__menu-head {
+        padding: 6px 8px 2px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-placeholder);
+    }
+
+    &__menu-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        height: 30px;
+        padding: 0 8px;
+        border: none;
+        border-radius: var(--radius-control, 6px);
+        background: transparent;
+        color: var(--color-text-primary);
+        font-family: inherit;
+        font-size: 13px;
+        text-align: left;
+        white-space: nowrap;
+        cursor: pointer;
+
+        > .bi {
+            font-size: 14px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: -2px;
+        }
+    }
+
+    &__menu-check,
+    &__menu-check:hover {
+        margin-left: auto;
+        color: var(--color-text-secondary);
+    }
+
+    &__hint--warning {
+        color: var(--color-warning-text);
+    }
+
+    // -- the preview: slate-100 around the front panel --------------------------------------------
+    &__stage {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        padding: 20px 20px 12px;
+        background: var(--color-bg-tertiary);
+    }
+
+    &__panel {
+        flex: none;
+    }
+
+    &__front.sim-board__front {
+        position: relative;
+        gap: 8px;
+        border-radius: 14px;
+        box-shadow: var(--shadow-md);
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent-hover);
+            outline-offset: 3px;
+        }
+    }
+
+    &__slot {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        min-width: 0;
+        border-radius: var(--radius-control, 6px);
+        cursor: grab;
+        touch-action: none;
+
+        &--selected {
+            outline: 2px solid var(--color-canvas-accent-hover);
+            outline-offset: 2px;
+        }
+
+        &--dragged {
+            opacity: 0.45;
+        }
+    }
+
+    // The face as at runtime, but never the target of the pointer: the slot is.
+    &__face {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        pointer-events: none;
+
+        > .sim-board-device {
+            flex: 1 1 auto;
+            justify-content: center;
+        }
+    }
+
+    // A name is never cut inside a word in the preview: it wraps between words.
+    &.sim-roles-modal .sim-board-editor__front .sim-board-device__name {
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
+
+        span {
+            overflow: visible;
+            overflow-wrap: normal;
+            text-overflow: clip;
+        }
+    }
+
+    &.sim-roles-modal .sim-board-editor__front .sim-board-device__press-text {
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    &.sim-roles-modal .sim-board-editor__front .sim-board-device__press {
+        padding: 0 4px;
+    }
+
+    &__ghost {
+        position: relative;
+        z-index: 2;
+        box-sizing: border-box;
+        border: 2px dashed var(--color-canvas-accent-hover);
+        border-radius: var(--radius-control, 6px);
+        background: var(--color-canvas-accent-subtle);
+        pointer-events: none;
+    }
+
+    &__handle {
+        position: absolute;
+        z-index: 3;
+        border-radius: 3px;
+        background: var(--color-canvas-accent-hover);
+        opacity: 0.85;
+
+        &:hover {
+            opacity: 1;
+        }
+
+        &--right {
+            top: 25%;
+            right: -5px;
+            width: 6px;
+            height: 50%;
+            cursor: ew-resize;
+        }
+
+        &--bottom {
+            bottom: -5px;
+            left: 25%;
+            width: 50%;
+            height: 6px;
+            cursor: ns-resize;
+        }
+
+        &--corner {
+            right: -6px;
+            bottom: -6px;
+            width: 10px;
+            height: 10px;
+            cursor: nwse-resize;
+        }
+    }
+
+    &__dot {
+        flex: none;
+        width: 8px;
+        height: 8px;
+        border-radius: var(--radius-full, 9999px);
+        background: var(--color-warning);
+        box-shadow: 0 0 0 2px var(--color-bg-secondary);
+
+        &--slot {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            z-index: 2;
+        }
+    }
+
+    &__helper {
+        margin: 0;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        text-align: center;
+    }
+
+    // -- the device list ---------------------------------------------------------------------------
+    &__list {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+        border-left: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-secondary);
+    }
+
+    &__list-head {
+        display: flex;
+        flex: none;
+        align-items: center;
+        justify-content: space-between;
+        height: 44px;
+        padding: 0 12px 0 16px;
+    }
+
+    &__eyebrow {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    &.sim-roles-modal .sim-board-editor__add {
+        height: 28px;
+    }
+
+    &.sim-roles-modal .sim-board-editor__search {
+        flex: none;
+        width: auto;
+        height: 28px;
+        margin: 0 12px 6px 16px;
+    }
+
+    &__rows {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0 8px 8px;
+
+        > .sim-board-editor__empty {
+            padding: 8px;
+        }
+    }
+
+    &__list-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    &__subhead {
+        display: flex;
+        align-items: center;
+        height: 24px;
+        padding: 0 8px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-placeholder);
+    }
+
+    &__row {
+        border: 1px solid transparent;
+        border-radius: var(--radius-md, 8px);
+
+        &--selected {
+            background: var(--color-bg-tertiary);
+        }
+
+        &--expanded {
+            border-color: var(--color-border-secondary);
+            background: var(--color-bg-primary);
+        }
+    }
+
+    &__row-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 32px;
+        padding: 5px 8px;
+        border: none;
+        border-radius: var(--radius-md, 8px);
+        background: transparent;
+        color: var(--color-text-primary);
+        font-family: inherit;
+        font-size: 13px;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: -2px;
+        }
+    }
+
+    &__row-icon {
+        flex: none;
+        font-size: 14px;
+
+        &--input,
+        &--input:hover {
+            color: var(--color-info-hover);
+        }
+
+        &--output,
+        &--output:hover {
+            color: var(--color-selection-bar);
+        }
+
+        &--panel,
+        &--panel:hover {
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    // The menu's icons take the same colours.
+    &__menu-item > .sim-board-editor__row-icon--input { color: var(--color-info-hover); }
+    &__menu-item > .sim-board-editor__row-icon--output { color: var(--color-selection-bar); }
+    &__menu-item > .sim-board-editor__row-icon--panel { color: var(--color-text-tertiary); }
+
+    // The whole label, never cut: it wraps between words before the binding gives way.
+    &__row-label {
+        flex: 0 1 auto;
+        min-width: min-content;
+        font-weight: 500;
+        line-height: 18px;
+    }
+
+    &__row-binding {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        font-family: var(--font-mono, monospace);
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    &__tag {
+        flex: none;
+        height: 16px;
+        padding: 0 6px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-full, 9999px);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-tertiary);
+        font-size: 10px;
+        font-weight: 500;
+        line-height: 14px;
+    }
+
+    &__chevron,
+    &__chevron:hover {
+        flex: none;
+        font-size: 11px;
+        color: var(--color-text-placeholder);
+    }
+
+    &__row-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 0 8px 8px;
+    }
+
+    &__line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        min-height: 28px;
+    }
+
+    &__line-label {
+        flex: none;
+        width: 104px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-text-tertiary);
+    }
+
+    &.sim-roles-modal .sim-board-editor__line .sim-roles-modal__input,
+    &.sim-roles-modal .sim-board-editor__line .sim-roles-modal__select {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        height: 28px;
+    }
+
+    &.sim-roles-modal .sim-board-editor__mono {
+        font-family: var(--font-mono, monospace);
+        font-size: 12px;
+    }
+
+    &__readonly {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 28px;
+        overflow: hidden;
+        padding: 0 8px;
+        border-radius: var(--radius-control, 6px);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-secondary);
+        line-height: 28px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    &.sim-roles-modal .sim-board-editor__nuxmv {
+        min-height: 22px;
+    }
+
+    &__nuxmv-line {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    &__icon-btn {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-control, 6px);
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        .bi {
+            font-size: 13px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    &__segmented {
+        display: inline-flex;
+        flex: none;
+        height: 28px;
+        overflow: hidden;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-control, 6px);
+    }
+
+    &__segment {
+        padding: 0 10px;
+        border: none;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+
+        & + & {
+            border-left: 1px solid var(--color-border-primary);
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &[aria-checked="true"] {
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+            font-weight: 600;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: -2px;
+        }
+    }
+
+    &__options-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 28px;
+        margin-left: auto;
+        padding: 0 6px;
+        border: none;
+        border-radius: var(--radius-control, 6px);
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+
+        .bi {
+            font-size: 10px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+    }
+
+    &__problem {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--color-warning-text);
+
+        .bi,
+        .bi:hover {
+            flex: none;
+            font-size: 12px;
+            line-height: 16px;
+            color: var(--color-warning);
+        }
+    }
+
+    &__options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    // -- footer: slate-50, hairline above -------------------------------------------------------------
+    &.sim-roles-modal .sim-board-editor__footer {
+        height: 52px;
+        padding: 0 16px 0 24px;
+        background: var(--color-bg-primary);
+    }
+
+    &__summary {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+    }
+
+    &__summary-warning {
+        font-weight: 500;
+        color: var(--color-warning-text);
+    }
+
+    &__apply {
+        display: inline-flex;
     }
 }
