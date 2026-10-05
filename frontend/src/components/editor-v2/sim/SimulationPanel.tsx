@@ -56,6 +56,15 @@
  * watch, the step and the firing (`watchHitLine`); the panel grows upward and
  * no button moves. They are edited from the run inspector (SimWatchesModal.tsx).
  *
+ * Step back and scenarios (R-SIM-138, R-SIM-139, P-2026-10-05-2315, S3, C2):
+ * Step back, between Reset and Step, pops the run one step (simRunState.ts
+ * `simStepBack`): it stops Play, closes an open list or input dialog, leaves the
+ * clocks alone and returns a past step shown to live; the status line names the
+ * step the run is back at. A scenario saved from the inspector is replayed here,
+ * synchronously from Reset (simScenarios.ts `replayScenario`): its Reset arms no
+ * clock, invariants and breakpoints do not stop it, its result goes to the
+ * inspector's Scenarios section.
+ *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
  * on the M2 face. `connect`-ed in the shape of components/editors/MetaData.tsx,
@@ -70,7 +79,7 @@ import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useRef, useSta
 import { connect, useSelector } from 'react-redux';
 import { Defaults, DState, DUser, LPointerTargetable, store } from '../../../joiner';
 import { buildEvalContext } from '../../../jjscript';
-import { configAt, getSimPolicy, getSimRun, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView } from './simRunState';
+import { configAt, getSimPolicy, getSimRun, MAX_PLAY_STEPS, setSimPolicy, simClear, simReset, simSetPending, simSetView, simStepBack } from './simRunState';
 import type { SimChoices } from './simRunState';
 import { getSimViewerPrefs, MAX_SIM_PINS, useSimViewerPrefsVersion } from './simViewerPrefs';
 import {
@@ -95,6 +104,8 @@ import { ROLE_CATALOG, roleValues } from '../../../model/simulation/roleCatalog'
 import { systemProfile } from '../../../model/simulation/simProfiles';
 import { IO_BOARD_KEY, decodeBoard } from '../../../model/simulation/boardCodec';
 import { RUN_WATCHES_KEY } from '../../../model/simulation/watchCodec';
+import { RUN_SCENARIOS_KEY } from '../../../model/simulation/scenarioCodec';
+import type { ScenarioRecord } from '../../../model/simulation/scenarioCodec';
 import type { WatchResult } from '../../../model/simulation/watchEvaluator';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { SimProfile } from '../../../model/simulation/simProfiles';
@@ -105,7 +116,9 @@ import type { RoleKey, Roles } from './simRoleStatus';
 import { SimRolesModal } from './SimRolesModal';
 import { SimInputDialog } from './SimInputDialog';
 import { SimDataModal } from './SimDataModal';
-import { facePins, SimInspector } from './SimInspector';
+import { facePins, SimInspector, traceStepText } from './SimInspector';
+import { replayScenario, scenarioKey } from './simScenarios';
+import type { ScenarioOutcome } from './simScenarios';
 import { SimCanvasLayer } from './SimCanvasLayer';
 import { SimBoard } from './simBoardDevices';
 import { autoClocks, createClocks } from './simBoardClock';
@@ -298,7 +311,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const {
         modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig, eventClassName, staleEventWarningText, stateAttributesRaw, profileBagSig, sketchSig,
-        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading, modelBoardRaw, modelWatchesRaw,
+        modelName, modelStateAttributesRaw, modelDataOff, modelProfileName, modelStateHeading, modelBoardRaw, modelWatchesRaw, modelScenariosRaw,
     } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
@@ -344,6 +357,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // R-SIM-119: the I/O board, in the inspector's slot; one of the two is open at a time.
     const [boardOpen, setBoardOpen] = useState(false);
     useEffect(() => { setBoardOpen(false); }, [modelid]);
+    // R-SIM-139: the last result of each scenario replayed, by `scenarioKey`; lost with the model, as the run is.
+    const [scenarioResults, setScenarioResults] = useState<ReadonlyMap<string, ScenarioOutcome>>(() => new Map());
+    useEffect(() => { setScenarioResults(new Map()); }, [modelid]);
     // R-SIM-104: the Watch rows read the pins, a viewer preference with its own channel, never the 'mark' one.
     const prefsVersion = useSimViewerPrefsVersion();
 
@@ -572,7 +588,8 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         // an edit of the invariants and breakpoints, which interrupts nothing, reads them again.
     }, [isModelMode, rolesComplete, modelid, tick, prefsVersion, events, roles.simGuard, roles.simAction, roles.simEntry, roles.simExit, modelWatchesRaw]);
 
-    const onReset = useCallback((): void => {
+    /** Reset; `null` when the run started, the line's reason when it was refused (a scenario's replay reads it). */
+    const resetRun = useCallback((): string | null => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
         setPlaying(null);
         setPlayNote(null);
@@ -593,21 +610,23 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             ? overlapVerdict(lookup, roles, collectMetaOptions(lookup, configModelId).classes.map(c => c.id))
             : null;
         if (verdict?.refuse) {
+            const refused = `Run not started. ${overlapMessage(lookup, verdict.overlap)}`;
             simClear(modelid);
             setRunWarning(null);
-            setRunError(`Run not started. ${overlapMessage(lookup, verdict.overlap)}`);
+            setRunError(refused);
             setTick(t => t + 1);
-            return;
+            return refused;
         }
         // The bridge (simBridge.ts): the net, and the model frozen once with the
         // model's own metamodel as the context's target (R-SIM-37).
         const started = startRun(lookup, modelid, configModelId, projectIdOfUser(), buildEvalContext);
         if (started.kind === 'refused') {
+            const refused = `Run not started. ${started.reason}`;
             simClear(modelid);
             setRunWarning(null);
-            setRunError(`Run not started. ${started.reason}`);
+            setRunError(refused);
             setTick(t => t + 1);
-            return;
+            return refused;
         }
         setRunError(null);
         setRunWarning(verdict ? overlapMessage(lookup, verdict.overlap) : null);
@@ -622,7 +641,52 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         // The run's seed in the Reset line's title only (R-SIM-100): no visible line.
         setLastStep({ text: 'Reset', title: `Reset\nseed ${started.run.seed}` });
         setTick(t => t + 1);
+        return null;
     }, [modelid, roles, configModelId, modelDataOff, modelProfileName]);
+
+    const onReset = useCallback((): void => { resetRun(); }, [resetRun]);
+
+    /**
+     * Step back (R-SIM-138, S3): the run one step earlier (simRunState.ts `simStepBack`), at Running whatever the
+     * status after the step was. It stops Play and closes an open list or input dialog, as Reset does; the clocks are
+     * left as they are, environment and not state; a past step shown returns to live. The status line names the step
+     * the run is back at, as the inspector's trace words it, Reset at step 0.
+     */
+    const onStepBack = useCallback((): void => {
+        setPlaying(null);
+        setPlayNote(null);
+        setPending(null);
+        setAsking(null);
+        simSetPending(modelid, null);
+        setReasonsOpen(false);
+        if (simStepBack(modelid)) {
+            const r = getSimRun(modelid);
+            const last = r?.trace?.[r.trace.length - 1];
+            const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
+            const text = r && last ? traceStepText(last, r.net, (store.getState() as any).idlookup ?? {}, label) : null;
+            setLastStep(text !== null ? { text, title: text } : { text: 'Reset', title: `Reset\nseed ${r?.seed}` });
+        }
+        setTick(t => t + 1);
+    }, [modelid, events]);
+
+    /**
+     * A scenario replayed (R-SIM-139, C2): synchronously from Reset through the bridge's presses (simScenarios.ts),
+     * the policy unread, invariants and breakpoints not stopping it; its Reset arms no clock, the auto clocks taking
+     * its net at once. The status line shows the last step it pressed; the result goes to the Scenarios section.
+     */
+    const onReplayScenario = useCallback((scenario: ScenarioRecord): void => {
+        const lookup: any = (store.getState() as any).idlookup ?? {};
+        const label: InputLabel = e => (e === null ? 'ε' : events.find(x => x.id === e)?.label ?? e);
+        const replayed = replayScenario(modelid, scenario, lookup, label, () => {
+            const refused = resetRun();
+            clocksRef.current?.arm?.(() => []);
+            return refused;
+        });
+        setScenarioResults(m => new Map(m).set(scenarioKey(scenario), replayed.outcome));
+        const last = replayed.last;
+        if (last?.lastStep) setLastStep({ text: last.lastStep, title: last.lastStepTitle ?? last.lastStep });
+        setTick(t => t + 1);
+    }, [modelid, events, resetRun]);
 
     const onStop = useCallback((): void => {
         setPlaying(null);
@@ -1183,6 +1247,16 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             <button type="button" className="sim-panel__btn" title="Reset" onClick={onReset}>
                                 <i className="bi bi-skip-backward-fill" />
                             </button>
+                            {/* R-SIM-138: one step back, on from step 1; Step moves right, its top does not. */}
+                            <button
+                                type="button"
+                                className="sim-panel__btn"
+                                title="Step back"
+                                onClick={onStepBack}
+                                disabled={!run || (view?.step ?? 0) === 0}
+                            >
+                                <i className="bi bi-skip-start-fill" />
+                            </button>
                             <button
                                 type="button"
                                 className="sim-panel__btn"
@@ -1254,6 +1328,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         {isModelMode && rolesComplete && inspectorOpen && (
             <SimInspector
                 modelId={modelid} modelName={modelName} inputLabel={labelOf} stateHint={stateHint} markingHeading={modelStateHeading} onClose={closeInspector}
+                scenariosRaw={modelScenariosRaw} scenarioResults={scenarioResults} onReplayScenario={onReplayScenario}
             />
         )}
         {isModelMode && rolesComplete && boardOpen && view && (
@@ -1370,6 +1445,8 @@ interface StateProps {
     modelBoardRaw: string | null;
     /** The raw `runWatches` string of the M1 model's own bag (R-SIM-137), `null` when unset or on the M2 face: a primitive. */
     modelWatchesRaw: string | null;
+    /** The raw `runScenarios` string of the M1 model's own bag (R-SIM-139), `null` when unset or on the M2 face: a primitive. */
+    modelScenariosRaw: string | null;
 }
 
 interface DispatchProps { }
@@ -1415,6 +1492,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         modelStateHeading: ownProps.isModelMode ? stateHeading(storedProfile(rawState).profile) : 'Marking',
         modelBoardRaw: ownProps.isModelMode && typeof dModel?._state?.[IO_BOARD_KEY] === 'string' ? dModel._state[IO_BOARD_KEY] : null,
         modelWatchesRaw: ownProps.isModelMode && typeof dModel?._state?.[RUN_WATCHES_KEY] === 'string' ? dModel._state[RUN_WATCHES_KEY] : null,
+        modelScenariosRaw: ownProps.isModelMode && typeof dModel?._state?.[RUN_SCENARIOS_KEY] === 'string' ? dModel._state[RUN_SCENARIOS_KEY] : null,
     };
 }
 

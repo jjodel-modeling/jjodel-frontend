@@ -47,6 +47,11 @@
  * run itself, and `getSimRun`, stay live. Showing a step bumps the `'mark'`
  * version; a stored commit, Reset and Stop return to live. R-SIM-108 adds the
  * reader of an element's presentation, `getSimPresentation`, on the same record.
+ *
+ * R-SIM-138 (P-2026-10-05-2315): `simStepBack` undoes the last committed step,
+ * popped from the trace and the kept configurations, `configAt` rebuilding the
+ * configuration when it is no longer kept. Viewing leaves the run where it is;
+ * a step back changes it.
  */
 
 import { useSyncExternalStore } from 'react';
@@ -269,8 +274,8 @@ export function getSimPresentation(objectId: string, attr: string): SimValue | u
 }
 
 /**
- * Installs a model's run (Reset; later the restore primitive of step-back, spec
- * §9.4). Always one bump: a new net can come with the same marking, and a halt
+ * Installs a model's run (Reset; step back has its own primitive, `simStepBack`,
+ * spec §9.4). Always one bump: a new net can come with the same marking, and a halt
  * cleared at an unchanged marking must still reach every reader. A past step
  * shown returns to live.
  */
@@ -384,6 +389,34 @@ export function simCommit(modelId: string, outcome: StepOutcome, origin?: SimOri
         case 'inadmissible':
             return;
     }
+}
+
+/**
+ * Step back (R-SIM-138; P-2026-10-05-2315, S1, S2): the run one step earlier,
+ * popped from the record itself, no stack and no bound. The configuration is
+ * `configAt(m - 1)`, a kept one or a replay from `net.initial`; the last trace
+ * entry and the last kept configuration go, past the cap too (the kept list is a
+ * cache `configAt` refills by replay); the halt goes with the halted step that
+ * set it, so Terminated, Deadlock and Halted all return to Running. `draws` is
+ * not rewound: a Random choice taken again may differ. A past step shown returns
+ * to live, with one bump of the `'mark'` version. A no-op, returning false, at
+ * step 0, without a run, or where the replay cannot rebuild step m - 1. Apart
+ * from `simReset`, so whatever counts a Reset never counts a step back.
+ */
+export function simStepBack(modelId: string): boolean {
+    const run = runs.get(modelId);
+    const trace = run?.trace ?? [];
+    const m = trace.length;
+    if (!run || m === 0) return false;
+    const config = configAt(run, m - 1);
+    if (!config) return false;
+    views.delete(modelId);
+    runs.set(modelId, {
+        ...run, config, halt: trace[m - 1].kind === 'halted' ? null : run.halt, trace: trace.slice(0, -1),
+        keptConfigs: (run.keptConfigs ?? []).slice(0, -1),
+    });
+    bump();
+    return true;
 }
 
 /**

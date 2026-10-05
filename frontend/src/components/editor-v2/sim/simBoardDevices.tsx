@@ -563,9 +563,14 @@ export function SimBoard(props: SimBoardProps): ReactElement {
     // R-SIM-133: the buzzers sound on a rising edge of the live step; the audio context waits for a gesture.
     const buzzerRef = useRef<Buzzer | null>(null);
     if (buzzerRef.current === null) buzzerRef.current = createBuzzer(makeAudio);
+    // R-SIM-138 (S3): a step back is no rising edge of the run: the live step of the same run went down, so the
+    // change is muted, while `observe` still moves its edge to the step the run is back at.
+    const liveWas = useRef<{ net: unknown; step: number }>({ net: runNet, step: live });
     useEffect(() => {
         const lit = new Map(faces.filter(f => f.kind === 'buzzer').map(f => [f.id, f.lit === true] as [string, boolean]));
-        buzzerRef.current?.observe(lit, { muted: !sound, live: viewed === null });
+        const back = liveWas.current.net === runNet && live < liveWas.current.step;
+        liveWas.current = { net: runNet, step: live };
+        buzzerRef.current?.observe(lit, { muted: !sound || back, live: viewed === null });
     });
     const gesture = (): void => { if (hasBuzzer && sound) buzzerRef.current?.unlock(); };
 

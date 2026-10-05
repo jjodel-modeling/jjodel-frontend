@@ -482,6 +482,51 @@ $sim-inspector-trace-rows: 6;
         font-weight: 600;
         line-height: 16px;
     }
+
+    // -- scenarios (R-SIM-139) -------------------------------------------------------------
+    // «Save as scenario» in the trace's head: the header's icon, its glyph at the header's size and colour rather than
+    // the section head's (0,3,0 over 0,2,0); refused, it reads quieter and its title says why. Its 20 px box overhangs
+    // the 12 px line by 4 px each way, so the head, and the card, keep their height.
+    &__section-head &__tool {
+        margin: -4px 0;
+    }
+
+    &__section-head &__tool .bi,
+    &__section-head &__tool .bi:hover {
+        font-size: 11px;
+        color: inherit;
+    }
+
+    &__tool:disabled {
+        opacity: 0.4;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: default;
+    }
+
+    &__scenario + &__scenario {
+        margin-top: 2px;
+    }
+
+    // The last result of a replay, under its scenario: passed quiet, failed in the error text, diverged in the warning
+    // text, one line, in full in its title.
+    &__scenario-result {
+        padding: 0 8px 2px 8px;
+        overflow: hidden;
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        &--failed {
+            color: var(--color-error-text);
+        }
+
+        &--diverged {
+            color: var(--color-warning-text);
+        }
+    }
 }
 
 // The «Invariants and breakpoints» dialog (SimWatchesModal.tsx, R-SIM-137): the roles dialog's shell and controls

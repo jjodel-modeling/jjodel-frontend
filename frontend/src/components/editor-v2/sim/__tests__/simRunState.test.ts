@@ -11,10 +11,10 @@ import { beforeEach, describe, it, expect } from 'vitest';
 import {
     __resetSimRunsForTests, configAt, DEFAULT_SIM_POLICY, getSimActiveIds, getSimChoiceVersion, getSimNodeState, getSimPolicy, getSimPresentation,
     getSimRun, getSimVersion, getSimView, isSimActive, isSimPending, MAX_PLAY_STEPS, setSimPolicy, SIM_KEEP_CONFIGS, simClear, simCommit, simReset,
-    simSetPending, simSetView, withInputs,
+    simSetPending, simSetView, simStepBack, withInputs,
 } from '../simRunState';
-import type { SimPolicy, SimRun, SimTraceStep } from '../simRunState';
-import { step } from '../../../../model/simulation/netStep';
+import type { SimOrigin, SimPolicy, SimRun, SimTraceStep } from '../simRunState';
+import { netRunStatus, step } from '../../../../model/simulation/netStep';
 import type {
     ActionOracle, CompiledNet, GuardOracle, HaltReason, NetTransition, SimState, SimValue,
 } from '../../../../model/simulation/netTypes';
@@ -652,5 +652,121 @@ describe('getSimPresentation (R-SIM-108): an element\'s presentation on the show
         const v = getSimVersion();
         getSimPresentation('b', 'heat');
         expect(getSimVersion()).toBe(v);
+    });
+});
+
+describe('step back (R-SIM-138, P-2026-10-05-2315, S1, S2): a pop over the kept configurations and configAt', () => {
+    const RING = mkNet([tr('t', { a: 1 }, { b: 1 }), tr('u', { b: 1 }, { c: 1 }), tr('v', { c: 1 }, { a: 1 })]);
+    const ringRun = () => mkRun({ ...RING, initial: st({ a: 1 }) }, { a: 1 });
+    const go = (net: CompiledNet, selector: string | null, event: string | null = null, origin?: SimOrigin) =>
+        simCommit('M', step(net, { state: getSimRun('M')!.config.state, event }, selector, TRUE, NONE), origin);
+    /** What the panel and the canvas read of a record: configuration, halt, trace, draws, every step's configuration, status; the kept list too unless told. */
+    const reading = (run: SimRun, withKept = true) => ({
+        config: run.config, halt: run.halt, trace: run.trace ?? [], draws: run.draws ?? 0,
+        configs: Array.from({ length: (run.trace?.length ?? 0) + 1 }, (_, n) => configAt(run, n)),
+        status: netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt),
+        ...(withKept ? { kept: run.keptConfigs ?? [] } : {}),
+    });
+
+    it('at every step the pop equals the record one step earlier, a discard included, back to step 0 (mutants: configAt(m) for m - 1; the trace or the kept list not shortened)', () => {
+        simReset('M', ringRun());
+        const snaps = [getSimRun('M')!];
+        for (const [s, e] of [['t', null], [null, 'coin'], ['u', null], ['v', null], ['t', null]] as Array<[string | null, string | null]>) {
+            go(RING, s, e);
+            snaps.push(getSimRun('M')!);
+        }
+        expect(snaps[2].trace![1].kind).toBe('discard');
+        for (let m = snaps.length - 1; m > 0; m--) {
+            expect(simStepBack('M')).toBe(true);
+            expect(reading(getSimRun('M')!)).toEqual(reading(snaps[m - 1]));
+        }
+        expect(simStepBack('M')).toBe(false);
+    });
+
+    it('from Terminated, Deadlock and Halted one pop returns to Running (mutants: the halt kept; the status of the popped step kept)', () => {
+        const fin: CompiledNet = { ...mkNet([tr('t', { a: 1 }, { b: 1 })]), final: new Set(['b']), initial: st({ a: 1 }) };
+        const sink: CompiledNet = { ...mkNet([tr('sink', { s: 1 }, {})]), initial: st({ s: 1 }) };
+        const unsafe: CompiledNet = { ...mkNet([tr('t', { a: 1 }, { b: 1 })]), initial: st({ a: 1, b: 1 }) };
+        const cases: Array<[CompiledNet, string, Record<string, number>, string]> = [
+            [fin, 't', { a: 1 }, 'Terminated'], [sink, 'sink', { s: 1 }, 'Deadlock'], [unsafe, 't', { a: 1, b: 1 }, 'Halted'],
+        ];
+        for (const [net, selector, marking, after] of cases) {
+            simReset('M', mkRun(net, marking));
+            go(net, selector);
+            const run = getSimRun('M')!;
+            expect(netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt)).toBe(after);
+            simStepBack('M');
+            const back = getSimRun('M')!;
+            expect([after, netRunStatus(back.net, back.config, back.alphabet, back.guards, back.halt), back.halt, back.trace]).toEqual([after, 'Running', null, []]);
+            expect(back.config.state.marking).toEqual(st(marking).marking);
+        }
+    });
+
+    it('past the cap every reading equals the record one step earlier; the kept list is one shorter and configAt refills it by replay (S1: no bound; mutant: the pop refused past the cap)', () => {
+        simReset('M', ringRun());
+        const cycle = ['t', 'u', 'v'];
+        let before: SimRun = getSimRun('M')!;
+        for (let i = 0; i < SIM_KEEP_CONFIGS + 4; i++) {
+            before = getSimRun('M')!;
+            go(RING, cycle[i % 3]);
+        }
+        expect(getSimRun('M')!.keptConfigs).toHaveLength(SIM_KEEP_CONFIGS);
+        expect(simStepBack('M')).toBe(true);
+        const popped = getSimRun('M')!;
+        expect(reading(popped, false)).toEqual(reading(before, false));
+        expect(popped.keptConfigs).toHaveLength(SIM_KEEP_CONFIGS - 1);
+    });
+
+    it('with nothing kept the pop rebuilds the configuration by replay from net.initial (mutant: the last kept configuration read without configAt)', () => {
+        simReset('M', ringRun());
+        for (const s of ['t', 'u', 'v', 't']) go(RING, s);
+        const four = getSimRun('M')!;
+        go(RING, 'u');
+        simReset('M', { ...getSimRun('M')!, keptConfigs: [] });
+        expect(simStepBack('M')).toBe(true);
+        expect(reading(getSimRun('M')!, false)).toEqual(reading(four, false));
+        // step 4 is not the initial configuration, so a fallback to net.initial would show
+        expect(getSimActiveIds('M')).toEqual(['b']);
+    });
+
+    it('draws are not rewound, so a retaken Random choice may differ (S2; mutant: draws minus one for a drawn step)', () => {
+        const choice: CompiledNet = { ...mkNet([tr('x', { a: 1 }, { b: 1 }), tr('y', { a: 1 }, { c: 1 })]), initial: st({ a: 1 }) };
+        simReset('M', { ...mkRun(choice, { a: 1 }), seed: 7, draws: 0 });
+        go(choice, 'y', null, 'random');
+        expect([getSimRun('M')!.draws, getSimRun('M')!.trace![0].origin]).toEqual([1, 'random']);
+        simStepBack('M');
+        expect([getSimRun('M')!.draws, getSimRun('M')!.trace, getSimRun('M')!.seed]).toEqual([1, [], 7]);
+    });
+
+    it('a step shown returns to live, and the pop is one bump of the mark version (mutants: the view kept; no bump; two bumps)', () => {
+        simReset('M', ringRun());
+        go(RING, 't');
+        go(RING, 'u');
+        simSetView('M', 0);
+        const v = getSimVersion();
+        simStepBack('M');
+        expect(getSimView('M')).toBeNull();
+        expect(getSimVersion()).toBe(v + 1);
+        expect(getSimActiveIds('M')).toEqual(['b']);
+    });
+
+    it('a no-op at step 0 and without a run: the same record, no bump (mutant: the guard at step 0 dropped)', () => {
+        expect(simStepBack('M')).toBe(false);
+        simReset('M', ringRun());
+        const run = getSimRun('M');
+        const v = getSimVersion();
+        expect(simStepBack('M')).toBe(false);
+        expect(getSimRun('M')).toBe(run);
+        expect(getSimVersion()).toBe(v);
+    });
+
+    it('the same input pressed again after a pop gives the popped record back (R-SIM-138; mutant: the kept list one longer after the pop)', () => {
+        simReset('M', ringRun());
+        go(RING, 't');
+        go(RING, 'u');
+        const two = reading(getSimRun('M')!);
+        simStepBack('M');
+        go(RING, 'u');
+        expect(reading(getSimRun('M')!)).toEqual(two);
     });
 });
