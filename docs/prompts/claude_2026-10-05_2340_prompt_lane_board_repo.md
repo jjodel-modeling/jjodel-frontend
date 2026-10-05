@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-05-2340
 Chat: C-2026-10-05-1116
 Lane: full (more than 3 files: three copied scripts, a README, `package.json`, the log entry). Tier: heavy (RC-32 on a full lane). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-05 · lane lane-board · b5fc46477
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
 Worktree: `~/jjodel-w-laneboard`, branch `lane-board`, cut from the trunk at `078325ee6`, `frontend/node_modules` symlinked (P14). Before anything else: `pwd`, branch, `git log -1` (the docs commit adding this prompt, on top of `078325ee6`) and a clean `git status`. Otherwise stop with `Outcome: blocked`.
