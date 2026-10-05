@@ -97,3 +97,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Gates: `node --check` 0, `check:scripts` PASS (55). 1735 turns 17:37:00-18:06:49, 22:35:28-23:03:41, 23:06:35-23:07:05; it ends 11 min before 2315 starts. 13 lanes had a skipped task-notification result, 0 a num_turns-0 empty one of another origin, the guard clamped 0 turns. Not investigated: one other same-worktree overlap, in `~/jjodel-release` (`P-2026-10-02-1445` vs `1501`, 933 s). Scratch left in `/tmp` (`lb-*`).
 **Prompt document name**: 2026-10-06 00:49
+
+## 2026-10-06 — merge: board-turns into alfonso-frontend-jjtl (P-2026-10-06-0059)
+**Prompt**: `claude_2026-10-06_0059_prompt_merge_board-turns.md`, a direct merge by `lane-run merge --direct`, no session: `board-turns` at `62c2e4858` into `alfonso-frontend-jjtl`, merge base `a9cc16bc7`, 3 commits on the branch side.
+**Files touched**: merge `db8c29fe3`: 3 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-06_0049_prompt_board_turn_pairing.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `db8c29fe3` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7598 tests in 308 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge (frontend/scripts/lane-board/lane-board.mjs): app untouched, no scene to check; board verified on 4701 by lane P-2026-10-06-0049
+**Notes**: Rollback tag `pre-board-turns` on `a9cc16bc7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0059/result.json`.
+**Prompt document name**: 2026-10-06 00:59
