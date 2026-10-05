@@ -71,3 +71,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: `CLAUDE.md` and `AGENTS.md` do not enumerate the prompt header fields (searched for `Prompt-ID`, `Lane: `, `Chat: `, `Status: da`; positive control `Outcome: done` matched once in each), so COSA 3 raised no question and neither file was touched. The first commit attempt was refused by the bash-guard hook for a missing `Model:` trailer (P6) and retried with it.
 **Prompt document name**: 2026-10-05 23:41
+
+## 2026-10-05 — merge: depends-header into alfonso-frontend-jjtl (P-2026-10-05-2353)
+**Prompt**: `claude_2026-10-05_2353_prompt_merge_depends-header.md`, a merge in a `lane-run` session (a06fbb70): `depends-header` at `d12952540` into `alfonso-frontend-jjtl`, `--no-ff` by explicit sha, merge base `078325ee6`, 3 commits on the branch side, 1 conflict measured (`docs/log-inbox/harness.md`).
+**Files touched**: merge `c6d8ab56c`: 5 files from the branch side (`docs/HARNESS-DOCS.md`, `docs/PROTOCOL.md`, `docs/decisions.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-05_2341_prompt_depends_header.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c6d8ab56c`: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 7551 tests in 306 files (expected 7551: trunk 7551 plus 0 new on the branch), 9 red at import, hooks 424; build exit 0; check:docs 4/4; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 2026-10-06: docs-only merge (P13 Depends bullet, RC-42, HARNESS-DOCS header fields, harness inbox union); gates green on c6d8ab56c; no visual check
+**Notes**: Union in `docs/log-inbox/harness.md`: the trunk's entries (2340, 2348) first, then the branch's (2341), verbatim; the result is byte-identical to the trunk's file plus the branch's block. `docs/PROTOCOL.md` changed on the branch: merged on Alfonso's go-ahead («procedi con tutte e tre», C-2026-10-05-1116). `git commit -- <paths>` is refused during a merge: the five-file index was committed without pathspec. No rollback tag; pre-merge tip `9ab14dcb0`.
+**Prompt document name**: 2026-10-05 23:53
