@@ -32,3 +32,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: harness only, no app change: the chat read result.json, all eight gates green on ef5cb6a6f; no visual check needed
 **Notes**: Rollback tag `pre-auto-intake` on `7a249ef87` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1840/result.json`.
 **Prompt document name**: 2026-10-03 18:40
+
+## 2026-10-05 — docs: every prompt declares its dependencies (P-2026-10-05-2341)
+**Prompt**: `claude_2026-10-05_2341_prompt_depends_header.md`, fast lane, docs only, on `~/jjodel-w-depends`, branch `depends-header`: a `Depends:` header line for every prompt (P13 bullet), decision row RC-42, and `Depends:` among the header fields of `docs/HARNESS-DOCS.md`, so the lane board draws exact edges instead of inferring them from citations.
+**Files touched**: `46aaefc02`: `docs/PROTOCOL.md` (P13, bullet after «Every prompt declares its lane»), `docs/decisions.md` (RC-42 after RC-41), `docs/HARNESS-DOCS.md` (structure note, prompt template, lifecycle figure); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. check:docs, check:agents and check:addonly exit 0 before the commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: `CLAUDE.md` and `AGENTS.md` do not enumerate the prompt header fields (searched for `Prompt-ID`, `Lane: `, `Chat: `, `Status: da`; positive control `Outcome: done` matched once in each), so COSA 3 raised no question and neither file was touched. The first commit attempt was refused by the bash-guard hook for a missing `Model:` trailer (P6) and retried with it.
+**Prompt document name**: 2026-10-05 23:41
