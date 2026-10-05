@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-05-2350
 Chat: C-2026-10-05-1110
 Lane: full (Phase 2, visual; the design is fixed by R-SIM-142, no Phase 1). Tier: heavy. Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
-Status: da eseguire
+Status: eseguito 2026-10-06 · lane sim-timeline · 6a771cfee · verifica visiva passata 2026-10-06
 Worktree: `~/jjodel-w-simverif`, branch `sim-verif` (lanes 1 and 2 closed on it), `frontend/node_modules` symlinked (P14). Before anything else: `pwd`, branch, `git log -1` (the docs commit adding this prompt and R-SIM-142) and a clean `git status`. Otherwise stop with `Outcome: blocked`.
 
 ## Lane discipline
