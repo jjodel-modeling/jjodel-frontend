@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-06-0100
 Chat: C-2026-10-05-1110
 Lane: full (Phase 2, visual; the design is fixed below and by R-SIM-143; a short inline check, no Phase 1 hard stop). Tier: heavy. Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
-Status: da eseguire
+Status: eseguito 2026-10-06 · lane sim-board-ui · f8bf48a5f · verifica visiva passata 2026-10-06
 Worktree: `~/jjodel-w-boardui`, branch `sim-board-ui`, cut by the chat from `alfonso-frontend-jjtl` at `a9cc16bc7`, `frontend/node_modules` symlinked (P14). Before anything else: `pwd`, branch, `git log -1` (the docs commit adding this prompt and R-SIM-143) and a clean `git status`. Otherwise stop with `Outcome: blocked`.
 
 ## Lane discipline
