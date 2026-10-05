@@ -679,3 +679,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3088, 1600×1000, light: four scenes with coverage off, base 16/16, after 16/16, 0 differing paths but the toggle (panel, layer, node boxes and overlays at step 0 and at the path's end, bag keys live and exported); coverage on ESM and Petri 30/30: `off` and `ts` veiled, 2/3 · 3/4 and 4/4 · 3/3, boxes 0 px, Reset and a step back keep, Clear empties, no dispatch; crops in `frontend/scripts/smoke/_tmp_simcov_crops/`; the chat's visual check pending, RC-23)
 **Notes**: Edges not covered in this lane (Q2): nodes only, edges a later measured slice. Counts are gathered with the switch on or off; Clear keeps the run seen, so a place marked before Clear stays veiled until a token arrives. The controls grow left by 77 px (on: the summary and Clear too), widening the 2026-10-04 ticket's overlap with a wide floating board. Base: f2c79606c's four files written into the tree, restored by git checkout HEAD; no stash. Probe gitignored, _tmp_simcov_*.
 **Prompt document name**: 2026-10-06 01:15
+
+## 2026-10-06 — merge: sim-verif into alfonso-frontend-jjtl (P-2026-10-06-0151)
+**Prompt**: `claude_2026-10-06_0151_prompt_merge_sim-verif.md`, a direct merge by `lane-run merge --direct`, no session: `sim-verif` at `f17ce761a` into `alfonso-frontend-jjtl`, merge base `913c22c89`, 5 commits on the branch side.
+**Files touched**: merge `507d073ca`: 9 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-06_0115_prompt_sim_coverage.md`, `frontend/src/components/editor-v2/sim/SimCanvasLayer.tsx`, `frontend/src/components/editor-v2/sim/SimNodeRunState.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simCoverage.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simViewerPrefs.test.ts`, `frontend/src/components/editor-v2/sim/simCoverage.ts`, `frontend/src/components/editor-v2/sim/simNodeRunState.scss`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `507d073ca` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7666 tests in 311 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane coverage 0115 passata sui crop, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-verif-P-2026-10-06-0151` on `9cd6ae57e` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0151/result.json`.
+**Prompt document name**: 2026-10-06 01:51
