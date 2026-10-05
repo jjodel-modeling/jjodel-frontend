@@ -43,6 +43,8 @@ tab is opened by `DockManager.open2`: the scenes open with only the metamodel's 
    Recommended: after Málaga, E2 first; nothing the audience sees changes, and a freeze-window merge costs more than
    the noise.
 
+**Addendum 2026-10-05 (P-2026-10-05-1648).** Decision 1, Alfonso: both errors are fixed before the 2026-10-07 freeze, against the recommendation; lane `console-errors-fix`.
+
 ## 1. Method
 
 **The probe** is `console-errors-demo.ts`. Before the app boots, an init script hooks `console.error`, `window`

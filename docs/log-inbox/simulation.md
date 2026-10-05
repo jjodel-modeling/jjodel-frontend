@@ -529,3 +529,21 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: RC-23 passata sui crop della lane P-2026-10-05-1110 (bottone e header card, delta 0 px); merge senza altre differenze visive
 **Notes**: Rollback tag `pre-sim-board-icon` on `d92e5419e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-1444/result.json`.
 **Prompt document name**: 2026-10-05 14:44
+
+## 2026-10-05 — fix: no console errors E1 and E2 on the demo scenes (P-2026-10-05-1648)
+**Prompt**: `claude_2026-10-05_1648_prompt_console_errors_fix.md`, full lane, heavy tier, `~/jjodel-w-consolefix` on `console-errors-fix`: Alfonso's decision to fix both console errors before the 2026-10-07 freeze; E2 one line in the M1 branch of `LModel.generateEcoreJson_impl`, E1 a guard in `DState.init_editor`; tests first, probe both modes with negative controls, mutation bench; no merge.
+**Files touched**: merge `d2c8acddb` (the discovery branch; `docs/log-inbox/simulation.md` resolved by hand, both sides kept). Code `68e4f312d`: `model/logicWrapper/LModelElement.tsx` (one line), `redux/store.tsx` (guard), `model/__tests__/m1EcoreRoots.test.ts` and `redux/__tests__/initEditorProjectGuard.test.ts` (new). This commit: the report's §0 addendum, the prompt's Status, this entry and the ticket below.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7508/7508 in 304 files, the 9 known red at import; build exit 0, chunk-size and Sass warnings only; check:docs 4/4. Both tests red before the fix, green after.
+**Out-of-scope changes**: yes — seven files over two commits, above five (rule 19), all in the prompt's DOVE; scratch writes outside the worktree in `/tmp` (gate outputs, the bench script); a gitignored scratch probe `frontend/scripts/smoke/_tmp_ce_m1ecore.ts`.
+**Layer Impact Report**: not-required (no §3.2 file)
+**Smoke visivo**: non applicabile (no rendering change, per the prompt)
+**Notes**: Probe, 40 pages: E1 0/20, E2 0, opens identical 20/20, round trips identical, exports 0 mismatches; init_dash 40/40 apart. Controls: E1 20/20, E2 6 per Reset, 6 per ESM model tab. Bench 11/11. The guard reads the batch's pending LoadAction. Gate unmet: M1 ecore has no loop and no object twice, but keeps one root per class (ticket below). FlowB load #4 and #5 failed to boot or open, 0 errors, not reproduced in 2 more loads.
+**Prompt document name**: 2026-10-05 16:48
+
+## 2026-10-05 — ticket: the M1 ecore JSON keeps one root object per class
+**Ticket**: `LModel.generateEcoreJson_impl` writes each M1 root as `json[obj.ecoreRootName]`, and `ecoreRootName` is `<package uri>:<class name>`, so roots of one class overwrite each other and the last wins. Measured after `68e4f312d` on fresh opens: PEST keeps 9 of 11 objects (Events `coin` and `push` lost), ESM 8 of 10, Petri 4 of 13, FlowB 7 of 17; no object twice, no loop error. It predates E2, which hid it behind a `MyError`. References serialize as `@//`. No UI path reads this JSON (discovery 2026-10-04 §3.3).
+**Priority**: low
+**Found in**: P-2026-10-05-1648

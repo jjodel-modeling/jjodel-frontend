@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-05-1648
 Chat: C-2026-10-05-1648
 Lane: full (core files, tests first, probe with negative controls; no rendering change, so no visual check). Tier: heavy (RC-32: `LModelElement.tsx` and the load path). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead: none of the files is in §3.2.
-Status: da eseguire
+Status: eseguito 2026-10-05 · lane console-errors-fix · merge d2c8acddb (console-errors-disc; docs/log-inbox/simulation.md conflict resolved by keeping both sides, recommendation adopted per RC-21) · code 68e4f312d · probe 40 pages on 3084: E1 0/20, E2 0, opens identical 20/20; both controls fire with the report's counts; bench 11/11 · gate unmet: the M1 ecore JSON keeps one root per class (ticket) · not merged
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
