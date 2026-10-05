@@ -67,6 +67,38 @@
     }
 }
 
+// Coverage (P-2026-10-06-0115, R-SIM-140), only while the canvas layer's «Coverage» is on. Never visited or never
+// fired: a veil over the node's box in the empty token's colours, so the node reads muted and the rings, the badge and
+// the tags stay on top of it (the veil is the overlay's first child). The node's 8 px radius (instanceNode.scss).
+.sim-node-run__cov-veil {
+    position: absolute;
+    inset: 0;
+    border: 1px dashed var(--color-sim-token-empty-fg);
+    border-radius: 8px;
+    background: var(--color-sim-token-empty-bg);
+    opacity: 0.6;
+}
+
+// Visited or fired: the count, discreet, on the bottom-right corner (the badge owns top-left, the problem dot
+// top-right, the tags start under the bottom-left).
+.sim-node-run__cov {
+    position: absolute;
+    right: -6px;
+    bottom: -7px;
+    height: 14px;
+    padding: 0 4px;
+    border: 1px solid var(--color-sim-token-empty-border);
+    border-radius: 7px;
+    background: var(--color-sim-token-empty-bg);
+    color: var(--color-sim-token-empty-fg);
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
 // TODO: cleanup — `__sigma` to `__sigma-attr`: unused since the σ card became tags (P-2026-10-03-0120, R-SIM-107).
 // The element's semantic σ, under the node.
 .sim-node-run__sigma {
@@ -241,6 +273,14 @@
     }
 }
 
+// The coverage summary beside its switch (R-SIM-140): places visited and transitions fired, of all.
+.sim-canvas-layer__coverage {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
 // The globals in one card pinned to the canvas corner (R-SIM-107): σ's key, solid slate.
 .sim-canvas-globals {
     min-width: 160px;
@@ -347,6 +387,17 @@
 .react-flow__node:has(> .mm-node > .ir-node-content:is(.ir-shape--circle, .ir-shape--diamond)) > .sim-node-run--inside {
     .sim-node-run__dot { left: calc(50% - 5.25px); }
     .sim-node-run__count { left: calc(50% + 10px); }
+}
+
+// The coverage veil follows a circle and a diamond, so the canvas around them stays clear.
+.react-flow__node:has(> .mm-node > .ir-node-content.ir-shape--circle) > .sim-node-run .sim-node-run__cov-veil {
+    border-radius: 50%;
+}
+
+.react-flow__node:has(> .mm-node > .ir-node-content.ir-shape--diamond) > .sim-node-run .sim-node-run__cov-veil {
+    border: none;
+    border-radius: 0;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
 }
 
 // The marked node: a 2 px cyan border on its own outline, in place of the wrapper's outline and halo. An inset outline

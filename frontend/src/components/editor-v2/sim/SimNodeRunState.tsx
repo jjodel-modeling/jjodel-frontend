@@ -31,11 +31,20 @@
  * solid slate with the glyph σ and the change in the run's cyan; with the canvas
  * switch «Inspect node.[x]» on, node's, one per presentation value, dashed pink
  * (R-SIM-102). The overlay follows the viewer preferences' channel too.
+ *
+ * P-2026-10-06-0115 (R-SIM-140): with the canvas layer's «Coverage» on for the
+ * model, a place or an element a transition was compiled from shows the counts
+ * of simCoverage.ts: never visited or never fired, a muted veil in the empty
+ * token's colours over the node; otherwise its count, discreet, on the bottom
+ * right corner. Painted for such an element even when the run shows nothing
+ * else of it. Coverage off, the overlay renders as before. It follows the
+ * coverage channel too.
  */
 
 import { getSimNodeState, getSimRun, isSimPending, useSimChoiceVersion, useSimVersion } from './simRunState';
 import type { SimNodeState, SimSigmaRow } from './simCanvasState';
 import { getSimViewerPrefs, useSimViewerPrefsVersion } from './simViewerPrefs';
+import { getSimNodeCoverage, useSimCoverageVersion } from './simCoverage';
 import './simNodeRunState.scss';
 
 export interface SimNodeRunStateProps {
@@ -50,10 +59,14 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
     useSimVersion();
     useSimChoiceVersion();
     useSimViewerPrefsVersion();
+    useSimCoverageVersion();
     if (typeof objectId !== 'string') return null;
     const found = getSimNodeState(objectId);
     const pending = isSimPending(objectId);
-    if (!found && !pending) return null;
+    // R-SIM-140: the counts, only while the canvas layer's «Coverage» is on for the model.
+    const known = getSimNodeCoverage(objectId);
+    const cov = known && getSimViewerPrefs(known.modelId).coverage === true ? known : null;
+    if (!found && !pending && !cov) return null;
     // A candidate of the open list is always enabled; the fallback only keeps the ring if that ever fails.
     const s: Pick<SimNodeState, 'tokens' | 'sigma' | 'enabled'> = found ?? { tokens: null, sigma: [], enabled: false };
     const tokensTitle = s.tokens === null ? '' : `${s.tokens} ${s.tokens === 1 ? 'token' : 'tokens'} in the run`;
@@ -74,7 +87,14 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
             data-sim-tokens={s.tokens ?? undefined}
             data-sim-enabled={s.enabled ? 'true' : undefined}
             data-sim-pending={pending ? 'true' : undefined}
+            data-sim-cov={cov ? cov.count : undefined}
         >
+            {cov && cov.count === 0 && (
+                <div
+                    className="sim-node-run__cov-veil"
+                    title={cov.kind === 'place' ? 'Never visited since the counts were cleared' : 'Never fired since the counts were cleared'}
+                />
+            )}
             {pending
                 ? <div className="sim-node-run__pending" title="Candidate of the open choice: pick it in the panel" />
                 : s.enabled && <div className="sim-node-run__ring" title="Enabled: can fire in the run" />}
@@ -118,6 +138,14 @@ export function SimNodeRunState({ objectId, placement }: SimNodeRunStateProps) {
                         </span>
                     ))}
                 </div>
+            )}
+            {cov && cov.count > 0 && (
+                <span
+                    className="sim-node-run__cov"
+                    title={`${cov.kind === 'place' ? 'Visited' : 'Fired'} ${cov.count} ${cov.count === 1 ? 'time' : 'times'} since the counts were cleared`}
+                >
+                    {`×${cov.count}`}
+                </span>
             )}
         </div>
     );

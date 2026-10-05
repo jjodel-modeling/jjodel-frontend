@@ -39,7 +39,7 @@ function tr(id: string, pre: Record<string, number>, post: Record<string, number
 }
 
 /**
- * a (marked) -t-> b, b -s-> b (a self-loop), b -v-> c ×2, c ×2 -r-> a; d -w-> a never enabled, d never marked;
+ * a (marked; d held at 0 in the initial marking) -t-> b, b -s-> b (a self-loop), b -v-> c ×2, c ×2 -r-> a; d -w-> a never enabled, d never marked;
  * a -h-> c ×3 halts on the bound 2; f1 (a -> b) and f2 (b -> a) are a fused node F with its edges e1, e2.
  */
 const NET: CompiledNet = {
@@ -49,7 +49,7 @@ const NET: CompiledNet = {
         tr('w', { d: 1 }, { a: 1 }), tr('h', { a: 1 }, { c: 3 }),
         tr('f1', { a: 1 }, { b: 1 }, ['F', 'e1']), tr('f2', { b: 1 }, { a: 1 }, ['F', 'e2']),
     ],
-    initial: { marking: new Map([['a', 1]]), attrs: new Map(), presentation: new Map() },
+    initial: { marking: new Map([['a', 1], ['d', 0]]), attrs: new Map(), presentation: new Map() },
 };
 /** A run as the bridge installs it at Reset: a net compiled anew each time, so a new object. */
 const fresh = (modelId = 'M'): SimRun => {
@@ -88,7 +88,7 @@ beforeEach(() => {
 });
 
 describe('the counts: visits are token arrivals, firings are fired steps (V1)', () => {
-    it('observed at every step, they equal the counts from the step labels; one visit per arrival whatever the weight, a self-loop included (mutants: the weight counted; the initial marking skipped)', () => {
+    it('observed at every step, they equal the counts from the step labels; one visit per arrival whatever the weight, a self-loop included (mutants: the weight counted; the initial marking skipped; a place at 0 counted)', () => {
         simReset('M', fresh());
         simObserveRun('M', getSimRun('M')!);
         const outcomes: StepOutcome[] = [];

@@ -14,12 +14,22 @@
  * bag, kept across Reset and Stop. The layer reads them on their own channel,
  * and the run on the `'mark'` version, so a past step viewed (R-SIM-106) shows
  * its globals too.
+ *
+ * P-2026-10-06-0115 (R-SIM-140, V1, V2): «Coverage», first in the controls, off
+ * by default (`coverage?`, a viewer preference too); on, the summary of the
+ * counts over the run's net and «Clear», which empties them. The layer is where
+ * the counts are gathered: after each render it hands the live run to
+ * simCoverage.ts, which counts what it has not seen, whether the switch is on
+ * or off, so turning it on shows the runs already made. The overlays paint the
+ * counts on the nodes (SimNodeRunState).
  */
 
+import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { configAt, getSimRun, getSimView, useSimVersion } from './simRunState';
 import { stateKindOf, stateValueOf } from './simCanvasState';
 import { getSimViewerPrefs, setSimViewerPrefs, useSimViewerPrefsVersion } from './simViewerPrefs';
+import { getSimCoverage, simClearCoverage, simCoverageSummary, simObserveRun, useSimCoverageVersion } from './simCoverage';
 
 export interface SimCanvasLayerProps {
     /** The M1 model whose run the canvas shows. */
@@ -29,9 +39,16 @@ export interface SimCanvasLayerProps {
 export function SimCanvasLayer({ modelId }: SimCanvasLayerProps): ReactElement | null {
     useSimVersion();
     useSimViewerPrefsVersion();
+    useSimCoverageVersion();
     const run = getSimRun(modelId);
+    // R-SIM-140: the live run observed after the render that shows it; the store counts only what is new.
+    useEffect(() => {
+        if (run) simObserveRun(modelId, run);
+    }, [modelId, run]);
     if (!run) return null;
     const prefs = getSimViewerPrefs(modelId);
+    const coverage = prefs.coverage === true;
+    const summary = coverage ? simCoverageSummary(run.net, getSimCoverage(modelId)) : null;
     const live = run.trace?.length ?? 0;
     const n = getSimView(modelId) ?? live;
     const state = configAt(run, n)?.state ?? run.config.state;
@@ -43,6 +60,34 @@ export function SimCanvasLayer({ modelId }: SimCanvasLayerProps): ReactElement |
     return (
         <div className="sim-canvas-layer">
             <div className="sim-canvas-layer__controls">
+                <button
+                    type="button"
+                    className="sim-canvas-layer__toggle"
+                    aria-pressed={coverage}
+                    title={coverage ? 'Hide the coverage of the runs' : 'Show on the nodes how often the runs since the last Clear visited or fired them'}
+                    onClick={() => setSimViewerPrefs(modelId, { coverage: !coverage })}
+                >
+                    <i className="bi bi-bullseye" aria-hidden="true" />
+                    <span>Coverage</span>
+                </button>
+                {summary && (
+                    <>
+                        <span
+                            className="sim-canvas-layer__coverage"
+                            title="Places visited and transitions fired by the runs since the last Clear; Reset, Stop and a step back keep the counts"
+                        >
+                            {`${summary.visited}/${summary.places} places · ${summary.fired}/${summary.transitions} transitions`}
+                        </span>
+                        <button
+                            type="button"
+                            className="sim-canvas-layer__toggle sim-canvas-layer__coverage-clear"
+                            title="Empty the coverage counts; the next steps count from zero"
+                            onClick={() => simClearCoverage(modelId)}
+                        >
+                            Clear
+                        </button>
+                    </>
+                )}
                 {globals.length > 0 && (
                     <button
                         type="button"
