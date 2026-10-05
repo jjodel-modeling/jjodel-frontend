@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-05-1110
 Chat: C-2026-10-05-1110
 Lane: fast (cosmetic, one icon class). Tier: light. Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
-Status: da eseguire
+Status: eseguito 2026-10-05 · lane sim-board-icon · de42ebe4a · verifica visiva passata 2026-10-05
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Worktree: `~/jjodel-w-boardicon`, branch `sim-board-icon` from the trunk `0e77734a2`, `frontend/node_modules` symlinked (P14). Before anything else:
 `pwd`, branch, `git log -1` (the docs commit adding this prompt, on top of `0e77734a2`) and a clean `git status`. Otherwise stop with `Outcome: blocked`.
