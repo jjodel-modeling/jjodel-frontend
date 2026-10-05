@@ -653,3 +653,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Prompt document name**: 2026-10-06 01:00
 
 **Inline check** (P-2026-10-06-0100): the editor was a 1120×600 modal of the roles dialog's shell: header with title and a long subtitle; a body of three columns, the palette (Inputs, Outputs, Panel), a middle column with the Theme/Accent/Columns block above a dashed edit grid of generic tiles and the nuXmv table, and a 320 px inspector (label, form, fields, period and auto-start, style, span, icon picker, status); a footer with the Pulse LED note. The runtime look is `simBoardDevices.tsx` `BoardDevice` (Variant B, `skin="panel"`) over `simBoardFace.ts` `boardFaces`, styled by `SimBoard.scss` under `.sim-board--panel` with `.sim-board__front--<theme>`: the preview wraps those, no second drawing. Floating at 6 or 8 columns is the card's (`simBoardLook.ts` `boardFloats`), untouched. Reused: `.sim-roles-modal__btn--primary/--secondary`, `__select`, `__input`, `__close`, the accent swatches; tokens `--color-canvas-accent(-hover)`, `--color-info-hover` (#2563eb), `--color-selection-bar` (#0891b2), `--color-warning(-text)`, `--color-bg-primary/tertiary`, `--shadow-md/lg`, `--font-mono`. No segmented component exists in `styles/`: the size control is local.
+
+## 2026-10-06 — merge: sim-board-ui into alfonso-frontend-jjtl (P-2026-10-06-0129)
+**Prompt**: `claude_2026-10-06_0129_prompt_merge_sim-board-ui.md`, a direct merge by `lane-run merge --direct`, no session: `sim-board-ui` at `0341a4f87` into `alfonso-frontend-jjtl`, merge base `a9cc16bc7`, 5 commits on the branch side.
+**Files touched**: merge `3c194ff85`: 7 files from the branch side (`docs/decisions.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-06_0100_prompt_sim_board_editor_layout.md`, `frontend/src/components/editor-v2/sim/SimBoardEditor.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBoardEditorLayout.test.ts`, `frontend/src/components/editor-v2/sim/simBoardEditorLayout.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3c194ff85` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7638 tests in 310 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane 0100 passata sui crop, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-board-ui` on `8af770a29` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0129/result.json`.
+**Prompt document name**: 2026-10-06 01:29
