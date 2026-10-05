@@ -857,7 +857,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         aria-pressed={boardOpen}
                         onClick={() => (boardOpen ? closeBoard() : openBoard())}
                     >
-                        <i className="bi bi-motherboard" />
+                        <i className="bi bi-toggles" />
                     </button>
                 )}
                 {/* R-SIM-105: the run inspector, a card beside the panel; the M1 face only. */}

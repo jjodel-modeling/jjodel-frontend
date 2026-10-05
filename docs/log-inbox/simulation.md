@@ -490,3 +490,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: 3001 HTTP 200 at 18:44; eight gates green on 32c70ea86 (typecheck 14, vitest 7458, build 0, checks 0); keycap and implicit Clock already checked visually by the chat on the lane crops
 **Notes**: Rollback tag `pre-sim-clock-auto` on `0022fe5c3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1832/result.json`.
 **Prompt document name**: 2026-10-04 18:32
+
+## 2026-10-05 — fix: clearer icon for the I/O board button (P-2026-10-05-1110)
+**Prompt**: `claude_2026-10-05_1110_prompt_sim_board_icon.md`, fast lane, light tier, `~/jjodel-w-boardicon` on `sim-board-icon`: the board button of the Simulation panel from `bi-motherboard` to `bi-toggles`, same size, title and position; grep the other hits; one code commit, hard stop for the visual check. Extended by Alfonso's GO of 2026-10-05, after the hard-stop report: the open board card's header icon and its two fixtures follow the button, second code commit, closure.
+**Files touched**: `5d5579bd7`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (one class); `de42ebe4a`: `frontend/src/components/editor-v2/sim/simBoardDevices.tsx` and `frontend/src/components/editor-v2/sim/__tests__/fixtures/simBoardCard.base.html`, `simBoardCard.base-notstarted.html` (one class each); `504e7b6a4` and this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `de42ebe4a`: typecheck exit 2, 14 errors, the §17 set by file and code; vitest `src/components/editor-v2/sim` 20 files, 663 of 663 passed, the card test comparing the render with both fixtures byte for byte; build exit 0 (Sass `@import` deprecations and the chunk-size warning, none naming the panel or the board).
+**Out-of-scope changes**: no — the card header and its two fixtures were outside the prompt's COSA and were added to the scope by Alfonso's GO of 2026-10-05, after the question in the hard-stop report; no other file.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe 11/11, ALL GREEN, button and card header, crops in `frontend/scripts/smoke/_tmp_boardicon_crops/`, gitignored); Alfonso's visual check of the button passed 2026-10-05 (his GO); the card header is read from the probe's boxes, delta 0 px, and its crops looked at by the lane, not by the chat
+**Notes**: bi-motherboard hits (frontend/src, frontend/docs, docs): SimulationPanel.tsx:860 (the button), simBoardDevices.tsx:695 and the fixtures simBoardCard.base(-notstarted).html (the open card's header), all now bi-toggles; frontend/docs none; docs only the prompt. grep on frontend/src now empty, control on bi-toggles finds the four. Probe on DemoESM, light: button 20x20, card header 250x39, glyph boxes, delta 0 px; before = same page, class swapped. vitest on sim/ only (20 files, 663).
+**Prompt document name**: 2026-10-05 11:10

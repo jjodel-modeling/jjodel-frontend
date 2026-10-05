@@ -692,7 +692,7 @@ export function SimBoard(props: SimBoardProps): ReactElement {
             onPointerDown={gesture}
         >
             <div className="sim-board__header" onPointerDown={drag}>
-                <i className="bi bi-motherboard" />
+                <i className="bi bi-toggles" />
                 <span className="sim-board__title">I/O board</span>
                 <span className="sim-board__subtitle" title={modelName}>{modelName}</span>
                 <span className="sim-board__skins" role="group" aria-label="Skin">
