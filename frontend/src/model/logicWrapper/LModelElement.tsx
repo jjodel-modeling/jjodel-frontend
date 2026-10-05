@@ -5209,7 +5209,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
         // keep sub-elements last
         if (packages.length) json[ECoreRoot.ecoreEPackage] = packages;
-        if (deep && !isM2) for (let obj of c.proxyObject.roots) { json[obj.ecoreRootName] = obj.generateEcoreJson(loopDetectionObj, deep, crossRef); }
+        if (deep && !isM2) for (let obj of c.proxyObject.roots) { if (!obj.isRoot) continue; json[obj.ecoreRootName] = obj.generateEcoreJson(loopDetectionObj, deep, crossRef); }
         return json; }
 
     public addPackage(name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): LPackage { return this.cannotCall("addPackage"); }
