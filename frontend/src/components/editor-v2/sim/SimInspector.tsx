@@ -28,11 +28,18 @@
  * that is not a boolean), and the trace marks the steps that hit, over the kept
  * configurations (simBridge.ts `watchHitSteps`). The UI never says «watch»: that
  * word is the Watch rows' (R-SIM-104). Without them the card is as it was.
+ *
+ * Scenarios (R-SIM-139, P-2026-10-05-2315, C3): «Save as scenario», an icon of
+ * the trace's head, records the trace (simScenarios.ts `recordScenario`) into the
+ * model's `runScenarios` in one `state` assignment, one undo step; a section under
+ * the trace, there only when the model has scenarios, lists each with its steps,
+ * Replay (the panel's, `onReplayScenario`), its last result and Delete. Without
+ * scenarios the card is as it was.
  */
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { store } from '../../../joiner';
+import { LPointerTargetable, store } from '../../../joiner';
 import { configAt, getSimRun, getSimView, simSetView, useSimVersion } from './simRunState';
 import type { SimRun, SimTraceStep } from './simRunState';
 import { stateKindOf, stateValueOf } from './simCanvasState';
@@ -42,10 +49,14 @@ import type { SimAttrRef } from './simViewerPrefs';
 import { candidateLabel, markingChips, watchHitSteps, watchResults } from './simBridge';
 import type { InputLabel } from './simBridge';
 import { SimWatchesModal } from './SimWatchesModal';
+import { newScenarioName, recordScenario, scenarioKey, scenarioResultText } from './simScenarios';
+import type { ScenarioOutcome } from './simScenarios';
 import { RUN_WATCHES_KEY } from '../../../model/simulation/watchCodec';
+import { decodeScenarios, scenariosPatch } from '../../../model/simulation/scenarioCodec';
+import type { ScenarioRecord } from '../../../model/simulation/scenarioCodec';
 import type { WatchResult } from '../../../model/simulation/watchEvaluator';
 import type { StateHeading } from './simLabels';
-import type { SimState, SimValue, StateAttributeDecl } from '../../../model/simulation/netTypes';
+import type { CompiledNet, SimState, SimValue, StateAttributeDecl } from '../../../model/simulation/netTypes';
 import './SimInspector.scss';
 
 export interface SimInspectorProps {
@@ -60,6 +71,12 @@ export interface SimInspectorProps {
     markingHeading?: StateHeading;
     /** Closes the card; the panel returns the view to live. */
     onClose: () => void;
+    /** R-SIM-139: the model's `runScenarios` as stored, `null` or absent when it has none. */
+    scenariosRaw?: string | null;
+    /** R-SIM-139: the last result of each scenario replayed, by `scenarioKey`; the panel keeps them. */
+    scenarioResults?: ReadonlyMap<string, ScenarioOutcome>;
+    /** R-SIM-139: replays a scenario from Reset; the panel's, which owns Reset, Play and the clocks. */
+    onReplayScenario?: (scenario: ScenarioRecord) => void;
 }
 
 /** One attribute of one element on the step shown. */
@@ -105,6 +122,16 @@ const refOf = (decl: StateAttributeDecl): SimAttrRef => ({ metaclass: decl.metac
 const KIND_WORD: Record<SimTraceStep['kind'], string> = {
     fired: 'fired', halted: 'halted the run', discard: 'discarded', quiescence: 'nothing to fire',
 };
+
+/**
+ * A committed step as «Last step» words it: `push: t3 (locked → locked) fired`, `ε (random): …`. The trace's rows,
+ * and the panel's status line after a step back (R-SIM-138), which names the step the run is back at.
+ */
+export function traceStepText(t: SimTraceStep, net: CompiledNet, lookup: Lookup, inputLabel: InputLabel): string {
+    const input = `${inputLabel(t.event)}${t.origin === 'random' ? ' (random)' : ''}`;
+    const what = t.selector !== null && (t.kind === 'fired' || t.kind === 'halted') ? `${candidateLabel(net, t.selector, lookup)} ` : '';
+    return `${input}: ${what}${KIND_WORD[t.kind]}`;
+}
 
 /**
  * The rows of one space of σ on `state`, by element: every declaration the net holds
@@ -166,7 +193,9 @@ function grouped(run: SimRun, state: SimState, rows: Map<string, InspectorRow[]>
     return { globals, classes };
 }
 
-export function SimInspector({ modelId, modelName, inputLabel, stateHint, markingHeading = 'Marking', onClose }: SimInspectorProps): ReactElement {
+export function SimInspector({
+    modelId, modelName, inputLabel, stateHint, markingHeading = 'Marking', onClose, scenariosRaw = null, scenarioResults, onReplayScenario,
+}: SimInspectorProps): ReactElement {
     // The view, a commit, Reset and Stop bump the 'mark' version; the pins and tags their own channel.
     useSimVersion();
     useSimViewerPrefsVersion();
@@ -182,6 +211,8 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
     // R-SIM-137: the dialog of the invariants and breakpoints, opened from the header.
     const [watchesOpen, setWatchesOpen] = useState(false);
     const watchesStored = lookup[modelId]?._state?.[RUN_WATCHES_KEY];
+    // R-SIM-139: the model's scenarios, decoded once per stored string.
+    const stored = useMemo(() => decodeScenarios(scenariosRaw), [scenariosRaw]);
 
     // The trace's scroll area (P-2026-10-03-1015), newest first. A commit leaves a list at its top there, the new
     // step in view, and keeps the rows in view where the reader scrolled down (the browser's scroll anchoring is
@@ -296,6 +327,64 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
         </div>
     );
 
+    /** One write of the key alone (C1): one `set_state`, one undo step; a save or a delete. */
+    const writeScenarios = (list: readonly ScenarioRecord[]): void => {
+        const patch = scenariosPatch(scenariosRaw, list);
+        if (patch === null) return;
+        const lmodel: any = LPointerTargetable.fromPointer(modelId as any);
+        if (lmodel) lmodel.state = patch;
+    };
+    /** The Scenarios section (C3): only when the model has scenarios, or a stored key that does not read. */
+    const scenariosSection = stored.scenarios.length > 0 || !stored.readable ? (
+        <section className="sim-inspector__section sim-inspector__section--scenarios" aria-label="Scenarios">
+            <div className="sim-inspector__section-head">
+                <i className="bi bi-collection-play" />
+                <span>Scenarios</span>
+                <span className="sim-inspector__step">{stored.scenarios.length}</span>
+            </div>
+            {!stored.readable && <div className="sim-panel__hint sim-panel__hint--warning">The stored scenarios are not readable.</div>}
+            {stored.scenarios.map((s, i) => {
+                const result = scenarioResults?.get(scenarioKey(s));
+                const text = result ? scenarioResultText(result) : null;
+                const steps = `${s.steps.length} ${s.steps.length === 1 ? 'step' : 'steps'}`;
+                return (
+                    <div className="sim-inspector__scenario" key={s.name}>
+                        <div className="sim-inspector__row" title={`${s.name} · ${steps}${s.expect !== undefined ? `\nexpect ${s.expect}` : ''}`}>
+                            <span className="sim-inspector__name">{s.name}</span>
+                            <span className="sim-inspector__value">{steps}</span>
+                            <span className="sim-inspector__row-actions">
+                                <button
+                                    type="button"
+                                    className="sim-inspector__toggle"
+                                    title={`Replay ${s.name} from Reset`}
+                                    aria-label={`Replay ${s.name}`}
+                                    disabled={!onReplayScenario}
+                                    onClick={() => onReplayScenario?.(s)}
+                                >
+                                    <i className="bi bi-play-fill" />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="sim-inspector__toggle"
+                                    title={`Delete ${s.name}`}
+                                    aria-label={`Delete ${s.name}`}
+                                    onClick={() => writeScenarios(stored.scenarios.filter((_, k) => k !== i))}
+                                >
+                                    <i className="bi bi-trash3" />
+                                </button>
+                            </span>
+                        </div>
+                        {result && text && (
+                            <div className={`sim-inspector__scenario-result sim-inspector__scenario-result--${result.kind}`} role="status" title={text}>
+                                {text}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </section>
+    ) : null;
+
     const watchesModal = watchesOpen ? (
         <SimWatchesModal
             modelId={modelId}
@@ -312,6 +401,7 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
                 {header}
                 <div className="sim-inspector__body">
                     <div className="sim-inspector__empty">Not started. Reset starts the run.</div>
+                    {scenariosSection}
                 </div>
                 {watchesModal}
             </div>
@@ -325,10 +415,15 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
     const chips = markingChips(state, lookup);
     const trace = run.trace ?? [];
     /** A committed step as «Last step» words it: `push: t3 (locked → locked) fired`, `ε (random): …`. */
-    const stepText = (t: SimTraceStep): string => {
-        const input = `${inputLabel(t.event)}${t.origin === 'random' ? ' (random)' : ''}`;
-        const what = t.selector !== null && (t.kind === 'fired' || t.kind === 'halted') ? `${candidateLabel(run.net, t.selector, lookup)} ` : '';
-        return `${input}: ${what}${KIND_WORD[t.kind]}`;
+    const stepText = (t: SimTraceStep): string => traceStepText(t, run.net, lookup, inputLabel);
+    // R-SIM-139: «Save as scenario» records the trace; refused, with its reason as the title, when it cannot.
+    const recording = recordScenario(run);
+    const saveWhy = !stored.readable
+        ? 'The stored scenarios are not readable: saving would replace them.'
+        : recording.kind === 'refused' ? recording.why : null;
+    const saveScenario = (): void => {
+        if (recording.kind !== 'ok' || !stored.readable) return;
+        writeScenarios([...stored.scenarios, { name: newScenarioName(stored.scenarios.map(x => x.name)), steps: recording.steps }]);
     };
     const steps = [{ i: 0, text: 'Reset' }, ...trace.map((t, k) => ({ i: k + 1, text: stepText(t) }))].reverse();
     // R-SIM-137: each invariant and breakpoint on the step shown, and the steps of the trace that hit.
@@ -441,6 +536,16 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
                         <i className="bi bi-clock-history" />
                         <span>Trace</span>
                         <span className="sim-inspector__step">{`${live} ${live === 1 ? 'step' : 'steps'}`}</span>
+                        <button
+                            type="button"
+                            className="sim-inspector__tool"
+                            title={saveWhy ?? 'Save as scenario'}
+                            aria-label="Save as scenario"
+                            disabled={saveWhy !== null}
+                            onClick={saveScenario}
+                        >
+                            <i className="bi bi-bookmark-plus" />
+                        </button>
                     </div>
                     <ol className="sim-inspector__trace" ref={traceRef}>
                         {steps.map(s => (
@@ -461,6 +566,7 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
                         ))}
                     </ol>
                 </section>
+                {scenariosSection}
             </div>
             {watchesModal}
         </div>

@@ -719,13 +719,14 @@ describe('step back (R-SIM-138, P-2026-10-05-2315, S1, S2): a pop over the kept 
 
     it('with nothing kept the pop rebuilds the configuration by replay from net.initial (mutant: the last kept configuration read without configAt)', () => {
         simReset('M', ringRun());
-        for (const s of ['t', 'u', 'v']) go(RING, s);
-        const three = getSimRun('M')!;
-        go(RING, 't');
+        for (const s of ['t', 'u', 'v', 't']) go(RING, s);
+        const four = getSimRun('M')!;
+        go(RING, 'u');
         simReset('M', { ...getSimRun('M')!, keptConfigs: [] });
         expect(simStepBack('M')).toBe(true);
-        expect(reading(getSimRun('M')!, false)).toEqual(reading(three, false));
-        expect(getSimRun('M')!.config.state.marking).toEqual(st({ a: 1 }).marking);
+        expect(reading(getSimRun('M')!, false)).toEqual(reading(four, false));
+        // step 4 is not the initial configuration, so a fallback to net.initial would show
+        expect(getSimActiveIds('M')).toEqual(['b']);
     });
 
     it('draws are not rewound, so a retaken Random choice may differ (S2; mutant: draws minus one for a drawn step)', () => {

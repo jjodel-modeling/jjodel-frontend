@@ -65,6 +65,9 @@ const TURNSTILE: Record<string, Obj> = {
     tPushL: { cls: 'C_Trans', slots: { R_next: ['Locked'], R_trigger: ['push'], A_guard: ['false'] } },
 };
 
+/** The turnstile with its guards read (simGuard), so push at Locked has no candidate. */
+const turnstile = (): Lookup => buildLookup({ ...ROLES, simGuard: 'A_guard' }, TURNSTILE);
+
 /** An ε choice at A every other step: A -t1-> B, A -t2-> C, then B -t3-> A and C -t4-> A. */
 const CYCLE: Record<string, Obj> = {
     A: { cls: 'C_Init', slots: { R_out: ['t1', 't2'] } },
@@ -140,7 +143,7 @@ describe('recordScenario: the trace projected to its inputs, by id (C1)', () => 
         press(lookup, null);
         expect(getSimRun('M')!.trace![0].origin).toBe('user');
         expect(recordScenario(getSimRun('M'))).toEqual({ kind: 'ok', steps: [{ event: null, selector: 't2', kind: 'fired' }, { event: null, selector: 't4', kind: 'fired' }] });
-        const sm = buildLookup(ROLES, TURNSTILE);
+        const sm = turnstile();
         resetOf(sm)();
         press(sm, 'coin');
         press(sm, 'push');
@@ -160,7 +163,7 @@ describe('recordScenario: the trace projected to its inputs, by id (C1)', () => 
 
     it('refused with its reason without a run, on an empty trace, and past the cap; at the cap it records (mutants: no cap; the cap off by one)', () => {
         expect(recordScenario(undefined).kind).toBe('refused');
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         resetOf(lookup)();
         const empty = recordScenario(getSimRun('M'));
         expect(empty.kind === 'refused' && empty.why).toContain('empty');
@@ -174,7 +177,7 @@ describe('recordScenario: the trace projected to its inputs, by id (C1)', () => 
 
 describe('replayScenario: synchronous from Reset through pressInput (C2)', () => {
     it('the replay of a recorded trace equals it, step by step and in σ, a discard included (mutant: the steps pressed without their selector)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         resetOf(lookup)();
         for (const e of ['coin', 'push', 'push', 'coin']) press(lookup, e);
         const rec = recordScenario(getSimRun('M'));
@@ -202,7 +205,7 @@ describe('replayScenario: synchronous from Reset through pressInput (C2)', () =>
     });
 
     it('starts from Reset whatever step the run was at, and Reset is called once (mutant: the replay continues the live run)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         resetOf(lookup)();
         press(lookup, 'coin');
         press(lookup, 'push');
@@ -213,14 +216,14 @@ describe('replayScenario: synchronous from Reset through pressInput (C2)', () =>
     });
 
     it('a Reset that refuses diverges at step 0 with its reason, nothing pressed (mutant: the steps pressed on no run)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         const r = replayScenario('M', { name: 's', steps: [COIN] }, lookup, label, () => 'Run not started. nope');
         expect(diverged(r.outcome)).toEqual([0, 'Run not started. nope']);
         expect(r.last).toBeNull();
     });
 
     it('invariants and breakpoints never stop a replay (C2; mutant: the replay stops at a hit)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         lookup.M._state = { runWatches: encodeWatches([{ name: 'open', kind: 'breakpoint', text: 'Unlocked.[marked]' }, { name: 'never', kind: 'invariant', text: 'false' }]) };
         expect(replay(lookup, [COIN, PUSH_U, COIN, PUSH_U]).outcome).toEqual({ kind: 'passed', steps: 4 });
         expect(getSimRun('M')!.trace).toHaveLength(4);
@@ -231,7 +234,7 @@ describe('divergence: the replay stops at the step and says why (§4)', () => {
     it('a selector never offered diverges at step 1, and the run stays at Reset (mutant: check 4 dropped)', () => {
         const lookup = buildLookup(ROLES, CYCLE);
         const r = replay(lookup, [{ event: null, selector: 't3', kind: 'fired' }]);
-        expect(diverged(r.outcome)).toEqual([1, 'the choice t3 is not offered']);
+        expect(diverged(r.outcome)).toEqual([1, 'the choice t3 (B → A) is not offered']);
         expect(getSimRun('M')!.trace ?? []).toEqual([]);
     });
 
@@ -243,12 +246,12 @@ describe('divergence: the replay stops at the step and says why (§4)', () => {
     });
 
     it('an event no longer in the model (mutant: check 2 dropped)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         expect(diverged(replay(lookup, [{ event: 'ghost', selector: null, kind: 'discard' }]).outcome)).toEqual([1, 'the event ghost is not in the model']);
     });
 
     it('an input not enabled (mutant: check 3 dropped)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         expect(diverged(replay(lookup, [COIN, COIN]).outcome)).toEqual([2, 'Coin is not enabled']);
     });
 
@@ -262,7 +265,7 @@ describe('divergence: the replay stops at the step and says why (§4)', () => {
     });
 
     it('a candidate where the scenario had none (mutant: the null selector pressed as a free choice)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         expect(diverged(replay(lookup, [COIN, { event: 'push', selector: null, kind: 'discard' }]).outcome)).toEqual([2, 'a candidate where the scenario had none']);
     });
 
@@ -281,14 +284,14 @@ describe('divergence: the replay stops at the step and says why (§4)', () => {
     });
 
     it('a committed kind other than the recorded one (mutant: the kind not compared)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         const r = replay(lookup, [{ ...COIN, kind: 'halted' }]);
         expect(diverged(r.outcome)).toEqual([1, 'the step fired, not halted']);
         expect(getSimRun('M')!.trace).toHaveLength(1);
     });
 
     it('checkScenarioStep answers null for a step the run accepts, the reason otherwise (mutant: the check inverted)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         resetOf(lookup)();
         const run = getSimRun('M')!;
         expect(checkScenarioStep(run, COIN, lookup, label)).toBeNull();
@@ -299,7 +302,7 @@ describe('divergence: the replay stops at the step and says why (§4)', () => {
 
 describe('the final condition (expect): read like an invariant on the last configuration', () => {
     it('true passes, false fails and says so, a text that does not compile fails as not readable (mutants: expect not read; read on Reset\'s configuration; a defect passing)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         expect(replay(lookup, [COIN], 'Unlocked.[marked]').outcome).toEqual({ kind: 'passed', steps: 1 });
         expect(replay(lookup, [COIN], 'Locked.[marked]').outcome).toEqual({ kind: 'failed', steps: 1, why: 'the final condition is false: Locked.[marked]' });
         const bad = replay(lookup, [COIN], 'model.[nope] > 1').outcome;
@@ -309,7 +312,7 @@ describe('the final condition (expect): read like an invariant on the last confi
     });
 
     it('not read when the replay diverged (mutant: a diverged replay reported failed)', () => {
-        const lookup = buildLookup(ROLES, TURNSTILE);
+        const lookup = turnstile();
         expect(replay(lookup, [COIN, COIN], 'Unlocked.[marked]').outcome.kind).toBe('diverged');
     });
 });
