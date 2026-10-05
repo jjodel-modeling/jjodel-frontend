@@ -275,6 +275,13 @@ The rules below still bind every tree that hosts more than one session.
   or `Lane: full (<trigger>)`, the trigger being one of RC-3's four: critical zone, migration, more than
   3 files, a changed exported interface. The fast lane is the default; a full lane without a named
   trigger is a defect of the prompt, and the session says so before starting (RC-17).
+- **Every prompt declares what it depends on.** The header of a prompt in `docs/prompts/` carries
+  `Depends: none` or `Depends: P-YYYY-MM-DD-HHmm[, P-…]`: the lanes whose result this one needs (merged
+  code it builds on, a report it implements, a decision it applies). A Prompt-ID cited elsewhere in the
+  prompt is context, not a dependency. Merge prompts rendered by `lane-run` are exempt: their dependency
+  is the branch they merge. The line is new from 2026-10-06; earlier prompts are not amended. The lane
+  board draws declared dependencies as solid arrows and citations as dashed ones
+  (`frontend/scripts/lane-board/`). Decided RC-42.
 - **Every prompt file carries a Status line, flipped once, in the lane's closure commit.** The header
   of a prompt in `docs/prompts/` holds `Status: da eseguire`. After its code commit, the lane writes the
   Status flip, its log or inbox entry and the visual-check line into its worktree and does not commit

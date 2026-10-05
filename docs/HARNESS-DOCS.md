@@ -112,7 +112,7 @@ una catena di rework e sparisce dalla misura del tasso di successo al primo colp
 194 prompt archiviati portano l'orario: è un debito noto, e vale per i nuovi.
 
 **Structure** (header amended 2026-09-26, RC-20 and RC-21): the header fields of P13 (`Prompt-ID`, `Chat`,
-`Lane`, `Status`), the protocol line, the worktree preconditions and the Lane discipline block, then COSA, DOVE,
+`Lane`, `Depends`, `Status`), the protocol line, the worktree preconditions and the Lane discipline block, then COSA, DOVE,
 COME, RIFERIMENTI. Shared clauses are cited by number, never copied.
 
 ```
@@ -121,6 +121,7 @@ COME, RIFERIMENTI. Shared clauses are cited by number, never copied.
 Prompt-ID: P-YYYY-MM-DD-HHmm
 Chat: C-YYYY-MM-DD-HHmm
 Lane: fast | full (<RC-3 trigger>)
+Depends: none | P-YYYY-MM-DD-HHmm[, P-…]
 Status: da eseguire
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
@@ -426,7 +427,7 @@ PDF alongside).
 ```
 Alfonso asks for a feature, a fix or a gate
    → chat writes the DISCOVERY PROMPT, committed         docs/prompts/
-       (Prompt-ID, Chat, Lane, Status: da eseguire; report path and name inside)
+       (Prompt-ID, Chat, Lane, Depends, Status: da eseguire; report path and name inside)
    → chat launches the session                          lane-run start <worktree> <prompt-file>
    → Claude Code runs Phase 1 read-only
    → Claude Code writes the DISCOVERY REPORT, commits    docs/discovery/
