@@ -599,3 +599,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3086, 1600×1000, light: four scenes base 54/54, after 58/58, 0 differing paths but Step back in the transport row and the trace head's icon; step back on Petri and ESM 18/18; scenarios on Petri 12/12, a tampered one diverging at step 2 with its reason, the key reopened with ids renewed and replayed; the chat's visual check pending, RC-23)
 **Notes**: Probe gitignored, not committed (_tmp_simback_probe.ts, crops in _tmp_simback_crops/). Base readings taken by writing the base of five files into the tree, restored by git checkout HEAD before the after run; no stash. A first back run compared null with null (HMR-stamped module URLs after that swap): Vite restarted, a positive control added, 18/18. Not exercised: input variables in the browser, clocks after a replay, the undo of a save. No expect editor in the UI: COSA names none.
 **Prompt document name**: 2026-10-05 23:15
+
+## 2026-10-06 — merge: sim-verif into alfonso-frontend-jjtl (P-2026-10-06-0011)
+**Prompt**: `claude_2026-10-06_0011_prompt_merge_sim-verif.md`, a direct merge by `lane-run merge --direct`, no session: `sim-verif` at `271df3cb9` into `alfonso-frontend-jjtl`, merge base `ec6e92707`, 6 commits on the branch side.
+**Files touched**: merge `778eeae4b`: 12 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-05_2315_prompt_sim_back_scenarios.md`, `frontend/src/components/editor-v2/sim/SimInspector.scss`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simRunState.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simScenarios.test.ts`, `frontend/src/components/editor-v2/sim/simBoardDevices.tsx`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `778eeae4b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7598 tests in 308 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane 2 passata, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-verif-P-2026-10-06-0011` on `78b045b8d` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0011/result.json`.
+**Prompt document name**: 2026-10-06 00:11
