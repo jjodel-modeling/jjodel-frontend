@@ -491,6 +491,19 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Notes**: Rollback tag `pre-sim-clock-auto` on `0022fe5c3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1832/result.json`.
 **Prompt document name**: 2026-10-04 18:32
 
+## 2026-10-04 — discovery: two console errors on the demo scenes (P-2026-10-04-1025)
+**Prompt**: `claude_2026-10-04_1025_prompt_console_errors_discovery.md`, heavy tier, read-only on `~/jjodel-w-consoleerr`, branch `console-errors-disc`: who fires «Invalid action path 0» and «Cannot serialize in ecore, found loop», when per scene and demo step, what each costs, whether the MODELS demo shows it, the smallest fix.
+**Files touched**: probe `9e54b5d96`: `frontend/scripts/probe/console-errors-demo.ts`. Report `ecea25e93`: `docs/discovery/discovery_2026-10-04_console_errors_demo.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (no file under `frontend/src`; check:scripts PASS, typecheck:scripts exit 0, whose scope excludes `probe/`)
+**Out-of-scope changes**: no — the one write outside the worktree and the lane folder is lane-run's own vite cache `/tmp/lane-vite-cache-3084` (its probe config), not the probe's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 40 fresh pages on 3084 (light, 1600×1000), ALL GREEN. E1: 20/20 hash opens, 0/20 fresh; the reset's init_editor writes the Default viewpoint into a project its empty state lacks; the 56-action batch rolls back and the store after the project's LOAD is identical. E2: a false-positive loop (LModel.get_roots lists contained objects), 6 per Reset on PEST and ESM, 6 more at ESM's model tab; save and exports intact. Answers the 2026-10-03 ticket above.
+**Prompt document name**: 2026-10-04 10:25
+
 ## 2026-10-05 — fix: clearer icon for the I/O board button (P-2026-10-05-1110)
 **Prompt**: `claude_2026-10-05_1110_prompt_sim_board_icon.md`, fast lane, light tier, `~/jjodel-w-boardicon` on `sim-board-icon`: the board button of the Simulation panel from `bi-motherboard` to `bi-toggles`, same size, title and position; grep the other hits; one code commit, hard stop for the visual check. Extended by Alfonso's GO of 2026-10-05, after the hard-stop report: the open board card's header icon and its two fixtures follow the button, second code commit, closure.
 **Files touched**: `5d5579bd7`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (one class); `de42ebe4a`: `frontend/src/components/editor-v2/sim/simBoardDevices.tsx` and `frontend/src/components/editor-v2/sim/__tests__/fixtures/simBoardCard.base.html`, `simBoardCard.base-notstarted.html` (one class each); `504e7b6a4` and this commit: this entry.
