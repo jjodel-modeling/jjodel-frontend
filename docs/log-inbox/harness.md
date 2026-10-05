@@ -32,3 +32,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: harness only, no app change: the chat read result.json, all eight gates green on ef5cb6a6f; no visual check needed
 **Notes**: Rollback tag `pre-auto-intake` on `7a249ef87` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1840/result.json`.
 **Prompt document name**: 2026-10-03 18:40
+
+## 2026-10-05 — feat: board in the repo, resolved outcome, Requirements tab (P-2026-10-05-1720)
+**Prompt**: `claude_2026-10-05_1720_prompt_harness_board_requirements_tab.md`: port the lane board into `frontend/scripts/board/`; a `resolved` outcome and `lane-run resolve`; `req-trace.mjs` (register rows, realized on the trunk, Louvain clusters, milestones, goal-model join); a Requirements tab. Unattended (RC-25), tests first.
+**Files touched**: `abd19148a`: `frontend/scripts/board/{.gitignore,lane-board.mjs,insights.js,timeline.js,requirements.js}` (new), `frontend/scripts/req-trace.mjs` (new), `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts` (new); this commit: this entry and the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no — nine code files, above rule 19's five, all inside the prompt's DOVE (RC-11), listed above.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — board probe on 4701: Lanes rows equal to 4700's (331, ids, states, outcomes, order), Requirements tab 476 rows, 277 realized, 0 console errors; crop `frontend/scripts/smoke/_tmp_reqtab_crops/requirements-1400.png` (gitignored)
+**Notes**: Gates: typecheck 14, the §17 set; typecheck:scripts, check:scripts exit 0; vitest 7519/7519, the 9 known import reds; build exit 0. Bench: lane-run 7/8 (survivor equivalent), req-trace 23/23, controls green. 277 realized vs the chat's 303: exact id tokens with ranges 277; substring matching (R-SIM-1 inside R-SIM-12) 298; code-touching commits of any type 285/308. Row set 476, not 436: the chat's row definition is not recorded. Decisions in the closing report.
+**Prompt document name**: 2026-10-05 17:20
