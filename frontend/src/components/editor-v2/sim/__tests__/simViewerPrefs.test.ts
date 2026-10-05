@@ -163,6 +163,36 @@ describe('the channel of the prefs: their own, never the \'mark\' one', () => {
     });
 });
 
+describe('coverage on the canvas: an optional preference, absent by default (R-SIM-140, P-2026-10-06-0115)', () => {
+    it('absent by default and after a change that does not name it: no key, so the prefs read as before (mutants: a default `coverage: false` key; on by default)', () => {
+        expect('coverage' in DEFAULT_SIM_VIEWER_PREFS).toBe(false);
+        expect('coverage' in getSimViewerPrefs('M')).toBe(false);
+        setSimViewerPrefs('M', EVERY);
+        expect(Object.keys(getSimViewerPrefs('M')).sort()).toEqual(Object.keys({ ...DEFAULT_SIM_VIEWER_PREFS, ...EVERY }).sort());
+        expect('coverage' in getSimViewerPrefs('M')).toBe(false);
+    });
+
+    it('on and off per model, keeping what the change does not name, on the prefs channel and never \'mark\' (mutants: one switch for every model; on \'mark\')', () => {
+        simReset('M', RUN);
+        const mark = getSimVersion();
+        const v = getSimViewerPrefsVersion();
+        setSimViewerPrefs('M', { inspectNode: true });
+        expect(setSimViewerPrefs('M', { coverage: true })).toEqual({ ...DEFAULTS, inspectNode: true, coverage: true });
+        expect(getSimViewerPrefs('N').coverage).toBeUndefined();
+        expect(setSimViewerPrefs('M', { coverage: false }).coverage).toBe(false);
+        expect(getSimViewerPrefsVersion()).toBe(v + 3);
+        expect(getSimVersion()).toBe(mark);
+    });
+
+    it('kept across Reset, a commit and Stop (mutant: a run primitive drops it)', () => {
+        setSimViewerPrefs('M', { coverage: true });
+        simReset('M', RUN);
+        simCommit('M', step(NET, RUN.config, 't', TRUE, NONE));
+        simClear('M');
+        expect(getSimViewerPrefs('M').coverage).toBe(true);
+    });
+});
+
 describe('defaultSimPins: what Watch shows with pins null (R-SIM-104)', () => {
     const decl = (name: string, metaclass: string | null, x: Partial<StateAttributeDecl> = {}): StateAttributeDecl =>
         ({ name, metaclass, space: 'semantic', domain: { kind: 'boolean' }, initial: false, ...x });
