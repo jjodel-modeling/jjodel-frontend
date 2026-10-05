@@ -20,8 +20,9 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { autoClocks, clockEnables, clockOffText, createClocks } from '../simBoardClock';
 import type { AutoClock, ClockOff, Clocks } from '../simBoardClock';
-import { panelInputs, playPress, pressInput, runStatus, startRun } from '../simBridge';
+import { panelInputs, playPress, pressInput, runStatus, startRun, watchResults } from '../simBridge';
 import type { ContextBuilder } from '../simBridge';
+import { encodeWatches } from '../../../../model/simulation/watchCodec';
 import { planPress } from '../simBoardFace';
 import { stateValueOf } from '../simCanvasState';
 import { __resetSimRunsForTests, getSimRun, simClear, simReset } from '../simRunState';
@@ -348,6 +349,73 @@ describe('why a clock is off, in words', () => {
             'switched off', 'Reset', 'no run (Stop, or the model changed)', 'the board changed', 'the panel was collapsed',
             'the run reached Terminated', 'the run reached Deadlock', 'the run reached Halted',
         ]);
+    });
+
+    it('a hit has its own phrase, in the UI\'s words, never «watch» (R-SIM-137, W4; mutant: the default phrase)', () => {
+        expect(clockOffText('watch')).toBe('an invariant or a breakpoint was hit');
+    });
+});
+
+describe('a hit switches the clocks off (R-SIM-137, P-2026-10-05-1735, W3)', () => {
+    /** The watches of the microwave, in its bag as the dialog writes them. */
+    const watch = (text: string, kind: 'invariant' | 'breakpoint') => {
+        lookup.M._state = { ...lookup.M._state, runWatches: encodeWatches([{ name: 'w', kind, text }]) };
+    };
+    /**
+     * The clocks with the panel's press: `fire`, then `show`, which reads the watches on the configuration the
+     * committed step left and switches every clock off at a hit. The panel does not import under this bench, so its
+     * wiring is the lane probe's; here the press is the bridge's and the clocks are the subject's.
+     */
+    function panelClocks(): Clocks {
+        const c: Clocks = createClocks({
+            run: () => getSimRun('M'),
+            waiting: () => waiting,
+            press: event => {
+                presses.push(event);
+                const pressed = pressInput('M', event, undefined, lookup, event);
+                const run = getSimRun('M');
+                if (pressed.outcome !== null && run && watchResults(run, lookup).some(r => r.hit)) c.stopAll('watch');
+            },
+            changed: () => { changes++; },
+        });
+        return c;
+    }
+
+    it('a breakpoint reached by a tick: every clock off with the reason, the count kept, nothing pressed after (mutants: the reason lost; a clock left ticking)', () => {
+        watch('model.[secs] <= 87', 'breakpoint');
+        reset(['plus', 'plus', 'plus', 'start']);
+        const c = panelClocks();
+        expect(c.start('k', 'tick', 1000)).toBe(true);
+        expect(c.start('j', 'plus', 5000)).toBe(true);
+        vi.advanceTimersByTime(3000);
+        expect([presses, secs(), steps()]).toEqual([['tick', 'tick', 'tick'], 87, 7]);
+        expect(c.state('k')).toEqual({ on: false, ticks: 3, dropped: 0, idle: 0, off: 'watch' });
+        expect(offOf(c, 'j')).toBe('watch');
+        vi.advanceTimersByTime(10000);
+        expect([presses.length, steps()]).toEqual([3, 7]);
+        // the run goes on: a hit stops the clocks, never the run
+        expect(runStatus(getSimRun('M')!)).toBe('Running');
+    });
+
+    it('an invariant broken by a tick, the same; the clock on again ticks until the next hit, level-triggered (mutant: the hit read before the press)', () => {
+        watch('model.[secs] > 88', 'invariant');
+        reset(['plus', 'plus', 'plus', 'start']);
+        const c = panelClocks();
+        c.start('k', 'tick', 1000);
+        vi.advanceTimersByTime(5000);
+        expect([presses.length, secs(), offOf(c)]).toEqual([2, 88, 'watch']);
+        expect(c.start('k', 'tick', 1000)).toBe(true);
+        vi.advanceTimersByTime(1000);
+        expect([presses.length, secs(), offOf(c)]).toEqual([3, 87, 'watch']);
+    });
+
+    it('no watch, or a watch that does not hit: the clock ticks on (control: the hit is what stops it)', () => {
+        watch('model.[secs] >= 0', 'invariant');
+        reset(['plus', 'plus', 'plus', 'start']);
+        const c = panelClocks();
+        c.start('k', 'tick', 1000);
+        vi.advanceTimersByTime(5000);
+        expect([presses.length, offOf(c)]).toEqual([5, null]);
     });
 });
 

@@ -16,9 +16,12 @@ import {
     acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
     inputPressTitle, inputReason,
     markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
-    pressRandom, pressStep, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchRows,
+    pressRandom, pressStep, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
 } from '../simBridge';
 import type { ContextBuilder, PanelInputs, PlayStop, RunStart } from '../simBridge';
+import { encodeWatches } from '../../../../model/simulation/watchCodec';
+import type { WatchRecord } from '../../../../model/simulation/watchCodec';
+import type { WatchResult } from '../../../../model/simulation/watchEvaluator';
 import {
     __resetSimRunsForTests, configAt, getSimActiveIds, getSimRun, getSimVersion, getSimView, setSimPolicy, simClear, simReset, simSetView,
 } from '../simRunState';
@@ -2726,6 +2729,163 @@ describe('R-SIM-101: the run policy, Step under Random and Play (P-2026-09-29-19
         } finally {
             spy.mockRestore();
         }
+    });
+
+    describe('R-SIM-137: invariants and breakpoints stop Play after its press (P-2026-10-05-1735, W3, Q1)', () => {
+        /** The model's watches, written in its bag as the dialog's Apply writes them. */
+        const watch = (lookup: Lookup, list: WatchRecord[]) => { lookup.M._state = { ...(lookup.M._state ?? {}), runWatches: encodeWatches(list) }; };
+        const COUNT_AT_MOST_1: WatchRecord = { name: 'countAtMost1', kind: 'invariant', text: 'model.[count] <= 1' };
+        const P3: WatchRecord = { name: 'p3Reached', kind: 'breakpoint', text: 'p3.[marked]' };
+        const hitsOf = (r: { hits?: readonly WatchResult[] }) => (r.hits ?? []).map(h => h.watch.name);
+        /** One Play press as the panel runs it, as `play` does, returning the tick that stopped it, its hits included. */
+        function playW(lookup: Lookup, cap = 5000) {
+            let steps = 0;
+            for (let tick = 0; tick < cap; tick++) {
+                const r = playPress('M', lookup, steps);
+                steps = r.steps;
+                if (r.stop !== null) return r;
+            }
+            throw new Error(`Play did not stop in ${cap} ticks`);
+        }
+
+        it('an invariant that breaks stops Play after the press that broke it: Flow B count reaches 2 at step 4 (mutants: the check dropped; the check before the press)', () => {
+            const lookup = flowB();
+            watch(lookup, [COUNT_AT_MOST_1]);
+            reset(lookup, 3);
+            const r = playW(lookup);
+            expect([r.stop, r.steps, getSimRun('M')!.trace!.length, status()]).toEqual(['watch', 4, 4, 'Running']);
+            expect(hitsOf(r)).toEqual(['countAtMost1']);
+            expect(r.press?.lastStep).toBe('ε: f2 (work → d1) fired');
+            expect(playStopLine(r.stop, r.steps)).toBeNull();
+            // control: without the watch the same run goes on to Terminated in 6 (the test above)
+            lookup.M._state = {};
+            reset(lookup, 3);
+            expect(playW(lookup)).toMatchObject({ stop: 'Terminated', steps: 6 });
+        });
+
+        it('a breakpoint under Random stops at the step that made it true, the same step and trace for the same seed (mutant: the check skipped on a drawn step)', () => {
+            const lookup = demoPetri();
+            watch(lookup, [P3]);
+            const runs: string[] = [];
+            for (const seed of [1, 99, 2026, 1, 99, 2026]) {
+                reset(lookup, seed);
+                setSimPolicy('M', { choices: 'random' });
+                const r = playW(lookup);
+                const run = getSimRun('M')!;
+                expect([r.stop, hitsOf(r)]).toEqual(['watch', ['p3Reached']]);
+                // the first configuration where p3 is marked: marked now, not one step before
+                expect((run.config.state.marking.get('p3') ?? 0) > 0).toBe(true);
+                expect(configAt(run, r.steps - 1)!.state.marking.get('p3') ?? 0).toBe(0);
+                runs.push(`${seed}:${r.steps}:${run.trace!.map(t => t.selector).join(',')}`);
+            }
+            expect(runs.slice(3)).toEqual(runs.slice(0, 3));
+        });
+
+        it('never on the configuration Play starts from: a breakpoint already true lets one step through, at every Play press (level-triggered; mutants: checked at the tick\'s start; edge-triggered)', () => {
+            const lookup = flowB();
+            watch(lookup, [{ name: 'always', kind: 'breakpoint', text: 'model.[count] >= 0' }]);
+            reset(lookup, 3);
+            expect(watchResults(getSimRun('M')!, lookup).map(x => x.hit)).toEqual([true]);
+            expect(playW(lookup)).toMatchObject({ stop: 'watch', steps: 1 });
+            expect(playW(lookup)).toMatchObject({ stop: 'watch', steps: 1 });
+            expect(getSimRun('M')!.trace).toHaveLength(2);
+            // an invariant false from Reset: the same, one step, then the stop
+            watch(lookup, [{ name: 'never', kind: 'invariant', text: 'model.[count] > 5' }]);
+            reset(lookup, 3);
+            expect(playW(lookup)).toMatchObject({ stop: 'watch', steps: 1 });
+        });
+
+        it('the stops that come before a press are unchanged: no ε candidate, a list under Ask (mutant: the watches read before the tick\'s stops)', () => {
+            const sm = buildLookup(ROLES, TURNSTILE);
+            watch(sm, [{ name: 'locked', kind: 'breakpoint', text: 'Locked.[marked]' }]);
+            reset(sm, 8);
+            expect(watchResults(getSimRun('M')!, sm).map(x => x.hit)).toEqual([true]);
+            expect(playW(sm)).toMatchObject({ stop: 'event', steps: 0 });
+            const petri = demoPetri();
+            watch(petri, [{ name: 'always', kind: 'breakpoint', text: 'p1.[marked] or not p1.[marked]' }]);
+            reset(petri, 10);
+            expect(watchResults(getSimRun('M')!, petri).map(x => x.hit)).toEqual([true]);
+            expect(playW(petri)).toMatchObject({ stop: 'choice', steps: 0 });
+        });
+
+        it('a watch that does not compile, or reads a number, is a defect and never stops Play (mutant: a defect read as false)', () => {
+            const lookup = flowB();
+            watch(lookup, [
+                { name: 'node', kind: 'invariant', text: 'node.[x] == 1' },
+                { name: 'number', kind: 'invariant', text: '1 + 1' },
+                { name: 'undeclared', kind: 'breakpoint', text: 'model.[nope]' },
+            ]);
+            reset(lookup, 3);
+            expect(playW(lookup)).toMatchObject({ stop: 'Terminated', steps: 6 });
+            const results = watchResults(getSimRun('M')!, lookup);
+            expect(results.map(x => [x.watch.name, x.reading.kind, x.hit])).toEqual([
+                ['node', 'defect', false], ['number', 'defect', false], ['undeclared', 'defect', false],
+            ]);
+        });
+
+        it('the watches are read from the bag at each press: written mid-run they stop the next Play, and they leave runSignature (mutants: frozen at Reset; a sim* key)', () => {
+            const lookup = flowB();
+            reset(lookup, 3);
+            setSimPolicy('M', { k: 2 });
+            expect(playW(lookup)).toMatchObject({ stop: 'limit', steps: 2 });
+            const before = runSignature(lookup, 'M', 'MM');
+            watch(lookup, [COUNT_AT_MOST_1]);
+            expect(runSignature(lookup, 'M', 'MM')).toBe(before);
+            expect(getSimRun('M')!.signature).toBe(before);
+            setSimPolicy('M', { k: 100 });
+            expect(playW(lookup)).toMatchObject({ stop: 'watch', steps: 2 });
+            // control: the same list under a sim* key would move the signature, so it would interrupt the run
+            lookup.M._state = { simWatches: lookup.M._state.runWatches };
+            expect(runSignature(lookup, 'M', 'MM')).not.toBe(before);
+        });
+
+        it('a hand Step reports the hit and never refuses to fire: the step is committed, the hit read on it (mutant: a press refused on a hit)', () => {
+            const lookup = flowB();
+            watch(lookup, [{ name: 'always', kind: 'breakpoint', text: 'model.[count] >= 0' }]);
+            reset(lookup, 3);
+            for (let i = 1; i <= 3; i++) {
+                const pressed = pressStep('M', lookup);
+                expect(pressed.outcome?.kind).toBe('fired');
+                expect(getSimRun('M')!.trace).toHaveLength(i);
+                expect(watchResults(getSimRun('M')!, lookup).filter(x => x.hit).map(x => x.watch.name)).toEqual(['always']);
+            }
+        });
+
+        it('watchResults reads any step\'s configuration, and the steps of the trace that hit are listed (mutants: the live configuration read for every step; step 0 listed)', () => {
+            const lookup = flowB();
+            watch(lookup, [COUNT_AT_MOST_1]);
+            reset(lookup, 3);
+            for (let i = 0; i < 6; i++) pressStep('M', lookup);
+            const run = getSimRun('M')!;
+            const values = Array.from({ length: 7 }, (_, n) => watchResults(run, lookup, configAt(run, n)!.state)[0].hit);
+            // count: 0 0 1 1 2 2 2, so the invariant breaks from step 4 on
+            expect(values).toEqual([false, false, false, false, true, true, true]);
+            expect([...watchHitSteps(run, lookup)]).toEqual([4, 5, 6]);
+            // control: no watch, no step
+            lookup.M._state = {};
+            expect([...watchHitSteps(run, lookup)]).toEqual([]);
+        });
+
+        it('watchHitLine names the watch, the step and the firing; more hits are counted on the line and listed in the title (mutants: the step or the firing dropped; the others dropped from the title)', () => {
+            const lookup = flowB();
+            watch(lookup, [COUNT_AT_MOST_1, { name: 'paidOut', kind: 'breakpoint', text: 'model.[count] >= 2' }]);
+            reset(lookup, 3);
+            for (let i = 0; i < 4; i++) pressStep('M', lookup);
+            const hits = watchResults(getSimRun('M')!, lookup).filter(x => x.hit);
+            expect(watchHitLine(hits.slice(0, 1), 4, 'ε: f2 (work → d1) fired')).toEqual({
+                line: 'Invariant countAtMost1 false at step 4 · ε: f2 (work → d1) fired',
+                title: 'Invariant countAtMost1 false at step 4 · ε: f2 (work → d1) fired\nInvariant countAtMost1: model.[count] <= 1',
+            });
+            expect(watchHitLine(hits.slice(1), 4, 'ε: f2 (work → d1) fired')?.line).toBe('Breakpoint paidOut at step 4 · ε: f2 (work → d1) fired');
+            const both = watchHitLine(hits, 4, 'ε: f2 (work → d1) fired')!;
+            expect(both.line).toBe('Invariant countAtMost1 false and 1 more at step 4 · ε: f2 (work → d1) fired');
+            expect(both.title.split('\n')).toEqual([
+                'Invariant countAtMost1 false and 1 more at step 4 · ε: f2 (work → d1) fired',
+                'Invariant countAtMost1: model.[count] <= 1',
+                'Breakpoint paidOut: model.[count] >= 2',
+            ]);
+            expect(watchHitLine([], 4, 'x')).toBeNull();
+        });
     });
 });
 
