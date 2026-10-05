@@ -20,9 +20,17 @@
  * that step made. It writes nothing but the view and the viewer preferences: a pin
  * (R-SIM-104) and a tag (R-SIM-107) per attribute. Viewing is read-only; a press
  * returns the view to live (simBridge.ts).
+ *
+ * Invariants and breakpoints (R-SIM-137, P-2026-10-05-1735, W4): an icon of the
+ * header, there before Reset and under every profile, opens their dialog
+ * (SimWatchesModal.tsx); when the model has some, a section reads each on the
+ * step shown, a hit marked, a defect named (what only the frozen M tells, a value
+ * that is not a boolean), and the trace marks the steps that hit, over the kept
+ * configurations (simBridge.ts `watchHitSteps`). The UI never says «watch»: that
+ * word is the Watch rows' (R-SIM-104). Without them the card is as it was.
  */
 
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { store } from '../../../joiner';
 import { configAt, getSimRun, getSimView, simSetView, useSimVersion } from './simRunState';
@@ -31,8 +39,11 @@ import { stateKindOf, stateValueOf } from './simCanvasState';
 import type { SimStateKind } from './simCanvasState';
 import { defaultSimPins, getSimViewerPrefs, MAX_SIM_PINS, setSimViewerPrefs, useSimViewerPrefsVersion } from './simViewerPrefs';
 import type { SimAttrRef } from './simViewerPrefs';
-import { candidateLabel, markingChips } from './simBridge';
+import { candidateLabel, markingChips, watchHitSteps, watchResults } from './simBridge';
 import type { InputLabel } from './simBridge';
+import { SimWatchesModal } from './SimWatchesModal';
+import { RUN_WATCHES_KEY } from '../../../model/simulation/watchCodec';
+import type { WatchResult } from '../../../model/simulation/watchEvaluator';
 import type { StateHeading } from './simLabels';
 import type { SimState, SimValue, StateAttributeDecl } from '../../../model/simulation/netTypes';
 import './SimInspector.scss';
@@ -168,6 +179,9 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
     const prev = run && n > 0 ? configAt(run, n - 1)?.state ?? null : null;
     const prefs = getSimViewerPrefs(modelId);
     const pins = run ? facePins(prefs.pins, run.net.attributes) : [];
+    // R-SIM-137: the dialog of the invariants and breakpoints, opened from the header.
+    const [watchesOpen, setWatchesOpen] = useState(false);
+    const watchesStored = lookup[modelId]?._state?.[RUN_WATCHES_KEY];
 
     // The trace's scroll area (P-2026-10-03-1015), newest first. A commit leaves a list at its top there, the new
     // step in view, and keeps the rows in view where the reader scrolled down (the browser's scroll anchoring is
@@ -266,11 +280,31 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
             <i className="bi bi-arrows-angle-expand" />
             <span className="sim-inspector__title">Run inspector</span>
             <span className="sim-inspector__subtitle" title={modelName}>{modelName}</span>
+            <button
+                type="button"
+                className="sim-inspector__tool"
+                title="Invariants and breakpoints"
+                aria-label="Invariants and breakpoints"
+                aria-haspopup="dialog"
+                onClick={() => setWatchesOpen(true)}
+            >
+                <i className="bi bi-shield-check" />
+            </button>
             <button type="button" className="sim-inspector__close" title="Close the inspector" aria-label="Close the inspector" onClick={onClose}>
                 <i className="bi bi-x-lg" />
             </button>
         </div>
     );
+
+    const watchesModal = watchesOpen ? (
+        <SimWatchesModal
+            modelId={modelId}
+            modelName={modelName}
+            watchesRaw={typeof watchesStored === 'string' ? watchesStored : null}
+            onClose={() => setWatchesOpen(false)}
+            onApplied={() => setWatchesOpen(false)}
+        />
+    ) : null;
 
     if (!run || !config) {
         return (
@@ -279,6 +313,7 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
                 <div className="sim-inspector__body">
                     <div className="sim-inspector__empty">Not started. Reset starts the run.</div>
                 </div>
+                {watchesModal}
             </div>
         );
     }
@@ -296,6 +331,25 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
         return `${input}: ${what}${KIND_WORD[t.kind]}`;
     };
     const steps = [{ i: 0, text: 'Reset' }, ...trace.map((t, k) => ({ i: k + 1, text: stepText(t) }))].reverse();
+    // R-SIM-137: each invariant and breakpoint on the step shown, and the steps of the trace that hit.
+    const watches = watchResults(run, lookup, state);
+    const hitSteps = watches.length > 0 ? watchHitSteps(run, lookup) : null;
+    /** One row: the name, the kind, the value on the step shown; a hit in its kind's colour, a defect named. */
+    const renderWatch = (r: WatchResult) => {
+        const kind = r.watch.kind === 'invariant' ? 'Invariant' : 'Breakpoint';
+        const shown = r.reading.kind === 'value' ? String(r.reading.value) : r.reading.short;
+        const note = r.hit ? (r.watch.kind === 'invariant' ? ' · violated' : ' · reached') : '';
+        const title = `${kind} ${r.watch.name}: ${r.watch.text}`
+            + (r.reading.kind === 'value' ? ` = ${shown}${note}` : `\n${r.reading.detail}`);
+        const hit = r.hit ? ` sim-inspector__value--${r.watch.kind === 'invariant' ? 'violated' : 'reached'}` : '';
+        return (
+            <div key={r.watch.name} className="sim-inspector__row" title={title}>
+                <span className="sim-inspector__name">{r.watch.name}</span>
+                <span className="sim-state-chip">{r.watch.kind}</span>
+                <span className={`sim-inspector__value${hit}${r.reading.kind === 'defect' ? ' sim-inspector__value--defect' : ''}`}>{shown}</span>
+            </div>
+        );
+    };
 
     return (
         <div className="sim-inspector" role="dialog" aria-label="Run inspector">
@@ -370,6 +424,17 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
                         <div className="sim-inspector__empty">No presentation state.</div>
                     )}
                 </section>
+                {/* R-SIM-137: only when the model has invariants or breakpoints, so a model without them keeps its card. */}
+                {watches.length > 0 && (
+                    <section className="sim-inspector__section sim-inspector__section--watches" aria-label="Invariants and breakpoints">
+                        <div className="sim-inspector__section-head">
+                            <i className="bi bi-shield-check" />
+                            <span>Invariants and breakpoints</span>
+                            <span className="sim-inspector__step">{`step ${n}`}</span>
+                        </div>
+                        {watches.map(renderWatch)}
+                    </section>
+                )}
                 {/* The trace (R-SIM-106): a step chosen is shown on the canvas as it was; the run does not move. */}
                 <section className="sim-inspector__section sim-inspector__section--trace" aria-label="Trace">
                     <div className="sim-inspector__section-head">
@@ -384,11 +449,12 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
                                     type="button"
                                     className={`sim-inspector__trace-step${s.i === n ? ' sim-inspector__trace-step--shown' : ''}`}
                                     aria-current={s.i === n ? 'step' : undefined}
-                                    title={s.i === live ? `Step ${s.i}, live: ${s.text}` : `Show step ${s.i}: ${s.text}`}
+                                    title={`${s.i === live ? `Step ${s.i}, live: ${s.text}` : `Show step ${s.i}: ${s.text}`}${hitSteps?.has(s.i) ? '\nAn invariant or a breakpoint hit at this step' : ''}`}
                                     onClick={() => simSetView(modelId, s.i === live ? null : s.i)}
                                 >
                                     <span className="sim-inspector__trace-n">{s.i}</span>
                                     <span className="sim-inspector__trace-text">{s.text}</span>
+                                    {hitSteps?.has(s.i) && <i className="bi bi-flag-fill sim-inspector__trace-hit" aria-label="hit" />}
                                     {s.i === live && <span className="sim-inspector__trace-live">live</span>}
                                 </button>
                             </li>
@@ -396,6 +462,7 @@ export function SimInspector({ modelId, modelName, inputLabel, stateHint, markin
                     </ol>
                 </section>
             </div>
+            {watchesModal}
         </div>
     );
 }

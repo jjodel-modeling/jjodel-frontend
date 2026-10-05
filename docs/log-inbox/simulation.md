@@ -547,3 +547,29 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Ticket**: `LModel.generateEcoreJson_impl` writes each M1 root as `json[obj.ecoreRootName]`, and `ecoreRootName` is `<package uri>:<class name>`, so roots of one class overwrite each other and the last wins. Measured after `68e4f312d` on fresh opens: PEST keeps 9 of 11 objects (Events `coin` and `push` lost), ESM 8 of 10, Petri 4 of 13, FlowB 7 of 17; no object twice, no loop error. It predates E2, which hid it behind a `MyError`. References serialize as `@//`. No UI path reads this JSON (discovery 2026-10-04 §3.3).
 **Priority**: low
 **Found in**: P-2026-10-05-1648
+
+## 2026-10-05 — discovery: watches, step back, scenarios and coverage, R-SIM-137..140 (P-2026-10-05-1655)
+**Prompt**: `claude_2026-10-05_1655_prompt_discovery_sim_watches_scenarios_coverage.md`, heavy tier, read-only on `~/jjodel-w-simverif`, branch `sim-verif`: watch evaluation and storage, step back, scenarios, coverage, the Phase 2 split and the risks, with file and line and a measurement where one decides.
+**Files touched**: `frontend/scripts/probe/sim-verif-bench.ts` (new, `8511a9c16`), `docs/discovery/discovery_2026-10-05_sim_watches_scenarios_coverage.md` (new, `ac81aca96`), the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (a report and a node probe; nothing under `frontend/src`; check:scripts exit 0)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe on the four demo fixtures, 35 PASS: a pop of the kept configurations equals the earlier record 30/30, 6/6 past the cap, so no stack; watches read as board outputs, 1.6-2.1 µs; replay 4/4; coverage from labels equals coverage from the trace 4/4; runWatches and runScenarios leave runSignature, sim* keys move it. Kept configuration 285-1038 B, not reconciled with the 71-109 B of 2026-10-02. Runs 1-2 logged to /tmp, deleted. Report §0, §6, §8.
+**Prompt document name**: 2026-10-05 16:55
+
+## 2026-10-05 — feat: invariants and breakpoints in the simulator, lane sim-watches (P-2026-10-05-1735)
+**Prompt**: `claude_2026-10-05_1735_prompt_sim_watches.md`, heavy tier, `~/jjodel-w-simverif` on `sim-verif`: R-SIM-137 as W1..W4 and Q1 of the 2026-10-05 discovery fix it (the key `runWatches`, the evaluator, Play's stop after its press, the clocks off at a hit, the hit line, the dialog from the inspector header, its section and trace marks); tests first, mutation bench, probe on 3080-3099, no merge, no Status flip.
+**Files touched**: `c539aa2bb`: `watchCodec.test.ts`, `watchEvaluator.test.ts` (new), `simBridge.test.ts`, `simBoardClock.test.ts`. `ed800135c`: `model/simulation/watchCodec.ts`, `model/simulation/watchEvaluator.ts`, `sim/SimWatchesModal.tsx` (new), `sim/simBridge.ts`, `sim/simBoardClock.ts`, `sim/SimulationPanel.tsx`, `sim/SimInspector.tsx`, `sim/SimInspector.scss`. This commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7542/7542 in 304 files, the 9 known reds at import and one `afterAll` Chromium timeout of `irCollapsedRender.test.ts` under load (13/13 alone); build exit 0; mutation bench 41/41 killed, all by assertions.
+**Out-of-scope changes**: no (twelve files, each named by the prompt's COSA and its tests, which is the rule 19 list)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3091, 1600×1000, light: four scenes base 54/54 and after 54/54, 0 differing paths but the inspector's one header icon; Petri watches 19/19, Ask, Random seeds 1 and 2026 twice, save/export/import/reopen byte for byte; crops in `frontend/scripts/smoke/_tmp_simwatch_crops/`; the chat's visual check pending, RC-23)
+**Notes**: Step's top 873 px in this probe, base and after alike (854.5 is another setup); inspector 372 × 400.5 on PEST. «Absent key» read as no key until Apply, `[]` once emptied (W1). The session hit the time limit in the probe and was resumed. The feat message says «the 17 set» for «the §17 set». The probe is gitignored, not committed.
+**Prompt document name**: 2026-10-05 17:35

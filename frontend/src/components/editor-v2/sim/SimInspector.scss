@@ -74,6 +74,8 @@ $sim-inspector-trace-rows: 6;
         text-overflow: ellipsis;
     }
 
+    // The header's icons: the dialog of the invariants and breakpoints (R-SIM-137), then close; one size, one hover.
+    &__tool,
     &__close {
         display: inline-flex;
         flex: 0 0 auto;
@@ -316,6 +318,27 @@ $sim-inspector-trace-rows: 6;
             font-style: italic;
             color: var(--color-text-tertiary);
         }
+
+        // R-SIM-137: an invariant false on the step shown, in the error pair; a breakpoint true, in the warning pair.
+        &--violated {
+            background: var(--color-error-subtle);
+            color: var(--color-error-text);
+        }
+
+        &--reached {
+            background: var(--color-warning-subtle);
+            color: var(--color-warning-text);
+        }
+
+        // What the watch fails to compile or to read: named on one line, in full in the row's title.
+        &--defect {
+            min-width: 0;
+            overflow: hidden;
+            font-family: inherit;
+            font-style: italic;
+            color: var(--color-error-text);
+            text-overflow: ellipsis;
+        }
     }
 
     // A past step shown (R-SIM-102's «past step»): the values that did not change read quieter.
@@ -439,6 +462,16 @@ $sim-inspector-trace-rows: 6;
         text-overflow: ellipsis;
     }
 
+    // R-SIM-137: a step of the trace where an invariant or a breakpoint hit. Under the step, (0,2,0), so the colour
+    // outranks the global `i.bi` one (0,1,1), as the ICON COLOUR note above asks.
+    &__trace-step &__trace-hit,
+    &__trace-step &__trace-hit:hover {
+        flex: 0 0 auto;
+        font-size: 10px;
+        line-height: 1;
+        color: var(--color-warning-text);
+    }
+
     &__trace-live {
         flex: 0 0 auto;
         padding: 0 5px;
@@ -449,4 +482,31 @@ $sim-inspector-trace-rows: 6;
         font-weight: 600;
         line-height: 16px;
     }
+}
+
+// The «Invariants and breakpoints» dialog (SimWatchesModal.tsx, R-SIM-137): the roles dialog's shell and controls
+// (SimRolesModal.scss), its rows here, in the sheet of the card that opens it. Under `.sim-roles-modal` as every rule
+// of that sheet, so it outranks the global form rules. One line of 32 px per row, name, kind, expression and remove,
+// and a fixed 16 px line under it for what the row fails to compile, so a defect moves no row.
+.sim-roles-modal .sim-watches-modal {
+    &__row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 0;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__line {
+        display: grid;
+        grid-template-columns: 160px 120px minmax(0, 1fr) 32px;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+    }
+}
+
+.sim-roles-modal .sim-roles-modal__input.sim-watches-modal__text {
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
 }
