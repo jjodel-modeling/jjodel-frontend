@@ -503,3 +503,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe 11/11, ALL GREEN, button and card header, crops in `frontend/scripts/smoke/_tmp_boardicon_crops/`, gitignored); Alfonso's visual check of the button passed 2026-10-05 (his GO); the card header is read from the probe's boxes, delta 0 px, and its crops looked at by the lane, not by the chat
 **Notes**: bi-motherboard hits (frontend/src, frontend/docs, docs): SimulationPanel.tsx:860 (the button), simBoardDevices.tsx:695 and the fixtures simBoardCard.base(-notstarted).html (the open card's header), all now bi-toggles; frontend/docs none; docs only the prompt. grep on frontend/src now empty, control on bi-toggles finds the four. Probe on DemoESM, light: button 20x20, card header 250x39, glyph boxes, delta 0 px; before = same page, class swapped. vitest on sim/ only (20 files, 663).
 **Prompt document name**: 2026-10-05 11:10
+
+## 2026-10-05 — merge: sim-board-icon into alfonso-frontend-jjtl (P-2026-10-05-1444)
+**Prompt**: `claude_2026-10-05_1444_prompt_merge_sim-board-icon.md`, a direct merge by `lane-run merge --direct`, no session: `sim-board-icon` at `c62e0afea` into `alfonso-frontend-jjtl`, merge base `0e77734a2`, 6 commits on the branch side.
+**Files touched**: merge `2c10ad236`: 6 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-05_1110_prompt_sim_board_icon.md`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/fixtures/simBoardCard.base-notstarted.html`, `frontend/src/components/editor-v2/sim/__tests__/fixtures/simBoardCard.base.html`, `frontend/src/components/editor-v2/sim/simBoardDevices.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2c10ad236` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7499 tests in 302 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 passata sui crop della lane P-2026-10-05-1110 (bottone e header card, delta 0 px); merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-board-icon` on `d92e5419e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-1444/result.json`.
+**Prompt document name**: 2026-10-05 14:44
