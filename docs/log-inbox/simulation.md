@@ -542,3 +542,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3091, 1600×1000, light: four scenes base 54/54 and after 54/54, 0 differing paths but the inspector's one header icon; Petri watches 19/19, Ask, Random seeds 1 and 2026 twice, save/export/import/reopen byte for byte; crops in `frontend/scripts/smoke/_tmp_simwatch_crops/`; the chat's visual check pending, RC-23)
 **Notes**: Step's top 873 px in this probe, base and after alike (854.5 is another setup); inspector 372 × 400.5 on PEST. «Absent key» read as no key until Apply, `[]` once emptied (W1). The session hit the time limit in the probe and was resumed. The feat message says «the 17 set» for «the §17 set». The probe is gitignored, not committed.
 **Prompt document name**: 2026-10-05 17:35
+
+## 2026-10-06 — feat: step back and scenarios in the simulator, lane sim-back-scenarios (P-2026-10-05-2315)
+**Prompt**: `claude_2026-10-05_2315_prompt_sim_back_scenarios.md`, heavy tier, `~/jjodel-w-simverif` on `sim-verif`: R-SIM-138 and R-SIM-139 as S1..S3, C1..C3 and Q3 of the 2026-10-05 discovery fix them (the pop `simStepBack`, the Step back button, the Buzzer muted backward, the key `runScenarios`, record and replay, the inspector's Save and Scenarios section); tests first, mutation bench, probe on 3080-3099, no merge, no Status flip.
+**Files touched**: `0f0bd65e7`: `scenarioCodec.test.ts`, `simScenarios.test.ts` (new), `simRunState.test.ts`. `4766dbb17`: `model/simulation/scenarioCodec.ts`, `sim/simScenarios.ts` (new), `sim/simRunState.ts`, `sim/SimulationPanel.tsx`, `sim/SimInspector.tsx`, `sim/SimInspector.scss`, `sim/simBoardDevices.tsx`, two of the tests. `69139f6d0`: `sim/SimInspector.scss`. This commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes, caught and fixed in the lane: `4766dbb17` made the inspector 7.5 px taller on the four scenes (400.5 to 408, the trace head's 20 px icon); the probe found it, `69139f6d0` fixed it, then 0 differing paths. Typecheck 14, the §17 set by file and code; vitest 7589/7589 in 306 files, the 9 known reds at import; build exit 0; mutation bench 53/55, the 2 survivors equivalent.
+**Out-of-scope changes**: no (ten files, each named by the prompt's COSA and its tests, which is the rule 19 list)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3086, 1600×1000, light: four scenes base 54/54, after 58/58, 0 differing paths but Step back in the transport row and the trace head's icon; step back on Petri and ESM 18/18; scenarios on Petri 12/12, a tampered one diverging at step 2 with its reason, the key reopened with ids renewed and replayed; the chat's visual check pending, RC-23)
+**Notes**: Probe gitignored, not committed (_tmp_simback_probe.ts, crops in _tmp_simback_crops/). Base readings taken by writing the base of five files into the tree, restored by git checkout HEAD before the after run; no stash. A first back run compared null with null (HMR-stamped module URLs after that swap): Vite restarted, a positive control added, 18/18. Not exercised: input variables in the browser, clocks after a replay, the undo of a save. No expect editor in the UI: COSA names none.
+**Prompt document name**: 2026-10-05 23:15
