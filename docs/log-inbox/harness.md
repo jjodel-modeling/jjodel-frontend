@@ -45,3 +45,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: md5 checked at the source, after the copy and on the committed blobs. Live on 4701 with `LANE_BOARD_CACHE` on a temp file, so `~/.jjodel-lanes/` was not written: four 200s, `/api` 337 rows with an empty error, `/api/timeline` 338 lanes. `typecheck:scripts` does not reach `.mjs`/`.js` (include: smoke, gates). Seven files, as the prompt declares. The launchd agent still runs the `~/.jjodel-lanes/board/` copy until the chat repoints it.
 **Prompt document name**: 2026-10-05 23:40
+
+## 2026-10-05 — merge: lane-board into alfonso-frontend-jjtl (P-2026-10-05-2348)
+**Prompt**: `claude_2026-10-05_2348_prompt_merge_lane-board.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board` at `edcaebab1` into `alfonso-frontend-jjtl`, merge base `078325ee6`, 3 commits on the branch side.
+**Files touched**: merge `441bace3b`: 7 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-05_2340_prompt_lane_board_repo.md`, `frontend/package.json`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `441bace3b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7551 tests in 306 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on the merge (typecheck at the receiving set, vitest, build, check:docs/agents/scripts/addonly); the three board files on the trunk match the deployed md5s; harness-only merge, no visual check
+**Notes**: Rollback tag `pre-lane-board` on `078325ee6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2348/result.json`.
+**Prompt document name**: 2026-10-05 23:48
