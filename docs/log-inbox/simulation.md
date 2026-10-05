@@ -555,3 +555,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3086, 1600×1000, light: four scenes base 54/54, after 58/58, 0 differing paths but Step back in the transport row and the trace head's icon; step back on Petri and ESM 18/18; scenarios on Petri 12/12, a tampered one diverging at step 2 with its reason, the key reopened with ids renewed and replayed; the chat's visual check pending, RC-23)
 **Notes**: Probe gitignored, not committed (_tmp_simback_probe.ts, crops in _tmp_simback_crops/). Base readings taken by writing the base of five files into the tree, restored by git checkout HEAD before the after run; no stash. A first back run compared null with null (HMR-stamped module URLs after that swap): Vite restarted, a positive control added, 18/18. Not exercised: input variables in the browser, clocks after a replay, the undo of a save. No expect editor in the UI: COSA names none.
 **Prompt document name**: 2026-10-05 23:15
+
+## 2026-10-06 — feat: a timeline slider in the simulator, lane 2b (P-2026-10-05-2350)
+**Prompt**: `claude_2026-10-05_2350_prompt_sim_timeline_slider.md`, heavy tier, `~/jjodel-w-simverif` on `sim-verif`: R-SIM-142 as written (a slider under the transport row over 0..live, viewing in the mode of R-SIM-106 in sync with the trace, Continue from here as `simStepBack` repeated, a grab stops Play, the keys); tests first, mutation bench, probe on 3080-3099, no merge, no Status flip.
+**Files touched**: `7a9ea6f9a`: `sim/__tests__/simTimeline.test.ts` (new). `6a771cfee`: `sim/SimTimeline.tsx` (new), `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`. This commit: this entry.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7602/7602 in 307 files, the 9 known reds at import; build exit 0; check:scripts exit 0; mutation bench 29/31 killed by assertions, the 2 survivors named in the feat message (one equivalent, one browser-only and held by the probe).
+**Out-of-scope changes**: no (four files, each named by the prompt's COSA and its tests; the collapse button's return to live is in `SimulationPanel.tsx`)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3087, 1600×1000, light: the four scenes byte-identical to the base with no run and at step 0, 0 differing paths; slider on Petri and ESM 33/33: drag to j shows the trace's step j with the run at k, trace click and Back to live move the thumb, keys, Continue from here leaves j entries at Running, a grab pauses Play; crops in `frontend/scripts/smoke/_tmp_simtl_crops/`; the chat's visual check pending, RC-23)
+**Notes**: The panel is anchored at the bottom, so from step 1 the rows above the slider move up 28 px (Step's top 873 to 845 on the four scenes) while the status line keeps 909: the contract's «everything above keeps its position» holds for the status line only. Continue from here sits beside the range, its box kept hidden at live, so no shift. A style="" on the Play limit input is written by Playwright's screenshot, not the app (measured). Probe gitignored, _tmp_simtl_*.
+**Prompt document name**: 2026-10-05 23:50
