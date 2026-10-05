@@ -485,7 +485,12 @@ $sim-inspector-trace-rows: 6;
 
     // -- scenarios (R-SIM-139) -------------------------------------------------------------
     // «Save as scenario» in the trace's head: the header's icon, its glyph at the header's size and colour rather than
-    // the section head's (0,3,0 over 0,2,0); refused, it reads quieter and its title says why.
+    // the section head's (0,3,0 over 0,2,0); refused, it reads quieter and its title says why. Its 20 px box overhangs
+    // the 12 px line by 4 px each way, so the head, and the card, keep their height.
+    &__section-head &__tool {
+        margin: -4px 0;
+    }
+
     &__section-head &__tool .bi,
     &__section-head &__tool .bi:hover {
         font-size: 11px;
