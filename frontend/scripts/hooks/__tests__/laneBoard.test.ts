@@ -278,6 +278,124 @@ describe('milestones: edges', () => {
     });
 });
 
+describe('milestones: files written through the shell', () => {
+    // Lanes edit as often with a python3 heredoc or a redirection as with Edit: measured on the
+    // logs of 2026-10-03..05, seven code lanes never used Edit on their code.
+    const sh = (command: string, result = '') => {
+        const id = 'toolu_' + Math.random().toString(36).slice(2);
+        return [
+            { type: 'assistant', message: { content: [{ type: 'tool_use', id, name: 'Bash', input: { command } }] } },
+            { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content: result }] } },
+        ];
+    };
+    const at = async (kind: string, evs: Ev[], name: string) => {
+        const { milestones } = await load();
+        return (milestones(kind, evs) as Milestones).steps.find((s) => s.name === name)!.state;
+    };
+
+    test('a python3 heredoc that opens a file under frontend/src to write reaches Code (program heredocs not read)', async () => {
+        const evs = sh("cd /w/frontend && python3 - <<'EOF'\np = 'src/a.ts'\ns = open(p).read()\nopen(p, 'w').write(s.replace('a', 'b'))\nEOF");
+        expect(await at('phase2', evs, 'Code')).toBe('reached');
+    });
+
+    test('a python3 heredoc that only reads a source file is no edit (any open read as a write)', async () => {
+        const evs = sh("cd /w/frontend && python3 - <<'EOF'\nprint(open('src/a.ts').read())\nEOF");
+        expect(await at('phase2', evs, 'Code')).toBe('pending');
+    });
+
+    test('a file literal in a program is not written unless the program opens it to write (every literal read as a write)', async () => {
+        const evs = sh("cd /w/frontend/src/x/__tests__ && python3 - <<'EOF'\np = 'a.test.ts'\nnew = \"const f = '/w/frontend/src/b.ts'\"\nopen(p, 'w').write(new)\nEOF");
+        expect(await at('phase2', evs, 'Code')).toBe('pending');
+        expect(await at('phase2', evs, 'Tests first')).toBe('reached');
+    });
+
+    test('the cd before a heredoc places its relative path (cd ignored)', async () => {
+        const evs = sh("cd /w/frontend/src/components && python3 - <<'EOF'\nopen('Panel.tsx', 'w').write('x')\nEOF");
+        expect(await at('phase2', evs, 'Code')).toBe('reached');
+    });
+
+    test('a node heredoc that calls writeFileSync on a source file reaches Code', async () => {
+        const evs = sh("node --input-type=module - <<'EOF'\nimport { writeFileSync } from 'node:fs';\nwriteFileSync('frontend/src/c.ts', '');\nEOF");
+        expect(await at('phase2', evs, 'Code')).toBe('reached');
+    });
+
+    test('a redirection into frontend/src is code, into a _tmp_ probe or /tmp it is not', async () => {
+        expect(await at('phase2', sh("cat > frontend/src/b.ts <<'EOF'\nexport {};\nEOF"), 'Code')).toBe('reached');
+        expect(await at('phase2', sh("cat > frontend/scripts/smoke/_tmp_x.ts <<'EOF'\nx\nEOF"), 'Code')).toBe('pending');
+        expect(await at('phase2', sh('cd frontend && npm run build > /tmp/build.txt 2>&1'), 'Code')).toBe('pending');
+    });
+
+    test('a redirection of a log under frontend/scripts is no code (source extension not required)', async () => {
+        expect(await at('phase2', sh('cd frontend && npx vitest run scripts/hooks > scripts/hooks/out.txt'), 'Code')).toBe('pending');
+    });
+
+    test('sed -i on a source file is code; a > or a sed -i inside quotes is text (quotes not emptied)', async () => {
+        expect(await at('phase2', sh("sed -i '' 's/a/b/' frontend/src/a.ts"), 'Code')).toBe('reached');
+        expect(await at('phase2', sh("sed 's/=.*/=<x>/' frontend/src/a.ts | head"), 'Code')).toBe('pending');
+        expect(await at('phase2', sh("command grep -rn \"sed -i\" frontend/src/a.ts"), 'Code')).toBe('pending');
+    });
+
+    test('a log entry appended through the shell lets a quiet docs commit from a message file close the lane', async () => {
+        const evs = [
+            ...sh("cd /w && python3 - <<'EOF'\np = 'docs/log-inbox/harness.md'\nopen(p, 'a').write('## entry')\nEOF"),
+            ...sh('git commit -q -F /tmp/msg.txt -- docs'),
+        ];
+        expect(await at('phase2', evs, 'Closure')).toBe('reached');
+        expect(await at('phase2', sh('git commit -q -F /tmp/msg.txt -- docs'), 'Closure')).toBe('pending');
+    });
+
+    test('pwd alone, or git log alone, opens a lane (one of the two dropped from Orient)', async () => {
+        expect(await at('phase2', sh('pwd'), 'Orient')).toBe('reached');
+        expect(await at('phase2', sh('git log -1 --oneline'), 'Orient')).toBe('reached');
+    });
+
+    test('a docs closure before any code is not the lane\'s closure (Closure not anchored after the code)', async () => {
+        const evs = [
+            ...sh("git commit -q -F - -- docs/prompts/p.md <<'EOF'\ndocs: Phase 1 Status (P-2026-10-05-0900)\nEOF"),
+            ...sh("sed -i '' 's/a/b/' frontend/src/a.ts"),
+        ];
+        expect(await at('phase2', evs, 'Closure')).toBe('pending');
+        expect(await at('phase2', evs.slice(0, 2), 'Closure')).toBe('reached');
+    });
+
+    test('a probe before the code is a negative control, not Probe (Probe not anchored after Code)', async () => {
+        const probe = sh('~/.local/bin/node frontend/scripts/lane-run.mjs probe /w frontend/scripts/probe/a.ts --port 3090');
+        const code = sh("sed -i '' 's/a/b/' frontend/src/a.ts");
+        expect(await at('phase2', [...probe, ...code], 'Probe')).toBe('pending');
+        expect(await at('phase2', [...code, ...probe], 'Probe')).toBe('reached');
+    });
+
+    test('a commit that git refused while the command still exited 0 is no commit (failure markers ignored)', async () => {
+        const evs = [
+            ...sh("sed -i '' 's/a/b/' frontend/src/a.ts"),
+            ...sh("git commit -q -F - -- frontend/src/a.ts <<'EOF'\nfix: a (P-2026-10-05-0900)\nEOF\necho \"exit=$?\"", 'nothing added to commit but untracked files present\nexit=1'),
+        ];
+        expect(await at('phase2', evs, 'Commit')).toBe('pending');
+    });
+
+    test('a discovery commit before the report is not its commit (Commit not anchored after Report)', async () => {
+        const evs = [
+            ...sh("git commit -q -F - -- docs/notes.md <<'EOF'\ndocs: notes (P-2026-10-05-0900)\nEOF"),
+            ...sh("cat > docs/discovery/discovery_2026-10-05_x.md <<'EOF'\n# x\nEOF"),
+        ];
+        expect(await at('discovery', evs, 'Report')).toBe('reached');
+        expect(await at('discovery', evs, 'Commit')).toBe('pending');
+    });
+
+    test('a merge lane\'s docs commit before the merge is not its closure (Closure not anchored after the merge)', async () => {
+        const evs = [
+            ...sh("git commit -q -F - -- docs/prompts/p.md <<'EOF'\ndocs: Status (P-2026-10-05-0900)\nEOF"),
+            ...sh('git merge --no-ff --no-commit sim-x'),
+        ];
+        expect(await at('merge', evs, 'Closure')).toBe('pending');
+    });
+
+    test('a redirect to /tmp before the opening git log is not a write in the tree (Orient bounded by any write)', async () => {
+        const evs = [...sh('cd frontend && npm run typecheck > /tmp/base.txt 2>&1'), ...sh('pwd; git log -1 --oneline')];
+        expect(await at('phase2', evs, 'Orient')).toBe('reached');
+    });
+});
+
 describe('milestones: the real log of P-2026-10-05-1110 (fast, trimmed)', () => {
     test('seven of eight: no test before the code, so Tests first reads skipped', async () => {
         const { milestones } = await load();
@@ -318,6 +436,12 @@ describe('compactEvent and laneEvents: the log as the board reads it', () => {
     test('compaction keeps everything the milestones read (a field the ladder reads dropped)', async () => {
         const { milestones, compactEvent } = await load();
         const cases: [string, string][] = [['phase2', 'phase2'], ['fast', 'fast'], ['discovery', 'discovery'], ['merge', 'merge'], ['fast', 'real-fast-P-2026-10-05-1110'], ['phase2', 'fast']];
+        // A commit only git's line names: the message from a file, no pathspec, the log entry edited before it.
+        const use = (id: string, name: string, input: Ev) => ({ type: 'assistant', message: { content: [{ type: 'tool_use', id, name, input }] } });
+        const res = (id: string, content: string) => ({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content }] } });
+        const byLine = [use('a', 'Edit', { file_path: '/w/docs/log-inbox/harness.md' }), use('b', 'Bash', { command: 'git commit -F /tmp/msg.txt' }), res('b', '[lane 1234567] docs: log entry (P-2026-10-05-0900)\n 1 file changed')];
+        expect((milestones('phase2', byLine) as Milestones).current).toBe('Closure');
+        expect(milestones('phase2', byLine.map(compactEvent).filter(Boolean))).toEqual(milestones('phase2', byLine));
         for (const [kind, name] of cases) {
             const evs = events(name);
             const small = evs.map(compactEvent).filter(Boolean);
@@ -453,6 +577,28 @@ async function board(): Promise<{ port: number; root: string }> {
 }
 
 describe('the board: /api and the page', () => {
+    test('importing the board does not listen: its port can be taken (server started on import)', async () => {
+        const held = createServer();
+        const port = await new Promise<number>((res) => held.listen(0, '127.0.0.1', () => res((held.address() as { port: number }).port)));
+        try {
+            const code = "await import(process.argv[1]); console.log('imported');";
+            const r = await new Promise<{ status: number | null; out: string }>((res) => {
+                const c = spawn(process.execPath, ['--input-type=module', '-e', code, pathToFileURL(SCRIPT).href], {
+                    env: { ...process.env, LANE_BOARD_PORT: String(port), JJODEL_LANES: tmp() }, stdio: ['ignore', 'pipe', 'pipe'],
+                });
+                let out = '';
+                c.stdout!.on('data', (b) => { out += b; });
+                c.stderr!.on('data', (b) => { out += b; });
+                const t = setTimeout(() => c.kill('SIGKILL'), 10000);
+                c.on('exit', (status) => { clearTimeout(t); res({ status, out }); });
+            });
+            expect(r.out).toContain('imported');
+            expect(r.status).toBe(0);
+        } finally {
+            held.close();
+        }
+    });
+
     test('/api gives a running row its progress and leaves the other rows as they were', async () => {
         const { port } = await board();
         const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
