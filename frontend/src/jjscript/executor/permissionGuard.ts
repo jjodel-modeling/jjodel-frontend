@@ -9,10 +9,11 @@
  * `checkBoundScope`, and only when the URL carries a profile: in developer mode nothing here is
  * consulted.
  *
- * Closed by default. A command is allowed only when it is one of the reading commands, or a
+ * Closed by default. A command is allowed only when it is `help`, or a
  * `create` / `set` / `rename` / `delete` on M1 instances of types the profile lets the viewer
- * edit. Anything the caller could not resolve to a type is refused, so a handler that learns to
- * find more than this check does still cannot write past it.
+ * edit; the reading commands that print the model are refused, since their output can name what
+ * the profile hides (#176). Anything the caller could not resolve to a type is refused, so a
+ * handler that learns to find more than this check does still cannot write past it.
  *
  * Pure on purpose: the caller resolves the names (`executor.ts`) and passes the types it found;
  * the only runtime import is `joiner/environmentConfig.ts`, which has none, so the module runs
@@ -81,6 +82,9 @@ export interface GuardEnvironment {
 /** Commands that never write the model (`docs/discovery/discovery_2026-10-01_168_b_guard.md` §3.2). */
 const READING_COMMANDS: ReadonlySet<string> = new Set(['list', 'show', 'help', 'eval', 'validate']);
 
+/** The reading commands whose output prints the model, so it can name what the profile hides (#176). */
+const MODEL_READING_COMMANDS: ReadonlySet<string> = new Set(['list', 'show', 'eval', 'validate']);
+
 /** Commands whose every inner command passes through this check again (`executeBlock`). */
 const CONTAINER_COMMANDS: ReadonlySet<string> = new Set(['block']);
 
@@ -96,8 +100,10 @@ const NO_RESOLUTION = 'This change could not be matched to an element of the mod
  * The refusal for a command the profile does not allow, or `null`.
  *
  * - No profile in the URL: `null`, always (developer mode).
- * - `list`, `show`, `help`, `eval`, `validate` and `block`: allowed, even when the profile is
- *   missing; the commands inside a block are checked one by one.
+ * - `list`, `show`, `eval`, `validate`: refused, even when the profile is missing; their output
+ *   can name what the profile hides (#176).
+ * - `help` and `block`: allowed, even when the profile is missing; the commands inside a block
+ *   are checked one by one.
  * - Profile in the URL but not in the project: every other command is refused.
  * - The metamodel commands, and `create` / `set` / `rename` / `delete` outside M1 or with an
  *   element type other than `instance`: refused as changes to the language.
@@ -111,6 +117,16 @@ const NO_RESOLUTION = 'This change could not be matched to an element of the mod
  */
 export function checkCommandPermission(cmd: GuardCommand, env: GuardEnvironment): PermissionRefusal | null {
     if (!env.profileId) return null;
+    // What a reading command prints can name an element or a type the profile hides, and nothing
+    // here can tell which before it runs (`eval` reaches every instance): refused, profile found
+    // or not (#176). The consumer has no surface that issues them; the Configurator shows the model.
+    if (MODEL_READING_COMMANDS.has(cmd.command)) {
+        return {
+            code: 'PROFILE_COMMAND_LOCKED',
+            message: `'${cmd.command}' isn't available in this environment.`,
+            suggestion: 'The elements this environment shows are in the Configurator.'
+        };
+    }
     if (READING_COMMANDS.has(cmd.command) || CONTAINER_COMMANDS.has(cmd.command)) return null;
 
     if (!env.profile) {

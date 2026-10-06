@@ -229,10 +229,26 @@ describe('checkCommandPermission — a create inside a parent writes the parent 
 // ─── commands outside the instance gestures ──────────────────────────────────
 
 describe('checkCommandPermission — the rest of the language', () => {
-    it('the reading commands pass in consumer mode, even when the profile is missing', () => {
+    it('help passes in consumer mode, even when the profile is missing', () => {
+        expect(code({ command: 'help', level: 'M1' })).toBeNull();
+        expect(code({ command: 'help', level: 'M2' }, MISSING)).toBeNull();
+    });
+
+    it('the reading commands that print the model are refused, even when the profile is missing (#176)', () => {
+        for (const command of ['list', 'show', 'eval', 'validate']) {
+            for (const env of [CONSUMER, MISSING]) {
+                const r = checkCommandPermission({ command, level: 'M1' }, env);
+                expect(r?.code).toBe('PROFILE_COMMAND_LOCKED');
+                expect(r?.message).toBe(`'${command}' isn't available in this environment.`);
+                expect(r?.suggestion).toBe('The elements this environment shows are in the Configurator.');
+            }
+            expect(code({ command, level: 'M2' })).toBe('PROFILE_COMMAND_LOCKED');
+        }
+    });
+
+    it('CONTROL: in developer mode the reading commands pass', () => {
         for (const command of ['list', 'show', 'help', 'eval', 'validate']) {
-            expect(code({ command, level: 'M1' })).toBeNull();
-            expect(code({ command, level: 'M2' }, MISSING)).toBeNull();
+            expect(code({ command, level: 'M1' }, DEVELOPER)).toBeNull();
         }
     });
 
