@@ -679,36 +679,60 @@ export async function executeDeleteInstance(
         };
     }
 
-    return new Promise((resolve) => {
-        try {
-            // Canonical cascade delete (Dummy.get_delete): cleans the incoming
-            // reference slots via pointedBy (case 'values'), the instance's own
-            // DValue features (children), model.objects and its graph vertices.
-            // The previous raw DeleteElementAction removed only the idlookup
-            // entry and left all of those dangling. .delete() opens its own
-            // TRANSACTION, so no outer wrapper here (canvasToJjom idiom).
-            (lObject as any).delete();
-            // Free the handle so it can be reused later in the same run, and its place in the
-            // slot it was created into (R-JS-9).
-            unregisterHandle(instanceName);
-            forgetPendingChild(lObject.id);
-            resolve({
-                success: true,
-                command: 'delete',
-                message: `Deleted instance '${instanceName}'`,
-                data: { id: lObject.id, name: instanceName, type: 'instance' },
-                affectedElements: [lObject.id],
-                undoable: true
-            });
-        } catch (error) {
-            resolve({
+    try {
+        // #171: the canonical cascade (Dummy.get_delete) cleans the incoming reference
+        // slots, the instance's own DValue slots, model.objects and its graph vertices,
+        // but it stops at the slots: an element a containment slot holds survived with a
+        // `father` that no longer resolved (measured, discovery_2026-10-04_157_closing_defects.md
+        // D3b). So the delete goes through the Configurator's and the Data Manager's plan
+        // (deleteAdapter, 12d): `descendantsOf` lists the contained elements and each one
+        // gets its own .delete(), deepest first, the container last. Verdict dirty (no
+        // options): nothing is written first, each .delete() removes the incoming pointers
+        // by value as the single call did, and the deletes run now, before the result.
+        // Every .delete() opens its own TRANSACTION, so no outer wrapper (rule 12).
+        //
+        // The plan reads the store: queued writes land first (a container created or linked
+        // earlier in the same run is not there yet). The adapters are loaded here, as
+        // `action.ts` is in `settlePendingWrites`, so this file's module graph does not take
+        // on the editor-v2 adapter chain (it reaches `sync/canvasToJjom`).
+        await settlePendingWrites();
+        const { applyDelete, deletePlan, preflightFor } = await import('../../../components/editor-v2/hooks/deleteAdapter');
+        const { makeShapeCtx } = await import('../../../components/editor-v2/hooks/shapeAdapter');
+        const plan = deletePlan(preflightFor(targetModel.id, makeShapeCtx(targetModel.id).shape(), lObject.id), {});
+        if (applyDelete(plan) === 0) {
+            // A blocked plan, or an instance no longer in the store: nothing was deleted,
+            // and a success here would lie.
+            const reason = plan.blocked ?? `Instance '${instanceName}' is no longer in the model`;
+            return {
                 success: false,
                 command: 'delete',
-                message: `Failed to delete instance: ${(error as Error).message}`,
-                errors: [{ code: 'DELETE_INSTANCE_ERROR', message: (error as Error).message }]
-            });
+                message: `Failed to delete instance: ${reason}`,
+                errors: [{ code: 'DELETE_INSTANCE_ERROR', message: reason }]
+            };
         }
-    });
+        // Free the handle so it can be reused later in the same run, and the place every
+        // deleted element held in the slot it was created into (R-JS-9).
+        unregisterHandle(instanceName);
+        for (const id of plan.deletes) forgetPendingChild(id);
+        const contained = plan.deletes.length - 1;
+        return {
+            success: true,
+            command: 'delete',
+            message: contained > 0
+                ? `Deleted instance '${instanceName}' and ${contained} contained element${contained === 1 ? '' : 's'}`
+                : `Deleted instance '${instanceName}'`,
+            data: { id: lObject.id, name: instanceName, type: 'instance' },
+            affectedElements: plan.deletes,
+            undoable: true
+        };
+    } catch (error) {
+        return {
+            success: false,
+            command: 'delete',
+            message: `Failed to delete instance: ${(error as Error).message}`,
+            errors: [{ code: 'DELETE_INSTANCE_ERROR', message: (error as Error).message }]
+        };
+    }
 }
 
 // ============================================
