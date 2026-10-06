@@ -191,6 +191,41 @@ describe('checkCommandPermission — a delete and what it contains', () => {
     });
 });
 
+describe('checkCommandPermission — a create inside a parent writes the parent (R-JS-9, #178)', () => {
+    const inside = (container: GuardCommand['container']): GuardCommand => ({ ...create(EDIT), container });
+
+    it('a read parent is refused, naming its type', () => {
+        const r = checkCommandPermission(inside(READ), CONSUMER);
+        expect(r?.code).toBe('PROFILE_TYPE_LOCKED');
+        expect(r?.message).toBe("You can't change Competency elements in this environment.");
+    });
+
+    it('a hidden parent is refused too', () => {
+        expect(code(inside(HIDDEN))).toBe('PROFILE_TYPE_LOCKED');
+    });
+
+    it('a parent that did not resolve is refused with the sentence the handler would give', () => {
+        const r = checkCommandPermission(inside({ unresolved: "No instance named 'house1'" }), CONSUMER);
+        expect(r?.code).toBe('PROFILE_UNRESOLVED');
+        expect(r?.message).toBe("No instance named 'house1'");
+    });
+
+    it('CONTROL: an edit parent and an unlisted one pass, and so does a create at the root', () => {
+        expect(code(inside(EDIT))).toBeNull();
+        expect(code(inside(UNLISTED))).toBeNull();
+        expect(code(create(EDIT))).toBeNull();
+    });
+
+    it('the created type is checked first: a read type inside an edit parent is a create refusal', () => {
+        const r = checkCommandPermission({ ...create(READ), container: EDIT }, CONSUMER);
+        expect(r?.message).toBe("You can't create Competency elements in this environment.");
+    });
+
+    it('CONTROL: in developer mode the create passes whatever its parent', () => {
+        expect(code(inside(READ), DEVELOPER)).toBeNull();
+    });
+});
+
 // ─── commands outside the instance gestures ──────────────────────────────────
 
 describe('checkCommandPermission — the rest of the language', () => {

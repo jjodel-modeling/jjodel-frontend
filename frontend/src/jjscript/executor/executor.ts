@@ -369,6 +369,15 @@ function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCom
             const types = metaclassesNamed(metamodel, args.name);
             cmd.creates = types.length > 0 ? types : { unresolved: `Class '${args.name}' not found in metamodel` };
         }
+        // `create instance … in <Parent>.<reference>` (R-JS-9): the parent, by the same lookup as
+        // `resolveContainerSlot` in `commands/instance.ts`.
+        if (args.parent) {
+            const model = project ? resolveTargetModel(context, project) : null;
+            const handle = (args.parent.segments ?? []).join('::');
+            cmd.container = model
+                ? instanceType(resolveInstanceHandle(model, handle), handle)
+                : { unresolved: 'No active M1 model' };
+        }
         return cmd;
     }
     if (ast.command !== 'set' && ast.command !== 'rename' && ast.command !== 'delete') return cmd;

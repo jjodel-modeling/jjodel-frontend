@@ -56,6 +56,9 @@ export interface GuardCommand {
     elementType?: string;
     /** `create instance of X` at M1: every metaclass named exactly X (`metaclassesNamed`). */
     creates?: GuardType[] | GuardUnresolved;
+    /** `create instance of X … in <Parent>.<reference>` at M1 (R-JS-9): the exact metaclass of the
+     *  parent, whose slot the new instance is written into (#178). Absent: a create at the root. */
+    container?: GuardType | GuardUnresolved;
     /** `set` / `rename` / `delete` at M1: the exact metaclass of the instance. */
     subject?: GuardType | GuardUnresolved;
     /** `set` at M1 on a reference whose value names an instance: that instance's metaclass. */
@@ -98,7 +101,8 @@ const NO_RESOLUTION = 'This change could not be matched to an element of the mod
  * - Profile in the URL but not in the project: every other command is refused.
  * - The metamodel commands, and `create` / `set` / `rename` / `delete` outside M1 or with an
  *   element type other than `instance`: refused as changes to the language.
- * - At M1: `create instance of X` needs every class named X to be `edit`; `set`, `rename` and
+ * - At M1: `create instance of X` needs every class named X to be `edit`, and, created
+ *   `in <Parent>.<reference>`, the parent's exact class too (#178); `set`, `rename` and
  *   `delete` need the instance's exact class to be `edit`; a `set` that links to an instance
  *   needs that instance's class not to be `hidden`, and to be `edit` when the reference is a
  *   containment (the link moves the target); a `delete` needs every element of its containment
@@ -144,6 +148,12 @@ export function checkCommandPermission(cmd: GuardCommand, env: GuardEnvironment)
         if (types.length === 0) return unresolved(NO_RESOLUTION);
         for (const t of types) {
             if (resolveTypePermission(env.profile, t.id) !== 'edit') return typeLocked('create', t);
+        }
+        // Born in the parent's slot (R-JS-9): the create changes the parent, as a containment link does.
+        if (cmd.container !== undefined) {
+            const parent = cmd.container;
+            if (!isType(parent)) return unresolved(parent?.unresolved ?? NO_RESOLUTION);
+            if (resolveTypePermission(env.profile, parent.id) !== 'edit') return typeLocked('change', parent);
         }
         return null;
     }
