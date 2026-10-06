@@ -269,6 +269,27 @@ export function liftEndpoint(objectId: string, model: ContainmentModel, hidden: 
     return null;
 }
 
+/**
+ * The objects whose resolved vertex view resolves `visible` false (P-2026-10-03-1304, Q7): not drawn, whatever refers
+ * to them; the view hides the class. Empty at once when no view of the index declares the key. Pure.
+ */
+export function computeViewHidden(nodes: Node[], objByVertex: Map<string, string>, index: IRViewpointIndex, readCtx: ReadCtx, idlookup: Record<string, any>): Set<string> {
+    const out = new Set<string>();
+    const declares = (entries: ReadonlyArray<{ compiled: CompiledView }>) => entries.some(e => !!e.compiled.visible);
+    if (![...index.byMetaclass.values()].some(declares) && !declares(index.wildcard)) return out;
+    for (const n of nodes) {
+        const objectId = objByVertex.get(n.id);
+        const metaclassId = objectId ? idlookup[objectId]?.instanceof : undefined;
+        if (!objectId || typeof metaclassId !== 'string') continue;
+        const view = resolveIRView(objectId, metaclassId, index, readCtx, idlookup);
+        if (!view?.visible) continue;
+        let shown = true;
+        try { shown = view.visible(readCtx, objectId) !== false; } catch { shown = true; }
+        if (!shown) out.add(objectId);
+    }
+    return out;
+}
+
 /** Apply hidden flags to nodes (pure; returns the same array when nothing changes). */
 export function decorateNodes(nodes: Node[], model: ContainmentModel, hidden: Set<string>): Node[] {
     if (hidden.size === 0) return nodes;

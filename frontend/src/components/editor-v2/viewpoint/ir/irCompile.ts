@@ -22,17 +22,23 @@ import type {
     CompiledRowView,
     CompiledView,
     Conditional,
+    FieldSegment,
     FontFamilyToken,
     FontWeightToken,
+    LabelAnchor,
     Literal,
     PathExpr,
     TextStyle,
     Predicate,
     NodeViewIR,
     RowViewIR,
+    TextTransformToken,
 } from './irTypes';
+import type { CSSProperties } from 'react';
 import type { ReadCtx } from './irReadCtx';
-import { parsePathExpr } from './pathExpr';
+import { parsePathExpr, presentationAttrOf } from './pathExpr';
+import { labelEditsFeature, labelEditsName } from './irLabelEdit';
+import { proxyToIdReplacer } from '../../../../model/unproxy';
 
 /**
  * Multi-hop cross-object paths collected during a single compileView /
@@ -96,8 +102,20 @@ function harvestChannels(): string[] | null {
  * KNOWN LIMIT (v1.1, to be fixed in spec v1.2 dependency-set work): only
  * single-hop self paths are fully reactive; multi-hop navigation reads the
  * target eagerly but changes on the *navigated* object do not invalidate self.
+ *
+ * `node.[x]` (R-SIM-108), recognized by the JjEL parser and not by the PathExpr
+ * grammar, reads the element's presentation in the simulation run. It is not a
+ * feature: no `featureNames`, no cross path; it declares the 'mark' channel, the
+ * version every run change bumps, as `marked` does. `presentation: false` is for
+ * an operand that must be an element (`isKind.path`): there it falls through to
+ * parsePathExpr and keeps the error it had.
  */
-function compilePath(expr: PathExpr): { fn: CompiledAccessor; featureNames: string[] } {
+function compilePath(expr: PathExpr, presentation = true): { fn: CompiledAccessor; featureNames: string[] } {
+    const attr = presentation ? presentationAttrOf(expr) : null;
+    if (attr !== null) {
+        channelSink?.add('mark');
+        return { fn: (ctx: ReadCtx, elementId: string) => ctx.getPresentation?.(elementId, attr), featureNames: [] };
+    }
     const { steps, featureNames } = parsePathExpr(expr);
     const fn: CompiledAccessor = (ctx: ReadCtx, elementId: string) => {
         let currentId = elementId;
@@ -140,12 +158,12 @@ function isLiteral(x: PathExpr | Literal): x is Literal {
     return typeof x === 'object' && x !== null && 'kind' in x;
 }
 
-function compileOperand(x: PathExpr | Literal, deps: Set<string>): CompiledAccessor {
+function compileOperand(x: PathExpr | Literal, deps: Set<string>, presentation = true): CompiledAccessor {
     if (isLiteral(x)) {
         const v = x.value;
         return () => v;
     }
-    const { fn, featureNames } = compilePath(x);
+    const { fn, featureNames } = compilePath(x, presentation);
     featureNames.forEach(f => deps.add(f));
     return fn;
 }
@@ -182,7 +200,8 @@ function compilePredicate(p: Predicate | undefined, deps: Set<string>): Compiled
         case 'isKind': {
             const cls = p.class;
             if (p.path) {
-                const acc = compileOperand(p.path, deps);
+                // The path names an element, and `node.[x]` is a value: refused (R-SIM-108).
+                const acc = compileOperand(p.path, deps, false);
                 return (ctx, id) => {
                     const target = acc(ctx, id);
                     return typeof target === 'string' ? ctx.isKindOf(target, cls) : false;
@@ -311,13 +330,86 @@ function compileTextStyle(style: TextStyle | undefined, deps: Set<string>): Comp
     if (style.fontStyle !== undefined) out.fontStyle = compileConditional<'normal' | 'italic' | ''>(style.fontStyle, '', deps);
     if (style.color !== undefined) out.color = compileConditional<string>(style.color, '', deps);
     if (style.underline !== undefined) out.underline = compileConditional<boolean>(style.underline, false, deps);
+    // R-VP-20: two scalar axes, compiled like the others so the render reads one shape. A scalar never
+    // reaches the fallback; anything else that does resolves to "no override".
+    if (style.letterSpacing !== undefined) out.letterSpacing = compileConditional<number | undefined>(style.letterSpacing, undefined, deps);
+    if (style.textTransform !== undefined) out.textTransform = compileConditional<TextTransformToken | ''>(style.textTransform, '', deps);
     return out;
 }
 
+/**
+ * Closed vocabulary of `TextStyle.textTransform` (R-VP-20). A Record keyed on the union, as
+ * LABEL_ANCHORS is; irValidate reads it for the authoring-time rule, the render below for what it emits.
+ */
+export const TEXT_TRANSFORMS: Record<TextTransformToken, true> = { uppercase: true, lowercase: true, none: true };
+
+/** FontFamilyToken -> design-system CSS var. */
+const FONT_FAMILY_VAR: Record<string, string> = { sans: 'var(--font-sans)', mono: 'var(--font-mono)' };
+/** FontWeightToken -> numeric CSS weight. */
+const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semibold: 600, bold: 700 };
+
+/**
+ * Resolve a CompiledTextStyle into an inline style for the current element
+ * (ir-1.3 TS1). Only authored axes with a non-empty resolved value are emitted,
+ * so an absent axis — or a conditional axis whose branch does not match — inherits
+ * the surface's CSS default (irStyle.ts BASE_CSS). An authored axis is always
+ * emitted (even when its value equals a CSS default) so it overrides the class rule.
+ *
+ * Here since P-2026-09-30-0150, moved from IRNodeContent.tsx with its two maps and
+ * otherwise unchanged but for the two axes of R-VP-20: the pure irEdgeViews.ts resolves
+ * an edge label's style with it, and cannot import the component (the joiner barrel).
+ * IRNodeContent re-exports it under the same name, which is where IRRow imports it from.
+ */
+export function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): CSSProperties | undefined {
+    if (!cs) return undefined;
+    const s: CSSProperties = {};
+    if (cs.fontFamily) { const v = cs.fontFamily(ctx, id); if (v) s.fontFamily = FONT_FAMILY_VAR[v]; }
+    if (cs.fontSize) { const v = cs.fontSize(ctx, id); if (v && v > 0) s.fontSize = `${v}px`; }
+    if (cs.fontWeight) { const v = cs.fontWeight(ctx, id); if (v) s.fontWeight = FONT_WEIGHT_NUM[v]; }
+    if (cs.fontStyle) { const v = cs.fontStyle(ctx, id); if (v) s.fontStyle = v; }
+    if (cs.color) { const v = cs.color(ctx, id); if (v) s.color = v; }
+    // Underline means the native instance-name underline (UML convention), offset
+    // included: the 3px is baked into the axis, not a separate field. Same value as the
+    // bare literal in instanceNode.scss (.mm-object__name). Offset authoring: owed to S5.
+    if (cs.underline) { const v = cs.underline(ctx, id); if (v) { s.textDecoration = 'underline'; s.textUnderlineOffset = '3px'; } }
+    // R-VP-20. Permissive towards what is persisted (R-B9-bis): a spacing that is not a finite
+    // number, or a case outside TEXT_TRANSFORMS, emits nothing. Zero is an authored spacing.
+    if (cs.letterSpacing) { const v = cs.letterSpacing(ctx, id); if (typeof v === 'number' && Number.isFinite(v)) s.letterSpacing = `${v}em`; }
+    if (cs.textTransform) { const v = cs.textTransform(ctx, id); if (typeof v === 'string' && Object.prototype.hasOwnProperty.call(TEXT_TRANSFORMS, v)) s.textTransform = v as TextTransformToken; }
+    return Object.keys(s).length ? s : undefined;
+}
+
+/**
+ * The compiled style of each literal segment of a row format (R-VP-20), by segment index, as a
+ * key to spread: empty when no literal declares one, so a compartment without the key compiles
+ * to the shape it had.
+ */
+function segmentStylesOf(segments: FieldSegment[], deps: Set<string>): { segmentStyles?: (CompiledTextStyle | undefined)[] } {
+    if (!Array.isArray(segments) || !segments.some(seg => seg?.kind === 'literal' && seg.style !== undefined)) return {};
+    return { segmentStyles: segments.map(seg => (seg?.kind === 'literal' ? compileTextStyle(seg.style, deps) : undefined)) };
+}
+
+/**
+ * Closed vocabulary of `LabelSpec.anchor` (R-VP-15 (1), P-2026-09-29-1245). A Record keyed on
+ * the union, as VALID_PREDICATE_OPS is: an anchor added to the type without being added here
+ * fails to compile. irValidate reads it for the authoring-time rule (R-B9-bis).
+ */
+export const LABEL_ANCHORS: Record<LabelAnchor, true> = { n: true, e: true, s: true, w: true };
+
+/** The render side of the anchor: permissive towards what is persisted, so an absent or
+ *  unknown anchor draws below ('s') instead of dropping the label (R-B9-bis). */
+export function resolveLabelAnchor(anchor: unknown): LabelAnchor {
+    return typeof anchor === 'string' && Object.prototype.hasOwnProperty.call(LABEL_ANCHORS, anchor)
+        ? anchor as LabelAnchor
+        : 's';
+}
+
 /** Cheap structural hash for the compile cache (djb2 over JSON). Also reused by
- * irDefaults.isMigratedDefaultView for the factory-equality comparison. */
+ * irDefaults.isMigratedDefaultView for the factory-equality comparison. An L object
+ * stored in the ir is hashed as its id instead of walked (P-2026-09-29-2121); on an ir
+ * without one the string is byte-identical to a plain stringify. */
 export function irHash(ir: AnyViewIR): string {
-    const s = JSON.stringify(ir);
+    const s = JSON.stringify(ir, proxyToIdReplacer);
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
     return String(h);
@@ -337,6 +429,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     channelSink = new Set<string>();
     const predicate = compilePredicate(ir.predicate, deps);
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
+    // Q7 (P-2026-10-03-1304): compiled only when declared, so a view without it compiles to the key list it had.
+    const declaredVisible = ir.kind === 'vertex' ? ir.visible : undefined;
+    const visible = declaredVisible !== undefined ? compileConditional<boolean>(declaredVisible, true, deps) : undefined;
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
     // Border, one compile per axis (slice 2, D1): the same three lines compileEdgeView
     // runs for `line`, with the same fallbacks — '' for the colour (the "no override"
@@ -395,10 +490,15 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
             const t = l.source.text;
             text = () => t;
         }
-        const editsName = l.source.from === 'intrinsic'
-            && (l.source.prop === 'name' || l.source.prop === 'qualifiedName')
-            && l.editable !== false;
-        return { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName, style: compileTextStyle(l.style, deps) };
+        const editsName = labelEditsName(l);
+        const compiled: CompiledLabel = { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName, style: compileTextStyle(l.style, deps) };
+        // Outside label (R-VP-15 (1)): the side is resolved here, once, so the render only
+        // reads it. An inside label carries no anchor, even a stray persisted one.
+        if (l.position === 'outside') compiled.anchor = resolveLabelAnchor(l.anchor);
+        // Path label (R-IRN-41): its feature only when it can edit, so every other label keeps its keys.
+        const editsFeature = labelEditsFeature(l);
+        if (editsFeature !== null) compiled.editsFeature = editsFeature;
+        return compiled;
     });
 
     const badges: CompiledBadge[] = (ir.shape.badges ?? []).map(b => ({
@@ -412,6 +512,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         id: fc.id,
         source: fc.source.from,
         segments: fc.rowFormat.segments,
+        // R-VP-20: the attributes exclude, copied verbatim and only on its own source (the
+        // validator applies the vocabulary, the render only compares names).
+        ...(fc.source.from === 'attributes' && Array.isArray(fc.source.exclude) ? { exclude: fc.source.exclude } : {}),
         // Section heading for the form rendering (2026-08-26). Copied verbatim, never
         // defaulted here: the fallback (`id` capitalized) belongs to the form host, and
         // materializing it now would make an authored title indistinguishable from a
@@ -432,6 +535,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         // axes extend the HOST view's deps, which is the right owner: the
         // compartment is drawn by the host node.
         rowStyle: compileTextStyle(fc.rowFormat.style, deps),
+        ...segmentStylesOf(fc.rowFormat.segments, deps),
     }));
 
     let containment: CompiledContainment | null = null;
@@ -480,13 +584,18 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         badges,
         fieldCompartments,
     };
+    // Entry mark (R-VP-22): written only when declared in the vocabulary, so a view without it
+    // compiles to the key list it had; a value outside it renders as absent (R-B9-bis).
+    const entry: unknown = ir.shape.entry;
+    if (entry === 'dot' || entry === 'arrow') compiled.entry = entry;
+    if (visible) compiled.visible = visible;
     compileCache.set(key, compiled);
     return compiled;
 }
 
 // ---- edge views (Fase 2c) --------------------------------------------------
 
-import type { CompiledEdgeView, EdgeViewIR, TextSource } from './irTypes';
+import type { CompiledEdgeView, EdgeTermination, EdgeViewIR, TextSource } from './irTypes';
 import { CONTAINER_ENDPOINT } from './irTypes';
 
 function compileTextSource(src: TextSource | undefined, deps: Set<string>): CompiledAccessor | null {
@@ -511,6 +620,89 @@ function compileTextSource(src: TextSource | undefined, deps: Set<string>): Comp
     return () => t;
 }
 
+/**
+ * The centre label of an edge view (R-VP-20 (4)): the `template` when it is a non-empty array,
+ * else `center`. The template concatenates its segments, as a row view's does, with one rule of
+ * its own: a value segment (path, intrinsic) that resolves empty draws nothing and takes with it
+ * the literal right before it, its caption (`weight = ` with no weight). Every value empty, the
+ * label is what the other literals say, and nothing at all when there are none, which draws no
+ * label, as an empty `center` path does; a template of literals only always draws. A template
+ * that is not a non-empty array falls back to `center`: the render is permissive, the validator
+ * refuses it (R-B9-bis).
+ */
+function compileLabelText(labels: EdgeViewIR['edge']['labels'], deps: Set<string>): CompiledAccessor | null {
+    const template = labels?.template;
+    if (!Array.isArray(template) || template.length === 0) return compileTextSource(labels?.center, deps);
+    const parts = template.map(seg => ({
+        value: seg?.from === 'path' || seg?.from === 'intrinsic',
+        text: compileTextSource(seg, deps) ?? (() => ''),
+    }));
+    return (ctx, id) => {
+        const drawn = parts.map(p => { const v = p.text(ctx, id); return v == null ? '' : String(v); });
+        let out = '';
+        for (let i = 0; i < parts.length; i++) {
+            // A literal right before an empty value is its caption: it goes with it.
+            if (!parts[i].value && parts[i + 1]?.value && drawn[i + 1] === '') continue;
+            out += drawn[i];
+        }
+        return out;
+    };
+}
+
+/** The TextSource kinds an end label may take (R-VP-23); anything else renders as absent (R-B9-bis). */
+const END_LABEL_SOURCES: Readonly<Record<string, true>> = { path: true, literal: true, intrinsic: true };
+
+/** An end label (R-VP-23): a text source compiled as a centre `center` is, or null when it is not one. */
+function compileEndLabel(src: unknown, deps: Set<string>): CompiledAccessor | null {
+    if (!src || typeof src !== 'object' || Array.isArray(src)) return null;
+    const from = (src as { from?: unknown }).from;
+    if (typeof from !== 'string' || !Object.prototype.hasOwnProperty.call(END_LABEL_SOURCES, from)) return null;
+    return compileTextSource(src as TextSource, deps);
+}
+
+/**
+ * The labels at one end (slice E): an object without `from` is an `EdgeEndLabels`, its multiplicity and role
+ * compiled as an R-VP-23 end label each; anything else is read as the R-VP-23 text source, the multiplicity.
+ */
+function compileEndLabels(src: unknown, deps: Set<string>): { multiplicity: CompiledAccessor | null; role: CompiledAccessor | null } {
+    if (src && typeof src === 'object' && !Array.isArray(src) && !('from' in src)) {
+        const parts = src as { multiplicity?: unknown; role?: unknown };
+        return { multiplicity: compileEndLabel(parts.multiplicity, deps), role: compileEndLabel(parts.role, deps) };
+    }
+    return { multiplicity: compileEndLabel(src, deps), role: null };
+}
+
+/** A Conditional end (slice E): an object carrying `when` or `rules`, as `compileConditional` discriminates them. */
+const isConditionalEnd = (v: unknown): v is Exclude<Conditional<EdgeTermination>, EdgeTermination> =>
+    !!v && typeof v === 'object' && !Array.isArray(v) && ('when' in v || 'rules' in v);
+
+/**
+ * The end a view states for every instance: a plain end as written (the compile of before), a Conditional's
+ * `else` / `default`, else the default end. The per-instance value of a Conditional is its resolver's.
+ */
+function staticTermination(v: unknown, fallback: EdgeTermination): EdgeTermination {
+    if (!isConditionalEnd(v)) return (v ?? fallback) as EdgeTermination;
+    const other = 'when' in v ? v.else : v.default;
+    return other !== undefined ? other : fallback;
+}
+
+/**
+ * The resolver of a Conditional end (slice E), or null: a plain end has none, and a malformed Conditional
+ * (a `rules` that is not a list, a predicate the compile refuses) renders as the static end instead of
+ * dropping the view (R-B9-bis: the render is permissive, `validateIR` refuses it).
+ */
+function compileTerminationEnd(v: unknown, fallback: EdgeTermination, deps: Set<string>): CompiledConditional<EdgeTermination> | null {
+    if (!isConditionalEnd(v)) return null;
+    const local = new Set<string>();
+    try {
+        const fn = compileConditional<EdgeTermination>(v, fallback, local);
+        local.forEach(f => deps.add(f));
+        return fn;
+    } catch {
+        return null;
+    }
+}
+
 const edgeCompileCache = new Map<string, CompiledEdgeView>();
 
 export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeView {
@@ -527,6 +719,10 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
     const e = ir.edge ?? {};
     const compileExpr = (expr: string | undefined): CompiledAccessor | null => {
         if (!expr) return null;
+        // An endpoint names an element; `node.[x]` is a value of one (R-SIM-108).
+        if (presentationAttrOf(expr) !== null) {
+            throw new Error(`[ir] ${expr} is a presentation value, not an edge endpoint`);
+        }
         const { fn, featureNames } = compilePath(expr);
         featureNames.forEach(f => deps.add(f));
         return fn;
@@ -559,14 +755,37 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
         lineWidth: e.line?.width !== undefined ? compileConditional(e.line.width, 1, deps) : null,
         lineStyle: e.line?.style !== undefined ? compileConditional(e.line.style, 'solid' as const, deps) : null,
         terminations: {
-            sourceEnd: e.terminations?.sourceEnd ?? 'none',
-            targetEnd: e.terminations?.targetEnd ?? 'openArrow',
+            sourceEnd: staticTermination(e.terminations?.sourceEnd, 'none'),
+            targetEnd: staticTermination(e.terminations?.targetEnd, 'openArrow'),
         },
         routing: e.routing ?? null,
-        labelText: compileTextSource(e.labels?.center, deps),
+        labelText: compileLabelText(e.labels, deps),
         labelPlacement: e.labels?.placement ?? 'auto',
         persistWaypoints: e.persistWaypoints ?? true,
     };
+    // R-VP-22: the arc, the same way: only when declared in the vocabulary.
+    const curve: unknown = e.curve;
+    if (curve === 'arc') compiled.curve = curve;
+    // R-VP-20 (TS3): the label style, compiled only when it is an object, so an edge view without
+    // it compiles to the shape it had and irEdgeViews writes no irLabelStyle.
+    const labelStyleIR = e.labels?.style;
+    if (labelStyleIR && typeof labelStyleIR === 'object' && !Array.isArray(labelStyleIR)) {
+        compiled.labelStyle = compileTextStyle(labelStyleIR, deps);
+    }
+    // R-VP-23: the end labels, each compiled only when it is a text source of the vocabulary, so an
+    // edge view without them compiles to the shape it had and irEdgeViews writes no end text.
+    // Slice E: the role of an `EdgeEndLabels`, compiled only when declared, the same way.
+    const sourceEnd = compileEndLabels(e.labels?.sourceEnd, deps);
+    if (sourceEnd.multiplicity) compiled.sourceEndText = sourceEnd.multiplicity;
+    if (sourceEnd.role) compiled.sourceEndRole = sourceEnd.role;
+    const targetEnd = compileEndLabels(e.labels?.targetEnd, deps);
+    if (targetEnd.multiplicity) compiled.targetEndText = targetEnd.multiplicity;
+    if (targetEnd.role) compiled.targetEndRole = targetEnd.role;
+    // Slice E: a Conditional end's resolver, only when declared, so a plain end compiles to the shape it had.
+    const sourceEndTermination = compileTerminationEnd(e.terminations?.sourceEnd, 'none', deps);
+    if (sourceEndTermination) compiled.sourceEndTermination = sourceEndTermination;
+    const targetEndTermination = compileTerminationEnd(e.terminations?.targetEnd, 'openArrow', deps);
+    if (targetEndTermination) compiled.targetEndTermination = targetEndTermination;
     compiled.dependencySet = Array.from(deps);
     compiled.crossPaths = dedupeCrossPaths(crossPathSink ?? []);
     const channels = harvestChannels();

@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, rmSync, appendFileSync, lstatSync, readlinkSync, symlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -57,12 +57,21 @@ exit \${FAKE_EXIT:-0}
 // starting `test(` of each test file (the files named, else every *.test.ts
 // under the cwd), a file holding FAKE_IMPORT_FAIL red at import, one holding
 // FAKE_FAILED_TEST with a failed test; any other script exits 0 unless named in
-// FAKE_RED. Every call is recorded in npm.txt with its cwd.
+// FAKE_RED. Every call is recorded in npm.txt with its cwd, and in nm.txt with
+// what its cwd holds at node_modules (none, dir:<real path>, link:<real path>).
 const fakeNpm = () => `#!${process.execPath}
 const fs = require('fs');
 const path = require('path');
 const args = process.argv.slice(2);
 fs.appendFileSync(path.join(process.env.FAKE_STATE, 'npm.txt'), fs.realpathSync(process.cwd()) + ' ' + args.join(' ') + '\\n');
+const nm = (() => {
+  try {
+    return (fs.lstatSync('node_modules').isSymbolicLink() ? 'link:' : 'dir:') + fs.realpathSync('node_modules');
+  } catch {
+    return 'none';
+  }
+})();
+fs.appendFileSync(path.join(process.env.FAKE_STATE, 'nm.txt'), fs.realpathSync(process.cwd()) + ' ' + args[1] + ' ' + nm + '\\n');
 const red = (process.env.FAKE_RED || '').split(',').filter(Boolean);
 if (args[0] !== 'run') process.exit(99);
 const script = args[1];
@@ -338,7 +347,7 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(res.ok).toBe(true);
         expect(res.merge).toBe(gitIn(l, repo, ['rev-parse', 'HEAD']));
         expect(res.tag).toBe('pre-feat');
-        expect(res.gates.map((g: { name: string }) => g.name)).toEqual(['typecheck', 'typecheck:scripts', 'vitest', 'build', 'check:docs', 'check:agents', 'check:scripts']);
+        expect(res.gates.map((g: { name: string }) => g.name)).toEqual(['typecheck', 'typecheck:scripts', 'vitest', 'build', 'check:docs', 'check:agents', 'check:scripts', 'check:addonly']);
         expect(res.gates.every((g: { ok: boolean }) => g.ok)).toBe(true);
         expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
         const s = laneRun(l, ['status', NEW_ID]);
@@ -432,6 +441,28 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(laneRun(r.l, ['status', NEW_ID]).stdout).toContain('outcome: Outcome: blocked');
     });
 
+    test('kills "check:addonly ignored", "the merge commit kept on an addonly violation", "a second rollback path invented": check:addonly red resets the trunk to its pre-merge tip, unlike every other gate', () => {
+        const r = repoLab();
+        expect(directMerge(r, { FAKE_RED: 'check:addonly' }).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(laneDir(r.l), 'exit.txt'), 'utf8').trim()).toBe('1');
+        const res = result(r.l);
+        expect(res.outcome).toBe('blocked');
+        expect(res.merge).toBe(null);
+        expect(res.gates.find((g: { name: string }) => g.name === 'check:addonly').ok).toBe(false);
+        expect(res.gates.find((g: { name: string }) => g.name === 'build').ok).toBe(true);
+        expect(res.reason).toContain('reset');
+        expect(res.reason).toContain(r.trunkTip);
+        const { l, repo } = r;
+        // The reset lands on the SAME tip the rollback tag already recorded (RC-31): no
+        // second rollback mechanism, and the prompt-file commit is undone with it.
+        expect(gitIn(l, repo, ['rev-parse', 'HEAD'])).toBe(r.trunkTip);
+        expect(gitIn(l, repo, ['rev-parse', 'pre-feat'])).toBe(r.trunkTip);
+        expect(existsSync(join(repo, MERGE_FILE))).toBe(false);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(laneRun(l, ['status', NEW_ID]).stdout).toContain('outcome: Outcome: blocked');
+    });
+
     test('kills "typecheck judged by its exit code": a new type error on the branch is red although tsc exits 2 on both sides', () => {
         const r = repoLab({ tscError: true });
         expect(directMerge(r).status).toBe(0);
@@ -474,6 +505,89 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(out.stdout).toContain('direct: falls back');
         expect(out.stdout).toContain('code files changed on both sides');
         expect(gitIn(r.l, r.wt, ['rev-parse', 'HEAD'])).toBe(r.branchTip);
+    });
+});
+
+// ── merge --direct: the node_modules of the trees the gates run in (P14) ─────
+
+/** A shared node_modules in the main worktree repo/, excluded from git as the real one is ignored. */
+function sharedModules(r: RepoLab): string {
+    const p = join(r.repo, 'frontend', 'node_modules');
+    mkdirSync(p, { recursive: true });
+    writeFileSync(join(p, 'marker'), 'shared\n');
+    mkdirSync(join(r.repo, '.git', 'info'), { recursive: true });
+    appendFileSync(join(r.repo, '.git', 'info', 'exclude'), '/frontend/node_modules\n');
+    return p;
+}
+
+const nmCalls = (l: Lab) => (existsSync(join(l.state, 'nm.txt')) ? readFileSync(join(l.state, 'nm.txt'), 'utf8').trim().split('\n') : []);
+const lstatOf = (p: string) => {
+    try {
+        return lstatSync(p);
+    } catch {
+        return null;
+    }
+};
+
+describe('lane-run merge --direct, the node_modules link (P14)', { timeout: 60000 }, () => {
+    test('kills "the link not created before the incoming gate", "the link left after the gates", "the link not in result.json", "the link not in the commit body": a branch worktree with no node_modules runs the incoming vitest through a link to the shared one, removed after the gates', () => {
+        const r = repoLab();
+        const shared = sharedModules(r);
+        const link = join(r.wt, 'frontend', 'node_modules');
+        expect(directMerge(r).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(nmCalls(r.l)).toContain(`${join(r.wt, 'frontend')} test link:${shared}`);
+        expect(lstatOf(link)).toBe(null);
+        const res = result(r.l);
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.nodeModules).toEqual([{ tree: r.repo, state: 'present' }, { tree: r.wt, state: 'created', target: shared, removed: true }]);
+        const body = gitIn(r.l, r.repo, ['log', '-1', '--format=%b']);
+        expect(body).toContain(`node_modules: ${link} was missing; linked to ${shared} for the gates, the link removed after them (P14).`);
+        expect(body.indexOf('node_modules: ')).toBeLessThan(body.indexOf('Model: none'));
+        expect(gitIn(r.l, r.wt, ['status', '--porcelain'])).toBe('');
+    });
+
+    test('kills "a directory replaced by a link", "a directory left unreported": a node_modules directory in the branch worktree is left as it is and named in result.json and the commit body', () => {
+        const r = repoLab();
+        const shared = sharedModules(r);
+        const own = join(r.wt, 'frontend', 'node_modules');
+        mkdirSync(own, { recursive: true });
+        writeFileSync(join(own, 'marker'), 'own\n');
+        expect(directMerge(r).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(lstatOf(own)?.isDirectory()).toBe(true);
+        expect(readFileSync(join(own, 'marker'), 'utf8')).toBe('own\n');
+        expect(nmCalls(r.l)).toContain(`${join(r.wt, 'frontend')} test dir:${own}`);
+        const res = result(r.l);
+        expect(res.nodeModules[1]).toEqual({ tree: r.wt, state: 'left', detail: `a directory, not a link to ${shared}` });
+        expect(gitIn(r.l, r.repo, ['log', '-1', '--format=%b'])).toContain(`node_modules: ${own} left as it is: a directory, not a link to ${shared} (P14).`);
+    });
+
+    test('kills "a link it did not create removed", "a present link relinked": a link to the shared node_modules already in the branch worktree is used and kept', () => {
+        const r = repoLab();
+        const shared = sharedModules(r);
+        const link = join(r.wt, 'frontend', 'node_modules');
+        symlinkSync(shared, link);
+        expect(directMerge(r).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(lstatOf(link)?.isSymbolicLink()).toBe(true);
+        expect(readlinkSync(link)).toBe(shared);
+        const res = result(r.l);
+        expect(res.nodeModules).toEqual([{ tree: r.repo, state: 'present' }, { tree: r.wt, state: 'present' }]);
+        expect(gitIn(r.l, r.repo, ['log', '-1', '--format=%b'])).not.toContain('node_modules:');
+    });
+
+    test('kills "the receiving branch tree not linked in trunk-into", "the shared path hard-coded": a trunk-into merge runs its gates in the branch worktree through a link to the main worktree\'s node_modules', () => {
+        const r = repoLab();
+        const shared = sharedModules(r);
+        const link = join(r.wt, 'frontend', 'node_modules');
+        const out = laneRun(r.l, ['merge', '--trunk-into', 'feat', '--from', 'trunk', '--direct'], { cwd: r.wt });
+        expect(out.status, out.stderr).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(nmCalls(r.l)).toContain(`${join(r.wt, 'frontend')} typecheck link:${shared}`);
+        expect(nmCalls(r.l).filter((x) => x.includes(' none'))).toEqual([]);
+        expect(lstatOf(link)).toBe(null);
+        expect(result(r.l).nodeModules).toEqual([{ tree: r.wt, state: 'created', target: shared, removed: true }]);
     });
 });
 
@@ -541,6 +655,26 @@ describe('lane-run go on a direct merge', { timeout: 60000 }, () => {
         expect(again.stderr).toContain('already closed');
         expect(gitIn(m.l, m.repo, ['rev-parse', 'HEAD'])).toBe(closed);
         expect(calls(m.l)).toEqual([]);
+    });
+
+    test('kills "the take-trunk closure flips nothing", "the take-trunk Status names the wrong lane", "no warning before the closure", "the warning after it": a direct trunk-into merge warns while its prompt reads da eseguire, and go flips it in the branch worktree', () => {
+        const r = repoLab();
+        const out = laneRun(r.l, ['merge', '--trunk-into', 'feat', '--from', 'trunk', '--direct'], { cwd: r.wt });
+        expect(out.status, out.stderr).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        const mergeSha = gitIn(r.l, r.wt, ['rev-parse', 'HEAD']);
+        const before = laneRun(r.l, ['status', NEW_ID]).stdout.split('\n').filter((x) => x.startsWith('warning:'));
+        expect(before).toEqual([`warning: ${TAKE_FILE}: \`Status: da eseguire\` after \`Outcome: hard-stop\`; the closure commit owes the flip (P16, RC-17)`]);
+        const g = laneRun(r.l, ['go', NEW_ID, '--smoke', SMOKE]);
+        expect(g.status, g.stderr).toBe(0);
+        expect(gitIn(r.l, r.wt, ['rev-parse', 'HEAD^'])).toBe(mergeSha);
+        expect(gitIn(r.l, r.wt, ['show', '--name-only', '--format=', 'HEAD']).split('\n').sort()).toEqual(['docs/log-inbox/lane.md', TAKE_FILE]);
+        expect(readFileSync(join(r.wt, TAKE_FILE), 'utf8').split('\n').filter((x) => x.startsWith('Status:'))).toEqual([
+            `Status: eseguito 2026-09-27 · lane feat · ${short(mergeSha)} · verifica visiva passata 2026-09-27 (${SMOKE})`,
+        ]);
+        const after = laneRun(r.l, ['status', NEW_ID]);
+        expect(after.stdout).toContain('outcome: Outcome: done');
+        expect(after.stdout).not.toContain('warning:');
     });
 
     test('kills "an inbox guessed among two", "--front ignored": a branch that writes two inboxes needs --front, which names the file', () => {

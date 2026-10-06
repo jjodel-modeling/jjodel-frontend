@@ -1,8 +1,13 @@
 import React from 'react';
-import { Select, Toggle, ConditionalEditor, PRESERVED_CHIP, type PathBuilderFeatures } from '../../../ui';
+import { Select, Toggle, HelpText, ConditionalEditor, PRESERVED_CHIP, type PathBuilderFeatures } from '../../../ui';
 import { TextSourceEditor } from './TextSourceEditor';
 import { TextStyleField } from './TextStyleField';
-import type { LabelSpec, LabelPosition, TextSource, TextStyle } from '../ir/irTypes';
+import { resolveLabelAnchor } from '../ir/irCompile';
+import {
+    labelEditable, labelEditableDefault, labelEditBlock, labelPathFeature,
+    type LabelEditBlock, type LabelFeatureInfo,
+} from '../ir/irLabelEdit';
+import type { LabelSpec, LabelPosition, LabelAnchor, TextSource, TextStyle } from '../ir/irTypes';
 
 const POSITION_OPTIONS = [
     { value: 'top', label: 'Top' },
@@ -10,6 +15,75 @@ const POSITION_OPTIONS = [
     { value: 'inside', label: 'Inside' },
     { value: 'bottom', label: 'Bottom' },
 ];
+
+/**
+ * The outside positions (R-VP-15 (1), P-2026-09-29-1245): one option per side, each standing
+ * for `position: 'outside'` plus an anchor. The select value `outside:<anchor>` exists in this
+ * control only; the IR carries the two fields (labelPositionValue / applyLabelPositionValue).
+ */
+const OUTSIDE_POSITION_OPTIONS = [
+    { value: 'outside:n', label: 'Above' },
+    { value: 'outside:s', label: 'Below' },
+    { value: 'outside:w', label: 'Left' },
+    { value: 'outside:e', label: 'Right' },
+];
+
+const POSITION_OPTION_GROUPS = [
+    { label: 'Inside', options: POSITION_OPTIONS },
+    { label: 'Outside', options: OUTSIDE_POSITION_OPTIONS },
+];
+
+const OUTSIDE_VALUE_PREFIX = 'outside:';
+
+/** The select value of a label: its position, or `outside:<anchor>` with the anchor resolved
+ *  as the canvas resolves it (absent or unknown reads 's'). */
+export function labelPositionValue(label: LabelSpec): string {
+    return label.position === 'outside' ? `${OUTSIDE_VALUE_PREFIX}${resolveLabelAnchor(label.anchor)}` : label.position;
+}
+
+/**
+ * The label after a choice in the select. An inside choice drops `anchor`; an outside one writes
+ * it only when it is not the 's' default, the padding/marker idiom: a default is never persisted,
+ * so «Below» saves as `position: 'outside'` alone. Every other key keeps its place.
+ */
+export function applyLabelPositionValue(label: LabelSpec, value: string): LabelSpec {
+    const { anchor: _anchor, ...rest } = label;
+    if (!value.startsWith(OUTSIDE_VALUE_PREFIX)) return { ...rest, position: value as LabelPosition };
+    const anchor: LabelAnchor = resolveLabelAnchor(value.slice(OUTSIDE_VALUE_PREFIX.length));
+    return anchor === 's' ? { ...rest, position: 'outside' } : { ...rest, position: 'outside', anchor };
+}
+
+/**
+ * The label after a click on the Editable toggle. The choice that equals the source's default
+ * removes the key, the other one is written, so the IR stays minimal: on a name label OFF writes
+ * `editable: false` and ON removes the key (absent renames, R-IRN-38); on a path label ON writes
+ * `editable: true` and OFF removes the key (absent does not edit, R-IRN-41). Every other key keeps
+ * its place.
+ */
+export function applyLabelEditable(label: LabelSpec, checked: boolean): LabelSpec {
+    if (checked !== labelEditableDefault(label.source)) return { ...label, editable: checked };
+    const { editable: _editable, ...rest } = label;
+    return rest;
+}
+
+/** The hint under a disabled Editable toggle, one per reason (R-IRN-38, R-IRN-41). */
+const EDIT_BLOCK_HINTS: Record<LabelEditBlock, string> = {
+    'name-only': 'Only a name label can be renamed on the canvas.',
+    'single-attribute': 'Only a single attribute of this object can be edited on the canvas.',
+    'string-only': 'Only a string attribute can be edited on the canvas.',
+};
+
+/** The metaclass's feature of a one-step path label, as the edit check reads it; null when there is
+ *  no metaclass, no one-step path or no feature of that name. */
+function labelFeatureInfo(source: TextSource, features: PathBuilderFeatures | null): LabelFeatureInfo | null {
+    const name = labelPathFeature(source);
+    if (!features || name === null) return null;
+    const attribute = features.attributes.find((a) => a.name === name);
+    if (attribute) return { kind: 'attribute', type: attribute.type, upperBound: attribute.upperBound };
+    const reference = features.references.find((r) => r.name === name);
+    if (reference) return { kind: 'reference', type: reference.targetClassName, upperBound: reference.upperBound };
+    return null;
+}
 
 export interface LabelEntryEditorProps {
     label: LabelSpec;
@@ -41,15 +115,17 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
 }) => {
     const editable = label.editable;
     const editableIsWidget = editable !== null && typeof editable === 'object';
+    const featureInfo = labelFeatureInfo(label.source, features);
+    const editBlock = labelEditBlock(label.source, featureInfo);
 
     return (
         <>
             <div className="jj-field">
                 <label className="jj-field-label">Position</label>
                 <Select
-                    options={POSITION_OPTIONS}
-                    value={label.position}
-                    onChange={(e) => onChange({ ...label, position: e.target.value as LabelPosition })}
+                    options={POSITION_OPTION_GROUPS}
+                    value={labelPositionValue(label)}
+                    onChange={(e) => onChange(applyLabelPositionValue(label, e.target.value))}
                 />
             </div>
 
@@ -68,10 +144,14 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                 {editableIsWidget
                     ? <span style={PRESERVED_CHIP}>editable: advanced widget</span>
                     : <Toggle
-                        checked={editable === true}
-                        onChange={(c) => onChange({ ...label, editable: c })}
+                        checked={labelEditable(label, featureInfo)}
+                        disabled={editBlock !== null}
+                        onChange={(c) => onChange(applyLabelEditable(label, c))}
                         size="xs"
                     />}
+                {!editableIsWidget && editBlock !== null && (
+                    <HelpText icon={false}>{EDIT_BLOCK_HINTS[editBlock]}</HelpText>
+                )}
             </div>
 
             {/* `props-label-entry-split`: dashed hairline that separates the field

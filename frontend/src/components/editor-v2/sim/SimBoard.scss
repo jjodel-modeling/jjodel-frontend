@@ -1,0 +1,1636 @@
+// The I/O board (R-SIM-110..115, R-SIM-119; P-2026-10-03-2000), painted by simBoardDevices.tsx: the card
+// `SimBoard` and its device faces `BoardDevice`.
+//
+// The card takes the run inspector's slot, one of the two open at a time (R-SIM-119), with the inspector's
+// geometry as SimInspector.scss measured it: a sibling of the simulation panel inside `.editor-switch-container`,
+// `position: absolute`, z-index 850 in the dock's stacking context, so it hides with its editor's tab; right of the
+// panel (left 584), bottom 16, 400 wide, clamped clear of the MiniMap and of the rail (`--jj-canvas-right-inset`,
+// READ here, never defined: design-system rule), its top 16 px under the editor's toolbar.
+//
+// Variant A, `.sim-board--board`, the working surface: design-system tokens only, in both themes; the buttons in
+// the vocabulary of the panel's event buttons (simulation-panel.scss `__event`), the switch the design system's
+// `.jjodel-switch` (styles/components/_switch.scss). Variant B, `.sim-board--panel`, the front panel: a physical
+// rendering, the same dark slate in both themes as the run buttons' gradient (design system §7.1), so its colours
+// are literals, written once each below; lamps and digits glow as hardware does. «Show bindings» outlines each device
+// dashed and shows its caption.
+//
+// ICON COLOUR — declared on the icon, with a `:hover` twin, as simulation-panel.scss explains.
+//
+// The styles of the front panel (R-SIM-130..133, P-2026-10-04-1131): four themes, closed palettes in the map
+// `$sim-board-themes`, one class on the front panel's root (`.sim-board__front--<theme>`), none reading an app token
+// or `data-theme` (D-UI-16). Graphite is the slate above, unchanged: the rules written for it before the themes stay
+// its rules, and the theme mixin adds only the new parts to it (presses, keycaps, display faces, silkscreens); the
+// other three themes re-colour every part. The Accent role takes the board's accent as an inline background colour
+// over the role's sheen (`background-image`), never on Print. The floating window (R-SIM-132) and the card's header
+// controls stay application chrome, on the design system's tokens.
+
+@use 'sass:map';
+
+$sim-board-mono: 'IBM Plex Mono', Monaco, Consolas, monospace;
+// Variant B's hardware, the same in both themes.
+$sim-board-metal-top: #334155;     // slate-700
+$sim-board-metal-bottom: #1e293b;  // slate-800
+$sim-board-ink: #e2e8f0;           // slate-200
+$sim-board-ink-dim: #94a3b8;       // slate-400
+$sim-board-glass: #0b1220;         // the display's dark glass
+$sim-board-lit: #22c55e;           // green-500, a lamp lit
+$sim-board-pulse: #f59e0b;         // amber-500, a pulse lit
+$sim-board-err: #ef4444;           // red-500, Err
+$sim-board-digit: #f87171;         // red-400, the 7-segment's digits
+$sim-board-lcd-bg: #b7c4a1;        // a reflective LCD
+$sim-board-lcd-ink: #1f2a12;
+
+// R-SIM-130: the four palettes. Graphite repeats the slate above; the roles Go, Stop and Accent per theme.
+$sim-board-themes: (
+    graphite: (
+        face-top: $sim-board-metal-top, face-bottom: $sim-board-metal-bottom, ink: $sim-board-ink, ink-dim: $sim-board-ink-dim, edge: #0f172a,
+        glass: $sim-board-glass, digit: $sim-board-digit, glow: rgba(248, 113, 113, 0.6), lcd-bg: $sim-board-lcd-bg, lcd-ink: $sim-board-lcd-ink,
+        key-top: #475569, key: #334155, key-ink: $sim-board-ink, key-radius: 5px, raise: 0 2px 0 #0f172a,
+        go: #16a34a, stop: #dc2626, accent: #f59e0b, role-ink: #ffffff, sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.18)),
+    ),
+    appliance: (
+        face-top: #fbfbf8, face-bottom: #e7e9e3, ink: #2b2f33, ink-dim: #6b7178, edge: #a9aea6,
+        glass: #16201d, digit: #5eead4, glow: rgba(94, 234, 212, 0.55), lcd-bg: #c8d3bb, lcd-ink: #1f2a12,
+        key-top: #e9ebe6, key: #dfe2dc, key-ink: #2b2f33, key-radius: 4px, raise: 0 1px 0 #a9aea6,
+        go: #2f9e44, stop: #e03131, accent: #1c7ed6, role-ink: #ffffff, sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.06)),
+    ),
+    instrument: (
+        face-top: #efe8d6, face-bottom: #ddd3b9, ink: #3a3326, ink-dim: #7a6f58, edge: #8a7d5f,
+        glass: #14110b, digit: #fbbf24, glow: rgba(251, 191, 36, 0.65), lcd-bg: #d8cfa6, lcd-ink: #2a2416,
+        key-top: #ddd5bd, key: #cfc5ab, key-ink: #3a3326, key-radius: 15px, raise: 0 2px 0 #8a7d5f,
+        go: #4d7c0f, stop: #9f1239, accent: #b45309, role-ink: #fffbeb, sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(0, 0, 0, 0.14)),
+    ),
+    print: (
+        face-top: #ffffff, face-bottom: #ffffff, ink: #000000, ink-dim: #333333, edge: #000000,
+        glass: #ffffff, digit: #000000, glow: none, lcd-bg: #ffffff, lcd-ink: #000000,
+        key-top: #ffffff, key: #ffffff, key-ink: #000000, key-radius: 4px, raise: none,
+        go: #000000, stop: #ffffff, accent: #ffffff, role-ink: #ffffff, sheen: none,
+    ),
+);
+
+// R-SIM-131: the colours of a lamp's style; Print fills a lit lamp black whatever its colour.
+$sim-board-led-colors: ("green": #22c55e, "red": #ef4444, "amber": #f59e0b, "blue": #3b82f6, "violet": #8b5cf6);
+// Each colour's highlight: green and amber are Graphite's lit LED and lit pulse before the styles.
+$sim-board-led-highlights: ("green": #bbf7d0, "red": #fecaca, "amber": #fde68a, "blue": #bfdbfe, "violet": #ddd6fe);
+$sim-board-vfd-glass: #071014;
+$sim-board-vfd-digit: #67e8f9;
+
+.sim-board {
+    position: absolute;
+    left: 584px;
+    bottom: 16px;
+    z-index: 850;
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+    max-width: calc(100% - 584px - var(--jj-canvas-right-inset, 0px) - 234px);
+    max-height: calc(100% - var(--jj-toolbar-height, 40px) - 32px);
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+    color: var(--color-text-primary);
+    font-family: inherit;
+
+    // -- header ---------------------------------------------------------------------
+    &__header {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+
+        > .bi,
+        > .bi:hover {
+            font-size: 12px;
+            line-height: 1;
+            color: var(--color-text-placeholder);
+        }
+    }
+
+    &__title {
+        flex: 0 0 auto;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    &__subtitle {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    // The skin switch (R-SIM-114): two segments, the one shown pressed.
+    &__skins {
+        display: inline-flex;
+        flex: 0 0 auto;
+        overflow: hidden;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+    }
+
+    &__skin {
+        height: 20px;
+        padding: 0 8px;
+        border: none;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+
+        & + & {
+            border-left: 1px solid var(--color-border-primary);
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &[aria-pressed="true"] {
+            background: var(--color-accent);
+            color: var(--color-text-inverse);
+            font-weight: 600;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: -2px;
+        }
+    }
+
+    &__edit {
+        flex: 0 0 auto;
+        height: 22px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    &__close {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    // R-SIM-133, R-SIM-132: the buzzer's sound and the window's pop out or dock, icon buttons of the chrome.
+    &__sound,
+    &__window {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    &__sound[aria-pressed="true"] {
+        border-color: var(--color-accent);
+        color: var(--color-accent);
+    }
+
+    // «Show bindings», Variant B only: the design system's switch, its label on the left.
+    &__toolbar {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+    }
+
+    &__toolbar-label {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+
+    // -- body -----------------------------------------------------------------------
+    &__body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 8px 12px 12px;
+    }
+
+    &__warning {
+        margin-bottom: 8px;
+        font-size: 11px;
+        color: var(--color-warning-text);
+    }
+
+    &__empty {
+        padding: 8px 0;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__group + &__group {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__group-head {
+        margin-bottom: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    // R-SIM-125, R-SIM-132: six and eight columns, on both skins.
+    &__grid--cols-6,
+    &__front--cols-6 {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    &__grid--cols-8,
+    &__front--cols-8 {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+
+    // Variant B: the front panel, every device at its cell of the four-column grid.
+    &__front {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        padding: 12px;
+        border-radius: 6px;
+        background: linear-gradient(180deg, $sim-board-metal-top, $sim-board-metal-bottom);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    &__slot {
+        min-width: 0;
+    }
+
+    // -- foot: the status block, the step shown and «Back to live» (R-SIM-106, R-SIM-113) ---
+    &__foot {
+        flex: 0 0 auto;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__viewing {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--color-sim-sigma-border);
+        background: var(--color-sim-sigma-bg);
+        color: var(--color-sim-sigma-fg);
+        font-size: 11px;
+    }
+
+    &__viewing-text {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    &__live {
+        flex: 0 0 auto;
+        height: 22px;
+        padding: 0 8px;
+        border: none;
+        border-radius: 4px;
+        background: var(--color-accent);
+        color: var(--color-text-inverse);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-accent-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    &__status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 20px;
+        padding: 6px 12px;
+    }
+}
+
+// R-SIM-132: a board wider than the card slot, or popped out by its viewer, floats over the canvas: placed by its
+// inline left and top, dragged by its header, as wide as its columns; still clear of the rail.
+.sim-board--floating {
+    bottom: auto;
+    max-width: calc(100% - var(--jj-canvas-right-inset, 0px));
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.28);
+
+    .sim-board__header {
+        cursor: move;
+        touch-action: none;
+    }
+}
+
+// Each column 80.5 px and a 10 px gap on the front panel, 48 px of padding (report 2026-10-04 §4.6).
+.sim-board--cols-6 {
+    width: 582px;
+}
+
+.sim-board--cols-8 {
+    width: 764px;
+}
+
+.sim-board:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+}
+
+// -- one device: Variant A ----------------------------------------------------------------
+.sim-board-device {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 6px 4px;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    background: var(--color-bg-primary);
+
+    &--flagged {
+        border-color: var(--color-warning);
+    }
+
+    &__face {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 26px;
+    }
+
+    &__name {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        max-width: 100%;
+        overflow: hidden;
+        font-size: 11px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    &__caption {
+        max-width: 100%;
+        overflow: hidden;
+        font-family: $sim-board-mono;
+        font-size: 10px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    &__flag,
+    &__flag:hover {
+        font-size: 10px;
+        color: var(--color-warning);
+    }
+
+    // R-SIM-133: the device's shortcut, a keycap in its top right corner.
+    &__keycap {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        min-width: 14px;
+        height: 14px;
+        padding: 0 3px;
+        box-sizing: border-box;
+        border: 1px solid var(--color-border-primary);
+        border-bottom-width: 2px;
+        border-radius: 3px;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 9px;
+        font-weight: 600;
+        line-height: 11px;
+        text-align: center;
+        text-transform: uppercase;
+        pointer-events: none;
+    }
+
+    // R-SIM-133: the Buzzer, a bar lamp beside its bell.
+    &__bell,
+    &__bell:hover {
+        font-size: 13px;
+        line-height: 1;
+        color: var(--color-text-tertiary);
+    }
+
+    // R-SIM-133: the silkscreen, a caption and a rule across its span (Variant B only; Variant A leaves it out).
+    &__silk {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+    }
+
+    &__silk-text {
+        flex: 0 0 auto;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    &__silk-rule {
+        flex: 1 1 auto;
+        height: 0;
+        border-top: 1px solid currentColor;
+        opacity: 0.6;
+    }
+
+    // Button: the panel's event button, full width.
+    &__button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
+        height: 24px;
+        padding: 0 6px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            line-height: 1;
+            color: inherit;
+        }
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    // Clock (R-SIM-122): the on/off toggle in the Button's vocabulary, full width, the accent while it ticks; under it
+    // the ticks since on and the period, one row.
+    &__clock {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        width: 100%;
+    }
+
+    &__clock-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            line-height: 1;
+            color: inherit;
+        }
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    // Written out: a modifier of the face that colours the toggle inside it.
+    .sim-board-device__clock--on .sim-board-device__clock-toggle,
+    .sim-board-device__clock--on .sim-board-device__clock-toggle:hover:not(:disabled) {
+        border-color: var(--color-accent);
+        background: var(--color-accent);
+        color: var(--color-text-inverse);
+    }
+
+    &__clock-read {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 4px;
+        min-width: 0;
+        line-height: 1.1;
+    }
+
+    &__clock-ticks {
+        padding: 0 4px;
+        border-radius: 3px;
+        background: var(--color-bg-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    &__clock-period {
+        font-family: $sim-board-mono;
+        font-size: 10px;
+        color: var(--color-text-tertiary);
+    }
+
+    // LED and Pulse LED.
+    &__lamp-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__lamp {
+        width: 16px;
+        height: 16px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 50%;
+        background: var(--color-bg-tertiary);
+
+        &--pulse {
+            width: 12px;
+            height: 12px;
+        }
+
+        &--lit {
+            border-color: var(--color-success);
+            background: var(--color-success);
+            box-shadow: 0 0 6px var(--color-success);
+        }
+
+        &--pulse.sim-board-device__lamp--lit {
+            border-color: var(--color-warning);
+            background: var(--color-warning);
+            box-shadow: 0 0 6px var(--color-warning);
+        }
+
+        &--err {
+            border-color: var(--color-error);
+            background: var(--color-error-muted);
+        }
+
+        &--buzzer {
+            width: 28px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        &--buzzer.sim-board-device__lamp--lit {
+            border-color: var(--color-warning);
+            background: var(--color-warning);
+            box-shadow: 0 0 6px var(--color-warning);
+        }
+    }
+
+    &__err {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-error-text);
+    }
+
+    // 7-segment: four digits, right-aligned, Err in red (R-SIM-111).
+    &__digits {
+        min-width: 56px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--color-bg-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 20px;
+        letter-spacing: 0.08em;
+        text-align: right;
+        color: var(--color-text-primary);
+
+        &--err {
+            color: var(--color-error-text);
+        }
+
+        &--off {
+            color: var(--color-text-placeholder);
+        }
+    }
+
+    // Text display: two lines at most, the whole text in the title.
+    &__lcd {
+        display: -webkit-box;
+        width: 100%;
+        min-height: 28px;
+        max-height: 28px;
+        overflow: hidden;
+        padding: 0 4px;
+        border-radius: 4px;
+        background: var(--color-bg-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 11px;
+        line-height: 14px;
+        text-align: center;
+        word-break: break-word;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+
+        &--err {
+            color: var(--color-error-text);
+        }
+    }
+
+    // Gauge (Variant A) and Slider: a bar and the value.
+    &__gauge,
+    &__slider {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+
+        input[type="range"] {
+            flex: 1 1 auto;
+            min-width: 0;
+            accent-color: var(--color-accent);
+        }
+    }
+
+    &__bar {
+        flex: 1 1 auto;
+        height: 6px;
+        overflow: hidden;
+        border-radius: 3px;
+        background: var(--color-bg-tertiary);
+
+        &--err .sim-board-device__bar-fill {
+            background: var(--color-error);
+        }
+    }
+
+    &__bar-fill {
+        display: block;
+        height: 100%;
+        background: var(--color-accent);
+    }
+
+    &__readout {
+        flex: 0 0 auto;
+        font-family: $sim-board-mono;
+        font-size: 11px;
+        color: var(--color-text-primary);
+    }
+
+    // Keypad: the buffer, then three columns of keys.
+    &__keypad {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    &__buffer {
+        min-width: 60px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: var(--color-bg-tertiary);
+        font-family: $sim-board-mono;
+        font-size: 12px;
+        text-align: right;
+    }
+
+    &__keys {
+        display: grid;
+        grid-template-columns: repeat(3, 22px);
+        gap: 3px;
+    }
+
+    &__key {
+        width: 22px;
+        height: 20px;
+        padding: 0;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 3px;
+        background: var(--color-bg-secondary);
+        color: var(--color-text-primary);
+        font-family: $sim-board-mono;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        &--enter {
+            background: var(--color-accent);
+            color: var(--color-text-inverse);
+        }
+
+        &--blank {
+            border: none;
+            background: transparent;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+}
+
+// -- one device: Variant B, the front panel -----------------------------------------------------------
+.sim-board--panel .sim-board-device {
+    padding: 6px 2px;
+    border: 1px solid transparent;
+    background: transparent;
+
+    &--flagged {
+        border-color: $sim-board-pulse;
+    }
+
+    &__name {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: $sim-board-ink;
+    }
+
+    &__caption {
+        color: $sim-board-ink-dim;
+    }
+
+    // The Clock's keycap sits above its corner (P-2026-10-04-1625, the chat's visual check): inside it, it covered the
+    // counter's glass, which this face puts in that corner. The device has no edge here, so only the keycap moves, into
+    // the front's 12 px padding or the 10 px gap between rows; the face and the cell keep their size.
+    &.sim-board-device--clock .sim-board-device__keycap {
+        top: -9px;
+    }
+
+    // A round push button, its cap raised.
+    // TODO: cleanup — since P-2026-10-04-1131 Variant B draws a Button as `__press` (below); kept per rule 9.
+    &__button {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 2px solid #0f172a;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #fca5a5, #dc2626 60%, #991b1b);
+        box-shadow: 0 2px 0 #0f172a, 0 3px 6px rgba(0, 0, 0, 0.4);
+
+        &:hover:not(:disabled) {
+            border-color: #0f172a;
+            background: radial-gradient(circle at 35% 30%, #fecaca, #ef4444 60%, #b91c1c);
+        }
+
+        &:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 1px 0 #0f172a, 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        &:disabled {
+            opacity: 1;
+            background: radial-gradient(circle at 35% 30%, #94a3b8, #475569 60%, #334155);
+        }
+    }
+
+    // A toggle lever: the knob down, or up when on.
+    &__lever {
+        position: relative;
+        width: 18px;
+        height: 32px;
+        padding: 0;
+        border: 2px solid #0f172a;
+        border-radius: 9px;
+        background: #0f172a;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid $sim-board-ink;
+            outline-offset: 2px;
+        }
+    }
+
+    &__lever-knob {
+        position: absolute;
+        left: 1px;
+        bottom: 1px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: linear-gradient(180deg, #f1f5f9, #94a3b8);
+        transition: bottom 150ms ease;
+    }
+
+    // Written out: under a descendant parent a second `&` would repeat `.sim-board--panel`.
+    .sim-board-device__lever--up .sim-board-device__lever-knob {
+        bottom: 15px;
+    }
+
+    // The Clock: a square power key with its lamp, which blinks at every tick (the lamp is remounted per tick), and the
+    // count behind glass, side by side.
+    &__clock {
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    &__clock-read {
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: flex-start;
+        gap: 0;
+    }
+
+    &__clock-power {
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 2px solid #0f172a;
+        border-radius: 5px;
+        background: linear-gradient(180deg, #475569, #334155);
+        box-shadow: 0 2px 0 #0f172a;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(180deg, #64748b, #475569);
+        }
+
+        &:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 1px 0 #0f172a;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid $sim-board-ink;
+            outline-offset: 2px;
+        }
+    }
+
+    &__clock-lamp {
+        display: block;
+        width: 8px;
+        height: 8px;
+        margin: auto;
+        border-radius: 50%;
+        background: #1e293b;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+    }
+
+    .sim-board-device__clock--on .sim-board-device__clock-lamp {
+        background: $sim-board-lit;
+        box-shadow: 0 0 6px $sim-board-lit;
+        animation: sim-board-clock-blink 300ms ease-out;
+
+        @media (prefers-reduced-motion: reduce) {
+            animation: none;
+        }
+    }
+
+    &__clock-ticks {
+        min-width: 40px;
+        border: 1px solid #0f172a;
+        background: $sim-board-glass;
+        text-align: right;
+        color: $sim-board-digit;
+        text-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+    }
+
+    &__clock-period {
+        color: $sim-board-ink-dim;
+    }
+
+    &__lamp {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #0f172a;
+        background: radial-gradient(circle at 35% 30%, #475569, #1e293b);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+
+        &--pulse {
+            width: 14px;
+            height: 14px;
+        }
+
+        &--lit {
+            border-color: #0f172a;
+            background: radial-gradient(circle at 35% 30%, #bbf7d0, $sim-board-lit 60%);
+            box-shadow: 0 0 10px $sim-board-lit;
+        }
+
+        &--pulse.sim-board-device__lamp--lit {
+            border-color: #0f172a;
+            background: radial-gradient(circle at 35% 30%, #fde68a, $sim-board-pulse 60%);
+            box-shadow: 0 0 10px $sim-board-pulse;
+        }
+
+        &--err {
+            border-color: $sim-board-err;
+            background: #1e293b;
+        }
+    }
+
+    &__err {
+        color: $sim-board-err;
+    }
+
+    // The 7-segment's glass and its glowing digits.
+    &__digits {
+        min-width: 64px;
+        padding: 3px 8px;
+        border: 2px solid #0f172a;
+        background: $sim-board-glass;
+        font-size: 20px;
+        color: $sim-board-digit;
+        text-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+
+        &--err {
+            color: $sim-board-err;
+        }
+
+        &--off {
+            color: #334155;
+            text-shadow: none;
+        }
+    }
+
+    &__lcd {
+        border: 2px solid #0f172a;
+        background: $sim-board-lcd-bg;
+        color: $sim-board-lcd-ink;
+
+        &--err {
+            color: #991b1b;
+        }
+
+        &--off {
+            background: #6b7563;
+        }
+    }
+
+    &__slider input[type="range"] {
+        accent-color: $sim-board-ink;
+    }
+
+    &__readout {
+        color: $sim-board-ink;
+    }
+
+    &__buffer {
+        border: 1px solid #0f172a;
+        background: $sim-board-glass;
+        color: $sim-board-digit;
+    }
+
+    &__key {
+        border-color: #0f172a;
+        background: linear-gradient(180deg, #475569, #334155);
+        color: $sim-board-ink;
+        box-shadow: 0 1px 0 #0f172a;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(180deg, #64748b, #475569);
+        }
+
+        &--enter {
+            background: linear-gradient(180deg, #16a34a, #15803d);
+        }
+
+        &--blank {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+        }
+    }
+
+    // The dial: a half circle and its needle.
+    &__dial {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    &__dial-arc {
+        fill: none;
+        stroke: $sim-board-ink-dim;
+        stroke-width: 3;
+    }
+
+    &__dial-needle {
+        stroke: $sim-board-pulse;
+        stroke-width: 2;
+        stroke-linecap: round;
+    }
+
+    .sim-board-device__dial--err .sim-board-device__dial-arc {
+        stroke: $sim-board-err;
+    }
+}
+
+// «Show bindings» (R-SIM-114): each device outlined, its binding named under it.
+.sim-board__front--bindings .sim-board-device {
+    border: 1px dashed rgba(148, 163, 184, 0.7);
+    border-radius: 6px;
+}
+
+// The Clock's lamp at a tick (R-SIM-122): brighter, then its steady green.
+@keyframes sim-board-clock-blink {
+    from {
+        background: #bbf7d0;
+        box-shadow: 0 0 12px $sim-board-lit;
+    }
+}
+
+// ==========================================================================================================
+// The styles of the front panel (R-SIM-130..133, P-2026-10-04-1131): what does not depend on the theme first,
+// then one block per theme from `$sim-board-themes`, then the lamp colours, which win over the themes' dark lamps.
+// ==========================================================================================================
+
+.sim-board--panel {
+    // A press (R-SIM-131): its shape here, its colours from the theme and its role.
+    .sim-board-device__press {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        min-width: 0;
+        max-width: 100%;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1;
+        cursor: pointer;
+
+        &:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        &:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 13px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    .sim-board-device__press-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sim-board-device__press--key {
+        width: 100%;
+        height: 30px;
+    }
+
+    .sim-board-device__press--membrane {
+        flex-direction: column;
+        gap: 3px;
+        width: 100%;
+        height: 42px;
+        border-radius: 3px;
+        font-weight: 500;
+        box-shadow: none;
+    }
+
+    .sim-board-device__press--round {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border-radius: 50%;
+
+        .bi,
+        .bi:hover {
+            font-size: 15px;
+        }
+    }
+
+    .sim-board-device__press--text {
+        height: 24px;
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    // The Clock's power key follows the press's shapes (R-SIM-131): its lamp, and its icon beside it.
+    .sim-board-device__clock-power {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-width: 26px;
+        width: auto;
+        padding: 0 4px;
+    }
+
+    .sim-board-device__clock-power--membrane {
+        min-width: 40px;
+        border-radius: 3px;
+        box-shadow: none;
+    }
+
+    .sim-board-device__clock-power--round {
+        min-width: 30px;
+        height: 30px;
+        border-radius: 50%;
+    }
+
+    .sim-board-device__clock-power--text {
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .sim-board-device__clock-icon,
+    .sim-board-device__clock-icon:hover {
+        font-size: 12px;
+        line-height: 1;
+        color: inherit;
+    }
+
+    // Lamps (R-SIM-131): the shapes; the bar also draws the Buzzer.
+    .sim-board-device__lamp--square {
+        border-radius: 3px;
+    }
+
+    .sim-board-device__lamp--bar,
+    .sim-board-device__lamp--buzzer {
+        width: 34px;
+        height: 10px;
+        border-radius: 2px;
+    }
+
+    // Displays (R-SIM-131): the face is the container its glyphs fit in, the box fixed by its size, never by its value.
+    .sim-board-device--text .sim-board-device__face,
+    .sim-board-device--seven .sim-board-device__face {
+        container-type: inline-size;
+    }
+
+    .sim-board__front .sim-board-device__digits {
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: content-box;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .sim-board-device__digits--s { line-height: 16px; }
+    .sim-board-device__digits--m { line-height: 20px; }
+    .sim-board-device__digits--l { line-height: 28px; }
+    .sim-board-device__digits--xl { line-height: 36px; }
+
+    .sim-board-device__lcd--s { min-height: 24px; max-height: 24px; line-height: 12px; }
+    .sim-board-device__lcd--m { min-height: 28px; max-height: 28px; line-height: 14px; }
+    .sim-board-device__lcd--l { min-height: 36px; max-height: 36px; line-height: 18px; }
+    .sim-board-device__lcd--xl { min-height: 46px; max-height: 46px; line-height: 23px; }
+
+    // Its glyphs known: one line, sized to fit them (simBoardLook.ts `displayGlyphFont`).
+    .sim-board-device__lcd--fit {
+        display: block;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
+        -webkit-line-clamp: unset;
+    }
+
+    .sim-board-device__lcd--fit.sim-board-device__lcd--s { line-height: 20px; }
+    .sim-board-device__lcd--fit.sim-board-device__lcd--m { line-height: 24px; }
+    .sim-board-device__lcd--fit.sim-board-device__lcd--l { line-height: 32px; }
+    .sim-board-device__lcd--fit.sim-board-device__lcd--xl { line-height: 42px; }
+
+    .sim-board-device--silk {
+        justify-content: center;
+        padding: 2px;
+    }
+
+    .sim-board-device__silk-text {
+        font-size: 10px;
+    }
+}
+
+// `$a` when `$cond` holds, else `$b`: the global `if()` is deprecated by the Sass of the build.
+@function sim-board-pick($cond, $a, $b) {
+    @if $cond {
+        @return $a;
+    }
+    @return $b;
+}
+
+// One theme over the front panel (R-SIM-130). `$full` re-colours the parts Graphite drew before the themes; without
+// it only the new parts are coloured, Graphite's own rules standing.
+@mixin sim-board-theme($t, $full) {
+    $ink: map.get($t, ink);
+    $ink-dim: map.get($t, ink-dim);
+    $edge: map.get($t, edge);
+    $glass: map.get($t, glass);
+    $digit: map.get($t, digit);
+    $glow: map.get($t, glow);
+    $key: map.get($t, key);
+    $key-top: map.get($t, key-top);
+    $key-ink: map.get($t, key-ink);
+    $raise: map.get($t, raise);
+    $sheen: map.get($t, sheen);
+    $role-ink: map.get($t, role-ink);
+    $flat: map.get($t, face-top) == map.get($t, face-bottom);
+    $digit-shadow: sim-board-pick($glow == none, none, 0 0 6px $glow);
+
+    // -- the new parts, every theme -------------------------------------------------------------
+    .sim-board-device__press,
+    .sim-board-device__clock-power {
+        border-color: $edge;
+        background-color: $key;
+        background-image: sim-board-pick($sheen == none, none, linear-gradient(180deg, $key-top, $key));
+        color: $key-ink;
+        box-shadow: $raise;
+    }
+
+    .sim-board-device__press--key {
+        border-radius: map.get($t, key-radius);
+    }
+
+    @each $role in (go, stop, accent) {
+        .sim-board-device__press--#{$role},
+        .sim-board-device__clock-power--#{$role} {
+            border-color: sim-board-pick(map.get($t, $role) == #ffffff, $edge, map.get($t, $role));
+            background-color: map.get($t, $role);
+            background-image: $sheen;
+            color: sim-board-pick(map.get($t, $role) == #ffffff, $ink, $role-ink);
+        }
+    }
+
+    // A text press has no body: its role is its ink; Print draws Stop and Accent in its one ink.
+    .sim-board-device__press--text,
+    .sim-board-device__clock-power--text {
+        border-color: transparent;
+        background-color: transparent;
+        background-image: none;
+        box-shadow: none;
+        color: $ink;
+    }
+
+    @each $role in (go, stop, accent) {
+        .sim-board-device__press--text.sim-board-device__press--#{$role} {
+            color: sim-board-pick(map.get($t, $role) == #ffffff, $ink, map.get($t, $role));
+        }
+    }
+
+    .sim-board-device__press--membrane {
+        box-shadow: none;
+    }
+
+    .sim-board-device__keycap {
+        border-color: $edge;
+        background: $key;
+        color: $key-ink;
+    }
+
+    .sim-board-device__silk,
+    .sim-board-device__bell,
+    .sim-board-device__bell:hover {
+        color: $ink;
+    }
+
+    // Display faces (R-SIM-131): plain is the theme's glass and digits, lcd a reflective panel, vfd a cyan glow.
+    .sim-board-device__digits--plain,
+    .sim-board-device__lcd--plain {
+        border-color: $edge;
+        background: $glass;
+        color: $digit;
+        text-shadow: $digit-shadow;
+    }
+
+    .sim-board-device__digits--lcd,
+    .sim-board-device__lcd--lcd {
+        border-color: $edge;
+        background: map.get($t, lcd-bg);
+        color: map.get($t, lcd-ink);
+        text-shadow: none;
+    }
+
+    .sim-board-device__digits--vfd,
+    .sim-board-device__lcd--vfd {
+        border-color: $edge;
+        background: sim-board-pick($glow == none, $glass, $sim-board-vfd-glass);
+        color: sim-board-pick($glow == none, $digit, $sim-board-vfd-digit);
+        text-shadow: sim-board-pick($glow == none, none, 0 0 8px rgba(103, 232, 249, 0.7));
+    }
+
+    .sim-board-device__digits--off,
+    .sim-board-device__lcd--off {
+        color: $ink-dim;
+        text-shadow: none;
+        opacity: 0.6;
+    }
+
+    .sim-board-device__digits--err,
+    .sim-board-device__lcd--err {
+        color: sim-board-pick($glow == none, $ink, $sim-board-err);
+    }
+
+    // -- the parts Graphite drew before the themes ------------------------------------------------
+    @if $full {
+        & {
+            background: sim-board-pick($flat, map.get($t, face-top), linear-gradient(180deg, map.get($t, face-top), map.get($t, face-bottom)));
+            box-shadow: sim-board-pick($flat, inset 0 0 0 2px $edge, (inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.12)));
+        }
+
+        .sim-board-device__name {
+            color: $ink;
+        }
+
+        .sim-board-device__caption {
+            color: $ink-dim;
+        }
+
+        .sim-board-device--flagged {
+            border-color: $ink;
+        }
+
+        .sim-board-device__lever {
+            border-color: $edge;
+            background: $edge;
+        }
+
+        .sim-board-device__lever-knob {
+            background: $key;
+        }
+
+        .sim-board-device__clock-lamp {
+            background: $ink-dim;
+            box-shadow: none;
+        }
+
+        .sim-board-device__clock--on .sim-board-device__clock-lamp {
+            background: sim-board-pick($glow == none, $ink, $sim-board-lit);
+            box-shadow: sim-board-pick($glow == none, none, 0 0 6px $sim-board-lit);
+        }
+
+        .sim-board-device__clock-ticks,
+        .sim-board-device__buffer {
+            border-color: $edge;
+            background: $glass;
+            color: $digit;
+            text-shadow: $digit-shadow;
+        }
+
+        .sim-board-device__clock-period {
+            color: $ink-dim;
+        }
+
+        .sim-board-device__lamp {
+            border-color: $edge;
+            background: sim-board-pick($flat, #ffffff, radial-gradient(circle at 35% 30%, $key-top, $ink-dim));
+            box-shadow: sim-board-pick($flat, none, inset 0 1px 2px rgba(0, 0, 0, 0.35));
+        }
+
+        .sim-board-device__lamp--err {
+            border-color: sim-board-pick($glow == none, $ink, $sim-board-err);
+            border-style: sim-board-pick($glow == none, dashed, solid);
+        }
+
+        .sim-board-device__err {
+            color: sim-board-pick($glow == none, $ink, $sim-board-err);
+        }
+
+        .sim-board-device__slider input[type="range"] {
+            accent-color: $ink;
+        }
+
+        .sim-board-device__readout {
+            color: $ink;
+        }
+
+        .sim-board-device__key {
+            border-color: $edge;
+            background: sim-board-pick($sheen == none, $key, linear-gradient(180deg, $key-top, $key));
+            color: $key-ink;
+            box-shadow: $raise;
+        }
+
+        .sim-board-device__key--enter {
+            border-color: map.get($t, go);
+            background: map.get($t, go);
+            color: $role-ink;
+        }
+
+        .sim-board-device__key--blank {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .sim-board-device__dial-arc {
+            stroke: $ink-dim;
+        }
+
+        .sim-board-device__dial-needle {
+            stroke: sim-board-pick($glow == none, $ink, map.get($t, accent));
+        }
+
+        &.sim-board__front--bindings .sim-board-device {
+            border-color: $ink-dim;
+        }
+    }
+}
+
+@each $name, $t in $sim-board-themes {
+    .sim-board--panel .sim-board__front--#{$name} {
+        @include sim-board-theme($t, $name != graphite);
+    }
+}
+
+// Lit lamps by their colour (R-SIM-131), after the themes so that a theme's dark lamp never wins over a lit one.
+@each $name, $c in $sim-board-led-colors {
+    .sim-board--panel .sim-board-device__lamp--#{$name}.sim-board-device__lamp--lit {
+        border-color: $c;
+        background: radial-gradient(circle at 35% 30%, map.get($sim-board-led-highlights, $name), $c 60%);
+        box-shadow: 0 0 10px $c;
+    }
+}
+
+// The Buzzer rings amber; Print fills every lit lamp black, without a glow.
+.sim-board--panel .sim-board-device__lamp--buzzer.sim-board-device__lamp--lit {
+    border-color: $sim-board-pulse;
+    background: radial-gradient(circle at 35% 30%, #fde68a, $sim-board-pulse 60%);
+    box-shadow: 0 0 10px $sim-board-pulse;
+}
+
+.sim-board--panel .sim-board__front--print .sim-board-device__press--stop,
+.sim-board--panel .sim-board__front--print .sim-board-device__clock-power--stop {
+    border-width: 2px;
+}
+
+.sim-board--panel .sim-board__front--print .sim-board-device__lamp.sim-board-device__lamp--lit,
+.sim-board--panel .sim-board__front--print .sim-board-device__clock--on .sim-board-device__clock-lamp {
+    border-color: #000000;
+    background: #000000;
+    box-shadow: none;
+}

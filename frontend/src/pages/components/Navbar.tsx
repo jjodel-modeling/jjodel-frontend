@@ -567,7 +567,8 @@ function NavbarComponent(props: AllProps) {
     let user: LUser = LUser.getUser();
     let project: LProject | undefined = user?.project || undefined;
     let projectid = U.getProjectID_URL();
-    Log.eDev(projectid !== project?.id, 'wrong project setup in navbar', {projectid, project});
+    // No id in the URL (null) and no project on the user (undefined) agree: the dashboard pages.
+    Log.eDev((projectid ?? undefined) !== project?.id, 'wrong project setup in navbar', {projectid, project});
     let metamodels: LModel[] = L.fromArr(props.metamodels);
     // Parse mmNames from string (joined with '|||') to avoid array reference changes
     const mmNamesArray = useMemo(() => props.mmNames ? props.mmNames.split('|||') : [], [props.mmNames]);

@@ -175,6 +175,13 @@ function narrowed(ix: SketchIndex, ids: readonly string[], name: RegExp, found: 
 
 const boundValue = (b: RoleBinding | undefined): string | undefined => (b?.status === 'bound' ? b.value : undefined);
 
+/** The value already in the bag for a class role (S6), a non-empty string at its key; `undefined` leaves the binder's own guess standing. */
+function keptValue(bag: Readonly<Record<string, unknown>> | undefined, role: RoleId): string | undefined {
+    const key = roleDescriptor(role).key;
+    const value = key ? bag?.[key] : undefined;
+    return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Name tests (report §3.1)
 // ---------------------------------------------------------------------------
@@ -371,9 +378,13 @@ function petriRoles(ix: SketchIndex, out: Found): { node?: string; transition?: 
 /**
  * The bindings of `profile` on `sketch`: one per `edit` role whose kind binds
  * an element, in catalog order. A role whose rule needs another role that did
- * not bind is `none`, and says which.
+ * not bind is `none`, and says which. `bag`, when given, is the values already
+ * set: the roles that depend on Node or Transition (roleCatalog `dependsOn`)
+ * derive from a Node or Transition it already holds, not from the binder's own
+ * guess (S6) — Node and Transition themselves keep their own guess, so a value
+ * the bag keeps against the binder's proposal is still reported as kept.
  */
-export function bindProfile(profile: SimProfile, sketch: MetamodelSketch): ProfileBindings {
+export function bindProfile(profile: SimProfile, sketch: MetamodelSketch, bag?: Readonly<Record<string, unknown>>): ProfileBindings {
     const ix = new SketchIndex(sketch);
     const found: Found = {};
     let node: string | undefined;
@@ -381,10 +392,12 @@ export function bindProfile(profile: SimProfile, sketch: MetamodelSketch): Profi
 
     if (profile.shape === 'controlFlow') {
         ({ node, transition } = controlFlowCore(ix, found));
-        if (node && transition) controlFlowRoles(ix, node, transition, found);
     } else {
         ({ node, transition } = petriRoles(ix, found));
     }
+    node = keptValue(bag, 'node') ?? node;
+    transition = keptValue(bag, 'transition') ?? transition;
+    if (profile.shape === 'controlFlow' && node && transition) controlFlowRoles(ix, node, transition, found);
     if (node) {
         nodeSubclassRoles(ix, node, found);
         found.initialMarking = initialMarking(ix, node);

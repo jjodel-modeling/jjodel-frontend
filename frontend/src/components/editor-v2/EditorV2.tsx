@@ -84,6 +84,8 @@ import {
     syncDeleteVertex,
     syncDeleteEdge,
     syncDeleteReferenceById,
+    resolveObjectAsEdge,
+    syncDeleteObjectAsEdge,
     syncCreateClass,
     syncCreateEnum,
     syncCreatePackage,
@@ -99,7 +101,8 @@ import {
     setModelUri,
     reconcileJjomAfterUndoRedo,
 } from './sync/canvasToJjom';
-import { computeElkLayout } from './utils/elkLayout';
+import { computeElkLayout, computeElkAutoLayout, setElkRoutes, measureOutsideLabels, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
+import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/notations';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
@@ -110,6 +113,9 @@ import { PolymetricView } from '../polymetric';
 import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
+import { simPillVisible } from './sim/simRoleStatus';
+import { getSimRun, useSimVersion } from './sim/simRunState';
+import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -363,6 +369,38 @@ export interface EditorV2Props {
 }
 
 /**
+ * Error boundary around the React Flow canvas (P-2026-10-01-1655). A render loop in the
+ * canvas («Maximum update depth exceeded», thrown from React Flow's StoreUpdater) used to
+ * reach the tab's `<Try>`, which replaced the whole editor pane. Caught here, it costs the
+ * canvas only: toolbar, rail and tabs stay, and «Reload canvas» mounts React Flow again
+ * from the editor's state, which nothing here touched.
+ */
+class CanvasErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+    state: { error: Error | null } = { error: null };
+
+    static getDerivedStateFromError(error: Error) {
+        return { error };
+    }
+
+    componentDidCatch(error: Error, info: React.ErrorInfo) {
+        console.error('[EditorV2] canvas error, caught inside the canvas:', error, info?.componentStack);
+    }
+
+    render() {
+        const { error } = this.state;
+        if (!error) return this.props.children;
+        return (
+            <div className="editor-v2__canvas-error" role="alert" style={{ padding: 24, textAlign: 'center' }}>
+                <p>The canvas stopped: {String(error.message ?? error).split('\n')[0].slice(0, 160)}</p>
+                <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => this.setState({ error: null })}>
+                    Reload canvas
+                </button>
+            </div>
+        );
+    }
+}
+
+/**
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
@@ -403,11 +441,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 
                 // Re-apply selection to the preserved edge ID
                 // This ensures selection survives Redux patches from useJjomSync
+                // An edge whose flag is already the forced one keeps its object, and the
+                // array its reference when none moves (P-2026-10-01-1655): rebuilt on
+                // every call, it turned an updater that returned its input into a new
+                // state, voiding every equality guard upstream of this wrapper.
                 if (selectedEdgeIdRef.current) {
-                    return deduped.map(e => ({
-                        ...e,
-                        selected: e.id === selectedEdgeIdRef.current,
-                    }));
+                    const sel = selectedEdgeIdRef.current;
+                    let moved = false;
+                    const reselected = deduped.map(e => {
+                        if (e.selected === (e.id === sel)) return e;
+                        moved = true;
+                        return { ...e, selected: e.id === sel };
+                    });
+                    return moved ? reselected : deduped;
                 }
                 return deduped;
             });
@@ -496,6 +542,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // M1/M2 mode detection — resolves metamodel classes, rootable classes, hierarchy
     const modeInfo = useEditorMode(modelid);
     const isModelMode = modeInfo.mode === 'model';
+    // The Simulation pill: Advanced mode and the metamodel's Simulation toggle (P-2026-09-29-1225, R-SIM-99). A boolean
+    // per dispatch; Redux `advanced`, not isAdvancedMode(), which reads localStorage and is not reactive in this tab.
+    const simPill = useSelector((state: any) => !!modelid && simPillVisible(!!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
 
     // Orphan feature co-evolution: soft-delete + restore by attribute name
     useOrphanFeatures(modelid, nodes);
@@ -1256,7 +1305,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 type: e.type,
             })),
             positions,
-            currentNodes.filter(n => !n.hidden).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0),
+            // A node the run hides keeps its box (P-2026-10-04-0935), so the lanes do not move with the events.
+            currentNodes.filter(occupiesCanvas).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0),
         )));
 
         return edgeList.map(edge => {
@@ -1500,6 +1550,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // the active viewpoint has IR graphVertex views. Pass-through (same array
     // references) otherwise — zero cost for non-IR sessions.
     const irContainment = useIRContainment(stableNodes, stableEdges);
+
+    // The run's events are not drawn while a run of this model exists (R-SIM-16, R-SIM-29; P-2026-10-04-0935):
+    // flagged hidden on the arrays handed to React Flow only, so nothing is written, laid out or persisted. Keyed on
+    // the run's alphabet, which a step keeps: a step recomputes nothing, and Stop gives back the arrays of before.
+    useSimVersion();
+    const simEvents = modelid ? getSimRun(modelid)?.alphabet : undefined;
+    const flowElements = useMemo(
+        () => hideRunEvents(irContainment.nodes, irContainment.edges, simEvents,
+            nodeId => (store.getState() as any).idlookup?.[nodeId]?.model),
+        [irContainment.nodes, irContainment.edges, simEvents],
+    );
 
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
@@ -2399,11 +2460,29 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         event.dataTransfer.dropEffect = 'move';
     }, []);
 
+    // Delete an object rendered as an edge (`irobj_<objectId>`, P-2026-10-04-0130): the edge IS the M1
+    // object, deleted with its hidden vertex and that vertex's edges (syncDeleteObjectAsEdge). No React
+    // Flow filter here: the sync drops them when their ids leave subElements, and a local filter of the
+    // hidden vertex was measured to send the canvas into an update-depth loop (report §10).
+    const deleteObjectAsEdge = useCallback(
+        (edgeId: string) => {
+            const target = resolveObjectAsEdge(edgeId, (store.getState() as any).idlookup);
+            if (!target) return;
+            takeSnapshot();
+            setSyntheticEdgeSelected(edgeId, false);
+            if (isJjomMode) syncDeleteObjectAsEdge(target.objectId);
+        },
+        [takeSnapshot, isJjomMode]
+    );
+
     // Delete selected nodes and edges
     const deleteSelected = useCallback(() => {
         const selectedNodes = getNodes().filter((n) => n.selected);
-        const selectedEdges = getEdges().filter((e) => e.selected);
+        // A selected object-as-edge is an M1 object, not an edge: it leaves with its object.
+        const objectAsEdges = getEdges().filter((e) => e.selected && e.id.startsWith('irobj_'));
+        const selectedEdges = getEdges().filter((e) => e.selected && !e.id.startsWith('irobj_'));
 
+        for (const e of objectAsEdges) deleteObjectAsEdge(e.id);
         if (selectedNodes.length === 0 && selectedEdges.length === 0) return;
 
         // In JjOM mode, route classNode deletions through co-evolution
@@ -2452,7 +2531,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 )
             ));
         }
-    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution, isJjomMode, handleClassRemoval]);
+    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution, isJjomMode, handleClassRemoval, deleteObjectAsEdge]);
 
     // Delete specific node by ID
     const deleteNode = useCallback(
@@ -2811,6 +2890,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
             clearSyntheticEdgeSelection();
             setSyntheticEdgeSelected(edge.id, true);
+            jjomSelection.onObjectAsEdgeClick(edge.id);
             return;
         }
         clearSyntheticEdgeSelection();
@@ -2832,6 +2912,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
             clearSyntheticEdgeSelection();
             setSyntheticEdgeSelected(edgeId, true);
+            jjomSelection.onObjectAsEdgeClick(edgeId);
             return;
         }
         clearSyntheticEdgeSelection();
@@ -3368,6 +3449,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const isInheritance = edge?.type === 'inheritance';
             const edgeData = edge?.data as ReferenceEdgeData | InheritanceEdgeData | undefined;
             const hasWaypoints = edgeData?.waypoints && edgeData.waypoints.length > 0;
+            // An object-as-edge (`irobj_<objectId>`) is an M1 object, not a reference or an inheritance,
+            // and it already has its view: its menu resets the route it keeps in the IR session store
+            // (handleEdgeChange's synthetic branch) and deletes the object (P-2026-10-04-0130).
+            const objectAsEdge = resolveObjectAsEdge(contextMenu.edgeId, (store.getState() as any).idlookup);
+            if (objectAsEdge) {
+                return [
+                    ...(hasWaypoints ? [{
+                        label: 'Reset routing',
+                        icon: 'bi-arrow-counterclockwise',
+                        onClick: () => handleEdgeChange(contextMenu.edgeId!, { data: { waypoints: [] } }),
+                    }] : []),
+                    {
+                        label: `Delete ${objectAsEdge.metaclassName}`,
+                        icon: 'bi-trash',
+                        danger: true,
+                        onClick: () => deleteObjectAsEdge(contextMenu.edgeId!),
+                    },
+                ];
+            }
             // Resolved ONCE for the «Create edge view» entry below: gate and destination from
             // the same answer, so the view cannot land anywhere but where the entry promised.
             const edgeViewVp = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
@@ -3580,11 +3680,130 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     }, [activeController]);
     const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);
 
-    // Auto-layout handler: compute ELK layout, apply to RF, sync to JjOM
-    const handleAutoLayout = useCallback(async () => {
+    // Auto-layout handler: compute ELK layout, apply to RF, sync to JjOM.
+    // `full` is the toolbar's (P-2026-10-01-2215 Phase 2): real sizes, labels, the viewpoint's profile, the 8 px grid
+    // and ELK's routes. Without it (the first open, the late-edge re-layout) the layout is today's, unchanged.
+    const handleAutoLayout = useCallback(async (opts?: { full?: boolean }) => {
         const currentNodes = getNodes();
         const currentEdges = getEdges();
         if (currentNodes.length === 0) return;
+
+        if (opts?.full) {
+            const state: any = store.getState();
+            const lookup = state?.idlookup ?? {};
+            const vpState: Record<string, unknown> = (typeof state?.viewpoint === 'string' && lookup[state.viewpoint]?._state) || {};
+            // The profile the derived viewpoint was derived with; a metamodel without one takes the class view's;
+            // any other canvas keeps today's strategy (null).
+            let profile: ElkLayoutProfile | null = null;
+            const stored = vpState[DERIVED_LAYOUT_KEY];
+            if (typeof stored === 'string') {
+                try { profile = JSON.parse(stored) as ElkLayoutProfile; } catch { profile = null; }
+            }
+            if (!profile && modelid && lookup[modelid]?.isMetamodel) profile = CLASS_VIEW_PROFILE;
+            const classOf = new Map(currentNodes.map(n => [n.id, (n.data as any)?.instanceOfClassId as string | undefined]));
+            const roleOf = (nodeId: string) => {
+                const classId = classOf.get(nodeId);
+                const role = classId ? vpState[`${DERIVED_ROLE_PREFIX}${classId}`] : undefined;
+                return typeof role === 'string' ? role : undefined;
+            };
+            // The labels as drawn (label divs carry no edge id; the edge's markup stays as it is): a centre label to the
+            // edge whose own label text it shows, the nearest drawn path breaking a tie; an end label to the nearest
+            // path, by the nearer end of it. Hidden ones (M1 hover) stay out.
+            const labelMap = new Map<string, ElkLabelInput[]>();
+            const container = editorContainerRef.current;
+            const textOfEdge = new Map(currentEdges.map(e => {
+                const d = e.data as { reference?: { name?: string }; referenceName?: string } | undefined;
+                return [e.id, String(e.label || d?.reference?.name || d?.referenceName || '').trim()] as const;
+            }));
+            if (container) {
+                const paths: Array<{ id: string; pts: DOMPoint[] }> = [];
+                container.querySelectorAll<SVGGElement>('g.react-flow__edge').forEach(g => {
+                    const id = g.getAttribute('data-id');
+                    const p = g.querySelector<SVGPathElement>('path.reference-edge, path.inheritance-edge');
+                    if (!id || !p) return;
+                    const len = p.getTotalLength();
+                    const n = Math.max(2, Math.ceil(len / 6));
+                    const m = p.getScreenCTM();
+                    if (!m) return;
+                    const pts: DOMPoint[] = [];
+                    for (let i = 0; i <= n; i++) pts.push(p.getPointAtLength((len * i) / n).matrixTransform(m));
+                    paths.push({ id, pts });
+                });
+                container.querySelectorAll<HTMLElement>('.react-flow__edgelabel-renderer .edge-label, .react-flow__edgelabel-renderer .edge-cardinality, .react-flow__edgelabel-renderer .edge-end-label').forEach(el => {
+                    const text = (el.textContent ?? '').trim();
+                    if (!text || !el.offsetWidth || !el.offsetHeight) return;
+                    const ink = (el.querySelector('.edge-label__text') as HTMLElement | null) ?? el;
+                    const check = (ink as any).checkVisibility;
+                    if (typeof check === 'function' && !check.call(ink, { opacityProperty: true, visibilityProperty: true })) return;
+                    const r = el.getBoundingClientRect();
+                    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+                    let best: { id: string; d: number; atStart: boolean } | null = null;
+                    const isCentre = el.classList.contains('edge-label');
+                    const sameText = isCentre ? paths.filter(p => textOfEdge.get(p.id) === text) : [];
+                    for (const { id, pts } of sameText.length ? sameText : paths) {
+                        pts.forEach((q, i) => {
+                            const d = Math.hypot(q.x - cx, q.y - cy);
+                            if (!best || d < best.d) best = { id, d, atStart: i < pts.length / 2 };
+                        });
+                    }
+                    if (!best) return;
+                    const { id, atStart } = best as { id: string; d: number; atStart: boolean };
+                    const kind: ElkLabelInput['kind'] = isCentre ? 'center' : atStart ? 'source' : 'target';
+                    const list = labelMap.get(id) ?? [];
+                    if (list.some(l => l.kind === kind)) return;
+                    list.push({ kind, text, width: el.offsetWidth, height: el.offsetHeight });
+                    labelMap.set(id, list);
+                });
+            }
+
+            // The vertices' outside labels (R-VP-53), measured on the same container: ELK reserves their room.
+            const outsideMap = container ? measureOutsideLabels(container) : new Map();
+            const result = await computeElkAutoLayout(currentNodes, currentEdges, { profile, roleOf, labelsOf: id => labelMap.get(id), outsideLabelsOf: id => outsideMap.get(id) });
+            const placed = currentNodes.map(n => {
+                const p = result.positions.get(n.id);
+                return p ? { ...n, position: p } : n;
+            });
+            setNodes(placed);
+            const moved = placed.filter(n => result.positions.has(n.id)).map(n => ({ id: n.id, x: n.position.x, y: n.position.y }));
+            if (moved.length > 0) syncPositionBatchToJjom(moved);
+
+            // Routes for the edges the layout owns: not pinned (mirrors the recalc below), no manual waypoints.
+            const unpinned = currentEdges.filter(e => {
+                const d = e.data as { sourceAnchor?: AnchorConfig; targetAnchor?: AnchorConfig } | undefined;
+                return d?.sourceAnchor?.mode !== 'pinned' && d?.targetAnchor?.mode !== 'pinned';
+            });
+            const routed = new Map<string, ElkRoute>();
+            for (const e of unpinned) {
+                const r = result.routes.get(e.id);
+                const wps = (e.data as any)?.waypoints;
+                if (r && !(Array.isArray(wps) && wps.length > 0)) routed.set(e.id, r);
+            }
+            setElkRoutes(currentEdges.map(e => e.id), routed);
+            // Sides: from the route where there is one (Q5), else geometry on the final rects, as below.
+            const placedRects = new Map(placed.map(n => [n.id, getNodeRect(n)]));
+            const geometric = computeGeometricAnchorsForAllEdges(unpinned.filter(e => !routed.has(e.id)), placedRects);
+            const unpinnedIds = new Set(unpinned.map(e => e.id));
+            setEdges(eds => applyDistribution(eds.map(edge => {
+                if (!unpinnedIds.has(edge.id)) return edge;
+                const route = routed.get(edge.id);
+                const a = route ? { sourceHandle: route.sourceSide, targetHandle: route.targetSide } : geometric.get(edge.id);
+                if (!a) return edge;
+                const sidesChanged = edge.sourceHandle?.split('-')[0] !== a.sourceHandle || edge.targetHandle?.split('-')[0] !== a.targetHandle;
+                return {
+                    ...edge,
+                    sourceHandle: `${a.sourceHandle}-0`,
+                    targetHandle: `${a.targetHandle}-0`,
+                    data: {
+                        ...edge.data,
+                        sourceAnchor: { mode: 'auto', side: a.sourceHandle } as AnchorConfig,
+                        targetAnchor: { mode: 'auto', side: a.targetHandle } as AnchorConfig,
+                        ...(sidesChanged ? { waypoints: [] } : {}),
+                    },
+                };
+            })));
+            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
+            return;
+        }
 
         const layoutedNodes = await computeElkLayout(currentNodes, currentEdges);
         setNodes(layoutedNodes);
@@ -3635,8 +3854,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             return applyDistribution(recomputed);
         });
         requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
-    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution]);
+    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid]);
     autoLayoutRef.current = handleAutoLayout;
+    // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
+    const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }), [handleAutoLayout]);
 
     // ── Re-run auto-layout once late M1 edges materialize (S4b) ──────────────
     // handleAutoLayout runs ~50ms after mount, before the async M1 reference edges reach
@@ -4148,8 +4369,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={irContainment.nodes}
-                edges={irContainment.edges}
+                nodes={flowElements.nodes}
+                edges={flowElements.edges}
                 onNodesChange={handleNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
@@ -4298,7 +4519,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
                         onFitView={handleFitView}
-                        onAutoLayout={handleAutoLayout}
+                        onAutoLayout={handleToolbarAutoLayout}
                         onDuplicateSelected={duplicateSelected}
                         onDeleteSelected={deleteSelected}
                         onUndo={handleUndo}
@@ -4371,7 +4592,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                     style={{ position: 'relative' }}
                                     onMouseDownCapture={() => setActive('flow')}
                                 >
-                                    {flowCanvas}
+                                    <CanvasErrorBoundary>{flowCanvas}</CanvasErrorBoundary>
                                 </div>
                             </div>
                         </div>
@@ -4382,7 +4603,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             style={{ position: 'relative' }}
                             onMouseDownCapture={() => setActive('flow')}
                         >
-                            {flowCanvas}
+                            <CanvasErrorBoundary>{flowCanvas}</CanvasErrorBoundary>
                         </div>
                     )}
 
@@ -4413,7 +4634,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 )}
 
                 {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
-                {modelid && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
+                {/* Gated (R-SIM-97, R-SIM-99): unmounting clears the run of this model (SimulationPanel's cleanup). */}
+                {modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
 
             </div>
         </EditorContext.Provider>

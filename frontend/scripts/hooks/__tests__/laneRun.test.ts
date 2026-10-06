@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -20,12 +20,23 @@ const ID = 'P-2026-09-26-1640';
 const SESSION = '467dcf71-a51c-4c15-a72b-c459bd6fa05c';
 const PROMPT = `# Prompt: a lane\n\nPrompt-ID: ${ID}\nChat: C-2026-09-25-1353\nLane: fast\nStatus: da eseguire\n\n## COSA\n\nDo the thing.\n`;
 
+// RC-20 (CLAUDE.md 21.2, docs/PROTOCOL.md P16): the closing reminder lane-run
+// appends to every text it sends a lane on stdin (prompt.md, this test's mirror
+// of the constant lane-run.mjs keeps module-private).
+const REMINDER_LINE = 'Close your final message (hard stop, question, closing report) with one line `Outcome: done | hard-stop | question | blocked`';
+const CLOSE_REMINDER =
+    '---\n' +
+    `${REMINDER_LINE}: exactly one of those four words, nothing else on that line (RC-20). A question with a recommendation also carries one line \`Recommended: <one line>\` (RC-21). The \`**Outcome**\` field of a log entry is not this line.\n`;
+
 const FAKE_CLAUDE = `#!/bin/sh
 {
   echo "--- call"
   echo "cwd=$(pwd -P)"
   echo "path=$PATH"
   echo "goahead=\${JJODEL_CRITICAL_ZONE_GOAHEAD-unset}"
+  echo "ghtoken=\${GH_TOKEN-unset}"
+  echo "githubtoken=\${GITHUB_TOKEN-unset}"
+  echo "ghconfig=\${GH_CONFIG_DIR-unset}"
   for a in "$@"; do echo "arg=$a"; done
   echo "stdin=$(cat | tr '\\n' ' ')"
 } >> "$FAKE_STATE/calls.txt"
@@ -107,6 +118,9 @@ function calls(l: Lab) {
                 args: lines.filter((x) => x.startsWith('arg=')).map((x) => x.slice(4)),
                 stdin: one('stdin'),
                 goahead: one('goahead'),
+                ghtoken: one('ghtoken'),
+                githubtoken: one('githubtoken'),
+                ghconfig: one('ghconfig'),
             };
         });
 }
@@ -292,6 +306,45 @@ describe('lane-run resume', () => {
         expect(r.stderr).toContain('running');
         expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
         expect(calls(l)).toHaveLength(1);
+    });
+});
+
+// ── the inputs of a lane ─────────────────────────────────────────────────────
+
+describe('lane-run keeps a copy of every input', () => {
+    const inputs = (dir: string) => readdirSync(dir).filter((n) => n.startsWith('input-')).sort();
+
+    test('kills "the prompt not kept", "a message file not kept", "an inline message not kept", "a link instead of a copy", "runs numbered apart": run <n> reads input-<n>.md, a verbatim copy made at launch', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        const dir = laneDir(l);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(dir, 'input-1.md'), 'utf8')).toBe(PROMPT + '\n' + CLOSE_REMINDER);
+        writeFileSync(join(l.home, 'go.md'), `[${ID}] GO from a file\n`);
+        const r = laneRun(l, ['resume', ID, join(l.home, 'go.md')]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        // The chat rewrites its message file for the next lane: the copy keeps what was sent.
+        writeFileSync(join(l.home, 'go.md'), 'rewritten afterwards\n');
+        expect(readFileSync(join(dir, 'input-2.md'), 'utf8')).toBe(`[${ID}] GO from a file\n` + '\n' + CLOSE_REMINDER);
+        const t = laneRun(l, ['resume', ID, '--text', `[${ID}] GO inline`]);
+        expect(t.status, t.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(dir, 'input-3.md'), 'utf8')).toBe(`[${ID}] GO inline\n` + '\n' + CLOSE_REMINDER);
+        expect(readFileSync(join(dir, 'msg-1.md'), 'utf8')).toBe(`[${ID}] GO inline\n`);
+        expect(inputs(dir)).toEqual(['input-1.md', 'input-2.md', 'input-3.md']);
+    });
+
+    test('kills "a refused run keeps an input": a resume refused over a running session copies nothing', () => {
+        const l = lab();
+        const hold = join(l.state, 'release');
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_HOLD: hold } }).status).toBe(0);
+        writeFileSync(join(l.home, 'go.md'), `[${ID}] GO`);
+        const r = laneRun(l, ['resume', ID, join(l.home, 'go.md')]);
+        writeFileSync(hold, '');
+        expect(r.status).toBe(2);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(inputs(laneDir(l))).toEqual(['input-1.md']);
     });
 });
 
@@ -893,6 +946,98 @@ describe('lane-run merge', () => {
     });
 });
 
+// ── the RC-20 closing reminder ───────────────────────────────────────────────
+
+describe('lane-run: every lane input closes with the RC-20 reminder', () => {
+    const count = (text: string) => text.split(REMINDER_LINE).length - 1;
+
+    test('kills "start sends the prompt as is", "the reminder appended twice": start\'s stdin ends with the reminder once, the committed prompt file untouched', () => {
+        const l = lab();
+        const before = readFileSync(join(l.worktree, 'prompt.md'), 'utf8');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        const dir = laneDir(l);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(l.worktree, 'prompt.md'), 'utf8')).toBe(before);
+        expect(readFileSync(join(dir, 'input-1.md'), 'utf8')).toBe(PROMPT + '\n' + CLOSE_REMINDER);
+        const [c] = calls(l);
+        expect(count(c.stdin)).toBe(1);
+    });
+
+    test('kills "resume from a file sends the file as is": a resume from a message file ends with the reminder, the file on disk untouched', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        const dir = laneDir(l);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        const goFile = join(l.home, 'go.md');
+        writeFileSync(goFile, `[${ID}] GO from a file\n`);
+        const r = laneRun(l, ['resume', ID, goFile]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(goFile, 'utf8')).toBe(`[${ID}] GO from a file\n`);
+        expect(readFileSync(join(dir, 'input-2.md'), 'utf8')).toBe(`[${ID}] GO from a file\n` + '\n' + CLOSE_REMINDER);
+        const [, c2] = calls(l);
+        expect(count(c2.stdin)).toBe(1);
+    });
+
+    test('kills "resume --text sends the raw message": an inline resume message ends with the reminder, msg-1.md keeps the raw text', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        const dir = laneDir(l);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        const r = laneRun(l, ['resume', ID, '--text', `[${ID}] GO inline`]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(dir, 'msg-1.md'), 'utf8')).toBe(`[${ID}] GO inline\n`);
+        expect(readFileSync(join(dir, 'input-2.md'), 'utf8')).toBe(`[${ID}] GO inline\n` + '\n' + CLOSE_REMINDER);
+        const [, c2] = calls(l);
+        expect(count(c2.stdin)).toBe(1);
+    });
+
+    test('kills "go\'s message sent without the reminder": go\'s GO message ends with the reminder', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        const dir = laneDir(l);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        const r = laneRun(l, ['go', ID, '--smoke', 'Smoke passed.']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        const [, c2] = calls(l);
+        expect(c2.stdin).toContain(REMINDER_LINE);
+        expect(count(c2.stdin)).toBe(1);
+    });
+
+    test('kills "a message already closed gets the reminder twice": a resume message that already ends with the reminder is not doubled', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        const dir = laneDir(l);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        const already = `[${ID}] GO.\n\n${CLOSE_REMINDER}`;
+        const r = laneRun(l, ['resume', ID, '--text', already]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(dir, 'input-2.md'), 'utf8')).toBe(already);
+        const [, c2] = calls(l);
+        expect(count(c2.stdin)).toBe(1);
+    });
+
+    test('kills "a chained lane\'s prompt sent without the reminder": a lane started by chain also closes on the reminder', () => {
+        const l = lab();
+        const repo = join(dirname(l.home), 'chain-repo');
+        mkdirSync(repo, { recursive: true });
+        gitIn(l, repo, ['init', '-q', '-b', 'trunk']);
+        commitFiles(l, repo, 'base', { 'README.md': 'x\n' });
+        const chainId = 'P-2026-09-28-0001';
+        const p1 = join(l.home, 'p1.md');
+        writeFileSync(p1, `# Prompt: one\n\nPrompt-ID: ${chainId}\nChat: C-2026-09-28-1120\nLane: fast\nStatus: da eseguire\n\n## COSA\n\nOne.\n`);
+        const r = laneRun(l, ['chain', repo, p1], { env: GIT_ENV });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l, chainId), 'exit.txt'), 15000)).toBe(true);
+        const [c] = calls(l);
+        expect(count(c.stdin)).toBe(1);
+    });
+});
+
 // ── the prompt path ──────────────────────────────────────────────────────────
 
 describe('lane-run start, the prompt path', () => {
@@ -1259,10 +1404,10 @@ describe('lane-run start, the model tier (RC-32)', () => {
         expect(t.r.stderr).toContain('no light model');
     });
 
-    test('kills "the constant not claude-sonnet-5", "a malformed id passed to claude": the light tier runs the id the owner chat set; a malformed id is refused', () => {
+    test('kills "the constant not claude-sonnet-5-5", "a malformed id passed to claude": the light tier runs the id the owner chat set; a malformed id is refused', () => {
         const s = startTier(TIER_CASES[3][1], [], {});
         expect(s.r.status, s.r.stderr).toBe(0);
-        expect(s.call.args.slice(-2)).toEqual(['--model', 'claude-sonnet-5']);
+        expect(s.call.args.slice(-2)).toEqual(['--model', 'claude-sonnet-5-5']);
         const bad = startTier(TIER_CASES[3][1], [], { LANE_RUN_LIGHT_MODEL: 'claude sonnet' });
         expect(bad.r.status).toBe(2);
         expect(bad.r.stderr).toContain('malformed');
@@ -1350,5 +1495,203 @@ describe('lane-run status, the brief of the report', () => {
         spawnSync('git', ['commit', '-q', '-m', `docs: the report (${ID})`, '--', REPORT_REL], { cwd: l.worktree, env });
         const r = laneRun(l, ['status', ID]);
         expect(r.stdout).toContain(`warning: ${REPORT_REL}: no "## 0. Answer in brief" (P16)`);
+    });
+});
+
+// ── status: the prompt's Status after the lane closed ────────────────────────
+
+/** An exited lane in l.worktree closing on `Outcome: <word>`, its prompt reading `Status: <status>` (named by prompt.txt, or found under docs/prompts). */
+function closedLane(l: Lab, status: string, word: string, viaPromptTxt = true) {
+    const rel = viaPromptTxt ? 'prompt.md' : 'docs/prompts/claude_2026-09-26_1640_prompt_a_lane.md';
+    mkdirSync(dirname(join(l.worktree, rel)), { recursive: true });
+    writeFileSync(join(l.worktree, rel), PROMPT.replace('Status: da eseguire', 'Status: ' + status));
+    const dir = laneDir(l);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'log.jsonl'), assistant('Closing report.\nOutcome: ' + word) + '\n');
+    writeFileSync(join(dir, 'worktree.txt'), l.worktree + '\n');
+    if (viaPromptTxt) writeFileSync(join(dir, 'prompt.txt'), join(l.worktree, rel) + '\n');
+    writeFileSync(join(dir, 'started.txt'), String(Date.now() - 60000) + '\n');
+    writeFileSync(join(dir, 'pid.txt'), '999999\n');
+    writeFileSync(join(dir, 'exit.txt'), '0\n');
+    return rel;
+}
+
+describe('lane-run status, the prompt Status after the close', () => {
+    test('kills "no warning on an unflipped prompt", "the warning on a flipped prompt", "the warning on question or blocked", "the hard-stop not warned": an exited lane on done or hard-stop whose prompt still reads da eseguire is warned, and only that one', () => {
+        const FLIPPED = 'eseguito 2026-09-26 · lane feat · 1234567 · verifica visiva passata 2026-09-26 (chat)';
+        for (const [status, word, warned] of [
+            ['da eseguire', 'done', true],
+            ['da eseguire', 'hard-stop', true],
+            [FLIPPED, 'done', false],
+            [FLIPPED, 'hard-stop', false],
+            ['da eseguire', 'question', false],
+            ['da eseguire', 'blocked', false],
+        ] as const) {
+            const l = lab();
+            const rel = closedLane(l, status, word);
+            const r = laneRun(l, ['status', ID]);
+            expect(r.status, r.stderr).toBe(0);
+            const lines = r.stdout.split('\n').filter((x) => x.startsWith('warning:'));
+            expect(lines, status + ' / ' + word).toEqual(warned ? [`warning: ${rel}: \`Status: da eseguire\` after \`Outcome: ${word}\`; the closure commit owes the flip (P16, RC-17)`] : []);
+        }
+    });
+
+    test('kills "the docs/prompts fallback dropped": a lane with no prompt.txt is judged on the docs/prompts file whose header holds its id', () => {
+        const l = lab();
+        const rel = closedLane(l, 'da eseguire', 'hard-stop', false);
+        const r = laneRun(l, ['status', ID]);
+        expect(r.stdout.split('\n').filter((x) => x.startsWith('warning:'))).toEqual([
+            `warning: ${rel}: \`Status: da eseguire\` after \`Outcome: hard-stop\`; the closure commit owes the flip (P16, RC-17)`,
+        ]);
+    });
+
+    test('kills "the warning while the lane runs": a running lane whose prompt reads da eseguire is not warned', () => {
+        const l = lab();
+        const hold = join(l.state, 'release');
+        const events = join(l.state, 'events.jsonl');
+        writeFileSync(events, assistant('Phase 1.\nOutcome: done') + '\n');
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_HOLD: hold, FAKE_EVENTS: events } }).status).toBe(0);
+        const r = laneRun(l, ['status', ID]);
+        writeFileSync(hold, '');
+        expect(r.stdout).toContain('state: running');
+        expect(r.stdout).not.toContain('warning:');
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(laneRun(l, ['status', ID]).stdout).toContain('warning: ');
+    });
+});
+
+// ── monitor ──────────────────────────────────────────────────────────────────
+
+describe('lane-run monitor', { timeout: 60000 }, () => {
+    const started: number[] = [];
+    afterAll(() => {
+        for (const pid of started) {
+            try {
+                process.kill(pid, 'SIGTERM');
+            } catch {
+                // already gone
+            }
+        }
+    });
+
+    const freePort = () =>
+        new Promise<number>((res) => {
+            const s = createServer();
+            s.listen(0, '127.0.0.1', () => {
+                const port = (s.address() as { port: number }).port;
+                s.close(() => res(port));
+            });
+        });
+
+    const fetchText = async (port: number, path: string) => {
+        const r = await fetch(`http://127.0.0.1:${port}${path}`);
+        return { status: r.status, text: await r.text() };
+    };
+
+    test('kills "3001 accepted", "a port in use taken": both are refused before anything starts', async () => {
+        const l = lab();
+        const r = laneRun(l, ['monitor', '--port', '3001', '--no-open']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('3001');
+        const busy: Server = createServer();
+        await new Promise<void>((ok) => busy.listen(0, '127.0.0.1', () => ok()));
+        const port = (busy.address() as { port: number }).port;
+        const b = laneRun(l, ['monitor', '--port', String(port), '--no-open']);
+        await new Promise<void>((ok) => busy.close(() => ok()));
+        expect(b.status).toBe(2);
+        expect(b.stderr).toContain('in use');
+        expect(existsSync(join(l.lanes, '_monitor', 'pid.txt'))).toBe(false);
+    });
+
+    test('kills "the monitor not started", "the lanes of another HOME": monitor starts trace-monitor, which outlives lane-run and serves the lanes of ~/.jjodel-lanes', async () => {
+        const l = lab();
+        mkdirSync(laneDir(l), { recursive: true });
+        writeFileSync(join(laneDir(l), 'log.jsonl'), assistant('Outcome: done') + '\n');
+        writeFileSync(join(laneDir(l), 'exit.txt'), '0\n');
+        const port = await freePort();
+        const r = laneRun(l, ['monitor', '--port', String(port), '--no-open']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain(`monitor: http://127.0.0.1:${port}/`);
+        const pid = Number(readFileSync(join(l.lanes, '_monitor', 'pid.txt'), 'utf8'));
+        started.push(pid);
+        expect(r.stdout).toContain(`pid: ${pid}`);
+        expect((await fetchText(port, '/health')).status).toBe(200);
+        const idx = JSON.parse((await fetchText(port, '/index.json')).text);
+        const lane = idx.nodes.find((n: { type: string; id: string }) => n.type === 'lane' && n.id === ID);
+        expect(lane.outcome).toBe('done');
+        process.kill(pid, 'SIGTERM');
+    });
+});
+
+// ── start --auto (RC-36) ─────────────────────────────────────────────────────
+
+const AUTO_FLAGS = ['--disallowedTools', 'WebFetch,WebSearch', '--strict-mcp-config'];
+const GH_ENV = { GH_TOKEN: 'tok-1', GITHUB_TOKEN: 'tok-2', GH_CONFIG_DIR: '/somewhere/with/credentials' };
+
+describe('lane-run start --auto (RC-36)', () => {
+    test('kills "the go-ahead allowed with --auto": --auto with --critical-zone-goahead is refused before anything runs', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md', '--auto', '--critical-zone-goahead', ID]);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('--auto refuses --critical-zone-goahead');
+        expect(existsSync(laneDir(l))).toBe(false);
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "a dry render launched": --auto refuses a prompt whose Status is not da eseguire', () => {
+        const l = lab();
+        writeFileSync(join(l.worktree, 'dry.md'), PROMPT.replace('Status: da eseguire', 'Status: dry render, not launchable'));
+        const r = laneRun(l, ['start', l.worktree, 'dry.md', '--auto']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('Status: da eseguire');
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "the web tools kept", "the MCP servers kept", "GH_TOKEN kept", "GITHUB_TOKEN kept", "GH_CONFIG_DIR not emptied", "no auto.json", "a go-ahead inherited": the call claude receives under --auto', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md', '--auto'], { env: { ...GH_ENV, JJODEL_CRITICAL_ZONE_GOAHEAD: ID } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        const [c] = calls(l);
+        expect(c.args).toEqual(['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', ...AUTO_FLAGS]);
+        expect(c.ghtoken).toBe('unset');
+        expect(c.githubtoken).toBe('unset');
+        expect(c.goahead).toBe('unset');
+        const empty = join(laneDir(l), 'gh-empty');
+        expect(c.ghconfig).toBe(empty);
+        expect(readdirSync(empty)).toEqual([]);
+        const auto = JSON.parse(readFileSync(join(laneDir(l), 'auto.json'), 'utf8'));
+        expect(auto.flags).toEqual(AUTO_FLAGS);
+        expect(auto.ghConfigDir).toBe(empty);
+        expect(typeof auto.at).toBe('number');
+        expect(r.stdout).toContain('auto: ');
+    });
+
+    test('kills "resume drops the auto flags", "resume restores the credentials", "resume passes a go-ahead": a resume of an --auto lane keeps its flags and environment', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md', '--auto'], { env: GH_ENV }).status).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        // A goahead.txt that appears in an automatic lane is flagged by the ledger and never passed on.
+        writeFileSync(join(laneDir(l), 'goahead.txt'), ID + '\n');
+        const r = laneRun(l, ['resume', ID, '--text', 'GO'], { env: GH_ENV });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        const c = calls(l)[1];
+        expect(c.args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', ...AUTO_FLAGS]);
+        expect(c.ghtoken).toBe('unset');
+        expect(c.githubtoken).toBe('unset');
+        expect(c.ghconfig).toBe(join(laneDir(l), 'gh-empty'));
+        expect(c.goahead).toBe('unset');
+    });
+
+    test('kills "auto by default": without --auto the GitHub variables pass through, no auto flag, no auto.json', () => {
+        const l = lab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: GH_ENV }).status).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        const [c] = calls(l);
+        expect(c.args).not.toContain('--strict-mcp-config');
+        expect(c.ghtoken).toBe('tok-1');
+        expect(c.ghconfig).toBe('/somewhere/with/credentials');
+        expect(existsSync(join(laneDir(l), 'auto.json'))).toBe(false);
     });
 });

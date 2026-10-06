@@ -50,6 +50,7 @@ import IoT from "../iot/IoT";
 import Collaborative from "../components/collaborative/Collaborative";
 import {Await, NavigateFunction} from "react-router-dom";
 import {hashReload, type ReloadWindow} from "./navigateReload";
+import {proxyToIdReplacer} from "../model/unproxy";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -437,7 +438,9 @@ export class U {
         state.idlookup = idlookup;
         state.idlookup[id] = {...dproject, state: ''} as any;
         state.projects = [id];
-        let str = JSON.stringify(state);
+        // An L object stored in the state (a view ir written before P-2026-09-29-2121) is
+        // saved as its id instead of walked: walking it hung the page for minutes.
+        let str = JSON.stringify(state, proxyToIdReplacer);
         return await compressToUTF16(str);
     }
 

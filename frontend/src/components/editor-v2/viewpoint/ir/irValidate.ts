@@ -10,12 +10,13 @@
  * is a cache hit.
  */
 
-import { compileView, compileEdgeView, compileRowView } from './irCompile';
+import { compileView, compileEdgeView, compileRowView, LABEL_ANCHORS, TEXT_TRANSFORMS } from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
 import { isUsableEndpointExpr } from './edgeEndpoints';
 import { authoredCornerRadius } from './shapeRegistry';
+import { usableSizeAxis } from '../../nodes/nodeSizing';
 import { isConditionalValue } from '../../../ui/ConditionalEditor/conditional';
-import type { AnyViewIR, EdgeViewIR, NodeViewIR, PaddingToken, Predicate, RowViewIR } from './irTypes';
+import type { AnyViewIR, EdgeCurve, EdgeTermination, EdgeViewIR, EntryMark, LabelPosition, NodeViewIR, PaddingToken, Predicate, RowViewIR, TextSource, VertexViewIR } from './irTypes';
 
 /**
  * Closed vocabulary of `edge.routing` (R-B9, 2026-08-03): the persisted identifiers,
@@ -39,6 +40,65 @@ export const VALID_ROUTING_VALUES: ReadonlyArray<NonNullable<EdgeViewIR['edge'][
  * instead of writing 'normal'). Only a PRESENT out-of-vocabulary value is an error.
  */
 export const VALID_PADDING_VALUES: ReadonlyArray<PaddingToken> = ['small', 'normal', 'large'];
+
+/** Closed vocabulary of `shape.entry` (R-VP-22), same shape and reasoning as VALID_PADDING_VALUES; absent = no mark. */
+export const VALID_ENTRY_VALUES: ReadonlyArray<EntryMark> = ['dot', 'arrow'];
+
+/** Closed vocabulary of `edge.curve` (R-VP-22), same shape and reasoning as VALID_ROUTING_VALUES; absent = the routing path. */
+export const VALID_CURVE_VALUES: ReadonlyArray<EdgeCurve> = ['arc'];
+
+/**
+ * Closed vocabulary of `edge.terminations` (P-2026-09-30-1521, R-VP-24): the persisted ends, `hollowCircle`
+ * among them. A Record keyed on the union, as VALID_PREDICATE_OPS below: an end added to the type without
+ * being added here fails to compile. Authoring-time only (R-B9-bis): the render stays permissive, an unknown
+ * end draws no marker (UnifiedEdge `irMarkerUrl`). An absent end is legal: the compile's default applies.
+ */
+export const VALID_TERMINATIONS: Record<EdgeTermination, true> = {
+    none: true, openArrow: true, closedArrow: true, hollowTriangle: true, filledDiamond: true, hollowDiamond: true, hollowCircle: true,
+    // Slice E (P-2026-09-30-1810): the seven ends of edges/edgeEndGlyphs.ts.
+    filledCircle: true, bar: true, cross: true, erZeroOrOne: true, erExactlyOne: true, erZeroOrMany: true, erOneOrMany: true,
+};
+
+const isTermination = (t: unknown): boolean => typeof t === 'string' && Object.prototype.hasOwnProperty.call(VALID_TERMINATIONS, t);
+const isPredicateObject = (p: unknown): boolean => !!p && typeof p === 'object' && !Array.isArray(p) && typeof (p as { op?: unknown }).op === 'string';
+
+/**
+ * An end of `edge.terminations` (slice E): absent, an end of the vocabulary, or a Conditional of them, as
+ * `line.color` takes a Conditional of colours: `{ when, then, else? }` or `{ rules: [{ when, then }], default? }`,
+ * every branch an end of the vocabulary. The predicates' operators are checked by the scan above, their paths
+ * by the compile. Null when valid, else the offending value.
+ */
+function terminationEndError(t: unknown): { read: unknown } | null {
+    if (t === undefined || isTermination(t)) return null;
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return { read: t };
+    const c = t as { when?: unknown; then?: unknown; else?: unknown; rules?: unknown; default?: unknown };
+    if ('when' in c) {
+        if (!isPredicateObject(c.when)) return { read: c.when };
+        if (!isTermination(c.then)) return { read: c.then };
+        if (c.else !== undefined && !isTermination(c.else)) return { read: c.else };
+        return null;
+    }
+    if ('rules' in c) {
+        if (!Array.isArray(c.rules)) return { read: c.rules };
+        for (const r of c.rules) {
+            if (!r || typeof r !== 'object' || !isPredicateObject((r as { when?: unknown }).when)) return { read: r };
+            if (!isTermination((r as { then?: unknown }).then)) return { read: (r as { then?: unknown }).then };
+        }
+        if (c.default !== undefined && !isTermination(c.default)) return { read: c.default };
+        return null;
+    }
+    return { read: t };
+}
+
+/**
+ * Closed vocabulary of `LabelSpec.position` (P-2026-09-29-1245): the four inside positions and
+ * `outside` (R-VP-15 (1)). A Record keyed on the union, for the reason given below for the
+ * predicate operators. The anchor of an `outside` label has its own vocabulary, LABEL_ANCHORS,
+ * next to the compile that resolves it.
+ */
+export const VALID_LABEL_POSITIONS: Record<LabelPosition, true> = {
+    top: true, center: true, inside: true, bottom: true, outside: true,
+};
 
 /**
  * Closed vocabulary of `Predicate.op` (R-MK-11, 2026-08-18).
@@ -94,6 +154,128 @@ function findUnknownPredicateOp(node: unknown, seen: Set<object>): string | null
     return null;
 }
 
+/** Closed vocabulary of `TextSource.from`, for the segments of an edge label template (R-VP-20). */
+const TEXT_SOURCE_KINDS: Record<TextSource['from'], true> = { path: true, literal: true, intrinsic: true };
+
+const isPlainObject = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
+const readOf = (v: unknown) => (typeof v === 'number' ? String(v) : JSON.stringify(v));
+
+/**
+ * The two axes R-VP-20 adds to TextStyle, on any TextStyle surface. Only these are read: the axes
+ * TextStyle already had keep being checked by the compile alone, as before, so a view that
+ * validated before C2 validates now. A surface that is not an object is left to its own rule.
+ */
+function textStyleAxesError(style: unknown, where: string): string | null {
+    if (!isPlainObject(style)) return null;
+    const ls = style.letterSpacing;
+    if (ls !== undefined && !(typeof ls === 'number' && Number.isFinite(ls))) {
+        return `[ir] ${where}.letterSpacing must be a finite number (em), or absent for the surface's spacing, read ${readOf(ls)}`;
+    }
+    const tt = style.textTransform;
+    if (tt !== undefined && (typeof tt !== 'string' || !Object.prototype.hasOwnProperty.call(TEXT_TRANSFORMS, tt))) {
+        return `[ir] ${where}.textTransform must be one of ${Object.keys(TEXT_TRANSFORMS).join(' | ')}, or absent for the surface's case, read ${readOf(tt)}`;
+    }
+    return null;
+}
+
+/** A key R-VP-20 adds whose value is a TextStyle (a literal segment's, an edge label's): an object when present. */
+function textStyleKeyError(style: unknown, where: string): string | null {
+    if (style === undefined) return null;
+    if (!isPlainObject(style)) return `[ir] ${where} must be a TextStyle object, or absent, read ${readOf(style)}`;
+    return textStyleAxesError(style, where);
+}
+
+/**
+ * The C2 keys (R-VP-20, P-2026-09-30-0150), authoring-time by the R-B9-bis criterion: the render
+ * reads a value outside the vocabulary as absent (irCompile resolveTextStyle, compileLabelText), the
+ * authoring surface refuses it here. Read as unknown for the reason given at `routing` below.
+ */
+function c2KeysError(ir: AnyViewIR): string | null {
+    const node = ir as NodeViewIR;
+    if (ir.kind === 'vertex' || ir.kind === 'graphVertex') {
+        const text = textStyleAxesError(node.shape?.text, 'shape.text');
+        if (text) return text;
+        const labels: unknown = node.shape?.labels;
+        if (Array.isArray(labels)) {
+            for (let i = 0; i < labels.length; i++) {
+                const bad = textStyleAxesError(labels[i]?.style, `shape.labels[${i}].style`);
+                if (bad) return bad;
+            }
+        }
+        const compartments: unknown = node.fieldCompartments;
+        if (Array.isArray(compartments)) {
+            for (let j = 0; j < compartments.length; j++) {
+                const fc = compartments[j];
+                const at = `fieldCompartments[${j}]`;
+                const exclude: unknown = fc?.source?.exclude;
+                if (exclude !== undefined) {
+                    if (fc.source.from !== 'attributes') return `[ir] ${at}.source.exclude applies to the attributes source only, read on ${readOf(fc.source.from)}`;
+                    if (!Array.isArray(exclude) || !exclude.every(x => typeof x === 'string')) {
+                        return `[ir] ${at}.source.exclude must be an array of feature names, or absent for every slot, read ${readOf(exclude)}`;
+                    }
+                }
+                const rowStyle = textStyleAxesError(fc?.rowFormat?.style, `${at}.rowFormat.style`);
+                if (rowStyle) return rowStyle;
+                const segments: unknown = fc?.rowFormat?.segments;
+                if (Array.isArray(segments)) {
+                    for (let k = 0; k < segments.length; k++) {
+                        if (segments[k]?.kind !== 'literal') continue;
+                        const bad = textStyleKeyError(segments[k].style, `${at}.rowFormat.segments[${k}].style`);
+                        if (bad) return bad;
+                    }
+                }
+            }
+        }
+    }
+    if (ir.kind === 'row') return textStyleAxesError((ir as RowViewIR).style, 'style');
+    if (ir.kind === 'edge') {
+        const labels: unknown = (ir as EdgeViewIR).edge?.labels;
+        if (isPlainObject(labels)) {
+            const template = labels.template;
+            if (template !== undefined && !(Array.isArray(template) && template.length > 0
+                && template.every(seg => isPlainObject(seg) && typeof seg.from === 'string' && Object.prototype.hasOwnProperty.call(TEXT_SOURCE_KINDS, seg.from)))) {
+                return `[ir] edge.labels.template must be a non-empty array of text sources (from: ${Object.keys(TEXT_SOURCE_KINDS).join(' | ')}), or absent for the centre source, read ${readOf(template)}`;
+            }
+            const style = textStyleKeyError(labels.style, 'edge.labels.style');
+            if (style) return style;
+            // R-VP-23: an end label is a text source, or absent (slice E: or {multiplicity?, role?}); the compile reads anything else as absent.
+            for (const end of ['sourceEnd', 'targetEnd'] as const) {
+                const bad = endLabelError(labels[end], `edge.labels.${end}`);
+                if (bad) return bad;
+            }
+        }
+    }
+    return null;
+}
+
+/** The intrinsic props a text source may read (irTypes.ts `TextSource`). */
+const INTRINSIC_PROPS: Readonly<Record<string, true>> = { name: true, metaclassName: true, qualifiedName: true };
+
+/** A text source whose own field has its type (R-VP-23). */
+const isEndTextSource = (src: unknown): boolean => isPlainObject(src) && (
+    (src.from === 'literal' && typeof src.text === 'string')
+    || (src.from === 'path' && typeof src.expr === 'string')
+    || (src.from === 'intrinsic' && typeof src.prop === 'string' && Object.prototype.hasOwnProperty.call(INTRINSIC_PROPS, src.prop))
+);
+
+/** The keys of an `EdgeEndLabels` (slice E). */
+const END_LABEL_KEYS: Readonly<Record<string, true>> = { multiplicity: true, role: true };
+
+/**
+ * An end label (R-VP-23): absent, or a text source. Slice E adds `{ multiplicity?, role? }`, an object
+ * without `from`, whose keys are those two and each a text source when present.
+ */
+function endLabelError(src: unknown, where: string): string | null {
+    if (src === undefined) return null;
+    if (isPlainObject(src) && !('from' in src)) {
+        const bad = Object.keys(src).find(k => !Object.prototype.hasOwnProperty.call(END_LABEL_KEYS, k)
+            || (src[k] !== undefined && !isEndTextSource(src[k])));
+        if (bad === undefined) return null;
+        return `[ir] ${where} must be a text source, or an end label {multiplicity?, role?} of text sources ({from: 'literal', text} | {from: 'path', expr} | {from: 'intrinsic', prop}), or absent for no end label, read ${readOf(src)}: ${Object.prototype.hasOwnProperty.call(END_LABEL_KEYS, bad) ? `${bad} is not a text source` : `unknown key ${bad}`}`;
+    }
+    return isEndTextSource(src) ? null : `[ir] ${where} must be a text source ({from: 'literal', text} | {from: 'path', expr} | {from: 'intrinsic', prop}), or an end label {multiplicity?, role?} of them, or absent for no end label, read ${readOf(src)}`;
+}
+
 export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: false; error: string } {
     // Predicate operator vocabulary (R-MK-11): the second authoring-time rule after
     // the endpoint one, by the same R-B9-bis criterion, and the only one that is not
@@ -126,6 +308,22 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             };
         }
 
+        // Entry mark (R-VP-22): same criterion as padding. The render reads a value outside the
+        // vocabulary as absent (compileView), the authoring surface refuses it here.
+        const entry: unknown = (ir as NodeViewIR).shape?.entry;
+        if (entry !== undefined && !(VALID_ENTRY_VALUES as readonly unknown[]).includes(entry)) {
+            return {
+                ok: false,
+                error: `[ir] shape.entry must be one of ${VALID_ENTRY_VALUES.join(' | ')}, or absent for no entry mark, read ${JSON.stringify(entry)}`,
+            };
+        }
+
+        // Q7 (P-2026-10-03-1304): `visible` is a boolean or a Conditional; the render reads anything else as absent.
+        const visible: unknown = (ir as { visible?: unknown }).visible;
+        if (visible !== undefined && typeof visible !== 'boolean' && !isConditionalValue(visible)) {
+            return { ok: false, error: `[ir] visible must be a boolean or a Conditional, or absent for drawn, read ${JSON.stringify(visible)}` };
+        }
+
         // Corner radius (slice 3, D5): numeric guard, same criterion as padding. The render
         // reads an invalid value as absent (authoredCornerRadius), the authoring surface
         // rejects it here through the same function, so the two cannot disagree on what
@@ -141,6 +339,67 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
                 error: `[ir] shape.cornerRadius must be a finite number >= 0 (px), or absent for the form's base radius, read ${read}`,
             };
         }
+
+        // Default size (P-2026-09-29-1230): same criterion as the radius, through the same
+        // function the render reads with (usableSizeAxis), so the two agree on "usable".
+        // No clamp here: the floor depends on the form, which can change per instance, so
+        // it is applied at render (defaultBoxFor). An absent axis is legal (stays derived).
+        const defaultSize: unknown = (ir as VertexViewIR).defaultSize;
+        if (defaultSize !== undefined) {
+            if (!defaultSize || typeof defaultSize !== 'object' || Array.isArray(defaultSize)) {
+                return {
+                    ok: false,
+                    error: `[ir] defaultSize must be an object { width?, height? }, or absent for the size derived from content, read ${JSON.stringify(defaultSize)}`,
+                };
+            }
+            for (const axis of ['width', 'height'] as const) {
+                const v: unknown = (defaultSize as Record<string, unknown>)[axis];
+                if (v !== undefined && usableSizeAxis(v) === undefined) {
+                    const read = typeof v === 'number' ? String(v) : JSON.stringify(v);
+                    return {
+                        ok: false,
+                        error: `[ir] defaultSize.${axis} must be a finite number > 0 (px), or absent for the size derived from content, read ${read}`,
+                    };
+                }
+            }
+        }
+
+        // Bar thickness (Q3, P-2026-10-03-1304): a finite number > 0 (px), by the same function as
+        // the default size, or absent for a bar drawn as its box.
+        const barThickness: unknown = (ir as NodeViewIR).shape?.barThickness;
+        if (barThickness !== undefined && usableSizeAxis(barThickness) === undefined) {
+            const read = typeof barThickness === 'number' ? String(barThickness) : JSON.stringify(barThickness);
+            return {
+                ok: false,
+                error: `[ir] shape.barThickness must be a finite number > 0 (px), or absent for a bar drawn as its box, read ${read}`,
+            };
+        }
+
+        // Label position and anchor (P-2026-09-29-1245): authoring-time by the R-B9-bis
+        // criterion, like padding. The render stays permissive (an unknown anchor draws 's',
+        // resolveLabelAnchor; an unknown position gets no rule and stays in the flow), the
+        // authoring surface applies the vocabulary. Read as unknown for the same reason as
+        // routing. A present anchor is checked on every position: the label editor never
+        // writes one on an inside position, so one there came from somewhere else.
+        const labels: unknown = (ir as NodeViewIR).shape?.labels;
+        if (Array.isArray(labels)) {
+            for (let i = 0; i < labels.length; i++) {
+                const position: unknown = labels[i]?.position;
+                if (typeof position !== 'string' || !Object.prototype.hasOwnProperty.call(VALID_LABEL_POSITIONS, position)) {
+                    return {
+                        ok: false,
+                        error: `[ir] shape.labels[${i}].position must be one of ${Object.keys(VALID_LABEL_POSITIONS).join(' | ')}, read ${JSON.stringify(position)}`,
+                    };
+                }
+                const anchor: unknown = labels[i]?.anchor;
+                if (anchor !== undefined && (typeof anchor !== 'string' || !Object.prototype.hasOwnProperty.call(LABEL_ANCHORS, anchor))) {
+                    return {
+                        ok: false,
+                        error: `[ir] shape.labels[${i}].anchor must be one of ${Object.keys(LABEL_ANCHORS).join(' | ')}, or absent for 's' (below), read ${JSON.stringify(anchor)}`,
+                    };
+                }
+            }
+        }
     }
 
     // Read as unknown on purpose: the values this rule exists to catch (the empty
@@ -154,6 +413,30 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
                 ok: false,
                 error: `[ir] edge.routing must be one of ${VALID_ROUTING_VALUES.join(' | ')}, or absent for the Manhattan default — read ${JSON.stringify(routing)}`,
             };
+        }
+
+        // Curve vocabulary (R-VP-22): same criterion as routing, read as unknown for the same reason.
+        const curve: unknown = (ir as EdgeViewIR).edge?.curve;
+        if (curve !== undefined && !(VALID_CURVE_VALUES as readonly unknown[]).includes(curve)) {
+            return {
+                ok: false,
+                error: `[ir] edge.curve must be ${VALID_CURVE_VALUES.join(' | ')}, or absent for the routing path, read ${JSON.stringify(curve)}`,
+            };
+        }
+
+        // Termination vocabulary (R-VP-24): same criterion as routing, each end read as unknown for the same reason.
+        const terminations: unknown = (ir as EdgeViewIR).edge?.terminations;
+        if (terminations && typeof terminations === 'object') {
+            for (const end of ['sourceEnd', 'targetEnd'] as const) {
+                const t: unknown = (terminations as Record<string, unknown>)[end];
+                const bad = terminationEndError(t);
+                if (bad) {
+                    return {
+                        ok: false,
+                        error: `[ir] edge.terminations.${end} must be one of ${Object.keys(VALID_TERMINATIONS).join(' | ')}, a Conditional of them ({when, then, else?} | {rules: [{when, then}], default?}), or absent for the default end, read ${JSON.stringify(bad.read)}`,
+                    };
+                }
+            }
         }
 
         // Endpoint vocabulary (R-B13/R-B15): the FIRST endpoint rule of validateIR,
@@ -188,6 +471,10 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             }
         }
     }
+
+    // The C2 keys (R-VP-20): after the rules above, before the compile, which reads them permissively.
+    const c2 = c2KeysError(ir);
+    if (c2 !== null) return { ok: false, error: c2 };
 
     try {
         if (ir.kind === 'edge') compileEdgeView(viewId, ir as EdgeViewIR);

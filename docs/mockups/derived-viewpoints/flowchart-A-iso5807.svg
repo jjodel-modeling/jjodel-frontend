@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.sm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:500;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+.at{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#64748b}
+.mk{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;fill:#0f172a}
+.mk0{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;fill:#94a3b8}
+</style><marker id="hfa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker><marker id="ifa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 400 88 L 400 127" marker-end="url(#hfa)"/>
+<path d="M 400 172 L 400 211" marker-end="url(#hfa)"/>
+<path d="M 400 256 L 400 291" marker-end="url(#hfa)"/>
+<path d="M 400 388 L 400 435" marker-end="url(#hfa)"/>
+<path d="M 300 460 H 216 V 340 H 311" marker-end="url(#hfa)"/>
+<path d="M 488 340 L 607 340" marker-end="url(#hfa)"/>
+<path d="M 688 362 L 688 439" marker-end="url(#hfa)"/>
+</g>
+<rect x="340" y="48" width="120" height="40" rx="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<polygon points="332,172 348,128 468,128 452,172" fill="#ffffff" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+<rect x="320" y="212" width="160" height="44" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<polygon points="400,292 488,340 400,388 312,340" fill="#ffffff" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+<rect x="290" y="436" width="220" height="48" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<polygon points="600,362 616,318 776,318 760,362" fill="#ffffff" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+<rect x="628" y="440" width="120" height="40" rx="20" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="400" y="73" text-anchor="middle">Start</text>
+<text class="sm" x="400" y="155" text-anchor="middle">read n</text>
+<text class="sm" x="400" y="239" text-anchor="middle">i := 0,  s := 0</text>
+<text class="sm" x="400" y="345" text-anchor="middle">i &lt; n ?</text>
+<text class="sm" x="400" y="465" text-anchor="middle">s := s + i,  i := i + 1</text>
+<text class="sm" x="688" y="345" text-anchor="middle">print s</text>
+<text class="sm" x="688" y="465" text-anchor="middle">End</text>
+<text class="lbl" x="420" y="418" text-anchor="start">yes</text>
+<text class="lbl" x="540" y="330" text-anchor="middle">no</text>
+</svg>

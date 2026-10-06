@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.sm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:500;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+.at{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#64748b}
+.mk{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;fill:#0f172a}
+.mk0{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;fill:#94a3b8}
+</style><marker id="hfb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker><marker id="ifb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 106 200 L 149 200" marker-end="url(#hfb)"/>
+<path d="M 270 200 L 309 200" marker-end="url(#hfb)"/>
+<path d="M 450 200 L 497 200" marker-end="url(#hfb)"/>
+<path d="M 542 200 L 599 200" marker-end="url(#hfb)"/>
+<path d="M 700 176 V 120 H 520 V 177" marker-end="url(#hfb)"/>
+<path d="M 520 222 L 520 329" marker-end="url(#hfb)"/>
+<path d="M 580 354 L 643 354" marker-end="url(#hfb)"/>
+</g>
+<circle cx="90" cy="200" r="16" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<rect x="150" y="176" width="120" height="48" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<rect x="310" y="176" width="140" height="48" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<polygon points="520,178 542,200 520,222 498,200" fill="#ffffff" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="M 513 193 L 527 207 M 527 193 L 513 207" stroke="#334155" stroke-width="1.5" stroke-linecap="round"/>
+<rect x="600" y="176" width="200" height="48" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<rect x="460" y="330" width="120" height="48" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="660" cy="354" r="16" fill="#ffffff" stroke="#334155" stroke-width="3.5"/>
+<text class="lbl" x="90" y="236" text-anchor="middle">start</text>
+<text class="sm" x="210" y="205" text-anchor="middle">read n</text>
+<text class="sm" x="380" y="205" text-anchor="middle">i := 0,  s := 0</text>
+<text class="sm" x="700" y="205" text-anchor="middle">s := s + i,  i := i + 1</text>
+<text class="sm" x="520" y="359" text-anchor="middle">print s</text>
+<text class="lbl" x="660" y="390" text-anchor="middle">end</text>
+<text class="lbl" x="504" y="170" text-anchor="end">i &lt; n ?</text>
+<text class="lbl" x="570" y="190" text-anchor="middle">yes</text>
+<text class="lbl" x="532" y="284" text-anchor="start">no</text>
+</svg>

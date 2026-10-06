@@ -564,8 +564,53 @@ export function syncDeleteReferenceById(refId: string, fallbackRefProxy?: any): 
 }
 
 /**
+ * Delete an M1 link: an edge whose start vertex is over a DObject. The link is one value
+ * of the source object's slot, never the DReference it instantiates, which the edge's
+ * `model` points at (syncCreateReferenceLink, useM1ReferenceEdges): deleting that was the
+ * M2 cascade, every slot and edge of the reference gone (discovery_2026-09-30_reference_delete.md).
+ *
+ * One TRANSACTION of pure actions (§3.3 SAFE): the target leaves the slot through
+ * setValueAtPosition, the rail's × primitive (a containment slot detaches the child to the
+ * model), the edge id leaves its graph's subElements (the cascade's pointedBy may not list
+ * it on a loaded project), the DEdge is deleted. The slot is the one of the edge's reference;
+ * with no resolvable `model`, the single reference slot holding the target; none or several
+ * leave the slot alone. Returns false for an edge that is not an M1 link, or whose `model`
+ * resolves to something other than a DReference: those keep the caller's path.
+ */
+function deleteM1Link(edgeId: string, lookup: any): boolean {
+    const dEdge: any = lookup[edgeId];
+    const startVertex: any = dEdge ? lookup[dEdge.start] : undefined;
+    if (!startVertex || lookup[startVertex.model]?.className !== 'DObject') return false;
+    const meta: any = typeof dEdge.model === 'string' ? lookup[dEdge.model] : undefined;
+    if (meta && meta.className !== 'DReference') return false;
+
+    const sourceObject: any = lookup[startVertex.model];
+    const targetId: string | undefined = lookup[dEdge.end]?.model;
+    const candidates: any[] = (sourceObject.features ?? [])
+        .map((f: string) => lookup[f])
+        .filter((s: any) => s?.className === 'DValue'
+            && lookup[s.instanceof]?.className === 'DReference'
+            && Array.isArray(s.values) && targetId !== undefined && s.values.indexOf(targetId) !== -1);
+    const slot: any = meta
+        ? candidates.find((s: any) => s.instanceof === dEdge.model)
+        : (candidates.length === 1 ? candidates[0] : undefined);
+    const lSlot: any = slot ? LPointerTargetable.fromPointer(slot.id) : undefined;
+    const graphIds = [...new Set([dEdge.father, dEdge.graph])]
+        .filter((g: any) => typeof g === 'string' && (lookup[g]?.subElements ?? []).includes(edgeId));
+
+    TRANSACTION('EditorV2 delete reference link', () => {
+        if (lSlot) lSlot.setValueAtPosition(slot.values.indexOf(targetId), undefined, { isPtr: true });
+        for (const g of graphIds) SetFieldAction.new(g, 'subElements', edgeId, '-=', true);
+        DeleteElementAction.new(dEdge);
+    });
+    clearCanvasEdgePair(dEdge.start, dEdge.end);
+    return true;
+}
+
+/**
  * Delete an edge from JjOM.
  * For inheritance edges: removes from extends array.
+ * For M1 links: removes the link only (deleteM1Link).
  * For reference edges: deletes the DReference.
  */
 export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
@@ -590,9 +635,10 @@ export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
                 DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy);
             });
         } else {
+            const lookup: any = store.getState().idlookup;
+            if (deleteM1Link(edgeId, lookup)) return;
             // Reference edge: cascade-delete the M2 DReference, its M1 slots, and all backing edges.
             const refModel: any = edgeProxy.model;
-            const lookup: any = store.getState().idlookup;
             // Canonical DReference pointer = the clicked edge's stored `model` (the same pointer used
             // by M1 edges' `model` and by slots' `instanceof`). Derive it from idlookup, NOT from
             // (refModel.__raw ?? refModel).id, which may differ and made fromPointer() return null.
@@ -606,6 +652,66 @@ export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
         }
     } catch (err) {
         console.warn('[canvasToJjom] Failed to delete edge:', err);
+    }
+}
+
+// The synthetic id prefix of an object rendered as an edge (irEdgeViews.ts, `irobj_<objectId>`).
+const OBJECT_AS_EDGE_PREFIX = 'irobj_';
+
+/**
+ * The M1 object an object-as-edge stands for (R-B series, P-2026-10-04-0130): the synthetic id names a
+ * DObject, not a DEdge, so `syncDeleteEdge` resolves nothing for it. Null for every other edge id (M2
+ * reference, inheritance, M1 link) and for an object no longer in the lookup. Pure: the edge's own menu
+ * and its delete both decide on it.
+ */
+export function resolveObjectAsEdge(edgeId: string, lookup: any): { objectId: string; metaclassName: string } | null {
+    if (!edgeId.startsWith(OBJECT_AS_EDGE_PREFIX)) return null;
+    const objectId = edgeId.slice(OBJECT_AS_EDGE_PREFIX.length);
+    const object: any = lookup?.[objectId];
+    if (object?.className !== 'DObject') return null;
+    const metaclassName: unknown = lookup[object.instanceof]?.name;
+    return { objectId, metaclassName: typeof metaclassName === 'string' && metaclassName ? metaclassName : 'object' };
+}
+
+/**
+ * Delete an object rendered as an edge: the edge IS the object. Its vertices (the hidden one under the
+ * IR viewpoint, any other graph's) and every DEdge on them leave the subElements that list them and are
+ * deleted, in one TRANSACTION of pure actions (§3.3 SAFE); then the DObject cascade, last and unwrapped.
+ * Measured on a loaded project (discovery_2026-10-04_object_edge_delete.md §10): the cascade alone, or
+ * `syncDeleteVertex`, leaves the vertex and its link edges in subElements, drawn as ghosts, the shape
+ * `deleteM1Link` already handles for one edge. A singleton is refused by the cascade's guard before
+ * anything is stripped, as in `syncDeleteVertex`.
+ */
+export function syncDeleteObjectAsEdge(objectId: string): void {
+    try {
+        const lookup: any = store.getState().idlookup;
+        const lObject: any = LPointerTargetable.fromPointer(objectId);
+        if (lookup[objectId]?.className !== 'DObject' || !lObject) return;
+        if (lObject.instanceof?.isSingleton) {
+            lObject.delete(); // guard refusal: warning only, no actions fired
+            return;
+        }
+        const all: any[] = Object.values(lookup);
+        const vertexIds = new Set<string>(all
+            .filter((d: any) => d && String(d.className).includes('Vertex') && d.model === objectId)
+            .map((d: any) => d.id));
+        const edges: any[] = all.filter((d: any) => d && String(d.className).includes('Edge')
+            && (vertexIds.has(d.start) || vertexIds.has(d.end)));
+        const doomed: any[] = [...edges, ...[...vertexIds].map(id => lookup[id])];
+        TRANSACTION('EditorV2 delete object-as-edge', () => {
+            for (const d of doomed) {
+                for (const g of new Set([d.father, d.graph])) {
+                    if (typeof g === 'string' && (lookup[g]?.subElements ?? []).includes(d.id)) {
+                        SetFieldAction.new(g as any, 'subElements' as any, d.id, '-=', true);
+                    }
+                }
+                DeleteElementAction.new(d);
+            }
+        });
+        for (const e of edges) clearCanvasEdgePair(e.start, e.end);
+        lObject.delete();
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to delete object-as-edge:', err);
     }
 }
 

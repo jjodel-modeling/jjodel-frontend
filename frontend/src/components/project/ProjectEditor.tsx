@@ -202,8 +202,9 @@ const formatDate = (date: Date | string | number | undefined): string => {
  */
 const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }) => {
     if (!project) return null;
-    const metamodels = project.metamodels || [];
-    const models = project.models || [];
+    // An absent target is left out: `.name` on it white-paged the project (P-2026-09-30-1540).
+    const metamodels = (project.metamodels || []).filter(m => !!m);
+    const models = (project.models || []).filter(m => !!m);
     // The Data Manager singleton is out of every list this page builds (R-DMV-1): the
     // VIEWPOINTS section, the megamodel, and the two export payloads below all read this
     // array. Filtered ONCE here rather than at each of the five call sites, which is the

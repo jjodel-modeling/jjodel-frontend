@@ -499,6 +499,23 @@
         overflow: hidden;
     }
 
+    /* Outside label (P-2026-09-29-1245): the symbolic preview places the text past the glyph
+       on the side of the view's primary label, 8px away and centred on that side, in the
+       canvas's regular weight. Same specificity as the rule above and later, so it wins. */
+    &__preview-label--outside {
+        inset: auto;
+        display: block;
+        padding: 0;
+        font-weight: 400;
+        white-space: nowrap;
+        overflow: visible;
+    }
+
+    &__preview-label--outside-n { bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); }
+    &__preview-label--outside-s { top: calc(100% + 8px); left: 50%; transform: translateX(-50%); }
+    &__preview-label--outside-w { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+    &__preview-label--outside-e { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+
     /* TODO: cleanup — orphaned by slice 5. Its only markup was the «Conditional form:
        no static preview» branch, which D8-b replaced with the fallback glyph: a
        conditional form is previewable now. Left in place rather than removed with the
@@ -596,6 +613,38 @@
         font-size: 10px;
         color: var(--color-text-secondary, #64748b);
         font-family: var(--font-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Outside label (P-2026-09-29-1245): the tile lays the label beside its box, in flow, so
+       it takes its room (SymbolBoxPreview takes the same room off the fit) instead of spilling
+       over the caption. A grid of named areas keeps the DOM order stage, label, caption for
+       every side. 11px, the canvas's regular weight, capped at 80px like the room reserved. */
+    &--outside {
+        display: grid;
+        justify-items: center;
+        align-items: center;
+        gap: 8px;
+
+        > .symbol-box-preview__stage { grid-area: stage; }
+        > .symbol-box-preview__outside-label { grid-area: label; }
+        > .symbol-box-preview__caption { grid-area: caption; }
+    }
+
+    &--outside-n { grid-template-areas: "label" "stage" "caption"; }
+    &--outside-s { grid-template-areas: "stage" "label" "caption"; }
+    &--outside-w { grid-template-areas: "label stage" "caption caption"; }
+    &--outside-e { grid-template-areas: "stage label" "caption caption"; }
+    &--outside-w > .symbol-box-preview__outside-label { justify-self: end; }
+    &--outside-e > .symbol-box-preview__outside-label { justify-self: start; }
+
+    &__outside-label {
+        max-width: 80px;
+        font-size: 11px;
+        line-height: 1.3;
+        color: var(--color-text-primary, #334155);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;

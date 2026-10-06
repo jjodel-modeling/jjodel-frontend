@@ -5,7 +5,8 @@
 `docs/discovery/discovery_2026-09-13_simulation_engine_state.md` and
 `docs/discovery/discovery_2026-09-13_jjel_eval_context.md`.
 **Amended**: 2026-09-25 by R-SIM-21..33 (Petri core, termination, five run statuses);
-see sections 3.3 and 3.4.
+see sections 3.3 and 3.4. 2026-09-28 by R-SIM-88 (input variables, a third input of the step);
+see sections 4.1 and 8.
 
 **Supersedes**: nothing; the current engine in `frontend/src/components/editor-v2/sim/` is the
 implementation this spec reshapes.
@@ -101,9 +102,15 @@ by the environment, and one **effect**, computed by the engine.
 
 - The **event** e (§2), possibly absent.
 - The **selector**: an edge of M, or *none*.
+- The **input valuation** (R-SIM-88, amends R-SIM-7): a value of its domain for each input
+  declaration the step reads. An input is declared like a state component (name, domain,
+  indexing, §3.2) but is not one: it is never part of σ, never assigned, never read by a derived
+  attribute, and holds for the one step it is given to. Guards and actions read it with `.[x]`.
 
 The environment is the user in step-by-step mode, the run policy (§6) in run mode, the model
-checker in verification.
+checker in verification. In step-by-step mode the panel asks the input valuation at the press,
+only for the inputs that the guards and actions of the structurally enabled candidates read, and
+before any effect; cancelling the question leaves the configuration as it was.
 
 ### 4.2 Enabling and candidates
 
@@ -210,6 +217,7 @@ e absent.
 | state components | `VAR` with declared domain | domain from §3.2, never inferred |
 | current event | `IVAR` (event enum + absent) | free for the checker, supplied by the user in simulation |
 | selector | `IVAR` (edge enum + none) | choice is an input of the step, not part of it |
+| input declaration (R-SIM-88) | `IVAR` with declared domain, one per owner | free for the checker, asked by the panel at the press that reads it |
 | enabling, guards, stable | `DEFINE` | stateless predicates |
 | admissibility, progress, event only when stable | `TRANS` | constraints on the IVARs |
 | structural effect, actions | `ASSIGN next(x) := …` | parallel, read on current state |

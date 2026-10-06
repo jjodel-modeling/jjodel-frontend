@@ -1,4 +1,5 @@
 # Prompt di handoff — #157 modalità stand-alone/environment
+Status: eseguito 2026-09-24 · staging (Juri Di Rocco, #157), outside this harness; line added at reintegration by the chat (P-2026-10-01-2240)
 
 **Data**: 2026-09-24
 **Branch**: `feat/157-environment-config`

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "SG-1",
+    "name": "Low cognitive load",
+    "description": "The modeler sees only what the task at hand needs. CLAUDE.md §8.8 makes Basic mode the default and asks to hide complexity until needed; docs/DESIGN-SYSTEM.md §4.2 requires every panel to support Basic/Advanced, Basic showing essential controls only. Rows serve it when they gate a surface on Redux state.advanced (R-RAIL-12, R-RAIL-13, R-SIM-97), keep a disclosure closed by default (R-RAIL-24), give one place and one name to one thing, or keep a concern out of the surfaces it would crowd (R-VAL-1: rules next to the class properties «aumenta il carico cognitivo»). They hurt it when they add concepts, controls or modes the user must hold in mind, or two readings of the same thing. Scope: the users of the product (modeler, language engineer, demo audience); the cost borne by the developer and the harness is SG-7."
+  },
+  {
+    "id": "SG-2",
+    "name": "No layout shift",
+    "description": "What is on screen does not move or resize because some state changed elsewhere. docs/DESIGN-SYSTEM.md §4.3: components use fixed dimensions, no reflow on state change, visibility toggled without collapsing the box. Rows serve it when they fix chrome heights in one token source (D-UI-12), keep every tab mounted so a switch does not remount or move focus (R-A), or persist node positions and human-chosen sizes per exclusive viewpoint so a reload or a viewpoint switch does not rearrange the canvas (R-LAY-1, R-LAY-4). They hurt it when content-dependent sizes, late-arriving data or conditional mounts move what the user is looking at. Scope: chrome, panels and canvas geometry."
+  },
+  {
+    "id": "SG-3",
+    "name": "Demo readiness",
+    "description": "The MODELS 2026 simulator demo in Malaga runs as scripted: its four scenes (state machine, Petri net, ESM, Flow B) reach the readings docs/demo/models_2026_simulator_demo.md quotes. The script header still carries the first calendar (demo 2026-10-04, build frozen 2026-10-01 evening); the checkpoint docs/sessioni/sessione_2026-09-30_2.md §3 moved the merge freeze to 2026-10-07, and R-VP-48 and R-VP-60 cite that freeze. Rows serve it when they add or fix what a scene shows (R-SIM-80..R-SIM-82), bring a surface into the demo build before the freeze (R-SIM-85, R-SIM-90), protect the scenes from regressions (RC-31 re-runs the four scenes on every merge before the freeze) or keep risky work after the demo (RC-39). RC-26 makes anything that changes what the demo shows wait for Alfonso. Rows hurt it when they move a scene-critical surface late or defer a capability a scene uses."
+  },
+  {
+    "id": "SG-4",
+    "name": "Reversibility",
+    "description": "A change can be taken back, at two levels. For the user's edits: one undo stack per editing mode with one step per gesture (R-UNDO-1, R-UNDO-5), saved projects that keep opening unchanged after a change (additive optional keys and no migration: R-SIM-90, R-SIM-134; no destructive migration now: R-EDGE-3), and deletion of persisted data gated on Alfonso (RC-26). For decisions: provisional rows that a veto reverts (RC-25), a rollback tag before each merge (RC-31), and the reversible: field the recent rows carry. A decision declared final with its reserve removed (D-UI-15) is the opposite pole. The reversible: header field alone is metadata, not a contribution."
+  },
+  {
+    "id": "SG-5",
+    "name": "Determinism of the simulation engine",
+    "description": "The same net, initial state and inputs give the same run and the same trace. The engine steps by interleaving with an explicit selector, one firing per step, quiescence and discarded events recorded as steps (R-SIM-7, R-SIM-21); guards stay pure and every external choice (modal, random, scenario) is a selector policy, so nondeterminism is visible as such instead of hidden in an expression (R-SIM-25); actions are parallel assignments read on the previous state (R-SIM-17, R-SIM-21). Rows hurt it when an outcome depends on wall-clock timing, on the iteration order of a container, or on unseeded randomness. Scope: the simulator (R-SIM rows and the JjEL and JjScript evaluation it calls), not the editor's rendering."
+  },
+  {
+    "id": "SG-6",
+    "name": "Fidelity to the formalism",
+    "description": "What the tool executes or checks is the semantics of the formalism the user models, not an approximation of it. For the simulator: the Petri transition is the nucleus, with the standard enabling and firing rule (R-SIM-21), state machines and flowcharts are special cases compiled into it (R-SIM-22, R-SIM-25), and the step semantics the spec excludes is replaced, not kept beside (R-SIM-7). By extension, the metamodeling formalism the user also models: a model conforms to its metamodel, and two metaclasses of different metamodels stay distinct under the same name (R-MCID-1). Rows hurt it when a shortcut makes the executed or checked behaviour differ from the formalism's, or when a presentation concern changes a semantic one."
+  },
+  {
+    "id": "SG-7",
+    "name": "Cost of the harness",
+    "description": "The human time and the tokens that the process around the code costs: prompts, lanes, gates, logs, ratifications, discovery reports, round trips to Alfonso. RC-18 sets a measured budget (at most one lane in four touching only harness paths), RC-17 cut the lane closure to one docs commit after measuring up to five, RC-32 runs the lighter model when the activity allows, and the 500-character Notes cap of CLAUDE.md §21.2 is a token budget. An R- row contributes when its text speaks to that cost: it adds or removes a step, a gate, a document, a commit or a wait for Alfonso, or it states a rule whose purpose is to stop rework that earlier lanes measured. Lower cost is the satisfied direction: a row that lowers it helps."
+  }
+]

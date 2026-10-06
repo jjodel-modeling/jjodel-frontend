@@ -8,13 +8,13 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    choiceElements, enabledElements, initialMarkingFeature, isInitialMarkingRow, nodeStateOf,
+    choiceElements, enabledElements, initialMarkingFeature, isInitialMarkingRow, nodeStateOf, stateKindOf,
 } from '../simCanvasState';
-import { __resetSimRunsForTests, getSimNodeState, simCommit, simReset } from '../simRunState';
+import { __resetSimRunsForTests, getSimNodeState, getSimRun, simCommit, simReset, simSetView } from '../simRunState';
 import type { SimRun } from '../simRunState';
 import { step } from '../../../../model/simulation/netStep';
 import type {
-    ActionOracle, CompiledNet, DerivedValues, GuardOracle, HaltReason, NetTransition, SimState, SimValue,
+    ActionOracle, CompiledNet, DerivedValues, GuardOracle, HaltReason, InputRead, NetTransition, SimState, SimValue, StateAttributeDecl,
 } from '../../../../model/simulation/netTypes';
 
 const TRUE: GuardOracle = () => ({ kind: 'true' });
@@ -123,6 +123,52 @@ describe('enabledElements: the origins of the candidates of some input, while th
     });
 });
 
+describe('enabledElements: a transition waiting for an input is ringed, as runStatus keeps its run Running (R-SIM-88)', () => {
+    const DECISION: InputRead = { element: 'D', attr: 'decision', domain: { kind: 'boolean' } };
+    // The DecisionNode of Flow B: both edges read the input, so no guard is true before it is answered.
+    const unanswered: GuardOracle = () => ({ kind: 'false' });
+    const waiting = (run: SimRun, reads: Record<string, InputRead[]>): SimRun => ({ ...run, inputs: new Map(Object.entries(reads)) });
+
+    it('the edges of a decision that wait for an input are ringed (killed by reading the candidates alone)', () => {
+        const net = mkNet([
+            tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'], guardSites: ['Flow_1'] }),
+            tr('f2', { d: 1 }, { b: 1 }, { origin: ['Flow_2'], guardSites: ['Flow_2'] }),
+        ]);
+        const run = waiting(mkRun(net, st({ d: 1 }), { guards: unanswered }), { f1: [DECISION], f2: [DECISION] });
+        expect([...enabledElements(run)].sort()).toEqual(['Flow_1', 'Flow_2']);
+        expect(nodeStateOf(run, 'Flow_1')?.enabled).toBe(true);
+    });
+
+    it('a transition that reads no input keeps the guard\'s reading (killed by ringing every structurally enabled transition)', () => {
+        const net = mkNet([
+            tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'], guardSites: ['Flow_1'] }),
+            tr('f3', { d: 1 }, { c: 1 }, { origin: ['Flow_3'], guardSites: ['Flow_3'] }),
+        ]);
+        const run = waiting(mkRun(net, st({ d: 1 }), { guards: unanswered }), { f1: [DECISION], f3: [] });
+        expect([...enabledElements(run)]).toEqual(['Flow_1']);
+    });
+
+    it('its preset unmarked, or an inhibitor marked, it does not wait (killed by skipping either structural check)', () => {
+        const unmarked = mkNet([tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'] })]);
+        expect(enabledElements(waiting(mkRun(unmarked, st({ a: 1 }), { guards: unanswered }), { f1: [DECISION] })).size).toBe(0);
+        const inhibited = mkNet([{ ...tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'] }), inhibitors: [{ place: 'x', weight: 1 }] }]);
+        expect(enabledElements(waiting(mkRun(inhibited, st({ d: 1, x: 1 }), { guards: unanswered }), { f1: [DECISION] })).size).toBe(0);
+    });
+
+    it('it waits only for an input the run can give: ε, or an event of the alphabet (killed by skipping the trigger check)', () => {
+        const net = mkNet([tr('tc', { d: 1 }, { a: 1 }, { origin: ['Tc'], triggers: ['coin'] })]);
+        expect(enabledElements(waiting(mkRun(net, st({ d: 1 }), { guards: unanswered }), { tc: [DECISION] })).size).toBe(0);
+        expect([...enabledElements(waiting(mkRun(net, st({ d: 1 }), { guards: unanswered, alphabet: ['coin'] }), { tc: [DECISION] }))]).toEqual(['Tc']);
+    });
+
+    it('a halted or terminated run waits for nothing (killed by dropping either gate)', () => {
+        const net = mkNet([tr('f1', { d: 1 }, { a: 1 }, { origin: ['Flow_1'] })]);
+        expect(enabledElements(waiting(mkRun(net, st({ d: 1 }), { guards: unanswered, halt: UNSAFE }), { f1: [DECISION] })).size).toBe(0);
+        const ended: CompiledNet = { ...net, final: new Set(['d']) };
+        expect(enabledElements(waiting(mkRun(ended, st({ d: 1 }), { guards: unanswered }), { f1: [DECISION] })).size).toBe(0);
+    });
+});
+
 describe('choiceElements: the elements the transitions of an open choice list were compiled from (slice A2)', () => {
     it('maps a listed transition to its origins, not its id (killed by mapping the id)', () => {
         const net = mkNet([
@@ -177,7 +223,7 @@ describe('getSimNodeState: the store, per model, per committed configuration', (
     it('finds the run that knows the object among several models (killed by reading only the first run)', () => {
         simReset('M1', mkRun(mkNet([tr('t', { a: 1 }, { b: 1 })], 'M1'), st({ a: 1 })));
         simReset('M2', mkRun(mkNet([tr('u', { x: 1 }, { y: 1 })], 'M2'), st({ x: 1 })));
-        expect(getSimNodeState('y')).toEqual({ modelId: 'M2', tokens: 0, sigma: [], enabled: false });
+        expect(getSimNodeState('y')).toEqual({ modelId: 'M2', tokens: 0, sigma: [], enabled: false, presentation: [] });
         expect(getSimNodeState('a')?.modelId).toBe('M1');
     });
 
@@ -223,5 +269,99 @@ describe('the initial-marking row', () => {
         expect(isInitialMarkingRow(lookup, 'fTokens', 'fTokens')).toBe(true);
         expect(isInitialMarkingRow(lookup, 'dvOther', 'fTokens')).toBe(false);
         expect(isInitialMarkingRow(lookup, 'dvTokens', null)).toBe(false);
+    });
+});
+
+describe('stateKindOf (R-SIM-102): the nuXmv name of a declaration', () => {
+    const base: StateAttributeDecl = { name: 'x', metaclass: null, space: 'semantic', domain: { kind: 'boolean' } };
+
+    it('an input is IVAR, a derived DEFINE, a stored VAR (mutants: the input read after the equation; DEFINE for every stored one)', () => {
+        expect(stateKindOf({ ...base, input: true })).toBe('IVAR');
+        expect(stateKindOf({ ...base, input: true, equation: 'true' })).toBe('IVAR');
+        expect(stateKindOf({ ...base, equation: 'true' })).toBe('DEFINE');
+        expect(stateKindOf({ ...base, initial: false })).toBe('VAR');
+        expect(stateKindOf({ ...base, space: 'presentation', domain: null })).toBe('VAR');
+    });
+});
+
+describe('nodeStateOf: presentation rows, kinds and the last step\'s changes (P-2026-10-03-0040)', () => {
+    const decl = (name: string, x: Partial<StateAttributeDecl> = {}): StateAttributeDecl =>
+        ({ name, metaclass: 'C', space: 'semantic', domain: { kind: 'range', min: 0, max: 9 }, ...x });
+    const declaring = (element: string, ds: StateAttributeDecl[]): CompiledNet =>
+        ({ ...mkNet([tr('t', { a: 1 }, { b: 1 })]), declared: new Map([[element, new Map(ds.map(d => [d.name, d]))]]) });
+    const withPresentation = (s: SimState, stored: Space, derived: Space = {}): SimState =>
+        ({ ...s, presentation: space(stored), derived: { attrs: s.derived?.attrs ?? space(), presentation: space(derived) } });
+
+    it('the presentation rows: stored then derived, sorted, never in σ (mutant: the presentation read into sigma)', () => {
+        const state = withPresentation(st({ a: 1 }, { a: { visits: 2 } }), { a: { heat: 3 } }, { a: { glow: true } });
+        const s = nodeStateOf(mkRun(mkNet([tr('t', { a: 1 }, { b: 1 })]), state), 'a');
+        expect(s?.sigma).toEqual([{ attr: 'visits', value: '2' }]);
+        expect(s?.presentation).toEqual([{ attr: 'glow', value: 'true' }, { attr: 'heat', value: '3' }]);
+    });
+
+    it('an element with presentation state only is not null, and a place without any has none (mutant: the null rule blind to the presentation)', () => {
+        const net = mkNet([tr('t', { a: 1 }, { b: 1 })]);
+        const s = nodeStateOf(mkRun(net, withPresentation(st({ a: 1 }), { lamp: { lit: true } })), 'lamp');
+        expect(s).toEqual({ modelId: 'M', tokens: null, sigma: [], enabled: false, presentation: [{ attr: 'lit', value: 'true' }] });
+        expect(nodeStateOf(mkRun(net, st({ a: 1 })), 'b')?.presentation).toEqual([]);
+    });
+
+    it('a row is named by its declaration\'s kind, stored VAR and derived DEFINE; no declaration, no kind (mutant: the kind from another element)', () => {
+        const net = declaring('a', [decl('visits'), decl('total', { equation: 'self.[visits]' }), decl('heat', { space: 'presentation', domain: null })]);
+        const state = withPresentation(st({ a: 1 }, { a: { visits: 2 } }, {}, { a: { total: 2 } }), { a: { heat: 1 } });
+        const s = nodeStateOf(mkRun(net, state), 'a');
+        expect(s?.sigma).toEqual([{ attr: 'total', value: '2', kind: 'DEFINE' }, { attr: 'visits', value: '2', kind: 'VAR' }]);
+        expect(s?.presentation).toEqual([{ attr: 'heat', value: '1', kind: 'VAR' }]);
+        const other = nodeStateOf(mkRun(net, st({ a: 1 }, { b: { visits: 2 } })), 'b');
+        expect(other?.sigma).toEqual([{ attr: 'visits', value: '2' }]);
+    });
+
+    it('given the σ before the step: a changed value carries its old text, a new one null, an unchanged one nothing (mutants: before on every row; before read on the shown σ)', () => {
+        const net = mkNet([tr('t', { a: 1 }, { b: 1 })]);
+        const prev = withPresentation(st({ a: 1 }, { a: { visits: 1, paid: false } }), { a: { heat: 1 } });
+        const now = withPresentation(st({ b: 1 }, { a: { visits: 2, paid: false, fresh: 0 } }), { a: { heat: 1, lit: true } });
+        const s = nodeStateOf(mkRun(net, now), 'a', prev);
+        expect(s?.sigma).toEqual([
+            { attr: 'fresh', value: '0', before: null }, { attr: 'paid', value: 'false' }, { attr: 'visits', value: '2', before: '1' },
+        ]);
+        expect(s?.presentation).toEqual([{ attr: 'heat', value: '1' }, { attr: 'lit', value: 'true', before: null }]);
+        expect(s?.sigma.some(r => 'before' in r && r.attr === 'paid')).toBe(false);
+        // without the σ before, no row says changed: Reset, or a reader that does not ask
+        expect(nodeStateOf(mkRun(net, now), 'a')?.sigma.every(r => !('before' in r))).toBe(true);
+        expect(nodeStateOf(mkRun(net, now), 'a', null)?.sigma.every(r => !('before' in r))).toBe(true);
+    });
+});
+
+describe('getSimNodeState: the last step\'s changes, live and on a viewed step (R-SIM-106, R-SIM-107)', () => {
+    const VISITS: StateAttributeDecl = { name: 'visits', metaclass: 'C', space: 'semantic', domain: { kind: 'range', min: 0, max: 9 }, initial: 0 };
+    const t = { ...tr('t', { a: 1 }, { b: 1 }), actionSites: [{ element: 't', role: 'transition' as const }] };
+    const net: CompiledNet = {
+        ...mkNet([t, tr('u', { b: 1 }, { a: 1 })]),
+        declared: new Map([['a', new Map([['visits', VISITS]])]]),
+        initial: st({ a: 1 }, { a: { visits: 0 } }),
+    };
+    const bump: ActionOracle = (site, _e, s) => ({
+        kind: 'ok', assignments: site.element === 't' ? [{ element: 'a', attr: 'visits', value: (s.read('a', 'visits') as number) + 1 }] : [],
+    });
+    const go = (selector: string) => simCommit('M', step(net, getSimRun('M')!.config, selector, TRUE, bump));
+
+    it('the step that assigned a value shows before → after; the next step that does not, nothing; Reset nothing (mutant: changes against step 0)', () => {
+        simReset('M', { ...mkRun(net, net.initial), actions: bump });
+        expect(getSimNodeState('a')?.sigma).toEqual([{ attr: 'visits', value: '0', kind: 'VAR' }]);
+        go('t');
+        expect(getSimNodeState('a')?.sigma).toEqual([{ attr: 'visits', value: '1', kind: 'VAR', before: '0' }]);
+        go('u');
+        expect(getSimNodeState('a')?.sigma).toEqual([{ attr: 'visits', value: '1', kind: 'VAR' }]);
+    });
+
+    it('a viewed step shows its own changes, against the step before it (mutant: the viewed record with the live changes)', () => {
+        simReset('M', { ...mkRun(net, net.initial), actions: bump });
+        go('t');
+        go('u');
+        simSetView('M', 1);
+        expect(getSimNodeState('a')?.sigma).toEqual([{ attr: 'visits', value: '1', kind: 'VAR', before: '0' }]);
+        expect(getSimNodeState('a')?.tokens).toBe(0);
+        simSetView('M', 0);
+        expect(getSimNodeState('a')?.sigma).toEqual([{ attr: 'visits', value: '0', kind: 'VAR' }]);
     });
 });

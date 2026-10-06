@@ -51,6 +51,7 @@ import {
     isM2ReferenceEdge,
     type RefEdgeSnapshot,
 } from '../utils/refEdgeReconcile';
+import { samePlainData, mergeSyncedEdge } from '../utils/syncPatchIdentity';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -206,13 +207,16 @@ function isEdgeClassName(className: string | undefined): boolean {
  */
 function deduplicateInheritanceEdges(edges: Edge[]): Edge[] {
     const seen = new Set<string>();
-    return edges.filter(e => {
+    const kept = edges.filter(e => {
         if (e.type !== 'inheritance') return true;
         const key = `inh:${e.source}→${e.target}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
     });
+    // The input itself when nothing was dropped, so a patch that changes nothing
+    // hands back the array it received (P-2026-10-02-1450, T9).
+    return kept.length === edges.length ? edges : kept;
 }
 
 // ---------------------------------------------------------------------------
@@ -1381,7 +1385,10 @@ export function useJjomSync(
                         // Only patch data if something actually changed — avoids
                         // creating a new node reference that triggers RF re-measurement
                         // and cascading re-renders (the "rename loop" bug).
-                        if (!existing || !shallowDataEqual(existing.data, rfNode.data)) {
+                        // The structural test reaches what the shallow one cannot (a
+                        // reference's `type`, an object's `features`): without it, an
+                        // unchanged vertex was patched after every render (T9).
+                        if (!existing || !(shallowDataEqual(existing.data, rfNode.data) || samePlainData(existing.data, rfNode.data))) {
                             patchedNodeData.set(id, rfNode.data);
                         }
                     }
@@ -1499,43 +1506,20 @@ export function useJjomSync(
                 }
 
                 if (_patchedEdges.size > 0) {
-                    result = result.map(e => {
+                    // The merge (handles, local routing, jjomRefId, kind) lives in
+                    // syncPatchIdentity.ts and hands back `e` itself when it would
+                    // change nothing; the array is kept when no edge changed, so an
+                    // identical patch does not re-render the editor (T9).
+                    let changed = false;
+                    const mapped = result.map(e => {
                         const newEdge = _patchedEdges.get(e.id);
                         if (!newEdge) return e;
-                        const merged = { ...newEdge };
-                        if (e.sourceHandle) merged.sourceHandle = e.sourceHandle;
-                        if (e.targetHandle) merged.targetHandle = e.targetHandle;
-                        const existingData = (e.data as any) ?? {};
-                        const mergedData = (merged.data as any) ?? {};
-                        // Preserve local routing customizations that are not
-                        // persisted in JjOM and would otherwise be lost after
-                        // incremental sync patches.
-                        if (existingData.waypoints !== undefined && mergedData.waypoints === undefined) {
-                            mergedData.waypoints = existingData.waypoints;
-                        }
-                        if (existingData.sourceAnchor && !mergedData.sourceAnchor) {
-                            mergedData.sourceAnchor = existingData.sourceAnchor;
-                        }
-                        if (existingData.targetAnchor && !mergedData.targetAnchor) {
-                            mergedData.targetAnchor = existingData.targetAnchor;
-                        }
-                        merged.data = mergedData;
-                        const existingJjomRefId = (e.data as any)?.jjomRefId;
-                        if (existingJjomRefId && !(merged.data as any)?.jjomRefId) {
-                            (merged.data as any).jjomRefId = existingJjomRefId;
-                        }
-                        const existingRef = (e.data as any)?.reference;
-                        const newRef = (merged.data as any)?.reference;
-                        if (existingRef && newRef && newRef.kind === 'association' && existingRef.kind !== 'association') {
-                            (merged.data as any).reference = {
-                                ...newRef,
-                                kind: existingRef.kind,
-                                containment: existingRef.containment,
-                            };
-                        }
+                        const merged = mergeSyncedEdge(e, newEdge);
+                        if (merged !== e) changed = true;
                         rfEdgeCache.current.set(e.id, merged);
                         return merged;
                     });
+                    if (changed) result = mapped;
                 }
 
                 if (_addedEdges.length > 0) {

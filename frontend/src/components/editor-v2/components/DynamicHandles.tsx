@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Handle, Position, useEdges, useStoreApi } from '@xyflow/react';
+import React, { memo, useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { Handle, Position, useStore, useStoreApi, type Edge, type ReactFlowState } from '@xyflow/react';
 import { MAX_HANDLES_PER_SIDE, type Side } from '../utils/portDistribution';
 import { computeSideEndpoints, computeSidePositions } from '../utils/handlePosition';
 import { getShapeDescriptor } from '../viewpoint/ir/shapeRegistry';
@@ -23,6 +23,73 @@ interface DynamicHandlesProps {
      * nodo senza forma geometrica, che ricadono su `rect`, cioe' rientro nullo.
      */
     shapeForm?: ShapeForm;
+    /**
+     * A bar that declares a thickness (Q3, P-2026-10-03-1304) paints its ink turned inside a square box: its
+     * orientation and its thickness in px, both or neither. Present, the handles sit on the ink (barHandlePlacement)
+     * and the hovered side is one of its long sides (barHoverSide). Primitives, so the shallow memo stays exact.
+     */
+    barOrientation?: 'upright' | 'lying';
+    barThickness?: number;
+}
+
+/** The ink of a turned bar: which way it stands and how many px across. */
+export interface BarInk { orientation: 'upright' | 'lying'; thickness: number }
+
+const isBarLongSide = (side: Side, orientation: BarInk['orientation']) =>
+    orientation === 'upright' ? side === 'left' || side === 'right' : side === 'top' || side === 'bottom';
+
+/**
+ * Where a handle of a turned bar sits, at fraction `t` along `side` (Q3): on a long side, along it as on any box and
+ * pulled in from the box edge onto the ink, half the box less half the thickness; on a short side (only an anchor the
+ * user pinned there), on the box edge, which the ink reaches, squeezed across onto the ink's width.
+ */
+export function barHandlePlacement(side: Side, t: number, ink: BarInk): React.CSSProperties {
+    const positionProp = side === 'left' || side === 'right' ? 'top' : 'left';
+    if (isBarLongSide(side, ink.orientation)) {
+        return { [positionProp]: `${t * 100}%`, [side]: `calc(50% - ${ink.thickness / 2}px)` };
+    }
+    return { [positionProp]: `calc(50% + ${(t - 0.5) * ink.thickness}px)`, [side]: '0%' };
+}
+
+/**
+ * The hovered side of a turned bar (Q3): the nearer of the ink's two long sides, `x` and `y` read from the ink's
+ * top-left in a `w` x `h` ink, when within `threshold` px of it; never a short side, which takes no end.
+ */
+export function barHoverSide(x: number, y: number, w: number, h: number, orientation: BarInk['orientation'], threshold: number): Side | null {
+    const [near, far, a, b]: [Side, Side, number, number] = orientation === 'upright' ? ['left', 'right', x, w - x] : ['top', 'bottom', y, h - y];
+    const d = Math.min(a, b);
+    if (d >= threshold) return null;
+    return a <= b ? near : far;
+}
+
+/**
+ * The fields of an edge that this component reads: `edgeTopologyKey` below lists them, and
+ * `computeSideEndpoints` (handlePosition.ts) reads no other. Two edges with the same key draw
+ * the same handles.
+ */
+const edgeKey = (e: Edge): string =>
+    `${e.id}:${e.source}:${e.target}:${e.type}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}`;
+
+/**
+ * The edges that touch `nodeId`, in store order. Every computation below filters the flow's
+ * edges on `source === nodeId || target === nodeId` first, so it sees exactly these.
+ */
+export function selectOwnEdges(edges: readonly Edge[], nodeId: string): Edge[] {
+    return edges.filter(e => e.source === nodeId || e.target === nodeId);
+}
+
+/**
+ * Equal when both lists hold, in the same order, edges with the same `edgeKey`. React Flow
+ * replaces edge objects on every sync, so identity alone would re-render every node; a change
+ * in a field outside the key (data, label, style, selection) draws no handle differently.
+ */
+export function ownEdgesEqual(a: readonly Edge[], b: readonly Edge[]): boolean {
+    if (a === b) return true;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i] && edgeKey(a[i]) !== edgeKey(b[i])) return false;
+    }
+    return true;
 }
 
 /** Distance in px from node edge within which a side is considered "hovered". */
@@ -93,10 +160,21 @@ function scheduleNodeInternalsUpdate(storeApi: { getState: () => any }, nodeId: 
  * "bottom-1", that handle already exists in the DOM with a known measured position.
  * React keys are stable (${side}-${index}) so handles never mount/unmount.
  */
-function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
-    const edges = useEdges();
+function DynamicHandles({ nodeId, shapeForm, barOrientation, barThickness }: DynamicHandlesProps) {
+    // This node's edges only, compared on the fields read below (P-2026-10-01-2136, fix 2).
+    // useEdges() re-rendered the 32 handles of every node on any edge change of the flow:
+    // 240,928 handle renders in one 16-command Run at 84 nodes
+    // (docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md §4.1).
+    const edges = useStore(
+        useCallback((s: ReactFlowState) => selectOwnEdges(s.edges, nodeId), [nodeId]),
+        ownEdgesEqual
+    );
     const storeApi = useStoreApi();
     const shape = getShapeDescriptor(shapeForm);
+    const barInk: BarInk | null = barOrientation && barThickness ? { orientation: barOrientation, thickness: barThickness } : null;
+    // The hover listener below is bound once; it reads the bar's ink through this ref.
+    const barInkRef = useRef<BarInk | null>(barInk);
+    barInkRef.current = barInk;
 
     // --- Hover state for ghost-like behavior on inactive handles ---
     const [hoveredSide, setHoveredSide] = useState<Side | null>(null);
@@ -187,6 +265,18 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
         if (!nodeEl) return;
 
         const onMouseMove = (e: MouseEvent) => {
+            // Q3: on a turned bar the side is read on the ink, and only a long side.
+            const ink = barInkRef.current;
+            const inkEl = ink ? nodeEl.querySelector(':scope > .ir-node-content.ir-bar-ink') as HTMLElement | null : null;
+            if (ink && inkEl) {
+                const r = inkEl.getBoundingClientRect();
+                const barSide = barHoverSide(e.clientX - r.left, e.clientY - r.top, r.width, r.height, ink.orientation, HOVER_THRESHOLD);
+                if (barSide !== hoveredSideRef.current) {
+                    hoveredSideRef.current = barSide;
+                    setHoveredSide(barSide);
+                }
+                return;
+            }
             const rect = nodeEl.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
@@ -259,8 +349,10 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
                 parts.push(`${endpoint}=${positions.get(endpoint)!.toFixed(4)}`);
             }
         }
-        return `${shapeForm ?? ''}|${parts.join(',')}`;
-    }, [sidePositionsBySide, shapeForm]);
+        // Q3: a turn moves every handle of the bar with no change of size, so it is part of the key.
+        const barKey = barOrientation && barThickness ? `:${barOrientation}:${barThickness}` : '';
+        return `${shapeForm ?? ''}${barKey}|${parts.join(',')}`;
+    }, [sidePositionsBySide, shapeForm, barOrientation, barThickness]);
 
     const lastCommittedKeyRef = useRef<string>('');
 
@@ -341,7 +433,7 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
                     };
 
                     const ghostClassName = 'mm-anchor mm-anchor--ghost mm-anchor--ghost-visible';
-                    const ghostStyle: React.CSSProperties = { [positionProp]: '50%' };
+                    const ghostStyle: React.CSSProperties = barInk ? barHandlePlacement(side, 0.5, barInk) : { [positionProp]: '50%' };
                     const connectedClassName = 'mm-anchor mm-anchor--connected';
                     // Second axis: pull the handle in from the box edge to the shape
                     // outline. The property is the side itself (left/right resolve the
@@ -361,11 +453,11 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
                             : shape.insetFractionAt(t);
                         return `${(inset * 100).toFixed(3)}%`;
                     };
-                    const sourceConnectedStyle: React.CSSProperties = {
+                    const sourceConnectedStyle: React.CSSProperties = barInk ? barHandlePlacement(side, sourcePercent, barInk) : {
                         [positionProp]: `${sourcePercent * 100}%`,
                         [side]: insetPct(sourcePercent),
                     };
-                    const targetConnectedStyle: React.CSSProperties = {
+                    const targetConnectedStyle: React.CSSProperties = barInk ? barHandlePlacement(side, targetPercent, barInk) : {
                         [positionProp]: `${targetPercent * 100}%`,
                         [side]: insetPct(targetPercent),
                     };
@@ -415,4 +507,10 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
     );
 }
 
-export default DynamicHandles;
+/**
+ * Memoized with React's default shallow comparison of the props, which is exact here: `nodeId`
+ * is a string, `shapeForm` a string or undefined, and the bar's orientation and thickness (Q3) a string and a number. A parent node re-rendering for its own
+ * reasons no longer re-renders the handle pool; the pool re-renders on its own edges
+ * (`useStore` above) and on hover.
+ */
+export default memo(DynamicHandles);

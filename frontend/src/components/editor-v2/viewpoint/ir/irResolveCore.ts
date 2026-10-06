@@ -139,6 +139,36 @@ export function computeIRSignature(state: any, viewpointId?: string): string {
     return parts.length > 1 ? parts.join('|') : '';
 }
 
+/**
+ * Self snapshot of one object for the IR node and row subscriptions: what must move for
+ * the memo behind them to re-resolve. Null when the object is not in the lookup.
+ *
+ * The slot values come first and unfiltered (an object has few features); the cross-object
+ * signature is appended by the caller, which owns the published deps of its own key.
+ *
+ * The object's name and its metaclass's name close the snapshot. An intrinsic name label
+ * reads the `name` slot when the class declares one (already covered by the slot values)
+ * and `DObject.name` otherwise, which no slot mirrors; `metaclassName` reads the DClass
+ * name, and the index is keyed by that name too. Both terms read what the ReadCtx reads
+ * (`getName`, `getMetaclassName`) and the metaclass one stops at the class itself: the
+ * selector runs for every node on every store update, so no ancestry walk here. JSON-quoted
+ * so a name holding the ';' separator cannot alias its neighbour.
+ */
+export function objectSnapshotParts(lookup: Record<string, any> | undefined, objectId: string, irSig: string): string[] | null {
+    const dObject = lookup?.[objectId];
+    if (!dObject) return null;
+    const snap: string[] = [irSig, objectId, dObject.instanceof ?? ''];
+    if (Array.isArray(dObject.features)) {
+        for (const fid of dObject.features) {
+            const dv = lookup?.[fid];
+            if (dv && Array.isArray(dv.values)) snap.push(`${fid}=${JSON.stringify(dv.values)}`);
+        }
+    }
+    snap.push(`n=${JSON.stringify(dObject.name ?? dObject.initialName ?? '')}`);
+    snap.push(`c=${JSON.stringify(lookup?.[dObject.instanceof]?.name ?? '')}`);
+    return snap;
+}
+
 const indexCache = new Map<string, IRViewpointIndex>();
 
 /**

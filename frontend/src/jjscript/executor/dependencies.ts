@@ -148,11 +148,13 @@ export function extractDependencies(ast: CommandNode): ElementDependency[] {
 function extractCreateDependencies(args: CreateArgs, deps: ElementDependency[]): void {
     const elementType = args.elementType;
 
-    // Parent dependency - required for nested elements
+    // Parent dependency - required for nested elements, and for the container of an M1
+    // instance (R-JS-11): pass 1 waits for a parent the previous line created, whose slots land
+    // about 300 ms after it, as it already waits for the target of a `set`.
     if (args.parent) {
         const needsParent = [
             'attribute', 'reference', 'containment', 'composition',
-            'operation', 'parameter', 'literal'
+            'operation', 'parameter', 'literal', 'instance'
         ].includes(elementType);
         deps.push({ name: args.parent, role: 'parent', required: needsParent });
     }

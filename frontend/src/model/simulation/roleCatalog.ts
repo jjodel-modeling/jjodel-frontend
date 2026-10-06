@@ -6,12 +6,17 @@
  * binds and the roles it depends on (memo table «Catalogo e dipendenze»). A
  * profile (simProfiles.ts) picks a mode for each role; it adds no semantics.
  *
- * `simAccepting`, `simStateOutput` and `simTransitionOutput` are new and
- * provisional (R-SIM-52): nothing reads or writes them yet.
  * `simAction`, `simEntry`, `simExit` and `simStateAttributes` are read by the run
- * since lane C1 (R-SIM-68, R-SIM-69), `simActivityFinal` since lane E1 (R-SIM-53).
+ * since lane C1 (R-SIM-68, R-SIM-69), `simActivityFinal` since lane E1 (R-SIM-53),
+ * `simAccepting`, `simStateOutput` and `simTransitionOutput` since lane S4
+ * (R-SIM-50, R-SIM-51): the engine reads them; the panel has no row for them yet.
  * `simEvent` is not here: the event metaclass is the declared type of Trigger,
  * derived on every read (R-SIM-38).
+ *
+ * Guard, Action, Entry and Exit are `multi` (R-SIM-90): the key holds a list of
+ * attributes, a plain id for one and a JSON array string for two or more
+ * (`roleValues`, `encodeRoleValues`), so a saved single value reads as a
+ * one-element list and every bag that binds one attribute stays as it was.
  *
  * Pure data: no React, no store.
  */
@@ -54,6 +59,8 @@ export interface RoleDescriptor {
     readonly dependsOn: readonly RoleId[];
     readonly label: string;
     readonly description: string;
+    /** R-SIM-90: the key holds a list of attributes (`roleValues`); absent for a single-valued role. */
+    readonly multi?: true;
 }
 
 const DESCRIPTORS: { readonly [K in RoleId]: Omit<RoleDescriptor, 'id'> } = {
@@ -142,19 +149,19 @@ const DESCRIPTORS: { readonly [K in RoleId]: Omit<RoleDescriptor, 'id'> } = {
         description: 'The attribute that names an event, in place of its name.',
     },
     guard: {
-        group: 'data', key: 'simGuard', kind: 'expressionAttribute', dependsOn: ['transition'], label: 'Guard',
+        group: 'data', key: 'simGuard', kind: 'expressionAttribute', dependsOn: ['transition'], label: 'Guard', multi: true,
         description: 'The Expression attribute of a transition that must hold for it to fire.',
     },
     action: {
-        group: 'data', key: 'simAction', kind: 'actionListAttribute', dependsOn: ['transition', 'stateAttributes'], label: 'Action',
+        group: 'data', key: 'simAction', kind: 'actionListAttribute', dependsOn: ['transition', 'stateAttributes'], label: 'Action', multi: true,
         description: 'The Action attribute of a transition, run when it fires.',
     },
     entry: {
-        group: 'data', key: 'simEntry', kind: 'actionListAttribute', dependsOn: ['node', 'stateAttributes'], label: 'Entry',
+        group: 'data', key: 'simEntry', kind: 'actionListAttribute', dependsOn: ['node', 'stateAttributes'], label: 'Entry', multi: true,
         description: 'The Action attribute of a node, run when a token enters it.',
     },
     exit: {
-        group: 'data', key: 'simExit', kind: 'actionListAttribute', dependsOn: ['node', 'stateAttributes'], label: 'Exit',
+        group: 'data', key: 'simExit', kind: 'actionListAttribute', dependsOn: ['node', 'stateAttributes'], label: 'Exit', multi: true,
         description: 'The Action attribute of a node, run when a token leaves it.',
     },
     stateAttributes: {
@@ -190,4 +197,41 @@ export function roleOfKey(key: string): RoleId | undefined {
 /** The roles that depend directly on `id`, in catalog order. */
 export function dependentsOf(id: RoleId): RoleId[] {
     return ROLE_CATALOG.filter(d => d.dependsOn.includes(id)).map(d => d.id);
+}
+
+/**
+ * The attributes a `multi` key holds (R-SIM-90), in order: `[]` for a value
+ * that is not a non-empty string; the elements of a JSON array string, the
+ * non-empty strings only, a repeated one dropped (the first kept), since it
+ * would assign every target twice; one element for any other string. A text
+ * that starts with `[` and does not parse is that one element, a dangling
+ * pointer the dialog judges «Not in this metamodel», never an unset role.
+ * Ids never start with `[` (`makeID` gives `Pointer…`).
+ */
+export function roleValues(raw: unknown): string[] {
+    if (typeof raw !== 'string' || raw === '') return [];
+    if (!raw.trim().startsWith('[')) return [raw];
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        return [raw];
+    }
+    if (!Array.isArray(parsed)) return [raw];
+    const out: string[] = [];
+    for (const x of parsed) if (typeof x === 'string' && x !== '' && !out.includes(x)) out.push(x);
+    return out;
+}
+
+/**
+ * The value of a `multi` key for `ids` (R-SIM-90): `undefined` for none, the
+ * id itself for one, so a bag that binds one attribute is byte-identical to
+ * before, a JSON array string for two or more. Empty and repeated ids are
+ * dropped first. `roleValues` reads it back.
+ */
+export function encodeRoleValues(ids: readonly string[]): string | undefined {
+    const list: string[] = [];
+    for (const id of ids) if (id !== '' && !list.includes(id)) list.push(id);
+    if (list.length === 0) return undefined;
+    return list.length === 1 ? list[0] : JSON.stringify(list);
 }

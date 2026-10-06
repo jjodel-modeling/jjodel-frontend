@@ -91,7 +91,7 @@ Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerar
 **The visual checklist, amended 2026-09-26 by RC-23.** The numbered visual steps of a prompt (its §11.5) are a
 checklist that the project chat runs in the built-in browser of the desktop app, against the lane's dev server on
 the Mac. Each item is read from the DOM or the console: positions, presence, texts, button states. A screenshot
-is never the evidence. Screenshots in light and dark are attached for Alfonso as a record. The browser profile is
+is never the evidence. Screenshots in the light theme are attached for Alfonso as a record (D-UI-15: Jjodel has no dark theme). The browser profile is
 empty and separate from Alfonso's, so the prompt names the console script or the exported file that builds each
 fixture; a fixture is never assumed to exist. The log entry names the source in `Smoke visivo`, in the form
 `passato — chat, unattended, <n>/<n>`. Alfonso's GO stays mandatory on critical-zone lanes, on the items a prompt
@@ -275,6 +275,13 @@ The rules below still bind every tree that hosts more than one session.
   or `Lane: full (<trigger>)`, the trigger being one of RC-3's four: critical zone, migration, more than
   3 files, a changed exported interface. The fast lane is the default; a full lane without a named
   trigger is a defect of the prompt, and the session says so before starting (RC-17).
+- **Every prompt declares what it depends on.** The header of a prompt in `docs/prompts/` carries
+  `Depends: none` or `Depends: P-YYYY-MM-DD-HHmm[, P-…]`: the lanes whose result this one needs (merged
+  code it builds on, a report it implements, a decision it applies). A Prompt-ID cited elsewhere in the
+  prompt is context, not a dependency. Merge prompts rendered by `lane-run` are exempt: their dependency
+  is the branch they merge. The line is new from 2026-10-06; earlier prompts are not amended. The lane
+  board draws declared dependencies as solid arrows and citations as dashed ones
+  (`frontend/scripts/lane-board/`). Decided RC-42.
 - **Every prompt file carries a Status line, flipped once, in the lane's closure commit.** The header
   of a prompt in `docs/prompts/` holds `Status: da eseguire`. After its code commit, the lane writes the
   Status flip, its log or inbox entry and the visual-check line into its worktree and does not commit
@@ -409,6 +416,7 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
   - `chain <worktree> <prompt>... [--merge-after]` runs lanes one after the other under a detached supervisor, the next only on `Outcome: done` with exit 0, so it suits lanes without a visual check; `status` and `wait` take the chain id, and `chain --stop` stops it after the running lane.
   - The model follows the activity (RC-32, 2026-09-28, amending RC-16): `lane-run` picks a heavy or a light tier from the prompt's header and DOVE and from the command, prints it and keeps it in `tier.txt`; `--tier` overrides it where the rule does not force heavy.
   - A discovery report opens with `## 0. Answer in brief`, at most 40 lines: the answer, the recommendation, the decisions awaiting Alfonso, and the questions with their `Recommended:` lines; the rest is appendix (2026-09-28). `lane-run status` warns when the brief of a report the lane wrote is missing, not the first section, or longer.
+- **Trace monitor (`P-2026-09-27-1030`, 2026-09-28).** `npm run trace:index` prints the trace index (lanes, prompts, chats, decisions, commits, log entries, checks and the edges between them, each edge with the place that declares it, plus the items that did not parse); `lane-run monitor [--port <n>] [--no-open]` serves it live on 127.0.0.1 (3008 by default, refused on 3001 and on a port in use). `lane-run` also keeps a copy of every input it sends to a lane in the lane folder.
 - **The chat reads one line.** The final message of a session ends with the `Outcome` line of P13, and the chat
   acts on that line through `lane-run status <Prompt-ID>`, never on the prose. A `question` is a hard stop: the
   session writes it and exits, the chat answers it or takes it to Alfonso, then resumes the session.
@@ -427,6 +435,8 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
 - **Parallel by default (RC-22).** Two lanes start together when the three checks of RC-22 pass. When one fails,
   the chat names it and queues the lane with its merge position fixed. Semantic conflicts are resolved on the
   branch first (RC-14).
+- **The `Chat:` line (RC-33).** A chat acts on a Prompt-ID only when the prompt's `Chat:` line carries its own ID; `—` or another chat's ID means stop, name the owner, ask Alfonso. `lane-run merge` gets `--chat <id>` every time.
+- **Add-only gate (RC-34).** `npm run check:addonly [<rev>] [--range <a>..<b>]` refuses a commit that changes or drops an entry of the add-only logs outside rotation and batch closure; `lane-run merge` runs it on every merge commit. A hand repair carries `Log-Repair: <sha>`.
 
 ---
 

@@ -8,543 +8,700 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 
 ---
 
-## 2026-09-27 — feat: declared state attributes and action keys, lane C1 (P-2026-09-26-2340)
-**Prompt**: `claude_2026-09-26_2340_fase2_sim_state_declarations_c1.md`, Phase 2 of lane C1 on `simulation-engine` in `~/jjodel-sim`, full lane, bound by R-SIM-67..72 (`320d4afcf`); Phase 1 report `06d911dd9`. Declarations in `simStateAttributes` (codec, per-record defects), the three action keys in `NetStc` and the step through a table built at Reset, declaration and action defects at Reset with the transition still a candidate, the Data group of the panel with the declarations table.
-**Files touched**: code `3ec3405d5`: `frontend/src/model/simulation/stateAttributesCodec.ts` (new), `roleCatalog.ts`, `netTypes.ts`, `netCompile.ts`, `netStep.ts`, `actionEvaluator.ts`, `simProfiles.ts`, `components/editor-v2/sim/simBridge.ts`, tests `stateAttributesCodec.test.ts` (new), `netCompile.test.ts`, `netStep.test.ts`, `actionEvaluator.test.ts`, `roleCatalog.test.ts`, `simProfiles.test.ts`, `sim/__tests__/simBridge.test.ts`; code `f507d166d`: `simRoleStatus.ts`, `SimulationPanel.tsx`, `simulation-panel.scss`; code `b62141aba`: `simulation-panel.scss`. Docs, this commit: this entry, the Status of the two prompt files.
+
+## 2026-10-02 — discovery: the simulator's state UI, R-SIM-102..107 and 109 (P-2026-10-02-2340)
+**Prompt**: `claude_2026-10-02_2340_prompt_discovery_sim_state_ui.md`, heavy tier, read-only on `~/jjodel-w-simstate`, branch `sim-state-disc`: where the inspector docks, the `.smv` preview, «Written by»/«Read by», kept configurations, viewer preferences, the «Data» label, the demo per lane; a Phase 2 plan of at most three lanes.
+**Files touched**: `docs/discovery/discovery_2026-10-02_sim_state_ui.md` (new), the Status line of the prompt, this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. On `b62141aba`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; `npx vitest run` 4926 passed (4884 + 42, stated before the run), the same 9 files red at import; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` the known `_tmp_sim1_verify.ts:186`. Red first: 30 tests and the codec file at collection. Mutation bench 12/12 killed.
-**Out-of-scope changes**: yes — 18 code paths, above the Rule 19 five, listed before the first edit. Outside DOVE: `roleCatalog.test.ts` (the assertions that pinned the unwired keys, R-SIM-52, declared) and `simProfiles.ts` with `simProfiles.test.ts` (Flowchart / Activity row + `stateAttributes`, ratified at the question stop as an R-SIM-68 amendment of the R-SIM-54 table); `b62141aba` is a third code commit.
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, unattended, 6/6 + Alfonso
-**Notes**: Baseline vitest 4884, not 4837: the trunk merge 17a3d308c added tests. Question stop: R-SIM-68 made Flowchart / Activity fail validateProfile; answer A ratified. b62141aba fixes the table's 36px text cells (global input rule), found in the session's run. Step 3 needs the entry blank and the second action blanked: a shorter array does not truncate the slot. set_state to undefined via the panel select removed the key: no ticket. Halt lines drop the action text for action-defect too.
-**Prompt document name**: 2026-09-26 23:40
-**Ticket** (priority low, opened here). The console error `failed to get project {project: null}` at load is still there, one per run on 3002 (noted by the B2 entry and report §7.5). Not investigated.
-**Ticket** (priority medium, opened here). The checker gap of report risk 5 stays open: `node.[x]` in a guard is reported only at Reset (`compileDefects`), never in the problems registry, and actions get no contextual check there either.
-**Ticket** (priority low, found by the chat's run of the checklist). Keyboard select-all inside the declarations table appends instead of replacing the text of the cell. Not reproduced by the session.
-
-## 2026-09-27 — feat: derived state attributes, eager DEFINE, lane C2 (P-2026-09-27-0200)
-**Prompt**: `claude_2026-09-27_0200_fase2_sim_derived_attributes.md`, Phase 2 of lane C2 on `sim-derived` in `~/jjodel-icons`, full lane, bound by R-SIM-73..76 (`0a8ad4270`); Phase 1 report `655706bab`. Derived attributes as `equation` records, evaluated eagerly into `SimState.derived` at Reset and after every fired step by an optional `DerivedOracle`; the declarations table offers «stored | derived».
-**Files touched**: code `5060657c5`: `frontend/src/model/simulation/stateAttributesCodec.ts`, `netTypes.ts`, `derivedEvaluator.ts` (new), `netCompile.ts`, `netStep.ts`, `components/editor-v2/sim/simBridge.ts`, `simRunState.ts`, tests `stateAttributesCodec.test.ts`, `netCompile.test.ts`, `netStep.test.ts`, `derivedEvaluator.test.ts` (new), `actionEvaluator.test.ts`, `sim/__tests__/simBridge.test.ts`; code `53c24b1fc`: `SimulationPanel.tsx`, `simulation-panel.scss`. Docs, this commit: this entry, the Status of the two prompt files.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. On `53c24b1fc`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; `npx vitest run` 4971 passed (4931 + 40, stated before the run), the same 9 files red at import; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: 24 tests and the evaluator file at collection. Mutation bench 11/11 killed.
-**Out-of-scope changes**: yes — 15 code paths, above the Rule 19 five, listed before the first edit. Outside DOVE: `actionEvaluator.test.ts`, one line of `handNet` skipping a declaration with no initial, ratified at the question stop (RC-21).
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato 2026-09-27 (chat, unattended: probe re-run on 3005, 5/5; Alfonso in the morning digest)
-**Notes**: Probe (4): `cnet.[total] := 5` does not resolve (a model name is no JjEL root): no defect at Reset, then an action-defect halt; `model.[total] := 5` gives read-only. Out of domain at Reset keeps the value (report decision 5, where R-SIM-73 reads «valore assente»). A presentation failure after a step leaves the value out and is shown nowhere. Rows of three lines, 88px, stored and derived alike (R-SIM-76, RC-26 digest).
-**Prompt document name**: 2026-09-27 02:00
-**Ticket** (priority low, opened here, R-SIM-74). The dependency graph is by name, so a well-founded recursion on containment (`total := own + sum(children.[total])`) is a self-loop and a cycle defect; nuXmv would accept it. Refinement by (metaclass, name) or by element deferred.
-**Ticket** (priority medium, opened here, R-SIM-76). `simStateOutput` and `simTransitionOutput` still have no reader: the outputs lane after C2.
-**Ticket** (priority low, opened here, report risk 5). A derived attribute that failed at Reset is absent, and a reader says «'total' is not a state attribute of cnet»: true of the value, misleading about the declaration. Not done in this lane.
-**Ticket** (priority low, seen in this lane's dark screenshots). Every select of the declarations table shows a doubled chevron with `data-theme="dark"`, the C1 selects as the new one. Not investigated.
-**Ticket** (priority medium, ruled at the GO). R-SIM-73 wording (value absent at Reset on out-of-domain) differs from the implementation (value kept, defect shown): align the row text; RC-26 for Alfonso.
-**Ticket** (priority low, ruled at the GO). A failed presentation equation is not surfaced; consider a line in «Last step» title.
-
-## 2026-09-27 — feat: simulation profiles in the panel, M3 (P-2026-09-27-0225)
-**Prompt**: `claude_2026-09-27_0225_fase2_sim_profiles_panel_m3.md`, Phase 2 of the profiles panel lane on `sim-profiles` in `~/jjodel-gate`, full lane, bound by R-SIM-77..79 (`5a9727e01`); Phase 1 report `1dddb15ae`. Option M3: a pure binder over a metamodel sketch, the summary and the Apply patch, then the Profile row with its four presets, Apply, «Configure…» folding the groups, and a `max-height` with scroll on the panel body.
-**Files touched**: code `48ab676df`: `frontend/src/model/simulation/profileBinder.ts` (new), `components/editor-v2/sim/metamodelSketch.ts` (new), `sim/simRoleStatus.ts`, tests `profileBinder.test.ts` (new), `metamodelSketch.test.ts` (new), `simRoleStatus.test.ts`; code `d1d1bba2b`: `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`; docs (this closure): `docs/log-inbox/simulation.md`, the Status lines of `claude_2026-09-27_0225_fase2_sim_profiles_panel_m3.md` and `claude_2026-09-27_0150_prompt_sim_profiles_panel_discovery.md`.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. At `927648820`: `npm run typecheck` exit 2, the 14 of §17; `npx vitest run` 4931 passed, the 9 known files red at import; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. On `48ab676df` and on `d1d1bba2b`: the same 14; 4970 passed (4931 + 39, stated before the run), the same 9 files; build exit 0, 51 lines; 4/4; PASS. Red first: the two new modules at collection, 15 simRoleStatus tests. Mutation bench 6/6 killed.
-**Out-of-scope changes**: no — eight files, all in DOVE, above the Rule 19 five, listed before the first edit; no critical-zone file.
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato 2026-09-27 (chat, unattended: probe re-run on 3006, items 1-8; Alfonso in the morning digest)
-**Notes**: Probe on 3006 (this tree): M1 Step top 879 and 854.5 after Reset, identical before and after; M2 all groups open, top -55 before, 67 after at 1000 and at 900 high, the body scrolls; folded after Apply, top 793.5. Apply of State machine on the turnstile: 6 keys plus simProfile, undoable 0 to 1, one Control+z empties the bag. Console errors 13, the baseline kinds. The mutant table is in the body of 48ab676df; the probes stay as frontend/scripts/smoke/_tmp_p0225_*.
-**Prompt document name**: 2026-09-27 02:25
-
-**Decisions taken in the lane** (accepted at the GO of 2026-09-27, listed for the digest):
-- two primitive props, `profileBagSig` and `sketchSig`, instead of the report's `profileRaw`: the role signature does not carry `simActivityFinal` and the other provisional keys;
-- the sketch records aggregations, so the binder's plain references are the panel's reference list;
-- a class role binds only a concrete class, the selects list no other; an abstract match is `none` with its reason;
-- Terminal never matches a class named like «ActivityFinal», which is its own role;
-- among Petri place, transition and arc candidates the most general wins, a subclass is not a rival;
-- the default fold of the groups follows the stored profile's verdict on the current bag, not the Apply preview;
-- the Profile label is 48 px in its row, so «Extended state machine» fits beside Apply.
-
-**Ticket** (priority medium, opened here). The modal lane, after MODELS (report §4 «What the modal lane adds»): the modal shell with «Configure…» pointed at it; the compatibility check that produces `BindingVerdict`, and so «with warnings»; binding dropdowns with compatible candidates only; user profiles, «Save as…» and the modified state; the Step 1 cards of the design input; the inert SMV placeholder; the resolver that makes the bridge skip `off` keys (D4).
-**Ticket** (priority medium, owed to the modal lane). `validateProfile` passes a user profile with Initial `off` and Initial marking derived from Initial, which is then not checkable on a complete bag (report §6.2). Unreachable with system presets only; fixed with a new `ProfileDefectCode` literal (Rule 11, additive) in the lane that brings user profiles.
-**Ticket** (priority low, deferred by R-SIM-78). «Clear bindings» is not built: `set_state` with `undefined` leaves the key in the raw bag (`06d911dd9` §7.6), so the action needs that first.
-**Ticket** (priority low, opened here). Undo after Apply was measured with Control+z in headless Chromium only; Cmd+Z on the Mac is untested.
-**Ticket** (priority low, opened here). A Flowchart Apply can write `simActivityFinal` (a subclass of Node named like ActivityFinal), which has no select in the groups (R-SIM-52): the user cannot change or clear it in the panel, and nothing reads it yet.
-**Ticket** (priority low, opened here). With a set key kept, e.g. «Kept: Node (TOther).», the other proposals come from the binder's own Node, not the kept one: the summary names the kept key but does not reconcile the two.
-**Ticket** (priority high, for Alfonso, RC-26, report §8). A1: M3 is built (inline row, summary, «Configure…» folding the groups; the modal waits for its lane). A2: the select lists four presets, DFA, NFA, Moore and Mealy hidden until R-SIM-50/51. A3: R-SIM-54 not amended, so the demo net shows «Set but off: Guard.» under Petri net. A4: the demo metamodels need Initial and Final as classes; a boolean flag is `none` with its reason.
-
-## 2026-09-27 — fix: Guard is edit in the Petri preset, R-SIM-54 and R-SIM-73 amended (P-2026-09-27-0935)
-**Prompt**: `claude_2026-09-27_0935_prompt_ratifications_petri_guard.md`, lane fast on `alfonso-frontend-jjtl` in `~/jjodel-release`. Alfonso's morning ratifications of the night digest: point 3 (A3), Guard `edit` in the Petri preset; point 7, R-SIM-73 text aligned to the implementation; the digest's hand-written section.
-**Files touched**: code `7455d0075`: `frontend/src/model/simulation/simProfiles.ts` (the petri row gains `'guard'`), tests `simProfiles.test.ts`, `profileBinder.test.ts`, `components/editor-v2/sim/__tests__/simRoleStatus.test.ts`. Docs, this commit: `docs/decisions.md` (one **Emendata** sentence in R-SIM-54 and in R-SIM-73), `docs/digest/2026-09-27.md`, this entry, the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-25 18:05 (`claude_2026-09-25_1805_prompt_sim_role_catalog_profiles.md`: its Petri row followed R-SIM-54, Guard off, amended today)
-**Causa**: (f)
-**Regressions**: no. On `7455d0075`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest `src/model/simulation src/components/editor-v2/sim` 502 passed (501 + 1), 18 files; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: 2 in `simProfiles.test.ts`. Mutation bench 2/2 killed (Guard dropped from the row: 6 tests; the edit filter of `proposalsOf`: 1).
-**Out-of-scope changes**: yes — eight files, above the Rule 19 five, all named by the prompt. Outside the named assertions: `simRoleStatus.test.ts` «writes only edit roles» (Guard replaced by Action, still off in Petri), `profileBinder.test.ts` Petri 3b (guard `-`, none 2) and C1 (seven bound, Guard `PTrans.guard`): all three pinned the pre-amendment preset and went red.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Second Corregge: R-SIM-73 text vs `5060657c5`, prompt 2026-09-27 02:00, cause (a). The digest header reads `93e62abbb plus uncommitted edits` and the line refs of the 2026-09-27 rows move by one or two: the generator names the register's last commit, which cannot be the commit that carries the register edit (`registerSource`, docs-digest.ts). One docs commit, not the inbox alone, as the prompt's DOVE asks.
-**Prompt document name**: 2026-09-27 09:35
-
-## 2026-09-27 — fix: event labels fall back to the instance name, R1 (P-2026-09-27-1105)
-**Prompt**: `claude_2026-09-27_1105_prompt_sim_r1_event_labels.md`, lane fast on `sim-r1-labels` in `~/jjodel-icons`, bound by R-SIM-80 (G1 of `discovery_2026-09-27_sim_demo_readiness.md`, decision A). `objectLabel` falls back to `lookup[id].name`, trimmed, before `shortId`, so the SM demo's event buttons and «Last step» read `coin`, not `…_136`.
-**Files touched**: code `cda1fdb4e`: `frontend/src/model/simulation/objectSlots.ts`, tests `frontend/src/model/simulation/__tests__/events.test.ts`. Docs, this commit: this entry, the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. On `cda1fdb4e`: `npm run typecheck` exit 2, the 14 of §17, set identical to the baseline; `npx vitest run src/model/simulation src/components/editor-v2/sim` 503 passed (502 + 1, stated before the run), 18 files; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: `expected '…_136' to be 'coin'`.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: probe SM re-run, events read by name; no visual change beyond the labels
-**Notes**: Probe on 3008, copies `_tmp_r1_*` of the ~/jjodel-sim `_tmp_demo_*` files, kept gitignored: M1 open `"events":["coin(off)","push(off)","stop(off)"]`, ten presses by label, Terminated {off: 1}, Step top 798.5, one known console error. Also changed: a blank `name` slot now falls to the instance name, not the short id. Full vitest 5100 passed, the 9 known files red at import. Mutation bench 3/3 killed.
-**Prompt document name**: 2026-09-27 11:05
-
-## 2026-09-27 — feat: Apply completes the natural shapes, lane R2 (P-2026-09-27-1110)
-**Prompt**: `claude_2026-09-27_1110_prompt_sim_r2_apply_natural_shapes.md`, lane R2 on `sim-r2-apply` in `~/jjodel-gate`, fast lane, bound by R-SIM-81 (decisions B and C of the demo readiness report). Apply proposes `simBound` from the largest initial marking on the M1 models (G2); Node and Transition bind an abstract class in control flow (G5); a summary line with an «Add attribute» button when an action role is bound and nothing is declared (G9).
-**Files touched**: code `86401f845`: `frontend/src/model/simulation/profileBinder.ts`, `components/editor-v2/sim/modelMarkings.ts` (new), `sim/simRoleStatus.ts`, `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`, tests `profileBinder.test.ts`, `sim/__tests__/modelMarkings.test.ts` (new), `sim/__tests__/simRoleStatus.test.ts`. Docs, this commit: this entry, the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Baseline at `39af28387`: vitest sim dirs 502 passed, 18 files; typecheck 14. On `86401f845`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest sim dirs 522 passed (502 + 20), 19 files; full vitest 5119 passed, the 9 known files red at import; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: 2 binder tests, 2 files at collection. Mutation bench 9/9 killed.
-**Out-of-scope changes**: no — eight code files, all in DOVE, above the Rule 19 five, listed before the first edit; no engine file, no critical-zone file.
-**Layer Impact Report**: not-required
-**Smoke visivo**: probes re-run, three readings as above (on 3009, readings in the body of `86401f845`)
-**Notes**: flowB builds ActivityNode concrete, so the abstract reading was taken on flowA (report §4.2 A): «Checkable» where it read «Missing: Node.»; flowB stays Checkable and Terminated. The ESM probe copy gained one step, the hint button in place of Configure…. Under k = 2 the Petri run halts unsafe at step 2 (p2 would hold 4): the proposal clears the Reset defect, the demo net still wants k = 4. concrete()'s refusing branch has no caller now. Port 3009, 3007 left to R1.
-**Prompt document name**: 2026-09-27 11:10
-**Ticket** (priority medium, opened here, RC-26 digest). The Bound proposal is the largest initial marking, a lower bound: on the demo net the ×2 arc puts 4 tokens on `p2`, so with k = 2 run A halts `unsafe` at step 2. The demo script sets Bound 4 by hand after Apply, or the proposal needs a reachability bound (after MODELS).
-**Ticket** (priority low, opened here). The declarations hint also shows when `simStateAttributes` is present but unreadable (no rows); the table's own «not readable» line is then the one that says why.
-
-## 2026-09-27 — feat: the M1 face for the audience, lane R3 (P-2026-09-27-1145)
-**Prompt**: `claude_2026-09-27_1145_prompt_sim_r3_m1_face.md`, lane R3 on `sim-r3-face` in `~/jjodel-gate`, full lane, bound by R-SIM-82 (decisions D and F of the demo readiness report). The marking and σ line of the M1 face for the run's lifetime (G3), the choice list above the buttons (G8), no `JjelEvaluationError:` in an action-defect halt (G10), `∅` for an empty side of a transition (G11).
-**Files touched**: code `766b9643c`: `frontend/src/components/editor-v2/sim/simBridge.ts` (`markingLine` new, `haltSource`, `arcsText`), `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`, tests `sim/__tests__/simBridge.test.ts`. Docs, this commit: this entry, the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Baseline at `b9528c991`: vitest sim dirs 523 passed, 19 files; typecheck 14. On `766b9643c`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest sim dirs 531 passed (523 + 8), 19 files; full vitest 5163 passed, the 9 known files red at import; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: 8 tests. Mutation bench 6/6 killed.
-**Out-of-scope changes**: no — six files, all in DOVE, above the Rule 19 five, listed before the first edit; no engine file, no critical-zone file.
-**Layer Impact Report**: not-required
-**Smoke visivo**: probes re-run, four readings as above (on 3010, readings in the body of `766b9643c`); visual GO by the chat pending
-**Notes**: A global sorts first (no element name in the line). The prompt's exact string holds two globals, so the element attribute has its own test. `derivedText` is not reused: it lists presentation and names the model, and no other function was to be touched. Title = line. The derived case keeps its inline replace: it does not read `haltSource`. Probes `_tmp_r3_*` kept gitignored; shots in `~/.jjodel-lanes/shots_r3/`.
-**Prompt document name**: 2026-09-27 11:45
-**Ticket** (priority low, seen in this lane's screenshot `petri_r3_choice_open_2.png`). The choice list title is uppercased by `text-transform`, so «Choose a transition (ε)» reads «CHOOSE A TRANSITION (Ε)», a capital epsilon that looks like E. Before R3 too; not changed here.
-
-## 2026-09-27 — discovery: demo readiness, second measurement on the trunk with R1-R3 (P-2026-09-27-1235)
-**Prompt**: `claude_2026-09-27_1235_prompt_discovery_sim_demo_readiness_2.md`, read-only discovery on `simulation-engine` in `~/jjodel-sim` at `e1cefcfbc`: the first readiness report's probes and scenarios (`567dc25da`), readers extended to R1, R2 and R3, run on the trunk with the three lanes merged; the second readiness report with G1..G11 re-measured.
-**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_demo_readiness_2.md` (new), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_demo2_*` gitignored, not committed.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Read-only: no source file changed. Probes on 3011, exit 0 each: petri (2 runs), flowA, flowB, flowC, sm, esm (2 runs), undo2, undo; one known console error per run. `check:docs` 4/4.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile — screenshots in `~/.jjodel-lanes/shots_readiness2/` for the chat's and Alfonso's check
-**Notes**: Gaps: 9 measured closed (G1, G2, G3 panel side, G4, G5, G8, G9, G10, G11), 2 measured open (G6, G7, after MODELS by decision E), 3 new (G12 Bound a lower bound, G13 header paints U+0395, G14 profile select clips), none demo-critical: no lane needed before the freeze (report §8). Readers `choiceSectionPaint` and `selectFit` added beyond the prompt's list to measure G13 and G14, hence the second Petri and ESM runs (report §9).
-**Prompt document name**: 2026-09-27 12:35
-**Ticket** (priority low, opened here, G14 of the report). The Profile select clips «Extended state machine» to «Extended state machin» at 1600×1000, on `ee1b7bfc8` as on `e1cefcfbc`; the M3 lane recorded that it fits. A canvas measure says fit (125 against a 137 px content box) because it does not count the native arrow.
-
-## 2026-09-27 — fix: the ε of the choice header, the Profile select fits its options (P-2026-09-27-1310)
-**Prompt**: `claude_2026-09-27_1310_prompt_sim_polish_g13_g14.md`, lane fast on `sim-polish-g13-g14` in `~/jjodel-gate`. G13 and G14 of `discovery_2026-09-27_sim_demo_readiness_2.md` §5: the choice header's input in its own span out of the uppercase, and the Profile select wide enough for every option of `PANEL_PROFILES` at 1600×1000 and 1280×800, measured before and after.
-**Files touched**: code `5739b950f`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (the header line), `simulation-panel.scss` (`&__section-input`, the profile label basis). Docs, this commit: this entry, the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-27 02:25 (`claude_2026-09-27_0225_fase2_sim_profiles_panel_m3.md`: its 48 px label was recorded as fitting «Extended state machine», the pixel says it did not)
-**Causa**: (c)
-**Regressions**: no. Baseline at `145e916c6`: vitest sim 124 passed, 5 files; full 5163 passed, the 9 known files red at import; typecheck 14. On `5739b950f`: `npm run typecheck` exit 2, 14 errors, set identical; full vitest 5163 passed, the same 9 files; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Probe on 3012: the three shorter options whole before and after, row 262 × 24 unchanged.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: probe readings and two crops for the chat (G13: «CHOOSE A TRANSITION (ε)», U+03B5, 5 of 5 conflicts; G14: 116 of 124 px before, 124 of 124 after, select 147.4 to 159.4 px at both sizes; `g13_header.png`, `g14_profile_row.png`)
-**Notes**: Closes G13 (and R3's ε ticket) and G14. G14 room from the label gap only, 48 to 36px («Profile» 33.4px); Apply untouched; 4px spare on the longest option. The readiness canvas reader counted the content box: the menulist paints text from column 10 and the arrow cuts it at 125 of a 147px select. No event conflict in the probe: «(coin)» holds by construction, not read. Probes `_tmp_g13_*`, `_tmp_g14_*` gitignored; shots in `~/.jjodel-lanes/shots_polish/`.
-**Prompt document name**: 2026-09-27 13:10
-
-## 2026-09-27 — fix: validateProfile rejects a derived role whose source is off (P-2026-09-27-1437)
-**Prompt**: `claude_2026-09-27_1437_prompt_sim_validate_profile_derived_from_off.md`, lane fast on `sim-validate-profile-from` in `~/jjodel-open`. The M3 ticket (medium): `validateProfile` passed Initial `off` with Initial marking derived from Initial. New `ProfileDefectCode` literal `derivedFromOff` (Rule 11), one `if` in the role loop, two tests.
-**Files touched**: code `6ade65d90`: `frontend/src/model/simulation/simProfiles.ts`, tests `frontend/src/model/simulation/__tests__/simProfiles.test.ts`. Docs, this commit: this entry, the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-25 18:40 (`claude_2026-09-25_1840_prompt_sim_profiles_genre_fix.md`: it made Initial marking derived from Initial and taught `checkability` the source, not `validateProfile`)
-**Causa**: (a)
-**Regressions**: no. Baseline at `8c1a499c1`: vitest `src/model/simulation` 407 passed, 14 files; typecheck 14. On `6ade65d90`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest `src/model/simulation` 409 passed (407 + 2), 14 files; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Mutation bench 2/2 killed.
-**Out-of-scope changes**: no — the two files of DOVE; the edit of the existing case at `simProfiles.test.ts:194` entered DOVE with the GO of the question stop.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Question stop, answered GO (RC-21): State machine with Trigger off pinned an exact list, and Event is derived from Trigger, so it gained `[derivedFromOff, event, trigger]`, second of three; the check stays unconditional, so Event reports both dependencyOff and derivedFromOff. Second cause of the stop, (a) too: the prompt counted 34 existing cases, the file held 42. Mutants: check dropped, 2 red; inverted to `active(source)`, 12 red.
-**Prompt document name**: 2026-09-27 14:37
-
-## 2026-09-27 — docs: MODELS 2026 demo script from the readiness reports (P-2026-09-27-1430)
-**Prompt**: `claude_2026-09-27_1430_prompt_sim_demo_script.md`, fast lane, docs only, on `simulation-engine` in `~/jjodel-sim`: the presenter's script for the four presets (PEST SM, Petri, ESM, flowchart B), every panel line quoted from the second readiness report (`a41e63496`) §4, its logs and screenshots, the shapes from the builder `_tmp_demo2_scenario.js`; decision H recorded as the script's rule.
-**Files touched**: `6fd1da38f`: `docs/demo/models_2026_simulator_demo.md` (new). This commit: this entry, the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Docs only, no source file changed. `check:docs` 4/4 at `6fd1da38f`; `grep -c '—'` on the script 0 (exit 1, control `Marking` 43).
+**Regressions**: no (docs only; the benches are gitignored `_tmp_*` under `frontend/scripts/smoke/`)
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
-**Notes**: Decision H (Alfonso, 2026-09-27 14:27): Petri Bound = 4 on screen after Apply is the script's rule. G12's script side is closed; the engine side (a reachability bound) stays after MODELS. Report §10 H: decided. No probe re-run: every quoted line is in the report, its logs, or the polish lane (`5739b950f`, header `(ε)`). Five unmeasured paths carry `<!-- not measured -->`. Builder and report §4 agree on all four presets.
-**Prompt document name**: 2026-09-27 14:30
-**Ticket** (priority medium, seen here, not fixed: out of this lane's scope). The merge `4edc8bed5` committed unresolved conflict markers into this file: `<<<<<<< HEAD`, `=======`, `>>>>>>> alfonso-frontend-jjtl` around the readiness-2 and polish entries. `check:docs` passes with them in; a fold would carry them into the active log. Resolution: delete the three marker lines, keep both entries.
+**Notes**: Benches on the four demo exports reproduce the script's readings word for word. Kept configurations about 100 B each (100 KiB for 1000), 3.2 KB on a 62-global σ; replay 3-13 µs a step, equal to live 4/4; the trace lacks input values. Inspector: a floating card beside the panel. Preview dropped. Lanes A ∥ B, then C. Report §0, §8.
+**Prompt document name**: 2026-10-02 23:40
 
-## 2026-09-27 — fix: one chevron on the panel's selects in dark (P-2026-09-27-1501)
-**Prompt**: `claude_2026-09-27_1501_prompt_sim_dark_select_chevron.md`, lane fast on `sim-dark-select-chevron` in `~/jjodel-open`. The C1 ticket: with `data-theme="dark"` every select of the declarations table paints a doubled chevron. A short discovery, then one rule in `simulation-panel.scss`, light unchanged by a pixel, probe crops in both themes for the chat.
-**Files touched**: code `50c198da5`: `frontend/src/components/editor-v2/sim/simulation-panel.scss` (`& &__select`, `background-image: none`). Docs, this commit: `docs/discovery/discovery_2026-09-27_sim_dark_select_chevron.md` (new), this entry, the Status of the prompt file.
+## 2026-10-03 — merge: sim-state-disc into alfonso-frontend-jjtl (P-2026-10-03-0032)
+**Prompt**: `claude_2026-10-03_0032_prompt_merge_sim-state-disc.md`, a direct merge by `lane-run merge --direct`, no session: `sim-state-disc` at `fece79bc3` into `alfonso-frontend-jjtl`, merge base `872d0abe8`, 3 commits on the branch side.
+**Files touched**: merge `6dc5fdc4b`: 4 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-02_sim_state_ui.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-02_2340_prompt_discovery_sim_state_ui.md`); this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Baseline at `2f42f2704`: `npm run typecheck` exit 2, 14 errors; vitest sim 124 passed, 5 files. On `50c198da5`: typecheck exit 2, 14 errors, set identical; vitest sim 124 passed, 5 files; `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` on this commit. Probe on 3014, `EXIT=0` before and after.
+**Regressions**: no. Gates on `6dc5fdc4b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6695 tests in 268 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: probe readings and 2x crops for the chat (dark: an SVG `background-image` on the 4 table selects before, `none` on 21 of 21 panel selects after, one chevron; light: `none` before and after, the 4 crops byte-identical by `cmp`; shots in `~/.jjodel-lanes/shots_chevron/`)
-**Notes**: Closes C1's doubled-chevron ticket. Not a second chevron but a row: `[data-theme="dark"] select` (`_form-system.scss:760`, 0,1,1) outranks `.sim-panel__select` (0,1,0), and its SVG tiles (the dark shorthand at `:735` resets repeat) beside the native arrow. It hits every panel select since panel v1 (`1b67b65fa`), so the rule covers all 21. Dark background colour unchanged (report §5). Probes `_tmp_chevron_*` gitignored; logs in `~/.jjodel-lanes/P-2026-09-27-1501/`.
-**Prompt document name**: 2026-09-27 15:01
+**Smoke visivo**: passato — chat, unattended: docs only: rows R-SIM-102..109 and two discovery reports; no code on the branch
+**Notes**: Rollback tag `pre-sim-state-disc` on `7c9ae4e0d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0032/result.json`.
+**Prompt document name**: 2026-10-03 00:32
 
-## 2026-09-27 — probe: the demo script's Add attribute hint path on the trunk (P-2026-09-27-1500)
-**Prompt**: `claude_2026-09-27_1500_prompt_sim_demo_hint_path_probe_trunk.md`, fast probe lane on `sim-hint-path-probe` in `~/jjodel-icons` (trunk code `86520a8f3`). Measure the ESM declarations path of `docs/demo/models_2026_simulator_demo.md` (`6fd1da38f`, lines 194-201) on the trunk: hint click, groups and focus, the two rows as typed, Apply, the marking line; four crops; confirm or amend each step.
-**Files touched**: this commit: `docs/discovery/discovery_2026-09-27_sim_demo_hint_path_trunk.md` (new), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_hint_*` gitignored; no source file.
+## 2026-10-03 — feat: the run model of the simulator's state UI, Lane A (P-2026-10-03-0040)
+**Prompt**: `claude_2026-10-03_0040_prompt_sim_state_model.md`, heavy tier, `~/jjodel-w-simmodel` on `sim-state-model`: §8.1 and §8.4 of the state UI discovery and the R-SIM-108 reader; inputs on the trace, kept configurations and replay, the viewed step, the face's builders, `simViewerPrefs.ts`, `presentationOf` and `getSimPresentation`. Tests first, mutation bench, no visual change.
+**Files touched**: `14311a636`: `sim/simRunState.ts`, `sim/simViewerPrefs.ts` (new), `sim/simBridge.ts`, `sim/simCanvasState.ts`, `model/simulation/netStep.ts`, and their tests `simRunState`, `simBridge`, `simCanvasState`, `simViewerPrefs` (new), `netStep`; the prompt's Status and this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no — no source file touched; four probe runs on 3013, `EXIT=0` each, port free before and after.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile — probe lane; five crops per variant for the chat in `~/.jjodel-lanes/shots_hint/{script,direct,prompt}/`
-**Notes**: Step 1 confirmed (focus on the table's add, 926-950 vs 950, R2's numbers); step 4 and the run confirmed. Steps 2 and 3 diverge in gestures only: cells prefilled `x1`/`false`/max `1`, a click leaves the caret after the text; row 1 line 3 at 945-969, second add 954-978, row 2 line 2 at 946-970, all past the 950 fold. Declarations byte-identical to the Configure path. Trunk moved to `2e7f966de` (validateProfile only, no panel caller). Report §6 has the script wording.
-**Prompt document name**: 2026-09-27 15:00
-**Ticket** (priority low, opened here, report §8 Q2). The table's own `Add attribute` scrolls nothing (`SimulationPanel.tsx:420`; only the hint scrolls, `:474-475`), so each new row starts at the body's bottom edge with its lower lines below the fold, and every new cell is prefilled (`:322`, `:274`) with the caret left after the text on click. After MODELS: scroll the new row into view, select a prefilled cell on focus.
-
-## 2026-09-27 — docs: demo script names the ESM hint path gestures (P-2026-09-27-1540)
-**Prompt**: `claude_2026-09-27_1540_prompt_sim_demo_script_hint_gestures.md`, fast lane, docs only, on `sim-demo-script-hint` in `~/jjodel-open`: §6 of `discovery_2026-09-27_sim_demo_hint_path_trunk.md` (`6acdb7080`, branch `sim-hint-path-probe`) applied step by step to §2.3 of the demo script, the three scrolls and the double-clicks named, the R2-only claim of §4 replaced by the trunk measurement.
-**Files touched**: this commit: `docs/demo/models_2026_simulator_demo.md` (§2.3 declarations steps 1 to 4 and the count sentence, §4 the summary-button risk), this entry, the Status of the prompt file.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-27 14:30 (`claude_2026-09-27_1430_prompt_sim_demo_script.md`: its §2.3 steps 2 and 3 did not name the scrolls and the prefilled cells the trunk measured)
-**Causa**: (c)
-**Regressions**: no. Docs only, no source file changed. `grep -c '—'` on the script 0 (exit 1, control `Marking` 43); `check:docs` 4/4.
-**Out-of-scope changes**: no
+**Regressions**: no
+**Out-of-scope changes**: no (ten code files, all in the prompt's DOVE, which confirmed them under rule 19)
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
-**Notes**: No value of §6 contradicts the script: min 0, max 3, initial 0, the 10 interactions (1 hint, 2 add, 7 cells) hold. Measured code `86520a8f3`; since then `frontend/src/components/editor-v2/sim/` differs by `50c198da5` only, a dark-only select rule (light computes `none`): read, not re-run. §2.4 line 274 types into the same prefilled cells and names no double-click; out of scope, left as is. The table-add ticket stays open (chat, RC-25).
-**Prompt document name**: 2026-09-27 15:40
+**Notes**: configAt and withInputs live in simRunState.ts, not simBridge.ts as the discovery placed them: the store's viewed reads need them and simBridge imports the store. Mutation bench 53/56, the 3 survivors equivalent (view deletes behind viewedOf's identity check). Readings of the four scenes identical to the base tree; replay equal to kept 30/30. Propagation of discovery §4: isSimActive feeds ReadCtx.isMarked, so a viewed step reaches IR views once Lane C sets one.
+**Prompt document name**: 2026-10-03 00:40
 
-## 2026-09-27 — discovery: post-MODELS engine batch, G6, G7, G12 (P-2026-09-27-1545)
-**Prompt**: `claude_2026-09-27_1545_prompt_discovery_sim_post_models_engine.md`, read-only discovery on `sim-post-models-engine` in `~/jjodel-icons` at `f18d976d5`: for G6 (the activity final is never read), G7 (`else` in fused transitions) and G12 (the Bound proposal is a lower bound), the code path, the minimal change, the tests, the R- rows and the effect on the four demo presets; two options for G12.
-**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_post_models_engine.md` (new), this entry, the Status of the prompt file. Probes in `/tmp/p1545/`, outside every tree, not committed.
+## 2026-10-03 — merge: sim-state-model into alfonso-frontend-jjtl (P-2026-10-03-0114)
+**Prompt**: `claude_2026-10-03_0114_prompt_merge_sim-state-model.md`, a direct merge by `lane-run merge --direct`, no session: `sim-state-model` at `6ae536200` into `alfonso-frontend-jjtl`, merge base `fece79bc3`, 3 commits on the branch side.
+**Files touched**: merge `2a60dbd3d`: 12 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_0040_prompt_sim_state_model.md`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simCanvasState.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simRunState.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simViewerPrefs.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/components/editor-v2/sim/simCanvasState.ts`, and 4 more); this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Read-only: no file under `frontend/` written, `git status` empty after every probe; probes exit 0. The G6 and G7 sketch, on `/tmp` copies of three engine files: the existing engine suites 155/155 on the tree and on the sketch; 9 proposed tests red 9/9 on the tree, green 9/9 on the sketch; mutation bench 10/10 killed. `check:docs` 4/4.
+**Regressions**: no. Gates on `2a60dbd3d` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6764 tests in 270 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: New: `else` on a plain edge whose sibling enters a fork is always true, a silent choice list (G7 mirror). The G7 sketch covers the fork in-edge, the join out-edge and the mirror; `else` into a join becomes `else-position` (B, Alfonso). G12: (a) wrong on a merge (2 for 4) and a chain (3 for 9); (b) exact on the demo net, recommended, amends R-SIM-81 (A, Alfonso). The prompt's `Lane: full` names no RC-3 trigger (RC-17). A /tmp mirror with symlinks was refused, not retried.
-**Prompt document name**: 2026-09-27 15:45
-**Ticket** (priority medium, opened here, G7 of the report §3.2). An `else` on a plain edge whose sibling enters a fork or a join is always true: the siblings are drawn from the plain edges only (`netCompile.ts:266`), so the decision offers both branches and no defect says why. Measured on `f18d976d5`; lane E1 of the report closes it.
+**Smoke visivo**: passato — chat, unattended: no visual change: Lane A is pure; gates green (typecheck 14 = baseline, 6764 tests, build, docs, agents); demo readings identical per the lane
+**Notes**: Rollback tag `pre-sim-state-model` on `47d6dc97d` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0114/result.json`.
+**Prompt document name**: 2026-10-03 01:14
 
-## 2026-09-27 — feat: the engine reads the activity final and resolves else over fused transitions, lane E1 (P-2026-09-27-1610)
-**Prompt**: `claude_2026-09-27_1610_prompt_sim_e1_engine_g6_g7.md`, Phase 2 of P-2026-09-27-1545 on `sim-e1-engine` in `~/jjodel-icons`, full lane (more than 3 files), unattended. G6: the engine reads `simActivityFinal`, and a marked activity final terminates the run with other tokens alive (R-SIM-53). G7: `else` resolved over plain and fused transitions with R-SIM-31(1)'s siblings as written; an `else` into a join or out of a fork is the defect `else-position` (Alfonso's B no).
-**Files touched**: code `45a796050` (G6): `frontend/src/model/simulation/netTypes.ts`, `netCompile.ts`, `netStep.ts`, `roleCatalog.ts` (header comment), tests `netCompile.test.ts`, `netStep.test.ts`, `roleCatalog.test.ts`; code `bce34aee1` (G7): `netTypes.ts`, `netCompile.ts`, `netStep.ts`, tests `netCompile.test.ts`, `netStep.test.ts`, `components/editor-v2/sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-83, R-SIM-84), this entry, the Status of the prompt file.
+## 2026-10-03 — feat: the State page of the roles dialog and the model's State dialog (P-2026-10-03-0041)
+**Prompt**: `claude_2026-10-03_0041_prompt_sim_state_dialog.md`, heavy tier, Phase 2 Lane B on `~/jjodel-w-simdialog`, branch `sim-state-dialog`: report §8.2 as R-SIM-109 adopts it, R-SIM-103 and R-SIM-102 in the dialogs; tests first; visual check by the chat, then its two fixes (kind chip colours, Globals once in the model dialog).
+**Files touched**: code `b8ac89fcd`: `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `SimRolesModal.scss`, `SimDataModal.tsx`, `simRoleStatus.ts`, `simStateUsage.ts` (new), `__tests__/simRoleStatus.test.ts`, `__tests__/simStateUsage.test.ts` (new); fix `a57092326`: `SimRolesModal.tsx`, `SimRolesModal.scss`. Demo `0889e83be`, `b4b32bd72`: `docs/demo/models_2026_simulator_demo.md`. This commit: the Status line of the prompt, this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Baseline at `5260df11f`: `npm run typecheck` exit 2, 14 errors; vitest on `model/simulation` and `editor-v2/sim` 533 passed, 19 files; full `npx vitest run` 5175 passed, the 9 known files red at import. On `bce34aee1`: typecheck exit 2, 14 errors, set identical; sim 543 passed (533 + 10); full 5185 passed, the same 9 files; `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` 4/4. Red first: G6 5 (the 4 new tests and the moved roleCatalog assertion), G7 6. Mutation bench on the ten mutants of report §9: 10/10 killed, each only by the new tests.
-**Out-of-scope changes**: no — eight code paths, all in DOVE (`simBridge.test.ts` the optional one), above the Rule 19 five; the list is the prompt's DOVE, not restated in chat before the first edit. No file of E2's DOVE, no critical-zone file.
+**Regressions**: no. Typecheck 14 errors, the §17 set diffed by file and code; sim suites 395/395 (red first: 4 failed and a missing module); build exit 0, chunk-size warning only; probe readings after Reset as the script's (`Marking: locked · coins = 0, paid = false`, `Marking: i0 · count = 0`). Full vitest not run: the prompt names the sim suites.
+**Out-of-scope changes**: yes — no file outside DOVE (ten files over five commits, above five, DOVE taken as the confirmation), but two typecheck logs were first written to `/tmp`, outside the worktree, then moved into the gitignored `frontend/scripts/smoke/`.
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile (no visual check in the prompt). The readiness Flow probes replace it, copied read-only as `_tmp_e1_*`, vite on 3015: Flow B trace identical line by line (11 of 11: the M1 reset and STEP 1..10); Flow C `Terminated` at step 6, `Marking: fin · count = 2` (was `Deadlock`); Flow A no defect at Reset, `Terminated` at step 6. Each exit 0, one console error of the known kind.
-**Notes**: The Flow B comparison drops one reader key, `choiceSectionPaint` (null): the readiness common file gained it at 13:01, after its Flow B ran at 12:51. The G7 subject is shortened from the prompt's, 74 characters, over the 72 of §6.2. R-SIM-83 and 84 are numbered while E2 runs in parallel; a clash is the later merge's to renumber. The G6 commit message was amended once, pathspec only, before the G7 commit.
-**Prompt document name**: 2026-09-27 16:10
-**Ticket** (closed here). The G7 mirror ticket of the P-2026-09-27-1545 entry (an `else` on a plain edge whose sibling enters a fork was always true) is closed by `bce34aee1`: the test «mirror» in `netCompile.test.ts` and mutant M7 of the bench.
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on the fresh crops, GO 2026-10-03 (State page two columns with the one-way arrow, E-NODE before Apply, Written by/Read by on ESM and Flow B, DEFINE indigo and IVAR amber chips, concrete chips dashed pink, model dialog with Globals once), after two fixes asked on the first crops; lane probe on 3064, light, 1600×1000, 78/78; crops `docs/discovery/harness/_tmp_simdialog_*.png`, gitignored
+**Notes**: Both dialogs 1120×600. Mutation bench 21/21. The hexes the check named for DEFINE and IVAR exist only as component literals; the entity tokens used resolve to #EBE6FC/#5A4A7F and #F3E8D3/#6B5110. Commit type `feat` chosen: the prompt names none (P6). The first closure commit 263a2cdf0 was taken back with a soft reset and is replaced by this one. The role selects span the wide dialog. One console error at page load.
+**Prompt document name**: 2026-10-03 00:41
+**Ticket** (P-2026-10-03-0041): the probe kit's walk (`~/.jjodel-lanes/probe-kit/simgate/_tmp_simgate_walk.ts`, `semanticType`) looks for the R-SIM-97 Semantic type field; this tree has R-SIM-99's Simulation toggle and the picker, so the lane probe drives those instead (`frontend/scripts/smoke/_tmp_simdialog_probe.ts`, gitignored).
 
-## 2026-09-27 — feat: binding compatibility verdicts as a pure module, S11a (P-2026-09-27-1646)
-**Prompt**: `claude_2026-09-27_1646_prompt_sim_binding_compat.md`, fast lane on `sim-binding-compat` in `~/jjodel-sim`, wave 1 of the backlog report (P-2026-09-27-1625, §4.2 S11a). `bindingVerdicts(profile, bag, sketch)`: for every `edit` role that binds an element, each sketch element of its sort and the bag's value judged `ok`, `warn` or `incompatible`; `currentVerdicts` gives the bag's verdicts to `checkability`. Unwired.
-**Files touched**: code `3d44abce0`: `frontend/src/model/simulation/bindingCompat.ts` (new), `frontend/src/model/simulation/__tests__/bindingCompat.test.ts` (new). Docs, this commit: this entry, the Status of the prompt file.
+## 2026-10-03 — merge: sim-state-dialog into alfonso-frontend-jjtl (P-2026-10-03-0157)
+**Prompt**: `claude_2026-10-03_0157_prompt_merge_sim-state-dialog.md`, a direct merge by `lane-run merge --direct`, no session: `sim-state-dialog` at `f580d8f78` into `alfonso-frontend-jjtl`, merge base `fece79bc3`, 6 commits on the branch side.
+**Files touched**: merge `995a7b057`: 10 files from the branch side (`docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_0041_prompt_sim_state_dialog.md`, `frontend/src/components/editor-v2/sim/SimDataModal.tsx`, `frontend/src/components/editor-v2/sim/SimRolesModal.scss`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simRoleStatus.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simStateUsage.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. On `3d44abce0`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; `npx vitest run src/model/simulation` 443 passed in 15 files (418 + 25, the baseline taken before the first edit); `npm run build` exit 0, the chunk-size warning; `check:docs` 4/4; `check:scripts` the known `_tmp_sim1_verify.ts:186`. Red first: the test file at collection, module absent. Mutation bench 24/24 killed.
+**Regressions**: no. Gates on `995a7b057` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6821 tests in 272 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: The rule table (report risk 10) is in the body of `3d44abce0`: sort, concrete (R-SIM-81 exception), proper subclass of Node or Arc, owner lineage, reference type, containment, attribute type (R-SIM-44); the worst failed rule decides. Not judged: multiplicity, and the overlap of the sorts beyond Trigger's type (`overlapVerdict`). `BindingVerdict` sufficed: no question stop, no exported type changed, no R- row.
-**Prompt document name**: 2026-09-27 16:46
-**Ticket** (priority low, opened here). `MetamodelSketch` carries no upper bound (report §3.1 of the profiles report lists one; `profileBinder.ts` and `metamodelSketch.ts` do not), so the compatibility check cannot judge multiplicity, the third check of the modal lane's «type, owner, multiplicity». An optional bound on `SketchAttribute` and `SketchReference` (Rule 11, additive) and its read in `metamodelSketch.ts` are owed to S11c or the modal lane.
+**Smoke visivo**: passato — chat, unattended: Lane B visually checked on its branch by the chat (State page, kind chips, E-NODE, model dialog); 9 gates green
+**Notes**: Rollback tag `pre-sim-state-dialog` on `7aba76bfa` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0157/result.json`.
+**Prompt document name**: 2026-10-03 01:57
 
-## 2026-09-27 — feat: E2, Bound from a bounded exploration and the activity-final row (P-2026-09-27-1611)
-**Prompt**: `claude_2026-09-27_1611_prompt_sim_e2_panel_row_bound.md`, lane E2 on `sim-e2-panel-bound` in `~/jjodel-open`, full lane, Phase 2 of P-2026-09-27-1545. G12(b): Apply proposes `simBound` from the reachable markings of the models, guards aside, inhibitors and termination kept, capped at 2000 (R-SIM-81(1) amended, Alfonso's answer A); the G6 panel row: Activity final in Configure… General.
-**Files touched**: code `917b1546b`: `frontend/src/model/simulation/boundExploration.ts` (new), `components/editor-v2/sim/modelMarkings.ts`, `sim/simRoleStatus.ts`, `sim/SimulationPanel.tsx`, tests `boundExploration.test.ts` (new), `sim/__tests__/modelMarkings.test.ts`, `sim/__tests__/simRoleStatus.test.ts`; code `babbc161c`: `sim/simRoleStatus.ts`, `sim/SimulationPanel.tsx`, `model/simulation/stcFromRoles.ts`, tests `simRoleStatus.test.ts`, `events.test.ts`, `roleCatalog.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-81 point (1) amended), this entry, the Status of the prompt file.
+## 2026-10-03 — feat: node.[x] read by IR views, R-SIM-108 interpreter side (P-2026-10-03-0121)
+**Prompt**: `claude_2026-10-03_0121_prompt_sim_node_read.md`, heavy tier, `~/jjodel-w-simnoderead` on `sim-node-read`, RC-30 go-ahead: §5 and §6 of the node.[x] discovery; `presentationAttrOf` through the JjEL parser, `compilePath` reading `ReadCtx.getPresentation` with the `'mark'` channel, endpoints refusing it, `makeReadCtx` injecting `getSimPresentation`. LIR first, tests first, mutation bench, probe with scene C on node.[x].
+**Files touched**: `b60775776`: `docs/lir/lir_2026-10-03_sim_node_read.md` (new). `bf81fc979`: `viewpoint/ir/pathExpr.ts`, `irCompile.ts`, `irReadCtx.ts`, `irReadCtxLproxy.ts`, tests `pathExpr.test.ts`, `irPresentation.test.ts` (new). Closure: `docs/discovery/discovery_2026-10-03_sim_node_read_addendum.md` (new), the R-SIM-108 row of `docs/decisions.md`, the prompt's Status, this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Baseline at `d685b5738`: typecheck 14; vitest sim dirs 533 passed, 19 files. On `babbc161c`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest sim dirs 559 passed (533 + 26), 20 files; full vitest 5201 passed, the 9 known files red at import; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: the new suite at collection and 11 tests, then 2 for the row. Mutation bench 16/16 and 4/4 killed.
-**Out-of-scope changes**: yes — `frontend/src/model/simulation/__tests__/roleCatalog.test.ts`, a file of lane E1, taken byte for byte from E1's blob (`9e4a20866`, the same at `45a796050`) at the GO of the question stop (RC-25): the row quotes `simActivityFinal`, which that source-text test pinned as unread. `git merge-tree` with `sim-e1-engine` clean. 13 code paths over two commits, above the Rule 19 five, listed in chat before commit 1, not before the first edit.
-**Layer Impact Report**: not-required
-**Smoke visivo**: probe readings and crops for the chat on 3016 (`Bound → 4` and its title; the Activity final row after Terminal, set by Apply and cleared; light and dark; `~/.jjodel-lanes/shots_e2/`); visual GO by the chat pending
-**Notes**: Five §4.2 nets: 4, 4, 9, 5, loop unbounded (no proposal). Cap 2000, worst measured 41 ms. Preset change to Bound → 4 in the DOM 2.5-3.3 ms, exploration 0.1-0.4 ms in page. Apply click to Checkable 257-428 ms, Flowchart control (no exploration) 242-464 ms: the store write lands 193-415 ms after a 1.5 ms handler. Run under Bound 4: t1 twice, p2 ×4, no unsafe; Deadlock at step 4 as scripted. DOVE had modelMarkings and stcFromRoles dirs swapped.
-**Prompt document name**: 2026-09-27 16:11
-
-**Decisions taken in the lane** (unattended, RC-25, for the digest):
-- the cap is the report's 2000, kept after measuring its slowest shape (41 ms, once per change of the models);
-- one model that does not close sends every model back to the largest initial marking, A read literally, even when the others closed higher;
-- the prompt's 100 ms is read as Apply's own cost (handler 1.5 ms; the exploration runs at the preset choice, not at Apply): click to screen is the deferred store write, the same on the Flowchart control;
-- the `unbounded` end reads «no bound was found»: with inhibitors or termination a covering marking need not repeat;
-- `profileSummary` and `profilePatch` take `number | BoundEstimate | null` (a compatible widening, a number keeps today's reading); `boundProposalBag`, `boundEstimate`, `boundEstimateSignature` and `exploreBound` are new exports;
-- the docs commit precedes the visual GO, as the prompt's step 7 and the chat's GO order it, where RC-17 puts it after.
-
-## 2026-09-27 — discovery: the run state on the canvas, S15, G3 canvas side (P-2026-09-27-1647)
-**Prompt**: `claude_2026-09-27_1647_prompt_discovery_sim_canvas_state.md`, Phase 1 of S15 (R-SIM-33 3c) on `sim-canvas-state` in `~/jjodel-icons`, full lane, read-only, hard stop at the report. What a run-state channel into the canvas needs: where marking, σ and candidates are read, the render path, at least two channel options with files, R-SIM-4, critical zone, render cost and tests, and the draft Layer Impact Report of Phase 2.
-**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_canvas_state.md` (new), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_canvas_*` (gitignored, not committed), vite on 3018 with its cache in `/tmp/canvas1647_scratch`.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Read-only: no file under `frontend/src` written; the probe exit 0, vite stopped after it (`lsof` on 3018 exit 1), `git status` empty after the run.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Measured on 7b66f879f: all 13 Petri demo nodes paint native, no viewpoint, so an IR channel shows nothing on the demo. G3 reproduced: p1 row `tokens = 2` while the run holds 1. A candidate sweep costs 1.2-8.8 µs. Recommended: option A, a per-node overlay in the R-SIM-3 pattern, 0 critical-zone files, no R-SIM-4 amendment; option B (IR surface) after J2. Four decisions await Alfonso (report §12). A halted run still yields candidates: Phase 2 gates on the status.
-**Prompt document name**: 2026-09-27 16:47
-
-## 2026-09-27 — docs: demo script after E1 and E2 (P-2026-09-27-1738)
-**Prompt**: `claude_2026-09-27_1738_prompt_sim_demo_script_after_e1_e2.md`, fast lane, docs only, on `sim-demo-script-e1e2` in `~/jjodel-w-script` (cut at `d9e88f792`, E1 and E2 merged): the demo script drops the three constraints E1 and E2 make obsolete (answers memo, item B): the Petri step 3 becomes Apply's own `Bound → 4`, decision E is lifted with what is now allowed, each new value probed on 3022.
-**Files touched**: this commit: `docs/demo/models_2026_simulator_demo.md` (§1 the Petri row, §2.2 steps 1 to 3 and the line before Reset, §2.4 a variants paragraph, §3 the Petri and Flowchart bullets and the footnote, §5 three lines), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_script_*` gitignored, not committed.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-27 14:30 (`claude_2026-09-27_1430_prompt_sim_demo_script.md`: its decision H step and decision E constraints, made obsolete by E1 and E2)
-**Causa**: (f)
-**Regressions**: no. Docs only, no source file changed. Four probes through `lane-run probe` on 3022 (petri, flowB, flowBF, flowBE), `EXIT=0` each, one known console error per run, port free after; `grep -c '—'` on the script 0 (exit 1, control `Marking` 44); `check:docs` 4/4.
-**Out-of-scope changes**: yes — two places outside DOVE's §2.2, §2.4, §3, §4: §1, the Petri row's live «Bound» (an interaction, COSA item 3), and §5, the G6, G7 and G12 lines (the same three constraints as deferred work). §4 names none of them and is unchanged.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Readings on 3022: (1) Petri `Bound → 4`, title over «the 9 reachable markings», bag 4; the §2.2 run line for line after Apply alone; t1 twice gives `p2 ×4`, no unsafe, Deadlock at step 4. (2) Flow B with `ActivityFinal`: `Activity final → ActivityFinal`, Terminated at step 6. (3) `else` on f4 into the Fork: no guard defect, Terminated at step 6. Flow B itself unchanged. No reading contradicts E1 or E2. One commit for script, entry and Status, as the prompt orders.
-**Prompt document name**: 2026-09-27 17:38
-**Ticket** (priority medium, opened here). The script's header asks for a re-run of the readiness probes after any trunk commit to `SimulationPanel.tsx`; E2 made two (`917b1546b`, `babbc161c`). This lane re-ran Petri and Flow B only: the SM (§2.1) and ESM (§2.3) scenes are not re-measured on this tree. `sim-readiness-3` (answers memo) covers them.
-
-## 2026-09-27 — discovery: the Simulation roles modal, S11b and S11c, Phase 1 (P-2026-09-27-1740)
-**Prompt**: `claude_2026-09-27_1740_prompt_sim_modal.md`, full lane on `sim-modal` in `~/jjodel-w-modal`, Phase 1 read-only: the design README's five «To confirm» points from the code, the modal against today's M2 face field by field, every mockup element mapped to an engine key, Phase 2 cut into slices outside the conflict map (`simBridge.ts`, `net*.ts`).
-**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_modal.md` (new), this entry. No file under `frontend/`; probe in `/tmp/p1740/`, outside every tree.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Read-only: `git status` empty before the commit but for the two docs; the mockup served on 3023 by `python3 -m http.server`, port free before and after; the probe printed its measure, then exit 1 at a screenshot selector (`#4a` is not a valid CSS id), no retry needed.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Keys: `simProfile` (system id or user JSON, modes inside), `sim*` per role, `simStateAttributes`. `off` is read by validator, binder and summary, never by the run. Data runs on Petri in the engine; the Petri preset turns on Guard only. The mockups misplace eleven roles (report §4); 4a's third chip ends 39.5 px below its card. Required = `requiredRoles` (R-SIM-48); the dependency set shows as «Needed by» (D1). Slices A (pure), B (shell), C (user profiles, S10), six files.
-**Prompt document name**: 2026-09-27 17:40
-
-## 2026-09-27 — feat: the Simulation roles modal, S11b and S11c, Phase 2 (P-2026-09-27-1740)
-**Prompt**: `claude_2026-09-27_1740_prompt_sim_modal.md`, Phase 2 on `sim-modal` in `~/jjodel-w-modal`, full lane, after the chat's GO (Required as R-SIM-48, both awaiting items as recommended; the modal enters the MODELS demo, so every demo path through it). Slices A, B, C of `discovery_2026-09-27_sim_modal.md` (`30c28f817`): the pure layer, the dialog with the system presets, user profiles and compatible selects; the 4a overflow fixed; the Bound helper in the engine's words.
-**Files touched**: code `645703645` (A): `frontend/src/components/editor-v2/sim/simRolesDraft.ts` (new), `sim/__tests__/simRolesDraft.test.ts` (new); `b582ca7d4` (B): `sim/SimRolesModal.tsx` (new), `sim/SimRolesModal.scss` (new), `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`; `e34323517` (C): `simRolesDraft.ts`, its test, `SimRolesModal.tsx`, `SimRolesModal.scss`. Docs, this commit: this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_modal_*` gitignored.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Baseline at `30c28f817`: typecheck 14; vitest sim dirs 594 passed, 21 files. On `e34323517`: `npm run typecheck` exit 2, 14 errors, set identical; vitest sim dirs 623 passed (594 + 29), 22 files; `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` on this commit. Red first: A at collection, C 9 tests. Mutation bench A 15/16 (M14 equivalent), C 13/13.
-**Out-of-scope changes**: no — the six files of the report §8, above the Rule 19 five, listed there before the first edit; no conflict-map file, no critical-zone file.
-**Layer Impact Report**: not-required
-**Smoke visivo**: probe readings and crops for the chat on 3023 (four presets through the dialog and a run each, the hint route, 4e, a named copy, a warning; `~/.jjodel-lanes/shots_modal/1600x1000/` 45 crops, `1280x800/` 43); visual GO by the chat pending
-**Notes**: Every Marking and Last step line of the four demo runs as the script, at both sizes; Petri Bound 4 with the engine's reason; one Control+z after Apply empties the bag; folds move neither header nor footer; S11a ok on every bound demo role; one console error, the known kind. The ecore-loop error kind (P-2026-09-27-0225) showed once, 24 console errors, with ESM and Flowchart B in one page, and in none of the nine later runs. Logs in `~/.jjodel-lanes/P-2026-09-27-1740/`.
-**Prompt document name**: 2026-09-27 17:40
-**Ticket** (priority high, opened here, before the freeze). The demo script (`docs/demo/models_2026_simulator_demo.md`) walks the inline groups: §2.2 step 3 (Bound via Configure…, now proposed as 4 by Apply) and §2.3, §2.4 (the table's gestures) no longer match the panel on this branch. A docs lane re-walks the script through the dialog after the merge, from `probe-walk-final-*.log` and `probe-hint-1600.log`.
-**Ticket** (priority medium, opened here). The panel's summary badge still reads `checkability` without the S11a verdicts (`simRoleStatus.ts:364`, D5), the dialog's pill with them: a binding that warns reads «Checkable» on the panel and «Checkable with warnings» in the dialog. None does on the demo metamodels. For the S6-S8 bundle that owns `profileSummary`.
-**Ticket** (priority low, opened here). The rules of the inline groups and the old table in `simulation-panel.scss` are marked `TODO: cleanup`, left for the S17-S19 cleanup.
-
-**Decisions taken in the lane** (unattended, RC-25, for the digest):
-- turning a role on brings the roles it depends on, and Trigger brings Event derived from it, as the presets do, so no offered switch makes a `dependencyOff`;
-- Data offers «Turn on» wherever State attributes is off (the engine runs declarations on every shape, report §3.5), which makes a user copy;
-- the validator's defects are listed at the top of the body with their fix, not under the row (a folded row would hide 4e);
-- a warn or incompatible option carries «(warning)» or «(incompatible)» in its text (a native option shows no title), the bound value's verdict an icon in a fixed slot;
-- declarations are part of the draft, written by the same Apply; a text cell selects its text on focus, so a prefilled cell is replaced by typing (the S12 caret ticket, in the dialog only);
-- Apply closes the dialog, Escape and Cancel discard it, a click on the backdrop does nothing;
-- the Bound helper reads «Proposed N.» then `boundValue`'s reason verbatim.
-
-## 2026-09-27 — merge: sim-modal into alfonso-frontend-jjtl (P-2026-09-27-2049)
-**Prompt**: `claude_2026-09-27_2049_prompt_merge_sim-modal.md`, merge lane on `alfonso-frontend-jjtl` in `~/jjodel-release`: `--no-ff` of `78afc0378` (`sim-modal`, P-2026-09-27-1740), 1 conflict in this file resolved by union. Resumed after the chat relayed Alfonso's reversal of the not-before-2026-10-04 embargo (17:39), with a decision row, gates and this entry.
-**Files touched**: merge `5eccdd4d2` (the branch's 25 files; union of `docs/log-inbox/simulation.md`, trunk's file +38 -0); docs, this commit: `docs/decisions.md` (R-SIM-85), the Status of the prompt file, this entry.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: unknown — gates green on `5eccdd4d2`: typecheck exit 2, 14 errors, set identical; vitest 5265 passed across 214 files (5236 + 29), the nine known red at import; hooks 300; build exit 0; `typecheck:scripts` exit 0; `check:agents`, `check:scripts` PASS; `check:docs` 4/4. No smoke on 3001 in this lane.
-**Out-of-scope changes**: no — the merge's files are the branch's, declared by the prompt; `docs/decisions.md` and this entry were asked by the chat's answer.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non eseguito in questa corsia: la chat ha chiesto Outcome: done dopo i gate; il suo smoke su 3001 segue (3001 su, PID 61660, non riavviato)
-**Notes**: The first run stopped before the commit on P-2026-09-27-1740's not-before-2026-10-04 line (Outcome: question) and ran `git merge --abort`; the resume re-merged to the same tree `2c5a67a2d`. `frontend/` at `5eccdd4d2` equals `78afc0378`'s. The demo script is stale on §2.2 step 3, §2.3 and §2.4 until the chat's re-walk docs lane. Rollback tag `pre-sim-modal` at `d9e88f792`.
-**Prompt document name**: 2026-09-27 20:49
-
-## 2026-09-27 — docs: demo script walks the Simulation roles dialog (P-2026-09-27-2105)
-**Prompt**: `claude_2026-09-27_2105_prompt_sim_demo_script_modal.md`, fast lane, docs only, on `sim-demo-script-modal` in `~/jjodel-w-demo-modal` (cut at `22aa888de`, the sim-modal merge in): the four scenes of the demo script re-walked through the Simulation roles dialog (R-SIM-85), every gesture and reading measured by a probe on 3024, clicks and keystrokes counted per scene.
-**Files touched**: this commit: `docs/demo/models_2026_simulator_demo.md` (§2.1 to §2.4 the Apply and declaration steps, one count line per scene, the ESM clamp lines, a not-measured note on the Flow variants; §3 the Petri bullet; §4 the two declaration risks), this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_demomodal_*` gitignored, not committed.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-27 17:38 (`claude_2026-09-27_1738_prompt_sim_demo_script_after_e1_e2.md`: its §2 walked the inline groups the dialog replaced)
-**Causa**: (f)
-**Regressions**: no. Docs only, no source file changed. Probes on 3024, one fresh page per scene, `EXIT=0` each (sm ×3, petri ×3, esm ×3, flowB ×1), one known console error per run, re-runs identical line for line; `grep -c '—'` on the script 0 (exit 1, control `Marking` 44); `check:docs` on this commit.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile — crops for the chat (RC-23), light, 1600x1000, in `~/.jjodel-lanes/shots_demo_modal/`
-**Notes**: The four 1740 readings hold: SM 7 of 10, Terminated at 10; Petri Bound 4 with the engine's reason, Deadlock · ε: t2 false at 4; ESM coins and paid declared, the halt line at 10; Flow B count declared, Terminated at 6. Counts: configuration 4 clicks each; ESM declarations 9 interactions (was 10), 34 keys, 2 scrolls (was 3), no double-click (was 4); Flow B 6, 10 keys, 1 scroll. Logs in `~/.jjodel-lanes/P-2026-09-27-2105/`.
-**Prompt document name**: 2026-09-27 21:05
-**Ticket** (priority medium, opened here, outside DOVE). The script's §5 still lists «The modal lane» as out of the demo, which R-SIM-85 reversed; §1 and the header are unchanged and still true. Left for the chat.
-**Ticket** (priority medium, opened here). On ESM at 1600x1000 the panel cuts the final halt line (302 px of text in 262) and `Last step:` (264 in 262); the optional Reset's defects and halt lines too (513, 430). The titles hold the whole text; the script says so.
-**Ticket** (priority low, opened here). The dialog's Bound cell is a number input with no select-on-focus: a click and `5` over `4` reads `45`, so the §3 fallback needs Cmd+A. The declaration cells select on focus.
-
-## 2026-09-27 — fix: the halt line reads whole in the halted state (P-2026-09-27-2225)
-**Prompt**: `claude_2026-09-27_2225_prompt_sim_halt_line.md`, fast lane on `sim-halt-line` in `~/jjodel-w-haltline` (cut at `d88e70e0e`): in the halted state only, the halt line wraps into a slot reserved for two lines, nothing below it moving (Alfonso, 2026-09-27 22:20, item 3); «Last step» follows only if the slot fits it without moving the controls; the memo of the four 22:20 answers.
-**Files touched**: code `e0e6ee5e4`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (the halt line carries `sim-panel__hint--halt`, a free name: grep exit 1, control exit 0), `simulation-panel.scss` (`__hint--halt`: line-clamp 2, a 3em content box). Docs: memo `docs/ratifiche/claude_ratifiche_2026-09-27_evening_answers.md` `1ec1e8138`; this commit: this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_halt_*` gitignored, not committed.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-26 13:15 (`claude_2026-09-26_1315_fase2_sim_guard_outcomes.md`: its one-row rule, R-SIM-63, cut the ESM halt line the demo exists to show)
-**Causa**: (f)
-**Regressions**: no. `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest on `src/components/editor-v2/sim` and `src/model/simulation` 22 files, 623 passed, as before; `npm run build` exit 0; every non-halted state measured identical before and after (Notes); Petri and SM crops byte-identical (cmp).
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile — the lane read its crops; the chat's RC-23 check on `~/.jjodel-lanes/shots_halt/` is pending
-**Notes**: Halted, 1600x1000: controls at 794.5/858.5/915 before and after; panel 251.5 to 268 (declared halt), 276 to 292.5 (undeclared); halt line 24.5px cut to 41px, two lines, whole, both texts. Running, Terminated, Deadlock, Not started, Reset from Halted: identical. Same at 1280x800, light and dark. «Last step» stays cut: wrapping it lifted the controls 16.5px. Logs in `~/.jjodel-lanes/P-2026-09-27-2225/`.
-**Prompt document name**: 2026-09-27 22:25
-**Ticket** (priority medium, opened here, outside DOVE, for the chat). Once merged, the demo script goes stale on two readings: §2.3 at lines 196-198 and 238-240 says the halt line is cut and read in its title; it now reads whole on two lines. «Last step» and the defects line are still cut, as the script says.
-**Ticket** (priority medium, opened here, outside DOVE, for the chat). Answer 3 narrows R-SIM-63 for the halt line; the row in `docs/decisions.md` is not written.
-**Ticket** (priority low, probe artifact). The dark probe's init script throws one `pageerror` (`document.documentElement` is null that early); the theme still applies through `localStorage.theme`.
-
-## 2026-09-27 — discovery: guard and action checks in the problems list, S16 (P-2026-09-27-1726)
-**Prompt**: `claude_2026-09-27_1726_prompt_discovery_sim_checker_gap.md`, Phase 1 read-only on `sim-checker-gap` in `~/jjodel-w-checker` at `d1d45b9d3`, wave 1 of the backlog report (S16): map the problems registry, measure which STC guard and action errors are caught today and where, design the producer, its kind and tests, with C2's probe (4) as the reference; draft the Layer Impact Report of Phase 2.
-**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_checker_gap.md` (new), this entry, the Status of the prompt file. Probes gitignored `frontend/scripts/smoke/_tmp_checker_*`, vite on 3020, logs in `/tmp/checker_scratch/`, not committed.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Read-only: no file under `frontend/src` written; `git status` empty after every probe; three probes exit 0; the 3020 server stopped by pid, no listener after. `check:docs` 4/4.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required (Phase 1 read-only; the draft for Phase 2a is in the report §14)
-**Smoke visivo**: non applicabile
-**Notes**: 35 cases on the demo presets (report §5.2): the registry sees only parse errors on Expression/Action slots (conformance); 11 classes pass Reset and show only when fired, C2's probe (4) among them. Recommended: P2a a producer over startRun, kind 'simulation' (critical zone), then P2b the new rules in the bridge. startRun median 1.6 ms on demoESM. Probe 1's A9-A12, E1, E2 inherited a leftover slot value and were rerun (probe 2).
-**Prompt document name**: 2026-09-27 17:26
-**Ticket** (priority medium, opened here, report F6). An `else` guard with no sibling is always true, silently: `tp.guard = else` fires on `push`, `t2.guard = else` compiles with no defect (measured on `d1d45b9d3`). A defect would amend the ratified R-SIM-31(1): decision 1 of the report §12, for Alfonso.
-**Ticket** (priority low, opened here, report decision 5). The declarations' compile defects (`role: 'declaration'`) have no M1 element, so a registry producer cannot anchor them; an M2 anchor (the metaclass node, or the metamodel) is a lane of its own.
-**Ticket** (priority low, opened here, report risk 7). Building the four demo presets in one page logs 216 `Cannot serialize in ecore, found loop` console errors (with their stacks); one preset per page logs none. Not investigated.
-
-## 2026-09-27 — feat: guard and action checks in the problems registry, P2a (P-2026-09-27-1805)
-**Prompt**: `claude_2026-09-27_1805_prompt_sim_checker_gap_phase2.md`, Phase 2 of `P-2026-09-27-1726` on `sim-checker-gap` in `~/jjodel-w-checker`, full lane (critical zone: the problems registry), go-ahead by `lane-run --critical-zone-goahead` (RC-30). Implement the report's slices in order: P2a (a producer of kind `'simulation'` over the bridge's `startRun`), then P2b (`stcChecks.ts`, rules R1-R5).
-**Files touched**: docs `4bbe3790a`: `docs/discovery/lir_2026-09-27_sim_checker_gap.md` (new, the Layer Impact Report, before any edit). Code `0412501ef`: `frontend/src/components/editor-v2/problems/registry.ts`, `simCheckToProblems.ts` (new), `SimCheckProblemSync.tsx` (new), `__tests__/simCheckToProblems.test.ts` (new), `components/editor-v2/EditorV2.tsx` (import and mount). This commit: this entry, the LIR's closure section, the Status of the prompt.
-**Outcome**: ⚠️ partial
-**Corregge**: —
-**Causa**: (a)
-**Regressions**: no. On `0412501ef`: `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest `problems/` + `sim/` 214 passed (195 + 19), 11 files; `npm run build` exit 0, the chunk-size warning (10m34s, load ~30). Full suite: 5087 passed; red the 9 known import files and 6 `scripts/` files (30 timeouts and pool-start failures under load, `criticalZone` under this session's go-ahead env); no `scripts/` file changed. Red first: 18 at collection. Mutation bench 22/22 killed.
-**Out-of-scope changes**: no: five code paths, the Rule 19 five, listed in the LIR before the first edit; all in the lane's ownership.
+**Regressions**: no
+**Out-of-scope changes**: yes (the addendum is a file of its own, not appended to the report: the report is on `sim-node-disc` at `8bd04b0c4`, unmerged, absent from this tree; eleven files in all, every other one in the prompt's DOVE)
 **Layer Impact Report**: produced
-**Smoke visivo**: fallito (lane probe on 3020, ESM alone: registry, dots, overlay, resolved and TTL as the Reset line, 4/5; the rail item not closable, no `.ir-form` on this preset; chat RC-23 run and Alfonso's GO pending)
-**Notes**: P2b not started: its wiring (`simBridge.ts`, its test) and R3 (`actionEvaluator.ts`) belong to `sim-derived-recursion`, whose unmerged `d2a19ccab` changes `simBridge.ts`; question to the chat. `node#edge` anchored on the node, as the defects line names it (report §9 said the edge). Selector cost 9.7 ms at 2000 objects, 30 ms at 5000. The R-SIM row is owed: `decisions.md` is not in the ownership map. Session past 90 minutes (build and full suite under load). Detail: the LIR §3 and §5.
-**Prompt document name**: 2026-09-27 18:05
-**Ticket** (priority low, opened here). `NodeProblemOverlay` stays light with `data-theme="dark"` on the canvas (crop `3_tp_enode_overlay_dark.png`); not changed here, not investigated.
-**Ticket** (priority low, opened here, LIR §5). The producer's selector walks the whole lookup through `runSignature` on every dispatch of a simulation-bound M1: 9.7 ms at 2000 objects, 30 ms at 5000. Above about 2000 objects, the report's fallback applies.
+**Smoke visivo**: non applicabile
+**Notes**: Probe on 3070: C rewritten on node.[x] has C's commits (9) and run-editor renders on the four scenes, the label shows the stand-in value on every IR node, default-viewpoint scenes equal to the report. Golden compile of views without node.[x] byte-identical. Bench 12/13, the survivor a defensive check. Typecheck 14 = baseline, 2217 tests, build exit 0. The report's probe stand-in lacked Lane A's net fields; details in the addendum.
+**Prompt document name**: 2026-10-03 01:21
 
-## 2026-09-27 — discovery: well-founded recursion in derived attributes, S3 (P-2026-09-27-1727)
-**Prompt**: `claude_2026-09-27_1727_prompt_discovery_sim_derived_recursion.md`, full lane, Phase 1 read-only on `sim-derived-recursion` in `~/jjodel-w-recursion` at `21394e437`, wave 1 of the backlog report (S3, ratification C): where R-SIM-74 refuses a well-founded recursion, the per-(element, attr) graph over frozen M with cycle detection, its cost on the demo presets, the collection form against R-SIM-43, the amendment texts and the Phase 2 lanes.
-**Files touched**: docs, this commit: `docs/discovery/discovery_2026-09-27_sim_derived_recursion.md` (new), this entry, the Status of the prompt file. Probe `frontend/scripts/smoke/_tmp_recur_probe/recur.test.ts` and its vitest config, gitignored, not committed.
+## 2026-10-03 — merge: sim-node-read into alfonso-frontend-jjtl (P-2026-10-03-0208)
+**Prompt**: `claude_2026-10-03_0208_prompt_merge_sim-node-read.md`, a direct merge by `lane-run merge --direct`, no session: `sim-node-read` at `6eb66ddb1` into `alfonso-frontend-jjtl`, merge base `f7131a405`, 4 commits on the branch side.
+**Files touched**: merge `b5427d7a5`: 11 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-03_sim_node_read_addendum.md`, `docs/lir/lir_2026-10-03_sim_node_read.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_0121_prompt_sim_node_read.md`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irPresentation.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/pathExpr.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irCompile.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Read-only: no file under `frontend/src` written, `git status` empty after every probe run; probe exit 0, 9 tests, 37 `[RECUR]` lines on the last run. No dev server: port 3021 not opened.
+**Regressions**: no. Gates on `b5427d7a5` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6847 tests in 273 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: sim-node-read: no change on the demo scenes (default viewpoint), probe on 3070 by the lane; 9 gates green
+**Notes**: Rollback tag `pre-sim-node-read` on `f74c7a198` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0208/result.json`.
+**Prompt document name**: 2026-10-03 02:08
+
+## 2026-10-03 — feat: the M1 face, run inspector and canvas tags of the state UI, Lane C (P-2026-10-03-0120)
+**Prompt**: `claude_2026-10-03_0120_prompt_sim_state_face.md`, heavy tier, Phase 2 Lane C on `~/jjodel-w-simface`, branch `sim-state-face`: report §8.3 as R-SIM-109 adopts it, R-SIM-104, 105, 106 (UI), 107, 109 and R-SIM-102 on the face and the canvas, rendering Lane A's builders; lane probe on the four demo exports; the chat's visual check, then its two fixes (the seed in the title only, Watch four rows with the globals by default).
+**Files touched**: code `6eedc4bf3`, fixes `d7ff4f821`, `16539631f`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `simulation-panel.scss`, `SimInspector.tsx` (new), `SimInspector.scss` (new), `SimNodeRunState.tsx`, `simNodeRunState.scss`, `SimCanvasLayer.tsx` (new). Demo `eb7d54c6b`, `d9e344274`: `docs/demo/models_2026_simulator_demo.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Typecheck 14 errors, the §17 set, none in `sim/`; sim suites 978/978 in 28 files; build exit 0, chunk-size warning only; lane probe on 3068, light, 1600×1000, 138/138, the four scenes' readings line for line as the script's. Not run: Play, the reasons list, the dark theme.
+**Out-of-scope changes**: yes — no file outside DOVE (ten files over six commits, above five, DOVE taken as the confirmation), but three scratch outputs (a typecheck log, two probe stdouts) were first written to `/tmp`, outside the worktree, then deleted; later ones went to the gitignored `frontend/scripts/smoke/`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 GO 2026-10-03 on the fresh crops (status line with step and last step, seed in the title only; Watch at most four rows; panel, Marking chips, Events, inspector with the viewed step, trace, canvas tags and Inspect switch as checked at 02:31), after two fixes asked on the first crops (`16539631f`); lane probe 138/138 on 3068, light, 1600×1000; crops `docs/discovery/harness/_tmp_simface_*.png`, gitignored
+**Notes**: Amends R-SIM-104 on the seed: in the status line's title only, as R-SIM-100 had it. Watch: the globals by default, at most four rows (`facePins`). The chat adopted the lane's four choices as recommended: the panel stays live while a step is viewed; closing the inspector or collapsing the panel returns to live; the canvas layer under the toolbar; the inspector clamped at 234 (MiniMap 202 px). Demo lines 62, 270, 403 also rewritten by Lane B: union at the second merge.
+**Prompt document name**: 2026-10-03 01:20
+**Ticket** (P-2026-10-03-0120): with the seed gone the last step still loses its tail in 184 px of status line: PEST and ESM by 23-71 px, Flow B's step 6 by 17 px, Petri's step 4 behind the Deadlock reason (61 px left); it reads whole in Petri's steps 1-3 and Flow B's 1-5. The title carries it whole; a perceptual item for Alfonso.
+
+## 2026-10-03 — merge: sim-state-face takes alfonso-frontend-jjtl (P-2026-10-03-0304)
+**Prompt**: `claude_2026-10-03_0304_prompt_sim-state-face_take_trunk.md`, full lane, `~/jjodel-w-simface` on `sim-state-face`: RC-14, the trunk at `04dd1c7e5` into the branch with one `--no-ff` merge, base `f7131a405`; the demo-script conflict resolved with the chat's text (RC-21); then, on the chat's two answers, the test red the merge gates found and the three `Data…` left in §4 of the demo script.
+**Files touched**: merge `536e27cf1`: the trunk's 39 files (37 clean, equal to the trunk's; resolved `docs/demo/models_2026_simulator_demo.md` by the chat's text, `docs/log-inbox/simulation.md` by union). `9b5386835`: `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irActivityRender.test.ts`. `6edc4b34c`: `docs/demo/models_2026_simulator_demo.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 01:20
+**Causa**: (c)
+**Regressions**: unknown. Gates on `6edc4b34c`: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 6847/6847 in 273 files, the 9 red at import, equal to the trunk tip's count measured read-only in `~/jjodel-release`; hooks 344; build exit 0, chunk-size warning only; check:docs 4/4, check:scripts PASS, check:addonly PASS. No visual probe ran on the merged tree.
+**Out-of-scope changes**: yes — the test file and the three §4 lines of the demo script, beyond the prompt's DOVE, authorized by the chat; the merge itself carries 39 files, above five, the trunk's, listed in the prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the face checked on the branch at 02:31 and 02:49 (RC-23), before the merge; the merge adds trunk code on files disjoint from the branch's, not re-probed on this tree
+**Notes**: Corregge/Causa for the test commit only: since `6eedc4bf3` (R-SIM-107) `SimNodeRunState` reads `getSimRun`, missing from the test's mock, and the σ card the test pinned is gone; the 0120 lane ran the sim suites only. Fix: the mock stub, the σ fixtures with `before`, `cornerSigma` re-pinned to `f19f2252a2347426`. Mutation bench not run. §4 stale `Data…` fixed in a docs commit (P13: never with code).
+**Prompt document name**: 2026-10-03 03:04
+
+## 2026-10-03 — merge: sim-state-face into alfonso-frontend-jjtl (P-2026-10-03-0345)
+**Prompt**: `claude_2026-10-03_0345_prompt_merge_sim-state-face.md`, a direct merge by `lane-run merge --direct`, no session: `sim-state-face` at `fabcef855` into `alfonso-frontend-jjtl`, merge base `04dd1c7e5`, 12 commits on the branch side.
+**Files touched**: merge `d90138dea`: 12 files from the branch side (`docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_0120_prompt_sim_state_face.md`, `docs/prompts/claude_2026-10-03_0304_prompt_sim-state-face_take_trunk.md`, `frontend/src/components/editor-v2/sim/SimCanvasLayer.tsx`, `frontend/src/components/editor-v2/sim/SimInspector.scss`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimNodeRunState.tsx`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d90138dea` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6883 tests in 275 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Lane C checked visually on its branch at 02:31 and 02:49; take-trunk P-2026-10-03-0304 changed docs and one test only; 9 gates green, 6883 tests; no visual probe on the merged tree, Alfonso round on 3001 is the check
+**Notes**: Rollback tag `pre-sim-state-face-P-2026-10-03-0345` on `f564a83d6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-0345/result.json`.
+**Prompt document name**: 2026-10-03 03:45
+
+## 2026-10-03 — fix: the run inspector's trace scrolls in six rows (P-2026-10-03-1015)
+**Prompt**: `claude_2026-10-03_1015_prompt_sim_inspector_trace_scroll.md`, light tier, fast lane, `~/jjodel-w-simtrace` on `sim-trace-scroll`: the inspector's trace a fixed scroll area showing the latest six steps, the card's height free of the trace, the newest step in view on a commit unless the reader scrolled down, a chosen step scrolled into view, «N steps» kept.
+**Files touched**: code `f507a382f`: `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimInspector.scss`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 01:20
+**Causa**: (a)
+**Regressions**: unknown. Typecheck 14 errors, the §17 set; sim suites and `irActivityRender.test.ts` 1019/1019 in 30 files; build exit 0, chunk-size warning only; lane probe on 3072, light, 1600×1000, DemoESM, 20/20. Not run: the dark theme, the rail collapsed, the other three scenes, Lane C's probe.
+**Out-of-scope changes**: yes — no file outside DOVE; one write outside the worktree: the baseline probe log renamed to `probe-_tmp_simtrace_probe.base.log` in the lane folder `~/.jjodel-lanes/P-2026-10-03-1015/`, which `lane-run` writes.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 GO 2026-10-03 on the crops at step 12 and at step 12 viewing step 1 (trace area six rows, newest first, scrollable, viewed row in view; card 442 px at steps 2, 6, 12 per the probe); lane probe 20/20 on 3072, light, 1600×1000; crops `docs/discovery/harness/_tmp_simtrace_step3.png`, `_step12.png`, `_step12_viewed.png`, the `_base_` ones before the fix, gitignored
+**Notes**: Card 442 px at steps 0..12 and 14, before 332..596; at steps 2, 6, 12: 442, 442, 442. Trace area 132 px (6 × 22, the row measured), scrollHeight 286 at step 12. Lane's choice: Back to live also scrolls the live row into view, as a step shown without a commit; the row's focus outline moves inside it. The scrollbar is not painted in the crops (Playwright hides it), its 3 px gutter measured. Corregge 0120: its prompt left the trace unbounded.
+**Prompt document name**: 2026-10-03 10:15
+
+## 2026-10-03 — merge: sim-trace-scroll into alfonso-frontend-jjtl (P-2026-10-03-1031)
+**Prompt**: `claude_2026-10-03_1031_prompt_merge_sim-trace-scroll.md`, a direct merge by `lane-run merge --direct`, no session: `sim-trace-scroll` at `c44875905` into `alfonso-frontend-jjtl`, merge base `4d190162f`, 3 commits on the branch side.
+**Files touched**: merge `f02502d10`: 4 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_1015_prompt_sim_inspector_trace_scroll.md`, `frontend/src/components/editor-v2/sim/SimInspector.scss`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f02502d10` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6883 tests in 275 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: trace scroll checked on its branch (card 442 px at steps 2, 6, 12; six rows; viewed row in view); 9 gates green
+**Notes**: Rollback tag `pre-sim-trace-scroll` on `39ae40a83` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1031/result.json`.
+**Prompt document name**: 2026-10-03 10:31
+
+## 2026-10-03 — fix: the panel and the inspector explain a profile without state attributes (P-2026-10-03-1420)
+**Prompt**: `claude_2026-10-03_1420_prompt_sim_profile_state_hint.md`, fast lane, light tier, `~/jjodel-w-simhint` on `sim-profile-hint`: under a profile whose `stateAttributes` mode is off, one hint line where the Undeclared line sits and once at the top of the inspector's σ section; with it on, nothing changes.
+**Files touched**: code `ff8e22e22`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (`stateAccessHint`, the `stateHint` state, `modelProfileName`), `frontend/src/components/editor-v2/sim/SimInspector.tsx` (optional prop `stateHint`; no SCSS rule needed: `sim-panel__hint` wraps in the card); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ff8e22e22`: typecheck exit 2 with 14 errors, the §17 set, none under `sim/`; vitest on `editor-v2/sim`, `model/simulation` and `irActivityRender.test.ts` 30 files, 1020 of 1020; build exit 0. After the round trip back to Extended state machine the panel lines are identical to those before it.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe 19 PASS, 0 FAIL on 3073, DemoESM imported read-only, 1600×1000, default theme, light in the crops; the chat's visual check pending, RC-23; crops `docs/discovery/harness/_tmp_simhint_panel_statemachine.png`, `_inspector_statemachine.png`, `_panel_extended.png`, gitignored)
+**Notes**: Matched reason: 'undeclared' only ('declaration' cannot arise under off: runBag and modelRunBag drop the key). On DemoESM under State machine 3 defects become 1 (actions off); the hint names model.[paid]. Panel line clamped at 288 px (scrollWidth 362 over 262), full text in the title. SimulationPanel does not import in the bench (window, monaco): helper run through esbuild. Console: one reducer 'Invalid action path', not compared against the base.
+**Prompt document name**: 2026-10-03 14:20
+
+## 2026-10-03 — fix: the state hint wraps in two rows so its remedy is readable (P-2026-10-03-1420)
+**Prompt**: the chat's check of `claude_2026-10-03_1420_prompt_sim_profile_state_hint.md` after `ff8e22e22`, same lane: the hint ended in an ellipsis at `use Ext…` in the 288 px panel; drop `--line` for this hint only so it wraps to two rows at most, text unchanged, re-measure the hint height and the transport row top before and after Reset, recrop.
+**Files touched**: code `1c4212b43`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (the hint takes `sim-panel__hint--halt`, no `--line`), `frontend/src/components/editor-v2/sim/simulation-panel.scss` (one declaration, `overflow: hidden`, in the existing `&__hint--halt`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-03 14:20 (`claude_2026-10-03_1420_prompt_sim_profile_state_hint.md`, its first pass `ff8e22e22`: the hint reused `--line`)
+**Causa**: (a)
+**Regressions**: no. Gates on `1c4212b43`: typecheck exit 2 with 14 errors, the §17 set, none under `sim/`; vitest on `editor-v2/sim`, `model/simulation` and `irActivityRender.test.ts` 30 files, 1020 of 1020; build exit 0; check:docs exit 0. The halt line is unchanged: it had `overflow: hidden` from `--line` already.
+**Out-of-scope changes**: yes — `simulation-panel.scss` is outside the first prompt's DOVE; the chat's follow-up put it in scope for one rule, and the change is one declaration on an existing rule, not a new class.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe 21 PASS, 0 FAIL on 3073, DemoESM, 1600×1000, default theme; the chat's visual check pending, RC-23; crops `docs/discovery/harness/_tmp_simhint_panel_statemachine.png`, `_panel_statemachine_long.png`, `_inspector_statemachine.png`, `_panel_extended.png`, gitignored)
+**Notes**: Measures on 3073, DemoESM under State machine: hint 41 px, two rows, not clamped sideways; transport row top 873 at Not started and 873 after Reset. --halt alone does not clip: a long name injected laid out 3 rows (scrollHeight 54 over 41) and the third painted over MARKING until overflow: hidden went into the --halt rule; the halt line already had it. A speck of that third row's top shows in the 4 px bottom padding. The SetFieldAction2 console error is left to the chat's ticket.
+**Prompt document name**: 2026-10-03 14:20
+
+## 2026-10-03 — merge: sim-profile-hint into alfonso-frontend-jjtl (P-2026-10-03-1452)
+**Prompt**: `claude_2026-10-03_1452_prompt_merge_sim-profile-hint.md`, a direct merge by `lane-run merge --direct`, no session: `sim-profile-hint` at `91c8964ae` into `alfonso-frontend-jjtl`, merge base `764e00502`, 5 commits on the branch side.
+**Files touched**: merge `aefaddcf5`: 5 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_1420_prompt_sim_profile_state_hint.md`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/simulation-panel.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `aefaddcf5` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6946 tests in 277 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat check (RC-23) on the lane probe of P-2026-10-03-1420: hint on two rows 41 px, transport row 873 before and after Reset under both profiles; gates of the direct merge green; Alfonso look on 3001 pending
+**Notes**: Rollback tag `pre-sim-profile-hint` on `ccb15ff9c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1452/result.json`.
+**Prompt document name**: 2026-10-03 14:52
+
+## 2026-10-03 — fix: a state attribute's initial value follows its domain (P-2026-10-03-1520)
+**Prompt**: `claude_2026-10-03_1520_prompt_sim_initial_default.md`, fast, light tier, `~/jjodel-w-siminit` on `sim-initial-default`: a new state attribute started at `false` whatever its domain, and an edit of kind, min, max or literals left the stale initial in place; the initial now takes the domain's default (false, the range minimum, the first enum literal) and keeps a value typed inside the domain.
+**Files touched**: code `777a5da2f`: `frontend/src/model/simulation/stateAttributesCodec.ts` (two additive exports, `defaultInitialOf` and `initialFollowingDomain`), `frontend/src/model/simulation/__tests__/stateAttributesCodec.test.ts`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx` (`patchOf`, a `domainPatch` helper); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `777a5da2f`: typecheck exit 2 with 14 errors, the §17 set; vitest on `model/simulation` and `editor-v2/sim` 29 files, 1022 of 1022; build exit 0. Tests 16 of 48 red first, then green. Mutation bench on the two helpers 12/12 killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3075, DemoESM, 1600×1000, light, 17 PASS 0 FAIL; the chat's visual check pending, RC-23; crops in `~/.jjodel-lanes/P-2026-10-03-1520/`, outside the tree)
+**Notes**: `patchOf` is not testable in the bench (SimRolesModal.tsx imports the joiner), so the rule lives in the codec and the wiring is covered by the probe only, derived row included by cell count. The four demo exports carry no `sim*` key, so no initial outside its domain; the run still starts on one and reports an `initial` defect. Open: derived to stored leaves initial empty (`formPatch`, simInputs.ts).
+**Prompt document name**: 2026-10-03 15:20
+
+## 2026-10-03 — merge: sim-initial-default into alfonso-frontend-jjtl (P-2026-10-03-1535)
+**Prompt**: `claude_2026-10-03_1535_prompt_merge_sim-initial-default.md`, a direct merge by `lane-run merge --direct`, no session: `sim-initial-default` at `095840d88` into `alfonso-frontend-jjtl`, merge base `cceec3f05`, 3 commits on the branch side.
+**Files touched**: merge `f614230e8`: 5 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_1520_prompt_sim_initial_default.md`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/model/simulation/__tests__/stateAttributesCodec.test.ts`, `frontend/src/model/simulation/stateAttributesCodec.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f614230e8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6962 tests in 277 files, 9 red at import, hooks 344; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat smoke on 3001: HTTP 200, the served stateAttributesCodec carries defaultInitialOf; all eight gates green; Alfonso look pending
+**Notes**: Rollback tag `pre-sim-initial-default` on `cceec3f05` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1535/result.json`.
+**Prompt document name**: 2026-10-03 15:35
+
+## 2026-10-03 — fix: simulation UI polish, tags, roles line, state heading, initials (P-2026-10-03-1630)
+**Prompt**: `claude_2026-10-03_1630_prompt_sim_polish.md`, full, heavy tier, `~/jjodel-w-simpolish` on `sim-polish`: five fixes in the simulation UI before the MODELS demo: long tags cut in the Simulation roles window, the roles line deaf to manual choices, «Marking» on non-Petri runs, derived to stored leaving the initial empty, presentation to semantic keeping a stale initial.
+**Files touched**: code `26e05dba3`: `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `SimRolesModal.scss`, `SimInspector.tsx`, `SimulationPanel.tsx`, `simInputs.ts`, `simLabels.ts` (new), `__tests__/simInputs.test.ts`, `__tests__/simLabels.test.ts` (new), all under `editor-v2/sim/`; this commit: this entry, the ticket below and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `26e05dba3`: typecheck exit 2 with 14 errors, the §17 set; vitest on `editor-v2/sim` and `model/simulation` 30 files, 1039 of 1039; build exit 0. Tests red first (simLabels missing, 6 of 15 simInputs red), then green. Mutation bench 22/22 killed, controls green.
+**Out-of-scope changes**: no — ten files over two commits, above five (RC-11, rule 19): the eight code files and the two docs files, each in the prompt's DOVE, taken as the confirmation.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3076, four demo scenes, 1600×1000: dark 106 PASS 0 FAIL; light 105 PASS 1 FAIL, a reducer error at DemoPEST open that the same probe on HEAD's code also logs; the chat's visual check pending, RC-23; crops in `~/.jjodel-lanes/P-2026-10-03-1630/`)
+**Notes**: Point 1: no role label is cut (eight presets, four scenes); the cut tags are R-SIM-90's, absent from the demo scenes (one candidate per row), reproduced with a probe-only attribute: `Transition.acceptanceCondition` shown 90 of 180 px, now whole, row still 32 px. Point 2 reads «assigned»: it counts edits and stored values, not matches. `matchLine` (simRolesDraft.ts) is now read by tests only.
+**Prompt document name**: 2026-10-03 16:30
+
+## 2026-10-03 — ticket: two console errors on the demo scenes predate the simulation UI
+**Ticket**: On the four demo exports, probed on 3076 with this lane's code and with HEAD's: «Invalid action path 0» (`deepCopyButOnlyFollowingPath`, reducer.ts, a SetFieldAction on an undefined path) at scene open, before any simulation UI mounts, intermittent: in the two phase-tagged light runs on DemoPEST twice and DemoESM once (HEAD's run included), in earlier untagged runs on DemoPetri and DemoESM, never in the dark run; and «Cannot serialize in ecore, found loop» (`generateEcoreJson_impl`) on DemoPEST and DemoESM after the model tab opens and Reset runs. The prompt's gate «the scenes open with no console error» cannot hold until the first is fixed.
+**Priority**: medium
+**Found in**: P-2026-10-03-1630
+**Detail**: ~/.jjodel-lanes/P-2026-10-03-1630/probe-_tmp_simpolish_probe.head.log
+
+## 2026-10-03 — merge: sim-polish into alfonso-frontend-jjtl (P-2026-10-03-1730)
+**Prompt**: `claude_2026-10-03_1730_prompt_merge_sim-polish.md`, a direct merge by `lane-run merge --direct`, no session: `sim-polish` at `c482d7785` into `alfonso-frontend-jjtl`, merge base `d2a1866b6`, 3 commits on the branch side.
+**Files touched**: merge `26b62ea01`: 10 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-03_1630_prompt_sim_polish.md`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimRolesModal.scss`, `frontend/src/components/editor-v2/sim/SimRolesModal.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simInputs.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simLabels.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `26b62ea01` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 6996 tests in 278 files, 9 red at import, hooks 352; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat RC-23 on the lane crops: roles counter 11 of 13 assigned, Configuration on DemoESM and Marking on DemoPetri, attribute tag whole, presentation to semantic initial false; eight gates of the direct worker green (vitest 6996)
+**Notes**: Rollback tag `pre-sim-polish` on `49957d340` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1730/result.json`.
+**Prompt document name**: 2026-10-03 17:30
+
+## 2026-10-03 — discovery: the simulator's I/O board, R-SIM-110..115 (P-2026-10-03-1845)
+**Prompt**: `claude_2026-10-03_1845_prompt_sim_io_board_discovery.md`, heavy tier, read-only on `~/jjodel-w-ioboard`, branch `sim-io-board`: R-SIM-115's eight questions (mount point, persistence key, binding resolution, output evaluation, input machinery reuse, keypad modes, nuXmv mapping, Phase 2 split), a probe where a number decides.
+**Files touched**: probe `ba0668d80`: `frontend/scripts/probe/io-board-outputs.ts`, `frontend/scripts/probe/fixtures/scene_3_DemoESM.jjodel` (byte copy). Report `bf8ed5b78`: `docs/discovery/discovery_2026-10-03_sim_io_board.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (no file under `frontend/src`; check:scripts PASS, typecheck:scripts exit 0, whose scope excludes `probe/`)
+**Out-of-scope changes**: yes — no file outside DOVE, but two scratch writes outside the worktree, `/tmp/io-board-outputs.json` (the probe's first default) and an empty `/tmp/claude-ioboard`, both deleted; the output now goes to the gitignored `frontend/scripts/smoke/`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe on 3079, DemoESM, final run ALL GREEN: ten outputs 5.2 µs a step (press 120 µs), X.[marked] reads under State machine, a sim* key moves runSignature and ioBoard does not, ioBoard survives save, import (event id remapped) and reopen. 50 console errors a run (ecore serialize loop at save), no baseline. Report §0, §8, §10.
+**Prompt document name**: 2026-10-03 18:45
+
+## 2026-10-03 — feat: the I/O board's model and editor, Lane 1 (P-2026-10-03-1845)
+**Prompt**: the chat's GO on `claude_2026-10-03_1845_prompt_sim_io_board_discovery.md`, same session and branch `sim-io-board`: Phase 2 Lane 1 `sim-io-board-model` of the report's §8, decisions 1-6 and question 1 adopted; tests first, mutation bench, harness probe on 3079, demo scenes byte-identical, R-SIM rows; no merge.
+**Files touched**: `879b591ef`: `boardCodec.ts`, `boardOutputs.ts` (new, `model/simulation/`), `sim/simBoard.ts`, `SimBoardEditor.tsx`, `SimBoardEditor.scss` (new), `simRunState.ts`, `simBridge.ts`. `f03462c33`: `boardCodec.test.ts`, `boardOutputs.test.ts`, `simBoard.test.ts` (new), `simBridge.test.ts`. `2b3ea44e9`: `boardOutputs.ts`, a comment. `6b2a1f53c`: `scripts/probe/io-board-lane1.ts`, `io-board-editor-harness.tsx`, two fixtures. This commit: `docs/decisions.md`, the report's addendum, the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7077/7077 in 273 files, the 9 known suites red at import; build exit 0, chunk-size warning only, the editor absent from `dist/`; the four demo scenes' readings byte-identical to the base, 34 rows.
+**Out-of-scope changes**: yes — the eleven code and test files are the GO's DOVE (it counts SimBoardEditor.tsx/.scss as one), the probe its harness probe; beyond its list, the report's addendum; one scratch write outside the worktree, `/tmp/ioboard_msg.txt`, a commit message, deleted at once.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3079, light, 1600×1000, DemoESM through the harness: 12/12, Apply one undo step, signature unchanged; crops light and dark in `~/.jjodel-lanes/P-2026-10-03-1845/`; the chat's visual check pending, RC-23)
+**Notes**: Bench 58/58 (codec 15, outputs 18, resolution 22, seams 3), one survivor killed by a test added. checkGuard folds nothing at the model, so outputs fold their own R2. R-SIM-116 and 118 verified by an RC-27 agent. Six first reds were the fixture's (`initial: ''` on derived and input records). The undo needs `U.userHasInteracted` in a probe. Report addendum.
+**Prompt document name**: 2026-10-03 18:45
+
+## 2026-10-03 — feat: the I/O board's two skins and the panel wiring, Lane 2 (P-2026-10-03-2000)
+**Prompt**: `claude_2026-10-03_2000_prompt_sim_io_board_skins.md`, heavy tier, `~/jjodel-w-ioskins` on `sim-io-board-skins` (from `11b4df6ce`): Lane 2 of the I/O board report §8, the card with Variants A and B, the device faces, the skin prefs, the panel wiring; tests first, mutation bench, lane probe on 3081 light and dark, the four demo scenes against the base; no merge.
+**Files touched**: `8c3a0e561`: `sim/SimBoard.scss`, `sim/simBoardDevices.tsx`, `sim/simBoardFace.ts` (new), `SimulationPanel.tsx`, `simViewerPrefs.ts`, `SimBoardEditor.tsx` (the footer string). `734294d19`: `__tests__/simBoardFace.test.ts` (new), `__tests__/simViewerPrefs.test.ts`. This commit: the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7106/7106 in 283 files, the 9 known suites red at import; build exit 0, chunk-size warning only; the four demo scenes' face, State dialog, inspector (372/400 × 442) and canvas readings equal to the base, 0 differing paths, Step's top 873.
+**Out-of-scope changes**: yes — eight files, all in the DOVE (rule 19), but `SimBoard.tsx` was not created: its card lives in `simBoardDevices.tsx` (Notes). Four scratch writes outside the worktree, three gate outputs and a backup in `/tmp`, moved into the gitignored `frontend/scripts/smoke/` or deleted.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3081, 1600×1000, DemoESM with a board: 50/50, the ten presses from the board equal to the hand run, Variants A and B, «Show bindings» on and off, a viewed step, the two cards never together; crops light and dark in `~/.jjodel-lanes/P-2026-10-03-2000/`; the chat's visual check pending, RC-23)
+**Notes**: `SimBoard.tsx` beside Lane 1's `simBoard.ts` differs only in case: on this disk `./SimBoard` resolves to `simBoard.ts` (tsc TS1149, Vite tries .ts first), so the card is `SimBoard` in `simBoardDevices.tsx`; a rename to a new file waits for Alfonso. Bench 36/36 on `simBoardFace.ts`, prefs 2/2. Held Switch and Slider values and `AskingInputs.given` are unit-tested only: DemoESM has no input. The prompt's 854.5 px is 873 since P-2026-10-03-0120.
+**Prompt document name**: 2026-10-03 20:00
+
+## 2026-10-03 — merge: sim-io-board-skins into alfonso-frontend-jjtl (P-2026-10-03-2327)
+**Prompt**: `claude_2026-10-03_2327_prompt_merge_sim-io-board-skins.md`, full lane, a lane-run session: `sim-io-board-skins` at `c0cb7551d` into `alfonso-frontend-jjtl` by `--no-ff` of the explicit sha, merge base `7a249ef87`, 13 commits on the branch side (I/O board Lane 1 and Lane 2, the header icon included, by Alfonso's approval), 54 on the trunk side (the prompt `5e33d9a88` and the auto-intake chore `53aed9baa` on top).
+**Files touched**: merge `18926660a`: 29 files from the branch side, 21 added and 8 modified (`docs/decisions.md`, auto-merged with RC-40, RC-41 and R-VP-54..57; the I/O board report, two prompts, `docs/log-inbox/simulation.md`, three probes and three fixtures, 11 source files under `editor-v2/sim/` and `model/simulation/`, 6 test files of which 4 new). This commit: this entry and the Status line of `claude_2026-10-03_2327_prompt_merge_sim-io-board-skins.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `18926660a`: typecheck 14, the §17 set by file and code; typecheck:scripts exit 0; vitest 7255 of 7255 in 292 files, 9 red at import (the §17 nine, the trunk tip's set), as expected (trunk tip 7160 in 288 plus the branch's 95: 88 in 4 new files, 7 in 2 modified ones); hooks 424, as expected (the branch adds none); build exit 0, chunk-size warning; check:docs 4/4; check:agents green; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no. The merge brings the branch's 29 files, declared by its prompts (RC-11). The rollback tag (a ref, not a file) was not in the prompt: RC-31, as in `843b2fa6b`. Scratch gate outputs and the commit message went to `/tmp`; the branch's tests were counted read-only in `~/jjodel-w-ioskins`, as the prompt allows.
+**Layer Impact Report**: not-required (a merge of reviewed commits)
+**Smoke visivo**: passato — chat, unattended, 2026-10-03 23:55 on 3001 at `18926660a`: HTTP 200, `simBoardDevices.tsx` served with `SimBoard`, no new console error; the P-2026-10-03-2000 board probe on the merged trunk via lane-run probe on 3082, 50/50, ten presses equal to the hand run; crops Variant A light and B with bindings dark identical to the branch. Alfonso in the morning digest.
+**Notes**: Rollback tag `pre-sim-io-board-skins` on `53aed9baa` (RC-31). No union resolution; probes 21/21 once, control R-VP-58 absent. The first run of this prompt stopped blocked on a dirty tree (`auto-intake.config.json`); the chat committed it as `53aed9baa`. Step 6's reset target `48eec06d5` was stale after `5e33d9a88`; the pre-merge tip was `53aed9baa`, not needed. The build's 43 Sass @import deprecations come from older files, none from the branch.
+**Prompt document name**: 2026-10-03 23:27
+
+## 2026-10-04 — feat: event nodes and their edges hidden on the canvas during a run (P-2026-10-04-0935)
+**Prompt**: `claude_2026-10-04_0935_prompt_sim_hide_events_during_run.md`, heavy tier, fast lane, `~/jjodel-w-simhide` on `sim-hide-events`: while a run exists the canvas draws neither the event instances nor the edges incident to them, view-only, 0 px for every other element; tests first, mutation bench, probe on the four demo scenes and a hand-made statechart; hard stop for the visual check.
+**Files touched**: code `8d0021987`: `frontend/src/components/editor-v2/sim/simHideEvents.ts` (new), `sim/__tests__/simHideEvents.test.ts` (new), `EditorV2.tsx`, `edges/UnifiedEdge.tsx`. Closure commit after the visual GO (P13): the prompt's Status line, this entry.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. Typecheck 14, the §17 set by file and code; typecheck:scripts and check:scripts exit 0; vitest 7285 of 7289, the 9 known import failures, the 4 others lane-run harness timeouts at load 20-30, 121/121 on a rerun of their two files at load 6; build exit 0, chunk-size warning only; lane probe 309/309 against the base tree.
+**Out-of-scope changes**: yes — six files over two commits, above five (RC-11, rule 19): the four code files and the two closure files. `UnifiedEdge.tsx` is beyond the place the prompt suggests (`EditorV2.tsx`): it keeps the hidden events' boxes as route obstacles (Notes). No file outside the worktree; the dev server on 3097 ran from this tree.
+**Layer Impact Report**: not-required (no §3.1 file)
+**Smoke visivo**: passato (lane probe on 3097, light, 1600×1000: 309/309 on PEST, Petri, ESM, Flow B, PEST in its derived statechart and the hand-made scene; crops `frontend/scripts/smoke/_tmp_simhide_crops/<scene>_{before,reset,running,final,stop}_600.png` and `<scene>_running_dark_600.png`, gitignored; visual GO from Alfonso on the crops, 2026-10-04)
+**Notes**: Partial on the spec, not the code: Reset starts a run here (R-SIM-29), so 'after Reset equals Not started' contradicts item 1; read as after Stop. A collapsed panel keeps its run: events stay hidden. React Flow's hidden dropped the boxes from the router, so other edges re-routed (ESM, 2 boxes) and PEST kept stale lanes after Stop; occupiesCanvas keeps them as obstacles. Hops over hidden edges go. Bench 13/16, 3 equivalent. Type feat chosen (P6).
+**Prompt document name**: 2026-10-04 09:35
+
+**Inline check** (P-2026-10-04-0935, the prompt's ten lines):
+- Run state: `simRunState.ts`, a module singleton outside Redux, one record per model from Reset (`simReset`) to Stop or unmount (`simClear`): a record exists iff the status is Running, Terminated, Deadlock or Halted; Not started is no record (R-SIM-29).
+- The canvas learns it through `useSimVersion()` (the `'mark'` channel: Reset, a fired or halted step, Stop) and `getSimRun(modelid)`; the event ids are the run's `alphabet`, the instances of the `simEvent` class at Reset, `[]` without the role.
+- Narrowest filter: the arrays EditorV2 hands to React Flow, after `useIRContainment`: a node whose `idlookup[vertex].model` is an event, and every edge with such a node at an end, flagged `hidden`, never removed; memoised on the alphabet, which a step keeps.
+- `hidden` keeps the elements in React Flow's store (handles unchanged), but the route avoidance, the arc obstacles and the lane pass skip hidden nodes: `occupiesCanvas` keeps the run's hidden nodes there, so no other edge moves.
+- New identifiers `simHideEvents.ts`, `hideRunEvents`, `occupiesCanvas`, `simRunHidden`: a global grep found none before.
+
+## 2026-10-04 — merge: sim-hide-events takes alfonso-frontend-jjtl (P-2026-10-04-1213)
+**Prompt**: `claude_2026-10-04_1213_prompt_sim-hide-events_take_trunk.md`, full lane, a lane-run session in `~/jjodel-w-simhide` on `sim-hide-events`: RC-14, the trunk at the explicit sha `5b4d6c887` into the branch with one `--no-ff` merge, base `43685438b`, 12 commits on the trunk side (object-as-edge delete, R-B17, D-UI-15), 3 on the branch side and this prompt on top; hard stop for the chat's visual GO, then this closure.
+**Files touched**: merge `c53a5a8d1`, the trunk's 15 files, none resolved by hand: `AGENTS.md`, `CLAUDE.md`, `docs/DESIGN-SYSTEM.md`, `docs/PROTOCOL.md`, `docs/decisions.md`, `docs/log-inbox/views.md`, the object-edge-delete discovery and its two prompts, `frontend/scripts/probe/object-edge-delete.ts`, `EditorV2.tsx` (auto-merged, the only file on both sides), `canvasToJjom.ts`, `syncDeleteObjectAsEdge.test.ts`, `frontend/src/styles/CLAUDE.md` and `AGENTS.md`. This commit: the prompt's Status line, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c53a5a8d1`: typecheck exit 2, 14 errors, the §17 set by file and code; typecheck:scripts exit 0; vitest 7305 of 7305 in 296 files, the 9 red at import, as expected (trunk tip 7289 measured read-only in `~/jjodel-release`, plus the branch's 16); hooks 424, as expected (the trunk's 424, the branch adds none); build exit 0, chunk-size and Sass deprecation warnings only; check:docs 4/4; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries the trunk's 15 files, above five (RC-11), declared by the prompt's measurement; this commit carries the two files of step 9. Scratch gate outputs and the commit message went to `/tmp`; the trunk's counts were taken read-only in `~/jjodel-release`, as the prompt allows.
+**Layer Impact Report**: not-required (a merge of reviewed commits; `canvasToJjom.ts` comes with the trunk's `5557a714b`)
+**Smoke visivo**: passato — chat, unattended, GO on `c53a5a8d1` at step 8 (the branch's visual probes on the merged tree, RC-23); Alfonso in the morning digest
+**Notes**: Merge-tree zero conflicts, tree `700949a33`, the one the commit records; no union resolution. Probes once each, control R-RAIL-46 absent, but `- **R-RAIL-44**` counts 2, not the prompt's 1: the trunk tip has 2 (the row marked superseded and its pointer under «Superate», both `18a861da7`) and the merged `decisions.md` is the trunk's byte for byte. `EditorV2.tsx` read whole: disjoint hunks, each import and declaration once.
+**Prompt document name**: 2026-10-04 12:13
+
+## 2026-10-04 — merge: sim-hide-events into alfonso-frontend-jjtl (P-2026-10-04-1456)
+**Prompt**: `claude_2026-10-04_1456_prompt_merge_sim-hide-events.md`, a direct merge by `lane-run merge --direct`, no session: `sim-hide-events` at `452b810ac` into `alfonso-frontend-jjtl`, merge base `5b4d6c887`, 6 commits on the branch side.
+**Files touched**: merge `b3fe55c5d`: 7 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_0935_prompt_sim_hide_events_during_run.md`, `docs/prompts/claude_2026-10-04_1213_prompt_sim-hide-events_take_trunk.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simHideEvents.test.ts`, `frontend/src/components/editor-v2/sim/simHideEvents.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b3fe55c5d` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7305 tests in 296 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: 3001 HTTP 200, serves simHideEvents.ts from the merged trunk; eight gates green in result.json; visual GO by Alfonso on the branch crops (P-2026-10-04-0935)
+**Notes**: Rollback tag `pre-sim-hide-events` on `5b4d6c887` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1456/result.json`.
+**Prompt document name**: 2026-10-04 14:56
+
+## 2026-10-04 — feat: a Clock input device on the I/O board (P-2026-10-04-0150)
+**Prompt**: `claude_2026-10-04_0150_prompt_sim_io_clock.md`, heavy tier, `~/jjodel-w-ioclock` on `sim-io-clock` (from `43685438b`), lane auto: the Clock as a fifth input of the board, time as an environment source (R-SIM-122); report first, then tests first, the timer through the panel's `fire`, both skins, the editor's period field; probe on 3083 light and dark; no merge.
+**Files touched**: report `51b074753`. `52ddd7163`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardClock.ts` (new), `sim/simBoardFace.ts`, `sim/simBoardDevices.tsx`, `sim/SimBoard.scss`, `sim/SimBoardEditor.tsx`, `sim/SimulationPanel.tsx`. `bed918e5f`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardFace.test.ts`, `simBoardClock.test.ts` (new). This commit: `docs/decisions.md` (R-SIM-122), the report's addendum, the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7310/7310 in 295 files, the 9 known suites red at import; build exit 0; check:scripts exit 0; mutation bench 48/48; the four demo scenes 50/50 on the base and after, 0 differing paths, header and board card included.
+**Out-of-scope changes**: yes — one scratch write outside the worktree, `/tmp/ioclock_sass_check.css` from an `npx sass` check, deleted at once. Code: twelve files over two commits, above five (rule 19), all in the prompt's DOVE as the report's §6 listed them; `SimBoardEditor.scss` listed and untouched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3083, 1600×1000: clock 22/22, microwave 8/8 reading 01:25 after 5 s, Play beside the clock with a failing control without keepPlay, scenes diff 0; crops light and dark in `~/.jjodel-lanes/P-2026-10-04-0150/`; the chat's visual check pending, RC-23)
+**Notes**: fire gains keepPlay so a tick leaves Play running; the panel is outside the node bench, so the probe's control stands for its test. Ticks use the board's held values (provisional R-SIM-120 read as presses from the board); a choice list drops ticks as the dialog does; a board edit switches clocks off. Variant A's first layout overflowed its tile, fixed before the commit. Report: docs/discovery/discovery_2026-10-04_sim_io_clock.md.
+**Prompt document name**: 2026-10-04 01:50
+
+## 2026-10-04 — merge: sim-io-clock into alfonso-frontend-jjtl (P-2026-10-04-1504)
+**Prompt**: `claude_2026-10-04_1504_prompt_merge_sim-io-clock.md`, a direct merge by `lane-run merge --direct`, no session: `sim-io-clock` at `452efc6f1` into `alfonso-frontend-jjtl`, merge base `43685438b`, 5 commits on the branch side.
+**Files touched**: merge `6704563a8`: 16 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_sim_io_clock.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_0150_prompt_sim_io_clock.md`, `frontend/src/components/editor-v2/sim/SimBoard.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBoard.test.ts`, and 8 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6704563a8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7342 tests in 297 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 by the chat on the lane crops (light): editor palette and period field, Variant A with tick count equal to the step count, microwave display 01:25 at secs 85 after plus x3, start and five ticks, plus and start disabled while Cooking. Alfonso accepted decision 1 of R-SIM-122 (a tick answers inputs from the board's switch and slider values), 2026-10-04. Tickets, low: the clock's On face pairs a pause icon with the word On (state and action mixed, use Pause/Start); binding captions truncated, more visible on clock tiles. Note: R-RAIL-44 under Superate de-bolded on the trunk (c25c758f4) so the duplicate-row probe no longer trips on D-UI-15.
+**Notes**: Rollback tag `pre-sim-io-clock` on `c25c758f4` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1504/result.json`.
+**Prompt document name**: 2026-10-04 15:04
+
+## 2026-10-04 — feat: styles of the I/O board's front panel, the model (P-2026-10-04-1130)
+**Prompt**: `claude_2026-10-04_1130_prompt_sim_io_panel_model.md`, heavy tier, `~/jjodel-w-iopanel` on `sim-io-panel` (from `452efc6f1`), lane auto, first of a chain with P-2026-10-04-1131: report first, then tests first, the board record's theme, accent, cols, span and style, the kinds silk and buzzer, occupancy by span, the editor's pure operations, `maxDisplayLength`, `simBoardIcons.ts`; D-UI-16 and R-SIM-123..129; no merge.
+**Files touched**: report `d03957dd1`. `906cb0f2e`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardFace.ts`, `sim/simBoardIcons.ts` (new), `sim/SimBoardEditor.tsx` and `sim/simBoardDevices.tsx` (two map entries each). `c18397a5c`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardFace.test.ts`, `simBoardIcons.test.ts` (new). This commit: `docs/decisions.md` (D-UI-16, R-SIM-123..129), the report's addendum, the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7360/7360 in 296 files, the 9 known suites red at import; build exit 0, chunk-size warning only; every board saved today encodes byte for byte as on `b27138436`; mutation bench 63/63.
+**Out-of-scope changes**: yes — `SimBoardEditor.tsx` and `simBoardDevices.tsx` were outside the prompt's DOVE (no `.tsx`): widened by the chat's answer to the report's question 1, two lines each. Ten code files over two commits, above five (rule 19), all listed in the report's §6 before the code.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no rendering in this lane beyond two placeholder map entries; what is drawn is P-2026-10-04-1131's, with its probe)
+**Notes**: Network loss near 11:51 ended the first session mid-test; resumed on the same tree, the one modified test file kept. The Write tool stored a regex range as literal combining marks; the bench exposed it (a mutant that could not apply), rewritten as escapes before the commit. D-UI-15 is on the trunk only: D-UI-16 sits after D-UI-14, a hunk at the merge. Report: docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md.
+**Prompt document name**: 2026-10-04 11:30
+
+## 2026-10-04 — feat: styles of the I/O board's front panel, what is drawn (P-2026-10-04-1131)
+**Prompt**: `claude_2026-10-04_1131_prompt_sim_io_panel_faces.md`, heavy tier, `~/jjodel-w-iopanel` on `sim-io-panel`, second of the chain after P-2026-10-04-1130, lane auto: R-SIM-130..133, themes, shapes, icons, display sizes, columns and the floating window, keycaps and shortcuts, silkscreen, buzzer, the editor's style controls and icon picker; tests first, probe on 3084, no merge.
+**Files touched**: `c79cf7774`: `model/simulation/boardCodec.ts`, `sim/SimBoard.scss`, `sim/SimBoardEditor.scss`, `sim/SimBoardEditor.tsx`, `sim/simBoardDevices.tsx`, `sim/simViewerPrefs.ts`, `sim/simBoardLook.ts` (new), `sim/simBoardSound.ts` (new). `372273fd8`: `boardCodec.test.ts`, `simViewerPrefs.test.ts`, `simBoardCard.test.ts`, `simBoardLook.test.ts`, `simBoardSound.test.ts` (new), two base markup fixtures (new). This commit: `docs/decisions.md` (R-SIM-130..133), the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set; vitest 7405/7405 in 299 files, the 9 known suites red at import; build exit 0; mutation bench 58/58; a board without the new fields renders the markup of `ab7907ad9` but for the keycaps, `aria-keyshortcuts`, the card's tabindex and the Pop out button; the four demo scenes 50/50 base and after, 0 differing paths.
+**Out-of-scope changes**: yes — `boardCodec.ts` and its test, outside `sim/`, for a bug found here as the DOVE allows (a Pulse LED's absent colour amber). Eight code files and seven test files over two commits, above five (rule 19), all in the DOVE by directory; `SimulationPanel.tsx` named by the prompt and untouched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3084, 1600×1000, light: panel 32/32, scenes diff 0; crops in `~/.jjodel-lanes/P-2026-10-04-1131/`; the chat's visual check pending, RC-23)
+**Notes**: The mock-up was not visible to the lane: role colours, swatches and the faces by theme were chosen and listed in R-SIM-130. The base scenes ran on the six sources restored from HEAD by copy, the index untouched (P13), then restored and compared byte for byte. A wide window's first place can sit under the canvas layer's Globals control: for the visual check. No discovery of its own (RC-11).
+**Prompt document name**: 2026-10-04 11:31
+
+## 2026-10-04 — ticket: a front panel press with an icon truncates its label in one cell
+**Ticket**: On Variant B a key-shaped Button one cell wide (80.5 px on 4 columns) with an icon and a label of six characters or more shows the label cut with an ellipsis: «+ Coin» reads «+ C…» in the crop `_tmp_iopanel_B_graphite.png`. The text is still the title and the aria-label. Seen by the chat's visual check (RC-23) of P-2026-10-04-1131, no fix in that lane; the way out is a span of 2, the mode `icon`, or a smaller font or a tighter gap on the press.
+**Priority**: low
+**Found in**: P-2026-10-04-1131
+
+## 2026-10-04 — ticket: a wide floating board can open under the canvas layer's Globals control
+**Ticket**: A 6- or 8-column board opens as a floating window at the card slot's left, 16 px under the toolbar (R-SIM-132); its top right corner then sits under the canvas layer's Globals and «Inspect node.[x]» controls, which paint above it (crop `_tmp_iopanel_B_six_columns_window.png`). The window drags away and keeps its place as a viewer pref. Seen by the lane probe and the chat's visual check of P-2026-10-04-1131, no fix in that lane; the way out is a first place at the slot's bottom, or the window above that layer.
+**Priority**: low
+**Found in**: P-2026-10-04-1131
+
+## 2026-10-04 — merge: sim-io-panel into alfonso-frontend-jjtl (P-2026-10-04-1540)
+**Prompt**: `claude_2026-10-04_1540_prompt_merge_sim-io-panel.md`, a direct merge by `lane-run merge --direct`, no session: `sim-io-panel` at `5525c3e7c` into `alfonso-frontend-jjtl`, merge base `452efc6f1`, 9 commits on the branch side.
+**Files touched**: merge `19b29dc2b`: 26 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_1130_prompt_sim_io_panel_model.md`, `docs/prompts/claude_2026-10-04_1131_prompt_sim_io_panel_faces.md`, `frontend/src/components/editor-v2/sim/SimBoard.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, and 18 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `19b29dc2b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7437 tests in 301 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Merge 19b29dc2b, eight gates green (typecheck 14, vitest 7437, build 0, checks 0); union on docs/decisions.md places D-UI-16 right after D-UI-15; 3001 answers 200. RC-23 already passed on the branch crops (5525c3e7c). GO for the closure.
+**Notes**: Rollback tag `pre-sim-io-panel` on `da3a18d72` (RC-31). Union: `docs/decisions.md`, `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1540/result.json`.
+**Prompt document name**: 2026-10-04 15:40
+
+## 2026-10-04 — feat: an implicit Clock on the I/O board, auto-start and idle ticks (P-2026-10-04-1625)
+**Prompt**: `claude_2026-10-04_1625_prompt_sim_clock_auto.md`, heavy tier, `~/jjodel-w-clockauto` on `sim-clock-auto`, lane auto: R-SIM-134 (an optional `autoStart`, on for new clocks, armed with the run), R-SIM-135 (the clocks owned by the panel, ticking with the board closed), R-SIM-136 (a tick that enables nothing is not a step); discovery committed first, tests first, probe on 3085, no merge.
+**Files touched**: `c106cb329`: `docs/discovery/discovery_2026-10-04_sim_clock_auto.md` (new). `3a71b2a21`: `model/simulation/boardCodec.ts`, `sim/simBoard.ts`, `sim/simBoardClock.ts`, `sim/simBoardFace.ts`, `sim/simBoardDevices.tsx`, `sim/SimulationPanel.tsx`, `sim/SimBoardEditor.tsx`. `7aa9e4889`: `boardCodec.test.ts`, `simBoard.test.ts`, `simBoardClock.test.ts`, `simBoardFace.test.ts`. This commit: `docs/decisions.md`, the report's addendum, the prompt's Status, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set; vitest 7458/7458 in 301 files, the 9 known suites red at import; build exit 0; mutation bench 33/35, two survivors equivalent; the four demo scenes 50/50 base and after, 0 differing paths.
+**Out-of-scope changes**: no (seven code files and four test files over two commits, above five (rule 19), each named by the report's §6 inside the DOVE, which asked for that list)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3085, 1600×1000, light: microwave 20/20, scenes diff 0; crops in `~/.jjodel-lanes/P-2026-10-04-1625/`; the chat's visual check pending, RC-23)
+**Notes**: Owner: the panel, not a singleton. Manual clocks freed from the card too. Collapse does not unmount the panel: it switches the clocks off with reason `panel`. Idle test = the button's grey test, structural: a guard-refused tick is still a discard step (report R3). The panel does not import under the node bench: its wiring is measured by the probe only. Report §5 and addendum.
+**Prompt document name**: 2026-10-04 16:25
+
+## 2026-10-04 — fix: the Clock's keycap above its corner on the front panel (P-2026-10-04-1625)
+**Prompt**: the chat's RC-23 on the six crops of P-2026-10-04-1625, pass with one fix: on Variant B the Clock's keycap covered its tick counter; move the keycap or the counter, both readable on the four themes and Variant A, face and cell sizes unchanged; one fix commit, the B crops retaken, typecheck, tests, build. Same prompt file, same session.
+**Files touched**: `836d36936`: `sim/SimBoard.scss`. This commit: `a43bf38f2`'s rewrite of the lane's entry above undone verbatim (`Log-Repair: a43bf38f2`), this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-04 16:25
+**Causa**: (d)
+**Regressions**: no. After the fix: typecheck 14, the §17 set; vitest 7458/7458 in 301 files, the 9 known suites red at import; build exit 0, chunk-size warning only.
+**Out-of-scope changes**: no (`sim/SimBoard.scss`, outside the report's §6 and inside the DOVE, is the file of the fix the chat asked)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the after crops, Variant B graphite and print, keycap T and counter both readable; Variant A, the keycap over the toggle's corner as before
+**Notes**: On Variant B the device has no edge: only the Clock's keycap moves, `top: -9px`, into the front's 12 px padding or the 10 px gap between rows. Probe on the four themes and Variant A, before and after: no keycap over a counter, period, name, switch or another device; every cell, face, counter and switch box as before; Variant A's keycap where it was.
+**Prompt document name**: 2026-10-04 16:25
+
+**Ticket** (low, found in P-2026-10-04-1625): the lane probe's check «the keycap is the topmost element at its pixel» fails on every clock, Variant A included, which the fix did not move; the chat read the Variant A after crop and found the T keycap fully visible over the button's corner, so the check is a probe artifact (the keycap takes `pointer-events: none`; toggling it for the measure did not change the reading), no code change. A later probe of keycaps should read the pixel colour instead.
+
+## 2026-10-04 — merge: sim-clock-auto into alfonso-frontend-jjtl (P-2026-10-04-1832)
+**Prompt**: `claude_2026-10-04_1832_prompt_merge_sim-clock-auto.md`, a direct merge by `lane-run merge --direct`, no session: `sim-clock-auto` at `18f65f917` into `alfonso-frontend-jjtl`, merge base `0022fe5c3`, 8 commits on the branch side.
+**Files touched**: merge `32c70ea86`: 16 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-04_sim_clock_auto.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_1625_prompt_sim_clock_auto.md`, `frontend/src/components/editor-v2/sim/SimBoard.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBoard.test.ts`, and 8 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `32c70ea86` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7458 tests in 301 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: 3001 HTTP 200 at 18:44; eight gates green on 32c70ea86 (typecheck 14, vitest 7458, build 0, checks 0); keycap and implicit Clock already checked visually by the chat on the lane crops
+**Notes**: Rollback tag `pre-sim-clock-auto` on `0022fe5c3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-1832/result.json`.
+**Prompt document name**: 2026-10-04 18:32
+
+## 2026-10-04 — discovery: two console errors on the demo scenes (P-2026-10-04-1025)
+**Prompt**: `claude_2026-10-04_1025_prompt_console_errors_discovery.md`, heavy tier, read-only on `~/jjodel-w-consoleerr`, branch `console-errors-disc`: who fires «Invalid action path 0» and «Cannot serialize in ecore, found loop», when per scene and demo step, what each costs, whether the MODELS demo shows it, the smallest fix.
+**Files touched**: probe `9e54b5d96`: `frontend/scripts/probe/console-errors-demo.ts`. Report `ecea25e93`: `docs/discovery/discovery_2026-10-04_console_errors_demo.md`. This commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (no file under `frontend/src`; check:scripts PASS, typecheck:scripts exit 0, whose scope excludes `probe/`)
+**Out-of-scope changes**: no — the one write outside the worktree and the lane folder is lane-run's own vite cache `/tmp/lane-vite-cache-3084` (its probe config), not the probe's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 40 fresh pages on 3084 (light, 1600×1000), ALL GREEN. E1: 20/20 hash opens, 0/20 fresh; the reset's init_editor writes the Default viewpoint into a project its empty state lacks; the 56-action batch rolls back and the store after the project's LOAD is identical. E2: a false-positive loop (LModel.get_roots lists contained objects), 6 per Reset on PEST and ESM, 6 more at ESM's model tab; save and exports intact. Answers the 2026-10-03 ticket above.
+**Prompt document name**: 2026-10-04 10:25
+
+## 2026-10-05 — fix: clearer icon for the I/O board button (P-2026-10-05-1110)
+**Prompt**: `claude_2026-10-05_1110_prompt_sim_board_icon.md`, fast lane, light tier, `~/jjodel-w-boardicon` on `sim-board-icon`: the board button of the Simulation panel from `bi-motherboard` to `bi-toggles`, same size, title and position; grep the other hits; one code commit, hard stop for the visual check. Extended by Alfonso's GO of 2026-10-05, after the hard-stop report: the open board card's header icon and its two fixtures follow the button, second code commit, closure.
+**Files touched**: `5d5579bd7`: `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (one class); `de42ebe4a`: `frontend/src/components/editor-v2/sim/simBoardDevices.tsx` and `frontend/src/components/editor-v2/sim/__tests__/fixtures/simBoardCard.base.html`, `simBoardCard.base-notstarted.html` (one class each); `504e7b6a4` and this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `de42ebe4a`: typecheck exit 2, 14 errors, the §17 set by file and code; vitest `src/components/editor-v2/sim` 20 files, 663 of 663 passed, the card test comparing the render with both fixtures byte for byte; build exit 0 (Sass `@import` deprecations and the chunk-size warning, none naming the panel or the board).
+**Out-of-scope changes**: no — the card header and its two fixtures were outside the prompt's COSA and were added to the scope by Alfonso's GO of 2026-10-05, after the question in the hard-stop report; no other file.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe 11/11, ALL GREEN, button and card header, crops in `frontend/scripts/smoke/_tmp_boardicon_crops/`, gitignored); Alfonso's visual check of the button passed 2026-10-05 (his GO); the card header is read from the probe's boxes, delta 0 px, and its crops looked at by the lane, not by the chat
+**Notes**: bi-motherboard hits (frontend/src, frontend/docs, docs): SimulationPanel.tsx:860 (the button), simBoardDevices.tsx:695 and the fixtures simBoardCard.base(-notstarted).html (the open card's header), all now bi-toggles; frontend/docs none; docs only the prompt. grep on frontend/src now empty, control on bi-toggles finds the four. Probe on DemoESM, light: button 20x20, card header 250x39, glyph boxes, delta 0 px; before = same page, class swapped. vitest on sim/ only (20 files, 663).
+**Prompt document name**: 2026-10-05 11:10
+
+## 2026-10-05 — merge: sim-board-icon into alfonso-frontend-jjtl (P-2026-10-05-1444)
+**Prompt**: `claude_2026-10-05_1444_prompt_merge_sim-board-icon.md`, a direct merge by `lane-run merge --direct`, no session: `sim-board-icon` at `c62e0afea` into `alfonso-frontend-jjtl`, merge base `0e77734a2`, 6 commits on the branch side.
+**Files touched**: merge `2c10ad236`: 6 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-05_1110_prompt_sim_board_icon.md`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/fixtures/simBoardCard.base-notstarted.html`, `frontend/src/components/editor-v2/sim/__tests__/fixtures/simBoardCard.base.html`, `frontend/src/components/editor-v2/sim/simBoardDevices.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2c10ad236` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7499 tests in 302 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 passata sui crop della lane P-2026-10-05-1110 (bottone e header card, delta 0 px); merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-board-icon` on `d92e5419e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-1444/result.json`.
+**Prompt document name**: 2026-10-05 14:44
+
+## 2026-10-05 — fix: no console errors E1 and E2 on the demo scenes (P-2026-10-05-1648)
+**Prompt**: `claude_2026-10-05_1648_prompt_console_errors_fix.md`, full lane, heavy tier, `~/jjodel-w-consolefix` on `console-errors-fix`: Alfonso's decision to fix both console errors before the 2026-10-07 freeze; E2 one line in the M1 branch of `LModel.generateEcoreJson_impl`, E1 a guard in `DState.init_editor`; tests first, probe both modes with negative controls, mutation bench; no merge.
+**Files touched**: merge `d2c8acddb` (the discovery branch; `docs/log-inbox/simulation.md` resolved by hand, both sides kept). Code `68e4f312d`: `model/logicWrapper/LModelElement.tsx` (one line), `redux/store.tsx` (guard), `model/__tests__/m1EcoreRoots.test.ts` and `redux/__tests__/initEditorProjectGuard.test.ts` (new). This commit: the report's §0 addendum, the prompt's Status, this entry and the ticket below.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7508/7508 in 304 files, the 9 known red at import; build exit 0, chunk-size and Sass warnings only; check:docs 4/4. Both tests red before the fix, green after.
+**Out-of-scope changes**: yes — seven files over two commits, above five (rule 19), all in the prompt's DOVE; scratch writes outside the worktree in `/tmp` (gate outputs, the bench script); a gitignored scratch probe `frontend/scripts/smoke/_tmp_ce_m1ecore.ts`.
+**Layer Impact Report**: not-required (no §3.2 file)
+**Smoke visivo**: non applicabile (no rendering change, per the prompt)
+**Notes**: Probe, 40 pages: E1 0/20, E2 0, opens identical 20/20, round trips identical, exports 0 mismatches; init_dash 40/40 apart. Controls: E1 20/20, E2 6 per Reset, 6 per ESM model tab. Bench 11/11. The guard reads the batch's pending LoadAction. Gate unmet: M1 ecore has no loop and no object twice, but keeps one root per class (ticket below). FlowB load #4 and #5 failed to boot or open, 0 errors, not reproduced in 2 more loads.
+**Prompt document name**: 2026-10-05 16:48
+
+## 2026-10-05 — ticket: the M1 ecore JSON keeps one root object per class
+**Ticket**: `LModel.generateEcoreJson_impl` writes each M1 root as `json[obj.ecoreRootName]`, and `ecoreRootName` is `<package uri>:<class name>`, so roots of one class overwrite each other and the last wins. Measured after `68e4f312d` on fresh opens: PEST keeps 9 of 11 objects (Events `coin` and `push` lost), ESM 8 of 10, Petri 4 of 13, FlowB 7 of 17; no object twice, no loop error. It predates E2, which hid it behind a `MyError`. References serialize as `@//`. No UI path reads this JSON (discovery 2026-10-04 §3.3).
+**Priority**: low
+**Found in**: P-2026-10-05-1648
+
+## 2026-10-05 — discovery: watches, step back, scenarios and coverage, R-SIM-137..140 (P-2026-10-05-1655)
+**Prompt**: `claude_2026-10-05_1655_prompt_discovery_sim_watches_scenarios_coverage.md`, heavy tier, read-only on `~/jjodel-w-simverif`, branch `sim-verif`: watch evaluation and storage, step back, scenarios, coverage, the Phase 2 split and the risks, with file and line and a measurement where one decides.
+**Files touched**: `frontend/scripts/probe/sim-verif-bench.ts` (new, `8511a9c16`), `docs/discovery/discovery_2026-10-05_sim_watches_scenarios_coverage.md` (new, `ac81aca96`), the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (a report and a node probe; nothing under `frontend/src`; check:scripts exit 0)
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
-**Notes**: The refusal is the name graph alone: tree size, depth via `parent`, list length pass the parser and the subset checker. The lambda form `self.children.sum(c => c.[size])` evaluates today, so R-SIM-43 needs no amendment; only the literal `children.[x]` is refused. G3 prototype: 5.8 ms at Reset for 1023 nodes, same plan on the ESM demo equation. Amending R-SIM-74 awaits Alfonso (RC-26). One docs commit per the prompt, not the skill's inbox-alone commit.
-**Prompt document name**: 2026-09-27 17:27
-**Ticket** (priority low, opened here, report §8.5). S2's planned message for a derived attribute with no value, «its equation failed», is wrong for a node absent because it sits on a cycle once G3 lands; `sim-derived-diagnostics` should say «has no value» and leave the cause to the defect line.
+**Notes**: Probe on the four demo fixtures, 35 PASS: a pop of the kept configurations equals the earlier record 30/30, 6/6 past the cap, so no stack; watches read as board outputs, 1.6-2.1 µs; replay 4/4; coverage from labels equals coverage from the trace 4/4; runWatches and runScenarios leave runSignature, sim* keys move it. Kept configuration 285-1038 B, not reconciled with the 71-109 B of 2026-10-02. Runs 1-2 logged to /tmp, deleted. Report §0, §6, §8.
+**Prompt document name**: 2026-10-05 16:55
 
-## 2026-09-27 — feat: derived attributes ordered per element over frozen M, S3 (P-2026-09-27-1727)
-**Prompt**: Phase 2 of `claude_2026-09-27_1727_prompt_discovery_sim_derived_recursion.md`, full lane on `sim-derived-recursion` in `~/jjodel-w-recursion`, GO of 2026-09-27 17:53 in cascade after Phase 1 (report `4868359c9`, Alfonso's answers `8baee76b6`: A yes, B no). The two slices of report §8: the graph per (element, attribute) in `derivedEvaluator.ts`, then the bridge line. Merge after MODELS.
-**Files touched**: code `805c8ecdd`: `frontend/src/model/simulation/derivedEvaluator.ts`, `__tests__/derivedEvaluator.test.ts`; code `d2a19ccab`: `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-74 amended), this entry, the Status of the prompt file. Probes `_tmp_recur_*`, gitignored.
+## 2026-10-05 — feat: invariants and breakpoints in the simulator, lane sim-watches (P-2026-10-05-1735)
+**Prompt**: `claude_2026-10-05_1735_prompt_sim_watches.md`, heavy tier, `~/jjodel-w-simverif` on `sim-verif`: R-SIM-137 as W1..W4 and Q1 of the 2026-10-05 discovery fix it (the key `runWatches`, the evaluator, Play's stop after its press, the clocks off at a hit, the hit line, the dialog from the inspector header, its section and trace marks); tests first, mutation bench, probe on 3080-3099, no merge, no Status flip.
+**Files touched**: `c539aa2bb`: `watchCodec.test.ts`, `watchEvaluator.test.ts` (new), `simBridge.test.ts`, `simBoardClock.test.ts`. `ed800135c`: `model/simulation/watchCodec.ts`, `model/simulation/watchEvaluator.ts`, `sim/SimWatchesModal.tsx` (new), `sim/simBridge.ts`, `sim/simBoardClock.ts`, `sim/SimulationPanel.tsx`, `sim/SimInspector.tsx`, `sim/SimInspector.scss`. This commit: this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Baseline at `8baee76b6`: typecheck exit 2, 14 errors; vitest on `model/simulation` and `editor-v2/sim` 568 passed, 20 files. On `d2a19ccab`: typecheck exit 2, 14, set identical; 581 passed (568 + 13, the existing 16 derived tests and the bridge's cycle test unchanged); `npm run build` exit 0, 51 warning lines; `check:scripts` PASS; `check:docs` 4/4. Red first: 12, then 1. Mutation bench 13/13 killed.
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7542/7542 in 304 files, the 9 known reds at import and one `afterAll` Chromium timeout of `irCollapsedRender.test.ts` under load (13/13 alone); build exit 0; mutation bench 41/41 killed, all by assertions.
+**Out-of-scope changes**: no (twelve files, each named by the prompt's COSA and its tests, which is the rule 19 list)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3091, 1600×1000, light: four scenes base 54/54 and after 54/54, 0 differing paths but the inspector's one header icon; Petri watches 19/19, Ask, Random seeds 1 and 2026 twice, save/export/import/reopen byte for byte; crops in `frontend/scripts/smoke/_tmp_simwatch_crops/`; the chat's visual check pending, RC-23)
+**Notes**: Step's top 873 px in this probe, base and after alike (854.5 is another setup); inspector 372 × 400.5 on PEST. «Absent key» read as no key until Apply, `[]` once emptied (W1). The session hit the time limit in the probe and was resumed. The feat message says «the 17 set» for «the §17 set». The probe is gitignored, not committed.
+**Prompt document name**: 2026-10-05 17:35
+
+## 2026-10-05 — merge: sim-verif into alfonso-frontend-jjtl (P-2026-10-05-2310)
+**Prompt**: `claude_2026-10-05_2310_prompt_merge_sim-verif.md`, a direct merge by `lane-run merge --direct`, no session: `sim-verif` at `ec6e92707` into `alfonso-frontend-jjtl`, merge base `57ff86f5d`, 9 commits on the branch side.
+**Files touched**: merge `b4fbccd80`: 18 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-05_sim_watches_scenarios_coverage.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-05_1655_prompt_discovery_sim_watches_scenarios_coverage.md`, `docs/prompts/claude_2026-10-05_1735_prompt_sim_watches.md`, `frontend/scripts/probe/sim-verif-bench.ts`, `frontend/src/components/editor-v2/sim/SimInspector.scss`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, and 10 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b4fbccd80` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7551 tests in 306 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile (no visual checklist in the prompt). Live probe on 3021, vite of this tree, stopped after: Reset shows `Marking: p1 · p1.len = 3, p2.len = 2, p3.len = 1`; a step keeps the values; `next` closed on p1 gives `1 defect: len (equation cycle: p1.len → p2.len → p3.len → p1.len).`; one console error, the known `failed to get project`. Crops light and dark in `~/.jjodel-lanes/shots_derived_recursion/`.
-**Notes**: Report questions decided unattended: a fixed cap of 10000 bindings per folded object (Q1); no rewrite hint in the cycle title (Q2); the S2 wording stays the ticket of the Phase 1 entry (Q3). Demo presets untouched by construction: three have no equation, the ESM equation keeps its plan (tested). `CompiledDerived.plan` is an optional field (Rule 11). The branch is not merged before 2026-10-04.
-**Prompt document name**: 2026-09-27 17:27
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane 1 passata sui crop, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-verif` on `a6fe2cf0d` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2310/result.json`.
+**Prompt document name**: 2026-10-05 23:10
 
-## 2026-09-27 — feat: the checker rules R1-R5 at Reset, P2b (P-2026-09-27-2235)
-**Prompt**: `claude_2026-09-27_2235_prompt_sim_checker_rules.md`, full lane on `sim-checker-rules` in `~/jjodel-w-rules`: merge `sim-derived-recursion`, then slice P2b of `discovery_2026-09-27_sim_checker_gap.md` (§8, §9, §14): `stcChecks.ts` with R1-R5 (R6 if cheap), called by `guardDefectsOf` and `actionDefectsOf`, `CompileDefect.reason` plus `'unresolved'` and `'value'`. Merges after MODELS, not before 2026-10-04.
-**Files touched**: merge `6d8129aae` (from `sim-derived-recursion` at `e6d25ef5d`: `derivedEvaluator.ts` and its test, `simBridge.ts` and its test, `docs/decisions.md`, the S3 report and prompt, this inbox; the one conflict, this inbox, resolved by union). Code `8beb4b28e`: `frontend/src/model/simulation/stcChecks.ts` (new), `__tests__/stcChecks.test.ts` (new), `actionEvaluator.ts`, `components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-70 extended), this entry, the Status of the prompt file.
+## 2026-10-06 — feat: step back and scenarios in the simulator, lane sim-back-scenarios (P-2026-10-05-2315)
+**Prompt**: `claude_2026-10-05_2315_prompt_sim_back_scenarios.md`, heavy tier, `~/jjodel-w-simverif` on `sim-verif`: R-SIM-138 and R-SIM-139 as S1..S3, C1..C3 and Q3 of the 2026-10-05 discovery fix them (the pop `simStepBack`, the Step back button, the Buzzer muted backward, the key `runScenarios`, record and replay, the inspector's Save and Scenarios section); tests first, mutation bench, probe on 3080-3099, no merge, no Status flip.
+**Files touched**: `0f0bd65e7`: `scenarioCodec.test.ts`, `simScenarios.test.ts` (new), `simRunState.test.ts`. `4766dbb17`: `model/simulation/scenarioCodec.ts`, `sim/simScenarios.ts` (new), `sim/simRunState.ts`, `sim/SimulationPanel.tsx`, `sim/SimInspector.tsx`, `sim/SimInspector.scss`, `sim/simBoardDevices.tsx`, two of the tests. `69139f6d0`: `sim/SimInspector.scss`. This commit: this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Baseline at `6d8129aae`: typecheck exit 2, 14 errors; vitest on `model/simulation` and `editor-v2/sim` 581 passed, 20 files. On `8beb4b28e`: typecheck 14, set identical; 602 passed, 21 files (+21); full suite 5263 passed, red only the 9 known `window is not defined` files; `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: 6 bridge tests and `stcChecks.test.ts` at collection (17). Four bridge assertions changed by design (R1, R5, the H4 fixture). Mutation bench 12/12 killed.
-**Out-of-scope changes**: no — five code paths, the Rule 19 five, and three docs, all in DOVE; the merge's files come from `sim-derived-recursion` as the prompt orders.
+**Regressions**: yes, caught and fixed in the lane: `4766dbb17` made the inspector 7.5 px taller on the four scenes (400.5 to 408, the trace head's 20 px icon); the probe found it, `69139f6d0` fixed it, then 0 differing paths. Typecheck 14, the §17 set by file and code; vitest 7589/7589 in 306 files, the 9 known reds at import; build exit 0; mutation bench 53/55, the 2 survivors equivalent.
+**Out-of-scope changes**: no (ten files, each named by the prompt's COSA and its tests, which is the rule 19 list)
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile (no visual check, report §14 P2b)
-**Notes**: Question stop (a preset gains a defect), answered A in chat: before Data, ESM Reset gains `tp guard (undeclared 'paid')`, Flow B `f3` and `f4 guard (undeclared 'count')`; SM, Petri, ESM and Flow B with Data: none. Node probe `_tmp_p2235_presets`, its before equal to report §5.3. R6 included. The P2b tests are report §9, not the prompt's §10. One docs commit per the prompt, not the skill's inbox-alone one. Bench in the body of 8beb4b28e.
-**Prompt document name**: 2026-09-27 22:35
-**Ticket** (priority low, for the post-MODELS merge of this branch). The optional «Reset before declaring» lines of `docs/demo/models_2026_simulator_demo.md` §2.3 and §2.4 go stale with the merge: ESM will read `3 defects: tp guard (undeclared 'paid'); tc action (undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).`, Flow B `3 defects: f3 guard (undeclared 'count'); f4 guard (undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` (node probe, not a browser). The P2a registry shows the guard entries too (by construction, not measured). Update the script at that merge.
-**Ticket** (priority low, opened here, declared gap). R4 is at Reset only: `compileAction` is unchanged, so an action whose right side has `E-EAGER`, `E-NOELSE`, `E-SHADOW` or `E-WITH` is listed as a defect at Reset while the run evaluates it and halts only if the evaluation fails. Making those codes a compile defect of the action touches `compileAction`, outside P2b.
-**Ticket** (priority low, opened here, declared gap). R2 is static: a guard read whose object folds is judged even inside a branch the run never evaluates (`if false then t1.[tokens] < 1 else true` is listed while the guard is true). By construction, not measured.
+**Smoke visivo**: passato (lane probe on 3086, 1600×1000, light: four scenes base 54/54, after 58/58, 0 differing paths but Step back in the transport row and the trace head's icon; step back on Petri and ESM 18/18; scenarios on Petri 12/12, a tampered one diverging at step 2 with its reason, the key reopened with ids renewed and replayed; the chat's visual check pending, RC-23)
+**Notes**: Probe gitignored, not committed (_tmp_simback_probe.ts, crops in _tmp_simback_crops/). Base readings taken by writing the base of five files into the tree, restored by git checkout HEAD before the after run; no stash. A first back run compared null with null (HMR-stamped module URLs after that swap): Vite restarted, a positive control added, 18/18. Not exercised: input variables in the browser, clocks after a replay, the undo of a save. No expect editor in the UI: COSA names none.
+**Prompt document name**: 2026-10-05 23:15
 
-## 2026-09-28 — merge: sim-checker-rules into alfonso-frontend-jjtl (P-2026-09-28-0023)
-**Prompt**: `claude_2026-09-28_0023_prompt_merge_sim-checker-rules.md`, merge lane on `alfonso-frontend-jjtl` in `~/jjodel-release`: `--no-ff` of `7a03daa1c` (`sim-checker-rules`: P2a, S3, P2b), zero conflicts. Resumed on the chat's GO with additions: the four demo scenes and the P2a checklist on the merged tree (3029), the demo script's optional Reset lines, this entry with a ticket.
-**Files touched**: merge `b452d9e5c` (the branch's 22 files, no union resolution); docs, this commit: `docs/demo/models_2026_simulator_demo.md` (§2.3 and §2.4 optional Reset lines, the G7 variant sentence), the Status of the prompt file, this entry. Probes `frontend/scripts/smoke/_tmp_m0023_*` gitignored, not committed.
+## 2026-10-06 — merge: sim-verif into alfonso-frontend-jjtl (P-2026-10-06-0011)
+**Prompt**: `claude_2026-10-06_0011_prompt_merge_sim-verif.md`, a direct merge by `lane-run merge --direct`, no session: `sim-verif` at `271df3cb9` into `alfonso-frontend-jjtl`, merge base `ec6e92707`, 6 commits on the branch side.
+**Files touched**: merge `778eeae4b`: 12 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-05_2315_prompt_sim_back_scenarios.md`, `frontend/src/components/editor-v2/sim/SimInspector.scss`, `frontend/src/components/editor-v2/sim/SimInspector.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simRunState.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simScenarios.test.ts`, `frontend/src/components/editor-v2/sim/simBoardDevices.tsx`, and 4 more); this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no — gates on `b452d9e5c`: typecheck exit 2, 14 errors, set identical; vitest 5345 passed across 218 files (5292 + 53, stated before the merge), the nine known red at import; hooks 300; build exit 0; `typecheck:scripts` exit 0; `check:agents`, `check:scripts` PASS; `check:docs` 4/4. The four demo scenes on script.
-**Out-of-scope changes**: no — the merge's files are the branch's, declared by the prompt; the demo script, the scenes and this entry were asked by the chat's GO.
-**Layer Impact Report**: not-required — the merge adds no change of its own; the branch's `problems/registry.ts` change is covered by its report `4bbe3790a`.
-**Smoke visivo**: passato — the chat on `~/.jjodel-lanes/shots_m0023/` (RC-23 GO, unattended; Alfonso in the morning digest); the four demo scenes on 3029 through the Simulation roles dialog, on script
-**Notes**: Scenes: probe copied read-only from P-2026-09-27-2105, finals equal to P-2026-09-27-2327 line for line; ESM halt line whole. Before Data, Reset gains ESM `tp guard (undeclared 'paid')`, Flow B `f3`, `f4 guard (undeclared 'count')`, G7 variant `f3` only (measured here); the script now quotes them, closing the P-2026-09-27-2235 ticket. P2a checklist 5/5, the rail as a count. Tag `pre-sim-checker-rules` on `e87df1ff6` (RC-31). 3001 not restarted.
-**Prompt document name**: 2026-09-28 00:23
-**Ticket** (priority medium, opened here). The form rail shows a residue problem only as a count, never as a line. `IRForm` (mounted only in the Data Manager) counts every unresolved problem of the object in its summary chip, but `collectFormDiagnostics` returns `residue`, the problems with no field to attach to (`simulation`, `duplicate-name`), and no renderer reads it (search with a positive control on `byField`). Measured on `tp` with the E-NODE guard: summary `1 error`, no field lit (P2a checklist item 1, crop `p2a_4_tp_enode_rail`).
-
-## 2026-09-27 — feat: the run state on the canvas nodes, slice A1 of S15 (P-2026-09-27-1647)
-**Prompt**: GO for Phase 2 of `claude_2026-09-27_1647_prompt_discovery_sim_canvas_state.md` (Alfonso 2026-09-27 17:53, in cascade after Phase 1) on `sim-canvas-state` in `~/jjodel-icons`: slice A1 of option A as ratified (C-2026-09-27-1437), under the ownership map of the parallel Phase 2 lanes; A2 waits for sim-modal. Not merged on the trunk before 2026-10-04 unless the chat says so.
-**Files touched**: code `4538d824f`: `frontend/src/components/editor-v2/sim/simCanvasState.ts` (new), `sim/SimNodeRunState.tsx` (new), `sim/simNodeRunState.scss` (new), `sim/__tests__/simCanvasState.test.ts` (new), `sim/simRunState.ts`, `nodes/ObjectNode.tsx`, `frontend/src/styles/tokens/_colors-light.scss`, `_colors-dark.scss`. Docs, this commit: this entry, the ticket below, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_canvas_*` (gitignored), 3018.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Baseline before the slice: typecheck exit 2, 14 errors; vitest on `editor-v2/sim` and `editor-v2/nodes` 275 passed, 10 files. On `4538d824f`: typecheck exit 2, 14 errors, set identical; vitest 294 passed, 11 files (+19); `npm run build` exit 0; `check:scripts` PASS. Red first at import (module absent). Mutation bench 13/13 killed. Probe on the four demo presets: 0 mismatches, Stop removes every overlay, node sizes unchanged.
-**Out-of-scope changes**: yes: eight files, above the Rule 19 five. Four new files under `sim/` owned by no lane, beyond the ownership map's list (`ObjectNode.tsx`, `simRunState.ts`, `styles/tokens/`): the report's A1 table named three of them, and `simNodeRunState.scss` replaces its `simulation-panel.scss` row, which sim-modal owns. `editor-v2/types.ts` untouched.
+**Regressions**: no. Gates on `778eeae4b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7598 tests in 308 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile (the RC-23 check is the chat's, pending). The lane's probe `_tmp_canvas_a1.ts`: Petri, PEST, ESM, Flow B, 51 nodes all native, badges equal to the marking and rings equal to the candidates computed in the page; crops light and dark in `~/.jjodel-lanes/shots_sim-canvas-state/`.
-**Notes**: The overlay is a sibling of the node wrapper inside `.react-flow__node`: the wrapper clips its overflow. The σ crop uses a σ installed through `simReset`, since no demo preset declares a per-element attribute. Node σ leaves the presentation out, as the panel line does. Rows of an IR view are not muted (`IRNodeContent.tsx`, critical zone). The initial-marking pointer is read with `netStcFromRoles`, `simBridge.ts` being owned elsewhere. The first probe runs failed under load 244, cause (g).
-**Prompt document name**: 2026-09-27 16:47
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane 2 passata, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-verif-P-2026-10-06-0011` on `78b045b8d` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0011/result.json`.
+**Prompt document name**: 2026-10-06 00:11
 
-## 2026-09-27 — ticket: every Reset serializes the selected model to ecore, and logs a loop on cyclic models
-**Ticket**: At Reset, `startRun` (`sim/simBridge.ts`) builds the JjEL context with `buildEvalContext`, which binds `data` to `_lastSelected.modelElement` (`jjscript/executor/commands/eval.ts:326-331`). `wrapSelectedElement` (`:915`) then copies every own key of its L-proxy, reading every getter (`:931-938`); on a selected `LModel` that includes `ecore`, a deep cross serialization (`LModelElement.tsx:541-556`). With the four demo presets in one project each Reset logs `Cannot serialize in ecore, found loop`, 6 error pairs, and 0 with one preset per project. The read is caught per key and the run starts, but the P8 smoke counts these as console errors, and every Reset pays one deep serialization. Stack captured on `4538d824f` (`_tmp_canvas_stack.ts`, 3018): panel Reset, `startRun`, `buildEvalContext`, `wrapSelectedElement`, `LModel.get_ecore`, `generateEcoreJson_impl`; no file of the canvas lane in the chain.
-**Priority**: medium
-**Found in**: P-2026-09-27-1647
-
-## 2026-09-28 — feat: the pending choice on the canvas, slice A2 of S15 (P-2026-09-27-2324)
-**Prompt**: `claude_2026-09-27_2324_prompt_sim_canvas_a2.md`, Phase 2 slice A2 of `discovery_2026-09-27_sim_canvas_state.md` on `sim-canvas-state` in `~/jjodel-icons`, full lane: while the «Choose a transition» list is open, exactly its candidates carry a pending mark on the canvas, through a second counter in `simRunState.ts` (R-SIM-33 3c), published and cleared by `SimulationPanel.tsx`; the choice counter re-renders the overlays only, never `ObjectNode`.
-**Files touched**: code `e49b10497`: `frontend/src/components/editor-v2/sim/simRunState.ts`, `sim/simCanvasState.ts`, `sim/SimNodeRunState.tsx`, `sim/simNodeRunState.scss`, `sim/SimulationPanel.tsx`, tests `sim/__tests__/simRunState.test.ts`, `sim/__tests__/simCanvasState.test.ts`. Docs, this commit: this entry, the Status of the prompt file. Probes `frontend/scripts/smoke/_tmp_canvasa2*` (gitignored), 3028.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. Baseline at `f5b70578d`: typecheck 14; vitest sim dirs 642 passed, 23 files. On `e49b10497`: `npm run typecheck` exit 2, 14 errors, set identical; vitest sim dirs 654 passed (642 + 12), 23 files; full vitest 5296 passed, the 9 known files red at import; `npm run build` exit 0, 51 warning lines; `check:scripts` PASS. Red first: 12 tests. Unit bench 11/11 killed; probe bench 9/9 (one mutant per clear site, one publishing without clearing).
-**Out-of-scope changes**: no — seven files, all named by the prompt's DOVE, above the Rule 19 five, not re-listed before the first edit; no critical-zone file, `ObjectNode.tsx` and `edges/UnifiedEdge.tsx` untouched, no new token (`--color-warning`, `--color-warning-muted`).
-**Layer Impact Report**: not-required
-**Smoke visivo**: passato 2026-09-28 — chat, unattended, RC-23 on `shots_canvas_a2` (`decision_1b_list_open_canvas_light`: Flow_1 and Flow_2 ringed, nothing else); the line read «pending» in `606d9e761`, committed before the GO. Probe `_tmp_canvasa2.ts` on 3028, 14/14: Petri conflict t1, t3; Flow B, six steps, no list, no mark; Alfonso's YES/NO flowchart, Flow_1, Flow_2; 18 crops, light and dark, in `~/.jjodel-lanes/shots_canvas_a2/`.
-**Notes**: Sites on f5b70578d: publish :452 (fire, clear when no list); clear :341 interruption, :392 Reset, :434 Stop, :652 Cancel, and the unmount cleanup :294. Render counts, sync commit per action: choice bumps ObjectNode 0, SimNodeRunState 30; control mark bump ObjectNode 30. The mark shows only while the model has a run, so the Stop, interruption and unmount mutants die by the choice version. UnifiedEdge left out: no demo preset draws an IR edge.
-**Prompt document name**: 2026-09-27 23:24
-
-## 2026-09-28 — ticket: the pending ring does not reach IR object-as-edge edges
-**Ticket**: Slice A2 marks the candidates of an open choice list on the node overlay only (`SimNodeRunState.tsx`). An M1 object drawn as an edge by an IR object-as-edge view (`irEdgeViews.ts:251`, `data.irObjectId`) gets no pending ring, and no enabled ring from A1 either. The optional `edges/UnifiedEdge.tsx` class of the report's A2 row was skipped: no demo preset draws an IR edge, so it could not be verified, and it would add a subscription path to every edge. Open it when an authored notation draws a transition as an edge.
-**Priority**: low
-**Found in**: P-2026-09-27-2324
-
-## 2026-09-28 — fix: demo polish, the theme switch reaches the open editor; toolbar labels accepted for MODELS (P-2026-09-28-0014)
-**Prompt**: `claude_2026-09-28_0014_prompt_demo_polish.md`, full lane on `demo-polish` in `~/jjodel-w-polish` (cut at `e87df1ff6`): the freeze readiness findings (`c6933dded`) F2 (Settings theme switch with a project open), F3 (toolbar labels cut at 1600 and 1280) and a Setup step in the demo script for F1 (Cmd+S, reload, check).
-**Files touched**: code `813a73ff5`: `frontend/src/pages/settings/AppearanceSettings.tsx` (a user's choice goes through `ThemeService.set`, whose `THEME_CHANGED` the editor's `useTheme` listens to). Docs, this commit: `docs/demo/models_2026_simulator_demo.md` §1 (one bullet, Save check), this entry, the prompt's Status.
+## 2026-10-06 — feat: a timeline slider in the simulator, lane 2b (P-2026-10-05-2350)
+**Prompt**: `claude_2026-10-05_2350_prompt_sim_timeline_slider.md`, heavy tier, `~/jjodel-w-simverif` on `sim-verif`: R-SIM-142 as written (a slider under the transport row over 0..live, viewing in the mode of R-SIM-106 in sync with the trace, Continue from here as `simStepBack` repeated, a grab stops Play, the keys); tests first, mutation bench, probe on 3080-3099, no merge, no Status flip.
+**Files touched**: `7a9ea6f9a`: `sim/__tests__/simTimeline.test.ts` (new). `6a771cfee`: `sim/SimTimeline.tsx` (new), `sim/SimulationPanel.tsx`, `sim/simulation-panel.scss`. This commit: this entry.
 **Outcome**: ⚠️ partial
 **Corregge**: —
 **Causa**: (a)
-**Regressions**: no. `npm run typecheck` exit 2, 14 errors, set identical to the baseline; vitest on `src/components/editor-v2`, `src/services`, `src/pages` 83 files, 1881 passed, as before; `npm run build` exit 0, 51 warning lines. Theme probe (3030, DemoPEST open, avatar > Settings > Appearance): before 5/6 from light and from dark at 1600 (the editor kept its theme); after 6/6 from light and from dark, at 1600x1000 and 1280x800.
-**Out-of-scope changes**: no
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7602/7602 in 307 files, the 9 known reds at import; build exit 0; check:scripts exit 0; mutation bench 29/31 killed by assertions, the 2 survivors named in the feat message (one equivalent, one browser-only and held by the probe).
+**Out-of-scope changes**: no (four files, each named by the prompt's COSA and its tests; the collapse button's return to live is in `SimulationPanel.tsx`)
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — chat, RC-23, F2 on `shots_polish/1600x1000/theme_after_from_light_1_after_dark.png`: canvas, sidebars and panels all dark
-**Notes**: F3 not done, stopped as the prompt asks: whole labels do not fit at 1280 without a redesign. Canvas zone 544 px at 1280, 824 at 1600; whole content 845 (M2) and 958 (M1), 761 and 874 with the icon buttons at their declared 28 px. The 28 px candidate, injected, still cuts `LAYO…` and `Abstract synt…` at 1600 on demoSM (41.1 of 41.8, 80.6 of 81.4: the freeze reader's +1 px tolerance hides it; the crop shows it).
-**Prompt document name**: 2026-09-28 00:14
-**Ticket** (priority low, opened here, after MODELS). The chat adopted the recommendation (RC-21, ratified as recommended, unattended): the cut labels are accepted for MODELS, no CSS change. Editor toolbar labels: `VIEW` renders 0 px wide at every size on both tabs, even with room (the VIEW group's intrinsic width sums the dropdowns' content widths, 84.8 and 109.7, while their flex basis is 120, so the label, shrink 200, absorbs the difference); icon buttons are 40 px, not the declared 28, from unscoped `.toolbar-btn` rules in `components/editors/Console/console-tab.scss:105` and `pages/components/catalog/catalog.scss:763`; whole labels at 1280 need a redesign of the bar (deficit 301 px on M2, 414 on M1).
+**Smoke visivo**: passato (lane probe on 3087, 1600×1000, light: the four scenes byte-identical to the base with no run and at step 0, 0 differing paths; slider on Petri and ESM 33/33: drag to j shows the trace's step j with the run at k, trace click and Back to live move the thumb, keys, Continue from here leaves j entries at Running, a grab pauses Play; crops in `frontend/scripts/smoke/_tmp_simtl_crops/`; the chat's visual check pending, RC-23)
+**Notes**: The panel is anchored at the bottom, so from step 1 the rows above the slider move up 28 px (Step's top 873 to 845 on the four scenes) while the status line keeps 909: the contract's «everything above keeps its position» holds for the status line only. Continue from here sits beside the range, its box kept hidden at live, so no shift. A style="" on the Play limit input is written by Playwright's screenshot, not the app (measured). Probe gitignored, _tmp_simtl_*.
+**Prompt document name**: 2026-10-05 23:50
 
-## 2026-09-28 — fix: roles that are off are skipped by the run; else with no sibling waits for Alfonso (P-2026-09-28-0100)
-**Prompt**: `claude_2026-09-28_0100_prompt_sim_bridge_off_else.md`, full lane on `sim-bridge-off-else` in `~/jjodel-w-bridge`, auto mode: (1) an `off` role read by the run exactly as an unbound one; (2) an `else` with no sibling as a Reset defect in `stcChecks.ts`, only if report `discovery_2026-09-27_sim_checker_gap.md` §12 decision 1 is settled or recommends it, else stop with a question.
-**Files touched**: code `22cc00ffd`: `frontend/src/components/editor-v2/sim/simBridge.ts`, `sim/__tests__/simBridge.test.ts`. Docs, this commit: `docs/decisions.md` (R-SIM-86), this entry, the Status of the prompt file. The STC builder is `netStcFromRoles` (`netCompile.ts`), unchanged: the bridge resolves the bag before calling it. Probes `frontend/scripts/smoke/_tmp_bridge_*`, gitignored.
-**Outcome**: ⚠️ partial
+## 2026-10-06 — merge: sim-verif into alfonso-frontend-jjtl (P-2026-10-06-0106)
+**Prompt**: `claude_2026-10-06_0106_prompt_merge_sim-verif.md`, a direct merge by `lane-run merge --direct`, no session: `sim-verif` at `913c22c89` into `alfonso-frontend-jjtl`, merge base `271df3cb9`, 5 commits on the branch side.
+**Files touched**: merge `5244ee5cb`: 7 files from the branch side (`docs/decisions.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-05_2350_prompt_sim_timeline_slider.md`, `frontend/src/components/editor-v2/sim/SimTimeline.tsx`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simTimeline.test.ts`, `frontend/src/components/editor-v2/sim/simulation-panel.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
 **Corregge**: —
-**Causa**: (a)
-**Regressions**: no — baseline at `72dc4dca2`: typecheck exit 2, 14 errors; vitest on `model/simulation` and `editor-v2/sim` 657 passed, 23 files. On `22cc00ffd`: typecheck 14, set identical; 663 passed (+6); `editor-v2` and `model/simulation` 2311 passed; full suite 5349 passed, red the 9 known import files and 2 timeouts in `laneRun.test.ts` (64/64 alone); `npm run build` exit 0, 51 warning lines; `check:docs` 4/4; `check:scripts` PASS. Red first: 5 tests. Bench 7/7 killed.
+**Causa**: —
+**Regressions**: no. Gates on `5244ee5cb` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7611 tests in 309 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: passato — lane probe on 3033 (DOM readings, not the RC-23 chat checklist): SM 10 steps Terminated; Petri Bound 4, 4 steps, Deadlock · ε: t2 false; ESM 10 steps, the domain halt line; Flow B 6 steps Terminated; Reset lines as P-2026-09-28-0023
-**Notes**: Ticket 2 not done: §12 decision 1 is RC-26 (the defect amends R-SIM-31(1), ratified); the only answer recorded is the chat's status quo (report §15), none in `decisions.md` or `docs/ratifiche/`. R-SIM-86 covers «Custom» too; one reading changes (see the row), and the control of the NO_SIM_ACTIONS test now declares the attributes. Logs in `~/.jjodel-lanes/P-2026-09-28-0100/`.
-**Prompt document name**: 2026-09-28 01:00
-**Ticket** (priority medium, carried from the P-2026-09-27 checker-gap entry, report F6). An `else` guard with no sibling is always true, silently. Question for Alfonso (RC-26). Recommended: amend R-SIM-31(1) so that an `else` with no sibling is a defect listed at Reset, rule R7 in `stcChecks.ts` with one new `CompileDefect.reason` literal (Rule 11), the run unchanged; no demo reading changes, since the only preset `else` (Flow B variant A, `f4`) has the sibling `f3`.
-**Ticket** (priority medium, opened here). Outside the run the bag is still read raw: the panel builds its roles from it (`SimulationPanel.tsx` `mapStateToProps`: `eventSigOf`, `missingEngineRoles`, `invalidEngineRoles`), so with Trigger off and set the M1 panel offers event buttons the run has no alphabet for, and a stray `simArc` in a control-flow profile reads as an incomplete Petri net; `modelMarkings.ts` explores the Bound on the raw bag; the P2a producer reads it only to dedup parse errors (harmless). Pass them through `runBag`.
-**Ticket** (priority low, opened here). A `derived` role is not resolved by the run either: in the control-flow system profiles Bound is derived (k = 1), yet a stored `simBound` still sets k. R-SIM-86 resolves `off` only.
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane 2b passata, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-verif-P-2026-10-06-0106` on `c53647bb3` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0106/result.json`.
+**Prompt document name**: 2026-10-06 01:06
+
+## 2026-10-06 — feat: the board editor's layout of R-SIM-143, lane sim-board-ui (P-2026-10-06-0100)
+**Prompt**: `claude_2026-10-06_0100_prompt_sim_board_editor_layout.md`, heavy tier, Phase 2 visual on `~/jjodel-w-boardui`, branch `sim-board-ui`: the «Board of <machine>» editor redrawn (one-row header with Theme and Columns dropdowns, live σ0 preview and a 400 px device list, inline row editing, amber warnings, footer counters, keys), layout only; tests first, mutation bench, probe, no merge.
+**Files touched**: test `e9b878cde`: `frontend/src/components/editor-v2/sim/__tests__/simBoardEditorLayout.test.ts` (new); feat `f8bf48a5f`: `sim/SimBoardEditor.tsx`, `sim/SimBoardEditor.scss`, `sim/simBoardEditorLayout.ts` (new); this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7625 tests in 309 files, 9 red at import (the known set); build exit 0, chunk-size warning and one new dynamic-import note; tests 27, red at the base (module missing), bench 42/42. A first full run turned `simBoardCard.test.ts` red at import (the jjscript barrel under its joiner mock), fixed before the commit. Demo scenes not re-probed: no file they read changed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe 28/28 on 3087, 1600×1000, light: 8 columns float at 764 px; labels whole 14/14; body, preview and list without scroll, collapsed, one row open, a flagged row open; selection both ways; Apply off with its reason; amber dot on row and device; drag move, edge resize, a refused resize; keys. Crops `docs/discovery/harness/_tmp_boardui_*.png`, gitignored; the chat's visual GO pending)
+**Notes**: Probe `frontend/scripts/smoke/_tmp_boardui_probe.ts`, gitignored; its log in `~/.jjodel-lanes/P-2026-10-06-0100`, written by lane-run. Taken in the lane: arrows select and Shift+arrows move (arrows moved the tile before); an empty cell no longer takes a click; the old inspector's fields under Options; Gauge, Buzzer, Silkscreen kept in Add; LEDs and displays keep the runtime skin's colours, not the request's amber and cyan.
+**Prompt document name**: 2026-10-06 01:00
+
+**Inline check** (P-2026-10-06-0100): the editor was a 1120×600 modal of the roles dialog's shell: header with title and a long subtitle; a body of three columns, the palette (Inputs, Outputs, Panel), a middle column with the Theme/Accent/Columns block above a dashed edit grid of generic tiles and the nuXmv table, and a 320 px inspector (label, form, fields, period and auto-start, style, span, icon picker, status); a footer with the Pulse LED note. The runtime look is `simBoardDevices.tsx` `BoardDevice` (Variant B, `skin="panel"`) over `simBoardFace.ts` `boardFaces`, styled by `SimBoard.scss` under `.sim-board--panel` with `.sim-board__front--<theme>`: the preview wraps those, no second drawing. Floating at 6 or 8 columns is the card's (`simBoardLook.ts` `boardFloats`), untouched. Reused: `.sim-roles-modal__btn--primary/--secondary`, `__select`, `__input`, `__close`, the accent swatches; tokens `--color-canvas-accent(-hover)`, `--color-info-hover` (#2563eb), `--color-selection-bar` (#0891b2), `--color-warning(-text)`, `--color-bg-primary/tertiary`, `--shadow-md/lg`, `--font-mono`. No segmented component exists in `styles/`: the size control is local.
+
+## 2026-10-06 — merge: sim-board-ui into alfonso-frontend-jjtl (P-2026-10-06-0129)
+**Prompt**: `claude_2026-10-06_0129_prompt_merge_sim-board-ui.md`, a direct merge by `lane-run merge --direct`, no session: `sim-board-ui` at `0341a4f87` into `alfonso-frontend-jjtl`, merge base `a9cc16bc7`, 5 commits on the branch side.
+**Files touched**: merge `3c194ff85`: 7 files from the branch side (`docs/decisions.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-06_0100_prompt_sim_board_editor_layout.md`, `frontend/src/components/editor-v2/sim/SimBoardEditor.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBoardEditorLayout.test.ts`, `frontend/src/components/editor-v2/sim/simBoardEditorLayout.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3c194ff85` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7638 tests in 310 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane 0100 passata sui crop, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-board-ui` on `8af770a29` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0129/result.json`.
+**Prompt document name**: 2026-10-06 01:29
+
+## 2026-10-06 — feat: coverage of the runs in the simulator, lane sim-coverage (P-2026-10-06-0115)
+**Prompt**: `claude_2026-10-06_0115_prompt_sim_coverage.md`, heavy tier, `~/jjodel-w-simverif` on `sim-verif`: R-SIM-140 as V1, V2, Q2 and Q4 of the 2026-10-05 discovery fix it (the counts per model in `simCoverage.ts` on their own channel, observed from the canvas layer, the Coverage toggle and Clear, the node overlay, `coverage?`); tests first, mutation bench, probe on 3080-3099, no merge, no Status flip.
+**Files touched**: `2fc8c8f84`: `sim/__tests__/simCoverage.test.ts` (new), `sim/__tests__/simViewerPrefs.test.ts`. `42bad725c`: `sim/simCoverage.ts` (new), `sim/SimCanvasLayer.tsx`, `sim/SimNodeRunState.tsx`, `sim/simNodeRunState.scss`, `sim/simViewerPrefs.ts`, `sim/__tests__/simCoverage.test.ts`. This commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7630/7630 in 308 files, the 9 known reds at import; build exit 0; mutation bench on `simCoverage.ts` 26/26 killed by assertions. Red at the base: the coverage suite at import; the prefs tests at typecheck only (the store spreads any key).
+**Out-of-scope changes**: no (seven files, above five: the five of the prompt's COSA and the two tests it names, the rule 19 list)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3088, 1600×1000, light: four scenes with coverage off, base 16/16, after 16/16, 0 differing paths but the toggle (panel, layer, node boxes and overlays at step 0 and at the path's end, bag keys live and exported); coverage on ESM and Petri 30/30: `off` and `ts` veiled, 2/3 · 3/4 and 4/4 · 3/3, boxes 0 px, Reset and a step back keep, Clear empties, no dispatch; crops in `frontend/scripts/smoke/_tmp_simcov_crops/`; the chat's visual check pending, RC-23)
+**Notes**: Edges not covered in this lane (Q2): nodes only, edges a later measured slice. Counts are gathered with the switch on or off; Clear keeps the run seen, so a place marked before Clear stays veiled until a token arrives. The controls grow left by 77 px (on: the summary and Clear too), widening the 2026-10-04 ticket's overlap with a wide floating board. Base: f2c79606c's four files written into the tree, restored by git checkout HEAD; no stash. Probe gitignored, _tmp_simcov_*.
+**Prompt document name**: 2026-10-06 01:15
+
+## 2026-10-06 — merge: sim-verif into alfonso-frontend-jjtl (P-2026-10-06-0151)
+**Prompt**: `claude_2026-10-06_0151_prompt_merge_sim-verif.md`, a direct merge by `lane-run merge --direct`, no session: `sim-verif` at `f17ce761a` into `alfonso-frontend-jjtl`, merge base `913c22c89`, 5 commits on the branch side.
+**Files touched**: merge `507d073ca`: 9 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-06_0115_prompt_sim_coverage.md`, `frontend/src/components/editor-v2/sim/SimCanvasLayer.tsx`, `frontend/src/components/editor-v2/sim/SimNodeRunState.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simCoverage.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simViewerPrefs.test.ts`, `frontend/src/components/editor-v2/sim/simCoverage.ts`, `frontend/src/components/editor-v2/sim/simNodeRunState.scss`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `507d073ca` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7666 tests in 311 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 della lane coverage 0115 passata sui crop, merge senza altre differenze visive
+**Notes**: Rollback tag `pre-sim-verif-P-2026-10-06-0151` on `9cd6ae57e` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0151/result.json`.
+**Prompt document name**: 2026-10-06 01:51
+
+## 2026-10-06 — merge: console-errors-fix into alfonso-frontend-jjtl (P-2026-10-05-2253)
+**Prompt**: `claude_2026-10-05_2253_prompt_merge_console-errors-fix.md`, a direct merge by `lane-run merge --direct`, no session: `console-errors-fix` at `613a13c37` into `alfonso-frontend-jjtl`, merge base `57ff86f5d`, 8 commits on the branch side.
+**Files touched**: merge `a6fe2cf0d`: 9 files from the branch side (`docs/discovery/discovery_2026-10-04_console_errors_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_1025_prompt_console_errors_discovery.md`, `docs/prompts/claude_2026-10-05_1648_prompt_console_errors_fix.md`, `frontend/scripts/probe/console-errors-demo.ts`, `frontend/src/model/__tests__/m1EcoreRoots.test.ts`, `frontend/src/model/logicWrapper/LModelElement.tsx`, `frontend/src/redux/__tests__/initEditorProjectGuard.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a6fe2cf0d` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7508 tests in 304 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: console-only fix: no rendering change; probe of the lane 40 pages E1 0/20, E2 0, opens identical 20/20; M1 ecore JSON incompleteness pre-existing, ticketed
+**Notes**: Rollback tag `pre-console-errors-fix` on `0eb09ad8f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2253/result.json`.
+**Prompt document name**: 2026-10-05 22:53

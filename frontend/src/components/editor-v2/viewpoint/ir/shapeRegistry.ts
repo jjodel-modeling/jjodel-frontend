@@ -305,6 +305,20 @@ const CLOUD_SIZING: ShapeSizing = {
 };
 
 /**
+ * The bar (R-VP-16, the Petri transition): a thin solid box of 4:1, drawn at this fixed
+ * size and not after its content, smaller than the smallest circle (64px). irStyle.ts sets
+ * the CSS box to it and lets the label overflow it, centred.
+ */
+export const BAR_SIZE: Size = { w: 48, h: 12 };
+
+/**
+ * Bar: no supplement, and the floors are the bar itself, as rect's 140x40 are the CSS
+ * floor of a box. Not consumed at runtime: without a supplement the content-driven
+ * sizing (useContentSize.ts) stays off and the CSS box holds.
+ */
+const BAR_SIZING: ShapeSizing = { heightFactor: 1, minBoxWidth: BAR_SIZE.w, minBoxHeight: BAR_SIZE.h, minAspect: 0 };
+
+/**
  * `strokeDasharray` per stile di bordo, per le forme dipinte in SVG.
  * Indicizzata per stringa come la `DIAMOND_DASH` che sostituisce: uno stile di
  * bordo non previsto ricade su `undefined`, cioe' tratto pieno.
@@ -415,6 +429,13 @@ export const SHAPE_REGISTRY: Readonly<Record<ShapeForm, ShapeDescriptor>> = {
         insetFractionAt: CLOUD_INSET_AT,
         sizing: CLOUD_SIZING,
     },
+    // bar (R-VP-16): the outline fills its box, so no inset; a fixed size, so no
+    // resize by default (the explicit `resizable` flag still opens it).
+    bar: {
+        id: 'bar', painter: { kind: 'css' },
+        defaultResizable: false, keepAspectRatio: false, insetFractionAt: NO_INSET,
+        sizing: BAR_SIZING,
+    },
 };
 
 /* ------------------------------------------------------------------------- */
@@ -460,13 +481,15 @@ export function baseCornerRadius(form: ShapeForm | undefined): number {
 }
 
 /**
- * Render clamp: `min(w, h) / 4`. Up to 12px the anchors and the content rect are not
- * recomputed (decision D5), and above that this clamp keeps the shape sane. The
- * authored number is never rewritten. Degenerate input answers 0.
+ * Render clamp: `min(w, h) / 2`, the browser's own bound for a CSS radius, so the
+ * polygons follow the same number (P-2026-09-30-1720: the Activity (UML) action draws
+ * its radius 14 on a 42 px box, where the quarter gave 10.5). Up to 12px the anchors and
+ * the content rect are not recomputed (decision D5). The authored number is never
+ * rewritten. Degenerate input answers 0.
  */
 export function clampCornerRadius(r: number, w: number, h: number): number {
     if (!(r > 0) || !(w > 0) || !(h > 0)) return 0;
-    return Math.min(r, Math.min(w, h) / 4);
+    return Math.min(r, Math.min(w, h) / 2);
 }
 
 /** What the painter does with the radius of one node. */

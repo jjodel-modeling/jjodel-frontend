@@ -11,14 +11,24 @@
  * the commit message.
  */
 
-import { beforeEach, describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
-    candidateLabel, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputReason, markingLine, NO_SIM_ACTIONS,
-    panelInputs, pressInput, runSignature, startRun, stopReason,
+    acceptingMark, candidateLabel, choiceHead, collectModelObjectIds, defectsLine, defectsTitle, evalContextFor, haltMessage, haltTitle, inputAsks, inputLabel, inputOffTitle,
+    inputPressTitle, inputReason,
+    markingChips, markingLine, modelDataPatch, modelDataRows, newGlobalRow, NO_SIM_ACTIONS, outputLine, panelInputs, playPress, playStopLine, playTick, pressInput,
+    pressRandom, pressStep, runSignature, runStatus, startRun, statusLine, stopReason, undeclaredGlobals, watchHitLine, watchHitSteps, watchResults, watchRows,
 } from '../simBridge';
-import type { ContextBuilder, PanelInputs, RunStart } from '../simBridge';
-import { __resetSimRunsForTests, getSimActiveIds, getSimRun, getSimVersion, simReset } from '../simRunState';
+import type { ContextBuilder, PanelInputs, PlayStop, RunStart } from '../simBridge';
+import { encodeWatches } from '../../../../model/simulation/watchCodec';
+import type { WatchRecord } from '../../../../model/simulation/watchCodec';
+import type { WatchResult } from '../../../../model/simulation/watchEvaluator';
+import {
+    __resetSimRunsForTests, configAt, getSimActiveIds, getSimRun, getSimVersion, getSimView, setSimPolicy, simClear, simReset, simSetView,
+} from '../simRunState';
+import type { SimTraceStep } from '../simRunState';
+import { uniform } from '../../../../model/simulation/simRandom';
 import { candidates, netRunStatus, step } from '../../../../model/simulation/netStep';
+import * as netStepModule from '../../../../model/simulation/netStep';
 import { encodeProfile } from '../../../../model/simulation/profileCodec';
 import { ROLE_IDS, roleDescriptor } from '../../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../../model/simulation/roleCatalog';
@@ -367,6 +377,23 @@ describe('the panel\'s texts and gates', () => {
         expect(candidateLabel(net, 't', names)).toBe('t (∅ → ∅)');
     });
 
+    describe('choiceHead (R-SIM-98): the choice list is a nondeterministic choice on the input pressed', () => {
+        it('an ε list reads «Nondeterministic choice (ε)» (mutant 1: the old «Choose a transition» heading kept)', () => {
+            const h = choiceHead('ε');
+            expect(`${h.heading} (${h.input})`).toBe('Nondeterministic choice (ε)');
+        });
+
+        it('an input-event list names the event pressed (mutant 2: the input fixed to ε)', () => {
+            const h = choiceHead('push');
+            expect(`${h.heading} (${h.input})`).toBe('Nondeterministic choice (push)');
+        });
+
+        it('the subline says what to do, and the head holds nothing else (mutant 3: the subline dropped or reworded)', () => {
+            expect(choiceHead('ε')).toEqual({ heading: 'Nondeterministic choice', input: 'ε', subline: 'Choose a transition' });
+            expect(choiceHead('push').subline).toBe('Choose a transition');
+        });
+    });
+
     describe('markingLine (R-SIM-82, G3): the marking, then the stored σ, then the derived σ', () => {
         type Values = Record<string, Record<string, SimValue>>;
         const byElement = (v: Values) => new Map(Object.entries(v).map(([e, a]) => [e, new Map(Object.entries(a))]));
@@ -542,7 +569,7 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         if (r) expect(r.inputs.map(i => i.event)).toEqual([null, ...run.alphabet]);
     }
 
-    it('b2net `p2.[tokens] < 2`: no reason while t1 fires; after two firings the reason is t1 false on the current marking (mutant: the configuration of the last label)', () => {
+    it('b2net `p2.[tokens] < 2`: no reason while t1 fires; after two firings the reason is t1 guard false on the current marking (mutant: the configuration of the last label)', () => {
         const lookup = b2net('p2.[tokens] < 2');
         reset(lookup);
         agrees(lookup);
@@ -552,8 +579,8 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         eps(lookup);
         agrees(lookup);
         const r = why(lookup)!;
-        expect(r.line).toBe('ε: t1 false');
-        expect(r.inputs.map(i => i.short)).toEqual(['ε: t1 false']);
+        expect(r.line).toBe('ε: t1 guard false');
+        expect(r.inputs.map(i => i.short)).toEqual(['ε: t1 guard false']);
         expect(r.title).toBe('ε: t1 (p1 → p2) false [p2.[tokens] < 2]');
         expect(r.inputs[0].detail).toBe('ε: t1 (p1 → p2) false');
     });
@@ -588,7 +615,7 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         reset(lookup);
         agrees(lookup);
         const r = why(lookup)!;
-        expect(r.line).toBe('ε: e2 false');
+        expect(r.line).toBe('ε: e2 guard false');
         expect(r.title).toBe('ε: F (S → A, B): e2 false [false]');
     });
 
@@ -640,7 +667,7 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         eps(lookup);
         agrees(lookup);
         const r = why(lookup)!;
-        expect(r.line).toBe('ε: e2 false; e4 false');
+        expect(r.line).toBe('ε: e2 guard false; e4 guard false');
         expect(r.title).toBe('ε: e2 (D → A) false [false]; F (D → B, C): e4 false [false]');
     });
 
@@ -662,6 +689,49 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         expect(r.title).toBe('ε: tq (pb → pc) inhibited by Alpha');
     });
 
+    /** t2 of DemoPetri (demo script §2.2) at a marking of p2, p3 and lock, k = 4: p2 -a3 ×2-> t2 -a4-> p3, lock -i1-o t2. */
+    const demoT2 = (p2: number, p3: number, lock: number) => {
+        const lookup = petri({
+            p2: { cls: 'C_Place', slots: { A_tokens: [p2] } },
+            p3: { cls: 'C_Place', slots: { A_tokens: [p3] } },
+            lock: { cls: 'C_Place', slots: { A_tokens: [lock] } },
+            t2: { cls: 'C_PTr', slots: { A_guard: ['p3.[tokens] < 1'] } },
+            a3: { cls: 'C_Arc', slots: { R_src: ['p2'], R_tgt: ['t2'], A_w: [2] } },
+            a4: { cls: 'C_Arc', slots: { R_src: ['t2'], R_tgt: ['p3'] } },
+            i1: { cls: 'C_Inh', slots: { R_src: ['lock'], R_tgt: ['t2'] } },
+        });
+        lookup.MM._state.simArcWeight = 'A_w';
+        lookup.MM._state.simBound = '4';
+        lookup.A_w = { className: 'DAttribute', id: 'A_w', name: 'w' };
+        return lookup;
+    };
+
+    it('DemoPetri t2 at (p2, p3, lock) = (2, 1, 0): the line says guard false, the title and the detail keep their text (mutants: the old `t2 false`; guard in the title)', () => {
+        const lookup = demoT2(2, 1, 0);
+        reset(lookup);
+        agrees(lookup);
+        const r = why(lookup)!;
+        expect(r.line).toBe('ε: t2 guard false');
+        expect(r.title).toBe('ε: t2 (p2 ×2 → p3) false [p3.[tokens] < 1]');
+        expect(r.inputs[0].detail).toBe('ε: t2 (p2 ×2 → p3) false');
+    });
+
+    it('DemoPetri t2 blocked by its guard and by something else: the inhibitor is checked first and names lock, a short preset leaves nothing enabled (mutant: the inhibitor reason reads guard false)', () => {
+        const inhibited = demoT2(2, 1, 1);
+        reset(inhibited);
+        agrees(inhibited);
+        const r = why(inhibited)!;
+        expect(r.line).toBe('ε: t2 inhibited by lock');
+        expect(r.title).toBe('ε: t2 (p2 ×2 → p3) inhibited by lock');
+
+        const short = demoT2(1, 1, 0);
+        reset(short);
+        agrees(short);
+        const s = why(short)!;
+        expect(s.line).toBe('nothing enabled');
+        expect(s.title).toBe('ε: nothing enabled');
+    });
+
     it('turnstile in Running: Push has no candidate and says why; Coin has one and says nothing; pressing Push names the false guard (mutants: a reason for an input with a candidate; the old discard wording)', () => {
         const lookup = buildLookup({ ...ROLES, simGuard: 'A_guard' }, TURNSTILE);
         reset(lookup, turnstileRecord);
@@ -669,13 +739,13 @@ describe('why an input has no candidate (P-2026-09-26-1315, R-SIM-57..63)', () =
         const run = getSimRun('M');
         expect(inputReason(run, 'coin', lookup, label)).toBeNull();
         expect(inputReason(run, 'push', lookup, label, 'A_guard')).toEqual({
-            event: 'push', short: 'Push: tPushL false', detail: 'Push: tPushL (Locked → Locked) false',
+            event: 'push', short: 'Push: tPushL guard false', detail: 'Push: tPushL (Locked → Locked) false',
             full: 'Push: tPushL (Locked → Locked) false [false]',
         });
         expect(why(lookup)).toBeNull();
         const pressed = pressInput('M', 'push', undefined, lookup, 'Push');
         expect(pressed.outcome?.kind).toBe('discard');
-        expect(pressed.lastStep).toBe('Push: discarded, tPushL false');
+        expect(pressed.lastStep).toBe('Push: discarded, tPushL guard false');
     });
 
     it('turnstile in Deadlock: an input with nothing enabled says so, never a defect; the defective one comes first in the line (mutant: an empty list reported as a defect)', () => {
@@ -1138,6 +1208,68 @@ describe('lane C1: declared state attributes and the action keys in the run (P-2
             expect(markingLine(getSimRun('M')!.config.state, t.run.net, tight).line).toBe('Marking: p1 ×3 · p1.visits = 0, p2.visits = 0, total = 0');
         });
     });
+
+    describe('the face\'s builders: Watch rows, Marking chips, the status line (P-2026-10-03-0040, R-SIM-102, R-SIM-104)', () => {
+        const SUM = { name: 'sum', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 6 }, equation: 'p1.[visits] + p2.[visits]' };
+        const GLOW = { name: 'glow', metaclass: null, space: 'presentation', domain: null, initial: '1' };
+        const BUMP2 = 'p2.[visits] := p2.[visits] + 1';
+        const at = (n: number) => configAt(getSimRun('M')!, n)!.state;
+        const rows = (lookup: Lookup, n: number, pins: Parameters<typeof watchRows>[3] = null) =>
+            watchRows(getSimRun('M')!.net, at(n), n === 0 ? null : at(n - 1), pins, lookup);
+
+        it('default pins: σ globals first, then the metaclass ones per owner by name; kind, domain and value on the shown σ (mutants: the derived value unread; owners unsorted)', () => {
+            const lookup = cnet({ decls: [VISITS, F, SUM, GLOW], t1: [BUMP2] });
+            expect(reset(lookup).compileDefects).toEqual([]);
+            expect(rows(lookup, 0)).toEqual([
+                { element: 'M', attr: 'f', name: 'f', space: 'semantic', kind: 'VAR', domain: { kind: 'boolean' }, value: false, before: null, changed: false },
+                { element: 'M', attr: 'sum', name: 'sum', space: 'semantic', kind: 'DEFINE', domain: { kind: 'range', min: 0, max: 6 }, value: 0, before: null, changed: false },
+                { element: 'P1x', attr: 'visits', name: 'p1.visits', space: 'semantic', kind: 'VAR', domain: { kind: 'range', min: 0, max: 3 }, value: 0, before: null, changed: false },
+                { element: 'P2x', attr: 'visits', name: 'p2.visits', space: 'semantic', kind: 'VAR', domain: { kind: 'range', min: 0, max: 3 }, value: 0, before: null, changed: false },
+            ]);
+        });
+
+        it('a step\'s changes: before → after on the values it changed, nothing on the others (mutants: before read on the shown σ; changed on every row)', () => {
+            const lookup = cnet({ decls: [VISITS, F, SUM], t1: [BUMP2] });
+            reset(lookup);
+            expect(eps(lookup).outcome?.kind).toBe('fired');
+            const changed = rows(lookup, 1).filter(r => r.changed).map(r => [r.name, r.before, r.value]);
+            expect(changed).toEqual([['sum', 0, 1], ['p2.visits', 0, 1]]);
+            expect(rows(lookup, 1).find(r => r.name === 'f')).toMatchObject({ before: null, changed: false });
+        });
+
+        it('explicit pins in their order, the presentation included when pinned; a pin no longer declared is skipped (mutant: the default pins over explicit ones)', () => {
+            const lookup = cnet({ decls: [VISITS, F, SUM, GLOW], t1: [BUMP2] });
+            reset(lookup);
+            const pins = [
+                { metaclass: null, name: 'glow', space: 'presentation' as const },
+                { metaclass: null, name: 'gone', space: 'semantic' as const },
+                { metaclass: null, name: 'sum', space: 'semantic' as const },
+            ];
+            expect(rows(lookup, 0, pins).map(r => [r.name, r.space, r.value])).toEqual([['glow', 'presentation', 1], ['sum', 'semantic', 0]]);
+            expect(rows(lookup, 0, []).length).toBe(0);
+        });
+
+        it('Marking chips: one per marked place by name, ×n from two tokens, as the marking line lists them (mutants: ×1 written; a 0-token place)', () => {
+            const lookup = cnet({ decls: [VISITS], t1: [BUMP2] });
+            const r = reset(lookup);
+            eps(lookup);
+            const state = getSimRun('M')!.config.state;
+            expect(markingChips(state, lookup)).toEqual([
+                { place: 'P1x', name: 'p1', tokens: 2, text: 'p1 ×2' }, { place: 'P2x', name: 'p2', tokens: 1, text: 'p2' },
+            ]);
+            expect(`Marking: ${markingChips(state, lookup).map(c => c.text).join(', ')}`).toBe(markingLine(state, r.run.net, lookup).line.split(' · ')[0]);
+            expect(markingChips({ ...state, marking: new Map([['P1x', 0]]) }, lookup)).toEqual([]);
+        });
+
+        it('the status line: step n, the seed, the last step; its title the «Last step» text of today (R-SIM-104; mutant: the title of the line itself)', () => {
+            const last = { text: 'ε: t1 (p1 → p2) fired', title: 'ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1' };
+            expect(statusLine(3, 12345, last)).toEqual({
+                line: 'step 3 · seed 12345 · ε: t1 (p1 → p2) fired', title: 'Last step: ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1',
+            });
+            expect(statusLine(0, 7, null)).toEqual({ line: 'step 0 · seed 7', title: 'step 0 · seed 7' });
+            expect(statusLine(1, undefined, last).line).toBe('step 1 · ε: t1 (p1 → p2) fired');
+        });
+    });
 });
 
 describe('P2b: the checker rules at Reset, on the rows of the checker gap report §5.2 (P-2026-09-27-2235)', () => {
@@ -1425,5 +1557,1456 @@ describe('roles that are off are read as unbound (P-2026-09-28-0100, R-SIM-78)',
         expect(sm.kind === 'started' && [sm.run.actions === NO_SIM_ACTIONS, sm.run.net.attributes, sm.run.net.activityFinal ?? null]).toEqual([true, [], null]);
         const pn = run(pnLookup({ ...PN_BAG, simProfile: 'petri' }));
         expect(face(pn)).toBe(face(run(pnLookup({ ...without(PN_BAG, ['simInitial', 'simNextState', 'simFork']), simProfile: 'petri' }))));
+    });
+});
+
+describe('R7: an else with no sibling is a defect at Reset, the run unchanged (P-2026-09-28-0100, R-SIM-87)', () => {
+    const COUNT = JSON.stringify({ v: 1, attrs: [{ name: 'count', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' }] });
+    const FLOW_ROLES = {
+        simNode: 'C_AN', simTransition: 'C_CF', simSource: 'R_source', simNextState: 'R_target', simInitial: 'C_IN', simFork: 'C_Fork',
+        simJoin: 'C_Join', simTerminal: 'C_Fin', simGuard: 'A_guard', simAction: 'A_effect', simStateAttributes: COUNT, simProfile: 'flowchart',
+    };
+
+    /**
+     * Flow B variant A of the demo (docs/demo/models_2026_simulator_demo.md §2.4): i0 -f1-> work -f2-> d1, d1 -f3-> work
+     * `count < 2`, d1 -f4-> fk `else`, the fork to left and right, the join jn to fin. `f3` false leaves f4 without its sibling.
+     */
+    function flow(f3: boolean, f4Guard = 'else'): Lookup {
+        const wires: Array<[string, string, string]> = [['f1', 'i0', 'work'], ['f2', 'work', 'd1'], ['f3', 'd1', 'work'], ['f4', 'd1', 'fk'],
+            ['f5', 'fk', 'left'], ['f6', 'fk', 'right'], ['f7', 'left', 'jn'], ['f8', 'right', 'jn'], ['f9', 'jn', 'fin']];
+        const guards: Record<string, string> = { f3: 'model.[count] < 2', f4: f4Guard };
+        const objects: Record<string, Obj> = {
+            i0: { cls: 'C_IN' }, work: { cls: 'C_Act' }, d1: { cls: 'C_Dec' }, fk: { cls: 'C_Fork' }, left: { cls: 'C_Act' },
+            right: { cls: 'C_Act' }, jn: { cls: 'C_Join' }, fin: { cls: 'C_Fin' },
+        };
+        for (const [e, s, t] of wires) {
+            if (e === 'f3' && !f3) continue;
+            objects[e] = { cls: 'C_CF', slots: {
+                R_source: [s], R_target: [t], ...(guards[e] ? { A_guard: [guards[e]] } : {}),
+                ...(e === 'f2' ? { A_effect: ['model.[count] := model.[count] + 1'] } : {}),
+            } };
+        }
+        const lookup = buildLookup(FLOW_ROLES, objects);
+        lookup.C_AN = { className: 'DClass', id: 'C_AN', name: 'ActivityNode', extends: [], abstract: true };
+        for (const [id, name] of [['C_IN', 'InitialNode'], ['C_Act', 'Activity'], ['C_Dec', 'Decision'], ['C_Fork', 'Fork'], ['C_Join', 'Join'], ['C_Fin', 'FinalNode']]) {
+            lookup[id] = { className: 'DClass', id, name, extends: ['C_AN'] };
+        }
+        lookup.C_CF = { className: 'DClass', id: 'C_CF', name: 'ControlFlow', extends: [] };
+        for (const id of ['R_source', 'R_target']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        lookup.M.name = 'demoFlowA';
+        return lookup;
+    }
+
+    const recordOf = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(recordOf(lookup)).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    /** ε until the run stops, at most 12 presses: the «Last step» lines and the status. */
+    const walk = (lookup: Lookup) => {
+        const lines: string[] = [];
+        for (let i = 0; i < 12; i++) {
+            const run = getSimRun('M')!;
+            const status = netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+            if (status !== 'Running') return { lines, status };
+            lines.push(pressInput('M', null, undefined, lookup, 'ε').lastStep ?? '');
+        }
+        return { lines, status: 'Running' };
+    };
+
+    it('Flow B variant A: f4 else has the sibling f3, no defect at Reset, 6 steps to Terminated (control: the demo preset unchanged)', () => {
+        const lookup = flow(true);
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBeNull();
+        const w = walk(lookup);
+        expect([w.lines.length, w.status]).toEqual([6, 'Terminated']);
+    });
+
+    it('f4 else into the fork with no sibling: one guard defect named by f4, not by the fork; the run is the one of f4 unguarded (mutants: no R7; the fork named)', () => {
+        const lookup = flow(false);
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['f4', 'guard', 'else-alone', 'else']]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: f4 guard (else, no sibling).');
+        expect(defectsTitle(r.run.net, lookup, r.compileDefects)).toBe('f4 guard: else with no sibling: no other transition has its preset and its triggers, so it is always true [else]');
+        const lone = walk(lookup);
+        // the run unchanged: the else is always true, as the same edge with no guard
+        const bare = flow(false, '');
+        expect(reset(bare).compileDefects).toEqual([]);
+        expect(lone).toEqual(walk(bare));
+        expect(lone.status).toBe('Terminated');
+    });
+
+    it('a plain edge: tPushL else leaves Locked on push, tCoin shares Locked but not the trigger, so no sibling; a second push edge from Locked is one (same preset, same triggers)', () => {
+        const alone = buildLookup({ ...ROLES, simGuard: 'A_guard' }, { ...TURNSTILE, tPushL: { ...TURNSTILE.tPushL, slots: { ...TURNSTILE.tPushL.slots, A_guard: ['else'] } } });
+        const r = startRun(alone, 'M', 'MM', 'P', spyBuilder().build);
+        expect(r.kind === 'started' && defectsLine(r.run.net, alone, r.compileDefects)).toBe('1 defect: tPushL guard (else, no sibling).');
+        // the run unchanged: push on Locked fires tPushL, the else always true
+        simReset('M', started(alone));
+        expect(pressInput('M', 'push', undefined, alone, 'Push').lastStep).toBe('Push: tPushL (Locked → Locked) fired');
+        const paired = buildLookup({ ...ROLES, simGuard: 'A_guard' }, {
+            ...TURNSTILE,
+            Locked: { ...TURNSTILE.Locked, slots: { R_out: ['tCoin', 'tPushL', 'tPush2'] } },
+            tPushL: { ...TURNSTILE.tPushL, slots: { ...TURNSTILE.tPushL.slots, A_guard: ['else'] } },
+            tPush2: { cls: 'C_Trans', slots: { R_next: ['Unlocked'], R_trigger: ['push'], A_guard: ['false'] } },
+        });
+        const p = startRun(paired, 'M', 'MM', 'P', spyBuilder().build);
+        expect(p.kind === 'started' && p.compileDefects).toEqual([]);
+    });
+
+    it('Petri (R-SIM-64): t1 else with no other transition on its preset is the same defect, and t1 still fires', () => {
+        const PN = {
+            simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+            simInitialMarking: 'A_tokens', simBound: '3', simGuard: 'A_guard',
+        };
+        const lookup = buildLookup(PN, {
+            p1: { cls: 'C_Place', slots: { A_tokens: [1] } }, p2: { cls: 'C_Place' }, t1: { cls: 'C_PTr', slots: { A_guard: ['else'] } },
+            a1: { cls: 'C_Arc', slots: { R_src: ['p1'], R_tgt: ['t1'] } }, a2: { cls: 'C_Arc', slots: { R_src: ['t1'], R_tgt: ['p2'] } },
+        });
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        const r = reset(lookup);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: t1 guard (else, no sibling).');
+        expect(pressInput('M', null, undefined, lookup, 'ε').lastStep).toBe('ε: t1 (p1 → p2) fired');
+    });
+});
+
+describe('R-SIM-88: inputs asked at the press that reads them (P-2026-09-28-0034)', () => {
+    /** S -e1-> D; D -e2 [g2]-> A, D -e3 [g3]-> B; `decision` an input of every State, A and B terminal. */
+    const DECISION = { name: 'decision', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    function decision(g2: string, g3 = 'else', e1Effect?: string, extra: object[] = []): Lookup {
+        const lookup = buildLookup({
+            ...ROLES, simGuard: 'A_guard', simTerminal: 'C_Final', ...(e1Effect ? { simAction: 'A_effect' } : {}),
+            simStateAttributes: JSON.stringify({ v: 1, attrs: [DECISION, ...extra] }),
+        }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+            D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+            A: { cls: 'C_Final' },
+            B: { cls: 'C_Final' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['D'], ...(e1Effect ? { A_effect: [e1Effect] } : {}) } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: [g2] } },
+            e3: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: [g3] } },
+        });
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        return lookup;
+    }
+    /** buildEvalContext's record: handles by id, `next` resolved, every name bound. */
+    const record = () => {
+        const h: Record<string, any> = {};
+        for (const id of ['S', 'D', 'A', 'B', 'e1', 'e2', 'e3']) h[id] = { id, __type: 'Object', name: id };
+        h.e1.next = h.D; h.e2.next = h.A; h.e3.next = h.B;
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', () => record());
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const eps = (lookup: Lookup, values?: Array<{ element: string; attr: string; value: boolean }>, selector?: string) =>
+        pressInput('M', null, selector, lookup, 'ε', values);
+    const answer = (value: boolean) => [{ element: 'D', attr: 'decision', value }];
+    const label = (e: string | null) => (e === null ? 'ε' : e);
+
+    it('the press that reads an input returns the asks and commits nothing (mutant: the ask skipped)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        expect(eps(lookup).lastStep).toBe('ε: e1 (S → D) fired');
+        const before = getSimRun('M')!.config;
+        const version = getSimVersion();
+        const out = eps(lookup);
+        expect(out.asks).toEqual([{ element: 'D', attr: 'decision', domain: { kind: 'boolean' } }]);
+        expect([out.pending, out.lastStep, out.outcome]).toEqual([null, null, null]);
+        expect(getSimRun('M')!.config).toBe(before);
+        expect(getSimVersion()).toBe(version);
+    });
+
+    it('the values reach the guards: true fires e2, false the else e3; σ′ never holds the input (mutants: the overlay unread, the input written into σ)', () => {
+        for (const [value, fired] of [[true, 'ε: e2 (D → A) fired'], [false, 'ε: e3 (D → B) fired']] as const) {
+            const lookup = decision('D.[decision]');
+            reset(lookup);
+            eps(lookup);
+            expect(eps(lookup, answer(value)).lastStep).toBe(fired);
+            const run = getSimRun('M')!;
+            expect(run.config.state.attrs.get('D')).toBeUndefined();
+            expect(markingLine(run.config.state, run.net, lookup).line).toBe(`Marking: ${value ? 'A' : 'B'}`);
+        }
+    });
+
+    it('the title of Last step lists the inputs of the step (mutant: the inputs left out of the title)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, answer(false)).lastStepTitle).toBe('ε: e3 (D → B) fired\ninputs: D.decision = false');
+        expect(inputLabel({ element: 'M', attr: 'answer' }, getSimRun('M')!.net, lookup)).toBe('answer');
+    });
+
+    it('an answer never shadows σ: a value given for a stored name is ignored (mutant: every value overlaid)', () => {
+        const SEEN = { name: 'seen', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' };
+        const lookup = decision('D.[decision] and not model.[seen]', 'else', undefined, [SEEN]);
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, [...answer(true), { element: 'M', attr: 'seen', value: true }]).lastStep).toBe('ε: e2 (D → A) fired');
+    });
+
+    it('several candidates after the answer: the list, then the choice with the same values (mutant: the values dropped on the choice)', () => {
+        const lookup = decision('D.[decision]', 'D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup, answer(true)).pending?.map(c => c.transition)).toEqual(['e2', 'e3']);
+        expect(eps(lookup, answer(true), 'e3').lastStep).toBe('ε: e3 (D → B) fired');
+    });
+
+    it('runStatus: Running while an enabled transition waits for an input, where the core alone says Deadlock; Terminated after (mutant: the waiting rule dropped)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        const run = getSimRun('M')!;
+        expect(netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt)).toBe('Deadlock');
+        expect(runStatus(run)).toBe('Running');
+        eps(lookup, answer(true));
+        expect(runStatus(getSimRun('M')!)).toBe('Terminated');
+    });
+
+    it('the reasons: an input that asks is no «no candidate» and no Deadlock reason (mutant: explained as a defect)', () => {
+        const lookup = decision('D.[decision]');
+        reset(lookup);
+        eps(lookup);
+        const run = getSimRun('M')!;
+        expect(inputReason(run, null, lookup, label)).toBeNull();
+        expect(stopReason(run, lookup, label)).toBeNull();
+    });
+
+    it('nothing is asked where no enabled transition that accepts the input reads one: today\'s press (mutants: not filtered by the preset, nor by the input)', () => {
+        const lookup = decision('D.[decision]');
+        const r = reset(lookup);
+        expect(r.run.inputs?.get('e2')).toEqual([{ element: 'D', attr: 'decision', domain: { kind: 'boolean' } }]);
+        // the else reads what its siblings read: the core evaluates them for the complement
+        expect(r.run.inputs?.get('e3')).toEqual(r.run.inputs?.get('e2'));
+        expect(inputAsks(getSimRun('M')!, null)).toEqual([]);
+        eps(lookup);
+        expect(inputAsks(getSimRun('M')!, 'coin')).toEqual([]);
+        expect(inputAsks(getSimRun('M')!, null)).toHaveLength(1);
+        // control: no input declared, no table
+        expect(started(buildLookup(ROLES, TURNSTILE)).inputs).toBeUndefined();
+    });
+
+    it('an action that assigns an input: a read-only defect at Reset and a read-only halt that says input (mutant: the checks for derived only)', () => {
+        const lookup = decision('D.[decision]', 'else', 'D.[decision] := true');
+        const r = reset(lookup);
+        expect(r.compileDefects?.filter(d => d.role === 'action').map(d => [d.element, d.reason, d.detail])).toEqual([
+            ['e1', 'read-only', "'decision' is an input and cannot be assigned"],
+        ]);
+        const out = eps(lookup);
+        expect(out.outcome?.kind).toBe('halted');
+        const halt = getSimRun('M')!.halt!;
+        expect(haltMessage(halt, lookup, { action: 'A_effect' })).toBe("Halted: the transition action of e1 failed: 'decision' is an input and cannot be assigned.");
+    });
+
+    it('a target the run resolves whose name only an input has: the same read-only defect at Reset (mutant: left to the run)', () => {
+        const SEEN = { name: 'seen', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' };
+        const lookup = decision('D.[decision]', 'else', '(if model.[seen] then D else S).[decision] := true', [SEEN]);
+        expect(reset(lookup).compileDefects?.filter(d => d.role === 'action').map(d => [d.element, d.reason, d.detail])).toEqual([
+            ['e1', 'read-only', "'decision' is an input and cannot be assigned"],
+        ]);
+    });
+});
+
+describe('R-SIM-90: Guard, Action, Entry and Exit hold a list of attributes (P-2026-09-29-0010)', () => {
+    /** visits on every place, 0..3; f a global boolean, initially `f`. */
+    const decls = (f = false) => JSON.stringify({ v: 1, attrs: [
+        { name: 'visits', metaclass: 'C_Place', space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' },
+        { name: 'f', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: String(f) },
+    ] });
+    const PETRI = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simArcSource: 'R_src', simArcTarget: 'R_tgt',
+        simInitialMarking: 'A_tokens', simBound: '3',
+    };
+    type Slots = Record<string, unknown[]>;
+    const arc = (s: string, t: string): Obj => ({ cls: 'C_Arc', slots: { R_src: [s], R_tgt: [t] } });
+
+    function petri(roles: Record<string, unknown>, objects: Record<string, Obj>, f = false): Lookup {
+        const lookup = buildLookup({ ...PETRI, simStateAttributes: decls(f), ...roles }, objects);
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        lookup.M.name = 'multi';
+        return lookup;
+    }
+    /** p1 (1 token) -a1-> t1 -a2-> p2, t1 and p2 with the slots given. */
+    const line = (roles: Record<string, unknown>, t1: Slots = {}, p2: Slots = {}) => petri(roles, {
+        p1: { cls: 'C_Place', slots: { A_tokens: [1] } }, p2: { cls: 'C_Place', slots: p2 }, t1: { cls: 'C_PTr', slots: t1 },
+        a1: arc('p1', 't1'), a2: arc('t1', 'p2'),
+    });
+    /** p1 (1 token) feeds tA -> pA and tE -> pE: one preset, so an `else` on tE is the complement of tA. */
+    const pair = (roles: Record<string, unknown>, tA: Slots, tE: Slots, f = false) => petri(roles, {
+        p1: { cls: 'C_Place', slots: { A_tokens: [1] } }, pA: { cls: 'C_Place' }, pE: { cls: 'C_Place' },
+        tA: { cls: 'C_PTr', slots: tA }, tE: { cls: 'C_PTr', slots: tE },
+        a1: arc('p1', 'tA'), a2: arc('tA', 'pA'), a3: arc('p1', 'tE'), a4: arc('tE', 'pE'),
+    }, f);
+
+    const record = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record(lookup)).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const eps = (lookup: Lookup) => pressInput('M', null, undefined, lookup, 'ε');
+    const status = () => {
+        const run = getSimRun('M')!;
+        return netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+    };
+    const label = (e: string | null) => (e === null ? 'ε' : e);
+    const GUARDS = '["A_guard","A_cond"]';
+
+    it('the silent failure of the discovery (§4.3): a list is never read as one pointer, so its guards never degrade to true', () => {
+        const lookup = line({ simGuard: GUARDS }, { A_guard: ['false'], A_cond: ['false'] });
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        expect(status()).toBe('Deadlock');
+    });
+
+    it('the guard is the conjunction of every Guard attribute: one false blocks the transition, the reason names both texts (mutants: any-of; the first attribute only)', () => {
+        for (const [a, b] of [['true', 'false'], ['false', 'true']]) {
+            const lookup = line({ simGuard: GUARDS }, { A_guard: [a], A_cond: [b] });
+            reset(lookup);
+            expect(status(), `${a} and ${b}`).toBe('Deadlock');
+            expect(stopReason(getSimRun('M'), lookup, label, ['A_guard', 'A_cond'])?.title).toBe(`ε: t1 (p1 → p2) false [${a}] [${b}]`);
+            expect(inputReason(getSimRun('M'), null, lookup, label, ['A_guard', 'A_cond'])?.full).toBe(`ε: t1 (p1 → p2) false [${a}] [${b}]`);
+        }
+        // control: both true, it fires
+        const both = line({ simGuard: GUARDS }, { A_guard: ['true'], A_cond: ['true'] });
+        reset(both);
+        expect(eps(both).outcome?.kind).toBe('fired');
+    });
+
+    it('the raw key, as a caller held it before R-SIM-90, gives the same reason as the decoded list (mutant: a string read as one pointer)', () => {
+        const lookup = line({ simGuard: GUARDS }, { A_guard: ['true'], A_cond: ['false'] });
+        reset(lookup);
+        expect(stopReason(getSimRun('M'), lookup, label, GUARDS)?.title).toBe('ε: t1 (p1 → p2) false [true] [false]');
+        // control: a plain id reads its one text, as before
+        expect(stopReason(getSimRun('M'), lookup, label, 'A_cond')?.title).toBe('ε: t1 (p1 → p2) false [false]');
+    });
+
+    it('a Guard attribute the transition does not carry contributes true (R-SIM-17) (mutant: an attribute not carried read as false)', () => {
+        const lookup = line({ simGuard: '["A_guard","A_other"]' }, { A_guard: ['true'] });
+        expect(reset(lookup).compileDefects).toEqual([]);
+        expect(eps(lookup).outcome?.kind).toBe('fired');
+        // control: the attribute it carries still counts
+        const off = line({ simGuard: '["A_guard","A_other"]' }, { A_guard: ['false'] });
+        reset(off);
+        expect(status()).toBe('Deadlock');
+    });
+
+    it('a defect in the second Guard attribute is a Reset defect of the site, with its own text, and wins over a false one (mutants: the first attribute only; false before a defect)', () => {
+        const lookup = line({ simGuard: GUARDS }, { A_guard: ['true'], A_cond: ['a b'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['t1', 'guard', 'parse-error', 'a b']]);
+        expect(status()).toBe('Deadlock');
+        // the site's conjunction as the core's over sites: a defect first, then false
+        const both = line({ simGuard: GUARDS }, { A_guard: ['false'], A_cond: ['a b'] });
+        reset(both);
+        expect(eps(both).outcome?.label.evaluated.map(e => [e.transition, e.outcome.kind])).toEqual([['t1', 'defect']]);
+    });
+
+    it('the actions of a site are the union of its Action attributes, in attribute order; one not carried assigns nothing (mutant: the first attribute only)', () => {
+        const lookup = line({ simAction: '["A_actions","A_more","A_none"]' }, { A_actions: ['p2.[visits] := 1'], A_more: ['model.[f] := true'] });
+        expect(reset(lookup).compileDefects).toEqual([]);
+        const out = eps(lookup);
+        expect(out.outcome?.label.assignments).toEqual([{ element: 'p2', attr: 'visits', value: 1 }, { element: 'M', attr: 'f', value: true }]);
+        expect(out.lastStepTitle).toBe('ε: t1 (p1 → p2) fired\nassignments: p2.visits = 1, multi.f = true');
+    });
+
+    it('two Entry attributes of one place writing one target: the Reset defect double-assignment, then the halt (answer 4)', () => {
+        const lookup = line({ simEntry: '["A_entry","A_entry2"]' }, {}, { A_entry: ['p2.[visits] := 1'], A_entry2: ['p2.[visits] := 2'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['t1', 'action', 'double-assignment']]);
+        eps(lookup);
+        expect(haltMessage(getSimRun('M')!.halt!, lookup, { entries: ['A_entry', 'A_entry2'] })).toBe('Halted: visits of p2 is assigned twice in one step.');
+        // control: distinct targets fire
+        const distinct = line({ simEntry: '["A_entry","A_entry2"]' }, {}, { A_entry: ['p2.[visits] := 1'], A_entry2: ['p1.[visits] := 2'] });
+        expect(reset(distinct).compileDefects).toEqual([]);
+        expect(eps(distinct).outcome?.kind).toBe('fired');
+    });
+
+    it('the halt title quotes the text of the second Action attribute that stopped the run (mutant: the halt reads the first attribute only)', () => {
+        const lookup = line({ simAction: '["A_actions","A_more"]' }, { A_actions: ['p2.[visits] := 1'], A_more: ['p1.[count] := 1'] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['t1', 'action', 'undeclared', 'p1.[count] := 1']]);
+        eps(lookup);
+        const halt = getSimRun('M')!.halt!;
+        const text = haltMessage(halt, lookup, { actions: ['A_actions', 'A_more'] });
+        expect(text).toBe("Halted: the transition action of t1 failed: 'count' is not declared on p1.");
+        expect(haltTitle(halt, lookup, { actions: ['A_actions', 'A_more'] })).toBe(`${text} [p1.[count] := 1]`);
+        // the raw key as the panel passed it before R-SIM-90 reads the same
+        expect(haltTitle(halt, lookup, { action: '["A_actions","A_more"]' })).toBe(`${text} [p1.[count] := 1]`);
+    });
+
+    it('else in the second Guard attribute alone: the complement of its sibling, never compiled as a guard (answer 3; mutant: else read in the first attribute only)', () => {
+        const lookup = pair({ simGuard: GUARDS }, { A_guard: ['false'] }, { A_cond: ['else'] });
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        expect(r.run.net.transitions.find(t => t.id === 'tE')).toMatchObject({ elseOf: ['tA'], guardSites: [] });
+        expect(eps(lookup).lastStep).toBe('ε: tE (p1 → pE) fired');
+    });
+
+    it('else beside another Guard attribute: the complement first, then that guard, conjoined (answer 3, G7; mutant: an else that drops the other conjuncts)', () => {
+        const tE = { A_guard: ['model.[f]'], A_cond: ['else'] };
+        const shut = pair({ simGuard: GUARDS }, { A_guard: ['false'] }, tE, false);
+        const r = reset(shut);
+        expect(r.compileDefects).toEqual([]);
+        expect(r.run.net.transitions.find(t => t.id === 'tE')).toMatchObject({ elseOf: ['tA'], guardSites: ['tE'] });
+        expect(status()).toBe('Deadlock');
+        expect(stopReason(getSimRun('M'), shut, label, ['A_guard', 'A_cond'])?.title).toBe('ε: tA (p1 → pA) false [false]; tE (p1 → pE) false [model.[f]]');
+        // control: the other guard true, the else fires
+        const open = pair({ simGuard: GUARDS }, { A_guard: ['false'] }, tE, true);
+        reset(open);
+        expect(eps(open).lastStep).toBe('ε: tE (p1 → pE) fired');
+        // control: the sibling true, the else is false whatever its other guard
+        const sibling = pair({ simGuard: GUARDS }, { A_guard: ['true'] }, tE, true);
+        reset(sibling);
+        expect(eps(sibling).lastStep).toBe('ε: tA (p1 → pA) fired');
+    });
+
+    it('an else with no sibling is named by the edge whose second attribute says it (R7 over every Guard attribute)', () => {
+        const lookup = line({ simGuard: GUARDS }, { A_cond: [' else '] });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.source])).toEqual([['t1', 'guard', 'else-alone', ' else ']]);
+    });
+});
+
+describe('R-SIM-94: the globals of a model are declared in its bag (P-2026-09-29-0110)', () => {
+    const COUNT_REC = { name: 'count', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' };
+    const COUNT = JSON.stringify({ v: 1, attrs: [COUNT_REC] });
+    const COUNT5 = JSON.stringify({ v: 1, attrs: [{ ...COUNT_REC, domain: { kind: 'range', min: 0, max: 5 } }] });
+    const FLOW_B = {
+        simNode: 'C_AN', simTransition: 'C_CF', simSource: 'R_source', simNextState: 'R_target', simInitial: 'C_IN', simFork: 'C_Fork',
+        simJoin: 'C_Join', simTerminal: 'C_Fin', simGuard: 'A_guard', simAction: 'A_effect', simProfile: 'flowchart',
+    };
+
+    /**
+     * Flow B of the demo (docs/demo/models_2026_simulator_demo.md §2.4), the fixture of the discovery's probe
+     * (P-2026-09-29-0011 §4): `count` declared in the metamodel's bag (`m2`), in the model's (`m1`), in both or in neither.
+     */
+    function flowB(m2: string | undefined, m1: string | undefined, bag: Record<string, unknown> = FLOW_B): Lookup {
+        const objects: Record<string, Obj> = {
+            i0: { cls: 'C_IN' }, work: { cls: 'C_Act' }, d1: { cls: 'C_Dec' }, fk: { cls: 'C_Fork' }, left: { cls: 'C_Act' },
+            right: { cls: 'C_Act' }, jn: { cls: 'C_Join' }, fin: { cls: 'C_Fin' },
+        };
+        const wires: Array<[string, string, string]> = [['f1', 'i0', 'work'], ['f2', 'work', 'd1'], ['f3', 'd1', 'work'], ['f4', 'd1', 'fk'],
+            ['f5', 'fk', 'left'], ['f6', 'fk', 'right'], ['f7', 'left', 'jn'], ['f8', 'right', 'jn'], ['f9', 'jn', 'fin']];
+        const guards: Record<string, string> = { f3: 'model.[count] < 2', f4: 'model.[count] >= 2' };
+        for (const [e, src, tgt] of wires) {
+            objects[e] = { cls: 'C_CF', slots: {
+                R_source: [src], R_target: [tgt], ...(guards[e] ? { A_guard: [guards[e]] } : {}),
+                ...(e === 'f2' ? { A_effect: ['model.[count] := model.[count] + 1'] } : {}),
+            } };
+        }
+        const lookup = buildLookup({ ...bag, ...(m2 !== undefined ? { simStateAttributes: m2 } : {}) }, objects);
+        lookup.C_AN = { className: 'DClass', id: 'C_AN', name: 'ActivityNode', extends: [], abstract: true };
+        for (const [id, name] of [['C_IN', 'InitialNode'], ['C_Act', 'Activity'], ['C_Dec', 'Decision'], ['C_Fork', 'Fork'], ['C_Join', 'Join'], ['C_Fin', 'FinalNode']]) {
+            lookup[id] = { className: 'DClass', id, name, extends: ['C_AN'] };
+        }
+        lookup.C_CF = { className: 'DClass', id: 'C_CF', name: 'ControlFlow', extends: [] };
+        for (const id of ['R_source', 'R_target']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        lookup.MM.name = 'DemoFlowB';
+        lookup.M.name = 'demoFlowB';
+        lookup.M._state = m1 !== undefined ? { simStateAttributes: m1 } : {};
+        return lookup;
+    }
+
+    const recordOf = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(recordOf(lookup)).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    /** Reset, then ε until the run stops (at most 12): the readings of the demo script. */
+    const scene = (lookup: Lookup) => {
+        const r = reset(lookup);
+        const first = markingLine(r.run.net.initial, r.run.net, lookup).line;
+        const lines: string[] = [];
+        let status = 'Running';
+        for (let i = 0; i < 12; i++) {
+            const run = getSimRun('M')!;
+            status = netRunStatus(run.net, run.config, run.alphabet, run.guards, run.halt);
+            if (status !== 'Running') break;
+            lines.push(pressInput('M', null, undefined, lookup, 'ε').lastStep ?? '');
+        }
+        const run = getSimRun('M')!;
+        return {
+            defects: defectsLine(r.run.net, lookup, r.compileDefects), first, steps: lines.length, status,
+            final: markingLine(run.config.state, run.net, lookup).line,
+        };
+    };
+    const S1 = { defects: null, first: 'Marking: i0 · count = 0', steps: 6, status: 'Terminated', final: 'Marking: fin · count = 2' };
+
+    it("S1, the metamodel's key (the demo today): unchanged, 6 steps to Terminated with count = 2 (control)", () => {
+        expect(scene(flowB(COUNT, undefined))).toEqual(S1);
+    });
+
+    it("S2, the model's key only: the same readings as S1, no undeclared count (mutant: the model's key not read)", () => {
+        expect(scene(flowB(undefined, COUNT))).toEqual(S1);
+    });
+
+    it("both keys: the model's record shadows the metamodel's, no twice, the model's domain held (mutant: no shadow)", () => {
+        const lookup = flowB(COUNT5, COUNT);
+        const r = reset(lookup);
+        expect(r.compileDefects).toEqual([]);
+        expect(r.run.net.declared.get('M')?.get('count')?.domain).toEqual({ kind: 'range', min: 0, max: 3 });
+        expect(scene(flowB(COUNT5, COUNT))).toEqual(S1);
+    });
+
+    it("a model record naming a metaclass is a record defect, named and said to be the model's; the rest runs", () => {
+        const bound = JSON.stringify({ v: 1, attrs: [COUNT_REC, { ...COUNT_REC, name: 'visits', metaclass: 'C_Act' }] });
+        const r = reset(flowB(undefined, bound));
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.detail])).toEqual([['visits', 'declaration', 'a model declares globals only']]);
+        expect(r.run.net.attributes.map(d => d.name)).toEqual(['count']);
+    });
+
+    it("the model's key defects say which bag: model state attributes, model record N (mutant: labelled as the metamodel's)", () => {
+        const unreadable = reset(flowB(COUNT, 'not json'));
+        expect(unreadable.compileDefects?.map(d => [d.element, d.detail])).toEqual([['model state attributes', 'not JSON']]);
+        const nameless = reset(flowB(COUNT, JSON.stringify({ v: 1, attrs: [{ space: 'semantic' }] })));
+        expect(nameless.compileDefects?.map(d => [d.element, d.detail])).toEqual([['model record 1', 'no name']]);
+        // control: the metamodel's own keep their words
+        const m2 = reset(flowB('not json', COUNT));
+        expect(m2.compileDefects?.map(d => d.element)).toEqual(['state attributes']);
+    });
+
+    it("a profile with the declarations off drops the model's key too, as the metamodel's (R-SIM-78) (mutant: the model's key read when off)", () => {
+        const sm = buildLookup({ ...ROLES, simProfile: 'stateMachine', simStateAttributes: COUNT }, TURNSTILE);
+        sm.M._state = { simStateAttributes: COUNT };
+        const r = startRun(sm, 'M', 'MM', 'P', spyBuilder().build);
+        expect(r.kind === 'started' && r.run.net.attributes).toEqual([]);
+    });
+
+    it("S5, runSignature moves on an edit of the model's sim key, not on its other keys (mutant: the model's term dropped)", () => {
+        const base = runSignature(flowB(COUNT, COUNT), 'M', 'MM');
+        expect(runSignature(flowB(COUNT, COUNT5), 'M', 'MM')).not.toBe(base);
+        // control: an edit of the metamodel's key moves it, as before
+        expect(runSignature(flowB(COUNT5, COUNT), 'M', 'MM')).not.toBe(base);
+        const other = flowB(COUNT, COUNT);
+        other.M._state.generatedBy = 'jjtl';
+        expect(runSignature(other, 'M', 'MM')).toBe(base);
+    });
+
+    it("with the declarations off an edit of the model's key leaves the signature, as an off key of the metamodel does", () => {
+        const sm = (m1: string) => {
+            const l = buildLookup({ ...ROLES, simProfile: 'stateMachine' }, TURNSTILE);
+            l.M._state = { simStateAttributes: m1 };
+            return runSignature(l, 'M', 'MM');
+        };
+        expect(sm(COUNT5)).toBe(sm(COUNT));
+    });
+
+    it("the Reset line's undeclared globals: count, named once, from guards and actions; a name undeclared on an element is not the model's (mutant: every undeclared name)", () => {
+        const lookup = flowB(undefined, undefined);
+        const r = reset(lookup);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe(
+            "3 defects: f3 guard (undeclared 'count'); f4 guard (undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).");
+        expect(undeclaredGlobals(r.compileDefects ?? [], lookup, 'M')).toEqual(['count']);
+        expect(undeclaredGlobals([
+            { element: 'f2', role: 'action', reason: 'undeclared', detail: "'x' is not declared on work", source: '', short: "undeclared 'x' on work" },
+        ], lookup, 'M')).toEqual([]);
+        // declared in the model, nothing left to declare
+        expect(undeclaredGlobals(reset(flowB(undefined, COUNT)).compileDefects ?? [], lookup, 'M')).toEqual([]);
+    });
+
+    it("the Data dialog is globals only: its new rows, typed or taken from the Reset line, have no metaclass (mutant: a new row bound)", () => {
+        expect(newGlobalRow([])).toEqual({ name: 'x1', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, initial: 'false' });
+        expect(newGlobalRow([newGlobalRow([])]).name).toBe('x2');
+        const stored = [{ ...COUNT_REC } as any];
+        const rows = modelDataRows(stored, ['count', 'paid']);
+        expect(rows.map(r => [r.name, r.metaclass])).toEqual([['count', null], ['paid', null]]);
+        expect(rows[0]).toBe(stored[0]);
+        expect(modelDataRows(stored, [])).toEqual(stored);
+    });
+
+    it("the Data dialog's Apply is one state assignment of the model's key alone: one set_state, one undo step (mutant: the key and the profile written)", () => {
+        const rows = modelDataRows([], ['count']);
+        const patch = modelDataPatch(rows);
+        expect(Object.keys(patch)).toEqual(['simStateAttributes']);
+        expect(patch.simStateAttributes).toBe('{"v":1,"attrs":[{"name":"count","metaclass":null,"space":"semantic","domain":{"kind":"boolean"},"initial":"false"}]}');
+    });
+
+    it("the Data dialog's Apply interrupts a run of the model: the patch, merged into the model's bag as set_state merges it, moves the signature (mutant: the signature term dropped)", () => {
+        const lookup = flowB(undefined, COUNT);
+        const r = reset(lookup);
+        expect(runSignature(lookup, 'M', 'MM')).toBe(r.run.signature);
+        lookup.M._state = { ...lookup.M._state, ...modelDataPatch([{ ...COUNT_REC, domain: { kind: 'range', min: 0, max: 5 } } as any]) };
+        expect(runSignature(lookup, 'M', 'MM')).not.toBe(r.run.signature);
+    });
+});
+
+describe('the faces of Accepting and the outputs (P-2026-09-29-0300, R-SIM-91, R-SIM-92)', () => {
+    const EMPTY_RECORD = () => spyBuilder(() => ({ instances: [], classes: [] })).build;
+    const reset = (lookup: Lookup) => simReset('M', started(lookup, EMPTY_RECORD()));
+    const current = () => getSimRun('M')!;
+    const mark = () => acceptingMark(current().net, current().config.state);
+    const output = (lookup: Lookup) => outputLine(current().config.state, current().net, lookup);
+
+    /** DemoDFA of the discovery §3.8 on the test metamodel: strings over {a, b} ending in b. */
+    function dfaLookup(bag: Record<string, unknown>): Lookup {
+        const lookup = buildLookup(bag, {
+            q0: { cls: 'C_Init', slots: { R_out: ['t00', 't01'] } },
+            q1: { cls: 'C_Acc', slots: { R_out: ['t10', 't11'] } },
+            a: { cls: 'C_Event', slots: { A_label: ['a'] } },
+            b: { cls: 'C_Event', slots: { A_label: ['b'] } },
+            t00: { cls: 'C_Trans', slots: { R_next: ['q0'], R_trigger: ['a'] } },
+            t01: { cls: 'C_Trans', slots: { R_next: ['q1'], R_trigger: ['b'] } },
+            t10: { cls: 'C_Trans', slots: { R_next: ['q0'], R_trigger: ['a'] } },
+            t11: { cls: 'C_Trans', slots: { R_next: ['q1'], R_trigger: ['b'] } },
+        });
+        lookup.C_Acc = { className: 'DClass', id: 'C_Acc', name: 'Accepting', extends: ['C_State'] };
+        return lookup;
+    }
+    const DFA_BAG = { ...ROLES, simAccepting: 'C_Acc', simProfile: 'dfa' };
+
+    /** The turnstile of step 1 with an `out` slot on its states (Moore) or on its transitions (Mealy). */
+    function outLookup(bag: Record<string, unknown>, outs: Record<string, unknown[]>, extra: Record<string, Obj> = {}): Lookup {
+        const objects: Record<string, Obj> = { ...TURNSTILE, ...extra };
+        for (const [id, values] of Object.entries(outs)) objects[id] = { ...objects[id], slots: { ...objects[id].slots, A_out: values } };
+        const lookup = buildLookup(bag, objects);
+        lookup.A_out = { className: 'DAttribute', id: 'A_out', name: 'out' };
+        return lookup;
+    }
+    const MOORE_BAG = { ...ROLES, simStateOutput: 'A_out', simProfile: 'moore' };
+    const MEALY_BAG = { ...ROLES, simTransitionOutput: 'A_out', simProfile: 'mealy' };
+
+    it('the status mark reads `accepting` on the accepting state only, the run going on (killed by a mark that ignores σ, or none)', () => {
+        const lookup = dfaLookup(DFA_BAG);
+        reset(lookup);
+        expect(mark()).toBeNull();
+        pressInput('M', 'b', undefined, lookup, 'b');
+        expect(getSimActiveIds('M')).toEqual(['q1']);
+        expect(runStatus(current())).toBe('Running');
+        expect(mark()).toBe('accepting');
+        pressInput('M', 'b', undefined, lookup, 'b');
+        expect(mark()).toBe('accepting');
+        pressInput('M', 'a', undefined, lookup, 'a');
+        expect(mark()).toBeNull();
+    });
+
+    it('no mark without the role, or with the role off; SM then DFA reads Running · accepting, not Terminated (S5, R-SIM-86)', () => {
+        const pressB = (lookup: Lookup) => { reset(lookup); pressInput('M', 'b', undefined, lookup, 'b'); };
+        pressB(dfaLookup(ROLES));
+        expect(getSimActiveIds('M')).toEqual(['q1']);
+        expect(mark()).toBeNull();
+        // State machine turns Accepting off: the key is set and never reaches the net
+        pressB(dfaLookup({ ...ROLES, simAccepting: 'C_Acc', simTerminal: 'C_Acc', simProfile: 'stateMachine' }));
+        expect([runStatus(current()), mark()]).toEqual(['Terminated', null]);
+        // DFA after State machine: Terminal left in the bag, off under DFA
+        pressB(dfaLookup({ ...DFA_BAG, simTerminal: 'C_Acc' }));
+        expect([runStatus(current()), mark()]).toEqual(['Running', 'accepting']);
+    });
+
+    it('Moore: the Output line from Reset, the marked state\'s value, then the next one (killed by listing every place)', () => {
+        const lookup = outLookup(MOORE_BAG, { Locked: ['red'], Unlocked: ['green'] });
+        reset(lookup);
+        expect(output(lookup)).toEqual({ line: 'Output: red', title: 'Output: red' });
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect(output(lookup)).toEqual({ line: 'Output: green', title: 'Output: green' });
+    });
+
+    it('Moore: `Output: none` on a marked state with no value; two values joined; several marked states named (killed by dropping the none)', () => {
+        const none = outLookup(MOORE_BAG, { Locked: ['red'] });
+        reset(none);
+        pressInput('M', 'coin', undefined, none, 'Coin');
+        expect(output(none)?.line).toBe('Output: none');
+        const two = outLookup(MOORE_BAG, { Locked: ['red', 'buzz'] });
+        reset(two);
+        expect(output(two)?.line).toBe('Output: red, buzz');
+        // Two Init states hold a token each: each output is named after its state
+        const both = outLookup(MOORE_BAG, { Locked: ['red'], Locked2: ['amber'] }, { Locked2: { cls: 'C_Init' } });
+        reset(both);
+        expect(output(both)?.line).toBe('Output: Locked red; Locked2 amber');
+    });
+
+    it('Moore: no Output line without the role, or with the role off (killed by a line on every run)', () => {
+        const plain = outLookup(ROLES, { Locked: ['red'] });
+        reset(plain);
+        expect(output(plain)).toBeNull();
+        const off = outLookup({ ...MOORE_BAG, simProfile: 'stateMachine' }, { Locked: ['red'] });
+        reset(off);
+        expect(output(off)).toBeNull();
+    });
+
+    it('Mealy: «Last step» reads input / output first, so the clamp never hides it; its title has an output line (killed by dropping the output)', () => {
+        const lookup = outLookup(MEALY_BAG, { tCoin: ['unlock'], tPushU: ['lock', 'beep'] });
+        reset(lookup);
+        const coin = pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect(coin.lastStep).toBe('Coin / unlock: tCoin (Locked → Unlocked) fired');
+        expect(coin.lastStepTitle).toBe('Coin / unlock: tCoin (Locked → Unlocked) fired\noutput: unlock');
+        const push = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect(push.lastStep).toBe('Push / lock, beep: tPushU (Unlocked → Locked) fired');
+        expect(push.lastStepTitle).toBe('Push / lock, beep: tPushU (Unlocked → Locked) fired\noutput: lock, beep');
+        // tPushL has no value: no suffix, no line
+        const bare = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect([bare.lastStep, bare.lastStepTitle]).toEqual(['Push: tPushL (Locked → Locked) fired', 'Push: tPushL (Locked → Locked) fired']);
+    });
+
+    it('Mealy: no output on a halted step (killed by the output on halted), nor without the role or with it off', () => {
+        const MERGE: Record<string, Obj> = {
+            A: { cls: 'C_Init', slots: { R_out: ['ta'] } },
+            B: { cls: 'C_Init', slots: { R_out: ['tb'] } },
+            C: { cls: 'C_State' },
+            ta: { cls: 'C_Trans', slots: { R_next: ['C'], A_out: ['unlock'] } },
+            tb: { cls: 'C_Trans', slots: { R_next: ['C'], A_out: ['lock'] } },
+        };
+        const lookup = buildLookup({ ...ROLES, simTransitionOutput: 'A_out' }, MERGE);
+        reset(lookup);
+        expect(pressInput('M', null, 'ta', lookup, 'ε').lastStep).toBe('ε / unlock: ta (A → C) fired');
+        const halted = pressInput('M', null, undefined, lookup, 'ε');
+        expect(halted.outcome?.kind).toBe('halted');
+        expect([halted.lastStep, halted.lastStepTitle]).toEqual(['ε: tb (B → C) halted the run', 'ε: tb (B → C) halted the run']);
+        for (const bag of [ROLES, { ...MEALY_BAG, simProfile: 'stateMachine' }]) {
+            const l = outLookup(bag, { tCoin: ['unlock'] });
+            reset(l);
+            expect(pressInput('M', 'coin', undefined, l, 'Coin').lastStep).toBe('Coin: tCoin (Locked → Unlocked) fired');
+        }
+    });
+
+    it('the demo presets: every key of the three set, no face on the M1 lines (State machine reads none of them)', () => {
+        const lookup = outLookup(
+            { ...ROLES, simAccepting: 'C_Init', simStateOutput: 'A_out', simTransitionOutput: 'A_out', simProfile: 'stateMachine' },
+            { Locked: ['red'], Unlocked: ['green'], tCoin: ['unlock'] },
+        );
+        reset(lookup);
+        expect([mark(), output(lookup)]).toEqual([null, null]);
+        const coin = pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect([coin.lastStep, mark(), output(lookup)]).toEqual(['Coin: tCoin (Locked → Unlocked) fired', null, null]);
+        expect(markingLine(current().config.state, current().net, lookup).line).toBe('Marking: Unlocked');
+    });
+});
+
+describe('R-SIM-100: Random on an ε list, the seed of the run, the trace (P-2026-09-29-1840)', () => {
+    /** A choice at A every other step: A -t1-> B, A -t2-> C, then B -t3-> A and C -t4-> A, forced. */
+    const CYCLE: Record<string, Obj> = {
+        A: { cls: 'C_Init', slots: { R_out: ['t1', 't2'] } },
+        B: { cls: 'C_State', slots: { R_out: ['t3'] } },
+        C: { cls: 'C_State', slots: { R_out: ['t4'] } },
+        t1: { cls: 'C_Trans', slots: { R_next: ['B'] } },
+        t2: { cls: 'C_Trans', slots: { R_next: ['C'] } },
+        t3: { cls: 'C_Trans', slots: { R_next: ['A'] } },
+        t4: { cls: 'C_Trans', slots: { R_next: ['A'] } },
+    };
+    const empty = () => spyBuilder(() => ({ instances: [] })).build;
+    const reset = (lookup: Lookup, seed?: number) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', empty(), seed);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r.run;
+    };
+    /** k ε presses, every list answered by Random: the run's trace. */
+    const playRandom = (lookup: Lookup, k: number) => {
+        for (let i = 0; i < k; i++) {
+            const p = pressInput('M', null, undefined, lookup, 'ε');
+            if (p.pending) pressRandom('M', p.pending, lookup);
+        }
+        return getSimRun('M')!.trace!;
+    };
+
+    it('Reset draws the seed once with crypto.getRandomValues, never Math.random; a seed given is kept; draws 0, trace empty (mutant: a constant seed)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        const fromCrypto = vi.spyOn(globalThis.crypto, 'getRandomValues');
+        const fromMath = vi.spyOn(Math, 'random');
+        try {
+            const drawn = reset(lookup);
+            expect(fromCrypto).toHaveBeenCalledTimes(1);
+            const seed = drawn.seed!;
+            expect(Number.isInteger(seed) && seed >= 0 && seed < 2 ** 32).toBe(true);
+            expect((fromCrypto.mock.results[0].value as Uint32Array)[0]).toBe(seed);
+            const given = reset(lookup, 3141592653);
+            expect(fromCrypto).toHaveBeenCalledTimes(1);
+            expect([given.seed, given.draws, given.trace]).toEqual([3141592653, 0, []]);
+            playRandom(lookup, 10);
+            expect(fromMath).not.toHaveBeenCalled();
+        } finally {
+            fromCrypto.mockRestore();
+            fromMath.mockRestore();
+        }
+    });
+
+    it('Random fires the drawn candidate: «ε (random)» in Last step, the seed in its title, origin random, one draw (mutants: the marker dropped; the seed line dropped)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 42);
+        const asked = pressInput('M', null, undefined, lookup, 'ε');
+        expect(asked.pending?.map(c => c.transition)).toEqual(['t1', 't2']);
+        const r = pressRandom('M', asked.pending!, lookup, undefined, () => 0.99);
+        expect(r.pending).toBeNull();
+        expect(r.lastStep).toBe('ε (random): t2 (A → C) fired');
+        expect(r.lastStepTitle).toBe('ε (random): t2 (A → C) fired\nseed 42');
+        expect(getSimActiveIds('M')).toEqual(['C']);
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 't2', kind: 'fired', origin: 'random' }]);
+        expect(getSimRun('M')!.draws).toBe(1);
+        // a hand choice keeps its line and its title: no marker, no seed
+        pressInput('M', null, undefined, lookup, 'ε');                 // C -t4-> A, forced
+        pressInput('M', null, undefined, lookup, 'ε');
+        const click = pressInput('M', null, 't1', lookup, 'ε');
+        expect([click.lastStep, click.lastStepTitle]).toEqual(['ε: t1 (A → B) fired', 'ε: t1 (A → B) fired']);
+    });
+
+    it('the list click records user, a forced press no origin, a quiescence none (mutants: a click recorded random; the origin not passed to the store)', () => {
+        const lookup = buildLookup(ROLES, { ...CYCLE, B: { cls: 'C_State' } });
+        reset(lookup, 1);
+        pressInput('M', null, undefined, lookup, 'ε');
+        pressInput('M', null, 't2', lookup, 'ε');
+        pressInput('M', null, undefined, lookup, 'ε');                 // C -t4-> A
+        pressInput('M', null, 't1', lookup, 'ε');
+        pressInput('M', null, undefined, lookup, 'ε');                 // B has no way out
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([
+            { event: null, selector: 't2', kind: 'fired', origin: 'user' },
+            { event: null, selector: 't4', kind: 'fired' },
+            { event: null, selector: 't1', kind: 'fired', origin: 'user' },
+            { event: null, selector: null, kind: 'quiescence' },
+        ]);
+        expect(getSimRun('M')!.draws).toBe(0);
+    });
+
+    it('without a stub the run\'s seed decides: draw k picks floor(uniform(seed, k) · 2); forced steps draw nothing (mutants: the stream restarted at every press; the pick of another seed)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 2026);
+        const trace = playRandom(lookup, 20);
+        const drawn = trace.filter(t => t.origin === 'random').map(t => t.selector);
+        expect(drawn).toEqual(Array.from({ length: 10 }, (_, k) => ['t1', 't2'][Math.floor(uniform(2026, k) * 2)]));
+        expect(trace.filter(t => t.origin === undefined)).toHaveLength(10);
+        expect(getSimRun('M')!.draws).toBe(10);
+        // control: the stream has both picks, so a pick that ignores the draw cannot pass
+        expect(new Set(drawn).size).toBe(2);
+    });
+
+    it('two runs with one seed give one trace; seed + 1 another (mutant: the seed ignored)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 2026);
+        const first = playRandom(lookup, 20);
+        reset(lookup, 2026);
+        const again = playRandom(lookup, 20);
+        expect(again).toEqual(first);
+        reset(lookup, 2027);
+        expect(playRandom(lookup, 20)).not.toEqual(first);
+    });
+
+    it('an event press is never random: Random fed an event\'s list commits nothing, the click on that list is the user\'s (mutants: a click recorded random; the origin not passed to the store)', () => {
+        const TWO_PUSH: Record<string, Obj> = {
+            ...TURNSTILE,
+            Locked: { cls: 'C_Init', slots: { R_out: ['tCoin', 'tPushL', 'tPushX'] } },
+            tPushX: { cls: 'C_Trans', slots: { R_next: ['Unlocked'], R_trigger: ['push'] } },
+        };
+        const lookup = buildLookup(ROLES, TWO_PUSH);
+        reset(lookup, 7);
+        const asked = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect(asked.pending?.map(c => c.transition).sort()).toEqual(['tPushL', 'tPushX']);
+        const drawn = pressRandom('M', asked.pending!, lookup);
+        expect(drawn.outcome?.kind).toBe('inadmissible');
+        expect([getSimRun('M')!.trace, getSimRun('M')!.draws]).toEqual([[], 0]);
+        pressInput('M', 'push', 'tPushX', lookup, 'Push');
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: 'push', selector: 'tPushX', kind: 'fired', origin: 'user' }]);
+    });
+
+    it('fewer than two candidates is not a list: Random draws nothing and commits nothing; no run, nothing', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 5);
+        const one = pressRandom('M', [{ transition: 't1', unsafe: null }], lookup, undefined, () => 0);
+        expect(one).toEqual({ pending: null, lastStep: null, outcome: null });
+        expect([getSimRun('M')!.trace, getSimRun('M')!.draws, getSimActiveIds('M')]).toEqual([[], 0, ['A']]);
+        __resetSimRunsForTests();
+        expect(pressRandom('M', [{ transition: 't1', unsafe: null }, { transition: 't2', unsafe: null }], lookup)).toEqual({ pending: null, lastStep: null, outcome: null });
+    });
+});
+
+describe('R-SIM-101: the run policy, Step under Random and Play (P-2026-09-29-1943)', () => {
+    /** A choice at A every other step: A -t1-> B, A -t2-> C, then B -t3-> A and C -t4-> A, forced. */
+    const CYCLE: Record<string, Obj> = {
+        A: { cls: 'C_Init', slots: { R_out: ['t1', 't2'] } },
+        B: { cls: 'C_State', slots: { R_out: ['t3'] } },
+        C: { cls: 'C_State', slots: { R_out: ['t4'] } },
+        t1: { cls: 'C_Trans', slots: { R_next: ['B'] } },
+        t2: { cls: 'C_Trans', slots: { R_next: ['C'] } },
+        t3: { cls: 'C_Trans', slots: { R_next: ['A'] } },
+        t4: { cls: 'C_Trans', slots: { R_next: ['A'] } },
+    };
+
+    /** Petri roles with inhibitor, weight and guard, k = 4, as DemoPetri is configured (demo script §2.2). */
+    const PETRI = {
+        simNode: 'C_Place', simTransition: 'C_PTr', simArc: 'C_Arc', simInhibitorArc: 'C_Inh', simArcSource: 'R_src',
+        simArcTarget: 'R_tgt', simInitialMarking: 'A_tokens', simArcWeight: 'A_w', simBound: '4', simGuard: 'A_guard',
+    };
+    function petri(objects: Record<string, Obj>, bound = '4'): Lookup {
+        const lookup = buildLookup({ ...PETRI, simBound: bound }, objects);
+        for (const id of ['C_Place', 'C_PTr', 'C_Arc', 'C_Inh']) lookup[id] = { className: 'DClass', id, name: id.slice(2), extends: [] };
+        for (const id of ['R_src', 'R_tgt']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_tokens = { className: 'DAttribute', id: 'A_tokens', name: 'tokens' };
+        lookup.A_w = { className: 'DAttribute', id: 'A_w', name: 'w' };
+        return lookup;
+    }
+    /** DemoPetri: p1 (2) -a1-> t1 -a2 ×2-> p2 -a3 ×2-> t2 -a4-> p3; lock (1) -a5-> t3; lock -i1-o t2; t2 `p3.[tokens] < 1`. */
+    const demoPetri = () => petri({
+        p1: { cls: 'C_Place', slots: { A_tokens: [2] } },
+        p2: { cls: 'C_Place' },
+        p3: { cls: 'C_Place' },
+        lock: { cls: 'C_Place', slots: { A_tokens: [1] } },
+        t1: { cls: 'C_PTr' },
+        t2: { cls: 'C_PTr', slots: { A_guard: ['p3.[tokens] < 1'] } },
+        t3: { cls: 'C_PTr' },
+        a1: { cls: 'C_Arc', slots: { R_src: ['p1'], R_tgt: ['t1'] } },
+        a2: { cls: 'C_Arc', slots: { R_src: ['t1'], R_tgt: ['p2'], A_w: [2] } },
+        a3: { cls: 'C_Arc', slots: { R_src: ['p2'], R_tgt: ['t2'], A_w: [2] } },
+        a4: { cls: 'C_Arc', slots: { R_src: ['t2'], R_tgt: ['p3'] } },
+        a5: { cls: 'C_Arc', slots: { R_src: ['lock'], R_tgt: ['t3'] } },
+        i1: { cls: 'C_Inh', slots: { R_src: ['lock'], R_tgt: ['t2'] } },
+    });
+
+    /** Flow B of the demo (§2.4): i0 -f1-> work -f2 {count += 1}-> d1, d1 -f3 [count < 2]-> work, d1 -f4 [count >= 2]-> fk, the fork, the join, fin. */
+    function flowB(): Lookup {
+        const COUNT = JSON.stringify({ v: 1, attrs: [{ name: 'count', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' }] });
+        const wires: Array<[string, string, string]> = [['f1', 'i0', 'work'], ['f2', 'work', 'd1'], ['f3', 'd1', 'work'], ['f4', 'd1', 'fk'],
+            ['f5', 'fk', 'left'], ['f6', 'fk', 'right'], ['f7', 'left', 'jn'], ['f8', 'right', 'jn'], ['f9', 'jn', 'fin']];
+        const guards: Record<string, string> = { f3: 'model.[count] < 2', f4: 'model.[count] >= 2' };
+        const objects: Record<string, Obj> = {
+            i0: { cls: 'C_IN' }, work: { cls: 'C_Act' }, d1: { cls: 'C_Dec' }, fk: { cls: 'C_Fork' }, left: { cls: 'C_Act' },
+            right: { cls: 'C_Act' }, jn: { cls: 'C_Join' }, fin: { cls: 'C_Fin' },
+        };
+        for (const [e, src, tgt] of wires) {
+            objects[e] = { cls: 'C_CF', slots: {
+                R_source: [src], R_target: [tgt], ...(guards[e] ? { A_guard: [guards[e]] } : {}),
+                ...(e === 'f2' ? { A_effect: ['model.[count] := model.[count] + 1'] } : {}),
+            } };
+        }
+        const lookup = buildLookup({
+            simNode: 'C_AN', simTransition: 'C_CF', simSource: 'R_source', simNextState: 'R_target', simInitial: 'C_IN', simFork: 'C_Fork',
+            simJoin: 'C_Join', simTerminal: 'C_Fin', simGuard: 'A_guard', simAction: 'A_effect', simStateAttributes: COUNT, simProfile: 'flowchart',
+        }, objects);
+        lookup.C_AN = { className: 'DClass', id: 'C_AN', name: 'ActivityNode', extends: [] };
+        for (const [id, name] of [['C_IN', 'InitialNode'], ['C_Act', 'Activity'], ['C_Dec', 'Decision'], ['C_Fork', 'Fork'], ['C_Join', 'Join'], ['C_Fin', 'FinalNode']]) {
+            lookup[id] = { className: 'DClass', id, name, extends: ['C_AN'] };
+        }
+        lookup.C_CF = { className: 'DClass', id: 'C_CF', name: 'ControlFlow', extends: [] };
+        for (const id of ['R_source', 'R_target']) lookup[id] = { className: 'DReference', id, name: id.slice(2) };
+        lookup.A_effect = { className: 'DAttribute', id: 'A_effect', name: 'effect' };
+        return lookup;
+    }
+
+    /** S -e1-> D; D -e2 [D.[decision]]-> A, D -e3 [else]-> B; `decision` an input of every State (R-SIM-88). */
+    function decision(): Lookup {
+        const DECISION = { name: 'decision', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+        return buildLookup({ ...ROLES, simGuard: 'A_guard', simTerminal: 'C_Final', simStateAttributes: JSON.stringify({ v: 1, attrs: [DECISION] }) }, {
+            S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+            D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+            A: { cls: 'C_Final' },
+            B: { cls: 'C_Final' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['D'] } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: ['D.[decision]'] } },
+            e3: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: ['else'] } },
+        });
+    }
+
+    /** The record of `buildEvalContext`: one handle per object of the model, instance names bound at the top. */
+    const recordOf = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup, seed?: number, record: () => Record<string, any> = recordOf(lookup)) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record).build, seed);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r.run;
+    };
+    const marking = (lookup: Lookup) => markingLine(getSimRun('M')!.config.state, getSimRun('M')!.net, lookup).line;
+    const status = () => runStatus(getSimRun('M')!);
+
+    /** One Play press as the panel runs it: a tick at a time, the steps carried to the next, until it stops (at most `cap` ticks). */
+    function play(lookup: Lookup, cap = 5000) {
+        let steps = 0;
+        for (let tick = 0; tick < cap; tick++) {
+            const r = playPress('M', lookup, steps);
+            steps = r.steps;
+            if (r.stop !== null) return { stop: r.stop, steps, press: r.press, ticks: tick + 1 };
+        }
+        throw new Error(`Play did not stop in ${cap} ticks`);
+    }
+
+    it('Step under Random opens no list: the drawn candidate fires, origin random, one draw; under Ask the list opens and nothing is committed (mutants: the policy not read; the draw applied under Ask)', () => {
+        const lookup = demoPetri();
+        reset(lookup, 2026);
+        const asked = pressStep('M', lookup);
+        expect(asked.pending?.map(c => c.transition)).toEqual(['t1', 't3']);
+        expect([asked.lastStep, getSimRun('M')!.trace]).toEqual([null, []]);
+        setSimPolicy('M', { choices: 'random' });
+        const drawn = pressStep('M', lookup, undefined, () => 0.99);
+        expect(drawn.pending).toBeNull();
+        expect(drawn.lastStep).toBe('ε (random): t3 (lock → ∅) fired');
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 't3', kind: 'fired', origin: 'random' }]);
+        expect(getSimRun('M')!.draws).toBe(1);
+        // a forced ε press under Random is today's: no marker, no draw
+        const flow = flowB();
+        reset(flow, 5);
+        setSimPolicy('M', { choices: 'random' });
+        expect(pressStep('M', flow).lastStep).toBe('ε: f1 (i0 → work) fired');
+        expect(getSimRun('M')!.draws).toBe(0);
+    });
+
+    it('the policy applies to ε only: under Random an event\'s list still opens (A3; mutant: the draw applied to every press)', () => {
+        const TWO_PUSH: Record<string, Obj> = {
+            ...TURNSTILE,
+            Locked: { cls: 'C_Init', slots: { R_out: ['tCoin', 'tPushL', 'tPushX'] } },
+            tPushX: { cls: 'C_Trans', slots: { R_next: ['Unlocked'], R_trigger: ['push'] } },
+        };
+        const lookup = buildLookup(ROLES, TWO_PUSH);
+        reset(lookup, 7, turnstileRecord);
+        setSimPolicy('M', { choices: 'random' });
+        const asked = pressInput('M', 'push', undefined, lookup, 'Push');
+        expect(asked.pending?.map(c => c.transition).sort()).toEqual(['tPushL', 'tPushX']);
+        expect(getSimRun('M')!.trace).toEqual([]);
+    });
+
+    it('playTick is pure and orders its stops: no run, the stopped statuses, k, an input, no ε candidate, a list under Ask, else press (mutants: k by >, each stop dropped)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        const run = reset(lookup, 1);
+        expect(playTick(undefined, { choices: 'random', k: 5 }, 0)).toEqual({ kind: 'stop', reason: 'cleared' });
+        expect(playTick(run, { choices: 'random', k: 3 }, 2)).toEqual({ kind: 'press' });
+        expect(playTick(run, { choices: 'random', k: 3 }, 3)).toEqual({ kind: 'stop', reason: 'limit' });
+        expect(playTick(run, { choices: 'ask', k: 3 }, 0)).toEqual({ kind: 'stop', reason: 'choice' });
+        // pure: the store is untouched
+        expect([getSimRun('M'), getSimRun('M')!.trace]).toEqual([run, []]);
+    });
+
+    it('at k Play stops, exactly k steps, the run still Running, «Play stopped at 100 steps»; a second press goes on (cyclic net; mutants: the counter not advanced; k by >)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 2026);
+        setSimPolicy('M', { choices: 'random' });
+        const first = play(lookup);
+        expect([first.stop, first.steps, first.press]).toEqual<[PlayStop, number, null]>(['limit', 100, null]);
+        expect(getSimRun('M')!.trace).toHaveLength(100);
+        expect(getSimRun('M')!.draws).toBe(50);
+        expect(status()).toBe('Running');
+        expect(playStopLine(first.stop, first.steps)).toBe('Play stopped at 100 steps');
+        const again = play(lookup);
+        expect([again.stop, again.steps]).toEqual(['limit', 100]);
+        expect(getSimRun('M')!.trace).toHaveLength(200);
+        // k is read from the policy: 7 stops at 7
+        reset(lookup, 2026);
+        setSimPolicy('M', { k: 7 });
+        expect(play(lookup)).toMatchObject({ stop: 'limit', steps: 7 });
+        expect(getSimRun('M')!.trace).toHaveLength(7);
+        expect(playStopLine('limit', 1)).toBe('Play stopped at 1 step');
+    });
+
+    it('Petri under Random ends in Deadlock at p2 ×2, p3 in 4 steps, three seeds (mutant: the stopped statuses not checked)', () => {
+        const lookup = demoPetri();
+        const traces: string[][] = [];
+        for (const seed of [1, 99, 2026]) {
+            reset(lookup, seed);
+            setSimPolicy('M', { choices: 'random' });
+            const r = play(lookup);
+            expect([r.stop, r.steps, r.press]).toEqual<[PlayStop, number, null]>(['Deadlock', 4, null]);
+            expect([status(), marking(lookup)]).toEqual(['Deadlock', 'Marking: p2 ×2, p3']);
+            expect(getSimRun('M')!.trace!.some(t => t.origin === 'random')).toBe(true);
+            expect(playStopLine(r.stop, r.steps)).toBeNull();
+            traces.push(getSimRun('M')!.trace!.map(t => t.selector ?? ''));
+        }
+        // control: the seeds draw different paths, so the four steps are not one fixed path
+        expect(new Set(traces.map(t => t.join())).size).toBeGreaterThan(1);
+    });
+
+    it('Flow B ends Terminated in 6 steps, under Ask as under Random, with no draw (mutant: the stopped statuses not checked)', () => {
+        for (const choices of ['ask', 'random'] as const) {
+            const lookup = flowB();
+            reset(lookup, 3);
+            setSimPolicy('M', { choices });
+            const r = play(lookup);
+            expect([r.stop, r.steps]).toEqual(['Terminated', 6]);
+            expect([status(), getSimRun('M')!.draws]).toEqual(['Terminated', 0]);
+        }
+    });
+
+    it('a halted run stops Play at the next tick: a drawn or forced step over the bound halts (mutant: Halted left out of the stops)', () => {
+        const lookup = petri({
+            p: { cls: 'C_Place', slots: { A_tokens: [1] } },
+            q: { cls: 'C_Place', slots: { A_tokens: [1] } },
+            tx: { cls: 'C_PTr' },
+            a1: { cls: 'C_Arc', slots: { R_src: ['p'], R_tgt: ['tx'] } },
+            a2: { cls: 'C_Arc', slots: { R_src: ['tx'], R_tgt: ['q'] } },
+            ty: { cls: 'C_PTr' },
+            a3: { cls: 'C_Arc', slots: { R_src: ['q'], R_tgt: ['ty'] } },
+            a4: { cls: 'C_Arc', slots: { R_src: ['ty'], R_tgt: ['q'] } },
+        }, '1');
+        reset(lookup, 4);
+        setSimPolicy('M', { choices: 'random' });
+        const r = play(lookup);
+        expect(getSimRun('M')!.halt).not.toBeNull();
+        expect([r.stop, status()]).toEqual(['Halted', 'Halted']);
+        expect(r.steps).toBe(getSimRun('M')!.trace!.length);
+    });
+
+    it('SM: no ε candidate while an event has one, Play waits for an event at 0 steps and commits nothing (mutant: the no-candidate stop dropped)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        reset(lookup, 8, turnstileRecord);
+        setSimPolicy('M', { choices: 'random' });
+        const r = play(lookup);
+        expect([r.stop, r.steps, r.press, r.ticks]).toEqual<[PlayStop, number, null, number]>(['event', 0, null, 1]);
+        expect([status(), getSimRun('M')!.trace]).toEqual(['Running', []]);
+        expect(playStopLine(r.stop, r.steps)).toBe('Play waits for an event');
+    });
+
+    it('an ε press that asks an input stops Play with the asks, nothing committed; Play never answers it (mutant: the input stop dropped)', () => {
+        const lookup = decision();
+        reset(lookup, 9);
+        setSimPolicy('M', { choices: 'random' });
+        const r = play(lookup);
+        expect([r.stop, r.steps]).toEqual(['input', 1]);
+        expect(r.press?.asks).toEqual([{ element: 'D', attr: 'decision', domain: { kind: 'boolean' } }]);
+        expect([r.press?.pending, r.press?.outcome]).toEqual([null, null]);
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([{ event: null, selector: 'e1', kind: 'fired' }]);
+        expect(playStopLine(r.stop, r.steps)).toBe('Play waits for an input');
+    });
+
+    it('under Ask Play stops at the first list and opens it, nothing committed (mutant: the list drawn under Ask)', () => {
+        const lookup = demoPetri();
+        reset(lookup, 10);
+        const r = play(lookup);
+        expect([r.stop, r.steps]).toEqual(['choice', 0]);
+        expect(r.press?.pending?.map(c => c.transition)).toEqual(['t1', 't3']);
+        expect([getSimRun('M')!.trace, marking(lookup)]).toEqual([[], 'Marking: lock, p1 ×2']);
+        expect(playStopLine(r.stop, r.steps)).toBeNull();
+    });
+
+    it('a cleared run stops Play at the next tick, nothing pressed (Stop, the R-SIM-34 interruption; mutant: the no-run stop dropped)', () => {
+        const lookup = buildLookup(ROLES, CYCLE);
+        reset(lookup, 11);
+        setSimPolicy('M', { choices: 'random' });
+        let steps = 0;
+        for (let i = 0; i < 3; i++) steps = playPress('M', lookup, steps).steps;
+        expect(steps).toBe(3);
+        simClear('M');
+        expect(playPress('M', lookup, steps)).toEqual({ stop: 'cleared', press: null, steps: 3 });
+        expect(getSimRun('M')).toBeUndefined();
+    });
+
+    it('every press of Play is ε: a spy on step sees event null on every call, and no call where only an event has a candidate (mutant: an event pressed)', () => {
+        const spy = vi.spyOn(netStepModule, 'step');
+        try {
+            // Locked -ε-> Unlocked -ε-> Locked beside the turnstile's coin and push: both kinds of input have candidates
+            const MIX: Record<string, Obj> = {
+                ...TURNSTILE,
+                Locked: { cls: 'C_Init', slots: { R_out: ['tCoin', 'tPushL', 'tGo'] } },
+                Unlocked: { cls: 'C_State', slots: { R_out: ['tPushU', 'tBack'] } },
+                tGo: { cls: 'C_Trans', slots: { R_next: ['Unlocked'] } },
+                tBack: { cls: 'C_Trans', slots: { R_next: ['Locked'] } },
+            };
+            const mix = buildLookup(ROLES, MIX);
+            reset(mix, 12, turnstileRecord);
+            setSimPolicy('M', { choices: 'random', k: 6 });
+            expect(play(mix)).toMatchObject({ stop: 'limit', steps: 6 });
+            // control: the spy sees the bridge's calls, one per step
+            expect(spy).toHaveBeenCalledTimes(6);
+            expect(spy.mock.calls.map(c => c[1].event)).toEqual([null, null, null, null, null, null]);
+            spy.mockClear();
+            const sm = buildLookup(ROLES, TURNSTILE);
+            reset(sm, 13, turnstileRecord);
+            expect(play(sm).stop).toBe('event');
+            expect(spy).not.toHaveBeenCalled();
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    describe('R-SIM-137: invariants and breakpoints stop Play after its press (P-2026-10-05-1735, W3, Q1)', () => {
+        /** The model's watches, written in its bag as the dialog's Apply writes them. */
+        const watch = (lookup: Lookup, list: WatchRecord[]) => { lookup.M._state = { ...(lookup.M._state ?? {}), runWatches: encodeWatches(list) }; };
+        const COUNT_AT_MOST_1: WatchRecord = { name: 'countAtMost1', kind: 'invariant', text: 'model.[count] <= 1' };
+        const P3: WatchRecord = { name: 'p3Reached', kind: 'breakpoint', text: 'p3.[marked]' };
+        const hitsOf = (r: { hits?: readonly WatchResult[] }) => (r.hits ?? []).map(h => h.watch.name);
+        /** One Play press as the panel runs it, as `play` does, returning the tick that stopped it, its hits included. */
+        function playW(lookup: Lookup, cap = 5000) {
+            let steps = 0;
+            for (let tick = 0; tick < cap; tick++) {
+                const r = playPress('M', lookup, steps);
+                steps = r.steps;
+                if (r.stop !== null) return r;
+            }
+            throw new Error(`Play did not stop in ${cap} ticks`);
+        }
+
+        it('an invariant that breaks stops Play after the press that broke it: Flow B count reaches 2 at step 4 (mutants: the check dropped; the check before the press)', () => {
+            const lookup = flowB();
+            watch(lookup, [COUNT_AT_MOST_1]);
+            reset(lookup, 3);
+            const r = playW(lookup);
+            expect([r.stop, r.steps, getSimRun('M')!.trace!.length, status()]).toEqual(['watch', 4, 4, 'Running']);
+            expect(hitsOf(r)).toEqual(['countAtMost1']);
+            expect(r.press?.lastStep).toBe('ε: f2 (work → d1) fired');
+            expect(playStopLine(r.stop, r.steps)).toBeNull();
+            // control: without the watch the same run goes on to Terminated in 6 (the test above)
+            lookup.M._state = {};
+            reset(lookup, 3);
+            expect(playW(lookup)).toMatchObject({ stop: 'Terminated', steps: 6 });
+        });
+
+        it('a breakpoint under Random stops at the step that made it true, the same step and trace for the same seed (mutant: the check skipped on a drawn step)', () => {
+            const lookup = demoPetri();
+            watch(lookup, [P3]);
+            const runs: string[] = [];
+            for (const seed of [1, 99, 2026, 1, 99, 2026]) {
+                reset(lookup, seed);
+                setSimPolicy('M', { choices: 'random' });
+                const r = playW(lookup);
+                const run = getSimRun('M')!;
+                expect([r.stop, hitsOf(r)]).toEqual(['watch', ['p3Reached']]);
+                // the first configuration where p3 is marked: marked now, not one step before
+                expect((run.config.state.marking.get('p3') ?? 0) > 0).toBe(true);
+                expect(configAt(run, r.steps - 1)!.state.marking.get('p3') ?? 0).toBe(0);
+                runs.push(`${seed}:${r.steps}:${run.trace!.map(t => t.selector).join(',')}`);
+            }
+            expect(runs.slice(3)).toEqual(runs.slice(0, 3));
+        });
+
+        it('never on the configuration Play starts from: a breakpoint already true lets one step through, at every Play press (level-triggered; mutants: checked at the tick\'s start; edge-triggered)', () => {
+            const lookup = flowB();
+            watch(lookup, [{ name: 'always', kind: 'breakpoint', text: 'model.[count] >= 0' }]);
+            reset(lookup, 3);
+            expect(watchResults(getSimRun('M')!, lookup).map(x => x.hit)).toEqual([true]);
+            expect(playW(lookup)).toMatchObject({ stop: 'watch', steps: 1 });
+            expect(playW(lookup)).toMatchObject({ stop: 'watch', steps: 1 });
+            expect(getSimRun('M')!.trace).toHaveLength(2);
+            // an invariant false from Reset: the same, one step, then the stop
+            watch(lookup, [{ name: 'never', kind: 'invariant', text: 'model.[count] > 5' }]);
+            reset(lookup, 3);
+            expect(playW(lookup)).toMatchObject({ stop: 'watch', steps: 1 });
+        });
+
+        it('the stops that come before a press are unchanged: no ε candidate, a list under Ask (mutant: the watches read before the tick\'s stops)', () => {
+            const sm = buildLookup(ROLES, TURNSTILE);
+            watch(sm, [{ name: 'locked', kind: 'breakpoint', text: 'Locked.[marked]' }]);
+            reset(sm, 8);
+            expect(watchResults(getSimRun('M')!, sm).map(x => x.hit)).toEqual([true]);
+            expect(playW(sm)).toMatchObject({ stop: 'event', steps: 0 });
+            const petri = demoPetri();
+            watch(petri, [{ name: 'always', kind: 'breakpoint', text: 'p1.[marked] or not p1.[marked]' }]);
+            reset(petri, 10);
+            expect(watchResults(getSimRun('M')!, petri).map(x => x.hit)).toEqual([true]);
+            expect(playW(petri)).toMatchObject({ stop: 'choice', steps: 0 });
+        });
+
+        it('a watch that does not compile, or reads a number, is a defect and never stops Play (mutant: a defect read as false)', () => {
+            const lookup = flowB();
+            watch(lookup, [
+                { name: 'node', kind: 'invariant', text: 'node.[x] == 1' },
+                { name: 'number', kind: 'invariant', text: '1 + 1' },
+                { name: 'undeclared', kind: 'breakpoint', text: 'model.[nope]' },
+            ]);
+            reset(lookup, 3);
+            expect(playW(lookup)).toMatchObject({ stop: 'Terminated', steps: 6 });
+            const results = watchResults(getSimRun('M')!, lookup);
+            expect(results.map(x => [x.watch.name, x.reading.kind, x.hit])).toEqual([
+                ['node', 'defect', false], ['number', 'defect', false], ['undeclared', 'defect', false],
+            ]);
+        });
+
+        it('the watches are read from the bag at each press: written mid-run they stop the next Play, and they leave runSignature (mutants: frozen at Reset; a sim* key)', () => {
+            const lookup = flowB();
+            reset(lookup, 3);
+            setSimPolicy('M', { k: 2 });
+            expect(playW(lookup)).toMatchObject({ stop: 'limit', steps: 2 });
+            const before = runSignature(lookup, 'M', 'MM');
+            watch(lookup, [COUNT_AT_MOST_1]);
+            expect(runSignature(lookup, 'M', 'MM')).toBe(before);
+            expect(getSimRun('M')!.signature).toBe(before);
+            setSimPolicy('M', { k: 100 });
+            expect(playW(lookup)).toMatchObject({ stop: 'watch', steps: 2 });
+            // control: the same list under a sim* key would move the signature, so it would interrupt the run
+            lookup.M._state = { simWatches: lookup.M._state.runWatches };
+            expect(runSignature(lookup, 'M', 'MM')).not.toBe(before);
+        });
+
+        it('a hand Step reports the hit and never refuses to fire: the step is committed, the hit read on it (mutant: a press refused on a hit)', () => {
+            const lookup = flowB();
+            watch(lookup, [{ name: 'always', kind: 'breakpoint', text: 'model.[count] >= 0' }]);
+            reset(lookup, 3);
+            for (let i = 1; i <= 3; i++) {
+                const pressed = pressStep('M', lookup);
+                expect(pressed.outcome?.kind).toBe('fired');
+                expect(getSimRun('M')!.trace).toHaveLength(i);
+                expect(watchResults(getSimRun('M')!, lookup).filter(x => x.hit).map(x => x.watch.name)).toEqual(['always']);
+            }
+        });
+
+        it('watchResults reads any step\'s configuration, and the steps of the trace that hit are listed (mutants: the live configuration read for every step; step 0 listed)', () => {
+            const lookup = flowB();
+            watch(lookup, [COUNT_AT_MOST_1]);
+            reset(lookup, 3);
+            for (let i = 0; i < 6; i++) pressStep('M', lookup);
+            const run = getSimRun('M')!;
+            const values = Array.from({ length: 7 }, (_, n) => watchResults(run, lookup, configAt(run, n)!.state)[0].hit);
+            // count: 0 0 1 1 2 2 2, so the invariant breaks from step 4 on
+            expect(values).toEqual([false, false, false, false, true, true, true]);
+            expect([...watchHitSteps(run, lookup)]).toEqual([4, 5, 6]);
+            // control: no watch, no step
+            lookup.M._state = {};
+            expect([...watchHitSteps(run, lookup)]).toEqual([]);
+        });
+
+        it('watchHitLine names the watch, the step and the firing; more hits are counted on the line and listed in the title (mutants: the step or the firing dropped; the others dropped from the title)', () => {
+            const lookup = flowB();
+            watch(lookup, [COUNT_AT_MOST_1, { name: 'paidOut', kind: 'breakpoint', text: 'model.[count] >= 2' }]);
+            reset(lookup, 3);
+            for (let i = 0; i < 4; i++) pressStep('M', lookup);
+            const hits = watchResults(getSimRun('M')!, lookup).filter(x => x.hit);
+            expect(watchHitLine(hits.slice(0, 1), 4, 'ε: f2 (work → d1) fired')).toEqual({
+                line: 'Invariant countAtMost1 false at step 4 · ε: f2 (work → d1) fired',
+                title: 'Invariant countAtMost1 false at step 4 · ε: f2 (work → d1) fired\nInvariant countAtMost1: model.[count] <= 1',
+            });
+            expect(watchHitLine(hits.slice(1), 4, 'ε: f2 (work → d1) fired')?.line).toBe('Breakpoint paidOut at step 4 · ε: f2 (work → d1) fired');
+            const both = watchHitLine(hits, 4, 'ε: f2 (work → d1) fired')!;
+            expect(both.line).toBe('Invariant countAtMost1 false and 1 more at step 4 · ε: f2 (work → d1) fired');
+            expect(both.title.split('\n')).toEqual([
+                'Invariant countAtMost1 false and 1 more at step 4 · ε: f2 (work → d1) fired',
+                'Invariant countAtMost1: model.[count] <= 1',
+                'Breakpoint paidOut: model.[count] >= 2',
+            ]);
+            expect(watchHitLine([], 4, 'x')).toBeNull();
+        });
+    });
+});
+
+describe('R-SIM-106: the inputs of a step on the trace, the replay, and a press while a past step is shown (P-2026-10-03-0040)', () => {
+    /** S -e1-> D; D -e2 [D.[decision]]-> A, D -e3 [else]-> B; `decision` an input of every State. */
+    const DECISION = { name: 'decision', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    const lookupOf = (): Lookup => buildLookup({
+        ...ROLES, simGuard: 'A_guard', simTerminal: 'C_Final', simStateAttributes: JSON.stringify({ v: 1, attrs: [DECISION] }),
+    }, {
+        S: { cls: 'C_Init', slots: { R_out: ['e1'] } },
+        D: { cls: 'C_State', slots: { R_out: ['e2', 'e3'] } },
+        A: { cls: 'C_Final' },
+        B: { cls: 'C_Final' },
+        e1: { cls: 'C_Trans', slots: { R_next: ['D'] } },
+        e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: ['D.[decision]'] } },
+        e3: { cls: 'C_Trans', slots: { R_next: ['B'], A_guard: ['else'] } },
+    });
+    const record = () => {
+        const h: Record<string, any> = {};
+        for (const id of ['S', 'D', 'A', 'B', 'e1', 'e2', 'e3']) h[id] = { id, __type: 'Object', name: id };
+        h.e1.next = h.D; h.e2.next = h.A; h.e3.next = h.B;
+        return { instances: Object.values(h), classes: [], ...h };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', () => record());
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r.run;
+    };
+    const eps = (lookup: Lookup, values?: Array<{ element: string; attr: string; value: boolean }>) => pressInput('M', null, undefined, lookup, 'ε', values);
+    const answer = (value: boolean) => [{ element: 'D', attr: 'decision', value }];
+
+    it('press records the values it was given on the step it commits; a step given none has no field (mutant: the values not passed to the store)', () => {
+        const lookup = lookupOf();
+        reset(lookup);
+        eps(lookup);
+        expect(eps(lookup).asks).toHaveLength(1);
+        eps(lookup, answer(false));
+        expect(getSimRun('M')!.trace).toEqual<SimTraceStep[]>([
+            { event: null, selector: 'e1', kind: 'fired' },
+            { event: null, selector: 'e3', kind: 'fired', inputs: answer(false) },
+        ]);
+    });
+
+    it('a step that read an input replays with the value it was given: e2, not the else (mutant: the replay ignores the inputs)', () => {
+        const lookup = lookupOf();
+        reset(lookup);
+        eps(lookup);
+        eps(lookup, answer(true));
+        expect(getSimActiveIds('M')).toEqual(['A']);
+        const run = { ...getSimRun('M')!, keptConfigs: [] };
+        expect([...configAt(run, 1)!.state.marking]).toEqual([['D', 1]]);
+        expect([...configAt(run, 2)!.state.marking]).toEqual([['A', 1]]);
+        expect(configAt(run, 0)!.state).toBe(run.net.initial);
+    });
+
+    it('a press while a past step is shown acts on the live configuration and returns the view to live (mutant: the press reads the viewed record)', () => {
+        const lookup = buildLookup(ROLES, TURNSTILE);
+        simReset('M', started(lookup));
+        pressInput('M', 'coin', undefined, lookup, 'Coin');
+        pressInput('M', 'push', undefined, lookup, 'Push');
+        simSetView('M', 1);
+        expect(getSimActiveIds('M')).toEqual(['Unlocked']);
+        const r = pressInput('M', 'coin', undefined, lookup, 'Coin');
+        expect(r.lastStep).toBe('Coin: tCoin (Locked → Unlocked) fired');
+        expect(getSimView('M')).toBeNull();
+        expect(getSimActiveIds('M')).toEqual(['Unlocked']);
+        expect(getSimRun('M')!.trace).toHaveLength(3);
+    });
+
+    it('a press that commits nothing returns to live too: the list or the dialog are the live step\'s (mutant: only a commit returns)', () => {
+        const lookup = lookupOf();
+        reset(lookup);
+        eps(lookup);
+        simSetView('M', 0);
+        expect(getSimActiveIds('M')).toEqual(['S']);
+        expect(eps(lookup).asks).toHaveLength(1);
+        expect(getSimView('M')).toBeNull();
+        expect(getSimActiveIds('M')).toEqual(['D']);
+    });
+
+    it('watchRows: an input is IVAR, its value the one its step was given, never a change (R-SIM-102)', () => {
+        const lookup = lookupOf();
+        reset(lookup);
+        eps(lookup);
+        eps(lookup, answer(true));
+        const run = getSimRun('M')!;
+        const pins = [{ metaclass: 'C_State', name: 'decision', space: 'semantic' as const }];
+        const out = watchRows(run.net, configAt(run, 2)!.state, configAt(run, 1)!.state, pins, lookup, run.trace![1].inputs);
+        expect(out.map(r => [r.name, r.kind, r.value, r.changed])).toEqual([
+            ['A.decision', 'IVAR', null, false], ['B.decision', 'IVAR', null, false], ['D.decision', 'IVAR', true, false], ['S.decision', 'IVAR', null, false],
+        ]);
+        expect(watchRows(run.net, configAt(run, 1)!.state, configAt(run, 0)!.state, pins, lookup).every(r => r.value === null)).toBe(true);
+    });
+});
+
+describe('the I/O board\'s seams (P-2026-10-03-1845 Lane 1, report §4 and §5)', () => {
+    it('the run carries the snapshot its oracles were built over: frozen, of this model, with its handles (mutant: snapshot not stored)', () => {
+        const run = started(buildLookup(ROLES, TURNSTILE));
+        expect(run.snapshot).toBeDefined();
+        expect(run.snapshot!.modelId).toBe('M');
+        expect(Object.isFrozen(run.snapshot)).toBe(true);
+        expect([...run.snapshot!.handleById.keys()].sort()).toEqual(Object.keys(TURNSTILE).sort());
+    });
+
+    it('one freeze per Reset: the snapshot is the one the builder was called for, not a second one (mutant: a second build)', () => {
+        const spy = spyBuilder();
+        started(buildLookup(ROLES, TURNSTILE), spy.build);
+        expect(spy.calls).toHaveLength(1);
+    });
+
+    it('inputPressTitle: the title of an input that is on, the panel\'s words (mutant: the reason or the asks dropped)', () => {
+        expect(inputPressTitle('Fire Coin')).toBe('Fire Coin');
+        expect(inputPressTitle('Fire Coin', 'Coin: t1 guard false', 'D.decision')).toBe('Fire Coin\nNo candidate. Coin: t1 guard false');
+        expect(inputPressTitle('Step (ε)', undefined, 'D.decision')).toBe('Step (ε)\nAsks: D.decision');
+    });
+
+    it('inputOffTitle: the title of an input that is off says why, the run\'s reason first, its status otherwise (R-SIM-104)', () => {
+        expect(inputOffTitle('Fire Coin', 'Coin: nothing enabled', 'Running')).toBe('Fire Coin\nOff. Coin: nothing enabled');
+        expect(inputOffTitle('Fire Coin', undefined, 'Not started')).toBe('Fire Coin\nOff. Reset starts the run.');
+        expect(inputOffTitle('Fire Coin', undefined, null)).toBe('Fire Coin\nOff. Reset starts the run.');
+        expect(inputOffTitle('Fire Coin', undefined, 'Terminated')).toBe('Fire Coin\nOff. The run is Terminated.');
     });
 });

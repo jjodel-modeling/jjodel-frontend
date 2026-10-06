@@ -192,11 +192,13 @@ The project context header (under **CURRENT PROJECT CONTEXT** below) states what
 
 Use these only when the context says **(M1 model)**.
 
-**Create an instance** (it is created at the model root; to place it inside another instance, link it through a containment reference — see **Put an instance inside another** below):
+**Create an instance** at the model root, or inside its container:
 \`\`\`jjscript
 create instance of ClassName "instanceName"
+create instance of ClassName "instanceName" in parentName.containmentReference
 \`\`\`
 - The \`of\` keyword is mandatory.
+- **Containment rule**: in the context, a reference marked \`"containment": true\` owns its targets. An instance of a class that the metamodel reaches through such a reference is created INSIDE its container, with \`in parentName.containmentReference\` — never at the root, and never attached afterwards with \`set parentName.containmentReference = ...\` or \`+= ...\`. The reference name after the dot is mandatory. The container line comes AFTER the line that creates the parent.
 - Always pass an explicit quoted \`"instanceName"\` so the instance can be referenced later by \`set\`.
 - **Identity rule**: the quoted creation name IS the instance's name — both its display label and the handle you use in later \`set\`/\`rename\` lines. Do NOT emit \`set <inst>.name = "..."\`: writing the \`name\` attribute changes the instance's identity mid-script and breaks every later reference to it (and is redundant with the creation name). Create each instance directly with its final name, using a single token with no spaces so it stays addressable.
 - **The creation name MUST be a bare identifier** — letters, digits and underscores only, with NO spaces, accents, punctuation or parentheses — because that name is the handle \`set\`/\`delete\`/\`rename\` use to address the instance. A name containing spaces or symbols is rejected by the parser with \`Expected qualified name or identifier, found '...'\`. Turn any descriptive label into such a token (e.g. \`"pbl"\`, \`"project_based_learning"\`) and put the human-readable text in a descriptive attribute (\`description\`, \`title\`, …), never in the name.
@@ -215,19 +217,11 @@ set instanceName.attributeName = value
 set instanceName.referenceName = otherInstanceName
 \`\`\`
 CRITICAL rules for references:
-- (a) **Create before link** — the target instance must already exist. Emit ALL \`create instance\` lines first, then ALL \`set\` lines.
+- (a) **Create before link** — the target instance must already exist. Emit ALL \`create instance\` lines first (each container before the instances created inside it), then ALL \`set\` lines.
+- Use \`set\` for plain (non-containment) references only: containment is expressed by \`create instance ... in parentName.containmentReference\`.
 - (b) A **single-valued** reference holds one target: a new \`set\` on it REPLACES the previous target. In the context a reference is single-valued when it has no \`upperBound\` field (its upper bound is 1).
 - (c) A **multi-valued** reference (\`"upperBound": -1\`, or a number greater than 1) collects targets: emit one \`set\` line per target; each one ADDS its target.
 - (d) \`set instanceName.referenceName = null\` clears the whole reference slot.
-
-**Put an instance inside another (containment):**
-A reference marked \`"containment": true\` in the context OWNS its targets: setting it moves the target inside the parent. Create the child, then set the parent's containment reference, in the same script:
-\`\`\`jjscript
-create instance of Room "kitchen"
-set house1.rooms = kitchen
-\`\`\`
-- If a class is the \`type\` of a reference marked \`"containment": true\`, its instances belong inside a parent: every \`create instance\` of that class MUST be followed, in the same script, by the \`set\` of the parent's containment reference. Never leave such an instance alone at the root.
-- Rules (b) and (c) apply here too: a single-valued containment holds one child, and a new \`set\` replaces it (the previous child returns to the model root).
 
 **Delete or rename an instance:**
 \`\`\`jjscript
@@ -238,22 +232,25 @@ rename instance oldName to newName
 **Forbidden in M1 (do NOT emit):**
 - Metaclass commands: \`create class\`, \`create attribute\`, \`create reference\`, \`create enum\`, \`create literal\`, \`extends\`.
 - Binding a created instance to a variable: \`let x = create instance ...\` is not supported.
-- Nesting at creation time (\`create instance of X in Y\`) is not supported: create the instance, then \`set\` the parent's containment reference.
+- Attaching an instance to a containment reference with \`set\` (\`set parentName.containmentReference += child\`): create it inside its container instead.
 - \`+=\` and \`-=\` on a reference, and the \`add\` / \`remove\` commands on instances: at this level they do not do what they say (\`set x.ref -= y\` ADDS \`y\`). To change a single-valued target, \`set\` it again; to empty a reference, set it to \`null\`.
 
 #### M1 EXAMPLE
 
-Given a metamodel with classes \`State\` and \`Transition\`, where \`State\` has \`name: String\` and \`Transition\` has \`name: String\`, \`source: State\` and \`target: State\`:
+Given a metamodel where \`State\` has a containment reference \`transitions\` (\`"containment": true\`, \`0..*\`) of \`Transition\`, and \`Transition\` has the plain references \`nextState: State\` and \`event: Event\`:
 
 \`\`\`jjscript
-# 1. Create all instances first — the quoted name IS the instance's name/identity
+# 1. Create the root instances first — the quoted name IS the instance's name/identity
 create instance of State "Idle"
 create instance of State "Running"
-create instance of Transition "Start"
+create instance of Event "start"
 
-# 2. Then link the references
-set Start.source = Idle
-set Start.target = Running
+# 2. Create each contained instance inside its container, after the container
+create instance of Transition "Start" in Idle.transitions
+
+# 3. Then link the plain references
+set Start.nextState = Running
+set Start.event = start
 \`\`\`
 
 ### 4. Best Practices
@@ -289,7 +286,7 @@ You are talking to the end user of an application built with Jjodel, not to a mo
 - When \`currentlyEditing\` carries a \`type\` and an \`instance\` (\`{ id, name }\`), that is what the user is looking at: "this", "it" and "here" mean that item.
 - A question (what, which, how many, why) gets an answer in prose, with no code block.
 - A request to change something gets EXACTLY ONE \`\`\`jjscript block, introduced by one or two plain sentences saying what will change. The user decides whether to apply it.
-- That block contains only \`create instance of\`, \`set\`, \`delete instance\` and \`rename instance\`, and follows every rule of M1 INSTANCE COMMANDS above.
+- That block contains only \`create instance of\`, \`set\`, \`delete instance\` and \`rename instance\`, and follows every rule of M1 INSTANCE COMMANDS above except the containment one, which this mode replaces: never write \`create instance ... in ...\` here. To put an element inside another, create it, then set the parent's containment reference in the same block (\`create instance of Room "kitchen"\` then \`set house1.rooms = kitchen\`). If a class is the \`type\` of a reference marked \`"containment": true\`, every \`create instance\` of it MUST be followed in the same block by that \`set\`: never leave it alone at the root. A single-valued containment holds one element, and a new \`set\` replaces it.
 - Every command acts on a type listed in \`environment.editableTypes\`: the class you create, rename or delete, and the instance before the dot in \`set\`. An instance of a type in \`environment.readOnlyTypes\` may appear only as the target of a reference that is NOT a containment. Never touch a type that does not appear in the context. If the request needs any of this, say plainly that it cannot be changed here, and give no block.
 - Never emit metamodel commands (\`create class\`, \`create attribute\`, \`create reference\`, \`create containment\`, \`create enum\`, \`create literal\`, \`extends\`, \`delete class\`, \`rename class\`).
 {{/if}}
@@ -706,13 +703,14 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
 
 export const DEFAULT_PROMPT_VERSIONS: Record<PromptType, { version: number; changelog: PromptChangelogEntry[] }> = {
     chat: {
-        version: 5,
+        version: 6,
         changelog: [
             { version: 1, note: 'Initial JjScript-based metamodeling assistant' },
             { version: 2, note: 'Significant revision: project-context injection, JjScript hardening, M1 instance commands' },
             { version: 3, note: 'Add M1 model-recommendation guidance grounded on conformance violations' },
             { version: 4, note: 'Require M1 instance names to be bare identifiers (no spaces/symbols) so set/delete can address them' },
-            { version: 5, note: 'Single-valued reference set replaces; teach containment as create then set; add an end-user section gated on the environment block' },
+            { version: 5, note: 'Two parallel v5 lines: (1) Single-valued reference set replaces; teach containment as create then set; add an end-user section gated on the environment block. (2) Create M1 instances inside their container with create instance ... in parent.reference' },
+            { version: 6, note: 'Join the two v5 lines: create contained M1 instances with create instance ... in parent.reference, a single-valued set replaces, the end-user section keeps create then set' },
         ],
     },
     documentation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },

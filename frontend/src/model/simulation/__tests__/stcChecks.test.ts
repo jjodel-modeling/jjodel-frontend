@@ -19,7 +19,7 @@ import type { JjelExpression } from '../../../jjel/types/ast';
 import { freezeSnapshot } from '../guardContext';
 import { compileAction, foldActionTarget, judgeActionTarget } from '../actionEvaluator';
 import type { CompiledAction } from '../actionEvaluator';
-import { checkActionSubset, checkActionValue, checkGuard, checkTargetName } from '../stcChecks';
+import { checkActionSubset, checkActionValue, checkElse, checkGuard, checkInputTarget, checkTargetName, inputReads } from '../stcChecks';
 import type { StcScope } from '../stcChecks';
 import type { ActionSite, StateAttributeDecl } from '../netTypes';
 
@@ -179,5 +179,54 @@ describe('A0 and G0 stay clean through every rule', () => {
             expect([text, checkActionSubset(c), checkTargetName(c, s), checkActionValue(c, TC, foldActionTarget(c, TC, s.snapshot), s)]).toEqual([text, null, null, null]);
         }
         expect(guard('model.[paid]')).toBeNull();
+    });
+});
+
+describe('R7: an else with no sibling (R-SIM-87, amends R-SIM-31(1), P-2026-09-28-0100)', () => {
+    it('an else whose sibling list is empty is a defect; with a sibling, or not an else, none (mutants: every else; no else)', () => {
+        expect(checkElse({ elseOf: [] })).toEqual({
+            reason: 'else-alone', detail: 'else with no sibling: no other transition has its preset and its triggers, so it is always true', short: 'else, no sibling',
+        });
+        expect(checkElse({ elseOf: ['t2'] })).toBeNull();
+        expect(checkElse({ elseOf: null })).toBeNull();
+    });
+});
+
+describe('R-SIM-88: the input reads of a guard or an action, folded as R2 folds (P-2026-09-28-0034)', () => {
+    const ASK: StateAttributeDecl = { name: 'ask', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    const ANSWER: StateAttributeDecl = { name: 'answer', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, input: true };
+    /** The ESM scope with `ask` an input of both states and `answer` a global input. */
+    const withInputs = (): StcScope => {
+        const s = scope();
+        const on = (...decls: StateAttributeDecl[]) => new Map(decls.map(d => [d.name, d]));
+        const declared = new Map([['Mx', on(COINS, PAID, ANSWER)], ['TCx', on(COLOR)], ['TPx', on(COLOR)], ['Lx', on(LEVEL, ASK)], ['Ux', on(LEVEL, ASK)]]);
+        return { ...s, net: { ...s.net, attributes: [COINS, PAID, COLOR, LEVEL, ASK, ANSWER], declared } };
+    };
+    const reads = (text: string, site = 'TPx') => inputReads(expr(text), site, withInputs()).map(r => `${r.element}.${r.attr}`);
+
+    it('a read whose object folds names that element, once (mutant: the object never folded, every owner asked)', () => {
+        expect(reads('locked.[ask]')).toEqual(['Lx.ask']);
+        expect(reads('self.nextState.[ask] and not self.nextState.[ask]')).toEqual(['Ux.ask']);
+        expect(reads('model.[answer] > 1')).toEqual(['Mx.answer']);
+    });
+
+    it('a read whose object reads σ asks every owner of the name as an input (mutant: such a read skipped)', () => {
+        expect(reads('(if model.[coins] > 0 then locked else unlocked).[ask]')).toEqual(['Lx.ask', 'Ux.ask']);
+    });
+
+    it('controls: a stored, derived, marked or node read, and an input name folded onto an element that does not declare it, ask nothing', () => {
+        for (const text of ['model.[coins] > 0', 'model.[paid]', 'locked.[marked]', 'node.[color] == 1', 'self.[ask]']) expect([text, reads(text)]).toEqual([text, []]);
+    });
+
+    it('the read carries the domain; R1, R2 and R6 accept a declared input (H6 of the report)', () => {
+        expect(inputReads(expr('model.[answer] > 1'), 'TPx', withInputs())[0]).toEqual({ element: 'Mx', attr: 'answer', domain: { kind: 'range', min: 0, max: 3 } });
+        for (const text of ['locked.[ask]', 'model.[answer] > 1']) expect([text, checkGuard(expr(text), 'TPx', withInputs())]).toEqual([text, null]);
+    });
+
+    it('a target the run resolves whose name only an input has is read-only (mutant: left to the run)', () => {
+        expect(checkInputTarget(action('(if model.[coins] > 0 then locked else unlocked).[ask] := true'), withInputs()))
+            .toEqual({ reason: 'read-only', detail: "'ask' is an input and cannot be assigned", short: "assigns input 'ask'" });
+        // control: a stored name
+        expect(checkInputTarget(action('(if model.[coins] > 0 then locked else unlocked).[level] := lo'), withInputs())).toBeNull();
     });
 });

@@ -6,7 +6,10 @@
 // Properties rail (SymbolEditorModal.scss, measured 2026-09-16).
 //
 // FIXED size, 640 x 600 (the design): header, match line and footer never
-// move; folds, values and new rows scroll inside the body. Only design-system
+// move; folds, values and new rows scroll inside the body. The State page
+// (R-SIM-103, P-2026-10-03-0041) takes two columns of rows, so both dialogs
+// that show it carry `--wide`, 1120 x 600, whatever is open: nothing moves
+// between the roles and the State page. Only design-system
 // tokens and the panel's literals (the slate gradient of a primary button, the
 // cyan of an indicator) are used; no variable is DEFINED here.
 //
@@ -51,6 +54,11 @@
 
     &:focus {
         outline: none;
+    }
+
+    // Two columns of 500 px: a row's value cell holds `model.[coins] >= 2` whole (measured in the lane probe).
+    &--wide {
+        width: 1120px;
     }
 
     .bi,
@@ -395,6 +403,107 @@
         }
     }
 
+    // R-SIM-90: the other attributes of a multi role, tags on the select's line. The strip keeps its
+    // width and the select gives way; a longer list is counted, never wrapped, so the row stays 32 px.
+    // A tag is as wide as its name (P-2026-10-03-1630); only past half the line does it end in an
+    // ellipsis, its name in its title.
+    &__attrs {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 4px;
+        max-width: 50%;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    &__attr {
+        box-sizing: border-box;
+        display: inline-flex;
+        flex: 0 1 auto;
+        align-items: center;
+        gap: 2px;
+        min-width: 0;
+        height: var(--control-height-sm);
+        padding: 0 2px 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-primary);
+        font-size: 12px;
+    }
+
+    &__attr-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__attr-remove {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        .bi {
+            font-size: 14px;
+        }
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    &__attr-more {
+        flex: none;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    // The «+» select: 24 px square; hidden, it keeps its slot.
+    & &__attr-add {
+        box-sizing: border-box;
+        flex: none;
+        width: var(--control-height-sm);
+        height: var(--control-height-sm);
+        padding: 0;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-secondary);
+        background-image: none;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 14px;
+        text-align: center;
+        text-align-last: center;
+        appearance: none;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus-visible {
+            outline: none;
+            border-color: var(--color-border-focus);
+            box-shadow: 0 0 0 3px var(--color-accent-muted);
+        }
+    }
+
     // Turn a role off (S11c), at the end of its label cell.
     &__switch {
         display: inline-flex;
@@ -658,7 +767,7 @@
         }
     }
 
-    // -- Data -------------------------------------------------------------------
+    // -- State (the «Data» fold until R-SIM-103) ----------------------------------
     // The header sticks to the top of the body, so Add attribute stays in view (4d).
     &__data-head {
         position: sticky;
@@ -713,11 +822,11 @@
         height: 32px;
 
         &--first {
-            grid-template-columns: 136px minmax(0, 1fr) 104px 32px;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 96px 32px;
         }
 
         &--second {
-            grid-template-columns: 136px 104px 64px 64px minmax(0, 1fr);
+            grid-template-columns: 120px 88px 48px 48px minmax(0, 1fr);
         }
     }
 
@@ -727,6 +836,11 @@
     & &__decl-value {
         font-family: var(--font-mono, monospace);
         font-size: 12px;
+    }
+
+    // DEFINE: the name in italics, never assigned (R-SIM-102).
+    & &__decl-name--define {
+        font-style: italic;
     }
 
     & &__decl-literals,
@@ -740,6 +854,263 @@
         border: 1px solid var(--color-border-secondary);
         border-radius: var(--radius-sm, 4px);
         background: var(--color-bg-tertiary);
+
+        // The value cell of an input row (R-SIM-88): one column, where the initial or the equation would be.
+        &--value {
+            grid-column: auto;
+        }
+    }
+
+    // -- the State page (R-SIM-103): two columns, σ and node, never mixed (R-SIM-102) --------
+    &__columns {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr);
+        column-gap: 16px;
+        align-items: start;
+    }
+
+    &__column {
+        min-width: 0;
+    }
+
+    &__column-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    // The visual key: σ solid slate (the panel's primary slate), node the viewpoint pink, dashed.
+    &__glyph {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm, 4px);
+        font-family: var(--font-mono, monospace);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: none;
+
+        &--semantic {
+            background: #334155;
+            color: #ffffff;
+        }
+
+        &--presentation {
+            border: 1px dashed var(--color-opt-4-fg);
+            background: var(--color-opt-4-bg);
+            color: var(--color-opt-4-fg);
+        }
+    }
+
+    &__group + &__group {
+        margin-top: 8px;
+    }
+
+    &__group-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 24px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--color-text-secondary);
+    }
+
+    &__group-name {
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    // «σ is read one way»: from the abstract column to the concrete one.
+    &__arrow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding-top: 8px;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        cursor: default;
+
+        .bi {
+            font-size: 16px;
+        }
+
+        span {
+            writing-mode: vertical-rl;
+            white-space: nowrap;
+        }
+    }
+
+    // The third line of a row: kind, access path, E-NODE.
+    &__decl-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 24px;
+        min-width: 0;
+    }
+
+    &__decl-kind {
+        box-sizing: border-box;
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        min-width: 48px;
+        height: 20px;
+        padding: 0 6px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-secondary);
+        font-family: var(--font-mono, monospace);
+        font-size: 11px;
+        font-weight: 500;
+
+        // R-SIM-102: VAR slate (above); DEFINE the operation pair, IVAR the model pair of the entity palette.
+        &--define {
+            border-color: transparent;
+            background: var(--color-entity-operation-bg);
+            color: var(--color-entity-operation-fg);
+        }
+
+        &--ivar {
+            border-color: transparent;
+            background: var(--color-entity-model-bg);
+            color: var(--color-entity-model-fg);
+        }
+
+        // Concrete: the dashed pink outline and tint, the kind's own text colour.
+        &--presentation {
+            border: 1px dashed var(--color-opt-4-fg);
+            background: var(--color-opt-4-bg);
+            color: var(--color-text-secondary);
+        }
+
+        &--presentation#{&}--define {
+            color: var(--color-entity-operation-fg);
+        }
+
+        &--presentation#{&}--ivar {
+            color: var(--color-entity-model-fg);
+        }
+    }
+
+    // The access path selects the row: «Written by» and «Read by» open under it.
+    &__path {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
+        height: 20px;
+        padding: 0 6px;
+        overflow: hidden;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm, 4px);
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: var(--font-mono, monospace);
+        font-size: 11px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-primary);
+            background: var(--color-bg-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+
+        &--presentation {
+            color: var(--color-opt-4-fg);
+        }
+
+        &--semantic[aria-pressed="true"] {
+            border-color: #334155;
+            background: #334155;
+            color: #ffffff;
+        }
+
+        &--presentation[aria-pressed="true"] {
+            border: 1px dashed var(--color-opt-4-fg);
+            background: var(--color-opt-4-bg);
+        }
+    }
+
+    &__decl-flag {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-error-text);
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: var(--color-error-text);
+        }
+    }
+
+    &__usage {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-bg-tertiary);
+        font-size: 11px;
+    }
+
+    &__usage-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        min-height: 20px;
+    }
+
+    &__usage-label {
+        flex: 0 0 72px;
+        font-weight: 600;
+        color: var(--color-text-tertiary);
+    }
+
+    &__usage-item {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 6px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm, 4px);
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+    }
+
+    &__usage-none {
+        color: var(--color-text-tertiary);
     }
 
     &__hidden {

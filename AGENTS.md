@@ -623,7 +623,6 @@ These anti-patterns are consolidated in the canonical **NON-NEGOTIABLE RULES** b
 ### 20.2 Best practices
 
 - ✅ Accessibility (WCAG)
-- ✅ Dark mode support
 - ✅ Lazy loading where appropriate
 - ✅ Memoization for performance
 - ✅ `console.log` with prefixes `[Component]` for debug — **remove before commit**
@@ -654,6 +653,8 @@ Codex maintains `docs/claude-code-log.md` as an add-only operational log: entrie
 ```
 
 This block is the canonical format, mirrored verbatim in `docs/PROTOCOL.md` P9.
+
+The `**Outcome**` field above belongs to the log entry only. It is not the closing line of a session: every final message (hard stop, question, closing report) ends with one line `Outcome: done | hard-stop | question | blocked`, one of those four words and no other (RC-20, `docs/PROTOCOL.md`). `lane-run` reads that line; any other word, `completed` included, reads `unparsed`.
 
 A **ticket** is an entry of its own type, for a finding that has to be found on its own and outlives the lane that made it. The heading is `## YYYY-MM-DD — ticket: short description` (the colon form, from 2026-09-24) and the fields are four, not twelve:
 

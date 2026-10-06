@@ -52,6 +52,8 @@ import {computeCreationSeed} from "../../components/editor-v2/viewpoint/ir/irCre
 import type {AnyViewIR} from "../../components/editor-v2/viewpoint/ir/irTypes";
 import type {FormThemeName} from "../../jjform/themes";
 import type {FormPaletteName} from "../../jjform/palettes";
+import type {MetaclassColoring} from "../viewPoint/metaclassPalette";
+import {unproxyDeep} from "../../model/unproxy";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -178,7 +180,7 @@ export type PaletteType = Dictionary<string, PaletteControl | NumberControl | St
  * cade nel ramo undefined insieme a ogni kind sconosciuto, dove il campo NON
  * viene toccato: meglio un valore vecchio di un valore inventato.
  */
-function appliableToForIRKind(kind: unknown): DViewElement['appliableTo'] | undefined {
+export function appliableToForIRKind(kind: unknown): DViewElement['appliableTo'] | undefined {
     switch (kind) {
         case 'vertex': return 'Vertex';
         case 'edge': return 'Edge';
@@ -273,6 +275,20 @@ export class DViewElement extends DPointerTargetable {
      * the singleton on first write (R-DMV-6).
      */
     formPalette?: FormPaletteName;
+    /**
+     * «Color by metaclass» of a VIEWPOINT (P-2026-09-30-1815, R-VP-28): `{ enabled, baseColor,
+     * border }`. ABSENT IS A VALUE, as for `formTheme` above: it reads as off, so a saved project
+     * has no such key and renders as it did, and no VersionFixer migration accompanies it.
+     * Written whole (the default setter replaces it), `enabled: false` to turn it off so the
+     * other two survive. Declared HERE and not on `DViewPoint`, for the reason stated above.
+     * P-2026-09-30-2022 (R-VP-39) adds an optional `overrides` map, metaclass id → colour,
+     * absent when there is none; an entry on a deleted class is ignored.
+     *
+     * READ BY: `resolveMetaclassColoring` (`metaclassPalette.ts`), from the ACTIVE viewpoint
+     * (`state.viewpoint`), in `ObjectNode.tsx`. WRITTEN BY: the «Color by metaclass» controls of
+     * `ViewpointProperties.tsx`.
+     */
+    metaclassColoring?: MetaclassColoring;
 
     // processate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;
@@ -649,6 +665,17 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         // il discriminatore legacy contraddice l'ir. La scrittura NON passa dal setter L
         // `set_appliableTo`, che accoppierebbe anche `forceNodeType` (letto solo da
         // DefaultNode, cioè dal canvas classico non più montato da Fase 5a).
+        // Un oggetto L annidato nel draft (`pins.A1 = A1` invece di `A1.id`) verrebbe salvato
+        // così com'è: Action.fire rifiuta solo un proxy al primo livello, e JSON.stringify
+        // dell'ir percorre poi il grafo L costruito pigramente, bloccando la pagina
+        // (P-2026-09-29-2121). Qui diventa il suo id; un valore non riducibile non si scrive.
+        const clean = unproxyDeep(val);
+        if (!clean.ok) {
+            Log.ee('set_ir refused for view "' + this.get_name(c) + '": ' + clean.reason
+                + (clean.path ? ' at ' + clean.path : '') + '. Nothing was stored.', {view: c.data.id, value: val});
+            return false;
+        }
+        val = clean.value;
         const derived = appliableToForIRKind((val as any)?.kind);
         TRANSACTION('change '+this.get_name(c)+'.ir', ()=>{
             SetFieldAction.new(c.data, "ir", val as any, '', false);

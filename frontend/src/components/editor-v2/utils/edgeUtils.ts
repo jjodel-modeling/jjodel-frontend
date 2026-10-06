@@ -1087,6 +1087,10 @@ export const CARD_LINE_GAP = 4;
  * The cardinality is also shifted laterally so it sits *beside* the entry edge,
  * never on top of it: top → right, bottom → left (vertical edges); right → up,
  * left → down (horizontal edges).
+ *
+ * `mirror` (slice E, P-2026-09-30-1810) takes the other side of the line, at the same
+ * depth: the role name of an end, the multiplicity keeping the side above. Absent or
+ * false, the anchor of before.
  */
 export function computeCardinalityAnchor(
     targetX: number,
@@ -1095,6 +1099,7 @@ export function computeCardinalityAnchor(
     boxGap: number,
     depthShift: number = 0,
     pathPoints?: { x: number; y: number }[],
+    mirror: boolean = false,
 ): string {
     const gap = boxGap + depthShift;
     const vertical = targetSide === 'top' || targetSide === 'bottom';
@@ -1106,7 +1111,8 @@ export function computeCardinalityAnchor(
     // Col tracciato in mano si sceglie il fianco **opposto** a quello da cui arriva:
     // è la parte che non collide con la linea.
     const from = pathPoints ? approachDirection(pathPoints, vertical ? 'x' : 'y') : 0;
-    const lateral = from === 0 ? fallback : -from;
+    const side = from === 0 ? fallback : -from;
+    const lateral = mirror ? -side : side;
 
     // La percentuale di translate segue il verso laterale, altrimenti la scatola
     // scavalcherebbe la linea invece di affiancarla.
@@ -1359,6 +1365,9 @@ export interface TreeBranch {
     childX: number;
     /** Y coordinate of child node's source handle */
     childY: number;
+    /** Y of the child's bottom edge. Read only for a child not below the parent's
+     *  handle: the bus then runs under it (see TREE_BUS_DROP). */
+    childBottom?: number;
     /** Edge ID for this branch */
     edgeId: string;
 }
@@ -1434,6 +1443,12 @@ export interface TreeConnectorGeometry {
 export const TREE_BUS_CORNER_RADIUS = 4;
 
 /**
+ * How far the bus runs under the parent's handle, and under the bottom of every child
+ * that is not below that handle, when the children do not sit below the parent.
+ */
+export const TREE_BUS_DROP = 16;
+
+/**
  * Radius to round one bus sub-path with: the nominal one, clamped to half of its
  * shortest segment.
  *
@@ -1501,9 +1516,18 @@ export function computeTreeConnectorPath(
 
     const sorted = [...branches].sort((a, b) => a.childX - b.childX);
 
-    // barY = midpoint between parent handle and closest child handle
+    // barY = midpoint between parent handle and closest child handle, when the children
+    // sit below the parent. When one sits beside it or above (the default placement puts
+    // a class and its subclasses on one row), that midpoint lies above the parent's bottom
+    // handle: the trunk reached the handle moving down, and the triangle turned away from
+    // the parent with its base under the box (measured 2026-09-29, R-VP-18). The bus then
+    // drops under the parent and under those children, and their branches run down
+    // through their own boxes, which paint over them.
     const closestChildY = Math.min(...sorted.map(b => b.childY));
-    const defaultBarY = parentY + (closestChildY - parentY) / 2;
+    const notBelow = sorted.filter(b => b.childY <= parentY);
+    const defaultBarY = notBelow.length === 0
+        ? parentY + (closestChildY - parentY) / 2
+        : Math.max(parentY, ...notBelow.map(b => (Number.isFinite(b.childBottom) ? b.childBottom as number : b.childY))) + TREE_BUS_DROP;
 
     // Single child: straight line (no bar needed)
     if (sorted.length === 1) {
@@ -1717,6 +1741,59 @@ interface EdgePathEntry {
 /** Module-level registry of computed edge paths for crossing detection. */
 const edgePathRegistry = new Map<string, EdgePathEntry>();
 
+// Version of the registry (P-2026-10-02-1450, T9). A path registers in an effect,
+// after the render in which the other edges computed their crossings from the
+// previous paths: without a signal those crossings stayed stale until the edges array
+// changed again, which the sync loop T9 removed used to do on every frame. The version
+// moves once per burst, in a task of its own, and only when the burst changed the
+// registry: an edge whose effect re-runs on every render unregisters and registers
+// the same path again, and a version moved by each call made the edges re-render each
+// other without end ("Maximum update depth exceeded", measured on two demo scenes).
+let edgePathsVersion = 0;
+const edgePathListeners = new Set<() => void>();
+/** Entries removed in the current burst, as they were: a re-registration with the
+ *  same content cancels the removal. */
+const edgePathsRemoved = new Map<string, EdgePathEntry>();
+let edgePathsChanged = false;
+let edgePathsFlushPending = false;
+
+function sameEdgePathEntry(a: EdgePathEntry, b: EdgePathEntry): boolean {
+    if (a.sourceNode !== b.sourceNode || a.targetNode !== b.targetNode || a.treeGroupId !== b.treeGroupId) return false;
+    if (a.points === b.points) return true;
+    if (a.points.length !== b.points.length) return false;
+    for (let i = 0; i < a.points.length; i++) {
+        if (a.points[i].x !== b.points[i].x || a.points[i].y !== b.points[i].y) return false;
+    }
+    return true;
+}
+
+function flushEdgePaths(): void {
+    edgePathsFlushPending = false;
+    const changed = edgePathsChanged || edgePathsRemoved.size > 0;
+    edgePathsChanged = false;
+    edgePathsRemoved.clear();
+    if (!changed) return;
+    edgePathsVersion++;
+    for (const listener of Array.from(edgePathListeners)) listener();
+}
+
+function scheduleEdgePathsFlush(): void {
+    if (edgePathsFlushPending) return;
+    edgePathsFlushPending = true;
+    setTimeout(flushEdgePaths, 0);
+}
+
+/** Subscribe to changes of the path registry (for `useSyncExternalStore`). */
+export function subscribeEdgePaths(listener: () => void): () => void {
+    edgePathListeners.add(listener);
+    return () => { edgePathListeners.delete(listener); };
+}
+
+/** Current version of the path registry: moves once after each burst that changed a registered path. */
+export function getEdgePathsVersion(): number {
+    return edgePathsVersion;
+}
+
 /** Register an edge's computed path segments for crossing detection by other edges.
  *  @param treeGroupId - Optional group ID; entries with the same group skip crossing detection. */
 export function registerEdgePath(
@@ -1726,12 +1803,23 @@ export function registerEdgePath(
     targetNode: string,
     treeGroupId?: string,
 ): void {
-    edgePathRegistry.set(edgeId, { points, sourceNode, targetNode, treeGroupId });
+    const next = { points, sourceNode, targetNode, treeGroupId };
+    const prev = edgePathRegistry.get(edgeId) ?? edgePathsRemoved.get(edgeId);
+    edgePathRegistry.set(edgeId, next);
+    edgePathsRemoved.delete(edgeId);
+    if (!prev || !sameEdgePathEntry(prev, next)) {
+        edgePathsChanged = true;
+        scheduleEdgePathsFlush();
+    }
 }
 
 /** Unregister an edge's path (call on unmount). */
 export function unregisterEdgePath(edgeId: string): void {
+    const prev = edgePathRegistry.get(edgeId);
+    if (!prev) return;
     edgePathRegistry.delete(edgeId);
+    if (!edgePathsRemoved.has(edgeId)) edgePathsRemoved.set(edgeId, prev);
+    scheduleEdgePathsFlush();
 }
 
 /**
@@ -2357,4 +2445,661 @@ export function avoidNodeRects(points: Pt[], rects: Rect[]): Pt[] {
     const snapped = snapAxial(rerouted);
     if (pathBlockingRects(snapped, rects).length > 0) return points;
     return snapped;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Arc edges (R-VP-22, P-2026-09-30-0355): `edge.curve: 'arc'`
+// ═══════════════════════════════════════════════════════════════
+//
+// An arc edge is drawn between the CENTRES of its two handles, which DynamicHandles places on the
+// node's outline, and not between the points xyflow passes (the handle's outer edge, 4 px past the
+// border): so the arrow tip sits on the outline and on the anchor the node shows on hover. No
+// router runs, so no snap moves the tip off it (C3, cause 3). Pure: UnifiedEdge gathers the points.
+
+type Point = { x: number; y: number };
+
+/** The bow of an opposite pair: control point off the chord's midpoint, as a share of the chord. */
+export const ARC_BOW_RATIO = 0.23;
+export const ARC_BOW_MIN = 24;
+export const ARC_BOW_MAX = 96;
+/** Distance of an arc's label from its apex, outwards; of a loop's label above its top. */
+export const ARC_LABEL_GAP = 10;
+/** Height of a self-loop's control points above its ends, and their outward spread. */
+export const ARC_LOOP_HEIGHT = 64;
+export const ARC_LOOP_SPREAD = 16;
+/** Half the span of a self-loop drawn at the top centre, when its handles are not on top. */
+export const ARC_LOOP_HALF_SPAN = 18;
+
+export interface ArcEdgeGeometry {
+    d: string;
+    start: Point;
+    end: Point;
+    /** The label's anchor. */
+    label: Point;
+    /** True on a straight arc edge: the label takes the classic perpendicular nudge; false where `label` already stands off the line. */
+    nudge: boolean;
+    /** Dominant axis of the chord, for that nudge. */
+    isHorizontal: boolean;
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100;
+const pt = (p: Point) => `${r2(p.x)} ${r2(p.y)}`;
+
+/**
+ * Centre of the handle `handleId` of `type` on an internal node (React Flow's `internals.handleBounds`,
+ * relative to `internals.positionAbsolute`), or null when the node or the handle is not measured yet.
+ */
+export function handleCenterOf(node: any, handleId: string | null | undefined, type: 'source' | 'target'): Point | null {
+    const bounds = node?.internals?.handleBounds?.[type];
+    const pos = node?.internals?.positionAbsolute;
+    if (!handleId || !Array.isArray(bounds) || !pos) return null;
+    const h = bounds.find((b: any) => b?.id === handleId);
+    if (!h) return null;
+    return { x: pos.x + h.x + h.width / 2, y: pos.y + h.y + h.height / 2 };
+}
+
+/** The chord of an arc between its two ends; `id`, its edge's, orders a fan (P-2026-10-03-1304). */
+export interface ArcChord {
+    start: Point;
+    end: Point;
+    id?: string;
+}
+
+/**
+ * What else an arc reads (P-2026-10-03-1304, docs/discovery/discovery_2026-10-03_derived_notations_edges.md §3.5,
+ * §3.8): its own id, the arcs between the same two nodes in its own direction, and the boxes of the other nodes,
+ * which a single arc's chord must not cross. Absent: the arc of R-VP-22, as before.
+ */
+export interface ArcContext {
+    id?: string;
+    same?: ReadonlyArray<ArcChord>;
+    obstacles?: ReadonlyArray<{ x: number; y: number; width: number; height: number }>;
+    /** The drawn curves of the other arcs, sampled (`sampleArcPath`): a single arc bowing round a box crosses none. */
+    avoid?: ReadonlyArray<ReadonlyArray<Point>>;
+    /** The label boxes of the other arcs: the curve and its own label keep off them. */
+    avoidBoxes?: ReadonlyArray<{ x: number; y: number; width: number; height: number }>;
+    /** This arc's own label, to keep it off the boxes above when the arc bows. */
+    labelSize?: { width: number; height: number };
+}
+
+/** What a single arc keeps between itself and a box it bows round, and the most it bows to do so. */
+export const ARC_CLEARANCE = 12;
+export const ARC_CLEAR_MAX = 240;
+
+type ArcBox = { x: number; y: number; width: number; height: number };
+
+/** Whether the segment from `s` to `e` enters the box (Liang-Barsky). */
+function segmentEntersBox(s: Point, e: Point, r: ArcBox): boolean {
+    const dx = e.x - s.x, dy = e.y - s.y;
+    const p = [-dx, dx, -dy, dy];
+    const q = [s.x - r.x, r.x + r.width - s.x, s.y - r.y, r.y + r.height - s.y];
+    let t0 = 0, t1 = 1;
+    for (let i = 0; i < 4; i++) {
+        if (p[i] === 0) {
+            if (q[i] < 0) return false;
+            continue;
+        }
+        const t = q[i] / p[i];
+        if (p[i] < 0) {
+            if (t > t1) return false;
+            if (t > t0) t0 = t;
+        } else {
+            if (t < t0) return false;
+            if (t < t1) t1 = t;
+        }
+    }
+    return t1 - t0 > 1e-6;
+}
+
+/**
+ * What a bow needs on each side (1: the chord's left normal, -1: its right) to take the quadratic from `s` to `e`
+ * round every box its chord enters, with ARC_CLEARANCE to spare: for each box, its farthest corner on that side, reached
+ * where the box's span on the chord comes nearest an end (the curve stands 2t(1-t) of its bow off the chord at t).
+ * Null when the chord enters no box.
+ */
+function boxNeed(s: Point, e: Point, boxes: ReadonlyArray<ArcBox>): Map<number, number> | null {
+    const dx = e.x - s.x, dy = e.y - s.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) return null;
+    const u = { x: dx / len, y: dy / len };
+    const n = { x: dy / len, y: -dx / len };
+    const hit = boxes.filter(r => segmentEntersBox(s, e, r));
+    if (hit.length === 0) return null;
+    const need = new Map<number, number>([[1, 0], [-1, 0]]);
+    for (const r of hit) {
+        const corners = [[r.x, r.y], [r.x + r.width, r.y], [r.x, r.y + r.height], [r.x + r.width, r.y + r.height]];
+        const ts = corners.map(([x, y]) => Math.min(0.98, Math.max(0.02, ((x - s.x) * u.x + (y - s.y) * u.y) / len)));
+        const os = corners.map(([x, y]) => (x - s.x) * n.x + (y - s.y) * n.y);
+        const t0 = Math.min(...ts), t1 = Math.max(...ts);
+        const tm = Math.abs(t0 - 0.5) > Math.abs(t1 - 0.5) ? t0 : t1;
+        const factor = 2 * tm * (1 - tm);
+        for (const side of [1, -1]) {
+            const depth = Math.max(0, ...os.map(o => side * o)) + ARC_CLEARANCE;
+            need.set(side, Math.max(need.get(side) as number, depth / factor));
+        }
+    }
+    return need;
+}
+
+/** The step of the bow search, in px of bow. */
+const ARC_BOW_STEP = 4;
+/** A crossing this close to the arc's own ends is its meeting with an edge at the same node, not a crossing. */
+const ARC_END_SLACK = 6;
+
+function properCross(a: Point, b: Point, c: Point, d: Point): Point | null {
+    const r = { x: b.x - a.x, y: b.y - a.y }, q = { x: d.x - c.x, y: d.y - c.y };
+    const den = r.x * q.y - r.y * q.x;
+    if (Math.abs(den) < 1e-9) return null;
+    const t = ((c.x - a.x) * q.y - (c.y - a.y) * q.x) / den;
+    const v = ((c.x - a.x) * r.y - (c.y - a.y) * r.x) / den;
+    return t > 0 && t < 1 && v > 0 && v < 1 ? { x: a.x + t * r.x, y: a.y + t * r.y } : null;
+}
+
+/**
+ * The bow of a single arc whose chord enters a box (P-2026-10-03-1304, Q5): on the side the boxes ask less of first,
+ * the smallest bow from what they ask, in steps of ARC_BOW_STEP up to ARC_CLEAR_MAX, whose curve enters no box,
+ * crosses none of the `avoid` curves away from its own ends, and keeps itself and its own label off `labelBoxes` (its
+ * label off the boxes too). When no bow does, the first that drops the labels; then the one that only clears the boxes;
+ * null when the chord enters no box, or nothing clears them within ARC_CLEAR_MAX.
+ */
+function searchBow(s: Point, e: Point, boxes: ReadonlyArray<ArcBox>, avoid: ReadonlyArray<ReadonlyArray<Point>>, labelBoxes: ReadonlyArray<ArcBox> = [], labelSize?: { width: number; height: number }): number | null {
+    const need = boxNeed(s, e, boxes);
+    if (!need) return null;
+    const dx = e.x - s.x, dy = e.y - s.y;
+    const len = Math.hypot(dx, dy);
+    const n = { x: dy / len, y: -dx / len };
+    const mid = { x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 };
+    const curve = (b: number): Point[] => {
+        const c = { x: mid.x + n.x * b, y: mid.y + n.y * b };
+        const out: Point[] = [];
+        for (let i = 0; i <= 48; i++) {
+            const t = i / 48;
+            out.push({ x: (1 - t) ** 2 * s.x + 2 * t * (1 - t) * c.x + t ** 2 * e.x, y: (1 - t) ** 2 * s.y + 2 * t * (1 - t) * c.y + t ** 2 * e.y });
+        }
+        return out;
+    };
+    const clearOfBoxes = (pts: Point[]) => !pts.some(p => boxes.some(r => p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height));
+    const clearOfCurves = (pts: Point[]) => {
+        for (const other of avoid) {
+            for (let i = 1; i < pts.length; i++) {
+                for (let j = 1; j < other.length; j++) {
+                    const x = properCross(pts[i - 1], pts[i], other[j - 1], other[j]);
+                    if (x && Math.hypot(x.x - s.x, x.y - s.y) > ARC_END_SLACK && Math.hypot(x.x - e.x, x.y - e.y) > ARC_END_SLACK) return false;
+                }
+            }
+        }
+        return true;
+    };
+    const inBox = (p: Point, r: ArcBox) => p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height;
+    const overlaps = (a: ArcBox, r: ArcBox) => a.x < r.x + r.width && r.x < a.x + a.width && a.y < r.y + r.height && r.y < a.y + a.height;
+    // The label where bowedArc puts it, ARC_LABEL_GAP past the apex, outwards.
+    const ownLabel = (b: number): ArcBox | null => {
+        if (!labelSize) return null;
+        const g = ARC_LABEL_GAP * Math.sign(b);
+        const x = mid.x + n.x * (b / 2 + g), y = mid.y + n.y * (b / 2 + g);
+        return { x: x - labelSize.width / 2, y: y - labelSize.height / 2, width: labelSize.width, height: labelSize.height };
+    };
+    const clearOfLabels = (pts: Point[], b: number) => {
+        if (pts.some(p => labelBoxes.some(r => inBox(p, r)))) return false;
+        const own = ownLabel(b);
+        return !own || (!labelBoxes.some(r => overlaps(own, r)) && !boxes.some(r => overlaps(own, r)));
+    };
+    const sides = (need.get(1) as number) <= (need.get(-1) as number) ? [1, -1] : [-1, 1];
+    for (const side of sides) {
+        for (let h = Math.max(need.get(side) as number, ARC_BOW_MIN); h <= ARC_CLEAR_MAX; h += ARC_BOW_STEP) {
+            const pts = curve(side * h);
+            if (clearOfBoxes(pts) && clearOfCurves(pts) && clearOfLabels(pts, side * h)) return side * h;
+        }
+    }
+    // Then the curves without the labels, then the boxes alone.
+    for (const side of sides) {
+        for (let h = Math.max(need.get(side) as number, ARC_BOW_MIN); h <= ARC_CLEAR_MAX; h += ARC_BOW_STEP) {
+            const pts = curve(side * h);
+            if (clearOfBoxes(pts) && clearOfCurves(pts)) return side * h;
+        }
+    }
+    for (const side of sides) {
+        const h = need.get(side) as number;
+        if (h <= ARC_CLEAR_MAX && clearOfBoxes(curve(side * h))) return side * h;
+    }
+    return null;
+}
+
+/**
+ * Points along an arc's `d` as the arc helpers write it (`M L`, `M Q`, `M C`), `n` steps: the curve another arc
+ * must not cross (P-2026-10-03-1304). Any other path gives its first point only.
+ */
+export function sampleArcPath(d: string, n = 32): Point[] {
+    const v = (d.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? []).map(Number);
+    const cmd = (d.match(/[LQC]/) ?? [])[0];
+    const P = (i: number) => ({ x: v[i], y: v[i + 1] });
+    if (v.length < 2) return [];
+    const at = (t: number): Point => {
+        if (cmd === 'L') { const [a, b] = [P(0), P(2)]; return { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) }; }
+        if (cmd === 'Q') { const [a, c, b] = [P(0), P(2), P(4)]; return { x: (1 - t) ** 2 * a.x + 2 * t * (1 - t) * c.x + t ** 2 * b.x, y: (1 - t) ** 2 * a.y + 2 * t * (1 - t) * c.y + t ** 2 * b.y }; }
+        if (cmd === 'C') {
+            const [a, c1, c2, b] = [P(0), P(2), P(4), P(6)];
+            const k = [(1 - t) ** 3, 3 * t * (1 - t) ** 2, 3 * t ** 2 * (1 - t), t ** 3];
+            return { x: k[0] * a.x + k[1] * c1.x + k[2] * c2.x + k[3] * b.x, y: k[0] * a.y + k[1] * c1.y + k[2] * c2.y + k[3] * b.y };
+        }
+        return P(0);
+    };
+    if (!cmd) return [P(0)];
+    const out: Point[] = [];
+    for (let i = 0; i <= n; i++) out.push(at(i / n));
+    return out;
+}
+
+/** The quadratic of a bow `b` on the chord's left normal, its label `ARC_LABEL_GAP` past the apex, outwards. */
+function bowedArc(start: Point, end: Point, normal: Point, b: number, isHorizontal: boolean): ArcEdgeGeometry {
+    const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    const c = { x: mid.x + normal.x * b, y: mid.y + normal.y * b };
+    const apex = { x: (start.x + 2 * c.x + end.x) / 4, y: (start.y + 2 * c.y + end.y) / 4 };
+    const s = Math.sign(b);
+    const label = { x: apex.x + normal.x * s * ARC_LABEL_GAP, y: apex.y + normal.y * s * ARC_LABEL_GAP };
+    return { d: `M ${pt(start)} Q ${pt(c)} ${pt(end)}`, start, end, label, nudge: false, isHorizontal };
+}
+
+/**
+ * An arc alone between its two nodes (P-2026-10-03-1304): a chord that enters another node's box bows round it,
+ * crossing none of the `avoid` curves and keeping its curve and label off `avoidBoxes` where it can (`searchBow`);
+ * otherwise the straight line of R-VP-22, from handle centre to handle centre.
+ */
+function singleArcGeometry(start: Point, end: Point, ctx: ArcContext): ArcEdgeGeometry {
+    const b = searchBow(start, end, ctx.obstacles ?? [], ctx.avoid ?? [], ctx.avoidBoxes ?? [], ctx.labelSize);
+    if (b !== null) {
+        const dx = end.x - start.x, dy = end.y - start.y;
+        const len = Math.hypot(dx, dy);
+        return bowedArc(start, end, { x: dy / len, y: -dx / len }, b, Math.abs(dx) >= Math.abs(dy));
+    }
+    const isHorizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
+    return { d: `M ${pt(start)} L ${pt(end)}`, start, end, label: { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }, nudge: true, isHorizontal };
+}
+
+/**
+ * The fan of n arcs between one pair of nodes (P-2026-10-03-1304): every member sorts the same chords the same way,
+ * by their midpoints along the left normal of the lowest id's chord (an id that is absent, this arc's own first), ties
+ * by id, and the k-th bows by ((n-1)/2 - k)/((n-1)/2) of its own height on that normal: the outer two by the full
+ * height, the middle one of an odd fan straight. The chords keep the order of their slots (computeSidePositions orders
+ * a side by edge id when the opposite node is the same), so no two cross.
+ */
+function fanArcGeometry(start: Point, end: Point, opposite: ReadonlyArray<ArcChord>, same: ReadonlyArray<ArcChord>, id: string | undefined): ArcEdgeGeometry {
+    const self = { start, end, id };
+    const chords: ArcChord[] = [self, ...opposite, ...same];
+    const byId = (a: ArcChord, b: ArcChord) => (a.id === b.id ? 0 : a.id === undefined ? 1 : b.id === undefined ? -1 : a.id < b.id ? -1 : 1);
+    const ref = [...chords].sort(byId)[0];
+    const rl = Math.hypot(ref.end.x - ref.start.x, ref.end.y - ref.start.y) || 1;
+    const rn = { x: (ref.end.y - ref.start.y) / rl, y: -(ref.end.x - ref.start.x) / rl };
+    const midOf = (c: ArcChord) => ({ x: (c.start.x + c.end.x) / 2, y: (c.start.y + c.end.y) / 2 });
+    const mean = chords.reduce((acc, c) => ({ x: acc.x + midOf(c).x / chords.length, y: acc.y + midOf(c).y / chords.length }), { x: 0, y: 0 });
+    const keyed = chords.map(c => ({ c, p: (midOf(c).x - mean.x) * rn.x + (midOf(c).y - mean.y) * rn.y }));
+    keyed.sort((a, b) => (Math.abs(a.p - b.p) >= 0.5 ? b.p - a.p : byId(a.c, b.c)));
+    const rank = keyed.findIndex(k => k.c === self);
+    const half = (chords.length - 1) / 2;
+    const f = (half - rank) / half;
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+    if (Math.abs(f) < 1e-9) {
+        return { d: `M ${pt(start)} L ${pt(end)}`, start, end, label: midOf(self), nudge: true, isHorizontal };
+    }
+    const h = Math.min(ARC_BOW_MAX, Math.max(ARC_BOW_MIN, ARC_BOW_RATIO * Math.hypot(dx, dy)));
+    return bowedArc(start, end, rn, f * h, isHorizontal);
+}
+
+/**
+ * An arc edge from `start` to `end`. With no opposite edge: a straight line, its label at the
+ * midpoint. With one or more (their chords in `opposite`, each from its own start to its own end):
+ * a quadratic whose control point stands off the midpoint on the side AWAY from the mean midpoint
+ * of the opposite chords, so the two arcs bow apart whichever slot each one got; on coincident
+ * chords, to the left of the direction of travel, which is opposite for the two directions. The
+ * label stands `ARC_LABEL_GAP` past the apex, outwards.
+ * P-2026-10-03-1304: the single arc bows round the boxes in `ctx.obstacles`
+ * (`singleArcGeometry`); three or more arcs between one pair, or two the same way (`ctx.same`), fan
+ * out (`fanArcGeometry`); the pair above is unchanged.
+ */
+export function computeArcEdgeGeometry(start: Point, end: Point, opposite: ReadonlyArray<ArcChord>, ctx: ArcContext = {}): ArcEdgeGeometry {
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const len = Math.hypot(dx, dy);
+    const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+    if (len < 1) {
+        return { d: `M ${pt(start)} L ${pt(end)}`, start, end, label: mid, nudge: true, isHorizontal };
+    }
+    const same = ctx.same ?? [];
+    // P-2026-10-03-1304: alone between its two nodes, bowed clear of the boxes on its chord.
+    if (opposite.length === 0 && same.length === 0) return singleArcGeometry(start, end, ctx);
+    // Three or more between one pair, or two the same way: the fan.
+    if (opposite.length + same.length > 1 || same.length > 0) return fanArcGeometry(start, end, opposite, same, ctx.id);
+    // The pair of R-VP-22, as before.
+    // Left of the direction of travel, in screen coordinates (y down).
+    const n = { x: dy / len, y: -dx / len };
+    const other = opposite.reduce((acc, o) => ({ x: acc.x + (o.start.x + o.end.x) / 2 / opposite.length, y: acc.y + (o.start.y + o.end.y) / 2 / opposite.length }), { x: 0, y: 0 });
+    const away = (mid.x - other.x) * n.x + (mid.y - other.y) * n.y;
+    const side = Math.abs(away) < 0.5 ? 1 : Math.sign(away);
+    const h = Math.min(ARC_BOW_MAX, Math.max(ARC_BOW_MIN, ARC_BOW_RATIO * len));
+    const c = { x: mid.x + n.x * side * h, y: mid.y + n.y * side * h };
+    const apex = { x: (start.x + 2 * c.x + end.x) / 4, y: (start.y + 2 * c.y + end.y) / 4 };
+    const label = { x: apex.x + n.x * side * ARC_LABEL_GAP, y: apex.y + n.y * side * ARC_LABEL_GAP };
+    return { d: `M ${pt(start)} Q ${pt(c)} ${pt(end)}`, start, end, label, nudge: false, isHorizontal };
+}
+
+/**
+ * A self-loop over the top edge: a cubic from `start` to `end`, both on that edge, its control
+ * points `ARC_LOOP_HEIGHT` above them and spread outwards, so the loop leaves upwards and the
+ * arrow enters the top edge from above. The label stands `ARC_LABEL_GAP` above the loop's top.
+ */
+export function computeArcSelfLoopGeometry(start: Point, end: Point): ArcEdgeGeometry {
+    const s = end.x >= start.x ? 1 : -1;
+    const c1 = { x: start.x - s * ARC_LOOP_SPREAD, y: start.y - ARC_LOOP_HEIGHT };
+    const c2 = { x: end.x + s * ARC_LOOP_SPREAD, y: end.y - ARC_LOOP_HEIGHT };
+    const top = { x: (start.x + 3 * c1.x + 3 * c2.x + end.x) / 8, y: (start.y + 3 * c1.y + 3 * c2.y + end.y) / 8 };
+    return {
+        d: `M ${pt(start)} C ${pt(c1)}, ${pt(c2)}, ${pt(end)}`,
+        start, end, label: { x: top.x, y: top.y - ARC_LABEL_GAP }, nudge: false, isHorizontal: true,
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ELK route ends on a diamond (P-2026-10-03-1304, Q4 (b))
+// ═══════════════════════════════════════════════════════════════
+//
+// ELK lays a diamond out as its box, so two routes may end side by side at the tip, off the outline. Each end takes a
+// vertex instead: the end nearest a side's vertex keeps it, another end on that side moves to the free adjacent vertex
+// its route turns towards, and with none free it stays on its side, moved onto the outline. Pure: UnifiedEdge gathers
+// the ends of the routes in the store and refits its own route with refitRouteEnd.
+
+/** An ELK route's end on a diamond: `route` runs from that end outwards. */
+export interface DiamondEnd {
+    key: string;
+    side: Side;
+    point: Point;
+    route: ReadonlyArray<Point>;
+}
+
+const SIDE_NORMAL: Record<Side, Point> = { top: { x: 0, y: -1 }, bottom: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+/** How far a route leaves a vertex along its side's normal before it turns. */
+export const DIAMOND_STUB = 16;
+
+function diamondVertex(r: ArcBox, side: Side): Point {
+    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+    return side === 'top' ? { x: cx, y: r.y } : side === 'bottom' ? { x: cx, y: r.y + r.height }
+        : side === 'left' ? { x: r.x, y: cy } : { x: r.x + r.width, y: cy };
+}
+
+/** `p` on the diamond's edge of `side`'s half, at the same coordinate along the side. */
+function onDiamondOutline(p: Point, r: ArcBox, side: Side): Point {
+    const cx = r.x + r.width / 2, cy = r.y + r.height / 2, hw = r.width / 2, hh = r.height / 2;
+    if (side === 'top' || side === 'bottom') {
+        const x = Math.min(r.x + r.width, Math.max(r.x, p.x));
+        const dy = hh * (1 - Math.abs(x - cx) / hw);
+        return { x, y: side === 'top' ? cy - dy : cy + dy };
+    }
+    const y = Math.min(r.y + r.height, Math.max(r.y, p.y));
+    const dx = hw * (1 - Math.abs(y - cy) / hh);
+    return { x: side === 'left' ? cx - dx : cx + dx, y };
+}
+
+/** Each end of `ends` on the diamond `rect`, by key: the vertex it takes and its side (see above). */
+export function spreadDiamondEnds(rect: ArcBox, ends: ReadonlyArray<DiamondEnd>): Map<string, { point: Point; side: Side }> {
+    const out = new Map<string, { point: Point; side: Side }>();
+    const taken = new Set<Side>(ends.map(e => e.side));
+    for (const side of ['top', 'right', 'bottom', 'left'] as Side[]) {
+        const v = diamondVertex(rect, side);
+        const list = ends.filter(e => e.side === side)
+            .sort((a, b) => (Math.hypot(a.point.x - v.x, a.point.y - v.y) - Math.hypot(b.point.x - v.x, b.point.y - v.y)) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+        if (list.length === 0) continue;
+        out.set(list[0].key, { point: v, side });
+        const across = side === 'top' || side === 'bottom';
+        for (const e of list.slice(1)) {
+            // Where the route turns: its first point off the end's own line, along the side.
+            const turn = e.route.find(p => (across ? Math.abs(p.x - e.point.x) : Math.abs(p.y - e.point.y)) > 1);
+            const along = turn ? (across ? turn.x - v.x : turn.y - v.y) : 0;
+            const prefs: Side[] = across ? (along < 0 ? ['left', 'right'] : ['right', 'left']) : (along < 0 ? ['top', 'bottom'] : ['bottom', 'top']);
+            const free = prefs.find(p => !taken.has(p));
+            if (free) {
+                taken.add(free);
+                out.set(e.key, { point: diamondVertex(rect, free), side: free });
+            } else {
+                out.set(e.key, { point: onDiamondOutline(e.point, rect, side), side });
+            }
+        }
+    }
+    return out;
+}
+
+/** The points without repeats and without a middle point on a straight run. */
+function simplifyOrthogonal(pts: Point[]): Point[] {
+    const out: Point[] = [];
+    for (const p of pts) {
+        const q = out[out.length - 1];
+        if (q && Math.abs(q.x - p.x) < 0.01 && Math.abs(q.y - p.y) < 0.01) continue;
+        out.push(p);
+        while (out.length >= 3) {
+            const [a, b, c] = out.slice(-3);
+            const sameX = Math.abs(a.x - b.x) < 0.01 && Math.abs(b.x - c.x) < 0.01;
+            const sameY = Math.abs(a.y - b.y) < 0.01 && Math.abs(b.y - c.y) < 0.01;
+            if (!sameX && !sameY) break;
+            out.splice(out.length - 2, 1);
+        }
+    }
+    return out;
+}
+
+/**
+ * An orthogonal route with one end moved to `point` on `side` of its node (`at` says which end). On the side the
+ * last leg already enters, the leg slides across; a lone leg slides whole when its other end can move to the same
+ * coordinate within `otherSpan` (that end's side, corners kept clear), else it gets a jog. On another side the route leaves the vertex
+ * along that side's normal: as far as the run it already makes there when that run lies beyond DIAMOND_STUB, else
+ * DIAMOND_STUB, then joins the route with one turn.
+ */
+export function refitRouteEnd(points: ReadonlyArray<Point>, at: 'start' | 'end', point: Point, side: Side, otherSpan?: readonly [number, number]): Point[] {
+    const pts = (at === 'start' ? [...points].reverse() : [...points]).map(p => ({ ...p }));
+    const n = pts.length;
+    if (n < 2) {
+        const lone = [...pts, point];
+        return at === 'start' ? lone.reverse() : lone;
+    }
+    const vertical = side === 'top' || side === 'bottom';
+    const last = pts[n - 1], prev = pts[n - 2];
+    const lastLegVertical = Math.abs(prev.x - last.x) < 0.01;
+    const nrm = SIDE_NORMAL[side];
+    const fromOutside = (prev.x - point.x) * nrm.x + (prev.y - point.y) * nrm.y > 0;
+    let out: Point[];
+    if (vertical === lastLegVertical && fromOutside) {
+        const c = vertical ? point.x : point.y;
+        if (n === 2 && otherSpan && c >= otherSpan[0] - 0.01 && c <= otherSpan[1] + 0.01) {
+            out = vertical ? [{ x: c, y: prev.y }, point] : [{ x: prev.x, y: c }, point];
+        } else if (n === 2) {
+            const mid = vertical ? (prev.y + point.y) / 2 : (prev.x + point.x) / 2;
+            out = vertical
+                ? [prev, { x: prev.x, y: mid }, { x: point.x, y: mid }, point]
+                : [prev, { x: mid, y: prev.y }, { x: mid, y: point.y }, point];
+        } else {
+            pts[n - 1] = point;
+            if (vertical) pts[n - 2].x = point.x; else pts[n - 2].y = point.y;
+            out = pts;
+        }
+    } else {
+        const head = pts.slice(0, n - 1);
+        const a = head[head.length - 1];
+        const b = head.length >= 2 ? head[head.length - 2] : null;
+        const beyond = (p: Point) => (p.x - point.x) * nrm.x + (p.y - point.y) * nrm.y;
+        // The route already runs along the normal past the stub (b to a): leave the vertex straight to b's line.
+        const parallel = b && (vertical ? Math.abs(b.x - a.x) < 0.01 : Math.abs(b.y - a.y) < 0.01);
+        if (b && parallel && beyond(b) >= DIAMOND_STUB) {
+            const t = vertical ? { x: point.x, y: b.y } : { x: b.x, y: point.y };
+            out = [...head.slice(0, -1), t, point];
+        } else {
+            const t = { x: point.x + nrm.x * DIAMOND_STUB, y: point.y + nrm.y * DIAMOND_STUB };
+            const corner = vertical ? { x: a.x, y: t.y } : { x: t.x, y: a.y };
+            out = [...head, corner, t, point];
+        }
+    }
+    const simple = simplifyOrthogonal(out);
+    return at === 'start' ? simple.reverse() : simple;
+}
+
+/** The ends of a self-loop drawn at the centre of the top edge of `rect`, when its handles are not both on top. */
+export function topLoopEnds(rect: Rect): { start: Point; end: Point } {
+    const cx = rect.x + rect.width / 2;
+    return { start: { x: cx - ARC_LOOP_HALF_SPAN, y: rect.y }, end: { x: cx + ARC_LOOP_HALF_SPAN, y: rect.y } };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Edge ends (slice E, P-2026-09-30-1810): the line stops at the glyph's back
+// ═══════════════════════════════════════════════════════════════
+//
+// The drawn `d` is cut at each end by the glyph's back (edgeEndGlyphs `back`), on the first and on
+// the last drawing command: a line exactly, a quadratic (the arc) or a cubic (the bezier, the loop)
+// split by de Casteljau at the parameter whose arc length matches. Every builder in use writes
+// absolute M, L, Q, C and A commands (roundManhattanPath, buildFinalPath, the arc helpers, xyflow's
+// straight and bezier paths): anything else is left as drawn, as is an end whose command is an A.
+// Pure: UnifiedEdge calls it on the path it would draw, only for an end that has a glyph.
+
+/** Where an end was cut: the new end point, the original end (the tip), the length cut, the angle at to tip. */
+export interface TrimmedEnd {
+    at: Point;
+    tip: Point;
+    length: number;
+    /** Degrees, the direction from `at` to `tip`, two decimals. */
+    angle: number;
+}
+
+export interface TrimmedPath {
+    d: string;
+    start: TrimmedEnd | null;
+    end: TrimmedEnd | null;
+}
+
+/** Below this the rest of a command is not kept: a cut never reaches a command's other end. */
+const TRIM_KEEP = 0.5;
+const TRIM_SAMPLES = 32;
+
+interface PathCommand { cmd: string; args: number[] }
+
+function parseAbsolutePath(d: string): PathCommand[] | null {
+    const tokens = d.match(/[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi);
+    if (!tokens || tokens[0] !== 'M') return null;
+    const arity: Record<string, number> = { M: 2, L: 2, Q: 4, C: 6, A: 7 };
+    const out: PathCommand[] = [];
+    let i = 0;
+    while (i < tokens.length) {
+        const cmd = tokens[i++];
+        const n = arity[cmd];
+        if (n === undefined) return null;
+        const args = tokens.slice(i, i + n).map(Number);
+        if (args.length !== n || args.some(v => !Number.isFinite(v))) return null;
+        i += n;
+        out.push({ cmd, args });
+    }
+    return out.length >= 2 ? out : null;
+}
+
+/** The control polygon of a drawing command from `from`: its points, the end last. */
+const polygonOf = (from: Point, c: PathCommand): Point[] => {
+    const pts: Point[] = [from];
+    for (let k = 0; k < c.args.length; k += 2) pts.push({ x: c.args[k], y: c.args[k + 1] });
+    return pts;
+};
+
+/** de Casteljau: the point at `t` and the two halves' control polygons. */
+function splitPolygon(p: Point[], t: number): { left: Point[]; right: Point[] } {
+    const left: Point[] = [p[0]];
+    const right: Point[] = [p[p.length - 1]];
+    let q = p;
+    while (q.length > 1) {
+        q = q.slice(1).map((v, k) => ({ x: q[k].x + (v.x - q[k].x) * t, y: q[k].y + (v.y - q[k].y) * t }));
+        left.push(q[0]);
+        right.unshift(q[q.length - 1]);
+    }
+    return { left, right };
+}
+
+const pointAt = (p: Point[], t: number): Point => splitPolygon(p, t).left[p.length - 1];
+
+/** Cumulative arc lengths at TRIM_SAMPLES + 1 parameters, from t = 0. */
+function arcTable(p: Point[]): number[] {
+    const table = [0];
+    let prev = p[0];
+    for (let k = 1; k <= TRIM_SAMPLES; k++) {
+        const c = p.length === 2 ? { x: p[0].x + (p[1].x - p[0].x) * k / TRIM_SAMPLES, y: p[0].y + (p[1].y - p[0].y) * k / TRIM_SAMPLES } : pointAt(p, k / TRIM_SAMPLES);
+        table.push(table[k - 1] + Math.hypot(c.x - prev.x, c.y - prev.y));
+        prev = c;
+    }
+    return table;
+}
+
+/** The parameter at arc length `s` from t = 0, by the table. */
+function paramAt(table: number[], s: number): number {
+    for (let k = 1; k < table.length; k++) {
+        if (table[k] >= s) {
+            const seg = table[k] - table[k - 1];
+            return (k - 1 + (seg > 0 ? (s - table[k - 1]) / seg : 0)) / TRIM_SAMPLES;
+        }
+    }
+    return 1;
+}
+
+const angleOf = (at: Point, tip: Point) => r2(Math.atan2(tip.y - at.y, tip.x - at.x) * 180 / Math.PI);
+
+/**
+ * Cut `length` off the end of a drawing command (from `from`): the new command, or null when it cannot be
+ * cut (an arc, a degenerate command). The cut is at most the command's length less TRIM_KEEP.
+ */
+function cutEnd(from: Point, c: PathCommand, length: number): { cmd: PathCommand; cut: TrimmedEnd } | null {
+    if (c.cmd !== 'L' && c.cmd !== 'Q' && c.cmd !== 'C') return null;
+    const p = polygonOf(from, c);
+    const table = arcTable(p);
+    const total = table[table.length - 1];
+    const a = Math.min(length, total - TRIM_KEEP);
+    if (!(a > 0)) return null;
+    const t = c.cmd === 'L' ? 1 - a / total : paramAt(table, total - a);
+    const left = c.cmd === 'L' ? [p[0], { x: p[0].x + (p[1].x - p[0].x) * t, y: p[0].y + (p[1].y - p[0].y) * t }] : splitPolygon(p, t).left;
+    const kept = left.slice(1).map(q => ({ x: r2(q.x), y: r2(q.y) }));
+    const at = kept[kept.length - 1];
+    const tip = p[p.length - 1];
+    return { cmd: { cmd: c.cmd, args: kept.flatMap(q => [q.x, q.y]) }, cut: { at, tip, length: r2(a), angle: angleOf(at, tip) } };
+}
+
+/** Cut `length` off the start of a drawing command (from `from`): the new start point and command, or null. */
+function cutStart(from: Point, c: PathCommand, length: number): { start: Point; cmd: PathCommand; cut: TrimmedEnd } | null {
+    if (c.cmd !== 'L' && c.cmd !== 'Q' && c.cmd !== 'C') return null;
+    const p = polygonOf(from, c);
+    const table = arcTable(p);
+    const total = table[table.length - 1];
+    const a = Math.min(length, total - TRIM_KEEP);
+    if (!(a > 0)) return null;
+    const t = c.cmd === 'L' ? a / total : paramAt(table, a);
+    const right = c.cmd === 'L' ? [{ x: p[0].x + (p[1].x - p[0].x) * t, y: p[0].y + (p[1].y - p[0].y) * t }, p[1]] : splitPolygon(p, t).right;
+    const kept = right.map((q, k) => (k === right.length - 1 ? q : { x: r2(q.x), y: r2(q.y) }));
+    const at = kept[0];
+    return { start: at, cmd: { cmd: c.cmd, args: kept.slice(1).flatMap(q => [q.x, q.y]) }, cut: { at, tip: from, length: r2(a), angle: angleOf(at, from) } };
+}
+
+/**
+ * The drawn path `d` with `startTrim` px cut off its start and `endTrim` px off its end, and where each end
+ * was cut (null where nothing was). Both trims 0: `d` itself, byte for byte. A path this cannot read is
+ * returned as drawn, with no cut.
+ */
+export function trimPathEnds(d: string, startTrim: number, endTrim: number): TrimmedPath {
+    if (!(startTrim > 0) && !(endTrim > 0)) return { d, start: null, end: null };
+    const cmds = parseAbsolutePath(d);
+    if (!cmds || cmds.slice(1).some(c => c.cmd === 'M')) return { d, start: null, end: null };
+    const startOf = (k: number): Point => {
+        const a = cmds[k - 1].args;
+        return { x: a[a.length - 2], y: a[a.length - 1] };
+    };
+    let end: TrimmedEnd | null = null;
+    let start: TrimmedEnd | null = null;
+    const lastIdx = cmds.length - 1;
+    if (endTrim > 0) {
+        const r = cutEnd(startOf(lastIdx), cmds[lastIdx], endTrim);
+        if (r) { cmds[lastIdx] = r.cmd; end = r.cut; }
+    }
+    if (startTrim > 0) {
+        const r = cutStart(startOf(1), cmds[1], startTrim);
+        if (r) { cmds[0] = { cmd: 'M', args: [r.start.x, r.start.y] }; cmds[1] = r.cmd; start = r.cut; }
+    }
+    if (!start && !end) return { d, start: null, end: null };
+    return { d: cmds.map(c => `${c.cmd} ${c.args.join(' ')}`).join(' '), start, end };
 }

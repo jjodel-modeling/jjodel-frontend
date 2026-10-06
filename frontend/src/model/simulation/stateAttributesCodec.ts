@@ -17,15 +17,23 @@
  * carry `equation`, so an edit of the panel's table keeps it (report §4.5 of
  * docs/discovery/discovery_2026-09-27_sim_derived_attributes.md).
  *
+ * An input record (R-SIM-88) has `"input":true` in the place of both: semantic
+ * only, and one of `initial` or `equation` beside it is `exclusive`.
+ *
  * Decoding is tolerant, record by record (R-SIM-68): a malformed record is a
  * defect of its own and the others decode; a string that is not JSON, or has no
  * `v` and `attrs`, is one defect on the key, never a silent empty set. Unknown
  * fields are ignored.
  *
+ * A model (M1) carries the same key in its own bag for its globals (R-SIM-94):
+ * `mergeDeclarations` gives the run the metamodel's list with the model's
+ * globals over it, by name; a model record naming a metaclass is a record defect.
+ *
  * Pure: JjEL's parser for the initial literal, and the types of the core.
  */
 
 import { parseExpressionStrict } from '../../jjel/parser';
+import { inDomain } from './netStep';
 import type { DeclarationDefect, Domain, SimValue, StateAttributeDecl } from './netTypes';
 
 /** The bag key (R-SIM-67). */
@@ -42,6 +50,8 @@ export interface StateAttributeRecord {
     readonly domain: Domain | null;
     readonly initial: string;
     readonly equation?: string;
+    /** An input variable (R-SIM-88): no initial (`''` as a row), no equation. */
+    readonly input?: true;
 }
 
 /** A domain with its fields in a fixed order, `null` when it is none of the three. */
@@ -66,14 +76,14 @@ function domainOf(raw: unknown): Domain | null {
 
 /**
  * The one string of the key: `{"v":1,"attrs":[...]}`, every record's fields in the order of R-SIM-67,
- * the last one `equation` for a derived record and `initial` otherwise, never both.
+ * the last one `equation` for a derived record, `input` for an input (R-SIM-88), `initial` otherwise.
  */
 export function encodeStateAttributes(records: readonly StateAttributeRecord[]): string {
     return JSON.stringify({
         v: 1,
         attrs: records.map(r => ({
             name: r.name, metaclass: r.metaclass, space: r.space, domain: domainOf(r.domain),
-            ...(r.equation !== undefined ? { equation: r.equation } : { initial: r.initial }),
+            ...(r.equation !== undefined ? { equation: r.equation } : r.input === true ? { input: true } : { initial: r.initial }),
         })),
     });
 }
@@ -91,6 +101,31 @@ export function parseInitialLiteral(text: string): SimValue | null {
     if (e.type === 'Unary' && e.operator === '-' && e.operand.type === 'Literal' && typeof e.operand.value === 'number') return -e.operand.value;
     if (e.type === 'Identifier') return e.name;
     return null;
+}
+
+/**
+ * The initial value a domain starts at, as the JjEL text a record stores: `false` for a boolean, the
+ * minimum for a range (`0`, `-3`), the first literal for an enumeration as a bare identifier (`A`), and
+ * `''` for an enumeration with no literals yet, which stays a defect until it has one.
+ */
+export function defaultInitialOf(domain: Domain): string {
+    switch (domain.kind) {
+        case 'boolean': return 'false';
+        case 'range': return String(domain.min);
+        case 'enum': return domain.literals[0] ?? '';
+    }
+}
+
+/**
+ * The initial text of a stored row whose domain `prev` became `next` by an edit of a bound or of the
+ * literals: the new domain's default when the text is not a value of the new domain, or is the previous
+ * domain's default (it follows the minimum or the first literal); a value typed inside the domain stays.
+ * A change of kind does not come here: it takes `defaultInitialOf` outright.
+ */
+export function initialFollowingDomain(initial: string, prev: Domain | null, next: Domain): string {
+    const value = parseInitialLiteral(initial);
+    const isValue = value !== null && inDomain(value, next);
+    return !isValue || (prev !== null && initial === defaultInitialOf(prev)) ? defaultInitialOf(next) : initial;
 }
 
 /** The array of records, or why the key itself is unreadable. */
@@ -119,6 +154,14 @@ function decodeRecord(raw: unknown, index: number): StateAttributeDecl | Declara
     if (r.space !== 'semantic' && r.space !== 'presentation') return defect('bad space');
     const domain = domainOf(r.domain);
     if (r.domain !== null && domain === null) return defect('bad domain');
+    // An input has neither initial nor equation, and is semantic (R-SIM-88).
+    if (r.input !== undefined) {
+        if (r.input !== true) return defect('bad input');
+        if (r.initial !== undefined) return { index, name, code: 'exclusive', message: 'input and initial' };
+        if (r.equation !== undefined) return { index, name, code: 'exclusive', message: 'input and equation' };
+        if (r.space !== 'semantic') return defect('an input is semantic');
+        return { name, metaclass: r.metaclass as string | null, space: 'semantic', domain, input: true };
+    }
     // Exactly one of initial and equation (R-SIM-72); the equation is compiled at Reset, not here.
     if (r.initial !== undefined && r.equation !== undefined) return { index, name, code: 'exclusive', message: 'initial and equation' };
     if (r.equation !== undefined) {
@@ -169,7 +212,46 @@ export function stateAttributeRows(raw: string | undefined): { rows: StateAttrib
             domain: domainOf(r.domain),
             initial: typeof initial === 'string' ? initial : typeof initial === 'number' || typeof initial === 'boolean' ? String(initial) : '',
             ...(typeof r.equation === 'string' ? { equation: r.equation } : {}),
+            ...(r.input === true ? { input: true as const } : {}),
         };
     });
     return { rows, readable: true };
+}
+
+/** What `decodeStateAttributes` gives: the declarations of one key, and its defects. */
+export interface DecodedStateAttributes {
+    readonly decls: readonly StateAttributeDecl[];
+    readonly defects: readonly DeclarationDefect[];
+}
+
+/**
+ * The declarations a run reads (R-SIM-94): the metamodel's, then the model's
+ * globals. A model global shadows the metamodel's global of the same name, with
+ * no defect, so a global declared in the metamodel is the default of every model
+ * that does not declare its own; a metaclass-bound record of the metamodel is
+ * never shadowed. A model record naming a metaclass is a record defect, left
+ * out: a model declares globals only. `defects` holds those defects only, indexed
+ * as the records of the model's key; the decoder's defects stay the caller's.
+ * Pure: neither input is mutated.
+ */
+export function mergeDeclarations(
+    metamodel: DecodedStateAttributes, model: DecodedStateAttributes,
+): { decls: StateAttributeDecl[]; defects: DeclarationDefect[] } {
+    // The decoder gives one declaration or one defect per record, in order: the declarations' record
+    // indices are the ones no record defect holds.
+    const dropped = new Set(model.defects.map(d => d.index));
+    const globals: StateAttributeDecl[] = [];
+    const defects: DeclarationDefect[] = [];
+    let index = 0;
+    for (const decl of model.decls) {
+        while (dropped.has(index)) index++;
+        if (decl.metaclass !== null) defects.push({ index, name: decl.name, code: 'record', message: 'a model declares globals only' });
+        else globals.push(decl);
+        index++;
+    }
+    const shadowed = new Set(globals.map(d => d.name));
+    return {
+        decls: [...metamodel.decls.filter(d => d.metaclass !== null || !shadowed.has(d.name)), ...globals],
+        defects,
+    };
 }

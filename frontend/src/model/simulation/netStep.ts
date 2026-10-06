@@ -44,6 +44,16 @@ export function isMarked(state: SimState, id: string): boolean {
 }
 
 /**
+ * An element's presentation attribute (`node.[x]`, R-SIM-18): the stored value
+ * first, then the derived one (R-SIM-73); `undefined` when σ has neither. The
+ * one precedence rule of the presentation space: the accessor of an action's
+ * site and the run-state reader of the viewpoints (R-SIM-108) both read it here.
+ */
+export function presentationOf(state: SimState, element: string, attr: string): SimValue | undefined {
+    return state.presentation.get(element)?.get(attr) ?? state.derived?.presentation.get(element)?.get(attr);
+}
+
+/**
  * The read-only accessor of σ (R-SIM-30). `site` is the element an action is
  * attached to: only its presentation is readable (locality, R-SIM-18); without
  * a site no presentation is. A stored value first, then the derived one of the
@@ -52,9 +62,7 @@ export function isMarked(state: SimState, id: string): boolean {
 export function stateAccess(state: SimState, site?: string): SimStateAccess {
     return {
         read: (elementId, attr) => state.attrs.get(elementId)?.get(attr) ?? state.derived?.attrs.get(elementId)?.get(attr),
-        readPresentation: attr => (site === undefined
-            ? undefined
-            : state.presentation.get(site)?.get(attr) ?? state.derived?.presentation.get(site)?.get(attr)),
+        readPresentation: attr => (site === undefined ? undefined : presentationOf(state, site, attr)),
         isMarked: elementId => isMarked(state, elementId),
         tokens: elementId => tokens(state, elementId),
     };
@@ -78,6 +86,37 @@ export function terminated(net: CompiledNet, state: SimState): boolean {
         any = true;
     }
     return any;
+}
+
+/**
+ * R-SIM-50: some marked place is a kind of `simAccepting`. A reading of the
+ * marking like `terminated`, outside the cycle: candidates and status never
+ * consult it, so an accepting configuration goes on. Never true without the role.
+ */
+export function isAccepting(net: CompiledNet, state: SimState): boolean {
+    const accepting = net.accepting;
+    if (!accepting) return false;
+    for (const [place, n] of state.marking) if (n !== 0 && accepting.has(place)) return true;
+    return false;
+}
+
+/**
+ * R-SIM-51, Moore: the outputs of the marked places, in the net's order, read on
+ * frozen M at Reset (`CompiledNet.stateOutputs`); a marked place with no output is
+ * left out. `[]` without the role or when no such place is marked.
+ */
+export function stateOutputOf(net: CompiledNet, state: SimState): Array<{ readonly place: string; readonly values: readonly SimValue[] }> {
+    const out: Array<{ readonly place: string; readonly values: readonly SimValue[] }> = [];
+    for (const [place, values] of net.stateOutputs ?? []) if (tokens(state, place) !== 0) out.push({ place, values });
+    return out;
+}
+
+/**
+ * R-SIM-51, Mealy: the output of firing `transition`, the fired step's
+ * `label.selector`; `[]` without the role or a value. The step itself is unchanged.
+ */
+export function transitionOutputOf(net: CompiledNet, transition: string): readonly SimValue[] {
+    return net.transitionOutputs?.get(transition) ?? [];
 }
 
 const INDEX = new WeakMap<CompiledNet, ReadonlyMap<string, NetTransition>>();
@@ -255,6 +294,8 @@ export function step(
             const decl = net.declared.get(a.element)?.get(a.attr);
             if (!decl) return halted({ kind: 'undeclared', site, element: a.element, attr: a.attr });
             if (decl.equation !== undefined) return halted({ kind: 'read-only', site, element: a.element, attr: a.attr });
+            // An input is the environment's, for the step that reads it: never assigned (R-SIM-88).
+            if (decl.input === true) return halted({ kind: 'read-only', site, element: a.element, attr: a.attr, input: true });
             const key = `${a.element}\u0000${a.attr}`;
             if (written.has(key)) return halted({ kind: 'double-assignment', element: a.element, attr: a.attr });
             written.add(key);

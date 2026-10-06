@@ -52,13 +52,25 @@ export type Conditional<T> =
     | { when: Predicate; then: T; else?: T }
     | { rules: { when: Predicate; then: T }[]; default?: T };
 
+/** `bar` (R-VP-16): a thin solid box at a fixed size, the Petri transition. Persisted, never renamed (R-B9). */
 export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
-    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud';
-export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
+    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud' | 'bar';
+/** `outside` (R-VP-15 (1), P-2026-09-29-1245): the label is drawn outside the box, on the
+ *  side its `anchor` names, and does not enter the box size. Persisted, never renamed (R-B9). */
+export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom' | 'outside';
+/** Side of the box an `outside` label sits on, as a compass point: n above, s below, w left,
+ *  e right. Absent = 's'. Persisted, never renamed (R-B9); diagonals would be an additive widening. */
+export type LabelAnchor = 'n' | 'e' | 's' | 'w';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
 /** Spacing preset of the symbol (header, compartments, inside label). Absent = 'normal'. */
 export type PaddingToken = 'small' | 'normal' | 'large';
+
+/** Entry mark of a shape (R-VP-22): see `ShapeSpec.entry`. Persisted, never renamed (R-B9). */
+export type EntryMark = 'dot' | 'arrow';
+
+/** Curve of an edge (R-VP-22): see `EdgeViewIR.edge.curve`. Persisted, never renamed (R-B9). */
+export type EdgeCurve = 'arc';
 
 /**
  * Text source of a label. 'intrinsic' reads element-level properties that are
@@ -81,6 +93,10 @@ export type FontFamilyToken = 'sans' | 'mono';
  *  normal 400, medium 500, semibold 600, bold 700. */
 export type FontWeightToken = 'normal' | 'medium' | 'semibold' | 'bold';
 
+/** Case transform of a text surface (R-VP-20, P-2026-09-30-0150): the rendered text only, the source
+ *  string is left as written. Persisted, never renamed (R-B9). */
+export type TextTransformToken = 'uppercase' | 'lowercase' | 'none';
+
 /**
  * Typographic style for a text surface (spec ir-1.3 addendum sez. 2). Every axis
  * is optional and Conditional; an absent axis inherits the surface's CSS default
@@ -93,6 +109,11 @@ export interface TextStyle {
     fontStyle?: Conditional<'normal' | 'italic'>;
     color?: Conditional<string>;                 // same shape as ShapeSpec.fill
     underline?: Conditional<boolean>;            // ir-1.3 addendum sez. 7 — additive, no migration
+    /** Letter spacing in em (R-VP-20). A plain number, not Conditional: widening it to
+     *  Conditional<number> later stays additive, a number being a Conditional. Absent = the surface's CSS. */
+    letterSpacing?: number;
+    /** Case transform (R-VP-20), scalar like `letterSpacing`. Absent = the surface's CSS. */
+    textTransform?: TextTransformToken;
 }
 
 export interface LabelSpec {
@@ -103,6 +124,9 @@ export interface LabelSpec {
     editable?: boolean | { widget: 'text' | 'textarea' | 'select' | 'checkbox' | 'color' };
     /** spec ir-1.3 addendum sez. 3.1 — typographic style (TS1). Absent = CSS default. */
     style?: TextStyle;
+    /** Side of an `outside` label (R-VP-15 (1)). Absent = 's'; ignored on the inside positions,
+     *  and never written for them (the label editor drops it). */
+    anchor?: LabelAnchor;
 }
 
 export interface BadgeSpec {
@@ -116,7 +140,9 @@ export type FieldSegment =
     | { kind: 'name' }
     | { kind: 'type' }
     | { kind: 'value'; editable?: boolean | { widget: 'text' | 'textarea' | 'select' | 'checkbox' | 'color' } }
-    | { kind: 'literal'; text: string };
+    /** `style` (R-VP-20): the literal's own typographic style, inline on its span, over the row's (a
+     *  grey `attr` prefix). Absent = the row's style. Additive, no migration. */
+    | { kind: 'literal'; text: string; style?: TextStyle };
 
 export interface FieldCompartmentSpec {
     id: string;
@@ -127,8 +153,12 @@ export interface FieldCompartmentSpec {
      * optional predicate over the child (absent = all containment children). For a
      * `children` source `rowFormat` is ignored (the row format comes from the child's
      * row view) but stays required by the contract.
+     *
+     * `exclude` (R-VP-20, the `attributes` source only): feature names whose slot draws no
+     * row, the identity slot the name label already shows. The symbol only: a form lists
+     * every feature (R-FRM-1). Absent = every slot. Additive, no migration.
      */
-    source: { from: 'attributes' } | { from: 'references' } | { from: 'children'; filter?: Predicate };
+    source: { from: 'attributes'; exclude?: string[] } | { from: 'references' } | { from: 'children'; filter?: Predicate };
     /**
      * `style` (ir-1.3 TS2): typographic style of the compartment rows. Rendered
      * inline on the compartment and inherited by its rows, so it wins over
@@ -213,6 +243,26 @@ export interface ShapeSpec {
      * (same precedent as `marker`).
      */
     padding?: PaddingToken;
+    /**
+     * Entry mark (R-VP-22, P-2026-09-30-0355): a mark drawn OUTSIDE the box, on its left, whose
+     * arrow ends on the box's border. `dot` is the UML initial pseudostate, a small filled dot
+     * with a short arrow into the state (Statechart (UML)); `arrow` is the arrow alone, the start
+     * arrow of an automaton. Drawn in the border colour, as the marker is; it enters neither the
+     * box size nor the handles (irStyle.ts places it, IRNodeContent draws it). Scalar like
+     * `padding`, never Conditional. Absent = no mark. Persisted, never renamed (R-B9); additive
+     * optional field: no irVersion bump, no migration.
+     */
+    entry?: EntryMark;
+    /**
+     * Drawn thickness of a `bar` (Q3, P-2026-10-03-1304, docs/lir/lir_2026-10-03_bar_orientation.md):
+     * a bar that declares it keeps a square box and paints its ink this many px across, upright or
+     * lying inside the box, turned automatically so its long sides face its connected neighbours
+     * (barOrientation.ts; recomputed on open, after Auto layout and at drag release, never persisted).
+     * Absent = the bar of before, drawn as its box, never turned (every view saved before Q3).
+     * Ignored by every other form. Scalar, never Conditional. Persisted, never renamed (R-B9);
+     * additive optional field: no irVersion bump, no migration.
+     */
+    barThickness?: number;
     /**
      * Typographic style of the whole symbol (ir-1.3, node-level cascade root).
      * Applied inline on `.ir-node-content` and inherited by every text surface
@@ -457,6 +507,25 @@ export interface StructureSpec {
     edgeMarker?: boolean;
 }
 
+/**
+ * The provenance of a view a derivation created (slice D, P-2026-09-30-0255, R-VP-21): `by`
+ * names the derivation (`'derive-2'`, «Derive viewpoint» with its notation dialog), `notation`
+ * the notation picked there (`generic`, `stateMachine`, `petri`, `flowchart`), `role` the
+ * class's role in the dialog's metaclass → role table when it has one, and `hash` the view's
+ * `structuralHash` (irDefaults.ts) at creation, which leaves this key out, so a later
+ * regeneration can tell an untouched view from an edited one.
+ *
+ * Describes the ir, as `migratedFrom` does, and is not part of it: the resolver, the compiler
+ * and the renderers never read it. Absent on every view written by hand. Additive optional
+ * field: no irVersion bump, no migration; the spelling is permanent (R-B9).
+ */
+export interface GeneratedProvenance {
+    by: string;
+    notation: string;
+    role?: string;
+    hash: string;
+}
+
 export interface VertexViewIR {
     irVersion: string;               // "ir-1.0" | "ir-1.2"
     kind: 'vertex';
@@ -464,12 +533,26 @@ export interface VertexViewIR {
     metaclasses: string[] | '*';
     /** Which class each name above stands for — see AuthoringMetaclassPins. */
     authoringMetaclassPins?: AuthoringMetaclassPins;
+    /** Written by a derivation, never by hand — see GeneratedProvenance. */
+    generated?: GeneratedProvenance;
     predicate?: Predicate;
     priority?: number;
     exclusive?: boolean;             // spike: only exclusive views are rendered; decorative ones are ignored
     label?: string;
     resizable?: boolean;             // v1: override esplicito del gate resize (undefined = default per forma)
+    /**
+     * Default box of the instances with no manual size (P-2026-09-29-1230), px per axis.
+     * An absent axis stays derived from content. Absent key = no default. Additive
+     * optional field: no irVersion bump, no migration.
+     */
+    defaultSize?: { width?: number; height?: number };
     shape: ShapeSpec;
+    /**
+     * Whether an object this view resolves is drawn (P-2026-10-03-1304, Q7): false hides its node (the containment pass,
+     * irContainment `computeViewHidden`); the object stays in the model and in the tree. A Conditional decides per object.
+     * Absent = drawn. Additive optional field: no irVersion bump, no migration; the spelling is permanent (R-B9).
+     */
+    visible?: Conditional<boolean>;
     /**
      * Level-2 structure supplement (2026-08-29, Turno 7). Absent = every field at its
      * per-Symbol default. Additive optional field: no irVersion bump, no migration.
@@ -504,6 +587,8 @@ export interface GraphVertexViewIR {
     metaclasses: string[] | '*';
     /** Which class each name above stands for — see AuthoringMetaclassPins. */
     authoringMetaclassPins?: AuthoringMetaclassPins;
+    /** Written by a derivation, never by hand — see GeneratedProvenance. */
+    generated?: GeneratedProvenance;
     predicate?: Predicate;
     priority?: number;
     exclusive?: boolean;
@@ -543,7 +628,35 @@ export type EdgeTermination =
     | 'closedArrow'
     | 'hollowTriangle'
     | 'filledDiamond'
-    | 'hollowDiamond';
+    | 'hollowDiamond'
+    /** R-VP-24 (P-2026-09-30-1521): a hollow circle, the inhibitor arc's end in «Petri net (classic)».
+     *  The name of R-VP-15 (1). Persisted, never renamed (R-B9); additive, no migration. */
+    | 'hollowCircle'
+    /**
+     * Slice E (P-2026-09-30-1810): a filled disc, a bar across the line, the UML non-navigable cross, and
+     * the four crow's foot ends, composed from bar, crow and circle: the part nearest the node gives the
+     * maximum (bar one, crow many), the part farther along the edge the minimum (circle zero, bar one).
+     * Drawn from the glyph table of `edges/edgeEndGlyphs.ts`. `bar` is also a ShapeForm value (R-VP-16): a
+     * different vocabulary on a different key. Persisted, never renamed (R-B9); additive, no migration.
+     */
+    | 'filledCircle'
+    | 'bar'
+    | 'cross'
+    | 'erZeroOrOne'
+    | 'erExactlyOne'
+    | 'erZeroOrMany'
+    | 'erOneOrMany';
+
+/**
+ * The labels at one end of an edge (slice E, P-2026-09-30-1810): the multiplicity (UML `0..*`, ER Chen `N`,
+ * `(0,N)`) on the side of the line R-VP-23 puts an end label, the role name on the other side. Both optional.
+ * `edge.labels.sourceEnd` / `targetEnd` also take a bare TextSource, the R-VP-23 form, read as the multiplicity.
+ * Persisted, never renamed (R-B9); additive, no migration.
+ */
+export interface EdgeEndLabels {
+    multiplicity?: TextSource;
+    role?: TextSource;
+}
 
 /**
  * Reserved endpoint token of an object-as-edge view (R-B13): resolves to the
@@ -577,6 +690,8 @@ export interface EdgeViewIR {
     metaclasses: string[] | '*';
     /** Which class each name above stands for — see AuthoringMetaclassPins. */
     authoringMetaclassPins?: AuthoringMetaclassPins;
+    /** Written by a derivation, never by hand — see GeneratedProvenance. */
+    generated?: GeneratedProvenance;
     reference?: string;
     predicate?: Predicate;
     priority?: number;
@@ -594,14 +709,54 @@ export interface EdgeViewIR {
             width?: Conditional<number>;
             style?: Conditional<'solid' | 'dashed' | 'dotted'>;
         };
-        terminations?: { sourceEnd?: EdgeTermination; targetEnd?: EdgeTermination };
+        /** Each end a plain EdgeTermination or a Conditional of them (slice E), resolved per edge instance,
+         *  as `line.color`; `Conditional<T>` admits a plain `T`, so every saved end stays valid. */
+        terminations?: { sourceEnd?: Conditional<EdgeTermination>; targetEnd?: Conditional<EdgeTermination> };
         /** Path shape drawn by UnifiedEdge (E-route). Absent ≡ 'orthogonal' (Manhattan
          *  router); 'straight' and 'curved' reuse the same handles and only change the
          *  curve, which drops waypoints and crossing bridges for that edge. */
         routing?: 'orthogonal' | 'straight' | 'curved';
+        /**
+         * R-VP-22 (P-2026-09-30-0355): `arc` draws the edge between the centres of its two
+         * handles, off the Manhattan router: straight when it is the only edge between its two
+         * nodes; a quadratic bowed away from the other edge when one runs between the same two
+         * nodes the other way, its label at the apex; a cubic loop over the top edge of the node
+         * for a self-loop, which then takes two top handles (irEdgeViews), its label above the
+         * loop. No waypoints, no crossing bridges, no snap. Wins over `routing`. Absent = the
+         * `routing` path, as before. Persisted, never renamed (R-B9); additive, no migration.
+         */
+        curve?: EdgeCurve;
         labels?: {
             center?: TextSource;
             placement?: 'auto' | 'above' | 'below';
+            /**
+             * R-VP-20: the centre label as segments concatenated, the precedent of a row view's
+             * `template`; it wins over `center`. A value segment (path, intrinsic) that resolves
+             * empty draws nothing and takes with it the literal right before it, its caption
+             * (`weight = ` with no weight); a template left with no text draws no label, as an
+             * empty `center` path; one of literals only always draws.
+             */
+            template?: TextSource[];
+            /**
+             * R-VP-20 (TS3 of the TextStyle addendum): the centre label's typographic style.
+             * Declared, the label drops its box for a halo in the canvas surface colour
+             * (EditorV2.scss `.edge-label__text--halo`); `style.color` wins over `line.color`
+             * for the text only, the terminations keep the line colour. Absent = the label box.
+             */
+            style?: TextStyle;
+            /**
+             * R-VP-23 (P-2026-09-30-0440): a label at the source end and one at the target end, the
+             * multiplicities of a relationship line (Chen's `1`, `N`, `M`) or a UML role. Each is read
+             * on the edge's evaluation object (the source object of a reference edge, the edge-object
+             * of an object-as-edge) and drawn just outside the node at that end, beside the line, where
+             * the classic cardinality badge sits (edgeUtils `computeCardinalityAnchor`); in the style
+             * of `style` above when declared (the halo), else as that badge. An empty text draws
+             * nothing. Absent = no end label, as before. Persisted, never renamed (R-B9); additive, no
+             * migration. Slice E (P-2026-09-30-1810) widens each to `EdgeEndLabels`, a multiplicity and a
+             * role on the two sides of the line; the bare TextSource stays, read as the multiplicity.
+             */
+            sourceEnd?: TextSource | EdgeEndLabels;
+            targetEnd?: TextSource | EdgeEndLabels;
         };
         /** spec v1.2 sez. 7 (extended reading, 2026-07-19): default true; false =
          *  the whole layout override (waypoints AND side pins) stays session-only. */
@@ -629,6 +784,8 @@ export interface RowViewIR {
     metaclasses: string[] | '*';
     /** Which class each name above stands for — see AuthoringMetaclassPins. */
     authoringMetaclassPins?: AuthoringMetaclassPins;
+    /** Written by a derivation, never by hand — see GeneratedProvenance. */
+    generated?: GeneratedProvenance;
     predicate?: Predicate;
     priority?: number;
     label?: string;
@@ -703,9 +860,23 @@ export interface CompiledEdgeView {
     lineWidth: CompiledConditional<number> | null;
     lineStyle: CompiledConditional<'solid' | 'dashed' | 'dotted'> | null;
     terminations: { sourceEnd: EdgeTermination; targetEnd: EdgeTermination };
+    /** Slice E: the resolver of a Conditional end, present only when the view declares one; `terminations`
+     *  then holds its `else` / `default` (else the default end), and irEdgeViews resolves it per instance. */
+    sourceEndTermination?: CompiledConditional<EdgeTermination>;
+    targetEndTermination?: CompiledConditional<EdgeTermination>;
     routing: 'orthogonal' | 'straight' | 'curved' | null;
+    /** `edge.curve` (R-VP-22); absent when the view declares none, or a value outside the vocabulary. */
+    curve?: EdgeCurve;
     labelText: CompiledAccessor | null;
     labelPlacement: 'auto' | 'above' | 'below';
+    /** Compiled `edge.labels.style` (R-VP-20); absent when the view declares none. */
+    labelStyle?: CompiledTextStyle;
+    /** Compiled `edge.labels.sourceEnd` / `targetEnd` (R-VP-23); each absent when the view declares none, or not a text source. */
+    sourceEndText?: CompiledAccessor;
+    targetEndText?: CompiledAccessor;
+    /** Compiled role of `EdgeEndLabels` (slice E); each absent when the view declares none. */
+    sourceEndRole?: CompiledAccessor;
+    targetEndRole?: CompiledAccessor;
     /** persistWaypoints ?? true — gates persistence/hydration of layout overrides. */
     persistWaypoints: boolean;
 }
@@ -786,6 +957,10 @@ export interface CompiledView {
     marker: CompiledConditional<string> | null;
     /** shape.padding ?? 'normal' */
     padding: PaddingToken;
+    /** `shape.entry` (R-VP-22); absent when the view declares none, or a value outside the vocabulary. */
+    entry?: EntryMark;
+    /** `visible` of a vertex view (Q7, P-2026-10-03-1304); absent when the view declares none. */
+    visible?: CompiledConditional<boolean>;
     /** Compiled node-level text style; undefined when the view declares none. */
     text?: CompiledTextStyle;
     labels: CompiledLabel[];
@@ -810,6 +985,9 @@ export interface CompiledTextStyle {
     fontStyle?: CompiledConditional<'normal' | 'italic' | ''>;
     color?: CompiledConditional<string>;
     underline?: CompiledConditional<boolean>;
+    /** R-VP-20: undefined / '' mean "no override", like the other axes' fallbacks. */
+    letterSpacing?: CompiledConditional<number | undefined>;
+    textTransform?: CompiledConditional<TextTransformToken | ''>;
 }
 
 export interface CompiledLabel {
@@ -818,8 +996,15 @@ export interface CompiledLabel {
     visible: CompiledConditional<boolean>;
     /** True when double-click edits the element name (intrinsic name/qualifiedName, editable !== false). */
     editsName: boolean;
+    /** The feature a double-click writes (R-IRN-41): set on a one-step path label that opts in with
+     *  `editable`, absent on every other label. Whether the slot is a single string attribute is
+     *  checked at the gesture, where the object is known. */
+    editsFeature?: string;
     /** Compiled typographic style (ir-1.3 TS1); undefined when the label has no style. */
     style?: CompiledTextStyle;
+    /** Resolved side of an `outside` label, always set for it ('s' when absent or unknown);
+     *  undefined on the inside positions. */
+    anchor?: LabelAnchor;
 }
 
 export interface CompiledBadge {
@@ -842,6 +1027,10 @@ export interface CompiledFieldCompartment {
     separator: boolean;
     /** Compiled rowFormat.style (ir-1.3 TS2); undefined when the compartment declares none. */
     rowStyle?: CompiledTextStyle;
+    /** `attributes` source only (R-VP-20): the feature names that draw no row; absent when none declared. */
+    exclude?: string[];
+    /** R-VP-20: the compiled style of each literal segment, by segment index; absent when no literal declares one. */
+    segmentStyles?: (CompiledTextStyle | undefined)[];
 }
 
 export interface CompiledContainment {

@@ -311,8 +311,10 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const pickType = (typeId: string) =>
         window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECT_TYPE, { detail: { typeId } }));
 
-    const pMetamodels = project?.metamodels || [];
-    const pModels = project?.models || [];
+    // An absent target is left out: a pointer no state holds is `undefined` here, and `.id` on it
+    // white-paged the project (P-2026-09-30-1540).
+    const pMetamodels = (project?.metamodels || []).filter(m => !!m);
+    const pModels = (project?.models || []).filter(m => !!m);
     const pViewpoints = project?.viewpoints || [];
     // LProject.transformations is synced by ProjectEditor via SetFieldAction (see ProjectEditor.tsx:169)
     const pTransformations = (((project as any)?.transformations) || []) as Array<{ id: string; name: string }>;

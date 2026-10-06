@@ -6,183 +6,107 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
-## 2026-09-27 — docs: ticket on the probe oracle, first unattended closure (P-2026-09-27-0020)
-**Prompt**: `claude_2026-09-27_0020_prompt_harness_probe_oracle_ticket.md`, fast lane (docs only, one commit, no visual check), launched by `lane-run` on the trunk in `~/jjodel-release` at `2b870d5ad`, the first lane expected to reach `Outcome: done` without a human after RC-29 (`620e3d5cd`). Records the ticket the RC-29 memo leaves to the next harness lane: `a fresh git init with a copied settings.json is not an oracle for permission rules`, below this entry.
-**Files touched**: this commit: `docs/log-inbox/harness.md` (this entry and the ticket), `docs/prompts/claude_2026-09-27_0020_prompt_harness_probe_oracle_ticket.md` (Status line).
+
+## 2026-10-03 — feat: auto-intake core for issue-driven unattended lanes (P-2026-10-03-1705)
+**Prompt**: `claude_2026-10-03_1705_prompt_auto_intake.md`: Phase 1 discovery (`c5bb487a8`, `docs/discovery/discovery_2026-10-03_auto_intake.md`), then after the GO `frontend/scripts/auto-intake.mjs` (queue, render, cut, admit, guard, ledger, trip; RC-35..RC-39), its configuration and discovery template, and `lane-run start --auto` (RC-36: no GitHub credentials, no web tools, no MCP servers, auto.json kept by a resume).
+**Files touched**: `frontend/scripts/auto-intake.mjs`, `frontend/scripts/auto-intake.config.json`, `frontend/scripts/lane-templates/issue-discovery.md`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/autoIntake.test.ts`, `frontend/scripts/hooks/__tests__/fixtures/auto-intake-gh.json`, `frontend/scripts/hooks/__tests__/laneRun.test.ts` (`630d82e19`); this commit: the report addendum (COME 5), the prompt's Status and this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Docs only; `npm run check:docs` from `frontend/`: 4/4 passed, exit 0, 3 warnings (the two unresolved `Corregge` of the active log, this inbox waiting to be folded).
-**Out-of-scope changes**: no — the two files of DOVE; `git diff --stat` of every other path empty.
-**Layer Impact Report**: not-required
-**Smoke visivo**: —
-**Notes**: `Found in`: the prompt's `RC-29` fails `TICKET_FOUND_IN` (`frontend/scripts/gates/log-tools.ts:53`: a prompt or chat ID first), so the ticket reads `C-2026-09-26-1702 (RC-29)`, the chat that measured RC-29. The inbox held no ticket after the fold `c5a669c2e`: shape from the harness tickets of the active log. Order as the prompt, entry then ticket: the fold puts the ticket on top. Session `89eb97d2`; `permission_denials` not visible from inside it.
-**Prompt document name**: 2026-09-27 00:20
-
-## 2026-09-27 — ticket: a fresh git init with a copied settings.json is not an oracle for permission rules
-**Ticket**: §7 of the P-2026-09-26-1640 report measured 0 `permission_denials` for `git commit` under `-p` and `bypassPermissions` in a probe repository (a fresh `git init` with a copied `settings.json`, `ask` on `Bash(git commit*)` included), while on the real tree that `ask` held and stopped `P-2026-09-26-2340` and `P-2026-09-26-2350` at their first commit: five probes in the RC-29 memo, 3 and 4 refused by the `ask` (an `allow` does not override it), 5 committed once the rule was removed. The difference between the two setups was not identified. Future permission measurements run on the tree the lanes run in, never in a copy; §7 of that report is to be read with the RC-29 memo beside it.
-**Priority**: low
-**Found in**: C-2026-09-26-1702 (RC-29)
-**Detail**: docs/ratifiche/claude_ratifiche_2026-09-27_commit_ask_under_bypass.md (What was measured, Ticket), read with docs/discovery/discovery_2026-09-26_orchestrated_lanes_harness.md (§7)
-
-## 2026-09-27 — chore: public-repo cleanup, PDF, local state, LaTeX builds, dataset emails (P-2026-09-27-0214)
-Edited 2026-09-27 by P-2026-09-27-0051: references to the study neutralized, content otherwise unchanged.
-**Prompt**: `claude_2026-09-27_0214_prompt_public_harness_cleanup.md`, lane harness, launched by `lane-run` on the trunk in `~/jjodel-release` at `283eab4f2`. Two phases; the GO on report `da84b10e5` adopted the nine `Recommended` lines of its §12 unattended (RC-21): `_build/*` plus `!_build/main.pdf`; the exact path `docs/jjtl-jjel-paper.log`; `authors_commitcount.txt` untouched (it holds no email); `noreply@anthropic.com` kept; ids a01..a08 from `commits.csv`, a09 and a10 from the attribution CSV; positive control `|a01|`; the wider negative grep; diff base `283eab4f2`; `paper-outline.md:128` to the ticket below.
-**Files touched**: `da84b10e5`: `docs/discovery/discovery_2026-09-27_public_harness_cleanup.md`. `b5eaadead`: `978-3-030-43946-0_9.pdf` removed; `.claude/projects/.../memory/MEMORY.md`, `.../project_header_redesign.md`, `.claude/scheduled_tasks.lock` removed from the index only; `.gitignore`. `723480064`: the fifteen LaTeX build files under `docs/` removed from the index only; `.gitignore`. `869f204eb`: `<local research folder>/dataset/git/commits.csv`, `authors_commits.txt`, `docs/analysis/harness-attribution-commits.csv`, `<local research folder>/dataset/SUMMARY.md`, `docs/analysis/harness-attribution.md`. This commit: this entry, the prompt's Status line. Outside every tree: `<local research folder>/author-map/author-map.csv` (10 rows, mode 600).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. `check:docs` 4/4, 3 warnings, before and after (baseline). Every field but the email identical to HEAD in the three CSV/TXT files, line counts 2075/11/1358, CRLF 1358 and quotes 532 kept. `|a01|` 0 then 723; the prompt's grep 3365 lines then none; the wider grep leaves only 69 `noreply@anthropic.com`. `git ls-files | grep -c 978-3-030` 0; `git ls-files .claude` = `settings.json` plus three skills; `_build/main.pdf` still tracked.
-**Out-of-scope changes**: no. 26 paths in `283eab4f2..HEAD`, above five files (rule 19), all in DOVE plus the Phase 1 report, declared by the prompt and confirmed by the GO.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Deviation: a pathspec commit re-adds a `git rm --cached` path still on disk (measured in a scratch repo in the lane dir) and bash-guard denies a commit without pathspec, so for commits 1 and 2 (`b5eaadead`, `723480064`) the on-disk copies went to `~/.jjodel-lanes/P-2026-09-27-0214/aside{1,2}` and back, shasum 3/3 and 15/15 OK. Report §4 reads 2073 matching lines for `commits.csv`: not reproduced, 2075 by git grep, BSD grep and Python. Session `916693ee`.
-**Prompt document name**: 2026-09-27 02:14
-
-**Ticket** (public repo, left by P-2026-09-27-0214, to be found on their own): (1) `harness_FTG_PM.xmi`, `harness_FTG_PM_generic.xmi`, `harness_FTG_PM_reference.xmi` and `background_spec_driven_development.md` sit at the repository root, added by `1c8647eed` with the removed PDF: are they meant to be public, and there? `docs/mde-intelligence-2026/paper-outline.md:128` still calls the PDF «already in the repo». (2) 95 files under `docs/` cite `localhost:3001`. (3) No entry point for external readers: a `docs/harness/README.md` separating the reusable core of the harness from the Jjodel instance and from the historical archive, a lane of its own, to be discussed in chat first. (4) `frontend/src/todo_others` is tracked and ignored by `.gitignore:59`, the same shape as the `/CLAUDE.md` line removed here.
-
-## 2026-09-27 — chore: research material out of the tree, references to the study neutralized (P-2026-09-27-0051)
-**Prompt**: `claude_2026-09-27_0051_prompt_research_material_out_of_tree.md`, lane harness, launched by `lane-run` on the trunk in `~/jjodel-release` at `7b381f70a`. Two phases; the GO on report `0f0e0df6f` adopted the six `Recommended` lines of its §7 unattended (RC-21), as corrections to the prompt text: the clean-tree control `git grep -I -i -w -l '<word>' -- .` with the same command on `7b381f70a` as positive control; the guard `docs/discovery/*-dataset/`; this prompt neutralized too; no commit message, entry or report spells the word; both `ls-files` pathspecs quoted; `<local transcripts folder>`.
-**Files touched**: `0f0e0df6f`: `docs/discovery/discovery_2026-09-27_research_material_out_of_tree.md`. `0793a8b6d`: 36 paths removed, the dataset directory under `docs/discovery/` (29 files) and `docs/analysis/harness-attribution.md` with its six `harness-attribution-*.csv`. `e0103160f`: `.gitignore`. `d47f3cbb1`: `docs/HARNESS-DOCS.md`, `docs/discovery/2026-06-12_template-simplification-edge-unification.md`, `docs/prompts/claude_2026-07-16_prompt_sessione_enrich_viewpoints_events.md`, `docs/prompts/claude_2026-09-27_0214_prompt_public_harness_cleanup.md`, `docs/discovery/discovery_2026-09-27_public_harness_cleanup.md`, `docs/log-inbox/harness.md`, this prompt. This commit: this entry, the prompt's Status line. Outside every tree: `<local research folder>` under `~/jjodel-research/`, with `dataset/`, `analysis/` and `author-map/` (moved from `~/.jjodel-lanes/`, sha256 unchanged).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. `check:docs` 4/4, 3 warnings, before and after (baseline). Copies verified before `git rm`: `diff -r` exit 0 on 29 files, `cmp` exit 0 ×7, positive controls exit 1. Word control on HEAD: no output, exit 1; on `7b381f70a` 9 files. `git ls-files` of the two quoted pathspecs: empty, exit 0; `git ls-files docs/analysis` = `analysis_2026-06-08_codebase_overview.md` only.
-**Out-of-scope changes**: no. 44 paths in `0f0e0df6f..HEAD`, above five files (rule 19), all in DOVE plus this prompt's body (Q3 of the GO), declared in the report and confirmed by the GO.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Deviations: commit 1 split in `0793a8b6d` and `e0103160f`, bash-guard refuses `docs/` and `.gitignore` in one pathspec (P13). The substring control prints 13 files, not the 12 of report F2: this prompt quotes the reflexive pronoun on six lines, left untouched, which F2 missed. The two local copies keep the stale mapping pointer (F8). Session `25771227`.
-**Prompt document name**: 2026-09-27 00:51
-
-**Ticket** (history of the public branch, left by P-2026-09-27-0051, a decision reserved to Alfonso by RC-26): the history of `alfonso-frontend-jjtl` still carries the research material removed by `0793a8b6d` (every blob before it), the study's name in the old paths and in the lines rewritten by `d47f3cbb1`, and one commit subject that names it, `869f204eb` (scope written here as `docs(<scope>)`); it is the only commit message of the branch that does, measured with a word-boundary grep over every message. Removing them takes a history rewrite and a force push: not done, not planned by any lane.
-
-## 2026-09-27 — fix: typecheck:scripts skips _tmp_ probes, P16 prompt path and foreground gates (P-2026-09-27-0405)
-**Prompt**: `claude_2026-09-27_0405_prompt_harness_night_tickets.md`, fast lane, launched by `lane-run` on the trunk in `~/jjodel-release` at `2a0066f21`. Closes three tickets of the night lanes: `typecheck:scripts` red on gitignored `_tmp_*` probes (`P-2026-09-27-0325`); P16 silent on the relative prompt path of `lane-run start` (chat, 03:01) and on gates run as a background task (`P-2026-09-27-0120`); the `bash-guard.mjs` header still naming the `git commit*` ask that RC-29 removed.
-**Files touched**: `fbd9064c9`: `frontend/scripts/tsconfig.json` (`"exclude": ["**/_tmp_*"]`), `frontend/scripts/hooks/bash-guard.mjs` (header comment only). This commit: `docs/PROTOCOL.md` (P16, two bullets after Launch and resume), `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. From `frontend/`: hook tests 255/255 and `check:scripts` PASS (28 files) before and after the code change; `check:docs` 4/4, 5 warnings, at baseline and before this commit. `typecheck:scripts`: baseline exit 0, 0 errors; with the probe `scripts/smoke/_tmp_p0405_typeerror.ts` exit 2, TS2322, 15 `scripts/` files listed; with the exclude and the probe still present exit 0, the same 14 files as the baseline, equal to the 14 tracked `.ts`. No build: no `src/` file changed.
-**Out-of-scope changes**: no — the four files of DOVE plus this prompt's Status line.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: The ticket's 25 errors did not reproduce: the chat's `_tmp_*` left in `scripts/smoke/` are `.md` only, so the probe stood in for them, then was removed. The child `exclude` replaces the one inherited from `frontend/tsconfig.json`, whose entries lie outside the child's `include`. Code subject is the prompt's fallback: the first one is 83 characters. Session `c9dbaa08`.
-**Prompt document name**: 2026-09-27 04:05
-
-## 2026-09-27 — feat: docs:digest, the decisions digest with a confidence label (P-2026-09-27-0830)
-**Prompt**: `claude_2026-09-27_0830_prompt_docs_digest_generator.md`, fast lane, launched by `lane-run` on the trunk in `~/jjodel-release` at `05e89c80a`. A read-only generator renders the rows of one date of `docs/decisions.md` into `docs/digest/<date>.md`, with a confidence label from the RC-25 header fields, the RC-28 counts and a hand-written section kept across regenerations; the first digest, 2026-09-27, committed.
-**Files touched**: `7b7ad1123`: `frontend/scripts/gates/docs-digest.ts` (new), `frontend/scripts/gates/__tests__/docsDigest.test.ts` (new, 41 tests), `frontend/package.json` (`docs:digest`). This commit: `docs/digest/README.md` (new), `docs/digest/2026-09-27.md` (generated), this entry, the prompt's Status line.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. From `frontend/`, before and after: `typecheck:scripts` exit 0 both; `check:scripts` PASS 27 then 29 files; `vitest run scripts/gates` 195 then 236 (+41); `check:docs` 4/4, 5 warnings both. Mutation bench 8/8 killed. Dry runs: 2026-09-27 12 rows, 2026-09-26 25, `--all` exit 0, 23 dates, 215 rows = 215 grammar rows by grep. `--write` twice: `unchanged`, same shasum. No build: no `src/` file.
-**Out-of-scope changes**: no. Seven files, above five (rule 19), all in DOVE; `docs/decisions.md` read only.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: The register over the prompt: R-EDGE-2, R-SIM-75, R-SIM-79 medium and R-SIM-76 low, not high. Deviations, in the `7b7ad1123` body: `at <sha>` is the last commit of the register, not HEAD; ` —` separator and free-text fields of ratified rows read; 11 IDs outside the grammar skipped and named. Status flipped by direct edit, the `status-flip` skill refuses model invocation; one closure commit (P13). Session `07f3b8cd`.
-**Prompt document name**: 2026-09-27 08:30
-
-## 2026-09-27 — feat: lane-run v2, five additions for the chat side (P-2026-09-27-1035)
-**Prompt**: `claude_2026-09-27_1035_prompt_lane_run_v2.md`, full lane (one script and its tests, one template folder, one protocol paragraph), launched by `lane-run` on the trunk in `~/jjodel-release` at `c9c810ffc`, tip moved to `6c69783cf` by a docs-only commit of C-2026-09-27-1030. Gives `lane-run` the five pieces ratified in chat 2026-09-27 10:30: merge prompts rendered from templates and launched, inline resume and `go`, `probe`, two fixes with `status --all`, `wait`.
-**Files touched**: `d6f619ce7`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-templates/merge-into-trunk.md` and `trunk-into-branch.md` (new). `58de29980`: `lane-run.mjs`, `laneRun.test.ts`. This commit: `docs/PROTOCOL.md` (P16, the lane-run v2 bullet), `docs/log-inbox/harness.md` (this entry), the prompt's Status line. Outside every tree: the mutation bench under `~/.jjodel-lanes/P-2026-09-27-1035/bench/`.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-26 16:40 (`claude_2026-09-26_1640_prompt_harness_orchestrated_lanes.md`: its `start` refused a prompt path relative to the caller, its Outcome parser read `Outcome: done · <shas>` as none)
-**Causa**: (a)
-**Regressions**: no. From `frontend/`: hook tests 255 before, 274 after `d6f619ce7`, 290 after `58de29980`, the 255 old ones green throughout; `typecheck:scripts` exit 0 and `check:scripts` PASS 29 files before and after; `check:docs` 4/4, 5 warnings, before and after. Mutation bench 33/33 and 28/28 killed. Real tree: `merge sim-profiles --into alfonso-frontend-jjtl --at 088473a5c` gives base `cdb46a7ee`, zero conflicts, 14 branch files, 11 commits; `status --all` 24 lanes, 0405 done, 1015 exited; a real probe on 3097: `/` and `profileBinder.ts` 200, EXIT=0, port freed, 3001 untouched. No build: no `src/` file.
-**Out-of-scope changes**: no. Seven files, above five (rule 19), all in DOVE; the dry-run prompts and the probe's `_tmp_lane_vite_3097.config.ts` were written in the tree and removed.
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Deviations: `merge --at <rev>` added, the only way to reproduce 03:40 now that the trunk holds sim-profiles (launch from it refused); `start` records `prompt.txt` for `go --step` and prints `prompt: <path>`; into the trunk `--launch` is also refused on code changed on both sides and on a branch prompt not flipped; probe sets PROBE_URL, PROBE_PORT. Two code commits: script diff above 400 lines. At start, an untracked prompt of C-2026-09-27-1030, committed by it as `6c69783cf`. Session 894945c0.
-**Prompt document name**: 2026-09-27 10:35
-
-**Ticket** (lane-run, left by P-2026-09-27-1035, to be found on their own): (1) `merge --into` does not refuse `--launch` when the branch has no commit the trunk lacks: measured on the dry run at the tip, where `sim-profiles` is already merged (base `939adb668`, 0 branch commits, launch not refused). (2) The merge-into-trunk template has no `simulation-engine` fast-forward step (0300 and 0345 had one): for a `sim-*` branch the chat adds it before `--launch`. (3) `npx tsx` resolves from the npx cache (`~/.npm/_npx/fd45a72a545557e9/`), not from a frontend dependency; on a machine without that cache npx would fetch it.
-
-## 2026-09-27 — fix: lane-run hides the Outcome of a running lane, wait exits 0 at the deadline (P-2026-09-27-1225)
-**Prompt**: `claude_2026-09-27_1225_prompt_harness_lanerun_wait_and_outcome.md`, fast lane, launched by `lane-run` in `~/jjodel-icons` on `harness-lanerun-wait` at `5e37e6027` (parent `097696d88`). Two tickets from the first use of lane-run v2: `status` showed the `Outcome:` of an earlier turn while a resumed lane ran (R2, P-2026-09-27-1110), and `wait` exited 3 at the deadline, so osascript dropped its output.
-**Files touched**: `e3c95ce23`: `frontend/scripts/lane-run.mjs` (`laneState`, `waitLanes`, usage header), `frontend/scripts/hooks/__tests__/laneRun.test.ts`. This commit: `docs/PROTOCOL.md` (P16, the `wait` bullet), `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-27 10:35 (`claude_2026-09-27_1035_prompt_lane_run_v2.md`: its `status` read the Outcome of any turn, its `wait` exited 3 at the deadline)
-**Causa**: (a)
-**Regressions**: no. From `frontend/`: `laneRun.test.ts` 54 green before, 3 red of 56 with the tests alone, 56/56 after; `check:scripts` PASS 39 files before and after; `typecheck:scripts` exit 0; `check:docs` 4/4 at this commit. Mutation bench 3/3 killed (table in `e3c95ce23`). No build: no `src/` file.
+**Regressions**: no
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
-**Notes**: The single-lane tests sit in `lane-run status, the Outcome line`, beside `fakeLane`; the dead-process case removes `exit.txt` by hand, no new helper. The header's exit-code list also drops `3 wait timed out`. `/lane` and the chat's lane skill do not read exit 3. Bench copies left in `/tmp/lanerun-bench-D9kd` (`rm -rf` denied). Inbox, P16 and Status flip in one docs commit, as the prompt asks. Session `8c06b07f`.
-**Prompt document name**: 2026-09-27 12:25
+**Notes**: Tests first, 70 red. Mutation bench: lane-run --auto 12/12, auto-intake 83/84, the survivor equivalent (commit body). Provisional, awaiting Alfonso, amends RC-39: shadow prompts render `Lane: discovery` from `laneByMode`, light by `tierRule` (checked on the dry render of #169); live renders `Lane: full`. Dry check: queue empty; admit tonight `deny: pace` (0.54 vs 0.16). `rm -rf` is denied: /tmp/ai-disc, /tmp/ai-bench, /tmp/ai-tier remain. Report addendum: section 12.
+**Prompt document name**: 2026-10-03 17:05
 
-## 2026-09-27 — fix: lane-run merge renders to pending, --governance-goahead (P-2026-09-27-1440)
-**Prompt**: `claude_2026-09-27_1440_prompt_harness_merge_pending_and_governance_goahead.md`, fast lane, launched by `lane-run` in `~/jjodel-gate` on `harness-merge-pending` at `b96195cc5` (parent `86520a8f3`). Two tickets of the afternoon: the unlaunched merge prompt left untracked in `docs/prompts/` blocked the next merge lane (P-2026-09-27-1409 on the prompt of P-2026-09-27-1242), and a governance change on the branch needed a launch by hand after Alfonso's yes (P-2026-09-27-1428).
-**Files touched**: `41e85a32e`: `frontend/scripts/lane-run.mjs` (`merge`, `parseMerge`, `mergeFindings`, `mergeValues`, usage header), `frontend/scripts/hooks/__tests__/laneRun.test.ts`. This commit: `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-27 10:35 (`claude_2026-09-27_1035_prompt_lane_run_v2.md`: `merge` rendered into `docs/prompts/` before knowing whether it would launch)
-**Causa**: (a)
-**Regressions**: no. From `frontend/`: `laneRun.test.ts` 56/56 before, 12 red of 64 with the tests alone, 64/64 after; `check:scripts` PASS 62 files before and after; `typecheck:scripts` exit 0; `check:docs` 4/4 at this commit. Mutation bench 4/4 killed, each by the test that names it (table in `41e85a32e`). No build: no `src/` file.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Readings of the prompt, stated: the by-hand commit also carries `-m <Model trailer>`, so it is the commit --launch makes (P6); with the flag and no --launch the Findings stay as measured and the go-ahead reaches only the by-hand commit; the minute check reads pending/ too, or a parked prompt no longer refused its Prompt-ID. `lane-run` in the by-hand line is the chat's name, not on the PATH, as the prompt's shape. Bench copies in `/tmp/lanerun-mut-1440`.
-**Prompt document name**: 2026-09-27 14:40
-
-## 2026-09-27 — docs: P16 describes the pending render and --governance-goahead (P-2026-09-27-1620)
-**Prompt**: `claude_2026-09-27_1620_prompt_harness_p16_merge_rules.md`, fast lane, launched by `lane-run` in `~/jjodel-gate` on `harness-p16-merge-rules` at `03c2ebb3b` (cut from `alfonso-frontend-jjtl` at `2b1b346da`). P16 gains the two `lane-run merge` rules merged in `964597641` (lane P-2026-09-27-1440, code `41e85a32e`): the prompt rendered into `~/.jjodel-lanes/pending/`, and `--governance-goahead`.
-**Files touched**: this commit: `docs/PROTOCOL.md` (P16, one bullet after the lane-run v2 block), `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
+## 2026-10-03 — merge: auto-intake into alfonso-frontend-jjtl (P-2026-10-03-1840)
+**Prompt**: `claude_2026-10-03_1840_prompt_merge_auto-intake.md`, a direct merge by `lane-run merge --direct`, no session: `auto-intake` at `c5b8279d8` into `alfonso-frontend-jjtl`, merge base `49957d340`, 3 commits on the branch side.
+**Files touched**: merge `ef5cb6a6f`: 10 files from the branch side (`docs/discovery/discovery_2026-10-03_auto_intake.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-03_1705_prompt_auto_intake.md`, `frontend/scripts/auto-intake.config.json`, `frontend/scripts/auto-intake.mjs`, `frontend/scripts/hooks/__tests__/autoIntake.test.ts`, `frontend/scripts/hooks/__tests__/fixtures/auto-intake-gh.json`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. Docs only. From `frontend/`: `check:docs` 4/4, 5 warnings (inboxes waiting to be folded), exit 0; `check:agents` PASS, exit 0; `check:scripts` PASS 62 files, exit 0. No em dash in the added lines: 0, positive control 36 on the whole file.
+**Regressions**: no. Gates on `ef5cb6a6f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7083 tests in 280 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
-**Notes**: Text read from the code, two points where it is narrower than the prompt: a launch moves the prompt into `docs/prompts/` (copy, then the pending copy removed), not just copies it; `--governance-goahead` without `--launch` lifts nothing and reaches only the commit of the `by hand:` line. The v2 `merge` line is left as it is: still true. Alfonso's yes (16:15, in chat) is the go-ahead of this governance change.
-**Prompt document name**: 2026-09-27 16:20
+**Smoke visivo**: passato — chat, unattended: harness only, no app change: the chat read result.json, all eight gates green on ef5cb6a6f; no visual check needed
+**Notes**: Rollback tag `pre-auto-intake` on `7a249ef87` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-03-1840/result.json`.
+**Prompt document name**: 2026-10-03 18:40
 
-## 2026-09-28 — fix: bordr line, probe theme helper, R-SIM-85 header (P-2026-09-28-0055)
-**Prompt**: `claude_2026-09-28_0055_prompt_small_cleanups.md`, fast lane, launched by `lane-run` in `~/jjodel-w-cleanups` on `small-cleanups` at `ba74632df` (cut from `alfonso-frontend-jjtl` at `b452d9e5c`). Three tickets of 2026-09-27: the `bordr` build warning (P-2026-09-27-2248), probes whose dark crops keep canvas and tree light (P-2026-09-27-1647, 1806, 2324, P-2026-09-28-0023), `docs:digest` exit 2 on the R-SIM-85 header.
-**Files touched**: `ce3531f99`: `docs/decisions.md` (R-SIM-85 header, two lines reflowed). `935d054f0`: `frontend/scripts/smoke/states.ts` (`setTheme`, `ThemeResult`). `dbcc9f2e9`: `frontend/src/components/editors/properties-with-tree-view.scss` (one line removed). This commit: `docs/log-inbox/harness.md` (this entry), the prompt's Status line.
-**Outcome**: ✅ completed
-**Corregge**: 2026-09-27 20:49 (merge lane of `sim-modal`: it wrote the R-SIM-85 header wrapped, item 3 only)
-**Causa**: (c)
-**Regressions**: no. From `frontend/`: `typecheck` exit 2, 14 errors, the baseline set; `build` exit 0, esbuild warnings 1 to 0 (`bordr`), Sass deprecations 43 and rollup notices 5 unchanged; `typecheck:scripts` exit 0; `check:scripts` PASS 31 files (29 before the gitignored probe and the scratch vite config existed); `docs:digest` exit 2 to 0, the reflow empty under a whitespace-normalised diff. Probe `_tmp_p0055_theme.ts` on 3032: 16/16, zero page errors (numbers in `935d054f0`). No vitest: no test covers the touched files.
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile (no human visual check in the prompt); probe crops light, attribute-only dark and `setTheme` dark in `~/.jjodel-lanes/P-2026-09-28-0055/shots_theme/`
-**Notes**: One stop with `Outcome: question` on `bordr`: renaming it to `border` would arm a red debug border on `.tree-node__header`, which no TSX emits; the chat adopted the Recommended answer (RC-21) and the line is deleted. `setTheme` calls `ThemeService.set` in the page; on this tree Settings > Appearance still writes the attribute only (`813a73ff5` is on `demo-polish`).
-**Prompt document name**: 2026-09-28 00:55
-
-**Ticket** (priority low, opened here). In the `setTheme` dark crop (`A3_dark_app.png`) the status bar stays light: `.app-statusbar` hard-codes `background: #f8fafc` (`frontend/src/components/StatusBar.scss:17`) with no dark rule, so no way of switching reaches it. The Name input of the properties panel paints white in the same crop. Neither changed here, the second not investigated.
-
-## 2026-09-28 — feat: lane-run direct merges, one closure commit, chains, model tier, report briefs (P-2026-09-27-2330)
-**Prompt**: `claude_2026-09-27_2330_prompt_harness_lane_efficiency.md`, full lane (governance: P16) on `harness-lane-efficiency` in `~/jjodel-w-harness-eff`, launched by `lane-run`. Phase 1 report `d81a14423` (29 merge lanes of 2026-09-27 measured, 23 would have gone direct); the GO adopted its eleven `Recommended` answers and set the light model id to `claude-sonnet-5` (RC-32).
-**Files touched**: `00c414397` merge --direct: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts` (new). `3a11565df` go closes a direct merge: `lane-run.mjs`, `lane-templates/merge-into-trunk.md`, `lane-templates/trunk-into-branch.md`, `laneRunDirect.test.ts`. `1986cdf46` chain: `lane-run.mjs`, `laneRunDirect.test.ts`. `142b3eddf` model tier: `lane-run.mjs`, `laneRun.test.ts`, `laneRunDirect.test.ts`. `c9b506d9f` brief warning: `lane-run.mjs`, `laneRun.test.ts`. `0bdfa1f94`: `docs/PROTOCOL.md` P16, `docs/HARNESS-DOCS.md` §4.1, §7 and version 1.7, `docs/decisions.md` RC-32. This commit: this entry and four tickets, the Status of the prompt file.
+## 2026-10-05 — feat(harness): lane board in the repo (P-2026-10-05-2340)
+**Prompt**: `claude_2026-10-05_2340_prompt_lane_board_repo.md`: copy the read-only lane board of chat `C-2026-10-05-1116` byte for byte from `~/.jjodel-lanes/board/` into `frontend/scripts/lane-board/`, add its README and the `lane-board` npm script, no edit to the copied files, to `~/.jjodel-lanes/` or to the launchd agent.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/README.md`, `frontend/package.json` (`b5fc46477`); this commit: the Status of the prompt file and this entry.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: no. At every code commit: hook tests 300 in 4 files at the baseline, 310, 314, 322, 330, 333 in 5 files, 0 failed; check:docs 4/4 with 5 warnings (baseline 5); check:agents PASS; check:scripts PASS; typecheck:scripts exit 0. Mutation bench: 30, 16, 18 and 24 mutants on slices 1 to 4, 6 more on slice 5, all killed.
-**Out-of-scope changes**: no. Eleven paths, above five (rule 19), all in DOVE and declared in the report's section 9; `laneRunDirect.test.ts` is the new test file DOVE allows, its fixtures carrying a second worktree and a fake npm.
+**Regressions**: no
+**Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
-**Notes**: Deviation: the union rule adds its blank line only before a branch heading (the report said before any non-blank line); both reproduce 15 of the 16 measured files. The GO says the project instructions name Sonnet 5 as an accepted deroga: not found in CLAUDE.md, decisions.md, PROTOCOL.md or settings.json, where Sonnet 5 appears only as a past executor; RC-32 records the id as the owner chat's. Session `536c46ab`.
-**Prompt document name**: 2026-09-27 23:30
+**Notes**: md5 checked at the source, after the copy and on the committed blobs. Live on 4701 with `LANE_BOARD_CACHE` on a temp file, so `~/.jjodel-lanes/` was not written: four 200s, `/api` 337 rows with an empty error, `/api/timeline` 338 lanes. `typecheck:scripts` does not reach `.mjs`/`.js` (include: smoke, gates). Seven files, as the prompt declares. The launchd agent still runs the `~/.jjodel-lanes/board/` copy until the chat repoints it.
+**Prompt document name**: 2026-10-05 23:40
 
-## 2026-09-28 — ticket: HARNESS-DOCS §4.2 and the discovery-report skill do not state the brief rule
-**Ticket**: P16 and HARNESS-DOCS §4.1 (`0bdfa1f94`) say a discovery report opens with `## 0. Answer in brief`, at most 40 lines, and `lane-run status` warns otherwise (`c9b506d9f`). The card of the discovery report, HARNESS-DOCS §4.2, and `.claude/skills/discovery-report/SKILL.md` (rules 1 to 7) still describe the report without it, so a session that follows the skill writes no brief. Both were outside the DOVE of P-2026-09-27-2330.
-**Priority**: medium
-**Found in**: P-2026-09-27-2330
-**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 8)
+## 2026-10-05 — merge: lane-board into alfonso-frontend-jjtl (P-2026-10-05-2348)
+**Prompt**: `claude_2026-10-05_2348_prompt_merge_lane-board.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board` at `edcaebab1` into `alfonso-frontend-jjtl`, merge base `078325ee6`, 3 commits on the branch side.
+**Files touched**: merge `441bace3b`: 7 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-05_2340_prompt_lane_board_repo.md`, `frontend/package.json`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `441bace3b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7551 tests in 306 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on the merge (typecheck at the receiving set, vitest, build, check:docs/agents/scripts/addonly); the three board files on the trunk match the deployed md5s; harness-only merge, no visual check
+**Notes**: Rollback tag `pre-lane-board` on `078325ee6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2348/result.json`.
+**Prompt document name**: 2026-10-05 23:48
 
-## 2026-09-28 — ticket: the log-entry skill commits the inbox alone, against the one closure commit
-**Ticket**: `.claude/skills/log-entry/SKILL.md:21` (rule 6) says "Commit the inbox alone", while P13 and RC-17 put the entry, the Status flip and the visual line in one closure commit, and `status-flip` (its line 19) already says the flip rides in that commit. It is one source of the two-commit closures measured on 2026-09-26/27.
-**Priority**: medium
-**Found in**: P-2026-09-27-2330
-**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 5)
+## 2026-10-05 — docs: every prompt declares its dependencies (P-2026-10-05-2341)
+**Prompt**: `claude_2026-10-05_2341_prompt_depends_header.md`, fast lane, docs only, on `~/jjodel-w-depends`, branch `depends-header`: a `Depends:` header line for every prompt (P13 bullet), decision row RC-42, and `Depends:` among the header fields of `docs/HARNESS-DOCS.md`, so the lane board draws exact edges instead of inferring them from citations.
+**Files touched**: `46aaefc02`: `docs/PROTOCOL.md` (P13, bullet after «Every prompt declares its lane»), `docs/decisions.md` (RC-42 after RC-41), `docs/HARNESS-DOCS.md` (structure note, prompt template, lifecycle figure); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. check:docs, check:agents and check:addonly exit 0 before the commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: `CLAUDE.md` and `AGENTS.md` do not enumerate the prompt header fields (searched for `Prompt-ID`, `Lane: `, `Chat: `, `Status: da`; positive control `Outcome: done` matched once in each), so COSA 3 raised no question and neither file was touched. The first commit attempt was refused by the bash-guard hook for a missing `Model:` trailer (P6) and retried with it.
+**Prompt document name**: 2026-10-05 23:41
 
-## 2026-09-28 — ticket: docs:digest stops on the wrapped header of R-SIM-85
-**Ticket**: `npm run docs:digest` exits on `docs/decisions.md`: the header of R-SIM-85 (added by `22aa888de`, on the trunk too) wraps before its closing parenthesis, "the parenthesis does not close on the header line". No digest is written until that header is on one line.
-**Priority**: medium
-**Found in**: P-2026-09-27-2330
+## 2026-10-05 — merge: depends-header into alfonso-frontend-jjtl (P-2026-10-05-2353)
+**Prompt**: `claude_2026-10-05_2353_prompt_merge_depends-header.md`, a merge in a `lane-run` session (a06fbb70): `depends-header` at `d12952540` into `alfonso-frontend-jjtl`, `--no-ff` by explicit sha, merge base `078325ee6`, 3 commits on the branch side, 1 conflict measured (`docs/log-inbox/harness.md`).
+**Files touched**: merge `c6d8ab56c`: 5 files from the branch side (`docs/HARNESS-DOCS.md`, `docs/PROTOCOL.md`, `docs/decisions.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-05_2341_prompt_depends_header.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c6d8ab56c`: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 7551 tests in 306 files (expected 7551: trunk 7551 plus 0 new on the branch), 9 red at import, hooks 424; build exit 0; check:docs 4/4; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 2026-10-06: docs-only merge (P13 Depends bullet, RC-42, HARNESS-DOCS header fields, harness inbox union); gates green on c6d8ab56c; no visual check
+**Notes**: Union in `docs/log-inbox/harness.md`: the trunk's entries (2340, 2348) first, then the branch's (2341), verbatim; the result is byte-identical to the trunk's file plus the branch's block. `docs/PROTOCOL.md` changed on the branch: merged on Alfonso's go-ahead («procedi con tutte e tre», C-2026-10-05-1116). `git commit -- <paths>` is refused during a merge: the five-file index was committed without pathspec. No rollback tag; pre-merge tip `9ab14dcb0`.
+**Prompt document name**: 2026-10-05 23:53
 
-## 2026-09-28 — ticket: a prose condition in a branch prompt is invisible to merge --direct
-**Ticket**: `merge --direct` checks what git and the prompt headers say. The session of P-2026-09-27-2049 stopped on "the branch is not merged on the trunk before 2026-10-04", written in the body of a branch prompt, with every mechanical precondition holding, so `--direct` would have merged it. RC-31 lifted that embargo, not the class. A header line a script can read (for example `Merge: not before <date>`) would let `--direct` refuse it.
-**Priority**: low
-**Found in**: P-2026-09-27-2330
-**Detail**: docs/discovery/discovery_2026-09-27_lane_efficiency.md (section 3)
+## 2026-10-06 — fix: the lane board pairs each turn with its own result (P-2026-10-06-0049)
+**Prompt**: `claude_2026-10-06_0049_prompt_board_turn_pairing.md`: `laneTimeline()` paired turn k with the k-th `result` of `log.jsonl` by position, so a task-notification result (`num_turns` 0, empty, 74 ms) shifted every later turn of `P-2026-10-05-1735` and drew a false same-worktree overlap with `P-2026-10-05-2315`; `results()` now skips non-turn results, a turn is clamped to the next input, cache key `v3` to `v4`.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs` (`c2ecea5e9`); this commit: the Status of the prompt file and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Old (`HEAD~1`) vs new timelines on all 343 lanes, scratch caches, port 4701: 333 identical, 8 changed (all with a skipped task-notification result), 1 live lane skipped, 1 unexited lane (`P-2026-09-29-1017`) differs by `now` alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Gates: `node --check` 0, `check:scripts` PASS (55). 1735 turns 17:37:00-18:06:49, 22:35:28-23:03:41, 23:06:35-23:07:05; it ends 11 min before 2315 starts. 13 lanes had a skipped task-notification result, 0 a num_turns-0 empty one of another origin, the guard clamped 0 turns. Not investigated: one other same-worktree overlap, in `~/jjodel-release` (`P-2026-10-02-1445` vs `1501`, 933 s). Scratch left in `/tmp` (`lb-*`).
+**Prompt document name**: 2026-10-06 00:49
+
+## 2026-10-06 — merge: board-turns into alfonso-frontend-jjtl (P-2026-10-06-0059)
+**Prompt**: `claude_2026-10-06_0059_prompt_merge_board-turns.md`, a direct merge by `lane-run merge --direct`, no session: `board-turns` at `62c2e4858` into `alfonso-frontend-jjtl`, merge base `a9cc16bc7`, 3 commits on the branch side.
+**Files touched**: merge `db8c29fe3`: 3 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-06_0049_prompt_board_turn_pairing.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `db8c29fe3` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7598 tests in 308 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge (frontend/scripts/lane-board/lane-board.mjs): app untouched, no scene to check; board verified on 4701 by lane P-2026-10-06-0049
+**Notes**: Rollback tag `pre-board-turns` on `a9cc16bc7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0059/result.json`.
+**Prompt document name**: 2026-10-06 00:59

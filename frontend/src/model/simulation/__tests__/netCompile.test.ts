@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../netCompile';
+import { compileNet, eventAlphabet, featuresOf, netStcFromRoles, withDerivedEventRole, withDerivedInitial } from '../netCompile';
 import { candidates } from '../netStep';
 import { isKindOf } from '../isKindOf';
 import { objectReferences, objectSlotValues } from '../objectSlots';
@@ -79,6 +79,15 @@ describe('netStcFromRoles (R-SIM-28, R-SIM-31, R-SIM-32)', () => {
         expect(netStcFromRoles(cf)).not.toHaveProperty('activityFinal');
     });
 
+    it('R-SIM-50, R-SIM-51: simAccepting, simStateOutput and simTransitionOutput reach the STC, optional (mutant: one ROLE_KEYS pair dropped)', () => {
+        const stc = netStcFromRoles({ ...cf, simAccepting: 'C_Acc', simStateOutput: 'A_so', simTransitionOutput: 'A_to' });
+        expect([stc?.accepting, stc?.stateOutput, stc?.transitionOutput]).toEqual(['C_Acc', 'A_so', 'A_to']);
+        // control: without the keys the fields are absent, and the STC still runs
+        const plain = netStcFromRoles(cf);
+        expect(plain).not.toBeNull();
+        for (const field of ['accepting', 'stateOutput', 'transitionOutput']) expect(plain).not.toHaveProperty(field);
+    });
+
     it('control-flow needs simNextState, a source rule and an initial rule; empty strings count as unset', () => {
         expect(netStcFromRoles({ ...cf, simNextState: undefined })).toBeNull();
         expect(netStcFromRoles({ ...cf, simNextState: '' })).toBeNull();
@@ -92,8 +101,9 @@ describe('netStcFromRoles (R-SIM-28, R-SIM-31, R-SIM-32)', () => {
     it('the action keys reach the STC (R-SIM-69): simAction, simEntry, simExit, and the run needs none of them', () => {
         const stc = netStcFromRoles({ ...petri, simAction: 'A_act', simEntry: 'A_in', simExit: 'A_out' });
         expect([stc?.action, stc?.entry, stc?.exit]).toEqual(['A_act', 'A_in', 'A_out']);
+        // R-SIM-90: the list field beside the first attribute, a one-element list for a plain id
         expect(netStcFromRoles({ ...cf, simEntry: 'A_in' })).toEqual({
-            shape: 'control-flow', bound: 1, initial: 'C_Init', ownedTransitions: 'R_out', nextState: 'R_next', entry: 'A_in',
+            shape: 'control-flow', bound: 1, initial: 'C_Init', ownedTransitions: 'R_out', nextState: 'R_next', entry: 'A_in', entries: ['A_in'],
         });
         // control: without them the STC has no action field, and it still runs
         expect(netStcFromRoles(petri)).not.toHaveProperty('action');
@@ -571,6 +581,19 @@ describe('the initial state, F and the attributes (R-SIM-19, R-SIM-27, R-SIM-28)
         expect(compile({ ...CF, terminal: 'C_End' }, spec).activityFinal).toBeNull();
     });
 
+    it('R-SIM-50: the accepting set is the kind-of places of simAccepting, apart from F, null without the role (mutants: the set built from terminal, accepting null)', () => {
+        const spec: Spec = {
+            classes: { ...CLASSES, C_Acc: ['C_Node'], C_SubAcc: ['C_Acc'] },
+            objects: { A: { cls: 'C_Init' }, X: { cls: 'C_Acc' }, S: { cls: 'C_SubAcc' }, E: { cls: 'C_End' } },
+        };
+        const net = compile({ ...CF, terminal: 'C_End', accepting: 'C_Acc' }, spec);
+        expect([...net.accepting!].sort()).toEqual(['S', 'X']);
+        // not merged into F: F keeps the terminal role's places only
+        expect([...net.final!]).toEqual(['E']);
+        // control: without the role the set is null
+        expect(compile({ ...CF, terminal: 'C_End' }, spec).accepting).toBeNull();
+    });
+
     it('attributes: per kind-of instance, global on the model id, presentation apart; the first declaration holds', () => {
         const decls: StateAttributeDecl[] = [
             { name: 'visits', metaclass: 'C_Node', space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: 0 },
@@ -789,5 +812,166 @@ describe('lane C2: derived declarations at compile and the initial σ (P-2026-09
         expect(values(out.initial.derived?.attrs)).toEqual({ M: { total: 7 } });
         // control: a value inside the domain is no defect
         expect(withDerivedInitial(net, fixed({ M: { total: 6 } })).declarationDefects).toEqual([]);
+    });
+});
+
+describe('role-bound outputs at compile (lane S4, P-2026-09-27-1725, R-SIM-51)', () => {
+    // p0 -e0-> F (fork) -e1-> a, -e2-> b ; a -ea-> b ; c has no output
+    const spec: Spec = {
+        classes: { ...CLASSES, C_SubNode: ['C_Node'] },
+        objects: {
+            p0: { cls: 'C_Init', slots: { R_out: ['e0'], A_so: ['start'] } },
+            // the fork node carries the transition's attribute too, as under a common superclass: never read
+            F: { cls: 'C_Fork', slots: { R_out: ['e1', 'e2'], A_to: ['fork'] } },
+            a: { cls: 'C_SubNode', slots: { R_out: ['ea'], A_so: ['x', 'y'] } },
+            b: { cls: 'C_Node', slots: { A_so: [3, { not: 'a value' }] } },
+            c: { cls: 'C_Node' },
+            e0: { cls: 'C_Tr', slots: { R_next: ['F'], A_to: ['go'] } },
+            e1: { cls: 'C_Tr', slots: { R_next: ['a'], A_to: ['left'] } },
+            e2: { cls: 'C_Tr', slots: { R_next: ['b'], A_to: [true] } },
+            ea: { cls: 'C_Tr', slots: { R_next: ['b'], A_to: ['o'] } },
+        },
+    };
+    const STC: NetStc = { ...CF, fork: 'C_Fork', stateOutput: 'A_so', transitionOutput: 'A_to' };
+    const entries = (m: ReadonlyMap<string, readonly SimValue[]> | null | undefined) => (m ? [...m] : m);
+
+    it('the state outputs: each place its slot values in order, a subclass instance included, no entry without a value, never a fork node (mutants: only the first value, the SimValue filter dropped)', () => {
+        const net = compile(STC, spec);
+        expect(entries(net.stateOutputs)).toEqual([['p0', ['start']], ['a', ['x', 'y']], ['b', [3]]]);
+    });
+
+    it('the transition outputs: a plain edge its value, a fused fork transition the values of its edges in order (mutants: the transition id read alone, only the first own element, the origin read with its fork node)', () => {
+        const net = compile(STC, spec);
+        expect(entries(net.transitionOutputs)).toEqual([['ea', ['o']], ['F', ['go', 'left', true]]]);
+    });
+
+    it('a Petri transition gives its own value; an arc is never read (mutant: the maps built from the arcs)', () => {
+        const net = compile(
+            { shape: 'petri', bound: 1, node: 'C_P', transition: 'C_T', arc: 'C_A', arcSource: 'R_s', arcTarget: 'R_t', initialMarking: 'A_m', stateOutput: 'A_so', transitionOutput: 'A_to' },
+            {
+                classes: { C_P: [], C_T: [], C_A: [] },
+                objects: {
+                    p: { cls: 'C_P', slots: { A_m: [1], A_so: ['P'] } }, q: { cls: 'C_P' },
+                    t: { cls: 'C_T', slots: { A_to: ['T'] } },
+                    x1: { cls: 'C_A', slots: { R_s: ['p'], R_t: ['t'], A_to: ['arc'] } }, x2: { cls: 'C_A', slots: { R_s: ['t'], R_t: ['q'] } },
+                },
+            },
+        );
+        expect(entries(net.stateOutputs)).toEqual([['p', ['P']]]);
+        expect(entries(net.transitionOutputs)).toEqual([['t', ['T']]]);
+    });
+
+    it('both maps are null without their roles, and nothing else of the net changes (mutant: an empty map without the role)', () => {
+        const without = compile({ ...CF, fork: 'C_Fork' }, spec);
+        expect(without.stateOutputs).toBeNull();
+        expect(without.transitionOutputs).toBeNull();
+        const withRoles = compile(STC, spec);
+        expect(withRoles.transitions).toEqual(without.transitions);
+        expect(withRoles.initial).toEqual(without.initial);
+        expect(withRoles.defects).toEqual(without.defects);
+    });
+});
+
+describe('R-SIM-88: input declarations at compile (P-2026-09-28-0034)', () => {
+    const SPEC: Spec = { classes: CLASSES, objects: { A: { cls: 'C_Init' }, N: { cls: 'C_Node' }, T: { cls: 'C_Tr' } } };
+    const ASK: StateAttributeDecl = { name: 'ask', metaclass: 'C_Node', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    const ANSWER: StateAttributeDecl = { name: 'answer', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, input: true };
+
+    it('an input is declared on every owner and puts no value in σ, with no defect (mutant: exclusivity of two)', () => {
+        const net = compile(CF, SPEC, [ASK, ANSWER]);
+        expect(net.declarationDefects).toEqual([]);
+        expect(net.declared.get('A')?.get('ask')).toBe(ASK);
+        expect(net.declared.get('N')?.get('ask')).toBe(ASK);
+        expect(net.declared.get('M')?.get('answer')).toBe(ANSWER);
+        expect(net.initial.attrs.size).toBe(0);
+    });
+
+    it('an input with an initial or an equation is exclusive and still never in σ; on presentation it is the defect input (mutants: the input stored, presentation accepted)', () => {
+        const net = compile(CF, SPEC, [
+            { ...ASK, name: 'a1', initial: true }, { ...ASK, name: 'a2', equation: 'true' }, { ...ASK, name: 'a3', space: 'presentation', domain: null },
+        ]);
+        expect((net.declarationDefects ?? []).map(d => [d.index, d.name, d.code, d.message])).toEqual([
+            [0, 'a1', 'exclusive', 'input and initial'], [1, 'a2', 'exclusive', 'input and equation'], [2, 'a3', 'input', 'an input is semantic'],
+        ]);
+        expect(net.initial.attrs.size).toBe(0);
+        expect(net.initial.presentation.size).toBe(0);
+    });
+});
+
+describe('R-SIM-90: Guard, Action, Entry and Exit read as lists (P-2026-09-29-0010)', () => {
+    const cf = { simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
+
+    it('a list fills the first attribute and the list field; a plain id gives a one-element list (mutant: the key read as one pointer)', () => {
+        const stc = netStcFromRoles({
+            ...cf, simGuard: '["A_g","A_h"]', simAction: 'A_act', simEntry: '["A_in","A_in2"]', simExit: '["A_out","A_out"]',
+        });
+        expect([stc?.guard, stc?.guards]).toEqual(['A_g', ['A_g', 'A_h']]);
+        expect([stc?.action, stc?.actions]).toEqual(['A_act', ['A_act']]);
+        expect([stc?.entry, stc?.entries]).toEqual(['A_in', ['A_in', 'A_in2']]);
+        expect([stc?.exit, stc?.exits]).toEqual(['A_out', ['A_out']]);
+        // control: an unbound role has neither field
+        for (const field of ['guard', 'guards', 'action', 'actions']) expect(netStcFromRoles(cf)).not.toHaveProperty(field);
+    });
+
+    it('the other keys stay single: a JSON text there is one pointer (mutant: every key decoded)', () => {
+        const stc = netStcFromRoles({ ...cf, simStateOutput: '["A_a","A_b"]', simTransitionOutput: 'A_t' });
+        expect([stc?.stateOutput, stc?.transitionOutput]).toEqual(['["A_a","A_b"]', 'A_t']);
+        expect(stc).not.toHaveProperty('stateOutputs');
+    });
+
+    it('featuresOf reads the list, else the first attribute alone of a hand-built STC, else nothing', () => {
+        expect(featuresOf({ guard: 'A_g', guards: ['A_g', 'A_h'] }, 'guard')).toEqual(['A_g', 'A_h']);
+        expect(featuresOf({ guard: 'A_g' }, 'guard')).toEqual(['A_g']);
+        expect(featuresOf({ entry: 'A_in' }, 'exit')).toEqual([]);
+        expect(featuresOf({ action: 'A_a', actions: ['A_a', 'A_b'] }, 'action')).toEqual(['A_a', 'A_b']);
+    });
+
+    const G2: NetStc = { ...CF, guard: 'A_g', guards: ['A_g', 'A_h'] };
+    /** D feeds e3 [x < 2] and e4, whose two Guard attributes are given: siblings. */
+    const decision = (e4: Record<string, unknown[]>) => compile(G2, {
+        classes: CLASSES,
+        objects: {
+            D: { cls: 'C_Init', slots: { R_out: ['e3', 'e4'] } }, I: { cls: 'C_Node' }, E: { cls: 'C_End' },
+            e3: { cls: 'C_Tr', slots: { R_next: ['I'], A_g: ['x < 2'] } },
+            e4: { cls: 'C_Tr', slots: { R_next: ['E'], ...e4 } },
+        },
+    });
+
+    it('else in the second Guard attribute alone marks the edge, which loses its site (answer 3; mutant: else read in the first attribute only)', () => {
+        const net = decision({ A_h: ['else'] });
+        const t = byId(net.transitions);
+        expect([t.e4.elseOf, t.e4.guardSites]).toEqual([['e3'], []]);
+        expect(net.defects).toEqual([]);
+        // a blank first attribute is no guard: the site still goes
+        expect(byId(decision({ A_g: ['  '], A_h: [' else '] }).transitions).e4.guardSites).toEqual([]);
+    });
+
+    it('else beside a non-blank Guard attribute keeps the site: that guard holds after the complement (answer 3, G7; mutant: the site dropped)', () => {
+        const net = decision({ A_g: ['y > 0'], A_h: ['else'] });
+        const t = byId(net.transitions);
+        expect([t.e4.elseOf, t.e4.guardSites]).toEqual([['e3'], ['e4']]);
+        // the core: e3 false, the complement true, then e4's other guard decides
+        const state = { marking: new Map([['D', 1]]), attrs: new Map(), presentation: new Map() };
+        const oracle = (other: 'true' | 'false'): GuardOracle => site => ({ kind: site === 'e3' ? 'false' : other });
+        expect(candidates(net, { state, event: null }, oracle('false')).candidates.map(c => c.transition)).toEqual([]);
+        expect(candidates(net, { state, event: null }, oracle('true')).candidates.map(c => c.transition)).toEqual(['e4']);
+    });
+
+    it('a Petri transition reads else over every Guard attribute too', () => {
+        const PG2: NetStc = {
+            shape: 'petri', bound: 1, node: 'C_P', transition: 'C_T', arc: 'C_A', arcSource: 'R_s', arcTarget: 'R_t', initialMarking: 'A_m',
+            guard: 'A_g', guards: ['A_g', 'A_h'],
+        };
+        const arc = (s: string, t: string) => ({ cls: 'C_A', slots: { R_s: [s], R_t: [t] } });
+        const petri = (te: Record<string, unknown[]>) => compile(PG2, {
+            classes: { C_P: [], C_T: [], C_A: [] },
+            objects: {
+                p: { cls: 'C_P', slots: { A_m: [1] } }, a: { cls: 'C_P' }, b: { cls: 'C_P' },
+                tf: { cls: 'C_T', slots: { A_g: ['false'] } }, te: { cls: 'C_T', slots: te },
+                x1: arc('p', 'tf'), x2: arc('tf', 'a'), x3: arc('p', 'te'), x4: arc('te', 'b'),
+            },
+        });
+        expect(byId(petri({ A_h: ['else'] }).transitions).te).toMatchObject({ elseOf: ['tf'], guardSites: [] });
+        expect(byId(petri({ A_g: ['y > 0'], A_h: ['else'] }).transitions).te).toMatchObject({ elseOf: ['tf'], guardSites: ['te'] });
     });
 });

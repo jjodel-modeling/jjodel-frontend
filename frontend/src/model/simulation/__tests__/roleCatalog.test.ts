@@ -8,16 +8,17 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { ROLE_CATALOG, ROLE_IDS, dependentsOf, roleDescriptor, roleOfKey } from '../roleCatalog';
+import { ROLE_CATALOG, ROLE_IDS, dependentsOf, encodeRoleValues, roleDescriptor, roleOfKey, roleValues } from '../roleCatalog';
 import type { RoleId } from '../roleCatalog';
 
 /**
  * The keys R-SIM-50..53 introduce: provisional, nothing reads or writes them yet.
  * `simAction`, `simEntry`, `simExit` and `simStateAttributes` left the list with the
  * commit that wires them (lane C1, R-SIM-68, R-SIM-69); `simActivityFinal` with the
- * engine's reading of it (lane E1, R-SIM-53).
+ * engine's reading of it (lane E1, R-SIM-53); `simAccepting`, `simStateOutput` and
+ * `simTransitionOutput` with the engine's (lane S4, R-SIM-50, R-SIM-51). None is left.
  */
-const NEW_KEYS = ['simAccepting', 'simStateOutput', 'simTransitionOutput'];
+const NEW_KEYS: string[] = [];
 
 /** The files of this lane: they name every key, so they are not evidence that the code does. */
 const OWN_FILES = new Set(['roleCatalog.ts', 'simProfiles.ts', 'profileCodec.ts']);
@@ -125,7 +126,7 @@ describe('roleCatalog: the keys against the code', () => {
 
     it('finds every existing key of the catalog as a string literal in the code', () => {
         const existing = ROLE_CATALOG.map(d => d.key).filter((k): k is string => k !== null && !NEW_KEYS.includes(k));
-        expect(existing).toHaveLength(24);
+        expect(existing).toHaveLength(27);
         for (const key of existing) {
             expect([...sources.values()].some(s => quoted(s, key)), key).toBe(true);
         }
@@ -135,6 +136,55 @@ describe('roleCatalog: the keys against the code', () => {
         for (const key of NEW_KEYS) {
             expect(ROLE_CATALOG.some(d => d.key === key), key).toBe(true);
             expect([...sources.values()].some(s => quoted(s, key)), key).toBe(false);
+        }
+    });
+});
+
+describe('R-SIM-90: Guard, Action, Entry and Exit hold a list of attributes (P-2026-09-29-0010)', () => {
+    it('multi is set on the four Data roles and on no other (mutant: an output role flagged)', () => {
+        expect(ROLE_CATALOG.filter(d => d.multi).map(d => d.id)).toEqual(['guard', 'action', 'entry', 'exit']);
+        // control: the single-valued roles of the amendment stay single
+        for (const id of ['eventIdentifier', 'stateOutput', 'transitionOutput', 'arcWeight', 'bound'] as const) {
+            expect(roleDescriptor(id).multi, id).toBeUndefined();
+        }
+    });
+
+    it('roleValues: unset reads [], a plain id one element, a JSON array its elements in order', () => {
+        expect(roleValues(undefined)).toEqual([]);
+        expect(roleValues(null)).toEqual([]);
+        expect(roleValues('')).toEqual([]);
+        expect(roleValues(42)).toEqual([]);
+        expect(roleValues('A')).toEqual(['A']);
+        expect(roleValues('["A","B"]')).toEqual(['A', 'B']);
+        expect(roleValues(' ["B", "A"] ')).toEqual(['B', 'A']);
+    });
+
+    it('roleValues drops a repeated attribute, the first kept (mutant: the list left as parsed)', () => {
+        expect(roleValues('["A","A"]')).toEqual(['A']);
+        expect(roleValues('["B","A","B"]')).toEqual(['B', 'A']);
+    });
+
+    it('roleValues drops an element that is not a non-empty string', () => {
+        expect(roleValues('["A","",3,null,"B"]')).toEqual(['A', 'B']);
+    });
+
+    it('a text that does not parse reads as one bad value, never as unset (mutant: [] on a parse error)', () => {
+        expect(roleValues('[bad')).toEqual(['[bad']);
+        expect(roleValues('["A",')).toEqual(['["A",']);
+    });
+
+    it('encodeRoleValues: none is undefined, one the plain id, two or more a JSON array (mutant: a single element encoded as JSON)', () => {
+        expect(encodeRoleValues([])).toBeUndefined();
+        expect(encodeRoleValues(['A'])).toBe('A');
+        expect(encodeRoleValues(['A', 'B'])).toBe('["A","B"]');
+        // a repeated or empty id is dropped before the choice of the form
+        expect(encodeRoleValues(['A', 'A'])).toBe('A');
+        expect(encodeRoleValues(['', 'B', ''])).toBe('B');
+    });
+
+    it('decode after encode is the identity on lists of distinct ids', () => {
+        for (const ids of [[], ['A'], ['A', 'B'], ['Pointer1_x', 'Pointer2_y', 'Pointer3_z']]) {
+            expect(roleValues(encodeRoleValues(ids))).toEqual(ids);
         }
     });
 });

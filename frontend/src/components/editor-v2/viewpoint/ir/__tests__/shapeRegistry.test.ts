@@ -17,11 +17,15 @@ import {
     contentRect, boxForContent, boxForContentNumeric,
     boxFromIntrinsic, hasSizeSupplement, MEASURE_SLACK,
     baseCornerRadius, clampCornerRadius, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
+    BAR_SIZE,
 } from '../shapeRegistry';
+import { ensureViewCss } from '../irStyle';
+import type { NodeViewIR } from '../irTypes';
+import { createHash } from 'node:crypto';
 
 const ALL_FORMS: ShapeForm[] = [
     'rect', 'rounded', 'ellipse', 'circle', 'diamond',
-    'stadium', 'hexagon', 'parallelogram', 'cylinder', 'cloud',
+    'stadium', 'hexagon', 'parallelogram', 'cylinder', 'cloud', 'bar',
 ];
 /**
  * Le cinque forme che esistevano prima del registry. I tre test di equivalenza
@@ -619,18 +623,27 @@ describe('shapeRegistry: raggio degli spigoli', () => {
         expect(resolveCornerRadius('diamond', 0, { w: 160, h: 64 })).toEqual({ kind: 'none' });
     });
 
-    it('clamp di render a min(w, h) / 4 su entrambi i painter', () => {
-        expect(clampCornerRadius(30, 200, 40)).toBe(10);
+    it('clamp di render a min(w, h) / 2 su entrambi i painter (P-2026-09-30-1720)', () => {
+        expect(clampCornerRadius(30, 200, 40)).toBe(20);
         expect(clampCornerRadius(6, 200, 40)).toBe(6);
-        expect(resolveCornerRadius('rect', 30, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 10 });
+        // L'azione di Activity (UML): raggio 14 sul box dipinto 140x42, prima 10.5.
+        expect(clampCornerRadius(14, 140, 42)).toBe(14);
+        expect(clampCornerRadius(14, 140, 20)).toBe(10);
+        expect(resolveCornerRadius('rect', 30, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 20 });
         expect(resolveCornerRadius('rounded', 6, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 6 });
-        expect(resolveCornerRadius('diamond', 30, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 15, w: 100, h: 60 });
+        expect(resolveCornerRadius('diamond', 30, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 30, w: 100, h: 60 });
+        expect(resolveCornerRadius('diamond', 40, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 30, w: 100, h: 60 });
         expect(resolveCornerRadius('hexagon', 8, { w: 160, h: 64 })).toEqual({ kind: 'path', r: 8, w: 160, h: 64 });
         // senza box la forma CSS tiene il numero scritto: non e' una taglia indovinata
         expect(resolveCornerRadius('rect', 30, null)).toEqual({ kind: 'css', px: 30 });
         for (const [r, w, h] of [[NaN, 10, 10], [6, 0, 10], [6, 10, -1], [-2, 10, 10]]) {
             expect(clampCornerRadius(r, w, h), `${r} ${w} ${h}`).toBe(0);
         }
+    });
+
+    it('il raggio salvato del corpus (8, viste rect utente) non cambia: su un box alto almeno 40 passava gia\'', () => {
+        for (const h of [40, 64, 120]) expect(clampCornerRadius(8, 200, h), String(h)).toBe(8);
+        expect(resolveCornerRadius('rect', 8, { w: 140, h: 40 })).toEqual({ kind: 'css', px: 8 });
     });
 
     it('un poligono senza box misurato resta spigoloso', () => {
@@ -706,5 +719,217 @@ describe('shapeRegistry: raggio compilato', () => {
         for (const bad of [undefined, NaN, -1, Infinity, '6', null]) {
             expect(resolveCompiledCornerRadius(compiled(() => bad), CTX, 'o1'), String(bad)).toBeUndefined();
         }
+    });
+});
+
+/** The text irStyle.ts puts in its <style> tag: BASE_CSS, then the per-view parts. */
+function injectedCss(): string {
+    const texts: string[] = [];
+    const g = globalThis as { document?: unknown };
+    const saved = g.document;
+    g.document = {
+        getElementById: () => null,
+        createElement: () => ({ appendChild: (n: { data: string }) => { texts.push(n.data); return n; } }),
+        createTextNode: (data: string) => ({ data, remove() { /* stand-in */ } }),
+        head: { appendChild: () => undefined },
+    };
+    try {
+        ensureViewCss(`bar-css-${texts.length}-${Date.now()}`, {} as NodeViewIR);
+    } finally {
+        if (saved === undefined) delete g.document; else g.document = saved;
+    }
+    return texts[0];
+}
+
+/** selector -> declarations, comments dropped, later declarations winning. */
+function rulesOf(css: string): Map<string, Record<string, string>> {
+    const out = new Map<string, Record<string, string>>();
+    for (const m of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const decls: Record<string, string> = {};
+        for (const d of m[2].split(';')) {
+            const i = d.indexOf(':');
+            if (i > 0) decls[d.slice(0, i).trim()] = d.slice(i + 1).trim();
+        }
+        for (const sel of m[1].split(',').map(x => x.trim().replace(/\s+/g, ' '))) {
+            out.set(sel, { ...(out.get(sel) ?? {}), ...decls });
+        }
+    }
+    return out;
+}
+
+/** Length of the injected CSS before the outside-label rules, measured at ca59e317e
+ *  (P-2026-09-29-1245): where the bar's section ends and the outside label's begins. */
+const OUTSIDE_LABEL_CSS_START = 17954;
+
+/** Length of the injected CSS before the entry mark's rules, measured on the D tip (c676fc6f6,
+ *  P-2026-09-30-0355): where the outside label's section ends and the entry mark's begins. */
+const ENTRY_MARK_CSS_START = 20461;
+
+/** Length of the injected CSS before the turned bar's rules (Q3), measured at 4bd9aa66f (P-2026-10-03-1304): where
+ *  the entry mark's section ends and the turned bar's begins. */
+const BAR_INK_CSS_START = 20896;
+
+/**
+ * The bar (R-VP-16, P-2026-09-29-1021): the Petri transition as a thin solid box drawn at a
+ * fixed size. The CSS is read as irStyle.ts injects it, through a stand-in `document` (the
+ * bench has no DOM): the rules are its output, not its source.
+ */
+describe('shapeRegistry: the bar (R-VP-16)', () => {
+    it('is drawn by the CSS box, never resized after its content, with no inset and no corner radius', () => {
+        const bar = SHAPE_REGISTRY.bar;
+        expect(bar.id).toBe('bar');
+        expect(bar.painter.kind).toBe('css');
+        expect(bar.defaultResizable).toBe(false);
+        expect(bar.keepAspectRatio).toBe(false);
+        for (let i = 0; i <= 10; i++) expect(bar.insetFractionAt(i / 10)).toBe(0);
+        expect(hasSizeSupplement(bar)).toBe(false);
+        expect(honorsCornerRadius('bar')).toBe(false);
+        expect(baseCornerRadius('bar')).toBe(0);
+        // The sizing reproduces the CSS box, as rect's 140x40 does: the box for no content is the bar.
+        expect(boxForContent(bar, 0, 0)).toEqual(BAR_SIZE);
+    });
+
+    it('is a thin box of about 4:1, shorter than a line of text and smaller than the smallest circle', () => {
+        expect(BAR_SIZE.w / BAR_SIZE.h).toBeGreaterThanOrEqual(3.5);
+        expect(BAR_SIZE.w / BAR_SIZE.h).toBeLessThanOrEqual(4.5);
+        expect(BAR_SIZE.h).toBeLessThanOrEqual(16);
+        const circle = boxForContent(getShapeDescriptor('circle'), 0, 0);
+        expect(BAR_SIZE.w).toBeLessThan(circle.w);
+        expect(BAR_SIZE.w * BAR_SIZE.h).toBeLessThanOrEqual((circle.w * circle.h) / 4);
+    });
+
+    it('the CSS: the fixed box with the floors lifted, on the box and on the wrapper, and nothing clipped', () => {
+        const rules = rulesOf(injectedCss());
+        expect(rules.get('.ir-node-content.ir-shape--bar')).toMatchObject({
+            width: `${BAR_SIZE.w}px`, height: `${BAR_SIZE.h}px`, 'min-width': '0', 'min-height': '0',
+            'border-radius': '0', overflow: 'visible',
+        });
+        // instanceNode.scss: .mm-node.mm-object { min-width: 200px; overflow: hidden }.
+        expect(rules.get('.mm-node:has(> .ir-node-content.ir-shape--bar)')).toMatchObject({
+            'min-width': '0', 'min-height': '0', overflow: 'visible',
+        });
+        // An explicit size (a manual resize) fills the box, as on every other form.
+        expect(rules.get('.mm-node.ir-sized > .ir-node-content.ir-shape--bar')).toMatchObject({ width: '100%', height: '100%' });
+    });
+
+    it('the CSS: the label centred on the bar, unclipped, with a halo in the surface colour', () => {
+        const label = rulesOf(injectedCss()).get('.ir-node-content.ir-shape--bar > .ir-label');
+        expect(label).toMatchObject({
+            position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+            'max-width': 'none', overflow: 'visible', margin: '0', padding: '0',
+        });
+        expect(label?.['text-shadow']).toContain('var(--color-inode-surface)');
+    });
+
+    it('every rule written before the bar is byte-identical: the bar only appends', () => {
+        const css = injectedCss();
+        // Measured on irStyle.ts at 22efe0670, before this lane: 16743 characters.
+        const BEFORE = { length: 16743, sha16: 'a2877becf5934b70' };
+        const prefix = css.slice(0, BEFORE.length);
+        expect(createHash('sha256').update(prefix).digest('hex').slice(0, 16)).toBe(BEFORE.sha16);
+        // The bar's section ends where the outside label's begins (P-2026-09-29-1245): it
+        // appends after the bar, so this check is bounded to the bar's own rules.
+        const added = [...rulesOf(css.slice(BEFORE.length, OUTSIDE_LABEL_CSS_START)).keys()];
+        expect(added.length).toBeGreaterThan(0);
+        for (const sel of added) expect(sel, sel).toContain('ir-shape--bar');
+    });
+});
+
+/**
+ * The outside label (R-VP-15 (1), P-2026-09-29-1245). Read as irStyle.ts injects it, as the bar
+ * above. What these rules do to the layout (the label past the box, 8px off, centred, out of the
+ * size, unclipped under hl-dimmed, winning on diamond and bar) was measured in headless Chromium
+ * against this same CSS: docs/discovery/discovery_2026-09-29_label_outside_positions.md §3.
+ */
+describe('irStyle: the outside label (P-2026-09-29-1245)', () => {
+    const LABEL = '.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-';
+
+    it('every rule written before it is byte-identical: the outside label only appends', () => {
+        const css = injectedCss();
+        const BEFORE = { length: OUTSIDE_LABEL_CSS_START, sha16: '063ce686b2d24781' };
+        expect(createHash('sha256').update(css.slice(0, BEFORE.length)).digest('hex').slice(0, 16)).toBe(BEFORE.sha16);
+        // The outside label's section ends where the entry mark's begins (P-2026-09-30-0355).
+        const added = [...rulesOf(css.slice(BEFORE.length, ENTRY_MARK_CSS_START)).keys()];
+        expect(added.length).toBeGreaterThan(0);
+        for (const sel of added) expect(sel, sel).toContain('ir-label--outside');
+    });
+
+    it('lifts the two clips, the shape\'s and the wrapper\'s, only on a node that carries one', () => {
+        const rules = rulesOf(injectedCss());
+        expect(rules.get('.ir-node-content:has(> .ir-label--outside)')).toEqual({ overflow: 'visible' });
+        expect(rules.get('.mm-node:has(> .ir-node-content > .ir-label--outside)')).toEqual({ overflow: 'visible' });
+    });
+
+    it('takes the label out of the flow, unclipped, over the shape, with a halo in the canvas colour', () => {
+        const rules = rulesOf(injectedCss());
+        for (const a of ['n', 's', 'w', 'e']) {
+            const r = rules.get(LABEL + a);
+            expect(r, a).toMatchObject({
+                position: 'absolute', 'z-index': '1', margin: '0', padding: '0', 'max-width': 'none', overflow: 'visible',
+            });
+            expect(r?.['text-shadow'], a).toContain('var(--canvas-bg)');
+        }
+    });
+
+    it('places each side 8px past the box, centred on it, and sets all four offsets (the bar sets two)', () => {
+        const rules = rulesOf(injectedCss());
+        const PAST = 'calc(100% + 8px)';
+        expect(rules.get(LABEL + 'n')).toMatchObject({ top: 'auto', bottom: PAST, left: '50%', right: 'auto', transform: 'translateX(-50%)' });
+        expect(rules.get(LABEL + 's')).toMatchObject({ top: PAST, bottom: 'auto', left: '50%', right: 'auto', transform: 'translateX(-50%)' });
+        expect(rules.get(LABEL + 'w')).toMatchObject({ top: '50%', bottom: 'auto', left: 'auto', right: PAST, transform: 'translateY(-50%)' });
+        expect(rules.get(LABEL + 'e')).toMatchObject({ top: '50%', bottom: 'auto', left: PAST, right: 'auto', transform: 'translateY(-50%)' });
+    });
+
+    it('is written at (0,4,0), after the rules it must beat: the SVG forms\' in-flow child (0,4,0) and the bar\'s label (0,3,0)', () => {
+        const css = injectedCss();
+        const classes = (sel: string) => (sel.match(/\.[a-zA-Z_-][\w-]*/g) ?? []).length;
+        for (const a of ['n', 's', 'w', 'e']) expect(classes(LABEL + a), a).toBe(4);
+        expect(classes('.ir-node-content.ir-shape--bar > .ir-label')).toBe(3);
+        const firstOutside = css.indexOf(LABEL);
+        expect(firstOutside).toBeGreaterThan(css.lastIndexOf(':not(.ir-marker-svg) { position: relative'));
+        expect(firstOutside).toBeGreaterThan(css.indexOf('.ir-node-content.ir-shape--bar > .ir-label {'));
+    });
+
+    it('gives the inline editor of an outside label its own width, not 90% of the box', () => {
+        expect(rulesOf(injectedCss()).get('.ir-node-content > .ir-label__input.ir-label--outside'))
+            .toEqual({ width: 'auto', 'min-width': '80px' });
+    });
+});
+
+/**
+ * The entry mark (R-VP-22, P-2026-09-30-0355). IRNodeContent places the mark inline, past the box on
+ * its left; irStyle.ts only lifts the two clips it would meet, on a node that carries one.
+ */
+describe('irStyle: the entry mark (P-2026-09-30-0355)', () => {
+    it('every rule written before it is byte-identical: the entry mark only appends', () => {
+        const css = injectedCss();
+        // The whole injected CSS of the D tip (c676fc6f6), 20461 characters.
+        expect(createHash('sha256').update(css.slice(0, ENTRY_MARK_CSS_START)).digest('hex').slice(0, 16)).toBe('9389262213aac4a4');
+        // The turned bar's section ends it since Q3 (P-2026-10-03-1304): this check is bounded to the entry mark's rules.
+        const added = [...rulesOf(css.slice(ENTRY_MARK_CSS_START, BAR_INK_CSS_START)).keys()];
+        expect(added).toEqual(['.ir-node-content:has(> .ir-entry-svg)', '.mm-node:has(> .ir-node-content > .ir-entry-svg)']);
+    });
+
+    it('lifts the two clips, and only them', () => {
+        const rules = rulesOf(injectedCss().slice(ENTRY_MARK_CSS_START));
+        expect(rules.get('.ir-node-content:has(> .ir-entry-svg)')).toEqual({ overflow: 'visible' });
+        expect(rules.get('.mm-node:has(> .ir-node-content > .ir-entry-svg)')).toEqual({ overflow: 'visible' });
+    });
+});
+
+/**
+ * Q3 (P-2026-10-03-1304): a bar that declares a thickness paints its ink inside a square box (IRNodeContent); the box
+ * takes no pointer, the ink does, so the hit area and the hover are the ink's. Measured in the browser by the lane
+ * probe (frontend/scripts/probe/derived-notations-edges.ts, barChecks); here, the rules as injected.
+ */
+describe('irStyle: the turned bar (Q3)', () => {
+    it('every rule written before it is byte-identical: the turned bar only appends', () => {
+        const css = injectedCss();
+        // The whole injected CSS at 4bd9aa66f, before Q3's edit, 20896 characters.
+        expect(createHash('sha256').update(css.slice(0, BAR_INK_CSS_START)).digest('hex').slice(0, 16)).toBe('8010dd5f370cb8f9');
+        const rules = rulesOf(css.slice(BAR_INK_CSS_START));
+        expect([...rules.keys()]).toEqual(['.react-flow__node:has(.ir-node-content.ir-bar-ink)', '.ir-node-content.ir-bar-ink']);
+        expect(rules.get('.react-flow__node:has(.ir-node-content.ir-bar-ink)')).toEqual({ 'pointer-events': 'none !important' });
+        expect(rules.get('.ir-node-content.ir-bar-ink')).toEqual({ 'pointer-events': 'auto' });
     });
 });

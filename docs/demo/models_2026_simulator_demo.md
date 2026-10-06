@@ -11,6 +11,16 @@
 - The G13/G14 polish (`5739b950f`) landed after the report. It changed the choice list header and the Profile
   select only, and its lane measured both. Any later trunk commit to `SimulationPanel.tsx` or `simBridge.ts` needs a
   re-run of the readiness probes before this script holds (report §7, risk 7).
+- The gate (R-SIM-97, P-2026-09-29-1106) changed the setup and the first steps of every scene: the pill shows only
+  in Advanced mode and on a metamodel with a Semantic type. Re-measured by that lane's probe on 3050 (headless,
+  light, 1600×1000, one fresh page per scene): the four scenes give the readings of the reference
+  `trunk_readings_2026-09-29c` but for the §2.1 Undo line and, in the dialog, the focus on open (the dialog itself,
+  no Continue click before it) [M].
+- The toggle (R-SIM-99, P-2026-09-29-1225) replaced the Semantic type: the pill shows in Advanced mode on a metamodel
+  whose `Simulation` toggle is on (Properties, section `SEMANTIC TYPE CLASS`), and the model kind is picked in the
+  dialog again. Re-measured by that lane's probe on 3052 (headless, light, 1600×1000, one fresh page per scene): the
+  four scenes give the 71 readings of `trunk_readings_2026-09-29c`, the dialog's focus and the §2.1 Undo line
+  included, but for the seven bag readings, which hold `simEnabled: true` besides [M].
 
 ---
 
@@ -20,16 +30,22 @@
   step 2). The measurements ran on 3011, this tree's dev server at `e1cefcfbc`. Under `frontend/src` the trunk
   differs from it by the polish `5739b950f` only (`git diff --stat e1cefcfbc alfonso-frontend-jjtl`, 2 files).
 - **Screen.** Light theme. Viewport 1600×1000.
-- **Panel.** In each editor tab, click the `Simulation` chip [R]. The panel docks at the bottom of the editor. Every
-  scene uses two tabs: the metamodel (M2 face: profile, Apply, Configure…) and the model (M1 face: the run).
+- **Advanced mode.** Before the first scene, click `Advanced` in the app bar. The first time a browser enables it,
+  the tutorial opens: click `Got it`. 2 clicks [M, P-2026-09-29-1106]. In Basic mode no editor shows the pill, and
+  the metamodel's Properties show no `SEMANTIC TYPE CLASS` section [M, P-2026-09-29-1225].
+- **Panel.** The `Simulation` chip shows once the metamodel's `Simulation` toggle is on (R-SIM-99), on the metamodel's
+  tab and on its models' tabs [M, P-2026-09-29-1225]. It sits at the bottom left of the editor, on Jjodie's centre line, 16 px to its right:
+  Jjodie (216, 903) 48×48, the chip (281, 911) 107×32 [M]. Each scene clicks the chip once in each of its two tabs.
+  The panel docks at the bottom of the editor. Every scene uses two tabs: the metamodel (M2 face: profile, Apply,
+  Configure…) and the model (M1 face: the run).
 - **Projects.** Four projects, one per preset. Each probe built its preset alone, in the RowViewSmoke seed project.
 
 | Preset | Metamodel / model | Prepared before the talk | Live |
 |---|---|---|---|
-| State machine (PEST) | `DemoPEST` / `demoSM` | metamodel and model, as §2.1 | profile, Apply, the run |
-| Petri net (P/T) | `DemoPetri` / `demoNet` | metamodel and model, as §2.2 | profile, Apply, the run |
-| Extended state machine | `DemoESM` / `demoESM` | metamodel and model, as §2.3 | profile, Apply, the declarations, the run |
-| Flowchart B | `DemoFlowB` / `demoFlowB` | metamodel and model, as §2.4 | profile, Apply, the declaration, the run |
+| State machine (PEST) | `DemoPEST` / `demoSM` | metamodel and model, as §2.1 | Simulation toggle, the model kind, Apply, the run |
+| Petri net (P/T) | `DemoPetri` / `demoNet` | metamodel and model, as §2.2 | Simulation toggle, the model kind, Apply, the run |
+| Extended state machine | `DemoESM` / `demoESM` | metamodel and model, as §2.3 | Simulation toggle, the model kind, Apply, the declarations, the run |
+| Flowchart B | `DemoFlowB` / `demoFlowB` | metamodel and model, as §2.4 | Simulation toggle, the model kind, Apply, the declaration, the run |
 
 - The builder writes the metamodels and models through the store. No probe drew them on the canvas. Drawing a preset
   live must end in the same names, types, abstract flags and references as §2.
@@ -37,13 +53,34 @@
 - **Save check.** After preparing each project: Cmd+S, reload the page once, check that the metamodel, the model and
   its objects are intact. Without Cmd+S, model edits may be lost on reload although the bar reads `Saved just now`
   (freeze readiness F1, `c6933dded`) [M].
-- **Empty bag.** Set no simulation role before Apply. Every measured path starts from an empty bag. On every preset
-  the M2 face then reads `Custom · Not checkable` and `Missing: Node, Transition, Next state, Initial or Initial
-  marking, Source or Owned transitions.` [M].
+- **Empty bag.** Set no simulation role, no Semantic type and no `Simulation` toggle before the talk. Every measured
+  path starts from an empty bag, and an empty bag shows no pill [M, P-2026-09-29-1106]. With the toggle on and before
+  Apply, on every preset the M2 face reads `Custom · Not checkable` and `Missing: Node, Transition, Next state, Initial
+  or Initial marking, Source or Owned transitions.` [M, P-2026-09-29-1225].
 - **Reset starts the run: before Reset every input is off.** The M1 face reads `Not started` with every event
   button off, e.g. `coin(off)`, `push(off)`, `stop(off)` [M].
-- **Buttons** [R]: ⏮ Reset, ▶ Step, ■ Stop. During a run the M1 face reads, top to bottom: the choice list (Petri,
-  on a conflict), the `Marking:` line, the buttons, `Events` (SM, ESM), `Last step:`, the status [M].
+- **State on the model tab (R-SIM-94, R-SIM-103).** A model declares its own globals in the `State…` entry (`Data…`
+  until P-2026-10-03-0120) [M, P-2026-10-03-0120], the first line of the M1 face, which opens the dialog
+  `State of <model>` [M, P-2026-10-03-0041]; one Apply is one undo step, and an edit interrupts a running
+  simulation (`Run interrupted: the model changed. Reset to run again.`). A global declared in the metamodel stays
+  the default of every model that does not declare its own [M, P-2026-09-29-0110,
+  `docs/discovery/discovery_2026-09-29_sim_data_level.md` §8]. §2.3 and §2.4 declare on this route and keep the
+  metamodel path as the fallback (§4).
+- **Buttons** [R]: ⏮ Reset, ▶ Step, ⏩ Play, ■ Stop. Above them, from the panel's first open, one row: `Choices`
+  (`Ask` | `Random`, Ask by default) and Play's step limit `100` (R-SIM-101) [M, P-2026-09-29-1943]. During a run the
+  M1 face reads, top to bottom (R-SIM-104): `State…` where the profile keeps it, the `Choices` row, the choice list
+  (Petri, on a conflict), the lines that come and go (defects, `Undeclared`, the halt), `WATCH` (ESM, Flow B: one row
+  per attribute, a range with its domain bar, a derived one in italics with the chip `DEFINE`, a value the last step
+  changed as `before → after` in cyan), `MARKING` (one chip per marked place, `p2 ×2` from two tokens; its hover title
+  is the marking line `Marking: …` the tables below quote), `EVENTS` (SM, ESM; an event that is off says why in its
+  title), the buttons, and one status line: the pill (`Running`), then `· step n · <last step>`, the seed in its
+  hover title only, which reads `Last step: …` as the tables quote it [M, P-2026-10-03-0120]. The last step reads whole
+  in Petri's steps 1-3 and Flow B's 1-5 and loses its tail elsewhere: PEST and ESM 23-71 px, Flow B's step 6 17 px
+  (the wider `Terminated` pill), Petri's step 4 behind the Deadlock reason [M]. The
+  `Marking:` line and the `Last step:` line are gone. Step's top is 873 from `Not started` to the last step in all
+  four scenes, the choice list open or closed; it was 854.5 with `Last step:` under the buttons [M,
+  P-2026-10-03-0120]. Play fires one ε step every 500 ms until the run stops; under `Ask` it stops at the first list,
+  as ▶ does [M]. The header's ⤢ button opens the run inspector beside the panel, an optional beat (§2.3).
 
 ---
 
@@ -68,26 +105,34 @@
 | `t5` | `locked` | `off` | `stop` |
 
 **Apply** (tab `DemoPEST`).
-1. Click `Configure…` [R]. The dialog `Simulation roles` opens on `What kind of model is this?`, with `Continue` off
-   and `Pick a model kind to continue.` [M, P-2026-09-27-2105]. Click `State machine`, then `Continue` [M].
-2. The dialog reads `Checkable` and `7 of 10 roles matched` [M, P-2026-09-27-2105]. Required 5 is open: Node
-   `State`, Initial `Initial`, Transition `Transition`, Owned transitions `State.transitions`, Next state
-   `Transition.nextState`. Optional 4, folded, holds the other two: Terminal `Terminal`, Trigger `Transition.event`
-   [M]. Hover titles, e.g. `Proposed: State.transitions. The composition from State to Transition` [M].
+1. Click an empty point of the canvas: the Properties show `DemoPEST`, `METAMODEL`, and after GENERAL the section
+   `SEMANTIC TYPE CLASS` with one toggle, `Simulation`, off [M, P-2026-09-29-1225]. Turn it on: the `Simulation` chip
+   appears beside Jjodie [M].
+   **Say** "I want to simulate the models of this metamodel."
+2. Click the chip: the M2 face reads `Custom · Not checkable` [M]. Click `Configure…`: the dialog `Simulation roles`
+   opens on `What kind of model is this?`, with `Continue` off and `Pick a model kind to continue.` [M]. Click
+   `State machine`, then `Continue`. The dialog reads `Checkable` and `7 of 10 roles matched` [M,
+   P-2026-09-29-1225]. Required 5 is open: Node `State`, Initial `Initial`, Transition `Transition`,
+   Owned transitions `State.transitions`, Next state `Transition.nextState`. Optional 4, folded, holds the other two:
+   Terminal `Terminal`, Trigger `Transition.event` [M]. Hover titles, e.g. `Proposed: State.transitions. The
+   composition from State to Transition` [M].
    **Say** "I say what kind of model this is. The dialog proposes a binding for every role, each with its reason."
 3. Apply, in the dialog. It closes, and the summary reads `State machine · Checkable` [M]. The panel is 157.5 px
-   high at top 793.5 [M, P-2026-09-27-2105].
+   high at top 793.5 [M, P-2026-09-29-1225].
    **Say** "One Apply writes the whole binding. It is one undo step."
 
-Count: 4 clicks, no keystroke; the run below, 11 clicks [M, P-2026-09-27-2105].
+Count: 7 clicks, no keystroke (canvas 1, toggle 1, chip 1, `Configure…` 1, kind 1, `Continue` 1, Apply 1), against
+6 with the Semantic type (R-SIM-97) and 4 before the gate; the chip on tab `demoSM`, 1 click; the run below, 11 clicks
+[M, P-2026-09-29-1225].
 
 **Run** (tab `demoSM`). Before Reset: `Not started`, `coin(off)`, `push(off)`, `stop(off)` [M].
 
-Reset: `Marking: locked`, `Last step: Reset`, `Running`, events `coin`, `push`, `stop` [M]. ▶ stays disabled for
+Reset: the chip `locked` (`Marking: locked`), the status line `Running · step 0 · Reset`
+(`Last step: Reset`), events `coin`, `push`, `stop` [M, P-2026-10-03-0120]. ▶ stays disabled for
 the whole run: every edge has a trigger [M].
 **Say** "Reset starts the run. The machine is in locked. The inputs are the events of the model."
 
-| # | Click | `Last step:` line [M] | `Marking:` line [M] | Events off after [M] | Say |
+| # | Click | `Last step:`, the status line's title [M] | `Marking:`, the chips' title [M] | Events off after [M] | Say |
 |---|---|---|---|---|---|
 | 1 | `push` | `Last step: push: t3 (locked → locked) fired` | `Marking: locked` | none | "push in locked is a self-loop." |
 | 2 | `coin` | `Last step: coin: t1 (locked → unlocked) fired` | `Marking: unlocked` | `stop` | "coin unlocks. No stop edge leaves unlocked, so stop is off." |
@@ -104,9 +149,10 @@ After step 10 the status reads `Terminated` [M].
 **Say** "Each line names the event and the transition by their names in the model."
 
 **Undo, optional** (tab `DemoPEST`, no write since Apply). Click an empty point of the canvas, then Cmd+Z. The M2
-face reads `Custom · Not checkable` [M]; the M1 face reads `Simulation not configured. Missing on DemoPEST:
-Initial or Initial marking, Owned transitions or Source, Next state.` [M]. Measured with Control+z in headless
-Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
+face reads `Custom · Not checkable`, and the bag holds `simEnabled` alone [M, P-2026-09-29-1225]; the M1 face reads
+`Simulation not configured. Missing on DemoPEST: Initial or Initial marking, Owned transitions or Source, Next
+state.` [M]. A second Cmd+Z turns the toggle off: it reads off and the pill goes from both tabs [M]. Measured with
+Control+z in headless Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
 **Say** "Apply was one step, so one undo takes the binding away."
 
 ### 2.2 Petri net (P/T)
@@ -129,8 +175,10 @@ Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
 | `i1` | `InhibitorArc` | `lock` | `t2` | unset |
 
 **Apply** (tab `DemoPetri`).
-1. Click `Configure…`, then `Petri net (P/T)`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads `Checkable`
-   and `9 of 10 roles matched` [M]. Required 6 is open: Node `Place`, Initial marking `Place.tokens`, Transition
+1. Click an empty point of the canvas and turn `Simulation` on in the Properties; click the chip, then `Configure…`,
+   `Petri net (P/T)` and `Continue` [M, P-2026-09-29-1225]. The dialog reads `Checkable` and `9 of 10 roles matched`
+   [M].
+   Required 6 is open: Node `Place`, Initial marking `Place.tokens`, Transition
    `Transition`, Arc `Arc`, Arc source `Arc.src`, Arc target `Arc.tgt`. Optional 4, folded: Arc weight
    `Arc.weight`, Inhibitor arc `InhibitorArc`, Guard `Transition.guard`, Terminal unset [M].
    **Say** "The binder recognises the net from the shape of the metamodel, the inhibitor and the guard included."
@@ -140,31 +188,44 @@ Chromium; Cmd+Z is Alfonso's check on 3001 (first report §4.5).
 3. Apply, in the dialog. The summary reads `Petri net (P/T) · Checkable`, the panel 157.5 px at 793.5 [M]. The bag
    holds Bound `4` [M, P-2026-09-27-2105].
 
-Count: 4 clicks, no keystroke; the run below, 8 clicks: Reset, ▶ four times, three choices [M, P-2026-09-27-2105].
+Count: 7 clicks, no keystroke; the chip on tab `demoNet`, 1 click; the run below, 8 clicks: Reset, ▶ four times,
+three choices [M, P-2026-09-29-1225]; the optional Random beat after it, 4 more: Reset, the `Choices` select and its
+option, ⏩ [M, P-2026-09-29-1943].
 
 **Run** (tab `demoNet`). Before Reset: `Not started`, ▶ disabled, no line [M, P-2026-09-27-1738].
 
-Reset: `Marking: lock, p1 ×2`, `Last step: Reset`, `Running` [M].
+Reset: the chips `lock`, `p1 ×2` (`Marking: lock, p1 ×2`), `Running · step 0 · Reset`
+[M, P-2026-10-03-0120].
 **Say** "Two tokens on p1, one on lock. The panel shows the marking of the run."
 
-On a conflict ▶ opens a list above the Marking line, headed `CHOOSE A TRANSITION (ε)` (U+03B5, measured by the
-polish lane `5739b950f`), with `Cancel` under it. While it is open, `Last step:` still shows the previous step and
-the buttons do not move (Step's top 854.5) [M].
+On a conflict ▶ opens a list above `MARKING`, headed `NONDETERMINISTIC CHOICE (ε)` (U+03B5), with the line
+`Choose a transition` under the heading, `Cancel` under the options and `Random` right of it (R-SIM-98 on 3051,
+R-SIM-100 on 3057). While it is open, the status line still shows the previous step and the buttons do not move
+(Step's top 873) [M, P-2026-10-03-0120]. Random fires one option, drawn: `Last step: ε (random): t1 (p1 → p2 ×2)
+fired`, the seed in its title [M]; since P-2026-10-03-0120 that is the status line's title [R].
 
-| # | Click | List offered [M] | `Marking:` line after [M] | `Last step:` line [M] | Say |
+| # | Click | List offered [M] | `Marking:`, the chips' title after [M] | `Last step:`, the status line's title [M] | Say |
 |---|---|---|---|---|---|
 | 1 | ▶, then `t1 (p1 → p2 ×2)` | `t1 (p1 → p2 ×2)`, `t3 (lock → ∅)` | `Marking: lock, p1, p2 ×2` | `Last step: ε: t1 (p1 → p2 ×2) fired` | "Two transitions are enabled, so I choose. t1 puts two tokens on p2." |
 | 2 | ▶, then `t3 (lock → ∅)` | the same | `Marking: p1, p2 ×2` | `Last step: ε: t3 (lock → ∅) fired` | "t3 empties lock. The inhibitor arc from lock no longer holds t2." |
 | 3 | ▶, then `t2 (p2 ×2 → p3)` | `t1 (p1 → p2 ×2)`, `t2 (p2 ×2 → p3)` | `Marking: p1, p3` | `Last step: ε: t2 (p2 ×2 → p3) fired` | "t2 takes two tokens from p2." |
 | 4 | ▶ | none | `Marking: p2 ×2, p3` | `Last step: ε: t1 (p1 → p2 ×2) fired` | "t1 is the only enabled transition. t2 has its tokens, but its guard is false." |
 
-After step 4 the status reads `Deadlock · ε: t2 false`, with the title `ε: t2 (p2 ×2 → p3) false [p3.[tokens] <
-1]` [M]. ▶ is disabled [M]. The table and this status read the same line for line after the dialog's Apply
+After step 4 the status line reads `Deadlock · ε: t2 guard false · step 4 · …` [M, P-2026-10-03-0120], the reason
+with the title `ε: t2 (p2 ×2 → p3) false
+[p3.[tokens] < 1]` [M, P-2026-09-29-1022, R-SIM-96]. ▶ is disabled [M]. The table and this status read the same line for line after the dialog's Apply
 [M, P-2026-09-27-2105].
 **Say** "Deadlock. The panel names the transition and the guard that stops it."
 
+Optional, Random (R-SIM-101): Reset, `Choices` → `Random`, then ⏩. Play fires one ε step every 500 ms and draws every
+choice, its glyph ⏸ while it plays; it stops by itself in `Deadlock` at `Marking: p2 ×2, p3` after 4 steps, whatever
+it draws, Step's top still 854.5 [M, P-2026-09-29-1943, three seeds; 873 since P-2026-10-03-0120, not re-measured
+under Play]. A drawn step reads `Last step: ε (random): …`.
+`Choices` stays `Random` for this model until set back, and under it ▶ draws too.
+**Say** "Now the simulator chooses. Whatever it draws, this net ends in the same deadlock."
+
 Optional: click the status row. The reasons list reads `ε: t2 (p2 ×2 → p3) false` and moves Step's top from 854.5
-to 830 [M]. Click it again to close.
+to 830 [M; from 873 since P-2026-10-03-0120, not re-measured]. Click it again to close.
 
 ### 2.3 Extended state machine
 
@@ -183,29 +244,70 @@ to 830 [M]. Click it again to close.
 | `ts` | `locked` | `off` | `stop` | | |
 
 **Apply** (tab `DemoESM`).
-1. Click `Configure…`, then `Extended state machine`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads
-   `Checkable` and `10 of 13 roles matched`: the seven of §2.1 plus Guard `Transition.guard`, Action
-   `Transition.effect`, Entry `State.entry` [M]. The Data fold reads `Declare the state attributes the actions
-   write` [M].
+1. Click an empty point of the canvas and turn `Simulation` on in the Properties; click the chip, then `Configure…`,
+   `Extended state machine` and `Continue` [M, P-2026-09-29-1225]. The dialog reads `Checkable` and `10 of 13 roles
+   matched`: the seven of §2.1 plus Guard `Transition.guard`, Action
+   `Transition.effect`, Entry `State.entry` [M]. The State fold (`Data` until P-2026-10-03-0041) reads `Declare the
+   state attributes the actions write (a model's globals go in its State…)` [R, SimRolesModal.tsx].
 2. Apply, in the dialog, with no declaration. The summary reads `Extended state machine · Checkable` and the line
    `Declare the state attributes the actions write: Add attribute`, its `Add attribute` in view [M]. The panel is
    198.5 px at 752.5 [M, P-2026-09-27-2105].
    **Say** "The binding is complete. The actions write state attributes, and the panel asks me to declare them."
+   <!-- not re-measured since R-SIM-94: the label of this line now reads `Declare the state attributes the actions
+   write (a model's globals go in its State…):` in simRoleStatus.ts:596 [R, P-2026-10-03-0041]; the walk of
+   P-2026-09-29-0110 does not read it -->
 
-Count: 4 clicks, no keystroke; the optional Reset below, 2 clicks; the declarations, 9 interactions and 34
-keystrokes; the run, 11 clicks [M, P-2026-09-27-2105].
+Count: 7 clicks, no keystroke; the chip on tab `demoESM`, 1 click; the optional Reset below, 2 clicks; the
+declarations on the model tab, 9 interactions and 34 keystrokes, 0 scrolls; the run, 11 clicks [M, P-2026-09-29-1225].
 
 **Optional: Reset before declaring** (tab `demoESM`). Reset shows `3 defects: tp guard (undeclared 'paid'); tc action
 (undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).` and `Marking: locked` [M,
-P-2026-09-28-0023]. `coin` then shows `Halted: the
+P-2026-09-28-0023] (the chip `locked` since P-2026-10-03-0120). `coin` then shows `Halted: the
 transition action of tc failed: 'coins' is not a state attribute of demoESM.` and `Last step: coin: tc (locked →
-locked) halted the run` [M]. The halt line reads whole on two lines [M, P-2026-09-27-2225]; the defects line is
-cut on screen, its title holds the whole text [M, P-2026-09-27-2105].
+locked) halted the run` [M], the status line's title since P-2026-10-03-0120. The halt line reads whole on two
+lines [M, P-2026-09-27-2225]; the defects line is
+cut on screen, its title holds the whole text [M, P-2026-09-27-2105]. Under the defects the panel reads `Undeclared:
+paid, coins. Declare in State…` [M, P-2026-09-29-0110; `Declare in Data…` until P-2026-10-03-0120, R]. <!-- not
+measured: the ESM `Undeclared` line clicked through; the walk reads it and declares through the `State…` entry -->
 **Say** "Without the declarations the run names the missing attribute and stops at the first action."
 
-**Declarations** (tab `DemoESM`).
-1. Click `Add attribute` in the summary line. The dialog opens on Data, its own `Add attribute` in view and focused
+**Declarations on the model tab** (tab `demoESM`, the model). The tab switch to `demoESM` that the run needs comes
+first.
+1. Click `State…`, the first line of the M1 face [M, P-2026-10-03-0120]; no Reset is needed first. The dialog
+   `State of demoESM` opens, its
+   `Add attribute` focused. The dialog's Apply is off, `Nothing to write` [M, P-2026-09-29-0110]. It is 1120 × 600
+   with two columns, `σ Abstract` and `node Concrete`, the arrow `σ is read one way` between them; the concrete
+   column reads `No presentation state. A row set to presentation is read as node.[name].` [M, P-2026-10-03-0041].
+2. Click `Add attribute`. Row 1 reads `x1 · Global · stored`, the name selected: type `coins`, Enter. Domain `range`:
+   the minimum reads `0`, the maximum `1`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter. Row 1
+   reads `coins · Global · stored · semantic · range 0..3 · 0` [M], in the abstract column, counted by the dialog's
+   `Globals` head with no group heading of its own, its third line `VAR model.[coins]` [M, P-2026-10-03-0041]. The metaclass select offers `Global` only [M].
+3. Click `Add attribute`. Row 2 reads `x1`, the name selected: `paid`, Enter; `derived`. Click the equation,
+   `model.[coins] >= 2`, Enter [M]. Its third line reads `DEFINE model.[paid]`, the name in italics; the equation
+   cell holds the text whole [M, P-2026-10-03-0041].
+4. Apply, in the dialog. The dialog closes; the model's bag holds the two records, the metamodel's holds no
+   `simStateAttributes`; the undo stack goes from 3 to 4 [M, P-2026-09-29-1225]: the toggle and the roles' Apply are
+   one step each, and the setup left one (the Advanced switch is an undo step of its own [M]).
+
+Steps 1 to 4 are 9 interactions (7 clicks, 2 select choices) and 34 keystrokes, with no scroll: every target is in
+view, where the metamodel path needs 2 scrolls on this screen [M, P-2026-09-29-0110]. With the two rows of three lines
+the body is still not scrolled before Apply (429 of 429 px) [M, P-2026-10-03-0041].
+
+**Optional, not counted: who writes and reads coins.** Before Apply, click `model.[coins]` under row 1: under it
+`Written by` `tc action` `tp action`, `Read by` `tc action` `equation of paid`; click it again to close [M,
+P-2026-10-03-0041]. Nothing above the row moves.
+**Say** "The data belongs to the model, not to the metamodel. coins is stored, with the domain 0 to 3. paid is derived
+from coins."
+
+**Fallback: declarations in the metamodel** (tab `DemoESM`). Use it if the `State…` route misbehaves (§4). A global
+declared in the metamodel is the default of every model that does not declare its own (R-SIM-94), and the four demo
+exports carry an empty model bag [M, P-2026-09-29-0011]. Declared this way the four scenes run to their final readings
+as before [M, P-2026-09-29-0110].
+1. Click `Add attribute` in the summary line. The dialog opens on State, its own `Add attribute` in view and focused
    [M, P-2026-09-27-2105: 645.5-673.5, body 338-735]. The dialog's Apply is off, `Nothing to write` [M].
+   <!-- not re-measured since P-2026-10-03-0041: the dialog is 1120 wide and a row three lines (120 px, was 88), so the
+   coordinates and the 2 scrolls below are the 640 px dialog's; the lane probe declared on this path with the rows
+   scrolled into view, and its body read 806 of 397 px with two rows and coins selected -->
 2. Click `Add attribute`. Row 1 reads `x1`, the name selected: type `coins`, Enter [M]. Scroll the dialog body to
    its end: the row's second line is below the fold [M 728-760, body bottom 735]. Domain `range`: the minimum reads
    `0`, the maximum `1` [M]. Click the maximum, `3`, Enter; click the initial value, `0`, Enter. A click selects the
@@ -216,20 +318,24 @@ cut on screen, its title holds the whole text [M, P-2026-09-27-2105].
 
 Steps 1 to 4 are 9 interactions: 1 hint, 2 `Add attribute`, 2 select choices (`range`, `derived`), 3 cells
 (maximum, initial value, equation), 1 Apply; 34 keystrokes; 2 scrolls; no double-click [M, P-2026-09-27-2105].
-The labels `range`, `derived`, `stored` are the options of the dialog's selects [M].
+The labels `range`, `derived`, `stored` are the options of the dialog's selects [M]. Since 2026-09-28 (R-SIM-88) the form select offers `stored`, `derived` and `input` [M, chat probe on `e259b94ec`]; the scene still picks `derived` and does not demonstrate `input`.
 **Say** "coins is stored, with the domain 0 to 3. paid is derived from coins."
 
 **Run** (tab `demoESM`). After the optional Reset above, the M1 face reads `Run interrupted: the model changed.
 Reset to run again.` [M].
 
-Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M].
-**Say** "After the dot, the state attributes: σ."
+Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M]. On the face since P-2026-10-03-0120:
+`WATCH` `coins` `0` with its domain bar 0..3 empty, `paid` in italics, `DEFINE`, `false`; the chip `locked`; the
+status line `Running · step 0 · Reset` [M, P-2026-10-03-0120]. Declared on the model tab, Reset reads
+the same with no defect, and the ten events below give the table line for line, to `Halted: coins of demoESM would be
+4, outside its domain.` with `Marking: locked · coins = 3, paid = true` [M, P-2026-09-29-0110].
+**Say** "Above the marking, the state attributes: σ."
 
-| # | Click | `Marking:` line after [M] | `Last step:` line [M] | Say |
+| # | Click | `Marking:`, the chips' title after [M] | `Last step:`, the status line's title [M] | Say |
 |---|---|---|---|---|
-| 1 | `push` | `Marking: locked · coins = 0, paid = false` | `Last step: push: discarded, tp false` | "push is discarded: the guard of tp reads paid, and paid is false." |
+| 1 | `push` | `Marking: locked · coins = 0, paid = false` | `Last step: push: discarded, tp guard false` [M, P-2026-09-29-1022] | "push is discarded: the guard of tp reads paid, and paid is false." |
 | 2 | `coin` | `Marking: locked · coins = 1, paid = false` | `Last step: coin: tc (locked → locked) fired` | "The action adds one coin." |
-| 3 | `push` | `Marking: locked · coins = 1, paid = false` | `Last step: push: discarded, tp false` | |
+| 3 | `push` | `Marking: locked · coins = 1, paid = false` | `Last step: push: discarded, tp guard false` [M, P-2026-09-29-1022] | |
 | 4 | `coin` | `Marking: locked · coins = 2, paid = true` | `Last step: coin: tc (locked → locked) fired` | "Two coins. paid becomes true through its equation." |
 | 5 | `push` | `Marking: unlocked · coins = 0, paid = false` | `Last step: push: tp (locked → unlocked) fired` | "tp fires and resets coins." |
 | 6 | `push` | `Marking: locked · coins = 0, paid = false` | `Last step: push: tu (unlocked → locked) fired` | |
@@ -238,12 +344,23 @@ Reset: `Marking: locked · coins = 0, paid = false`, `Last step: Reset` [M].
 | 9 | `coin` | `Marking: locked · coins = 3, paid = true` | `Last step: coin: tc (locked → locked) fired` | |
 | 10 | `coin` | `Marking: locked · coins = 3, paid = true` | `Last step: coin: tc (locked → locked) halted the run` | "A fourth coin leaves the domain. The run halts on the last good state." |
 
+- Steps 1 and 3 read `guard false` since R-SIM-96 [M, P-2026-09-29-1022, declared through the metamodel fallback;
+  the model-tab route not re-run]. The other eight lines and the final readings are unchanged [M].
 - After step 5 only `push` is on: `coin(off)`, `stop(off)` [M].
 - After step 10 the halt line reads `Halted: coins of demoESM would be 4, outside its domain.` and every event is
-  off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; `Last step:` is cut at `halted the r…`,
-  its title is the whole line [M, P-2026-09-27-2105: 264 px of text in 262].
-- The hover title of `Last step:` adds the writes, e.g. after step 4 `assignments: demoESM.coins = 2` and
-  `derived: demoESM.paid = true` [M].
+  off [M]. The panel shows it whole on two lines [M, P-2026-09-27-2225]; the status line is cut in the last step (263 px
+  of text in 192), its title is the whole `Last step:` line [M, P-2026-10-03-0120].
+- `WATCH` follows the table: step 2 `coins` `0 → 1` in cyan, its bar a third full; step 4 `paid` `false → true`; step
+  5 `coins` `2 → 0` and `paid` `true → false`; step 10 `coins` `3`, the bar full [M, P-2026-10-03-0120].
+- Optional, the run inspector, after step 5: click ⤢ in the panel's header. A card opens right of the panel (400 px,
+  372 with the rail open, clear of the MiniMap): `σ ABSTRACT STATE` with the chip `unlocked`, `coins` `VAR` `2 → 0`,
+  `paid` `DEFINE` `true → false`; `node CONCRETE STATE`, `No presentation state.`; `TRACE`, steps 5 to 0. Click step
+  4: `Viewing step 4. The run is still at step 5.`, the card shows `locked`, `coins 1 → 2`, `paid false → true`, and
+  the canvas marks `locked`, while the panel stays on step 5; `Back to live` returns. Step 6 (`push`) pressed while a
+  step is viewed acts on the run and returns the view to live [M, P-2026-10-03-0120].
+  **Say** "The run keeps its past. I can look at any step; the run stays where it is."
+- The hover title of the status line (`Last step:` until P-2026-10-03-0120) adds the writes, e.g. after step 4
+  `assignments: demoESM.coins = 2` and `derived: demoESM.paid = true` [M].
 
 **Say** "The halt names the attribute, the element and the value."
 
@@ -274,31 +391,58 @@ together. <!-- not measured: abstract ActivityNode with FinalNode and the explic
 | `f9` | `jn` | `fin` | | |
 
 **Apply** (tab `DemoFlowB`).
-1. Click `Configure…`, then `Flowchart / Activity`, then `Continue` [M, P-2026-09-27-2105]. The dialog reads
-   `Checkable` and `10 of 13 roles matched` [M]: Node `ActivityNode`, Initial `InitialNode`, Transition
+1. Click an empty point of the canvas and turn `Simulation` on in the Properties; click the chip, then `Configure…`,
+   `Flowchart / Activity` and `Continue` [M, P-2026-09-29-1225]. The dialog reads `Checkable` and `10 of 13 roles
+   matched` [M]: Node `ActivityNode`, Initial `InitialNode`, Transition
    `ControlFlow`, Source `ControlFlow.source`, Next state `ControlFlow.target`; in Optional, folded, Terminal
    `FinalNode`, Fork `Fork`, Join `Join`, Guard `ControlFlow.guard`, Action `ControlFlow.effect` [M].
    **Say** "The same binder, on a control-flow shape: fork and join are roles too."
 2. Apply, in the dialog, with no declaration. The summary reads `Flowchart / Activity · Checkable`, the declarations
    line in view [M]. The panel is 198.5 px at 752.5 [M, P-2026-09-27-2105].
+   <!-- not re-measured since R-SIM-94: the label of the declarations line now reads `Declare the state attributes the
+   actions write (a model's globals go in its State…):` in simRoleStatus.ts:596 [R, P-2026-10-03-0041]; the walk of
+   P-2026-09-29-0110 does not read it -->
 
-Count: 4 clicks, no keystroke; the optional Reset below, 1 click; the declaration, 6 interactions and 10
-keystrokes; the run, 7 clicks [M, P-2026-09-27-2105].
+Count: 7 clicks, no keystroke; the chip on tab `demoFlowB`, 1 click; the Reset before declaring, 1 click, the entry
+of the route below; the declaration from the Reset line, 5 interactions and 4 keystrokes, 0 scrolls; the run, 7
+clicks [M, P-2026-09-29-1225].
 
-**Optional: Reset before declaring** (tab `demoFlowB`): `3 defects: f3 guard (undeclared 'count'); f4 guard
-(undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023].
+**Reset before declaring** (tab `demoFlowB`, the model): `3 defects: f3 guard (undeclared 'count'); f4 guard
+(undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).` and `Marking: i0` [M, P-2026-09-28-0023], the
+chip `i0`. Under the defects the panel reads `Undeclared: count. Declare in State…` [M, P-2026-10-03-0120].
+**Say** "The panel names what the model leaves undeclared, and takes me to the data of the model."
 
-**Declaration** (tab `DemoFlowB`). Click `Add attribute` in the summary line: the dialog opens on Data, its own `Add
+**Declaration on the model tab** (tab `demoFlowB`, from the Reset line).
+1. Click `Declare in State…` [M, P-2026-10-03-0120]. The dialog `State of demoFlowB` opens with row 1 already there,
+   `count · Global · stored · boolean · false`, its name focused; Apply is on [M, P-2026-09-29-0110]. The row sits in the abstract column, counted
+   by the dialog's `Globals` head, its third line `VAR model.[count]` [M, P-2026-10-03-0041].
+2. Select Domain `range`. Click the maximum, `3`, Enter; click the initial value, `0`, Enter.
+3. Apply, in the dialog. The model's bag holds `count`; the undo stack goes from 3 to 4 [M, P-2026-09-29-1225], as in
+   §2.3.
+
+5 interactions (4 clicks, 1 select choice) and 4 keystrokes, with no scroll, against 6 interactions, 10 keystrokes and
+1 scroll on the metamodel path [M, P-2026-09-29-0110]. The name is not typed: the line carried it. Still no scroll
+with the row of three lines [M, P-2026-10-03-0041]. Optional, not counted: `model.[count]` opens `Written by` `f2
+action`, `Read by` `f2 action` `f3 guard` `f4 guard` [M, P-2026-10-03-0041].
+**Say** "count, from 0 to 3, starts at 0."
+
+**Fallback: declaration in the metamodel** (tab `DemoFlowB`). Use it if the `State…` route misbehaves (§4). A global
+declared in the metamodel is the default of every model that does not declare its own (R-SIM-94), and the four demo
+exports carry an empty model bag [M, P-2026-09-29-0011]. Declared this way the four scenes run to their final readings
+as before [M, P-2026-09-29-0110]. The Reset above stays optional on this path.
+
+**Declaration** (tab `DemoFlowB`). Click `Add attribute` in the summary line: the dialog opens on State, its own `Add
 attribute` in view and focused [M, P-2026-09-27-2105]. Click it; row 1's name is selected: `count`, Enter. Scroll
-the dialog body to its end [M 728-760 > 735]. Domain `range`; click the maximum, `3`, Enter; click the initial
+the dialog body to its end [M 728-760 > 735; the 640 px dialog's, not re-measured since P-2026-10-03-0041]. Domain `range`; click the maximum, `3`, Enter; click the initial
 value, `0`, Enter. Apply, in the dialog: the declarations line is gone [M]. 6 interactions: 1 hint, 1 `Add
 attribute`, 1 select choice, 2 cells, 1 Apply; 10 keystrokes; 1 scroll [M, P-2026-09-27-2105].
 **Say** "count, from 0 to 3, starts at 0."
 
-**Run** (tab `demoFlowB`). Reset: `Marking: i0 · count = 0`, `Last step: Reset` [M]. No choice list opens in this
+**Run** (tab `demoFlowB`). Reset: `Marking: i0 · count = 0`, `Last step: Reset` [M]; `WATCH` `count` `0`, the chip
+`i0` [M, P-2026-10-03-0120]. No choice list opens in this
 run [M].
 
-| # | Click | `Last step:` line [M] | `Marking:` line after [M] | Say |
+| # | Click | `Last step:`, the status line's title [M] | `Marking:`, the chips' title after [M] | Say |
 |---|---|---|---|---|
 | 1 | ▶ | `Last step: ε: f1 (i0 → work) fired` | `Marking: work · count = 0` | "One token, one step at a time." |
 | 2 | ▶ | `Last step: ε: f2 (work → d1) fired` | `Marking: d1 · count = 1` | "The edge action increments count." |
@@ -307,8 +451,9 @@ run [M].
 | 5 | ▶ | `Last step: ε: fk (d1 → left, right) fired` | `Marking: left, right · count = 2` | "The decision edge and the fork fire as one transition. Two tokens." |
 | 6 | ▶ | `Last step: ε: jn (left, right → fin) fired` | `Marking: fin · count = 2` | "The join takes both. The token reaches the final node." |
 
-After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover title of `Last step:` after step 2 adds
-`assignments: demoFlowB.count = 1` [M].
+After step 6 the status reads `Terminated` and ▶ is disabled [M]. The hover title of the status line after step 2
+adds `assignments: demoFlowB.count = 1` [M]. `WATCH` reads `count` `0 → 1` in cyan at step 2, `1 → 2` at step 4,
+`2` at the end [M, P-2026-10-03-0120].
 
 **Two variants run the same** [M, P-2026-09-27-1738]. With the final class named `ActivityFinal` (G6, closed by E1),
 Apply proposes `Activity final → ActivityFinal` in place of `Terminal → FinalNode`. With `f4` guarded `else` in place
@@ -327,8 +472,9 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
   marking, with a reason that says so. The project holds `demoNet` alone, as the builder makes it. If the Bound row
   reads a lower number, type 4 over it before Apply: click the cell, Cmd+A, `4`, 1 click and 2 keystrokes; a click
   alone leaves the caret after the digit, `45` [M, P-2026-09-27-2105, typed with 5 over the stored 4, then Cancel].
-  With `Bound → 4`, taking `t1` twice before `t2` reads `Marking: lock, p2 ×4` at step 2 and the run goes on
-  to `Deadlock` at step 4, no `unsafe` halt [M, P-2026-09-27-1738]; under Bound 2 the readiness run halted `unsafe`
+  With `Bound → 4`, taking `t1` twice before `t2` reads `Marking: lock, p2 ×4` at step 2 (the chips `lock`, `p2 ×4`
+  since P-2026-10-03-0120, not re-measured) and the run goes on to `Deadlock` at step 4, no `unsafe` halt [M,
+  P-2026-09-27-1738]; under Bound 2 the readiness run halted `unsafe`
   at step 2.
 - **Flowchart: `FinalNode` and the explicit complement are the script's model, no longer a constraint.** E1 lifted
   decision E: the engine reads the activity final (G6, R-SIM-83) and resolves `[else]` on the edge into a Fork or out
@@ -340,21 +486,44 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
   first report's risk 4: with the focus on the page body Control+z does nothing, and after a node click it reverts
   the selection first [M].
 - **Reset starts the run: before Reset every input is off.** From the first report's risk 6 [M].
+- **Undo stops at Apply.** Past the Apply, Cmd+Z turns the `Simulation` toggle off (the pill goes), and the Advanced
+  switch is an undo step too [M, P-2026-09-29-1225].
+- **The toggle turned off by mistake: Cmd+Z, or turn it on again.** Off is one step and one Cmd+Z brings the toggle and
+  the pill back; the roles and the model kind stay in the bag either way [M, P-2026-09-29-1225]. A run in progress is
+  cleared by the off: Reset again.
 - **Each preset as the builder draws it (§2), from an empty bag.** Every other shape or order is unmeasured.
 
 ---
 
 ## 4. Risks and what to say if they show
 
+- **No pill.** Basic mode, or a metamodel whose `Simulation` toggle is off (R-SIM-99). Click `Advanced` in the app bar,
+  then turn `Simulation` on in the metamodel's Properties, section `SEMANTIC TYPE CLASS` [M, P-2026-09-29-1225].
+  Switching to Basic or turning the toggle off in the middle of a run clears the run: Reset again once the pill is
+  back [M].
+  **Say** "The simulator is an advanced tool: I turn it on for the metamodels I want to simulate."
+- **The Problems panel still lists simulator defects in Basic mode or with the toggle off.** The producer does not
+  follow the gate (a ticket) [R].
+
 - **The canvas contradicts the panel on Petri during a run** (G3, canvas side). The `tokens` slots show the model's
   values: after step 4 `p1 : Place` reads `tokens 2` under `Marking: p2 ×2, p3` [M]. Point at the panel line.
   **Say** "The panel shows the run. The canvas shows the model; the run on the canvas comes after MODELS."
 - **`∅` reads like `ø` at 11-12 px** in `t3 (lock → ∅)` [M]. **Say** "t3 has an empty postset."
-- **Declaration targets below the dialog body's fold** at 1600×1000: row 1's second line, 728-760 against the
-  body's 735, on ESM and Flow B, and row 2's second line, 743-775, on ESM [M, P-2026-09-27-2105]. Scroll the dialog
-  body to its end before Domain and before the equation, as §2.3 and §2.4 say. The summary line's `Add attribute`
-  brings the dialog's own button into view and focuses it [M].
-- **The hint path through the dialog is measured on ESM and on Flow B** by P-2026-09-27-2105 on 3024 (headless,
+- **The `State…` route is the primary path; the metamodel path is the fallback.** If the route misbehaves (the dialog
+  does not open, Apply stays off, the Reset line still reads `Undeclared` after Apply), declare in the metamodel as
+  before, with the Fallback blocks of §2.3 and §2.4. Both routes give the same runs [M, P-2026-09-29-0110]. The model's
+  record overrides a metamodel record of the same name, by name and with no defect, so a demo project that holds both
+  reads the model's (R-SIM-94).
+- **Not measured on the `State…` route:** Save and reload of a non-empty model key, the collaborative sync of the
+  model's bag, the dark theme (discovery §8). The §1 Save check covers the first on rehearsal: declare, Cmd+S, reload
+  once, Reset. Every run logs one console error at load, `failed to get project {project: null}`, a known ticket, not a
+  demo defect [M, P-2026-09-29-0110].
+- **Declaration targets below the dialog body's fold, on the metamodel path only** (the Fallback blocks) at
+  1600×1000: row 1's second line, 728-760 against the body's 735, on ESM and Flow B, and row 2's second line, 743-775,
+  on ESM [M, P-2026-09-27-2105]. Scroll the dialog body to its end before Domain and before the equation, as the
+  Fallback blocks say. The summary line's `Add attribute` brings the dialog's own button into view and focuses it [M].
+  The `State…` dialog needed 0 scrolls on ESM and on Flow B [M, P-2026-09-29-0110].
+- **The hint path through the dialog (the Fallback blocks) is measured on ESM and on Flow B** by P-2026-09-27-2105 on 3024 (headless,
   1600×1000, one fresh page per scene): every value of §2.3 and §2.4 holds [M]. The RC-23 browser check re-reads the
   below-the-fold positions before the freeze. Rehearse §2.3 and §2.4 on 3001 before the freeze. If a target is out
   of view, scroll the dialog body.
@@ -367,3 +536,5 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
 - The `.smv` exporter.
 - The modal lane is no longer out: the demo walks the Simulation roles dialog (R-SIM-85).
 - The outputs profiles (Moore, Mealy).
+- A seed typed by hand, and the export of the trace (spec step 5): the seed is in two titles only (R-SIM-100).
+- Play on events and inputs: Play never presses an event nor answers an input; it stops and says it waits (R-SIM-101).

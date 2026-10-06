@@ -9,12 +9,12 @@
  * All fixtures are plain D-layer shapes (idlookup records); no store, no React.
  */
 import { describe, it, expect } from 'vitest';
-import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash } from '../irCompile';
+import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash, resolveLabelAnchor, resolveTextStyle } from '../irCompile';
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
 import { getIRIndex, pinAccepts, resolveIRView, resolveRowView } from '../irResolveCore';
-import { defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID, withMigratedHash } from '../irDefaults';
+import { defaultEdgeViewIR, defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID, structuralHash, withMigratedHash } from '../irDefaults';
 import {
     buildContainmentModel,
     computeHidden,
@@ -26,7 +26,9 @@ import {
 } from '../irContainment';
 import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
 import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
-import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
+import type { AnyViewIR, EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
+import { applyPresetToShape, NOTATION_CATALOG } from '../notationCatalog';
+import { validateIR } from '../irValidate';
 import { CONTAINER_ENDPOINT } from '../irTypes';
 import { resolveCompiledCornerRadius, resolveCornerRadius } from '../shapeRegistry';
 
@@ -1620,6 +1622,45 @@ describe('isMigratedDefaultView — migratedHash stamp (P-2026-09-24-1455)', () 
     });
 });
 
+describe('structuralHash ignores ir.generated (slice D, P-2026-09-30-0255, R-IRN-33)', () => {
+    // `generated` is the provenance a derivation writes on its views (irTypes.ts): it describes the ir,
+    // as `migratedFrom` does, and is not part of it. The derivation stamps `generated.hash` with this
+    // function, so a stamped view must hash to its stamp.
+    const GEN = { by: 'derive-2', notation: 'stateMachine', role: 'node', hash: '123' };
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+    it('a view with and without generated hash alike, whatever generated holds', () => {
+        const ir = defaultObjectViewIR();
+        expect(structuralHash({ ...ir, generated: GEN })).toBe(structuralHash(ir));
+        expect(structuralHash({ ...ir, generated: { ...GEN, hash: 'other', role: undefined } })).toBe(structuralHash(ir));
+        const edge = defaultEdgeViewIR();
+        expect(structuralHash({ ...edge, generated: GEN })).toBe(structuralHash(edge));
+    });
+
+    it('does not mask a real edit: the control moves the hash', () => {
+        const ir = defaultObjectViewIR();
+        expect(structuralHash({ ...ir, generated: GEN, priority: 7 })).not.toBe(structuralHash({ ...ir, generated: GEN }));
+    });
+
+    it('is the stamp withMigratedHash writes: generated does not enter it', () => {
+        const ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' };
+        expect(withMigratedHash({ ...ir, generated: GEN }).migratedHash).toBe(withMigratedHash(ir).migratedHash);
+    });
+
+    it('a stamped migrated default that later carries generated still delegates, and an edit still does not', () => {
+        const ir = persisted(withMigratedHash({ ...defaultObjectViewIR(), migratedFrom: 'classic-default' }));
+        const tagged = { ...ir, generated: GEN } as unknown as VertexViewIR;
+        expect(isMigratedDefaultView(compileView('V_gen_stamp', tagged))).toBe(true);
+        expect(isMigratedDefaultView(compileView('V_gen_stamp_edit', { ...tagged, priority: 7 } as VertexViewIR))).toBe(false);
+    });
+
+    it('irHash is unchanged for an ir without the key, and moves with it (the compile cache keeps them apart)', () => {
+        const ir = defaultObjectViewIR();
+        expect(irHash(persisted(ir))).toBe(irHash(ir));
+        expect(irHash({ ...ir, generated: GEN } as VertexViewIR)).not.toBe(irHash(ir));
+    });
+});
+
 describe('layout persistence (discovery 2026-07-19)', () => {
     const edgeIR = (over: Partial<EdgeViewIR['edge']>): EdgeViewIR => ({
         irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
@@ -1910,5 +1951,430 @@ describe('compile di TS2, stile tipografico delle righe (2026-08-25)', () => {
         clearCompileCache();
         expect(compileView('v_same_id', withStyle).fieldCompartments[0].rowStyle).toBeDefined();
         expect(compileView('v_same_id', without).fieldCompartments[0].rowStyle).toBeUndefined();
+    });
+});
+
+describe('defaultSize round-trip (P-2026-09-29-1230)', () => {
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+    it('survives a save (JSON round trip) and reaches compiled.ir verbatim', () => {
+        clearCompileCache();
+        const ir = persisted(vertexIR({ defaultSize: { width: 120, height: 60 } }));
+        expect(ir.defaultSize).toEqual({ width: 120, height: 60 });
+        expect((compileView('v_dsize_rt', ir).ir as VertexViewIR).defaultSize).toEqual({ width: 120, height: 60 });
+    });
+
+    it('keeps a single axis as a single axis: the other is not materialized', () => {
+        const ir = persisted(vertexIR({ defaultSize: { width: 120 } }));
+        expect(ir.defaultSize).toEqual({ width: 120 });
+        expect('height' in (ir.defaultSize as object)).toBe(false);
+    });
+
+    it('moves the irHash, so an edit recompiles instead of hitting the cache', () => {
+        const a = vertexIR({ defaultSize: { width: 120, height: 60 } });
+        const b = vertexIR({ defaultSize: { width: 200, height: 60 } });
+        expect(irHash(a)).not.toBe(irHash(vertexIR({})));
+        expect(irHash(a)).not.toBe(irHash(b));
+    });
+
+    it('a view whose default was set and then dropped hashes as one that never had it', () => {
+        const { defaultSize: _dropped, ...rest } = vertexIR({ defaultSize: { width: 120, height: 60 } });
+        expect('defaultSize' in rest).toBe(false);
+        expect(irHash(rest as VertexViewIR)).toBe(irHash(vertexIR({})));
+    });
+});
+
+describe('outside label: compile per position and anchor (P-2026-09-29-1245)', () => {
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+    /** One literal label at `position`, the anchor written only when given. */
+    const withLabel = (position: string, anchor?: unknown): VertexViewIR => vertexIR({
+        shape: {
+            form: 'circle',
+            labels: [{ position, ...(anchor !== undefined ? { anchor } : {}), source: { from: 'literal', text: 'p1' } }],
+        } as unknown as VertexViewIR['shape'],
+    });
+
+    it('an inside position compiles as before: the position verbatim and no anchor key at all', () => {
+        for (const position of ['top', 'center', 'inside', 'bottom']) {
+            clearCompileCache();
+            const l = compileView(`v_lout_${position}`, withLabel(position)).labels[0];
+            expect(l.position, position).toBe(position);
+            expect(Object.keys(l).sort(), position).toEqual(['editsName', 'position', 'style', 'text', 'visible']);
+        }
+    });
+
+    it('an inside position drops a stray anchor: only outside carries one', () => {
+        clearCompileCache();
+        expect('anchor' in compileView('v_lout_stray', withLabel('top', 'e')).labels[0]).toBe(false);
+    });
+
+    it('outside with no anchor compiles below (s)', () => {
+        clearCompileCache();
+        const l = compileView('v_lout_default', withLabel('outside')).labels[0];
+        expect(l.position).toBe('outside');
+        expect(l.anchor).toBe('s');
+    });
+
+    it('outside with each anchor compiles that anchor, and the text is untouched', () => {
+        for (const anchor of ['n', 'e', 's', 'w']) {
+            clearCompileCache();
+            const l = compileView(`v_lout_${anchor}`, withLabel('outside', anchor)).labels[0];
+            expect(l.anchor, anchor).toBe(anchor);
+            expect(l.text(makeDrawReadCtx({}), 'x'), anchor).toBe('p1');
+        }
+    });
+
+    it('the render is permissive: an unknown anchor draws below instead of dropping the label (R-B9-bis)', () => {
+        for (const bad of ['nw', 'north', '', null, 3]) {
+            clearCompileCache();
+            expect(compileView(`v_lout_bad_${String(bad)}`, withLabel('outside', bad)).labels[0].anchor, String(bad)).toBe('s');
+            expect(resolveLabelAnchor(bad), String(bad)).toBe('s');
+        }
+        expect(resolveLabelAnchor(undefined)).toBe('s');
+        expect(resolveLabelAnchor('w')).toBe('w');
+    });
+
+    it('survives a save (JSON round trip) byte-identical, and each anchor moves the irHash', () => {
+        const ir = withLabel('outside', 'e');
+        const saved = persisted(ir);
+        expect(JSON.stringify(saved)).toBe(JSON.stringify(ir));
+        clearCompileCache();
+        expect(compileView('v_lout_rt', saved).labels[0].anchor).toBe('e');
+        const hashes = new Set(['n', 'e', 's', 'w'].map(a => irHash(withLabel('outside', a))));
+        expect(hashes.size).toBe(4);
+        // Below written explicitly and below by absence render the same, but are two IRs.
+        expect(irHash(withLabel('outside', 's'))).not.toBe(irHash(withLabel('outside')));
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Slice C2 (P-2026-09-30-0150, R-VP-20): five optional keys, persisted for good (R-B9)
+// ---------------------------------------------------------------------------
+
+/** Every fixture view the lane can build without the store, by name: the three factory defaults and each
+ *  catalogue preset applied to a bare vertex, as the Symbol Editor applies it. */
+function c2FixtureViews(): Record<string, AnyViewIR> {
+    const out: Record<string, AnyViewIR> = {
+        defaultObjectViewIR: defaultObjectViewIR(), defaultRowViewIR: defaultRowViewIR(), defaultEdgeViewIR: defaultEdgeViewIR(),
+    };
+    for (const p of NOTATION_CATALOG) out[`preset:${p.id}`] = vertexIR({ shape: applyPresetToShape({ form: 'rect' }, p) });
+    return out;
+}
+/** The irHash of every fixture view, measured on the C1 tip (3ec98d486, code as ddfb24dc1) before C2. */
+const C2_FIXTURE_HASHES: Record<string, string> = {
+    'defaultObjectViewIR': '-314148633',
+    'defaultRowViewIR': '-1158849889',
+    'defaultEdgeViewIR': '-732930928',
+    'preset:base-rect': '482407916',
+    'preset:base-rounded': '-524465073',
+    'preset:base-stadium': '1124639029',
+    'preset:base-ellipse': '-383863476',
+    'preset:base-circle': '-1907700816',
+    'preset:base-diamond': '-112831686',
+    'preset:base-parallelogram': '-647933567',
+    'preset:base-hexagon': '1615947368',
+    'preset:base-cylinder': '2044353656',
+    'preset:bpmn-start-event': '-1907700816',
+    'preset:bpmn-intermediate-event': '130830642',
+    'preset:bpmn-end-event': '647571570',
+    'preset:bpmn-message-event': '-531433890',
+    'preset:bpmn-timer-event': '-2001644148',
+    'preset:bpmn-signal-event': '-1399481450',
+    'preset:bpmn-error-event': '-857205372',
+    'preset:bpmn-exclusive-gateway': '969879586',
+    'preset:bpmn-parallel-gateway': '2047479502',
+    'preset:bpmn-inclusive-gateway': '1855780860',
+    'preset:bpmn-complex-gateway': '1170747920',
+    'preset:bpmn-task': '-524465073',
+    'preset:bpmn-service-task': '-1079518146',
+    'preset:bpmn-user-task': '-2050309930',
+    'preset:bpmn-script-task': '1731101310',
+    'preset:bpmn-loop-task': '1490739353',
+    'preset:bpmn-multi-instance-task': '916731623',
+    'preset:uml-state': '-524465073',
+    'preset:uml-initial-state': '2065333181',
+    'preset:uml-final-state': '-672891225',
+    'preset:uml-shallow-history': '230321746',
+    'preset:uml-deep-history': '2055229405',
+    'preset:uml-choice': '-112831686',
+    'preset:uml-flow-final': '1072773208',
+    'preset:uml-fork-join': '-216406663',
+    'preset:uml-use-case': '-383863476',
+    'preset:flow-process': '482407916',
+    'preset:flow-decision': '-112831686',
+    'preset:petri-place': '-1907700816',
+    'preset:petri-marked-place': '-672891225',
+    'preset:petri-transition': '-216406663',
+    'preset:er-entity': '482407916',
+    'preset:er-weak-entity': '1695007470',
+    'preset:er-relationship': '-112831686',
+    'preset:er-identifying-relationship': '-768030212',
+    'preset:er-attribute': '-383863476',
+    'preset:er-derived-attribute': '-1591158502',
+    'preset:er-multivalued-attribute': '-1122144690',
+    'preset:goal-goal': '1124639029',
+    'preset:goal-softgoal': '1895274005',
+    'preset:goal-task': '1615947368',
+    'preset:goal-resource': '482407916',
+    'preset:goal-actor': '-1907700816',
+    'preset:goal-agent': '391996245',
+    'preset:goal-role': '-1373657129',
+    'preset:goal-belief': '-383863476',
+    'preset:goal-obstacle': '-647933567',
+};
+/** The compiled shape of the defaults, key by key, measured on the C1 tip before C2. */
+const C2_COMPILED_KEYS: Record<string, string[]> = {
+    view: ['badges', 'borderColor', 'borderStyle', 'borderWidth', 'containment', 'cornerRadius', 'crossPaths', 'dependencySet', 'fieldCompartments', 'fill', 'form', 'formSpec', 'ir', 'kind', 'labels', 'marker', 'padding', 'predicate', 'priority', 'text', 'viewId'],
+    compartment: ['id', 'rowStyle', 'segments', 'separator', 'source', 'visible'],
+    label: ['editsName', 'position', 'style', 'text', 'visible'],
+    labelStyle: ['color', 'fontSize', 'underline'],
+    edge: ['crossPaths', 'dependencySet', 'ir', 'isObjectAsEdge', 'labelPlacement', 'labelText', 'lineColor', 'lineStyle', 'lineWidth', 'persistWaypoints', 'predicate', 'priority', 'reference', 'routing', 'sourceExpr', 'sourceIsContainer', 'targetExpr', 'targetIsContainer', 'terminations', 'viewId'],
+    row: ['crossPaths', 'dependencySet', 'ir', 'kind', 'predicate', 'priority', 'style', 'template', 'viewId', 'visible'],
+};
+
+describe('C2 keys absent: an IR without them is the IR it was (R-VP-20, R-IRN-32)', () => {
+    it('irHash of every fixture view is the one measured on the C1 tip', () => {
+        const got = Object.fromEntries(Object.entries(c2FixtureViews()).map(([k, v]) => [k, irHash(v)]));
+        expect(Object.keys(got).length).toBeGreaterThan(10);
+        expect(got).toEqual(C2_FIXTURE_HASHES);
+    });
+
+    it('the compiled defaults carry no new field: the key lists measured on the C1 tip', () => {
+        clearCompileCache();
+        const v = compileView('c2_keys_v', defaultObjectViewIR());
+        const e = compileEdgeView('c2_keys_e', { ...defaultEdgeViewIR(), edge: { labels: { center: { from: 'literal', text: 'x' } } } });
+        const r = compileRowView('c2_keys_r', defaultRowViewIR());
+        const got: Record<string, string[]> = {
+            view: Object.keys(v).sort(),
+            compartment: Object.keys(v.fieldCompartments[0]).sort(),
+            label: Object.keys(v.labels[0]).sort(),
+            labelStyle: Object.keys(v.labels[0].style!).sort(),
+            edge: Object.keys(e).sort(),
+            row: Object.keys(r).sort(),
+        };
+        expect(got).toEqual(C2_COMPILED_KEYS);
+    });
+});
+
+/** A vertex carrying the three vertex keys, and an edge carrying the two edge keys. */
+function c2Vertex(): VertexViewIR {
+    return vertexIR({
+        shape: {
+            form: 'rounded',
+            text: { textTransform: 'lowercase' },
+            labels: [{ position: 'top', source: { from: 'literal', text: 'State' }, style: { fontSize: 10, letterSpacing: 0.08, textTransform: 'uppercase' } }],
+        },
+        fieldCompartments: [{
+            id: 'attributes', source: { from: 'attributes', exclude: ['name'] },
+            rowFormat: { segments: [{ kind: 'literal', text: 'attr ', style: { color: 'var(--color-inode-quiet)' } }, { kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
+            separator: true,
+        }],
+    });
+}
+function c2Edge(over: Partial<EdgeViewIR['edge']> = {}): EdgeViewIR {
+    return {
+        irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['State'], reference: 'next',
+        edge: {
+            labels: {
+                template: [{ from: 'literal', text: 'to ' }, { from: 'intrinsic', prop: 'name' }],
+                style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)', letterSpacing: 0.02 },
+            },
+            ...over,
+        },
+    };
+}
+
+describe('C2 keys present: persisted, validated, hashed apart (R-VP-20)', () => {
+    it('survive a save (JSON round trip) byte-identical, validate, and compile the same', () => {
+        for (const ir of [c2Vertex(), c2Edge()] as AnyViewIR[]) {
+            const saved = JSON.parse(JSON.stringify(ir));
+            expect(JSON.stringify(saved)).toBe(JSON.stringify(ir));
+            expect(irHash(saved)).toBe(irHash(ir));
+            clearCompileCache();
+            expect(validateIR(`c2_rt_${ir.kind}`, saved)).toEqual({ ok: true });
+        }
+    });
+
+    it('each key moves the irHash, so an edit recompiles instead of hitting the cache', () => {
+        const base = vertexIR({ shape: { form: 'rounded', labels: [{ position: 'top', source: { from: 'literal', text: 'S' } }] } });
+        const variants: VertexViewIR[] = [
+            vertexIR({ shape: { form: 'rounded', labels: [{ position: 'top', source: { from: 'literal', text: 'S' }, style: { letterSpacing: 0.08 } }] } }),
+            vertexIR({ shape: { form: 'rounded', labels: [{ position: 'top', source: { from: 'literal', text: 'S' }, style: { textTransform: 'uppercase' } }] } }),
+            vertexIR({ ...base, fieldCompartments: [{ id: 'a', source: { from: 'attributes', exclude: ['name'] }, rowFormat: { segments: [{ kind: 'name' }] } }] }),
+            vertexIR({ ...base, fieldCompartments: [{ id: 'a', source: { from: 'attributes' }, rowFormat: { segments: [{ kind: 'literal', text: 'a', style: { fontSize: 9 } }] } }] }),
+        ];
+        const hashes = new Set([base, ...variants].map(v => irHash(v)));
+        expect(hashes.size).toBe(5);
+        const e0 = c2Edge({ labels: { center: { from: 'literal', text: 'x' } } });
+        const e1 = c2Edge({ labels: { center: { from: 'literal', text: 'x' }, template: [{ from: 'literal', text: 'x' }] } });
+        const e2 = c2Edge({ labels: { center: { from: 'literal', text: 'x' }, style: {} } });
+        expect(new Set([e0, e1, e2].map(irHash)).size).toBe(3);
+    });
+});
+
+describe('C2 compile and resolve: letterSpacing and textTransform (R-VP-20 (1))', () => {
+    it('a declared axis resolves to CSS: letter-spacing in em, text-transform verbatim', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('c2_ls', c2Vertex());
+        expect(cv.labels[0].style!.letterSpacing!(ctx, 's1')).toBe(0.08);
+        expect(cv.labels[0].style!.textTransform!(ctx, 's1')).toBe('uppercase');
+        expect(resolveTextStyle(cv.labels[0].style, ctx, 's1')).toEqual({ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' });
+        // On the node root too: the cascade carries it to every surface (irStyle.ts inherit).
+        expect(resolveTextStyle(cv.text, ctx, 's1')).toEqual({ textTransform: 'lowercase' });
+    });
+
+    it('absent: no compiled axis and no CSS property', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('c2_ls_absent', vertexIR({ shape: { form: 'rect', labels: [{ position: 'top', source: { from: 'literal', text: 'S' }, style: { fontSize: 10 } }] } }));
+        expect('letterSpacing' in cv.labels[0].style!).toBe(false);
+        expect('textTransform' in cv.labels[0].style!).toBe(false);
+        expect(resolveTextStyle(cv.labels[0].style, ctx, 's1')).toEqual({ fontSize: '10px' });
+    });
+
+    it('zero and a negative spacing are authored values and are emitted', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        for (const [n, css] of [[0, '0em'], [-0.02, '-0.02em']] as [number, string][]) {
+            const cv = compileView(`c2_ls_${n}`, vertexIR({ shape: { form: 'rect', text: { letterSpacing: n } } }));
+            expect(resolveTextStyle(cv.text, ctx, 's1'), String(n)).toEqual({ letterSpacing: css });
+        }
+    });
+
+    it('the render is permissive: a value outside the vocabulary is not emitted, the view still compiles (R-B9-bis)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        for (const bad of [{ letterSpacing: '0.08' }, { letterSpacing: Number.NaN }, { letterSpacing: Infinity }, { textTransform: 'capitalize' }, { textTransform: 7 }]) {
+            const cv = compileView(`c2_bad_${JSON.stringify(bad)}`, vertexIR({ shape: { form: 'rect', text: bad as never } }));
+            expect(resolveTextStyle(cv.text, ctx, 's1'), JSON.stringify(bad)).toBeUndefined();
+        }
+    });
+});
+
+describe('C2 compile: the attributes exclude and the literal segment style (R-VP-20 (2), (3))', () => {
+    it('exclude is compiled onto the attributes compartment, verbatim', () => {
+        clearCompileCache();
+        const fc = compileView('c2_ex', c2Vertex()).fieldCompartments[0];
+        expect(fc.source).toBe('attributes');
+        expect(fc.exclude).toEqual(['name']);
+    });
+
+    it('absent, or on another source, no exclude key is compiled', () => {
+        clearCompileCache();
+        expect('exclude' in compileView('c2_ex_absent', defaultObjectViewIR()).fieldCompartments[0]).toBe(false);
+        const refs = vertexIR({ fieldCompartments: [{ id: 'r', source: { from: 'references', exclude: ['next'] } as never, rowFormat: { segments: [{ kind: 'name' }] } }] });
+        expect('exclude' in compileView('c2_ex_refs', refs).fieldCompartments[0]).toBe(false);
+    });
+
+    it('a literal segment style is compiled at its index; the other segments have none', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const fc = compileView('c2_seg', c2Vertex()).fieldCompartments[0];
+        expect(fc.segmentStyles).toHaveLength(4);
+        expect(resolveTextStyle(fc.segmentStyles![0], ctx, 's1')).toEqual({ color: 'var(--color-inode-quiet)' });
+        expect(fc.segmentStyles!.slice(1)).toEqual([undefined, undefined, undefined]);
+        // The segments themselves are passed through unchanged.
+        expect(fc.segments[0]).toEqual({ kind: 'literal', text: 'attr ', style: { color: 'var(--color-inode-quiet)' } });
+    });
+
+    it('no literal style, no segmentStyles key', () => {
+        clearCompileCache();
+        expect('segmentStyles' in compileView('c2_seg_absent', defaultObjectViewIR()).fieldCompartments[0]).toBe(false);
+    });
+
+    it('a conditional axis in a segment style extends the view\'s dependency set', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('c2_seg_cond', vertexIR({
+            fieldCompartments: [{
+                id: 'a', source: { from: 'attributes' },
+                rowFormat: { segments: [{ kind: 'literal', text: 'x', style: { color: { when: { op: 'exists', path: '$isInitial.value' }, then: 'red' } } }] },
+            }],
+        }));
+        expect(cv.dependencySet).toContain('isInitial');
+        expect(resolveTextStyle(cv.fieldCompartments[0].segmentStyles![0], ctx, 's1')).toEqual({ color: 'red' });
+        expect(resolveTextStyle(cv.fieldCompartments[0].segmentStyles![0], ctx, 's3')).toBeUndefined();
+    });
+});
+
+describe('C2 compile: the edge label template and style (R-VP-20 (4), (5))', () => {
+    it('the template is the centre label, segments concatenated, and wins over center', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileEdgeView('c2_tpl', c2Edge({ labels: { center: { from: 'literal', text: 'center' }, template: [{ from: 'literal', text: 'weight = ' }, { from: 'path', expr: '$tags.values[1]' }] } }));
+        expect(cv.labelText!(ctx, 's1')).toBe('weight = b');
+        expect(cv.dependencySet).toContain('tags');
+    });
+
+    it('an empty value draws nothing and takes its caption, the literal right before it; the other literals stay', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const tpl = compileEdgeView('c2_tpl_empty', c2Edge({ labels: { template: [{ from: 'literal', text: 'weight = ' }, { from: 'path', expr: '$isInitial.value' }] } }));
+        expect(tpl.labelText!(ctx, 's3')).toBe('');
+        expect(tpl.labelText!(ctx, 's2')).toBe('weight = false');
+        const stereo = compileEdgeView('c2_tpl_stereo', c2Edge({ labels: { template: [{ from: 'literal', text: '«Inhibitor»' }, { from: 'literal', text: ' weight = ' }, { from: 'path', expr: '$isInitial.value' }] } }));
+        expect(stereo.labelText!(ctx, 's3')).toBe('«Inhibitor»');
+        expect(stereo.labelText!(ctx, 's2')).toBe('«Inhibitor» weight = false');
+        // A literal after a value is not a caption: it stays when the value is empty.
+        const after = compileEdgeView('c2_tpl_after', c2Edge({ labels: { template: [{ from: 'path', expr: '$isInitial.value' }, { from: 'literal', text: ' ok' }] } }));
+        expect(after.labelText!(ctx, 's3')).toBe(' ok');
+    });
+
+    it('a template of literals only always draws', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const lit = compileEdgeView('c2_tpl_lit', c2Edge({ labels: { template: [{ from: 'literal', text: '«Dependency»' }] } }));
+        expect(lit.labelText!(ctx, 's3')).toBe('«Dependency»');
+    });
+
+    it('an empty or malformed template falls back to center, permissively (R-B9-bis)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        for (const bad of [[], {}, 'x']) {
+            const cv = compileEdgeView(`c2_tpl_bad_${JSON.stringify(bad)}`, c2Edge({ labels: { center: { from: 'literal', text: 'center' }, template: bad as never } }));
+            expect(cv.labelText!(ctx, 's1'), JSON.stringify(bad)).toBe('center');
+        }
+    });
+
+    it('absent: the centre label as before, and no labelStyle key', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileEdgeView('c2_tpl_absent', c2Edge({ labels: { center: { from: 'intrinsic', prop: 'name' } } }));
+        // The intrinsic name reads the identity slot first (model/CLAUDE.md §3.12): `idle`.
+        expect(cv.labelText!(ctx, 's1')).toBe('idle');
+        expect('labelStyle' in cv).toBe(false);
+    });
+
+    it('the label style is compiled, and resolves to CSS', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileEdgeView('c2_lstyle', c2Edge());
+        expect(resolveTextStyle(cv.labelStyle, ctx, 's1')).toEqual({ fontSize: '12px', fontWeight: 500, color: 'var(--color-inode-quiet)', letterSpacing: '0.02em' });
+    });
+
+    it('irEdgeViews carries the resolved style on data.irLabelStyle, and the template text on the label', () => {
+        const { idlookup, edges } = edgeWorld();
+        const state = { viewpoint: 'VP', viewelements: ['V_c2'], idlookup: { ...idlookup, V_c2: { id: 'V_c2', viewpoint: 'VP', ir: c2Edge() } } };
+        const ctx = makeDrawReadCtx(state.idlookup);
+        const index = getIRIndex(state, 'sig_edge_c2')!;
+        const de = decorateReferenceEdges(edges as any, new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]), index, ctx, state.idlookup);
+        const next = de.find(e => e.id === 'e_next')!;
+        expect(next.label).toBe('to S1');
+        expect((next.data as any).irLabelText).toBe('to S1');
+        expect((next.data as any).irLabelStyle).toEqual({ fontSize: '12px', fontWeight: 500, color: 'var(--color-inode-quiet)', letterSpacing: '0.02em' });
+    });
+
+    it('irEdgeViews: a declared empty style is still the halo label ({}); no style, no irLabelStyle key at all', () => {
+        const { idlookup, edges } = edgeWorld();
+        const views = { V_c2a: c2Edge({ labels: { center: { from: 'literal', text: 'n' }, style: {} } }), V_c2b: c2Edge({ labels: { center: { from: 'literal', text: 'n' } } }) };
+        for (const [vid, ir] of Object.entries(views)) {
+            const state = { viewpoint: 'VP', viewelements: [vid], idlookup: { ...idlookup, [vid]: { id: vid, viewpoint: 'VP', ir } } };
+            const ctx = makeDrawReadCtx(state.idlookup);
+            const de = decorateReferenceEdges(edges as any, new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]), getIRIndex(state, `sig_${vid}`)!, ctx, state.idlookup);
+            const data = de.find(e => e.id === 'e_next')!.data as any;
+            if (vid === 'V_c2a') expect(data.irLabelStyle).toEqual({});
+            else expect('irLabelStyle' in data).toBe(false);
+        }
     });
 });

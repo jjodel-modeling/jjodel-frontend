@@ -15,10 +15,12 @@ import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import { useEditorContextSafe } from '../../contexts/EditorContext';
 import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
-import type { CompiledView, CompiledTextStyle } from './irTypes';
+import type { BadgePosition, CompiledView, LabelAnchor, ShapeForm, VertexViewIR } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
+import { labelFeatureEditBlock, labelFeatureInfoOf } from './irLabelEdit';
+import { metaclassColoringVars, metaclassOutsideInkVars, type MetaclassColorOverride } from '../../../../view/viewPoint/metaclassPalette';
 import {
     getShapeDescriptor, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
     SVG_BORDER_DASH, type ShapePainter, type Size,
@@ -107,36 +109,41 @@ const SEL_BAND_STROKE_WIDTH = 6;
 import { useContentDrivenSize } from './useContentSize';
 import { getMarkerDef, MARKER_STROKE_WIDTH, MARKER_VIEWBOX } from './markerRegistry';
 import IRRow from './IRRow';
-
-/** FontFamilyToken -> design-system CSS var. */
-const FONT_FAMILY_VAR: Record<string, string> = { sans: 'var(--font-sans)', mono: 'var(--font-mono)' };
-/** FontWeightToken -> numeric CSS weight. */
-const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semibold: 600, bold: 700 };
+import { resolveTextStyle } from './irCompile';
 
 /**
- * Resolve a CompiledTextStyle into an inline style for the current element
- * (ir-1.3 TS1). Only authored axes with a non-empty resolved value are emitted,
- * so an absent axis — or a conditional axis whose branch does not match — inherits
- * the surface's CSS default (irStyle.ts BASE_CSS). An authored axis is always
- * emitted (even when its value equals a CSS default) so it overrides the class rule.
- *
- * Exported since TS2: IRRow renders the dispatched rows outside this component and
- * must resolve their style with the same function, not a copy of it.
+ * A badge sits in its corner on every form (P-2026-09-29-2122). On the five SVG-painted forms
+ * the in-flow child rule of irStyle.ts (`> :not(.ir-<form>-svg):not(.ir-marker-svg)`, 0,4,0)
+ * beats `.ir-node-content .ir-badge` (0,2,0) and made the badge a flex item, top centre.
+ * Inline, and not one more `:not()` there: that would lift the rule to (0,5,0), above the
+ * outside label (0,4,0) written to beat it (measured in Chromium). The values are the class
+ * rule's own, so the CSS forms do not move.
  */
-export function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): React.CSSProperties | undefined {
-    if (!cs) return undefined;
-    const s: React.CSSProperties = {};
-    if (cs.fontFamily) { const v = cs.fontFamily(ctx, id); if (v) s.fontFamily = FONT_FAMILY_VAR[v]; }
-    if (cs.fontSize) { const v = cs.fontSize(ctx, id); if (v && v > 0) s.fontSize = `${v}px`; }
-    if (cs.fontWeight) { const v = cs.fontWeight(ctx, id); if (v) s.fontWeight = FONT_WEIGHT_NUM[v]; }
-    if (cs.fontStyle) { const v = cs.fontStyle(ctx, id); if (v) s.fontStyle = v; }
-    if (cs.color) { const v = cs.color(ctx, id); if (v) s.color = v; }
-    // Underline means the native instance-name underline (UML convention), offset
-    // included: the 3px is baked into the axis, not a separate field. Same value as the
-    // bare literal in instanceNode.scss (.mm-object__name). Offset authoring: owed to S5.
-    if (cs.underline) { const v = cs.underline(ctx, id); if (v) { s.textDecoration = 'underline'; s.textUnderlineOffset = '3px'; } }
-    return Object.keys(s).length ? s : undefined;
-}
+const BADGE_STYLE: React.CSSProperties = { position: 'absolute', zIndex: 2 };
+
+/**
+ * The entry mark (R-VP-22, `ShapeSpec.entry`): a layer ENTRY_W × ENTRY_H outside the box, its right
+ * edge on the box's left border and its middle on the box's middle, so the arrow's tip, the layer's
+ * rightmost point, touches the border and nothing more. Placed inline, as the badge is, so no in-flow
+ * rule of the SVG-painted forms can take it back into the flow; irStyle.ts only lifts the two clips.
+ * `dot`: a filled dot (UML initial pseudostate), then the line; `arrow`: the line alone. The head is the open
+ * arrowhead of the transitions (R-VP-25, P-2026-10-03-1304): two strokes, no fill, the line running into its tip.
+ */
+const ENTRY_W = 40;
+const ENTRY_H = 14;
+const ENTRY_DOT_R = 6;
+const ENTRY_HEAD = 8;
+const ENTRY_STYLE: React.CSSProperties = {
+    position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', overflow: 'visible', pointerEvents: 'none', zIndex: 1,
+};
+
+/**
+ * Exported since TS2: IRRow renders the dispatched rows outside this component and
+ * must resolve their style with the same function, not a copy of it. The function
+ * lives in irCompile.ts since P-2026-09-30-0150 (R-VP-20), so the pure irEdgeViews.ts
+ * can call it too; re-exported here under the same name.
+ */
+export { resolveTextStyle };
 
 export interface IRNodeContentProps {
     compiled: CompiledView;
@@ -174,6 +181,62 @@ export interface IRNodeContentProps {
      * in the authoring preview, which has no live object to read.
      */
     renderRowValue?: (featureName: string) => React.ReactNode | null;
+    /**
+     * The container is collapsed (F3, P-2026-09-29-2122): a graphVertex then paints its
+     * `containment.collapsed` form, fill and badge where the view declares them. The host
+     * decides it, with the predicate of its expand chip. Absent = expanded, as in the
+     * authoring preview.
+     */
+    collapsed?: boolean;
+    /**
+     * «Color by metaclass» of the active viewpoint (R-VP-27..31), resolved by the host, which
+     * knows the metaclass (`ObjectNode`). Present, it wins over the view's fill, border colour
+     * and text colour; the border keeps the view's width and style (transparent when the
+     * option's Border is off), and an outside label keeps its ink. Absent = the view paints
+     * alone, as before and as in the authoring preview.
+     */
+    colorOverride?: MetaclassColorOverride;
+    /**
+     * The orientation of a bar that declares a thickness (Q3, P-2026-10-03-1304), computed by the edge synthesis
+     * (irEdgeViews.ts) and handed over by the host from the node data. Absent = upright. Ignored by every other form
+     * and by a bar without a thickness, which paints its box as before.
+     */
+    barOrientation?: 'upright' | 'lying';
+    /**
+     * The sides the edge synthesis moved outside labels to, declared -> chosen (P-2026-10-03-1920, item 2; irEdgeViews.ts),
+     * handed over by the host from the node data. Absent = every outside label on its declared side, as before.
+     */
+    labelAnchors?: Partial<Record<LabelAnchor, LabelAnchor>>;
+}
+
+/** The four sides an outside label's anchor can name. */
+const LABEL_ANCHORS: ReadonlySet<string> = new Set(['n', 'e', 's', 'w']);
+
+/**
+ * Form of the node as painted (F3, P-2026-09-29-2122). Collapsed, a graphVertex takes
+ * `containment.collapsed.form` when the view declares one; otherwise the shape's form.
+ * ObjectNode reads the same function for handles and resizer, so the outline and the
+ * anchors cannot disagree.
+ */
+export function resolveNodeForm(compiled: CompiledView, readCtx: ReadCtx, objectId: string, collapsed: boolean): ShapeForm {
+    const collapsedForm = collapsed ? compiled.containment?.collapsedForm : null;
+    return (collapsedForm ?? compiled.form)(readCtx, objectId);
+}
+
+/**
+ * The declared collapsed badge, resolved (F3): null when the node is expanded, when the
+ * view declares none, or when it resolves invisible or to no icon. Non-null, it replaces
+ * the count of the expand chip in ObjectNode (spec v1.2 sez. 8: the badge defaults to a
+ * child count). It replaces the count and not the chip: the chip is the only way to
+ * expand a collapsed container.
+ */
+export function resolveCollapsedBadge(
+    compiled: CompiledView, readCtx: ReadCtx, objectId: string, collapsed: boolean,
+): { icon: string; position: BadgePosition; tooltip?: string } | null {
+    const badge = collapsed ? compiled.containment?.collapsedBadge : null;
+    if (!badge || !badge.visible(readCtx, objectId)) return null;
+    const icon = badge.icon(readCtx, objectId);
+    return icon ? { icon, position: badge.position, tooltip: badge.tooltip } : null;
 }
 
 interface CompartmentRowData {
@@ -202,9 +265,14 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue }: IRNodeContentProps) {
-    const form = compiled.form(readCtx, objectId);
-    const fill = compiled.fill ? compiled.fill(readCtx, objectId) : '';
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue, collapsed = false, colorOverride, barOrientation, labelAnchors }: IRNodeContentProps) {
+    const form = resolveNodeForm(compiled, readCtx, objectId, collapsed);
+    // A collapsed fill that resolves empty (a conditional with no match) falls back to the
+    // expanded fill, the same convention as an empty fill falling back to the box colour.
+    const collapsedFill = collapsed && compiled.containment?.collapsedFill
+        ? compiled.containment.collapsedFill(readCtx, objectId) : '';
+    const fill = colorOverride?.fill || collapsedFill || (compiled.fill ? compiled.fill(readCtx, objectId) : '');
+    const collapsedBadge = resolveCollapsedBadge(compiled, readCtx, objectId, collapsed);
 
     // In-place editing state
     const [editingRow, setEditingRow] = useState<{ key: string; name: string } | null>(null);
@@ -220,7 +288,9 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // take the size their ink needs inside the outline. Inert on the shapes that
     // fill their box and on a vertex resized by hand. See useContentSize.ts.
     const contentRef = useRef<HTMLDivElement>(null);
-    useContentDrivenSize(vertexId, form, contentRef);
+    useContentDrivenSize(vertexId, form, contentRef, 'defaultSize' in compiled.ir ? compiled.ir.defaultSize : undefined);
+    // Q9a: the view's choice for a slot with no value; only 'hide' changes the IR compartment (the dash otherwise).
+    const hideEmptyRows = 'structure' in compiled.ir && compiled.ir.structure?.emptyBehavior === 'hide';
 
     // Compartment rows come from the object's D-layer features (name/type/value).
     const compartmentSig = useSelector((state: any) => {
@@ -262,6 +332,17 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
         return { attributes, references };
     }, [compartmentSig]);
 
+    // The rows a slot compartment draws: the exclude (R-VP-20) and, under 'hide' (Q9a), the slots with no value left out.
+    const shownRows = (fc: { source: 'attributes' | 'references' | 'children'; exclude?: string[] }) => {
+        const slots = fc.source === 'references' ? rows.references : rows.attributes;
+        const kept = fc.exclude ? slots.filter(r => !fc.exclude!.includes(r.name)) : slots;
+        return hideEmptyRows ? kept.filter(r => r.value.trim() !== '') : kept;
+    };
+    // Q9a: 'hide' left no row in any compartment (and none holds children): a name the compartment put on top is
+    // centred, as on the same node without a compartment.
+    const noRowsLeft = hideEmptyRows && compiled.fieldCompartments.length > 0
+        && compiled.fieldCompartments.every(fc => fc.source !== 'children' && shownRows(fc).length === 0);
+
     // Row-dispatch (Fase R2): child object ids rendered as inline rows for a
     // `children`-source compartment. SAME rowRenderedChildren as the presentation
     // pass (SSOT — computeRowHiddenChildren hides exactly this set). A string
@@ -299,13 +380,24 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
 
     const commitLabelEdit = useCallback(() => {
         if (editingLabel !== null) {
+            const label = compiled.labels[editingLabel];
+            if (label?.editsFeature) {
+                // Path label (R-IRN-41): the attribute, through the row value's write path and with
+                // its dirty rule; compared with the label's text, the source the edit was seeded from.
+                const raw = label.text(readCtx, objectId);
+                const changed = (raw == null ? '' : String(raw)) !== editValue;
+                syncUpdateFeatureValue(vertexId, label.editsFeature, editValue);
+                if (changed) U.isProjectModified = true;
+                setEditingLabel(null);
+                return;
+            }
             // Same source the edit was seeded from (see the label onDoubleClick).
             const changed = (readCtx.getName(objectId) ?? '') !== editValue;
             syncNodeLabel(vertexId, editValue);
             if (changed) U.isProjectModified = true;
             setEditingLabel(null);
         }
-    }, [editingLabel, editValue, vertexId, readCtx, objectId]);
+    }, [editingLabel, editValue, vertexId, readCtx, objectId, compiled]);
 
     const editKeys = useCallback((commit: () => void) => (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') commit();
@@ -390,8 +482,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     const borderWidthV = compiled.borderWidth ? compiled.borderWidth(readCtx, objectId) : undefined;
     const borderStyleV = compiled.borderStyle ? compiled.borderStyle(readCtx, objectId) : undefined;
     const hasAuthoredBorder = borderColorV !== undefined || borderWidthV !== undefined || borderStyleV !== undefined;
+    // «Color by metaclass»: every line drawn in the border colour (outline, separators) takes the
+    // shade, or transparent with Border off; width and style stay the view's, so no size moves.
+    const outlineColor = colorOverride ? (colorOverride.border ? colorOverride.stroke : 'transparent') : borderColorV;
     if (hasAuthoredBorder && !svgPainter) {
-        inlineStyle.border = `${borderWidthV ?? 1}px ${borderStyleV ?? 'solid'} ${borderColorV || 'var(--border-default)'}`;
+        inlineStyle.border = `${borderWidthV ?? 1}px ${borderStyleV ?? 'solid'} ${outlineColor || 'var(--border-default)'}`;
+    } else if (colorOverride && !svgPainter) {
+        inlineStyle.borderColor = outlineColor;
     }
 
     // Corner radius (slice 3, D5; Conditional by R-IRN-35). Resolved per instance from
@@ -414,7 +511,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // undefined when the view declares no colour axis, or when a conditional resolves to
     // the empty fallback: both keep the CSS default (irStyle.ts) and leave the separator
     // unaffected, same fallback discipline as `border` above.
-    const separatorColorStyle: React.CSSProperties | undefined = borderColorV ? { borderTopColor: borderColorV } : undefined;
+    const separatorColorStyle: React.CSSProperties | undefined = outlineColor ? { borderTopColor: outlineColor } : undefined;
     // Node-level text style (ir-1.3 cascade root): inline on the root so every
     // text surface inherits it (irStyle.ts uses `inherit` on labels, rows and
     // inline editors). A label's own style, inline on its span, still wins.
@@ -424,13 +521,24 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // Compartment rows declare no weight, so there it does propagate.
     // resolveTextStyle returns undefined when there is nothing to emit, and
     // Object.assign with undefined is a no-op: no guard needed.
-    Object.assign(inlineStyle, resolveTextStyle(compiled.text, readCtx, objectId));
+    const nodeTextStyle = resolveTextStyle(compiled.text, readCtx, objectId);
+    Object.assign(inlineStyle, nodeTextStyle);
+    // «Color by metaclass»: the node tokens the row values (RowValue) and the bar's halo paint with.
+    // The text colour is not set on the root (R-VP-51): labels, compartments and badges state it
+    // below, so an outside label with no colour of its own inherits what it inherits off.
+    if (colorOverride) Object.assign(inlineStyle, metaclassColoringVars(colorOverride));
+    // What the node draws outside its box sits on the canvas and paints as with coloring off
+    // (R-VP-51): the name ink rebound back, and the node-level colour restated so it resolves there.
+    const outsideInk: React.CSSProperties | undefined = colorOverride
+        ? { ...metaclassOutsideInkVars(), color: nodeTextStyle?.color } : undefined;
+    const overText = (st: React.CSSProperties | undefined, position?: string): React.CSSProperties | undefined =>
+        !colorOverride ? st : position === 'outside' ? { ...outsideInk, ...st } : { ...st, color: colorOverride.text };
 
     // The SVG layer paints the same resolved fill/border, with the box-base
     // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
     // to any aspect ratio; non-scaling-stroke keeps the border a constant width.
     const svgFill = fill || 'var(--node-bg)';
-    const svgStroke = borderColorV || 'var(--border-default)';
+    const svgStroke = outlineColor || 'var(--border-default)';
     const svgStrokeWidth = borderWidthV ?? 1;
     const svgDash = SVG_BORDER_DASH[borderStyleV ?? 'solid'];
     // double (asse bordo, 2026-08-15). CSS shapes get it for free from the
@@ -449,16 +557,30 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // preserveAspectRatio="meet" (irStyle.ts positions the layer).
     const markerId = compiled.marker ? compiled.marker(readCtx, objectId) : '';
     const markerDef = getMarkerDef(markerId ? String(markerId) : undefined);
-    const markerColor = borderColorV || 'var(--border-default)';
+    // The entry mark sits outside the box, so it keeps this colour while coloured (R-VP-51).
+    const inkColor = borderColorV || 'var(--border-default)';
+    const markerColor = colorOverride ? colorOverride.text : inkColor;
 
     // Spacing preset (2026-08-25): 'normal' carries no class, so the tokens declared on
     // .ir-node-content itself apply and the markup of an unauthored view is unchanged.
     const padClass = compiled.padding === 'normal' ? '' : ` ir-pad--${compiled.padding}`;
 
+    // Q3 (P-2026-10-03-1304): a bar that declares a thickness keeps its square box and paints its ink T px across,
+    // upright or lying, centred in the box. The ink is this element, so the selection ring and the run's outline,
+    // drawn on it, follow the bar; irStyle.ts gives the pointer to the ink alone.
+    const barThickness = form === 'bar' ? (compiled.ir as VertexViewIR).shape?.barThickness : undefined;
+    const barInk = typeof barThickness === 'number' && Number.isFinite(barThickness) && barThickness > 0;
+    if (barInk) {
+        const half = `calc(50% - ${barThickness / 2}px)`;
+        Object.assign(inlineStyle, barOrientation === 'lying'
+            ? { position: 'absolute', top: half, left: 0, width: '100%', height: `${barThickness}px` }
+            : { position: 'absolute', left: half, top: 0, width: `${barThickness}px`, height: '100%' });
+    }
+
     return (
         <div
             ref={contentRef}
-            className={`ir-node-content ir-shape--${form}${padClass}`}
+            className={`ir-node-content ir-shape--${form}${padClass}${barInk ? ' ir-bar-ink' : ''}`}
             style={inlineStyle}
         >
             {svgPainter && (
@@ -518,32 +640,54 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     ))}
                 </svg>
             )}
+            {compiled.entry && (
+                <svg className={`ir-entry-svg ir-entry--${compiled.entry}`} width={ENTRY_W} height={ENTRY_H} viewBox={`0 0 ${ENTRY_W} ${ENTRY_H}`} style={colorOverride ? { ...ENTRY_STYLE, ...metaclassOutsideInkVars() } : ENTRY_STYLE} aria-hidden="true">
+                    {compiled.entry === 'dot' && <circle cx={ENTRY_DOT_R} cy={ENTRY_H / 2} r={ENTRY_DOT_R} fill={inkColor} />}
+                    <path d={`M ${compiled.entry === 'dot' ? 2 * ENTRY_DOT_R : 0} ${ENTRY_H / 2} H ${ENTRY_W}`} stroke={inkColor} strokeWidth={1} fill="none" />
+                    <path d={`M ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 - 4} L ${ENTRY_W} ${ENTRY_H / 2} L ${ENTRY_W - ENTRY_HEAD} ${ENTRY_H / 2 + 4}`} stroke={inkColor} strokeWidth={1} fill="none" />
+                </svg>
+            )}
             {compiled.badges.map((b, i) => {
                 if (!b.visible(readCtx, objectId)) return null;
                 const icon = b.icon(readCtx, objectId);
                 if (!icon) return null;
                 return (
-                    <span key={`badge_${i}`} className={`ir-badge ir-badge--${b.position}`} title={b.tooltip}>
+                    <span key={`badge_${i}`} className={`ir-badge ir-badge--${b.position}`} style={overText(BADGE_STYLE)} title={b.tooltip}>
                         <i className={`bi ${icon}`} />
                     </span>
                 );
             })}
+            {collapsedBadge && (
+                <span className={`ir-badge ir-badge--${collapsedBadge.position}`} style={overText(BADGE_STYLE)} title={collapsedBadge.tooltip}>
+                    <i className={`bi ${collapsedBadge.icon}`} />
+                </span>
+            )}
             {compiled.labels.map((l, i) => {
                 if (!l.visible(readCtx, objectId)) return null;
                 const raw = l.text(readCtx, objectId);
                 const text = raw == null ? '' : String(raw);
+                // Outside label (R-VP-15 (1)): the side rides on a class of its own, so an
+                // inside label keeps exactly the class list it had (irStyle.ts places it).
+                // P-2026-10-03-1920 (item 2): an outside label the edge synthesis moved off an edge end paints on its new side.
+                const moved = l.position === 'outside' && l.anchor ? labelAnchors?.[l.anchor] : undefined;
+                const anchor = moved && LABEL_ANCHORS.has(moved) ? moved : l.anchor;
+                const anchorClass = anchor ? ` ir-label--anchor-${anchor}` : '';
+                // Q9a: with no row left under 'hide', a name on top is centred (`noRowsLeft`).
+                const position = noRowsLeft && l.position === 'top' ? 'center' : l.position;
                 // Editable: intrinsic name/qualifiedName labels edit the element
-                // name unless the IR opts out (spec v1.2 sez. 5).
-                if (l.editsName && editingLabel === i) {
+                // name unless the IR opts out (spec v1.2 sez. 5); a one-step path
+                // label that opts in edits its attribute (R-IRN-41).
+                const editsFeature = l.editsFeature;
+                if ((l.editsName || editsFeature) && editingLabel === i) {
                     return (
                         <input
                             key={`label_${i}`}
-                            className={`ir-label ir-label--${l.position} ir-label__input`}
+                            className={`ir-label ir-label--${position}${anchorClass} ir-label__input`}
                             // Same authored style as the span it replaces: the node-level
                             // style already reaches the field by inheritance, this carries
                             // the label's own one, so the text does not change face on
                             // entering the edit.
-                            style={resolveTextStyle(l.style, readCtx, objectId)}
+                            style={overText(resolveTextStyle(l.style, readCtx, objectId), position)}
                             autoFocus
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
@@ -556,11 +700,18 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 return (
                     <span
                         key={`label_${i}`}
-                        className={`ir-label ir-label--${l.position}`}
-                        style={resolveTextStyle(l.style, readCtx, objectId)}
+                        className={`ir-label ir-label--${position}${anchorClass}`}
+                        style={overText(resolveTextStyle(l.style, readCtx, objectId), position)}
                         onDoubleClick={l.editsName ? () => {
                             setEditingLabel(i);
                             setEditValue(readCtx.getName(objectId) ?? '');
+                        } : editsFeature ? () => {
+                            // The slot decides at the gesture, as openRowSelect does: a view can
+                            // apply to classes where the feature is not a single string attribute.
+                            const info = labelFeatureInfoOf((store.getState() as any).idlookup, objectId, editsFeature);
+                            if (labelFeatureEditBlock(info) !== null) return;
+                            setEditingLabel(i);
+                            setEditValue(text);
                         } : undefined}
                     >
                         {text}
@@ -583,7 +734,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                             // the rows inherit it (irStyle.ts gives .ir-row font-size:
                             // inherit and declares no other text axis), and a dispatched
                             // row view can still override it inline on its own .ir-row.
-                            style={{ ...resolveTextStyle(fc.rowStyle, readCtx, objectId), ...(fc.separator ? separatorColorStyle : undefined) }}
+                            style={{ ...overText(resolveTextStyle(fc.rowStyle, readCtx, objectId)), ...(fc.separator ? separatorColorStyle : undefined) }}
                         >
                             {rowChildIds.map(childId => (
                                 <IRRow key={childId} childObjectId={childId} />
@@ -592,13 +743,17 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     );
                 }
                 const isReferenceCompartment = fc.source === 'references';
-                const source = isReferenceCompartment ? rows.references : rows.attributes;
+                // R-VP-20: the attributes exclude keeps the named slots out of the rows (the identity
+                // slot the name label shows). Every slot excluded draws no compartment, as none does.
+                // P-2026-10-03-1304 (Q9a): under `structure.emptyBehavior: 'hide'` a slot with no value draws no row
+                // either, as the native rows do (ObjectNode.tsx); `shownRows` applies both.
+                const source = shownRows(fc);
                 if (source.length === 0) return null;
                 return (
                     <div
                         key={fc.id}
                         className={`ir-compartment${fc.separator ? '' : ' ir-compartment--no-separator'}`}
-                        style={{ ...resolveTextStyle(fc.rowStyle, readCtx, objectId), ...(fc.separator ? separatorColorStyle : undefined) }}
+                        style={{ ...overText(resolveTextStyle(fc.rowStyle, readCtx, objectId)), ...(fc.separator ? separatorColorStyle : undefined) }}
                     >
                         {source.map(row => (
                             <div
@@ -689,7 +844,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                                                 </span>
                                             );
                                         }
-                                        case 'literal': return <span key={si}>{seg.text}</span>;
+                                        // R-VP-20: a literal's own style, inline on its span; absent, a bare span.
+                                        case 'literal': return <span key={si} style={resolveTextStyle(fc.segmentStyles?.[si], readCtx, objectId)}>{seg.text}</span>;
                                         default: return null;
                                     }
                                 })}

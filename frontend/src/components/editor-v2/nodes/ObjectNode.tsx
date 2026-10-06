@@ -18,7 +18,7 @@
  */
 
 import { Fragment, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, shallowEqual } from 'react-redux';
 import { NodeResizer, useReactFlow, useStore, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
 import { isNodeResizable, SHAPE_MIN_SIZE, defaultResizableForForm, keepAspectRatioForForm } from './nodeSizing';
@@ -33,14 +33,15 @@ import { useIsHighlighted } from '../problems/useNodeProblems';
 import { useIRView, useIRViewpointActive } from '../viewpoint/ir/irResolve';
 import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
 import { rendererForWidget } from '../viewpoint/ir/widgetRenderer';
-import type { VertexViewIR } from '../viewpoint/ir/irTypes';
-import IRNodeContent from '../viewpoint/ir/IRNodeContent';
+import type { LabelAnchor, VertexViewIR } from '../viewpoint/ir/irTypes';
+import IRNodeContent, { resolveCollapsedBadge, resolveNodeForm } from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
 import { getSimNodeState, isSimActive, useSimVersion } from '../sim/simRunState';
 import { initialMarkingFeature, isInitialMarkingRow } from '../sim/simCanvasState';
 import SimNodeRunState from '../sim/SimNodeRunState';
 import { entityLetter } from '../../../common/entityMeta';
+import { isNotationGlyph, metaclassColoringVars, resolveMetaclassColoring } from '../../../view/viewPoint/metaclassPalette';
 import { store, LPointerTargetable } from '../../../joiner';
 import {
     resolveInstanceNodeStyle,
@@ -135,6 +136,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return { name: dClass?.name ?? null };
     });
     const liveMetaclassName = liveMetaclassInfo.name;
+    // «Color by metaclass» (R-VP-27..31): the ACTIVE viewpoint's fill, text and border for this
+    // object's metaclass, or null (option off, no viewpoint, no metaclass). Compared field by
+    // field, so a fresh answer with the same colours does not re-render the node.
+    const metaclassColor = useSelector((state: any) => resolveMetaclassColoring(state, data.instanceOfClassId), shallowEqual);
     const metaclassName = liveMetaclassName
         ?? (data.instanceOfClassId ? data.instanceOfClassName : 'Orphan');
 
@@ -909,14 +914,33 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         // per-form default; `resizable: false` blocks resize on any shape (false is
         // not nullish → it wins the ??). `ir-resizable` marks the wrapper so the
         // scoped CSS neutralizer (irStyle.ts) lets rect/rounded shrink to the floor.
-        const shapeForm = irResolution.compiled.form(irResolution.readCtx, irResolution.objectId);
+        // Collapsed as the expand chip below shows it (F3, P-2026-09-29-2122): a collapsible
+        // container holding children, in the collapsed set. Only then does the node paint the
+        // view's `containment.collapsed`; a container with nothing to expand keeps its look.
+        const collapsedLook = irResolution.compiled.kind === 'graphVertex'
+            && !!irResolution.compiled.containment?.collapsible
+            && irChildCount > 0
+            && isCollapsed(irResolution.objectId);
+        const shapeForm = resolveNodeForm(irResolution.compiled, irResolution.readCtx, irResolution.objectId, collapsedLook);
+        // A declared, visible badge replaces the chip's count, never the chip (the only way to expand).
+        const collapsedBadge = resolveCollapsedBadge(irResolution.compiled, irResolution.readCtx, irResolution.objectId, collapsedLook);
         const hasGeometricShape = defaultResizableForForm(shapeForm);
         const resolvedResizable = (irResolution.compiled.ir as VertexViewIR).resizable;
         const canResize = resolvedResizable ?? hasGeometricShape;
+        // P-2026-09-30-1935: a node a derived viewpoint draws (its view carries `generated`, R-VP-21 (4)) shows the run
+        // inside it: the token as a dot, the marked node's own outline in cyan (simNodeRunState.scss). The default
+        // viewpoint and user views keep the corner pill and the outline.
+        const derivedView = !!(irResolution.compiled.ir as VertexViewIR).generated;
+        // Q3 (P-2026-10-03-1304): a bar that declares a thickness paints its ink turned inside its square box; the edge
+        // synthesis puts the orientation on the node data (irEdgeViews.ts), upright until it has. The ink and the
+        // handles read the same pair, so they cannot disagree.
+        const declaredBarThickness = shapeForm === 'bar' ? (irResolution.compiled.ir as VertexViewIR).shape?.barThickness : undefined;
+        const barThickness = typeof declaredBarThickness === 'number' && Number.isFinite(declaredBarThickness) && declaredBarThickness > 0 ? declaredBarThickness : undefined;
+        const barOrientation = barThickness !== undefined ? ((data as { irBarOrientation?: 'upright' | 'lying' }).irBarOrientation ?? 'upright') : undefined;
         return (
             <>
             <div
-                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}${hasExplicitSize ? ' ir-sized' : ''}${isSimActiveNode ? ' sim-active' : ''}`}
+                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}${hasExplicitSize ? ' ir-sized' : ''}${isSimActiveNode ? ' sim-active' : ''}${isSimActiveNode && derivedView ? ' sim-active--derived' : ''}`}
                 data-viewid={irResolution.compiled.viewId}
             >
                 {isNodeResizable('objectNode', canResize) && (
@@ -929,7 +953,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         handleClassName="node-resize-handle"
                     />
                 )}
-                <DynamicHandles nodeId={id} shapeForm={shapeForm} />
+                <DynamicHandles nodeId={id} shapeForm={shapeForm} barOrientation={barOrientation} barThickness={barThickness} />
                 <NodeProblemIndicator nodeId={id} />
                 <IRNodeContent
                     compiled={irResolution.compiled}
@@ -938,6 +962,12 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     readCtx={irResolution.readCtx}
                     onInspectFeature={openInspectorByFeatureName}
                     renderRowValue={renderRowValue}
+                    collapsed={collapsedLook}
+                    // R-VP-50: a node its derived notation draws as a glyph (bar, disc, bull's-eye) is not coloured.
+                    colorOverride={metaclassColor && !isNotationGlyph(irResolution.compiled.ir) ? metaclassColor : undefined}
+                    barOrientation={barOrientation}
+                    // P-2026-10-03-1920 (item 2): the outside labels' sides the edge synthesis chose (irEdgeViews.ts).
+                    labelAnchors={(data as { irLabelAnchors?: Partial<Record<LabelAnchor, LabelAnchor>> }).irLabelAnchors}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'
@@ -958,7 +988,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         }}
                     >
                         <i className={`bi ${isCollapsed(irResolution.objectId) ? 'bi-chevron-expand' : 'bi-chevron-contract'}`} />
-                        {isCollapsed(irResolution.objectId) ? String(irChildCount) : null}
+                        {isCollapsed(irResolution.objectId) && !collapsedBadge ? String(irChildCount) : null}
                     </button>
                 )}
                 {/* Same panel as the native branch. It portals to `body`, so sitting
@@ -966,7 +996,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     transform. */}
                 {inspectorEl}
             </div>
-            <SimNodeRunState objectId={simObjectId} />
+            <SimNodeRunState objectId={simObjectId} placement={derivedView ? 'inside' : undefined} />
             </>
         );
     }
@@ -1162,6 +1192,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 className={`mm-node mm-object mm-object--pill ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}
                 onDoubleClick={handleDoubleClick}
                 onClick={() => { if (selected && !editing) setEditing(true); }}
+                style={metaclassColor ? metaclassColoringVars(metaclassColor) as React.CSSProperties : undefined}
             >
                 <DynamicHandles nodeId={id} />
                 <NodeProblemIndicator nodeId={id} />
@@ -1219,6 +1250,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 ['--inode-accent' as string]: chrome.accentColor ?? 'transparent',
                 ['--inode-badge-bg' as string]: chrome.badgeBg,
                 ['--inode-badge-fg' as string]: chrome.badgeFg,
+                ...(metaclassColor && !notRendered ? metaclassColoringVars(metaclassColor) : undefined),
             } as React.CSSProperties}
         >
             {isNodeResizable('objectNode') && (
