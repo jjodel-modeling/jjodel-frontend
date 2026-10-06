@@ -102,3 +102,16 @@ in this order** (RC-12) and empties this file. The active log is not touched by 
 **Priority**: low
 **Found in**: C-2026-10-04-0605
 **Detail**: docs/discovery/discovery_2026-10-04_157_closing_defects.md
+
+## 2026-10-06 — fix(#157): il form IR segue il profilo stand-alone (passo B)
+**Prompt**: chat di Juri: passo B dei difetti di chiusura di #157, GO sulla Fase 2 il 2026-10-04 (6 file, regola 19); il 2026-10-06 «commita gli step completati ed integrali nello stage». Referto: `discovery_2026-10-04_157_step_b_ir_form_profile.md` (`5c4b7565b`).
+**Files touched**: `a15298e79`: `editor-v2/viewpoint/ir/formPermissions.ts` (nuovo), `ir/__tests__/formPermissions.test.ts` (nuovo), `ir/IRForm.tsx`, `ir/IRFormField.tsx`, `ir/widgets/ListWidget.tsx`, `abstract/tabs/InstanceDetail.tsx`, `abstract/tabs/__tests__/instanceManager10c.test.ts`, `abstract/tabs/__tests__/instanceManagerOutline.test.ts`, `environment/ConfiguratorTab.tsx`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-24 14:00
+**Causa**: (c)
+**Regressions**: no — `npx tsc --noEmit` output completo **14**, stesso insieme della baseline; build exit 0; vitest 42 file / 1169 test; banco delle mutazioni 8/9 uccise; sonda `_tmp_157_b_verify.ts` 17/17, con i controlli developer (C.D2.2, C.D3d, C.D3e) invariati.
+**Out-of-scope changes**: yes — 9 file, sopra la soglia di 5: i 6 del piano (referto §6) più i letterali dei test sorgente 10c e Outline e `ConfiguratorTab.tsx` (senza, il Configurator developer perdeva i candidati bound: C.D3d rosso). Dichiarati il 2026-10-04, committati su richiesta di Juri del 2026-10-06.
+**Layer Impact Report**: produced — in chat il 2026-10-04, con la richiesta di GO: view in critical zone (`viewpoint/ir/`), nessun D-layer, L-layer, sync o persistenza.
+**Smoke visivo**: passato — `npm run smoke` GREEN 12/12; sonda Playwright `_tmp_157_b_verify.ts` 17/17; verifica visiva di Juri non eseguita (script `_tmp_157_b_setup.js` pronto).
+**Notes**: Il form IR prende un `permissionOf` opzionale: niente campi tipati da classi hidden, nessun candidato hidden, nei contenimenti solo elementi `edit` liberi, valori non `edit` in un contenimento bloccati. Senza profilo restituisce l'input per identità. M9 (guardia `''`) sopravvive: intento dichiarato. Residuo non misurato: un valore di sottotipo hidden in un riferimento tipato da un supertipo visibile mostra ancora il nome.
+**Prompt document name**: 2026-10-04 14:53

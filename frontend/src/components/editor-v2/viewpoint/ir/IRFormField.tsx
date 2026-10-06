@@ -119,6 +119,13 @@ export interface IRFormFieldProps {
      * draws, and this component only reads which widget the name asks for.
      */
     layout?: LayoutField;
+    /**
+     * #157 step B: true for a value this viewer may neither remove nor replace, i.e. an
+     * element of a non-`edit` class held in a containment slot, where both gestures evict
+     * it. A single control holding one renders read-only; a list keeps the row and drops
+     * its remove. Absent (no profile): nothing is locked.
+     */
+    isLocked?: (valueId: string) => boolean;
 }
 
 /**
@@ -156,9 +163,17 @@ function displayValue(raw: unknown): string {
  *  there is none, never a guess at what the host meant. */
 const UNSTATED_REFUSAL = 'The model refused this change';
 
-export function IRFormField({ objectId, field, offer, diagnostics, dirty, onCommitted, layout }: IRFormFieldProps) {
+export function IRFormField({ objectId, field, offer, diagnostics, dirty, onCommitted, layout, isLocked }: IRFormFieldProps) {
     const fieldId = `ir-field-${field.slotId}`;
     const first = field.values[0];
+
+    // #157 step B: which raw positions hold a locked value. By raw index, the address every
+    // removal uses (see the note on `chips` below).
+    const lockedAt = (i: number) => {
+        const v = field.values[i];
+        return typeof v === 'string' && !!isLocked?.(v);
+    };
+    const anyLocked = !!isLocked && field.values.some((_, i) => lockedAt(i));
 
     /**
      * The host's last refusal on THIS field (S2).
@@ -291,7 +306,9 @@ export function IRFormField({ objectId, field, offer, diagnostics, dirty, onComm
      * stays a sub-form, and the two meanings of the word `textarea`) are all in that one
      * function. Here there is only the lookup and the props.
      */
-    const extendedName = layout ? extendedWidgetFor(layout.widget, field) : null;
+    // #157 step B: a field holding a locked value stays on the committed dispatch below,
+    // whose branches know how to lock it; an extended chip input removes by chip.
+    const extendedName = layout && !anyLocked ? extendedWidgetFor(layout.widget, field) : null;
     const ExtendedDef = extendedName ? extendedWidget(extendedName) : null;
     const declaredUnit = field.annotations?.unit;
     const unit = declaredUnit === 'ms' || declaredUnit === 's' ? declaredUnit : undefined;
@@ -332,7 +349,9 @@ export function IRFormField({ objectId, field, offer, diagnostics, dirty, onComm
                     : undefined}
             />
         );
-    } else if (field.isReadOnly && !field.isMultivalued) {
+    } else if ((field.isReadOnly || anyLocked) && !field.isMultivalued) {
+        // A locked single value reads like a frozen one: picking another value or «(none)»
+        // would evict it (#157 step B).
         control = (
             <div className="ir-field__readonly" id={fieldId}>
                 {displayValue(first) || <span className="ir-field__empty">empty</span>}
@@ -350,6 +369,7 @@ export function IRFormField({ objectId, field, offer, diagnostics, dirty, onComm
                 atUpperBound={isAtUpperBound(field)}
                 upperBound={field.upperBound}
                 onRemove={(i) => clearAt(i, true)}
+                canRemove={anyLocked ? (i) => !lockedAt(i) : undefined}
                 // Containment children get no Add in this slice: creating one is a creation
                 // flow, not a value edit. See the ListWidget module comment.
                 onAppend={field.isReference ? (id) => appendAt(id, true) : undefined}
