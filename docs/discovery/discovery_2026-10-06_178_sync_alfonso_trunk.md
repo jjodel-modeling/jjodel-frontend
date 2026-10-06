@@ -122,3 +122,39 @@ Merge resolution of the inboxes: `data-manager-ux.md` and `standalone-environmen
 ## Files read
 
 `docs/claude-code-log.md` (whole heading list; `:1-16`, `:240-285`, `:460-482`), `docs/PROTOCOL.md` P4, P9, P13, P14, `docs/decisions.md` `:1-80` (RC-3 … RC-14), `frontend/scripts/gates/rotate-log.ts` `:1-200`, `frontend/src/jjscript/executor/permissionGuard.ts` `:1-175`, `frontend/src/jjscript/executor/executor.ts` `:340-440`, `frontend/src/components/Jodie/consumerProposalModel.ts` `:1-30`, `:225-275`, `frontend/scripts/hooks/bash-guard.mjs` `:155-185`. From `origin/alfonso-frontend-jjtl`: `docs/prompts/claude_2026-10-01_2240_prompt_staging_sync.md` (the first 150 lines, which hold the whole prompt), the diffs `98ebb132e..` of `defaultPrompts.ts`, `parser.ts`, `instance.ts`, `registry.ts`, `package.json`, and `git show --stat d2eb5fb83 9916cefce`.
+
+## Addendum 2026-10-06 — Phase 2
+
+Commits on `chore/178-sync-alfonso`:
+- `851dec87f`: merge, parents `ee72b5354` (this report) and `799e9f50a` (`origin/alfonso-frontend-jjtl`);
+- `e33c628b8`: `fix:` of the guard.
+
+**Merge.** The resolution follows §5.
+- The two inboxes keep the other side's preamble and this line's 4 + 3 entries added after the base. They are byte-identical to what `origin/staging` added: MEASURED, diff of the `+` lines, empty.
+- `defaultPrompts.ts` resolves as the hybrid. The diff against the other side has four hunks: (b) and (c) from this line, the `+=` / `-=` / `add` / `remove` ban, the END-USER section with the containment line, and version 6.
+- Beyond the markers, this line's «Put an instance inside another» block auto-merged without markers into the M1 section, where it contradicted the other side's containment rule. It was removed there and carried into the END-USER line.
+- The changelog holds one v5 entry with both notes verbatim. `frontend/src/components/settings/PromptEditor.tsx:151` keys the list on `entry.version`, so two v5 entries would have collided.
+
+**The merge commit and the commit guard.** `bash-guard` reads the merge state from the session's cwd (`~/development/jjodel`, no `MERGE_HEAD`), not from this worktree: the open ticket «bash-guard reads the merge state from the payload cwd only». It therefore asked for a pathspec, and git refuses a pathspec during a merge. The commit used `git commit -i -F <msg> -- frontend/src/constants/defaultPrompts.ts`: it stages that file (already staged, unchanged) and commits the index, which here held only the merge result. Declared here, and not a precedent: the worktree held no other lane.
+
+**check:addonly on the merge.** 81 entries flagged against the first parent (MEASURED).
+- 79 reappear byte-identical in the merged log or archive: folded straight to the archive by `d2eb5fb83`, or the duplicate copies collapsed into one.
+- 2 are the halves of the `07f65237b` splice (`:245`, `:465`). Their clean text is in the merged archive, which holds the entry with its fields and the rotation fields, and in the log preamble, which holds the incident paragraphs.
+- The merge message was amended, with tree and parents unchanged (MEASURED), to carry `Log-Repair: 07f65237b` and a paragraph naming all of this. After the amend: `EXEMPT 851dec87f Log-Repair: 07f65237b`, exit 0.
+
+**Gates on `851dec87f`** (MEASURED, each in the foreground):
+- typecheck 14, the §17 list by file and code;
+- `npx vitest run`: 9 files failed, 308 passed, 7871/7871 tests. The 9 are the baseline files that fail at import. `bashGuard.test.ts` is green, so the Phase 1 artefact is gone;
+- `npm run build` exit 0;
+- `npm run check:docs` exit 0, A-D 4/4 PASS, 17 warnings (inboxes waiting).
+
+**Guard fix `e33c628b8`.**
+- What it adds: `GuardCommand.container?` (optional, rule 11), `describeForGuard` resolving the parent with `resolveInstanceHandle`, and the refusal in `checkCommandPermission`.
+- Tests first: `permissionGuard.test.ts` gains 6 tests, 3 red before the fix and controls green; 58/58 after.
+- `describeForGuard` is not executed by any test, because `executor.ts` does not import under node.
+- jjscript + Jodie + environment vitest: 713/713, with `context-binding` red at import (baseline).
+- Not run: a browser probe of the consumer, and Jodie with a real model.
+
+**Question 1, the fold.** Juri, 2026-10-06: «i merge li faccio solo ed esclusivamente io. Alfonso lavora solo sul suo branch». §6 had assumed that Alfonso's staging-sync folds this line's inboxes; that premise does not hold. With `check:docs` green, no fold is made here. The inboxes (jodie-consumer 33, data-manager-ux 4, standalone-environment 3, gemini-test-connection 1, plus the other trunk's own) wait for Juri's next merge, where the fold is his decision. `rotate-log.ts` folds every inbox or none (`:65-70`).
+
+**Not done here.** Pushing `staging`, the visual check of the integrated app, and the merge of `fix/171-jjscript-delete-cascade`, which touches `instance.ts` again, now on top of R-JS-10.
