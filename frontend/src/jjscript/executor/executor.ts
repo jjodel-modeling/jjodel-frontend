@@ -40,8 +40,8 @@ import { waitForDependencies } from './elementWaiter';
 import { checkBoundScope } from './scopeGuard';
 import { getMetamodelById } from './resolvers';
 import { getProject } from './utils';
-import { checkCommandPermission, containedTypes, metaclassesNamed } from './permissionGuard';
-import type { GuardCommand, GuardType, GuardUnresolved } from './permissionGuard';
+import { checkCommandPermission, containedTypes, instanceType, metaclassesNamed, rememberCreated } from './permissionGuard';
+import type { GuardCommand, GuardType } from './permissionGuard';
 import { resolveTargetModel, resolveInstanceHandle } from './commands/instance';
 import { activeProfileId } from '../../components/environment/consumerMode';
 import { findProfile } from '../../joiner/environmentConfig';
@@ -55,6 +55,8 @@ export class JjScriptExecutor {
     private context: ExecutionContext;
     private undoStack: (() => void)[] = [];
     private redoStack: (() => void)[] = [];
+    /** The metaclass of each instance a guarded `create` made, by id, until the store has it (#176). */
+    private createdTypes = new Map<string, GuardType>();
 
     constructor(projectId: string, modelId?: string, targetMetamodelId?: string, level?: 'M1' | 'M2', scopeBound?: boolean) {
         this.context = {
@@ -128,9 +130,11 @@ export class JjScriptExecutor {
             // resolves names against the state the handler will see; before the scope check, so the
             // profile's refusal is the one the viewer reads. No profile: nothing is resolved here.
             const profileId = activeProfileId();
+            let guarded: GuardCommand | undefined;
             if (profileId) {
                 const profile = findProfile((store.getState() as any).idlookup, profileId);
-                const refusal = checkCommandPermission(describeForGuard(ast, context), { profileId, profile });
+                guarded = describeForGuard(ast, context, this.createdTypes);
+                const refusal = checkCommandPermission(guarded, { profileId, profile });
                 if (refusal) {
                     return {
                         success: false,
@@ -237,6 +241,9 @@ export class JjScriptExecutor {
             }
 
             _applyMs = performance.now() - _tApplyStart; // TEMP-DISCOVERY
+
+            // The type a create was checked against stands in for `instanceof` until the store has it.
+            if (guarded) rememberCreated(this.createdTypes, guarded, result);
 
             // Record in main history (always on this.context, not override)
             this.recordHistory(ast, result);
@@ -354,7 +361,7 @@ export class JjScriptExecutor {
  * Resolves only at M1 and only for `create instance` / `set` / `rename` / `delete`; a name that
  * does not resolve travels as the handler's own sentence, and the guard refuses it.
  */
-function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCommand {
+function describeForGuard(ast: CommandNode, context: ExecutionContext, created: ReadonlyMap<string, GuardType>): GuardCommand {
     const args: any = ast.args;
     const cmd: GuardCommand = { command: ast.command, level: context.level, elementType: args?.elementType };
     if (context.level !== 'M1') return cmd;
@@ -375,7 +382,7 @@ function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCom
             const model = project ? resolveTargetModel(context, project) : null;
             const handle = (args.parent.segments ?? []).join('::');
             cmd.container = model
-                ? instanceType(resolveInstanceHandle(model, handle), handle)
+                ? instanceType(resolveInstanceHandle(model, handle), handle, created)
                 : { unresolved: 'No active M1 model' };
         }
         return cmd;
@@ -391,7 +398,7 @@ function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCom
     // Same spelling as the handlers (`instance.ts`, executeSet/Rename/DeleteInstance).
     const instanceName = args.target.segments.join('::') || args.target.raw;
     const resolved = resolveInstanceHandle(model, instanceName);
-    cmd.subject = instanceType(resolved, instanceName);
+    cmd.subject = instanceType(resolved, instanceName, created);
 
     // A `delete` touches what the instance contains too (#157, 2026-10-04): read from the store
     // the guard already reads the profile from, through the containment the L-layer names.
@@ -416,28 +423,13 @@ function describeForGuard(ast: CommandNode, context: ExecutionContext): GuardCom
         if (links) {
             const targetName = isLiteral ? value.value : value?.raw;
             cmd.linkTarget = typeof targetName === 'string'
-                ? instanceType(resolveInstanceHandle(model, targetName), targetName)
+                ? instanceType(resolveInstanceHandle(model, targetName), targetName, created)
                 : { unresolved: `Reference '${args.property}' expects an instance name` };
             // `LReference.containment` is `composition || aggregation`: such a link re-fathers the target.
             cmd.linkIsContainment = !!reference?.containment;
         }
     }
     return cmd;
-}
-
-/** The exact metaclass of a resolved instance, or why there is none. */
-function instanceType(
-    resolved: { ok: boolean; value?: any; reason?: string },
-    instanceName: string
-): GuardType | GuardUnresolved {
-    if (!resolved.ok || !resolved.value) {
-        return { unresolved: resolved.reason ?? `No instance named '${instanceName}'` };
-    }
-    const metaclass: any = resolved.value.instanceof;
-    if (!metaclass || typeof metaclass.id !== 'string') {
-        return { unresolved: `Cannot resolve metaclass for instance '${instanceName}'` };
-    }
-    return { id: metaclass.id, name: metaclass.name ?? '' };
 }
 
 // ============================================

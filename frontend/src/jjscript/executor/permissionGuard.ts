@@ -278,6 +278,54 @@ export function metaclassesNamed(metamodel: any, name: string): GuardType[] {
     return found;
 }
 
+/**
+ * The exact metaclass of a resolved instance, or why there is none.
+ *
+ * The store's `instanceof` first. An instance a `create` of this run made has none until the next
+ * commit lands it, about 300 ms later (`discovery_2026-10-04_jjscript_m1_containment.md` §4.5):
+ * its type is then the one the guard checked on that create, kept by `rememberCreated` (#176).
+ * Any other instance without a metaclass stays unresolved, with the handler's sentence.
+ */
+export function instanceType(
+    resolved: { ok: boolean; value?: any; reason?: string },
+    instanceName: string,
+    created: ReadonlyMap<string, GuardType>,
+): GuardType | GuardUnresolved {
+    if (!resolved.ok || !resolved.value) {
+        return { unresolved: resolved.reason ?? `No instance named '${instanceName}'` };
+    }
+    const metaclass: any = resolved.value.instanceof;
+    if (!metaclass || typeof metaclass.id !== 'string') {
+        const pending = typeof resolved.value.id === 'string' ? created.get(resolved.value.id) : undefined;
+        return pending ?? { unresolved: `Cannot resolve metaclass for instance '${instanceName}'` };
+    }
+    return { id: metaclass.id, name: metaclass.name ?? '' };
+}
+
+/**
+ * Keep the metaclass of the instance a `create` just made, under the id the handler returned, for
+ * `instanceType` to read until the store has it (#176).
+ *
+ * A `set` waits for its subject, not for its value (`dependencies.ts`: a value is not a required
+ * dependency), so a `set` that links to the element the line before created reached the guard
+ * before that element had a type, and was refused as unresolved.
+ *
+ * The type kept is the first of `cmd.creates`: `metaclassesNamed` walks the containers in the
+ * order `findMetaclassByName` does, so its first match is the class the handler instantiated.
+ * When several classes share the name, the create passed only because every one of them is
+ * `edit`, so a later link reads the same verdict whichever of them is kept.
+ */
+export function rememberCreated(
+    created: Map<string, GuardType>,
+    cmd: GuardCommand,
+    result: { success: boolean; data?: any },
+): void {
+    const types = cmd.creates;
+    const id = result.data?.id;
+    if (!result.success || !Array.isArray(types) || types.length === 0 || typeof id !== 'string') return;
+    created.set(id, types[0]);
+}
+
 function isType(r: GuardType | GuardUnresolved | undefined): r is GuardType {
     return !!r && typeof (r as GuardType).id === 'string';
 }

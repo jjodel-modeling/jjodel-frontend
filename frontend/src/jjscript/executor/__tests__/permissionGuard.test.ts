@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { checkCommandPermission, containedTypes, metaclassesNamed } from '../permissionGuard';
+import { checkCommandPermission, containedTypes, instanceType, metaclassesNamed, rememberCreated } from '../permissionGuard';
 import type { GuardCommand, GuardEnvironment, GuardType } from '../permissionGuard';
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
@@ -320,6 +320,83 @@ describe('checkCommandPermission — what the caller could not resolve is refuse
         expect(code(create(EDIT, readTwin))).toBe('PROFILE_TYPE_LOCKED');
         expect(code(create(readTwin, EDIT))).toBe('PROFILE_TYPE_LOCKED');
         expect(code(create(EDIT, UNLISTED))).toBeNull();
+    });
+});
+
+// ─── an element the script just created (#176) ───────────────────────────────
+
+describe('instanceType — the type of an instance the store has not typed yet comes from its create (#176)', () => {
+    // A resolved instance as `resolveInstanceHandle` returns it: right after `create`, the object
+    // is there by id, and its `instanceof` lands with the next commit.
+    const fresh = (id: string) => ({ ok: true, value: { id } });
+    const typed = (id: string, t: GuardType) => ({ ok: true, value: { id, instanceof: { id: t.id, name: t.name } } });
+    const madeHere = (id: string, t: GuardType) => new Map<string, GuardType>([[id, t]]);
+
+    it('an instance with no instanceof yet reads the type its create was checked against', () => {
+        expect(instanceType(fresh('o1'), 'p1', madeHere('o1', EDIT))).toEqual(EDIT);
+    });
+
+    it('the store wins: an instance the store has typed reads its instanceof, whatever its create kept', () => {
+        expect(instanceType(typed('o1', READ), 'p1', madeHere('o1', EDIT))).toEqual(READ);
+    });
+
+    it('CONTROL: an instance with no instanceof that no create made stays unresolved, with the handler sentence', () => {
+        expect(instanceType(fresh('o2'), 'p2', madeHere('o1', EDIT)))
+            .toEqual({ unresolved: "Cannot resolve metaclass for instance 'p2'" });
+        expect(instanceType(fresh('o2'), 'p2', new Map()))
+            .toEqual({ unresolved: "Cannot resolve metaclass for instance 'p2'" });
+    });
+
+    it('a name that did not resolve stays unresolved, with its reason or the default sentence', () => {
+        const made = madeHere('o1', EDIT);
+        expect(instanceType({ ok: false, reason: "No instance named 'p9' in 'm'" }, 'p9', made))
+            .toEqual({ unresolved: "No instance named 'p9' in 'm'" });
+        expect(instanceType({ ok: false }, 'p9', made)).toEqual({ unresolved: "No instance named 'p9'" });
+    });
+});
+
+describe('rememberCreated — a create that passed keeps its type under the id the handler returned (#176)', () => {
+    const passed = (id: string) => ({ success: true, data: { id, name: 'p1', type: 'instance', className: 'Course' } });
+
+    it('keeps the first class named, the one findMetaclassByName instantiates', () => {
+        const made = new Map<string, GuardType>();
+        rememberCreated(made, create(EDIT, UNLISTED), passed('o1'));
+        expect([...made]).toEqual([['o1', EDIT]]);
+    });
+
+    it('keeps nothing for a create that failed, one whose classes did not resolve, or a result with no id', () => {
+        const made = new Map<string, GuardType>();
+        rememberCreated(made, create(EDIT), { success: false, data: { id: 'o1' } });
+        rememberCreated(made, { command: 'create', level: 'M1', elementType: 'instance', creates: { unresolved: 'x' } }, passed('o2'));
+        rememberCreated(made, create(), passed('o3'));
+        rememberCreated(made, create(EDIT), { success: true });
+        rememberCreated(made, onInstance('set', EDIT), passed('o4'));
+        expect(made.size).toBe(0);
+    });
+});
+
+describe('checkCommandPermission — a set that names the element the line before created (#176)', () => {
+    // The issue's script: `create instance of Phase "p1"` then at once `set Scenario_0.pathway = p1`.
+    const linkTo = (made: Map<string, GuardType>, containment: boolean) => onInstance('set', EDIT, {
+        linkTarget: instanceType({ ok: true, value: { id: 'o1' } }, 'p1', made),
+        linkIsContainment: containment,
+    });
+
+    it('passes, plain or containment, once the create passed and was kept', () => {
+        const made = new Map<string, GuardType>();
+        rememberCreated(made, create(EDIT), { success: true, data: { id: 'o1' } });
+        expect(code(linkTo(made, false))).toBeNull();
+        expect(code(linkTo(made, true))).toBeNull();
+    });
+
+    it('CONTROL: without the create kept it is refused as unresolved, as before #176', () => {
+        expect(code(linkTo(new Map(), false))).toBe('PROFILE_UNRESOLVED');
+        expect(code(linkTo(new Map(), true))).toBe('PROFILE_UNRESOLVED');
+    });
+
+    it('the kept type goes through the same checks: the profile still decides', () => {
+        expect(code(linkTo(new Map([['o1', READ]]), true))).toBe('PROFILE_TYPE_LOCKED');
+        expect(code(linkTo(new Map([['o1', HIDDEN]]), false))).toBe('PROFILE_HIDDEN_TARGET');
     });
 });
 
