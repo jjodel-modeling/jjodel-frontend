@@ -534,7 +534,10 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
                                                 openDelete={openDelete}
                                                 onCreate={createIn}
                                                 onCreateAndLink={createAndLink}
-                                                permissionOf={permissionOf}
+                                                // Only with a profile (#157 step B): the IR form reads an
+                                                // absent rule as «no profile», and keeps the developer's
+                                                // containment pickers as they were.
+                                                permissionOf={profile ? permissionOf : undefined}
                                             />
                                         </div>
                                     </div>

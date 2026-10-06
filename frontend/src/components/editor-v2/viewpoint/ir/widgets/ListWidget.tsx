@@ -33,6 +33,9 @@ export interface ListWidgetProps {
     /** Raw values, holes included: the array index is the removal key. */
     values: unknown[];
     onRemove: (index: number) => void;
+    /** #157 step B: whether the row at this raw index may be removed. Absent: every row,
+     *  as before. A row it refuses stays listed, without its remove. */
+    canRemove?: (index: number) => boolean;
     /** Absent for containment children, which have no Add in this slice. */
     onAppend?: (id: string) => void;
     options: FormFieldOptionGroup[];
@@ -49,7 +52,7 @@ export interface ListWidgetProps {
 }
 
 export function ListWidget(props: ListWidgetProps) {
-    const { values, onRemove, onAppend, options, getOptions, typeName, secondary, atUpperBound, upperBound, readOnly, id } = props;
+    const { values, onRemove, canRemove, onAppend, options, getOptions, typeName, secondary, atUpperBound, upperBound, readOnly, id } = props;
     const [anchor, setAnchor] = useState<DOMRect | null>(null);
     // What the open popover offers, taken when it opened. `addable` below stays the
     // render-time answer, because it is what disables the button.
@@ -90,7 +93,7 @@ export function ListWidget(props: ListWidgetProps) {
                         <span className="ir-list__badge" aria-hidden="true">{metaclassLetter(target, typeName)}</span>
                         <span className="ir-list__name" title={name}>{name}</span>
                         {sub && <span className="ir-list__secondary">{sub}</span>}
-                        {!readOnly && (
+                        {!readOnly && (canRemove ? canRemove(i) : true) && (
                             <button
                                 type="button"
                                 className="ir-list__remove"

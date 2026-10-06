@@ -29,8 +29,9 @@
  * `permissionOf(classId)` is the profile's per-type rule (`resolveTypePermission`),
  * applied to every instance this panel shows or offers, including the ones reached by
  * navigating: `read` → the form takes no input (the soft gate of D1) and nothing is
- * created or deleted from it; `hidden` → the element is listed but does not open.
- * Absent (the Data Manager), everything is `edit`.
+ * created or deleted from it; `hidden` → the element is not shown, nor is a reference or
+ * child slot typed by its class (step B; the form gets the same rule as `IRForm`'s
+ * `permissionOf`). Absent (the Data Manager), everything is `edit`.
  */
 
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
@@ -109,9 +110,10 @@ type RefSlot = {
  * child's own form, so it drops the band (rule and padding) that separates the
  * subject's section from the fields above it.
  *
- * `isHidden` (#157): a target of a type the profile hides stays LISTED — the form's own
- * chips already name it, and a list that disagreed with them would read as a bug — but
- * it does not open and carries no summary. `onCreate` absent: no create control at all.
+ * `isHidden` (#157): a target of a type the profile hides is not listed. It used to stay
+ * listed, locked, because the form's own chips named it; since step B the form does not
+ * (`IRForm` takes `permissionOf`), and neither does this section. `onCreate` absent: no
+ * create control at all.
  */
 function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate, isHidden }: {
     slots: RefSlot[];
@@ -137,20 +139,8 @@ function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate, isHidden }
                     </h3>
                     {slot.targets.map(targetId => {
                         const label = crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null });
-                        if (isHidden?.(targetId)) {
-                            return (
-                                <span
-                                    className="instance-manager__inline-link instance-manager__ref-link instance-manager__ref-link--hidden"
-                                    key={targetId}
-                                    title="Hidden for this profile"
-                                >
-                                    <span className="instance-manager__ref-text">
-                                        <span className="instance-manager__ref-name">{label}</span>
-                                    </span>
-                                    <i className="bi bi-eye-slash" aria-hidden="true" />
-                                </span>
-                            );
-                        }
+                        // #157 step B: not named at all, see the comment above.
+                        if (isHidden?.(targetId)) return null;
                         const summary = slot.summaries[targetId] ?? [];
                         const summaryText = summary.map(s => `${s.label}: ${s.text}`).join(' · ');
                         return (
@@ -385,7 +375,9 @@ export function InstanceDetail({
         if (!ownerId || !subjectShape) return [] as Array<{ child: RefShape; count: number; reason: string | null }>;
         const shape = shapeCtx.shape();
         const ownerEditable = permOfInstance(ownerId) === 'edit';
-        return subjectShape.children.map(child => {
+        // #157 step B: a child slot typed by a hidden class is not listed, not even with
+        // its reason: the reason would name the class.
+        return subjectShape.children.filter(child => permOfClassName(child.of) !== 'hidden').map(child => {
             const count = childSlotCount(ownerId, child.key);
             // The third argument is the metaclass the slot is TYPED ON, and it is
             // what closes §2.6: without it the bar offered «Add Node» on an abstract
@@ -468,7 +460,10 @@ export function InstanceDetail({
             const summaries: Record<string, SummaryItem[]> = {};
             for (const t of targets) summaries[t] = summaryOf(t);
             return { ref, targets, count, createReason, summaries };
-        }).filter(s => s.targets.length > 0 || s.createReason === null);
+        })
+            .filter(s => s.targets.length > 0 || s.createReason === null)
+            // #157 step B: a reference typed by a hidden class is no section at all.
+            .filter(s => permOfClassName(s.ref.of) !== 'hidden');
     };
 
     const refSlots = useMemo(
@@ -586,7 +581,7 @@ export function InstanceDetail({
             </header>
 
             <ReadOnlyGate readOnly={permOfInstance(formSubjectId ?? subjectId) === 'read'}>
-                <IRForm objectId={formSubjectId ?? subjectId} host="manager" />
+                <IRForm objectId={formSubjectId ?? subjectId} host="manager" permissionOf={permissionOf} />
             </ReadOnlyGate>
 
             {/* The depth rule of 12c, and it is ONE comparison:
@@ -622,7 +617,7 @@ export function InstanceDetail({
                                             <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
                                         </button>
                                         <ReadOnlyGate readOnly={permOfInstance(childId) === 'read'}>
-                                            <IRForm objectId={childId} host="manager" />
+                                            <IRForm objectId={childId} host="manager" permissionOf={permissionOf} />
                                         </ReadOnlyGate>
                                         {/* #158 P3 — the child's own reference
                                             sections, under its own form and inside
