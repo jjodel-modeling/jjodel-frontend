@@ -692,3 +692,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: RC-23 della lane coverage 0115 passata sui crop, merge senza altre differenze visive
 **Notes**: Rollback tag `pre-sim-verif-P-2026-10-06-0151` on `9cd6ae57e` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0151/result.json`.
 **Prompt document name**: 2026-10-06 01:51
+
+## 2026-10-06 — merge: console-errors-fix into alfonso-frontend-jjtl (P-2026-10-05-2253)
+**Prompt**: `claude_2026-10-05_2253_prompt_merge_console-errors-fix.md`, a direct merge by `lane-run merge --direct`, no session: `console-errors-fix` at `613a13c37` into `alfonso-frontend-jjtl`, merge base `57ff86f5d`, 8 commits on the branch side.
+**Files touched**: merge `a6fe2cf0d`: 9 files from the branch side (`docs/discovery/discovery_2026-10-04_console_errors_demo.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-04_1025_prompt_console_errors_discovery.md`, `docs/prompts/claude_2026-10-05_1648_prompt_console_errors_fix.md`, `frontend/scripts/probe/console-errors-demo.ts`, `frontend/src/model/__tests__/m1EcoreRoots.test.ts`, `frontend/src/model/logicWrapper/LModelElement.tsx`, `frontend/src/redux/__tests__/initEditorProjectGuard.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a6fe2cf0d` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7508 tests in 304 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: console-only fix: no rendering change; probe of the lane 40 pages E1 0/20, E2 0, opens identical 20/20; M1 ecore JSON incompleteness pre-existing, ticketed
+**Notes**: Rollback tag `pre-console-errors-fix` on `0eb09ad8f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2253/result.json`.
+**Prompt document name**: 2026-10-05 22:53
