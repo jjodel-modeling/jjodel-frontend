@@ -50,6 +50,27 @@ vi.mock('../resolvers', () => ({
     resolveElement: () => null,
 }));
 
+// `delete instance` (#171) settles the queued writes and goes through the delete plan of the
+// Configurator and the Data Manager; both reach the store, so here they act on the in-memory one:
+// the plan deletes the instance alone, and applying it calls each `.delete()`, as
+// `deleteAdapter.applyDelete` does (`instanceDelete.test.ts` covers the plan itself).
+vi.mock('../../../redux/action/action', () => ({ COMMIT: () => undefined }));
+vi.mock('../../../components/editor-v2/hooks/shapeAdapter', () => ({
+    makeShapeCtx: () => ({ shape: () => ({ enums: {}, classes: {} }) }),
+}));
+vi.mock('../../../components/editor-v2/hooks/deleteAdapter', () => ({
+    preflightFor: (_modelId: string, _shape: unknown, id: string) => ({ id }),
+    deletePlan: (preflight: { id: string }) => ({ deletes: [preflight.id], blocked: null }),
+    applyDelete: (plan: { deletes: string[] }) => {
+        let deleted = 0;
+        for (const id of plan.deletes) {
+            const o = h.store.get(id);
+            if (o) { o.delete(); deleted++; }
+        }
+        return deleted;
+    },
+}));
+
 import { DModel, DValue } from '../../../joiner';
 import { parse } from '../../parser/parser';
 import {
