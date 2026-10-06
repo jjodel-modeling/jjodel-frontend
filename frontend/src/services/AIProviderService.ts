@@ -3,7 +3,7 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveLegacyModelId, isForeignModel, getAICompany} from '../types/jodie';
+import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveCurrentModelId, isForeignModel, getAICompany} from '../types/jodie';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
 
@@ -54,24 +54,8 @@ export class AIProviderService {
         const keyError = this.validateKeyCoherence(provider, config);
         if (keyError) throw new Error(keyError);
 
-        // The Custom registry entry is a selector placeholder, not an endpoint model ID.
-        // Resolve it against the current configuration, including already-persisted preferences.
-        if (provider === AIProvider.Custom && model === 'custom') model = undefined;
-
-        // Resolve effective model: explicit param > per-provider config. Run through legacy ID map
-        // so stale identifiers (e.g. persisted before a rename) reach the current canonical form.
-        let effectiveModel = resolveLegacyModelId(provider, model ?? config.model) ?? config.model ?? '';
-        // Guard the provider/model pairing: a model belonging to a *different* provider (e.g. a
-        // per-feature "chat" model chosen under OpenAI while the active provider is Claude) must
-        // never be sent — it yields a cryptic 404. Fall back to the provider's own model.
-        // Custom has no model registry — any user-supplied model is valid (e.g. an OpenAI-compatible
-        // proxy serving 'gpt-4o' or 'mistral-large-latest'), so it must bypass the foreign-model guard.
-        if (effectiveModel && provider !== AIProvider.Custom && isForeignModel(provider, effectiveModel)) {
-            let own = resolveLegacyModelId(provider, config.model) ?? config.model ?? '';
-            if (!own || isForeignModel(provider, own)) own = Object.keys(llm?.versions ?? {})[0] ?? '';
-            console.warn(`[AIProviderService] Discarding model "${effectiveModel}" — not a ${provider} model; using "${own}" instead.`);
-            effectiveModel = own;
-        }
+        // Same resolution as the connection test (#179), so a green test means this model answers.
+        const effectiveModel = this.effectiveModel(provider, model);
         if (!effectiveModel.trim()) {
             throw new Error(`No model selected for ${provider}. Please choose a model in Settings.`);
         }
@@ -108,6 +92,46 @@ export class AIProviderService {
             default:
                 throw new Error(`Unsupported provider: ${provider}`);
         }
+    }
+
+    /**
+     * The model `provider` is called with when `requested` is asked for. `chat` and
+     * `testConnection` both resolve here (#179).
+     */
+    static effectiveModel(provider: TAIProvider, requested?: string): string {
+        const config = AIConfig.get(provider);
+        const llm = AI[provider];
+
+        // The Custom registry entry is a selector placeholder, not an endpoint model ID.
+        // Resolve it against the current configuration, including already-persisted preferences.
+        if (provider === AIProvider.Custom && requested === 'custom') requested = undefined;
+
+        // Resolve effective model: explicit param > per-provider config. Run through the legacy ID
+        // map so stale identifiers (e.g. persisted before a rename) reach the current canonical
+        // form, and move a retired model (#179) onto a current one.
+        let effectiveModel = resolveCurrentModelId(provider, requested ?? config?.model) ?? config?.model ?? '';
+        // Guard the provider/model pairing: a model belonging to a *different* provider (e.g. a
+        // per-feature "chat" model chosen under OpenAI while the active provider is Claude) must
+        // never be sent — it yields a cryptic 404. Fall back to the provider's own model.
+        // Custom has no model registry — any user-supplied model is valid (e.g. an OpenAI-compatible
+        // proxy serving 'gpt-4o' or 'mistral-large-latest'), so it must bypass the foreign-model guard.
+        if (effectiveModel && provider !== AIProvider.Custom && isForeignModel(provider, effectiveModel)) {
+            let own = resolveCurrentModelId(provider, config?.model) ?? config?.model ?? '';
+            if (!own || isForeignModel(provider, own)) own = Object.keys(llm?.versions ?? {})[0] ?? '';
+            console.warn(`[AIProviderService] Discarding model "${effectiveModel}" — not a ${provider} model; using "${own}" instead.`);
+            effectiveModel = own;
+        }
+        return effectiveModel;
+    }
+
+    /**
+     * The model the Jodie chat calls `provider` with: the chat's own pick when the chat points at
+     * this provider, the provider's model otherwise. The connection test checks the key against
+     * it (#179), so a green test means the chat works with that key, and a red one that it does not.
+     */
+    static chatModel(provider: TAIProvider): string {
+        const requested = AIConfig.getPreferred('chat') === provider ? AIConfig.getPreferredModel('chat') : undefined;
+        return this.effectiveModel(provider, requested);
     }
 
     /**
@@ -669,7 +693,8 @@ export class AIProviderService {
     }
 
     /**
-     * Test if a provider's API key is valid
+     * Test if a provider's API key is valid, with the model the chat calls it with (#179):
+     * key and effective model together, so the test and the chat cannot disagree.
      */
     static async testConnection(provider: TAIProvider): Promise<{ success: boolean; error?: string }> {
         try {
@@ -681,43 +706,45 @@ export class AIProviderService {
             // Ollama doesn't require API key, other providers do
             if (!config.isConfigured()) return { success: false, error: 'API key not configured' };
 
+            const model = this.chatModel(provider);
+
             // Claude/Gemini keep their dedicated tests; the OpenAI-compatible providers route
             // through the shared testOpenAICompatible, preserving each provider's success criterion
             // and 401/404/network hints via parameters.
             switch (provider) {
                 case AIProvider.Claude:
-                    return await this.testClaude(config.apiKey, config.model);
+                    return await this.testClaude(config.apiKey, model);
                 case AIProvider.Gemini:
-                    return await this.testGemini(config.apiKey, config.model);
+                    return await this.testGemini(config.apiKey, model);
                 case AIProvider.GPT:
-                    return await this.testOpenAICompatible(AI.GPT.getEndpoint(), AI.GPT.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                    return await this.testOpenAICompatible(AI.GPT.getEndpoint(), AI.GPT.authScheme, config.apiKey, model, { max_tokens: 10 }, {
                         expectedKeyPrefix: 'sk-',
                         invalidKeyHint: 'Invalid API key. Please check your key in the OpenAI Dashboard.',
                     });
                 case AIProvider.DeepSeek:
-                    return await this.testOpenAICompatible(AI.DeepSeek.getEndpoint(), AI.DeepSeek.authScheme, config.apiKey, config.model, { max_tokens: 10 });
+                    return await this.testOpenAICompatible(AI.DeepSeek.getEndpoint(), AI.DeepSeek.authScheme, config.apiKey, model, { max_tokens: 10 });
                 case AIProvider.Mistral:
-                    return await this.testOpenAICompatible(AI.Mistral.getEndpoint(), AI.Mistral.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                    return await this.testOpenAICompatible(AI.Mistral.getEndpoint(), AI.Mistral.authScheme, config.apiKey, model, { max_tokens: 10 }, {
                         invalidKeyHint: 'Invalid API key. Please check your key in the Mistral Console.',
                     });
                 case AIProvider.Groq:
-                    return await this.testOpenAICompatible(AI.Groq.getEndpoint(), AI.Groq.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                    return await this.testOpenAICompatible(AI.Groq.getEndpoint(), AI.Groq.authScheme, config.apiKey, model, { max_tokens: 10 }, {
                         invalidKeyHint: 'Invalid API key. Please check your key in the Groq Console.',
                     });
                 case AIProvider.Kimi:
-                    return await this.testOpenAICompatible(AI.Kimi.getEndpoint(), AI.Kimi.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                    return await this.testOpenAICompatible(AI.Kimi.getEndpoint(), AI.Kimi.authScheme, config.apiKey, model, { max_tokens: 10 }, {
                         invalidKeyHint: 'Invalid API key. Please check your key in the Moonshot AI Console.',
                     });
                 case AIProvider.Ollama: {
                     const endpoint = config.baseUrl ? this.resolveChatCompletionsUrl(config.baseUrl) : AI.Ollama.endpoint;
-                    return await this.testOpenAICompatible(endpoint, AI.Ollama.authScheme, '', config.model, { stream: false }, {
-                        notFoundHint: `Model "${config.model}" not found. Make sure it's pulled in Ollama.`,
+                    return await this.testOpenAICompatible(endpoint, AI.Ollama.authScheme, '', model, { stream: false }, {
+                        notFoundHint: `Model "${model}" not found. Make sure it's pulled in Ollama.`,
                         networkErrorHint: `Cannot connect to Ollama at ${endpoint}. Make sure Ollama is running.`,
                     });
                 }
                 case AIProvider.Custom: {
                     if (!config.baseUrl || !config.baseUrl.trim()) return { success: false, error: 'Custom provider requires a Base URL.' };
-                    return await this.testOpenAICompatible(this.resolveChatCompletionsUrl(config.baseUrl), AI.Custom.authScheme, config.apiKey, config.model, { max_tokens: 10 });
+                    return await this.testOpenAICompatible(this.resolveChatCompletionsUrl(config.baseUrl), AI.Custom.authScheme, config.apiKey, model, { max_tokens: 10 });
                 }
                 case AIProvider.Llama:
                     return { success: false, error: 'Llama is not yet supported (no endpoint configured).' };
@@ -842,6 +869,9 @@ export class AIProviderService {
 
                 if (response.status === 400 || response.status === 403) {
                     errorMsg = 'Invalid API key or model. Check your key in Google AI Studio.';
+                } else if (response.status === 404) {
+                    // The key passed; the model did not (#179). Name it instead of the API's JSON.
+                    errorMsg = `Gemini does not serve the model "${model}". Pick another Gemini model in Jodie's model menu and test again.`;
                 }
 
                 return { success: false, error: errorMsg };

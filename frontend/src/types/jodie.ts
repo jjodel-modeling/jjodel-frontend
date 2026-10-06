@@ -121,6 +121,28 @@ export function resolveLegacyModelId(provider: TAIProvider, modelId: string | un
 }
 
 /**
+ * Providers whose registry lists every model their endpoint still serves (#179). For them a
+ * deprecated entry, or an id no longer in the list, is a retired model: Google answers 404 for
+ * `gemini-2.0-flash-exp`, the default that every Gemini configuration saved before 2026-08-05
+ * still carries. The other providers keep unlisted ids (user-pulled Ollama tags, Custom
+ * endpoints, ids such as `deepseek-reasoner`) and their deprecated entries stay selectable.
+ */
+const RETIRING_PROVIDERS: TAIProvider[] = ['Gemini'];
+
+/**
+ * The id `provider` is actually called with for `modelId`: the legacy map first, then, for a
+ * provider of RETIRING_PROVIDERS, a retired model moves to the first non-deprecated entry of the
+ * registry. Returns the input unchanged when nothing applies.
+ */
+export function resolveCurrentModelId(provider: TAIProvider, modelId: string | undefined): string | undefined {
+    const id = resolveLegacyModelId(provider, modelId);
+    if (!id || !RETIRING_PROVIDERS.includes(provider)) return id;
+    const versions = AI[provider]?.versions ?? {};
+    if (versions[id] && !versions[id].deprecated) return id;
+    return Object.keys(versions).find(k => !versions[k].deprecated) ?? id;
+}
+
+/**
  * True when `modelId` is a known model of `provider` (present in its version registry).
  */
 export function isModelOfProvider(provider: TAIProvider, modelId: string | undefined): boolean {
@@ -424,6 +446,9 @@ export class AIConfig{
     /** Outcome of the most recent connection test for the current key: true=passed, false=failed,
      *  undefined=not tested (or invalidated by a credential edit). Drives the Settings status pill. */
     lastTestOk?: boolean;
+    /** The retired model this provider was moved off at load (#179, `retireModels`). Settings
+     *  names it until a connection test passes on the current one. */
+    replacedModel?: string;
     messages: ChatMessage[] = [];
     isOpen: boolean = false;
     isMinimized: boolean = false;
@@ -513,7 +538,8 @@ export class AIConfig{
     }
 
     /**
-     * Returns the per-feature model selection, resolving legacy IDs through the map.
+     * Returns the per-feature model selection, resolving legacy IDs through the map and retired
+     * ones to a current model (#179), so a menu shows the model the call will use.
      * Returns undefined when no model has been chosen for this feature.
      * Callers should fall back to the provider's AIConfig.model if they need a concrete ID.
      */
@@ -523,7 +549,7 @@ export class AIConfig{
             if (!stored) return undefined;
             const pref: ProviderPreference = JSON.parse(stored);
             if (!pref.modelId) return undefined;
-            const resolved = resolveLegacyModelId(pref.providerId as TAIProvider, pref.modelId);
+            const resolved = resolveCurrentModelId(pref.providerId as TAIProvider, pref.modelId);
             // Integrity guard: a stored modelId that belongs to a different provider than
             // pref.providerId is a corrupted preference — ignore it so callers fall back to
             // the provider's own default model (prevents a provider/model mismatch on send).
@@ -642,6 +668,60 @@ export class AIConfig{
             if (repaired > 0) console.info(`[jodie] sanitizeForeignFeatureModels: repaired ${repaired} mismatched per-feature model preference(s).`);
         } catch (e) {
             console.warn('[jodie] sanitizeForeignFeatureModels failed:', e);
+        }
+    }
+
+    /**
+     * Moves persisted models that the registry no longer serves onto current ones (#179): the
+     * per-feature picks and each provider's AIConfig.model, through `resolveCurrentModelId`.
+     * No sentinel, unlike migrateLegacyModelIds: the model list changes from release to release,
+     * and a run that finds nothing to move writes nothing. The provider's config keeps the id it
+     * left in `replacedModel`, so Settings can say which model was replaced.
+     */
+    static retireModels(): void {
+        try {
+            const replaced: Partial<Record<TAIProvider, string>> = {};
+
+            // 1. Per-feature preferences (jjodel_provider_<feature>)
+            const features: AIFeature[] = ['documentation', 'chat', 'scriptblock', 'mappings', 'explain'];
+            for (const feature of features) {
+                const key = `${AI.STORAGE_PREFIX}${feature}`;
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                try {
+                    const pref: ProviderPreference = JSON.parse(raw);
+                    if (!pref.modelId) continue;
+                    const provider = pref.providerId as TAIProvider;
+                    const current = resolveCurrentModelId(provider, pref.modelId);
+                    if (current && current !== pref.modelId) {
+                        replaced[provider] = pref.modelId;
+                        pref.modelId = current;
+                        pref.updatedAt = Date.now();
+                        localStorage.setItem(key, JSON.stringify(pref));
+                    }
+                } catch { /* skip malformed entries */ }
+            }
+
+            // 2. Per-provider AIConfig.model (stored under AI[provider].storageKey)
+            for (const provider of ALL_AI_PROVIDERS) {
+                const llm = AI[provider];
+                if (!llm?.storageKey) continue;
+                const raw = localStorage.getItem(llm.storageKey);
+                if (!raw) continue;
+                try {
+                    const cfg = JSON.parse(raw);
+                    const current = resolveCurrentModelId(provider, cfg?.model);
+                    if (current && current !== cfg.model) {
+                        replaced[provider] = cfg.model;
+                        cfg.model = current;
+                    }
+                    else if (!replaced[provider]) continue;
+                    cfg.replacedModel = replaced[provider];
+                    localStorage.setItem(llm.storageKey, JSON.stringify(cfg));
+                } catch { /* skip malformed entries */ }
+            }
+        } catch (e) {
+            console.warn('[jodie] retireModels failed:', e);
         }
     }
 
@@ -789,6 +869,9 @@ export class JodieConfig {
         AIConfig.migrateLegacyModelIds();
         // (3) Repair per-feature prefs whose modelId belongs to a different provider.
         AIConfig.sanitizeForeignFeatureModels();
+        // (4) Move models the registry no longer serves onto current ones (#179). Not sentinel-
+        // protected: it runs on every load and writes only when it moves something.
+        AIConfig.retireModels();
 
         let data: GObject<JodieConfig>;
         if (!json) json = localStorage.getItem(AI.STORAGE_GLOBAL_CONFIG);

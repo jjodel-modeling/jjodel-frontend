@@ -166,6 +166,8 @@ export function AISettingsContent({
                 config.lastTested = Date.now();
                 config.lastTestOk = true;
                 config.enabled = true;
+                // The current model answered: the notice about the retired one has served (#179).
+                config.replacedModel = undefined;
                 config.save();
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
             } else {
@@ -213,11 +215,21 @@ export function AISettingsContent({
         return summary || 'OpenAI-compatible endpoint';
     };
 
-    // Label of the model this provider currently points at, shown only on configured rows.
+    // Label of the model this provider currently points at, shown only on configured rows: the
+    // model the chat calls it with, which is the one Test Connection tests (#179).
     // Falls back to the raw id for models outside the registry (custom / user-pulled tags).
     const activeModelLabel = (name: TAIProvider): string => {
-        const config = AIConfig.get(name);
-        return AI[name].versions[config.model]?.label || config.model || '';
+        const model = AIProviderService.chatModel(name);
+        return AI[name].versions[model]?.label || model || '';
+    };
+
+    // A retired model this provider was moved off at load (AIConfig.retireModels), named until a
+    // test passes on the current one (#179). Null when there is nothing to say.
+    const replacedModelNotice = (name: TAIProvider): string | null => {
+        const replaced = AIConfig.get(name).replacedModel;
+        if (!replaced) return null;
+        const label = AI[name].versions[replaced]?.label || replaced;
+        return `${label} is no longer available, so ${name} now uses ${activeModelLabel(name)}.`;
     };
 
     const toggleProvider = (name: TAIProvider) => {
@@ -370,6 +382,12 @@ export function AISettingsContent({
                                 )}
                             </div>
                         ))}
+
+                        {replacedModelNotice(name) && (
+                            <p className="provider-notice">
+                                <i className="bi bi-info-circle" /> {replacedModelNotice(name)}
+                            </p>
+                        )}
 
                         <div className="provider-actions">
                             <button
