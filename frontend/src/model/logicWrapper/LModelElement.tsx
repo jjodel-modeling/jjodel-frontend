@@ -6066,7 +6066,9 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
      *  current tick included. So the slot case is routed through it and handed to the predicate
      *  form of `defaultname`. `get_children_idlist` is NOT widened: what "child" means for
      *  `LValue` is unchanged for every other reader (that was candidate C1 of the report's §7,
-     *  and it is not taken here).
+     *  and it is not taken here). Since #174 (R-NEST-5) `LValue.get_children_idlist` does list
+     *  the values a slot owns, for the delete cascade; the slot case here still reads
+     *  `getNamespaceOf`, so the auto-name is unchanged.
      *
      *  A model father keeps the existing path, byte for byte.
      */
@@ -7458,6 +7460,19 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     }
 
 
+    // What a slot owns are its children, so `.delete()` cascades into them for every caller (Dummy.ts:84):
+    // every DObject of a composition slot, and in any other slot the DObjects it fathered (an aggregation
+    // that re-fathered them, a shapeless slot). An element a slot merely lists stays. R-NEST-2, R-NEST-5;
+    // the plan's walk, deleteDraw.descendantsOf, applies the same rule. The auto-name does not read this
+    // list for a slot father (it asks getNamespaceOf, see DObject.autoName).
+    protected get_children_idlist(context: Context): Pointer<DAnnotation | DObject, 1, 'N'> {
+        const idlookup = store.getState().idlookup as GObject;
+        const composition = (idlookup[context.data.instanceof as any] as GObject)?.composition === true;
+        const owned = ((context.data.values ?? []) as any[]).filter((v: any) => typeof v === 'string'
+            && (idlookup[v] as GObject)?.className === DObject.cname
+            && (composition || (idlookup[v] as GObject).father === context.data.id));
+        return [...super.get_children_idlist(context) as Pointer<DAnnotation | DObject, 1, 'N'>, ...owned];
+    }
     protected get_edges(context: Context): this["edges"] { return LPointerTargetable.fromPointer(context.data.edges) || []; }
     protected get_fromlfeature<C, T extends keyof (NonNullable<C>)>(meta: C, key: T): NonNullable<C>[T] { return meta ? (meta as any)[key] : undefined as any; }
     protected get_opposite(context: Context): LReference["opposite"] { return this.get_fromlfeature(context.proxyObject.instanceof as LReference, "opposite"); }

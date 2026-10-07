@@ -45,6 +45,10 @@ import ActivityLogger from '../services/ActivityLogger';
 import { ActivityType } from '../types/activity';
 import {i} from "vite/dist/node/chunks/moduleRunnerTransport";
 
+/** Ids whose delete was issued in this macrotask (#174): the cascade reaches an owned child that the
+ *  plan, or the model's own children list, already deleted. Cleared at the next macrotask. */
+const deleteIssued = new Set<string>();
+
 export class Dummy {
     static t2mIgnoreKeys = ['id','pointedBy','className'];
     static get_delete(thiss: L, context: any): () => void {
@@ -57,6 +61,9 @@ export class Dummy {
             const deletedID = dDeleted.id as any;
             if (dDeleted.__readonly) return;
             if (deletedID.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
+            if (deleteIssued.has(deletedID)) return;
+            deleteIssued.add(deletedID);
+            setTimeout(() => deleteIssued.delete(deletedID), 0);
 
             // Log activity for model/metamodel deletion
             if (dDeleted.className === 'DModel') {
@@ -110,8 +117,17 @@ export class Dummy {
                 const fatherField = dDeleted.className === 'DObject' ? 'objects'
                     : dDeleted.className === 'DValue' ? 'features'
                     : null;
+                // A nested instance's father is a slot, while the list that holds it is its model's
+                // `objects` (R-NEST-1): walk up to the model.
+                let fatherTarget: any = dDeleted.father;
+                if (dDeleted.className === 'DObject') {
+                    const idl: GObject = store.getState().idlookup;
+                    let e: GObject | undefined = idl[dDeleted.father];
+                    for (let i = 0; i < 64 && e && e.className !== 'DModel'; i++) e = idl[e.father];
+                    if (e?.className === 'DModel') fatherTarget = e.id;
+                }
                 if (fatherField) {
-                    SetFieldAction.new(dDeleted.father as any, fatherField, deletedID, '-=', true);
+                    SetFieldAction.new(fatherTarget, fatherField, deletedID, '-=', true);
                 }
             }
 
