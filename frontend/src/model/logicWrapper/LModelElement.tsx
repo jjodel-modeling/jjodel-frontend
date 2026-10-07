@@ -5755,11 +5755,14 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     }
 
     protected get_crossRoots(context: Context): this["roots"] { return this.get_roots(context, true); }
+    // `objects` lists every instance of the model, the nested ones too (R-NEST-1): a root is an
+    // instance whose father is a model. Read through `father` and not `isRoot`, which throws on a
+    // father that no longer resolves.
     protected get_roots(context: Context, includeCross: boolean = false): this["roots"] {
-        return this.get_objects(context, includeCross);//.filter( o => o.isRoot);
+        return this.get_objects(context, includeCross).filter((o: LObject) => o?.father?.className === DModel.cname);
     }
     protected get_root(context: Context, includeCross: boolean = false): this["roots"][0] {
-        return this.get_objects(context, includeCross)[0];
+        return this.get_roots(context, includeCross)[0];
     }
 
     protected get_crossClasses(c: Context, s?: DState): this["classes"] { return this.get_classes(c, s, true); }
