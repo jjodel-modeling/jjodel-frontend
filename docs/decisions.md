@@ -5717,6 +5717,39 @@ metaclass is in the store: a bare handle hit is not enough, since before its met
 `NO_METACLASS` (report §4.5). Measured: a `set` on a contained child of the same run went from 522-549 ms to 1 ms.
 Code `9916cefce`.
 
+R-JS-12..15 below: decided by Juri in chat `C-2026-10-07-0910` (#175), adopting the recommendations of
+`docs/discovery/discovery_2026-10-07_175_jjscript_m1_operators.md` §6. Marker: **provisional**.
+
+**R-JS-12** (2026-10-07, provisional) — **At M1 `-=` and `remove` take an element out of a reference.**
+`set X.ref -= Y` and `remove Y from X.ref` remove Y by value, the removal `= null` makes (`removeLinked`), and
+answer «Removed», never «Linked». Refused before any write: Y not in the slot (`NOT_LINKED`); a containment child
+born in the slot and not listed among the model's roots (`WOULD_ORPHAN`, with the `delete instance` hint), because
+the removal would father it to the model and list it nowhere (the #174 eviction orphan); `remove Y from X` without
+the reference (`REFERENCE_REQUIRED`); `-= null` (`TYPE_MISMATCH`). A root-born child leaves the containment back to
+the model root. `-=` is not type-checked: taking a wrong-typed element out repairs the slot. Under a profile
+`remove` stays refused as a language command (`permissionGuard.ts`); `set … -=` passes the link rules. Code
+`cb02e6a2b`.
+
+**R-JS-13** (2026-10-07, provisional) — **`+=` adds without replacing.** It appends while the slot has room:
+unbounded, below its upper bound, or an empty single-valued slot. A single-valued slot holding another element, and
+a bounded slot at its bound, refuse with `MULTIPLICITY_EXCEEDED` (the single-valued one names `=`); a single-valued
+slot already holding the target succeeds with no write. `=` is unchanged (#168 C1: single replaces, multi appends).
+`+=`/`-=` on an attribute: `OPERATOR_NOT_SUPPORTED`. Code `cb02e6a2b`.
+
+**R-JS-14** (2026-10-07, provisional) — **A link is type-checked in the JjScript executor, not in the core.** `=`
+and `+=` write only an instance of the reference type or of a subclass (`isExtending`, the test of R-JS-9's
+`create … in`), else `TYPE_MISMATCH`, on plain references and containments alike. The target's class is read
+from the store after the queued writes land, so a target created by the previous line is checked without a pause;
+no class in the store is `NO_METACLASS`. The core's own check (`LModelElement.tsx:7910`, commented out) and the
+canvas gestures are untouched (rule 5). Code `cb02e6a2b`.
+
+**R-JS-15** (2026-10-07, provisional) — **An instance name is read with or without quotes, and never dropped.**
+`create instance of X name` reads a bare identifier as the name (`end`, which closes a block, and keywords need
+quotes); any other token left after `create instance …` is a parse error, because the parse is non-strict and a
+dropped token was the name or the `in` behind it (measured: auto-named, born at the root). `rename x to "y"` reads
+quotes; at M1 the new name is free, as `create` takes it, and only an empty one is refused (`INVALID_NAME`); M2
+keeps the identifier check. `add Y to X.ref` names the `set … +=` form in its parse error. Code `cb02e6a2b`.
+
 ## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
 
 Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homonyms.md`.

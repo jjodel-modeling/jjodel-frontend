@@ -140,3 +140,20 @@ No code. Controls D0-D2 stay in the probe.
 4. `+=` on a single-valued reference that already holds another element: refuse (`MULTIPLICITY_EXCEEDED`) or replace as today? Recommended: refuse, with the `=` hint.
 5. The 8-9 files of §5.5 (rule 19): confirmed? Recommended: yes.
 6. After the gates: branch `fix/175-jjscript-m1-operators`, fast-forward `staging`, push, closing comment on #175? Recommended: yes, as for #176.
+
+---
+
+## Addendum 2026-10-07 — Phase 2
+
+Juri answered the four questions of §0 with the recommendations (execute `-=`/`remove`, refuse the slot-born orphan; refuse `+=` on a full single-valued slot; type check in the executor; go to closure). Recorded as R-JS-12..15 in `docs/decisions.md`. Code `cb02e6a2b` on `fix/175-jjscript-m1-operators`, the eight files of §5.5 items 1-8; `m1Containment.test.ts` untouched, the handler tests went to the new `executor/__tests__/m1Operators.test.ts`.
+
+What differs from §5:
+- `+=` of the single value a slot already holds succeeds with no write and `undoable: false`, so no empty TRANSACTION is opened.
+- The instance option loop now stops at the first token that is not the name: an instance takes no M2 option (`create instance of X "a" type Foo` used to parse the `type` and ignore it, now it is the leftover error).
+- `rename.ts` keeps the identifier check in front of `getProject` for M2 (order unchanged there) and skips it when the rename goes to an instance.
+
+Measured after (MEAS on `cb02e6a2b`'s tree, the same probe with `EXPECT=after`, :3000): 29 PASS, 0 FAIL, zero page errors. A2 `-= p1` → «Removed p1 from Scenario_0.lead», `[]`; A3 `remove p2 from Scenario_0.lead` → «Removed», `[]`; A5 `NOT_LINKED`; A6 the parse error names `set <Instance>.<reference> += p1`; A8 p2 back to `DModel`, still in `objects`; A9 `+=` on `coach` holding Antonio → `MULTIPLICITY_EXCEEDED`, slot unchanged; A10 `-= pAdd` (born in the slot) → `WOULD_ORPHAN`, pAdd still in the slot; B1, B2, B5 `TYPE_MISMATCH` (B5 with no pause after the create); B3, B4 controls succeed; C1 `nome1` named, C2 the `set` finds it, C3 quoted rename succeeds, C6 `nome4` born in `Scenario_0.pathway`, C7 parse error «Unexpected 'words' after the instance…»; D0-D2 unchanged.
+
+Gates: `npx tsc --noEmit` 14 errors, the same set as before the change (by file and code); `npm run test` 7938 passed, 9 files red at import, exactly the §17 list; `npm run build` exit 0 (chunk-size warning only). Mutation bench 18/18 killed, sources restored byte-identical (sha256), list in the commit body.
+
+Still open, outside #175 (tickets in the lane inbox): a name with a space cannot be the subject of a command (C8: `rename "Mario Rossi" to …` is a parse error); the chat prompt v5 (`defaultPrompts.ts:236`) still says `+=`/`-=`/`add`/`remove` «do not do what they say» at M1; under a profile `remove` is refused as a language change.
