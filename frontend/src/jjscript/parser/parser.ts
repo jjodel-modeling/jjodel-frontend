@@ -300,6 +300,18 @@ export class Parser {
                     "Syntax: create instance of <ClassName> \"<instanceName>\" in <Parent>.<reference>"
                 );
             }
+            // #175: the parse is non-strict, so a token left here was dropped in silence: the
+            // instance was auto-named, or born at the root without its `in`. A command ends at a
+            // newline, the end of input, `;`, `end` (a block) or the next command.
+            const rest = this.peek();
+            const ends = this.isAtEnd() || this.check('NEWLINE') || this.check('COMMAND') || this.checkKeyword('end')
+                || (this.check('PUNCTUATION') && rest.value === ';');
+            if (!ends) {
+                throw new Error(
+                    `Unexpected '${rest.value}' after the instance. A name with spaces goes in quotes: ` +
+                    "create instance of <ClassName> \"<instanceName>\" [in <Parent>.<reference>]"
+                );
+            }
             return {
                 command: 'create',
                 elementType,
@@ -365,10 +377,17 @@ export class Parser {
             // M1: instance name as positional STRING after class name
             // e.g., "create instance Customer \"Alice\"" — Alice is the instance name.
             // Reuses options.defaultValue as the carrier (read by executeCreateInstance).
-            if (elementType === 'instance' && this.check('STRING') && !options.defaultValue) {
-                options.defaultValue = { kind: 'string', value: this.advance().value };
-                hasOptions = true;
-                continue;
+            // #175: or as a bare identifier (`create instance of Customer Alice`), never `end`, which
+            // closes a block. An instance takes no other option, so anything else ends the loop and
+            // parseCreateCommand reads `in` or refuses what is left.
+            if (elementType === 'instance') {
+                const bare = this.check('IDENTIFIER') && this.peek().value.toLowerCase() !== 'end';
+                if (!options.defaultValue && (this.check('STRING') || bare)) {
+                    options.defaultValue = { kind: 'string', value: this.advance().value };
+                    hasOptions = true;
+                    continue;
+                }
+                break;
             }
 
             // type: TypeName
@@ -564,7 +583,8 @@ export class Parser {
             throw new Error("Expected 'to' or 'as' after target in rename command");
         }
 
-        const newName = this.expectIdentifier('new name');
+        // #175: quoted as `create instance` takes it, or bare.
+        const newName = this.check('STRING') ? this.advance().value : this.expectIdentifier('new name');
 
         return { command: 'rename', target, newName, elementType };
     }
@@ -612,7 +632,18 @@ export class Parser {
     // ============================================
 
     private parseAddCommand(): AddArgs {
-        const elementType = this.parseElementType();
+        // #175: `add p1 to s.ref` reads like a link, but `add` creates. Say which form links.
+        const first = this.peek();
+        let elementType: ElementType;
+        try {
+            elementType = this.parseElementType();
+        } catch (e) {
+            if (['IDENTIFIER', 'QUALIFIED_NAME', 'STRING'].includes(first.type) && this.peekNext()?.value.toLowerCase() === 'to') {
+                throw new Error(`${(e as Error).message} — to add the existing '${first.value}' to a reference: ` +
+                    `set <Instance>.<reference> += ${first.value}`);
+            }
+            throw e;
+        }
         const name = this.expectIdentifier('element name');
 
         // Expect 'to'

@@ -4,6 +4,8 @@
  *   set s.lead = p        single-valued (upper bound 1): p REPLACES what the slot held
  *   set s.people = p      multi-valued: p is appended, one `set` per target (duplicates kept)
  *   set s.people = null   the slot is emptied
+ *   set s.people += p     p is appended while the slot has room, never replacing (#175)
+ *   set s.people -= p     p is taken out by value; refused when the slot does not hold it (#175)
  *
  * A plan has two parts because the proxy write cannot shrink a slot. `refProxy.values = [...]`
  * shortens it with a `'-='` that carries no value, and the reducer drops that change, so a slot
@@ -63,4 +65,36 @@ export function planLink(current: readonly string[], targetId: string, many: boo
 /** Empty a slot that holds `current` (`set x.ref = null`). */
 export function planUnlink(current: readonly string[]): ReferenceWritePlan {
     return { remove: distinct(current) };
+}
+
+/**
+ * What a `+=` does to a slot (#175): the target appended while the slot has room, as `=` appends
+ * on a multi-valued reference. A single-valued slot that already holds the target is left as it
+ * is (`held`); one that holds another element is `full`, and so is a bounded multi-valued slot
+ * at its bound. `+=` never replaces: that is `=`.
+ */
+export type AddPlan = { write: string[] } | { held: true } | { full: number };
+
+/** How many values a slot may hold: unbounded, its bound, or 1 for a single-valued reference. */
+function capacityOf(upperBound: unknown): number {
+    if (upperBound === -1 || upperBound === '*') return Infinity;
+    return isManyValued(upperBound) ? (upperBound as number) : 1;
+}
+
+export function planAdd(current: readonly string[], targetId: string, upperBound: unknown): AddPlan {
+    const capacity = capacityOf(upperBound);
+    if (capacity === 1 && current.includes(targetId)) return { held: true };
+    if (current.length >= capacity) return { full: capacity };
+    return { write: [...current, targetId] };
+}
+
+/**
+ * What a `-=` takes out of a slot (#175): the target, by value, or nothing when the slot does
+ * not hold it (`absent`). The by-value removal takes every copy a slot overfilled by older
+ * appends still holds, which is what «remove y» means.
+ */
+export type RemovePlan = { remove: string[] } | { absent: true };
+
+export function planRemove(current: readonly string[], targetId: string): RemovePlan {
+    return current.includes(targetId) ? { remove: [targetId] } : { absent: true };
 }

@@ -30,8 +30,10 @@ export async function executeRename(
     const { target, newName } = args;
 
     try {
-        // Validate new name
-        if (!isValidIdentifier(newName)) {
+        // Validate new name. Not at M1 (#175): an instance name is free, as `create instance of X "…"`
+        // takes it, and executeRenameInstance refuses only an empty one.
+        const instanceRename = args.elementType === 'instance' || context.level === 'M1';
+        if (!instanceRename && !isValidIdentifier(newName)) {
             return {
                 success: false,
                 command: 'rename',
@@ -56,7 +58,7 @@ export async function executeRename(
         }
 
         // M1 routing: 'rename instance X' or any 'rename X' in M1 context targets an instance.
-        if (args.elementType === 'instance' || context.level === 'M1') {
+        if (instanceRename) {
             return executeRenameInstance(args, context, project);
         }
 

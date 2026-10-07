@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { isManyValued, linkedIds, planLink, planUnlink } from '../referenceWrite';
+import { isManyValued, linkedIds, planLink, planUnlink, planAdd, planRemove } from '../referenceWrite';
 
 describe('isManyValued — same cardinality rule as eval.ts', () => {
     it('upper bound 1 is single (dies if 1 counts as many)', () => {
@@ -92,5 +92,42 @@ describe('planUnlink — `= null` empties the slot', () => {
     });
     it('an empty slot gives an empty plan', () => {
         expect(planUnlink([])).toEqual({ remove: [] });
+    });
+});
+
+describe('planAdd — `+=` appends while the slot has room (#175)', () => {
+    it('an unbounded slot appends, duplicates kept as `=` keeps them', () => {
+        expect(planAdd(['p1'], 'p2', -1)).toEqual({ write: ['p1', 'p2'] });
+        expect(planAdd(['p1'], 'p1', '*')).toEqual({ write: ['p1', 'p1'] });
+    });
+    it('an empty single-valued slot takes the target', () => {
+        expect(planAdd([], 'p1', 1)).toEqual({ write: ['p1'] });
+    });
+    it('a single-valued slot holding another is full (dies on the replace of planLink)', () => {
+        expect(planAdd(['p2'], 'p1', 1)).toEqual({ full: 1 });
+    });
+    it('a single-valued slot already holding the target is left as it is (dies if it is reported full)', () => {
+        expect(planAdd(['p1'], 'p1', 1)).toEqual({ held: true });
+    });
+    it('a bounded multi-valued slot appends below its bound and is full at it (dies if the bound is ignored)', () => {
+        expect(planAdd(['p1', 'p2'], 'p3', 3)).toEqual({ write: ['p1', 'p2', 'p3'] });
+        expect(planAdd(['p1', 'p2', 'p3'], 'p4', 3)).toEqual({ full: 3 });
+    });
+    it('a missing or 0 bound reads as single, as isManyValued reads it', () => {
+        expect(planAdd(['p2'], 'p1', undefined)).toEqual({ full: 1 });
+        expect(planAdd(['p2'], 'p1', 0)).toEqual({ full: 1 });
+    });
+});
+
+describe('planRemove — `-=` takes the target out by value (#175)', () => {
+    it('a held target is removed (dies on the old append)', () => {
+        expect(planRemove(['p1', 'p2'], 'p1')).toEqual({ remove: ['p1'] });
+    });
+    it('listed once even when the slot holds it twice: the by-value removal takes every copy', () => {
+        expect(planRemove(['p1', 'p2', 'p1'], 'p1')).toEqual({ remove: ['p1'] });
+    });
+    it('a target the slot does not hold is absent (dies if absence is not reported)', () => {
+        expect(planRemove(['p2'], 'p1')).toEqual({ absent: true });
+        expect(planRemove([], 'p1')).toEqual({ absent: true });
     });
 });
