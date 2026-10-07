@@ -6093,7 +6093,7 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
         const computedDefaultName = this.autoName(father, instanceoff);
         if (!name) name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DObject(instanceoff).end();
+            .DNamedElement(name).DObject(instanceoff).end((d) => DObject.listInModel(d, fatherType));
         // initialName: always the auto-generated default, regardless of the explicit `name` parameter.
         // This is the immutable "auto-name" that acts as fallback when the identity slot is empty.
         ret.initialName = computedDefaultName;
@@ -6105,9 +6105,24 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
         if (!ptrs.name) ptrs.name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
             .DPointerTargetable().DModelElement()
-            .DNamedElement(ptrs.name).DObject(ptrs.instanceof).end(then);
+            .DNamedElement(ptrs.name).DObject(ptrs.instanceof).end((d, c) => { DObject.listInModel(d, fatherType); then?.(d, c); });
         ret.initialName = computedDefaultName;
         return ret;
+    }
+
+    /** A DObject born in a slot is listed by its model too (R-NEST-1); the constructor registers it in the
+     *  slot's `values` only (joiner/classes.ts:786-792). Queued as a persist callback, like the constructor's
+     *  own `objects '+='` for a root, so it lands after the create and the reducer writes the `pointedBy`
+     *  entry (a SetFieldAction issued after `new3` returns was measured landing without it).
+     *  Skipped when the slot's model is not in the store yet: a creator that builds a whole new model (the
+     *  XMI import, XMIService.ts:1074) writes that list itself, and a second '+=' would duplicate it. */
+    private static listInModel(d: DObject, fatherType?: typeof DModel | typeof DValue): void {
+        if (fatherType?.cname !== DValue.cname || !d.father) return;
+        const idlookup = store.getState().idlookup as GObject;
+        let e: GObject | undefined = idlookup[d.father];
+        for (let i = 0; i < 64 && e && e.className !== DModel.cname; i++) e = idlookup[e.father];
+        if (!e || e.className !== DModel.cname || (e.objects ?? []).includes(d.id)) return;
+        d._persistCallbacks.push(SetFieldAction.create(e.id, 'objects', d.id, '+=', true));
     }
 
 
@@ -7856,7 +7871,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             else { info.isContainment = true; }
         }
         if (info.isContainment && oldTarget?.className === "DObject") {
-            SetFieldAction.new(oldVal as Pointer<DObject>, "father", context.proxyObject.model.id, undefined, true);
+            const modelId = context.proxyObject.model.id;
+            SetFieldAction.new(oldVal as Pointer<DObject>, "father", modelId, undefined, true);
+            // The evicted element is a root: the model lists it (R-NEST-4). Appended only when the model
+            // does not list it yet, read before the TRANSACTION lands, so a move never duplicates it.
+            if (!(((store.getState().idlookup as GObject)[modelId] as GObject)?.objects ?? []).includes(oldVal))
+                SetFieldAction.new(modelId, 'objects', oldVal as any, '+=', true);
         }
         if (!skipSettingUndefined) SetFieldAction.new(context.data, 'values.' + index as any, undefined, '', info.isPtr);
     }
