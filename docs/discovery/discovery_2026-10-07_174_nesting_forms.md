@@ -360,3 +360,80 @@ Uncertain about propagation? → yes: the double delete of §9 and the U4 undo; 
 5. The file list of §10.5 (rule 19), with `permissionGuard.ts` outside the prompt's candidates. Recommended: confirm.
 
 Decisions 1 (b), 2 (aggregation) and 3 (migration) of the issue are data-model choices. RC-27 asks a second agent to verify (b) before adoption. **What would falsify it:** a reader that needs roots only, reads `model.objects` or `roots` without a father filter and is missing from §5; or a fresh canvas that still draws an imported project's nested children as nodes once the `XMIService.ts:1074` push is removed, which would make (a) cheap.
+
+---
+
+## Addendum 2026-10-08: vertici fantasma
+
+The chat's visual check (C-2026-10-07-0948, 2026-10-08) failed items 6 and 11: after a delete, the v2-flow
+vertices of the deleted elements stay in the store («ghost»: a `DVertex` whose `model` no longer exists) and some
+stay painted. The rework prompt (input-7 of the lane folder) asks four questions before the fix; MEAS below on
+`352758aa2` with `frontend/scripts/smoke/_tmp_174_ghost.ts` (gitignored), the chat's probe rewritten for
+`lane-run probe` on :3052 (log `probe-_tmp_174_ghost.log`), same fixture (`p174.fixture()` + `nest()`, then
+`set S3.team = P1`, `link('S3','team','P2')`, `open()`) and the same gesture (click the node, press Delete).
+
+### A.1 Where a v2-flow `DVertex` is bound to its element (MEAS DISC)
+
+- The vertex holds the element in `model`; its `father` and `graph` are the `DGraph`; the graph lists it in
+  `subElements`. Record keys of S3's vertex: `model`, `father` (a `DGraph`), `graph`, `subElements`, `edgesIn`,
+  `edgesOut`, `x`, `y`, `w`, `h`, `pointedBy`, … (`DISC.vertexKeys`).
+- The element's `pointedBy` holds `idlookup.<vertex>.model`, the only entry that binds it to the vertex.
+- The vertex's own `pointedBy`: `vertexs` (the root collection), `idlookup.<graph>.subElements`, and one
+  `idlookup.<edge>.start` (or `.end`) for every edge drawn from (or to) it: S3's two edges, S3→P1 and S3→P2.
+
+### A.2 Why `lDeleted.nodes` does not see it
+
+- `LModelElement.tsx:630-633`: `get_nodes` returns
+  `Object.values(transientProperties.modelElement[context.data.id]?.nodes || {}).filter(n=>n&&n.html)`, the
+  registry the classic renderer fills for a node it has drawn in HTML. v2-flow draws through React Flow and never
+  registers there: MEAS DISC `lNodes: 0`, `nodesTransient: 0` for S3, whose v2-flow vertex is painted.
+- So `Dummy.ts:277` (`if (lDeleted.nodes) lDeleted.nodes.map((node: any) => node.delete());`) deletes nothing on
+  the developer canvas. `canvasToJjom.ts:463-470` relies on it («every DVertex across graphs (nodes)»).
+
+### A.3 What `Dummy.ts` does with the vertex's entry today
+
+- The element's dependency `idlookup.<vertex>.model` reaches `case 'model'` (`Dummy.ts:256-276`), which deletes an
+  edge only: «a graph EDGE whose `model` points at the deleted element … must die with it … Vertices and other
+  model-pointing dependents keep the historical no-op (their flows delete them explicitly)»
+  (`if (typeof dObj.className === 'string' && dObj.className.includes('Edge')) { lObj.delete(); }`).
+- No v2-flow flow deletes them. `syncDeleteVertex` (`canvasToJjom.ts:397-470`, the Delete key on a node) deletes
+  the edges of the clicked vertex only (raw `DeleteElementAction`), then `modelElement.delete()`. JjScript and the
+  plan (`deleteAdapter`) call `.delete()` alone.
+- A vertex that is deleted would leave its edges behind anyway: `case 'end': case 'start':` is a no-op
+  (`Dummy.ts:181-183`).
+
+### A.4 What removes the React Flow node
+
+- `useJjomSync.ts:1314-1318`: an id that leaves the graph's `subElements` leaves `rfNodeCache` / `rfEdgeCache`;
+  `:1450-1451` filters it out of the nodes (`result.filter(n => !_removedNodeIds.has(n.id))`). A `DVertex` that
+  stays in `subElements` stays a node.
+- The clicked node disappears anyway, because React Flow removes the node the Delete key acted on from its own state;
+  its `DVertex` stays (MEAS M1 `vertexStillInStore: true`, as on `staging` in the chat's probe).
+
+### A.5 Baseline (MEAS, before the fix)
+
+| arm | ghosts | painted | note |
+|---|---|---|---|
+| M1, Delete on S3 | 2 (S3, P1) | 1 (P1) | 7 delete calls, 0 doubled |
+| M1U, one Ctrl+Z | 0 | — | S3 restored but **not painted** (its vertex never left `subElements`, so nothing re-adds the node) |
+| M2, Delete on S1 | 4 (S1, x1, x2, x3) | 3 | plus one edge «?->?» between two ghosts |
+| M2U, one Ctrl+Z | 4 | 3 | S1 not restored on the canvas; the repeated delete (MR) finds no node to click |
+| M3, JjScript `delete instance S2` | 6 | 5 | S2 itself painted |
+| SG, a ghost already saved, reloaded and opened | — | **painted** | vertex in the store and in `subElements` |
+
+### A.6 The fix, in `Dummy.ts` (the file is on the list)
+
+- `case 'model'`: a `DVertex` whose `model` is the deleted element is deleted too (`lObj.delete()`), like an edge.
+- `case 'end': case 'start':`: when the element being deleted is a `DVertex`, an edge drawn from or to it is
+  deleted too. The no-op stays for every other element.
+- Composition with the gesture's TRANSACTION: the vertex and edge deletes are `.delete()` calls made inside the
+  element's `ret()`, i.e. inside the element's own `TRANSACTION('delete …')`; nested TRANSACTIONs merge, so the
+  element, its vertices and their edges land in one history entry, and one Ctrl+Z restores them together. Restoring
+  the vertex puts it back in `subElements`, which is what makes the incremental sync paint it again (A.4). No
+  creator is involved (rule 12 does not apply).
+- Composition with the re-entry guard (`deleteIssued`, step 3): vertex and edge ids enter the Set like any other, so
+  a vertex reached twice in one macrotask (a container's cascade and a child's own delete) is deleted once. The raw
+  `DeleteElementAction`s of `syncDeleteVertex` (the clicked vertex's edges) bypass `Dummy` and the Set: the cascade
+  can issue a second delete for those edges, a no-op in the reducer (`reducer.ts:373`). Measured in the probe
+  (`del*.doubled`).
+- No critical-zone file: `canvasToJjom.ts`, `useJjomSync.ts`, `syncState.ts` are not touched.
