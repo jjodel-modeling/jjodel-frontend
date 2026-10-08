@@ -1264,6 +1264,52 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    /** Every instance is listed by its model (R-NEST-6, #174): `DModel.objects` holds the nested instances too
+     *  (R-NEST-1), and a state saved before held only the roots and the nested ones written by a `set` or by
+     *  the XMI import. For every `DObject` whose `father` chain ends at a `DModel`, the id is appended to that
+     *  model's `objects` when missing, with the `pointedBy` entry an `objects '+='` writes (PointedBy.fromID,
+     *  joiner/classes.ts); every `objects` list is then deduplicated keeping the first entry, as FASE B of
+     *  `2.226 -> 2.227`. A chain that does not reach a model (a father deleted before #174) is left
+     *  untouched, and no `father` is rewritten: an aggregation keeps its re-father (R-NEST-2).
+     *  Layer Impact Report: docs/lir/lir_2026-10-07_174_migration.md. Pure, idempotent, a no-op on a
+     *  coherent state. */
+    private ['2.229 -> 2.230'](s: DState): DState {
+        const idlookup: any = s.idlookup;
+        if (!idlookup || typeof idlookup !== 'object') return s;
+
+        const modelOf = (o: any): any => {
+            let e: any = idlookup[o.father];
+            for (let i = 0; i < 64 && e && e.className !== 'DModel'; i++) e = idlookup[e.father];
+            return e?.className === 'DModel' ? e : null;
+        };
+
+        let listed = 0, dangling = 0, deduped = 0;
+        for (const k in idlookup) {
+            const o = idlookup[k];
+            if (!o || typeof o !== 'object' || o.className !== 'DObject') continue;
+            const model = modelOf(o);
+            if (!model) { dangling++; continue; }
+            if (!Array.isArray(model.objects) || model.objects.includes(o.id)) continue;
+            model.objects = [...model.objects, o.id];
+            const source = 'idlookup.' + model.id + '.objects';
+            const pointedBy: any[] = Array.isArray(o.pointedBy) ? o.pointedBy : [];
+            if (!pointedBy.some((p: any) => p?.source === source)) o.pointedBy = [...pointedBy, { source }];
+            listed++;
+        }
+        for (const k in idlookup) {
+            const e = idlookup[k];
+            if (!e || e.className !== 'DModel' || !Array.isArray(e.objects)) continue;
+            const unique = [...new Set(e.objects)];
+            if (unique.length === e.objects.length) continue;
+            deduped += e.objects.length - unique.length;
+            e.objects = unique;
+        }
+
+        if (listed || deduped) console.log(`[VersionFixer 2.229 -> 2.230] ${listed} istanza/e annidata/e elencata/e nel modello, `
+            + `${deduped} voce/i doppia/e tolta/e da objects, ${dangling} con un padre che non risolve (lasciata/e com'era).`);
+        return s;
+    }
+
 }
 
 
