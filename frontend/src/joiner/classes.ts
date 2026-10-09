@@ -256,6 +256,18 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     (data: D | Pointer | undefined | null, baseObjInLookup?: undefined, path: '' = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState): CAN_THROW extends true ? L : L | undefined{
         if (!data || (data as any).__isProxy) return data as any;
         if (typeof data === 'string') {
+            /*if (!Pointers.isPointer(data as any)) {
+             NB: trying to resolve it as ecore-pointer: scrapped because i cannot access the base model from here,
+              and i would need to try all models with risks of multiple matches being ambiguous
+              todo: maybe later add baseobj as optional parameter to .wrap and .from and .fromD, .fromPointer methods, so they can resolve ecore-pointers.
+                const baseObj = undefined;
+                if ((/[A-Za-z0-9_$]$/.test(data)) && (data.includes("#") || data.includes("/") || data.includes("."))) {
+                    const baseObj
+                    const ret = (RuntimeAccessibleClass.get("LValue") as typeof LValue).resolveReference(data, baseObj)?.id as PTR;
+                    console.log("pointers from resolve", {data, ret});
+                    return ret;
+                }
+            }*/
             data = DPointerTargetable.from(data, state) as D;
             if (!data) {
                 windoww.Log.e(canThrow, 'Cannot wrap:', {data, baseObjInLookup, path});
@@ -732,7 +744,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let thiss: GObject<DModelElement> = this.thiss as any;
         if ('instances' in thiss) thiss.instances = [];
         return this; }
-    DClassifier(): this { return this; }
+
+    DClassifier(): this {
+        let thiss: DClassifier = this.thiss as any;
+        // do not initialize, because for classes is assumed false (they shouldn't even have it), for EDataType (primitives) is assumed true.
+        // So i want to be able to switch isPrimitive without changing the initialized value (indistinguishable from user input)
+        thiss.serializable = undefined;
+        return this;
+    }
     DParameter(defaultValue?: any): this {
         let thiss: DParameter = this.thiss as any;
         thiss.defaultValue = defaultValue;
@@ -895,6 +914,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DNamedElement(name?: DNamedElement["name"]): this {
         const thiss: DNamedElement = this.thiss as any;
         thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
+        if (thiss.className === "DOperation") return this; // do not check duplicates, operations allow overloading.
         let lParent: LModelElement | undefined = L.fromPointer(this.fatherPtr);
         if (lParent) U.increaseEndingNumber(thiss.name, false, false, s => !!lParent.children?.[s]);
         return this; }
@@ -903,18 +923,22 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const thiss: DTypedElement = this.thiss as any;
         thiss.allowCrossReference = false;
 
+        // trust pointers with no validation, maybe merge later with validation for d-classes below
+        if (Pointers.isPointer(type)) { this.setPtr("type", type); return this; }
+        // fix d-objects passed as type, or use fallback default types
         let dtype = Selectors.getByName2(type) as DClassifier | null;
-        switch (dtype?.className){
+        switch (dtype?.className) {
             default: type = undefined; break;
             case 'DClass':
                 switch (thiss.className) {
                     case 'DReference':
                     case 'DOperation':
                     case 'DParameter':
-                        type = dtype.id;
-                        break;
+                        type = dtype.id; break;
                     case 'DAttribute':
-                    default: type = dtype.id; break;
+                        type = ((dtype as DClass).isPrimitive) ? dtype.id : undefined; break;
+                    default:
+                        type = dtype.id; break;
                 }
                 break;
             case 'DEnumerator':
@@ -1011,6 +1035,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.allowCrossReference = false;
         thiss.typeParameters = [];
         thiss.eidFeature = "__recalculating__";
+        thiss.genericSuperTypes = [];
         this.setExternalPtr(thiss.father, "classes", "+=");
         this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 
@@ -1029,10 +1054,13 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const thiss: DEnumerator = this.thiss as any;
         this.setExternalPtr(thiss.father, "enumerators", "+=");
         this.setPtr("literals", literals);
+        thiss.serializable = undefined; // intentionally not initialized, check comment on DClass() constructor sgment.
         // thiss.literals = literals;
         // thiss.isClass = false;
         // thiss.isEnum = true;
-        return this; }
+        return this;
+    }
+
     DEdgePoint(): this { return this; }
     DEdge(): this {
         let thiss: DVoidEdge = this.thiss as any;
@@ -1115,7 +1143,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         this.setPtr("model", model);
         this.setPtr("graph", parentgraphID);
         this.setExternalPtr(thiss.father, "subElements", "+=");
-        console.log("0x1 set subelements ct", {f:thiss.father, id:thiss.id, thiss, parentgraphID});
 
         Log.eDev(thiss.father&&DPointerTargetable.fromPointer(thiss.father as Pointer<DGraphElement>)?.subElements.indexOf(thiss.id)!==-1, "subelemnts+= addition have duplicates",
             {adding:thiss, d:thiss.father&&DPointerTargetable.fromPointer(thiss.father as Pointer<DGraphElement>)?.subElements.indexOf(thiss.id)});
@@ -1607,13 +1634,14 @@ export class Pointers{
 
     static fromArr<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (
         val: (P | D | L | null | undefined)[] |  (P | D | L | null | undefined),
-        unique: boolean = false): /*P[] |*/ Pointer<any, 1, 1, any>[] {
+        unique: boolean = false, baseObj?: LModelElement, filter: boolean = true): /*P[] |*/ Pointer<any, 1, 1, any>[] {
         if (!val) val = [];
         if (!Array.isArray(val)) { val = [val]; }
         if (!val.length) { return val as any; }
-        val = val.map((lItem: any) => { return Pointers.from(lItem) }).filter(e=>!!e);
+        val = val.map((lItem: any) => { return Pointers.from(lItem, baseObj) }).filter(e=>!!e);
         val = val.filter(v => !!v) as any[];
         if (unique) val = [...new Set(val)];
+        if (filter) val = val.filter(e=> !!e);
         return val as any;
     }
 
@@ -1650,38 +1678,6 @@ export class Pointers{
         : INFERRED {
         return null as any;
     }
-
-
-    static from00<
-        // LOW extends number, UPP extends number | 'N',
-        // DDD extends (PTR extends Pointer<infer D> ? D : 'undefined_D'),
-        DWL extends {id: any},
-        // PCK extends (T extends Pack<infer PPP> ? PPP : never),
-        //ISARR extends (T extends any[] ? true : false),
-        // PCK1 extends (T extends any[] ? null : T extends Pack1<infer PPP> ? PPP : never), //         PCK1 extends (T extends any[] ? true : false),
-        // PCKA extends (T extends PackArr<infer PPP> ? PPP : 'undefined_arrpack'),
-        // PTR extends DWL["id"], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
-        // T extends DWL | DWL[] | null | undefined,
-        /*DX extends (PTR extends Pointer<infer D0> ? D0 : 'undefined_D'),
-        LOW extends (PTR extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
-        UPP extends (PTR extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
-        LX extends (PTR extends Pointer<any, number, any, infer LL> ? LL : 'undefined_L'),
-
-        LOWARR extends (PTR extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
-        UPPARR extends (PTR extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
-        DDDARR extends (PTR extends Pointer<any, any, any, infer LL>[] ? LL : 'undefined_LARR'),
-        RET = DX extends DPointerTargetable ? ( LOW extends number ? ( UPP extends number ? ( LX extends LPointerTargetable ? Pointer<DX, LOW, UPP, LX> : '_notret_L_') : '_notret_UPP_') : '_notret_LOW_') : '_notret_D_'
-        */
-        PTRPARAM = Pointer | Pointer[],
-        T = Exclude<DWL | DWL[] | PTRPARAM, unknown[]>,
-        // @ts-ignore
-        PTR = T extends null ? null : T extends undefined ? null : (T extends PTRPARAM ? T : (T extends any[] ? T[number]['id'][] : T['id'])),
-        // RET extends Pointer<DPointerTargetable, any, any, LPointerTargetable> = T extends DWL ? DWL["id"] : (T extends DWL[] ? DWL["id"] : null),
-        // INF = { PCK:PCK, ISARR: ISARR,  PTR: PTR, DWL: DWL, RET: RET}, // {DD:DD, LL: LL}//
-        >(data: T | T[] ): PTR { // RET | RET[] {
-        if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any as DWL).id)) as any;
-        else return (data ? (data as any).id : null as any);
-    } // stavolta fai infer so D|l.id
 
 
     public static from<DX extends DPointerTargetable>(data:DX): DX["id"]; // | {D:any};
@@ -1725,19 +1721,35 @@ export class Pointers{
     public static from<TT extends Pack<LPointerTargetable[]> | undefined | null,
         // @ts-ignore
         T extends (TT extends Pack<infer PTYPE> ? PTYPE : undefined)>(data:T): T extends null | undefined ? T : Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
+    public static from<TT extends Pack<LPointerTargetable[]> | undefined | null,
+        // @ts-ignore
+        T extends (TT extends Pack<infer PTYPE> ? PTYPE : undefined)>(data:T, baseObj?: LModelElement): T extends null | undefined ? T : Pointer<LtoD<T>, 1, 1, T>;
     // @ts-ignore
     public static from<T extends LPointerTargetable | undefined | null>(data: PackArr<T[]>): T extends null | undefined ? T : Pointer<LtoD<T>, 1, 1, T>[]; //{TESTARR:any};
+    // @ts-ignore
+    public static from<T extends LPointerTargetable | undefined | null>(data: PackArr<T[]>, baseObj?: LModelElement): T extends null | undefined ? T : Pointer<LtoD<T>, 1, 1, T>[];
     public static from(data:null | undefined): null; // | {Dn:any};
     public static from(data:(null | undefined)[]): []; // | {Dnn:any};
     public static from(data:(null | undefined) | (null | undefined)[]): []; // | {Dn0:any};
+    public static from(data:(null | undefined) | (null | undefined)[], baseObj?: LModelElement): [];
 
     // function from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): PTR | PTR[] | GObject {
-    public static from<T extends LClass, PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): null | PTR | PTR[]{
+    public static from<T extends LClass, PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[], baseObj?: LModelElement): null | PTR | PTR[]{
         if (!data) return null;
-        if (Array.isArray(data)) return data.filter(d => !!d).map(d => Pointers.from(d)) as any;
+        if (Array.isArray(data)) return data.filter(d => !!d).map(d => Pointers.from(d, baseObj)) as any;
         if (typeof data === "string") {
             if (data.indexOf(Pointers.prefix) === 0) return data as PTR;
-            // else return (RuntimeAccessibleClass.get("LValue") as typeof LValue).resolveReferenceTODO(data)?.id as PTR;
+            // if it doesn't contain "#" or "/" or "." --> it's not a ecore-reference. it usually starts with those but those are valid too: "other.ecore#myId", "http://..." "model.ecore"
+            // it must also end with alphanumeric or _$ (identifier valid characters)
+            if ((/[A-Za-z0-9_$]$/.test(data)) && (data.includes("#") || data.includes("/") || data.includes("."))) {
+                if (!baseObj) {
+                    Log.ww("Tried to solve a ecore-based reference without base model, it will return null", {data, baseObj});
+                    return null;
+                }
+                const ret = (RuntimeAccessibleClass.get("LValue") as typeof LValue).resolveReference(data, baseObj as any)?.id as PTR;
+                // console.log("pointers from resolve", {data, ret});
+                return ret;
+            }
         }
         const id = (data as any)?.id;
         if (id && id.indexOf(Pointers.prefix) === 0) return id;
@@ -1772,11 +1784,6 @@ export type Pack1<LL extends orArr<LPointerTargetable> | undefined, L extends LP
     L extends LPointerTargetable ? ( D extends DPointerTargetable ? D | L | Pointer<D, 1, 1, L> : undefined) : undefined;
 export type PackArr<LL extends orArr<LPointerTargetable> | undefined, L extends LPointerTargetable | undefined = unArr<LL>> = Pack1<L>[];
 export type Pack<LL extends orArr<LPointerTargetable> | undefined, L extends LPointerTargetable | undefined = unArr<LL>> = L extends undefined ? undefined : Pack1<L> | PackArr<L>;
-/*
-let n: any = null;
-let aa: DClass = n;
-let ptrr = Pointers.from(aa.parent);
-aa.parent = ptrr;*/
 
 @RuntimeAccessible('PendingPointedByPaths')
 export class PendingPointedByPaths{
@@ -1842,7 +1849,7 @@ export class PendingPointedByPaths{
     public saveForLater(): void { PendingPointedByPaths.all.push(this); }
     private canBeResolved(state: DState): boolean {
         this.solveAttempts++;
-        Log.w(this.solveAttempts >= 3 /*PendingPointedByPaths.maxSolveAttempts*/,
+        Log.w(U.debug && this.solveAttempts >= 3 /*PendingPointedByPaths.maxSolveAttempts*/,
             "pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
         return !!state.idlookup[this.holder];
     }
@@ -2172,11 +2179,14 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
         if (c.data.name === name) return true;
         const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
-        if (father) {
+        // check if name is available. Operations are allowed to overload (should be the only exception to name uniqueness)
+        // features shadowing/override is not a concern because .children does not return inherited features, so this check won't forbid shadowing/override.
+        if (c.data.className !== "DOperation" && father) {
             const check = (father as LModelElement).children?.filter((child) => {
                 return child.id !== c.data.id && (D.fromPointer(child.id) as DNamedElement).name === name;
             });
             if (check.length > 0) {
+                Log.ee("Cannot rename the selected element since this name is already taken.", {d:c.data, old: c.data.name, val});
                 U.alert('e', 'Cannot rename the selected element since this name is already taken.');
                 return true;
             }
@@ -2214,11 +2224,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     protected get_toString(c: Context): () => string {
         const data = c.data as DNamedElement;
         const ret: any = () => {
-            console.error("px defualt tostring inner", U.jsonCopy({data, dn: data.name}));
             return (data.name || data.className.substring(0))};
-        let printstuff = {...U.jsonCopy({d: U.jsonCopy(c.data), n:data.name, id: data.id}), c, ret};
-        ret.printstuff = printstuff;
-        console.error("px default tostring " + c.data.className, printstuff);
+        // let printstuff = {...U.jsonCopy({d: U.jsonCopy(c.data), n:data.name, id: data.id}), c, ret};
+        // ret.printstuff = printstuff;
         return ret;
         // return () => data.id;
     }

@@ -477,7 +477,9 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                 elem.className = elem.className || (elem.constructor as typeof RuntimeAccessibleClass).cname || elem.constructor.name;
                 let statefoldername = elem.className.substring(1).toLowerCase() + 's';
                 derivedActions.push(
-                    Action.parse(SetRootFieldAction.create(statefoldername, elem.id,'[]', true)));
+                    // NB: those are pointers in the state root like "s().packages, s().classs" ...
+                    Action.parse(SetRootFieldAction.create(statefoldername, elem.id, '[]', true))
+                );
                 if (!Array.isArray(elem.pointedBy)) elem.pointedBy = [];
                 elem.pointedBy.push(PointedBy.new(statefoldername));
                 /*if (false && action.isPointer) {
@@ -517,7 +519,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
         const prevAction: ParsedAction = actions[i-1];
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
-        if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
+        // if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
 
         switch (actiontype) {
             /*
@@ -606,7 +608,7 @@ ret .b = 3
 
 // then add to it: content of props, constants, usageDeclarations
 export function reducer(oldState: DState = initialState, action: Action, isLiveChange: boolean = false): DState {
-    if (U.debug) console.warn("reducer", {action, isLiveChange});
+    // if (U.debug) console.warn("reducer", {action, isLiveChange});
     if (!oldState) {
         DState.current = initialState = oldState = DState.new();
         if (U.debug) console.error("############## state initialized", DState.current, DState.current?.idlookup);
@@ -615,7 +617,7 @@ export function reducer(oldState: DState = initialState, action: Action, isLiveC
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
 
-    if (U.debug) console.log('execute action', {action, isLiveChange});
+    if (U.debug) console.log('execute action', {live:isLiveChange, f:action.field, action});
     if (!U.safeMode) {
         let ret = unsafereducer(oldState, action, isLiveChange);
         DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
@@ -1228,8 +1230,8 @@ function updateStateHistory(ret: DState, oldState: DState, action: Action): void
 
     // update state history
     let delta = Uobj.objectDelta(ret, oldState, true, false);
-    if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
-    let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
+    // if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
+    Uobj.applyObjectDelta(ret, delta, false, oldState); // check round-trip, throws exception if fails. needed to validate the action can be undone.
     delta.timestamp = ret.timestamp;
     delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
     if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();

@@ -5,10 +5,22 @@
 	Author:  Stefan Goessner/2006
 	Web:     http://goessner.net/
 */
+
+/*
+Edited by Damiano Di Vincenzo ~2026
+I don't claim any change in the license.
+both the original and my edit are free to use and share following LGPL/2.1.
+
+to add:
+   unique identifier for comments (path-based),
+   additional error handling,
+   ability to parse strings instead of documents
+   other ecore-based and misc utilities.
+*/
 import xmlFormat from 'xml-formatter';
 
 var X = {
-   toObj: function(xml, index = 0) {
+   toObj: function(xml, indices/*: number[]*/ = []) {
       var o = {};
       if (xml.nodeType==1) {   // element node ..
          if (xml.attributes.length)   // element with attributes  ..
@@ -33,12 +45,12 @@ var X = {
                         o["#cdata"] = X.escape(n.nodeValue);
                      else if (o[n.nodeName]) {  // multiple occurence of element ..
                         if (o[n.nodeName] instanceof Array)
-                           o[n.nodeName][o[n.nodeName].length] = X.toObj(n, i);
+                           o[n.nodeName][o[n.nodeName].length] = X.toObj(n, [...indices, i]);
                         else
-                           o[n.nodeName] = [o[n.nodeName], X.toObj(n, i)];
+                           o[n.nodeName] = [o[n.nodeName], X.toObj(n, [...indices, i])];
                      }
                      else  // first occurence of element..
-                        o[n.nodeName] = X.toObj(n, i); // damiano: qua parsa sottonodi
+                        o[n.nodeName] = X.toObj(n, [...indices, i]); // damiano: qui parsa sottonodi
                   }
                }
                else { // mixed content
@@ -65,11 +77,11 @@ var X = {
          if (!xml.attributes.length && !xml.firstChild) o = null;
       }
       else if (xml.nodeType==9) { // document.node
-         o = X.toObj(xml.documentElement);
+         o = X.toObj(xml.documentElement, indices);
       }
       else if (xml.nodeType==8) { // comment
          // console.error("unhandled xml node comment: " + xml.nodeType, {xml, nodetype:xml.nodeType});
-         return {type: "#comment", details: {comment:xml.data}, source: "XMI_Element_"+index} // ; .data; .nodeValue, .textContent are the same
+         return {type: "#comment", details: {comment:xml.data}, source: "XMI_Element_"+indices.join(".")} // ; .data; .nodeValue, .textContent are the same
 
       }
       else console.error("unhandled xml node type: " + xml.nodeType, {xml, nodetype:xml.nodeType});

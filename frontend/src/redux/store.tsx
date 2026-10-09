@@ -1,4 +1,4 @@
-import {DPlaceholder, DTypeDeclaration, type Language, transientProperties, Uobj} from '../joiner';
+import {DAnnotation, DPlaceholder, DTypeDeclaration, type Language, transientProperties, Uobj} from '../joiner';
 import {
     Asterisk,
     Circle,
@@ -135,6 +135,7 @@ export class DState extends DPointerTargetable{
     edgepoints: Pointer<DEdgePoint, 0, 'N'> = [];
     edges: Pointer<DEdge, 0, "N"> = [];
 
+    annotations: Pointer<DAnnotation, 0, 'N'> = [];
     classifiers: Pointer<DClassifier, 0, 'N'> = [];
     enumerators: Pointer<DEnumerator, 0, 'N'> = [];
     packages: Pointer<DPackage, 0, 'N'> = [];
@@ -342,9 +343,9 @@ otherwise you would click the edge container instead of the graph-elements benea
 
             for (let primitiveType of Object.values(ShortAttribETypes)) {
                 let dPrimitiveType;
-                if (primitiveType === ShortAttribETypes.EVoid) continue; // or make void too without primitiveType = true, but with returnType = true?
                 dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, true, 'Pointer_' + primitiveType.toUpperCase());
-                SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
+                if (primitiveType === ShortAttribETypes.EVoid) SetRootFieldAction.new('returnTypes', dPrimitiveType.id, '+=', true);
+                else SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
             }
 
             /// creating m3 "Object" metaclass

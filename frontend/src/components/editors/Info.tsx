@@ -580,7 +580,7 @@ class builder {
                 // Check if the reference is a composition
                 isComposition = (feature as LReference)?.composition === true;
                 if (isComposition) {
-                    isReference = false; // 
+                    isReference = false;
                 }
             break;
             case DAttribute.cname:
@@ -714,23 +714,9 @@ class builder {
             {this.named(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Type:</b>
-                {(()=> { console.error("input getter pre", {data, n:data.name, s: data+""}); return null })()}
                 <Input type={"text"}
                        data={data}
-                       getter={(l)=> {
-                           const ls0 = l.toString();
-                           //windoww.ProxyCache.disable = true;
-                           const ls = l.toString();
-                           // windoww.ProxyCache.disable = false;
-                           windoww.lll = l;
-                           windoww.ddd = data;
-                           console.error("input getter", {l, data, ls0,
-                               ls, ds: data.toString(), d: U.jsonCopy(l.__raw),
-                               dn: data.name, ln: l.name,
-                               lls: l + "", dds: data+""
-                           });
-                           return ls;
-                       }}
+                       getter={(l)=> l.toString()}
                        setter={(v: any, l: LTypeDeclaration) => {
                            console.error("parse setter");
                            l.parse(v)
@@ -995,13 +981,15 @@ function InfoComponent(props: AllProps) {
 
         // MCWS: # Metaclasses with Superclass
         const MCWS = dclasses.filter((c: any) => {
-            const extendsArr = c?.extends;
+            const extendsArr = (LPointerTargetable.from(c) as LClass)?.extends;
             return Array.isArray(extendsArr) && extendsArr.length > 0;
         }).length;
 
         // LMC: % Isolated Metaclasses (no superclass and no subclasses)
         const isolated = classes.filter((c: any) => {
-            const extendsArr = c.extends;
+            c = LPointerTargetable.from(c) as LClass;
+            if (!c) return true;
+            const extendsArr = c?.extends;
             const extendedByArr = c.extendedBy;
             const hasSuper = Array.isArray(extendsArr) && extendsArr.length > 0;
             const hasSub = Array.isArray(extendedByArr) && extendedByArr.length > 0;

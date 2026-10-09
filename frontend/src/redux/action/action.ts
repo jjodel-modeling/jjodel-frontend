@@ -278,7 +278,7 @@ let after_transaction: ((newState: DState)=>void)[] = [];
 // called before reducer, before map and react updates, always, also if the transaction is unsuccessful. Not if it's aborted before launch.
 export async function AT_TRANSACTION(a:(...argss:any)=>void) { at_transaction.push(a); }
 
-// called after reducer, before map and react updates, only if the transaction is successful.
+// called INSIDE reducer, before map and react updates, only if the transaction is successful.
 // NB: cannot call store.getState while inside.
 export async function AFTER_TRANSACTION(a:(newState: DState)=>void) { after_transaction.push(a); }
 
@@ -286,7 +286,7 @@ export async function AFTER_TRANSACTION(a:(newState: DState)=>void) { after_tran
 // NB: can call store.getState while inside.
 export async function AFTER_UPDATE(a:(newState: DState)=>void) { after_transaction.push((s)=>setTimeout(()=>a(s), 1)); }
 
-// to be executed in reducer, for internal jjodel usage, users should never call it.
+// to be executed INSIDE reducer, for internal jjodel usage, users should never call it.
 export async function DO_AFTER_TRANSACTION_NOT_FOR_USERS(newState: DState, liveChange: boolean = false) {
     // console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS len:', after_transaction.length);
     if (after_transaction.length) {
@@ -354,7 +354,12 @@ export class Action extends RuntimeAccessibleClass {
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;
-        this.stack = new Error().stack?.split('\n').splice( 4);
+        (this as any).rawStack = new Error();
+        this.stack = (new Error().stack || '').split('\n');
+        this.stack.splice(0, 2);
+        //  //(0, 4); first 4 elements are fixed: 1: new Error(), 2: super.action construction. 3) subclass.action constructor 4) Action.new or Action.create
+        // but if by any chance new Action() is called directly somewhere, then i need to only splice 2.
+        // so i'm going safe even through that should be invalid, to help detect invalid calls.
         this.subType = subType;
         this.skipCollaborative = skipCollaborative;
         this.className = Action.cname;
@@ -635,7 +640,7 @@ export class SetFieldAction extends SetRootFieldAction {
         this.me = me;
         this.me_field = field;
         this.className = SetFieldAction.cname;
-        if (field === "details") (this as any).debug = true;
+        // if (field === "details") (this as any).debug = true;
         if (fire) this.fire();
     }
 

@@ -82,7 +82,6 @@ export class ReferencePointers extends CommonStuff{
     instances!: Pointer<DValue>[];
     defaultValue!: Pointer<DObject>[];
     opposite?: Pointer<DReference>;
-    target!: Pointer<DClass>[];
     edges!: Pointer<DEdge>[];
 }
 
@@ -123,6 +122,7 @@ export class ClassPointers extends CommonStuff{
     // extendedBy?: Pointer<DClass>[];
     implements?: Pointer<DClass>[];
     implementedBy?: Pointer<DClass>[];
+    // nested in genericType and genericSuperTypes
 }
 
 @RuntimeAccessible('EnumPointers')

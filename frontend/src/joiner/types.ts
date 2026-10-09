@@ -5,7 +5,7 @@ import {
     Pointer,
     RuntimeAccessibleClass,
     ShortAttribETypes,
-    transientProperties
+    transientProperties, U
 } from "../joiner";
 import {
     DGraphElement,
@@ -125,6 +125,17 @@ export type bool = boolean;
 export type NotBool<T> = Exclude<T, boolean>;
 export type TODO<T = any> = any;
 export type NonEmptyString = Exclude<string, ''>;
+
+// typed that can only accept literals, not string variables, to reduce mistakes and guarantee i'm passing a manually fixed key.
+export type Literal<T extends string = string> = T extends string
+    ? string extends T
+        ? never // T got widened to `string` → reject
+        : T
+    : never;
+// usage example:
+function literalUsage<T extends string>(k: Literal<T>) { }
+literalUsage("a"); // this is fine
+// literalUsage("" as string); // this is an error
 
 export type TLCoordExtended =
     "center" | "c" | "cc" | "cl" | "cr" | "ct" | "cb" |

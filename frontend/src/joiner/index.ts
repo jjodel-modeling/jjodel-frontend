@@ -78,7 +78,7 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, DeepReadon
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap,
     Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption, NestedArray, TLCoord, TLCoordExtended,
     ObjectWithoutPointers, FakeStateProps, DefaultProps, ubyte, byte, degree, double, float, radian, ratio, int, uint, Dependency,
-    NotBool, NodeTypes,
+    NotBool, NodeTypes, Literal
 
 } from "./types";
 
@@ -160,6 +160,7 @@ export {
     ECoreOperation,
     ECoreParameter,
     ECoreObject,
+    EcoreTypeDeclaration,
     EcoreXmiTags,
 } from "../api/data";
 // import domain-specific classes
@@ -190,7 +191,7 @@ export {
     DTypeDeclaration, LTypeDeclaration,
 } from "../model/logicWrapper/LModelElement";
 export {default as LTypedElement} from "../model/logicWrapper/LModelElement"
-export {GenericType} from "../model/logicWrapper/etype";
+export {GenericType, getClassifiers, TypeDeclaration, TypeDeclarationXMI, TypeDeclarationXMIU, writeEcoreType, } from "../model/logicWrapper/etype";
 
 
 export {
@@ -205,7 +206,14 @@ export {LViewElement, DViewElement} from "../view/viewElement/view";
 export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction,
-    TRANSACTION, ABORT, /*BEGIN, END*/} from "../redux/action/action";
+    TRANSACTION, TRANSACTION_MERGE,
+    /*BEGIN, END, */
+    ABORT, COMMIT,
+    AT_TRANSACTION,
+    AFTER_TRANSACTION,
+    DO_AFTER_TRANSACTION_NOT_FOR_USERS,
+    AFTER_UPDATE,
+} from "../redux/action/action";
 
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
 export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";

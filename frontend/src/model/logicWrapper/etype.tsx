@@ -1,11 +1,11 @@
-import type {
+import {
     Pointer,
     Dictionary,
     GObject,
     LogicContext,
     orArr,
     DtoL,
-    NamedArr,
+    NamedArr, ECoreClass, ECoreAttribute, DTypedElement, ECoreOperation, LAnnotation, Defaults,
 } from "../../joiner";
 import {
     DClassifier, LClassifier, Pointers, U, L, LModel, LClass, DClass, LEnumerator,
@@ -16,7 +16,8 @@ import {
     Uarr, Log,
     Alias,
     DState,
-    T2M
+    T2M,
+    EcoreTypeDeclaration
 } from "../../joiner";
 
 const OPERATOR_MAP: Dictionary<string, keyof GenericType> = {
@@ -34,6 +35,7 @@ const OPERATORS: { symbol: string; field: keyof GenericType }[] = [
     { symbol: "~",  field: "operandsComplement" },   // highest precedence
 ];
 
+// ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Recursive descent parser
 // Handles: T, Foo, Foo<A,B>, ?, ? extends A & B, ? super A,
@@ -250,14 +252,14 @@ class GenericTypeParser {
             if (!this.consume(">")) return null;
             // eg: Shape<Geom2D>, List<?>
             const ret = new GenericType("parameterized");
-            console.log("resolve param for GT", {name, ret});
+            // console.log("resolve param for GT", {name, ret});
             ret.classifier = this.resolveClassifierID(name);
             ret.typeArgs = args;
             return ret;
         }
         // eg: Shape, Map, T (target is LClass or LTypeParam)
         const ret = new GenericType("raw");
-        console.log("resolve classifier for GT", {name, ret});
+        // console.log("resolve classifier for GT", {name, ret});
         ret.classifier = this.resolveClassifierID(name);
         return ret;
     }
@@ -351,20 +353,43 @@ type String = DClassifier;
 export type GenericTypeName = string;
 export type TYPE =  Pointer<DClassifier> | Pointer<DTypeDeclaration>; // pointer or string like "T", because i can have stuff like K extends V
 
-export function getClassifiers(c: LogicContext<any> | LModelElement) {
+
+export function getClassifiers(c: LogicContext<any> | LModelElement, inScope = true) {
     let l: LModelElement = c as any;
     if (!l.__isProxy) l = (c as LogicContext).proxyObject;
 
     const model = l.model;
     const classes = model.classes;
     const enums = model.enumerators;
-    const typeDecls = (l as LClass | LOperation | LModel).allTypeDeclarations; // not model.typeDeclarations, because it needs to get all typedecls in this element and his ancestors.
+
+    // not model.typeDeclarations, because it needs to get all typedecls in this element and his ancestors.
+    const typeDecls =
+        inScope ? l.scopedTypeParameters :
+            (l as LClass | LOperation | LModel).allTypeDeclarations;
 
     return {model, classes, enums, typeDecls,
         m: model, typeDeclarations: typeDecls, enumerators: enums};
 }
 
-// NB: i need all keys to be present for U.closerTo, even if they are undefined. so i cannot use property?: optionals.  or !. They need to exist.
+export function writeEcoreType(json: GObject, c: LogicContext<DTypedElement>): void {
+    if (c.proxyObject.genericType) {
+        const {m, classes, enums, typeDeclarations} = getClassifiers(c);
+        const gt = c.proxyObject.genericType;
+        // const serialized = gt ? GenericType.serializeGenericType(gt, m) : null;
+        const gtEcore = gt && GenericType.parseToEcore(gt, classes, enums, typeDeclarations, false);
+        console.error("write generic type to ecore 0x9", {gt, gtEcore, json, d: c.data});
+        if (gtEcore) {
+            EcoreParser.write(json, ECoreAttribute.eGenericType, gtEcore);
+        }
+    }
+    if (json[ECoreAttribute.eGenericType]) return;
+    const type = c.proxyObject.type;
+    if (type.id === Defaults.Pointer_EVOID) return;
+    EcoreParser.write(json, ECoreAttribute.eType, c.proxyObject.type.typeEcoreString + "", "");
+}
+
+
+// NB: i need all keys to be present for U.closrTo, even if they are undefined. so i cannot use property?: optionals.  or !. They need to exist.
 @RuntimeAccessible("GenericType")
 export class GenericType {
     static cname = "GenericType";
@@ -383,172 +408,552 @@ export class GenericType {
     // annotations?: LAnnotation; // removed because i cannot have GenericType contain L-elements
 
     static diff() {
-
-        const original = {
-            "eAnnotations": {
-                "@source": "http://www.example.org/documentation",
-                "@references": "#//",
-                "details": {
-                    "@key": "description",
-                    "@value": "This package contains exactly one of each major Ecore structural model element with all properties populated."
-                }
-            },
-            "eClassifiers": [
-                {
-                    "@xsi:type": "ecore:EDataType",
-                    "@name": "CustomString",
-                    "@instanceClassName": "java.lang.String",
-                    "@serializable": "true"
-                },
-                {
-                    "@xsi:type": "ecore:EEnum",
-                    "@name": "AccessLevel",
-                    "eLiterals": {
-                        "@name": "ADMIN",
-                        "@value": "1",
-                        "@literal": "ADMINISTRATOR"
-                    }
-                },
-                {
-                    "@xsi:type": "ecore:EClass",
-                    "@name": "IdentifiableElement",
-                    "@abstract": "true",
-                    "@interface": "false",
-                    "eStructuralFeatures": {
-                        "@xsi:type": "ecore:EAttribute",
-                        "@name": "id",
-                        "@eType": "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong",
-                        "@changeable": "true",
-                        "@volatile": "false",
-                        "@transient": "false",
-                        "@unsettable": "false",
-                        "@derived": "false",
-                        "@iD": "true"
-                    }
-                },
-                {
-                    "@xsi:type": "ecore:EClass",
-                    "@name": "UserAccount",
-                    "@abstract": "false",
-                    "@interface": "false",
-                    "@eSuperTypes": "#//IdentifiableElement",
-                    "eStructuralFeatures": [
-                        {
-                            "@xsi:type": "ecore:EAttribute",
-                            "@name": "username",
-                            "@eType": "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString",
-                            "@ordered": "true",
-                            "@unique": "true",
-                            "@lowerBound": "1",
-                            "@upperBound": "1",
-                            "@changeable": "true",
-                            "@volatile": "false",
-                            "@transient": "false",
-                            "@defaultValueLiteral": "anonymous_user",
-                            "@unsettable": "false",
-                            "@derived": "false",
-                            "@iD": "false"
-                        },
-                        {
-                            "@xsi:type": "ecore:EReference",
-                            "@name": "profile",
-                            "@eType": "#//SecurityProfile",
-                            "@ordered": "true",
-                            "@unique": "true",
-                            "@lowerBound": "0",
-                            "@upperBound": "1",
-                            "@changeable": "true",
-                            "@volatile": "false",
-                            "@transient": "false",
-                            "@unsettable": "false",
-                            "@derived": "false",
-                            "@containment": "true",
-                            "@resolveProxies": "true"
-                        }
-                    ],
-                    "eOperations": {
-                        "@name": "changePassword",
-                        "@eType": "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean",
-                        "@ordered": "true",
-                        "@unique": "true",
-                        "@lowerBound": "1",
-                        "@upperBound": "1",
-                        "eParameters": {
-                            "@name": "newPassword",
-                            "@eType": "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString",
-                            "@ordered": "true",
-                            "@unique": "true",
-                            "@lowerBound": "1",
-                            "@upperBound": "1"
-                        }
-                    }
-                },
-                {
-                    "@xsi:type": "ecore:EClass",
-                    "@name": "SecurityProfile"
-                },
-                {
-                    "@xsi:type": "ecore:EClass",
-                    "@name": "DataRepository",
-                    "@abstract": "false",
-                    "@interface": "false",
-                    "eTypeParameters": {
-                        "@name": "T"
-                    },
-                    "eStructuralFeatures": {
-                        "@xsi:type": "ecore:EAttribute",
-                        "@name": "storedData",
-                        "#text": "can structuralfeature have nested stuff inside??",
-                        "eGenericType": {
-                            "@eTypeParameter": "#//DataRepository/T"
-                        }
-                    }
-                }
-            ],
-            "xmlns:ecore": "http://www.eclipse.org/emf/2002/Ecore",
-            "xmlns:xmi": "http://www.omg.org/XMI",
-            "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-            "xmi:version": "2.0",
-            "name": "comprehensiveUniverse",
-            "nsURI": "http://www.example.org/comprehensiveUniverse",
-            "nsPrefix": "universe"
-        };
-        const copy = {};
+// should have fixed defaultval, need still to fix types as prio, add logs for type parsing m2 and run new tests.
+        let newfrag = {};
 
     }
     static test() {
-        T2M(L.from(DState.getState().models[0]), "eCore/XMI", `
-<?xml version="1.0" ?>
-<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" xmi:version="2.0" name="comprehensiveUniverse" nsURI="http://www.example.org/comprehensiveUniverse" nsPrefix="universe">
-  <eAnnotations source="http://www.example.org/documentation" references="#//">
-    <details key="description" value="This package contains exactly one of each major Ecore structural model element with all properties populated."/>
-  </eAnnotations>
-  <eClassifiers xsi:type="ecore:EDataType" name="CustomString" instanceClassName="java.lang.String" serializable="true"/>
-  <eClassifiers xsi:type="ecore:EEnum" name="AccessLevel">
-    <eLiterals name="ADMIN" value="1" literal="ADMINISTRATOR"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="IdentifiableElement" abstract="true" interface="false">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong" changeable="true" volatile="false" transient="false" unsettable="false" derived="false" iD="true"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="UserAccount" abstract="false" interface="false" eSuperTypes="#//IdentifiableElement">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="username" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" ordered="true" unique="true" lowerBound="1" upperBound="1" changeable="true" volatile="false" transient="false" defaultValueLiteral="anonymous_user" unsettable="false" derived="false" iD="false"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="profile" eType="#//SecurityProfile" ordered="true" unique="true" lowerBound="0" upperBound="1" changeable="true" volatile="false" transient="false" unsettable="false" derived="false" containment="true" resolveProxies="true"/>
-    <eOperations name="changePassword" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" ordered="true" unique="true" lowerBound="1" upperBound="1">
-      <eParameters name="newPassword" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" ordered="true" unique="true" lowerBound="1" upperBound="1"/>
-    </eOperations>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="SecurityProfile"/>
-  <eClassifiers xsi:type="ecore:EClass" name="DataRepository" abstract="false" interface="false">
-    <eTypeParameters name="T"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="storedData">
- can structuralfeature have nested stuff inside?? 
-      <eGenericType eTypeParameter="#//DataRepository/T"/>
+        // to get json-version use window.ecorejson
+        /*T2M(L.from(DState.getState().models[0]), "eCore/XMI", `<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore">
+
+  <eClassifiers xsi:type="ecore:EClass" name="EObject">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceClass" changeable="false"
+        volatile="true" transient="true" derived="true">
+      <eGenericType eClassifier="#//EObject">
+        <eTypeArguments/>
+      </eGenericType>
     </eStructuralFeatures>
   </eClassifiers>
 </ecore:EPackage>
-
+`);
+       if (false as any) */T2M(L.from(DState.getState().models[0]), "eCore/XMI", `<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="ecore"
+    nsURI="http://www.eclipse.org/emf/2002/Ecore" nsPrefix="ecore">
+  <eClassifiers xsi:type="ecore:EClass" name="EAttribute" eSuperTypes="#//EStructuralFeature">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="ConsistentTransient"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="iD" eType="#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAttributeType" lowerBound="1"
+        eType="#//EDataType" changeable="false" volatile="true" transient="true" derived="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EAnnotation" eSuperTypes="#//EModelElement">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="WellFormedSourceURI"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="source" eType="#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="details" upperBound="-1"
+        eType="#//EStringToStringMapEntry" containment="true" resolveProxies="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eModelElement" eType="#//EModelElement"
+        transient="true" resolveProxies="false" eOpposite="#//EModelElement/eAnnotations"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="contents" upperBound="-1"
+        eType="#//EObject" containment="true" resolveProxies="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="references" upperBound="-1"
+        eType="#//EObject"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EClass" eSuperTypes="#//EClassifier">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="InterfaceIsAbstract AtMostOneID UniqueFeatureNames UniqueOperationSignatures NoCircularSuperTypes WellFormedMapEntryClass ConsistentSuperTypes DisjointFeatureAndOperationSignatures"/>
+    </eAnnotations>
+    <eOperations name="isSuperTypeOf" eType="#//EBoolean">
+      <eParameters name="someClass" eType="#//EClass"/>
+    </eOperations>
+    <eOperations name="getFeatureCount" eType="#//EInt"/>
+    <eOperations name="getEStructuralFeature" eType="#//EStructuralFeature">
+      <eParameters name="featureID" eType="#//EInt"/>
+    </eOperations>
+    <eOperations name="getFeatureID" eType="#//EInt">
+      <eParameters name="feature" eType="#//EStructuralFeature"/>
+    </eOperations>
+    <eOperations name="getEStructuralFeature" eType="#//EStructuralFeature">
+      <eParameters name="featureName" eType="#//EString"/>
+    </eOperations>
+    <eOperations name="getOperationCount" eType="#//EInt"/>
+    <eOperations name="getEOperation" eType="#//EOperation">
+      <eParameters name="operationID" eType="#//EInt"/>
+    </eOperations>
+    <eOperations name="getOperationID" eType="#//EInt">
+      <eParameters name="operation" eType="#//EOperation"/>
+    </eOperations>
+    <eOperations name="getOverride" eType="#//EOperation">
+      <eParameters name="operation" eType="#//EOperation"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="abstract" eType="#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="interface" eType="#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eSuperTypes" upperBound="-1"
+        eType="#//EClass" unsettable="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="suppressedIsSetVisibility" value="true"/>
+        <details key="suppressedUnsetVisibility" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eOperations" upperBound="-1"
+        eType="#//EOperation" containment="true" resolveProxies="false" eOpposite="#//EOperation/eContainingClass"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAllAttributes" upperBound="-1"
+        eType="#//EAttribute" changeable="false" volatile="true" transient="true"
+        derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAllReferences" upperBound="-1"
+        eType="#//EReference" changeable="false" volatile="true" transient="true"
+        derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eReferences" upperBound="-1"
+        eType="#//EReference" changeable="false" volatile="true" transient="true"
+        derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAttributes" upperBound="-1"
+        eType="#//EAttribute" changeable="false" volatile="true" transient="true"
+        derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAllContainments" upperBound="-1"
+        eType="#//EReference" changeable="false" volatile="true" transient="true"
+        derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAllOperations" upperBound="-1"
+        eType="#//EOperation" changeable="false" volatile="true" transient="true"
+        derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAllStructuralFeatures"
+        upperBound="-1" eType="#//EStructuralFeature" changeable="false" volatile="true"
+        transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAllSuperTypes" upperBound="-1"
+        eType="#//EClass" changeable="false" volatile="true" transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eIDAttribute" eType="#//EAttribute"
+        changeable="false" volatile="true" transient="true" derived="true" resolveProxies="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eStructuralFeatures" upperBound="-1"
+        eType="#//EStructuralFeature" containment="true" resolveProxies="false" eOpposite="#//EStructuralFeature/eContainingClass"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eGenericSuperTypes" upperBound="-1"
+        eType="#//EGenericType" unsettable="true" containment="true" resolveProxies="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="suppressedIsSetVisibility" value="true"/>
+        <details key="suppressedUnsetVisibility" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAllGenericSuperTypes"
+        upperBound="-1" eType="#//EGenericType" changeable="false" volatile="true"
+        transient="true" derived="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EClassifier" abstract="true" eSuperTypes="#//ENamedElement">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="WellFormedInstanceTypeName UniqueTypeParameterNames"/>
+    </eAnnotations>
+    <eOperations name="isInstance" eType="#//EBoolean">
+      <eParameters name="object" eType="#//EJavaObject"/>
+    </eOperations>
+    <eOperations name="getClassifierID" eType="#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceClassName" eType="#//EString"
+        volatile="true" unsettable="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="suppressedIsSetVisibility" value="true"/>
+        <details key="suppressedUnsetVisibility" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceClass" changeable="false"
+        volatile="true" transient="true" derived="true">
+      <eGenericType eClassifier="#//EJavaClass">
+        <eTypeArguments/>
+      </eGenericType>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultValue" eType="#//EJavaObject"
+        changeable="false" volatile="true" transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceTypeName" eType="#//EString"
+        volatile="true" unsettable="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="suppressedIsSetVisibility" value="true"/>
+        <details key="suppressedUnsetVisibility" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="ePackage" eType="#//EPackage"
+        changeable="false" transient="true" eOpposite="#//EPackage/eClassifiers"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eTypeParameters" upperBound="-1"
+        eType="#//ETypeParameter" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EDataType" eSuperTypes="#//EClassifier">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serializable" eType="#//EBoolean"
+        defaultValueLiteral="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EEnum" eSuperTypes="#//EDataType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="UniqueEnumeratorNames UniqueEnumeratorLiterals"/>
+    </eAnnotations>
+    <eOperations name="getEEnumLiteral" eType="#//EEnumLiteral">
+      <eParameters name="name" eType="#//EString"/>
+    </eOperations>
+    <eOperations name="getEEnumLiteral" eType="#//EEnumLiteral">
+      <eParameters name="value" eType="#//EInt"/>
+    </eOperations>
+    <eOperations name="getEEnumLiteralByLiteral" eType="#//EEnumLiteral">
+      <eParameters name="literal" eType="#//EString"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eLiterals" upperBound="-1"
+        eType="#//EEnumLiteral" containment="true" resolveProxies="false" eOpposite="#//EEnumLiteral/eEnum"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EEnumLiteral" eSuperTypes="#//ENamedElement">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" eType="#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instance" eType="#//EEnumerator"
+        transient="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="literal" eType="#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eEnum" eType="#//EEnum"
+        changeable="false" transient="true" resolveProxies="false" eOpposite="#//EEnum/eLiterals"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EFactory" eSuperTypes="#//EModelElement">
+    <eOperations name="create" eType="#//EObject">
+      <eParameters name="eClass" eType="#//EClass"/>
+    </eOperations>
+    <eOperations name="createFromString" eType="#//EJavaObject">
+      <eParameters name="eDataType" eType="#//EDataType"/>
+      <eParameters name="literalValue" eType="#//EString"/>
+    </eOperations>
+    <eOperations name="convertToString" eType="#//EString">
+      <eParameters name="eDataType" eType="#//EDataType"/>
+      <eParameters name="instanceValue" eType="#//EJavaObject"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="ePackage" lowerBound="1"
+        eType="#//EPackage" transient="true" resolveProxies="false" eOpposite="#//EPackage/eFactoryInstance"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EModelElement" abstract="true">
+    <eOperations name="getEAnnotation" eType="#//EAnnotation">
+      <eParameters name="source" eType="#//EString"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eAnnotations" upperBound="-1"
+        eType="#//EAnnotation" containment="true" resolveProxies="false" eOpposite="#//EAnnotation/eModelElement"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ENamedElement" abstract="true" eSuperTypes="#//EModelElement">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="WellFormedName"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EObject">
+    <eOperations name="eClass" eType="#//EClass"/>
+    <eOperations name="eIsProxy" eType="#//EBoolean"/>
+    <eOperations name="eResource" eType="#//EResource"/>
+    <eOperations name="eContainer" eType="#//EObject"/>
+    <eOperations name="eContainingFeature" eType="#//EStructuralFeature"/>
+    <eOperations name="eContainmentFeature" eType="#//EReference"/>
+    <eOperations name="eContents">
+      <eGenericType eClassifier="#//EEList">
+        <eTypeArguments eClassifier="#//EObject"/>
+      </eGenericType>
+    </eOperations>
+    <eOperations name="eAllContents">
+      <eGenericType eClassifier="#//ETreeIterator">
+        <eTypeArguments eClassifier="#//EObject"/>
+      </eGenericType>
+    </eOperations>
+    <eOperations name="eCrossReferences">
+      <eGenericType eClassifier="#//EEList">
+        <eTypeArguments eClassifier="#//EObject"/>
+      </eGenericType>
+    </eOperations>
+    <eOperations name="eGet" eType="#//EJavaObject">
+      <eParameters name="feature" eType="#//EStructuralFeature"/>
+    </eOperations>
+    <eOperations name="eGet" eType="#//EJavaObject">
+      <eParameters name="feature" eType="#//EStructuralFeature"/>
+      <eParameters name="resolve" eType="#//EBoolean"/>
+    </eOperations>
+    <eOperations name="eSet">
+      <eParameters name="feature" eType="#//EStructuralFeature"/>
+      <eParameters name="newValue" eType="#//EJavaObject"/>
+    </eOperations>
+    <eOperations name="eIsSet" eType="#//EBoolean">
+      <eParameters name="feature" eType="#//EStructuralFeature"/>
+    </eOperations>
+    <eOperations name="eUnset">
+      <eParameters name="feature" eType="#//EStructuralFeature"/>
+    </eOperations>
+    <eOperations name="eInvoke" eType="#//EJavaObject" eExceptions="#//EInvocationTargetException">
+      <eParameters name="operation" eType="#//EOperation"/>
+      <eParameters name="arguments">
+        <eGenericType eClassifier="#//EEList">
+          <eTypeArguments/>
+        </eGenericType>
+      </eParameters>
+    </eOperations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EOperation" eSuperTypes="#//ETypedElement">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="UniqueParameterNames UniqueTypeParameterNames NoRepeatingVoid"/>
+    </eAnnotations>
+    <eOperations name="getOperationID" eType="#//EInt"/>
+    <eOperations name="isOverrideOf" eType="#//EBoolean">
+      <eParameters name="someOperation" eType="#//EOperation"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eContainingClass" eType="#//EClass"
+        changeable="false" transient="true" resolveProxies="false" eOpposite="#//EClass/eOperations"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eTypeParameters" upperBound="-1"
+        eType="#//ETypeParameter" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eParameters" upperBound="-1"
+        eType="#//EParameter" containment="true" resolveProxies="false" eOpposite="#//EParameter/eOperation"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eExceptions" upperBound="-1"
+        eType="#//EClassifier" unsettable="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="suppressedIsSetVisibility" value="true"/>
+        <details key="suppressedUnsetVisibility" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eGenericExceptions" upperBound="-1"
+        eType="#//EGenericType" unsettable="true" containment="true" resolveProxies="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="suppressedIsSetVisibility" value="true"/>
+        <details key="suppressedUnsetVisibility" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EPackage" eSuperTypes="#//ENamedElement">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="WellFormedNsURI WellFormedNsPrefix UniqueSubpackageNames UniqueClassifierNames UniqueNsURIs"/>
+    </eAnnotations>
+    <eOperations name="getEClassifier" eType="#//EClassifier">
+      <eParameters name="name" eType="#//EString"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="nsURI" eType="#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="nsPrefix" eType="#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eFactoryInstance" lowerBound="1"
+        eType="#//EFactory" transient="true" resolveProxies="false" eOpposite="#//EFactory/ePackage"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eClassifiers" upperBound="-1"
+        eType="#//EClassifier" containment="true" eOpposite="#//EClassifier/ePackage"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eSubpackages" upperBound="-1"
+        eType="#//EPackage" containment="true" eOpposite="#//EPackage/eSuperPackage"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eSuperPackage" eType="#//EPackage"
+        changeable="false" transient="true" eOpposite="#//EPackage/eSubpackages"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EParameter" eSuperTypes="#//ETypedElement">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eOperation" eType="#//EOperation"
+        changeable="false" transient="true" resolveProxies="false" eOpposite="#//EOperation/eParameters"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EReference" eSuperTypes="#//EStructuralFeature">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="ConsistentOpposite SingleContainer ConsistentKeys ConsistentUnique ConsistentContainer"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="containment" eType="#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="container" eType="#//EBoolean"
+        changeable="false" volatile="true" transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resolveProxies" eType="#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eOpposite" eType="#//EReference"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eReferenceType" lowerBound="1"
+        eType="#//EClass" changeable="false" volatile="true" transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eKeys" upperBound="-1"
+        eType="#//EAttribute"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EStructuralFeature" abstract="true"
+      eSuperTypes="#//ETypedElement">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="ValidDefaultValueLiteral"/>
+    </eAnnotations>
+    <eOperations name="getFeatureID" eType="#//EInt"/>
+    <eOperations name="getContainerClass">
+      <eGenericType eClassifier="#//EJavaClass">
+        <eTypeArguments/>
+      </eGenericType>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="changeable" eType="#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="volatile" eType="#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="transient" eType="#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultValueLiteral" eType="#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultValue" eType="#//EJavaObject"
+        changeable="false" volatile="true" transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="unsettable" eType="#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="derived" eType="#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eContainingClass" eType="#//EClass"
+        changeable="false" transient="true" resolveProxies="false" eOpposite="#//EClass/eStructuralFeatures"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ETypedElement" abstract="true" eSuperTypes="#//ENamedElement">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="ValidLowerBound ValidUpperBound ConsistentBounds ValidType"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ordered" eType="#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="unique" eType="#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lowerBound" eType="#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="upperBound" eType="#//EInt"
+        defaultValueLiteral="1"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="many" eType="#//EBoolean"
+        changeable="false" volatile="true" transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="required" eType="#//EBoolean"
+        changeable="false" volatile="true" transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eType" eType="#//EClassifier"
+        volatile="true" unsettable="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="suppressedIsSetVisibility" value="true"/>
+        <details key="suppressedUnsetVisibility" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eGenericType" eType="#//EGenericType"
+        volatile="true" unsettable="true" containment="true" resolveProxies="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="suppressedIsSetVisibility" value="true"/>
+        <details key="suppressedUnsetVisibility" value="true"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EBigDecimal" instanceClassName="java.math.BigDecimal">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#decimal"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EBigInteger" instanceClassName="java.math.BigInteger">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#integer"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EBoolean" instanceClassName="boolean">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#boolean"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EBooleanObject" instanceClassName="java.lang.Boolean">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="EBoolean"/>
+      <details key="name" value="EBoolean:Object"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EByte" instanceClassName="byte">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#byte"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EByteArray" instanceClassName="byte[]">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#hexBinary"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EByteObject" instanceClassName="java.lang.Byte">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="EByte"/>
+      <details key="name" value="EByte:Object"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EChar" instanceClassName="char"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="ECharacterObject" instanceClassName="java.lang.Character">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="EChar"/>
+      <details key="name" value="EChar:Object"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EDate" instanceClassName="java.util.Date"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="EDiagnosticChain" instanceClassName="org.eclipse.emf.common.util.DiagnosticChain"
+      serializable="false"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="EDouble" instanceClassName="double">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#double"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EDoubleObject" instanceClassName="java.lang.Double">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="EDouble"/>
+      <details key="name" value="EDouble:Object"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EEList" instanceClassName="org.eclipse.emf.common.util.EList"
+      serializable="false">
+    <eTypeParameters name="E"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EEnumerator" instanceClassName="org.eclipse.emf.common.util.Enumerator"
+      serializable="false"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="EFeatureMap" instanceClassName="org.eclipse.emf.ecore.util.FeatureMap"
+      serializable="false"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="EFeatureMapEntry" instanceClassName="org.eclipse.emf.ecore.util.FeatureMap$Entry"
+      serializable="false"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="EFloat" instanceClassName="float">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#float"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EFloatObject" instanceClassName="java.lang.Float">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="EFloat"/>
+      <details key="name" value="EFloat:Object"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EInt" instanceClassName="int">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#int"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EIntegerObject" instanceClassName="java.lang.Integer">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="EInt"/>
+      <details key="name" value="EInt:Object"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EJavaClass" instanceClassName="java.lang.Class">
+    <eTypeParameters name="T"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EJavaObject" instanceClassName="java.lang.Object"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="ELong" instanceClassName="long">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#long"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="ELongObject" instanceClassName="java.lang.Long">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="ELong"/>
+      <details key="name" value="ELong:Object"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EMap" instanceClassName="java.util.Map"
+      serializable="false">
+    <eTypeParameters name="K"/>
+    <eTypeParameters name="V"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EResource" instanceClassName="org.eclipse.emf.ecore.resource.Resource"
+      serializable="false"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="EResourceSet" instanceClassName="org.eclipse.emf.ecore.resource.ResourceSet"
+      serializable="false"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="EShort" instanceClassName="short">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#short"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EShortObject" instanceClassName="java.lang.Short">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="EShort"/>
+      <details key="name" value="EShort:Object"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EString" instanceClassName="java.lang.String">
+    <eAnnotations source="http:///org/eclipse/emf/ecore/util/ExtendedMetaData">
+      <details key="baseType" value="http://www.w3.org/2001/XMLSchema#string"/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EStringToStringMapEntry" instanceClassName="java.util.Map$Entry">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="key" eType="#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" eType="#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="ETreeIterator" instanceClassName="org.eclipse.emf.common.util.TreeIterator"
+      serializable="false">
+    <eTypeParameters name="E"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EGenericType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore">
+      <details key="constraints" value="ConsistentType ConsistentBounds ConsistentArguments"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eUpperBound" eType="#//EGenericType"
+        containment="true" resolveProxies="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eTypeArguments" upperBound="-1"
+        eType="#//EGenericType" containment="true" resolveProxies="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eRawType" lowerBound="1"
+        eType="#//EClassifier" changeable="false" transient="true" derived="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eLowerBound" eType="#//EGenericType"
+        containment="true" resolveProxies="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eTypeParameter" eType="#//ETypeParameter"
+        resolveProxies="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eClassifier" eType="#//EClassifier"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ETypeParameter" eSuperTypes="#//ENamedElement">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eBounds" upperBound="-1"
+        eType="#//EGenericType" containment="true" resolveProxies="false"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="EInvocationTargetException" instanceClassName="java.lang.reflect.InvocationTargetException"
+      serializable="false"/>
+</ecore:EPackage>
 `)
     }
+
     static documentation() {
         const testt: Dictionary<string, Dictionary<string, Dictionary<string, (...a:any)=>any>>> = {
             GenericType: {
@@ -630,9 +1035,20 @@ export class GenericType {
     private static PointerOrName<T extends DPointerTargetable>(v: any, allowGenericType = false, c: LogicContext): string | Pointer<T> | undefined {
         if (!v) return undefined;
         let tv = typeof v;
-        if (tv === "object") return Pointers.from(v) || (allowGenericType ? GenericType.getter(v, c) : undefined);
-        if (tv === "string") return v;
-        return undefined;
+        const model = c.proxyObject.model;
+        let attempt: Pointer<any> | undefined = Pointers.from(v, model); // this accepts everything: L, D, P, ecore-pointers, only not names
+        if (attempt) return attempt;
+        if (tv === "object") return (allowGenericType ? GenericType.getter(v, c) as any : undefined);
+        if (tv !== "string") return undefined;
+
+        let {classes, enums, typeDecls, m} = getClassifiers(c);
+        attempt = typeDecls.find(e => e.name === v)?.id || classes.find(e => e.name === v)?.id;
+        /*
+        console.log("resolve gt classifier 2:", {
+            classes: classes.map(c=> ({n: c.name, d: c.__raw})),
+            td: typeDecls.map(c=> ({n: c.name, d: c.__raw}))
+        });*/
+        return attempt || v;
     }
 
     public static desc_class: Info = {type: "GenericType[]", txt: "Type parameters used to extend a superclass with generic typings.\n" +
@@ -640,6 +1056,7 @@ export class GenericType {
     public static desc_object: Info = {type: "GenericType", txt: "Type parameters used to create an object whose class have generic typings."}
     public static desc_value: Info = {type: "GenericType", txt: GenericType.desc_object.txt }
     public static descTypeParameters: Info = {type: "TypeDeclaration[]", txt: "Type parameters attached to the classifier or function definition, like in HashMap<K, V>"}
+    public static scopedTypeParameters: Info = {type: "TypeDeclaration[]", txt: "All type parameters accessible in current scope. Declared either from this element or elements higher in hierarchy."}
     public static descAllTypeParameters: Info = Info.typeDeclarations;
 
     public static serializeETypeParameter(...a: Parameters<typeof serializeETypeParameter>): ReturnType<typeof serializeETypeParameter> {
@@ -662,8 +1079,9 @@ export class GenericType {
     public static getterArr(v: Partial<GenericType>[] | undefined | null, c: LogicContext): GenericType[] {
         if (!v) return [];
         if (!Array.isArray(v)) v = [v];
-        return v.map( e => GenericType.getter(e, c)).filter(e=>!!e);
+        return v.map( e => GenericType.getter(e, c)).filter(e=> !!e);
     }
+    // NB: unused, and might be wrong. i replaced it with LClass.addGenericType() implementation
     public static setterArr<T extends DModelElement>(v: GenericType[] | undefined, c: LogicContext<T>, propkey: keyof T & string, thiss: DtoL<T>): boolean {
         v = GenericType.getterArr(v, c as LogicContext);
         let old  = GenericType.getterArr(c.data[propkey] as any , c as LogicContext);
@@ -685,6 +1103,7 @@ export class GenericType {
         let ret = new GenericType(v.kind);
         // ret.name = typeof v.name === "string" && v.name ? v.name : undefined;
         ret.classifier = this.PointerOrName<DClass>(v.classifier, false, c);
+        // console.log("resolve gt classifier: ", {rc: ret.classifier, vc: v.classifier, ret, v, c});
         ret.upper = (v.upper || []).map<GenericType | TYPE>(e => GenericType.PointerOrName(e, true, c) as any).filter(e=>!!e);
         ret.lower = (v.lower || []).map<GenericType | TYPE>(e => GenericType.PointerOrName(e, true, c) as any).filter(e=>!!e);
 
@@ -699,12 +1118,13 @@ export class GenericType {
     }
 
     public static setter(v: GenericType | null | undefined, c: LogicContext<any>, thiss: LModelElement): boolean {
+        if (Array.isArray(v)) v = v[0] as any;
         v = GenericType.getter(v, c as LogicContext<DModelElement>);
         let old = GenericType.getter(c.data.genericType, c as LogicContext<DModelElement>);
-        let delta = old && v && Uobj.objectDelta(old, v, true, false);
+        let delta = !old ? v : (old && v && Uobj.objectDelta(old, v, true, false));
         if (delta && Object.keys(delta).length === 0) return true;
         TRANSACTION((thiss as any).get_name(c)+".genericType", ()=> {
-            if (v) SetFieldAction.new(c.data, "genericType", delta, "+=", false);
+            if (delta) SetFieldAction.new(c.data, "genericType", delta, "+=", false);
             else SetFieldAction.new(c.data, "genericType", undefined, '', false);
         }, delta ? delta : old, delta ? undefined : (old ? v : null))
         return true;
@@ -737,19 +1157,17 @@ export class GenericType {
     public static setter_typeParameters(v0: (Pointer<DTypeDeclaration> | TypeDeclaration | LTypeDeclaration | DTypeDeclaration)[] | undefined,
                                         c: LogicContext<DClass | DOperation | DModel>, thiss: LClass | LOperation | LModel): boolean {
         let old = (c.data as DClass | DOperation | DModel).typeParameters;
-        console.log("0x1 set typeParameters", {v0, c, thiss});
-        const m = c.proxyObject.model;
+        const model = c.proxyObject.model;
         const {classes, enums, typeDecls} = getClassifiers(c);
 
         if (!v0 || typeof v0 !== "object" || U.isEmptyObject(v0)) v0 = [];
         if (!Array.isArray(v0)) { v0 = [v0 as any]; }
-
         // let finalArr: Pointer<DTypeDeclaration>[] = [];
         const finalArr: Pointer<DTypeDeclaration>[] = v0.map(v => {
             let tv = typeof v;
             if (tv !== "string" && tv !== "object") return null;
 
-            let ptr = Pointers.from(v as any as DPointerTargetable);
+            let ptr = Pointers.from(v as any, model);
             let serialized: string | null = null;
             if (tv === "string") {
                 if (Pointers.isPointer(ptr)) { finalArr.push(ptr as Pointer<any>); return v; }
@@ -852,17 +1270,16 @@ export class GenericType {
         let direction: string = l.direction; // thiss.get_direction(c);
         const m: LModel = l.model;
         let name = l.name; // (thiss as any).get_name(c);
-        console.error("input getter GT serialize", {l, d:U.jsonCopy(l.__raw), name});
         if (direction === "inout" || !direction) direction = "";
         else direction += " ";
         if (!name && !def && !upper.length && !lower.length) return "";
 
-        let extendsStr = upper.map(e=>GenericType.serializeJOM(e, m, asID)).filter(e=>!!e).join("&");
-        let superStr = lower.map(e=>GenericType.serializeJOM(e, m, asID)).filter(e=>!!e).join("&");
-        console.log("serialize tp", {upper, lower,
-            umap:upper.map(e=>GenericType.serializeJOM(e, m, asID)),
+        let extendsStr = upper.map(e=> GenericType.serializeJOM(e, m, asID)).filter(e=>!!e).join("&");
+        let superStr = lower.map(e=> GenericType.serializeJOM(e, m, asID)).filter(e=>!!e).join("&");
+        /*console.log("serialize tp", {upper, lower,
+            umap: upper.map(e=>GenericType.serializeJOM(e, m, asID)),
             lmap: lower.map(e=>GenericType.serializeJOM(e, m, asID))
-        });
+        });*/
         if (superStr) superStr = " super " + superStr;
         if (extendsStr) extendsStr = " extends "+extendsStr;
         return `${direction}${name}${extendsStr}${superStr}`;
@@ -873,7 +1290,7 @@ export class GenericType {
         const tl = typeof l0;
         const l: LTypeDeclaration = l0 as any;
         if (l?.__isProxy) return GenericType.serializeTypeDeclarationJOM(l);
-        console.log("serialize TD", l0);
+        // console.log("serialize TD", l0);
         if (l?.className === "DTypeDeclaration") return GenericType.serializeTypeDeclarationJOM(L.fromD(l as any)) || fallback;
         if (Pointers.isPointer(l0)) return GenericType.serializeTypeDeclarationJOM(L.fromPointer(l0 as any)) || fallback;
         if (tl === "object") {
@@ -906,9 +1323,9 @@ export class GenericType {
             if (cnamePrefix === "D") return L.from(gType0 as LClass)?.name || "";
         }
 
-        const gType = normalizeEcoreKeys(gType0);
-        const closer = U.closerTo(gType, GTKeys_J, GTKeys_E, GTKeys_EU);
-        console.error("closerr", {gType, closer, GTKeys_J, GTKeys_E, GTKeys_EU});
+        const gType = normalizeEcoreKeys(gType0, false, false, true);
+        const closer = U.closerTo(gType, GTKeys_J, GTKeys_E);
+        // console.error("closer_0", U.jsonCopy({gType, closer, GTKeys_J, GTKeys_E}));
         if (closer.closestKeys == GTKeys_J) return GenericType.serializeJOM(gType0 as any, m, asID);
         else return GenericType.serializeEcore(gType as any, m, asID);
     }
@@ -955,7 +1372,6 @@ export class GenericType {
                 if (o.operandsDifference?.length)   return joinOperands(o.operandsDifference,   " \ ", false);
                 if (o.operandsComplement?.length)   return joinOperands(o.operandsComplement,   " ~ ", false);
 
-                o.classifier
                 let base: string;
                 let isWildcard: boolean = false;
                 if (!o.classifier) {
@@ -1044,70 +1460,112 @@ export class GenericType {
                                classes: NamedArr<LClass>,
                                enums: NamedArr<LEnumerator>,
                                typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>, asID = false): TypeDeclarationXMIU | null {
-        let gt: TypeDeclaration | null;
+        let gt: TypeDeclaration | LTypeDeclaration | null;
         if (typeof s === "string") gt = GenericType.parseDeclaration(s, classes, enums, typeDeclarations);
         else gt = s as any;
         if (!gt) return null;
-        if ((gt as LTypeDeclaration).__isProxy) return (gt as LTypeDeclaration).ecore as any;
+        // if ((gt as LTypeDeclaration).__isProxy) return (gt as LTypeDeclaration).ecore as any;
 
         const ret = new TypeDeclarationXMIU();
-        ret.eBounds         = gt.upper?.map(g=> GenericType.parseToEcore(g, classes, enums, typeDeclarations))
-            .filter(e=>!!e);
-        ret.name = gt.name;
-        if (Pointers.isPointer(ret.name) && !asID) {
-            ret.name = (L.fromPointer(ret.name) as LClass | LTypeDeclaration)?.name || "T";
+        ret.eBounds         = gt.upper?.map(g=> {
+            return GenericType.parseToEcore(g, classes, enums, typeDeclarations)
+        }).filter(e=>!!e);
+        let name = gt.name;
+        if (Pointers.isPointer(name) && !asID) {
+            name = (L.fromPointer(name) as LClass | LTypeDeclaration)?.name || "T";
         }
 
-        // annotations are allowed only if "s" parameter is LTYpeDeclaration, and in that case i use s.ecore before.
-        // ret.eAnnotations = (gt as LModelElement).annotations.map((a: LAnnotation): Json => (L.from(a) as LTypeDeclaration)?.eCore).filter((e: Json)=>!!e);
-        // if (ret.eAnnotations?.length === 1) ret.eAnnotations = ret.eAnnotations[0];
-        // if (!ret.eAnnotations || !(ret.eAnnotations as any).length) delete ret.eAnnotations;
+        // annotations are allowed only if "s" argument is of type LTYpeDeclaration, and in that case i use s.ecore before.
+        ret.eAnnotations = (gt as LModelElement).annotations.map((a: LAnnotation): GObject => (L.from(a) as LTypeDeclaration)?.eCore).filter((e: GObject)=>!!e);
+        // @ts-ignore
+        if (ret.eAnnotations?.length === 1) ret.eAnnotations = ret.eAnnotations[0];
+        if (!ret.eAnnotations || !(ret.eAnnotations as any).length) delete ret.eAnnotations;
 
         if (ret.eBounds?.length === 1) ret.eBounds = ret.eBounds[0];
         if (!ret.eBounds || !(ret.eBounds as any).length) delete ret.eBounds;
+        if (name) {
+            ret[EcoreTypeDeclaration.namee] = name;
+        }
         return ret;
     }
 
-    public static parseToEcore(s: string | GenericType,
+    public static parseToEcore(s0: string | GenericType | LClass | DClass | DTypeDeclaration | LTypeDeclaration | Pointer<any>,
                                classes: NamedArr<LClass>,
                                enums: NamedArr<LEnumerator>,
                                typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>, asID = false): XmiGenericTypeJsonU | null {
         let gt: GenericType | null;
-        if (typeof s === "string") gt = GenericType.parse(s, classes, enums, typeDeclarations);
-        else gt = s as any;
+        // console.error("toecore 0", U.jsonCopy({s0:s0?.__raw || s0}));
+        if (!s0) return null;
+        const cname = (s0 as any).className;
+        if (cname && cname !== "GenericType") s0 = (s0 as any).id;
+        if (typeof s0 === "string") {
+            if (Pointers.isPointer(s0)) gt = new GenericType("raw", (d) => { d.classifier = (s0 as any).id});
+            else gt = GenericType.parse(s0, classes, enums, typeDeclarations);
+        }
+        else gt = s0 as any;
         if (!gt) return null;
+
+        console.error("parsetoecore 0 "+gt.kind, U.jsonCopy({s0: (s0 as any)?.__raw || s0, gt}));
         const ret = new XmiGenericTypeJsonU();
         ret.eBounds         = gt.upper?.map(g=> GenericType.parseToEcore(g, classes, enums, typeDeclarations))
             .filter(e=>!!e);
         ret.eTypeArguments  = gt.typeArgs?.map(g=> GenericType.parseToEcore(g, classes, enums, typeDeclarations))
-            .filter(e=>!!e);
-        // block: set eTypeParameter or eClassifier (mutually exclusive
+            .filter(e=> e === null || !!e);
+
+        console.error("parsetoecore 1 "+gt.kind,  U.jsonCopy({s0: (s0 as any)?.__raw || s0, gt, ret, ta: ret.eTypeArguments}));
+        // block: set eTypeParameter or eClassifier (mutually exclusive)
         {
             let l = L.fromPointer(gt.classifier) as LClass | LTypeDeclaration;
-            if (gt.classifier && !l) ret.eTypeParameter = gt.classifier; // treating unknown target as a missing type declaration like K, V, T
-            else {
-                let val: string = l?.ecorePointer?.() || gt.classifier || ""; // target's name or ecore-based pointer string
-                if (l.className === "LClass") ret.eClassifier = val;
-                else ret.eTypeParameter = val;
 
+            // console.error("toecore 2", U.jsonCopy({gt, l:l?.__raw, ret}));
+            // console.error("toecore 2.2", U.jsonCopy({gt, ep: l?.ecorePointer}));
+            if (gt.classifier && !l) ret["@eTypeParameter"] = gt.classifier; // treating unknown target as a missing type declaration like K, V, T
+            else {
+                let val: string = l?.ecorePointer || gt.classifier || ""; // target's name or ecore-based pointer string
+                if (l?.className === "DClass") ret["@eClassifier"] = val;
+                else ret["@eTypeParameter"] = val;
+                if (!l) console.error("GenericType.ParseToEcore() could not resolve classifier: ", {l, classifier: gt.classifier, ret, s0});
             }
             if (!asID) {
-                if (Pointers.isPointer(ret.eClassifier))
-                    ret.eClassifier = (L.fromPointer(ret.eClassifier) as LClass)?.name || "";
-                if (Pointers.isPointer(ret.eTypeParameter))
-                    ret.eTypeParameter = (L.fromPointer(ret.eTypeParameter) as LTypeDeclaration)?.name || "";
+                if (Pointers.isPointer(ret["@eClassifier"]))
+                    ret["@eClassifier"] = (L.fromPointer(ret["@eClassifier"]) as LClass)?.name || "";
+                if (Pointers.isPointer(ret["@eTypeParameter"]))
+                    ret["@eTypeParameter"] = (L.fromPointer(ret["@eTypeParameter"]) as LTypeDeclaration)?.ecorePointer || "";
             }
         }
         // NB: ANNOTATIONS in GenericType are not supported yet
         // ret.eAnnotations = gt.annotations.map((a: LAnnotation)=> a.eCore);
-        if (ret.eBounds?.length === 1) ret.eBounds = ret.eBounds[0];
-        if (ret.eTypeArguments?.length === 1) ret.eTypeArguments = ret.eTypeArguments[0];
-        // if (ret.eAnnotations?.length === 1) ret.eAnnotations = ret.eAnnotations[0];
 
-        if (!ret.eClassifier || !(ret.eClassifier as any).length) delete ret.eClassifier;
-        if (!ret.eTypeArguments || !(ret.eTypeArguments as any).length) delete ret.eTypeArguments;
-        if (!ret.eAnnotations || !(ret.eAnnotations as any).length) delete ret.eAnnotations;
-        if (!ret.eBounds || !(ret.eBounds as any).length) delete ret.eBounds;
+        // fix multiplicity in ecore xmi
+        if (!Array.isArray(ret.eBounds)) ret.eBounds = [ret.eBounds as any].filter(e=>!!e);
+        if (!Array.isArray(ret.eTypeArguments)) ret.eTypeArguments = [ret.eTypeArguments as any].filter(e=>!!e);
+        if (!Array.isArray(ret.eAnnotations)) ret.eAnnotations = [ret.eAnnotations as any].filter(e=>!!e);
+
+        if (ret.eBounds.length === 1) ret.eBounds = ret.eBounds[0];
+        else if (ret.eBounds.length === 0) delete ret.eBounds;
+
+
+        if (ret.eTypeArguments?.length === 1) ret.eTypeArguments = ret.eTypeArguments[0];
+        else if (ret.eTypeArguments?.length === 0) delete ret.eTypeArguments;
+        // NB: eTypeArguments can be null (not [] or undefined) it means that it's a unbounded wildcard
+        // (no name, no classifier, no upper-lower), in XMI it is <eTypeParameter /> and it's standard ecore (even without closing tag)
+
+        // @ts-ignore
+        if (ret.eAnnotations?.length === 1) ret.eAnnotations = ret.eAnnotations[0];
+        // @ts-ignore
+        else if (ret.eAnnotations.length === 0) delete ret.eAnnotations;
+
+        if (!ret["@eClassifier"]) delete ret["@eClassifier"];
+        if (!ret["@eTypeParameter"]) delete ret["@eTypeParameter"];
+
+        /// @ts-ignore
+        console.error("parsetoecore 3 "+gt.kind, {ret:U.jsonCopy(ret), bl:ret.eBounds?.length, tl:ret.eTypeArguments?.length, al: ret.eAnnotations?.length});
+
+        // if it's an unbounded wildcard, ecore makes it <eTypeParameter /> which is null in json. but not sure if annotations can mess with that.
+        // ps: eTypeParameter and eClassifier are not checked as they should always be null in kind === "wildcard" (otherwise it's parameterized like List<?>)
+        /// @ts-ignore
+        if (gt.kind === "wildcard" && !ret.eBounds?.length && !ret.eTypeArguments?.length && !ret.eAnnotations?.length) return null;
+
         return ret;
     }
     //  parse("Map<String, List<? extends Foo>>") --> JOM object
@@ -1130,8 +1588,8 @@ export class GenericType {
                                     out?:{generated: DModelElement[]}): LTypeDeclaration | null{
         let typeDecl: TypeDeclaration | null;
         if (!json0) return null;
-        let json = normalizeEcoreKeys(json0);
-        if (U.closerTo(json, TDKeys_J, TDKeys_E, TDKeys_EU).closestKeys === TDKeys_J) typeDecl = json0 as TypeDeclaration;
+        let json = normalizeEcoreKeys(json0, false, false, true);
+        if (U.closerTo(json, TDKeys_J, TDKeys_E).closestKeys === TDKeys_J) typeDecl = json0 as TypeDeclaration;
         else typeDecl = GenericType.parseDeclarationFromEcore(json as TypeDeclarationXMIU, c, out);
         if (!typeDecl) return null;
 
@@ -1382,12 +1840,12 @@ type ClassifierResolver = (ecoreRef: string) => TYPE;
 
 class ECoreGenericType {
     static "eClassifier" =   "eClassifier" as const;
-    static "eTypeParameter" = "eTypeParameter" as const;
+    static "@eTypeParameter" = "@eTypeParameter" as const;
     static "eTypeArguments" =  "eTypeArguments" as const;
     static "eBounds" =  "eBounds" as const;
 
-    static "eclassifier" =   "eclassifier" as const;
-    static "etypeparameter" = "etypeparameter" as const;
+    static "@eclassifier" =   "@eclassifier" as const;
+    static "@etypeparameter" = "@etypeparameter" as const;
     static "etypearguments" =  "etypearguments" as const;
     static "ebounds" =  "ebounds" as const;
 
@@ -1395,7 +1853,8 @@ class ECoreGenericType {
 }
 
 // removes XMI inline marker and transforms all keys to lowercase.
-function normalizeEcoreKeys<T extends GObject>(go: T, deep = true, lowercase = true): T{
+function normalizeEcoreKeys<T extends GObject>(go: T, deep = true, removeEcoreMarker = false, lowercase = true): T{
+    if (!removeEcoreMarker && !lowercase) return go;
     go = {...go};
     for (let k0 in go) {
         if (typeof k0 !== "string") continue;
@@ -1403,7 +1862,10 @@ function normalizeEcoreKeys<T extends GObject>(go: T, deep = true, lowercase = t
         delete go[k0];
         let ks = k0 as string & keyof T;
         if (lowercase) ks = (ks as string).toLowerCase();
-        if (ks[0] === EcoreParser.XMLinlineMarker) ks = ks.substring(1);
+        if (removeEcoreMarker && ks[0] === EcoreParser.XMLinlineMarker) {
+            go[ks] = v; // un-delete prefixed @key to keep both versions
+            ks = ks.substring(1);
+        }
         if (deep && v && typeof v === "object") {
             if (Array.isArray(v)) v = v.map((e: unknown)=> {
                 if (!e || typeof e !== "object") return e;
@@ -1424,8 +1886,8 @@ function normalizeEcoreKeys<T extends GObject>(go: T, deep = true, lowercase = t
 // NB: i need all keys to be present for U.closerTo, even if they are undefined. so i cannot use property?: optionals.  or !. They need to exist.
 class XmiGenericTypeJson {
     eannotations:     orArr<ECoreAnnotation> | undefined = undefined;
-    "eclassifier":    string | undefined = undefined;  // present for raw / parameterized / wildcard-bound
-    "etypeparameter": string | undefined = undefined;  // present for typeParam references. mutually exclusive with eclassifier but same meaning for different target types
+    "@eclassifier":    string | undefined = undefined;  // present for raw / parameterized / wildcard-bound
+    "@etypeparameter": string | undefined = undefined;  // present for typeParam references. mutually exclusive with eclassifier but same meaning for different target types
     "etypearguments": orArr<XmiGenericTypeJson> | undefined = undefined;
     "ebounds":        orArr<XmiGenericTypeJson> | undefined = undefined;
     // A wildcard has neither eClassifier nor eTypeParameter
@@ -1434,9 +1896,9 @@ class XmiGenericTypeJson {
 
 class XmiGenericTypeJsonU { // case sensitive version
     eAnnotations:     orArr<ECoreAnnotation> | undefined = undefined;
-    "eClassifier":    string | undefined = undefined;  // present for raw / parameterized / wildcard-bound
-    "eTypeParameter": string | undefined = undefined;  // present for typeParam references. mutually exclusive with eclassifier but same meaning for different target types
-    "eTypeArguments": orArr<XmiGenericTypeJsonU> | undefined = undefined;
+    "@eClassifier":    string | undefined = undefined;  // present for raw / parameterized / wildcard-bound
+    "@eTypeParameter": string | undefined = undefined;  // present for typeParam references. mutually exclusive with eclassifier but same meaning for different target types
+    "eTypeArguments": orArr<XmiGenericTypeJsonU | null> | undefined = undefined; // null if it's unbounded wildcard (<eTypeParameter /> in ecore/xmi)
     "eBounds":        orArr<XmiGenericTypeJsonU> | undefined = undefined;
     // A wildcard has neither eClassifier nor eTypeParameter
 }
@@ -1528,14 +1990,16 @@ type ELowerBound = EGenericType;
 // NB: i need all keys to be present for U.closerTo, even if they are undefined. so i cannot use property?: optionals. or !. They need to exist.
 export class TypeDeclarationXMIU {
     eAnnotations: orArr<ECoreAnnotation> | undefined = undefined;
-    name!: string;
+    // name?: string;
+    "@name"!: string;
     eBounds: orArr<XmiGenericTypeJsonU> | undefined = undefined;
 }
 
 // NB: i need all keys to be present for U.closerTo, even if they are undefined. so i cannot use property?: optionals. or !. They need to exist.
 export class TypeDeclarationXMI { // K extends ...
     annotations: orArr<ECoreAnnotation> | undefined = undefined;
-    name: string = ""; // plain string as name, never a ecore pointer like "//@some.path"
+    // name: string = ""; // plain string as name, never a ecore pointer like "//@some.path"
+    "@name"!: string;
     ebounds: orArr<XmiGenericTypeJson> | undefined = undefined; // equivalent to TypeDeclaration.upper. lower is not supported by ecore.
     // direction?: "in" | "out" | "inout"; ecore doesn't support it.
     // defaultType?: GenericType | TYPE;
@@ -1643,27 +2107,9 @@ class EGenericType { // todo: not ecore's structure, when i'm using this? use in
 
 // (ETypeParameter, ETypedElement) --> eGenericType
 
-/**
- * Serializes a GObject structure back into a Java-like generic declaration string.
- */
-interface EcoreClassJSON {
-    type?: string;
-    name?: string;
-    version?: string;
-    nsprefix?: string;
-    nsuri?: string;
-    abstract?: string;
-    eclassifiers?: GObject[];
-    ebounds?: GObject;
-    eclassifier?: Pointer;
-
-    etypeparameters?: TypeDeclarationXMIU[];
-    // non contain?
-    egenericsupertypes?: EGenericSuperTypes[]; // only references, assign a value to a eTypeParameter.
-    // class can only do it when extending, like: class C extends List<String>{}
-}
 
 function resolveClassifier(s: string, m: LModel): LClassifier | null{
+    /* untested but should be simplified as L.from(Pointers.from(s)). Pointers.from should now handle primitive type uri and ecore references.*/
     // as ecore primitive
     let ptr = U.solveEcoreType(s, true);
     if (ptr) return L.from(ptr) || null;
@@ -1679,7 +2125,7 @@ export function serializeETypeParameter_old(arr: TypeDeclarationXMI[], m: LModel
     arr = Uarr.normalizeArray(arr);
     if (!arr?.length) return fallback;
     return arr.map((param) => {
-        let paramStr = param.name || fallback;
+        let paramStr = param[EcoreTypeDeclaration.namee] || (param as any).name || fallback;
 
         // Checks if the parameter has an upper bound (extends clause)
         if (param.ebounds) {
@@ -1694,7 +2140,7 @@ export function serializeETypeParameter_old(arr: TypeDeclarationXMI[], m: LModel
 
 function resolveClassifierName(s: string, m: LModel, asID: boolean = true): string | null {
     // as class eid
-    let lc =  resolveClassifier(s, m);
+    let lc = resolveClassifier(s, m);
     let fallbackRet = null;
     if (lc && typeof lc === "object") return lc[asID ? "id" : "name"] || fallbackRet;
     if (typeof lc === "string") s = lc;
@@ -1708,7 +2154,7 @@ function resolveClassifierName(s: string, m: LModel, asID: boolean = true): stri
 function serializeETypeParameter(arr: (ETypeParameter | TypeDeclaration | TypeDeclarationXMI | TypeDeclarationXMIU)[], m: LModel, asID: boolean = true): string | null {
     const fallback = null;
     arr = Uarr.normalizeArray(arr);
-    console.log("serialize TD ecore", arr);
+    // console.log("serialize TD ecore", arr);
     if (!arr?.length) return fallback;
     return arr.map((param0) => {
         let param: Partial<ETypeParameter & TypeDeclaration & TypeDeclarationXMIU> = param0 as any;
@@ -1720,7 +2166,7 @@ function serializeETypeParameter(arr: (ETypeParameter | TypeDeclaration | TypeDe
         if (param.direction) paramStr += param.direction + " ";
 
         // 2. name
-        paramStr += param.name || '';
+        paramStr += (param as TypeDeclarationXMIU)[EcoreTypeDeclaration.namee] || param.name || '';
         const upper = U.arrayMergeInPlace([],
             Uarr.normalizeArray(param.upper),
             Uarr.normalizeArray(param.ebounds as any),
@@ -1771,13 +2217,13 @@ function serializeGenericTypeOrType(value: GenericType | TYPE, m: LModel, asID: 
  * recursively serialize (eBounds / eTypeArguments / eGenericType / eGenericSuperTypes / eGenericExceptions) GObjects.
  */
 // const GTKeys = ["classifier" || "operandsTuple" || "operandsOr" || "operandsAnd" || "operandsDifference" || "operandsComplement" || "operandsArray" || "typeArgs" || ".upper" || "lower" || "kind"] as keyof GenericType
-const GTKeys_J  = Object.keys(new GenericType("raw")) as (keyof GenericType)[];
-const GTKeys_E  = Object.keys(new XmiGenericTypeJson()) as (keyof XmiGenericTypeJson)[];
-const GTKeys_EU = Object.keys(new XmiGenericTypeJsonU()) as (keyof XmiGenericTypeJsonU)[];
+const GTKeys_J  = Object.keys(new GenericType("raw")).map(e=> e.toLowerCase()) as (keyof GenericType)[];
+const GTKeys_E  = Object.keys(new XmiGenericTypeJson()).map(e=> e.toLowerCase()) as (keyof XmiGenericTypeJson)[];
+// const GTKeys_EU = Object.keys(new XmiGenericTypeJsonU()) as (keyof XmiGenericTypeJsonU)[];
 
-const TDKeys_J  = Object.keys(new TypeDeclaration()) as (keyof TypeDeclaration)[];
-const TDKeys_E  = Object.keys(new TypeDeclarationXMI()) as (keyof TypeDeclarationXMI)[];
-const TDKeys_EU = Object.keys(new TypeDeclarationXMIU()) as (keyof TypeDeclarationXMIU)[];
+const TDKeys_J  = Object.keys(new TypeDeclaration()).map(e=> e.toLowerCase()) as (keyof TypeDeclaration)[];
+const TDKeys_E  = [...Object.keys(new TypeDeclarationXMI()), "name"].map(e=> e.toLowerCase()) as (keyof TypeDeclarationXMI)[];
+// const TDKeys_EU = [...Object.keys(new TypeDeclarationXMIU()), "name"] as (keyof TypeDeclarationXMIU)[];
 
 
 // used in GenericType.serializeEcoreGenericType
@@ -1789,22 +2235,32 @@ export function serializeECoreGenericType(gType0: EBound | XmiGenericTypeJson | 
     
     // NB: eclassifier and etypeparameter are mutually exclusive: (public next: List) vs (public next: T)
     // Case 1: The generic type points to a concrete classifier (e.g., #//List)
-    if (g.eclassifier) {
-        const baseName = resolveClassifierName(g.eclassifier, m, asID) || fallback;
+    const classifier = g["@eclassifier"] = (g as any).eclassifier || g["@eclassifier"];
+    const parameter = g["@etypeparameter"] = (g as any).etypeparameter || g["@etypeparameter"];
+
+    // const debug = classifier === "#//EElist";
+
+    if (classifier) {
+        const baseName = resolveClassifierName(classifier, m, asID) || fallback;
         // if (!baseName) return fallback;
         // If it has nested type arguments (e.g., List<B>), process them recursively
         let args: string = "";
-        let arr = Uarr.normalizeArray(g.etypearguments);
-        if (arr && arr.length > 0) {
-            args = arr.map((arg) => serializeECoreGenericType(arg, m, asID) || fallback)
-                .join(", ");
+        // special case, because ecore can store unbounded wildcards as simple <eTypeParameter /> which is translated to json as eTypeParameter: null.
+        if (g.etypearguments === null) args = "?";
+        else {
+            let arr = Uarr.normalizeArray(g.etypearguments);
+            if (arr && arr.length > 0) {
+                args = arr.map((arg) => serializeECoreGenericType(arg, m, asID) || fallback)
+                    .join(", ");
+            }
         }
+
         return baseName + (args.length ? `<${args}>` : "");
     }
 
     // Case 2: The generic type points to a local type parameter reference (e.g., #//Composite/B), cannot have type parameter instantiations
-    if (g.etypeparameter) {
-        return resolveClassifierName(g.etypeparameter, m, asID) || fallback;
+    if (parameter) {
+        return resolveClassifierName(parameter, m, asID) || fallback;
     }
 
     // Case 3: Wildcards (? / ? extends T / ? super T)
@@ -1891,8 +2347,8 @@ function xmiToJavaString(
     resolveTypeParam: (path: string) => string,  // resolves "../0/Container/0" → "T"
     mode:"name" | "id" | "jsx" = "name"
 ): string | null{
-    const classifierRef  = node[ECoreGenericType.eclassifier];
-    const typeParamRef   = node[ECoreGenericType.etypeparameter];
+    const classifierRef  = node[ECoreGenericType.eclassifier] || @eClassifier;
+    const typeParamRef   = node[ECoreGenericType.etypeparameter] || @eTypeParameter;
     const typeArgs   = Uarr.normalizeArray(node[ECoreGenericType.etypearguments]);
     const bounds     = Uarr.normalizeArray(node[ECoreGenericType.ebounds]);
     let useID = mode === "id";

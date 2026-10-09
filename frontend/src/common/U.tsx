@@ -1,6 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
-import type {NamedArr, NestedArray} from "../joiner";
+import {NamedArr, NestedArray, Pointers} from "../joiner";
 import {Any, DClass, DGraphElement, LClass, LGraphElement} from "../joiner";
 import {
     AbstractConstructor,
@@ -384,6 +384,34 @@ export class U {
         return Object.values(map);
     }
 
+    public static getEcorePrimitivePointer(arg?: LModelElement | DModelElement | Pointer | DocString<"name">): DocString<"full ecore primitive pointer"> {
+        let name0: string = (arg as any)?.name || arg;
+        if (typeof name0 !== "string") return "";
+        let name = name0.trim();
+        if (name.startsWith(Pointers.prefix)) name = name.substring(Pointers.prefix.length);
+        if (name[0] === "_") name = name.substring(1);
+        let primitiveName: string = '';
+        name = name.toLowerCase();
+        if (name[0] === "e") name = name.substring(1);
+
+        switch (name) {
+            case "void":     primitiveName = 'Void';    break;
+            case "char":     primitiveName = 'Char';    break;
+            case "string":   primitiveName = 'String';  break;
+            case "date":     primitiveName = 'Date';    break;
+            case "boolean":  primitiveName = 'Boolean'; break;
+            case "byte":     primitiveName = 'Byte';    break;
+            case "short":    primitiveName = 'Short';   break;
+            case "int":      primitiveName = 'Int';     break;
+            case "long":     primitiveName = 'Long';    break;
+            case "float":    primitiveName = 'Float';   break;
+            case "double":   primitiveName = 'Double';  break;
+        }
+        if (primitiveName) return "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//" + primitiveName;
+        let id: Pointer | null = Pointers.from(arg as any) || null;
+        return "ecore:EDataType https://app.jjodel.io/"+windoww.DUser.getUser()?.name+"/"+(id || name0)+"/";
+    }
+
     static solveEcoreType(v: string, asPointer: boolean = false, casePrefixTolerant = true, voidReturn = '', emptyReturn = ''): string {
         if (!v) return v;
         const prefix = "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//"
@@ -407,7 +435,7 @@ export class U {
                 case "double":   v = 'Double';  break;
             }
             if (!asPointer) return v;
-            return (window as any).Pointers.prefix + "_" + v.toUpperCase();
+            return (window as any).Pointers.prefix + "_E" + v.toUpperCase();
         } else
         switch (v) {
             default: return asPointer ? "" : v;
@@ -427,7 +455,7 @@ export class U {
         // return as pointer
         if (v === "Void") return voidReturn;
         if (!v) return emptyReturn;
-        const ptr = (window as any).Pointers.prefix + "_" + v.toUpperCase();
+        const ptr = (window as any).Pointers.prefix + "_E" + v.toUpperCase();
         // if (!LPointerTargetable.from(ptr)) return '';
         return ptr;
     }
@@ -1385,7 +1413,7 @@ export class U {
         }
     }
 
-    static arrayUnique<T>(arr: T[]): Array<T> { return [ ...new Set<T>(arr)]; }
+    static arrayUnique<T>(arr: T[]): Array<T> { return [...new Set<T>(arr)]; }
 
     static fileReadContent(file: File, callback: (content :string) => void): void {
         const textType = /text.*/;

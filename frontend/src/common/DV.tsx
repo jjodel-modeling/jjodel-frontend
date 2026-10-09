@@ -1430,10 +1430,8 @@ public static typeDeclaration(): string {
         e.currentTarget.classList.remove('drag-over');
         try {
             const dataStr = e.dataTransfer.getData('application/json');
-            console.log("dropped on class 1", {dataStr});
             if (!dataStr) return;
             const dropData = JSON.parse(dataStr);
-            console.log("dropped on class 2", {dropData, t:dropData.type});
             switch (dropData.type) {
                 case 'FEATURE_ATTRIBUTE':
                     data.addAttribute();
@@ -1689,21 +1687,22 @@ public static typeDeclaration(): string {
     fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
     transition: 'background 0.15s ease'
 }}>
-    {/* Left side: Name with arrow */}
-    <span style={{
-        fontWeight: 500,
-        color: '#334155'
-    }}>{data.name} =&gt; </span>
-
-    {/* Right side: Return Type Select (smaller) */}
-    <div style={{maxWidth: '110px', minWidth: '80px'}}>
+    <div className={"return-type w-100 d-flex"}>
+        {/* Left side: Name with arrow */}
+        <span style={{
+            fontWeight: 500,
+            color: '#334155',
+            display: "inline-flex",
+            alignItems: "center"
+        }}>{data.name} =&gt; </span>
+    
+        {/* Right side: Return Type Select (smaller) */}
         <Select data={data} field={'type'} />
     </div>
 
     {/* Parameters (if level >= 3) */}
     {level >= 3 && data.parameters.length > 0 &&
         <div className={"parameters-section"} style={{
-            marginLeft: '4px',
             fontSize: '10px',
             color: '#64748b'
         }}>

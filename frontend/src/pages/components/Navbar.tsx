@@ -24,7 +24,7 @@ import {
     Pointer, Pointers, Log,
     UndoAction,
     RedoAction,
-    GraphPoint
+    GraphPoint, LClass
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
@@ -402,13 +402,14 @@ function NavbarComponent(props: AllProps) {
         // MCWS: # Metaclasses with Superclass
         // Use DClass extends array
         const MCWS = dclasses.filter((c: any) => {
-            const extendsArr = c?.extends;
+            const extendsArr = (L.from(c) as LClass)?.extends;
             return Array.isArray(extendsArr) && extendsArr.length > 0;
         }).length;
 
         // LMC: % Isolated Metaclasses (no superclass and no subclasses)
         // Use LClass for computed properties (extends and extendedBy)
         const isolated = classes.filter((c: any) => {
+            c = (L.from(c) as LClass);
             const extendsArr = c.extends;
             const extendedByArr = c.extendedBy;
             const hasSuper = Array.isArray(extendsArr) && extendsArr.length > 0;

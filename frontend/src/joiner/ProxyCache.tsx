@@ -154,7 +154,7 @@ export class ProxyCache {
         }
     }
     static update0(ret: DeepReadonly<DState>, old: DeepReadonly<DState>): void {
-        if (U.debug) console.log("cache update", U.jsonCopy({ret, old}));
+        // if (U.debug) console.log("cache update", U.jsonCopy({ret, old}));
         let allObjectKeys = new Set(U.arrayMergeInPlace(Object.keys(ret.idlookup), Object.keys(old.idlookup)));
         if (!ProxyCache.enabled || !ProxyCache.dependencyEnabled) { return; }
         ProxyCache.subelementMap = {};

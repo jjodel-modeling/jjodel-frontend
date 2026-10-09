@@ -590,8 +590,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return this.wrongAccessMessage('adaptSize'); }
 
     get_adaptSize(c: Context): (typeof this['adaptSize']) {
-        return (size: EPSize, view: LViewElement, canTriggerSet: {w: boolean, h: boolean} = {w: true, h: true})=> {
+        return (size: EPSize, view: LViewElement, canTriggerSet: {w: boolean, h: boolean} = {w: true, h: true}) => {
             if (Debug.lightMode) return; // canTriggerSet = {w: false, h: false};
+            const debug = false; // U.debug;
             if (!canTriggerSet.w && !canTriggerSet.h) return;
             let ret0 = size;
             let ret = {...ret0};
@@ -609,7 +610,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             // if w = 0 i don't auto-set it, because in first render it has w:0 because is not re-rendered and not resized.
             if (!html || (c.data.clonedCounter && (c.data.clonedCounter || -1) !== +(html.dataset.clonedcounter as string))) {
                 // canTriggerSet = {w: false, h: false};
-                console.warn('adaptSize mismatching clonedcounter', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
+                if (debug) console.warn('adaptSize mismatching clonedcounter', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
                     cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom, data: c.data});
                 return;
             }
@@ -934,7 +935,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         let ptr: DGraphElement["father"] = Pointers.from(val) as any;
         TRANSACTION(this.get_name(c)+'.father', ()=> {
             SetFieldAction.new(c.data, 'father', ptr, undefined, true);
-            console.log("0x1 set subelements father2", {id:c.data.id, d:c.data, val});
             if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', c.data.id);
         }, this.get_father(c).name, (L.fromPointer(ptr) as LGraphElement)?.name||'')
         return true; }

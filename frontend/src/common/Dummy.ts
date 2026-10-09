@@ -13,7 +13,7 @@ import {
     DClassifier,
     LModel,
     LValue,
-    Dependency, DValue, DAnnotation,
+    Dependency, DValue, DAnnotation, AFTER_UPDATE,
 } from '../joiner';
 
 import {
@@ -39,12 +39,15 @@ import {
     DReference, DAttribute,
     DOperation, DParameter,
     EcoreXmiTags,
+    AFTER_TRANSACTION, TRANSACTION_MERGE,
 } from '../joiner';
 
 import ActivityLogger from '../services/ActivityLogger';
 import { ActivityType } from '../types/activity';
-import {i} from "vite/dist/node/chunks/moduleRunnerTransport";
 
+let t2mTimestamps: number[] = [];
+let t2mPending: (()=>any)[] = [];
+let t2mPendingExtends: (()=>any)[] = [];
 export class Dummy {
     static t2mIgnoreKeys = ['id','pointedBy','className'];
     static get_delete(thiss: L, context: any): () => void {
@@ -243,13 +246,24 @@ export class Dummy {
         }
     }
 
-    static doT2M<THIS extends LNamedElement>(c: LogicContext<any>, thiss: GObject/*<THIS>*/): ((json:GObject)=>THIS) {
+
+
+    // indirectly recursive by calling child.t2m(v);
+    static doT2M<THIS extends LNamedElement>(c: LogicContext<any>, thiss: GObject/*<THIS>*/, pending?: (()=>any)[]): ((json:GObject)=>THIS) {
         return (json: GObject): THIS => {
+            const now = Date.now();
+            let isRootCall: boolean = t2mTimestamps.length === 0 || (t2mTimestamps[0] - now < 10);
+            const debug = true;
+            t2mTimestamps.push(now);
+
+            if (debug && t2mPending.length) console.log("delayed setters pre", {t2mPending, t2mPendingExtends});
+
+            // todo: check if delete works with new properties set (generics, typedecls)
             if (!json || typeof json !== 'object') return c.proxyObject as THIS;
             let old = {...json};
             TRANSACTION(thiss.get_name(c) + '.t2m()', () => {
                 json = (thiss as LModelElement)._convertEcoreToJom_m2(json,thiss.get_model(c), c);
-                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: JSON.parse(JSON.stringify(json)), jj: json, old});
+                if (debug) console.log('L'+c.data.className.substring(1)+'.t2m() called.', U.jsonCopy({d:c.data, j: json, old, isRootCall, t2mTimestamps}));
                 let childrenToUpdateByID: Dictionary<Pointer,  {json:GObject, l: LModelElement, id: Pointer, k: string}> = {};
                 let childrenToUpdateByName: Dictionary<string, {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}> = {};
                 let childrenToUpdateBySource: Dictionary<string, {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}> = {};
@@ -265,7 +279,6 @@ export class Dummy {
                     let dparent: DModelElement = null as any;
                     let lparent: LModelElement = null as any;
 
-                    // console.log('t2m children by name getparent', {k, gv, json});
                     if (c.data.className !== 'DModel') {
                         dparent = c.data;
                         lparent = c.proxyObject as LModelElement;
@@ -407,8 +420,6 @@ export class Dummy {
                     return collection || '';
                 }
 
-                (window as any).__debugt2m_getChildrenCollection = getChildrenCollection;
-
                 // populates all 3 collections "childrenToUpdateBy"
                 const registerChildren = (k: string) => {
                     let type = !json ? 'null' : typeof json;
@@ -421,7 +432,6 @@ export class Dummy {
                     let v = json[k];
                     let arr: (Pointer|D|L)[] = Array.isArray(v) ? v : [v];
                     let i: number = -1;
-                    // if (v) console.log("register children", {k, v, json, arr});
                     for (let v of arr) {
                         ++i;
                         if (!v) {
@@ -466,7 +476,6 @@ export class Dummy {
                         if (gv.id) {
                             child = L.fromPointer(gv.id) || L.fromPointer(Pointers.prefix + gv.id);
                             if (!child) {
-                                // console.warn("doChildrenupdate", {k, i, json: v, src:"id"});
                                 childrenToUpdateByNew.push({k, i, json:v});
                                 continue; // valid, new element
                             }
@@ -513,7 +522,7 @@ export class Dummy {
                                 continue; // valid, completed registration
                             }
                         }
-                        // console.log("register children not match", {child, k, i})
+                        if (debug) console.log("register children not match by source", {child, k, i, gv})
                         unregisteredChildren.push({k, i});
                     }
                 }
@@ -538,7 +547,6 @@ export class Dummy {
                     if (!child) {
                         // Log.ee('M2T could not match a children element', {gv:JSON.parse(JSON.stringify(gv)), k0, k, json:JSON.parse(JSON.stringify(json)), arr:JSON.parse(JSON.stringify(arr)), i, oldValues});
                         // childrenToUpdateInvalidMismatches.push({k, i, json:gv, reason: 'match by index failed, old index is not populated'});
-                        // console.warn("doChildrenupdate", {k, i, json: gv, src:"collection/index", arr, jjson:json});
                         childrenToUpdateByNew.push({k, i, json:gv});
                         return; // valid, completed registration
                     }
@@ -559,7 +567,7 @@ export class Dummy {
                 // calls [getparent]
                 const doChildrenUpdate = (child: LModelElement | null, k: string, v: GObject, matchedBy: 'id' | 'name' | 'source' | 'index' | 'new') => {
                     let lparent: LModelElement, dparent: DModelElement;
-                    // console.log('doChildrenUpdate ' + v.name, {cn: child?.name, child, k, v, matchedBy, json});
+                    if (debug) console.log('doChildrenUpdate ' + v.name, {cn: child?.name, child, k, v, matchedBy, json});
                     // should never happen, v should only be pointer or object.
                     if (typeof v !== 'object') { return; }
                     if (true as any /*matchedBy !== 'name' && matchedBy !== 'index'*/) {
@@ -591,7 +599,7 @@ export class Dummy {
                         };
                         let callback: (d: any) => void = (d: DModelElement) => {};
                         let d: DModelElement = null as any;
-                        console.log('m2t create subelement', {ptrs, v, thisData:c.data, dparent});
+                        if (debug) console.log('m2t create subelement', {ptrs, v, thisData:c.data, dparent});
                         // try to automatically determine the holding collection (class, enumerator or attrib, reference
                         switch (k) {
                             default: Log.ee('eCore unexpected child collection found', {k, c, json}); break;
@@ -609,7 +617,6 @@ export class Dummy {
                             case 'parameters': d = DParameter.new3(ptrs, callback, true); break;
                             case 'annotations': d = DAnnotation.new3(ptrs, callback, true); break;
                         }
-                        // console.log('M2 L'+c.data.className.substring(1)+'.t2m()', {d, v: JSON.parse(JSON.stringify(v))});
                         child = L.from(d); // (this as LValue).get_addObject(c)({});
                     }
                     if (!child) return;
@@ -620,6 +627,8 @@ export class Dummy {
                 // uses __childrenToSort
                 const cname = c.data.className;
 
+
+                // if (json.name === "changePassword") console.log("0x5 pre set stuff", {json});
                 // do non-children properties first
                 for (let k in json) {
                     let v = json[k];
@@ -630,12 +639,11 @@ export class Dummy {
                     // do childs last, but one key "references" is containment in classes and non-containment in annotations, so they need to be treated differently.
                     if (DPointerTargetable.childKeys.includes(k) && !(cname === "DAnnotation" && k === "references")) continue;
 
-
-
                     let doDefaultAssignment = false;
+                    let delayAssignment = false;
                     // do assignment
                     switch (k) {
-                        case '_state': thiss.set_state(v, c); break;
+                        case '_state': doDefaultAssignment = false; thiss.set_state(v, c); break;
                         case "name":
                             // if i'm changing model name in t2m, and there is only 1 package
                             // then the root is actually the pkg and not the model, he needs to be renamed as well.
@@ -645,24 +653,72 @@ export class Dummy {
                             if (pkgs.length !== 1) break;
                             pkgs[0].name = v;
                             break;
+                        case "references":
+                            doDefaultAssignment = true;
+                            if (cname === "DAnnotation") delayAssignment = true;
+                            break;
+
+                        /*
+                        delay setting containment because it needs to be set after type.
+                        by default right after creation type === reference.parent, but setting containment checks for loops,
+                        so setting it as true before changing his type might trigger a false positive error rejecting the operation of containment = true;
+                        EDIT: that can be allowed but there is another issue:
+                        it is allowed might be that A contains A, and it doesn't create a loop. because A can be contained by other elements too.
+                        so it can be: D -> C -> A -> A -> A and it's not a loop and A can still be instantiated. (EG: Model -> package -> subpackage) can all be containment's.
+                        A different issue arises if lowerbound >= 1, which would cause an infinite loop of instances, either direct or indirect.
+                        */
+                        case "lowerBound":
+                        case "containment": case "composition": doDefaultAssignment = true; delayAssignment = true; break;
+
+                        // all properties that can have ecore-style pointers ("//root/@feature.1") must be delayed
+                        // because all names/values (used in eid) must be set first
+                        case "type": case "defaultType": case "typeDeclarations":
+                        case "genericType": case "genericSuperTypes":
+                        case "exceptions": case "opposite": case "extends":
+                                // NB: stuff that changes structure should be excluded from delay operations because they affect ecore-pointers resolution
+                                // but "extends" should be fine because it can only happen in m2, and that only alters m1 structure, m2 structure won't change
+                                // (if a feature is referenced, is done through the superclass, never through subclasses).
+                            doDefaultAssignment = true;
+                            delayAssignment = true;
+                            break;
                         default: doDefaultAssignment = true; break;
                     }
-                    if (doDefaultAssignment) {
-                        // if (k[0] === "@" || k.toLowerCase().includes("annota")) console.error("setting wrong stuff", {d:c.data, k, v, json, old}); todo remove other debug comments like this
-                        console.log("t2m default set", {k, v,json, oldV, d:c.data});
+                    // NB: if i'm setting egenericsupertype, i would need to delay the setter because the genericType might reference by name items not yet created.
+                    // but if i delay it, the class will miss properties that can make other pointers to those properties fail? or are they always referencing the properties from the superclass?
+                    // so far i've decided to delay it.
+                    if (k === "genericSuperTypes") {
+                        doDefaultAssignment = false;
+                        t2mPendingExtends.push(() => {
+                            if (debug) console.log("0x0 t2m default delayed set "+k, {k, v, json, oldV, d:c.data});
+                            (c.proxyObject as LClass).addGenericSuperType(v);
+                        })
+                        // if (debug) console.log("0x0 t2m genericsupertype set "+k, {k, v, json, oldV, d:c.data, delayAssignment});
                         // @ts-ignore
-                        c.proxyObject[k] = v;
+                        // c.proxyObject.addExtends(v);
+                    }
+                    if (doDefaultAssignment) {
+                        if (delayAssignment) { t2mPending.push(() => {
+                            if (debug) console.log("0x0 t2m default delayed set "+k, {k, v, json, oldV, d:c.data});
+                            // @ts-ignore
+                            c.proxyObject[k] = v;
+                        })}
+                        else {
+                            if (debug) console.log("0x0 t2m default set "+k, {k, v, json, oldV, d:c.data, delayAssignment});
+                            // @ts-ignore
+                            c.proxyObject[k] = v;
+                        }
                     }
                 }
 
-                // do childs last
+                // do childs after trivial properties
+                // ***** CHILD BLOCK START **** //
                 for (let k of ['__childrenToSort']) { switch (k) {
                     case '__childrenToSort': // if they got id or name they can be registered right away. not ambiguous.
                         if (Array.isArray(json[k])) for (let i = 0; i < json[k].length; i++) {
                             let child = json[k][i];
                             if (!child) continue;
                             json[k][i] = child = (thiss as LModelElement)._convertEcoreToJom_m2(child,thiss.get_model(c), c)
-                            let collection = getChildrenCollection(k, child, child, json[k], i);
+                            let collection = getChildrenCollection(k, child, child, json[k], i); // todo: useless call??
                             //console.log('getChildrenCollection post', {collection, k, child, json, old, i});
                         }
                         break;
@@ -725,9 +781,6 @@ export class Dummy {
                 }
                 registerPhase();
 
-                console.log("t2m register children", {n: json.name, json, d: c.data, childrenToUpdateByNew,
-                    childrenToUpdateByID, childrenToUpdateByName, childrenToUpdateBySource,
-                    childrenToUpdateByIndex, childrenToUpdateInvalidMismatches});
                 // uses [doChildrenUpdate]
                 // final: actually handle childrens
                 for (let id in childrenToUpdateByID) {
@@ -761,6 +814,25 @@ export class Dummy {
                 }
 
             })
+            // ***** CHILD BLOCK END **** //
+
+            // set properties that can have ecore-style pointers after everything else (need eid, values, names and structure in place.
+            if (isRootCall && (t2mPendingExtends.length || t2mPending.length)) {
+                AFTER_UPDATE( (newState) => {
+                    TRANSACTION_MERGE("t2m setting pointers", () => {
+                        if (debug && t2mPending.length) console.log("delayed setters post", {t2mPending});
+                        for (let p of t2mPendingExtends) p();
+                        // reference copy because execution can be delayed (if !liveStateChanges) but i need to clean the array now.
+                        let extendPending_tmp = t2mPendingExtends;
+
+                        if (U.liveStateChanges) for (let p of t2mPending) p();
+                        else AFTER_UPDATE((newState) => { for (let p of extendPending_tmp) p(); });
+                        t2mPendingExtends = [];
+                        t2mPending = [];
+                        t2mTimestamps = [];
+                    })
+                });
+            }
             return c.proxyObject as THIS;
         }
     }

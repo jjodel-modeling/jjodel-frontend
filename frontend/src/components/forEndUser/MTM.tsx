@@ -463,7 +463,7 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
         else Log.ee('T2M returned an array instead of an object', {ret, data, language});
     }
     const copy = U.jsonCopy(ret);
-    console.log('doT2M json pre', {data, text, ret:copy});
+    // console.log('doT2M json pre', {data, text, ret:copy});
     windoww.ecorejson = copy;
     if (!(data as LObject).t2m) {
         Log.ee("The T2M transformation cannot be applied yet to " + className + " elements.", {className, ret, data, language});

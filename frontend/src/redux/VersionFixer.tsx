@@ -3,7 +3,8 @@ import {
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
     DProject, LViewElement,
-    DV, DPackage, DObject, DModel, LObject, Uarr, DClass,
+    DV, DPackage, DObject, DModel, LObject, Uarr, DClass, DAnnotation, DClassifier, DEnumerator, DAttribute,
+    DEnumLiteral, DOperation, DParameter, DTypeDeclaration, DPlaceholder,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -674,6 +675,63 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 (e as DClass | DObject).eidFeature = "__recalculating__";
                 continue;
             }
+        }
+        return s;
+    }
+    private ['2.212 -> 2.3'](s: DState): DState {
+        this.getByClassName(s, "DReference").forEach(r=> r.EKeys = r.EKeys || []);
+
+        if (!Array.isArray(s.annotations))      s.annotations = [];
+        if (!Array.isArray(s.typedeclarations)) s.typedeclarations = [];
+        if (!Array.isArray(s.placeholders))     s.placeholders = [];
+
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            let cn = e?.className;
+            if (!cn) continue;
+            if ((cn === 'DClass') && !e.typeParameters) {
+                (e as DClass).genericSuperTypes = [];
+                continue;
+            }
+        }
+
+        if (!s.idlookup.Pointer_EVOID) {
+            s.returnTypes = (s.returnTypes || []);
+            s.returnTypes.push("Pointer_EVOID");
+            s.idlookup.Pointer_EVOID = {
+                "className": "DClass",
+                "id": "Pointer_EVOID",
+                "pointedBy": [
+                    {"source": "classs"},
+                    {"source": "primitiveTypes"},
+                    {"source": "classs"}
+                ],
+                "_state": {},
+                "name": "EVoid",
+                "parent": [],
+                "annotations": [],
+                "abstract": false,
+                "interface": false,
+                "instances": [],
+                "operations": [],
+                "features": [],
+                "references": [],
+                "attributes": [],
+                "referencedBy": [],
+                "extends": [],
+                "isPrimitive": true,
+                "implements": [],
+                "implementedBy": [],
+                "partial": false,
+                "partialdefaultname": "",
+                "isSingleton": false,
+                "sealed": [],
+                "final": false,
+                "allowCrossReference": false,
+                "eidFeature": "__recalculating__",
+                "typeParameters": [],
+                "genericSuperTypes": []
+            } as any // DClass
         }
         return s;
     }

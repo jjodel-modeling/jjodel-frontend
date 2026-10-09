@@ -525,6 +525,7 @@ border-radius: 6px;
 .operation{
     display: flex;
     padding: 2px 5px;
+    flex-flow: column;
     
     input,
     select {
@@ -538,6 +539,23 @@ border-radius: 6px;
         left: 0;
         top: 100%;
         width: 100%;
+    }
+    .parameters-section{
+        display: none;
+    }
+    
+    &:hover, &:focus-within, &:focus{
+        .parameters-section{
+            display: flex;
+            /*
+            position: absolute;
+            top: 100%;
+            left: 90%;
+            transform: translateY(-100%);*/
+            margin-left: 2px !important;
+            background-color: var(--background-2);
+            padding: 1em;
+        }
     }
 }`;
         }, false, Defaults.Pointer_ViewOperation);
@@ -571,12 +589,25 @@ border-radius: 6px;
             view.isExclusiveView = true;
         }, false, Defaults.Pointer_ViewAnnotation);
         view.css =  `
-& { display: inline; }
-.annotation{
+&{
+    position: relative;
+    height: 1lh;
+    display: flex;
+}
+.annotation {
+    position: absolute;
     display: inline-flex;
     padding-left: 1em;
-    width: auto;
+    width: 100%;
     .annotation-source { display: none; }
+    .details{
+        display: inline-block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        &:hover, &:focus-within, &:active, &:focus{
+            overflow: visible;
+        }
+    }
     .modifier{
         width: 1ic;
         text-align: center;

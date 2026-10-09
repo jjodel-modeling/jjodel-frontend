@@ -258,7 +258,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                                  isDGraph?: DGraph): void {
 
         const cname = ret.data?.className;
-        if (cname === "DAttribute") console.log('create node 0', {ownProps, mid:ret?.data?.id});
         let nodeid: string = ownProps.nodeid as string;
         let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
         let parentnodeid: string = ownProps.parentnodeid as string;
@@ -273,13 +272,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
         }*/
 
-        if (cname === "DAttribute") console.log('create node 0.5', {ownProps, mid:ret?.data?.id, nodeid});
         if (!ownProps.nodeid) {
             Log.ee('Error in creating vertex, inject props did not inject the id', {ownProps});
             return;
         }
 
-        if (cname === "DAttribute") console.log('create node 1', {ownProps, mid:ret?.data?.id, nodeid});
         let graph: DGraph = DPointerTargetable.from(graphid, state) as DGraphElement as any; // se non c'è un grafo lo creo
         if (!graph) {
             // Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
@@ -290,10 +287,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
         let dnode: DGraphElement = DPointerTargetable.from(nodeid, state) as DGraphElement;
 
-        if (cname === "DAttribute") console.log('create node 2', {ownProps, mid:ret?.data?.id, nodeid, dnode});
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
         if (!dnode) {
-            console.log('create node 3', {ownProps, mid:ret?.data?.id, nodeid});
             /*
             console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret,
                 pendings: {...DPointerTargetable.pendingCreation}, pending:DPointerTargetable.pendingCreation[nodeid]});*/
@@ -347,7 +342,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             else {
                 let initialSize = ownProps.initialSize;
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
-                console.log('create node 4', {ownProps, mid:ret?.data?.id, nodeid, newNode: dge});
                 if (!tn) transientProperties.node[nodeid] = new NodeTransientProperties();
                 tn.onDelete = ownProps.onDelete;
                 ret.node =  MyProxyHandler.wrap(dge);
@@ -356,8 +350,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         else {
             ret.node = MyProxyHandler.wrap(dnode);
-
-            if (cname === "DAttribute") console.log('create node 5.5', {ownProps, mid:ret?.data?.id, nodeid, dnode, rn: ret.node});
             if (dGraphElementDataClass === DEdge) (ret as EdgeStateProps).edge = ret.node as any;
         }
 
@@ -379,7 +371,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let ret: GraphElementReduxStateProps = (startingobj || GraphElementReduxStateProps.new()) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         // console.log("viewsss mapstate 0 " + ownProps.view + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
 
-        console.log('err mapstate node 0', {state, ownProps, ret, dGraphDataClass, lm: Debug.lightMode});
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
         // lightMode (potatoMode) skips entirely node assign and view matching (the heaviest operation) for "small" elements.
         if (Debug.lightMode && (!ret.data || !(lightModeAllowedElements.includes(ret.data.className)))){
