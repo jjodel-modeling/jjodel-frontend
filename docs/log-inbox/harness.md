@@ -316,3 +316,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: scripts-only (lane board), app untouched; live board on 4700 restarted on 549409422, /api/insights 200 in 2.1 s, Insights tab shows Code areas, Model by area and by size and First-shot over time, no console errors (chat, built-in browser, RC-23)
 **Notes**: Rollback tag `pre-lane-board-model-insights` on `c7b5bd751` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1708/result.json`.
 **Prompt document name**: 2026-10-10 17:08
+
+## 2026-10-10 — feat(harness): lane board shows the span beside the working time (P-2026-10-10-1717)
+**Prompt**: `claude_2026-10-10_1717_prompt_lane_board_span.md`, fast lane on `~/jjodel-w-boardspan`, branch `lane-board-span`: a `Span` column right after `Elapsed` in the three tables of the Lanes tab, end - start for an exited lane, now - start for a running one, empty when start is 0 or an exited lane's end is 0; `title` tooltips on `Elapsed` and `Span`.
+**Files touched**: code `960294cd4`: `frontend/scripts/lane-board/lane-board.mjs`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` exit 0; check:scripts PASS 60 files. Board on 4701 (cache in /tmp), the page's own `table()` run in node on the 390 `/api` rows: P-2026-10-10-0045 Elapsed 34 min, Span 7 h 39 min (459 min = end - start); 385 of 386 exited rows carry a span, the empty one has end 0; Elapsed cells equal `work()` on every row; running 1600 21 min worked, 1 h 22 min span.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read of the Lanes tab: Span right after Elapsed in Running, Last 24 hours and Earlier lanes, both headers carry their title; 0045 reads Elapsed 34 min, Span 7 h 39 min; 1150 reads 10 min and 11 min; board on 4701 stopped
+**Notes**: Running is `r.live`, the flag that already splits the Running table from the others, so a chain row follows it too. The empty exited span is P-2026-09-29-1017 (no exit.txt, dead pid), the row that already shows no Ended. Span uses the browser's clock for now, Elapsed the server's at the last /api read: on a running row the two can differ by up to the cache age.
+**Prompt document name**: 2026-10-10 17:17
