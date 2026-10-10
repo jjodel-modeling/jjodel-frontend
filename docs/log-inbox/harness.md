@@ -524,3 +524,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat GO (RC-23), unattended: the merge brings only trunk content into the branch; the board was checked on 4701 from this branch before the merge, no board code edited by hand
 **Notes**: The trunk moved to `c315460b0` during the session, docs-only (1843's Status flip and log entry); `31706d940` merged as step 1 prescribes. Union: the trunk's 7 entries, then the branch's 1757 block, byte-identical to the trunk's file plus that block. Probes 19 of 19 once, control RC-46 absent. lane-board.mjs read end to end: hunks disjoint, 95 declarations once, node --check 0. check:docs is 5/5, not 4/4: Check E is on the trunk. No rollback tag.
 **Prompt document name**: 2026-10-10 18:48
+
+## 2026-10-10 — merge: lane-run-rc45-draw takes alfonso-frontend-jjtl (P-2026-10-10-1923)
+**Prompt**: `claude_2026-10-10_1923_prompt_lane-run-rc45-draw_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-rc45draw` on `lane-run-rc45-draw`: RC-14, the trunk at the explicit sha `9d41d0bce` into the branch with one `--no-ff` merge, base `31706d940`, 20 trunk commits against 7 on the branch and this prompt on top; hard stop for the chat's visual GO, then this closure.
+**Files touched**: merge `2913eced0`: the 10 files of the trunk side; `docs/log-inbox/harness.md` resolved by union (the trunk's 5 new entries, then the branch's 1757 and 1848 blocks, verbatim, each heading once); `frontend/scripts/lane-board/lane-board.mjs` auto-merged, no hand edit to code. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2913eced0`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8066 passed in 330 files, 0 failed, the 9 §17 files red at import (expected: trunk tip 8052, measured read-only in `~/jjodel-release`, plus 14 from the branch); hooks 501 (trunk 487 plus 14); build exit 0; check:docs 5/5; check:scripts PASS 67 files; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries 10 files, above five (RC-11), all the trunk side's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO (RC-23), unattended: trunk content only, kindOf and the RC-45 draw code sit in separate regions of lane-board.mjs, gates match
+**Notes**: merge-tree exit 1, tree `09b422a2e`, 1 conflict; staged tree `7437a01e9` differs only in harness.md, byte-identical to the trunk's file plus the branch's block. Probes 7 of 7 once, control 1923 heading 0. lane-board.mjs read end to end: trunk hunk :78-81, branch hunks :661-760, 95 declarations once, node --check 0. check:docs is 5/5, not 4/4: Check E is on the trunk. No rollback tag.
+**Prompt document name**: 2026-10-10 19:23
