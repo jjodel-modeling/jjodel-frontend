@@ -167,65 +167,6 @@
 }
 
 // ============================================
-// Dark Mode
-// ============================================
-html[data-theme="dark"] {
-    .browser-warning-overlay {
-        background: rgba(0, 0, 0, 0.7);
-    }
-
-    .browser-warning-modal {
-        background: #1e293b;
-
-        &__icon {
-            background: #422006;
-
-            i {
-                color: #fbbf24;
-            }
-        }
-
-        &__title {
-            color: #f1f5f9;
-        }
-
-        &__message {
-            color: #cbd5e1;
-
-            strong {
-                color: #f1f5f9;
-            }
-        }
-
-        &__suggestion {
-            color: #f1f5f9;
-        }
-
-        &__list li {
-            color: #cbd5e1;
-
-            strong {
-                color: #f1f5f9;
-            }
-        }
-
-        &__note {
-            color: #94a3b8;
-            border-top-color: #334155;
-        }
-
-        &__btn--primary {
-            background: #475569;
-            color: #ffffff;
-
-            &:hover {
-                background: #64748b;
-            }
-        }
-    }
-}
-
-// ============================================
 // Responsive
 // ============================================
 @media (max-width: 600px) {

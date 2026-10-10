@@ -503,114 +503,6 @@ section.page-root {
 }
 
 // ============================================
-// DARK MODE — minimal overrides, mirrors baseline
-// ============================================
-[data-theme="dark"] .apply-to-tab {
-  background: #0f172a !important;
-  color: #e2e8f0 !important;
-
-  .form-label { color: #94a3b8 !important; }
-  .toggle-label { color: #94a3b8 !important; }
-
-  input, input[type="text"], input[type="number"], select, textarea,
-  .form-input, .form-select {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-    color: #e2e8f0 !important;
-
-    &:focus {
-      border-color: #64748b !important;
-      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.25) !important;
-    }
-
-    &::placeholder { color: #64748b !important; }
-
-    &:disabled, &[readonly] {
-      background: #0f172a !important;
-      color: #64748b !important;
-    }
-  }
-
-  .section-header--collapsible {
-    border-bottom-color: #334155 !important;
-  }
-
-  .section-title { color: #94a3b8 !important; }
-  .section-header__left i,
-  .section-header__right i { color: #64748b !important; }
-
-  .monaco-editor-wrapper {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-  }
-
-  // Multi-select dark mode
-  .form-field:has([class*="-control"]) {
-    [class*="-control"] {
-      background: #1e293b !important;
-      border-color: #334155 !important;
-
-      &:hover { border-color: #475569 !important; }
-    }
-
-    [class*="-control--is-focused"] {
-      border-color: #64748b !important;
-      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.25) !important;
-    }
-
-    [class*="-multiValue"] {
-      background: #334155 !important;
-      border-color: #475569 !important;
-    }
-
-    [class*="-multiValue__label"] { color: #e2e8f0 !important; }
-
-    [class*="-multiValue__remove"] {
-      color: #94a3b8 !important;
-
-      &:hover {
-        background: #475569 !important;
-        color: #cbd5e1 !important;
-      }
-    }
-
-    [class*="-placeholder"] { color: #64748b !important; }
-  }
-
-  .form-field [class*="-menu"] {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-  }
-
-  .form-field [class*="-option"] {
-    color: #e2e8f0 !important;
-
-    &:hover { background: rgba(100, 116, 139, 0.2) !important; }
-  }
-
-  .form-field [class*="-option--is-selected"] {
-    background: rgba(148, 163, 184, 0.15) !important;
-    color: #f1f5f9 !important;
-  }
-
-  .form-field [class*="-option--is-focused"] {
-    background: rgba(100, 116, 139, 0.15) !important;
-  }
-
-  .apply-to-toggle {
-    background: #475569 !important;
-
-    &.active {
-      background: #94a3b8 !important;
-
-      .apply-to-toggle-thumb { background: #0f172a !important; }
-    }
-
-    &:hover:not(.active) { background: #64748b !important; }
-  }
-}
-
-// ============================================
 // L2.x.1 — Edge-candidate banner ("Apply suggestions")
 // Renders above the Is Edge toggle in InfoData when the view's classifier
 // is uniquely identified and has exactly two declared references.
@@ -721,16 +613,6 @@ section.page-root {
 }
 .properties-tab.properties-panel .jjodel-select__multi-value__remove {
   color: #64748b !important;
-}
-// Preserve the dark-theme chip appearance (mirrors _form-system's dark values).
-[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value {
-  background-color: #334155 !important;
-}
-[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value__label {
-  color: #e2e8f0 !important;
-}
-[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value__remove {
-  color: #94a3b8 !important;
 }
 
 // --- Issue 3: disabled/readonly values render legible (slate), not placeholder-gray.

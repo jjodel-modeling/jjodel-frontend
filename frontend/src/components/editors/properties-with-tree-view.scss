@@ -1155,35 +1155,6 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         // la copia che vinceva la cascata a (0,3,0); il colore non arrivava comunque al
         // glifo, perche' a dipingere e' l'<i class="bi"> e non questo <span> (R-RAIL-36).
         // Rimozione misurata: zero pixel di differenza. Non rimetterla.
-        // Dopo la rimozione la regola che vince su questi <span> e' quella di
-        // components/forEndUser/tree.scss, quarta palette entity globale e non scopata
-        // (voce a TECH-DEBT). Sul colore non cambia niente, perche' nessuna delle due
-        // dipinge il glifo. Sul FONDO invece cambia, ma solo in dark: quel foglio scopa
-        // la sua meta' scura come `html[data-theme="dark"] { .tree-DClass { ... } }`,
-        // cioe' (0,2,1), e batte il `background: transparent` di base qui sopra, che e'
-        // (0,2,0). Le undici dichiarazioni rimosse tenevano anche questo, oltre alla -bg
-        // del foglio del tree: era il loro secondo mestiere, e il commento precedente ne
-        // nominava uno solo. Misurato in dark senza la riga qui sotto: sei kind passano
-        // da trasparente a una pastiglia traslucida (DClass rgba(14,165,233,.2), DModel
-        // rgba(100,116,139,.2), DPackage rgba(245,158,11,.2), e cosi' via).
-        // Il :not() e' obbligatorio, ma non per specificita'. Senza, la riga sta a
-        // (0,3,0) e batte comunque tree-viewpoint e tree-leaf-view, che stanno a
-        // (0,2,0) e sono le due pastiglie ratificate dall'emendamento (2) a
-        // R-RAIL-33: ne spegnerebbe il fondo. Il :not() non abbassa la specificita',
-        // la alza a (0,5,0); quello che fa e' escludere le due classi dal match.
-        // I tre badge per kind delle view foglia (tree-view-vertex/-row/-edge) sono
-        // pastiglie della stessa famiglia delle due sopra: sostituiscono
-        // `tree-leaf-view` sulle stesse righe, e senza l'esclusione perderebbero il
-        // fondo solo in dark. Misurato: fondo rgba(0,0,0,0) contro il rgb(36,46,61)
-        // che tree-leaf-view conserva sulla riga accanto.
-        // Stessa ragione per i badge delle istanze M1 (`tree-m1-icon`, sezione
-        // in coda a tree-view-sidebar.scss): sono pastiglie, una per metaclasse,
-        // e senza l'esclusione perderebbero il fondo solo in dark. Misurato
-        // 2026-08-26: fondo rgba(0,0,0,0) contro il rgb(254,226,226) del chiaro.
-        // Basta la classe comune: le cinque varianti la portano tutte.
-        [data-theme="dark"] &:not(.tree-viewpoint):not(.tree-leaf-view):not(.tree-view-vertex):not(.tree-view-row):not(.tree-view-edge):not(.tree-m1-icon) {
-            background: transparent;
-        }
 
         // Il corsivo della classe astratta non e' colore e resta.
         &.tree-DClass {
@@ -1311,114 +1282,6 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         // Hide the redundant NodeEditor header (we have our own section header)
         .node-header {
             display: none;
-        }
-    }
-}
-
-// ============================================
-// DARK MODE SUPPORT
-// ============================================
-
-[data-theme="dark"] {
-    .properties-with-tree-view {
-        background-color: #14181d; // darker backdrop so the cards read as elevated (Fase 2A)
-    }
-
-    // Properties card in dark (Fase 2A): base bg is #fff (light) — override to the
-    // dark panel surface, matching the tree card, with a dark contained shadow.
-    .properties-panel-container {
-        background-color: #1e1e1e;
-        border-color: #333;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    }
-
-    // The disclosure row has no fill and no top border left to re-colour, and its
-    // hairline uses `--color-panel-border`, which does follow the theme. Only the hover
-    // needs flipping: `--color-slate-*` is a raw palette, so the light rule would
-    // darken the label against a dark surface instead of lifting it.
-    .properties-node-section__header:hover {
-        color: var(--color-slate-300);
-    }
-
-    .tree-view-panel-container {
-        background-color: #1e1e1e;
-        border-color: #333;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); // dark contained card shadow (Fase 2A)
-    }
-
-    .tree-view-panel-header {
-        background-color: #1e1e1e;
-        border-color: #333;
-        color: #888;
-
-        > i {
-            color: #6b7280;
-        }
-    }
-
-    .tree-view-toggle-btn {
-        color: #888;
-
-        &:hover {
-            background-color: #333;
-            color: #e0e0e0;
-        }
-    }
-
-    // Pin button — dark mode (2026-07-05 fase 2). Active state keeps the cyan indicator.
-    .properties-panel-pin-btn {
-        color: #888;
-
-        &:hover {
-            background-color: #333;
-            color: #e0e0e0;
-        }
-
-        &.is-active {
-            color: $color-highlight;
-
-            &:hover {
-                color: $color-highlight;
-            }
-        }
-    }
-
-    // Mockup-alignment overrides — dark counterparts (2026-07-29, fase 2B/B4).
-    // The accent checkbox fill works on both themes; only the muted greys need it.
-    .properties-panel-container {
-        .jj-field > p {
-            color: #64748b;                 // slate-500 reads better on the dark card
-        }
-
-        .jj-field > button {
-            border-color: #334155;
-            color: #cbd5e1;
-        }
-
-        .jj-field > button:disabled {
-            border-color: #1e293b;
-            color: #475569;
-        }
-
-        .props-label-entry-split {
-            border-top-color: #334155;
-        }
-    }
-
-    .tree-view-collapsed {
-        background-color: #1e1e1e;
-        border-color: #333;
-
-        &:hover {
-            background-color: #252525;
-
-            i {
-                color: #e0e0e0;
-            }
-        }
-
-        i {
-            color: #6b7280;
         }
     }
 }
@@ -1559,13 +1422,6 @@ body[data-active-tab="manager"] .properties-tree-overlay {
 
     // The accordion maximize (`.card-header-only`) is retired with the two-card
     // layout (rail arc 1, 2026-08-10, R-RAIL-11).
-}
-
-// Dark: keep the floating wrapper transparent (the [data-theme=dark]
-// .properties-with-tree-view backdrop rule would otherwise tint it). The rail
-// modifier below repaints it as one surface.
-[data-theme="dark"] .properties-with-tree-view--floating {
-    background: transparent;
 }
 
 // ============================================
@@ -1838,40 +1694,6 @@ body[data-active-tab="manager"] .properties-tree-overlay {
     }
 }
 
-// ─── Focus bar and posture button in dark ────────────────────────────────────
-// The values above are the design's, and the design is drawn in light: `--color-slate-50`
-// and the slate text grades are raw palette and do not follow the theme, so in dark the
-// bar rendered a near-white ground under near-white text, and the Back chip dark text on
-// a dark ground. Measured, not supposed: the bar computed `rgb(248,250,252)` under
-// `rgb(240,240,240)`. This block corrects the three colours for dark only, leaving the
-// light rendering — the one already approved — byte for byte as it was.
-[data-theme="dark"] .properties-with-tree-view--rail {
-    .rail-focusbar {
-        background: var(--color-bg-hover);
-        border-bottom-color: var(--color-panel-border);
-    }
-
-    // `.rail-header__btn` dropped from this list with the header (2026-08-26).
-    .rail-focusbar__back,
-    .rail-focusbar__step {
-        color: var(--color-slate-300);
-    }
-
-    // Same correction for the Structure bar, and for the same reason: `--color-slate-50`
-    // and the slate text grades are raw palette and do not follow the theme.
-    .rail-structurebar {
-        background: var(--color-bg-hover);
-        border-bottom-color: var(--color-panel-border);
-        color: var(--color-slate-300);
-
-        &:hover { background: var(--color-bg-elevated); }
-        .rail-structurebar__caret.bi { color: var(--color-slate-500); }
-        .rail-structurebar__icon.bi { color: var(--color-slate-400); }
-    }
-
-    .rail-focusbar__current { color: var(--color-slate-100); }
-}
-
 // ─── Arco 3, passo A: la griglia dei campi (design §7) ───────────────────────
 // La mossa di densità del design: label a destra in una colonna da 84px, campo su una
 // riga sola invece di uno stack da tre.
@@ -2044,42 +1866,6 @@ body[data-active-tab="manager"] .properties-tree-overlay {
                 text-align: center;
                 border: none !important;
             }
-        }
-    }
-}
-
-// Il segmentato in dark. Superficie nuova: R-RAIL-42 impone di guardarla nei due temi
-// prima di dichiararla finita, e i valori del design sono disegnati in light. Il fondo
-// bianco del non selezionato sarebbe una pastiglia chiara su pannello scuro, e lo slate-700
-// del selezionato sparirebbe dentro il fondo. Qui il rapporto si inverte: il selezionato
-// prende il grado chiaro e il testo scuro, che è la stessa mossa già fatta per la Focus bar.
-[data-theme="dark"] .properties-with-tree-view--rail .properties-fields {
-    .jj-mult__seg {
-        background: var(--color-bg-hover);
-        border-color: var(--color-panel-border);
-        color: var(--color-slate-300);
-
-        &:hover { border-color: var(--color-slate-500); }
-
-        // Lo stato selezionato VA ridichiarato, anche se `--color-selection-bg` ha gia'
-        // la sua meta' scura: la regola base di questo blocco porta `[data-theme]` in
-        // piu' e vale (0,5,0), quindi batte la `.is-selected` del blocco chiaro a
-        // (0,4,0) e le sovrascrive fondo e bordo. Misurato prima della correzione:
-        // acceso a `rgba(255,255,255,0.06)` con anello `rgb(51,65,85)`, cioe' lo stato
-        // spento. Il token porta il valore, la ridichiarazione porta la specificita'.
-        &.is-selected {
-            background: var(--color-selection-bg);
-            border-color: $pc-accent;
-            color: var(--color-slate-100);
-        }
-    }
-
-    .jj-mult__custom {
-        .jj-mult__custom-label,
-        .jj-mult__custom-value { color: var(--color-slate-400); }
-
-        > div:has(> button:not([role="checkbox"]) + input) {
-            border-color: var(--color-panel-border);
         }
     }
 }
@@ -2297,56 +2083,6 @@ body[data-active-tab="manager"] .properties-tree-overlay {
     }
 }
 
-// I flag in dark. Superficie nuova, quindi misurata nei due temi prima di dichiararla
-// finita (R-RAIL-42): il chip spento a fondo bianco sarebbe una pastiglia chiara su
-// pannello scuro, e il chip acceso a slate-700 sparirebbe nel fondo. Stessa inversione
-// già adottata per il segmentato del passo B e per la Focus bar dell'arco 2.
-[data-theme="dark"] .properties-with-tree-view--rail .properties-fields {
-    .jj-flags__title,
-    .jj-flags__summary { color: var(--color-slate-400); }
-
-    .jj-flag {
-        background: var(--color-bg-hover);
-        border-color: var(--color-panel-border);
-        color: var(--color-slate-300);
-
-        // Stessa ragione del segmentato qui sopra: la specificita' di questo blocco
-        // impone di ridichiarare fondo e anello, non solo il testo.
-        &.is-on {
-            background: var(--color-selection-bg);
-            border-color: $pc-accent;
-            color: var(--color-slate-100);
-        }
-
-        &:hover:not(.is-on) { border-color: var(--color-slate-500); }
-    }
-}
-
-[data-theme="dark"] .properties-with-tree-view--rail-focus .properties-fields {
-    .jj-flags__group { border-color: var(--color-panel-border); }
-
-    .jj-flag {
-        background: transparent;
-        border-top-color: var(--color-panel-border);
-        color: var(--color-slate-200);
-
-        // Il fondo della riga accesa arriva da `--color-selection-bg`, che in dark e'
-        // gia' una velatura (`rgba(8,145,178,0.18)`) e non un colore pieno: si posa
-        // sul pannello scuro senza schiarirlo. Si corregge il bordo, che qui e' l'unico
-        // valore che il blocco light non puo' indovinare.
-        &.is-on {
-            background: var(--color-selection-bg);
-            border-top-color: var(--color-panel-border);
-            color: var(--color-slate-100);
-        }
-        > i { color: var(--color-slate-400); }
-    }
-
-    .jj-flag__hint { color: var(--color-slate-400); }
-    // La traccia non si ridichiara in dark: `ui/Toggle` non ha meta' scura, e i due
-    // interruttori che convivono nella stessa colonna devono restare identici.
-}
-
 // ─── Arco 3, passo D: la disclosure Advanced (design §7) ─────────────────────
 // Il design fonde `ADVANCED` e `ADVANCED STATE` in una sola voce «Advanced», resa come
 // riga da 30px: caret, eyebrow, filetto che riempie il mezzo, riepilogo a destra.
@@ -2412,12 +2148,6 @@ body[data-active-tab="manager"] .properties-tree-overlay {
         max-width: 160px;
         display: inline-block;
     }
-}
-
-[data-theme="dark"] .properties-with-tree-view--rail .jj-disclosure {
-    .props-section__title,
-    .props-section__chevron,
-    .jj-disclosure__summary { color: var(--color-slate-400); }
 }
 
 // ─── Le card delle view alla stessa scala dell'inspector (2026-08-13) ────────

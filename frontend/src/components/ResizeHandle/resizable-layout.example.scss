@@ -78,38 +78,3 @@ $color-text-tertiary: #9CA3AF;
     color: $color-text-secondary;
   }
 }
-
-// ============================================
-// DARK MODE
-// ============================================
-
-html[data-theme="dark"] {
-  .resizable-layout {
-    background: #0f172a;
-  }
-
-  .resizable-layout__canvas {
-    background: #0f172a;
-  }
-
-  .resizable-layout__console {
-    border-top-color: #334155;
-    background: #0f172a;
-  }
-
-  .resizable-layout__placeholder {
-    color: #64748b;
-
-    i {
-      color: #94a3b8;
-    }
-
-    p {
-      color: #f1f5f9;
-    }
-
-    span {
-      color: #94a3b8;
-    }
-  }
-}

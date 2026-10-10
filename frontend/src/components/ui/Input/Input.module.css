@@ -154,25 +154,3 @@
 .rightIconContainer {
   right: 12px;
 }
-
-/* Dark mode support */
-html[data-theme="dark"] {
-  .input {
-    background-color: var(--color-bg-secondary);
-    border-color: var(--input-border-color);
-    color: var(--color-text-primary);
-  }
-
-  .input:hover:not(:disabled):not(:read-only):not(.input-error) {
-    border-color: var(--input-border-color-hover);
-  }
-
-  .input:focus {
-    background-color: var(--color-bg-primary);
-  }
-
-  .input:disabled,
-  .input:read-only {
-    background-color: var(--color-bg-tertiary);
-  }
-}

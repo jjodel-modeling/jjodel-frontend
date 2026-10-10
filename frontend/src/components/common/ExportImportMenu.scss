@@ -113,39 +113,3 @@
     color: var(--text-tertiary, #94a3b8);
     font-family: 'IBM Plex Mono', monospace;
 }
-
-// ============================================
-// DARK MODE
-// ============================================
-
-[data-theme="dark"] {
-    .export-import-menu__trigger {
-        color: var(--text-tertiary, #64748b);
-
-        &:hover:not(:disabled) {
-            background: var(--bg-hover, #334155);
-            color: var(--text-primary, #e2e8f0);
-        }
-    }
-
-    .export-import-menu__dropdown {
-        background: var(--bg-secondary, #1e293b);
-        border-color: var(--border-color, #334155);
-    }
-
-    .export-import-menu__item {
-        color: var(--text-primary, #e2e8f0);
-
-        &:hover {
-            background: var(--bg-hover, #334155);
-        }
-
-        i {
-            color: var(--text-secondary, #94a3b8);
-        }
-    }
-
-    .export-import-menu__hint {
-        color: var(--text-tertiary, #64748b);
-    }
-}

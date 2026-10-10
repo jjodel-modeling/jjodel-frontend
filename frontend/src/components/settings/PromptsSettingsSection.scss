@@ -186,33 +186,3 @@
         }
     }
 }
-
-// Dark mode
-[data-theme="dark"] {
-    .prompts-section-header {
-        h2 {
-            color: var(--text-primary, #f1f5f9);
-        }
-    }
-
-    .prompt-card__source {
-        &.source--global {
-            background: #312e81;
-            color: #a5b4fc;
-        }
-
-        &.source--project {
-            background: #831843;
-            color: #f9a8d4;
-        }
-    }
-
-    .prompt-card__updated {
-        background: rgba(14, 165, 233, 0.15);
-        color: #7dd3fc;
-    }
-
-    .prompt-card__header:hover {
-        background: var(--bg-hover, #1e293b);
-    }
-}

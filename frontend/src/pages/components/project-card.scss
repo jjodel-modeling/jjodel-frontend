@@ -1246,44 +1246,6 @@ $transition: 150ms ease;
   color: var(--color-text-tertiary, #94a3b8);
 }
 
-// Dark mode
-[data-theme="dark"] {
-  .gallery-card {
-    background: #1e293b;
-    border-color: #334155;
-
-    &:hover { border-color: #475569; }
-  }
-
-  .gallery-card__action-btn {
-    background: rgba(30, 41, 59, 0.9);
-    border-color: #475569;
-    color: #94a3b8;
-
-    &:hover {
-      background: #334155;
-      color: #e2e8f0;
-    }
-  }
-
-  .gallery-card__header-actions .menu-button {
-    background: rgba(30, 41, 59, 0.9) !important;
-    border-color: #475569 !important;
-  }
-
-  .gallery-card__rev {
-    background: rgba(15, 23, 42, 0.72);
-    border-color: #475569;
-  }
-
-  .gallery-card__status[style*="dcfce7"] {
-    background: rgba(22, 101, 52, 0.25) !important;
-  }
-  .gallery-card__status[style*="fef3c7"] {
-    background: rgba(146, 64, 14, 0.25) !important;
-  }
-}
-
 // ============================================
 // PROJECT CHECKBOX - Bulk Selection
 // ============================================

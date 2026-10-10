@@ -323,13 +323,3 @@
         }
     }
 }
-
-/* Le due primitive slate consumate sopra sono invarianti al tema per costruzione
-   (`styles/tokens.css`), quindi la hairline e il segmento scelto vogliono una
-   controparte dark propria — la stessa forma che `ListEditor.module.css` usa per le
-   sue superfici chiare literal. Il dark resta comunque sospeso (R-RAIL-44): questa
-   è cintura, non copertura. */
-html[data-theme='dark'] .properties-with-tree-view--rail .properties-panel-container .view-editor-tab-content {
-    section + section { border-top-color: var(--color-border-primary); }
-    [role='radio'][aria-checked='true'] { background: var(--color-bg-tertiary); }
-}
