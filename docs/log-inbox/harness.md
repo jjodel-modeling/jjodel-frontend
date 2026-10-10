@@ -175,3 +175,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: harness script only (lane-run chain), no UI to check; tests and gates read from the report
 **Notes**: On base `4d00d2634` tests 1-2 red (`unknown option for chain: --request`), test 3 green by design: it pins today's chain without `--request`. 3/3 after. Mutation bench 7/7 killed, listed in the commit body. `chain.json` gains `request` (path or null). The merge lane's exemption holds by construction (merge spawned without `--request`), not tested. `rm -rf` denied: `/tmp/lrbench-7hCl` remains.
 **Prompt document name**: 2026-10-10 12:43
+
+## 2026-10-10 — merge: chain-request into alfonso-frontend-jjtl (P-2026-10-10-1250)
+**Prompt**: `claude_2026-10-10_1250_prompt_merge_chain-request.md`, a direct merge by `lane-run merge --direct`, no session: `chain-request` at `3a9e87808` into `alfonso-frontend-jjtl`, merge base `4d00d2634`, 2 commits on the branch side.
+**Files touched**: merge `829073426`: 3 files from the branch side (`docs/log-inbox/harness.md`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `829073426` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7728 tests in 317 files, 9 red at import, hooks 427; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: harness script only (lane-run chain), app untouched, no scene to check on 3001
+**Notes**: Rollback tag `pre-chain-request` on `18d9dfb57` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1250/result.json`.
+**Prompt document name**: 2026-10-10 12:50
