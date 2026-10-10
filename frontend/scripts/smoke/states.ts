@@ -484,27 +484,24 @@ export async function link(
     };
 }
 
-// ── The theme, switched the app way ─────────────────────────────────────────
+// ── The theme: light only ───────────────────────────────────────────────────
 
 /**
- * `setTheme` — switch light/dark through the app's own `ThemeService`, and
- * assert that the open editors followed.
+ * `setTheme` — Jjodel has no dark theme (D-UI-15). The app has two LIGHT states
+ * (docs/discovery/discovery_2026-10-10_dark_theme_removal.md §3.1): A, nothing
+ * stored and no `data-theme` on <html>; B, `localStorage.theme = 'light'` and
+ * `data-theme="light"`. `setTheme(page, 'light')` puts the page in B, the state
+ * the probes of the earlier lanes took their light crops in, by writing the
+ * attribute and the stored value, the two things the boot script of
+ * `index.html` reads and writes. Every `.editor-v2` carries `theme-light` by
+ * construction since P-2026-10-10-0910, and the poll still asserts it.
  *
- * Probes set `data-theme` on `<html>` by hand. That reaches every rule keyed on
- * `[data-theme="dark"]` and nothing else: the editor takes its theme from
- * `useTheme` (`src/components/editor-v2/EditorV2.tsx:915`, the
- * `.editor-v2.theme-<t>` class), which follows only the `THEME_CHANGED` event
- * that `ThemeService.set` fires (`src/services/ThemeService.ts:32-36`). So the
- * canvas stayed light in the dark crops of P-2026-09-27-1647, 1806, 2324 and
- * P-2026-09-28-0023.
+ * `setTheme(page, 'dark')` writes nothing and returns `ok: false`: there is no
+ * dark theme to switch to. The signature is kept for the archival probes that
+ * still ask for it (`probe/petri-ink-ports.ts`, `probe/io-board-lane1.ts`).
  *
- * The helper imports the real module from the dev server and calls `set`: the
- * attribute, `localStorage.theme` and the event, the same call Settings >
- * Appearance makes for a user's choice on a tree that carries `813a73ff5`
- * (P-2026-09-28-0014); before it, the radio wrote the attribute only too.
- * A probe that wants a theme from the first paint seeds `localStorage.theme`
- * before `goto` instead, which is what the boot script of `index.html` and the
- * first read of `useTheme` both look at.
+ * A probe that wants state B from the first paint seeds `localStorage.theme`
+ * before `goto` instead, which is what the boot script looks at.
  *
  * The shape is asserted, not waited for: the poll ends when the attribute, the
  * stored value and every mounted `.editor-v2` agree, and a timeout returns
@@ -527,23 +524,12 @@ export interface ThemeResult {
 }
 
 export async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<ThemeResult> {
-    // The URL goes in as an argument so tsc does not try to resolve a dev-server path.
-    const failed = await page.evaluate(
-        async (a: { theme: 'light' | 'dark'; url: string }) => {
-            try {
-                const m = await import(a.url);
-                if (typeof m?.ThemeService?.set !== 'function') return `ThemeService.set assente in ${a.url}`;
-                m.ThemeService.set(a.theme);
-                return '';
-            } catch (e) {
-                return e instanceof Error ? e.message : String(e);
-            }
-        },
-        { theme, url: '/src/services/ThemeService.ts' },
-    );
-    if (failed) return { ok: false, error: failed };
+    if (theme !== 'light') return { ok: false, error: 'no dark theme (D-UI-15): setTheme takes light only' };
+    await page.evaluate(() => {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+    });
 
-    // Same budget as `link`: the event is synchronous, the editor re-renders on it.
     const timeoutMs = 4000;
     const pollMs = 100;
     const started = Date.now();

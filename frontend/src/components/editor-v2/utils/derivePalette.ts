@@ -43,14 +43,13 @@ export function hexToHsl(hex: string): HSL {
 }
 
 const hsl = (h: number, s: number, l: number): string => `hsl(${Math.round(wrap(h))}, ${Math.round(s)}%, ${Math.round(l)}%)`;
+// TODO: cleanup — no caller since the dark set went (D-UI-15, P-2026-10-10-0910).
 const hsla = (h: number, s: number, l: number, a: number): string => `hsla(${Math.round(wrap(h))}, ${Math.round(s)}%, ${Math.round(l)}%, ${a})`;
 
 /** The CSS custom properties a palette controls, grouped for the injector. */
 export interface DerivedPaletteVars {
     /** Root vars for `.theme-light`. */
     light: Record<string, string>;
-    /** Root vars for `.theme-dark`. */
-    dark: Record<string, string>;
     /** Light-only `.mm-class.abstract` re-overrides. */
     lightAbstract: Record<string, string>;
     /** Light-only `.mm-enum` re-override. */
@@ -85,22 +84,6 @@ export function derivePaletteVars(seed: string): DerivedPaletteVars {
         '--package-accent': hsl(h, sC, 41),
     };
 
-    const dark: Record<string, string> = {
-        '--class-header-bg': hsla(h, sC, 50, 0.24),
-        '--class-abstract-header-bg': hsla(h, 28, 33, 0.26),
-        '--enum-header-bg': hsla(eH, 82, 48, 0.22),
-        '--package-header-bg': hsla(h, 45, 22, 0.28),
-        '--object-header-bg': hsla(h, sC, 50, 0.18),
-        '--orphan-border-color': hsl(h, sC, 58),
-        '--orphan-header-bg': hsla(h, 13, 50, 0.2),
-        // Dark text is theme-constant across all curated palettes.
-        '--node-header-text': 'rgba(255, 255, 255, 0.92)',
-        '--stereotype-color': 'rgba(255, 255, 255, 0.55)',
-        '--field-type-color': hsl(h, 88, 76),
-        '--enum-accent': hsl(eH, 88, 62),
-        '--package-accent': hsl(h, sC, 58),
-    };
-
     const lightAbstract: Record<string, string> = {
         '--node-header-text': hsl(h, 12, 35),
         '--stereotype-color': hsl(h, 10, 45),
@@ -112,7 +95,7 @@ export function derivePaletteVars(seed: string): DerivedPaletteVars {
         '--package-header-text': hsl(h, 30, 28),
     };
 
-    return { light, dark, lightAbstract, lightEnum, lightPackage };
+    return { light, lightAbstract, lightEnum, lightPackage };
 }
 
 /**
