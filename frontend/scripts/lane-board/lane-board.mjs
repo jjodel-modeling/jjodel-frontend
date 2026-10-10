@@ -134,13 +134,14 @@ function collect() {
         if (!isChain) Object.assign(row, laneSpan(id, now));
         rows.push(row);
     }
-    // A chain spans its lanes: the earliest start, and the latest end once every lane that started has ended.
+    // A chain spans its lanes: the earliest start, the latest end once every lane that started has ended, the sum of their work.
     const byId = new Map(rows.map((r) => [r.id, r]));
     for (const row of rows) {
         if (!row.chain) continue;
         const spans = [...chainPosMem()].filter(([, p]) => p.chain === row.id).map(([lid]) => byId.get(lid) || laneSpan(lid, now)).filter((s) => s.start);
         row.start = spans.length ? Math.min(...spans.map((s) => s.start)) : 0;
         row.end = !row.live && spans.length && spans.every((s) => s.end) ? Math.max(...spans.map((s) => s.end)) : 0;
+        row.work = spans.reduce((a, s) => a + s.work, 0);
     }
     if (tlDirty) {
         try { writeFileSync(TL_CACHE_FILE + '.tmp', JSON.stringify(tlCache)); renameSync(TL_CACHE_FILE + '.tmp', TL_CACHE_FILE); } catch { /* best effort */ }
@@ -246,14 +247,16 @@ function laneTimeline(id, now) {
     return v;
 }
 
-/** When a lane started and ended, in epoch ms: the first turn's start and, once it has exited, the last turn's end; 0 when unknown or running. */
+/** When a lane started and ended, in epoch ms: the first turn's start and, once it has exited, the last turn's end; 0 when unknown or running.
+ *  work: the sum of the turn durations in ms, the running turn up to now (the waits for a decision are not work). */
 function laneSpan(id, now) {
-    if (!/^P-\d{4}-\d{2}-\d{2}-\d{4}$/.test(id)) return { start: 0, end: 0 };
+    if (!/^P-\d{4}-\d{2}-\d{2}-\d{4}$/.test(id)) return { start: 0, end: 0, work: 0 };
     try {
         const { turns, exited } = laneTimeline(id, now);
-        if (!turns.length) return { start: 0, end: 0 };
-        return { start: Math.round(turns[0].s), end: exited ? Math.round(turns[turns.length - 1].e) : 0 };
-    } catch { return { start: 0, end: 0 }; }
+        if (!turns.length) return { start: 0, end: 0, work: 0 };
+        const work = Math.round(turns.reduce((a, t) => a + Math.max(0, t.e - t.s), 0));
+        return { start: Math.round(turns[0].s), end: exited ? Math.round(turns[turns.length - 1].e) : 0, work };
+    } catch { return { start: 0, end: 0, work: 0 }; }
 }
 
 function chains() {
@@ -491,9 +494,13 @@ const launch=r=>{const l=r.launcher||{};const c={chat:'var(--run)',harness:'var(
 const dur=m=>m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-// HH:MM on the row's own day (ref), MM-DD HH:MM on any other; empty when unknown.
-const when=(ms,ref)=>{if(!ms)return '<td class="when"></td>';const d=new Date(ms);const hm=pad(d.getHours())+':'+pad(d.getMinutes());return '<td class="when">'+(ymd(d)===ymd(new Date(ref))?hm:pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+hm)+'</td>'};
-function table(rows,live){
+// HH:MM on the table's reference day (YYYY-MM-DD), MM-DD HH:MM on any other; empty when unknown.
+const when=(ms,day)=>{if(!ms)return '<td class="when"></td>';const d=new Date(ms);const hm=pad(d.getHours())+':'+pad(d.getMinutes());return '<td class="when">'+(ymd(d)===day?hm:pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+hm)+'</td>'};
+// Elapsed is the working time, the sum of the turns; empty when no turn is known.
+const work=r=>'<td>'+(r.start?dur(Math.floor(r.work/60000)):'')+'</td>';
+// day: the reference day of Started and Ended, today unless given (an Earlier lanes group passes its own).
+function table(rows,live,day){
+  day=day||ymd(new Date());
   if(!rows.length)return '<div class="empty">'+(live?'No lane is running.':'No lanes in this period.')+'</div>';
   const cols=live?['Lane','State','Kind','Started','Elapsed','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Worktree','Launched by'];
   let h='<table><thead><tr>'+cols.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead><tbody>';
@@ -501,8 +508,8 @@ function table(rows,live){
     const id='<td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>';
     const kind='<td>'+esc(r.kind||r.lane.split(/[ .(]/)[0]||'')+(r.tier?' · '+esc(r.tier):'')+'</td>';
     const oc=r.outcome==='none'?'':r.outcome;
-    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,Date.now())+'<td>'+dur(r.minutes)+'</td><td>'+esc(r.left)+'</td><td class="phase">'+esc(r.phase)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
-    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,r.start)+when(r.end,r.start)+'<td>'+dur(r.minutes)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
+    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+'<td>'+esc(r.left)+'</td><td class="phase">'+esc(r.phase)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
+    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+'<td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
   }
   return h+'</tbody></table>';
 }
@@ -527,7 +534,7 @@ function renderOlder(rows){
     const rs=rows.filter(r=>r.day===day).sort((a,b)=>b.t-a.t||(a.id<b.id?1:a.id>b.id?-1:0));
     const tally={};rs.forEach(r=>{const o=(r.chain||r.outcome==='none')?r.state:r.outcome.split(' ')[0];tally[o]=(tally[o]||0)+1});
     const sum=Object.entries(tally).map(([k,v])=>v+' '+k).join(' · ');
-    return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+'</span></summary><div class="wrap">'+table(rs,false)+'</div></details>';
+    return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+'</span></summary><div class="wrap">'+table(rs,false,day)+'</div></details>';
   }).join('');
   box.querySelectorAll('details').forEach(el=>el.addEventListener('toggle',()=>{el.open?openDays.add(el.dataset.day):openDays.delete(el.dataset.day);saveOpen()}));
 }
