@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: full (five files: board, timeline.js, insights.js, README, one new test file)
 Depends: P-2026-10-10-2021
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-2103 (board-strip, ff1620ca0); visual check passed (chat, built-in browser on 4702 and fixture board 4703, RC-23)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

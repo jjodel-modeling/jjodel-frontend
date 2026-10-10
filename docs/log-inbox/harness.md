@@ -630,3 +630,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passed: chat RC-23 check on 4702, Running Phase cell with segments, n/m and phase text, columns unchanged
 **Notes**: Rollback tag `pre-board-progress-core` on `c0727487e` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2053/result.json`.
 **Prompt document name**: 2026-10-10 20:53
+
+## 2026-10-10 — feat(harness): board status strip, resolved colour in Timeline and Insights (P-2026-10-10-2103)
+**Prompt**: `claude_2026-10-10_2103_prompt_board_strip.md`, slice S4 of the board port (discovery P-2026-10-10-1806 §7): F1, the six-pill status strip with its filter of the Lanes tab through the trunk `table()`; F6, `resolved` in Timeline (last turn, legends, title, detail, `LANE_OUTCOME_TIPS`) and the Insights `OUTS` entry; README; new `laneBoardStrip.test.ts`; a mutation bench; a live check on 4702, left running for the chat's RC-23 check.
+**Files touched**: `ff1620ca0`: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoardStrip.test.ts`; uncommitted (RC-17): this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown until the chat's RC-23 check. Measured: `node --check` exit 0 on the three scripts; `laneBoard.test.ts` 66/66, `laneBoardStrip.test.ts` 12/12; check:scripts PASS 73 files; S2's raw-outcome guard green.
+**Out-of-scope changes**: yes, inside the five declared files: `timeline()` in `lane-board.mjs` adds `resolved: true` beside the raw outcome, and `outOf` in `insights.js` reads it. S2 keeps `/api/timeline` raw for the exports, so the branch hunks (`lane.outcome === 'resolved'`) would never fire; adopted unattended, not asked.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: chat RC-23 on 4702 (six pills, blocked filter and clear) and on the 4703 fixture (resolved last turn in var(--ok), legend tip): RC-23 on 4702 (PID 95480, live data, no resolved lane) and on the fixture board 4703 (PID 95961, `/tmp/s4-fixture-lanes`: resolved P-2026-10-05-1110, two turns, Range 7 days); both left running for the chat to stop
+**Notes**: Base: 12/12 new cases red. Bench 26/26 killed, control green; a one-turn fixture let "every turn painted" survive until the resolved lane got two turns. Live 4702: 427 rows; stripCounts, the page's stripKey and a hand tally agree (2/8/125/15/0/55). 4703 serves /tmp copies of 8 lanes, resolved.txt only in a copy; its XES and trace keep blocked. `rm -rf` is denied: /tmp/s4bench, /tmp/s4base2 and the 4703 fixture remain.
+**Prompt document name**: 2026-10-10 21:03
