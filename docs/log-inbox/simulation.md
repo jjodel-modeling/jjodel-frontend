@@ -705,3 +705,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: console-only fix: no rendering change; probe of the lane 40 pages E1 0/20, E2 0, opens identical 20/20; M1 ecore JSON incompleteness pre-existing, ticketed
 **Notes**: Rollback tag `pre-console-errors-fix` on `0eb09ad8f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2253/result.json`.
 **Prompt document name**: 2026-10-05 22:53
+
+## 2026-10-10 — feat: fixed-width Coverage switch, Clear sees the live marking (P-2026-10-10-1646)
+**Prompt**: `claude_2026-10-10_1646_prompt_sim_coverage_polish.md`, fast lane, Phase 2 only, `~/jjodel-w-covpolish` on `sim-coverage-polish`: R-SIM-146 points 4 and 5. The Coverage switch of the canvas layer becomes an icon of fixed width with its summary in the title, Clear keeps a reserved slot; `simClearCoverage(modelId, run?)` counts the places the live configuration marks once, as visits, after emptying. Tests first, mutation bench, probe on 3088, hard stop for the visual check (RC-23), then this closure.
+**Files touched**: `69ff1c4ef`: `frontend/src/components/editor-v2/sim/__tests__/simCoverage.test.ts`. `14382ed70`: `frontend/src/components/editor-v2/sim/simCoverage.ts`, `frontend/src/components/editor-v2/sim/SimCanvasLayer.tsx`, `frontend/src/components/editor-v2/sim/simNodeRunState.scss`, `frontend/src/components/editor-v2/sim/__tests__/simCoverage.test.ts`. `f515ae45d`: `frontend/scripts/probe/sim-coverage-polish.ts` (new). This commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-06 01:15 (`claude_2026-10-06_0115_prompt_sim_coverage.md`, its measured switch width of 77 px and the veil on a marked place after a Clear)
+**Causa**: (a)
+**Regressions**: no. Typecheck 14 errors, the §17 set, none in `sim/`; typecheck:scripts exit 0; vitest 7736 tests in 308 files, the 9 known reds at import; build exit 0; check:docs 4/4; check:scripts pass; check:addonly clean. The four scenes with coverage off: 0 differing paths against the base but the switch and Clear's hidden slot.
+**Out-of-scope changes**: no (six files over the lane, above five: the five of the prompt's DOVE and this entry, which the DOVE names; rule 19 taken as confirmed by the list). New classes `sim-canvas-layer__toggle--icon` and `sim-canvas-layer__coverage-clear--hidden`, free by global search; `.sim-canvas-layer__coverage` kept with `// TODO: cleanup`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3088, 1600×1000, light, base then after: controls 10/10, Clear 12/12 after and 7/7 base, scenes diff 10/10; crops in `~/.jjodel-lanes/P-2026-10-10-1646/crops/`; RC-23 passed by the chat on the crops, GO of 2026-10-10)
+**Notes**: Mutation bench 42/43 killed; the survivor, the layer handing the run to Clear, is not executable in static markup and is covered by the probe (Clear 12/12). Controls: base 333.9 px off, 527 on; after 312.6 both. Probe artefact: after a file swap Vite served the app's simCoverage.ts under an HMR query, a plain-URL import read an empty second instance; Vite restarted. Unreachable edge: Clear with a run not yet observed recounts its initial marking. Output: ~/.jjodel-lanes/P-2026-10-10-1646/.
+**Prompt document name**: 2026-10-10 16:46
