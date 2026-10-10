@@ -23,7 +23,7 @@
 
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { DState, DVoidEdge, DEdge, DeleteElementAction, TRANSACTION } from '../../../joiner';
+import { DState, DVoidEdge, DEdge, DeleteElementAction, SetFieldAction, TRANSACTION } from '../../../joiner';
 import { store } from '../../../joiner';
 import { hasCanvasEdgePair, markCanvasEdgePair, clearCanvasEdgePair } from '../sync/syncState';
 
@@ -184,13 +184,17 @@ export function useM1ReferenceEdges(
             }
             // Pure-delete batch (no creator) → safe in its own TRANSACTION: §3.3's
             // no-wrap rule targets creation coordinate-loss, not deletion. Mirrors
-            // useJjomSync's stale-edge deletes (useJjomSync.ts:779). The DVoidEdge
-            // leaving graph.subElements drives the incremental sync to drop the RF
-            // edge live (useJjomSync.ts:1193-1198 / 1336-1346).
+            // useJjomSync's stale-edge deletes (useJjomSync.ts:779). A bare
+            // DeleteElementAction removes the idlookup key only, so the id is also
+            // taken out of graph.subElements: its leaving is what drives the
+            // incremental sync to drop the RF edge live (useJjomSync.ts:1315-1319).
+            // Same write as m1EdgeSweep.ts and canvasToJjom.deleteM1Link
+            // (discovery_2026-10-10_stale_m1_reference_edge.md).
             TRANSACTION('useM1ReferenceEdges: remove stale M1 reference edges', () => {
                 for (const e of toDelete) {
                     const raw = lookup[e.id];
                     if (raw) DeleteElementAction.new(raw);
+                    SetFieldAction.new(graphId as any, 'subElements' as any, e.id, '-=', true);
                     clearCanvasEdgePair(e.start, e.end);
                 }
             });

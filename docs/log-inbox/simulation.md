@@ -802,3 +802,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Prompt document name**: 2026-10-10 16:30
 
 **Ticket** (low, R-SIM-144 settled it as a ticket): a trigger on a fork's out edge, or on a join's in edge, is dropped by `compileControlFlow` without a defect; the event press reads «no transition accepted it». Discovery report §3.4.
+
+## 2026-10-10 — merge: sim-event-attrs into alfonso-frontend-jjtl (P-2026-10-10-1753)
+**Prompt**: `claude_2026-10-10_1753_prompt_merge_sim-event-attrs.md`, a direct merge by `lane-run merge --direct`, no session: `sim-event-attrs` at `039ed6f62` into `alfonso-frontend-jjtl`, merge base `ae50f7459`, 5 commits on the branch side.
+**Files touched**: merge `45ad56bd6`: 9 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-10_1630_fase2_sim_event_attributes.md`, `frontend/scripts/probe/sim-event-attrs-visual.ts`, `frontend/scripts/probe/sim-event-attrs.ts`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/model/simulation/__tests__/stcChecks.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `45ad56bd6` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7897 tests in 324 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 passed on the lane crops (P-2026-10-10-1630 Phase 2); all merge gates green
+**Notes**: Rollback tag `pre-sim-event-attrs-P-2026-10-10-1753` on `c43001de4` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1753/result.json`.
+**Prompt document name**: 2026-10-10 17:53
