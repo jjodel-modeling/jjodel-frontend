@@ -290,6 +290,17 @@ The rules below still bind every tree that hosts more than one session.
   `~/.jjodel-lanes/<Prompt-ID>/request.md`. Merge prompts rendered by `lane-run` are exempt. The line is
   new from 2026-10-10; earlier prompts are not amended. The lane board shows the request first in a
   lane's detail (`frontend/scripts/lane-board/`). Decided RC-43.
+- **Every prompt names its front.** The header of a prompt in `docs/prompts/` carries `Front: <slug>`,
+  the slug of a front of `docs/harness/fronts.json`. A front is a milestone-like unit of work with a
+  verifiable exit; `maintenance` (work outside every other front) and `harness` are permanent. Merge
+  prompts rendered by `lane-run` are exempt. The line is new from `P-2026-10-10-1500`; earlier prompts are
+  not amended. `npm run check:docs` (Check E) fails on a prompt whose front is missing, unknown, or closed
+  before the prompt's date, and `lane-run start` will refuse it (rule in
+  `frontend/scripts/lane-tracking.mjs`). The chat opens a front when four criteria hold: a verifiable
+  exit, at least three lanes expected, its own ratification series or branch, no overlap with an open
+  front. It decides with a `Recommended:` line, and Alfonso can veto in the digest. A front closes with
+  `state: closed` and `closedOn` in the registry, which then fails only prompts dated after `closedOn`;
+  lane-run's GitHub sync closes its milestone. Decided RC-44.
 - **Every prompt file carries a Status line, flipped once, in the lane's closure commit.** The header
   of a prompt in `docs/prompts/` holds `Status: da eseguire`. After its code commit, the lane writes the
   Status flip, its log or inbox entry and the visual-check line into its worktree and does not commit
@@ -420,7 +431,7 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
 - **lane-run v3 (`P-2026-09-27-2330`, 2026-09-28).** Five additions, one line each; the measures behind them are
   in `docs/discovery/discovery_2026-09-27_lane_efficiency.md`.
   - `merge ... --direct` merges without a session when every precondition holds, and otherwise falls back, saying why: launched with `--launch`, parked without. RC-14 still decides what cannot go direct: a conflict outside the union files, a union hunk that edits, code changed on both sides, a governance file or an open prompt on the branch, a failed probe, a dirty tree, a running lane. It tags `pre-<branch>` (RC-31), runs the template's gates in a detached worker and ends at `Outcome: hard-stop` for the chat's visual check, or at `Outcome: blocked` on a red gate, the merge commit left in place.
-  - `go <Prompt-ID> --smoke "<what the chat verified>"` on a direct merge writes the closure itself: one docs commit with the Status flip and the P9 entry in the inbox the branch writes to (`--front <name>` when it writes several). Every lane closes with one docs commit (RC-17, 2026-09-25): a merge session writes the P9 entry of the merge in it, from 2026-09-28.
+  - `go <Prompt-ID> --smoke "<what the chat verified>"` on a direct merge writes the closure itself: one docs commit with the Status flip and the P9 entry in the inbox the branch writes to (`--front <name>` when it writes several; this `--front` names a log inbox of `docs/log-inbox/`, not a front of `docs/harness/fronts.json`, P13). Every lane closes with one docs commit (RC-17, 2026-09-25): a merge session writes the P9 entry of the merge in it, from 2026-09-28.
   - `chain <worktree> <prompt>... [--merge-after]` runs lanes one after the other under a detached supervisor, the next only on `Outcome: done` with exit 0, so it suits lanes without a visual check; `status` and `wait` take the chain id, and `chain --stop` stops it after the running lane.
   - The model follows the activity (RC-32, 2026-09-28, amending RC-16): `lane-run` picks a heavy or a light tier from the prompt's header and DOVE and from the command, prints it and keeps it in `tier.txt`; `--tier` overrides it where the rule does not force heavy.
   - A discovery report opens with `## 0. Answer in brief`, at most 40 lines: the answer, the recommendation, the decisions awaiting Alfonso, and the questions with their `Recommended:` lines; the rest is appendix (2026-09-28). `lane-run status` warns when the brief of a report the lane wrote is missing, not the first section, or longer.

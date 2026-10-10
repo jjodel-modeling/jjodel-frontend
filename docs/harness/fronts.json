@@ -1,0 +1,66 @@
+{
+  "v": 1,
+  "board": {
+    "owner": "jjodel-modeling",
+    "project": 2,
+    "repo": "jjodel-modeling/jjodel-lanes"
+  },
+  "fronts": [
+    {
+      "slug": "maintenance",
+      "title": "Maintenance: fixes, tickets, small cleanups outside every front",
+      "exit": "none: a permanent front",
+      "state": "open",
+      "openedOn": "2026-10-10",
+      "milestone": 1
+    },
+    {
+      "slug": "harness",
+      "title": "Lane harness: lane-run, gates, board, GitHub tracking",
+      "exit": "none: a permanent front",
+      "state": "open",
+      "openedOn": "2026-10-10",
+      "milestone": 2
+    },
+    {
+      "slug": "codegen-pilot",
+      "title": "Model-to-text generation pilot (R-GEN)",
+      "exit": "the S1..S5 branches are ancestors of alfonso-frontend-jjtl, and S6 is merged or deferred to 3.2.x by a decision row (R-GEN-15)",
+      "state": "open",
+      "openedOn": "2026-10-10",
+      "milestone": 3
+    },
+    {
+      "slug": "simulator",
+      "title": "Simulation engine and simulator UI (R-SIM)",
+      "exit": "a decision row closes the front once the 3.2 tag carries the CHANGELOG Simulation section and the open simulator tickets are fixed or moved to maintenance",
+      "state": "open",
+      "openedOn": "2026-10-10",
+      "milestone": 4
+    },
+    {
+      "slug": "standalone-editor",
+      "title": "Stand-alone editor: Configurator, environments, Data Manager UX (#157, #158, #166..#168)",
+      "exit": "gh issue view N --repo jjodel-modeling/jjodel-frontend --json state is CLOSED for 157, 158, 166, 167, 168",
+      "state": "open",
+      "openedOn": "2026-10-10",
+      "milestone": 5
+    },
+    {
+      "slug": "graphvertex",
+      "title": "graphVertex containment: BPMN pools and lanes, nested-object vertices (R-GV)",
+      "exit": "the slice branches are merged, R-GV-1..14 are in the trunk's docs/decisions.md, and the bpmn-lanes probe is green on the trunk",
+      "state": "open",
+      "openedOn": "2026-10-10",
+      "milestone": 6
+    },
+    {
+      "slug": "release-3-2",
+      "title": "Release 3.2 for the MDE course: freeze 2026-10-23, live 2026-10-26",
+      "exit": "git tag -l 3.2.0 is non-empty and CHANGELOG.md has ## [3.2.0]",
+      "state": "open",
+      "openedOn": "2026-10-10",
+      "milestone": 7
+    }
+  ]
+}
