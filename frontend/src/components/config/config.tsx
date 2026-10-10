@@ -22,6 +22,7 @@ import './config.scss';
 import {Tooltip} from "../forEndUser/Tooltip";
 import {ProxyCache} from "../../joiner/ProxyCache";
 import {setInterfaceMode} from "../../hooks/useInterfaceMode";
+import {documentEventsIntervalId, setDocumentEvents} from "../../redux/reducer/reducer";
 
 class ConfigEntry<T>{
     userValue: T;
@@ -92,7 +93,10 @@ export class Config extends Component{
                         }
                         break;
                     case "potatoMode": Debug.lightMode = v; break;
-                    case "synchDelay": U.UpdatingTimer = v; break;
+                    case "synchDelay":
+                        U.UpdatingTimer = v;
+                        setDocumentEvents(); // updates used interval timer
+                        break;
                     case "debugMode": SetRootFieldAction.new("debug", v); U.debug = v; break;
                     case "advancedMode": SetRootFieldAction.new("advanced", v); setInterfaceMode(v ? "advanced" : "basic"); break;
                     case "exportMetaData": U.storeMetadata = v; break;

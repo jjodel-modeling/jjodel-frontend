@@ -1481,8 +1481,8 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
 }
 
 const originalFocus = HTMLElement.prototype.focus;
-let documentEventsIntervalId: ReturnType<typeof setInterval> | undefined;
-function setDocumentEvents(){
+export let documentEventsIntervalId: ReturnType<typeof setInterval> | undefined;
+export function setDocumentEvents(){
     // do not use types (imported as classes) here or it will change import order
     if (documentEventsIntervalId !== undefined) clearInterval(documentEventsIntervalId);
 

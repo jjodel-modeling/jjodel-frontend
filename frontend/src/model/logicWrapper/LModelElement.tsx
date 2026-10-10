@@ -4813,7 +4813,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         }, c.data.partial, val)
         return true;
     }
-    protected get_partial(context: Context): D["partial"] { return context.data.partial; }
+    protected get_partial(context: Context): D["partial"] {
+        return context.data.partial;
+    }
 
     protected set_partialdefaultname(val: D["partialdefaultname"], c: Context): boolean {
         if (val === c.data.partialdefaultname) return true;

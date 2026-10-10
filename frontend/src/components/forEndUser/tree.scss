@@ -33,6 +33,7 @@ $color-operation: #06b6d4;  // Cyan (darker) - Operations
 $color-enum: #ec4899;       // Pink - Enums
 $color-literal: #f472b6;    // Light Pink - Enum Literals
 $color-object: #6b7280;     // Gray - Objects
+$color-singleton: #475569;  // Gray - Singleton
 $color-parameter: #9ca3af;  // Light Gray - Parameters
 $color-feature: #6b7280;    // Gray - Values
 
@@ -204,7 +205,7 @@ div.d-flex.tree {
 
 .tree-Singleton {
   background-color: rgba(71, 85, 105, 0.15);
-  color: $color-accent;
+  color: $color-singleton;
 }
 
 .tree-DValue {
