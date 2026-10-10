@@ -63,3 +63,16 @@ not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: albero unito 2f60f3415: frontend/ identico alla punta della lane a54e771d6 (git diff vuoto), che ha il GO visivo di Juri del 2026-10-10; sonda della chat con gesti reali sul vite di staging (3053): Delete di S3, Delete di S1 e JjScript delete instance S2 con 0 vertici fantasma e 0 nodi dipinti, Cmd+Z ripristina S3 e P1, cancellazione ripetuta dopo l'undo riuscita, 0 errori di pagina, nessun padre pendente
 **Notes**: Rollback tag `pre-fix/174-nesting-forms` on `e635f8723` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1110/result.json`.
 **Prompt document name**: 2026-10-10 11:10
+
+## 2026-10-10 — fix(#182): appending to a composition slot moves the element into it
+**Prompt**: `claude_2026-10-10_1230_prompt_182_append_composition.md`, fast lane, light tier (RC-32), director Juri («risolvi issue 182», chat `C-2026-10-10-1223`): Phase 1 (report, Layer Impact Report, R-NEST-9) and Phase 2 in cascade, one function in one file.
+**Files touched**: Phase 1 `32d2eda40`: `docs/discovery/discovery_2026-10-10_182_append_composition.md`, `docs/lir/lir_2026-10-10_182_append_composition.md`, `docs/decisions.md` (R-NEST-9). Phase 2 `9e6ecb9cf`: `frontend/src/components/editor-v2/viewpoint/ir/formWrite.ts` (`appendSlotValue`, its docblock, the module header). Correction after the chat's reading of the reachability: `280dc34e8` (the report's addendum), `5656f7586` (`formWrite.ts`, the "Known and accepted" paragraph of the docblock, comment only). Closure, in the closure commit: this entry and the Status line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — the D-layer is measured clean (probe `MODE=after` ALL GREEN: controls G2 and R1 unchanged, D1 cascade clean, 0 new page errors; vitest 7977 passed, the nine known files red at import), but the harness mounts no canvas hook and the form has no unit test, so the repaint of a moved node is not measured.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (`docs/lir/lir_2026-10-10_182_append_composition.md`, `32d2eda40`, before the diff)
+**Smoke visivo**: non applicabile — this session ran no browser; Juri gave the GO on 2026-10-10 (chat C-2026-10-10-1223) without reporting a browser run of the non-regression checklist, so no visual pass is claimed
+**Notes**: Closes the 2026-10-08 ticket («New … & link» su una composizione). No user gesture reaches the composition branch: the prompt was wrong on the chip picker (extendedWidgetFor returns null for a composition, ListWidget gives it no append), corrected in the report's addendum; the fix is a guard on the write primitive. No unit test: formWrite.ts does not import in the bench (monaco); the probe is the measure (P11). Reported, not fixed: C6 (the second append overwrites the first); undo (#177).
+**Prompt document name**: 2026-10-10 12:30
