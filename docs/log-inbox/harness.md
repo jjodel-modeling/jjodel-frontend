@@ -643,3 +643,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato: chat RC-23 on 4702 (six pills, blocked filter and clear) and on the 4703 fixture (resolved last turn in var(--ok), legend tip): RC-23 on 4702 (PID 95480, live data, no resolved lane) and on the fixture board 4703 (PID 95961, `/tmp/s4-fixture-lanes`: resolved P-2026-10-05-1110, two turns, Range 7 days); both left running for the chat to stop
 **Notes**: Base: 12/12 new cases red. Bench 26/26 killed, control green; a one-turn fixture let "every turn painted" survive until the resolved lane got two turns. Live 4702: 427 rows; stripCounts, the page's stripKey and a hand tally agree (2/8/125/15/0/55). 4703 serves /tmp copies of 8 lanes, resolved.txt only in a copy; its XES and trace keep blocked. `rm -rf` is denied: /tmp/s4bench, /tmp/s4base2 and the 4703 fixture remain.
 **Prompt document name**: 2026-10-10 21:03
+
+## 2026-10-10 — merge: board-strip into alfonso-frontend-jjtl (P-2026-10-10-2119)
+**Prompt**: `claude_2026-10-10_2119_prompt_merge_board-strip.md`, a direct merge by `lane-run merge --direct`, no session: `board-strip` at `c9044649e` into `alfonso-frontend-jjtl`, merge base `3f4ad5d00`, 2 commits on the branch side.
+**Files touched**: merge `0edb5f06b`: 7 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_2103_prompt_board_strip.md`, `frontend/scripts/hooks/__tests__/laneBoardStrip.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0edb5f06b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8180 tests in 334 files, 9 red at import, hooks 603; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702 (six pills, blocked filter and clear) and on the 4703 fixture (resolved last turn in var(--ok), legend tip)
+**Notes**: Rollback tag `pre-board-strip` on `3f4ad5d00` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2119/result.json`.
+**Prompt document name**: 2026-10-10 21:19
