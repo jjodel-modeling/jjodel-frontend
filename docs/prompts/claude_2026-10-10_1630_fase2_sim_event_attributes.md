@@ -5,7 +5,7 @@ Chat: C-2026-10-10-1620
 Request: https://claude.ai/code/session_01CjZSPxRbbXhjGTtAKkf96c
 Lane: full (Phase 2; an additive change to exported types, no critical-zone file). Unattended: Alfonso said «vai in auto»; questions with a recommendation are answered as recommended (RC-21) and recorded.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane sim-event-attrs · 6ccf89d0e · verifica visiva passata 2026-10-10 (RC-23, chat)
 
 [P-2026-10-10-1630] GO for Phase 2. Alfonso ratified R-SIM-144 on 2026-10-10 17:23 («sì alle 5 raccomandazioni»): the
 five recommendations of your report's §12, as written. Read R-SIM-144 in `docs/decisions.md` and the new row of spec §8

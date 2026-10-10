@@ -101,7 +101,8 @@ import { compileDerived, makeDerivedOracle } from '../../../model/simulation/der
 import { decodeStateAttributes, encodeStateAttributes, mergeDeclarations, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
 import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 import {
-    checkActionSubset, checkActionValue, checkElse, checkGuard, checkInputTarget, checkTargetName, inputReads, inputTarget,
+    checkActionSubset, checkActionValue, checkElse, checkEventFeature, checkEventRead, checkGuard, checkInputTarget, checkTargetName, eventReads,
+    inputReads, inputTarget,
 } from '../../../model/simulation/stcChecks';
 import type { StcDefect, StcScope } from '../../../model/simulation/stcChecks';
 import { isKindOf } from '../../../model/simulation/isKindOf';
@@ -114,7 +115,7 @@ import { compileWatch, readWatches } from '../../../model/simulation/watchEvalua
 import type { CompiledWatch, WatchResult } from '../../../model/simulation/watchEvaluator';
 import type {
     ActionOracle, ActionSite, Arc, Candidate, CandidateSet, CompiledNet, DeclarationDefect, DeclarationDefectCode, Domain, GuardOracle, HaltReason,
-    InputRead, NetConfiguration, NetModelView, NetRunStatus, NetStc, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
+    InputRead, NetConfiguration, NetModelView, NetRunStatus, NetStc, NetTransition, SimState, SimStateAccess, SimValue, StateAttributeDecl, StepOutcome,
 } from '../../../model/simulation/netTypes';
 import { getSimPolicy, getSimRun, simCommit, simSetView, withInputs } from './simRunState';
 import type { SimOrigin, SimPolicy, SimRun } from './simRunState';
@@ -386,7 +387,9 @@ function compileActionTable(net: CompiledNet, features: ActionFeatures, lookup: 
  * error on an action's right side, a right side that folds to a non-scalar or
  * outside the target's domain, and a guard that is one non-boolean read
  * (`value`); since R-SIM-87 (R7) an `else` with no sibling (`else-alone`),
- * which the run still reads as always true. Never a run-time outcome: those depend on σ and are explained by
+ * which the run still reads as always true; since R-SIM-144 a read of `event`
+ * where no event is bound (`event`) and `event.a` on a name the trigger's type
+ * does not have (`event-feature`). Never a run-time outcome: those depend on σ and are explained by
  * `stopReason` or halt the run. A defective guard takes its transition out of
  * the candidates; a defective action does not: the transition halts if it fires.
  */
@@ -394,7 +397,8 @@ export interface CompileDefect {
     /** A guard's or an action's element; for a declaration, its name, `record N`, or `state attributes` for the key. */
     readonly element: string;
     readonly role: 'guard' | 'action' | 'declaration';
-    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration' | 'read-only' | 'unresolved' | 'value' | 'else-alone';
+    readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration' | 'read-only' | 'unresolved' | 'value' | 'else-alone'
+        | 'event' | 'event-feature';
     readonly detail: string;
     /** The guard's, the action's or the equation's text; `''` for any other declaration defect. */
     readonly source: string;
@@ -405,20 +409,45 @@ export interface CompileDefect {
 }
 
 export type RunStart =
-    | { readonly kind: 'started'; readonly run: SimRun; readonly compileDefects?: readonly CompileDefect[] }
+    | {
+        readonly kind: 'started'; readonly run: SimRun; readonly compileDefects?: readonly CompileDefect[];
+        /** R-SIM-144: the lines of the run warning (R-SIM-37), the unset event attributes; absent when none. */
+        readonly runWarnings?: readonly string[];
+    }
     | { readonly kind: 'refused'; readonly reason: string };
 
 /**
- * The guards of the map that never run, in compile order: a compile defect,
- * else the first rule of `checkGuard` that applies (P2b: R1, R2, R6).
+ * R-SIM-144 (P3): per site, a transition carrying it that has no trigger, by the element it is named
+ * after (a fused `node#edge` by its node); a site carried by several transitions is judged on each.
  */
-function guardDefectsOf(guards: ReadonlyMap<string, readonly CompiledGuard[]>, scope: StcScope): CompileDefect[] {
+function untriggeredCarriers(transitions: readonly NetTransition[], sitesOf: (t: NetTransition) => readonly string[]): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const t of transitions) {
+        if (t.triggers.length > 0) continue;
+        for (const site of sitesOf(t)) if (!out.has(site)) out.set(site, t.id.split('#')[0]);
+    }
+    return out;
+}
+
+/**
+ * The guards of the map that never run, in compile order: a compile defect,
+ * else a read of `event` where none is bound or on a name the trigger's type
+ * lacks (R-SIM-144), else the first rule of `checkGuard` that applies (P2b: R1, R2, R6).
+ */
+function guardDefectsOf(guards: ReadonlyMap<string, readonly CompiledGuard[]>, scope: StcScope, transitions: readonly NetTransition[]): CompileDefect[] {
     const out: CompileDefect[] = [];
+    const untriggered = untriggeredCarriers(transitions, t => t.guardSites);
     for (const [element, list] of guards) {
         // R-SIM-90: each Guard attribute of the site on its own, in feature order.
         for (const g of list) {
             if (g.defect) {
                 out.push({ element, role: 'guard', reason: g.defect.reason, detail: g.defect.detail, source: g.source });
+                continue;
+            }
+            const event = g.expr === null ? null
+                : checkEventRead(g.expr, { role: 'guard', untriggered: untriggered.get(element) ?? null }, scope) ?? checkEventFeature(g.expr, scope);
+            if (event) {
+                out.push({ element, role: 'guard', reason: event.reason, detail: event.detail, source: g.source, ...(event.short ? { short: event.short } : {}) });
                 continue;
             }
             const rule = g.expr === null ? null : checkGuard(g.expr, element, scope);
@@ -457,6 +486,8 @@ function actionDefectsOf(
 ): CompileDefect[] {
     const out: CompileDefect[] = [];
     const judged = new Set<string>();
+    // R-SIM-144 (P3): a transition action site carried by a transition without a trigger, judged on each.
+    const untriggered = untriggeredCarriers(net.transitions, t => t.actionSites.filter(s => s.role === 'transition').map(s => s.element));
     for (const t of net.transitions) {
         const targets = new Set<string>();
         for (const site of t.actionSites) {
@@ -470,6 +501,13 @@ function actionDefectsOf(
                 const rule = (d: StcDefect) => report(d.reason, d.detail, d.short);
                 if (c.defect !== null) {
                     report(c.action === null ? 'parse-error' : 'subset', c.defect);
+                    continue;
+                }
+                // R-SIM-144: `event` read where none is bound (P3), or on a name the trigger's type lacks (P4).
+                const eventSite = site.role === 'transition' ? { role: site.role, untriggered: untriggered.get(site.element) ?? null } : { role: site.role };
+                const event = checkEventRead(c.action, eventSite, scope) ?? checkEventFeature(c.action, scope);
+                if (event) {
+                    rule(event);
                     continue;
                 }
                 const subset = checkActionSubset(c);
@@ -593,6 +631,58 @@ function inputReadTable(
     return out;
 }
 
+/**
+ * R-SIM-144 (P4): the trigger's declared type as the checks read it, its name and the names of the
+ * attributes and references it and its ancestors declare (`extends`, transitively, as `isKindOf` walks
+ * it); a subclass's features are not its own (no downcast, R-SIM-38).
+ */
+function eventTypeOf(lookup: Lookup, classId: string): { name: string; features: ReadonlySet<string> } {
+    const features = new Set<string>();
+    const seen = new Set<string>();
+    const work = [classId];
+    while (work.length > 0) {
+        const id = work.pop()!;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const cls = lookup[id];
+        for (const f of [...(Array.isArray(cls?.attributes) ? cls.attributes : []), ...(Array.isArray(cls?.references) ? cls.references : [])]) {
+            const name = lookup[f]?.name;
+            if (typeof name === 'string' && name) features.add(name);
+        }
+        for (const s of Array.isArray(cls?.extends) ? cls.extends : []) if (typeof s === 'string') work.push(s);
+    }
+    return { name: elementName(lookup, classId), features };
+}
+
+/**
+ * R-SIM-144: the run warning of the unset event attributes, `Unset event attributes: coinX.amount`, or
+ * `null`. A transition with a trigger contributes the names its guards and actions read on `event` that
+ * its type declares; a trigger instance contributes those whose value in the frozen M is unset, as the
+ * run reads it (`null`: a mandatory attribute reads its type's default, one with a default that default,
+ * `buildEvalContext`). Sorted by text, each once.
+ */
+function unsetEventWarning(
+    net: CompiledNet, guards: ReadonlyMap<string, readonly CompiledGuard[]>, table: ReadonlyMap<string, readonly CompiledAction[]>,
+    snapshot: SimSnapshot, type: { readonly features: ReadonlySet<string> } | undefined, lookup: Lookup,
+): string | null {
+    if (!type) return null;
+    const unset = new Set<string>();
+    for (const t of net.transitions) {
+        if (t.triggers.length === 0) continue;
+        const reads = new Set<string>();
+        for (const site of t.guardSites) for (const g of guards.get(site) ?? []) if (g.expr) for (const a of eventReads(g.expr)) reads.add(a);
+        for (const site of t.actionSites) for (const c of table.get(actionSiteKey(site)) ?? []) if (c.action) for (const a of eventReads(c.action)) reads.add(a);
+        for (const a of reads) {
+            if (!type.features.has(a)) continue;
+            for (const e of t.triggers) {
+                const handle = snapshot.handleById.get(e) as Record<string, unknown> | undefined;
+                if (handle && (handle[a] === null || handle[a] === undefined)) unset.add(`${elementName(lookup, e)}.${a}`);
+            }
+        }
+    }
+    return unset.size === 0 ? null : `Unset event attributes: ${[...unset].sort((x, y) => x.localeCompare(y)).join(', ')}`;
+}
+
 /** R-SIM-100: the seed of a run, a uniform 32-bit integer; drawn at Reset only, never by the core. */
 function freshSeed(): number {
     return crypto.getRandomValues(new Uint32Array(1))[0];
@@ -641,8 +731,10 @@ export function startRun(
     const guards = compileGuards(net, stc, lookup);
     const actionRoles = !!(stc.action || stc.entry || stc.exit);
     const actions = actionRoles ? compileActionTable(net, stc, lookup) : new Map<string, CompiledAction[]>();
-    // The rules of P2b read M frozen and the declarations of the net (stcChecks.ts).
-    const scope: StcScope = { snapshot, net, nameOf: id => elementName(lookup, id) };
+    // The rules of P2b read M frozen and the declarations of the net (stcChecks.ts); R-SIM-144 the trigger's type.
+    const eventType = stc.event ? eventTypeOf(lookup, stc.event) : undefined;
+    const scope: StcScope = { snapshot, net, nameOf: id => elementName(lookup, id), ...(eventType ? { event: eventType } : {}) };
+    const unset = unsetEventWarning(net, guards, actions, snapshot, eventType, lookup);
     // The inputs each transition reads (R-SIM-88): only when one is declared, as the derived oracle.
     const inputs = net.attributes.some(d => d.input === true) ? inputReadTable(net, guards, actions, scope) : undefined;
     return {
@@ -663,8 +755,9 @@ export function startRun(
             // The I/O board's outputs read σ on the same frozen M (P-2026-10-03-1845, report §4).
             snapshot,
         },
+        ...(unset === null ? {} : { runWarnings: [unset] }),
         compileDefects: [
-            ...guardDefectsOf(guards, scope),
+            ...guardDefectsOf(guards, scope, net.transitions),
             ...elseDefectsOf(net, featuresOf(stc, 'guard'), lookup),
             ...actionDefectsOf(net, actions, snapshot, lookup, scope),
             ...declarationDefectsOf(declarations.defects, lookup),

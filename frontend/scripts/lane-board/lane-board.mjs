@@ -68,7 +68,9 @@ function header(dir) {
     if (!text && existsSync(join(dir, 'exit.txt'))) text = trunkPrompt(dir.replace(/^.*\//, ''), file).slice(0, 4000);
     const line = (k) => (text.match(new RegExp('^' + k + ':\\s*(.*)$', 'm')) || [])[1] || '';
     const title = (text.match(/^#\s+(.*)$/m) || [])[1] || '';
-    const h = { lane: line('Lane'), chat: line('Chat'), title, file };
+    // The Request: line (RC-43) of the header block, before the first `## ` section: its first word, a URL or `none`.
+    const request = (text.split(/\n## /)[0].match(/^Request:[ \t]*(\S*)/m) || [])[1] || '';
+    const h = { lane: line('Lane'), chat: line('Chat'), title, file, request };
     if (text || existsSync(join(dir, 'exit.txt'))) headMem.set(dir, h);
     return h;
 }
@@ -131,11 +133,12 @@ function collect() {
         const live = state === 'running' || state === 'blocked';
         const t = idTime(id) || (isChain ? idTime(id.slice(6)) : 0);
         const recent = Date.now() - t < RECENT_H * 3600_000;
-        const row = { id, state, outcome, minutes, chain: isChain, t, worktree: '', kind: '', lane: '', chat: '', title: '', tier: '', phase: '', left: '' };
+        const row = { id, state, outcome, minutes, chain: isChain, t, worktree: '', kind: '', lane: '', chat: '', title: '', tier: '', phase: '', left: '', chatUrl: '', chatUrlFrom: '', chatUrlVia: '' };
+        let request = '';
         if (!isChain && existsSync(dir)) {
             row.worktree = readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~');
             const h = header(dir);
-            row.lane = h.lane; row.chat = h.chat; row.title = h.title;
+            row.lane = h.lane; row.chat = h.chat; row.title = h.title; request = h.request;
             row.kind = kindOf(h.lane, h.file);
             row.tier = readTrim(join(dir, 'tier.txt')).split(/[\s:]/)[0];
             if (live) {
@@ -144,6 +147,7 @@ function collect() {
             }
         }
         if (!isChain) row.launcher = launcherOf(id, chainPosMem().get(id), row.chat);
+        if (!isChain) Object.assign(row, ownChatUrl(id, request));
         row.live = live;
         row.recent = recent;
         row.day = t ? new Date(t - new Date(t).getTimezoneOffset() * 60000).toISOString().slice(0, 10) : 'unknown';
@@ -158,6 +162,17 @@ function collect() {
         row.start = spans.length ? Math.min(...spans.map((s) => s.start)) : 0;
         row.end = !row.live && spans.length && spans.every((s) => s.end) ? Math.max(...spans.map((s) => s.end)) : 0;
         row.work = spans.reduce((a, s) => a + s.work, 0);
+    }
+    // A lane without a URL of its own borrows the one of the latest other lane (by Prompt-ID) that names the same Chat: id.
+    const chatKey = (r) => (r.chat.match(/C-\d{4}-\d{2}-\d{2}-\d{4}/) || [])[0] || '';
+    const donor = new Map();
+    for (const row of rows) {
+        const k = chatKey(row), cur = donor.get(k);
+        if (k && row.chatUrl && (!cur || row.id > cur.id)) donor.set(k, row);
+    }
+    for (const row of rows) {
+        const d = donor.get(chatKey(row));
+        if (!row.chatUrl && d) Object.assign(row, { chatUrl: d.chatUrl, chatUrlFrom: 'chat-id', chatUrlVia: d.id });
     }
     if (tlDirty) {
         try { writeFileSync(TL_CACHE_FILE + '.tmp', JSON.stringify(tlCache)); renameSync(TL_CACHE_FILE + '.tmp', TL_CACHE_FILE); } catch { /* best effort */ }
@@ -420,6 +435,15 @@ function launcherOf(id, chainPos, chat) {
     if (chat) return { ...base, by: 'chat', label: 'chat', detail: chat + ' · committed from the Mac shell' + (c.models.length ? ' · ' + c.models.join(', ') : '') + ' (' + c.sha + ')' };
     if (c.models.length || c.model) return { ...base, by: 'claude-code', label: 'Claude Code', detail: 'local session · ' + (c.models.join(', ') || c.model) + ' (' + c.sha + ')' };
     return { ...base, by: 'manual', label: c.author || 'manual', detail: 'committed by hand (' + c.sha + ')' };
+}
+
+/** A lane's own claude.ai conversation (RC-43): the Request: header, else the Claude-Session: trailer of the commit that added its prompt. */
+const CLAUDE_URL = /^https:\/\/claude\.ai\//;
+function ownChatUrl(id, request) {
+    if (CLAUDE_URL.test(request)) return { chatUrl: request, chatUrlFrom: 'request' };
+    const session = (promptCommits().get(id) || {}).session || '';
+    if (CLAUDE_URL.test(session)) return { chatUrl: session, chatUrlFrom: 'commit' };
+    return { chatUrl: '', chatUrlFrom: '' };
 }
 
 function chainPositions() {
@@ -854,6 +878,9 @@ td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid currentColor}
 .running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done{color:var(--ok)}.question{color:var(--warn)}.hard-stop{color:var(--hs)}.blocked-o,.unparsed,.failed{color:var(--bad)}
 .phase{max-width:340px}.empty{padding:16px;color:var(--muted)}.err{color:var(--bad);margin:8px 0}
+table.lfx{table-layout:fixed;width:100%;min-width:1200px}table.lfx th,table.lfx td{padding:8px;overflow:hidden;overflow-wrap:anywhere}table.lfx .pill{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
+td.lfx-num{white-space:nowrap;font-variant-numeric:tabular-nums}td.lfx-cut{white-space:nowrap;text-overflow:ellipsis}
+a.chat{color:var(--run);text-decoration:none}a.chat:hover{text-decoration:underline}
 .load-hi{color:var(--bad);font-weight:600}
 .tabs{display:flex;gap:4px;margin:0 0 8px;border-bottom:1px solid var(--line)}.tabs button,.seg button{font:inherit;font-size:12px;background:none;border:0;color:var(--muted);padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}.tabs button.on{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
 details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
@@ -872,29 +899,36 @@ details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-ite
 const REFRESH=${REFRESH_S}*1000;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pill=(t,cls)=>t?'<span class="pill '+esc(cls||t)+'">'+esc(t)+'</span>':'';
-const launch=r=>{const l=r.launcher||{};const c={chat:'var(--run)',harness:'var(--muted)',chain:'var(--muted)','claude-code':'var(--warn)',manual:'var(--ok)'}[l.by]||'var(--muted)';return (l.label?'<span class="pill" style="color:'+c+'" title="'+esc(l.detail||'')+'">'+esc(l.label)+'</span>':'')+(r.chat?'<span class="title">'+esc(r.chat)+'</span>':'')};
+// The chat id opens the lane's claude.ai conversation when one is known; a URL without a chat id reads "chat".
+const chatFrom=r=>({request:'from the Request header',commit:'from the commit that added the prompt','chat-id':'inferred from '+r.chatUrlVia+', same chat id'})[r.chatUrlFrom]||'';
+const chatLink=r=>r.chatUrl?'<a class="title chat" href="'+esc(r.chatUrl)+'" target="_blank" rel="noopener" title="'+esc(chatFrom(r))+'">'+esc(/C-\\d{4}-\\d{2}-\\d{2}-\\d{4}/.test(r.chat)?r.chat:'chat')+'</a>':(r.chat?'<span class="title">'+esc(r.chat)+'</span>':'');
+const launch=r=>{const l=r.launcher||{};const c={chat:'var(--run)',harness:'var(--muted)',chain:'var(--muted)','claude-code':'var(--warn)',manual:'var(--ok)'}[l.by]||'var(--muted)';return (l.label?'<span class="pill" style="color:'+c+'" title="'+esc(l.detail||'')+'">'+esc(l.label)+'</span>':'')+chatLink(r)};
 const dur=m=>m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 // HH:MM on the table's reference day (YYYY-MM-DD), MM-DD HH:MM on any other; empty when unknown.
 const when=(ms,day)=>{if(!ms)return '<td class="when"></td>';const d=new Date(ms);const hm=pad(d.getHours())+':'+pad(d.getMinutes());return '<td class="when">'+(ymd(d)===day?hm:pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+hm)+'</td>'};
 // Elapsed is the working time, the sum of the turns; empty when no turn is known.
-const work=r=>'<td>'+(r.start?dur(Math.floor(r.work/60000)):'')+'</td>';
+const work=r=>'<td class="lfx-num">'+(r.start?dur(Math.floor(r.work/60000)):'')+'</td>';
 // Span is the start to the end, waits for decisions included: to now while the lane runs; empty when an end is unknown.
-const span=r=>{const e=r.live?Date.now():r.end;return '<td>'+(r.start&&e?dur(Math.floor((e-r.start)/60000)):'')+'</td>'};
+const span=r=>{const e=r.live?Date.now():r.end;return '<td class="lfx-num">'+(r.start&&e?dur(Math.floor((e-r.start)/60000)):'')+'</td>'};
 const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start to end, waits for decisions included'};
+// One width per column name, shared by every Lanes-tab table so a column keeps its width wherever it appears.
+// Phase (Running) and Outcome (exited) have none: they take the room the others leave.
+const COL_W={Lane:200,State:92,Kind:124,Started:96,Ended:96,Elapsed:100,Span:100,Left:116,Worktree:144,'Launched by':128};
 // day: the reference day of Started and Ended, today unless given (an Earlier lanes group passes its own).
 function table(rows,live,day){
   day=day||ymd(new Date());
   if(!rows.length)return '<div class="empty">'+(live?'No lane is running.':'No lanes in this period.')+'</div>';
   const cols=live?['Lane','State','Kind','Started','Elapsed','Span','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','Worktree','Launched by'];
-  let h='<table><thead><tr>'+cols.map(c=>'<th'+(tips[c]?' title="'+esc(tips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
+  let h='<table class="lfx"><colgroup>'+cols.map(c=>'<col'+(COL_W[c]?' style="width:'+COL_W[c]+'px"':'')+'>').join('')+'</colgroup><thead><tr>'+cols.map(c=>'<th'+(tips[c]?' title="'+esc(tips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
   for(const r of rows){
     const id='<td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>';
     const kind='<td>'+esc(r.kind||r.lane.split(/[ .(]/)[0]||'')+(r.tier?' · '+esc(r.tier):'')+'</td>';
     const oc=r.outcome==='none'?'':r.outcome;
-    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+span(r)+'<td>'+esc(r.left)+'</td><td class="phase">'+esc(r.phase)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
-    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+span(r)+'<td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
+    const wt='<td class="lfx-cut" title="'+esc(r.worktree)+'">'+esc(r.worktree)+'</td>';
+    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+span(r)+'<td class="lfx-num">'+esc(r.left)+'</td><td class="phase lfx-cut" title="'+esc(r.phase)+'">'+esc(r.phase)+'</td>'+wt+'<td>'+launch(r)+'</td></tr>';
+    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+span(r)+wt+'<td>'+launch(r)+'</td></tr>';
   }
   return h+'</tbody></table>';
 }
