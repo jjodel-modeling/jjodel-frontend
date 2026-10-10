@@ -73,10 +73,10 @@ function header(dir) {
     return h;
 }
 
-/** Kind from the Lane line's first word (P13: fast, full (<trigger>), discovery); lane-run's merge prompts declare `Lane: full (merge; …)`. */
+/** Kind from the Lane line's first word (P13: fast, full (<trigger>), discovery); lane-run's merge prompts declare `Lane: full (merge; …)`, or count them, `full (two merges …)`. */
 function kindOf(laneLine, file = '') {
     const l = laneLine.toLowerCase();
-    if (/^merge|^full \((merge|take[- ]trunk)\b/.test(l) || /_prompt_merge_|_take_trunk/.test(file)) return 'merge';
+    if (/^merge|^full \((merge|take[- ]trunk|(one|two|three|four|five|six|seven|eight|nine|ten|\d+) merges?)\b/.test(l) || /_prompt_merge_|_take_trunk/.test(file)) return 'merge';
     if (/^fast/.test(l)) return 'fast';
     // A full lane that is only a read-only Phase 1 (its fix is a later lane) is a discovery; a two-phase lane is not.
     if (/^discovery|^phase 1 only|^full \(discovery\b/.test(l) || (/^full \(phase 1\b/.test(l) && /read-only/.test(l) && !/two-phase|same session|in cascade|after the chat'?s go/.test(l))) return 'discovery';
