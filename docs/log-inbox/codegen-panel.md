@@ -25,3 +25,16 @@ empties this file. The active log is not touched by this lane.
 **Ticket**: `EditorV2.tsx:2842-2851` (`f95d0a44f`) returns early for INPUT and SELECT only, so Backspace or Delete typed in a TEXTAREA (or a contenteditable) rendered inside the editor root, not portaled, runs `deleteSelected()` on the canvas selection. Measured by the bench of P-2026-10-10-1825 (M6): the code panel without its key isolation lost the selected node `tc`, 10 nodes to 9. The code panel stops propagation at its root; other textareas under the editor root are not audited.
 **Priority**: medium
 **Found in**: P-2026-10-10-1825
+
+## 2026-10-10 — merge: codegen-panel into alfonso-frontend-jjtl (P-2026-10-10-2018)
+**Prompt**: `claude_2026-10-10_2018_prompt_merge_codegen-panel.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-panel` at `715e7bee6` into `alfonso-frontend-jjtl`, merge base `21d8dc2e7`, 4 commits on the branch side.
+**Files touched**: merge `601ec1379`: 13 files from the branch side (`docs/log-inbox/codegen-panel.md`, `docs/prompts/claude_2026-10-10_1825_prompt_codegen_s5_panel.md`, `frontend/package.json`, `frontend/scripts/gates/check-codegen-lazy.ts`, `frontend/scripts/probe/codegen-panel.ts`, `frontend/src/codegen/__tests__/setting.test.ts`, `frontend/src/codegen/setting.ts`, `frontend/src/codegen/ui/CodePanel.scss`, and 5 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `601ec1379` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8078 tests in 331 files, 9 red at import, hooks 501; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: direct merge gates green: typecheck 14 = base, vitest 8078 tests in 331 files (9 red at import as base), build, check:docs/agents/scripts/addonly exit 0; visual GO by Alfonso 20:18 after RC-23 on 8 crops
+**Notes**: Rollback tag `pre-codegen-panel` on `f753bf0d9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2018/result.json`.
+**Prompt document name**: 2026-10-10 20:18
