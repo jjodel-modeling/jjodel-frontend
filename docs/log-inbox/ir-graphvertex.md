@@ -77,3 +77,24 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-10-0105
 **Detail**: frontend/scripts/probe/bpmn-lanes-fixture.ts
+
+## 2026-10-10 — feat(ir): graphVertex self-framing containers for UML statecharts, S2b (P-2026-10-10-0105)
+**Prompt**: Phase 2 GO slice S2b (chat C-2026-10-10-0057; no prompt file under `docs/prompts/` at the time), visual: `containment.layout.frame: 'self'` (a composite state as the box of its substates) and `separator: 'dashed'` (orthogonal regions), a UML statechart fixture on its own port in the light theme, a new addendum section and one R-GV row; BPMN S2/S3 and the S1 hull scenes kept; gates, frame-geometry bench, hard stop.
+**Files touched**: `d2f169781` (12): `viewpoint/ir/` irTypes, irCompile, irValidate, irFrame (new), irContainment, useIRContainment, irStyle; tests irFrame (new), irContainerLayout, ir, irValidate, shapeRegistry. `7b0aa3a46`: `frontend/scripts/probe/statechart-fixture.ts` (new). `3858e8cf2`: spec addendum §11, `docs/decisions.md` R-GV-15, `docs/discovery/assets/graphvertex-s2b/` (9 files). This commit: this inbox file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: yes (`irContainment.ts` is not in the GO's DOVE: the layout pass `useIRContainment` calls lives there, and frames, drag offsets and the selection rule needed it; twelve code files in one commit, above five)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Statechart 3/7 before (pre-S2b tree), 7/7 after; BPMN S2+S3 25/25 and hull scenes byte-identical on the S2b tree. tsc 14 = baseline; editor-v2 3599; full 7876, 9 known import failures; build 0. Bench 31 mutants, all killed after tests for C6, C7. Fixed in-lane: a collapsed frame jumped to its record; a selected composite hid its regions, and that fix then hid a lane's resize line (S3-7). Regressions unknown: the lift and selection rules reach derived viewpoints, unmeasured.
+**Prompt document name**: 2026-10-10 01:05
+
+**Ticket** (lane): the collapse chip of a layout container lies under the edges. The container's z-index is below them, so an edge crossing the chip takes the pointer (measured on the statechart fixture: Running's chip is covered by a transition's 20 px interaction path; the fixture dispatches the click). Options: draw the chip in the header band, or lift the chip out of the node.
+
+## 2026-10-10 — ticket: an IR view cannot hide a reference edge, nor a predicate reach an object's owner
+**Ticket**: to tell a region of a two-region state from the only region of a state, the statechart fixture adds UML's `Region.state` and tests `$state.value.$regions.values[1]`: a predicate has no way to climb to the owner (`father`), and the edge that back-reference draws can only be styled clear (`line.color: transparent`), since an edge view has no `visible`. Either key would remove the workaround.
+**Priority**: low
+**Found in**: P-2026-10-10-0105
+**Detail**: docs/spec/claude_spec_2026-10-10_ir_graphvertex_containment_addendum.md
