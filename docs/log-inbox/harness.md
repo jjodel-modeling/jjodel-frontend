@@ -496,3 +496,44 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board kindOf), classification verified by lane P-2026-10-10-1803 on the prompt corpus
 **Notes**: Rollback tag `pre-board-kindof-merges` on `e1eb53d43` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1913/result.json`.
 **Prompt document name**: 2026-10-10 19:13
+
+## 2026-10-10 — feat(harness): lane-run draws the tier of eligible lanes, RC-45 (P-2026-10-10-1757)
+**Prompt**: `claude_2026-10-10_1757_prompt_lane_run_rc45_draw.md`: Phase 1 discovery (`758c62cc1`, `docs/discovery/discovery_2026-10-10_lane_run_rc45_draw.md`), then in cascade the RC-45 draw in `lane-run start` and `chain` (eligibility, ledger `~/.jjodel-lanes/rc45-draws.jsonl`, `--no-draw`, reuse of a draw, lock), the board reading the ledger and `tier.txt`, tests red first.
+**Files touched**: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/insights.js` (`8a1068660`); this commit: `frontend/scripts/lane-board/README.md` and this entry. Seven files with the report, all named by the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Adopted under RC-21 the four Recommended lines of the report §0: inline `DOVE:` read when there is no `## DOVE`; a Lane-line draw missing from the ledger is recorded; a chain draws at each lane's start; `--tier` equal to a draw is accepted. Tests first, 13 of 14 red; mutation bench 27 of 28 killed (survivor: the ledger lock, a race). Dry runs under HOME=/tmp/p1757/dry; the real ledger unchanged (sha256 94af6b50).
+**Prompt document name**: 2026-10-10 17:57
+
+**Ticket** (RC-45 vs check:docs, P-2026-10-10-1757): the prompt asks for `Corregge: none` (RC-45 (2)), but Check B of `npm run check:docs` refuses it: measured on this entry, `value is neither the sentinel nor a prompt-document name in the prescribed form`. This entry writes the sentinel `—`, which §21.3 defines as "corrects nothing". Either RC-45 (2) reads `—`, or `log-tools.ts` `lintTaskFields` accepts `none`: the chat's call.
+
+## 2026-10-10 — merge: lane-run-rc45-draw takes alfonso-frontend-jjtl (P-2026-10-10-1848)
+**Prompt**: `claude_2026-10-10_1848_prompt_lane-run-rc45-draw_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-rc45draw` on `lane-run-rc45-draw`: RC-14, the trunk at the explicit sha `31706d940` into the branch with one `--no-ff` merge, base `6ca224b68`, 50 trunk commits against 4 on the branch and this prompt on top; hard stop for the chat's visual GO, then this closure.
+**Files touched**: merge `995d7cb18`: the 64 files of the trunk side; `docs/log-inbox/harness.md` resolved by union, `frontend/scripts/lane-board/lane-board.mjs` auto-merged, no hand edit to code. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `995d7cb18`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8066 passed in 330 files, 0 failed (expected: trunk tip 8052, measured read-only in `~/jjodel-release`, plus 14 from the branch); 11 red files, the 9 §17 at import and `irCollapsedRender.test.ts`, `irSelectionRing.test.ts` (afterAll `browser.close()` timeouts at load 156, 18/18 green alone); hooks 501 (487 plus 14); build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries 64 files, above five (RC-11), all the trunk side's.
+**Layer Impact Report**: not-required (no sync file edited here; the trunk's `useM1ReferenceEdges.ts` arrives with its own LIR, `docs/lir/lir_2026-10-10_stale_m1_edge_f1.md`)
+**Smoke visivo**: passato — chat GO (RC-23), unattended: the merge brings only trunk content into the branch; the board was checked on 4701 from this branch before the merge, no board code edited by hand
+**Notes**: The trunk moved to `c315460b0` during the session, docs-only (1843's Status flip and log entry); `31706d940` merged as step 1 prescribes. Union: the trunk's 7 entries, then the branch's 1757 block, byte-identical to the trunk's file plus that block. Probes 19 of 19 once, control RC-46 absent. lane-board.mjs read end to end: hunks disjoint, 95 declarations once, node --check 0. check:docs is 5/5, not 4/4: Check E is on the trunk. No rollback tag.
+**Prompt document name**: 2026-10-10 18:48
+
+## 2026-10-10 — merge: lane-run-rc45-draw takes alfonso-frontend-jjtl (P-2026-10-10-1923)
+**Prompt**: `claude_2026-10-10_1923_prompt_lane-run-rc45-draw_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-rc45draw` on `lane-run-rc45-draw`: RC-14, the trunk at the explicit sha `9d41d0bce` into the branch with one `--no-ff` merge, base `31706d940`, 20 trunk commits against 7 on the branch and this prompt on top; hard stop for the chat's visual GO, then this closure.
+**Files touched**: merge `2913eced0`: the 10 files of the trunk side; `docs/log-inbox/harness.md` resolved by union (the trunk's 5 new entries, then the branch's 1757 and 1848 blocks, verbatim, each heading once); `frontend/scripts/lane-board/lane-board.mjs` auto-merged, no hand edit to code. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2913eced0`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8066 passed in 330 files, 0 failed, the 9 §17 files red at import (expected: trunk tip 8052, measured read-only in `~/jjodel-release`, plus 14 from the branch); hooks 501 (trunk 487 plus 14); build exit 0; check:docs 5/5; check:scripts PASS 67 files; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries 10 files, above five (RC-11), all the trunk side's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO (RC-23), unattended: trunk content only, kindOf and the RC-45 draw code sit in separate regions of lane-board.mjs, gates match
+**Notes**: merge-tree exit 1, tree `09b422a2e`, 1 conflict; staged tree `7437a01e9` differs only in harness.md, byte-identical to the trunk's file plus the branch's block. Probes 7 of 7 once, control 1923 heading 0. lane-board.mjs read end to end: trunk hunk :78-81, branch hunks :661-760, 95 declarations once, node --check 0. check:docs is 5/5, not 4/4: Check E is on the trunk. No rollback tag.
+**Prompt document name**: 2026-10-10 19:23

@@ -658,14 +658,28 @@ function rcRows() {
     return out;
 }
 
+/** RC-45: the draws of lane-run's ledger, ROOT/rc45-draws.jsonl, Prompt-ID to the tier of its first entry; a line that is not a draw is skipped. */
+function rc45Draws() {
+    const m = new Map();
+    for (const line of readTrim(join(ROOT, 'rc45-draws.jsonl')).split('\n')) {
+        let d = null;
+        try { d = JSON.parse(line); } catch { /* not a draw */ }
+        if (d && typeof d.promptId === 'string' && (d.tier === 'heavy' || d.tier === 'light') && !m.has(d.promptId)) m.set(d.promptId, d.tier);
+    }
+    return m;
+}
+
 /** One lane of /api/insights. firstShot (discovery §4.3): ends done or hard-stop, no rework signal, no blocked or over-90-minute run; null while it runs. */
-function insightLane(id, dir, t, g, corr, own, now) {
+function insightLane(id, dir, t, g, corr, own, now, draws = new Map()) {
     const f = t.facts || {};
     const h = header(dir);
     const tierLine = readTrim(join(dir, 'tier.txt'));
     const tier = (/^(heavy|light)\b/.exec(tierLine) || [])[1] || '';
-    // RC-45: a lane whose tier was drawn at random says so in its Lane line, `tier drawn (RC-45): heavy|light`.
+    // RC-45: a lane whose tier was drawn at random is in lane-run's ledger, or its tier.txt reads
+    // `<tier> (<model>): drawn (RC-45), <n>/40` (never `not drawn`), or its Lane line says `tier drawn (RC-45): heavy|light`.
+    const tm = /^(heavy|light) \([^)]*\): drawn \(RC-45\)/.exec(tierLine);
     const dm = /tier drawn \(RC-45\)\s*:?\s*(heavy|light)?/i.exec(h.lane);
+    const drawn = draws.get(id) || (tm ? tm[1] : null) || (dm ? (dm[1] || tier || '').toLowerCase() || null : null);
     const commits = g.byPid.get(id) || [];
     const lines = {};
     const files = new Set();
@@ -703,7 +717,7 @@ function insightLane(id, dir, t, g, corr, own, now) {
     return {
         id, day: id.slice(2, 12), start, end: Math.round(end), kind: kindOf(h.lane, h.file),
         model: f.model || null, subagentModels: f.subModels || {}, tier, tierReason: tierLine.replace(/^[^:]*:\s*/, ''),
-        drawn: dm ? (dm[1] || tier || '').toLowerCase() || null : null, cliVersion: f.cli || '',
+        drawn, cliVersion: f.cli || '',
         runs, final, workMs: Math.round(runs.reduce((a, x) => a + Math.max(0, x.ms), 0)), costUSD: Math.round((f.costUSD || 0) * 100) / 100, outTokens: f.outTokens || 0,
         commits: commits.map((c) => c.sha.slice(0, 9)), files: [...files], lines, primaryArea: byLines[0] || '', criticalZone: cz,
         sizeBand: total ? BANDS.find(([max]) => total <= max)[1] : null,
@@ -742,7 +756,8 @@ function insights() {
             if (e.type !== 'ticket' && e.pid && !own.has(e.pid)) own.set(e.pid, e);
             if (e.cPid) { if (!corr.has(e.cPid)) corr.set(e.cPid, []); corr.get(e.cPid).push(e); }
         }
-        const lanes = rows.map(({ id, dir, t }) => insightLane(id, dir, t, g, corr.get(id) || [], own.get(id), now));
+        const draws = rc45Draws();
+        const lanes = rows.map(({ id, dir, t }) => insightLane(id, dir, t, g, corr.get(id) || [], own.get(id), now, draws));
         const data = {
             v: 1, now, trunk: g.trunk.slice(0, 9),
             sources: { lanes: lanes.length, sessions: lanes.filter((l) => l.model).length, commitsScanned: g.seen.size, logEntries: g.entries.length, since: ids.length ? ids[0].slice(2, 12) : '' },
