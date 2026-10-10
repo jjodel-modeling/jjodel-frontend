@@ -5,7 +5,7 @@ Chat: C-2026-10-10-1620
 Request: https://claude.ai/code/session_01CjZSPxRbbXhjGTtAKkf96c
 Lane: full (Phase 1, read-only on sources; one node probe outside `frontend/src/`)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane sim-event-attrs · 325cfafec · hard stop di Fase 1, report letto dalla chat
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 

@@ -1,0 +1,30 @@
+probe=/Users/alfonso/jjodel-w-eventattrs/frontend/scripts/probe/sim-event-attrs-browser.ts
+CFG=/Users/alfonso/jjodel-w-eventattrs/frontend/scripts/smoke/_tmp_lane_vite_3097.config.ts
+url=http://localhost:3097/
+server=200
+PASS  fixture imported  Pointer1791643345477_USER_2
+PASS  models and elements found  {"mm":"Pointer1791643345487_USER_4","m1":"Pointer1791643345489_USER_30","projectId":"Pointer1791643345477_USER_2","ids":{"Event":"Pointer1791643345488_USER_12","State":"Pointer1791643345488_USER_8","coin":"Pointer1791643345490_USER_42","push":"Pointer1791643345490_USER_44","stop":"Pointer1791643345490_USER_46","tc":"Pointer1791643345490_USER_48","locked":"Pointer1791643345489_USER_33","unlocked":"Pointer1791643345489_USER_36"}}
+MEAS  M2 edit  {"ids":{"amount":"Pointer1791643355700_USER_97","hot":"Pointer1791643355701_USER_101","label":"Pointer1791643355701_USER_105","tags":"Pointer1791643355702_USER_109","need":"Pointer1791643355702_USER_113","dflt":"Pointer1791643355702_USER_117","text":"Pointer1791643355703_USER_121","Size":"Pointer1791643355703_USER_125","literals":{"S":"Pointer1791643355704_USER_126","M":"Pointer1791643355704_USER_127","L":"Pointer1791643355704_USER_128"},"size":"Pointer1791643355704_USER_129","home":"Pointer1791643355704_USER_133"},"dfltSet":"ok","bounds":{"tags":-1,"need":1,"dflt":[7]}}
+MEAS  M1 writes  {"errs":[]}
+MEAS  raw DValue values, coin  {"amount":[50],"hot":[true],"label":["fifty"],"tags":[1,2],"need":[5],"dflt":[],"text":["50"],"size":["Pointer1791643355704_USER_128"],"home":["Pointer1791643345489_USER_33"]}
+MEAS  buildEvalContext handle, coin  {"amount":50,"hot":true,"label":"fifty","size":"L","home":"<locked>","tags":[1,2],"need":5,"dflt":7,"text":50}
+MEAS  stand-in handle, coin  {"amount":50,"hot":true,"label":"fifty","size":"Pointer1791643355704_USER_128","home":"<locked>","tags":[1,2],"need":5,"dflt":null,"text":"50"}
+MEAS  raw DValue values, push  {"amount":[20],"hot":[false],"label":[],"tags":[],"need":[],"dflt":[],"text":[],"size":["Pointer1791643355704_USER_127"],"home":["Pointer1791643345489_USER_36"]}
+MEAS  buildEvalContext handle, push  {"amount":20,"hot":false,"label":null,"size":"M","home":"<unlocked>","tags":[],"need":0,"dflt":7,"text":null}
+MEAS  stand-in handle, push  {"amount":20,"hot":false,"label":null,"size":"Pointer1791643355704_USER_127","home":"<unlocked>","tags":[],"need":null,"dflt":null,"text":null}
+MEAS  raw DValue values, stop  {"amount":[],"hot":[],"label":[],"tags":[],"need":[],"dflt":[],"text":[],"size":[],"home":[]}
+MEAS  buildEvalContext handle, stop  {"amount":null,"hot":null,"label":null,"size":null,"home":null,"tags":[],"need":0,"dflt":7,"text":null}
+MEAS  stand-in handle, stop  {"amount":null,"hot":null,"label":null,"size":null,"home":null,"tags":[],"need":null,"dflt":null,"text":null}
+PASS  positive control: coin.amount written and read by the app as 50  {"amount":50,"hot":true,"label":"fifty","size":"L","home":"<locked>","tags":[1,2],"need":5,"dflt":7,"text":50}
+MEAS  app and stand-in differ on  ["coin.size: app \"L\", stand-in \"Pointer1791643355704_USER_128\"","coin.dflt: app 7, stand-in null","coin.text: app 50, stand-in \"50\"","push.size: app \"M\", stand-in \"Pointer1791643355704_USER_127\"","push.need: app 0, stand-in null","push.dflt: app 7, stand-in null","stop.need: app 0, stand-in null","stop.dflt: app 7, stand-in null"]
+MEAS  run  {"applied":{"keys":["simAction","simEntry","simGuard","simInitial","simNextState","simNode","simOwnedTransitions","simProfile","simTerminal","simTransition","simTrigger"]},"defects":["undeclared 'paid'","undeclared 'coins' on demoESM"]}
+MEAS  event reads in the run's guard context on tc, coin  {"event.amount":50,"event.hot":true,"event.label":"fifty","event.size":"L","event.size == \"L\"":true,"event.home":"<locked>","event.tags":[1,2],"event.need":5,"event.dflt":7,"event.text":50,"event.text + 1":51,"event.amount + 1":51,"guard event.amount > 15":"true"}
+MEAS  event reads in the run's guard context on tc, push  {"event.amount":20,"event.hot":false,"event.label":null,"event.size":"M","event.size == \"L\"":false,"event.home":"<unlocked>","event.tags":[],"event.need":0,"event.dflt":7,"event.text":null,"event.text + 1":null,"event.amount + 1":21,"guard event.amount > 15":"true"}
+MEAS  event reads in the run's guard context on tc, stop  {"event.amount":null,"event.hot":null,"event.label":null,"event.size":null,"event.size == \"L\"":false,"event.home":null,"event.tags":[],"event.need":0,"event.dflt":7,"event.text":null,"event.text + 1":null,"event.amount + 1":null,"guard event.amount > 15":"false"}
+MEAS  press coin  {"last":"coin: tc (locked → locked) fired","credit":{"credit":50},"halt":null}
+PASS  positive control: the press of coin adds event.amount to credit  {"credit":50}
+MEAS  page errors  1
+      console: init_dash
+ALL GREEN  out /Users/alfonso/jjodel-w-eventattrs/frontend/scripts/smoke/_tmp_sim-event-attrs-browser.json
+EXIT=0
+end=2026-10-10T14:42:39.409Z
