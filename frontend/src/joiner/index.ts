@@ -72,13 +72,13 @@ export const $: JQueryStatic = $$;
 // nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
 export type {GetPath} from './proxy';
 
-export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
+export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, DeepReadonly, NamedArr, NamedArray, Proxyfied, Temporary, RawObject, NotFoundv,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap,
     Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption, NestedArray, TLCoord, TLCoordExtended,
     ObjectWithoutPointers, FakeStateProps, DefaultProps, ubyte, byte, degree, double, float, radian, ratio, int, uint, Dependency,
-    NotBool, NodeTypes,
+    NotBool, NodeTypes, Literal
 
 } from "./types";
 
@@ -92,8 +92,11 @@ export {findEnvironmentConfig, findProfile, profileIdsOf, profilesOfConfig, reso
 export type {EnvPermission} from "./environmentConfig";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
-    ValueDetail, SetValueAtPositionInfoType
+    ValueDetail, SetValueAtPositionInfoType, WTypeDeclaration, WPlaceholder
 } from "../model/logicWrapper/LModelElement";
+
+export type {GenericTypeName, TYPE} from "../model/logicWrapper/etype";
+
 export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex, EdgeSegment, EdgeFillSegment} from "../model/dataStructure/GraphDataElements";
 export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointers, EnumPointers, ClassPointers,
     LiteralPointers, OperationPointers, ObjectPointers, GraphPointers, ParameterPointers, ReferencePointers, VertexPointers,
@@ -116,6 +119,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     Language,
     LUser, DUser, DProject, LProject, DEnvironmentConfig, LEnvironmentConfig, DProfile, LProfile, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EGraphElements, EModelElements, transientProperties,
     ViewEClassMatch, notLanguageFragments, LanguageCache, ParserData, ProjectPointers, UserPointers,
+    Alias
 } from "./classes";
 
 export {Info} from '../model/Info';
@@ -161,6 +165,7 @@ export {
     ECoreOperation,
     ECoreParameter,
     ECoreObject,
+    EcoreTypeDeclaration,
     EcoreXmiTags,
 } from "../api/data";
 // import domain-specific classes
@@ -184,11 +189,14 @@ export {
     DParameter, LParameter,
     DOperation, LOperation,
     DPackage, LPackage,
-    DTypedElement, LTypedElement,
-    DAnnotation, LAnnotation,
+    DTypedElement, DAnnotation, LAnnotation,
     EJavaObject,
-    DFactory_useless_, LFactory_useless_, DMap, LMap
+    DFactory_useless_, LFactory_useless_, DMap, LMap,
+    DPlaceholder, LPlaceholder,
+    DTypeDeclaration, LTypeDeclaration,
 } from "../model/logicWrapper/LModelElement";
+export {default as LTypedElement} from "../model/logicWrapper/LModelElement"
+export {GenericType, getClassifiers, TypeDeclaration, TypeDeclarationXMI, TypeDeclarationXMIU, writeEcoreType, } from "../model/logicWrapper/etype";
 
 
 export {
@@ -207,7 +215,14 @@ export {DValidationViewpoint, LValidationViewpoint, DValidationRule, LValidation
     findValidationViewpoint, ensureValidationViewpoint, VALIDATION_VIEWPOINT_ID, VALIDATION_VIEWPOINT_NAME} from "../model/validation/validationTypes";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction,
-    TRANSACTION, ABORT, /*BEGIN, END*/} from "../redux/action/action";
+    TRANSACTION, TRANSACTION_MERGE,
+    /*BEGIN, END, */
+    ABORT, COMMIT,
+    AT_TRANSACTION,
+    AFTER_TRANSACTION,
+    DO_AFTER_TRANSACTION_NOT_FOR_USERS,
+    AFTER_UPDATE,
+} from "../redux/action/action";
 
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
 export {GraphDragManager} from "../redux/GraphDragHandler";
@@ -218,6 +233,8 @@ export {store} from "../redux/createStore";
 export {Debug} from "../debugtools/debug";
 
 export {OCL} from "../ocl/ocl";
+
+export {T2M, M2T, parseT2M} from "../components/forEndUser/MTM";
 
 
 

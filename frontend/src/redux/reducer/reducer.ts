@@ -48,9 +48,7 @@ import {
 } from "../../joiner";
 import React from "react";
 import {
-    BEGIN,
     COMMIT,
-    END,
     AFTER_TRANSACTION,
     DO_AFTER_TRANSACTION_NOT_FOR_USERS,
     CollabClearHistoryAction, CollabRefreshAction,
@@ -71,6 +69,7 @@ import {SaveManager} from "../../components/topbar/SaveManager";
 import Api from "../../api/api";
 import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
 import {JjodelEvents} from "../../events/registry";
+import {ProxyCache} from "../../joiner/ProxyCache";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -156,7 +155,8 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     moveOffset = (action.value || 1) * moveDirection;
                     break;
             }
-            switch (modifier.substring(0, 2)) {
+            let mod = modifier.substring(0, 2);
+            switch (mod) {
                 case '*=':
                     oldValue = current[key];
                     if (typeof oldValue !== 'number') {
@@ -173,16 +173,17 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     }
                     newVal = oldValue /= newVal;
                     break;
-                case '[]':
+                case '[]': // always equal to +=
+                case '{}': // if target is an array, forces to use it as an object delta.
                     // +=...5 and all less complex variations tested
                 case '+=':// +=...5    --> add at position 5 N elements (value must be array that will be flattened and inserted)
                     oldValue = current[key]; // todo check all oldvalue assignment to prevent double set
                     if (modifier.substring(2, 5) === '...') isMultiAddRemove = true;
                     if (isMultiAddRemove) index = +(modifier.substring(5)) || undefined;
                     else index = +(modifier.substring(2)) || undefined;
-                    switch (typeof oldValue){
+                    switch (typeof oldValue) {
                         case 'object':
-                            if (Array.isArray(oldValue)) isArrayAppend = true;
+                            if (mod !== "{}" && Array.isArray(oldValue)) isArrayAppend = true;
                             else isObjectMerge = true;
                             break;
                         default:
@@ -238,22 +239,33 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 if (inCollabNode) return false; // abort for collab nodes
                 continue; // silently skip for local duplicates
             }
+
+            if ((action as any).debug) console.log("0x1 action", U.jsonCopy({isObjectMerge, isArrayAppend, oldValue, newVal, current}));
             if (isObjectMerge) {
                 if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
                 oldValue = {...current[key]};
-                current[key] = {...current[key]};
 
-                for (let subkey in newVal) {
-                    // console.warn("object merge", {current, key, subkey, newVal, old:current[key][subkey], new:newVal[subkey]});
-                    if (current[key][subkey] === newVal[subkey]) continue;
-                    let subval = current[key][subkey] = newVal[subkey];
-                    gotChanged = true;
-                    if (action.isPointer && Pointers.isPointer(subkey)) newRoot = PointedBy.add(subkey as Pointer, action, newRoot, "+=");
-                    if (action.isPointer && Pointers.isPointer(subval)) newRoot = PointedBy.add(subval as Pointer, action, newRoot, "+=");
+                if (newVal?.__jjObjDiffDeltaRoot) {
+                    if (!U.isEmptyObject(newVal)) {
+                        current[key] = Uobj.applyObjectDelta(current[key], newVal, false);
+                        gotChanged = true;
+                    }
+                }
+                else {
+                    current[key] = {...current[key]};
+                    for (let subkey in newVal) {
+                        // console.warn("object merge", {current, key, subkey, newVal, old:current[key][subkey], new:newVal[subkey]});
+                        if (current[key][subkey] === newVal[subkey]) continue;
+                        let subval = current[key][subkey] = newVal[subkey];
+                        gotChanged = true;
+                        if (action.isPointer && Pointers.isPointer(subkey)) newRoot = PointedBy.add(subkey as Pointer, action, newRoot, "+=");
+                        if (action.isPointer && Pointers.isPointer(subval)) newRoot = PointedBy.add(subval as Pointer, action, newRoot, "+=");
+                    }
                 }
                 if (action.isPointer && Pointers.isPointer(key)) newRoot = PointedBy.add(key as Pointer, action, newRoot, "+=");
             } else
             if (isObjectDifference) {
+                if (newVal?.__jjObjDiffDeltaRoot) Log.eDevv("object delta in reducer can only be used with {} object merger modifier.", action);
                 if (typeof newVal === 'string') newVal = {[newVal]: true};
                 oldValue = {...current[key]};
                 current[key] = {...current[key]};
@@ -268,6 +280,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 if (action.isPointer && Pointers.isPointer(key)) newRoot = PointedBy.add(key as Pointer, action, newRoot, "-=");
             }
             else if (isArrayAppend) {
+                if (newVal?.__jjObjDiffDeltaRoot) Log.eDevv("object delta in reducer can only be used with {} object merger modifier.", action);
                 gotChanged = true;
                 if (allowFixingNullArr && !Array.isArray(current[key])) { current[key] = []; }
                 if (!Array.isArray(current[key])) break;
@@ -466,7 +479,9 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                 elem.className = elem.className || (elem.constructor as typeof RuntimeAccessibleClass).cname || elem.constructor.name;
                 let statefoldername = elem.className.substring(1).toLowerCase() + 's';
                 derivedActions.push(
-                    Action.parse(SetRootFieldAction.create(statefoldername, elem.id,'[]', true)));
+                    // NB: those are pointers in the state root like "s().packages, s().classs" ...
+                    Action.parse(SetRootFieldAction.create(statefoldername, elem.id, '[]', true))
+                );
                 if (!Array.isArray(elem.pointedBy)) elem.pointedBy = [];
                 elem.pointedBy.push(PointedBy.new(statefoldername));
                 /*if (false && action.isPointer) {
@@ -507,7 +522,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
     // (P-2026-10-03-1632: a slot write's no-op `isMirage` made `values.N` land in it, and undo lost the write).
     let lastApplied: ParsedAction = undefined as any;
     for (let i = 0; i < actions.length; i++) {
-        const prevAction: ParsedAction = lastApplied;
+        const prevAction: ParsedAction = lastApplied; // actions[i-1];
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
         // if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
@@ -521,6 +536,10 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
 
             case CollabClearHistoryAction.type: break;
             case LoadAction.type:
+                if (oldState.viewelements.length) {
+                    for (let id of oldState.viewelements) Defaults.defaultViewsMap[id] = oldState.idlookup[id] as DViewElement;
+                    for (let id of oldState.viewpoints) Defaults.defaultViewPointsMap[id] = oldState.idlookup[id] as DViewPoint;
+                }
                 newState = action.value;
                 let u = DUser.getUser(newState);
                 let p = DProject.getProject(newState);
@@ -600,8 +619,7 @@ ret .b = 3
 
 
 // then add to it: content of props, constants, usageDeclarations
-
-export function reducer(oldState: DState = initialState, action: Action, liveChange: boolean = false): DState {
+export function reducer(oldState: DState = initialState, action: Action, isLiveChange: boolean = false): DState {
     if (windoww.__scuStormDebug) {
         try {
             const a: any = action;
@@ -613,38 +631,69 @@ export function reducer(oldState: DState = initialState, action: Action, liveCha
             });
         } catch (e) {}
     }
+    // if (U.debug) console.warn("reducer", {action, isLiveChange});
+    if (!oldState) {
+        DState.current = initialState = oldState = DState.new();
+        if (U.debug) console.error("############## state initialized", DState.current, DState.current?.idlookup);
+    }
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
-    let safeMode = false;
-    // console.log('execute action', action);
-    if (!safeMode) {
-        let ret = unsafereducer(oldState, action);
+
+    if (U.debug) console.log('execute action', {live:isLiveChange, f:action.field, action});
+    if (!U.safeMode) {
+        let ret = unsafereducer(oldState, action, isLiveChange);
         DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
         return ret;
     }
 
     try {
-        let ret = unsafereducer(oldState, action);
+        let ret = unsafereducer(oldState, action, isLiveChange);
         DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
         return ret;
     }
-    catch (e) {
-        console.error('unhandled error in reducer', {e, oldState, action});
+    catch (e: any) {
+        console.error('unhandled error in reducer', {e, oldState, action, stack: (e?.stack || "").split("\n")});
+        if (!isLiveChange) transientProperties.livePatches = oldState;
+        DState.current = oldState;
         return oldState;
     }
 }
 
-function unsafereducer(oldState: DState = initialState, action: Action): DState {
-    if (!oldState) { oldState = initialState = DState.new(); }
-    // console.log('external REDUCER', {action, CEtype:CreateElementAction.type});
+function unsafereducer(oldState: DState = initialState, action: Action, isLiveChange: boolean = false): DState {
+    let ret: DState;
+    // making livechanges persistent, if liveChanges are enabled && did not abort
+    let outcome = "?";
 
-    const ret = _reducer(oldState, action);
+    if (!isLiveChange && U.liveStateChanges) {
+        if (!transientProperties.livePatches) outcome = "live change rejected";
+        // should never happen, abort is handled in FINAL_END without triggering a compositeAction.
+        if (!transientProperties.livePatches) return oldState;
+        outcome = "live change accepted";
+        ret = transientProperties.livePatches;
+        updateStateHistory(ret, oldState, action);
+        (ret as any).fromLP = ((ret as any).fromLP || 0) +1;
+    }
+    // make either normal state change or livecange which is not persistent (reducer manually called on a copy of state)
+    else {
+        outcome = "ordinary "+(isLiveChange?"live-":'')+"change";
+        ret = _reducer(oldState, action, isLiveChange);
+        (ret as any).fromLP = ((ret as any).fromLP || 0) +0.0001;
+    }
+// action line 173 if (U.liveStateChanges) t.pendingActions = [];  caused not update of reaxt
+    // console.warn("reducer didchange: ", {outcome, b:ret === oldState, ret, oldState, action, isLiveChange})
     if (ret === oldState) return oldState;
-    if (!ret) return ret;
-    ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     // client synchronization stuff
     if (Collaborative.online) Collaborative.send(action);
+    if (!ret) return ret;
+    return postReducer(ret, oldState);
+}
+
+function postReducer(ret: DState, oldState: DState, liveChange: boolean = false): DState {
+    ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
+    ret.clonedCounter = (ret.clonedCounter || 0) +1;
+    if (!liveChange) transientProperties.livePatches = ret;
+    DState.current = ret;
 
     function filterSet<T extends any>(r: T[]): Set<T>{
         if (!Array.isArray(r)) r = [];
@@ -753,9 +802,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of tv.UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-        // console.log('labels parse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
         const body: string =  'return (' + val + ')';
-        // console.log('labels parse', {vid: ptr, paramStr, body});
         try {
             if (isNode) {
                 // need to store the function in tnv instead of tn since if v changes, ud changes as well? in all of them?what if i make a new view?
@@ -990,7 +1037,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
             tv.jsCondition = new Function(paramStr, body) as ((...a:any)=>any);
         } catch (e) {
             tv.jsCondition = undefined;
-            // console.log('JS Condition parsed error', e);
+            Log.ee('JS Condition parsed error', e);
         }
     }
     ret.VIEWS_RECOMPILE_jsCondition = [];
@@ -1117,8 +1164,8 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
     }
 
+    ProxyCache.update(ret, oldState);
     return ret;
-
 }
 
 function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DState {
@@ -1156,8 +1203,7 @@ function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DSt
 }
 
 const allowFixingNullArr: boolean = false;
-export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
-    const mergeTolerance = U.UpdatingTimer*1.5;
+export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action, isLiveChange: boolean): DState{
 
     switch (action.type) {
         case UndoAction.type: return doUndoRedo(oldState, action, 'undo');
@@ -1191,8 +1237,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                     ret.action_description = '';
                 }
             }
+            if (isLiveChange) return ret;
             if (!oldState/* || !Object.keys(delta).length*/) return ret;
-
             // Fast path: skip history bookkeeping when the only meaningful change
             // is a single transient top-level key (dragging / _lastSelected /
             // contextMenu). isRelevantChangeCheck would discard the delta in this
@@ -1201,82 +1247,91 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 return ret;
             }
 
-            // update state history
-            let delta = Uobj.objectDelta(ret, oldState, true, false);
-            // if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
-            delta.timestamp = ret.timestamp;
-            delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
-            if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
-            let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
-            const allowMerge = true; // switch for debugging
-            let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>);
-            // merge if: there is a past delta, and the delta doesn't pass the filter to exist individually
-            let shouldMerge = !isRelevantChange;
-            let debugMerge = true;
-            if (!shouldMerge && (delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs)) shouldMerge = true;
-            if (!pastDelta) shouldMerge = false;
-
-            if (false && pastDelta) console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
-                isRelevantChange,
-                shouldMerge, irl: pastDelta && (delta?.timestamp||0) - pastDelta.timestamp < mergeTolerance,
-                 dt: delta.timestamp, pdt: pastDelta.timestamp, diff: (delta?.timestamp||0) - pastDelta.timestamp,
-                oldState, delta});
-
-            //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.
-            if (shouldMerge && allowMerge) {
-                // pastDelta = Uobj.applyObjectDelta(pastDelta, delta); no because special handling
-                //   of __jjisEmpty etc must not be done at this stage.
-                let gdelta: Dictionary<string, string[] | GObject> = {};
-                let allkeys: Set<string> = new Set([...Object.keys(delta), ...Object.keys(pastDelta)]);
-                let mergeRecompileArr = (k: string) => {
-                    // todo: reenable fix last line but remember they can be either true arrays or delta object fake arrays __jjObjDiffIsArr = true
-                    return;
-                    if (!(k.indexOf('RECOMPILE') >= 0 || k.indexOf('ELEMENT_') >= 0 || k === 'ClassNameChanged')) return;
-                    if (k === 'ClassNameChanged') {
-                        let merged: Dictionary<string> = {};
-                        for (let p of allkeys) {
-                            let vnow = (delta as GObject)[k][p];
-                            let vpast = pastDelta[k][p];
-                            if (vnow === vpast) { merged[p] = vnow; continue; }
-                            if (vnow.indexOf('__jjObjDiff') !== -1) { merged[p] = vpast; continue; }
-                            merged[p] = vnow;
-                        }
-                        gdelta.ClassNameChanged = merged;
-                        return;
-                    }
-                    // todo: this is troublesome because ['id1', 'empty'] + ['id2'] =  ['id1', 'empty', 'id2'] but should not have side effects? can the empty sparse arr make problems?
-                    if (!Array.isArray((delta as GObject)[k] || [])) console.error('mergerecompilearr err',
-                        {sm:shouldMerge, pd:!!pastDelta, delta, pastDelta, k, dk: (delta as any)?.[k], pdk: pastDelta?.[k]});
-                    // if (!Array.isArray((delta as GObject)[k]||[])) console.log('err in delta merge', {arr:(delta as GObject)[k]||[], delta, k});
-                    // if (!Array.isArray((pastDelta as GObject)[k]||[])) console.log('err in past delta merge', {arr:(pastDelta as GObject)[k]||[], pastDelta, k});
-                    gdelta[k] = [...new Set(U.arrayMergeInPlace((delta as GObject)[k]||[], pastDelta[k]||[]))] as string[];
-                }
-
-                for (let k of allkeys) mergeRecompileArr(k);
-                U.objectMergeInPlace(pastDelta, delta);
-                delta = pastDelta; // must be inaccessible now as it merged with pastdelta, use that instead
-                for (let k in gdelta) {
-                    if (Array.isArray(gdelta[k])) pastDelta[k] = gdelta[k].filter((e:string) => e && e.indexOf('__jjObjDiff') === -1);
-                    else pastDelta[k] = gdelta[k];
-                }
-                if (debugMerge) (ret as any).mergeCounter = (pastDelta as any).mergeCounter = 1+((ret as any).mergeCounter||0)
-            }
-            else if (isRelevantChange) {
-                let user = (action as Action).sender;
-                statehistory[user].undoable.push(delta);
-                statehistory.all.undoable.push(delta);
-                if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();
-                if (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
-                if (debugMerge) {
-                    if (shouldMerge) (ret as any).notMergeCounter = (delta as any).notMergeCounter = 1+((ret as any).notMergeCounter || 0)
-                    else (ret as any).notMergeCounter = 0;
-                }
-            }
+            updateStateHistory(ret, oldState, action);
 
             return ret;
     }
 }
 
+function updateStateHistory(ret: DState, oldState: DState, action: Action): void {
+    const mergeTolerance = U.UpdatingTimer*1.5;
+
+    // update state history
+    let delta = Uobj.objectDelta(ret, oldState, true, false);
+    // if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
+    Uobj.applyObjectDelta(ret, delta, false, oldState); // check round-trip, throws exception if fails. needed to validate the action can be undone.
+    delta.timestamp = ret.timestamp;
+    delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
+    if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
+    let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
+    const allowMerge = true; // switch for debugging
+    let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>);
+    // merge if: there is a past delta, and the delta doesn't pass the filter to exist individually
+    let shouldMerge = !isRelevantChange;
+    let debugMerge = true;
+    if (!shouldMerge && (delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs)) shouldMerge = true;
+    if (!pastDelta) shouldMerge = false;
+
+    if (false && pastDelta) console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
+        isRelevantChange,
+        shouldMerge, irl: pastDelta && (delta?.timestamp||0) - pastDelta.timestamp < mergeTolerance,
+        dt: delta.timestamp, pdt: pastDelta.timestamp, diff: (delta?.timestamp||0) - pastDelta.timestamp,
+        oldState, delta});
+
+    //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.
+    if (shouldMerge && allowMerge) {
+        // pastDelta = Uobj.applyObjectDelta(pastDelta, delta); no because special handling
+        //   of __jjisEmpty etc must not be done at this stage.
+        let gdelta: Dictionary<string, string[] | GObject> = {};
+        let allkeys: Set<string> = new Set([...Object.keys(delta), ...Object.keys(pastDelta)]);
+        let mergeRecompileArr = (k: string) => {
+            // todo: reenable fix last line but remember they can be either true arrays or delta object fake arrays __jjObjDiffIsArr = true
+            return;
+            if (!(k.indexOf('RECOMPILE') >= 0 || k.indexOf('ELEMENT_') >= 0 || k === 'ClassNameChanged')) return;
+            if (k === 'ClassNameChanged') {
+                let merged: Dictionary<string> = {};
+                for (let p of allkeys) {
+                    let vnow = (delta as GObject)[k][p];
+                    let vpast = pastDelta[k][p];
+                    if (vnow === vpast) { merged[p] = vnow; continue; }
+                    if (vnow.indexOf('__jjObjDiff') !== -1) { merged[p] = vpast; continue; }
+                    merged[p] = vnow;
+                }
+                gdelta.ClassNameChanged = merged;
+                return;
+            }
+            // todo: this is troublesome because ['id1', 'empty'] + ['id2'] =  ['id1', 'empty', 'id2'] but should not have side effects? can the empty sparse arr make problems?
+            if (!Array.isArray((delta as GObject)[k] || [])) console.error('mergerecompilearr err',
+                {sm:shouldMerge, pd:!!pastDelta, delta, pastDelta, k, dk: (delta as any)?.[k], pdk: pastDelta?.[k]});
+            if (!Array.isArray((delta as GObject)[k]||[])) console.log('err in delta merge', {arr:(delta as GObject)[k]||[], delta, k});
+            if (!Array.isArray((pastDelta as GObject)[k]||[])) console.log('err in past delta merge', {arr:(pastDelta as GObject)[k]||[], pastDelta, k});
+            gdelta[k] = [...new Set(U.arrayMergeInPlace((delta as GObject)[k]||[], pastDelta[k]||[]))] as string[];
+        }
+
+        for (let k of allkeys) mergeRecompileArr(k);
+        U.objectMergeInPlace(pastDelta, delta);
+        delta = pastDelta; // must be inaccessible now as it merged with pastdelta, use that instead
+        for (let k in gdelta) {
+            if (Array.isArray(gdelta[k])) pastDelta[k] = gdelta[k].filter((e:string) => e && e.indexOf('__jjObjDiff') === -1);
+            else pastDelta[k] = gdelta[k];
+        }
+        if (debugMerge) (ret as any).mergeCounter = (pastDelta as any).mergeCounter = 1+((ret as any).mergeCounter||0)
+    }
+    else if (isRelevantChange) {
+        let user = (action as Action).sender;
+        statehistory[user].undoable.push(delta);
+        statehistory.all.undoable.push(delta);
+        if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();
+        if (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
+        if (debugMerge) {
+            if (shouldMerge) (ret as any).notMergeCounter = (delta as any).notMergeCounter = 1+((ret as any).notMergeCounter || 0)
+            else (ret as any).notMergeCounter = 0;
+        }
+    }
+}
+
+
+// used to determine if 2 deltas needs to be merged in a single undo action
 function isRelevantChangeCheck(delta: GObject<DState>, pastDelta?: GObject<DState>): boolean {
     const mergeTolerance = U.UpdatingTimer*1.5;
 
@@ -1322,6 +1377,7 @@ function isOnlyTransientTopLevelChange(ret: DState, oldState: DState): boolean {
     }
     return semanticChange !== null && TRANSIENT_TOP_KEYS.has(semanticChange);
 }
+
 function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | undefined, isundo = true): DState {
     if (!delta) return state;
     //let undonestate: DState = {...state} as DState;
@@ -1349,7 +1405,7 @@ function undorecursive(deltalevel: GObject, statelevel: GObject): void {
     // statelevel = {...statelevel}; not working if i do it here, just a new var. first time copy id done in caller func undo(). recursive copies are done before recursive step
     for (let key in deltalevel) {
         let delta = deltalevel[key];
-        // console.log("undoing", {delta, key, deltalevel, statelevel})
+        console.log("undoing", {delta, key, deltalevel, statelevel})
         //if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; }
         if (typeof delta === "object") {
         // if (U.isObject(delta, false, false, true)) {
@@ -1425,8 +1481,8 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
 }
 
 const originalFocus = HTMLElement.prototype.focus;
-let documentEventsIntervalId: ReturnType<typeof setInterval> | undefined;
-function setDocumentEvents(){
+export let documentEventsIntervalId: ReturnType<typeof setInterval> | undefined;
+export function setDocumentEvents(){
     // do not use types (imported as classes) here or it will change import order
     if (documentEventsIntervalId !== undefined) clearInterval(documentEventsIntervalId);
 
@@ -1439,6 +1495,7 @@ function setDocumentEvents(){
     };
 
     setTimeout(
+        // @ts-ignore
         ()=> $(document).off("mouseup.jjodelDocEvents").on("mouseup.jjodelDocEvents",
             (e: MouseUpEvent) => {
                 statehistory.globalcanundostate = true;
@@ -1446,7 +1503,7 @@ function setDocumentEvents(){
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    documentEventsIntervalId = setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
+    documentEventsIntervalId = setInterval(()=> { COMMIT(undefined, false, true) }, windoww.U.UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);
@@ -1581,7 +1638,7 @@ export async function stateInitializer() {
             // console.log('12 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
 
             if (!project.state) {
-                // state = {...store.getState()} as DState; // NEEDS TO BE SHALLOW COPIED or the state won't update. new project just created, never saved.
+                // state = {...DState.getState()} as DState; // NEEDS TO BE SHALLOW COPIED or the state won't update. new project just created, never saved.
                 // }
                 Constructors.persist(project);
                 recursiveCheck();

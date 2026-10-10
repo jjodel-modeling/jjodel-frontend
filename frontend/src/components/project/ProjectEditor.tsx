@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import type {
+    GObject,
+} from '../../joiner';
 import {
     LModel,
     LProject,
@@ -21,6 +24,7 @@ import {
     isDataManagerViewpoint,
     DViewPoint,
     Log,
+    DState,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import { createM2, createM1 } from '../../pages/components/Navbar';
@@ -65,7 +69,7 @@ interface OpenMenu {
  * Get the engine (platform) version from the Redux store
  */
 const getEngineVersion = (): string => {
-    const state = store.getState();
+    const state = DState.getState();
     return `v${state.version?.n || '2.0'}`;
 };
 
@@ -224,6 +228,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 const next = typeof updater === 'function'
                     ? (updater as (p: JjtlTransformation[]) => JjtlTransformation[])(prev)
                     : updater;
+                // @ts-ignore
                 SetFieldAction.new(project.id, 'transformations', next, '', false);
                 return next;
             });
@@ -1462,7 +1467,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     // Method 2: Check __raw.instanceof and resolve via Redux state
                     if (!className && (obj as any).__raw?.instanceof) {
                         const classPointer = (obj as any).__raw.instanceof;
-                        const state = store.getState() as any;
+                        const state = DState.getState() as GObject<DState>;
                         const classData = state[classPointer];
                         if (classData && classData.name) {
                             className = classData.name;
@@ -1590,7 +1595,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // This ensures we catch recently created models that haven't triggered a re-render yet.
                 // DModels live under state.idlookup (not at the root) — iterating root keys would
                 // only see "idlookup", "graphs", etc. and miss every model.
-                const freshState = store.getState() as any;
+                const freshState = DState.getState() as any;
                 const freshExistingNames: string[] = [];
                 const idlookup = freshState?.idlookup || {};
                 for (const key in idlookup) {
@@ -2333,7 +2338,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
     // Section definitions removed — navigation is now in LeftBar sidebar
 
-    const versionList = store.getState().version.conversionList;
+    const versionList = DState.getState().version.conversionList;
     return (
         <div className="project-editor">
 

@@ -379,7 +379,7 @@ exports.Generator = function(source) {
                 }
             })
         }
-        return new this.constructor(this)
+        return new this.GenericTypeParser(this, classes, enums)
     }
     
     this.filter = function(filter) {
@@ -405,7 +405,7 @@ exports.Generator = function(source) {
                 }
             })
         }
-        return new this.constructor(this)
+        return new this.GenericTypeParser(this, classes, enums)
     }
 
     this.slice = function(begin, end) {
@@ -427,7 +427,7 @@ exports.Generator = function(source) {
                     source.next(handler)
             })
         }
-        return new this.constructor(this)
+        return new this.GenericTypeParser(this, classes, enums)
     }
     
     this.reduce = function(reduce, initialValue) {
@@ -470,7 +470,7 @@ exports.Generator = function(source) {
                 })
             }            
         }
-        return new this.constructor(this)
+        return new this.GenericTypeParser(this, classes, enums)
     }
     
     this.forEach =
@@ -489,7 +489,7 @@ exports.Generator = function(source) {
                 }
             })
         }
-        return new this.constructor(this)
+        return new this.GenericTypeParser(this, classes, enums)
     }
     
     this.some = function(condition) {
@@ -522,7 +522,7 @@ exports.Generator = function(source) {
                 })
             })
         }
-        return new this.constructor(this)
+        return new this.GenericTypeParser(this, classes, enums)
     }
     
     this.every = function(condition) {
@@ -555,7 +555,7 @@ exports.Generator = function(source) {
                 })
             })
         }
-        return new this.constructor(this)
+        return new this.GenericTypeParser(this, classes, enums)
     }
     
     this.call = function(context) {
@@ -574,7 +574,7 @@ exports.Generator = function(source) {
         var index = 0
         var source = generators[index++]
         
-        return new this.constructor(function(callback) {            
+        return new this.GenericTypeParser(function (callback) {
             source.next(function handler(err, value) {
                 if (err) {
                     if (err == STOP) {
@@ -583,27 +583,25 @@ exports.Generator = function(source) {
                             return callback(STOP)
                         else
                             return source.next(handler)
-                    }
-                    else
+                    } else
                         return callback(err)
-                }
-                else
+                } else
                     return callback(null, value)
             })
-        })
+        }, classes, enums)
     }
     
     this.zip = function(generator) {
         var generators = [this]
         generators.push.apply(generators, arguments)
         
-        return new this.constructor(function(callback) {
+        return new this.GenericTypeParser(function (callback) {
             exports.list(generators)
-                .map(function(gen, next) {                    
+                .map(function (gen, next) {
                     gen.next(next)
                 })
                 .toArray(callback)
-        })
+        }, classes, enums)
     }
     
     this.expand = function(inserter, constructor) {
@@ -662,7 +660,7 @@ exports.Generator = function(source) {
                 }
             })            
         }
-        return new this.constructor(this)
+        return new this.GenericTypeParser(this, classes, enums)
     }
 
     this.join = function(separator) {
@@ -691,8 +689,8 @@ exports.Generator = function(source) {
                 }
             })
         }
-        return new this.constructor(this)
-        
+        return new this.GenericTypeParser(this, classes, enums)
+
     }
     
     this.end = function(breakOnError, callback) {

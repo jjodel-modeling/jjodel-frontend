@@ -40,7 +40,7 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
     if (!text) { LOG('doT2M: missing text'); return null; }
     if (className && className[0] === 'D') className = className.substring(1);
     if (!language) language = 'eCore/JSON';
-    if (!s) s = store.getState();
+    if (!s) s = DState.getState();
     // text = U.jsonSanitize_dangerous(text);
     let ret: GObject = null as any;
     let msg: string; // error message
@@ -233,7 +233,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
     // text = U.jsonSanitize_dangerous(text);
     let ret: string = '';
     if (!language) { language = 'eCore/JSON'; }
-    let s = store.getState();
+    let s = DState.getState();
     if (!(language in s.languages)) {
         let msg = 'M2T error, language "'+language+'" does not exist.';
         Log.ee(msg);
@@ -446,7 +446,7 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
     if (!DPointerTargetable.isD(data0)) { Log.ee('T2M transformation must be called on a modelling element, found instead: ' + typeof data0, {element:data0, text, language}); return; }
     let data: LModelElement = LPointerTargetable.from(data0 as any);
     let className = data.className;
-    let s: DState = store.getState();
+    let s: DState = DState.getState();
     let langObj = s.languages[language];
     if (className !== 'DModel') {
         let allowPartial = langObj.t2m[langObj.t2m.engine].allowPartials;
@@ -462,7 +462,9 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
         if (ret.length === 1) ret = ret[0];
         else Log.ee('T2M returned an array instead of an object', {ret, data, language});
     }
-    // console.log('doT2M json pre', {data, text, ret:JSON.parse(JSON.stringify(ret))});
+    const copy = U.jsonCopy(ret);
+    // console.log('doT2M json pre', {data, text, ret:copy});
+    windoww.ecorejson = copy;
     if (!(data as LObject).t2m) {
         Log.ee("The T2M transformation cannot be applied yet to " + className + " elements.", {className, ret, data, language});
         return;

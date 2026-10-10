@@ -59,7 +59,7 @@ export function T2MEditor(props: EditorProps & {onBlur?: (value: string|undefine
 
 function _export(data: LModelElement | undefined, extension: string, content: string): undefined {
     let name: string = data?.name || "export";
-    console.trace("export");
+    // console.trace("export");
     U.download(name+"."+extension.toLowerCase(), content);
 }
 

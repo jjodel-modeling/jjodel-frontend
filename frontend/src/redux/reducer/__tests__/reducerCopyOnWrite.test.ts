@@ -135,7 +135,7 @@ const redoAction = () => ({ type: 'RedoAction', className: 'RedoAction', value: 
 /** Each dispatch 1 s after the previous one: outside the 450 ms merge window, as the probe's gestures were. */
 function dispatch(state: any, action: any): any {
     clock += 1000;
-    return _reducer(state, action as any);
+    return _reducer(state, action as any, false);
 }
 
 /** A state holding: an object O1 with name, and three slots that already hold a value (isMirage false). */

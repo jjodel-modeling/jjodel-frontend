@@ -1,6 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
-import type {NestedArray} from "../joiner";
+import {NamedArr, NestedArray, Pointers} from "../joiner";
 import {Any, DClass, DGraphElement, LClass, LGraphElement} from "../joiner";
 import {
     AbstractConstructor,
@@ -55,6 +55,17 @@ import {proxyToIdReplacer} from "../model/unproxy";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 // console.warn('ts loading U log');
+
+type ConsoleMethod = "log" | "warn" | "error" | "info" | "debug" | "trace";
+
+const CONSOLE_METHODS: ConsoleMethod[] = [
+    "log",
+    "warn",
+    "error",
+    "info",
+    "debug",
+    "trace",
+] as const;
 
 @RuntimeAccessible('Color')
 export class Color {
@@ -177,12 +188,15 @@ export class U {
     private static clickedOutsideMapEntries: Element[] = null as any; // because weak maps are not iterable and cannot get a list of keys
     public static UpdatingTimer: number = 300;
     public static liveStateChanges: boolean = false;
+    public static storeMetadata: boolean = false;
+    public static storeNodeData: boolean = false;
 
 
     // to register call with both parameters. to remove a listener call with callback=undefined
     public static navigating: boolean = false; // if i'm changing page, i stop rendering to prevent meaningless errors.
-    static debug: boolean = false;
-    static uniqueNames: boolean = true;
+    public static debug: boolean = false;
+    public static uniqueNames: boolean = true;
+    public static safeMode: boolean = false; // if off, it skips some try-catch for easier debug. search and consider merging with local variables "canthrow" or similar
     static clickedOutside(currentTarget0: Element|Any<Event>, callback: undefined | ((e: Element, evt: JQuery.ClickEvent) => void)) {
         if (!currentTarget0) return;
         let currentTarget: Element = (currentTarget0 as any)?.currentTarget || currentTarget0 as any;
@@ -250,6 +264,14 @@ export class U {
             window.removeEventListener('beforeunload', U.beforeUnloadHandler);
             U.beforeUnloadHandler = null;
         }
+    }
+
+    public static toIdentifier(s: string | undefined, replacement = "_", allowUnicode: boolean = false): string {
+        if (typeof s !== "string") return "";
+        return s.trim()
+            // replace special/punctuation/whitespace sequences with _
+            .replace(allowUnicode ? /[<>:;,!?'"(){}\[\]@#%^&*+=|\\\/`~.\-\s]+/g : /[^A-Za-z0-9_$]+/g, replacement)
+            .replace(/^([0-9])/, replacement + "$1");
     }
 
     private static clickedOutsideCallback(e: any & ClickEvent){
@@ -365,9 +387,61 @@ export class U {
         return Object.values(map);
     }
 
-    static solveEcoreType(v: string): string{
-        if (v.indexOf('#//') === 0) v = v.substring(3);
+    public static getEcorePrimitivePointer(arg?: LModelElement | DModelElement | Pointer | DocString<"name">): DocString<"full ecore primitive pointer"> {
+        let name0: string = (arg as any)?.name || arg;
+        if (typeof name0 !== "string") return "";
+        let name = name0.trim();
+        if (name.startsWith(Pointers.prefix)) name = name.substring(Pointers.prefix.length);
+        if (name[0] === "_") name = name.substring(1);
+        let primitiveName: string = '';
+        name = name.toLowerCase();
+        if (name[0] === "e") name = name.substring(1);
+
+        switch (name) {
+            case "void":     primitiveName = 'Void';    break;
+            case "char":     primitiveName = 'Char';    break;
+            case "string":   primitiveName = 'String';  break;
+            case "date":     primitiveName = 'Date';    break;
+            case "boolean":  primitiveName = 'Boolean'; break;
+            case "byte":     primitiveName = 'Byte';    break;
+            case "short":    primitiveName = 'Short';   break;
+            case "int":      primitiveName = 'Int';     break;
+            case "long":     primitiveName = 'Long';    break;
+            case "float":    primitiveName = 'Float';   break;
+            case "double":   primitiveName = 'Double';  break;
+        }
+        if (primitiveName) return "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//" + primitiveName;
+        let id: Pointer | null = Pointers.from(arg as any) || null;
+        return "ecore:EDataType https://app.jjodel.io/"+windoww.DUser.getUser()?.name+"/"+(id || name0)+"/";
+    }
+
+    static solveEcoreType(v: string, asPointer: boolean = false, casePrefixTolerant = true, voidReturn = '', emptyReturn = ''): string {
+        if (!v) return v;
+        const prefix = "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//"
+        if (v.indexOf(prefix) === 0) v = v.substring(prefix.length);
+        if (casePrefixTolerant) {
+            let v0 = v;
+            v = v.trim().toLowerCase();
+            if (v[0] === "e") v = v.substring(1).trimStart();
+            switch (v) {
+                default: return asPointer ? "" : v0;
+                case "void":     v = 'Void';    break;
+                case "char":     v = 'Char';    break;
+                case "string":   v = 'String';  break;
+                case "date":     v = 'Date';    break;
+                case "boolean":  v = 'Boolean'; break;
+                case "byte":     v = 'Byte';    break;
+                case "short":    v = 'Short';   break;
+                case "int":      v = 'Int';     break;
+                case "long":     v = 'Long';    break;
+                case "float":    v = 'Float';   break;
+                case "double":   v = 'Double';  break;
+            }
+            if (!asPointer) return v;
+            return (window as any).Pointers.prefix + "_E" + v.toUpperCase();
+        } else
         switch (v) {
+            default: return asPointer ? "" : v;
             case ShortAttribETypes.EVoid:     v = 'Void';    break;
             case ShortAttribETypes.EChar:     v = 'Char';    break;
             case ShortAttribETypes.EString:   v = 'String';  break;
@@ -380,7 +454,13 @@ export class U {
             case ShortAttribETypes.EFloat:    v = 'Float';   break;
             case ShortAttribETypes.EDouble:   v = 'Double';  break;
         }
-        return v;
+        if (!asPointer) return v;
+        // return as pointer
+        if (v === "Void") return voidReturn;
+        if (!v) return emptyReturn;
+        const ptr = (window as any).Pointers.prefix + "_E" + v.toUpperCase();
+        // if (!LPointerTargetable.from(ptr)) return '';
+        return ptr;
     }
     static alertSeparator: string = '£';
     /**
@@ -428,7 +508,7 @@ export class U {
     }
     static async compressedState(dproject: DProject): Promise<string> {
         let id: Pointer<DProject> = dproject.id;
-        const state = {...store.getState()};
+        const state = {...DState.getState()};
         const idlookup: Record<Pointer, DPointerTargetable> = {};
         for (const [pointer, object] of Object.entries(state.idlookup) as [Pointer, DPointerTargetable][]) {
             if ((object as DGraphElement).isSelected) (object as DGraphElement).isSelected = {};
@@ -1348,7 +1428,7 @@ export class U {
         }
     }
 
-    static arrayUnique<T>(arr: T[]): Array<T> { return [ ...new Set<T>(arr)]; }
+    static arrayUnique<T>(arr: T[]): Array<T> { return [...new Set<T>(arr)]; }
 
     static fileReadContent(file: File, callback: (content :string) => void): void {
         const textType = /text.*/;
@@ -1606,6 +1686,7 @@ export class U {
 
     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
     static isNumber(o: any): o is number { return typeof o === "number" && !isNaN(o); }
+    static isBool(o: any): o is boolean { return typeof o === "boolean"; }
     static isPrimitive(o: any, returnIfNull=true, returnIfUndefined=true, returnIfSymbol = false): o is PrimitiveType {
         switch (typeof o) {
             case 'symbol': return returnIfSymbol; // it is primitive by definition, but behaves too much differently
@@ -1645,7 +1726,7 @@ export class U {
         // nb: mind that typeof [] === 'object'
         return typeof v === 'object'; }
 
-    static objectFromArray<V extends any>(arr: V[], getKey?: keyof V|((entry:V) => string)): Dictionary<string, V>{
+    static objectFromArray<V extends any>(arr: V[], getKey?: keyof V|((entry:V) => string), getVal?: any|((entry:V) => any)): Dictionary<string, V>{
         if (!arr || !Array.isArray(arr)) return {};
         // @ts-ignore
         return arr.reduce((acc, val, i) => {
@@ -1654,8 +1735,15 @@ export class U {
             if (getKey === undefined) key = val as any;
             else if (typeof getKey === 'string') key = (val || {} as any)[getKey] as any;
             else if (typeof getKey === 'function') key = getKey(val);
+
             // else key = i;
             if (key === null || key === undefined) return acc; // skip element
+
+            if (typeof getVal === 'string') val = (val || {} as any)[getKey] as any;
+            else if (typeof getVal === 'function') val = (getVal as any)(val);
+            else if (getVal === '__jj_empty') val = undefined as any;
+            else if (getVal !== undefined) val = getVal;
+
             // @ts-ignore
             acc[key] = val;
             return acc;
@@ -1676,11 +1764,11 @@ export class U {
      return !!v;
     }
 
-    static fromBoolString<T extends any>(str: string | boolean): boolean;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
+    static fromBoolString<T extends any>(str?: string | boolean | null): boolean;
+    static fromBoolString<T extends any>(str?: string | boolean | null, defaultVal?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean | null, defaultVal?: T, nullValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean | null, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean | null, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
         if (str === false) return false;
         if (str === true) return true;
         str = ('' + str).toLowerCase().trim();
@@ -1691,6 +1779,54 @@ export class U {
         // if (defaultVal === true) return str === "false" || str === 'f' || str === '0'; // false solo se è esplicitamente false, true se ambiguo.
         if (str === "false" || str === 'f' || str === '0') return false;
         return defaultVal;
+    }
+
+
+    private static _consoleMemory : {method: ConsoleMethod, args: unknown[]}[] = [];
+    private static _consoleOriginals: Partial<Record<ConsoleMethod, (...args: unknown[]) => void>> = {};
+    private static _isConsoleSuspended: boolean = false;
+    // Replaces console methods with placeholders that just memorize args.
+    static consoleSuspend(memorizes: boolean = true) {
+        if (U._isConsoleSuspended) return;
+        U._isConsoleSuspended = true;
+        for (const method of CONSOLE_METHODS) {
+            U._consoleOriginals[method] = console[method];
+            console[method] = memorizes ?
+                ((...args: unknown[]) => { U._consoleMemory.push({ method, args }); })
+            : (()=> {});
+        }
+    }
+
+    // Restore original logger functions, and calls them with original parameters.
+    static consoleResume(printMemory: boolean = true) {
+        if (!U._isConsoleSuspended) return;
+        for (const method of CONSOLE_METHODS) {
+            console[method] = U._consoleOriginals[method]!;
+        }
+        if (printMemory) for (const { method, args } of U._consoleMemory) {
+            console[method](...args);
+        }
+        U._consoleMemory = [];
+        U._isConsoleSuspended = false;
+    }
+
+    static measure(f: ()=>void, times: number = 100): number {
+        if (typeof f !== "function") return -1;
+        if (typeof times !== "number" || isNaN(times)) return -1;
+        U.consoleSuspend(true);
+        let start = Date.now();
+        let i: number = 0;
+        while (i++ < times) {
+            try { f(); }
+            catch (e: any) {
+                i = times + 1 ; // stops with overflow counter (signals error)
+                console.error("Measure error:", e);
+            }
+        }
+        let end = Date.now();
+        U.consoleResume(true);
+        if (i > times + 1) return -1;
+        return end - start;
     }
 
     static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false): {added: T[], removed: T[], starting: T[], final: T[]} {
@@ -1897,6 +2033,52 @@ export class U {
         return +ret;
     }
 
+    static closerTo_old(o: GObject, keysA: GObject | string[], keysB: GObject | string[]): {A: number, B: number, closestKeys: GObject | string[]}{
+        const useSetA = Array.isArray(keysA);
+        const useSetB = Array.isArray(keysB);
+        const aKeys = useSetA ? new Set<string>(['a1', 'a2', 'a3']) : null;
+        const bKeys = useSetB ? new Set<string>(['b1', 'b2', 'b3']) : null;
+        const total = Object.keys(o).length || 1; // avoid div by zero
+        const keys = Object.keys(o);
+        const A = keys.filter(k => aKeys ? aKeys.has(k) : k in keysA).length / total;
+        const B = keys.filter(k => bKeys ? bKeys.has(k) : k in keysA).length / total;
+        return {A, B, closestKeys: B > A ? keysB : keysA};
+    }
+
+// determines if the object is closer to type A or B, by passing the keys of A and B as string arrays, or an object assumed to have all the keys of A, B.
+// @return: a dictionary with scores to each key set, counting how many keys were present.
+//            each key set is scored with A-Z letters or by index position in the argument.
+static closerTo(o: GObject, ...keysSets: (GObject | string[])[]): Dictionary<string, number> & Dictionary<number, number> & {
+        closestKeys: GObject | string[],
+        closestIndex: number
+} {
+    const total = Object.keys(o).length || 1;
+    const oKeys = Object.keys(o);
+
+    const ret: Dictionary<string, number> & Dictionary<number, number> & {
+        closestKeys: GObject | string[],
+        closestIndex: number
+    } = {} as any;
+    const counts: Record<string, number> = ret;
+    let maxScore = -1;
+    let closestIndex = 0;
+
+    keysSets.forEach((keysX, i) => {
+        const useSet = Array.isArray(keysX);
+        const setX = useSet ? new Set<string>(keysX as string[]) : null;
+        const score = oKeys.filter(k => setX ? setX.has(k) : k in (keysX as GObject)).length / total;
+
+        // store by index
+        ret[i] = score;
+        // store by uppercase letter (A=0, B=1, ... Z=25, falls back to index if > 25)
+        if (i < 26) counts[String.fromCharCode(65 + i)] = score;
+        if (score > maxScore) { maxScore = score; ret.closestIndex = i; }
+    });
+
+    ret.closestKeys = keysSets[ret.closestIndex];
+    return ret;
+}
+
     // faster than jquery, underscore and many native methods checked https://stackoverflow.com/a/59787784
     public static isEmptyObject(obj: GObject | undefined): boolean {
         if (typeof obj !== "object") return false;
@@ -2082,18 +2264,17 @@ export class U {
         // or err.toString --> "Error: message" dunno if stack is printed too i tested with a fake error.
     }
 
-    static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], darr?:D[]): L[] & Dictionary<DocString<"$name">, L>{
-        if (!darr || darr.length !== larr.length) darr = larr.map(l=>l.__raw as D);
-
-        for (let i = 0; i < larr.length; i++) if (darr[i] && larr[i]) (larr as GObject)["$"+(darr[i] as GObject).name] = larr[i];
-        /*for (let index of Object.getOwnPropertyNames(larr)) { // ownPropertyNames skips "first, last, separator" created by extending array prototype
-            if (index === "length") continue;
-            let d = darr[index as any as number];
-            let l = larr[index as any as number];
-            if (!d || !l) continue;
-            (larr as any)["$" + (d as any).name] = l;
-        }*/
-        return larr as any;
+    static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], names?: string[] | D[] ): NamedArr<L> {
+        // let names: any = null;
+        if (!names || names.length !== names.length) names = larr.map(l=> (l as any).eid);
+        let ret: NamedArr<L> = larr as any;
+        for (let i = 0; i < larr.length; i++) {
+            let name = (names[i] as unknown as LNamedElement)?.name || names[i];
+            if (typeof name !== "string") continue;
+            if (!ret[name]) ret[name] = larr[i];
+            if (!ret["$"+name]) ret["$"+name] = larr[i];
+        }
+        return ret
     }
     public static isPromise(value: any): value is Promise<any> {
         return (
@@ -2177,6 +2358,9 @@ export class U {
         return U.deepReplace(o, replacer);
     }
 
+    static jsonCopy(obj: any): any {
+        return JSON.parse(JSON.stringify(obj));
+    }
     static deepCopy(obj: any, circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any)): any {
         return U.deepReplace(obj, undefined, circularReferenceValue);
     }
@@ -2798,6 +2982,21 @@ export class U {
         if (m === Number.NEGATIVE_INFINITY) return negative;
         return false;
     }
+    public static numericHash(str: string, min: number = 0, max: number = Number.NEGATIVE_INFINITY): number {
+        if (max === Number.NEGATIVE_INFINITY) { max = min; min = 0; }
+        if (isNaN(min)) min = 0;
+        if (isNaN(max)) return min;
+        if (max === min) return min;
+        if (typeof str !== "string") return min;
+        if (min > max) { let tmp = min; min = max; max = tmp; }
+
+        let hash = 2166136261; // FNV offset basis
+        for (let i = 0; i < str.length; i++) {
+            hash ^= str.charCodeAt(i);
+            hash = (hash * 16777619) >>> 0; // FNV prime, keep unsigned 32-bit
+        }
+        return min + (hash % (max - min + 1));
+    }
 
     public static getHashParams(value: string): Dictionary<string, string>{
         let search = window.location.hash;
@@ -2807,7 +3006,7 @@ export class U {
         for (let [key, entry] of new URLSearchParams(search).entries()) ret[key] = entry;
         return ret;
     }
-    public static getProjectID_URL(): string | null { return U.getHashParam('id'); }
+    public static getProjectID_URL(): Pointer<DProject> { return U.getHashParam('id') as any; }
     public static getHashParam(arg_name: string): string | null {
         let search = window.location.hash;
         let _index = search.indexOf('?');
@@ -2955,6 +3154,169 @@ export class U {
         return window['process'].env[varr] || '';
     }
 
+    // for m1 ecore references check LValue.resolveReference
+    public static ecoreSerializeValue(value: any, type: string): string {
+        switch (type.toLowerCase()) {
+
+            // ── Integer types — plain decimal, no frills ──────────────────────────
+            case "byte":
+            case "ebyte":
+            case "short":
+            case "eshort":
+            case "int":
+            case "eint":
+            case "long":
+            case "elong":
+            case "biginteger":
+            case "ebiginteger":
+                return Math.trunc(value).toString(10);
+
+            // ── Floating point — mirror Java's Double.toString() / Float.toString()
+            //    Rules:
+            //      - always at least one decimal digit (never "12", always "12.0")
+            //      - scientific notation if abs >= 1e7 or (abs < 1e-3 and abs > 0)
+            //      - canonical sign: "E" uppercase, no leading zeros in exponent
+            //      - special values: NaN, Infinity, -Infinity
+            case "float":
+            case "efloat":
+            case "double":
+            case "edouble":
+            case "bigdecimal":
+            case "ebigdecimal":
+                const n = Number(value);
+                if (isNaN(n)) return "NaN";
+                if (!isFinite(n)) return n > 0 ? "Infinity" : "-Infinity";
+                if (n === 0) return Object.is(n, -0) ? "-0.0" : "0.0";
+                const abs = Math.abs(n);
+                const needsSci = abs !== 0 && (abs >= 1e7 || abs < 1e-3);
+                /**
+                 * Formats a number in decimal form, always with at least one decimal digit,
+                 * trimming unnecessary trailing zeros beyond the first decimal digit.
+                 * Mirrors Java Double.toString() decimal output.
+                 */
+                let formatFloat = (n: number): string => {
+                    let s = n.toPrecision(17).replace(/0+$/, "");
+                    if (!s.includes(".")) s += ".0";
+                    if (s.endsWith(".")) s += "0";
+                    return s;
+                }
+
+                // Produce Java-style scientific notation: 1.5E7 not 1.5e+7
+                // JavaScript's toExponential uses lowercase 'e' and explicit '+' sign
+                // We need to match Java: uppercase E, no '+', no leading zeros in exponent
+                if (needsSci) {
+                    const exp = Math.floor(Math.log10(abs));
+                    const mantissa = n / Math.pow(10, exp);
+                    return `${formatFloat(mantissa)}E${exp}`;
+                } else return formatFloat(n);
+            // ── Date — EMF uses ISO 8601 via Java's XMLTypeFactory ────────────────────
+            case "date":
+            case "edate": {
+                const d = value as Date;
+                const yyyy = d.getUTCFullYear().toString().padStart(4, "0");
+                const MM   = (d.getUTCMonth() + 1).toString().padStart(2, "0");
+                const dd   = d.getUTCDate().toString().padStart(2, "0");
+                const HH   = d.getUTCHours().toString().padStart(2, "0");
+                const mm   = d.getUTCMinutes().toString().padStart(2, "0");
+                const ss   = d.getUTCSeconds().toString().padStart(2, "0");
+                const SSS  = d.getUTCMilliseconds().toString().padStart(3, "0");
+                return `${yyyy}-${MM}-${dd}T${HH}:${mm}:${ss}.${SSS}+0000`;
+            }
+
+// ── Duration (XMLType) ─────────────────────────────────────────────────────
+// ISO 8601 duration: P1Y2M3DT4H5M6S
+            case "duration":
+            case "eduration": {
+                // value is expected as total milliseconds
+                const ms    = value as number;
+                const sign  = ms < 0 ? "-" : "";
+                const abs   = Math.abs(ms);
+
+                const sec  = 1000;
+                const min  = 60 * sec;
+                const hr   = 60 * min;
+                const day  = 24 * hr;
+
+                const days  = Math.floor(abs / day);
+                const hours = Math.floor((abs % day) / hr);
+                const mins  = Math.floor((abs % hr)  / min);
+                const secs  = Math.floor((abs % min) / sec);
+                const frac  = abs % sec;
+                const secStr = frac > 0
+                    ? `${secs}.${frac.toString().padStart(3, "0")}S`
+                    : `${secs}S`;
+                return `${sign}P${days}DT${hours}H${mins}M${secStr}`;
+            }
+
+// ── EByteArray — Base64 ───────────────────────────────────────────────────
+            case "bytearray":
+            case "ebytearray": {
+                const bytes = value as Uint8Array;
+                return btoa(String.fromCharCode(...bytes));
+            }
+
+// ── EChar / ECharacterObject ──────────────────────────────────────────────
+            case "char":
+            case "echar":
+            case "character":
+            case "echaracterobject":
+                return String(value);
+
+// ── Object wrapper types (boxed primitives) ───────────────────────────────
+// EMF generates EIntegerObject, EDoubleObject etc. for boxed Java types
+// they serialize identically to their primitive counterparts
+            case "integerobject":
+            case "eintegerobject":
+            case "shortobject":
+            case "eshortobject":
+            case "longobject":
+            case "elongobject":
+            case "byteobject":
+            case "ebyteobject":
+                return Math.trunc(value).toString(10);
+
+            case "floatobject":
+            case "efloatobject":
+            case "doubleobject":
+            case "edoubleobject":
+                // reuse float/double logic — delegate to the double case
+                return U.ecoreSerializeValue(value, "double");
+
+            case "booleanobject":
+            case "ebooleanobject":
+                return value ? "true" : "false";
+
+// ── EFeatureMapEntry ──────────────────────────────────────────────────────
+// not directly serializable as a scalar — omit or throw
+            case "efeaturemapentry":
+                throw new Error("EFeatureMapEntry is not scalar-serializable");
+
+// ── EJavaObject / EJavaClass ──────────────────────────────────────────────
+// no canonical serialization — EMF uses toString() as fallback
+            case "ejavaobject":
+            case "ejavaclass":
+                return String(value);
+        }
+    return "";
+    }
+
+    static debugSimulateSlow() {
+        let count: number = (window as any).debugslow || 0;
+        for (let i = 0; i < count; i++) {
+            let s = DState.getState();
+            if (!s) return;
+            let s2 = {};
+            let delta1 = (window as any).Uobj.objectDelta(s2, s);
+            let delta2 = (window as any).Uobj.objectDelta(s, s2);
+            (window as any).Uobj.applyObjectDelta(s, delta2, s2);
+            (window as any).Uobj.applyObjectDelta(s2, delta1, s);
+        }
+    }
+
+    // safer dictionary version, that can use __proto__ as key safely as it doesn't have any proto (not even to Object)
+    // overriding built-in symbols can still be dangerous.
+    // warning: obj+"" or obj.toString() will throw exception as it doesn't inherit toString method, same with other Object properties/funcs.
+    public static safeEmptyMap(): Dictionary { return Object.create(null); }
 }
 export type ThrottleState = {timerID: null|number, decay: number, initialDelay:number, currentDelay:number, minDelay: number,
     pending:Function[], cumulative: boolean};
@@ -3032,6 +3394,19 @@ export class myFileReader {
 }
 @RuntimeAccessible('Uarr')
 export class Uarr{
+    static clampIndex(index: number, length: number): number {
+        if (index > 0 && index <= length -1) return index;
+        // index += length * Math.abs(Math.ceil(index / length));
+        return ((index % length) + length) % length;
+    }
+
+    // XMI parsers emit a single object when there is one child,
+    // and an array when there are multiple. Normalise to always array.
+    static normalizeArray<T>(value: T | T[] | undefined): T[] {
+        if (value === undefined || value === null) return [];
+        return Array.isArray(value) ? value : [value];
+    }
+
     // filter can either be a value or a filter function
     static findAllIndexes<T extends any>(arr: T[], filter: T | ((val: T, index: number, arr: T[]) => boolean)): number[] {
         const ret: number[] = [];
@@ -3076,14 +3451,14 @@ export class Uarr{
         return subarray.every((el) => array.includes(el));
     }
 
-    public static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false, unsorted = false): {added: T[], removed: T[], starting: T[], final: T[]} {
+    public static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false, unsorted = true, equals?: (e1:T, e2:T) => boolean): {added: T[], removed: T[], starting: T[], final: T[]} {
         let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
         ret.starting = starting;
         ret.final = final;
         if (!starting) starting = [];
         if (!final) final = [];
-        ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
-        ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
+        ret.removed = Uarr.arraySubtract1(starting, final, false, filter, equals); // start & !end
+        ret.added = Uarr.arraySubtract1(final, starting, false, filter, equals); // end & !start
         if (filter) {
             ret.removed = ret.removed.filter(e => !!e);
             ret.added = ret.added.filter(e => !!e);
@@ -3096,11 +3471,27 @@ export class Uarr{
         return arr1.filter( e => arr2.indexOf(e) >= 0);
     }
 
+    static arraySubtract1<T>(arr1: T[], arr2: T[], inPlace: boolean, filter = false, equals?: (e1:T, e2:T) => boolean): any[]{
+        const ret: any[] = inPlace ? arr1 : [...arr1];
+        let toDelete = Symbol("to_delete");
+        for (let e1 of arr2) {
+            for (let i = 0; i < ret.length; i++) {
+                let e2 = ret[i];
+                if (e2 === toDelete) continue;
+                if (equals ? !equals(e1, e2) : e1 !== e2) continue;
+                ret[i] = toDelete;
+            }
+        }
+        if (filter) return ret.filter(e=> !!e);
+        return ret.filter(e=> e !== toDelete);
+    }
+
     static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{
         let i: number;
         const ret: any[] = inPlace ? arr1 : [...arr1];
         for (i = 0; i < arr2.length; i++) { U.arrayRemoveAll(ret, arr2[i]); }
-        return ret; }
+        return ret;
+    }
 
     static equals<T extends any>(a1: T[], a2: T[], deep: boolean): boolean {
         Log.ex(deep, "deep array comparison is not supported yet");
@@ -3300,6 +3691,10 @@ export class Uarr{
         }
         // console.log('Array shift debug', {srcArr, newArr, additionalOffsets, moveOffset, moveDirection});
         return newArr;
+    }
+
+    static toDictionary<V extends any>(arr: V[], getKey?: keyof V|((entry:V) => string)): Dictionary<string, V>{
+        return U.objectFromArray(arr, getKey);
     }
 }
 
@@ -3517,7 +3912,7 @@ export class Keystrokes {
             // console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
             switch (e.key) {
                 case Keystrokes.escape:
-                    if (store.getState()?.isEdgePending?.source) SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+                    if (DState.getState()?.isEdgePending?.source) SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
                     break;
                 // if those are the last key pressed is not an event, it is still typing.
                 case 'Control': case 'Shift': case 'Alt': return;
@@ -3654,6 +4049,9 @@ export enum AttribETypes {
   ELongObj = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELongObject', */
     // EELIST = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EEList', // List<E> = List<?>
 }
+
+// alias
+export function isAttribEType(s: any): boolean { return !!U.solveEcoreType(s, false, false); }
 
 // export type Json = object;
 

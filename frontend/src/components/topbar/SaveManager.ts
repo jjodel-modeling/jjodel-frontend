@@ -32,7 +32,7 @@ export class SaveManager {
         let project = LProject.getProject();
         if (project) ProjectsApi.save(project);
         U.isProjectModified = false;
-        /*SaveManager.tmpsave = store.getState();
+        /*SaveManager.tmpsave = DState.getState();
         localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave));
         console.clear();
         // console.log(JSON.stringify(SaveManager.tmpsave))*/
@@ -185,7 +185,7 @@ export class SaveManager {
     }
 
     static exportLayout_click(toFile: boolean) {
-        let lmodel: LModel = (LPointerTargetable.wrap(store.getState().models[0]) as LModel);
+        let lmodel: LModel = (LPointerTargetable.wrap(DState.getState().models[0]) as LModel);
         // lmodel.node?.allSubNodes
 
     }

@@ -35,6 +35,8 @@ interface ScrollState {
 type EventLetter = 's'|'ing'|'e';
 type MeasurableUIEvent = ResizableEvent | DraggableEvent | RotatableEvent;
 
+type JQUIEVENT = {'s': 'start', 'ing': string, 'e':'stop'};
+
 @RuntimeAccessible('MeasurableComponent')
 export class MeasurableComponent extends Component<MeasurableAllProps, MeasurableState>{
     static cname: string = "MeasurableComponent";
@@ -268,7 +270,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             this.childmode(e.target, e, evtkind, ui);
         }
     }
-    makeEvent(options: GObject<DraggableOptions>, type: string, evtkey: keyof typeof jquievent) {
+    makeEvent(options: GObject<DraggableOptions>, type: string, evtkey: keyof JQUIEVENT) {
         let eventmap = {
             's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
             'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},

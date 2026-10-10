@@ -3206,6 +3206,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     label: 'Add reference',
                     icon: 'bi-link-45deg',
                     onClick: () => {
+                        // @ts-ignore
                         const lClass: any = LPointerTargetable.fromPointer(node.id)?.model;
                         if (!lClass || typeof lClass.addReference !== 'function') return;
                         // Unique name among the class's existing references

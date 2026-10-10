@@ -1,7 +1,7 @@
 import {
     Dictionary,
     DModel,
-    DProject,
+    DProject, DState,
     GObject,
     LProject,
     Pointer,
@@ -136,7 +136,7 @@ class ProjectsApi {
         // wrote it over the live entry, and a viewpoint added in between was lost
         // (P-2026-09-29-2120). `__raw` remains the fallback for a project that is not in
         // `idlookup`.
-        const liveProject = (store.getState() as GObject).idlookup?.[project.id] as DProject | undefined;
+        const liveProject = (DState.getState() as GObject).idlookup?.[project.id] as DProject | undefined;
         const dProject = {...(liveProject ?? project.__raw)} as DProject;
         dProject.lastModified = Date.now();
         dProject.viewpointsNumber = project.viewpoints.length;
@@ -152,7 +152,7 @@ class ProjectsApi {
         // no longer writes the advanced value back onto that mirror (see the block at
         // the end of the method). `dProject.version` remains the fallback for a project
         // that is not in `idlookup`.
-        const currentVersion = ((store.getState() as GObject).idlookup?.[dProject.id]?.version) ?? dProject.version;
+        const currentVersion = ((DState.getState() as GObject).idlookup?.[dProject.id]?.version) ?? dProject.version;
         const nextVersion = silent ? currentVersion : getNextVersionNumber(currentVersion);
         dProject.version = nextVersion;
         // console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
@@ -233,7 +233,7 @@ class ProjectsApi {
             // one explicit save: `clonedCounter` +0 and zero undo steps, against +1 and one
             // step for the same `SetFieldAction` fired without the in-place write.
             const raw = project.__raw as DProject | undefined;
-            const live = (store.getState() as GObject).idlookup?.[dProject.id];
+            const live = (DState.getState() as GObject).idlookup?.[dProject.id];
             if (raw && raw !== live) raw.version = nextVersion;
         }
 
@@ -267,7 +267,7 @@ class ProjectsApi {
 
         let project = json as unknown as DProject;
         project.isFavorite = false;
-        let state = store.getState();
+        let state = DState.getState();
         let resp_replace = 'Replace';
         let resp_dup = 'Duplicate';
         let response: string = resp_dup;
@@ -517,7 +517,7 @@ class Online {
      *  comunque; quello di successo e' salito a `ProjectsApi.save`. */
     static async save(project: DProject): Promise<boolean> {
         project = {...project} as any;
-        if (!project.version) project.version = store.getState().version.n;
+        if (!project.version) project.version = DState.getState().version.n;
         if (!('_Id' in project)) (project as any)._Id = undefined;
         const updateProjectRequest = new UpdateProjectRequest(project);
         // console.log('online save request: ', {updateProjectRequest});

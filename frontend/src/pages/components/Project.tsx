@@ -1,4 +1,4 @@
-import {Defaults, Dictionary, DocString, Pointer, Pointers, store, SetFieldAction} from '../../joiner';
+import {Defaults, Dictionary, DocString, Pointer, Pointers, store, SetFieldAction, DState} from '../../joiner';
 import {Constructors, DProject, LProject, R, U} from '../../joiner';
 import React, {JSX, useState} from "react";
 
@@ -146,7 +146,7 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
     let projectNames: Dictionary<DocString<'name'>, Pointer>;
     if (pnames) projectNames = pnames;
     else {
-        let state = store.getState();
+        let state = DState.getState();
         projectNames = {};
         for (let ptr of state.projects) {
             let p = state.idlookup[ptr];
