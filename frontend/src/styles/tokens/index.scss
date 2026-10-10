@@ -14,10 +14,6 @@
  *     border-radius: var(--radius-md);
  *     transition: var(--transition-fast-all);
  *   }
- *
- * Theme switching:
- *   Add [data-theme="dark"] to <html> or <body> element
- *   JavaScript: document.documentElement.setAttribute('data-theme', 'dark');
  */
 
 /* ============================================
@@ -28,11 +24,8 @@
 /* 1. Colors - Load light theme first (default) */
 @import './colors-light';
 
-/* 2. Colors - Dark theme (overrides when [data-theme="dark"]) */
-@import './colors-dark';
-
 /* 2-bis. Form palettes - the appearance axis of the Data Manager (R-SKIN).
-   AFTER colors-dark, and the order is load-bearing in one direction only: these rules
+   AFTER the colours, and the order is load-bearing in one direction only: these rules
    sit on a DESCENDANT (.instance-manager), so they win by inheritance and not by
    cascade order. Placed here anyway because a reader looking for what remaps a
    --color-form-* must find the two files next to each other. */

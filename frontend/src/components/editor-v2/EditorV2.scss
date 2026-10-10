@@ -4256,14 +4256,6 @@
 
 // --- Variant A: Current colors at reduced opacity (60%) ---
 body.header-variant-a {
-    // Dark theme
-    .editor-v2.theme-dark {
-        --class-header-bg: rgba(55, 88, 122, 0.6);           // #37587a @ 60%
-        --class-abstract-header-bg: rgba(62, 74, 90, 0.6);   // #3e4a5a @ 60%
-        --enum-header-bg: rgba(91, 74, 122, 0.6);            // #5b4a7a @ 60%
-        --package-header-bg: rgba(45, 58, 74, 0.6);          // #2d3a4a @ 60%
-        --object-header-bg: rgba(180, 130, 50, 0.5);         // amber/gold @ 50%
-    }
     //   theme
     .editor-v2.theme-light {
         --class-header-bg: rgba(123, 175, 212, 0.65);        // #7bafd4 @ 65%
@@ -4278,20 +4270,6 @@ body.header-variant-a {
 body.header-variant-b {
     .mm-node__header {
         border-top: 4px solid var(--variant-b-accent, #5b8fb9);
-    }
-
-    // Dark theme
-    .editor-v2.theme-dark {
-        --class-header-bg: #2d3a4a;
-        --class-abstract-header-bg: #2d3a4a;
-        --enum-header-bg: #2d3a4a;
-        --node-header-text: rgba(255, 255, 255, 0.85);
-        --stereotype-color: rgba(255, 255, 255, 0.5);
-
-        .mm-class .mm-node__header { --variant-b-accent: #5b8fb9; }
-        .mm-class.abstract .mm-node__header { --variant-b-accent: #94a3b8; }
-        .mm-enum .mm-node__header { --variant-b-accent: #8b7db8; }
-        .mm-object .mm-node__header { --variant-b-accent: #d97706; }
     }
 
     // Light theme
@@ -4312,15 +4290,6 @@ body.header-variant-b {
 
 // --- Variant C: Pastel background with matching dark text ---
 body.header-variant-c {
-    // Dark theme — slightly muted pastels for dark mode
-    .editor-v2.theme-dark {
-        --class-header-bg: rgba(59, 130, 246, 0.2);          // blue tint
-        --class-abstract-header-bg: rgba(148, 163, 184, 0.2); // gray tint
-        --enum-header-bg: rgba(139, 92, 246, 0.2);           // purple tint
-        --object-header-bg: rgba(245, 158, 11, 0.2);         // amber tint
-        --node-header-text: rgba(255, 255, 255, 0.9);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-    }
 
     // Light theme — true pastel backgrounds
     .editor-v2.theme-light {
