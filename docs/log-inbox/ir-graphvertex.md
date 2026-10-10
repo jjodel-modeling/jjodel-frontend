@@ -31,3 +31,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Gates: tsc 14 = baseline; viewpoint/ir 49 files 1103 tests; full suite 7722 pass, only the 9 known import failures; build exit 0. Invariant test green before the change. Bench 43 mutants: 38 then 43 killed (5 survivors, one test each). LIR not required: §3.2 lists none of these files. Correction: `LValue.setValueAtPosition` auto-moves, a reparent primitive the Phase 1 §D4 missed; recorded in R-GV-8 and spec §6.
 **Prompt document name**: 2026-10-10 01:05
+
+## 2026-10-10 — feat(ir): graphVertex partitions, header bands and channel edges rendered, S2 (P-2026-10-10-0105)
+**Prompt**: Phase 2 GO of `claude_2026-10-10_0105_prompt_graphvertex_bpmn_lanes_discovery.md`, slice S2 (visual): BPMN fixture as oracle, partitions applied in the presentation pass, header band and vertical label, channel-edge suppression, D-c rows win, graphVertex `visible`, black-box pool, channel-slot memo signature, containment problems; measurements before/after, hard stop.
+**Files touched**: `6e22f4a9b` (13): `viewpoint/ir/` irContainment, useIRContainment, IRContainmentHulls, IRNodeContent, irStyle; `nodes/ObjectNode.tsx`; `problems/` registry, containmentToProblems (new); tests ir, shapeRegistry, irContainerLayout (new), irHeaderBandRender (new), containmentToProblems (new). `b7e061436`: `frontend/scripts/probe/bpmn-lanes-fixture.ts` (new). This commit: `docs/discovery/assets/graphvertex-s2/` and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (fourteen code files over two commits, above five (rule 19), each in the GO's DOVE; no CLAUDE.md §3.2 file, no EditorV2.tsx)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Probe 2/12 before (pre-S2 tree), 12/12 after; hull scenes byte-identical. Gates: tsc 14 = baseline; full suite 7760 pass, 9 known import failures; build 0. Bench 31 mutants: 23/26 then 30/31, E3 equivalent. Spec §5 says the won claim; code hides every claim's channel edge (decision, amendment owed). Lanes dragged by hand snap back; tasks do not follow a pool drag (S3). Correction from P-2026-10-10-0830 noted in chat.
+**Prompt document name**: 2026-10-10 01:05
