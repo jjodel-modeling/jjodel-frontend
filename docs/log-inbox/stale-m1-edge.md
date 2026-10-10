@@ -24,3 +24,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-10-1600
 **Detail**: docs/discovery/discovery_2026-10-10_stale_m1_reference_edge.md
+
+## 2026-10-10 — fix(sync): a stale M1 reference edge leaves graph.subElements, F1 (P-2026-10-10-1600)
+**Prompt**: Phase 2 GO of `claude_2026-10-10_1600_prompt_stale_m1_edge_discovery.md` in the same session, F1 only (critical zone, go-ahead 17:16, recorded 17:40 after a first resume stopped on the hook): LIR first, then the scrub in `useM1ReferenceEdges.ts`'s delete TRANSACTION, a red-first fake-barrel test and a mutation bench, the probe as acceptance, the reference-delete M1 matrix as control, gates; hard stop.
+**Files touched**: `df7904064`: `docs/lir/lir_2026-10-10_stale_m1_edge_f1.md` (new). `ad08a8519`: `frontend/src/components/editor-v2/hooks/useM1ReferenceEdges.ts`, `hooks/__tests__/useM1ReferenceEdges.test.ts` (new). `82b4b71c6`: `frontend/scripts/probe/stale-m1-edge.ts`. This commit: the report (Phase 2 addendum), the LIR §4, `docs/discovery/assets/stale-m1-edge/` (10 new files), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (sixteen files over four commits, above five (rule 19), each named by the GO's COSA and COME; no edit to useJjomSync.ts, m1EdgeGate.ts or m1EdgeSweep.ts)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (lane probe 50/50 on 3123, control 25/25 before and after; the visual GO of the chat and Alfonso is pending)
+**Notes**: Test red first 4/7, then 7/7; bench 10/10 killed. tsc 14 = baseline; hooks 175, editor-v2 3455; full 7735 passed, 9 known import failures; build 0. Probe 31 failures before F1, 50/50 after. The handle check was narrowed to the source handle (the one stale edges took) plus stability across re-adds: the target side of a re-created edge is right-0 before and after F1, bottom-0 at open. S3 fixture not run (ir-graphvertex not on the trunk).
+**Prompt document name**: 2026-10-10 16:00
+
+**Ticket** (lane, low): an M1 reference edge re-created after open enters its target on another side than the same edge at open (Running→stop: bottom-0 at open, right-0 at every re-add, before and after F1). Not a staleness effect; whether a re-created edge should take its old side back is a layout question.

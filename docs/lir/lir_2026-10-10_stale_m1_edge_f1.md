@@ -95,4 +95,15 @@ Layers touched:
 
 ## 4. Deviations measured while building
 
-(Filled after the diff, if any.)
+Added after the diff (`ad08a8519`). No §3.2 file other than the hook changed, and the write is the one §2 describes.
+
+1. **The acceptance «live edge on its baseline handles» did not hold on the target side, and that side is not
+   F1's.**
+   - After F1 the re-added edge enters `stop` on `right-0`; the edge at open sat on `bottom-0`.
+   - The run on the unfixed code shows the same `right-0` on the first re-add.
+   - The handle a stale edge takes is the source's: `top-0`, as at baseline, after F1; `top-1` then `top-2` before
+     it.
+   - The probe checks that handle and the stability of both handles across re-adds, and measures the target side.
+     Measures in the report's Phase 2 addendum.
+2. **The control's baseline is 25/25, not the 24/25 the reference-delete lane recorded.** The rail's undo now
+   restores the link on the trunk before F1 too. Identical verdicts before and after F1.

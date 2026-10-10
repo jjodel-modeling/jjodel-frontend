@@ -1,0 +1,60 @@
+probe=/Users/alfonso/jjodel-w-staleedge/frontend/scripts/smoke/_tmp_refdelete_m1.ts
+CFG=/Users/alfonso/jjodel-w-staleedge/frontend/scripts/smoke/_tmp_lane_vite_3123.config.ts
+url=http://localhost:3123/
+server=200
+MEAS  link r_del  ["Pointer1791645906532_USER_40"]
+MEAS  link r_bksp  ["Pointer1791645907437_USER_44"]
+MEAS  link r_ctx  ["Pointer1791645908342_USER_48"]
+MEAS  link r_rail  ["Pointer1791645909246_USER_52"]
+MEAS  link r_toolbar  ["Pointer1791645910150_USER_56"]
+MEAS  setup  {"r_del":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_bksp":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_ctx":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_rail":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_toolbar":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"__allEdgesDom":10}
+PASS  setup r_del: M2 ref, slot, M1 DEdge, RF edge  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  setup r_bksp: M2 ref, slot, M1 DEdge, RF edge  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  setup r_ctx: M2 ref, slot, M1 DEdge, RF edge  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  setup r_rail: M2 ref, slot, M1 DEdge, RF edge  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  setup r_toolbar: M2 ref, slot, M1 DEdge, RF edge  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+MEAS  del gesture  Delete pressed
+MEAS  del after  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  del: link gone from canvas  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  del: link gone from model (slot empty, M1 DEdge gone)  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  del: M2 reference r_del kept  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+MEAS  del undo  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  del: undo restores link  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+MEAS  del others  {"r_bksp":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_ctx":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_rail":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_toolbar":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}}
+MEAS  bksp gesture  Backspace pressed
+MEAS  bksp after  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  bksp: link gone from canvas  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  bksp: link gone from model (slot empty, M1 DEdge gone)  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  bksp: M2 reference r_bksp kept  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+MEAS  bksp undo  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  bksp: undo restores link  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+MEAS  bksp others  {"r_del":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_ctx":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_rail":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_toolbar":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}}
+MEAS  ctx gesture  menu item «Delete reference» clicked; menu=["Delete Project","Convert to Inheritance","Delete reference"]
+MEAS  ctx after  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  ctx: link gone from canvas  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  ctx: link gone from model (slot empty, M1 DEdge gone)  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  ctx: M2 reference r_ctx kept  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+MEAS  ctx undo  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  ctx: undo restores link  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+MEAS  ctx others  {"r_del":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_bksp":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_rail":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_toolbar":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}}
+MEAS  rail gesture  rail × #3 clicked; rows=["r_del [0..*] b_del b_bksp b_ctx b_rail b_toolbar × + add r_del… b_del b_bksp b_c","r_bksp [0..*] b_del b_bksp b_ctx b_rail b_toolbar × + add r_bksp… b_del b_bksp b","r_ctx [0..*] b_del b_bksp b_ctx b_rail b_toolbar × + add r_ctx… b_del b_bksp b_c","r_rail [0..*] b_del b_bksp b_ctx b_rail b_toolbar × + add r_rail… b_del b_bksp b","r_toolbar [0..*] b_del b_bksp b_ctx b_rail b_toolbar × + add r_toolbar… b_del b_"]
+MEAS  rail after  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  rail: link gone from canvas  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  rail: link gone from model (slot empty, M1 DEdge gone)  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  rail: M2 reference r_rail kept  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+MEAS  rail undo  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  rail: undo restores link  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+MEAS  rail others  {"r_del":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_bksp":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_ctx":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_toolbar":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}}
+MEAS  toolbar gesture  toolbar trash clicked
+MEAS  toolbar after  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  toolbar: link gone from canvas  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  toolbar: link gone from model (slot empty, M1 DEdge gone)  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+PASS  toolbar: M2 reference r_toolbar kept  {"m2ref":1,"slot":0,"m1edges":0,"m2edges":1,"rf":0}
+MEAS  toolbar undo  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+PASS  toolbar: undo restores link  {"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}
+MEAS  toolbar others  {"r_del":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_bksp":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_ctx":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1},"r_rail":{"m2ref":1,"slot":1,"m1edges":1,"m2edges":1,"rf":1}}
+MEAS  errors  []
+MEAS  warns  ["warning: tn deleted {tn: undefined, id: Pointer1791645912786_USER_60}","warning: tn deleted {tn: undefined, id: Pointer1791645897604_USER_26_graph5}","warning: tn deleted {tn: undefined, id: Pointer1791645913684_USER_61}","warning: tn deleted {tn: undefined, id: Pointer1791645897604_USER_26_graph5}","warning: tn deleted {tn: undefined, id: Pointer1791645914585_USER_62}","warning: tn deleted {tn: undefined, id: Pointer1791645897604_USER_26_graph5}","warning: tn deleted {tn: undefined, id: Pointer1791645916385_USER_64}","warning: tn deleted {tn: undefined, id: Pointer1791645897604_USER_26_graph5}"]
+RESULT 25/25
+EXIT=0
+end=2026-10-10T15:25:49.549Z

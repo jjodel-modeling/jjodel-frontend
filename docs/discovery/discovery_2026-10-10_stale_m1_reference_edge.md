@@ -350,3 +350,79 @@ F3, if Alfonso wants it (D1), belongs in nested S2's lane, since it is that slic
 - `crop_baseline.png`, `crop_after_R2.png`, `crop_after_A2.png` and `crop_after_C1.png`.
 
 The probe is `frontend/scripts/probe/stale-m1-edge.ts`. The lane folder `~/.jjodel-lanes/P-2026-10-10-1600/` keeps the vite log.
+
+## Addendum 2026-10-10, Phase 2 (fix F1, code `ad08a8519`)
+
+GO of 2026-10-10: F1 only, questions 1-4 answered as recommended. Alfonso's critical-zone go-ahead was given at 17:16
+and recorded for the session (`goahead.txt`) at 17:40, after the first resume stopped on the hook (`Outcome:
+question`). The GO's prompt file named in that message, `docs/prompts/claude_2026-10-10_1600_fase2_stale_m1_edge_f1.md`,
+is not in this tree; its text is the GO message itself.
+
+**Commits.**
+- `df7904064`: the LIR, `docs/lir/lir_2026-10-10_stale_m1_edge_f1.md`.
+- `ad08a8519`: the fix and its test.
+- `82b4b71c6`: the probe's acceptance checks.
+- This commit: measurements, this addendum, LIR §4 and the inbox entry.
+
+**Fix.** It is §7.1 as written: `SetFieldAction` imported, and one write after `DeleteElementAction.new(raw)` inside the
+delete-only TRANSACTION. The comment above the TRANSACTION now says what the write is for. Nothing else in the file
+changed; the header's «Add-only by design» paragraph is stale since `125fd48f6` and was left alone (rule 8).
+
+**Test and bench** [M]. `hooks/__tests__/useM1ReferenceEdges.test.ts`, 7 tests:
+- red first (4 failed, the 3 unchanged-path tests passed), 7/7 on the fix;
+- mutation bench, 10 of 10 killed, each mutant written and the fixed text restored in one process, file hash identical
+  after. The mutants:
+  - scrub dropped;
+  - scrub outside the TRANSACTION;
+  - `e.start` for `e.id`;
+  - `modelid` for `graphId`;
+  - `+=` for `-=`;
+  - `isPointer` false;
+  - the first stale id for every edge;
+  - `DeleteElementAction` dropped;
+  - pair guard kept;
+  - `new2` inside a TRANSACTION.
+
+  None of the mutants failed at import: every bench run reported 1 to 4 failures out of 7.
+
+**Gates** [M]:
+- typecheck: exit 2, 14 errors, the §17 baseline set;
+- hooks 175/175 and editor-v2 3455/3455;
+- full suite: 7735 passed, the 9 known files red at import (`window is not defined`). It ran with
+  `JJODEL_CRITICAL_ZONE_GOAHEAD` unset, because of the known leak into `criticalZone.test.ts`;
+- `npm run build`: exit 0;
+- `check:scripts`: exit 0.
+
+**Acceptance** [M] (`frontend/scripts/probe/stale-m1-edge.ts`, port 3123, 3 runs in this phase: the two below and the strict-handles run discussed after them):
+
+| Run | Code | Result |
+|---|---|---|
+| `probe-run4-before.log` | trunk before F1 | 31 checks failed: 1, 2, 3 stale pair edges, the dangling ids, 18 → 20 drawn |
+| `probe-run4-after.log`, `probe-run4-after.json` | `ad08a8519` | **50/50**: after every removal 0 pair edges in state, prop, store and DOM at 1 s and 5 s, 0 dangling ids, 17 drawn; after every add 1 pair edge and 18 drawn; C1 has nothing to scrub |
+
+- **A deviation from the GO's wording, declared.** The GO asked that «the live edge keeps its handle».
+  - A first after-run (`probe-run4-after-strict-handles.log`) checked both baseline handles. It failed only on the
+    target side: the re-added edge enters `stop` on `right-0`, the edge at open on `bottom-0`.
+  - The unfixed run shows `right-0` on its first re-add as well (`top-1->right-0`), so that side is chosen when the
+    edge is created and does not depend on staleness.
+  - The check now holds the handle a stale edge takes, Running's source handle. After F1 it is `top-0` at every
+    re-add, as at baseline. Before F1 it was `top-1`, then `top-2`.
+  - It also checks the two handles are the same at every re-add (`top-0->right-0`, both runs).
+  - The target side against baseline is a MEAS line.
+- **Crops** (record): `crop_baseline-after.png`, `crop_after_R2-after.png`, `crop_after_A2-after.png` and
+  `crop_after_C1-after.png`. After A2 one edge enters `stop`; before F1 there were three.
+
+**Control** [M]. The reference-delete lane's M1 matrix (`_tmp_refdelete_m1.ts` of P-2026-09-30-1542, copied as a
+gitignored `_tmp_` file into this tree and run unchanged):
+- **25/25 before F1 and 25/25 after**, every verdict identical (`control-refdelete-m1-before.log`,
+  `control-refdelete-m1-after.log`). That lane recorded 24/25 on 2026-09-30, its one failure the rail's undo. On
+  today's trunk the rail's undo restores the link too, before F1 as well, so a later lane changed it, not this one.
+- **Limit of that probe.** Its `rf` count reads only the DOM edges whose id is still in `idlookup`, so it cannot see a
+  stale RF edge. This is the same blind spot as the S3 count (§0.3). Its «link gone from canvas» on the rail path
+  passed before F1 while the stale edge was drawn.
+
+**Not measured.**
+- The S3 fixture (`bpmn-lanes-fixture.ts`) after F1: `ir-graphvertex` is not on the trunk. The merge that first joins
+  F1 and that branch runs it (LIR §2).
+- Undo of a slot removal through the acceptance probe: the control's rail path covers the panel's primitive and its
+  undo.
