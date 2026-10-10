@@ -157,6 +157,8 @@ export function isDiscoveryPrompt(promptText, promptFile) {
  *   merge         the folder is a direct merge's (direct.json)
  *   state         laneState's running | exited | blocked; null without a folder
  *   outcome       lastOutcome's line; null when there is none, or while a run is live
+ *   resolved      laneState's line of resolved.txt (lane-run resolve) when the outcome
+ *                 is blocked; null otherwise. A resolved lane projects like a done one.
  *   headerStatus  the prompt's Status: `da eseguire`, or the flipped line
  *   goSeen        a GO reached the lane after its first run (isGoMessage)
  *   promptText, promptFile, and fronts (the registry)
@@ -185,7 +187,8 @@ export function projectLane(id, observed) {
     const m = typeof o.outcome === 'string' ? OUTCOME.exec(o.outcome) : null;
     if (!m) return card('In progress', ['outcome:unparsed']);
     if (m[1] === 'question') return card('In progress', ['waiting:question']);
-    if (m[1] === 'blocked') return card('In progress', ['blocked']);
+    // A blocked lane resolved afterwards (P-2026-10-10-2020, report P-2026-10-10-1806 R4) falls through to the done row.
+    if (m[1] === 'blocked' && typeof o.resolved !== 'string') return card('In progress', ['blocked']);
     if (m[1] === 'hard-stop') return card('In review', [isDiscoveryPrompt(o.promptText, o.promptFile) && !o.goSeen ? 'waiting:phase-2' : 'waiting:visual']);
     return flipped ? card('Done', [], true) : card('In review', ['closure-owed']);
 }
