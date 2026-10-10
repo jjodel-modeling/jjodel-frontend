@@ -24,6 +24,7 @@ import type {
     CompiledContainmentLayout,
     ChannelEdges,
     Conditional,
+    ContainerFrame,
     ContainmentMembership,
     FieldSegment,
     FontFamilyToken,
@@ -32,6 +33,7 @@ import type {
     LabelOrientation,
     Literal,
     MembershipMode,
+    PartitionSeparator,
     PathExpr,
     TextStyle,
     Predicate,
@@ -407,6 +409,8 @@ export const LABEL_ORIENTATIONS: Record<LabelOrientation, true> = { horizontal: 
 export const LAYOUT_MODES: Record<CompiledContainmentLayout['mode'], true> = { free: true, partitions: true };
 export const PARTITION_AXES: Record<CompiledContainmentLayout['axis'], true> = { vertical: true, horizontal: true };
 export const HEADER_SIDES: Record<NonNullable<CompiledContainmentLayout['header']>['side'], true> = { w: true, n: true };
+export const CONTAINER_FRAMES: Record<ContainerFrame, true> = { hull: true, self: true };
+export const PARTITION_SEPARATORS: Record<PartitionSeparator, true> = { solid: true, dashed: true };
 export const MEMBERSHIP_MODES: Record<MembershipMode, true> = { none: true, forbid: true, reference: true, reparent: true };
 export const CHANNEL_EDGES: Record<ChannelEdges, true> = { show: true, hide: true };
 
@@ -416,6 +420,8 @@ const inVocabulary = <T extends string>(vocabulary: Record<T, true>, v: unknown)
 /**
  * The declared layout of a graphVertex (R-GV-5), read permissively (R-B9-bis): an unknown mode reads 'free',
  * an unknown axis 'vertical', a malformed header no band, a malformed padding 0. Undefined when not an object.
+ * `frame` and `separator` (S2b) are kept only when they change something: `self` on `free`, `dashed` on `partitions`;
+ * anything else reads as their default and is left out, so a layout without them compiles to the keys it had.
  */
 export function compileContainmentLayout(raw: unknown): CompiledContainmentLayout | undefined {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
@@ -424,12 +430,15 @@ export function compileContainmentLayout(raw: unknown): CompiledContainmentLayou
     const header = h && typeof h === 'object' && inVocabulary(HEADER_SIDES, h.side)
         && typeof h.size === 'number' && Number.isFinite(h.size) && h.size > 0
         ? { side: h.side, size: h.size } : null;
-    return {
+    const out: CompiledContainmentLayout = {
         mode: inVocabulary(LAYOUT_MODES, r.mode) ? r.mode : 'free',
         axis: inVocabulary(PARTITION_AXES, r.axis) ? r.axis : 'vertical',
         header,
         padding: typeof r.padding === 'number' && Number.isFinite(r.padding) && r.padding >= 0 ? r.padding : 0,
     };
+    if (out.mode === 'free' && r.frame === 'self') out.frame = 'self';
+    if (out.mode === 'partitions' && r.separator === 'dashed') out.separator = 'dashed';
+    return out;
 }
 
 /** The declared membership of a graphVertex (R-GV-8), read permissively: an unknown mode reads 'none', a malformed

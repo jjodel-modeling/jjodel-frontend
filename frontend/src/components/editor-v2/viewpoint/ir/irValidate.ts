@@ -13,6 +13,7 @@
 import {
     compileView, compileEdgeView, compileRowView, LABEL_ANCHORS, TEXT_TRANSFORMS,
     CHANNEL_EDGES, HEADER_SIDES, LABEL_ORIENTATIONS, LAYOUT_MODES, MEMBERSHIP_MODES, PARTITION_AXES,
+    CONTAINER_FRAMES, PARTITION_SEPARATORS,
 } from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
 import { parsePathExpr } from './pathExpr';
@@ -331,6 +332,15 @@ function containmentKeysError(ir: AnyViewIR): string | null {
         const padding = layout.padding;
         if (padding !== undefined && !(typeof padding === 'number' && Number.isFinite(padding) && padding >= 0)) {
             return `[ir] containment.layout.padding must be a finite number >= 0 (px), or absent for 0, read ${readOf(padding)}`;
+        }
+        // S2b (spec addendum §11): `frame` frames a free container, `separator` draws the line between partitions.
+        if (layout.frame !== undefined) {
+            if (layout.mode !== 'free') return `[ir] containment.layout.frame applies to free only (partitions are their own frame), read on ${readOf(layout.mode)}`;
+            if (!has(CONTAINER_FRAMES, layout.frame)) return `[ir] containment.layout.frame must be one of ${Object.keys(CONTAINER_FRAMES).join(' | ')}, or absent for hull, read ${readOf(layout.frame)}`;
+        }
+        if (layout.separator !== undefined) {
+            if (layout.mode !== 'partitions') return `[ir] containment.layout.separator applies to partitions only, read on ${readOf(layout.mode)}`;
+            if (!has(PARTITION_SEPARATORS, layout.separator)) return `[ir] containment.layout.separator must be one of ${Object.keys(PARTITION_SEPARATORS).join(' | ')}, or absent for solid, read ${readOf(layout.separator)}`;
         }
     }
 

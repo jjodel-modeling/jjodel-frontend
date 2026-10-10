@@ -261,6 +261,12 @@ const BASE_CSS = `
 .ir-node-content.ir-layout { box-shadow: none; }
 .react-flow__node.ir-partition-next-v .ir-node-content { border-top-color: transparent !important; }
 .react-flow__node.ir-partition-next-h .ir-node-content { border-left-color: transparent !important; }
+/* Partition separator (S2b, spec addendum 2026-10-10 §11): with \`separator: 'dashed'\` every partition before the
+   last draws its trailing border, the line it shares with the next, dashed and 1px whatever the view's own border
+   (irContainment PARTITION_DASHED_CLASS): UML orthogonal regions. Appended after every other rule, so the rules
+   above stay byte-identical. */
+.react-flow__node.ir-partition-sep-dashed-v .ir-node-content { border-bottom: 1px dashed var(--border-default) !important; }
+.react-flow__node.ir-partition-sep-dashed-h .ir-node-content { border-right: 1px dashed var(--border-default) !important; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

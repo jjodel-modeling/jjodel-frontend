@@ -701,6 +701,16 @@ describe('validateIR: R-GV keys of a graphVertex (spec addendum 2026-10-10 §2)'
         expect(errorOf('l_e7', gv({ layout: { mode: 'free', header: { side: 'w', size: Number.NaN } } }))).toContain('containment.layout.header must be');
         expect(errorOf('l_e8', gv({ layout: { mode: 'free', padding: -2 } }))).toContain('containment.layout.padding must be a finite number >= 0');
     });
+    it('checks frame on free only and separator on partitions only, each in its vocabulary (S2b)', () => {
+        expect(check('f_ok1', gv({ layout: { mode: 'free', frame: 'self', padding: 16, header: { side: 'n', size: 28 } } }))).toEqual({ ok: true });
+        expect(check('f_ok2', gv({ layout: { mode: 'free', frame: 'hull' } }))).toEqual({ ok: true });
+        expect(check('f_ok3', gv({ layout: { mode: 'partitions', separator: 'dashed' } }))).toEqual({ ok: true });
+        expect(check('f_ok4', gv({ layout: { mode: 'partitions', separator: 'solid' } }))).toEqual({ ok: true });
+        expect(errorOf('f_e1', gv({ layout: { mode: 'partitions', frame: 'self' } }))).toContain('containment.layout.frame applies to free only');
+        expect(errorOf('f_e2', gv({ layout: { mode: 'free', frame: 'box' } }))).toContain('containment.layout.frame must be one of hull | self');
+        expect(errorOf('f_e3', gv({ layout: { mode: 'free', separator: 'dashed' } }))).toContain('containment.layout.separator applies to partitions only');
+        expect(errorOf('f_e4', gv({ layout: { mode: 'partitions', separator: 'dotted' } }))).toContain('containment.layout.separator must be one of solid | dashed');
+    });
     it('checks the membership vocabulary, the channel a reference needs, and create', () => {
         expect(check('m_ok1', gv({ children: '$flowNodeRefs.values', membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } } }))).toEqual({ ok: true });
         expect(check('m_ok2', gv({ membership: { mode: 'reparent' } }))).toEqual({ ok: true });

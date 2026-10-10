@@ -163,6 +163,8 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         let outNodes = nodes;
         let outEdges = edges;
         const names = new Map<string, string>();
+        // The objects hidden by a collapse, a row or a view's `visible`, kept for the object-as-edge lift below.
+        let hiddenObjects: Set<string> | null = null;
 
         // Row-dispatch suppression (Fase R2): containment children rendered as inline
         // rows in a vertex view's `children` compartment are hidden as top-level nodes
@@ -185,6 +187,7 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
             const hidden = computeHidden(model, getCollapsedSet());
             for (const r of rowHidden) hidden.add(r);
             for (const v of viewHidden) hidden.add(v);
+            hiddenObjects = hidden;
             outNodes = decorateNodes(outNodes, model, hidden);
             // R-GV-5..7 (S2): the containers that declare a layout go under the edges, and partitions fill theirs,
             // in session only (the boxes are derived, R-LAY-4). Same array when no container declares one.
@@ -210,9 +213,14 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
             model.containerOf, model.walkedObjects,
         );
         outNodes = oae.nodes;
+        // S2b: an object-as-edge (a UML transition) with an end hidden by a collapse is lifted to the nearest drawn
+        // container, as every other edge is above; without this it went with its hidden end. The edges lifted above
+        // have drawn ends and pass through unchanged.
+        const synthesizedEdges = oae.edges;
+        const liftedEdges = hiddenObjects && hiddenObjects.size > 0 ? decorateEdges(synthesizedEdges, model, hiddenObjects, outNodes) : synthesizedEdges;
         // Re-apply RF selection to synthetic edges (tracked in irEdgeInteraction:
         // selection changes for irobj_* ids cannot land in the base edge state).
-        outEdges = oae.edges.map(e =>
+        outEdges = liftedEdges.map(e =>
             (e.data as any)?.irObjectAsEdge && isSyntheticEdgeSelected(e.id) ? { ...e, selected: true } : e);
 
         // Publish edge-object cross deps for the next oaeSlotsSig pass (two-phase,

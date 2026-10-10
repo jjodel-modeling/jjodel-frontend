@@ -21,6 +21,7 @@ import type { ReadCtx } from './irReadCtx';
 import { findFeatureRaw, navigateRefHop } from './irReadCtx';
 import type { ChannelEdges, CompiledContainmentLayout, CompiledPathStep, CompiledView, ContainmentMembership } from './irTypes';
 import { layoutPartitions, MIN_PARTITION_EXTENT, partitionExtent, resizePartitionBorder, type PartitionSpec } from './irPartitions';
+import { frameBox } from './irFrame';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
 import type { IRViewpointIndex } from './irResolveCore';
 import { resolveIRView } from './irResolveCore';
@@ -571,12 +572,17 @@ export function decorateEdges(edges: Edge[], model: ContainmentModel, hidden: Se
 /** z-index of a container that declares a layout, plus its depth (R-GV-6): under the edges (z 0) and the flow nodes,
  *  even when selected (React Flow lifts a selected node by 1000), deeper containers above shallower ones. */
 export const LAYOUT_CONTAINER_Z = -2000;
+/** What React Flow adds to the z-index of a selected node (`elevateNodesOnSelect`, @xyflow/system). */
+export const SELECTED_NODE_LIFT = 1000;
 /** Space kept around the children of a partition that is not sized by hand, px (spec addendum §7.1, content). */
 export const PARTITION_CONTENT_MARGIN = 16;
 /** Class of every partition after the first, by axis: it drops its leading border, which the previous partition's
  *  trailing border already draws, so two lanes share one line (irStyle.ts). Geometry unchanged. */
 export const PARTITION_NEXT_CLASS = { vertical: 'ir-partition-next-v', horizontal: 'ir-partition-next-h' } as const;
-const PARTITION_CLASSES = new Set<string>(Object.values(PARTITION_NEXT_CLASS));
+/** Class of every partition before the last when the layout declares `separator: 'dashed'` (S2b): its trailing border,
+ *  the shared line, is drawn dashed (irStyle.ts). Geometry unchanged. */
+export const PARTITION_DASHED_CLASS = { vertical: 'ir-partition-sep-dashed-v', horizontal: 'ir-partition-sep-dashed-h' } as const;
+const PARTITION_CLASSES = new Set<string>([...Object.values(PARTITION_NEXT_CLASS), ...Object.values(PARTITION_DASHED_CLASS)]);
 
 type Box = { x: number; y: number; w: number; h: number };
 const sizeOf = (n: Node): { w: number; h: number } => ({
@@ -622,6 +628,11 @@ function depthIn(model: ContainmentModel, objectId: string): number {
  *   plus `PARTITION_CONTENT_MARGIN` on both sides, its band included, or the stack of its own partitions). Outer
  *   containers first, so a nested one stacks inside the box its parent gave it.
  * - Children of a partition (the flow nodes of a lane) are not moved: the gesture that moves them is slice S3.
+ * - A `free` container that declares `frame: 'self'` (S2b, spec addendum §11) is the box of its visible children (an
+ *   inner self-framing child counted by its own box), plus its padding and band, never smaller than a size set by hand
+ *   (`irFrame.frameBox`). Inner frames first; a partitions container sizes a partition by the frames inside it.
+ * - A container being dragged (S3) carries its descendants: each is drawn offset by the container's move from where it
+ *   rests (its record, or its frame for a self-framing one), and the boxes above are computed from those positions.
  *
  * Returns `nodes` itself when nothing changes, so the memo downstream sees no new array.
  */
@@ -645,6 +656,60 @@ export function applyContainerLayout(
         });
     const patch = new Map<string, Partial<Box> & { z?: number; cls?: string }>();
 
+    // Drag offsets (S3): an object a dragged container carries, by object id. Empty until computed below, from the
+    // geometry at rest; every position read after that goes through `posOf`.
+    const offset = new Map<string, { x: number; y: number }>();
+    const posOf = (n: Node, objectId: string | undefined) => {
+        const o = objectId !== undefined ? offset.get(objectId) : undefined;
+        return o ? { x: n.position.x + o.x, y: n.position.y + o.y } : n.position;
+    };
+    const nodeBox = (objectId: string): Box => {
+        const n = byId.get(model.vertexByObj.get(objectId)!)!;
+        const p = posOf(n, objectId);
+        const s = sizeOf(n);
+        return { x: p.x, y: p.y, w: s.w, h: s.h };
+    };
+    const isSelf = (objectId: string): boolean => {
+        const l = model.containers.get(objectId)?.layout;
+        return l?.mode === 'free' && l.frame === 'self';
+    };
+    // The frame of a self-framing container (S2b), from its visible children's boxes. Memoized, cycle-guarded.
+    // Collapsed (no visible child, hidden ones), it keeps the place its children's frame gives it at its own size:
+    // `anchoredOnly` holds it, and only its position is patched.
+    const frameMemo = new Map<string, Box | null>();
+    const anchoredOnly = new Set<string>();
+    const frameOf = (objectId: string, seen: Set<string> = new Set()): Box | null => {
+        if (frameMemo.has(objectId)) return frameMemo.get(objectId)!;
+        if (!isSelf(objectId) || seen.has(objectId)) return null;
+        seen.add(objectId);
+        const info = model.containers.get(objectId)!;
+        const node = byId.get(info.vertexId);
+        let out: Box | null = null;
+        if (node && !node.hidden && !hidden.has(objectId)) {
+            const rec = recOf(info.vertexId);
+            // Being resized, the live size is the floor; at rest, the record's when sized by hand.
+            const stored = node.resizing === true
+                ? { w: (node.measured?.width ?? node.width) as number | undefined, h: (node.measured?.height ?? node.height) as number | undefined, isResized: true }
+                : { w: rec.w, h: rec.h, isResized: !!rec.isResized };
+            const frameOver = (kids: string[]) => frameBox({
+                children: kids.map(k => frameOf(k, seen) ?? stackOf(k) ?? nodeBox(k)),
+                padding: info.layout!.padding, header: info.layout!.header, stored,
+            });
+            out = frameOver(visibleKids(objectId));
+            if (!out) {
+                const all = (model.childrenOf.get(objectId) ?? []).filter(k => byId.has(model.vertexByObj.get(k) ?? ''));
+                const anchor = frameOver(all);
+                if (anchor) {
+                    const own = sizeOf(node);
+                    out = { x: anchor.x, y: anchor.y, w: own.w, h: own.h };
+                    anchoredOnly.add(objectId);
+                }
+            }
+        }
+        frameMemo.set(objectId, out);
+        return out;
+    };
+
     // What a container's own children need, as a box size (spec addendum §7.1, content). Memoized, cycle-guarded.
     const needMemo = new Map<string, { w: number; h: number }>();
     const needOf = (objectId: string, seen: Set<string> = new Set()): { w: number; h: number } => {
@@ -665,10 +730,9 @@ export function applyContainerLayout(
         } else if (kids.length > 0) {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             for (const k of kids) {
-                const n = byId.get(model.vertexByObj.get(k)!)!;
-                const s = sizeOf(n);
-                minX = Math.min(minX, n.position.x); minY = Math.min(minY, n.position.y);
-                maxX = Math.max(maxX, n.position.x + s.w); maxY = Math.max(maxY, n.position.y + s.h);
+                const r = frameOf(k) ?? stackOf(k) ?? nodeBox(k);
+                minX = Math.min(minX, r.x); minY = Math.min(minY, r.y);
+                maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h);
             }
             const band = layout?.header;
             out = {
@@ -690,24 +754,64 @@ export function applyContainerLayout(
             contentCross: vertical ? need.w : need.h,
         };
     };
+    // The laid-out box of a `partitions` container a frame holds (S2b): where its node is, its stack's size; the frame
+    // counts that box, not the node's stored size. Null for any other object.
+    const stackOf = (objectId: string): Box | null => {
+        const info = model.containers.get(objectId);
+        const layout = info?.layout;
+        const node = info ? byId.get(info.vertexId) : undefined;
+        if (!info || !node || layout?.mode !== 'partitions') return null;
+        const rec = recOf(info.vertexId);
+        const at = posOf(node, objectId);
+        return layoutPartitions({
+            container: { x: at.x, y: at.y, w: rec.w, h: rec.h, isResized: !!rec.isResized }, axis: layout.axis, header: layout.header,
+            padding: layout.padding, partitions: visibleKids(objectId).map(k => specOf(k, layout.axis, new Set())),
+        }).container;
+    };
 
     const ordered = layoutContainers
         .map((c, i) => ({ c, i, d: depthIn(model, c.objectId) }))
         .sort((a, b) => a.d - b.d || a.i - b.i);
+
+    // A container being dragged (S3) carries its descendants along on screen: the offset of its node from where it
+    // rests (its record; its frame, for a self-framing one), applied to every visible descendant. Not for a partition,
+    // whose place is computed. At drag end EditorV2 writes the same offset to the records, and the offset drops to zero.
+    for (const { c } of ordered) {
+        const node = byId.get(c.vertexId);
+        if (!node?.dragging) continue;
+        const parent = model.parentOf.get(c.objectId);
+        if (parent !== undefined && model.containers.get(parent)?.layout?.mode === 'partitions') continue;
+        const rest = frameOf(c.objectId) ?? recOf(c.vertexId);
+        const dx = node.position.x - rest.x;
+        const dy = node.position.y - rest.y;
+        if (!Number.isFinite(dx) || !Number.isFinite(dy) || (dx === 0 && dy === 0)) continue;
+        // Hidden descendants too: a collapsed frame takes its place from them. They are not drawn, nor patched below.
+        for (const d of descendantsOf(model, c.objectId)) {
+            if (!offset.has(d)) offset.set(d, { x: dx, y: dy });
+        }
+    }
+    if (offset.size > 0) { frameMemo.clear(); anchoredOnly.clear(); needMemo.clear(); }
+
+    // A selected node is lifted by 1000 by React Flow (elevateNodesOnSelect): a layout container that holds layout
+    // containers takes it back, so selecting a pool or a composite state never covers its own lanes, regions and inner
+    // frames (S2b). One that holds none keeps the lift, which puts its resize line above its neighbour's box (S3).
+    const holdsLayout = (objectId: string) => descendantsOf(model, objectId).some(o => !!model.containers.get(o)?.layout);
+    const zOf = (n: Node | undefined, objectId: string, z: number) => z - (n?.selected && holdsLayout(objectId) ? SELECTED_NODE_LIFT : 0);
     for (const { c, d } of ordered) {
         const node = byId.get(c.vertexId);
         if (!node || node.hidden) continue;
         const own = patch.get(c.vertexId) ?? {};
-        patch.set(c.vertexId, { ...own, z: LAYOUT_CONTAINER_Z + d });
+        patch.set(c.vertexId, { ...own, z: zOf(node, c.objectId, LAYOUT_CONTAINER_Z + d) });
         const layout = c.layout!;
         if (layout.mode !== 'partitions') continue;
         const kids = visibleKids(c.objectId);
         // A container that is itself a partition was placed by its parent: its box is that, as if sized by hand.
         const placed = own.w !== undefined && own.h !== undefined;
         const rec = recOf(c.vertexId);
+        const at = posOf(node, c.objectId);
         const box = placed
             ? { x: own.x!, y: own.y!, w: own.w!, h: own.h!, isResized: true }
-            : { x: node.position.x, y: node.position.y, w: rec.w, h: rec.h, isResized: !!rec.isResized };
+            : { x: at.x, y: at.y, w: rec.w, h: rec.h, isResized: !!rec.isResized };
         let specs = kids.map(k => specOf(k, layout.axis, new Set()));
         // A partition being resized (S3): its live size moves its end border, the next partition gives or takes the
         // difference, the sum stays (spec addendum §7.5); the records are written once, at the end of the gesture.
@@ -728,34 +832,36 @@ export function applyContainerLayout(
             partitions: specs,
         });
         patch.set(c.vertexId, { ...patch.get(c.vertexId), w: l.container.w, h: l.container.h });
+        const axis = layout.axis === 'horizontal' ? 'horizontal' : 'vertical';
         kids.forEach((k, i) => {
             const v = model.vertexByObj.get(k)!;
             const r = l.partitions[i];
-            const cls = i > 0 ? PARTITION_NEXT_CLASS[layout.axis === 'horizontal' ? 'horizontal' : 'vertical'] : undefined;
-            patch.set(v, { ...patch.get(v), x: r.x, y: r.y, w: r.w, h: r.h, z: LAYOUT_CONTAINER_Z + d + 1, cls });
+            // The line between two partitions: the later drops its leading border, the earlier's trailing border draws
+            // it, dashed when the layout says so (S2b).
+            const cls = [
+                ...(i > 0 ? [PARTITION_NEXT_CLASS[axis]] : []),
+                ...(layout.separator === 'dashed' && i < kids.length - 1 ? [PARTITION_DASHED_CLASS[axis]] : []),
+            ].join(' ') || undefined;
+            patch.set(v, { ...patch.get(v), x: r.x, y: r.y, w: r.w, h: r.h, z: zOf(byId.get(v), k, LAYOUT_CONTAINER_Z + d + 1), cls });
         });
     }
 
-    // A container being dragged (S3) carries its descendants along on screen: the offset of its node from its record,
-    // applied to every descendant the layout does not place. Not for a partition, whose place is computed. At drag end
-    // EditorV2 writes the same offset to the records, and the offset drops to zero.
+    // Self-framing containers (S2b): their frame, unless a parent's partitions placed them.
     for (const { c } of ordered) {
-        const node = byId.get(c.vertexId);
-        if (!node?.dragging) continue;
-        const parent = model.parentOf.get(c.objectId);
-        if (parent !== undefined && model.containers.get(parent)?.layout?.mode === 'partitions') continue;
-        const rec = recOf(c.vertexId);
-        const dx = node.position.x - rec.x;
-        const dy = node.position.y - rec.y;
-        if (!Number.isFinite(dx) || !Number.isFinite(dy) || (dx === 0 && dy === 0)) continue;
-        for (const d of descendantsOf(model, c.objectId)) {
-            const v = model.vertexByObj.get(d);
-            const n = v !== undefined ? byId.get(v) : undefined;
-            if (!n || hidden.has(d)) continue;
-            const p = patch.get(v!);
-            if (p?.x !== undefined) continue;
-            patch.set(v!, { ...p, x: n.position.x + dx, y: n.position.y + dy });
-        }
+        const own = patch.get(c.vertexId) ?? {};
+        if (own.w !== undefined) continue;
+        const f = frameOf(c.objectId);
+        if (f) patch.set(c.vertexId, anchoredOnly.has(c.objectId) ? { ...own, x: f.x, y: f.y } : { ...own, x: f.x, y: f.y, w: f.w, h: f.h });
+    }
+
+    // The descendants a dragged container carries and no layout placed: drawn at their offset.
+    for (const [d, o] of offset) {
+        const v = model.vertexByObj.get(d);
+        const n = v !== undefined ? byId.get(v) : undefined;
+        if (!n || hidden.has(d)) continue;
+        const p = patch.get(v!);
+        if (p?.x !== undefined) continue;
+        patch.set(v!, { ...p, x: n.position.x + o.x, y: n.position.y + o.y });
     }
 
     let changed = false;
@@ -768,7 +874,7 @@ export function applyContainerLayout(
         const h = p.h ?? n.height;
         const z = p.z ?? n.zIndex;
         const own = (n.className ?? '').split(' ').filter(c => c && !PARTITION_CLASSES.has(c));
-        const className = [...own, ...(p.cls ? [p.cls] : [])].join(' ') || undefined;
+        const className = [...own, ...(p.cls ? p.cls.split(' ') : [])].join(' ') || undefined;
         if (x === n.position.x && y === n.position.y && w === n.width && h === n.height && z === n.zIndex && className === n.className) return n;
         changed = true;
         const next: Node = { ...n, position: x === n.position.x && y === n.position.y ? n.position : { x, y }, zIndex: z };

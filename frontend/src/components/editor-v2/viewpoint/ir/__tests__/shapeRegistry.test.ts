@@ -772,6 +772,8 @@ const BAR_INK_CSS_START = 20896;
 /** Length of the injected CSS before the header band's rules (R-GV-5), measured at 1f02e06f7 (P-2026-10-10-0105 S2):
  *  where the turned bar's section ends and the header band's begins. */
 const HEADER_BAND_CSS_START = 21457;
+/** Where the partition separator rules start (S2b): the whole injected CSS at f4756a94b, 22955 characters. */
+const SEPARATOR_CSS_START = 22955;
 
 /**
  * The bar (R-VP-16, P-2026-09-29-1021): the Petri transition as a thin solid box drawn at a
@@ -949,7 +951,7 @@ describe('irStyle: the header band (R-GV-5)', () => {
         const css = injectedCss();
         // The whole injected CSS at 1f02e06f7, before S2's edit, 21457 characters (irStyle.ts's diff only appends).
         expect(createHash('sha256').update(css.slice(0, HEADER_BAND_CSS_START)).digest('hex').slice(0, 16)).toBe('c8caecc5fc5ca085');
-        expect([...rulesOf(css.slice(HEADER_BAND_CSS_START)).keys()]).toEqual([
+        expect([...rulesOf(css.slice(HEADER_BAND_CSS_START, SEPARATOR_CSS_START)).keys()]).toEqual([
             '.ir-node-content .ir-header-band', '.ir-node-content .ir-header-band--w', '.ir-node-content .ir-header-band--n',
             '.ir-node-content .ir-header-band .ir-label--header', '.ir-node-content .ir-header-band .ir-label--vertical',
             '.ir-node-content.ir-layout',
@@ -958,7 +960,7 @@ describe('irStyle: the header band (R-GV-5)', () => {
     });
 
     it('puts the band out of the flow on its side, reads a vertical label bottom to top, drops the frame shadow', () => {
-        const rules = rulesOf(injectedCss().slice(HEADER_BAND_CSS_START));
+        const rules = rulesOf(injectedCss().slice(HEADER_BAND_CSS_START, SEPARATOR_CSS_START));
         expect(rules.get('.ir-node-content .ir-header-band')).toMatchObject({ position: 'absolute', top: '0', left: '0', 'pointer-events': 'none' });
         expect(rules.get('.ir-node-content .ir-header-band--w')).toEqual({ bottom: '0', 'border-right-width': '1px' });
         expect(rules.get('.ir-node-content .ir-header-band--n')).toEqual({ right: '0', 'border-bottom-width': '1px' });
@@ -966,5 +968,21 @@ describe('irStyle: the header band (R-GV-5)', () => {
         expect(rules.get('.ir-node-content.ir-layout')).toEqual({ 'box-shadow': 'none' });
         expect(rules.get('.react-flow__node.ir-partition-next-v .ir-node-content')).toEqual({ 'border-top-color': 'transparent !important' });
         expect(rules.get('.react-flow__node.ir-partition-next-h .ir-node-content')).toEqual({ 'border-left-color': 'transparent !important' });
+    });
+});
+
+/** S2b (P-2026-10-10-0105): the dashed line between two partitions, UML orthogonal regions. */
+describe('irStyle: the partition separator (S2b)', () => {
+    it('every rule written before it is byte-identical: the separator only appends', () => {
+        const css = injectedCss();
+        expect(createHash('sha256').update(css.slice(0, SEPARATOR_CSS_START)).digest('hex').slice(0, 16)).toBe('02a96e9e968d63e6');
+        expect([...rulesOf(css.slice(SEPARATOR_CSS_START)).keys()]).toEqual([
+            '.react-flow__node.ir-partition-sep-dashed-v .ir-node-content', '.react-flow__node.ir-partition-sep-dashed-h .ir-node-content',
+        ]);
+    });
+    it('draws the trailing border of a partition dashed, on its axis', () => {
+        const rules = rulesOf(injectedCss().slice(SEPARATOR_CSS_START));
+        expect(rules.get('.react-flow__node.ir-partition-sep-dashed-v .ir-node-content')).toEqual({ 'border-bottom': '1px dashed var(--border-default) !important' });
+        expect(rules.get('.react-flow__node.ir-partition-sep-dashed-h .ir-node-content')).toEqual({ 'border-right': '1px dashed var(--border-default) !important' });
     });
 });

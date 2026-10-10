@@ -2594,6 +2594,18 @@ describe('R-GV keys compile (spec addendum 2026-10-10 §2)', () => {
         expect(compileView('gv_l4', gv({ layout: { mode: 'free', header: { side: 'w', size: Infinity } } })).containment!.layout!.header).toBeNull();
         expect(compileView('gv_l5', gv({ layout: 'partitions' })).containment!.layout).toBeUndefined();
     });
+    it('keeps frame only as self on free and separator only as dashed on partitions, else leaves the key out (S2b)', () => {
+        clearCompileCache();
+        expect(compileView('gv_f1', gv({ layout: { mode: 'free', frame: 'self', padding: 16 } })).containment!.layout)
+            .toEqual({ mode: 'free', axis: 'vertical', header: null, padding: 16, frame: 'self' });
+        expect(compileView('gv_f2', gv({ layout: { mode: 'free', frame: 'hull' } })).containment!.layout).toEqual({ mode: 'free', axis: 'vertical', header: null, padding: 0 });
+        expect(compileView('gv_f3', gv({ layout: { mode: 'partitions', frame: 'self' } })).containment!.layout!.frame).toBeUndefined();
+        expect(compileView('gv_f4', gv({ layout: { mode: 'free', frame: 'other' } })).containment!.layout!.frame).toBeUndefined();
+        expect(compileView('gv_s1', gv({ layout: { mode: 'partitions', separator: 'dashed' } })).containment!.layout)
+            .toEqual({ mode: 'partitions', axis: 'vertical', header: null, padding: 0, separator: 'dashed' });
+        expect(compileView('gv_s2', gv({ layout: { mode: 'partitions', separator: 'solid' } })).containment!.layout!.separator).toBeUndefined();
+        expect(compileView('gv_s3', gv({ layout: { mode: 'free', separator: 'dashed' } })).containment!.layout!.separator).toBeUndefined();
+    });
     it('normalizes membership permissively and keeps a well-formed create', () => {
         clearCompileCache();
         expect(compileView('gv_m1', gv({ membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } } })).containment!.membership)

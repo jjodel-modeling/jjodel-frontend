@@ -6,7 +6,8 @@
 import { describe, it, expect } from 'vitest';
 import type { Edge, Node } from '@xyflow/react';
 import {
-    applyContainerLayout, LAYOUT_CONTAINER_Z, PARTITION_CONTENT_MARGIN, PARTITION_NEXT_CLASS, suppressChannelEdges, type ContainmentModel,
+    applyContainerLayout, LAYOUT_CONTAINER_Z, PARTITION_CONTENT_MARGIN, PARTITION_DASHED_CLASS, PARTITION_NEXT_CLASS, SELECTED_NODE_LIFT,
+    suppressChannelEdges, type ContainmentModel,
 } from '../irContainment';
 import type { CompiledContainmentLayout } from '../irTypes';
 
@@ -288,5 +289,163 @@ describe('applyContainerLayout: live gestures (S3)', () => {
         const o2 = applyContainerLayout(last.nodes, last.model, last.idlookup, null, new Set());
         expect(pick(o2, 'Vwarehouse').h).toBe(230);
         expect(pick(o2, 'Vshop').h).toBe(410);
+    });
+});
+
+/**
+ * S2b (P-2026-10-10-0105, spec addendum §11): a UML statechart. Active (partitions, band on top, dashed separator) holds
+ * the regions A1 and A2; A1 holds Waiting; A2 holds Running (free, `frame: 'self'`, band 28, padding 16) and Paused;
+ * Running holds Fetch and Compute. Running's record sits far away: its place is its frame.
+ */
+function scWorld(opts: { frame?: boolean; nodes?: Partial<Record<string, Partial<Node>>>; recs?: Record<string, any> } = {}) {
+    const band = { side: 'n' as const, size: 28 };
+    const runLayout: CompiledContainmentLayout = { mode: 'free', axis: 'vertical', header: band, padding: 16, ...(opts.frame === false ? {} : { frame: 'self' as const }) };
+    const model: ContainmentModel = {
+        containers: new Map<string, any>([
+            ['active', { objectId: 'active', vertexId: 'Vactive', collapsible: false, layout: { mode: 'partitions', axis: 'vertical', header: band, padding: 0, separator: 'dashed' } }],
+            ['a1', { objectId: 'a1', vertexId: 'Va1', collapsible: false, layout: { mode: 'free', axis: 'vertical', header: null, padding: 0 } }],
+            ['a2', { objectId: 'a2', vertexId: 'Va2', collapsible: false, layout: { mode: 'free', axis: 'vertical', header: null, padding: 0 } }],
+            ['run', { objectId: 'run', vertexId: 'Vrun', collapsible: true, layout: runLayout }],
+        ]),
+        childrenOf: new Map([['active', ['a1', 'a2']], ['a1', ['w']], ['a2', ['run', 'p']], ['run', ['f', 'c']]]),
+        parentOf: new Map([['a1', 'active'], ['a2', 'active'], ['w', 'a1'], ['run', 'a2'], ['p', 'a2'], ['f', 'run'], ['c', 'run']]),
+        objByVertex: new Map(['active', 'a1', 'a2', 'w', 'run', 'p', 'f', 'c'].map(o => ['V' + o, o] as [string, string])),
+        vertexByObj: new Map(['active', 'a1', 'a2', 'w', 'run', 'p', 'f', 'c'].map(o => [o, 'V' + o] as [string, string])),
+    };
+    const rec = (x: number, y: number, w: number, h: number, isResized = false) => ({ x, y, w, h, isResized });
+    const idlookup: Record<string, any> = {
+        Vactive: rec(100, 100, 200, 100), Va1: rec(0, 0, 200, 60), Va2: rec(0, 0, 200, 60), Vrun: rec(900, 900, 160, 60),
+        Vw: rec(170, 144, 140, 60), Vp: rec(600, 266, 140, 60), Vf: rec(220, 280, 140, 60), Vc: rec(400, 280, 140, 60),
+        ...(opts.recs ?? {}),
+    };
+    const node = (id: string): Node => {
+        const r = idlookup[id];
+        return { id, type: 'objectNode', position: { x: r.x, y: r.y }, data: {}, width: r.w, height: r.h, ...(opts.nodes?.[id] ?? {}) } as Node;
+    };
+    return { model, idlookup, nodes: ['Vactive', 'Va1', 'Va2', 'Vw', 'Vrun', 'Vp', 'Vf', 'Vc'].map(node) };
+}
+const scPick = (nodes: Node[], id: string) => {
+    const n = nodes.find(m => m.id === id)!;
+    return { x: n.position.x, y: n.position.y, w: n.width, h: n.height };
+};
+const classOf = (nodes: Node[], id: string) => nodes.find(m => m.id === id)!.className;
+
+describe('applyContainerLayout: self-framing containers and separators (S2b)', () => {
+    it('frames Running on its substates, padding and band, and sizes the region and the state around the frame', () => {
+        const { model, idlookup, nodes } = scWorld();
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Vrun')).toEqual({ x: 204, y: 236, w: 352, h: 120 });
+        expect(scPick(out, 'Vactive')).toEqual({ x: 100, y: 100, w: 568, h: 272 });
+        expect(scPick(out, 'Va1')).toEqual({ x: 100, y: 128, w: 568, h: 92 });
+        expect(scPick(out, 'Va2')).toEqual({ x: 100, y: 220, w: 568, h: 152 });
+        expect(out.find(n => n.id === 'Vrun')!.zIndex).toBe(LAYOUT_CONTAINER_Z + 2);
+        // The substates stay where they are.
+        expect(scPick(out, 'Vf')).toEqual({ x: 220, y: 280, w: 140, h: 60 });
+    });
+    it('without `frame: \'self\'` the container keeps its own box, and the region counts that box', () => {
+        const { model, idlookup, nodes } = scWorld({ frame: false });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Vrun')).toEqual({ x: 900, y: 900, w: 160, h: 60 });
+        expect(scPick(out, 'Va2').w).toBe(1060 - 600 + 2 * PARTITION_CONTENT_MARGIN);
+    });
+    it('draws the line between two regions dashed: every region but the last carries the dashed class', () => {
+        const { model, idlookup, nodes } = scWorld();
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(classOf(out, 'Va1')).toBe(PARTITION_DASHED_CLASS.vertical);
+        expect(classOf(out, 'Va2')).toBe(PARTITION_NEXT_CLASS.vertical);
+        const solid = scWorld();
+        (solid.model.containers.get('active') as any).layout = { mode: 'partitions', axis: 'vertical', header: null, padding: 0 };
+        const out2 = applyContainerLayout(solid.nodes, solid.model, solid.idlookup, null, new Set());
+        expect(classOf(out2, 'Va1')).toBeUndefined();
+        expect(classOf(out2, 'Va2')).toBe(PARTITION_NEXT_CLASS.vertical);
+    });
+    it('a collapsed frame keeps the top-left its hidden substates give it, at its own size', () => {
+        const { model, idlookup, nodes } = scWorld();
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set(['f', 'c']));
+        expect(scPick(out, 'Vrun')).toEqual({ x: 204, y: 236, w: 160, h: 60 });
+    });
+    it('a collapsed frame patches no size: a measure left from its open frame is not kept as its size', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vrun: { width: undefined, height: undefined, measured: { width: 352, height: 120 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set(['f', 'c']));
+        const run = out.find(n => n.id === 'Vrun')!;
+        expect(run.position).toEqual({ x: 204, y: 236 });
+        expect([run.width, run.height]).toEqual([undefined, undefined]);
+    });
+    it('a self-framing partition takes the place its parent\'s partitions give it, not its frame', () => {
+        const { model, idlookup, nodes } = scWorld();
+        (model.containers.get('a1') as any).layout = { mode: 'free', axis: 'vertical', header: null, padding: 0, frame: 'self' };
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Va1')).toEqual({ x: 100, y: 128, w: 568, h: 92 });
+    });
+    it('a frame with no child at all keeps its own box', () => {
+        const { model, idlookup, nodes } = scWorld();
+        model.childrenOf.set('run', []);
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Vrun')).toEqual({ x: 900, y: 900, w: 160, h: 60 });
+    });
+    it('Active dragged carries its regions, the frame inside and the substates by the same offset', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vactive: { position: { x: 140, y: 160 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Va1')).toMatchObject({ x: 140, y: 188 });
+        expect(scPick(out, 'Vrun')).toEqual({ x: 244, y: 296, w: 352, h: 120 });
+        expect(scPick(out, 'Vf')).toMatchObject({ x: 260, y: 340 });
+        expect(scPick(out, 'Vp')).toMatchObject({ x: 640, y: 326 });
+        expect(scPick(out, 'Vw')).toMatchObject({ x: 210, y: 204 });
+    });
+    it('Running dragged from its frame carries its substates; a hidden one stays', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vrun: { position: { x: 230, y: 250 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set(['c']));
+        expect(scPick(out, 'Vrun')).toMatchObject({ x: 230, y: 250 });
+        expect(scPick(out, 'Vf')).toMatchObject({ x: 246, y: 294 });
+        expect(scPick(out, 'Vc')).toMatchObject({ x: 400, y: 280 });
+    });
+    it('a collapsed frame dragged follows the pointer', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vrun: { position: { x: 230, y: 250 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set(['f', 'c']));
+        expect(scPick(out, 'Vrun')).toEqual({ x: 230, y: 250, w: 160, h: 60 });
+    });
+    it('a frame dragged carries a partitions container inside it, its regions and their frames', () => {
+        const { model, idlookup, nodes } = scWorld();
+        model.containers.set('outer', { objectId: 'outer', vertexId: 'Vouter', collapsible: false, layout: { mode: 'free', axis: 'vertical', header: null, padding: 10, frame: 'self' } } as any);
+        model.childrenOf.set('outer', ['active']);
+        model.parentOf.set('active', 'outer');
+        model.objByVertex.set('Vouter', 'outer');
+        model.vertexByObj.set('outer', 'Vouter');
+        idlookup.Vouter = { x: 0, y: 0, w: 50, h: 50, isResized: false };
+        const at = (dragging: boolean) => applyContainerLayout(
+            [...nodes, { id: 'Vouter', type: 'objectNode', position: dragging ? { x: 120, y: 130 } : { x: 0, y: 0 }, data: {}, dragging } as Node],
+            model, idlookup, null, new Set());
+        expect(scPick(at(false), 'Vouter')).toEqual({ x: 90, y: 90, w: 588, h: 292 });
+        const out = at(true);
+        expect(scPick(out, 'Vouter')).toEqual({ x: 120, y: 130, w: 588, h: 292 });
+        expect(scPick(out, 'Vactive')).toEqual({ x: 130, y: 140, w: 568, h: 272 });
+        expect(scPick(out, 'Va1')).toMatchObject({ x: 130, y: 168 });
+        expect(scPick(out, 'Vrun')).toMatchObject({ x: 234, y: 276 });
+    });
+    it('drops a dashed class a node kept from an earlier pass when the layout no longer asks for it', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Va1: { className: `keep ${PARTITION_DASHED_CLASS.vertical}` } } });
+        (model.containers.get('active') as any).layout = { mode: 'partitions', axis: 'vertical', header: null, padding: 0 };
+        expect(classOf(applyContainerLayout(nodes, model, idlookup, null, new Set()), 'Va1')).toBe('keep');
+    });
+    it('a selected container that holds layout containers gives back the lift React Flow adds; one that holds none keeps it', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vactive: { selected: true }, Va1: { selected: true }, Va2: { selected: true }, Vrun: { selected: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        const z = (id: string) => out.find(n => n.id === id)!.zIndex!;
+        // Active holds the regions, A2 holds Running: both stay under what they hold.
+        expect(z('Vactive')).toBe(LAYOUT_CONTAINER_Z - SELECTED_NODE_LIFT);
+        expect(z('Va2')).toBe(LAYOUT_CONTAINER_Z + 1 - SELECTED_NODE_LIFT);
+        // A1 and Running hold states only: lifted by React Flow as any node, above their neighbours.
+        expect(z('Va1')).toBe(LAYOUT_CONTAINER_Z + 1);
+        expect(z('Vrun')).toBe(LAYOUT_CONTAINER_Z + 2);
+        expect(SELECTED_NODE_LIFT).toBe(1000);
+        const rest = scWorld();
+        const out2 = applyContainerLayout(rest.nodes, rest.model, rest.idlookup, null, new Set());
+        expect(out2.find(n => n.id === 'Vactive')!.zIndex).toBe(LAYOUT_CONTAINER_Z);
+    });
+    it('a frame being resized takes its live size as a floor; at rest, a size set by hand', () => {
+        const live = scWorld({ nodes: { Vrun: { resizing: true, measured: { width: 500, height: 200 } } } });
+        expect(scPick(applyContainerLayout(live.nodes, live.model, live.idlookup, null, new Set()), 'Vrun')).toEqual({ x: 204, y: 236, w: 500, h: 200 });
+        const hand = scWorld({ recs: { Vrun: { x: 900, y: 900, w: 400, h: 100, isResized: true } } });
+        expect(scPick(applyContainerLayout(hand.nodes, hand.model, hand.idlookup, null, new Set()), 'Vrun')).toEqual({ x: 204, y: 236, w: 400, h: 120 });
     });
 });

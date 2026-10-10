@@ -586,6 +586,10 @@ export type ContainmentLayoutMode = 'free' | 'partitions';
 export type PartitionAxis = 'vertical' | 'horizontal';
 /** Side of the header band: `w` a band on the left, `n` a band on top. */
 export type HeaderSide = 'w' | 'n';
+/** How a `free` container is framed (S2b, spec addendum §11): `hull` as today, `self` sized to its children. */
+export type ContainerFrame = 'hull' | 'self';
+/** The line between two partitions (S2b, spec addendum §11): `dashed` for UML orthogonal regions. */
+export type PartitionSeparator = 'solid' | 'dashed';
 
 export interface ContainmentLayout {
     mode: ContainmentLayoutMode;
@@ -595,6 +599,11 @@ export interface ContainmentLayout {
     header?: { side: HeaderSide; size: number };
     /** px, >= 0. Absent = 0. */
     padding?: number;
+    /** `free` only. Absent = 'hull' (today's). `self`: the node is the box of its visible children, plus `padding` and
+     *  the band (S2b, spec addendum §11). Partitions are always their own frame. */
+    frame?: ContainerFrame;
+    /** `partitions` only. Absent = 'solid' (today's). */
+    separator?: PartitionSeparator;
 }
 
 /** What a drop across a container boundary does to the model (R-GV-8, spec addendum §6). */
@@ -1119,4 +1128,8 @@ export interface CompiledContainmentLayout {
     axis: PartitionAxis;
     header: { side: HeaderSide; size: number } | null;
     padding: number;
+    /** Set only to 'self' on a `free` layout that declares it (S2b): a layout without it compiles as before. */
+    frame?: ContainerFrame;
+    /** Set only to 'dashed' on a `partitions` layout that declares it (S2b). */
+    separator?: PartitionSeparator;
 }
