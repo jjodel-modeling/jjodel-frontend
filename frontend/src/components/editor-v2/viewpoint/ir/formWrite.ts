@@ -263,8 +263,9 @@ export function addSlotValue(slot: SlotProxy): WriteResult {
  * which is what the reference picker and the chips editor produce.
  *
  * Known and accepted: `setValueAtPosition` takes its index from the caller, so two appends
- * to the same composition slot inside one propagation window target the same index. Every
- * caller issues one append per gesture.
+ * to the same composition slot inside one propagation window target the same index. The
+ * second overwrites the first (measured: the slot ends up holding the second value only),
+ * and the first element keeps its `father` on a slot that no longer lists it.
  */
 export function appendSlotValue(
     slot: SlotProxy,
