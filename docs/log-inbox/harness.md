@@ -149,3 +149,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read of the Timeline detail: 0840 and 1150 show their `request.md` in a blockquote with line breaks, 1150 links its session URL in a new tab, 0810 shows `Request: not recorded`; board on 4701 (PID 29457, cache in `/tmp`) stopped by the chat.
 **Notes**: Cache fix: key on the mtime of `request.md` (v5), the smaller change; checked on 4702 over a temp lane root, an exited lane read empty then carried a later `request.md`. Refusals of `--request` (missing, empty, no value) exit 2 before any write; the warning, the copy and the merge exemption checked with a fake `claude` in a temp HOME. `rm -rf` is denied: `/tmp/lr-req-*` remain. `chain` does not forward `--request`: see the closing report.
 **Prompt document name**: 2026-10-10 11:50
+
+## 2026-10-10 — merge: prompt-request into alfonso-frontend-jjtl (P-2026-10-10-1204)
+**Prompt**: `claude_2026-10-10_1204_prompt_merge_prompt-request.md`, a merge run by a `lane-run` session: `prompt-request` at `dfbba3964` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `4f059689c`, 3 commits on the branch side.
+**Files touched**: merge `49b31da4a`: 7 files from the branch side (`docs/PROTOCOL.md`, `docs/decisions.md`, `docs/log-inbox/harness.md`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/issue-discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `49b31da4a` in the session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 7716 tests in 316 files, 9 red at import, as expected (trunk and branch tip both 7716, no new tests), hooks 424; build exit 0; check:docs 4/4; check:agents green; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts and docs only (lane-run, lane board, issue template, PROTOCOL P13, decisions), app untouched, no scene to check on 3001; board verified on 4701 under P-2026-10-10-1150
+**Notes**: merge-tree zero conflicts, tree `8ec319011` equal to the merge's index tree. Union: none. Probes: RC-43 1, RC-44 0, 1150 heading 1. Governance: `docs/PROTOCOL.md`, under the go-ahead. No rollback tag (not asked). P-2026-10-10-1150 still reads `Status: da eseguire` on the trunk; the chat flips it. Step 6 names `616344b3c` as the pre-merge tip, the real one was `ca372edea`; not exercised, check:addonly passed.
+**Prompt document name**: 2026-10-10 12:04
