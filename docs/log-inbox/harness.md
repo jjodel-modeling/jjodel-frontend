@@ -604,3 +604,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: not applicable: CLI only (lane-run resolve and status); gates green, 8102 tests
 **Notes**: Rollback tag `pre-lane-run-resolve` on `2cc5af89a` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2042/result.json`.
 **Prompt document name**: 2026-10-10 20:42
+
+## 2026-10-10 — feat: lane board progress in the Phase cell and the resolved outcome (P-2026-10-10-2021)
+**Prompt**: `claude_2026-10-10_2021_prompt_board_progress_core.md`, slice S2 of the board port (discovery P-2026-10-10-1806 §7): the board listens only when run and exports its pure functions (F7), progress ladders from a running lane's log (F3), the blended estimate (F4), the `resolved` overlay for the Lanes tab only (F5), progress drawn inside the Phase cell (R1), README, the ported `laneBoard.test.ts` and five fixtures, a mutation bench.
+**Files touched**: `40b64be63`: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/{discovery,fast,merge,phase2,real-fast-P-2026-10-05-1110}.jsonl`; uncommitted (RC-17): this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no; the chat's RC-23 check of the Running table passed on 4702. Measured: `node --check` exit 0; `laneBoard.test.ts` 66/66; check:scripts PASS 68 files; on 4702 the Running header is the trunk's, exited rows carry the trunk's 24 keys, 15 blocked rows stay `blocked`.
+**Out-of-scope changes**: no: eight files, all declared by the prompt (above rule 19's five, listed there).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane, node run of the page's own `table()` on the 4 live `/api` rows of 4702: 8 segments and n/m each, phase text below; the chat's RC-23 check on 4702 (PID 57203) passed, board stopped
+**Notes**: Base commit: 63 of 64 ported cases red, the raw-outcome guard green. Bench 57/59 killed, 2 equivalent (Math.max on a fraction, cache eviction); three survivors closed by two tests (compaction at every step, guard through a symlink). Exports: XES reads `/api/timeline`, which maps `resolved` back to `blocked`; trace reads turn outcomes. Subject shortened to 72 chars: bash-guard caps it. `import()` returns exit 0, no port.
+**Prompt document name**: 2026-10-10 20:21
