@@ -457,3 +457,29 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: docs-only merge (discovery report and its prompt), nothing to check
 **Notes**: Rollback tag `pre-board-req-port-disc` on `c315460b0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1852/result.json`.
 **Prompt document name**: 2026-10-10 18:52
+
+## 2026-10-10 — fix(harness): lane board counts a two-merge lane as a merge (P-2026-10-10-1803)
+**Prompt**: `claude_2026-10-10_1803_prompt_board_kindof_merges.md`: extend `kindOf()` in `frontend/scripts/lane-board/lane-board.mjs` so that a Lane line `full (<count word or number> merge|merges …)` is `merge`, and prove on every `Lane:` line of `docs/prompts/*.md` that exactly one prompt moves, `phase2` to `merge`.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs` (`a77675e5e`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Corpus of 438 Lane lines in 840 files, classified before and after, line only and with the file name: one change, line only, `claude_2026-09-26_1550_prompt_merge_icons_and_navigate.md:5` phase2 to merge; with the file name none. node --check exit 0; check:scripts PASS, 65 files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: board classification only, verified by the lane on the full prompt corpus (one line moves, phase2 to merge); no UI change to check
+**Notes**: The measured phase2 holds only when the board passes no file name: `header()` takes it from `prompt.txt`, absent for the 2026-09-26/27 lanes; with the name, `_prompt_merge_` already made it a merge. Count words are one..ten or digits; probes `two mergers`, `twomerges`, `two phases, merge after` stay phase2. No test covers `kindOf` and none was created (WHAT 3). The first commit attempt was refused by bash-guard for the missing `Model:` trailer (P6), then added.
+**Prompt document name**: 2026-10-10 18:03
+
+## 2026-10-10 — merge: board-kindof-merges takes alfonso-frontend-jjtl (P-2026-10-10-1851)
+**Prompt**: `claude_2026-10-10_1851_prompt_board-kindof-merges_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-kindof` on `board-kindof-merges`: RC-14, the trunk at the explicit sha `c315460b0` into the branch with one `--no-ff` merge, base `45ad56bd6`, 45 trunk commits against 4 on the branch and this prompt on top; hard stop for the chat's GO, then this closure.
+**Files touched**: merge `43231854c`: the 56 files of the trunk side; `docs/log-inbox/harness.md` resolved by union (the trunk's entries, then the branch's 1803 entry, verbatim, each heading once); `frontend/scripts/lane-board/lane-board.mjs` auto-merged, no hand edit to code. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `43231854c`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8052 passed in 330 files, 0 failed, the 9 known red at import, equal to the trunk tip's count (the P-2026-10-10-1852 worker's vitest-before.json on `c315460b0` in `~/jjodel-release`; the branch adds no test); hooks 487 (trunk 487); build exit 0; check:docs 5/5; check:scripts PASS 67 files; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries 56 files, above five (RC-11), all the trunk side's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: take-trunk merge of a scripts-only branch, gates green per the session; nothing to check in the app
+**Notes**: Two of three full vitest runs, at load 75-105 beside the 1852 worker's gates, also red on irCollapsedRender and irSelectionRing: afterAll browser.close() hook timeout 10 s, every assertion passed; alone 18/18; the third run, load ~40, clean. check:docs is 5/5, not the prompt's 4/4 (Check E). The merge body says «ten blocks» and lists seven; not amended. Trunk now `e1eb53d43`, docs only past `c315460b0`; harness.md conflicts again for the merge into the trunk.
+**Prompt document name**: 2026-10-10 18:51
