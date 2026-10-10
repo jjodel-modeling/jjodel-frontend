@@ -123,3 +123,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23): all 11 earlier days strictly newest first by DOM read; on 2026-10-04 `chain-P-2026-10-04-1130` at index 7 between `1213` and `1025`; board on 4701 stopped.
 **Notes**: Measured on 2026-10-04: the chain moves from index 15 of 16 to 7, between `1213` and `1025`; `t` is non-increasing across the day. Board on 4701 (PID 21803) stopped by the chat after the visual check. Port 4700, launchd and `~/.jjodel-lanes/board/` untouched.
 **Prompt document name**: 2026-10-10 08:40
+
+## 2026-10-10 — merge: lane-board-order into alfonso-frontend-jjtl (P-2026-10-10-0843)
+**Prompt**: `claude_2026-10-10_0843_prompt_merge_lane-board-order.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-order` at `9a308dc0b` into `alfonso-frontend-jjtl`, merge base `d87d9353b`, 2 commits on the branch side.
+**Files touched**: merge `02a7d1857`: 2 files from the branch side (`docs/log-inbox/harness.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `02a7d1857` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7666 tests in 311 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only merge (frontend/scripts/lane-board/lane-board.mjs), app untouched; earlier-lanes order verified in the built-in browser on 4701 under P-2026-10-10-0840
+**Notes**: Rollback tag `pre-lane-board-order` on `d87d9353b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-0843/result.json`.
+**Prompt document name**: 2026-10-10 08:43
