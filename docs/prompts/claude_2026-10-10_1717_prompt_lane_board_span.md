@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: fast (one file, `frontend/scripts/lane-board/lane-board.mjs`, outside the critical zone)
 Depends: P-2026-10-10-1253
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1717 (lane-board-span, 960294cd4), merged 177dc474b; visual check passed (chat, built-in browser on 4701, RC-23)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
