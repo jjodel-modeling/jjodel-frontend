@@ -19,8 +19,8 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
 import { findFeatureRaw, navigateRefHop } from './irReadCtx';
-import type { ChannelEdges, CompiledContainmentLayout, CompiledPathStep, CompiledView } from './irTypes';
-import { layoutPartitions, type PartitionSpec } from './irPartitions';
+import type { ChannelEdges, CompiledContainmentLayout, CompiledPathStep, CompiledView, ContainmentMembership } from './irTypes';
+import { layoutPartitions, MIN_PARTITION_EXTENT, partitionExtent, resizePartitionBorder, type PartitionSpec } from './irPartitions';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
 import type { IRViewpointIndex } from './irResolveCore';
 import { resolveIRView } from './irResolveCore';
@@ -39,6 +39,13 @@ export interface ContainerInfo {
     edges?: ChannelEdges;
     /** Declared channel (R-GV-1): its feature when single-hop, null when multi-hop. Absent = the composition channel. */
     channelFeature?: string | null;
+    /** Declared channel's steps (R-GV-1), for the terminal slot a membership edit writes (S3). */
+    channelSteps?: CompiledPathStep[];
+    /** Declared `containment.membership` (R-GV-8, S3). */
+    membership?: ContainmentMembership;
+    /** Declared single-hop channel: what its slot holds, before any filter (S3), so an edge of the feature to an object
+     *  the slot no longer holds reads as stale. */
+    channelValues?: ReadonlySet<string>;
 }
 
 export interface ContainmentModel {
@@ -395,6 +402,9 @@ export function buildContainmentModel(
         if (cv.containment.layout) info.layout = cv.containment.layout;
         if (cv.containment.edges) info.edges = cv.containment.edges;
         if (channel) info.channelFeature = channel.steps.length === 1 ? channel.steps[0].feature : null;
+        if (channel) info.channelSteps = channel.steps;
+        if (cv.containment.membership) info.membership = cv.containment.membership;
+        if (channel && channel.steps.length === 1) info.channelValues = new Set(raw);
         model.containers.set(objectId, info);
         claims.push({ containerId: objectId, children, view: cv, declared: !!channel, order: claims.length });
     }
@@ -574,6 +584,21 @@ const sizeOf = (n: Node): { w: number; h: number } => ({
     h: (n.measured?.height ?? n.height ?? 60) as number,
 });
 
+/** Every object a container draws, at any depth, through the visual-parent forest (cycle-safe). */
+export function descendantsOf(model: ContainmentModel, objectId: string): string[] {
+    const out: string[] = [];
+    const seen = new Set<string>([objectId]);
+    const queue = [...(model.childrenOf.get(objectId) ?? [])];
+    for (let i = 0; i < queue.length; i++) {
+        const o = queue[i];
+        if (seen.has(o)) continue;
+        seen.add(o);
+        out.push(o);
+        for (const k of model.childrenOf.get(o) ?? []) queue.push(k);
+    }
+    return out;
+}
+
 /** Depth of a container in the visual-parent forest (R-GV-2): 0 for one no container draws. */
 function depthIn(model: ContainmentModel, objectId: string): number {
     let d = 0;
@@ -683,9 +708,24 @@ export function applyContainerLayout(
         const box = placed
             ? { x: own.x!, y: own.y!, w: own.w!, h: own.h!, isResized: true }
             : { x: node.position.x, y: node.position.y, w: rec.w, h: rec.h, isResized: !!rec.isResized };
+        let specs = kids.map(k => specOf(k, layout.axis, new Set()));
+        // A partition being resized (S3): its live size moves its end border, the next partition gives or takes the
+        // difference, the sum stays (spec addendum §7.5); the records are written once, at the end of the gesture.
+        const live = kids.findIndex(k => byId.get(model.vertexByObj.get(k)!)?.resizing === true);
+        if (live !== -1) {
+            const ln = byId.get(model.vertexByObj.get(kids[live])!)!;
+            const liveExtent = layout.axis === 'horizontal' ? (ln.measured?.width ?? ln.width) : (ln.measured?.height ?? ln.height);
+            if (typeof liveExtent === 'number' && Number.isFinite(liveExtent)) {
+                const extents = specs.map(sp => partitionExtent(sp));
+                const next = live < extents.length - 1
+                    ? resizePartitionBorder(extents, live, liveExtent - extents[live])
+                    : extents.map((e, i) => (i === live ? Math.max(liveExtent, MIN_PARTITION_EXTENT) : e));
+                specs = specs.map((sp, i) => ({ ...sp, stored: next[i], isResized: true }));
+            }
+        }
         const l = layoutPartitions({
             container: box, axis: layout.axis, header: layout.header, padding: layout.padding,
-            partitions: kids.map(k => specOf(k, layout.axis, new Set())),
+            partitions: specs,
         });
         patch.set(c.vertexId, { ...patch.get(c.vertexId), w: l.container.w, h: l.container.h });
         kids.forEach((k, i) => {
@@ -694,6 +734,28 @@ export function applyContainerLayout(
             const cls = i > 0 ? PARTITION_NEXT_CLASS[layout.axis === 'horizontal' ? 'horizontal' : 'vertical'] : undefined;
             patch.set(v, { ...patch.get(v), x: r.x, y: r.y, w: r.w, h: r.h, z: LAYOUT_CONTAINER_Z + d + 1, cls });
         });
+    }
+
+    // A container being dragged (S3) carries its descendants along on screen: the offset of its node from its record,
+    // applied to every descendant the layout does not place. Not for a partition, whose place is computed. At drag end
+    // EditorV2 writes the same offset to the records, and the offset drops to zero.
+    for (const { c } of ordered) {
+        const node = byId.get(c.vertexId);
+        if (!node?.dragging) continue;
+        const parent = model.parentOf.get(c.objectId);
+        if (parent !== undefined && model.containers.get(parent)?.layout?.mode === 'partitions') continue;
+        const rec = recOf(c.vertexId);
+        const dx = node.position.x - rec.x;
+        const dy = node.position.y - rec.y;
+        if (!Number.isFinite(dx) || !Number.isFinite(dy) || (dx === 0 && dy === 0)) continue;
+        for (const d of descendantsOf(model, c.objectId)) {
+            const v = model.vertexByObj.get(d);
+            const n = v !== undefined ? byId.get(v) : undefined;
+            if (!n || hidden.has(d)) continue;
+            const p = patch.get(v!);
+            if (p?.x !== undefined) continue;
+            patch.set(v!, { ...p, x: n.position.x + dx, y: n.position.y + dy });
+        }
     }
 
     let changed = false;
@@ -729,24 +791,38 @@ export function applyContainerLayout(
  * dispatch, row-dispatch addendum §6). Every claim counts, the one the container lost to an inner claimant too (R-GV-2):
  * the double claim is reported by the problems overlay, not by a stray edge. A declared single-hop channel matches a
  * reference edge of its feature; the default channel matches a composition edge; a multi-hop channel has no direct edge
- * and matches nothing. Pure; returns `edges` itself when nothing changes.
+ * and matches nothing. A declared single-hop channel also drops (S3) an edge of its feature to an object its slot no
+ * longer holds, and every edge of a pair but the last: after a membership edit the model deletes the old edge while the
+ * canvas may keep it, and a move back adds a new edge for the same pair (one edge per pair, Rule 13). Dropped, not
+ * hidden: a hidden edge still takes a handle slot on its ends (the object-as-edge synthesis counts it), and these pile
+ * up with every move. Pure; returns `edges` itself when nothing changes.
  */
 export function suppressChannelEdges(edges: Edge[], model: ContainmentModel): Edge[] {
-    let changed = false;
-    const out = edges.map(e => {
-        if (e.hidden) return e;
+    const channelOf = (e: Edge): { src: string; tgt: string; info: ContainerInfo } | null => {
         const src = model.objByVertex.get(e.source);
         const tgt = model.objByVertex.get(e.target);
-        if (src === undefined || tgt === undefined) return e;
-        if (model.parentOf.get(tgt) !== src && !model.multiClaimed?.get(tgt)?.includes(src)) return e;
-        const info = model.containers.get(src);
-        if (!info || info.edges !== 'hide' || info.channelFeature === null) return e;
+        const info = src !== undefined ? model.containers.get(src) : undefined;
+        if (src === undefined || tgt === undefined || !info || info.edges !== 'hide' || info.channelFeature === null) return null;
         const isChannel = info.channelFeature === undefined
             ? e.type === 'composition'
             : (e.type === 'instanceRef' || e.type === 'composition') && (e.data as { referenceName?: unknown } | undefined)?.referenceName === info.channelFeature;
-        if (!isChannel) return e;
+        return isChannel ? { src, tgt, info } : null;
+    };
+    const lastOfPair = new Map<string, number>();
+    edges.forEach((e, i) => { if (channelOf(e)?.info.channelValues !== undefined) lastOfPair.set(`${e.source}→${e.target}`, i); });
+    let changed = false;
+    const out: Edge[] = [];
+    edges.forEach((e, i) => {
+        const ch = channelOf(e);
+        if (!ch) { out.push(e); return; }
+        const { src, tgt, info } = ch;
+        if (info.channelValues !== undefined && (!info.channelValues.has(tgt) || lastOfPair.get(`${e.source}→${e.target}`) !== i)) {
+            changed = true;
+            return;
+        }
+        if (e.hidden || (model.parentOf.get(tgt) !== src && !model.multiClaimed?.get(tgt)?.includes(src))) { out.push(e); return; }
         changed = true;
-        return { ...e, hidden: true };
+        out.push({ ...e, hidden: true });
     });
     return changed ? out : edges;
 }

@@ -203,6 +203,29 @@ describe('suppressChannelEdges (R-GV-4)', () => {
         expect(suppressChannelEdges(edges, model({ edges: 'show', channelFeature: 'flowNodeRefs' }))).toBe(edges);
         expect(suppressChannelEdges(edges, model({ channelFeature: 'flowNodeRefs' }))).toBe(edges);
     });
+    it('drops an edge of the feature to an object the slot no longer holds, keeps one to an object it holds unclaimed', () => {
+        const held = model({ edges: 'hide', channelFeature: 'flowNodeRefs', channelValues: new Set(['t', 'u']) });
+        const outHeld = suppressChannelEdges(edges, held);
+        expect(outHeld.map(e => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']);
+        expect(hiddenIds(outHeld)).toEqual(['e1']);
+        const stale = model({ edges: 'hide', channelFeature: 'flowNodeRefs', channelValues: new Set(['t']) });
+        const outStale = suppressChannelEdges(edges, stale);
+        expect(outStale.map(e => e.id)).toEqual(['e1', 'e2', 'e4', 'e5']);
+        expect(hiddenIds(outStale)).toEqual(['e1']);
+        // Already hidden (a collapsed hull, a row) and stale: dropped all the same.
+        const hiddenStale = [{ ...edges[2], hidden: true }];
+        expect(suppressChannelEdges(hiddenStale, stale)).toEqual([]);
+        // Two edges of the feature for one pair: the older is a leftover, the last one stays (and is hidden).
+        const twice = [edge('old', 'VL', 'Vt', 'instanceRef', 'flowNodeRefs'), ...edges];
+        const outTwice = suppressChannelEdges(twice, held);
+        expect(outTwice.map(e => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']);
+        expect(hiddenIds(outTwice)).toEqual(['e1']);
+        // Without a declared single-hop channel nothing is dropped, duplicates included.
+        expect(suppressChannelEdges(twice, model({ edges: 'hide', channelFeature: 'flowNodeRefs' })).map(e => e.id))
+            .toEqual(['old', 'e1', 'e2', 'e3', 'e4', 'e5']);
+        const shown = model({ edges: 'show', channelFeature: 'flowNodeRefs', channelValues: new Set(['t']) });
+        expect(suppressChannelEdges(edges, shown)).toBe(edges);
+    });
     it('hides the edge of a claim the container lost to another claimant as well', () => {
         const m = model({ edges: 'hide', channelFeature: 'flowNodeRefs' });
         m.parentOf.set('t', 'M');
@@ -216,8 +239,54 @@ describe('suppressChannelEdges (R-GV-4)', () => {
         const done = [{ ...edges[0], hidden: true }];
         expect(suppressChannelEdges(done, model({ edges: 'hide', channelFeature: 'flowNodeRefs' }))).toBe(done);
     });
-    it('never removes an edge: the array keeps its length and ids', () => {
+    it('never removes an edge the slot still holds: the array keeps its length and ids', () => {
         const out = suppressChannelEdges(edges, model({ edges: 'hide', channelFeature: 'flowNodeRefs' }));
         expect(out.map(e => e.id)).toEqual(edges.map(e => e.id));
+    });
+});
+
+describe('applyContainerLayout: live gestures (S3)', () => {
+    it('a pool being dragged carries its flow nodes by its offset from its record, and the lanes with it', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vshop: { position: { x: 300, y: 140 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vsales')).toMatchObject({ x: 330, y: 140 });
+        expect(pick(out, 'Vt1')).toMatchObject({ x: 500, y: 200 });
+        expect(pick(out, 'Vt2')).toMatchObject({ x: 500, y: 380 });
+        expect(out.find(n => n.id === 'Vx')).toBe(nodes.find(n => n.id === 'Vx'));
+    });
+    it('a pool being dragged leaves a hidden descendant where it is', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vshop: { position: { x: 300, y: 140 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set(['t1']));
+        expect(pick(out, 'Vt1')).toMatchObject({ x: 300, y: 160 });
+        expect(pick(out, 'Vt2')).toMatchObject({ x: 500, y: 380 });
+    });
+    it('a pool at its record, or not dragged, carries nothing', () => {
+        const atRest = world({ nodes: { Vshop: { dragging: true } } });
+        expect(pick(applyContainerLayout(atRest.nodes, atRest.model, atRest.idlookup, null, new Set()), 'Vt1')).toMatchObject({ x: 300, y: 160 });
+        const moved = world({ nodes: { Vshop: { position: { x: 300, y: 140 } } } });
+        expect(pick(applyContainerLayout(moved.nodes, moved.model, moved.idlookup, null, new Set()), 'Vt1')).toMatchObject({ x: 300, y: 160 });
+    });
+    it('a lane being dragged carries nothing: its place is computed', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vsales: { position: { x: 600, y: 600 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vt1')).toMatchObject({ x: 300, y: 160 });
+        expect(pick(out, 'Vsales')).toMatchObject({ x: 130, y: 100 });
+    });
+    it('a lane being resized moves its end border live: the next lane gives the difference, the sum stays', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vsales: { resizing: true, measured: { width: 870, height: 220 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vsales')).toMatchObject({ y: 100, h: 220 });
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ y: 320, h: 140 });
+        expect(pick(out, 'Vshop').h).toBe(360);
+    });
+    it('the floor holds the neighbour, and the last lane grows the pool', () => {
+        const big = world({ nodes: { Vsales: { resizing: true, measured: { width: 870, height: 500 } } } });
+        const o1 = applyContainerLayout(big.nodes, big.model, big.idlookup, null, new Set());
+        expect(pick(o1, 'Vwarehouse').h).toBe(24);
+        expect(pick(o1, 'Vsales').h).toBe(336);
+        const last = world({ nodes: { Vwarehouse: { resizing: true, measured: { width: 870, height: 230 } } } });
+        const o2 = applyContainerLayout(last.nodes, last.model, last.idlookup, null, new Set());
+        expect(pick(o2, 'Vwarehouse').h).toBe(230);
+        expect(pick(o2, 'Vshop').h).toBe(410);
     });
 });

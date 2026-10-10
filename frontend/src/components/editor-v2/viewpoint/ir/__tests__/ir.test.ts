@@ -2644,6 +2644,13 @@ describe('R-GV children channel and single visual parent (irContainment)', () =>
         expect(model.parentOf.get('L1')).toBe('pool');
         expect(model.parentOf.get('L2')).toBe('pool');
     });
+    it('records what a single-hop channel slot holds before the filter (S3), and nothing for a multi-hop one', () => {
+        const patch = { s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['t1', 'g1', 'sf1'] } };
+        const { model } = bpmnWorld('sig_gv_ch_values', { patch });
+        expect(model.childrenOf.get('L1')).toEqual(['t1', 'g1']);
+        expect([...(model.containers.get('L1')!.channelValues ?? [])]).toEqual(['t1', 'g1', 'sf1']);
+        expect(model.containers.get('pool')!.channelValues).toBeUndefined();
+    });
     it('gives a twice-claimed node to the first claimant in canvas order when the depths tie', () => {
         const a = bpmnWorld('sig_gv_bpmn_2a').model;
         expect(a.parentOf.get('t1')).toBe('L1');
