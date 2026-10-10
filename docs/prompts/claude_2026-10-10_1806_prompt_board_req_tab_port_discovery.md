@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: full (discovery, read-only; Phase 2 is a later prompt)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1806 (board-req-port-disc, report 0d8180ebc); discovery, no visual check
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
