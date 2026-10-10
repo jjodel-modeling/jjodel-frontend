@@ -214,3 +214,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Lanes tab verified on 4701 under P-2026-10-10-1253
 **Notes**: Rollback tag `pre-lane-board-times` on `8acff31ef` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1312/result.json`.
 **Prompt document name**: 2026-10-10 13:12
+
+## 2026-10-10 — feat(harness): lane board Insights, models, code areas, first-shot (P-2026-10-10-1520)
+**Prompt**: `claude_2026-10-10_1520_prompt_lane_board_model_insights_discovery.md`: Phase 1 discovery (`da062a727`), then the chat's GO with the ten decisions of report §11 (RC-21): `/api/insights` v1, three Insights sections (code areas; model by area and by size with the RC-45 drawn toggle; first-shot by week with model and RC markers), the `header()` and `kindOf` fix, the README path.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/README.md` (`e3590d682`); this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` on both files; check:scripts PASS (57 files); final outcome from the logs equal to `lane-run status` on 380/380 lanes; headless probe on 4701 of the Lanes, Timeline and Insights tabs, 0 console errors.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe, headless, on 4701: the three new sections, the drawn toggle's empty state and the 7, 30 and all ranges read from the DOM, 0 console errors; the chat's RC-23 check on 4701 is still due.
+**Notes**: Cold /api/insights 4.15 s, warm 0.003 s (0.09 s on recompute). Kinds over 382 lanes, before -> after: not recorded 203 -> 5, merge 0 -> 171. Area rows and model tables match report §5.2 and §6.5 except P-2026-09-26-2340, -2350 and P-2026-10-10-1253, now attributed (suffix outside the run windows, Prompt-ID trailer), and P-2026-10-10-0105, running, left out. Board left on 4701. Report: docs/discovery/discovery_2026-10-10_lane_board_model_insights.md.
+**Prompt document name**: 2026-10-10 15:20
+
+**Ticket** (report correction): `total_cost_usd` and `modelUsage` are cumulative over a session, a resume restores them (0 decreases in 196 consecutive pairs of results). The report's §2.4 summed them per lane: $3,705 total and an Opus median of $7.92 overstate. The largest value per lane is the lane's cost, $2,218 over 382 lanes; the endpoint uses it. An addendum to the report is owed (not in this lane's DOVE).
