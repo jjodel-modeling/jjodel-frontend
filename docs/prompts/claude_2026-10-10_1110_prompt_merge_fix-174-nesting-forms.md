@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-10-1110
 Chat: C-2026-10-07-0948
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane merge · 2f60f3415 · verifica visiva passata 2026-10-10 (albero unito 2f60f3415: frontend/ identico alla punta della lane a54e771d6 (git diff vuoto), che ha il GO visivo di Juri del 2026-10-10; sonda della chat con gesti reali sul vite di staging (3053): Delete di S3, Delete di S1 e JjScript delete instance S2 con 0 vertici fantasma e 0 nodi dipinti, Cmd+Z ripristina S3 e P1, cancellazione ripetuta dopo l'undo riuscita, 0 errori di pagina, nessun padre pendente)
 
 Worktree: `/Users/juridirocco/development/jjodel`, branch `staging`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/juridirocco/development/jjodel` on `staging`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-10-1110 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

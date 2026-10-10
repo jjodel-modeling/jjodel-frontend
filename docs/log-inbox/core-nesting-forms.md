@@ -50,3 +50,16 @@ not touched by this lane.
 **Priority**: low
 **Found in**: P-2026-10-07-0950
 **Detail**: docs/discovery/discovery_2026-10-07_174_nesting_forms.md
+
+## 2026-10-10 — merge: fix/174-nesting-forms into staging (P-2026-10-10-1110)
+**Prompt**: `claude_2026-10-10_1110_prompt_merge_fix-174-nesting-forms.md`, a direct merge by `lane-run merge --direct`, no session: `fix/174-nesting-forms` at `a54e771d6` into `staging`, merge base `e635f8723`, 15 commits on the branch side.
+**Files touched**: merge `2f60f3415`: 18 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-07_174_nesting_forms.md`, `docs/lir/lir_2026-10-07_174_migration.md`, `docs/lir/lir_2026-10-10_174_load_purge.md`, `docs/log-inbox/core-nesting-forms.md`, `docs/prompts/claude_2026-10-07_0950_prompt_174_nesting_forms.md`, `docs/ratifiche/claude_2026-10-07_memo_174_nesting_forms.md`, `frontend/src/common/Dummy.ts`, and 10 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2f60f3415` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7977 tests in 321 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: albero unito 2f60f3415: frontend/ identico alla punta della lane a54e771d6 (git diff vuoto), che ha il GO visivo di Juri del 2026-10-10; sonda della chat con gesti reali sul vite di staging (3053): Delete di S3, Delete di S1 e JjScript delete instance S2 con 0 vertici fantasma e 0 nodi dipinti, Cmd+Z ripristina S3 e P1, cancellazione ripetuta dopo l'undo riuscita, 0 errori di pagina, nessun padre pendente
+**Notes**: Rollback tag `pre-fix/174-nesting-forms` on `e635f8723` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1110/result.json`.
+**Prompt document name**: 2026-10-10 11:10
