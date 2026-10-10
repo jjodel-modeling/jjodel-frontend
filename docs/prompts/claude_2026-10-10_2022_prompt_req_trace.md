@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: fast (two new files copied verbatim, outside the critical zone, no caller yet)
 Depends: P-2026-10-10-1806
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-2022 (req-trace-port, 14461b2bd); no visual check (script without UI)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

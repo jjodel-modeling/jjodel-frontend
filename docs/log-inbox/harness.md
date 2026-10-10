@@ -550,3 +550,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: harness: lane-run draws the tier of eligible fast lanes (RC-45); board drawn toggle checked on 4701
 **Notes**: Rollback tag `pre-lane-run-rc45-draw` on `9d41d0bce` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1937/result.json`.
 **Prompt document name**: 2026-10-10 19:37
+
+## 2026-10-10 — feat(harness): req-trace on the trunk, verbatim from harness-req-tab (P-2026-10-10-2022)
+**Prompt**: `claude_2026-10-10_2022_prompt_req_trace.md`, slice S3 of the board port (discovery `discovery_2026-10-10_board_req_tab_port.md` §6-7): copy `req-trace.mjs` and `reqTrace.test.ts` verbatim from `35240a582`, probe the trunk, re-run 8 or more mutations, gates, one code commit.
+**Files touched**: `frontend/scripts/req-trace.mjs`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts` (`14461b2bd`, blobs identical to the branch, mode 100644); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: No line changed: suite 16/16, node --check 0, check:scripts PASS 69 (walks the disk, both files in). Probe exit 0, 4.5 s, 488470 B: §6 counts hold except realized 297 and 12 after the milestone (+3 each: `f95d0a44f` cites R-GEN-2, -3, -14, merged by `601ec1379` after `834152b68`); prompts 860, +20 of which 13 merge, 7 under 2 ids, graph unchanged. Bench 13/13 killed, control green. Subject cut to 72 (guard).
+**Prompt document name**: 2026-10-10 20:22
