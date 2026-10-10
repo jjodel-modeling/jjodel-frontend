@@ -329,3 +329,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read of the Lanes tab: Span right after Elapsed in Running, Last 24 hours and Earlier lanes, both headers carry their title; 0045 reads Elapsed 34 min, Span 7 h 39 min; 1150 reads 10 min and 11 min; board on 4701 stopped
 **Notes**: Running is `r.live`, the flag that already splits the Running table from the others, so a chain row follows it too. The empty exited span is P-2026-09-29-1017 (no exit.txt, dead pid), the row that already shows no Ended. Span uses the browser's clock for now, Elapsed the server's at the last /api read: on a running row the two can differ by up to the cache age.
 **Prompt document name**: 2026-10-10 17:17
+
+## 2026-10-10 — feat(harness): lane board tables with fixed column widths (P-2026-10-10-1742)
+**Prompt**: `claude_2026-10-10_1742_prompt_lane_board_fixed_columns.md`, fast lane on `~/jjodel-w-boardcols`, branch `lane-board-columns`: every Lanes-tab table `table-layout: fixed`, width 100%, a `<colgroup>` from one width map keyed by column name; pills never wrap; time and duration cells nowrap and tabular-nums; Worktree and Phase ellipsis with a `title`; no cell overflows into its neighbour.
+**Files touched**: code `034811a1f`: `frontend/scripts/lane-board/lane-board.mjs`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` exit 0; check:scripts PASS 63 files. Headless Chromium probe on 4701, live data, 13 tables, light theme: at 1280, 1440 and 1920 px every column has one width across all tables and across a `tick()`, Lane's left edge is one value, no non-truncating cell has scrollWidth > clientWidth, no pill wraps, no `.lfx` table in Timeline or Insights.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read: table-layout fixed on Running, Last 24 hours and an Earlier day; every column keeps one width across tables; Lane, State, Worktree and Launched by share the same left edge everywhere, the middle columns shift only where the column sets differ; no pill wraps; Worktree truncates with a title; board on 4701 stopped
+**Notes**: Widths px: Lane 200, State 92, Kind 124, Started/Ended 96, Elapsed/Span 100, Left 116, Worktree 144, Launched by 128; Phase and Outcome auto (146 and 166 at 1246 px). Ended is fixed beside Started, Outcome absorbs the rest. Horizontal cell padding 8 px in these tables only: at 12 px Phase fell under 90 px. Min-width 1200: below ~1240 px viewport the wrap scrolls and the chain outcome pill (148 px) ends in an ellipsis. Titles wrap at 184 px instead of up to 320.
+**Prompt document name**: 2026-10-10 17:42
