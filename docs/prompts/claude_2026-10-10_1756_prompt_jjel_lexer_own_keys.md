@@ -5,7 +5,7 @@ Chat: C-2026-10-10-1512
 Request: https://claude.ai/code/session_015Px4yAHrpWDZQo31DjapvA
 Lane: fast (two lookups in one lexer file, with tests; outside the critical zone; tier drawn (RC-45): light)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1756 (jjel-lexer-own-keys, 455792c69 b1b1599ba; tier drawn RC-45: light, claude-sonnet-5-5), merged 0d2ad8f11 (P-2026-10-10-1817); non-visual
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
