@@ -19,7 +19,7 @@
  *         frontend/scripts/probe/bpmn-lanes-fixture.ts --port 3071 --id P-2026-10-10-0105
  * Env:  GV_TAG    label of the run in file names (default after)
  *       GV_OUT    output directory (default docs/discovery/assets/graphvertex-s2 of this tree)
- *       GV_ONLY   comma list of scenes: bpmn, hull, demos (default bpmn,hull)
+ *       GV_ONLY   comma list of scenes: bpmn, hull, demos, s3, s3hull (default bpmn,hull)
  *       GV_DEMOS  directory of the demo exports for the `demos` scene (default ~/jjodel-demo-exports)
  */
 import { chromium, type Browser, type Page } from '@playwright/test';
@@ -68,11 +68,11 @@ export const BPMN_VIEWS: Array<[string, Record<string, unknown>]> = [
         defaultSize: { width: 900, height: 40 },
         shape: { form: 'rect', fill: '#ffffff', border: { width: 1.5 }, labels: [{ position: 'center', source: I('name') }] },
         containment: { collapsible: false } }],
-    ['Lane', { kind: 'graphVertex', metaclasses: ['Lane'], label: 'Lane',
+    ['Lane', { kind: 'graphVertex', metaclasses: ['Lane'], label: 'Lane', resizable: true,
         shape: { form: 'rect', fill: '#ffffff', border: { width: 1 }, labels: [headerLabel] },
         containment: { children: '$flowNodeRefs.values', childFilter: isKind('FlowNode'), layout: { mode: 'free', header: band },
             membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } }, edges: 'hide', collapsible: false } }],
-    ['Lane', { kind: 'graphVertex', metaclasses: ['Lane'], label: 'Lane with sub-lanes', priority: 1,
+    ['Lane', { kind: 'graphVertex', metaclasses: ['Lane'], label: 'Lane with sub-lanes', priority: 1, resizable: true,
         predicate: { op: 'exists', path: '$childLaneSet.value' },
         shape: { form: 'rect', fill: '#ffffff', border: { width: 1 }, labels: [headerLabel] },
         containment: { children: '$childLaneSet.value.$lanes.values', childFilter: isKind('Lane'),
@@ -370,23 +370,31 @@ const inside = (c: Box, p: Box) => c.x >= p.x - 1 && c.y >= p.y - 1 && c.x + c.w
 
 // ── Scenes ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
-async function sceneBpmn(browser: Browser, out: Record<string, unknown>) {
+/** The BPMN scene, built and shown under its viewpoint in the light theme; null when the graph never came. */
+export async function buildBpmnScene(browser: Browser, label: string) {
     const { page, errors } = await openPage(browser);
-    const pid = await createProject(page, `GV_S2_bpmn_${TAG}_${Date.now()}`);
+    const pid = await createProject(page, `GV_${label}_${TAG}_${Date.now()}`);
     await page.goto(`${URL}/#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     await page.waitForTimeout(NAV_MS);
     await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
-    meas('bpmn metamodel', await buildMetamodel(page, BPMN_CLASSES, BPMN_REFS, 'BaseElement'));
+    meas(`${label} metamodel`, await buildMetamodel(page, BPMN_CLASSES, BPMN_REFS, 'BaseElement'));
     const shell = await buildModelShell(page);
-    meas('bpmn model shell', shell);
-    if (!shell.graphId) { check('bpmn: v2-flow graph exists', false, shell); return; }
+    meas(`${label} model shell`, shell);
+    if (!shell.graphId) { check(`${label}: v2-flow graph exists`, false, shell); return null; }
     const ids = await buildObjects(page, shell.graphId, BPMN_OBJECTS);
     await buildLinks(page, ids, BPMN_CONTAINMENT, BPMN_REFERENCES);
     const vp = await buildViewpoint(page, 'BPMN', BPMN_VIEWS);
-    meas('bpmn viewpoint', vp);
+    meas(`${label} viewpoint`, vp);
     await setTheme(page, 'light');
     await pickViewpoint(page, 'BPMN');
     await page.waitForTimeout(SETTLE_MS);
+    return { page, errors, ids, shell: shell as { modelId: string; graphId: string } };
+}
+
+async function sceneBpmn(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildBpmnScene(browser, 'S2_bpmn');
+    if (!scene) return;
+    const { page, errors, ids, shell } = scene;
 
     const nodes = await readNodes(page);
     const edges = await readEdges(page);
@@ -528,6 +536,263 @@ async function sceneDemos(browser: Browser, out: Record<string, unknown>) {
     out.demos = res;
 }
 
+// ── S3: gestures and membership (P-2026-10-10-0105 S3, docs/lir/lir_2026-10-10_graphvertex_s3.md) ────────────────
+
+/** The zoom of the visible canvas, from its viewport transform. */
+export async function zoomOf(page: Page): Promise<number> {
+    return page.evaluate(() => {
+        const t = (document.querySelector('.dock-tabpane-active .react-flow__viewport') as HTMLElement | null)?.style.transform ?? '';
+        const m = t.match(/scale\(\s*([\d.]+)\s*\)/);
+        return m ? +m[1] : 1;
+    });
+}
+/** The screen box of a node of the visible canvas. */
+export async function screenBox(page: Page, vertexId: string) {
+    return page.locator(`.dock-tabpane-active .react-flow__node[data-id="${vertexId}"]`).first().boundingBox();
+}
+/** A mouse drag in screen pixels, in steps, then a pause for the sync. */
+export async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, settle = 1500) {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 12; i++) await page.mouse.move(from.x + (to.x - from.x) * i / 12, from.y + (to.y - from.y) * i / 12);
+    await page.mouse.up();
+    await page.waitForTimeout(settle);
+}
+/** The ids a slot holds, by its owner's key and feature name, read from Redux. */
+export async function slotIds(page: Page, ids: Record<string, { obj: string }>, key: string, feature: string): Promise<string[]> {
+    return ev<string[]>(page, `const idl = w.store.getState().idlookup; const o = idl[a.obj];
+        for (const f of o?.features || []) { const v = idl[f]; if (v && idl[v.instanceof]?.name === a.feature) return (v.values || []).filter((x) => typeof x === 'string'); }
+        return [];`, { obj: ids[key].obj, feature }, 0);
+}
+/** The stored layout record of each vertex, under the layout key in force. */
+export async function records(page: Page, ids: Record<string, { vertex: string }>) {
+    return ev<Record<string, { x: number; y: number; w: number; h: number }>>(page, `
+        const lay = await import('/src/components/editor-v2/viewpoint/layout/vertexLayout.ts');
+        const ad = await import('/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts');
+        const idl = w.store.getState().idlookup; const key = ad.getActiveLayoutKey();
+        return Object.fromEntries(Object.entries(a).map(([k, v]) => { const r = lay.readVertexLayout(idl[v.vertex] || {}, key); return [k, { x: r.x, y: r.y, w: r.w, h: r.h }]; }));`, ids, 0);
+}
+const objectsOf = (page: Page, cls: string) => ev<string[]>(page, `const idl = w.store.getState().idlookup;
+    return Object.values(idl).filter((d) => d && d.className === 'DObject' && idl[d.instanceof]?.name === a).map((d) => d.id);`, cls, 0);
+
+async function sceneS3(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildBpmnScene(browser, 'S3_bpmn');
+    if (!scene) return;
+    const { page, errors, ids, shell } = scene;
+    const res: Record<string, unknown> = { tag: TAG, ids };
+    out.s3 = res;
+    const laneVertices = new Set([ids.sales.vertex, ids.warehouse.vertex]);
+    const hit = async (x: number, y: number) => page.evaluate(([x, y]) => { const el = document.elementFromPoint(x, y) as HTMLElement | null; return { cls: String(el?.className ?? '').slice(0, 60), node: (el?.closest('.react-flow__node') as HTMLElement | null)?.dataset.id ?? null }; }, [x, y] as const);
+    // An empty point of the pane: a click there clears the selection.
+    const clickPane = async () => {
+        const pane = await page.locator('.dock-tabpane-active .react-flow__pane').first().boundingBox();
+        if (!pane) return false;
+        for (let fy = 0.95; fy >= 0.05; fy -= 0.1) for (let fx = 0.05; fx <= 0.95; fx += 0.1) {
+            const p = { x: pane.x + pane.width * fx, y: pane.y + pane.height * fy };
+            if ((await hit(p.x, p.y)).cls.includes('react-flow__pane')) { await page.mouse.click(p.x, p.y); await page.waitForTimeout(300); return true; }
+        }
+        return false;
+    };
+    const laneEdgeCount = async () => (await readEdges(page)).filter((e) => laneVertices.has(e.source)).length;
+    const k = await zoomOf(page);
+    res.zoom = k;
+
+    // 1. Ship from Warehouse to Sales: the two lists swap it; no lane edge; one undo restores both.
+    const before1 = { sales: await slotIds(page, ids, 'sales', 'flowNodeRefs'), warehouse: await slotIds(page, ids, 'warehouse', 'flowNodeRefs') };
+    const shipBox = await screenBox(page, ids.ship.vertex);
+    const shipRec0 = (await records(page, ids)).ship;
+    if (shipBox) await drag(page, { x: shipBox.x + shipBox.width / 2, y: shipBox.y + shipBox.height / 2 }, { x: shipBox.x + shipBox.width / 2, y: shipBox.y + shipBox.height / 2 - 200 * k });
+    const after1 = { sales: await slotIds(page, ids, 'sales', 'flowNodeRefs'), warehouse: await slotIds(page, ids, 'warehouse', 'flowNodeRefs') };
+    const laneEdges1 = await laneEdgeCount();
+    await shoot(page, `s3-ship-moved-${TAG}-light.png`, true);
+    check('S3-1 Ship into Sales: Sales.flowNodeRefs gains it, Warehouse.flowNodeRefs loses it',
+        after1.sales.includes(ids.ship.obj) && !after1.warehouse.includes(ids.ship.obj) && !before1.sales.includes(ids.ship.obj), { before1, after1 });
+    check('S3-2 no Lane→Task edge after the move', laneEdges1 === 0, laneEdges1);
+    await page.locator('button[title="Undo (Ctrl+Z)"]:visible').first().click();
+    await page.waitForTimeout(2000);
+    const undone = { sales: await slotIds(page, ids, 'sales', 'flowNodeRefs'), warehouse: await slotIds(page, ids, 'warehouse', 'flowNodeRefs') };
+    const shipRecU = (await records(page, ids)).ship;
+    check('S3-3 one undo restores both lists, and Ship\'s place', JSON.stringify(undone) === JSON.stringify(before1)
+        && shipRecU.x === shipRec0.x && shipRecU.y === shipRec0.y, { undone, before1, shipRec0, shipRecU });
+    check('S3-3b still no Lane→Task edge after the undo', (await laneEdgeCount()) === 0, await laneEdgeCount());
+    res.move = { before1, after1, undone, laneEdges1, shipRec0, shipRecU };
+
+    // 2. Back and forth: Ship to Sales and straight back to Warehouse.
+    const b2 = await screenBox(page, ids.ship.vertex);
+    if (b2) {
+        const c = { x: b2.x + b2.width / 2, y: b2.y + b2.height / 2 };
+        await drag(page, c, { x: c.x, y: c.y - 200 * k }, 300);
+        await drag(page, { x: c.x, y: c.y - 200 * k }, c, 2500);
+    }
+    const final2 = { sales: await slotIds(page, ids, 'sales', 'flowNodeRefs'), warehouse: await slotIds(page, ids, 'warehouse', 'flowNodeRefs') };
+    const pairEdges = await ev<number>(page, `const idl = w.store.getState().idlookup; const g = idl[a.g];
+        return (g?.subElements || []).map((id) => idl[id]).filter((d) => d && (d.className === 'DVoidEdge' || d.className === 'DEdge') && d.start === a.wh && d.end === a.ship).length;`,
+        { g: shell.graphId, wh: ids.warehouse.vertex, ship: ids.ship.vertex }, 0);
+    check('S3-4 back and forth: Ship ends in Warehouse alone, one Warehouse→Ship edge, none drawn',
+        final2.warehouse.includes(ids.ship.obj) && !final2.sales.includes(ids.ship.obj) && pairEdges === 1 && (await laneEdgeCount()) === 0, { final2, pairEdges });
+    res.backAndForth = { final2, pairEdges };
+
+    // 3. Sales dragged out of Shop: it snaps back, its record untouched.
+    const nodes3 = await readNodes(page);
+    const sales3 = nodes3.find((n) => n.id === ids.sales.vertex)!;
+    const rec3 = (await records(page, ids)).sales;
+    const sb = await screenBox(page, ids.sales.vertex);
+    // Pressed on its header band, checked to be Sales: the right end of a lane can sit under the side panel.
+    const press3 = sb ? { x: sb.x + 10, y: sb.y + 20 } : null;
+    const hit3 = press3 ? await hit(press3.x, press3.y) : null;
+    if (press3) await drag(page, press3, { x: press3.x, y: press3.y + 500 * k });
+    const sales3b = (await readNodes(page)).find((n) => n.id === ids.sales.vertex)!;
+    const rec3b = (await records(page, ids)).sales;
+    check('S3-5 Sales dragged out of Shop snaps back (box and record unchanged)', hit3?.node === ids.sales.vertex
+        && sales3.x === sales3b.x && sales3.y === sales3b.y && sales3.w === sales3b.w && sales3.h === sales3b.h && rec3.x === rec3b.x && rec3.y === rec3b.y,
+        { pressedOn: hit3, sales3: [sales3.x, sales3.y, sales3.w, sales3.h], sales3b: [sales3b.x, sales3b.y, sales3b.w, sales3b.h], rec3, rec3b });
+
+    // 4. Shop dragged by its band: every descendant moves by Shop's delta.
+    const desc = ['sales', 'warehouse', 'start', 'check', 'gw', 'ship', 'end'];
+    const n4 = await readNodes(page);
+    const at = (ns: Box[], key: string) => ns.find((n) => n.id === ids[key].vertex)!;
+    const pb = await screenBox(page, ids.shop.vertex);
+    if (pb) await drag(page, { x: pb.x + 15 * k, y: pb.y + pb.height / 2 }, { x: pb.x + 15 * k + 160 * k, y: pb.y + pb.height / 2 + 32 * k }, 2500);
+    const n4b = await readNodes(page);
+    const dShop = { x: at(n4b, 'shop').x - at(n4, 'shop').x, y: at(n4b, 'shop').y - at(n4, 'shop').y };
+    const deltas = desc.map((d) => ({ d, dx: at(n4b, d).x - at(n4, d).x, dy: at(n4b, d).y - at(n4, d).y }));
+    const recs4 = await records(page, ids);
+    check('S3-6 Shop dragged: every descendant\'s x (and y) changes by exactly Shop\'s delta', dShop.x !== 0
+        && deltas.every((v) => Math.abs(v.dx - dShop.x) < 0.5 && Math.abs(v.dy - dShop.y) < 0.5), { dShop, deltas });
+    check('S3-6b the flow nodes\' records moved with it', ['start', 'check', 'gw', 'ship', 'end'].every((d) => Math.abs((recs4[d].x - at(n4b, d).x)) < 0.5),
+        Object.fromEntries(['start', 'check', 'ship'].map((d) => [d, [recs4[d].x, at(n4b, d).x]])));
+    await shoot(page, `s3-shop-moved-${TAG}-light.png`, true);
+
+    // 5. The Sales/Warehouse border resized: both heights change, their sum does not.
+    const n5 = await readNodes(page);
+    const s5 = at(n5, 'sales'); const w5 = at(n5, 'warehouse');
+    const sb5 = await screenBox(page, ids.sales.vertex);
+    // Selected by its header band: the right end of a lane can sit under the side panel.
+    // Shop is still selected from the drag, and React Flow lifts a selected node by 1000 (elevateNodesOnSelect): it
+    // covers its lanes until it is deselected.
+    const paneClicked = await clickPane();
+    const hit5 = sb5 ? await hit(sb5.x + 10, sb5.y + sb5.height / 2) : null;
+    if (sb5) { await page.mouse.click(sb5.x + 10, sb5.y + sb5.height / 2); await page.waitForTimeout(600); }
+    const selected5 = await page.evaluate(() => [...document.querySelectorAll('.dock-tabpane-active .react-flow__node.selected')].map((n) => (n as HTMLElement).dataset.id));
+    const line = page.locator(`.dock-tabpane-active .react-flow__node[data-id="${ids.sales.vertex}"] .react-flow__resize-control.line.bottom`).first();
+    const lb = (await line.count()) ? await line.boundingBox() : null;
+    if (lb) await drag(page, { x: lb.x + lb.width * 0.7, y: lb.y + lb.height / 2 }, { x: lb.x + lb.width * 0.7, y: lb.y + lb.height / 2 + 40 * k }, 2000);
+    const n5b = await readNodes(page);
+    const s5b = at(n5b, 'sales'); const w5b = at(n5b, 'warehouse');
+    const recs5 = await records(page, ids);
+    check('S3-7 the Sales/Warehouse border resized: both heights change, their sum is constant',
+        !!lb && s5b.h !== s5.h && w5b.h !== w5.h && Math.abs((s5b.h + w5b.h) - (s5.h + w5.h)) < 1 && Math.abs(s5b.y + s5b.h - w5b.y) < 1,
+        { line: !!lb, before: [s5.h, w5.h], after: [s5b.h, w5b.h], records: [recs5.sales.h, recs5.warehouse.h], paneClicked, hit: hit5, salesSelected: selected5.includes(ids.sales.vertex) });
+    await page.mouse.click(5, 5);
+
+    // 6. A Task dropped from the palette into Warehouse: in the process's flowElements and in Warehouse.flowNodeRefs.
+    const tasks0 = await objectsOf(page, 'Task');
+    const taskClass = await ev<string>(page, `return w.LProject.getProject().metamodels[0].packages[0].classes.find((c) => c.name === 'Task').id;`, undefined, 0);
+    const wb = await screenBox(page, ids.warehouse.vertex);
+    if (wb) {
+        await page.evaluate(([x, y, cls]) => {
+            const el = document.elementFromPoint(x as number, y as number);
+            const dt = new DataTransfer();
+            dt.setData('application/reactflow', 'objectNode');
+            dt.setData('metaclassId', cls as string);
+            el?.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: x as number, clientY: y as number, dataTransfer: dt }));
+            el?.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, clientX: x as number, clientY: y as number, dataTransfer: dt }));
+        }, [wb.x + wb.width * 0.6, wb.y + wb.height * 0.5, taskClass] as const);
+        await page.waitForTimeout(2500);
+    }
+    const newTasks = (await objectsOf(page, 'Task')).filter((t) => !tasks0.includes(t));
+    const fe = await slotIds(page, ids, 'shopProc', 'flowElements');
+    const whRefs = await slotIds(page, ids, 'warehouse', 'flowNodeRefs');
+    check('S3-8 a Task dropped into Warehouse sits in Process.flowElements and in Warehouse.flowNodeRefs',
+        newTasks.length === 1 && fe.includes(newTasks[0]) && whRefs.includes(newTasks[0]), { newTasks, inFlowElements: fe.includes(newTasks[0] ?? ''), inWarehouse: whRefs.includes(newTasks[0] ?? '') });
+    res.paletteDrop = { newTasks };
+
+    // 7. A SequenceFlow connected from Check order to Ship: the edge object sits in Process.flowElements.
+    const flows0 = await objectsOf(page, 'SequenceFlow');
+    // A new connection starts from the ghost handle a hovered side shows (DynamicHandles), on a side with no edge yet:
+    // Check's top. It ends on Ship's top border, where Ship's handles sit.
+    const srcHandle = page.locator(`.dock-tabpane-active .react-flow__node[data-id="${ids.check.vertex}"] .react-flow__handle.source.mm-anchor--ghost-visible`).first();
+    const cb = await screenBox(page, ids.check.vertex);
+    const tb = await screenBox(page, ids.ship.vertex);
+    if (cb) { await page.mouse.move(cb.x + cb.width / 2, cb.y + 3); await page.waitForTimeout(400); }
+    const sh = (await srcHandle.count()) ? await srcHandle.boundingBox() : null;
+    const th = tb ? { x: tb.x + tb.width / 2 - 4, y: tb.y - 4, width: 8, height: 8 } : null;
+    // The press goes where the handle itself is hit (its half inside the node is under the node's content), and is
+    // dispatched on the source ghost: under the pointer the target ghost of the same slot comes on top, and a target
+    // handle does not start a connection (DynamicHandles, isConnectableStart false).
+    let press: { x: number; y: number } | null = null;
+    if (sh) {
+        for (let fy = 0.1; fy <= 0.9 && !press; fy += 0.2) for (let fx = 0.5; fx <= 0.9 && !press; fx += 0.2) {
+            const p = { x: sh.x + sh.width * fx, y: sh.y + sh.height * fy };
+            if ((await hit(p.x, p.y)).cls.includes('react-flow__handle')) press = p;
+        }
+    }
+    let picked = false;
+    if (press && th) {
+        const to = { x: th.x + th.width / 2, y: th.y + th.height / 2 };
+        await page.mouse.move(press.x, press.y); await page.waitForTimeout(200);
+        await srcHandle.dispatchEvent('mousedown', { clientX: press.x, clientY: press.y, button: 0, buttons: 1 });
+        for (let i = 1; i <= 12; i++) { await page.mouse.move(press.x + (to.x - press.x) * i / 12, press.y + (to.y - press.y) * i / 12); await page.waitForTimeout(40); }
+        await page.mouse.up(); await page.waitForTimeout(800);
+        const option = page.locator('.edge-type-popup__label', { hasText: 'New SequenceFlow' }).first();
+        if (await option.count()) { await option.click(); picked = true; }
+        await page.waitForTimeout(2500);
+    }
+    const newFlows = (await objectsOf(page, 'SequenceFlow')).filter((f) => !flows0.includes(f));
+    const fe7 = await slotIds(page, ids, 'shopProc', 'flowElements');
+    check('S3-9 a SequenceFlow connected inside Shop sits in Process.flowElements', newFlows.length === 1 && fe7.includes(newFlows[0]),
+        { handles: [!!sh, !!th], picked, newFlows, inFlowElements: fe7.includes(newFlows[0] ?? '') });
+    res.connect = { handles: [!!sh, !!th], picked, newFlows };
+    await shoot(page, `s3-final-${TAG}-light.png`, true);
+    res.errors = errors.slice(0, 20);
+}
+
+/** S3 control: a graphVertex view without membership or layout keeps today's behaviour exactly. */
+async function sceneS3Hull(browser: Browser, out: Record<string, unknown>) {
+    const { page } = await openPage(browser);
+    const pid = await createProject(page, `GV_S3_hull_${TAG}_${Date.now()}`);
+    await page.goto(`${URL}/#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(NAV_MS);
+    await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+    await buildMetamodel(page, [['Named', true, []], ['Region', false, ['Named']], ['State', false, ['Named']]], [['Region', 'states', 'State', true, true]], 'Named');
+    const shell = await buildModelShell(page);
+    if (!shell.graphId) { check('S3 hull: v2-flow graph exists', false, shell); return; }
+    const ids = await buildObjects(page, shell.graphId, [
+        ['r1', 'Region', 'region1', 100, 100, null], ['r2', 'Region', 'region2', 700, 100, null],
+        ['a', 'State', 'A', 120, 260, null], ['b', 'State', 'B', 380, 260, null], ['d', 'State', 'D', 720, 300, null],
+    ]);
+    await buildLinks(page, ids, [['r1', 'states', 'a'], ['r1', 'states', 'b'], ['r2', 'states', 'd']], []);
+    await buildViewpoint(page, 'Hulls', [
+        ['Region', { kind: 'graphVertex', metaclasses: ['Region'], shape: { form: 'rect', labels: [{ position: 'top', source: I('name') }] }, containment: { collapsible: true } }],
+        ['State', { kind: 'vertex', metaclasses: ['State'], shape: { form: 'rounded', labels: [{ position: 'center', source: I('name') }] } }],
+    ]);
+    await setTheme(page, 'light');
+    await pickViewpoint(page, 'Hulls');
+    await page.waitForTimeout(SETTLE_MS);
+    const k = await zoomOf(page);
+    const r1Before = await slotIds(page, ids, 'r1', 'states');
+    const r2Before = await slotIds(page, ids, 'r2', 'states');
+    const rec0 = await records(page, ids);
+    // A State dragged into the other Region's box: moved, slots untouched (no membership, today).
+    const ab = await screenBox(page, ids.a.vertex);
+    const d0 = (await readNodes(page)).find((n) => n.id === ids.d.vertex)!;
+    if (ab) await drag(page, { x: ab.x + ab.width / 2, y: ab.y + ab.height / 2 }, { x: ab.x + ab.width / 2 + (d0.x - rec0.a.x) * k, y: ab.y + ab.height / 2 + 120 * k });
+    const rec1 = await records(page, ids);
+    const r1After = await slotIds(page, ids, 'r1', 'states');
+    const r2After = await slotIds(page, ids, 'r2', 'states');
+    check('S3-10 hull view without membership: a State dropped in another Region moves, the slots are untouched',
+        rec1.a.x !== rec0.a.x && JSON.stringify(r1After) === JSON.stringify(r1Before) && JSON.stringify(r2After) === JSON.stringify(r2Before),
+        { a: [rec0.a, rec1.a], r1: [r1Before, r1After], r2: [r2Before, r2After] });
+    // A Region dragged: its States stay where they are (no layout, today).
+    const rb = await screenBox(page, ids.r2.vertex);
+    if (rb) await drag(page, { x: rb.x + rb.width / 2, y: rb.y + rb.height / 2 }, { x: rb.x + rb.width / 2 + 96 * k, y: rb.y + rb.height / 2 + 48 * k });
+    const rec2 = await records(page, ids);
+    check('S3-11 hull view without layout: a Region dragged moves alone', rec2.r2.x !== rec1.r2.x && rec2.d.x === rec1.d.x && rec2.d.y === rec1.d.y,
+        { r2: [rec1.r2, rec2.r2], d: [rec1.d, rec2.d] });
+    await shoot(page, `s3-hull-${TAG}-light.png`, true);
+    out.s3hull = { ids, rec0, rec1, rec2, r1Before, r1After, r2Before, r2After };
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 if (process.argv[1] && /bpmn-lanes-fixture\.ts$/.test(process.argv[1])) {
@@ -537,6 +802,8 @@ if (process.argv[1] && /bpmn-lanes-fixture\.ts$/.test(process.argv[1])) {
         if (ONLY.includes('bpmn')) await sceneBpmn(browser, out);
         if (ONLY.includes('hull')) await sceneHull(browser, out);
         if (ONLY.includes('demos')) await sceneDemos(browser, out);
+        if (ONLY.includes('s3')) await sceneS3(browser, out);
+        if (ONLY.includes('s3hull')) await sceneS3Hull(browser, out);
     } finally {
         out.checks = { pass, fail };
         writeFileSync(`${OUT}/measures-${TAG}.json`, JSON.stringify(out, null, 2));
