@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: fast (one file, `frontend/scripts/lane-board/timeline.js`, outside the critical zone; cause measured)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1744 (timeline-newest-first, 0ce6f57bb); visual check passed (chat, built-in browser on 4702, RC-23)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
