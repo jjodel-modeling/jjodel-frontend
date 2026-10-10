@@ -1029,20 +1029,6 @@
   }
 }
 
-// Dark mode support
-html[data-theme="dark"] {
-  .btn-generate-ai {
-    background-color: #1e293b;
-    border-color: #334155;
-    color: #cbd5e1;
-
-    &:hover {
-      background-color: #334155;
-      border-color: #475569;
-    }
-  }
-}
-
 /* ==============================================
    BOUNDS ROW (Lower + Upper + Badge inline)
    ============================================== */

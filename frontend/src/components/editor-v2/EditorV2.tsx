@@ -107,7 +107,6 @@ import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
-import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
 import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
@@ -959,9 +958,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const handleObjectEdgeSelectedRef = useRef<(match: IRConnectRuleMatch, conn?: Connection) => void>(() => {});
     // Mirror of the IR interaction plan for stable-dep callbacks (same pattern as modeInfoRef).
     const irPlanRef = useRef<IRInteractionPlan | null>(null);
-
-    // Theme state — follows global ThemeService (synced with Navbar/Settings)
-    const [theme] = useTheme();
 
     // Notation mode state with localStorage persistence
     const VALID_NOTATIONS: NotationMode[] = ['uml', 'simplified', 'compact', 'wireframe', 'er'];
@@ -4414,8 +4410,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     <defs>
                         <pattern id="dot-grid-pattern" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
                             <circle cx="12" cy="12" r="1"
-                                fill={theme === 'dark' ? '#334155' : '#cbd5e1'}
-                                fillOpacity={theme === 'dark' ? 0.6 : 0.55}
+                                fill="#cbd5e1"
+                                fillOpacity={0.55}
                             />
                         </pattern>
                     </defs>
@@ -4442,11 +4438,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     style={{ position: 'absolute', margin: 0, right: 'calc(var(--jj-canvas-right-inset, 0px) + 16px)', bottom: '16px', borderRadius: '4px', opacity: 0.8 }}
                     nodeStrokeWidth={3}
                     nodeColor={(node) => {
-                        if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
+                        if (node.type === 'classNode') return '#0284c7';
                         if (node.type === 'enumNode') return '#7c3aed';
-                        if (node.type === 'packageNode') return theme === 'dark' ? '#64748b' : '#94a3b8';
-                        if (node.type === 'objectNode') return theme === 'dark' ? '#f59e0b' : '#d97706';
-                        return theme === 'dark' ? '#334155' : '#e2e8f0';
+                        if (node.type === 'packageNode') return '#94a3b8';
+                        if (node.type === 'objectNode') return '#d97706';
+                        return '#e2e8f0';
                     }}
                     bgColor="var(--color-minimap-bg)"
                     maskColor="var(--minimap-mask)"
@@ -4501,7 +4497,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
+            <div className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />

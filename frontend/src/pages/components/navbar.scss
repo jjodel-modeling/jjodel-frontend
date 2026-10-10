@@ -1161,49 +1161,6 @@ $transition-menu: 150ms ease;
   }
 }
 
-// Dark mode support
-[data-theme="dark"] .debug-toggle,
-.dark .debug-toggle {
-  // OFF state in dark mode
-  background: transparent;
-  border-color: #475569; // slate-600
-  color: #94a3b8; // slate-400
-
-  i {
-    color: #64748b; // slate-500
-  }
-
-  &:hover {
-    background: rgba(148, 163, 184, 0.1);
-    border-color: #64748b; // slate-500
-    color: #cbd5e1; // slate-300
-
-    i {
-      color: #94a3b8;
-    }
-  }
-
-  // ON state in dark mode
-  &--active {
-    border-color: #fbbf24; // amber-400
-    color: #fbbf24;
-
-    i {
-      color: #fbbf24;
-    }
-
-    &:hover {
-      background: rgba(251, 191, 36, 0.1);
-      border-color: #fcd34d; // amber-300
-      color: #fcd34d;
-
-      i {
-        color: #fcd34d;
-      }
-    }
-  }
-}
-
 // ============================================
 // MODE TOGGLE - Basic/Advanced Mode Switch
 // Minimal outline style for professional look
@@ -1275,50 +1232,6 @@ $transition-menu: 150ms ease;
   }
 }
 
-// Dark mode support
-[data-theme="dark"] .mode-toggle-btn,
-.dark .mode-toggle-btn {
-  &--basic {
-    background: transparent;
-    border-color: #475569; // slate-600
-    color: #94a3b8; // slate-400
-
-    i {
-      color: #64748b; // slate-500
-    }
-
-    &:hover {
-      background: rgba(148, 163, 184, 0.1);
-      border-color: #64748b; // slate-500
-      color: #cbd5e1; // slate-300
-
-      i {
-        color: #94a3b8;
-      }
-    }
-  }
-
-  &--advanced {
-    background: rgba(100, 116, 139, 0.2); // slate-500 at 20%
-    border-color: #94a3b8; // slate-400
-    color: #f1f5f9; // slate-100
-
-    i {
-      color: #e2e8f0; // slate-200
-    }
-
-    &:hover {
-      background: rgba(100, 116, 139, 0.3);
-      border-color: #cbd5e1; // slate-300
-      color: #ffffff;
-
-      i {
-        color: #f1f5f9;
-      }
-    }
-  }
-}
-
 // Legacy support - keep advanced-mode-badge for any remaining usage
 // Updated to minimal outline style for consistency
 .advanced-mode-badge {
@@ -1349,17 +1262,6 @@ $transition-menu: 150ms ease;
   i {
     font-size: 14px;
     color: #334155;
-  }
-}
-
-[data-theme="dark"] .advanced-mode-badge,
-.dark .advanced-mode-badge {
-  background: rgba(100, 116, 139, 0.2);
-  border-color: #94a3b8;
-  color: #f1f5f9;
-
-  i {
-    color: #e2e8f0;
   }
 }
 
@@ -1469,31 +1371,6 @@ $transition-menu: 150ms ease;
     }
 }
 
-// Dark mode support
-[data-theme="dark"] .navbar__layout-controls,
-.dark .navbar__layout-controls {
-  background: rgba(148, 163, 184, 0.1); // slate-400 with opacity
-}
-
-[data-theme="dark"] .layout-btn,
-.dark .layout-btn {
-  color: #94a3b8; // slate-400
-
-  &:hover {
-    background: rgba(148, 163, 184, 0.15);
-    color: #cbd5e1; // slate-300
-  }
-
-  &--active {
-    background: #64748b; // slate-500
-    color: #f8fafc;
-
-    &:hover {
-      background: #475569; // slate-600
-    }
-  }
-}
-
 // ============================================
 // NAVBAR DIVIDER
 // ============================================
@@ -1504,22 +1381,6 @@ $transition-menu: 150ms ease;
   background: #e2e8f0; // slate-200
   margin: 0 8px;
   flex-shrink: 0;
-}
-
-[data-theme="dark"] .navbar__divider,
-.dark .navbar__divider {
-  background: #334155; // slate-700
-}
-
-// ============================================
-// KEYBOARD SHORTCUTS - Dark Mode Support
-// ============================================
-
-[data-theme="dark"] .keystrokes .keystroke-pill,
-.dark .keystrokes .keystroke-pill {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #94a3b8; // slate-400
 }
 
 // ============================================
@@ -1699,10 +1560,6 @@ $transition-menu: 150ms ease;
   background: var(--color-border-tertiary, #e2e8f0);
   margin: 0 8px;
   flex-shrink: 0;
-}
-
-[data-theme="dark"] .appbar__sep {
-  background: #334155;
 }
 
 // ============================================
@@ -2208,167 +2065,4 @@ $transition-menu: 150ms ease;
 // Ensure content fills the full height when models tab bar is hidden
 .not-strip .dock-panel.dock-style-models > .dock-content-holder {
   height: 100% !important;
-}
-
-// ============================================
-// DARK MODE — App Bar
-// ============================================
-
-[data-theme="dark"] {
-  .nav-container.appbar {
-    border-bottom-color: #334155;
-  }
-
-  .project-label {
-    border-right-color: #334155;
-  }
-
-  .project-icon {
-    color: #94a3b8;
-  }
-
-  .project-name {
-    color: #e2e8f0;
-  }
-
-  .appbar-tab {
-    &:hover {
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    &--active {
-      background: rgba(14, 165, 233, 0.12);
-    }
-
-    &--metamodel.appbar-tab--active {
-      background: rgba(109, 40, 217, 0.15);
-    }
-
-    &__name {
-      color: #94a3b8;
-    }
-
-    &__close:hover {
-      background: rgba(239, 68, 68, 0.15);
-    }
-  }
-
-  .appbar-tabs__overflow-btn {
-    background: #334155;
-    border-color: #475569;
-    color: #94a3b8;
-  }
-
-  .appbar-tabs__overflow-dropdown {
-    background: #1e293b;
-    border-color: #334155;
-  }
-
-  .appbar-tabs__overflow-item {
-    color: #e2e8f0;
-
-    &:hover {
-      background: #334155;
-    }
-  }
-
-  .new-document {
-    &__btn {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: #475569;
-      color: #94a3b8;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.08);
-      }
-
-      &--open {
-        background: #0f172a;
-        color: #fff;
-        border-color: #0f172a;
-      }
-    }
-
-    &__menu {
-      background: #1e293b;
-      border-color: #334155;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-    }
-
-    &__divider {
-      border-top-color: #334155;
-    }
-
-    &__item {
-      color: #e2e8f0;
-
-      &:hover:not(:disabled) {
-        background: #334155;
-      }
-    }
-
-    &__label {
-      color: #e2e8f0;
-    }
-
-    &__desc {
-      color: #94a3b8;
-    }
-
-    &__soon {
-      color: #64748b;
-    }
-  }
-
-  // Mode switch — dark: the white active pill would glare on the dark bar, so the
-  // raised segment is slate (mirrors the same control inside the properties card).
-  .appbar-mode-switch {
-    background-color: rgba(255, 255, 255, 0.05);
-
-    &__opt {
-      color: #94a3b8;
-
-      &:hover:not(.appbar-mode-switch__opt--active) {
-        color: #cbd5e1;
-      }
-
-      &--active {
-        background-color: #334155;
-        color: #f1f5f9;
-        box-shadow: none;
-      }
-    }
-  }
-}
-
-/* ============================================
-   DARK MODE — dropdown della navbar
-   (Jjodel / File / Edit / View / Tools / Analyze / Help)
-   Additive block: nessuna regola light viene toccata.
-
-   Stessi due difetti del menu utente, vedi il blocco gemello in
-   pages/components/menu/menu.scss:
-   - `.content > ul` usa `--color-bg-elevated`, che in dark e' un token
-     glass (rgba(255,255,255,0.04)) applicato senza `backdrop-filter`;
-   - l'hover della voce e' `--color-accent` (slate-400 in dark) con
-     `color: white`, ~2.7:1.
-   ============================================ */
-:root[data-theme="dark"] {
-
-  .nav-container .content > ul {
-    background-color: var(--color-ctx-menu-bg);
-    border-color: var(--color-ctx-menu-divider);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .nav-container .content.context-menu ul > li:hover > label,
-  .nav-container .content.context-menu ul > li:focus-within > label {
-    background-color: var(--color-ctx-menu-hover);
-    color: var(--color-ctx-menu-text);
-
-    .bi,
-    svg {
-      color: var(--color-ctx-menu-text);
-    }
-  }
 }

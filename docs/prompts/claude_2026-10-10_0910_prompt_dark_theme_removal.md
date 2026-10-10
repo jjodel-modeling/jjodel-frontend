@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-0910
 Chat: C-2026-10-10-0910
 Lane: full (deletion across more than three files; RC-26 deletion approved by Alfonso, see Context)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane dark-theme-removal · full · report e5ac3d817 · code e88f1a22e, 21ed32054, 09c40bf1e, 0099539d2, 2bb18dcd9 · docs 7b75cb5d5 · closure 999f50ad4 · visual check: passato, chat, unattended, probe 62/62 in light (RC-23) · StructureGroups.scss:82-84 left pending the critical-zone go-ahead
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 

@@ -464,36 +464,3 @@ body.modal-fullscreen-open {
     display: none !important;
   }
 }
-
-// ============================================
-// DARK MODE SUPPORT
-// ============================================
-html[data-theme="dark"] {
-  .editor-fullscreen-body .monaco-editor {
-    .view-overlays .current-line {
-      background-color: rgba(148, 163, 184, 0.1) !important; // slate-400 @ 10%
-      border: none !important;
-    }
-
-    .margin-view-overlays .current-line-margin,
-    .margin-view-overlays .current-line-margin-both {
-      background-color: rgba(148, 163, 184, 0.1) !important;
-      border: none !important;
-    }
-  }
-}
-
-[data-theme="dark"] {
-  .editor-fullscreen-body .monaco-editor {
-    .view-overlays .current-line {
-      background-color: rgba(148, 163, 184, 0.1) !important;
-      border: none !important;
-    }
-
-    .margin-view-overlays .current-line-margin,
-    .margin-view-overlays .current-line-margin-both {
-      background-color: rgba(148, 163, 184, 0.1) !important;
-      border: none !important;
-    }
-  }
-}

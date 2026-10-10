@@ -11,8 +11,7 @@ This folder contains the complete design token system that powers Jjodel's visua
 ```
 /styles/tokens/
 ├── index.scss              ← Import this file to get all tokens
-├── _colors-light.scss      ← Light theme color palette
-├── _colors-dark.scss       ← Dark theme color palette
+├── _colors-light.scss      ← Color palette (Jjodel has one theme, light: D-UI-15)
 ├── _typography.scss        ← Font families, sizes, weights
 ├── _spacing.scss           ← Spacing scale (4px grid)
 ├── _shadows.scss           ← Box shadow elevation system
@@ -40,18 +39,9 @@ The tokens are already imported globally in `App.scss`, so you can use them anyw
 }
 ```
 
-### 2. Switch themes:
+### 2. View all tokens:
 
-```javascript
-// In your React component or theme toggle
-document.documentElement.setAttribute('data-theme', 'dark');
-// or
-document.documentElement.setAttribute('data-theme', 'light');
-```
-
-### 3. View all tokens:
-
-Visit `/test-tokens` route to see all tokens visually with the theme switcher.
+Visit `/test-tokens` route to see all tokens visually.
 
 ---
 
@@ -258,29 +248,15 @@ Each semantic color also has `-muted` and `-subtle` variants.
 
 ---
 
-## 🎨 Dark Mode Support
+## One theme, two light states
 
-**Automatic theme switching:**
+Jjodel has no dark theme (D-UI-15, 2026-10-04; the code went on 2026-10-10, P-2026-10-10-0910). Do not
+write a dark variant of any token or component.
 
-Both light and dark themes are defined. Simply change the `data-theme` attribute:
-
-```javascript
-// Light mode (default)
-document.documentElement.setAttribute('data-theme', 'light');
-
-// Dark mode
-document.documentElement.setAttribute('data-theme', 'dark');
-```
-
-**All tokens automatically adjust** - no need to write theme-specific code!
-
-```scss
-// This works in both themes automatically:
-.my-component {
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-}
-```
+Light comes in two states today, and both are kept: with nothing stored, `<html>` carries no
+`data-theme` and `styles/tokens.css` wins the names it shares with this folder; a user who stored
+`'light'` gets `data-theme="light"` from the boot script of `index.html`, and this folder wins them.
+Converging the two is D-UI-13's work (arcs 5 to 8), not a per-component choice.
 
 ---
 
@@ -316,7 +292,7 @@ document.documentElement.setAttribute('data-theme', 'dark');
 1. **Always use tokens** - Never hardcode colors, spacing, etc.
 2. **Use semantic names** - `--color-text-primary` not `--gray-900`
 3. **Consistent spacing** - Use the 4px grid (`--space-*`)
-4. **Theme-aware** - Test components in both light and dark modes
+4. **Light only** - Test components in the light theme, the only one (D-UI-15)
 5. **Performance** - CSS variables have minimal performance impact
 
 ---

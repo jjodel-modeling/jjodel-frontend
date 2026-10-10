@@ -291,10 +291,6 @@
     100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
 }
 
-[data-theme="dark"] .jodie-alive-dot--idle {
-    background: #475569;
-}
-
 .jodie-header-center {
     display: flex;
     align-items: center;
@@ -362,26 +358,6 @@
 }
 
 .jodie-metamodel-indicator.jodie-metamodel-inactive i {
-    color: #94a3b8;
-}
-
-/* Dark mode metamodel indicator */
-[data-theme="dark"] .jodie-metamodel-indicator {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
-}
-
-[data-theme="dark"] .jodie-metamodel-count {
-    background: rgba(16, 185, 129, 0.25);
-}
-
-[data-theme="dark"] .jodie-metamodel-indicator.jodie-metamodel-warning {
-    background: rgba(245, 158, 11, 0.15);
-    color: #fbbf24;
-}
-
-[data-theme="dark"] .jodie-metamodel-indicator.jodie-metamodel-inactive {
-    background: rgba(100, 116, 139, 0.15);
     color: #94a3b8;
 }
 
@@ -1100,135 +1076,6 @@
 }
 
 /* ========================================
-   Dark Mode Support
-   ======================================== */
-
-[data-theme="dark"] .jodie-window {
-    background: #1e293b;
-    border-color: #334155;
-}
-
-[data-theme="dark"] .jodie-header {
-    background: #0f172a;
-    border-color: #334155;
-}
-
-[data-theme="dark"] .jodie-name {
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .jodie-header-btn {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-header-btn:hover {
-    background: #334155;
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .jodie-messages {
-    background: #1e293b;
-}
-
-[data-theme="dark"] .jodie-message-assistant .jodie-message-bubble {
-    background: #334155;
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .jodie-welcome {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-welcome-icon {
-    background: #334155;
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-welcome h3 {
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .jodie-welcome li {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-welcome li i {
-    color: #64748b;
-}
-
-[data-theme="dark"] .jodie-input-container {
-    background: #0f172a;
-    border-color: #334155;
-}
-
-[data-theme="dark"] .jodie-input {
-    background: #1e293b;
-    border-color: #334155;
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .jodie-input::placeholder {
-    color: #64748b;
-}
-
-[data-theme="dark"] .jodie-input:focus {
-    border-color: #64748b;
-    background: #1e293b;
-}
-
-[data-theme="dark"] .jodie-image-preview {
-    border-color: #334155;
-    background: #1e293b;
-}
-
-[data-theme="dark"] .jodie-image-preview:hover {
-    border-color: #64748b;
-}
-
-[data-theme="dark"] .jodie-image-remove {
-    border-color: #1e293b;
-}
-
-[data-theme="dark"] .jodie-attach-btn {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-attach-btn:hover:not(:disabled) {
-    background: #334155;
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .jodie-attach-btn:disabled {
-    color: #475569;
-}
-
-[data-theme="dark"] .jodie-minimized {
-    background: linear-gradient(135deg, #475569 0%, #334155 100%);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="dark"] .jodie-confirm-dialog {
-    background: #1e293b;
-}
-
-[data-theme="dark"] .jodie-confirm-header h3 {
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .jodie-confirm-dialog p {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-confirm-cancel {
-    background: #334155;
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .jodie-confirm-cancel:hover {
-    background: #475569;
-}
-
-/* ========================================
    Message Images
    ======================================== */
 
@@ -1250,11 +1097,6 @@
 
 .jodie-message-image:hover {
     transform: scale(1.02);
-}
-
-/* Dark mode for message images */
-[data-theme="dark"] .jodie-message-image {
-    border: 1px solid #334155;
 }
 
 /* ========================================
@@ -1397,32 +1239,6 @@
     color: #ffffff;
 }
 
-/* Dark mode for documents */
-[data-theme="dark"] .jodie-document-preview {
-    background: #1e293b;
-    border-color: #334155;
-}
-
-[data-theme="dark"] .jodie-document-preview:hover {
-    border-color: #64748b;
-}
-
-[data-theme="dark"] .jodie-document-name {
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .jodie-document-size {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-message-document {
-    background: rgba(239, 68, 68, 0.12);
-}
-
-[data-theme="dark"] .jodie-message-document .jodie-document-name {
-    color: #f1f5f9;
-}
-
 /* ========================================
    JjScript Results Styling
    ======================================== */
@@ -1476,30 +1292,6 @@
 .jodie-jjscript-label-error {
     color: #dc2626 !important;
     font-weight: 500;
-}
-
-/* Dark mode JjScript styling */
-[data-theme="dark"] .jodie-jjscript-avatar.jodie-jjscript-success {
-    background: rgba(22, 163, 74, 0.2);
-    color: #4ade80;
-}
-
-[data-theme="dark"] .jodie-jjscript-avatar.jodie-jjscript-error {
-    background: rgba(220, 38, 38, 0.2);
-    color: #f87171;
-}
-
-[data-theme="dark"] .jodie-jjscript-bubble {
-    background: var(--color-bg-secondary, #1e293b);
-    border-color: var(--color-border, #334155);
-}
-
-[data-theme="dark"] .jodie-jjscript-label-success {
-    color: #4ade80 !important;
-}
-
-[data-theme="dark"] .jodie-jjscript-label-error {
-    color: #f87171 !important;
 }
 
 /* ============================================
@@ -2160,20 +1952,6 @@
     text-overflow: ellipsis;
 }
 
-/* Dark mode for executing toolbar */
-[data-theme="dark"] .jodie-executing-toolbar {
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.06) 100%);
-    border-bottom-color: rgba(14, 165, 233, 0.25);
-}
-
-[data-theme="dark"] .jodie-executing-indicator {
-    background: rgba(14, 165, 233, 0.2);
-}
-
-[data-theme="dark"] .jodie-executing-command {
-    color: #e2e8f0;
-}
-
 /* ========================================
    CONSOLE MODE SWITCHER (Chat / Code)
    ======================================== */
@@ -2215,19 +1993,6 @@
 
 .jodie-mode-switch__opt--active:hover {
     color: #ffffff;
-}
-
-[data-theme="dark"] .jodie-mode-switch {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .jodie-mode-switch__opt {
-    color: #cbd5e1;
-}
-
-[data-theme="dark"] .jodie-mode-switch__opt:hover {
-    color: #f1f5f9;
 }
 
 /* Sub-row shown only in Code mode (JjEL/JS toggle + scope indicator) */
@@ -2298,29 +2063,6 @@
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
     font-size: 11px;
     user-select: none;
-}
-
-[data-theme="dark"] .jodie-code-subrow {
-    background: rgba(255, 255, 255, 0.02);
-    border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .jodie-flavor-switch {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .jodie-flavor-switch__opt {
-    color: #cbd5e1;
-}
-
-[data-theme="dark"] .jodie-flavor-switch__badge {
-    background: rgba(255, 255, 255, 0.08);
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-code-scope {
-    color: #64748b;
 }
 
 /* ========================================
@@ -2441,28 +2183,6 @@
     opacity: 0.7;
 }
 
-[data-theme="dark"] .jodie-code-entry {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .jodie-code-entry--error {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
-}
-
-[data-theme="dark"] .jodie-code-entry__input {
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .jodie-code-entry__output {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-code-entry__output-row--error .jodie-code-entry__output {
-    color: #fca5a5;
-}
-
 /* ========================================
    CODE ENTRY WARNING BLOCK
    Surfaces silent-null events (undefined identifiers) from the JjEL evaluator.
@@ -2503,20 +2223,6 @@
     padding: 0 4px;
     border-radius: 3px;
     color: #78350f;
-}
-
-[data-theme="dark"] .jodie-code-entry__warning {
-    background: rgba(245, 158, 11, 0.14);
-    color: #fcd34d; /* amber-300 */
-}
-
-[data-theme="dark"] .jodie-code-entry__warning i {
-    color: #fbbf24; /* amber-400 */
-}
-
-[data-theme="dark"] .jodie-code-entry__warning code {
-    background: rgba(252, 211, 77, 0.12);
-    color: #fde68a;
 }
 
 /* ========================================
@@ -2622,48 +2328,6 @@
     margin-top: 1px;
 }
 
-[data-theme="dark"] .jodie-inspect-toggle {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-inspect-toggle:hover {
-    color: #38bdf8;
-}
-
-[data-theme="dark"] .jodie-inspector {
-    background: rgba(56, 189, 248, 0.06);
-    border-left-color: #38bdf8;
-}
-
-[data-theme="dark"] .jodie-inspector-key {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-inspector-value-string,
-[data-theme="dark"] .jodie-inspector-value-bool {
-    color: #38bdf8;
-}
-
-[data-theme="dark"] .jodie-inspector-value-number {
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .jodie-inspector-value-null {
-    color: #64748b;
-}
-
-[data-theme="dark"] .jodie-inspector-value-expandable {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-inspector-value-expandable:hover {
-    color: #38bdf8;
-}
-
-[data-theme="dark"] .jodie-inspector-nested {
-    border-left-color: rgba(255, 255, 255, 0.08);
-}
-
 /* ========================================
    PROMOTION BUTTONS (Chat ↔ Code)
    Style modeled on .md-toggle-btn for consistency.
@@ -2705,18 +2369,6 @@
     margin-left: 14px;
 }
 
-[data-theme="dark"] .jodie-promote-btn {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .jodie-promote-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.18);
-    color: #e2e8f0;
-}
-
 /* Disabled promote-btn (offer already consumed). */
 .jodie-promote-btn:disabled {
     opacity: 0.5;
@@ -2754,20 +2406,6 @@
 .jodie-offer__actions {
     display: flex;
     gap: 8px;
-}
-
-[data-theme="dark"] .jodie-offer {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .jodie-offer__title {
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .jodie-offer__preview {
-    background: rgba(0, 0, 0, 0.3);
-    color: #f1f5f9;
 }
 
 /* ========================================
