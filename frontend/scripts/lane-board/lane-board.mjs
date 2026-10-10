@@ -199,7 +199,7 @@ function laneTimeline(id, now) {
     const exitP = join(dir, 'exit.txt');
     const exited = existsSync(exitP);
     const inputs = readdirSync(dir).map((n) => /^input-(\d+)\.md$/.exec(n)).filter(Boolean).map((m) => Number(m[1])).sort((a, b) => a - b);
-    const key = ['v4', size(join(dir, 'log.jsonl')), mtime(exitP), inputs.length].join('/');
+    const key = ['v5', size(join(dir, 'log.jsonl')), mtime(exitP), inputs.length, mtime(join(dir, 'request.md'))].join('/');
     const hit = tlCache[id];
     if (hit && hit.key === key && exited) return hit.v;
     const res = results(join(dir, 'log.jsonl'));
@@ -225,7 +225,9 @@ function laneTimeline(id, now) {
     // Declared dependencies (PROTOCOL P13, `Depends:` header line): exact, unlike the citations.
     const depLine = (text.match(/^Depends:\s*(.*)$/m) || [])[1] || '';
     const depends = /^none\b/i.test(depLine.trim()) ? [] : [...new Set(depLine.match(/P-\d{4}-\d{2}-\d{2}-\d{4}/g) || [])].filter((x) => x !== id);
-    const v = { turns, cites, depends, declared: !!depLine, exited };
+    // The request (PROTOCOL P13, RC-43): the `Request:` header line, and the words kept in request.md, written by lane-run start or later by the chat.
+    const request = { url: ((text.split(/\n## /)[0].match(/^Request:[ \t]*(.*)$/m) || [])[1] || '').trim(), text: readTrim(join(dir, 'request.md')).slice(0, 4000) };
+    const v = { turns, cites, depends, declared: !!depLine, request, exited };
     if (exited) { tlCache[id] = { key, v }; tlDirty = true; }
     return v;
 }
@@ -321,7 +323,7 @@ function timeline() {
         try { t = laneTimeline(id, now); } catch { continue; }
         const st = status.get(id) || {};
         const h = st.worktree !== undefined ? st : (() => { const x = header(dir); return { ...x, worktree: readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~'), kind: kindOf(x.lane) }; })();
-        lanes.push({ id, launcher: launcherOf(id, cpos.get(id), h.chat), title: h.title || '', chat: h.chat || '', worktree: h.worktree || '', kind: h.kind || '', tier: st.tier || '', state: st.state || (t.exited ? 'exited' : '?'), outcome: st.outcome || '', live: !!st.live, turns: t.turns, cites: t.cites, depends: t.depends || [], declared: !!t.declared });
+        lanes.push({ id, launcher: launcherOf(id, cpos.get(id), h.chat), title: h.title || '', chat: h.chat || '', worktree: h.worktree || '', kind: h.kind || '', tier: st.tier || '', state: st.state || (t.exited ? 'exited' : '?'), outcome: st.outcome || '', live: !!st.live, turns: t.turns, cites: t.cites, depends: t.depends || [], declared: !!t.declared, request: t.request || { url: '', text: '' } });
     }
     const known = new Set(lanes.map((l) => l.id));
     const chainDeps = chains().filter(([a, b]) => known.has(a) && known.has(b));

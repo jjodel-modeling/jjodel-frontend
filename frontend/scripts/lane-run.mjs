@@ -7,7 +7,7 @@
  * says so (merge, with --launch, moves the prompt it rendered into the tree and
  * commits it alone).
  *
- *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--auto]
+ *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--auto] [--request <file>]
  *                runs `claude -p` in <worktree> with the prompt file on stdin
  *                (the path as given, absolute or relative to the caller's
  *                directory, then relative to the worktree; refused, naming both,
@@ -30,6 +30,12 @@
  *                the report of P-2026-10-03-1705, section 7). auto.json in the
  *                lane folder records the flags, that folder and the time; a
  *                resume of the lane re-applies them and never passes a go-ahead.
+ *                --request <file> (RC-43, P13): the words of the request the
+ *                prompt answers, which are never committed; copied into the lane
+ *                folder as request.md before the session starts, refused, naming
+ *                the path, when the file is missing or empty. A prompt whose
+ *                header has no `Request:` line, started without --request, gets
+ *                one warning line and runs; a merge prompt gets none.
  *   resume <Prompt-ID> <message-file> | --text "<message>" | -
  *                `claude -p --resume <session id>` with the message on stdin, in
  *                the worktree recorded at start: a resume runs in the caller's
@@ -277,6 +283,7 @@ function laneFiles(id) {
         prompt: join(dir, 'prompt.txt'),
         tier: join(dir, 'tier.txt'),
         auto: join(dir, 'auto.json'),
+        request: join(dir, 'request.md'),
     };
 }
 
@@ -437,6 +444,16 @@ function readAuto(f) {
     return { ...a, ghConfigDir };
 }
 
+/** `--request <file>` (RC-43): the file holding the words of the request, refused when missing or empty; null when the flag is absent. */
+function requestOption(rest) {
+    const v = option(rest, '--request');
+    if (v === null) return null;
+    const path = resolve(v);
+    if (!existsSync(path) || !statSync(path).isFile()) refuse('--request: no request file: ' + path);
+    if (readFileSync(path, 'utf8').trim() === '') refuse('--request: the request file is empty: ' + path);
+    return path;
+}
+
 // ── the model tier (RC-32) ───────────────────────────────────────────────────
 
 /** The names that put a prompt in the critical zone: the six files of CLAUDE.md 3.2 (the hook's list) and rule 14's two. */
@@ -521,7 +538,7 @@ function tierOption(rest) {
 }
 
 async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
-    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--auto]');
+    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--auto] [--request <file>]');
     const worktree = resolve(worktreeArg);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
     // As given (absolute, or relative to the caller's directory), then relative to the worktree.
@@ -536,6 +553,10 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     if (auto && headerStatus(text) !== 'da eseguire') refuse('--auto starts only a prompt that reads `Status: da eseguire`: ' + promptFile + ' reads `Status: ' + headerStatus(text) + '`');
     const goAhead = goAheadOption(rest, id);
     const tier = chooseTier(text, { ...ctx, goahead: Boolean(goAhead) }, tierOption(rest));
+    const request = requestOption(rest);
+    // RC-43: a prompt names its request; the merge prompts lane-run renders are exempt (their Lane line, also on a launch by hand).
+    const { header } = promptParts(text);
+    const unnamed = !request && !/^Request:[ \t]*\S/m.test(header) && !ctx.merge && !/^Lane:\s*full \(merge\b/m.test(header);
 
     const claude = findClaude();
     const f = laneFiles(id);
@@ -544,6 +565,7 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     mkdirSync(f.dir, { recursive: true });
     writeFileSync(f.worktree, worktree + '\n');
     writeFileSync(f.prompt, promptFile + '\n');
+    if (request) copyFileSync(request, f.request);
     closeSync(openSync(f.log, 'a'));
     const from = statSync(f.log).size;
 
@@ -558,6 +580,8 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     launch(f, claude, worktree, promptFile, ['-p', ...FLAGS, ...(autoRun ? AUTO_FLAGS : []), ...(tier.model ? ['--model', tier.model] : [])], goAhead, autoRun);
     console.log('prompt: ' + promptFile);
     console.log('tier: ' + tier.line);
+    if (request) console.log('request: ' + f.request);
+    if (unnamed) console.log('warning: ' + promptFile + ': no `Request:` line in the header and no --request; the request is not recorded (P13, RC-43)');
     if (autoRun) console.log('auto: ' + AUTO_FLAGS.join(' ') + '; GH_TOKEN and GITHUB_TOKEN removed; GH_CONFIG_DIR ' + autoRun.ghConfigDir);
     console.log('log: ' + f.log);
 
