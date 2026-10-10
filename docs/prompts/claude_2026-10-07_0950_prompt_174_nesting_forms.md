@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-07-0950
 Chat: C-2026-10-07-0948
 Lane: full (critical zone e core: D-layer, L-layer, sync del canvas; migrazione possibile; più di 3 file)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane fix/174-nesting-forms · 948ea2884 · verifica visiva passata 2026-10-10
 Limite: 120 minuti per la Fase 1, 90 minuti per ogni passo della Fase 2
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).

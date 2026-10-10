@@ -45,6 +45,10 @@ import ActivityLogger from '../services/ActivityLogger';
 import { ActivityType } from '../types/activity';
 import {i} from "vite/dist/node/chunks/moduleRunnerTransport";
 
+/** Ids whose delete was issued in this macrotask (#174): the cascade reaches an owned child that the
+ *  plan, or the model's own children list, already deleted. Cleared at the next macrotask. */
+const deleteIssued = new Set<string>();
+
 export class Dummy {
     static t2mIgnoreKeys = ['id','pointedBy','className'];
     static get_delete(thiss: L, context: any): () => void {
@@ -57,6 +61,9 @@ export class Dummy {
             const deletedID = dDeleted.id as any;
             if (dDeleted.__readonly) return;
             if (deletedID.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
+            if (deleteIssued.has(deletedID)) return;
+            deleteIssued.add(deletedID);
+            setTimeout(() => deleteIssued.delete(deletedID), 0);
 
             // Log activity for model/metamodel deletion
             if (dDeleted.className === 'DModel') {
@@ -110,8 +117,17 @@ export class Dummy {
                 const fatherField = dDeleted.className === 'DObject' ? 'objects'
                     : dDeleted.className === 'DValue' ? 'features'
                     : null;
+                // A nested instance's father is a slot, while the list that holds it is its model's
+                // `objects` (R-NEST-1): walk up to the model.
+                let fatherTarget: any = dDeleted.father;
+                if (dDeleted.className === 'DObject') {
+                    const idl: GObject = store.getState().idlookup;
+                    let e: GObject | undefined = idl[dDeleted.father];
+                    for (let i = 0; i < 64 && e && e.className !== 'DModel'; i++) e = idl[e.father];
+                    if (e?.className === 'DModel') fatherTarget = e.id;
+                }
                 if (fatherField) {
-                    SetFieldAction.new(dDeleted.father as any, fatherField, deletedID, '-=', true);
+                    SetFieldAction.new(fatherTarget, fatherField, deletedID, '-=', true);
                 }
             }
 
@@ -257,6 +273,29 @@ export class Dummy {
                         // and coevolution-tests/m2-reference-delete.test.ts.
                         if (typeof dObj.className === 'string' && dObj.className.includes('Edge')) {
                             lObj.delete();
+                        }
+                        // A v2-flow vertex showing the deleted element leaves its graph with it (#174), and so
+                        // do the edges drawn from or to it: React Flow never registers in `nodes` (the classic
+                        // renderer's HTML registry), so the loop over `lDeleted.nodes` below never reached the
+                        // vertex and it stayed painted as a ghost. DETACHED from `subElements`, not deleted:
+                        // a delta that touches the root `vertexs` / `edges` is merged into the previous history
+                        // entry by a shallow merge that drops its records (reducer.ts shouldMerge,
+                        // U.objectMergeInPlace), so deleting the records here, or right after, takes the undo of
+                        // the element with it. Detaching stays inside this TRANSACTION and its history entry:
+                        // one Ctrl+Z puts the vertex and its edges back in the graph, where they were.
+                        else if (dObj.className === 'DVertex') {
+                            const idl: GObject = store.getState().idlookup;
+                            const detach = (ge: GObject) => {
+                                const graph: GObject | undefined = idl[ge.father];
+                                if (graph && Array.isArray(graph.subElements) && graph.subElements.includes(ge.id))
+                                    SetFieldAction.new(graph.id, 'subElements', ge.id, '-=', true);
+                            };
+                            detach(dObj);
+                            for (const p of (dObj.pointedBy || [])) {
+                                const m = /^idlookup\.(.+)\.(start|end)$/.exec(p?.source || '');
+                                const edge: GObject | undefined = m ? idl[m[1]] : undefined;
+                                if (edge && typeof edge.className === 'string' && edge.className.includes('Edge')) detach(edge);
+                            }
                         }
                         break;
                     case 'father': // obj.father -> deleted element. should be deleted but is already removed through deleted.children
