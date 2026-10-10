@@ -22,6 +22,11 @@
  * simCoverage.ts, which counts what it has not seen, whether the switch is on
  * or off, so turning it on shows the runs already made. The overlays paint the
  * counts on the nodes (SimNodeRunState).
+ *
+ * P-2026-10-10-1646 (R-SIM-146, points 4 and 5): the switch is an icon of fixed
+ * width, its summary in the title; Clear keeps its slot with coverage off
+ * (`visibility`), so the controls have one width off and on, and it hands the
+ * live run to simClearCoverage, which counts the places the run marks.
  */
 
 import { useEffect } from 'react';
@@ -62,32 +67,25 @@ export function SimCanvasLayer({ modelId }: SimCanvasLayerProps): ReactElement |
             <div className="sim-canvas-layer__controls">
                 <button
                     type="button"
-                    className="sim-canvas-layer__toggle"
+                    className="sim-canvas-layer__toggle sim-canvas-layer__toggle--icon"
+                    aria-label="Coverage"
                     aria-pressed={coverage}
-                    title={coverage ? 'Hide the coverage of the runs' : 'Show on the nodes how often the runs since the last Clear visited or fired them'}
+                    title={summary
+                        ? `Hide the coverage of the runs: ${summary.visited}/${summary.places} places · ${summary.fired}/${summary.transitions} transitions`
+                        : 'Show on the nodes how often the runs since the last Clear visited or fired them'}
                     onClick={() => setSimViewerPrefs(modelId, { coverage: !coverage })}
                 >
                     <i className="bi bi-bullseye" aria-hidden="true" />
-                    <span>Coverage</span>
                 </button>
-                {summary && (
-                    <>
-                        <span
-                            className="sim-canvas-layer__coverage"
-                            title="Places visited and transitions fired by the runs since the last Clear; Reset, Stop and a step back keep the counts"
-                        >
-                            {`${summary.visited}/${summary.places} places · ${summary.fired}/${summary.transitions} transitions`}
-                        </span>
-                        <button
-                            type="button"
-                            className="sim-canvas-layer__toggle sim-canvas-layer__coverage-clear"
-                            title="Empty the coverage counts; the next steps count from zero"
-                            onClick={() => simClearCoverage(modelId)}
-                        >
-                            Clear
-                        </button>
-                    </>
-                )}
+                <button
+                    type="button"
+                    className={`sim-canvas-layer__toggle sim-canvas-layer__toggle--icon sim-canvas-layer__coverage-clear${coverage ? '' : ' sim-canvas-layer__coverage-clear--hidden'}`}
+                    aria-label="Clear coverage"
+                    title="Empty the coverage counts and count the places marked now once; the next steps count from there"
+                    onClick={() => simClearCoverage(modelId, run)}
+                >
+                    <i className="bi bi-eraser" aria-hidden="true" />
+                </button>
                 {globals.length > 0 && (
                     <button
                         type="button"

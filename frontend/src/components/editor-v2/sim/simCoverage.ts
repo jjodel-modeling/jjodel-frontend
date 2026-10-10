@@ -107,10 +107,21 @@ export function simObserveRun(modelId: string, run: SimRun): void {
     if (changed) bump();
 }
 
-/** Clear: empties a model's counts. The run seen stays seen, so only the steps after it count. One bump. */
-export function simClearCoverage(modelId: string): void {
+/**
+ * Clear: empties a model's counts. The run seen stays seen, so only the steps after it count. With the model's
+ * run (R-SIM-146), the places its live configuration marks are then counted once each as visited, so a place
+ * that holds a token is not veiled until a new token arrives; the live configuration, whatever step is viewed
+ * (R-SIM-106). One bump.
+ */
+export function simClearCoverage(modelId: string, run?: SimRun): void {
     const entry = entries.get(modelId);
-    entries.set(modelId, { counts: EMPTY, net: entry?.net ?? null, trace: entry?.trace ?? [] });
+    const visits = new Map<string, number>();
+    if (run) for (const [place, n] of run.config.state.marking) if (n > 0) visits.set(place, 1);
+    entries.set(modelId, {
+        counts: visits.size > 0 ? { visits, firings: new Map() } : EMPTY,
+        net: entry?.net ?? null,
+        trace: entry?.trace ?? [],
+    });
     bump();
 }
 

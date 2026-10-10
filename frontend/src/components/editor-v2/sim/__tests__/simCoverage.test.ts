@@ -297,13 +297,14 @@ describe('Clear sees the live marking: a place that holds a token is visited onc
         expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['c', 1]]), firings: new Map() }));
     });
 
-    it('it touches its own model only; a count handed out before is a snapshot; a model never seen stays empty (mutants: another model\'s counts changed; the shared empty map written; the old map edited)', () => {
+    it('it touches its own model only; a count handed out before is a snapshot; a model never seen stays empty (mutants: another model\'s counts changed or marking read; the shared empty map written; the old map edited)', () => {
         toC();
         simReset('N', fresh('N'));
         simObserveRun('N', getSimRun('N')!);
         const before = getSimCoverage('M');
         simClearCoverage('M', getSimRun('M'));
         expect(before.visits.get('b')).toBe(1);
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['c', 1]]), firings: new Map() }));
         expect(text(getSimCoverage('N'))).toBe(text({ visits: new Map([['a', 1]]), firings: new Map() }));
         expect(text(getSimCoverage('Z'))).toBe(text({ visits: new Map(), firings: new Map() }));
     });
