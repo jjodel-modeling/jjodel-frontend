@@ -229,3 +229,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-10 15:20
 
 **Ticket** (report correction): `total_cost_usd` and `modelUsage` are cumulative over a session, a resume restores them (0 decreases in 196 consecutive pairs of results). The report's §2.4 summed them per lane: $3,705 total and an Opus median of $7.92 overstate. The largest value per lane is the lane's cost, $2,218 over 382 lanes; the endpoint uses it. An addendum to the report is owed (not in this lane's DOVE).
+
+## 2026-10-10 — merge: lane-board-model-insights takes alfonso-frontend-jjtl (P-2026-10-10-1635)
+**Prompt**: `claude_2026-10-10_1635_prompt_lane-board-model-insights_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-modelinsights` on `lane-board-model-insights`: RC-14, the trunk at the explicit sha `f13f6f489` into the branch with one `--no-ff` merge, base `3bc597b32`, 5 trunk commits (RC-45, the lane board's hard-stop colour and outcome tooltips, two discovery prompts, a ratification memo) against 4 on the branch and this prompt on top; hard stop for the chat's visual GO, then this closure.
+**Files touched**: merge `25383392a`: the 7 files of the trunk side (`docs/decisions.md`, `docs/prompts/claude_2026-10-10_1600_prompt_stale_m1_edge_discovery.md`, `docs/prompts/claude_2026-10-10_1630_prompt_sim_event_attributes_discovery.md`, `docs/ratifiche/claude_2026-10-10_memo_proposta_event_attributes.md`, `frontend/scripts/lane-board/insights.js`, `lane-board.mjs`, `timeline.js`); the two lane-board files changed on both sides auto-merged, no hand edit. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `25383392a`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 7728 passed in 317 files, 0 failed, the 9 known red at import, equal to the trunk tip's count measured read-only in `~/jjodel-release` (the branch adds no test); hooks 427 (trunk 427); build exit 0; check:docs 4/4; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries 7 files, above five (RC-11), all the trunk side's, listed above.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, built-in browser on 4701 restarted on `25383392a` (RC-23), Insights tab, range All: the three new sections render, area and model tables as before, the trunk's legend changes present; the only console errors are connection resets from the restart window.
+**Notes**: merge-tree exit 0, zero conflicts, tree `09059c0d3`, the one the commit records. No union: decisions.md, timeline.js, CLAUDE.md, AGENTS.md, PROTOCOL.md and settings.json equal the trunk's; log-inbox the branch's. Probes: `- **RC-45**` once, the 1520 heading once, control RC-46 absent. insights.js and lane-board.mjs read end to end: hunks disjoint, each declaration once, node --check on all three; the branch's new cards use no --warn.
+**Prompt document name**: 2026-10-10 16:35

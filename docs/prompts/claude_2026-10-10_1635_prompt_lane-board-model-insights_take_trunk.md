@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-10-1635
 Chat: —
 Lane: full (merge of the trunk into the branch; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane lane-board-model-insights · 25383392a · verifica visiva passata 2026-10-10 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-modelinsights`, branch `lane-board-model-insights`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-modelinsights`, branch `lane-board-model-insights`, `git log -1` is the commit that adds this file (its parent `285356563`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-10-1635 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
