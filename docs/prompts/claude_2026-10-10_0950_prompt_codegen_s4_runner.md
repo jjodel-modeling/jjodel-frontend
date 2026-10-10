@@ -6,7 +6,7 @@ Lane: full (new target profile and the first worker sandbox of the codebase; dif
 evaluator). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead (none needed,
 discovery §I.3).
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane codegen-runner · code a588a27ae · docs 312927556 · tsc 14 = base, 128 new tests (src/codegen 149), src/jjel 279, src/model/simulation 685, build exit 0, probe 24/24 in Chromium, mutation bench 22/22 killed · no visual check (textual slice)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
