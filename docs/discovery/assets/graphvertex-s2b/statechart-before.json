@@ -1,0 +1,182 @@
+{
+  "url": "http://localhost:3072",
+  "tag": "before",
+  "at": "2026-10-10T14:21:00.794Z",
+  "statechart": {
+    "tag": "before",
+    "ids": {
+      "sm": {
+        "obj": "Pointer1791642146264_USER_64",
+        "vertex": "Pointer1791642146265_USER_68"
+      },
+      "top": {
+        "obj": "Pointer1791642146519_USER_69",
+        "vertex": "Pointer1791642146520_USER_75"
+      },
+      "i0": {
+        "obj": "Pointer1791642146774_USER_76",
+        "vertex": "Pointer1791642146774_USER_80"
+      },
+      "idle": {
+        "obj": "Pointer1791642147029_USER_81",
+        "vertex": "Pointer1791642147029_USER_85"
+      },
+      "active": {
+        "obj": "Pointer1791642147288_USER_86",
+        "vertex": "Pointer1791642147289_USER_90"
+      },
+      "done": {
+        "obj": "Pointer1791642147589_USER_91",
+        "vertex": "Pointer1791642147589_USER_95"
+      },
+      "a1": {
+        "obj": "Pointer1791642147890_USER_96",
+        "vertex": "Pointer1791642147891_USER_102"
+      },
+      "a2": {
+        "obj": "Pointer1791642148195_USER_103",
+        "vertex": "Pointer1791642148196_USER_109"
+      },
+      "i1": {
+        "obj": "Pointer1791642148512_USER_110",
+        "vertex": "Pointer1791642148513_USER_114"
+      },
+      "waiting": {
+        "obj": "Pointer1791642148811_USER_115",
+        "vertex": "Pointer1791642148813_USER_119"
+      },
+      "processing": {
+        "obj": "Pointer1791642149119_USER_120",
+        "vertex": "Pointer1791642149120_USER_124"
+      },
+      "i2": {
+        "obj": "Pointer1791642149426_USER_125",
+        "vertex": "Pointer1791642149426_USER_129"
+      },
+      "running": {
+        "obj": "Pointer1791642149725_USER_130",
+        "vertex": "Pointer1791642149725_USER_134"
+      },
+      "paused": {
+        "obj": "Pointer1791642150025_USER_135",
+        "vertex": "Pointer1791642150025_USER_139"
+      },
+      "r": {
+        "obj": "Pointer1791642150330_USER_140",
+        "vertex": "Pointer1791642150331_USER_146"
+      },
+      "i3": {
+        "obj": "Pointer1791642150644_USER_147",
+        "vertex": "Pointer1791642150645_USER_151"
+      },
+      "fetch": {
+        "obj": "Pointer1791642150938_USER_152",
+        "vertex": "Pointer1791642150939_USER_156"
+      },
+      "compute": {
+        "obj": "Pointer1791642151237_USER_157",
+        "vertex": "Pointer1791642151237_USER_161"
+      },
+      "t0": {
+        "obj": "Pointer1791642151528_USER_162",
+        "vertex": "Pointer1791642151529_USER_169"
+      },
+      "t1": {
+        "obj": "Pointer1791642151831_USER_170",
+        "vertex": "Pointer1791642151831_USER_177"
+      },
+      "t2": {
+        "obj": "Pointer1791642152136_USER_178",
+        "vertex": "Pointer1791642152137_USER_185"
+      },
+      "t3": {
+        "obj": "Pointer1791642152433_USER_186",
+        "vertex": "Pointer1791642152434_USER_193"
+      },
+      "t4": {
+        "obj": "Pointer1791642152747_USER_194",
+        "vertex": "Pointer1791642152748_USER_201"
+      },
+      "t5": {
+        "obj": "Pointer1791642153051_USER_202",
+        "vertex": "Pointer1791642153052_USER_209"
+      },
+      "t6": {
+        "obj": "Pointer1791642153350_USER_210",
+        "vertex": "Pointer1791642153351_USER_217"
+      },
+      "t7": {
+        "obj": "Pointer1791642153655_USER_218",
+        "vertex": "Pointer1791642153655_USER_225"
+      },
+      "t8": {
+        "obj": "Pointer1791642153971_USER_226",
+        "vertex": "Pointer1791642153972_USER_233"
+      },
+      "t9": {
+        "obj": "Pointer1791642154279_USER_234",
+        "vertex": "Pointer1791642154280_USER_241"
+      },
+      "t10": {
+        "obj": "Pointer1791642154575_USER_242",
+        "vertex": "Pointer1791642154575_USER_249"
+      }
+    },
+    "nodes0": [
+      "i0 40,480 20x20 z0",
+      "Idle 100,460 140x60 z0",
+      "Active 100,100 1416x212 z-2000",
+      "Done 880,220 30x30 z0",
+      "A1 100,128 1416x92 z-1999",
+      "A2 100,220 1416x92 z-1999",
+      "i1 120,164 20x20 z0",
+      "Waiting 170,144 140x60 z0",
+      "Processing 360,144 140x60 z0",
+      "i2 116,286 20x20 z0",
+      "Running 1300,280 200x42 z-1998",
+      "Paused 600,266 140x60 z0",
+      "i3 180,300 20x20 z0",
+      "Fetch 220,280 140x60 z0",
+      "Compute 400,280 140x60 z0"
+    ],
+    "collapse": {
+      "chipFound": true,
+      "chipCovered": {
+        "cls": "",
+        "node": null
+      },
+      "t3": [],
+      "t8": [],
+      "badge": 1,
+      "runBefore": {
+        "id": "Pointer1791642149725_USER_134",
+        "name": "Running",
+        "x": 1440,
+        "y": 340,
+        "w": 200,
+        "h": 42,
+        "z": "-1998",
+        "cls": "ir-node-content ir-shape--rounded ir-layout",
+        "band": "ir-header-band ir-header-band--n|196x28",
+        "bandLabel": "Running|horizontal-tb|none"
+      },
+      "runAfter": {
+        "id": "Pointer1791642149725_USER_134",
+        "name": "Running",
+        "x": 1440,
+        "y": 340,
+        "w": 200,
+        "h": 42,
+        "z": "-1998",
+        "cls": "ir-node-content ir-shape--rounded ir-layout",
+        "band": "ir-header-band ir-header-band--n|196x28",
+        "bandLabel": "Running|horizontal-tb|none"
+      }
+    },
+    "errors": []
+  },
+  "checks": {
+    "pass": 3,
+    "fail": 4
+  }
+}

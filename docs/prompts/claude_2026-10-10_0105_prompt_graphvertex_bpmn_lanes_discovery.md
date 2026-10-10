@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-0105
 Chat: C-2026-10-10-0057
 Lane: full (IR schema extension; Phase 2 will touch canvas sync and the critical zone)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane ir-graphvertex · S0, S1, S2, S2b, S3, S4 (ir-graphvertex-s4), S6, last 8f94261cc · verifica visiva passata 2026-10-11 00:03 · flip 2026-10-11 dalla chat
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 

@@ -26,10 +26,33 @@
 
 import { defaultObjectViewIR, defaultEdgeViewIR } from './irDefaults';
 import { validateIR } from './irValidate';
-import type { AnyViewIR, AuthoringMetaclassPins, EdgeViewIR, RowViewIR, VertexViewIR } from './irTypes';
+import type { AnyViewIR, AuthoringMetaclassPins, EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from './irTypes';
 
-/** I tre kind autorabili. `graphVertex` resta fuori (R-6, 2026-08-04). */
-export type CreationSeedKind = 'vertex' | 'row' | 'edge';
+/** I kind autorabili. `graphVertex` entra con R-GV-11 (2026-10-10), che emenda R-6 (2026-08-04) e R-IRN-4. */
+export type CreationSeedKind = 'vertex' | 'row' | 'edge' | 'graphVertex';
+
+/**
+ * Il seed D-a di un graphVertex (R-GV-11, discovery 2026-10-10 §I decisione 1): `form: 'rect'`, una label `top`
+ * col nome intrinseco, `containment: {}` (canale di composizione, layout free, collassabile), così una view appena
+ * seedata disegna l'hull di oggi. `exclusive: true` come il default del vertex (`irDefaults.defaultObjectViewIR`):
+ * il pannello mostra l'interruttore acceso, e il seed dice ciò che il pannello mostra. Una funzione e non una
+ * costante, come i default di `irDefaults`: ogni chiamante riceve un oggetto suo.
+ *
+ * Lo legge anche `irKindConvert` quando si entra in graphVertex senza uno slot di stash da ripristinare.
+ */
+export function graphVertexSeedIR(): GraphVertexViewIR {
+    return {
+        irVersion: 'ir-1.2',
+        kind: 'graphVertex',
+        metaclasses: '*',
+        exclusive: true,
+        shape: {
+            form: 'rect',
+            labels: [{ position: 'top', source: { from: 'intrinsic', prop: 'name' } }],
+        },
+        containment: {},
+    };
+}
 
 export interface CreationSeedInput {
     kind: CreationSeedKind;
@@ -87,6 +110,7 @@ function pinFor(name: string | undefined, id: string | undefined): AuthoringMeta
  *   senza metaclasse per costruzione: l'autore la sceglie dal RowAuthoringPanel.
  * - `edge`: default edge, `metaclasses` col nome se noto, altrimenti `[]`. `edge: {}` lascia
  *   applicare i default di compile (terminazioni, labelPlacement).
+ * - `graphVertex`: il seed D-a (`graphVertexSeedIR`), `metaclasses` e `label` come il vertex.
  */
 export function computeCreationSeed(input: CreationSeedInput): AnyViewIR | null {
     const { kind, metaclassName, metaclassId, label } = input;
@@ -101,6 +125,14 @@ export function computeCreationSeed(input: CreationSeedInput): AnyViewIR | null 
             template: [{ from: 'intrinsic', prop: 'name' }],
         };
         seed = row;
+    } else if (kind === 'graphVertex') {
+        const graphVertex: GraphVertexViewIR = {
+            ...graphVertexSeedIR(),
+            metaclasses: metaclassName ? [metaclassName] : '*',
+            ...(pins ? { authoringMetaclassPins: pins } : {}),
+            ...(label ? { label } : {}),
+        };
+        seed = graphVertex;
     } else if (kind === 'edge') {
         const edge: EdgeViewIR = {
             ...defaultEdgeViewIR(),

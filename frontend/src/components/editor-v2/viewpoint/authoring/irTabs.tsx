@@ -26,8 +26,8 @@ export type IRTabId =
     | 'ir-text'
     | 'ir-source';
 
-/** The three IR kinds that have an authoring panel (graphVertex is out of scope). */
-export type IRAuthoringKind = 'vertex' | 'row' | 'edge';
+/** The IR kinds that have an authoring panel. graphVertex joined with R-GV-11 (2026-10-10), amending R-6 and R-IRN-4. */
+export type IRAuthoringKind = 'vertex' | 'row' | 'edge' | 'graphVertex';
 
 /** Tab labels — English (R-4), independent of the italian strings inside the panels. */
 export const IR_TAB_LABELS: Record<IRTabId, string> = {
@@ -64,6 +64,11 @@ export const IR_TAB_TOOLTIPS: Partial<Record<IRTabId, string>> = {
  * the two tables it hides are gated INSIDE the body, not at bar level. A row view
  * and an edge view carry no `form` in the schema, so the tab would have nothing to
  * author there.
+ *
+ * A graphVertex (P-2026-10-10-1156) gets the edge's bar: its Structure body holds the
+ * Containment section, its Appearance and Text bodies stay in the rail because the
+ * symbol editor modal re-hosts the vertex panel only. No Form tab: the container's
+ * FormSpec is not authored there in this slice.
  */
 export const irTabsForKind = (kind: IRAuthoringKind, advanced: boolean): IRTabId[] => {
     // D15: the vertex anatomy (Appearance and Text bodies) is re-hosted by the
@@ -71,7 +76,7 @@ export const irTabsForKind = (kind: IRAuthoringKind, advanced: boolean): IRTabId
     // edge keeps the pre-D15 bar until its own re-hosting slice.
     const content: IRTabId[] = kind === 'row'
         ? ['ir-applies-to', 'ir-text']
-        : kind === 'edge'
+        : kind === 'edge' || kind === 'graphVertex'
             ? ['ir-applies-to', 'ir-structure', 'ir-appearance', 'ir-text']
             : ['ir-applies-to', 'ir-structure', 'ir-symbol', 'ir-form'];
     return advanced ? [...content, 'ir-source'] : content;
@@ -160,16 +165,17 @@ export interface IRIdentityFieldsProps extends IRIdentityProps {
 /** Same labels as EnableIRPanel: the two selectors must read as the same choice. */
 const IR_KIND_OPTIONS = [
     { value: 'vertex', label: 'Vertex (node)' },
+    { value: 'graphVertex', label: 'Container (graph vertex)' },
     { value: 'row', label: 'Row (inline)' },
     { value: 'edge', label: 'Edge (line)' },
 ];
 
 const isAuthorableKind = (k: unknown): k is AuthorableIRKind =>
-    k === 'vertex' || k === 'row' || k === 'edge';
+    k === 'vertex' || k === 'row' || k === 'edge' || k === 'graphVertex';
 
 export const IRIdentityFields: React.FC<IRIdentityFieldsProps> = ({ view, viewpoints, readOnly }) => {
     // Kind selector (slice B, D8..D10): rendered only for an ir of an authorable
-    // kind — a classic view goes through EnableIRPanel, a graphVertex has no panel.
+    // kind — a classic view goes through EnableIRPanel. graphVertex since R-GV-11.
     const ir = (view as any).ir as AnyViewIR | undefined;
     const kindSelectable = !!ir && isAuthorableKind(ir.kind);
     const stash = (view as any).irStash as IRKindStash | undefined;
@@ -202,7 +208,7 @@ export const IRIdentityFields: React.FC<IRIdentityFieldsProps> = ({ view, viewpo
                 <div className="jj-field">
                     <label className="jj-field-label">
                         Kind
-                        <InfoTooltip text="How this view renders: node, inline row, or edge. Switching keeps the fields of the kind you leave in a stash, restored when you switch back; metaclasses, pins and label always follow the active view." />
+                        <InfoTooltip text="How this view renders: node, container, inline row, or edge. Switching keeps the fields of the kind you leave in a stash, restored when you switch back; metaclasses, pins and label always follow the active view." />
                     </label>
                     <Select
                         options={IR_KIND_OPTIONS}

@@ -56,8 +56,12 @@ export type Conditional<T> =
 export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
     | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud' | 'bar';
 /** `outside` (R-VP-15 (1), P-2026-09-29-1245): the label is drawn outside the box, on the
- *  side its `anchor` names, and does not enter the box size. Persisted, never renamed (R-B9). */
-export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom' | 'outside';
+ *  side its `anchor` names, and does not enter the box size. Persisted, never renamed (R-B9).
+ *  `header` (R-GV-5): inside the header band of a graphVertex `containment.layout.header`; legal
+ *  only there (irValidate), drawn as `top` where no band is declared. Additive widening. */
+export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom' | 'outside' | 'header';
+/** Text direction of a `header` label (R-GV-5): `vertical` reads bottom to top. Absent = 'horizontal'. */
+export type LabelOrientation = 'horizontal' | 'vertical';
 /** Side of the box an `outside` label sits on, as a compass point: n above, s below, w left,
  *  e right. Absent = 's'. Persisted, never renamed (R-B9); diagonals would be an additive widening. */
 export type LabelAnchor = 'n' | 'e' | 's' | 'w';
@@ -127,6 +131,9 @@ export interface LabelSpec {
     /** Side of an `outside` label (R-VP-15 (1)). Absent = 's'; ignored on the inside positions,
      *  and never written for them (the label editor drops it). */
     anchor?: LabelAnchor;
+    /** Text direction of a `header` label (R-GV-5); legal with `position: 'header'` only. Absent = 'horizontal'.
+     *  Additive optional field: no irVersion bump, no migration. */
+    orientation?: LabelOrientation;
 }
 
 export interface BadgeSpec {
@@ -573,6 +580,44 @@ export interface VertexViewIR {
     table?: TableSpec;
 }
 
+/** Arrangement of a graphVertex's children (R-GV-5, spec addendum 2026-10-10 §2.2). */
+export type ContainmentLayoutMode = 'free' | 'partitions';
+/** Stacking axis of `partitions`: `vertical` stacks top to bottom, `horizontal` left to right. */
+export type PartitionAxis = 'vertical' | 'horizontal';
+/** Side of the header band: `w` a band on the left, `n` a band on top. */
+export type HeaderSide = 'w' | 'n';
+/** How a `free` container is framed (S2b, spec addendum §11): `hull` as today, `self` sized to its children. */
+export type ContainerFrame = 'hull' | 'self';
+/** The line between two partitions (S2b, spec addendum §11): `dashed` for UML orthogonal regions. */
+export type PartitionSeparator = 'solid' | 'dashed';
+
+export interface ContainmentLayout {
+    mode: ContainmentLayoutMode;
+    /** `partitions` only. Absent = 'vertical'. */
+    axis?: PartitionAxis;
+    /** Header band, thickness in px. Absent = no band. */
+    header?: { side: HeaderSide; size: number };
+    /** px, >= 0. Absent = 0. */
+    padding?: number;
+    /** `free` only. Absent = 'hull' (today's). `self`: the node is the box of its visible children, plus `padding` and
+     *  the band (S2b, spec addendum §11). Partitions are always their own frame. */
+    frame?: ContainerFrame;
+    /** `partitions` only. Absent = 'solid' (today's). */
+    separator?: PartitionSeparator;
+}
+
+/** What a drop across a container boundary does to the model (R-GV-8, spec addendum §6). */
+export type MembershipMode = 'none' | 'forbid' | 'reference' | 'reparent';
+
+export interface ContainmentMembership {
+    mode: MembershipMode;
+    /** `reference` only: a new child is created in `feature` of the nearest composition ancestor of kind `ownerKind`. */
+    create?: { ownerKind: string; feature: string };
+}
+
+/** Whether the edges that draw the channel itself are drawn (R-GV-4). */
+export type ChannelEdges = 'show' | 'hide';
+
 /**
  * graphVertex view (spec v1.2 sez. 8): shape + containment.
  * Fase 2b renders containment as a hull (container drawn as a bounding box
@@ -580,6 +625,11 @@ export interface VertexViewIR {
  * deferred because it changes the coordinate semantics of the canvas→JjOM
  * write-back (critical zone). Collapse semantics (lift-to-ancestor) are fixed
  * by the interpreter, not per-view.
+ *
+ * R-GV (spec addendum 2026-10-10): absolute coordinates stay (computed placement,
+ * R-GV-6); the children channel, layout, membership and channel edges are optional
+ * keys of `containment`, and `visible`, `resizable`, `defaultSize` mirror the vertex
+ * kind (R-GV-9). Every key absent = the behaviour above.
  */
 export interface GraphVertexViewIR {
     irVersion: string;
@@ -593,7 +643,13 @@ export interface GraphVertexViewIR {
     priority?: number;
     exclusive?: boolean;
     label?: string;
+    /** As on VertexViewIR (R-GV-9): explicit resize gate; absent = the per-form default. */
+    resizable?: boolean;
+    /** As on VertexViewIR (R-GV-9): default box of the instances with no manual size; absent = from content. */
+    defaultSize?: { width?: number; height?: number };
     shape: ShapeSpec;
+    /** As on VertexViewIR (R-GV-9): false hides the node through the containment pass; absent = drawn. */
+    visible?: Conditional<boolean>;
     fieldCompartments?: FieldCompartmentSpec[];
     /**
      * Form rendering supplement (2026-08-26). Absent = this view renders as a symbol
@@ -609,8 +665,20 @@ export interface GraphVertexViewIR {
      */
     table?: TableSpec;
     containment: {
+        /**
+         * Children channel (R-GV-1): the objects this path reaches from the container, containment or not.
+         * Absent = all containment-reference children. Hops take `value` or `values[N]`; the terminal may
+         * read the whole list. The `container` token and `node.[x]` are illegal here.
+         */
+        children?: PathExpr;
         /** Which contained children render inside the hull; absent = all containment-reference children. */
         childFilter?: Predicate;
+        /** Arrangement (R-GV-5). Absent = 'free' with no band: the hull. */
+        layout?: ContainmentLayout;
+        /** Membership edit (R-GV-8). Absent = 'none': a drag moves the node, the model is untouched. */
+        membership?: ContainmentMembership;
+        /** Channel-edge suppression (R-GV-4). Absent = 'show'. */
+        edges?: ChannelEdges;
         collapsible?: boolean;
         collapsed?: {
             /** Shape override when collapsed (partial; merged over `shape`). */
@@ -1005,6 +1073,8 @@ export interface CompiledLabel {
     /** Resolved side of an `outside` label, always set for it ('s' when absent or unknown);
      *  undefined on the inside positions. */
     anchor?: LabelAnchor;
+    /** Text direction of a `header` label (R-GV-5); set only when the label declares a known one. */
+    orientation?: LabelOrientation;
 }
 
 export interface CompiledBadge {
@@ -1039,4 +1109,27 @@ export interface CompiledContainment {
     collapsedForm: CompiledConditional<ShapeForm> | null;
     collapsedFill: CompiledConditional<string> | null;
     collapsedBadge: CompiledBadge | null;
+    /**
+     * R-GV keys, each set only when the view declares it, so a view without them compiles to the key list it had
+     * (the precedent of `entry` and `visible`). Read permissively: an out-of-vocabulary value reads as its default.
+     */
+    /** Declared children channel (R-GV-1): the expression and its parsed steps, read by irContainment. */
+    channel?: { expr: string; steps: CompiledPathStep[] };
+    /** Declared layout (R-GV-5), normalized: axis 'vertical', no header, padding 0 when absent or malformed. */
+    layout?: CompiledContainmentLayout;
+    /** Declared membership (R-GV-8); an unknown mode reads 'none'. */
+    membership?: ContainmentMembership;
+    /** Declared channel edges (R-GV-4); only a known value is set. */
+    edges?: ChannelEdges;
+}
+
+export interface CompiledContainmentLayout {
+    mode: ContainmentLayoutMode;
+    axis: PartitionAxis;
+    header: { side: HeaderSide; size: number } | null;
+    padding: number;
+    /** Set only to 'self' on a `free` layout that declares it (S2b): a layout without it compiles as before. */
+    frame?: ContainerFrame;
+    /** Set only to 'dashed' on a `partitions` layout that declares it (S2b). */
+    separator?: PartitionSeparator;
 }

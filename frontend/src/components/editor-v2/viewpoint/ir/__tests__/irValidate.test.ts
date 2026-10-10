@@ -361,8 +361,8 @@ describe('validateIR: label position and anchor vocabulary (P-2026-09-29-1245)',
     });
     const lit = (text: string) => ({ from: 'literal', text });
 
-    it('the vocabularies are exactly the four inside positions plus outside, and the four compass anchors', () => {
-        expect(Object.keys(VALID_LABEL_POSITIONS).sort()).toEqual(['bottom', 'center', 'inside', 'outside', 'top']);
+    it('the vocabularies are exactly the four inside positions plus outside and header (R-GV-5), and the four compass anchors', () => {
+        expect(Object.keys(VALID_LABEL_POSITIONS).sort()).toEqual(['bottom', 'center', 'header', 'inside', 'outside', 'top']);
         expect(Object.keys(LABEL_ANCHORS).sort()).toEqual(['e', 'n', 's', 'w']);
     });
 
@@ -670,5 +670,83 @@ describe('validateIR — edge.terminations closed vocabulary (R-VP-24, P-2026-09
                 expect(r.error).toContain(JSON.stringify(value));
             }
         }
+    });
+});
+
+describe('validateIR: R-GV keys of a graphVertex (spec addendum 2026-10-10 §2)', () => {
+    const gv = (containment: any, extra: any = {}): GraphVertexViewIR => ({
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], shape: { form: 'rect' }, containment, ...extra,
+    } as GraphVertexViewIR);
+    const check = (id: string, ir: GraphVertexViewIR | VertexViewIR) => { clearCompileCache(); return validateIR(id, ir); };
+    const errorOf = (id: string, ir: GraphVertexViewIR | VertexViewIR) => { const r = check(id, ir); return r.ok ? null : r.error; };
+
+    it('accepts a declared channel, single- or multi-hop, and refuses the four malformed ones', () => {
+        expect(check('c_ok1', gv({ children: '$flowNodeRefs.values' }))).toEqual({ ok: true });
+        expect(check('c_ok2', gv({ children: '$processRef.value.$laneSets.values[0].$lanes.values' }))).toEqual({ ok: true });
+        expect(errorOf('c_e1', gv({ children: '' }))).toContain('containment.children must be a non-empty PathExpr');
+        expect(errorOf('c_e2', gv({ children: 4 }))).toContain('containment.children must be a non-empty PathExpr');
+        expect(errorOf('c_e3', gv({ children: CONTAINER_ENDPOINT }))).toContain('edge endpoint only (R-B13)');
+        expect(errorOf('c_e4', gv({ children: '$a.value?.$b' }))).toContain('forbidden construct');
+        expect(errorOf('c_e5', gv({ children: '$processRef.value.$laneSets.values.$lanes.values' }))).toContain('hop 2 ($laneSets) reads .values');
+    });
+    it('checks the layout vocabulary, the axis on partitions only, the header and the padding', () => {
+        expect(check('l_ok1', gv({ layout: { mode: 'partitions', axis: 'horizontal', header: { side: 'n', size: 24 }, padding: 0 } }))).toEqual({ ok: true });
+        expect(check('l_ok2', gv({ layout: { mode: 'free', header: { side: 'w', size: 30 } } }))).toEqual({ ok: true });
+        expect(errorOf('l_e1', gv({ layout: 'partitions' }))).toContain('containment.layout must be an object');
+        expect(errorOf('l_e2', gv({ layout: { mode: 'grid' } }))).toContain('containment.layout.mode must be one of free | partitions');
+        expect(errorOf('l_e3', gv({ layout: { mode: 'free', axis: 'vertical' } }))).toContain('axis applies to partitions only');
+        expect(errorOf('l_e4', gv({ layout: { mode: 'partitions', axis: 'diagonal' } }))).toContain('containment.layout.axis must be one of');
+        expect(errorOf('l_e5', gv({ layout: { mode: 'free', header: { side: 'e', size: 30 } } }))).toContain('containment.layout.header must be');
+        expect(errorOf('l_e6', gv({ layout: { mode: 'free', header: { side: 'w', size: 0 } } }))).toContain('containment.layout.header must be');
+        expect(errorOf('l_e7', gv({ layout: { mode: 'free', header: { side: 'w', size: Number.NaN } } }))).toContain('containment.layout.header must be');
+        expect(errorOf('l_e8', gv({ layout: { mode: 'free', padding: -2 } }))).toContain('containment.layout.padding must be a finite number >= 0');
+    });
+    it('checks frame on free only and separator on partitions only, each in its vocabulary (S2b)', () => {
+        expect(check('f_ok1', gv({ layout: { mode: 'free', frame: 'self', padding: 16, header: { side: 'n', size: 28 } } }))).toEqual({ ok: true });
+        expect(check('f_ok2', gv({ layout: { mode: 'free', frame: 'hull' } }))).toEqual({ ok: true });
+        expect(check('f_ok3', gv({ layout: { mode: 'partitions', separator: 'dashed' } }))).toEqual({ ok: true });
+        expect(check('f_ok4', gv({ layout: { mode: 'partitions', separator: 'solid' } }))).toEqual({ ok: true });
+        expect(errorOf('f_e1', gv({ layout: { mode: 'partitions', frame: 'self' } }))).toContain('containment.layout.frame applies to free only');
+        expect(errorOf('f_e2', gv({ layout: { mode: 'free', frame: 'box' } }))).toContain('containment.layout.frame must be one of hull | self');
+        expect(errorOf('f_e3', gv({ layout: { mode: 'free', separator: 'dashed' } }))).toContain('containment.layout.separator applies to partitions only');
+        expect(errorOf('f_e4', gv({ layout: { mode: 'partitions', separator: 'dotted' } }))).toContain('containment.layout.separator must be one of solid | dashed');
+    });
+    it('checks the membership vocabulary, the channel a reference needs, and create', () => {
+        expect(check('m_ok1', gv({ children: '$flowNodeRefs.values', membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } } }))).toEqual({ ok: true });
+        expect(check('m_ok2', gv({ membership: { mode: 'reparent' } }))).toEqual({ ok: true });
+        expect(check('m_ok3', gv({ membership: { mode: 'forbid' } }))).toEqual({ ok: true });
+        expect(errorOf('m_e1', gv({ membership: 'forbid' }))).toContain('containment.membership must be an object');
+        expect(errorOf('m_e2', gv({ membership: { mode: 'move' } }))).toContain('containment.membership.mode must be one of none | forbid | reference | reparent');
+        expect(errorOf('m_e3', gv({ membership: { mode: 'reference' } }))).toContain("'reference' edits the channel's list: declare containment.children");
+        expect(errorOf('m_e4', gv({ membership: { mode: 'reparent', create: { ownerKind: 'P', feature: 'f' } } }))).toContain('create applies to the reference mode only');
+        expect(errorOf('m_e5', gv({ children: '$r.values', membership: { mode: 'reference', create: { ownerKind: '', feature: 'f' } } }))).toContain('containment.membership.create must be');
+        expect(errorOf('m_e6', gv({ children: '$r.values', membership: { mode: 'reference', create: { ownerKind: 'P', feature: '1f' } } }))).toContain('containment.membership.create must be');
+    });
+    it('checks edges and resizable, and leaves the vertex kind without a resizable rule', () => {
+        expect(check('x_ok', gv({ edges: 'hide' }, { resizable: true }))).toEqual({ ok: true });
+        expect(errorOf('x_e1', gv({ edges: 'none' }))).toContain('containment.edges must be one of show | hide');
+        expect(errorOf('x_e2', gv({}, { resizable: 'yes' }))).toContain('resizable must be a boolean');
+        const vertex = { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['X'], shape: { form: 'rect' }, resizable: 'yes' } as unknown as VertexViewIR;
+        expect(check('x_v', vertex)).toEqual({ ok: true });
+    });
+    it('accepts a header label only on a graphVertex with a band, and its orientation only on it', () => {
+        const lbl = (extra: any) => [{ position: 'header', source: { from: 'literal', text: 'L' }, ...extra }];
+        const banded = (labels: any[]) => gv({ layout: { mode: 'free', header: { side: 'w', size: 30 } } }, { shape: { form: 'rect', labels } });
+        expect(check('h_ok', banded(lbl({ orientation: 'vertical' })))).toEqual({ ok: true });
+        expect(errorOf('h_e1', gv({}, { shape: { form: 'rect', labels: lbl({}) } }))).toContain("position 'header' needs a graphVertex with containment.layout.header");
+        const vertex = { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['X'], shape: { form: 'rect', labels: lbl({}) } } as unknown as VertexViewIR;
+        expect(errorOf('h_e2', vertex)).toContain("position 'header' needs a graphVertex");
+        expect(errorOf('h_e3', banded([{ position: 'top', orientation: 'vertical', source: { from: 'literal', text: 'L' } }]))).toContain('orientation applies to a header label only');
+        expect(errorOf('h_e4', banded(lbl({ orientation: 'sideways' })))).toContain('orientation must be one of horizontal | vertical');
+    });
+    it('warns, without refusing, on a children compartment over the default channel (D-c, R-GV-3)', () => {
+        const rows = [{ id: 'kids', source: { from: 'children' }, rowFormat: { segments: [] } }];
+        const r = check('w_1', gv({}, { fieldCompartments: rows }));
+        expect(r.ok).toBe(true);
+        expect(r.ok && r.warnings).toEqual([expect.stringContaining('the rows win')]);
+        expect(check('w_2', gv({ children: '$flowNodeRefs.values' }, { fieldCompartments: rows }))).toEqual({ ok: true });
+        expect(check('w_3', gv({}, { fieldCompartments: [{ id: 'a', source: { from: 'attributes' }, rowFormat: { segments: [] } }] }))).toEqual({ ok: true });
+        const vertex = { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['X'], shape: { form: 'rect' }, fieldCompartments: rows } as unknown as VertexViewIR;
+        expect(check('w_4', vertex)).toEqual({ ok: true });
     });
 });

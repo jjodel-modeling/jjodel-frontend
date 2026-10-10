@@ -5839,6 +5839,93 @@ Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
   runnable guard, and a Petri template could not write `initial()`. Named `target`, not `js`, so a second target
   plugs in without renaming.
 
+## R-GV — graphVertex containment: channel, layout, membership (ratifiche 2026-10-10)
+
+Source: `docs/discovery/discovery_2026-10-10_graphvertex_bpmn_lanes.md` (P-2026-10-10-0105 Phase 1, §H and §I), spec
+`docs/spec/claude_spec_2026-10-10_ir_graphvertex_containment_addendum.md`. Ratified by Alfonso in chat
+`C-2026-10-10-0057` on 2026-10-10 08:27, «ratifico tutto», on the eight decisions taken unattended, the four awaiting
+him and the three open questions of the report. No `irVersion` bump, no VersionFixer, no migration for any row.
+
+- **R-GV-1** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **A graphVertex may declare its children channel, `containment.children: PathExpr`, containment or not.** Absent =
+  the composition children, as today. Hops follow `navigateRefHop` (`value` or `values[N]`), the terminal may read
+  the whole list; `container` and `node.[x]` are illegal there. v1 does not fan out over a list: a pool reaches its
+  lanes through `$processRef.value.$laneSets.values[0].$lanes.values`, and the JjEL profile (R-J2, R-J7) is not
+  extended. Spec addendum §2.1.
+- **R-GV-2** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **A node is drawn inside one container at most: the innermost claimant wins, then canvas order.** Fixed by the
+  interpreter, not per view. Depth is the shortest claim path from an unclaimed container; a link that would close
+  a claim cycle is not set. The containment model exposes `multiClaimed`, `unclaimed` and `channelSlots`; the
+  problems overlay reads the first two in slice S2. Spec addendum §4.
+- **R-GV-3** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **D-c: when a row compartment and the containment channel of the same view claim one object, the row wins.**
+  `validateIR` warns, without refusing, on a graphVertex with a `children`-source compartment and no declared
+  channel. Warning in slice S1, interpreter precedence in slice S2. Spec addendum §8.
+- **R-GV-4** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Channel edges are suppressed by `containment.edges: 'hide'`; absent = `show`.** Existing views keep their
+  edges; the authoring seed writes `hide` on a non-composition channel. Suppression by `hidden` in the presentation
+  pass, slice S2. Spec addendum §5.
+- **R-GV-5** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **The arrangement key keeps the spec's name, `containment.layout`, optional, `mode: 'free' | 'partitions'`,** with
+  `axis`, a `header` band (`w` or `n`) and `padding`. `LabelPosition` gains `'header'` and `LabelSpec` gains
+  `orientation` (`horizontal` | `vertical`) for the band's label. Spec addendum §2.2, §2.3.
+- **R-GV-6** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Amends spec v1.2 §8 (`docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md:157-173`): computed placement in
+  absolute coordinates, strategy (β).** Children stay top-level React Flow nodes in absolute coordinates; the
+  interpreter computes the partitions' boxes and moves descendants with their container; no `parentId`. `layout`
+  becomes optional; the v1.1 values `vertical | horizontal | grid` are withdrawn as never implemented. The collapse
+  fields of §8, amended by R-IRN-37, are untouched; the text of §8 is not edited (the addendum §3 carries the
+  amendment).
+- **R-GV-7** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Partition geometry: partitions fill the container's inner width, stack along the axis, the container's main
+  size is their sum, slack goes to the last; a paired-border resize keeps the sum.** Extents come from each
+  partition's `isResized` record (R-LAY-4, R-LAY-14) or its content, floor 24 px. Pure module `irPartitions.ts`.
+  Spec addendum §7.
+- **R-GV-8** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Membership edit is declared by `containment.membership.mode`: `none` (absent, today), `forbid`, `reference`,
+  `reparent`; `create: {ownerKind, feature}` names the creation owner of a `reference` container.** `reparent`
+  relies on the model's single-container auto-move (`LValue.setValueAtPosition`, discovery 2026-07-27), a
+  primitive the Phase 1 report §D4 missed. Gestures in slice S3. Spec addendum §6.
+- **R-GV-9** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **graphVertex gains the vertex kind's `visible`, `resizable` and `defaultSize`,** same types, defaults and
+  validation. Spec addendum §2.6.
+- **R-GV-10** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **v1 covers the root form of a model only (objects in `DModel.objects`, appended to the containment slots).**
+  Vertices for nested objects (`useJjomSync.ts` Step 2bis, slice S5) get a read-only discovery of their own before
+  any code: P-2026-10-10-0830, branch `nested-vertices`.
+- **R-GV-11** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **graphVertex becomes an authorable kind, effective when slice S1 has landed. Amends R-6 (2026-08-04,
+  `docs/sessioni/claude_sessione_2026-08-04_3.md:20`, «`graphVertex` in `showIRTab` **non** entra da solo») and
+  R-IRN-4 (this file, «graph e graphVertex non sono kind autorabili»).** D-a, the seed: `form: 'rect'`, a `top`
+  intrinsic-name label, `containment: {}` (composition channel, free layout, collapsible), so a seeded view
+  renders as today's hull. The amended rows are not edited. Panel and seed in slice S4.
+- **R-GV-12** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **D-b: a metaclass whose drawing changes with its structure gets two views told apart by `predicate` and
+  `priority`, not one adaptive view.** Spec addendum §9.
+- **R-GV-13** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Critical-zone go-ahead slice by slice (RC-26, RC-30).** S1, S2 and S4, inside the `CLAUDE.md` §3.1 zone
+  (`viewpoint/ir/`, `viewpoint/authoring/`), are granted; S3 gets its own go-ahead and its own Layer Impact Report in
+  `docs/lir/` if it touches `canvasToJjom.ts`.
+- **R-GV-14** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **The report's three open questions.** MessageFlow ends: the metamodel's `InteractionNode` typing (Participant,
+  Task, StartEvent, EndEvent) is the OMG restriction, no extra check. A pool without `processRef` draws as a thin
+  band (slice S2). Lanes are `collapsible: false` and persist no `irCollapsed`.
+- **R-GV-15** (2026-10-10, decided by Alfonso 2026-10-10 13:25, evidence: measured, verified: probe, reversible: branch).
+  **Hierarchical UML state machines are a target of graphVertex, beside BPMN pools and lanes.** `containment.layout`
+  gains `frame: 'hull' | 'self'` (free only, absent = `hull`, today's) and `separator: 'solid' | 'dashed'` (partitions
+  only, absent = `solid`): a composite state is the box of its substates, orthogonal regions share a dashed line. A
+  selected container that holds layout containers stays under them; an object-as-edge with a collapsed end is lifted.
+  Bordered nodes (entry and exit points, history on the border) are deferred, the next capability to open if
+  statecharts are pursued in full. Spec addendum §11; fixture `frontend/scripts/probe/statechart-fixture.ts` (slice
+  S2b).
+- **R-GV-16** (2026-10-11, ratified by Alfonso 2026-10-11 00:05, evidence: measured, verified: probe, reversible: branch).
+  **The toolbar Auto layout lays graphVertex containers out bottom-up and keeps containment** (slice S6,
+  `utils/elkContainers.ts`): a partitions container takes one layered run over the flow nodes of all its partitions,
+  each node placed in its own band; a self-framed or free container takes its own run over its children. Two
+  consequences are accepted for v1: a pool or orthogonal state that the shared flow coordinate outgrows is written with
+  its new size as sized by hand, which becomes its minimum; a frame nested in a lane or region is laid out with the
+  root options (downward), not in the direction of the lanes around it. The open-time layout keeps its flat call.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
