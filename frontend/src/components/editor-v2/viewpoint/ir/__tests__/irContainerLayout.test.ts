@@ -94,9 +94,50 @@ describe('applyContainerLayout: partitions (R-GV-7) in absolute coordinates (R-G
     it('a pool not resized by hand is as wide as its band plus the widest lane content', () => {
         const { model, idlookup, nodes } = world({ shop: { x: 100, y: 100, w: 900, h: 360, isResized: false } });
         const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
-        // Each lane needs t's 140 plus the margins plus its own 30 px band.
-        expect(pick(out, 'Vshop').w).toBe(30 + 140 + 2 * PARTITION_CONTENT_MARGIN + 30);
+        // Each lane starts at 130, past the pool's band, and reaches the margin past t's right edge (300 + 140); its own
+        // 30 px band lies before t (P-2026-10-11-0040: no longer t's 140 plus the margins plus the band, which cut t).
+        expect(pick(out, 'Vshop').w).toBe(30 + (300 + 140 + PARTITION_CONTENT_MARGIN - 130));
         expect(pick(out, 'Vshop').h).toBe(360);
+    });
+    it('a lane not sized by hand keeps the margin on its right, measured from where it starts (P-2026-10-11-0040)', () => {
+        // t1 sits 27 px past Sales's band: its span plus two margins would leave 32 - 27 = 5 px on its right.
+        const { model, idlookup, nodes } = world({ shop: { x: 100, y: 100, w: 900, h: 360, isResized: false },
+            nodes: { Vt1: { position: { x: 187, y: 160 } }, Vt2: { position: { x: 176, y: 340 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        const sales = pick(out, 'Vsales');
+        expect(sales.x).toBe(130);
+        expect(sales.x + sales.w! - (187 + 140)).toBe(PARTITION_CONTENT_MARGIN);
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ x: 130, w: sales.w });
+        expect(pick(out, 'Vshop').w).toBe(30 + sales.w!);
+        // The children do not move: the frame grows.
+        expect(out.find(n => n.id === 'Vt1')).toBe(nodes.find(n => n.id === 'Vt1'));
+    });
+    it('a padded pool starts its lanes past its padding, and the margin on their right is measured from there', () => {
+        const { model, idlookup, nodes } = world({ shop: { x: 100, y: 100, w: 900, h: 360, isResized: false },
+            nodes: { Vt1: { position: { x: 197, y: 170 } }, Vt2: { position: { x: 186, y: 350 } } } });
+        (model.containers.get('shop') as any).layout = { ...partitions(), padding: 10 };
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        const sales = pick(out, 'Vsales');
+        expect(sales.x).toBe(140);
+        expect(sales.x + sales.w! - (197 + 140)).toBe(PARTITION_CONTENT_MARGIN);
+        expect(pick(out, 'Vshop').w).toBe(30 + 10 + sales.w! + 10);
+    });
+    it('a lane whose children sit closer to its start than the margin keeps the span plus the margins as its floor', () => {
+        const { model, idlookup, nodes } = world({ shop: { x: 100, y: 100, w: 900, h: 360, isResized: false },
+            nodes: { Vt1: { position: { x: 160, y: 160 } }, Vt2: { position: { x: 160, y: 340 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vsales').w).toBe(140 + 2 * PARTITION_CONTENT_MARGIN + 30);
+    });
+    it('side by side, the margin past the children is kept on the cross axis, below them', () => {
+        const { model, idlookup, nodes } = world({ shop: { x: 100, y: 100, w: 900, h: 100, isResized: false },
+            nodes: { Vt1: { position: { x: 300, y: 157 } }, Vt2: { position: { x: 600, y: 146 } } } });
+        (model.containers.get('shop') as any).layout = { mode: 'partitions', axis: 'horizontal', header: { side: 'n', size: 30 }, padding: 0 };
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        // The region starts under the band, at 130; t1 sits 27 px into it, 60 high.
+        const sales = pick(out, 'Vsales');
+        expect(sales.y).toBe(130);
+        expect(sales.y + sales.h! - (157 + 60)).toBe(PARTITION_CONTENT_MARGIN);
+        expect(pick(out, 'Vshop').h).toBe(30 + sales.h!);
     });
     it('follows the pool node where it is now (a drag in progress), not where its record says', () => {
         const { model, idlookup, nodes } = world({ nodes: { Vshop: { position: { x: 400, y: 50 } } } });
@@ -335,9 +376,10 @@ describe('applyContainerLayout: self-framing containers and separators (S2b)', (
         const { model, idlookup, nodes } = scWorld();
         const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
         expect(scPick(out, 'Vrun')).toEqual({ x: 204, y: 236, w: 352, h: 120 });
-        expect(scPick(out, 'Vactive')).toEqual({ x: 100, y: 100, w: 568, h: 272 });
-        expect(scPick(out, 'Va1')).toEqual({ x: 100, y: 128, w: 568, h: 92 });
-        expect(scPick(out, 'Va2')).toEqual({ x: 100, y: 220, w: 568, h: 152 });
+        // The regions start at Active's 100 and reach the margin past Paused's right edge, 600 + 140 (P-2026-10-11-0040).
+        expect(scPick(out, 'Vactive')).toEqual({ x: 100, y: 100, w: 656, h: 272 });
+        expect(scPick(out, 'Va1')).toEqual({ x: 100, y: 128, w: 656, h: 92 });
+        expect(scPick(out, 'Va2')).toEqual({ x: 100, y: 220, w: 656, h: 152 });
         expect(out.find(n => n.id === 'Vrun')!.zIndex).toBe(LAYOUT_CONTAINER_Z + 2);
         // The substates stay where they are.
         expect(scPick(out, 'Vf')).toEqual({ x: 220, y: 280, w: 140, h: 60 });
@@ -346,7 +388,7 @@ describe('applyContainerLayout: self-framing containers and separators (S2b)', (
         const { model, idlookup, nodes } = scWorld({ frame: false });
         const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
         expect(scPick(out, 'Vrun')).toEqual({ x: 900, y: 900, w: 160, h: 60 });
-        expect(scPick(out, 'Va2').w).toBe(1060 - 600 + 2 * PARTITION_CONTENT_MARGIN);
+        expect(scPick(out, 'Va2').w).toBe(1060 + PARTITION_CONTENT_MARGIN - 100);
     });
     it('draws the line between two regions dashed: every region but the last carries the dashed class', () => {
         const { model, idlookup, nodes } = scWorld();
@@ -375,7 +417,7 @@ describe('applyContainerLayout: self-framing containers and separators (S2b)', (
         const { model, idlookup, nodes } = scWorld();
         (model.containers.get('a1') as any).layout = { mode: 'free', axis: 'vertical', header: null, padding: 0, frame: 'self' };
         const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
-        expect(scPick(out, 'Va1')).toEqual({ x: 100, y: 128, w: 568, h: 92 });
+        expect(scPick(out, 'Va1')).toEqual({ x: 100, y: 128, w: 656, h: 92 });
     });
     it('a frame with no child at all keeps its own box', () => {
         const { model, idlookup, nodes } = scWorld();
@@ -415,10 +457,10 @@ describe('applyContainerLayout: self-framing containers and separators (S2b)', (
         const at = (dragging: boolean) => applyContainerLayout(
             [...nodes, { id: 'Vouter', type: 'objectNode', position: dragging ? { x: 120, y: 130 } : { x: 0, y: 0 }, data: {}, dragging } as Node],
             model, idlookup, null, new Set());
-        expect(scPick(at(false), 'Vouter')).toEqual({ x: 90, y: 90, w: 588, h: 292 });
+        expect(scPick(at(false), 'Vouter')).toEqual({ x: 90, y: 90, w: 676, h: 292 });
         const out = at(true);
-        expect(scPick(out, 'Vouter')).toEqual({ x: 120, y: 130, w: 588, h: 292 });
-        expect(scPick(out, 'Vactive')).toEqual({ x: 130, y: 140, w: 568, h: 272 });
+        expect(scPick(out, 'Vouter')).toEqual({ x: 120, y: 130, w: 676, h: 292 });
+        expect(scPick(out, 'Vactive')).toEqual({ x: 130, y: 140, w: 656, h: 272 });
         expect(scPick(out, 'Va1')).toMatchObject({ x: 130, y: 168 });
         expect(scPick(out, 'Vrun')).toMatchObject({ x: 234, y: 276 });
     });

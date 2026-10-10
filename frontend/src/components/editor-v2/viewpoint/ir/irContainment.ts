@@ -710,9 +710,11 @@ export function applyContainerLayout(
         return out;
     };
 
-    // What a container's own children need, as a box size (spec addendum §7.1, content). Memoized, cycle-guarded.
-    const needMemo = new Map<string, { w: number; h: number }>();
-    const needOf = (objectId: string, seen: Set<string> = new Set()): { w: number; h: number } => {
+    // What a container's own children need, as a box size (spec addendum §7.1, content), and, when they are not a stack,
+    // the far corner they need in absolute coordinates: their far edges plus the margin. Memoized, cycle-guarded.
+    type Need = { w: number; h: number; end?: { x: number; y: number } };
+    const needMemo = new Map<string, Need>();
+    const needOf = (objectId: string, seen: Set<string> = new Set()): Need => {
         const memo = needMemo.get(objectId);
         if (memo) return memo;
         if (seen.has(objectId)) return { w: 0, h: 0 };
@@ -720,7 +722,7 @@ export function applyContainerLayout(
         const info = model.containers.get(objectId);
         const layout = info?.layout;
         const kids = visibleKids(objectId);
-        let out = { w: 0, h: 0 };
+        let out: Need = { w: 0, h: 0 };
         if (layout?.mode === 'partitions') {
             const l = layoutPartitions({
                 container: { x: 0, y: 0 }, axis: layout.axis, header: layout.header, padding: layout.padding,
@@ -738,21 +740,34 @@ export function applyContainerLayout(
             out = {
                 w: maxX - minX + 2 * PARTITION_CONTENT_MARGIN + (band?.side === 'w' ? band.size : 0),
                 h: maxY - minY + 2 * PARTITION_CONTENT_MARGIN + (band?.side === 'n' ? band.size : 0),
+                end: { x: maxX + PARTITION_CONTENT_MARGIN, y: maxY + PARTITION_CONTENT_MARGIN },
             };
         }
         needMemo.set(objectId, out);
         return out;
     };
-    const specOf = (objectId: string, axis: CompiledContainmentLayout['axis'], seen: Set<string>): PartitionSpec => {
+    // `crossFrom`: where the partitions start on the cross axis, when the caller knows it. A partition starts there, not
+    // a margin before its children, and its children do not move: it reaches the margin past their far edge from there,
+    // never less than their span plus the margins (P-2026-10-11-0040).
+    const specOf = (objectId: string, axis: CompiledContainmentLayout['axis'], seen: Set<string>, crossFrom?: number): PartitionSpec => {
         const rec = recOf(model.vertexByObj.get(objectId)!);
         const need = needOf(objectId, seen);
         const vertical = axis !== 'horizontal';
+        const reach = need.end && crossFrom !== undefined ? (vertical ? need.end.x : need.end.y) - crossFrom : 0;
         return {
             stored: vertical ? rec.h : rec.w,
             isResized: !!rec.isResized,
             content: vertical ? need.h : need.w,
-            contentCross: vertical ? need.w : need.h,
+            contentCross: Math.max(vertical ? need.w : need.h, reach),
         };
+    };
+    // Where the partitions of a `partitions` container at `at` start on the cross axis: past its band on that axis and its
+    // padding, as `layoutPartitions` places them.
+    const crossFromOf = (at: { x: number; y: number }, layout: CompiledContainmentLayout): number => {
+        const vertical = layout.axis !== 'horizontal';
+        const band = layout.header?.side === (vertical ? 'w' : 'n') && Number.isFinite(layout.header.size) ? Math.max(0, layout.header.size) : 0;
+        const pad = Number.isFinite(layout.padding) ? Math.max(0, layout.padding) : 0;
+        return (vertical ? at.x : at.y) + band + pad;
     };
     // The laid-out box of a `partitions` container a frame holds (S2b): where its node is, its stack's size; the frame
     // counts that box, not the node's stored size. Null for any other object.
@@ -763,9 +778,10 @@ export function applyContainerLayout(
         if (!info || !node || layout?.mode !== 'partitions') return null;
         const rec = recOf(info.vertexId);
         const at = posOf(node, objectId);
+        const from = crossFromOf(at, layout);
         return layoutPartitions({
             container: { x: at.x, y: at.y, w: rec.w, h: rec.h, isResized: !!rec.isResized }, axis: layout.axis, header: layout.header,
-            padding: layout.padding, partitions: visibleKids(objectId).map(k => specOf(k, layout.axis, new Set())),
+            padding: layout.padding, partitions: visibleKids(objectId).map(k => specOf(k, layout.axis, new Set(), from)),
         }).container;
     };
 
@@ -812,7 +828,8 @@ export function applyContainerLayout(
         const box = placed
             ? { x: own.x!, y: own.y!, w: own.w!, h: own.h!, isResized: true }
             : { x: at.x, y: at.y, w: rec.w, h: rec.h, isResized: !!rec.isResized };
-        let specs = kids.map(k => specOf(k, layout.axis, new Set()));
+        const from = crossFromOf(box, layout);
+        let specs = kids.map(k => specOf(k, layout.axis, new Set(), from));
         // A partition being resized (S3): its live size moves its end border, the next partition gives or takes the
         // difference, the sum stays (spec addendum §7.5); the records are written once, at the end of the gesture.
         const live = kids.findIndex(k => byId.get(model.vertexByObj.get(k)!)?.resizing === true);
