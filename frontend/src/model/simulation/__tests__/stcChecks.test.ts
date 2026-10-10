@@ -275,7 +275,7 @@ describe('R-SIM-144 P4: event.a looked up on the trigger\'s declared type (P-202
     it('a name the type does not have is the defect event-feature, whose short never reads undeclared (mutant: reason undeclared)', () => {
         const d = checkEventFeature(expr('event.bonus > 0'), typed);
         expect(d).toEqual({ reason: 'event-feature', detail: "'bonus' is not a feature of Coin, the type of the trigger", short: 'event.bonus: not on Coin' });
-        expect(d?.short.startsWith("undeclared '")).toBe(false);
+        expect(d?.short?.startsWith("undeclared '")).toBe(false);
         expect(checkEventFeature(expr('event?.bonus == null'), typed)?.reason).toBe('event-feature');
     });
 
