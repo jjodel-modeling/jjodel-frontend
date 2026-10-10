@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: full (five files: two scripts, two test files, one doc)
 Depends: P-2026-10-10-1806
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-2020 (lane-run-resolve, a335abd21 + docs 5dc52f23f); no visual check (CLI only)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

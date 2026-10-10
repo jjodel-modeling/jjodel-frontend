@@ -550,3 +550,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: harness: lane-run draws the tier of eligible fast lanes (RC-45); board drawn toggle checked on 4701
 **Notes**: Rollback tag `pre-lane-run-rc45-draw` on `9d41d0bce` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1937/result.json`.
 **Prompt document name**: 2026-10-10 19:37
+
+## 2026-10-10 — feat: lane-run resolve and the resolved outcome, with card projection (P-2026-10-10-2020)
+**Prompt**: `claude_2026-10-10_2020_prompt_lane_run_resolve.md`: slice S1 of discovery P-2026-10-10-1806, a fresh port of `harness-req-tab` hunks h1-h7 (`resolved.txt`, `outcome: resolved` in `status`, `lane-run resolve`), plus R4: a resolved lane projects like done and `resolve` re-projects its card.
+**Files touched**: code `a335abd21`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-tracking.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`; docs `5dc52f23f`: `docs/HARNESS-DOCS.md`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. node --check exit 0 on both scripts; laneRun, laneRunDirect, laneTracking 205/205, exit 0; check:scripts PASS. On base `c22fc0ec5`: 3 of 4 ported tests red (the fourth guards reading the file on any outcome, green there by design), 4 of 4 new laneTracking cases red.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Mutation bench 16 of 17 killed; M8 (running lane not refused) is equivalent: a live run has a null outcome, so the outcome check refuses it, only the text differs. Subject shortened from the prompt's 86 characters to 70: bash-guard refuses above 72 (CLAUDE.md 6.2). All tests in throwaway HOMEs; real `~/.jjodel-lanes/` holds 0 `resolved.txt` (control: 419 `exit.txt`). Bench list in the body of `a335abd21`.
+**Prompt document name**: 2026-10-10 20:20
+
+**Ticket** (low, found here): `resolved.txt` survives a `resume`. A resolved lane resumed and blocked again reads `resolved` in `status` and on its card until the file is removed by hand. Inherited from the branch semantics (written once, never cleared); not changed in this lane.
