@@ -19,7 +19,9 @@ import type { JjelExpression } from '../../../jjel/types/ast';
 import { freezeSnapshot } from '../guardContext';
 import { compileAction, foldActionTarget, judgeActionTarget } from '../actionEvaluator';
 import type { CompiledAction } from '../actionEvaluator';
-import { checkActionSubset, checkActionValue, checkElse, checkGuard, checkInputTarget, checkTargetName, inputReads } from '../stcChecks';
+import {
+    checkActionSubset, checkActionValue, checkElse, checkEventFeature, checkEventRead, checkGuard, checkInputTarget, checkTargetName, eventReads, inputReads,
+} from '../stcChecks';
 import type { StcScope } from '../stcChecks';
 import type { ActionSite, StateAttributeDecl } from '../netTypes';
 
@@ -228,5 +230,66 @@ describe('R-SIM-88: the input reads of a guard or an action, folded as R2 folds 
             .toEqual({ reason: 'read-only', detail: "'ask' is an input and cannot be assigned", short: "assigns input 'ask'" });
         // control: a stored name
         expect(checkInputTarget(action('(if model.[coins] > 0 then locked else unlocked).[level] := lo'), withInputs())).toBeNull();
+    });
+});
+
+describe('R-SIM-144 P3: a read of event where no event is bound (P-2026-10-10-1630)', () => {
+    const named = { nameOf: (id: string) => NAMES[id] ?? id };
+    const onArc = (text: string, untriggered: string | null) => checkEventRead(expr(text), { role: 'guard', untriggered }, named);
+
+    it('a guard of a transition without a trigger that reads event is the defect event, named by that transition (mutant: the trigger ignored, never a defect)', () => {
+        expect(onArc('event.amount > 0', 'TPx')).toEqual({
+            reason: 'event', detail: 'reads event, but tp has no trigger: event is null in its step', short: 'reads event, no trigger',
+        });
+    });
+
+    it('every form counts: event == null, event.[x], event alone, inside a lambda (mutant: only a member read counted)', () => {
+        for (const text of ['event == null', 'event.[coins] > 0', 'event', '[1, 2].all(x => event == null)']) {
+            expect([text, onArc(text, 'TPx')?.reason]).toEqual([text, 'event']);
+        }
+    });
+
+    it('controls: on a triggered transition none; a feature named event on self is not the root (mutant: any name event counted)', () => {
+        expect(onArc('event.amount > 0', null)).toBeNull();
+        expect(onArc('self.event == "x"', 'TPx')).toBeNull();
+        expect(onArc('model.[coins] > 0', 'TPx')).toBeNull();
+    });
+
+    it('an entry or an exit action that reads event is the defect, whatever the arc (mutant: entry judged as a transition action)', () => {
+        const a = action('model.[coins] := event.amount').action;
+        expect(checkEventRead(a, { role: 'entry' }, named)).toEqual({
+            reason: 'event', detail: 'an entry action cannot read event: what a node does on entry does not depend on the path that reached it',
+            short: 'reads event in entry',
+        });
+        expect(checkEventRead(a, { role: 'exit' }, named)?.short).toBe('reads event in exit');
+        expect(checkEventRead(action('model.[coins] := 1').action, { role: 'exit' }, named)).toBeNull();
+        // an action's target counts as a read too
+        expect(checkEventRead(action('event.[coins] := 1').action, { role: 'transition', untriggered: 'TCx' }, named)?.short).toBe('reads event, no trigger');
+        expect(checkEventRead(action('event.[coins] := 1').action, { role: 'transition', untriggered: null }, named)).toBeNull();
+    });
+});
+
+describe('R-SIM-144 P4: event.a looked up on the trigger\'s declared type (P-2026-10-10-1630)', () => {
+    const typed = { event: { name: 'Coin', features: new Set(['amount', 'home']) } };
+
+    it('a name the type does not have is the defect event-feature, whose short never reads undeclared (mutant: reason undeclared)', () => {
+        const d = checkEventFeature(expr('event.bonus > 0'), typed);
+        expect(d).toEqual({ reason: 'event-feature', detail: "'bonus' is not a feature of Coin, the type of the trigger", short: 'event.bonus: not on Coin' });
+        expect(d?.short.startsWith("undeclared '")).toBe(false);
+        expect(checkEventFeature(expr('event?.bonus == null'), typed)?.reason).toBe('event-feature');
+    });
+
+    it('controls: a feature of the type and the four handle keys pass; no type, no check (mutant: handle keys refused)', () => {
+        for (const text of ['event.amount > 1', 'event.home == locked', 'event.name == "coin"', 'event.id == "c"', 'event.instanceOf == null', 'event.parent == null']) {
+            expect([text, checkEventFeature(expr(text), typed)]).toEqual([text, null]);
+        }
+        expect(checkEventFeature(expr('event.bonus > 0'), {})).toBeNull();
+        expect(checkEventFeature(expr('self.bonus > 0'), typed)).toBeNull();
+    });
+
+    it('eventReads lists the names read on event, once each, in order; not state reads, not self (mutant: the state read listed)', () => {
+        expect(eventReads(expr('event.amount + event.home.x + event?.amount > event.[coins]'))).toEqual(['amount', 'home']);
+        expect(eventReads(action('model.[coins] := event.amount').action)).toEqual(['amount']);
+        expect(eventReads(expr('self.amount > 0'))).toEqual([]);
     });
 });
