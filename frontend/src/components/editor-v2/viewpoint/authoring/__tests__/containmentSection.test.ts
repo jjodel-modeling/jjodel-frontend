@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ContainmentSection, type ContainmentSectionProps } from '../ContainmentSection';
-import { LabelEntryEditor } from '../LabelEntryEditor';
+import { LabelEntryEditor, applyLabelOrientation, applyLabelPositionValue } from '../LabelEntryEditor';
 import { graphVertexSeedIR } from '../../ir/irCreationSeed';
 import type { ChannelClass } from '../graphVertexAuthoring';
 import type { GraphVertexViewIR, LabelSpec } from '../../ir/irTypes';
@@ -122,6 +122,13 @@ describe('ContainmentSection — the channel and the metamodel check', () => {
         expect(bad).toContain('Reparent appends to a containment slot, and this channel ends on a plain reference: use reference.');
     });
 
+    it('the creation owner offers only the containment references of the owner class', () => {
+        const draft: GraphVertexViewIR = { ...LEAF_LANE, containment: { ...LEAF_LANE.containment, membership: { mode: 'reference', create: { ownerKind: 'Lane', feature: 'childLaneSet' } } } };
+        const create = block(render({ advanced: true, draft }), 'gv-membership-create');
+        expect(create).toMatch(/<option value="childLaneSet"[^>]*selected=""/);
+        expect(create).not.toMatch(/<option value="flowNodeRefs"/);
+    });
+
     it('the creation owner offers the containment references of the owner class', () => {
         const create = block(render({ advanced: true }), 'gv-membership-create');
         expect(create).toMatch(/<option value="flowElements"[^>]*selected=""/);
@@ -146,6 +153,15 @@ describe('LabelEntryEditor — the header band position (R-GV-5)', () => {
         const html = renderLabel({ position: 'top', source: { from: 'intrinsic', prop: 'name' } });
         expect(html).not.toContain('value="header"');
         expect(html).not.toContain('Text direction');
+    });
+
+    it('the text direction stays on a header label and leaves with it; horizontal is never written', () => {
+        const top: LabelSpec = { position: 'top', source: { from: 'intrinsic', prop: 'name' } };
+        expect(applyLabelPositionValue(header, 'header')).toEqual(header);
+        expect(applyLabelPositionValue(header, 'top')).toEqual(top);
+        expect(applyLabelPositionValue(header, 'outside:w')).toEqual({ ...top, position: 'outside', anchor: 'w' });
+        expect(applyLabelOrientation(header, 'horizontal')).toEqual({ position: 'header', source: header.source });
+        expect(applyLabelOrientation({ position: 'header', source: header.source }, 'vertical')).toEqual(header);
     });
 
     it('no text direction on a label outside the band', () => {

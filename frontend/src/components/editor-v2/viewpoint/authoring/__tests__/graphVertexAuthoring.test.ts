@@ -189,6 +189,12 @@ describe('the metamodel checks of the panel (spec addendum §2.4)', () => {
         expect(admittedMembershipModes(f)).toEqual(['none', 'forbid', 'reparent']);
     });
 
+    it('the pool channel, picked whole, writes edges: hide although its last step is containment (processRef is not)', () => {
+        const e = '$processRef.value.$laneSets.values[0].$lanes.values';
+        const d = withChannel(graphVertexSeedIR(), e, channelFacts(e, byName('Participant'), byId));
+        expect(d.containment).toEqual({ children: e, edges: 'hide' });
+    });
+
     it('a channel made of containment only is a composition channel, and leaves edges alone', () => {
         const f = channelFacts('$childLaneSet.value.$lanes.values', byName('Lane'), byId);
         expect(f).toMatchObject({ terminalContainment: true, composition: true });
