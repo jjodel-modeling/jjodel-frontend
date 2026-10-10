@@ -116,6 +116,7 @@ import SimulationPanel from './sim/SimulationPanel';
 import { simPillVisible } from './sim/simRoleStatus';
 import { getSimRun, useSimVersion } from './sim/simRunState';
 import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
+import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -400,6 +401,60 @@ class CanvasErrorBoundary extends React.Component<{ children: React.ReactNode },
     }
 }
 
+// Code generation (P-2026-10-10-1825, R-GEN-2): the one way into src/codegen/ beyond setting.ts. The lazy gate
+// (scripts/gates/check-codegen-lazy.ts) fails on any static import of the generator from the entry.
+const CodePanel = React.lazy(() => import('../../codegen/ui/CodePanel'));
+
+/** The Simulation pill's own slot (simulation-panel.scss `.sim-panel`), for the Code pill when there is no Simulation pill. */
+const SIM_SLOT_LEFT = 'calc(200px + 16px + 48px + 16px)';
+
+/**
+ * The «Code» pill, and the code panel in its place once pressed: 8px right of the Simulation panel's box, chip or
+ * open panel, followed as it opens, closes and grows; in the Simulation pill's slot when there is none. The chip is
+ * the Simulation chip's (`sim-panel__chip`), so the two read as a pair; the place is inline, no stylesheet loads here.
+ */
+function CodegenSlot({ modelid }: { modelid: string }) {
+    const anchor = useRef<HTMLDivElement>(null);
+    const [open, setOpen] = useState(false);
+    const [left, setLeft] = useState<number | null>(null);
+    useLayoutEffect(() => {
+        const host = anchor.current?.parentElement;
+        if (!host) return;
+        let sim: HTMLElement | null = null;
+        const resize = new ResizeObserver(() => place());
+        const place = () => {
+            const next = host.querySelector<HTMLElement>(':scope > .sim-panel');
+            if (next !== sim) {
+                if (sim) resize.unobserve(sim);
+                sim = next;
+                if (sim) resize.observe(sim);
+            }
+            setLeft(sim ? sim.offsetLeft + sim.offsetWidth + 8 : null);
+        };
+        const children = new MutationObserver(place);
+        children.observe(host, { childList: true });
+        place();
+        return () => { children.disconnect(); resize.disconnect(); };
+    }, []);
+    const place = left === null ? SIM_SLOT_LEFT : `${left}px`;
+    return (
+        <div ref={anchor} style={{ display: 'contents' }}>
+            {open ? (
+                <React.Suspense fallback={null}>
+                    <CodePanel modelid={modelid} left={place} onClose={() => setOpen(false)} />
+                </React.Suspense>
+            ) : (
+                <div className="codegen-pill" style={{ position: 'absolute', left: place, bottom: 24, zIndex: 850 }}>
+                    <button type="button" className="sim-panel__chip" title="Code generation" onClick={() => setOpen(true)}>
+                        <i className="bi bi-code-slash" />
+                        <span>Code</span>
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 /**
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
@@ -547,6 +602,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The Simulation pill: Advanced mode and the metamodel's Simulation toggle (P-2026-09-29-1225, R-SIM-99). A boolean
     // per dispatch; Redux `advanced`, not isAdvancedMode(), which reads localStorage and is not reactive in this tab.
     const simPill = useSelector((state: any) => !!modelid && simPillVisible(!!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
+    // The Code pill (R-GEN-2): the experimental setting, then the rule of codegen/setting.ts, a boolean per dispatch.
+    const codegenEnabled = useCodegenEnabled();
+    const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenEnabled, !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
 
     // Orphan feature co-evolution: soft-delete + restore by attribute name
     useOrphanFeatures(modelid, nodes);
@@ -4635,6 +4693,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
                 {/* Gated (R-SIM-97, R-SIM-99): unmounting clears the run of this model (SimulationPanel's cleanup). */}
                 {modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
+                {modelid && codePill && <CodegenSlot modelid={modelid} />}
 
             </div>
         </EditorContext.Provider>

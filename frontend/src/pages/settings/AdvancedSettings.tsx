@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { setCodegenEnabled, useCodegenEnabled } from '../../codegen/setting';
 
 type SettingProps = {
     onDirtyChange?: (...a:any)=>any
@@ -11,6 +12,7 @@ export function AdvancedSettings(props: SettingProps) {
     });
 
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const codegenEnabled = useCodegenEnabled();
 
     const toggleDebugMode = (enabled: boolean) => {
         setDebugMode(enabled);
@@ -74,6 +76,25 @@ export function AdvancedSettings(props: SettingProps) {
                     <div className="checkbox-content">
                         <span className="checkbox-label">Enable debug mode</span>
                         <span className="checkbox-description">Show additional debugging information in the console</span>
+                    </div>
+                </label>
+            </div>
+
+            <div className="settings-divider" />
+
+            {/* Experimental (R-GEN-2): off by default; with it off no module of the generator loads. */}
+            <div className="settings-group">
+                <label className="settings-label">Experimental</label>
+
+                <label className="settings-checkbox">
+                    <input
+                        type="checkbox"
+                        checked={codegenEnabled}
+                        onChange={(e) => setCodegenEnabled(e.target.checked)}
+                    />
+                    <div className="checkbox-content">
+                        <span className="checkbox-label">Code generation</span>
+                        <span className="checkbox-description">Show the Code panel in the model editor: templates over the metamodel, generated text linked to the model</span>
                     </div>
                 </label>
             </div>
