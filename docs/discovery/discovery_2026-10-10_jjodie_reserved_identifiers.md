@@ -290,3 +290,35 @@ This lane removes the reason to type such a message, not the loop. Proposed tick
   - Variant B: the same with `JJRES_MSG2="Please rename it, avoid copy."`, exit 0.
   - The Vite process (this tree's, port 3047) was stopped after the runs. `git status` is empty apart from the gitignored probes, which are kept for Phase 2.
 - The system prompt captured from request #1 contains rule 8 with its 18 words: `keywords: create, delete, rename, class, abstract, attribute, reference, containment, enum, literal, extends, in, to, type` and `primitive types: String, int, boolean, Date`.
+
+## Addendum 2026-10-10, Phase 2 (GO of C-2026-10-10-0039)
+
+The chat decided the three open points under RC-25, each as its `Recommended:` line:
+1. Exact lowercase match.
+2. Primitive type names are rendered from `TYPE_ALIASES` and checked on class and enum names in any case, never on feature names.
+3. Only the repaired reply is shown, with one notice line. A reply that still violates is shown with Run and Step refused.
+
+The freeze is fixed by lane P-2026-10-10-0810 (`do-freeze`), which owns `parser.ts`. This lane did not touch that file.
+
+**Code** (the nine files of §4.5):
+- `377070258` moves the lists verbatim to `jjscript/reservedIdentifiers.ts`. `types.ts` keeps `COMMANDS`, `ELEMENT_TYPES` and `KEYWORDS` as copies, and adds `JJSCRIPT_PRIMITIVE_TYPE_NAMES`. The lexer reads the Sets.
+- `b5e9ed415` renders rule 8 from the list. The prompt goes to version 6.
+- `07bf5c3ee` adds `components/Jodie/reservedIdentifierGate.ts`, wired in `Jodie.tsx` (send and `askJjodie`) and in `ScriptBlock.tsx` (Run and Step).
+
+**Two departures from §4.5:**
+- Step now checks the script on every press, not only the first. Without that, a second press after a refusal would start at line 1.
+- The gate reads `create` and `rename`, as the prompt defines it. It does not read `add` or `copy … as` [R].
+
+**Measured on `07bf5c3ee`** [M]:
+- Tests first: both new files were red on the base (module absent), then 30/30 green.
+- Mutation bench: 12 of 12 mutations killed, with a green control after restore.
+- Gates:
+  - typecheck: 14 errors, the §17 set;
+  - `src/jjscript` plus the gate test: 571 passed, with `context-binding.test.ts` red at import (known);
+  - build: exit 0.
+- Playwright on this tree's Vite (port 3047), with the model endpoint mocked:
+  - Variant (a), `copy` twice: 2 model calls; the repair turn's roles were `system,user,assistant,user`. Step and Run were refused, both naming `'copy' (line 6)`, with the model unchanged, and a second press of Step ran nothing either. 12/12 checks passed.
+  - Variant (b), `copy` then `bookCopy`: only the repaired reply was shown, with the notice naming `copy`. Run applied 7 commands, and `bookCopy` is in the model. 11/11 checks passed.
+- The probe's own negative controls:
+  - With the gate call removed from `Jodie.tsx`, 4 checks failed (calls=1).
+  - With the `ScriptBlock` check removed, 5 checks failed. Step applied `Library` and then `Book`, the base behaviour.
