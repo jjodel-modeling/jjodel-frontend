@@ -347,3 +347,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: Measured on P-2026-10-10-1648. (1) A go-ahead given on the `by hand:` path reaches the commit body only: the prompt's Findings still read `lane-run merge refuses --launch`, because `merge` lifts the governance finding only when `--launch` is passed (`mergeFindings(m, o, Boolean(o.launch && goahead))`), so the session reads a refusal the chat had already lifted. (2) Step 2 of `frontend/scripts/lane-templates/merge-into-trunk.md` says the governance diff "must be empty", with no exception for a go-ahead. (3) Step 6 says `check:docs` 4/4, but since Check E (RC-44) the gate prints 5/5.
 **Priority**: low
 **Found in**: P-2026-10-10-1648
+
+## 2026-10-10 — merge: lane-board-span into alfonso-frontend-jjtl (P-2026-10-10-1731)
+**Prompt**: `claude_2026-10-10_1731_prompt_merge_lane-board-span.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-span` at `2ee2c2ea6` into `alfonso-frontend-jjtl`, merge base `30be4d558`, 2 commits on the branch side.
+**Files touched**: merge `177dc474b`: 2 files from the branch side (`docs/log-inbox/harness.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `177dc474b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7798 tests in 318 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Span verified on 4701 under P-2026-10-10-1717 and on 4700 after the kickstart
+**Notes**: Rollback tag `pre-lane-board-span` on `bd97bae49` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1731/result.json`.
+**Prompt document name**: 2026-10-10 17:31
