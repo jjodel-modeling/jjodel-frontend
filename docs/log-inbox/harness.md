@@ -360,3 +360,9 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Span verified on 4701 under P-2026-10-10-1717 and on 4700 after the kickstart
 **Notes**: Rollback tag `pre-lane-board-span` on `bd97bae49` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1731/result.json`.
 **Prompt document name**: 2026-10-10 17:31
+
+## 2026-10-10 — ticket: `lane-run resume` cannot carry the critical-zone go-ahead
+**Ticket**: `--critical-zone-goahead <Prompt-ID>` exists only on `start` (`lane-run.mjs:10`, `:456-462`), which writes `goahead.txt` in the lane folder; `resume` reads that file but cannot write it. A Phase 2 GO always arrives by `resume`, so a lane started read-only for its discovery (no flag) is denied by the critical-zone hook when its GO grants the go-ahead (`critical-zone.mjs:103-108`). Seen on P-2026-10-10-1600: the first Phase 2 resume stopped with `Outcome: question`; the chat wrote `goahead.txt` by hand after Alfonso's explicit go-ahead and resumed. Fix: accept `--critical-zone-goahead <Prompt-ID>` on `resume` with the same checks as `start` (the value must be the lane's own Prompt-ID), and record it in the lane log.
+**Priority**: medium
+**Found in**: P-2026-10-10-1600
+**Detail**: `~/.jjodel-lanes/P-2026-10-10-1600/log.jsonl` (the resume at 17:40)
