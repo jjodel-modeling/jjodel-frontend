@@ -214,3 +214,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Lanes tab verified on 4701 under P-2026-10-10-1253
 **Notes**: Rollback tag `pre-lane-board-times` on `8acff31ef` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1312/result.json`.
 **Prompt document name**: 2026-10-10 13:12
+
+## 2026-10-10 — feat(harness): every prompt names its front, Check E (P-2026-10-10-1500)
+**Prompt**: `claude_2026-10-10_1500_prompt_lane_tracking_A_fronts.md`, full lane on `~/jjodel-w-lanetrack`, branch `lane-tracking`, lane A of the discovery P-2026-10-10-1330: the front registry `docs/harness/fronts.json` (seven open fronts, milestones 1..7, board Project 2), `frontend/scripts/lane-tracking.mjs` (`loadFronts`, `parseFrontLine`, `frontProblem`, `FRONT_FROM`), Check E in `check-docs.ts`, the P13 bullet, HARNESS-DOCS §4.1, RC-44. No GitHub call, `lane-run.mjs` untouched.
+**Files touched**: code `73af7bbac`: `frontend/scripts/lane-tracking.mjs`, `frontend/scripts/gates/check-docs.ts`, `frontend/scripts/gates/__tests__/checkDocs.test.ts`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`; docs `8ab16688f`: `docs/harness/fronts.json`, `docs/PROTOCOL.md`, `docs/HARNESS-DOCS.md`, `docs/decisions.md`; this commit: this entry and the Status lines of this prompt and of `claude_2026-10-10_1330_prompt_lane_tracking_github_discovery.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. check:docs 5/5 exit 0, Check E 1 of 816 prompts in scope; a scratch copy of the prompt without `Front:` exit 1, one ERROR line, deleted. check:scripts 59 files, typecheck:scripts exit 0 (allowJs import, positive control TS2305/TS2307), typecheck 14 (baseline set), vitest scripts/gates and scripts/hooks 737/737, build exit 0, check:agents exit 0. Mutation bench 6/6, control 15/15.
+**Out-of-scope changes**: yes — eleven files over three commits, above five (RC-11), each named by the prompt's COSA except `checkDocs.test.ts`: its throwaway tree needs `lane-tracking.mjs`, `docs/prompts/` and a registry, and its `4/4` read `5/5`, or every case breaks; it also gained four Check E cases and three mutants.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: P6 asks the commit type of the prompt, which names none: chose feat(harness) and docs, as the earlier harness lanes (RC-11). HARNESS-DOCS §4.1 got two lines, Front in the field list and one template line. Left out, not in scope: §6 (check:docs row) and §7 :430 still lack Check E and Front; the chat updates the KB copy of HARNESS-DOCS (P10). Bench 6/6 in the body of 73af7bbac.
+**Prompt document name**: 2026-10-10 15:00

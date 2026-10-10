@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01FCFNYi6n4pLBgcbMduJcJe
 Lane: full (more than 3 files; amends P13, a governance file)
 Depends: P-2026-10-10-1330
 Front: harness
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1500 (lane-tracking, code 73af7bbac, docs 8ab16688f); no visual check (harness)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
