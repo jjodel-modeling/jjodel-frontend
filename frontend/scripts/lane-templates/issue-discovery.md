@@ -2,6 +2,7 @@
 
 Prompt-ID: {{promptId}}
 Chat: {{night}}
+Request: https://github.com/{{repo}}/issues/{{issue}}
 Lane: {{lane}}
 Tier: light
 Status: {{status}}
