@@ -150,7 +150,7 @@
  *                both are named in result.json and the merge commit body.
  *                A failed precondition falls back, saying why: the
  *                rendered prompt is launched with --launch, parked without.
- *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light]
+ *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--request <file>]
  *                validates every prompt (a header Prompt-ID, no id twice, no lane
  *                folder yet; one in the tree committed, one outside it not yet in
  *                docs/prompts/), writes ~/.jjodel-lanes/chain-<first Prompt-ID>/
@@ -166,6 +166,12 @@
  *                `merge <branch> --into <trunk> --direct` run in the trunk's
  *                worktree (default alfonso-frontend-jjtl); a fallback is parked,
  *                never launched.
+ *                --request <file> (RC-43): the request every lane of the chain
+ *                answers; refused as start refuses it (missing, empty, no value)
+ *                before the chain folder is written, kept there as request.md,
+ *                and passed as --request <chain folder>/request.md to the start
+ *                of every lane, the first included. The merge of --merge-after
+ *                gets none (RC-43 exempts merge prompts).
  *   chain --stop <chain-id>
  *                the chain stops after its running lane, which runs to its end.
  *   monitor [--port <n>] [--no-open]
@@ -1875,7 +1881,7 @@ const CHAIN_POLL_MS = 500;
 
 function chainFiles(id) {
     const dir = join(lanesRoot(), id);
-    return { dir, json: join(dir, 'chain.json'), stop: join(dir, 'stop'), log: join(dir, 'chain.log') };
+    return { dir, json: join(dir, 'chain.json'), stop: join(dir, 'stop'), log: join(dir, 'chain.log'), request: join(dir, 'request.md') };
 }
 
 function readChain(id) {
@@ -1912,14 +1918,18 @@ function chainStatus(id) {
  */
 function chain(rest) {
     if (rest[0] === '--stop') return chainStop(rest[1]);
-    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] | chain --stop <chain-id>';
+    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--request <file>] | chain --stop <chain-id>';
     const positional = [];
-    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null, tier: null };
+    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null, tier: null, request: null };
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i];
         if (a === '--merge-after') o.mergeAfter = true;
         else if (a === '--into' || a === '--chat' || a === '--tier') {
             o[a.slice(2)] = option(rest.slice(i), a);
+            i++;
+        } else if (a === '--request') {
+            // Refused here as start refuses it, before the chain folder or any lane exists (RC-43).
+            o.request = requestOption(rest.slice(i));
             i++;
         } else if (a === '--limit') {
             o.limit = limitOption(rest.slice(i));
@@ -1969,9 +1979,10 @@ function chain(rest) {
     const cf = chainFiles(id);
     if (existsSync(cf.dir)) refuse(id + ' already exists in ' + lanesRoot());
     mkdirSync(cf.dir, { recursive: true });
+    if (o.request) copyFileSync(o.request, cf.request);
     writeJson(cf.json, {
         id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat, tier: o.tier,
-        lanes, mergeAfter: into ? { into, state: 'queued' } : null, stoppedAt: null, supervisor: null,
+        request: o.request ? cf.request : null, lanes, mergeAfter: into ? { into, state: 'queued' } : null, stoppedAt: null, supervisor: null,
     });
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
     const child = spawn('/bin/sh', ['-c', 'nohup "$@" >> "$0" 2>&1', cf.log, process.execPath, SELF, 'chain-run', id], {
@@ -1980,6 +1991,7 @@ function chain(rest) {
     child.unref();
     console.log('chain: ' + id);
     console.log('lanes: ' + lanes.map((l) => l.id).join(', '));
+    if (o.request) console.log('request: ' + cf.request);
     console.log('merge after: ' + (into ? 'into ' + into + ' --direct' : 'none'));
     console.log('log: ' + cf.log);
     return 0;
@@ -2031,7 +2043,8 @@ async function chainRun(id) {
         save();
         let code;
         try {
-            code = await start(c.worktree, promptFile, c.tier ? ['--tier', c.tier] : []);
+            // Every lane gets the chain's copy of the request (RC-43); the caller's file may be gone by now.
+            code = await start(c.worktree, promptFile, [...(c.tier ? ['--tier', c.tier] : []), ...(c.request ? ['--request', c.request] : [])]);
         } catch (err) {
             return stop(lane.id, 'start refused: ' + (err && err.message ? err.message : String(err)));
         }
