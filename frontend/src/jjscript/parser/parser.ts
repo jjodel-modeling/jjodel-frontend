@@ -1038,7 +1038,14 @@ export class Parser {
                 break;
             }
 
-            commands.push(this.parseCommand());
+            // A non-command word comes back as an eval node built by remainingInput(),
+            // which consumes no token: pushing it again would never reach 'end'.
+            const before = this.current;
+            const command = this.parseCommand();
+            if (this.current === before) {
+                throw new Error(`Unexpected '${this.peek().value}' in do block`);
+            }
+            commands.push(command);
         }
 
         return commands;
