@@ -6,7 +6,8 @@
 // (/api/timeline, drawn by timeline.js next to this file) shows turns, decisions,
 // parallelism and dependencies; finished lanes are cached in timeline-cache.json. The Insights
 // tab adds /api/insights: model, cost, code areas and first-shot success per lane, from the lane
-// logs, `git log --all` and the trunk's log entries and decisions.md (insights.js, README).
+// logs, `git log --all` and the trunk's log entries and decisions.md (insights.js, README). The Requirements
+// tab adds /api/requirements: req-trace.mjs on the working tree of this checkout and its trunk (requirements.js).
 // A running lane's progress is the ladder of milestones its log.jsonl has reached (below), drawn in
 // its Phase cell; an exited blocked lane holding resolved.txt reads `resolved` in the Lanes tab, and
 // Timeline and Insights paint it in the ok colour from a flag beside its raw outcome. A strip of six
@@ -1189,6 +1190,55 @@ function xesExport(days) {
     return out.join('\n');
 }
 
+// ── requirements ────────────────────────────────────────────────────────────
+// The Requirements tab (/api/requirements, drawn by requirements.js; ported by P-2026-10-11-0008 from branch
+// harness-req-tab 35240a582): req-trace.mjs on the working tree of the board's own checkout and its trunk, run
+// asynchronously so the other tabs keep answering. One run at a time, its JSON kept REQ_MS from the end of the
+// run, a failed run not kept, a run killed at REQ_KILL_MS. Its own cache (the git side, keyed on the trunk sha)
+// lives in the system temp folder, outside the tree.
+const REQ_TRACE = join(HERE, '..', 'req-trace.mjs');
+const REQ_REPO = process.env.REQ_TRACE_REPO || join(HERE, '..', '..', '..');
+const REQ_TRUNK = process.env.REQ_TRACE_TRUNK || 'alfonso-frontend-jjtl';
+const REQ_MS = 60_000;
+const REQ_KILL_MS = 120_000;
+
+/** One run of req-trace: `{ ok, body }`, body its stdout when it exits 0, else a JSON error document. */
+export function runReqTrace(spawnFn = spawn, killMs = REQ_KILL_MS) {
+    return new Promise((done) => {
+        const out = [], err = [];
+        const fail = (error) => done({ ok: false, body: JSON.stringify({ error, rows: [] }) });
+        let child, killed = false;
+        try { child = spawnFn(process.execPath, [REQ_TRACE, '--repo', REQ_REPO, '--trunk', REQ_TRUNK], { stdio: ['ignore', 'pipe', 'pipe'] }); }
+        catch (e) { return fail('req-trace: ' + e.message); }
+        const timer = setTimeout(() => { killed = true; child.kill('SIGKILL'); }, killMs);
+        child.stdout.on('data', (b) => out.push(b));
+        child.stderr.on('data', (b) => err.push(b));
+        child.on('error', (e) => { clearTimeout(timer); fail('req-trace: ' + e.message); });
+        child.on('close', (code) => {
+            clearTimeout(timer);
+            if (code === 0) done({ ok: true, body: Buffer.concat(out).toString('utf8') });
+            else fail(killed ? 'req-trace killed after ' + killMs / 1000 + ' s' : ('req-trace exit ' + code + ': ' + Buffer.concat(err).toString('utf8')).trim());
+        });
+    });
+}
+
+/** `run` behind a single flight and a cache of `ttl` ms from the end of the run; a failed run is served once, not kept. */
+export function reqTraceCache(run = runReqTrace, now = Date.now, ttl = REQ_MS) {
+    let mem = { at: 0, body: null };
+    let pending = null;
+    return () => {
+        if (mem.body !== null && now() - mem.at < ttl) return Promise.resolve(mem.body);
+        if (pending) return pending;
+        pending = run().then(({ ok, body }) => {
+            mem = ok ? { at: now(), body } : { at: 0, body: null };
+            pending = null;
+            return body;
+        });
+        return pending;
+    };
+}
+const requirements = reqTraceCache();
+
 // ── status strip ────────────────────────────────────────────────────────────
 // The pills at the end of the tab bar (Alfonso, 2026-10-05 17:35; ported by P-2026-10-10-2103): key,
 // label, the class of the outcome colour the Lanes table already uses. Counted in the page from the
@@ -1246,7 +1296,7 @@ a.chat{color:var(--run);text-decoration:none}a.chat:hover{text-decoration:underl
 details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
 </style></head><body><main>
 <header><h1>Jjodel Harness Lane Management</h1><span class="meta" id="meta">loading…</span></header>
-<nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button><div class="strip" id="strip" aria-label="Lanes by state">${STRIP.map(([k, label, cls]) => '<a href="#" role="button" class="pill sp ' + cls + ' zero" data-k="' + k + '" title="Show the ' + label + ' lanes"><b>0</b>' + label + '</a>').join('')}</div></nav>
+<nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button><button data-tab="requirements">Requirements</button><div class="strip" id="strip" aria-label="Lanes by state">${STRIP.map(([k, label, cls]) => '<a href="#" role="button" class="pill sp ' + cls + ' zero" data-k="' + k + '" title="Show the ' + label + ' lanes"><b>0</b>' + label + '</a>').join('')}</div></nav>
 <div class="err" id="err"></div>
 <section id="tab-table">
 <div id="lanes-filt" hidden></div>
@@ -1258,7 +1308,8 @@ details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-ite
 </section>
 <section id="tab-timeline" hidden><div id="tl"></div></section>
 <section id="tab-insights" hidden><div id="ins"></div></section>
-</main><script src="/timeline.js"></script><script src="/insights.js"></script><script>
+<section id="tab-requirements" hidden><div id="req"></div></section>
+</main><script src="/timeline.js"></script><script src="/insights.js"></script><script src="/requirements.js"></script><script>
 const REFRESH=${REFRESH_S}*1000;
 const stripKey=${stripKey.toString()};
 const STRIP=${JSON.stringify(STRIP)};
@@ -1359,11 +1410,11 @@ function renderOlder(rows){
 let openDays=new Set();
 try{openDays=new Set(JSON.parse(localStorage.getItem('laneBoardOpenDays')||'[]'))}catch(e){}
 function saveOpen(){try{localStorage.setItem('laneBoardOpenDays',JSON.stringify([...openDays]))}catch(e){}}
-function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['table','timeline','insights'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh()}
+function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['table','timeline','insights','requirements'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh();if(t==='requirements'&&window.REQ)REQ.refresh()}
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 let tab0='table';try{tab0=localStorage.getItem('laneBoardTab')||'table'}catch(e){}
 showTab(tab0);
-tick();setInterval(()=>{tick();if(!document.getElementById('tab-timeline').hidden&&window.TL)TL.refresh();if(!document.getElementById('tab-insights').hidden&&window.INS)INS.refresh()},REFRESH);
+tick();setInterval(()=>{tick();if(!document.getElementById('tab-timeline').hidden&&window.TL)TL.refresh();if(!document.getElementById('tab-insights').hidden&&window.INS)INS.refresh();if(!document.getElementById('tab-requirements').hidden&&window.REQ)REQ.refresh()},REFRESH);
 </script></body></html>`;
 
 // Listens when run (launchd, node lane-board.mjs), also through a symlinked path, not when its tests import it.
@@ -1388,6 +1439,17 @@ const server = createServer((req, res) => {
     if (req.url === '/timeline.js') {
         res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
         return res.end(readTrim(join(HERE, 'timeline.js')));
+    }
+    if (url.pathname === '/requirements.js') {
+        res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
+        return res.end(readTrim(join(HERE, 'requirements.js')));
+    }
+    if (req.url === '/api/requirements') {
+        requirements().then((body) => {
+            res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+            res.end(body);
+        });
+        return;
     }
     if (req.url === '/api/timeline') {
         let body;

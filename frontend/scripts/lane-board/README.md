@@ -1,17 +1,19 @@
 # Lane board
 
 A live, read-only board of the Jjodel lanes started by `lane-run`, served on
-http://localhost:4700. A Node server with no dependencies (`lane-board.mjs`) and two
-browser scripts it serves beside its page (`timeline.js`, `insights.js`).
+http://localhost:4700. A Node server with no dependencies (`lane-board.mjs`) and three
+browser scripts it serves beside its page (`timeline.js`, `insights.js`, `requirements.js`).
 
 It reads `lane-run status --all`, the lane folders of `~/.jjodel-lanes/`,
 `git log --all` of the repository, and the log entries and `docs/decisions.md` of the
-trunk ref. It never launches, resumes, merges
+trunk ref; for the Requirements tab it runs `../req-trace.mjs` on its own checkout. It
+never launches, resumes, merges
 or kills a lane and never writes in a worktree. The only file it writes is its own
 cache, `~/.jjodel-lanes/board/timeline-cache.json` (best effort: if the directory is
-missing the write is skipped and finished lanes are read again).
+missing the write is skipped and finished lanes are read again); `req-trace.mjs` keeps
+its own cache in the system temp folder (below).
 
-## The three tabs
+## The four tabs
 
 **Lanes.** A table of the running and blocked lanes: state, kind (from the `Lane:`
 line of the prompt) and tier, elapsed time, an estimate of the time left, the current
@@ -49,6 +51,12 @@ longest waits, lanes per day by outcome, outcome by kind of lane, and who launch
 the lanes. It also offers the two exports below, and can open the trace directly in
 ui.perfetto.dev. Below these, three sections read `/api/insights` (next section):
 code areas, model by area and by size, and first-shot success over time.
+
+**Requirements.** Every R- row of `docs/decisions.md`, grouped by co-citation cluster and,
+inside a cluster, by milestone, with whether a commit on the trunk realized it and its
+goal-model contributions; filters by family, status, realized and softgoal. Below, the
+pairs of realized rows that pull a softgoal both ways, grouped by declared conflict. See
+"The Requirements tab" below.
 
 ## Progress, the estimate and `resolved`
 
@@ -124,6 +132,37 @@ Log facts ride the per-lane cache (key `v6`). The git facts are rebuilt only whe
 hash of `git for-each-ref` changes, and then only for the commits since the last scan.
 The log entries and RC rows are re-read only when the trunk moves.
 
+## The Requirements tab
+
+`/api/requirements` runs `frontend/scripts/req-trace.mjs` (beside the board's folder) as
+`node req-trace.mjs --repo <checkout> --trunk <ref>` and returns its JSON as it is;
+`requirements.js` draws it. The checkout is the one the board runs from (three levels above
+`lane-board.mjs`), the trunk `alfonso-frontend-jjtl`; `REQ_TRACE_REPO` and `REQ_TRACE_TRUNK`
+override them.
+
+- **What it reads.** `docs/decisions.md`, `docs/prompts/*.md` and, when present,
+  `docs/goals/{cluster-names,milestones,softgoals,contributions,conflicts}.json` from the
+  **working tree** of that checkout, not from the trunk ref: for the launchd agent, the
+  working tree of `~/jjodel-release`. Uncommitted edits there show in the tab; a clean tree
+  at the trunk tip shows the trunk. What realized a row comes from git: the `feat`, `fix`, `refactor` and
+  `perf` commits reachable from the trunk ref that cite its id.
+- **One run at a time, 60 s, 120 s.** The run is asynchronous, so the other tabs keep
+  answering. Requests that arrive while it runs share it; its JSON is kept 60 s from the
+  end of the run; a run that fails is served once and not kept; a run still going after
+  120 s is killed, and the tab shows `req-trace killed after 120 s`. `req-trace.mjs` caches
+  its git side in `$TMPDIR/jjodel-req-trace/<trunk sha>.json`, so a run on an unchanged
+  trunk rereads only the register and the prompts.
+- **Milestones.** Inside a cluster, a realized row sits under the first milestone on or after
+  its first commit, then come the rows realized after the last milestone, then the rows not
+  realized. The milestones are those of `docs/goals/milestones.json` when it exists, else
+  the one built into `req-trace.mjs` (MODELS freeze, 2026-10-07); the tab adds none.
+- **Opposing contributions.** One closed group per conflict of `docs/goals/conflicts.json`,
+  in its order, named by its two rows and its softgoal, with its pair count; a pair belongs
+  to a conflict with the same softgoal and the same two rows, in either order. The pairs no
+  conflict names come last, in the group `unassigned`.
+- **Fixed widths.** Every table of the tab has a fixed layout, and the tables of one kind
+  share their column widths, so a filter or an opened group never moves a column.
+
 ## Running it
 
 From the repository root:
@@ -153,6 +192,8 @@ board never competes with them.
 | `JJODEL_REPO` | `~/jjodel` | Repository whose `git log --all` classifies the launcher and links lanes to commits. Any worktree serves: the board reads refs, never its working files. |
 | `JJODEL_TRUNK` | `alfonso-frontend-jjtl` | Trunk ref whose log entries, `docs/decisions.md` and prompts the Insights sections read. |
 | `LANE_BOARD_CACHE` | `$JJODEL_LANES/board/timeline-cache.json` | Cache of the finished lanes' timelines. |
+| `REQ_TRACE_REPO` | the board's own checkout, three levels above `lane-board.mjs` | Checkout whose working tree the Requirements tab traces. |
+| `REQ_TRACE_TRUNK` | `alfonso-frontend-jjtl` | Trunk ref whose history decides which rows are realized. |
 | `LANE_BOARD_PORT` | `4700` | Port, overridden by `--port`. |
 | `LANE_BOARD_REFRESH` | `30` | Refresh in seconds, overridden by `--refresh`. |
 
