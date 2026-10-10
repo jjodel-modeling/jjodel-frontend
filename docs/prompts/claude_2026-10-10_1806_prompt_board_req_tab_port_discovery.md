@@ -1,6 +1,6 @@
 # Lane board: what the harness-req-tab branch still adds to the trunk board (discovery)
 
-Prompt-ID: P-2026-10-10-1802
+Prompt-ID: P-2026-10-10-1806
 Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: full (discovery, read-only; Phase 2 is a later prompt)
@@ -15,7 +15,7 @@ adding this prompt is the first commit on the branch (the trunk was busy with an
 `git status`. Otherwise stop with `Outcome: blocked`.
 
 ## Lane discipline
-Every reply of this session opens with `[P-2026-10-10-1802 · session <id>]`.
+Every reply of this session opens with `[P-2026-10-10-1806 · session <id>]`.
 Every final message ends with one line: `Outcome: done | hard-stop | question | blocked`.
 Every question that has a recommendation carries it in one line: `Recommended: <one line>`.
 The lane does not touch the `Status` line of this prompt; the chat flips it.
@@ -55,7 +55,7 @@ branch is retired. Lane 1705 is not to be resumed: it is superseded.
 6. Save the report as `docs/discovery/discovery_2026-10-10_board_req_tab_port.md`, with the sections: goal, files
    read (full paths), inventory table, lane-run hunks, tests, req-trace, port plan, risks, decisions taken
    (unattended), decisions awaiting Alfonso. Commit it with an explicit pathspec,
-   `docs(discovery): what harness-req-tab still adds to the trunk board (P-2026-10-10-1802)`, then stop with
+   `docs(discovery): what harness-req-tab still adds to the trunk board (P-2026-10-10-1806)`, then stop with
    `Outcome: hard-stop`. No code change, no merge.
 
 ## DO NOT
