@@ -34,7 +34,7 @@ OCL                   JjEL                         EOL                      Java
 
 JjEL has a **set-theoretic** semantics: its core construct (`forall`) selects and transforms sets of elements. It is more computational than OCL, more declarative than EOL, and specifically designed for the MDE domain.
 
-**Scope boundary:** JjEL provides expressions for JjTL (Model-to-Model transformations). Model-to-Text generation (M2T) is handled separately by the existing Handlebars-based template engine. JjTL does not cover M2T.
+**Scope boundary:** JjEL provides expressions for JjTL (Model-to-Model transformations). JjTL does not cover Model-to-Text generation (M2T). M2T has two homes that coexist: the legacy `DState.languages` subsystem (`doM2T`, with engines such as Handlebars), left as it is, and the code generator in `frontend/src/codegen/`, whose templates are JjEL interpolated strings (§9.4; R-GEN-10, R-GEN-13).
 
 ---
 
@@ -588,7 +588,7 @@ isLeaf = subClasses.isEmpty
 
 ### 8.6 Value Expressions for Code Fragments
 
-JjEL can compute string values that represent code fragments within M2M transformations. Full code generation (M2T) is handled by the Handlebars template engine.
+JjEL can compute string values that represent code fragments within M2M transformations. Full code generation (M2T) belongs to the code generator in `frontend/src/codegen/`, with JjEL templates (§9.4); the legacy `DState.languages` subsystem coexists (R-GEN-13).
 
 ```
 forall a in attributes: "public " + a.type + " get" + a.name.pascalCase() + "()"
@@ -655,11 +655,14 @@ class.closure(c => c.subclasses)     -- replaces allSubclasses
 
 ### 9.4 String Interpolation
 
-The lexer detects `${}` syntax but the implementation is incomplete. The parser never produces `InterpolatedStringExpr` nodes.
+**Status:** Implemented, opt-in (R-GEN-10, 2026-10-10).
 
-**Proposal:** Complete string interpolation as a natural extension for building code fragments within M2M transformations (`"public ${a.type} ${a.name}"`). This would complement the existing string concatenation approach. Full M2T remains in the Handlebars engine.
+`"public ${a.type} ${a.name}"` interpolates only where interpolation is turned on: the lexer option `interpolation` (off by default, like `actionMode`) and the entry point `parseTemplate(source)`, the twin of `parseAction`, with a strict end of input. Through `parseExpression`, `parseExpressionStrict` and `parseAction` a string with a hole still fails to parse, so no expression that works elsewhere changes meaning.
 
-**Status:** Deferred. Will be considered as a future enhancement.
+- A hole holds any expression, lambdas whose bodies are interpolated strings included: `"${xs.map(x => "<${x.name}>").join(", ")}"`. Locations inside a hole are absolute in the template's source.
+- `\$` writes a literal `$`, so `"\${x}"` is the text `${x}`. Single-quoted strings never interpolate.
+- Without a Text host the value is a string: `null` renders as `''`, a collection as its items joined by `", "`, numbers and booleans with `String`.
+- Two optional fields of the evaluation context serve the code generator (`frontend/src/codegen/`) and nothing else, both inherited by child scopes: `textHost`, a `JjelTextHost` that builds Text values from interpolations and takes over `+`, `join` and the rendering of a hole when a Text is involved; and `readObserver`, called with target, property and value on every member read that finds its property, `o.p` and `o.p()`.
 
 ### 9.5 `forall` Nesting
 
