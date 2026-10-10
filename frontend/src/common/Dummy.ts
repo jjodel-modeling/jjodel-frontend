@@ -274,6 +274,29 @@ export class Dummy {
                         if (typeof dObj.className === 'string' && dObj.className.includes('Edge')) {
                             lObj.delete();
                         }
+                        // A v2-flow vertex showing the deleted element leaves its graph with it (#174), and so
+                        // do the edges drawn from or to it: React Flow never registers in `nodes` (the classic
+                        // renderer's HTML registry), so the loop over `lDeleted.nodes` below never reached the
+                        // vertex and it stayed painted as a ghost. DETACHED from `subElements`, not deleted:
+                        // a delta that touches the root `vertexs` / `edges` is merged into the previous history
+                        // entry by a shallow merge that drops its records (reducer.ts shouldMerge,
+                        // U.objectMergeInPlace), so deleting the records here, or right after, takes the undo of
+                        // the element with it. Detaching stays inside this TRANSACTION and its history entry:
+                        // one Ctrl+Z puts the vertex and its edges back in the graph, where they were.
+                        else if (dObj.className === 'DVertex') {
+                            const idl: GObject = store.getState().idlookup;
+                            const detach = (ge: GObject) => {
+                                const graph: GObject | undefined = idl[ge.father];
+                                if (graph && Array.isArray(graph.subElements) && graph.subElements.includes(ge.id))
+                                    SetFieldAction.new(graph.id, 'subElements', ge.id, '-=', true);
+                            };
+                            detach(dObj);
+                            for (const p of (dObj.pointedBy || [])) {
+                                const m = /^idlookup\.(.+)\.(start|end)$/.exec(p?.source || '');
+                                const edge: GObject | undefined = m ? idl[m[1]] : undefined;
+                                if (edge && typeof edge.className === 'string' && edge.className.includes('Edge')) detach(edge);
+                            }
+                        }
                         break;
                     case 'father': // obj.father -> deleted element. should be deleted but is already removed through deleted.children
                         break;
