@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-10-1246
 Chat: —
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/decisions.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane ir-graphvertex · merge b48595776 · flip 2026-10-11 dalla chat
 
 Worktree: `/Users/alfonso/jjodel-w-graphvertex`, branch `ir-graphvertex`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-graphvertex`, branch `ir-graphvertex`, `git log -1` is the commit that adds this file (its parent `7d334c817`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-10-1246 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-10-1716
 Chat: —
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane ir-graphvertex · merge 92ff4a6ad · flip 2026-10-11 dalla chat
 
 Worktree: `/Users/alfonso/jjodel-w-graphvertex`, branch `ir-graphvertex`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-w-graphvertex` on `ir-graphvertex`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-10-1716 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

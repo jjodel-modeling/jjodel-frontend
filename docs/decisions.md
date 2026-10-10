@@ -5909,6 +5909,13 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   Bordered nodes (entry and exit points, history on the border) are deferred, the next capability to open if
   statecharts are pursued in full. Spec addendum §11; fixture `frontend/scripts/probe/statechart-fixture.ts` (slice
   S2b).
+- **R-GV-16** (2026-10-11, ratified by Alfonso 2026-10-11 00:05, evidence: measured, verified: probe, reversible: branch).
+  **The toolbar Auto layout lays graphVertex containers out bottom-up and keeps containment** (slice S6,
+  `utils/elkContainers.ts`): a partitions container takes one layered run over the flow nodes of all its partitions,
+  each node placed in its own band; a self-framed or free container takes its own run over its children. Two
+  consequences are accepted for v1: a pool or orthogonal state that the shared flow coordinate outgrows is written with
+  its new size as sized by hand, which becomes its minimum; a frame nested in a lane or region is laid out with the
+  root options (downward), not in the direction of the lanes around it. The open-time layout keeps its flat call.
 
 ## Superate
 
