@@ -537,3 +537,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat GO (RC-23), unattended: trunk content only, kindOf and the RC-45 draw code sit in separate regions of lane-board.mjs, gates match
 **Notes**: merge-tree exit 1, tree `09b422a2e`, 1 conflict; staged tree `7437a01e9` differs only in harness.md, byte-identical to the trunk's file plus the branch's block. Probes 7 of 7 once, control 1923 heading 0. lane-board.mjs read end to end: trunk hunk :78-81, branch hunks :661-760, 95 declarations once, node --check 0. check:docs is 5/5, not 4/4: Check E is on the trunk. No rollback tag.
 **Prompt document name**: 2026-10-10 19:23
+
+## 2026-10-10 — merge: lane-run-rc45-draw into alfonso-frontend-jjtl (P-2026-10-10-1937)
+**Prompt**: `claude_2026-10-10_1937_prompt_merge_lane-run-rc45-draw.md`, a direct merge by `lane-run merge --direct`, no session: `lane-run-rc45-draw` at `d63a4e8e6` into `alfonso-frontend-jjtl`, merge base `9d41d0bce`, 10 commits on the branch side.
+**Files touched**: merge `e93cc0d0b`: 9 files from the branch side (`docs/discovery/discovery_2026-10-10_lane_run_rc45_draw.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_1848_prompt_lane-run-rc45-draw_take_trunk.md`, `docs/prompts/claude_2026-10-10_1923_prompt_lane-run-rc45-draw_take_trunk.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/lane-board.mjs`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e93cc0d0b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8066 tests in 330 files, 9 red at import, hooks 501; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: harness: lane-run draws the tier of eligible fast lanes (RC-45); board drawn toggle checked on 4701
+**Notes**: Rollback tag `pre-lane-run-rc45-draw` on `9d41d0bce` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1937/result.json`.
+**Prompt document name**: 2026-10-10 19:37
