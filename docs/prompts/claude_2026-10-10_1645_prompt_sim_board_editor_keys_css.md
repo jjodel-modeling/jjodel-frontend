@@ -5,7 +5,7 @@ Chat: C-2026-10-10-1620
 Request: https://claude.ai/code/session_01CjZSPxRbbXhjGTtAKkf96c
 Lane: fast (Phase 2 only, visual; the design is fixed by R-SIM-146, no Phase 1). No critical-zone go-ahead.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane sim-board-keys · 0132e7149 · verifica visiva passata 2026-10-10 (RC-23, chat)
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 
