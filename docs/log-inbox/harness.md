@@ -342,3 +342,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read: table-layout fixed on Running, Last 24 hours and an Earlier day; every column keeps one width across tables; Lane, State, Worktree and Launched by share the same left edge everywhere, the middle columns shift only where the column sets differ; no pill wraps; Worktree truncates with a title; board on 4701 stopped
 **Notes**: Widths px: Lane 200, State 92, Kind 124, Started/Ended 96, Elapsed/Span 100, Left 116, Worktree 144, Launched by 128; Phase and Outcome auto (146 and 166 at 1246 px). Ended is fixed beside Started, Outcome absorbs the rest. Horizontal cell padding 8 px in these tables only: at 12 px Phase fell under 90 px. Min-width 1200: below ~1240 px viewport the wrap scrolls and the chain outcome pill (148 px) ends in an ellipsis. Titles wrap at 184 px instead of up to 320.
 **Prompt document name**: 2026-10-10 17:42
+
+## 2026-10-10 — feat(harness): lane board links each lane to its chat (P-2026-10-10-1816)
+**Prompt**: `claude_2026-10-10_1816_prompt_lane_board_chat_links.md`, fast lane on `~/jjodel-w-chatlinks`, branch `board-chat-links` (cut from `lane-board-columns`). Every `/api` lane row gets `chatUrl` and `chatUrlFrom`, from the `Request:` header, else the `Claude-Session:` trailer of the commit that added the prompt, else the same `Chat:` id in another lane (claude.ai URLs only). In Launched by, the chat id becomes a link whose `title` names the source.
+**Files touched**: code `226fce084`: `frontend/scripts/lane-board/lane-board.mjs`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` exit 0; check:scripts PASS 63 files. The board on 4703 (cache in /tmp) serves `/api` with 406 rows and no error. A headless Chromium probe at 1280 and 1920 px found 223 links, each with target, rel and title set. Launched by is 128 px in every table, no link overflows its cell, and the console shows no errors.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4703 (RC-23), DOM read of the Lanes tab: 45 claude.ai links in Running and Last 24 hours, all target _blank with noopener; titles name the source (Request header, commit, inferred from a same-chat lane); lane-run merges without a chat stay plain; board on 4703 stopped
+**Notes**: Coverage, 405 lanes: Request 18, commit 114, chat id 91, none 182. Last 7 days, 107 lanes: 18, 25, 19, 45. Among the lanes with no URL, 98 are lane-run merge prompts (29 in the last 7 days). A third field, `chatUrlVia`, holds the donor Prompt-ID that the title cites. Four `Claude-Session:` trailers hold a C- id and are rejected. One chat, C-2026-10-01-1725, has two URLs; the latest wins. A lane with `Chat: —` and a URL shows "chat" (5 lanes).
+**Prompt document name**: 2026-10-10 18:16
