@@ -1,0 +1,301 @@
+{
+  "url": "http://localhost:3074",
+  "at": "2026-10-10T10:48:51.985Z",
+  "readOnlyState": {
+    "views": 20,
+    "check": true,
+    "debug": false,
+    "defaultVpEntry": "boolean",
+    "defaultVpInIdlookup": false,
+    "disabled": true
+  },
+  "written": {
+    "irVersion": "ir-1.2",
+    "kind": "graphVertex",
+    "metaclasses": [
+      "Lane"
+    ],
+    "exclusive": true,
+    "shape": {
+      "form": "rect",
+      "labels": [
+        {
+          "position": "header",
+          "source": {
+            "from": "intrinsic",
+            "prop": "name"
+          },
+          "orientation": "vertical"
+        }
+      ],
+      "fill": "#ffffff",
+      "border": {
+        "width": 1
+      }
+    },
+    "containment": {
+      "layout": {
+        "mode": "free",
+        "header": {
+          "side": "w",
+          "size": 30
+        }
+      },
+      "children": "$flowNodeRefs.values",
+      "edges": "hide",
+      "membership": {
+        "mode": "reference",
+        "create": {
+          "ownerKind": "Process",
+          "feature": "flowElements"
+        }
+      },
+      "collapsible": false
+    },
+    "authoringMetaclassPins": {
+      "Lane": "Pointer1791629401171_USER_31"
+    },
+    "label": "Lane"
+  },
+  "measures": {
+    "advanced": {
+      "labels": [
+        "13px",
+        "14px"
+      ],
+      "labelCount": 9,
+      "titles": [
+        "11px"
+      ],
+      "hints": [
+        "11px"
+      ],
+      "pad": "14px",
+      "gaps": [
+        20
+      ],
+      "margins": [
+        "10px",
+        "0px"
+      ],
+      "icons": [
+        "bi bi-chevron-down",
+        "bi bi-chevron-down",
+        "bi bi-chevron-down",
+        "bi bi-arrow-return-right",
+        "bi bi-x",
+        "bi bi-chevron-down",
+        "bi bi-chevron-down",
+        "bi bi-chevron-down"
+      ],
+      "svgs": []
+    },
+    "basic": {
+      "labels": [
+        "13px"
+      ],
+      "labelCount": 3,
+      "titles": [
+        "11px"
+      ],
+      "hints": [
+        "11px"
+      ],
+      "pad": "14px",
+      "gaps": [
+        20
+      ],
+      "margins": [
+        "10px",
+        "0px"
+      ],
+      "icons": [
+        "bi bi-chevron-down",
+        "bi bi-chevron-down",
+        "bi bi-chevron-down",
+        "bi bi-arrow-return-right",
+        "bi bi-x"
+      ],
+      "svgs": []
+    }
+  },
+  "vertexMeasures": {
+    "labels": [
+      "13px",
+      "14px"
+    ],
+    "labelCount": 9,
+    "titles": [
+      "11px"
+    ],
+    "hints": [
+      "11px"
+    ],
+    "pad": "0px",
+    "gaps": [
+      20
+    ],
+    "margins": [
+      "10px",
+      "0px"
+    ],
+    "icons": [
+      "bi bi-chevron-down",
+      "bi bi-chevron-down",
+      "bi bi-chevron-down",
+      "bi bi-arrow-return-right",
+      "bi bi-x",
+      "bi bi-chevron-down",
+      "bi bi-chevron-down",
+      "bi bi-chevron-down"
+    ],
+    "svgs": []
+  },
+  "nodes": [
+    {
+      "id": "Pointer1791629443433_USER_131",
+      "name": "Shop",
+      "x": 100,
+      "y": 100,
+      "w": 900,
+      "h": 360,
+      "z": "-2000",
+      "cls": "ir-node-content ir-shape--rect ir-layout",
+      "band": "ir-header-band ir-header-band--w|30x356",
+      "bandLabel": "Shop|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+    },
+    {
+      "id": "Pointer1791629443705_USER_136",
+      "name": "Customer",
+      "x": 100,
+      "y": 520,
+      "w": 900,
+      "h": 200,
+      "z": "-2000",
+      "cls": "ir-node-content ir-shape--rect ir-layout",
+      "band": "ir-header-band ir-header-band--w|30x196",
+      "bandLabel": "Customer|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+    },
+    {
+      "id": "Pointer1791629443992_USER_141",
+      "name": "Supplier",
+      "x": 100,
+      "y": 780,
+      "w": 900,
+      "h": 40,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--rect",
+      "band": null,
+      "bandLabel": null
+    },
+    {
+      "id": "Pointer1791629444320_USER_147",
+      "name": "Sales",
+      "x": 130,
+      "y": 100,
+      "w": 870,
+      "h": 180,
+      "z": "-1999",
+      "cls": "ir-node-content ir-shape--rect ir-layout",
+      "band": "ir-header-band ir-header-band--w|30x176",
+      "bandLabel": "Sales|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+    },
+    {
+      "id": "Pointer1791629444606_USER_153",
+      "name": "Warehouse",
+      "x": 130,
+      "y": 280,
+      "w": 870,
+      "h": 180,
+      "z": "-1999",
+      "cls": "ir-node-content ir-shape--rect ir-layout",
+      "band": "ir-header-band ir-header-band--w|30x176",
+      "bandLabel": "Warehouse|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+    },
+    {
+      "id": "Pointer1791629444901_USER_157",
+      "name": "Order received",
+      "x": 190,
+      "y": 172,
+      "w": 36,
+      "h": 36,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--circle",
+      "band": null,
+      "bandLabel": null
+    },
+    {
+      "id": "Pointer1791629445226_USER_161",
+      "name": "Check order",
+      "x": 300,
+      "y": 160,
+      "w": 140,
+      "h": 60,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--rounded",
+      "band": null,
+      "bandLabel": null
+    },
+    {
+      "id": "Pointer1791629445506_USER_166",
+      "name": "In stock?",
+      "x": 530,
+      "y": 165,
+      "w": 50,
+      "h": 50,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--diamond",
+      "band": null,
+      "bandLabel": null
+    },
+    {
+      "id": "Pointer1791629445833_USER_170",
+      "name": "Ship",
+      "x": 500,
+      "y": 340,
+      "w": 140,
+      "h": 60,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--rounded",
+      "band": null,
+      "bandLabel": null
+    },
+    {
+      "id": "Pointer1791629446117_USER_174",
+      "name": "Shipped",
+      "x": 720,
+      "y": 352,
+      "w": 36,
+      "h": 36,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--circle",
+      "band": null,
+      "bandLabel": null
+    },
+    {
+      "id": "Pointer1791629446438_USER_178",
+      "name": "Place order",
+      "x": 250,
+      "y": 590,
+      "w": 140,
+      "h": 60,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--rounded",
+      "band": null,
+      "bandLabel": null
+    },
+    {
+      "id": "Pointer1791629446721_USER_182",
+      "name": "Receive goods",
+      "x": 600,
+      "y": 590,
+      "w": 140,
+      "h": 60,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--rounded",
+      "band": null,
+      "bandLabel": null
+    }
+  ],
+  "errors": []
+}
