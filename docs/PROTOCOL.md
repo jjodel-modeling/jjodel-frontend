@@ -293,7 +293,7 @@ The rules below still bind every tree that hosts more than one session.
 - **Every prompt names its front.** The header of a prompt in `docs/prompts/` carries `Front: <slug>`,
   the slug of a front of `docs/harness/fronts.json`. A front is a milestone-like unit of work with a
   verifiable exit; `maintenance` (work outside every other front) and `harness` are permanent. Merge
-  prompts rendered by `lane-run` are exempt. The line is new from `P-2026-10-10-1500`; earlier prompts are
+  prompts rendered by `lane-run` are exempt. The line is new from `P-2026-10-11-0000`; earlier prompts are
   not amended. `npm run check:docs` (Check E) fails on a prompt whose front is missing, unknown, or closed
   before the prompt's date, and `lane-run start` will refuse it (rule in
   `frontend/scripts/lane-tracking.mjs`). The chat opens a front when four criteria hold: a verifiable
