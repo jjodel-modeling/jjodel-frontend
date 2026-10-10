@@ -1,0 +1,1503 @@
+{
+ "url": "http://localhost:3155",
+ "started": "2026-10-10T10:02:51.219Z",
+ "experiments": {
+  "E1": {
+   "shapesBeforeOpen": {
+    "objectsLength": 10,
+    "graphs": [],
+    "dobjects": [
+     {
+      "id": "Pointer1791626617812_USER_31",
+      "name": "StateMachine_0",
+      "label": "Heater",
+      "subs": 0,
+      "cls": "StateMachine",
+      "fatherClass": "DModel",
+      "container": null,
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "root"
+     },
+     {
+      "id": "Pointer1791626617814_USER_35",
+      "name": "State_0",
+      "label": "Idle",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.states",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617816_USER_45",
+      "name": "State_1",
+      "label": "Running",
+      "subs": 2,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.states",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617819_USER_55",
+      "name": "State_0",
+      "label": "Warmup",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "State_1.substates",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617820_USER_65",
+      "name": "State_1",
+      "label": "Steady",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "State_1.substates",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617822_USER_75",
+      "name": "State_2",
+      "label": "Off",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.states",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617823_USER_85",
+      "name": "State_3",
+      "label": "Broken",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.states",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617825_USER_95",
+      "name": "Transition_0",
+      "label": "start",
+      "subs": 0,
+      "cls": "Transition",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.transitions",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617826_USER_101",
+      "name": "Transition_1",
+      "label": "stop",
+      "subs": 0,
+      "cls": "Transition",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.transitions",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617826_USER_107",
+      "name": "Transition_2",
+      "label": "fault",
+      "subs": 0,
+      "cls": "Transition",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.transitions",
+      "inObjects": true,
+      "vertices": 0,
+      "shape": "hybrid"
+     }
+    ]
+   },
+   "shapes": {
+    "objectsLength": 10,
+    "graphs": [
+     {
+      "id": "Pointer1791626617812_USER_30_graph1",
+      "style": null,
+      "subElements": 0
+     },
+     {
+      "id": "Pointer1791626617812_USER_30_graph2",
+      "style": "v2-flow",
+      "subElements": 28
+     }
+    ],
+    "dobjects": [
+     {
+      "id": "Pointer1791626617812_USER_31",
+      "name": "StateMachine_0",
+      "label": "Heater",
+      "subs": 0,
+      "cls": "StateMachine",
+      "fatherClass": "DModel",
+      "container": null,
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "root"
+     },
+     {
+      "id": "Pointer1791626617814_USER_35",
+      "name": "State_0",
+      "label": "Idle",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.states",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617816_USER_45",
+      "name": "State_1",
+      "label": "Running",
+      "subs": 2,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.states",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617819_USER_55",
+      "name": "State_0",
+      "label": "Warmup",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "State_1.substates",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617820_USER_65",
+      "name": "State_1",
+      "label": "Steady",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "State_1.substates",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617822_USER_75",
+      "name": "State_2",
+      "label": "Off",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.states",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617823_USER_85",
+      "name": "State_3",
+      "label": "Broken",
+      "subs": 0,
+      "cls": "State",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.states",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617825_USER_95",
+      "name": "Transition_0",
+      "label": "start",
+      "subs": 0,
+      "cls": "Transition",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.transitions",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617826_USER_101",
+      "name": "Transition_1",
+      "label": "stop",
+      "subs": 0,
+      "cls": "Transition",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.transitions",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     },
+     {
+      "id": "Pointer1791626617826_USER_107",
+      "name": "Transition_2",
+      "label": "fault",
+      "subs": 0,
+      "cls": "Transition",
+      "fatherClass": "DValue",
+      "container": "StateMachine_0.transitions",
+      "inObjects": true,
+      "vertices": 1,
+      "shape": "hybrid"
+     }
+    ]
+   },
+   "nodes": {
+    "mounted": true,
+    "layoutKey": "__abstract__",
+    "nodeCount": 10,
+    "edgeCount": 18,
+    "edgesByType": {
+     "react-flow__edge-instanceRef": 9,
+     "react-flow__edge-composition": 9
+    },
+    "nodes": [
+     {
+      "id": "Pointer1791626623947_USER_118",
+      "object": "State_0",
+      "x": 141,
+      "y": 530,
+      "seed": {
+       "x": 50,
+       "y": 50
+      },
+      "rec": {
+       "x": 141,
+       "y": 530
+      },
+      "recRaw": "{\"x\":141,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_120",
+      "object": "State_1",
+      "x": 701,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 50
+      },
+      "rec": {
+       "x": 701,
+       "y": 530
+      },
+      "recRaw": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_122",
+      "object": "State_0",
+      "x": 496,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 50
+      },
+      "rec": {
+       "x": 496,
+       "y": 770
+      },
+      "recRaw": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_124",
+      "object": "State_1",
+      "x": 216,
+      "y": 770,
+      "seed": {
+       "x": 50,
+       "y": 350
+      },
+      "rec": {
+       "x": 216,
+       "y": 770
+      },
+      "recRaw": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_126",
+      "object": "State_2",
+      "x": 421,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 350
+      },
+      "rec": {
+       "x": 421,
+       "y": 530
+      },
+      "recRaw": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_128",
+      "object": "State_3",
+      "x": 50,
+      "y": 1010,
+      "seed": {
+       "x": 890,
+       "y": 350
+      },
+      "rec": {
+       "x": 50,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_130",
+      "object": "Transition_0",
+      "x": 217,
+      "y": 290,
+      "seed": {
+       "x": 50,
+       "y": 650
+      },
+      "rec": {
+       "x": 217,
+       "y": 290
+      },
+      "recRaw": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_132",
+      "object": "Transition_1",
+      "x": 512,
+      "y": 290,
+      "seed": {
+       "x": 470,
+       "y": 650
+      },
+      "rec": {
+       "x": 512,
+       "y": 290
+      },
+      "recRaw": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_134",
+      "object": "Transition_2",
+      "x": 776,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 650
+      },
+      "rec": {
+       "x": 776,
+       "y": 770
+      },
+      "recRaw": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_136",
+      "object": "StateMachine_0",
+      "x": 391,
+      "y": 50,
+      "seed": {
+       "x": 50,
+       "y": 950
+      },
+      "rec": {
+       "x": 391,
+       "y": 50
+      },
+      "recRaw": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     }
+    ]
+   }
+  },
+  "E2": {
+   "parent": "Running",
+   "command": {
+    "line": "create instance of State \"ProbeChild\" in Running.substates",
+    "success": true,
+    "message": "Created instance 'ProbeChild' of State in Running.substates"
+   },
+   "before": {
+    "mounted": true,
+    "layoutKey": "__abstract__",
+    "nodeCount": 10,
+    "edgeCount": 18,
+    "edgesByType": {
+     "react-flow__edge-instanceRef": 9,
+     "react-flow__edge-composition": 9
+    },
+    "nodes": [
+     {
+      "id": "Pointer1791626623947_USER_118",
+      "object": "State_0",
+      "x": 141,
+      "y": 530,
+      "seed": {
+       "x": 50,
+       "y": 50
+      },
+      "rec": {
+       "x": 141,
+       "y": 530
+      },
+      "recRaw": "{\"x\":141,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_120",
+      "object": "State_1",
+      "x": 701,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 50
+      },
+      "rec": {
+       "x": 701,
+       "y": 530
+      },
+      "recRaw": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_122",
+      "object": "State_0",
+      "x": 496,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 50
+      },
+      "rec": {
+       "x": 496,
+       "y": 770
+      },
+      "recRaw": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_124",
+      "object": "State_1",
+      "x": 216,
+      "y": 770,
+      "seed": {
+       "x": 50,
+       "y": 350
+      },
+      "rec": {
+       "x": 216,
+       "y": 770
+      },
+      "recRaw": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_126",
+      "object": "State_2",
+      "x": 421,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 350
+      },
+      "rec": {
+       "x": 421,
+       "y": 530
+      },
+      "recRaw": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_128",
+      "object": "State_3",
+      "x": 50,
+      "y": 1010,
+      "seed": {
+       "x": 890,
+       "y": 350
+      },
+      "rec": {
+       "x": 50,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_130",
+      "object": "Transition_0",
+      "x": 217,
+      "y": 290,
+      "seed": {
+       "x": 50,
+       "y": 650
+      },
+      "rec": {
+       "x": 217,
+       "y": 290
+      },
+      "recRaw": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_132",
+      "object": "Transition_1",
+      "x": 512,
+      "y": 290,
+      "seed": {
+       "x": 470,
+       "y": 650
+      },
+      "rec": {
+       "x": 512,
+       "y": 290
+      },
+      "recRaw": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_134",
+      "object": "Transition_2",
+      "x": 776,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 650
+      },
+      "rec": {
+       "x": 776,
+       "y": 770
+      },
+      "recRaw": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_136",
+      "object": "StateMachine_0",
+      "x": 391,
+      "y": 50,
+      "seed": {
+       "x": 50,
+       "y": 950
+      },
+      "rec": {
+       "x": 391,
+       "y": 50
+      },
+      "recRaw": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     }
+    ]
+   },
+   "after": {
+    "mounted": true,
+    "layoutKey": "__abstract__",
+    "nodeCount": 10,
+    "edgeCount": 18,
+    "edgesByType": {
+     "react-flow__edge-instanceRef": 9,
+     "react-flow__edge-composition": 9
+    },
+    "nodes": [
+     {
+      "id": "Pointer1791626623947_USER_118",
+      "object": "State_0",
+      "x": 141,
+      "y": 530,
+      "seed": {
+       "x": 50,
+       "y": 50
+      },
+      "rec": {
+       "x": 141,
+       "y": 530
+      },
+      "recRaw": "{\"x\":141,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_120",
+      "object": "State_1",
+      "x": 701,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 50
+      },
+      "rec": {
+       "x": 701,
+       "y": 530
+      },
+      "recRaw": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_122",
+      "object": "State_0",
+      "x": 496,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 50
+      },
+      "rec": {
+       "x": 496,
+       "y": 770
+      },
+      "recRaw": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_124",
+      "object": "State_1",
+      "x": 216,
+      "y": 770,
+      "seed": {
+       "x": 50,
+       "y": 350
+      },
+      "rec": {
+       "x": 216,
+       "y": 770
+      },
+      "recRaw": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_126",
+      "object": "State_2",
+      "x": 421,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 350
+      },
+      "rec": {
+       "x": 421,
+       "y": 530
+      },
+      "recRaw": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_128",
+      "object": "State_3",
+      "x": 50,
+      "y": 1010,
+      "seed": {
+       "x": 890,
+       "y": 350
+      },
+      "rec": {
+       "x": 50,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_130",
+      "object": "Transition_0",
+      "x": 217,
+      "y": 290,
+      "seed": {
+       "x": 50,
+       "y": 650
+      },
+      "rec": {
+       "x": 217,
+       "y": 290
+      },
+      "recRaw": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_132",
+      "object": "Transition_1",
+      "x": 512,
+      "y": 290,
+      "seed": {
+       "x": 470,
+       "y": 650
+      },
+      "rec": {
+       "x": 512,
+       "y": 290
+      },
+      "recRaw": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_134",
+      "object": "Transition_2",
+      "x": 776,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 650
+      },
+      "rec": {
+       "x": 776,
+       "y": 770
+      },
+      "recRaw": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_136",
+      "object": "StateMachine_0",
+      "x": 391,
+      "y": 50,
+      "seed": {
+       "x": 50,
+       "y": 950
+      },
+      "rec": {
+       "x": 391,
+       "y": 50
+      },
+      "recRaw": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     }
+    ]
+   },
+   "child": {
+    "id": "Pointer1791626635925_USER_155",
+    "name": "ProbeChild",
+    "label": null,
+    "subs": 0,
+    "cls": "State",
+    "fatherClass": "DValue",
+    "container": "State_1.substates",
+    "inObjects": false,
+    "vertices": 0,
+    "shape": "nested"
+   }
+  },
+  "E3a": {
+   "mountedOnLoad": 0,
+   "before": {
+    "mounted": true,
+    "layoutKey": "__abstract__",
+    "nodeCount": 10,
+    "edgeCount": 18,
+    "edgesByType": {
+     "react-flow__edge-instanceRef": 9,
+     "react-flow__edge-composition": 9
+    },
+    "nodes": [
+     {
+      "id": "Pointer1791626623947_USER_118",
+      "object": "State_0",
+      "x": 781,
+      "y": 1010,
+      "seed": {
+       "x": 50,
+       "y": 50
+      },
+      "rec": {
+       "x": 781,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}",
+      "domAfterWrite": "141,530"
+     },
+     {
+      "id": "Pointer1791626623947_USER_120",
+      "object": "State_1",
+      "x": 701,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 50
+      },
+      "rec": {
+       "x": 701,
+       "y": 530
+      },
+      "recRaw": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_122",
+      "object": "State_0",
+      "x": 496,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 50
+      },
+      "rec": {
+       "x": 496,
+       "y": 770
+      },
+      "recRaw": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_124",
+      "object": "State_1",
+      "x": 216,
+      "y": 770,
+      "seed": {
+       "x": 50,
+       "y": 350
+      },
+      "rec": {
+       "x": 216,
+       "y": 770
+      },
+      "recRaw": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_126",
+      "object": "State_2",
+      "x": 421,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 350
+      },
+      "rec": {
+       "x": 421,
+       "y": 530
+      },
+      "recRaw": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_128",
+      "object": "State_3",
+      "x": 50,
+      "y": 1010,
+      "seed": {
+       "x": 890,
+       "y": 350
+      },
+      "rec": {
+       "x": 50,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_130",
+      "object": "Transition_0",
+      "x": 217,
+      "y": 290,
+      "seed": {
+       "x": 50,
+       "y": 650
+      },
+      "rec": {
+       "x": 217,
+       "y": 290
+      },
+      "recRaw": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_132",
+      "object": "Transition_1",
+      "x": 512,
+      "y": 290,
+      "seed": {
+       "x": 470,
+       "y": 650
+      },
+      "rec": {
+       "x": 512,
+       "y": 290
+      },
+      "recRaw": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_134",
+      "object": "Transition_2",
+      "x": 776,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 650
+      },
+      "rec": {
+       "x": 776,
+       "y": 770
+      },
+      "recRaw": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_136",
+      "object": "StateMachine_0",
+      "x": 391,
+      "y": 50,
+      "seed": {
+       "x": 50,
+       "y": 950
+      },
+      "rec": {
+       "x": 391,
+       "y": 50
+      },
+      "recRaw": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     }
+    ]
+   },
+   "after": {
+    "mounted": true,
+    "layoutKey": "__abstract__",
+    "nodeCount": 10,
+    "edgeCount": 18,
+    "edgesByType": {
+     "react-flow__edge-instanceRef": 9,
+     "react-flow__edge-composition": 9
+    },
+    "nodes": [
+     {
+      "id": "Pointer1791626623947_USER_118",
+      "object": "State_0",
+      "x": 781,
+      "y": 1010,
+      "seed": {
+       "x": 50,
+       "y": 50
+      },
+      "rec": {
+       "x": 781,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_120",
+      "object": "State_1",
+      "x": 701,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 50
+      },
+      "rec": {
+       "x": 701,
+       "y": 530
+      },
+      "recRaw": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_122",
+      "object": "State_0",
+      "x": 496,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 50
+      },
+      "rec": {
+       "x": 496,
+       "y": 770
+      },
+      "recRaw": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_124",
+      "object": "State_1",
+      "x": 216,
+      "y": 770,
+      "seed": {
+       "x": 50,
+       "y": 350
+      },
+      "rec": {
+       "x": 216,
+       "y": 770
+      },
+      "recRaw": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_126",
+      "object": "State_2",
+      "x": 421,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 350
+      },
+      "rec": {
+       "x": 421,
+       "y": 530
+      },
+      "recRaw": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_128",
+      "object": "State_3",
+      "x": 50,
+      "y": 1010,
+      "seed": {
+       "x": 890,
+       "y": 350
+      },
+      "rec": {
+       "x": 50,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_130",
+      "object": "Transition_0",
+      "x": 217,
+      "y": 290,
+      "seed": {
+       "x": 50,
+       "y": 650
+      },
+      "rec": {
+       "x": 217,
+       "y": 290
+      },
+      "recRaw": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_132",
+      "object": "Transition_1",
+      "x": 512,
+      "y": 290,
+      "seed": {
+       "x": 470,
+       "y": 650
+      },
+      "rec": {
+       "x": 512,
+       "y": 290
+      },
+      "recRaw": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_134",
+      "object": "Transition_2",
+      "x": 776,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 650
+      },
+      "rec": {
+       "x": 776,
+       "y": 770
+      },
+      "recRaw": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_136",
+      "object": "StateMachine_0",
+      "x": 391,
+      "y": 50,
+      "seed": {
+       "x": 50,
+       "y": 950
+      },
+      "rec": {
+       "x": 391,
+       "y": 50
+      },
+      "recRaw": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     }
+    ]
+   },
+   "diff": {
+    "compared": 10,
+    "moved": [],
+    "missing": []
+   },
+   "verticesBefore": 10,
+   "verticesAfter": 10
+  },
+  "E3b": {
+   "mountedOnLoad": 0,
+   "command": {
+    "line": "create instance of State \"ProbeRoot\"",
+    "success": true,
+    "message": "Created instance 'ProbeRoot' of State"
+   },
+   "rootBeforeOpen": {
+    "id": "Pointer1791626689719_USER_4",
+    "name": "ProbeRoot",
+    "label": null,
+    "subs": 0,
+    "cls": "State",
+    "fatherClass": "DModel",
+    "container": null,
+    "inObjects": true,
+    "vertices": 0,
+    "shape": "root"
+   },
+   "rootAfterOpen": {
+    "id": "Pointer1791626689719_USER_4",
+    "name": "ProbeRoot",
+    "label": null,
+    "subs": 0,
+    "cls": "State",
+    "fatherClass": "DModel",
+    "container": null,
+    "inObjects": true,
+    "vertices": 1,
+    "shape": "root"
+   },
+   "before": {
+    "mounted": true,
+    "layoutKey": "__abstract__",
+    "nodeCount": 10,
+    "edgeCount": 18,
+    "edgesByType": {
+     "react-flow__edge-instanceRef": 9,
+     "react-flow__edge-composition": 9
+    },
+    "nodes": [
+     {
+      "id": "Pointer1791626623947_USER_118",
+      "object": "State_0",
+      "x": 781,
+      "y": 1010,
+      "seed": {
+       "x": 50,
+       "y": 50
+      },
+      "rec": {
+       "x": 781,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_120",
+      "object": "State_1",
+      "x": 701,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 50
+      },
+      "rec": {
+       "x": 701,
+       "y": 530
+      },
+      "recRaw": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_122",
+      "object": "State_0",
+      "x": 496,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 50
+      },
+      "rec": {
+       "x": 496,
+       "y": 770
+      },
+      "recRaw": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_124",
+      "object": "State_1",
+      "x": 216,
+      "y": 770,
+      "seed": {
+       "x": 50,
+       "y": 350
+      },
+      "rec": {
+       "x": 216,
+       "y": 770
+      },
+      "recRaw": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_126",
+      "object": "State_2",
+      "x": 421,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 350
+      },
+      "rec": {
+       "x": 421,
+       "y": 530
+      },
+      "recRaw": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_128",
+      "object": "State_3",
+      "x": 50,
+      "y": 1010,
+      "seed": {
+       "x": 890,
+       "y": 350
+      },
+      "rec": {
+       "x": 50,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_130",
+      "object": "Transition_0",
+      "x": 217,
+      "y": 290,
+      "seed": {
+       "x": 50,
+       "y": 650
+      },
+      "rec": {
+       "x": 217,
+       "y": 290
+      },
+      "recRaw": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_132",
+      "object": "Transition_1",
+      "x": 512,
+      "y": 290,
+      "seed": {
+       "x": 470,
+       "y": 650
+      },
+      "rec": {
+       "x": 512,
+       "y": 290
+      },
+      "recRaw": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_134",
+      "object": "Transition_2",
+      "x": 776,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 650
+      },
+      "rec": {
+       "x": 776,
+       "y": 770
+      },
+      "recRaw": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_136",
+      "object": "StateMachine_0",
+      "x": 391,
+      "y": 50,
+      "seed": {
+       "x": 50,
+       "y": 950
+      },
+      "rec": {
+       "x": 391,
+       "y": 50
+      },
+      "recRaw": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     }
+    ]
+   },
+   "after": {
+    "mounted": true,
+    "layoutKey": "__abstract__",
+    "nodeCount": 11,
+    "edgeCount": 18,
+    "edgesByType": {
+     "react-flow__edge-instanceRef": 9,
+     "react-flow__edge-composition": 9
+    },
+    "nodes": [
+     {
+      "id": "Pointer1791626623947_USER_118",
+      "object": "State_0",
+      "x": 141,
+      "y": 530,
+      "seed": {
+       "x": 50,
+       "y": 50
+      },
+      "rec": {
+       "x": 141,
+       "y": 530
+      },
+      "recRaw": "{\"x\":141,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_120",
+      "object": "State_1",
+      "x": 701,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 50
+      },
+      "rec": {
+       "x": 701,
+       "y": 530
+      },
+      "recRaw": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_122",
+      "object": "State_0",
+      "x": 496,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 50
+      },
+      "rec": {
+       "x": 496,
+       "y": 770
+      },
+      "recRaw": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_124",
+      "object": "State_1",
+      "x": 216,
+      "y": 770,
+      "seed": {
+       "x": 50,
+       "y": 350
+      },
+      "rec": {
+       "x": 216,
+       "y": 770
+      },
+      "recRaw": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_126",
+      "object": "State_2",
+      "x": 421,
+      "y": 530,
+      "seed": {
+       "x": 470,
+       "y": 350
+      },
+      "rec": {
+       "x": 421,
+       "y": 530
+      },
+      "recRaw": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623947_USER_128",
+      "object": "State_3",
+      "x": 50,
+      "y": 1010,
+      "seed": {
+       "x": 890,
+       "y": 350
+      },
+      "rec": {
+       "x": 50,
+       "y": 1010
+      },
+      "recRaw": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_130",
+      "object": "Transition_0",
+      "x": 217,
+      "y": 290,
+      "seed": {
+       "x": 50,
+       "y": 650
+      },
+      "rec": {
+       "x": 217,
+       "y": 290
+      },
+      "recRaw": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_132",
+      "object": "Transition_1",
+      "x": 512,
+      "y": 290,
+      "seed": {
+       "x": 470,
+       "y": 650
+      },
+      "rec": {
+       "x": 512,
+       "y": 290
+      },
+      "recRaw": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_134",
+      "object": "Transition_2",
+      "x": 776,
+      "y": 770,
+      "seed": {
+       "x": 890,
+       "y": 650
+      },
+      "rec": {
+       "x": 776,
+       "y": 770
+      },
+      "recRaw": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626623948_USER_136",
+      "object": "StateMachine_0",
+      "x": 391,
+      "y": 50,
+      "seed": {
+       "x": 50,
+       "y": 950
+      },
+      "rec": {
+       "x": 391,
+       "y": 50
+      },
+      "recRaw": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     {
+      "id": "Pointer1791626710949_USER_5",
+      "object": "ProbeRoot",
+      "x": 470,
+      "y": 950,
+      "seed": {
+       "x": 470,
+       "y": 950
+      },
+      "rec": null,
+      "recRaw": null
+     }
+    ]
+   },
+   "diff": {
+    "compared": 10,
+    "moved": [
+     {
+      "id": "Pointer1791626623947_USER_118",
+      "object": "State_0",
+      "from": "781,1010",
+      "to": "141,530"
+     }
+    ],
+    "missing": []
+   }
+  }
+ },
+ "finished": "2026-10-10T10:05:22.943Z",
+ "pageErrors": [],
+ "consoleErrors": [
+  "init_dash",
+  "init_dash",
+  "init_dash",
+  "init_dash",
+  "init_dash",
+  "init_dash",
+  "init_dash"
+ ]
+}
