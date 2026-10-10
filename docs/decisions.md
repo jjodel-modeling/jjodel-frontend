@@ -5829,6 +5829,25 @@ writes; every `DModel.objects` is deduplicated keeping the first entry. A chain 
 (dangling) is left untouched; aggregation fathers are left as they are (R-NEST-2). Idempotent, a no-op on a coherent
 state. Critical zone (`VersionFixer.tsx`), go-ahead RC-30 by Juri.
 
+R-NEST-7 and R-NEST-8 below: decided by Juri in chat `C-2026-10-07-0948` on 2026-10-10, after the visual check of
+2026-10-08 failed on the canvas (deleted elements stayed painted). Evidence: the addendum of 2026-10-08 in
+`docs/discovery/discovery_2026-10-07_174_nesting_forms.md` (section A).
+
+**R-NEST-7** (2026-10-10, ratified by Juri 2026-10-10, evidence: measured, verified: none, reversible: trunk) —
+**A deleted model element leaves every graph, and its vertex records stay.** In the same delete, the v2-flow vertices
+that represent the element, and their edges, are detached from their graph's `subElements`; the records are kept, so
+one Ctrl+Z restores the element, its nodes and its edges. The records are not deleted there: the reducer merges any
+change of the root `vertexs` or `edges` lists into the previous history entry (`reducer.ts:1216`, a shallow merge),
+and an undo then restores nothing (measured, with a page error at `reducer.ts:1115`). That merge is ticketed as a
+lane of its own.
+
+**R-NEST-8** (2026-10-10, ratified by Juri 2026-10-10, evidence: measured, verified: none, reversible: trunk) —
+**Every load purges the graph elements that represent nothing.** After the version steps, `VersionFixer` removes from
+`subElements` and deletes the vertices whose `model` pointer does not resolve and the edges with a dead end, and
+deletes the vertex and edge records no container lists (what R-NEST-7 leaves, and the ghosts saved before it). A
+vertex with no `model` at all is not a ghost. At load there is no undo history to protect. Critical zone
+(`VersionFixer.tsx`), go-ahead RC-30 by Juri; deletion of persisted data accepted (RC-26).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.

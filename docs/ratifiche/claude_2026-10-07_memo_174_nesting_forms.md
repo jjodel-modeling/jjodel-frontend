@@ -55,3 +55,17 @@ con la decisione 2 non cambia), `VersionFixer.tsx` e il test della migrazione `2
 senza `--critical-zone-goahead`: la chat scrive `goahead.txt` nella cartella della lane, come lo scrive
 `lane-run start`, così il resume porta il go-ahead. Dopo la misura E3 della Fase 2 la chat aggiorna R-JS-12
 (`WOULD_ORPHAN` irraggiungibile su dati migrati).
+
+## Addendum 2026-10-10: vertici fantasma (R-NEST-7, R-NEST-8)
+
+La verifica visiva dell'8 ottobre, fatta dalla chat con Juri, è fallita sulle voci 6 e 11: gli elementi
+cancellati dalla cascata restavano dipinti sul canvas. Misura della chat con il gesto reale, lane contro
+`staging`: il difetto esisteva già (la cancellazione del core non tocca i vertici v2-flow; su `staging` la
+cancellazione via JjScript o Data Manager lascia i nodi dipinti) e la cascata lo estendeva. Juri ha scelto il
+rework nella lane. Decisioni del 10 ottobre, sulle due domande della lane:
+
+- **Stacco, non cancellazione** (R-NEST-7): cancellare i record dei vertici rompe Ctrl+Z per via della fusione
+  della cronologia nel reducer; resta un ticket per quella fusione.
+- **Pulizia a ogni caricamento** (R-NEST-8), in `VersionFixer.tsx`, con go-ahead RC-30 e Layer Impact Report.
+  Scartati: un punto in più nella sola migrazione `2.230` (non pulisce i record staccati dopo) e il rinvio a
+  un ticket.
