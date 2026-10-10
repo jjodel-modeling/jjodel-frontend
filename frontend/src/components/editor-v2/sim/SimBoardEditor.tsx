@@ -1083,7 +1083,7 @@ export function SimBoardEditor(props: SimBoardEditorProps): ReactElement {
                                 style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${shownRows}, minmax(56px, auto))` }}
                                 role="grid"
                                 aria-label="Board preview"
-                                aria-description="Arrows select a device; Shift and an arrow move it; Delete removes it; Enter edits it."
+                                aria-description="Arrows move a device; Shift and an arrow select the neighbour; Delete removes it; Enter edits it."
                                 tabIndex={0}
                             >
                                 {Array.from({ length: shownRows }, (_, row) => Array.from({ length: cols }, (__, column) => (covered(column, row) ? null : (
