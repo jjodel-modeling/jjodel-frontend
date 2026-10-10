@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0046
 Lane: fast (two new files under a new folder, pure functions over the lookup, no existing source changed).
 Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane codegen-stc · code 0ab88a4ae · docs 120145e74 · tsc 14 = base, stcAccess 21/21, src/model/simulation 685/685, build exit 0, mutation bench 10/10 killed · four core helpers copied and cross-checked against the originals · no visual check (textual slice)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

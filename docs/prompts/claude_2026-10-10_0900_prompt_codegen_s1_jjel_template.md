@@ -6,7 +6,7 @@ Lane: full (core JjEL: lexer, parser, evaluator and context, with consumers acro
 discovery P-2026-10-10-0815, no new discovery). Model: the default of `.claude/settings.json`, no deviation.
 No critical-zone go-ahead (none needed, discovery §I.3).
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane codegen-jjel-template · code 4eda9c793 · docs de640d661 · tsc 14 = base, vitest src/jjel 279 (245+34), consumer suites 1843 (1809+34, same 8 import-time reds as base), build exit 0, mutation bench 7/7 killed · JjelTextHost adds optional evaluateHole; literal spans recovered by S2 from tokenize · no visual check (textual slice)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
