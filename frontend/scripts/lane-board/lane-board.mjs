@@ -4,11 +4,14 @@
 // State, outcome and elapsed come from `lane-run status --all`; worktree, kind, chat,
 // tier and phase come from the files in ~/.jjodel-lanes/<Prompt-ID>/. The Timeline tab
 // (/api/timeline, drawn by timeline.js next to this file) shows turns, decisions,
-// parallelism and dependencies; finished lanes are cached in timeline-cache.json.
+// parallelism and dependencies; finished lanes are cached in timeline-cache.json. The Insights
+// tab adds /api/insights: model, cost, code areas and first-shot success per lane, from the lane
+// logs, `git log --all` and the trunk's log entries and decisions.md (insights.js, README).
 // Usage: node ~/.jjodel-lanes/board/lane-board.mjs [--port 4700] [--refresh 30]
 
 import { createServer } from 'node:http';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, openSync, readSync, fstatSync, closeSync } from 'node:fs';
 import { homedir, loadavg } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -52,19 +55,32 @@ function tail(path, bytes = 256 * 1024) {
     }
 }
 
+// The header of a lane's prompt: input-1.md (from P-2026-09-28-1545 on), else the file named in
+// prompt.txt, else the trunk's copy of the prompt (lanes of 2026-09-26/27, removed worktrees).
+// Kept once found, or once the lane has exited: a prompt's Lane, Chat and title lines do not change.
+const headMem = new Map();
 function header(dir) {
-    const text = readTrim(join(dir, 'input-1.md')).slice(0, 4000);
+    if (headMem.has(dir)) return headMem.get(dir);
+    const promptPath = readTrim(join(dir, 'prompt.txt'));
+    const file = promptPath.replace(/^.*\//, '');
+    let text = readTrim(join(dir, 'input-1.md')).slice(0, 4000);
+    if (!text && promptPath) text = readTrim(promptPath).slice(0, 4000);
+    if (!text && existsSync(join(dir, 'exit.txt'))) text = trunkPrompt(dir.replace(/^.*\//, ''), file).slice(0, 4000);
     const line = (k) => (text.match(new RegExp('^' + k + ':\\s*(.*)$', 'm')) || [])[1] || '';
     const title = (text.match(/^#\s+(.*)$/m) || [])[1] || '';
-    return { lane: line('Lane'), chat: line('Chat'), title };
+    const h = { lane: line('Lane'), chat: line('Chat'), title, file };
+    if (text || existsSync(join(dir, 'exit.txt'))) headMem.set(dir, h);
+    return h;
 }
 
-function kindOf(laneLine) {
+/** Kind from the Lane line's first word (P13: fast, full (<trigger>), discovery); lane-run's merge prompts declare `Lane: full (merge; …)`. */
+function kindOf(laneLine, file = '') {
     const l = laneLine.toLowerCase();
-    if (/^merge/.test(l)) return 'merge';
+    if (/^merge|^full \((merge|take[- ]trunk)\b/.test(l) || /_prompt_merge_|_take_trunk/.test(file)) return 'merge';
     if (/^fast/.test(l)) return 'fast';
-    if (/discovery/.test(l)) return 'discovery';
-    if (/phase ?2|implementation|full/.test(l)) return 'phase2';
+    // A full lane that is only a read-only Phase 1 (its fix is a later lane) is a discovery; a two-phase lane is not.
+    if (/^discovery|^phase 1 only|^full \(discovery\b/.test(l) || (/^full \(phase 1\b/.test(l) && /read-only/.test(l) && !/two-phase|same session|in cascade|after the chat'?s go/.test(l))) return 'discovery';
+    if (/^full|^phase|implementation/.test(l)) return 'phase2';
     return '';
 }
 
@@ -120,7 +136,7 @@ function collect() {
             row.worktree = readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~');
             const h = header(dir);
             row.lane = h.lane; row.chat = h.chat; row.title = h.title;
-            row.kind = kindOf(h.lane);
+            row.kind = kindOf(h.lane, h.file);
             row.tier = readTrim(join(dir, 'tier.txt')).split(/[\s:]/)[0];
             if (live) {
                 row.phase = phaseOf(dir);
@@ -168,10 +184,9 @@ let tlDirty = false;
 const mtime = (p) => { try { return statSync(p).mtimeMs; } catch { return 0; } };
 const size = (p) => { try { return statSync(p).size; } catch { return -1; } };
 
-/** The `result` events of a log: duration and the last Outcome line of each turn. */
-function results(log) {
-    let buf;
-    try { buf = readFileSync(log); } catch { return []; }
+/** The `result` events of a log (its bytes, or null): duration and the last Outcome line of each turn. */
+function results(buf) {
+    if (!buf) return [];
     const out = [];
     const key = Buffer.from('"type":"result"');
     let at = buf.indexOf(key);
@@ -190,6 +205,78 @@ function results(log) {
         at = buf.indexOf(key, s1);
     }
     return out;
+}
+
+/** Calls fn with every line of buf that contains key, once per line. */
+function eachLine(buf, key, fn) {
+    const k = Buffer.from(key);
+    let at = buf.indexOf(k);
+    while (at !== -1) {
+        const s0 = buf.lastIndexOf(10, at) + 1;
+        let s1 = buf.indexOf(10, at);
+        if (s1 === -1) s1 = buf.length;
+        fn(buf.subarray(s0, s1));
+        at = buf.indexOf(k, s1);
+    }
+}
+
+const parseLine = (raw) => { try { return JSON.parse(raw.toString('utf8')); } catch { return null; } };
+const ASSISTANT = Buffer.from('{"type":"assistant"');
+
+/** What the Insights tab reads from a lane's log. total_cost_usd and modelUsage are cumulative over the
+ *  session (a resume restores them; 0 decreases in 196 consecutive pairs, 2026-10-10), so the largest is the lane's. */
+function logFacts(buf, res) {
+    const f = { model: '', cli: '', runs: 0, costUSD: 0, outTokens: 0, subModels: {}, apiError: false, outcome: 'none',
+        blockedRun: res.some((r) => r.outcome === 'blocked'), overTime: res.some((r) => r.ms > 90 * 60e3) };
+    if (!buf) return f;
+    eachLine(buf, '"subtype":"init"', (raw) => {
+        const e = parseLine(raw);
+        if (!e || e.type !== 'system' || e.subtype !== 'init') return;
+        f.runs++;
+        if (!f.model) { f.model = e.model || ''; f.cli = e.claude_code_version || ''; }
+    });
+    eachLine(buf, '"type":"result"', (raw) => {
+        const e = parseLine(raw);
+        if (!e || e.type !== 'result') return;
+        if (typeof e.total_cost_usd === 'number') f.costUSD = Math.max(f.costUSD, e.total_cost_usd);
+        if (e.modelUsage) f.outTokens = Math.max(f.outTokens, Object.values(e.modelUsage).reduce((a, v) => a + ((v && v.outputTokens) || 0), 0));
+        if (e.terminal_reason === 'api_error' || e.is_error) f.apiError = true;
+    });
+    // Subagents: assistant events with a parent tool use; only their model is read.
+    eachLine(buf, '"parent_tool_use_id":"', (raw) => {
+        if (!raw.subarray(0, ASSISTANT.length).equals(ASSISTANT)) return;
+        const m = /"model":"([^"]+)"/.exec(raw.toString('utf8'));
+        if (m && m[1] !== '<synthetic>') f.subModels[m[1]] = (f.subModels[m[1]] || 0) + 1;
+    });
+    // The outcome as `lane-run status` reads it (lastOutcome there): the last assistant text line that starts with Outcome:.
+    let last = null;
+    eachLine(buf, 'Outcome:', (raw) => {
+        if (!raw.subarray(0, ASSISTANT.length).equals(ASSISTANT)) return;
+        const e = parseLine(raw);
+        const content = e && e.message && Array.isArray(e.message.content) ? e.message.content : [];
+        for (const b of content) {
+            if (!b || b.type !== 'text' || typeof b.text !== 'string') continue;
+            for (const line of b.text.split('\n')) if (line.trim().startsWith('Outcome:')) last = line.trim();
+        }
+    });
+    if (last !== null) f.outcome = (/^Outcome:\s*(done|hard-stop|question|blocked)\b/.exec(last) || [])[1] || 'unparsed';
+    return f;
+}
+
+/** The class of a resume input (input-k.md, k >= 2, or msg-k.md): first-line rules, plus a body rule for a fix request.
+ *  19/20 on a hand-checked sample with the first-line rules, 20/20 with the body rule on the same sample (discovery P-2026-10-10-1520 §4.2). */
+function inputClass(text) {
+    const t = text.replace(/^\[P-[^\]]*\]\s*/, '');
+    const l = t.split('\n').map((x) => x.trim()).find(Boolean) || '';
+    const body = t.split(/\n---\s*\n/)[0].slice(0, 1200);
+    if (/^(The Mac (went to sleep|lost)|Your (last turn|session) ended|The (previous resume|session) ended|The chat stopped this session)/i.test(l)) return 'recovery';
+    if (/^(Rework|Chat check: one fix|Corrections?\b|Two corrections|Fix\b|Redo|Not yet|Failed|The visual check failed)|with one fix before the GO|fails?\b.*before the merge/i.test(l)) return 'corrective';
+    if (!/Phase 2/i.test(l) && /\b(one|two|three|\d) (precise )?fix(es)?\b|\bfix(es)? before the GO\b/i.test(body)) return 'corrective';
+    if (/^ACK\b/.test(l)) return 'ack';
+    if (/^(Answers?\b|Q\d|Recommended answer|Recommendation adopted|Chat decision|.*adopted as recommended|.*ratified as recommended)/i.test(l)) return 'answer';
+    if (/^(Visual )?GO\b|^GO[.,:]|Visual GO|Phase 2 GO|^Visual check by the chat/i.test(l)) return 'go';
+    if (/^\/status-flip/.test(l)) return 'closure';
+    return 'other';
 }
 
 /** The decision text of input-k.md: its first non-empty line without the [P-…] tag. */
@@ -213,11 +300,15 @@ function laneTimeline(id, now) {
     const dir = join(ROOT, id);
     const exitP = join(dir, 'exit.txt');
     const exited = existsSync(exitP);
-    const inputs = readdirSync(dir).map((n) => /^input-(\d+)\.md$/.exec(n)).filter(Boolean).map((m) => Number(m[1])).sort((a, b) => a - b);
-    const key = ['v5', size(join(dir, 'log.jsonl')), mtime(exitP), inputs.length, mtime(join(dir, 'request.md'))].join('/');
+    const names = readdirSync(dir);
+    const inputs = names.map((n) => /^input-(\d+)\.md$/.exec(n)).filter(Boolean).map((m) => Number(m[1])).sort((a, b) => a - b);
+    // v6: the Insights facts (logFacts) and the class of each resume input ride the same cache.
+    const key = ['v6', size(join(dir, 'log.jsonl')), mtime(exitP), inputs.length, mtime(join(dir, 'request.md'))].join('/');
     const hit = tlCache[id];
     if (hit && hit.key === key && exited) return hit.v;
-    const res = results(join(dir, 'log.jsonl'));
+    let buf = null;
+    try { buf = readFileSync(join(dir, 'log.jsonl')); } catch { /* no log yet */ }
+    const res = results(buf);
     const end = exited ? mtime(exitP) : now;
     const turns = [];
     if (!inputs.length) {
@@ -232,9 +323,17 @@ function laneTimeline(id, now) {
             else e = last ? end : starts[i + 1];
             if (!last) e = Math.min(e, starts[i + 1]);
             if (last && !exited) e = now;
-            turns.push({ s: st, e: Math.max(e, st), o: res[i] ? res[i].outcome : '', d: i ? decisionText(join(dir, 'input-' + inputs[i] + '.md')) : '' });
+            const input = join(dir, 'input-' + inputs[i] + '.md');
+            turns.push({ s: st, e: Math.max(e, st), o: res[i] ? res[i].outcome : '', d: i ? decisionText(input) : '', c: i ? inputClass(readTrim(input).slice(0, 1500)) : '' });
         });
     }
+    const facts = logFacts(buf, res);
+    // Turns from input-k.md carry each run; before them a lane has one turn, started.txt (the last run's start) to exit.txt.
+    facts.fromInputs = inputs.length > 0;
+    facts.res = res.map((r) => ({ ms: r.ms, outcome: r.outcome }));
+    // Lanes from before input-k.md kept their resume messages as msg-k.md (lane-run v2): classed, not aligned to turns.
+    const msgs = names.map((n) => /^msg-(\d+)\.md$/.exec(n)).filter(Boolean).map((m) => Number(m[1])).sort((a, b) => a - b);
+    facts.resumeCls = inputs.length > 1 ? turns.slice(1).map((t) => t.c) : msgs.map((k) => inputClass(readTrim(join(dir, 'msg-' + k + '.md')).slice(0, 1500)));
     const text = readTrim(join(dir, 'input-1.md')).slice(0, 20000);
     const cites = [...new Set((text.match(/P-\d{4}-\d{2}-\d{2}-\d{4}/g) || []).filter((x) => x !== id))].map((c) => ({ id: c, text: citeText(text, c) }));
     // Declared dependencies (PROTOCOL P13, `Depends:` header line): exact, unlike the citations.
@@ -242,7 +341,7 @@ function laneTimeline(id, now) {
     const depends = /^none\b/i.test(depLine.trim()) ? [] : [...new Set(depLine.match(/P-\d{4}-\d{2}-\d{2}-\d{4}/g) || [])].filter((x) => x !== id);
     // The request (PROTOCOL P13, RC-43): the `Request:` header line, and the words kept in request.md, written by lane-run start or later by the chat.
     const request = { url: ((text.split(/\n## /)[0].match(/^Request:[ \t]*(.*)$/m) || [])[1] || '').trim(), text: readTrim(join(dir, 'request.md')).slice(0, 4000) };
-    const v = { turns, cites, depends, declared: !!depLine, request, exited };
+    const v = { turns, cites, depends, declared: !!depLine, request, exited, facts };
     if (exited) { tlCache[id] = { key, v }; tlDirty = true; }
     return v;
 }
@@ -349,7 +448,7 @@ function timeline() {
         let t;
         try { t = laneTimeline(id, now); } catch { continue; }
         const st = status.get(id) || {};
-        const h = st.worktree !== undefined ? st : (() => { const x = header(dir); return { ...x, worktree: readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~'), kind: kindOf(x.lane) }; })();
+        const h = st.worktree !== undefined ? st : (() => { const x = header(dir); return { ...x, worktree: readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~'), kind: kindOf(x.lane, x.file) }; })();
         lanes.push({ id, launcher: launcherOf(id, cpos.get(id), h.chat), title: h.title || '', chat: h.chat || '', worktree: h.worktree || '', kind: h.kind || '', tier: st.tier || '', state: st.state || (t.exited ? 'exited' : '?'), outcome: st.outcome || '', live: !!st.live, turns: t.turns, cites: t.cites, depends: t.depends || [], declared: !!t.declared, request: t.request || { url: '', text: '' } });
     }
     const known = new Set(lanes.map((l) => l.id));
@@ -361,6 +460,274 @@ function timeline() {
     const data = { now, lanes, chainDeps };
     tlMem = { at: Date.now(), data };
     return data;
+}
+
+// ── insights ────────────────────────────────────────────────────────────────
+// /api/insights (discovery P-2026-10-10-1520): per lane, the model, cost, code areas and success
+// signals that the Insights tab aggregates by range. Log facts ride the per-lane cache (v6, above).
+// Git facts (commits by Prompt-ID, reverts) are scanned once, then only for the commits since the
+// last scan, and only when the hash of `git for-each-ref` moves. Log entries and RC rows are read
+// from the trunk ref, never from a working tree, and again only when the trunk moves.
+const TRUNK = process.env.JJODEL_TRUNK || 'alfonso-frontend-jjtl';
+// CLAUDE.md §3.2: the six files whose edit needs a Layer Impact Report. A flag on the lane, not an area.
+const CZ_FILES = ['useJjomSync.ts', 'syncState.ts', 'canvasToJjom.ts', 'portDistribution.ts', 'useM1ReferenceEdges.ts', 'VersionFixer.tsx'];
+// First match wins; every path not matched before lands in other-ui. Probes follow the area they probe and are not attributed.
+const AREAS = [
+    { key: 'viewpoint', label: 'Viewpoint (IR, authoring, derive)', rule: 'frontend/src/components/editor-v2/viewpoint/**', re: /^frontend\/src\/components\/editor-v2\/viewpoint\// },
+    { key: 'simulator', label: 'Simulator', rule: 'editor-v2/sim/**, model/simulation/**', re: /^frontend\/src\/(components\/editor-v2\/sim|model\/simulation)\// },
+    { key: 'canvas', label: 'Canvas', rule: 'the rest of frontend/src/components/editor-v2/**', re: /^frontend\/src\/components\/editor-v2\// },
+    { key: 'languages', label: 'Languages and codegen', rule: 'src/jjscript, jjel, jjtl, codegen', re: /^frontend\/src\/(jjscript|jjel|jjtl|codegen)\// },
+    { key: 'model-core', label: 'Model core', rule: 'src/model, redux, joiner, view, common, api, services', re: /^frontend\/src\/(model|redux|joiner|view|common|api|services)\// },
+    { key: 'harness', label: 'Harness', rule: 'frontend/scripts/** (not probes), .claude/, CLAUDE.md, AGENTS.md, package.json, vitest.config.ts', re: /^(frontend\/scripts\/|\.claude\/|CLAUDE\.md$|AGENTS\.md$|frontend\/package\.json$|frontend\/vitest\.config\.ts$|\.gitignore$)/ },
+    { key: 'other-ui', label: 'Other UI', rule: 'everything else', re: /^/ },
+];
+const BANDS = [[50, '≤50'], [200, '51–200'], [800, '201–800'], [Infinity, '>800']];
+const isProbe = (p) => p.startsWith('frontend/scripts/probe/') || /(^|\/)_tmp_/.test(p);
+const areaOf = (p) => (isProbe(p) ? '' : AREAS.find((a) => a.re.test(p)).key);
+const git = (args) => spawnSync('git', ['-C', REPO, ...args], { encoding: 'utf8', timeout: 20_000, maxBuffer: 64 * 1024 * 1024 });
+const alive = (pid) => { if (!pid) return false; try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
+
+/** The trunk's copy of a lane's prompt, found by the file name of prompt.txt or by the Prompt-ID's time stamp; '' when none. */
+let trunkPrompts = { at: 0, files: [] };
+function trunkPrompt(id, file) {
+    if (Date.now() - trunkPrompts.at > 5 * 60e3) {
+        const r = git(['ls-tree', '--name-only', TRUNK, 'docs/prompts/']);
+        trunkPrompts = { at: Date.now(), files: r.status === 0 ? r.stdout.split('\n').filter(Boolean) : [] };
+    }
+    const m = /^P-(\d{4}-\d{2}-\d{2})-(\d{4})$/.exec(id);
+    const stamp = m ? 'docs/prompts/claude_' + m[1] + '_' + m[2] + '_' : '';
+    for (const p of trunkPrompts.files.filter((x) => (file && x.endsWith('/' + file)) || (stamp && x.startsWith(stamp)))) {
+        const r = git(['show', TRUNK + ':' + p]);
+        if (r.status === 0 && r.stdout.includes('Prompt-ID: ' + id)) return r.stdout;
+    }
+    return '';
+}
+
+const gitFacts = { key: '', scannedAt: 0, trunk: '', seen: new Set(), byPid: new Map(), reverted: new Map(), entries: [], rc: [] };
+let gitFlight = null;
+
+/** git as a child process: its stdout, or null on a failure or after 60 s. */
+function gitAsync(args, input = '') {
+    return new Promise((resolve) => {
+        const child = spawn('git', ['-C', REPO, ...args]);
+        const chunks = [];
+        const timer = setTimeout(() => child.kill(), 60_000);
+        child.stdout.on('data', (d) => chunks.push(d));
+        child.on('error', () => { clearTimeout(timer); resolve(null); });
+        child.on('close', (code) => { clearTimeout(timer); resolve(code === 0 ? Buffer.concat(chunks).toString('utf8') : null); });
+        child.stdin.on('error', () => { /* git exited first */ });
+        child.stdin.end(input);
+    });
+}
+
+/** Brings gitFacts up to date when a ref moved, in two passes run as child processes, in parallel with the
+ *  caller's log parsing: every commit's subject and body (0.1 s), then --numstat outside docs/ for the
+ *  new commits that carry a Prompt-ID only (0.6 s on the first scan, measured 2026-10-10). */
+function refreshGit(since) {
+    if (gitFlight) return gitFlight;
+    const refs = git(['for-each-ref', '--format=%(objectname) %(refname)']);
+    if (refs.status !== 0) return Promise.resolve(gitFacts);
+    const key = createHash('sha1').update(refs.stdout).digest('hex');
+    if (key === gitFacts.key) return Promise.resolve(gitFacts);
+    const trunk = (refs.stdout.split('\n').find((l) => l.endsWith(' refs/heads/' + TRUNK)) || '').split(' ')[0];
+    // An hour of slack on the committer date; the first scan starts two days before the first lane.
+    const from = gitFacts.scannedAt ? new Date(gitFacts.scannedAt - 3600e3).toISOString() : since;
+    const scanAt = Date.now();
+    gitFlight = (async () => {
+        const out = await gitAsync(['log', '--all', '--no-merges', '--since=' + from, '--format=%x1e%H%x1f%aI%x1f%s%x1f%b']);
+        if (out !== null) {
+            const fresh = addCommits(out);
+            const stats = fresh.length ? await gitAsync(['log', '--no-walk=unsorted', '--no-renames', '--numstat', '--format=%x1e%H', '--stdin', '--', '.', ':(exclude)docs'], fresh.map((c) => c.sha).join('\n') + '\n') : '';
+            if (stats !== null) {
+                const bySha = new Map(fresh.map((c) => [c.sha, c]));
+                for (const rec of stats.split('\x1e')) {
+                    const [head, ...rest] = rec.split('\n');
+                    const c = bySha.get(head.trim());
+                    if (c) c.stat = rest.map((x) => x.trim().split('\t')).filter((x) => x.length === 3).map(([a, d, p]) => ({ a: a === '-' ? 0 : Number(a), d: d === '-' ? 0 : Number(d), p }));
+                }
+                gitFacts.key = key;
+                gitFacts.scannedAt = scanAt;
+            } else {
+                // No stats: forget these commits, so the next scan files them again.
+                for (const c of fresh) {
+                    gitFacts.seen.delete(c.sha);
+                    for (const [pid, list] of gitFacts.byPid) if (list.includes(c)) gitFacts.byPid.set(pid, list.filter((x) => x !== c));
+                }
+            }
+        }
+        if (trunk && trunk !== gitFacts.trunk) { gitFacts.entries = logEntries(); gitFacts.rc = rcRows(); gitFacts.trunk = trunk; }
+        return gitFacts;
+    })().finally(() => { gitFlight = null; });
+    return gitFlight;
+}
+
+/** Files every commit of a `git log` by the Prompt-ID of its subject suffix (CLAUDE.md §6.2) or of a `Prompt-ID:`
+ *  trailer, and every revert by the sha it reverts; returns the new commits that carry a Prompt-ID. */
+function addCommits(out) {
+    const fresh = [];
+    for (const rec of out.split('\x1e')) {
+        const f = rec.split('\x1f');
+        if (f.length < 4 || gitFacts.seen.has(f[0])) continue;
+        const [sha, adate, subject, body] = f;
+        gitFacts.seen.add(sha);
+        const rv = /This reverts commit ([0-9a-f]{40})/.exec(body);
+        if (rv) gitFacts.reverted.set(rv[1], sha.slice(0, 9));
+        const pid = (/\((P-\d{4}-\d{2}-\d{2}-\d{4})\)\s*$/.exec(subject) || /^Prompt-ID:\s*(P-\d{4}-\d{2}-\d{2}-\d{4})/m.exec(body) || [])[1];
+        if (!pid) continue;
+        const list = gitFacts.byPid.get(pid) || [];
+        // A cherry-pick repeats subject and author date on another sha: counted once.
+        if (list.some((c) => c.subject === subject && c.adate === adate)) continue;
+        const c = { sha, adate, subject, stat: [] };
+        list.push(c);
+        gitFacts.byPid.set(pid, list);
+        fresh.push(c);
+    }
+    return fresh;
+}
+
+const stampPid = (s) => { const m = /(\d{4})-(\d{2})-(\d{2})[ T_](\d{2}):?(\d{2})/.exec(s || ''); return m ? 'P-' + m[1] + '-' + m[2] + '-' + m[3] + '-' + m[4] + m[5] : ''; };
+const filePid = (s) => { const m = /claude_(\d{4}-\d{2}-\d{2})_(\d{4})_/.exec(s || ''); return m ? 'P-' + m[1] + '-' + m[2] : ''; };
+
+/** The P9 entries of the trunk: inboxes first (newest), then the active log, then the archive. */
+function logEntries() {
+    const ls = git(['ls-tree', '--name-only', TRUNK, 'docs/log-inbox/']);
+    const files = [...(ls.status === 0 ? ls.stdout.split('\n').filter((p) => p.endsWith('.md')) : []), 'docs/claude-code-log.md', 'docs/claude-code-log-archive.md'];
+    const raw = [];
+    for (const file of files) {
+        const r = git(['show', TRUNK + ':' + file]);
+        if (r.status !== 0) continue;
+        let cur = null;
+        for (const ln of r.stdout.split('\n')) {
+            if (/^## \d{4}-\d{2}-\d{2}/.test(ln)) { cur = { head: ln, fields: {} }; raw.push(cur); continue; }
+            const m = cur && /^\*\*([^*]+)\*\*:\s*(.*)$/.exec(ln);
+            if (m && !(m[1].trim() in cur.fields)) cur.fields[m[1].trim()] = m[2];
+        }
+    }
+    return raw.map(({ head, fields }) => {
+        const c = (fields.Corregge || '').trim();
+        const filled = c !== '' && !/^[—-]/.test(c);
+        const o = fields.Outcome || '';
+        return {
+            pid: (/\((P-\d{4}-\d{2}-\d{2}-\d{4})\)/.exec(head) || [])[1] || stampPid(fields['Prompt document name']),
+            type: (/^## \S+ — ([a-z]+)/.exec(head) || [])[1] || '',
+            cPid: filled ? (/P-\d{4}-\d{2}-\d{2}-\d{4}/.exec(c) || [])[0] || filePid(c) || stampPid(c) : '',
+            causa: ((fields.Causa || '').match(/\(([a-g])\)|^([a-g])\b/) || []).slice(1).find(Boolean) || '',
+            outcome: o.includes('✅') ? 'completed' : o.includes('⚠') ? 'partial' : o.includes('❌') ? 'problems' : '',
+            regressions: (fields.Regressions || '').trim().split(/[ .,;]/)[0],
+            smoke: (fields['Smoke visivo'] || '').trim().split(/[ (—,;]/)[0],
+        };
+    });
+}
+
+/** RC rows of the trunk's decisions.md from RC-20 (the orchestrated lanes) on: id, date, the bold title. */
+function rcRows() {
+    const r = git(['show', TRUNK + ':docs/decisions.md']);
+    if (r.status !== 0) return [];
+    const lines = r.stdout.split('\n');
+    const out = [];
+    lines.forEach((ln, i) => {
+        const m = /^- \*\*RC-(\d+)\*\* \((\d{4}-\d{2}-\d{2})/.exec(ln);
+        if (!m || Number(m[1]) < 20) return;
+        const t = /\*\*([^*]+)\*\*/.exec(ln.replace(/^- \*\*RC-\d+\*\*/, '')) || /\*\*([^*]+)\*\*/.exec(lines[i + 1] || '');
+        out.push({ id: 'RC-' + m[1], date: m[2], title: t ? t[1].trim().replace(/\.$/, '') : '' });
+    });
+    return out;
+}
+
+/** One lane of /api/insights. firstShot (discovery §4.3): ends done or hard-stop, no rework signal, no blocked or over-90-minute run; null while it runs. */
+function insightLane(id, dir, t, g, corr, own, now) {
+    const f = t.facts || {};
+    const h = header(dir);
+    const tierLine = readTrim(join(dir, 'tier.txt'));
+    const tier = (/^(heavy|light)\b/.exec(tierLine) || [])[1] || '';
+    // RC-45: a lane whose tier was drawn at random says so in its Lane line, `tier drawn (RC-45): heavy|light`.
+    const dm = /tier drawn \(RC-45\)\s*:?\s*(heavy|light)?/i.exec(h.lane);
+    const commits = g.byPid.get(id) || [];
+    const lines = {};
+    const files = new Set();
+    let cz = false;
+    for (const c of commits) for (const s of c.stat) {
+        if (!s.p || s.p.startsWith('docs/')) continue;
+        files.add(s.p);
+        if (CZ_FILES.some((n) => s.p.endsWith('/' + n))) cz = true;
+        const a = areaOf(s.p);
+        if (a) lines[a] = (lines[a] || 0) + s.a + s.d;
+    }
+    const total = Object.values(lines).reduce((a, b) => a + b, 0);
+    const byLines = Object.keys(lines).sort((a, b) => lines[b] - lines[a]);
+    const live = !t.exited && alive(Number(readTrim(join(dir, 'pid.txt'))));
+    const cls = f.resumeCls || [];
+    const signals = {
+        corrective: cls.includes('corrective'),
+        correctedBy: [...new Set(corr.filter((e) => e.pid !== id).map((e) => e.pid))],
+        selfCorrected: corr.some((e) => e.pid === id),
+        reverted: commits.map((c) => g.reverted.get(c.sha)).filter(Boolean),
+        blockedRun: !!f.blockedRun, overTime: !!f.overTime, recovery: cls.includes('recovery'),
+        resumeTextComplete: cls.length >= Math.max(0, (f.runs || 0) - 1),
+    };
+    const final = live ? 'running' : f.outcome || 'none';
+    const rework = signals.corrective || signals.correctedBy.length > 0 || signals.selfCorrected || signals.reverted.length > 0;
+    const failedRun = signals.blockedRun || signals.overTime || ['blocked', 'none', 'unparsed'].includes(final);
+    const turns = t.turns || [];
+    const end = turns.length ? turns[turns.length - 1].e : 0;
+    // Without input-k.md the one turn covers the last run only: runs and work come from the result events, the start from the Prompt-ID.
+    const res = f.fromInputs || !(f.res || []).length ? null : f.res;
+    const runs = res
+        ? res.map((r, i) => ({ start: null, ms: r.ms, outcome: r.outcome, input: i === 0 ? 'first' : cls.length === res.length - 1 ? cls[i - 1] : 'unknown' }))
+        : turns.map((x, i) => ({ start: Math.round(x.s), ms: Math.round(x.e - x.s), outcome: x.o || '', input: i === 0 ? 'first' : x.c || 'unknown' }));
+    const start = turns.length ? Math.round(res ? Math.min(turns[0].s, idTime(id) || turns[0].s) : turns[0].s) : 0;
+    return {
+        id, day: id.slice(2, 12), start, end: Math.round(end), kind: kindOf(h.lane, h.file),
+        model: f.model || null, subagentModels: f.subModels || {}, tier, tierReason: tierLine.replace(/^[^:]*:\s*/, ''),
+        drawn: dm ? (dm[1] || tier || '').toLowerCase() || null : null, cliVersion: f.cli || '',
+        runs, final, workMs: Math.round(runs.reduce((a, x) => a + Math.max(0, x.ms), 0)), costUSD: Math.round((f.costUSD || 0) * 100) / 100, outTokens: f.outTokens || 0,
+        commits: commits.map((c) => c.sha.slice(0, 9)), files: [...files], lines, primaryArea: byLines[0] || '', criticalZone: cz,
+        sizeBand: total ? BANDS.find(([max]) => total <= max)[1] : null,
+        signals, rework, failedRun,
+        firstShot: live ? null : ['done', 'hard-stop'].includes(final) && !rework && !failedRun,
+        causa: [...new Set([...corr, own].filter(Boolean))].map((e) => e.causa).filter(Boolean),
+        selfAssessment: own ? { outcome: own.outcome, regressions: own.regressions, causa: own.causa, corregge: own.cPid, smoke: own.smoke } : null,
+        ageDays: live ? 0 : Math.round(((now - end) / 864e5) * 10) / 10,
+    };
+}
+
+let insMem = { at: 0, data: null };
+let insFlight = null;
+function insights() {
+    if (insMem.data && Date.now() - insMem.at < CACHE_MS) return Promise.resolve(insMem.data);
+    if (insFlight) return insFlight;
+    insFlight = (async () => {
+        const now = Date.now();
+        const ids = readdirSync(ROOT).filter((n) => /^P-\d{4}-\d{2}-\d{2}-\d{4}$/.test(n)).sort();
+        const pending = refreshGit(new Date((ids.length ? idTime(ids[0]) : now) - 2 * 864e5).toISOString());
+        const rows = [];
+        for (const id of ids) {
+            const dir = join(ROOT, id);
+            try { if (!statSync(dir).isDirectory()) continue; } catch { continue; }
+            // header() here, not after the await: its reads and trunk lookups overlap the git child processes.
+            try { rows.push({ id, dir, t: laneTimeline(id, now) }); header(dir); } catch { /* an unreadable lane folder: skipped */ }
+        }
+        if (tlDirty) {
+            try { writeFileSync(TL_CACHE_FILE + '.tmp', JSON.stringify(tlCache)); renameSync(TL_CACHE_FILE + '.tmp', TL_CACHE_FILE); } catch { /* best effort */ }
+            tlDirty = false;
+        }
+        const g = await pending;
+        const corr = new Map();
+        const own = new Map();
+        for (const e of g.entries) {
+            if (e.type !== 'ticket' && e.pid && !own.has(e.pid)) own.set(e.pid, e);
+            if (e.cPid) { if (!corr.has(e.cPid)) corr.set(e.cPid, []); corr.get(e.cPid).push(e); }
+        }
+        const lanes = rows.map(({ id, dir, t }) => insightLane(id, dir, t, g, corr.get(id) || [], own.get(id), now));
+        const data = {
+            v: 1, now, trunk: g.trunk.slice(0, 9),
+            sources: { lanes: lanes.length, sessions: lanes.filter((l) => l.model).length, commitsScanned: g.seen.size, logEntries: g.entries.length, since: ids.length ? ids[0].slice(2, 12) : '' },
+            areas: AREAS.map(({ key, label, rule }) => ({ key, label, rule })), bands: BANDS.map((b) => b[1]), harness: g.rc, lanes,
+        };
+        insMem = { at: Date.now(), data };
+        return data;
+    })().finally(() => { insFlight = null; });
+    return insFlight;
 }
 
 // ── exports ─────────────────────────────────────────────────────────────────
@@ -573,6 +940,13 @@ createServer((req, res) => {
         try { body = JSON.stringify(timeline()); } catch (e) { body = JSON.stringify({ now: Date.now(), lanes: [], chainDeps: [], error: String(e) }); }
         res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
         return res.end(body);
+    }
+    if (req.url === '/api/insights') {
+        insights().then((d) => JSON.stringify(d), (e) => JSON.stringify({ v: 1, now: Date.now(), lanes: [], error: String(e) })).then((body) => {
+            res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+            res.end(body);
+        });
+        return;
     }
     if (req.url === '/api') {
         let body;
