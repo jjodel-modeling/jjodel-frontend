@@ -16,9 +16,10 @@ missing the write is skipped and finished lanes are read again).
 **Lanes.** A table of the running and blocked lanes: state, kind (from the `Lane:`
 line of the prompt) and tier, elapsed time, an estimate of the time left, the current
 phase (the last tool description in the lane's `log.jsonl`), the worktree and who
-launched it. The estimate is a heuristic, not a promise: a measured median per kind,
-minus the elapsed time, corrected by the phase and the load average. Below it, the
-earlier lanes grouped by day, with their outcome.
+launched it. The Phase cell draws the lane's progress on its first line and the phase
+text, cut, on its second (next section). The estimate is a heuristic, not a promise: a
+measured median per kind, minus the elapsed time, corrected by the phase and the load
+average. Below it, the earlier lanes grouped by day, with their outcome.
 
 **Timeline.** One row per lane, grouped by worktree or by launcher, over the last
 24 h, 3 days, 7 days or all time. Each turn is a bar coloured by its outcome; the gap
@@ -35,6 +36,45 @@ longest waits, lanes per day by outcome, outcome by kind of lane, and who launch
 the lanes. It also offers the two exports below, and can open the trace directly in
 ui.perfetto.dev. Below these, three sections read `/api/insights` (next section):
 code areas, model by area and by size, and first-shot success over time.
+
+## Progress, the estimate and `resolved`
+
+**Progress.** A running lane's `/api` row carries `progress`: `{ reached, total, current,
+steps: [{ name, state }] }`, a ladder of milestones read from the tool calls of its
+`log.jsonl`. The ladder follows the kind:
+
+| Kind | Milestones |
+|------|------------|
+| phase2, fast | Orient, Read, Tests first, Code, Gates, Probe, Commit, Closure |
+| discovery | Orient, Read, Probe, Report, Commit, Closure |
+| merge | Measure, Merge, Gates, Commit, Closure |
+
+Orient is a `pwd` or `git log` before the first write in the tree; Read a read of
+`frontend/src` or `frontend/scripts`; Tests first a test written or run before the code;
+Code a write to a source file there (an edit tool, a redirection, `sed -i`, or a `python3`
+or `node` heredoc that opens it to write; tests, probes and `_tmp_` files excluded);
+Gates, Probe and Commit count after the code; Closure is a docs commit that carries the
+log inbox or the prompt's Status. Report is a write under `docs/discovery/`; Measure a
+`pwd` or a reading git command before the `git merge`. A step is `reached`, `skipped`
+(not reached while a later one is) or `pending`; `current` is the last one reached. The
+log is read on from where the last read stopped, keeping only tool calls and git's
+result lines. A kind without a ladder, and a direct merge (a lane folder holding
+`direct.json`: its log is the worker's, with no tool call), have `progress: null`. The Phase cell draws one segment
+per step and `reached/total`, with the phase text below; both lines are drawn with or
+without progress, so a row keeps its height as the lane advances.
+
+**The estimate with progress.** Without progress the rule above is unchanged. With it, the
+time left is the mean of that rule and the median times the share of the ladder above
+the current milestone: `(rule + median × (1 − position/total)) / 2`, where `position` is
+the current milestone's place in the ladder, so a skipped step counts as behind the lane.
+A phase that names a gate still reads `under 5 min`, and so does the last milestone;
+otherwise a phase that names a probe still reads `about 5-15 min`.
+
+**`resolved`.** An exited lane whose outcome is `blocked` and whose folder holds
+`resolved.txt` (one line, date, who and why, written by `lane-run resolve`) shows the
+outcome `resolved` in the Lanes tab, in the colour of `done`. The overlay is the Lanes
+tab's only: `/api/timeline` and the two exports keep `blocked`, and Insights keeps the raw
+outcome on purpose, since first-shot success measures the lane, not the repair made after it.
 
 ## Models, code areas and first-shot success
 
@@ -81,7 +121,8 @@ npm run lane-board
 ```
 
 `--refresh` is the page's polling interval in seconds. The server listens on
-`127.0.0.1` only. Port 4700 is deliberately outside the 30xx range used by the dev
+`127.0.0.1` only, and only when the file is run as a script: importing it, as its tests
+do, opens no port. Port 4700 is deliberately outside the 30xx range used by the dev
 servers and probes (3000, 3001, the `lane-run probe` and `monitor` ports), so the
 board never competes with them.
 
@@ -147,4 +188,6 @@ The launcher is read from the commit that added the lane's prompt to `docs/promp
 - `/export/lanes.xes`: an XES event log for process mining tools.
 
 Both take `?days=<n>` (lanes whose last turn ends within the last `n` days; absent or
-`0` means all) and `&download` to be served as an attachment.
+`0` means all) and `&download` to be served as an attachment. Both carry the raw outcome:
+the XES trace attribute comes from `/api/timeline`, which turns the Lanes tab's
+`resolved` back into `blocked`, and the trace events carry each turn's own outcome.

@@ -7,12 +7,15 @@
 // parallelism and dependencies; finished lanes are cached in timeline-cache.json. The Insights
 // tab adds /api/insights: model, cost, code areas and first-shot success per lane, from the lane
 // logs, `git log --all` and the trunk's log entries and decisions.md (insights.js, README).
+// A running lane's progress is the ladder of milestones its log.jsonl has reached (below), drawn in
+// its Phase cell; an exited blocked lane holding resolved.txt reads `resolved` in the Lanes tab only.
+// It listens when run as a script, not when imported (the tests import its functions).
 // Usage: node ~/.jjodel-lanes/board/lane-board.mjs [--port 4700] [--refresh 30]
 
 import { createServer } from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, openSync, readSync, fstatSync, closeSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, openSync, readSync, fstatSync, closeSync, realpathSync } from 'node:fs';
 import { homedir, loadavg } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -91,18 +94,326 @@ function phaseOf(dir) {
     return m.length ? m[m.length - 1][1].replace(/\\(.)/g, '$1') : '';
 }
 
-/** A heuristic, never a promise: the median for the kind minus the elapsed, corrected by the phase and the load. */
-function estimate(kind, minutes, phase, load) {
+/** A heuristic, never a promise: the median for the kind minus the elapsed, corrected by the phase and the load.
+ *  With milestones, averaged with the median times the share of the ladder above the current milestone. */
+export function estimate(kind, minutes, phase, load, progress) {
     const p = phase.toLowerCase();
     const stretch = load > 20 ? 1.5 : 1;
     if (/gate|closure|commit body|status flip|flip/.test(p)) return 'under 5 min';
+    // The position of the current milestone, not the count reached: a skipped step is behind the lane.
+    const done = progress && progress.total ? (progress.steps.findIndex((s) => s.name === progress.current) + 1) / progress.total : null;
+    if (done === 1) return 'under 5 min';
     if (/probe|dev server/.test(p)) return 'about 5-15 min';
     const med = MEDIAN[kind];
     if (!med) return '?';
     let left = /tests? first|baseline/.test(p) ? med * 0.8 : med - minutes;
+    if (done !== null) left = (left + Math.max(0, med * (1 - done))) / 2;
     left = Math.round(left * stretch);
     if (left <= 0) return 'past the median';
     return 'about ' + left + ' min';
+}
+
+// ── progress ────────────────────────────────────────────────────────────────
+// How far a running lane has got, read from the tool calls of its log.jsonl: one ladder of
+// milestones per kind, each reached when its signal appears. A later milestone may be reached
+// while an earlier one never is (a lane without a probe): once a later one is reached, the
+// earlier ones read as skipped, not pending. The current milestone is the last one reached.
+// Heredoc bodies (commit messages, log entries) and quoted strings are text, not commands,
+// except the program a python3 or node heredoc runs: lanes edit files that way as often as with
+// Edit. The code area is frontend/src and frontend/scripts, where a harness lane writes.
+
+const LADDERS = {
+    phase2: ['Orient', 'Read', 'Tests first', 'Code', 'Gates', 'Probe', 'Commit', 'Closure'],
+    fast: ['Orient', 'Read', 'Tests first', 'Code', 'Gates', 'Probe', 'Commit', 'Closure'],
+    discovery: ['Orient', 'Read', 'Probe', 'Report', 'Commit', 'Closure'],
+    merge: ['Measure', 'Merge', 'Gates', 'Commit', 'Closure'],
+};
+
+const EDIT_TOOLS = /^(Edit|Write|MultiEdit|NotebookEdit)$/;
+const CODE_FILE = /(^|\/)frontend\/(src|scripts)(\/|$)/;
+const TEST_FILE = /(^|\/)(__tests__|__mocks__)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
+const NOT_CODE = /(^|\/)_tmp_|(^|\/)frontend\/scripts\/probe\//;
+const CODE_IN_SHELL = /frontend\/(src|scripts)\b|(^|[\s'"=(:])(\.\/)?(src|scripts)\//;
+const CODE_RELATIVE = /^(\.\/)?(src|scripts)\//;
+const SOURCE_FILE = /\.([cm]?[jt]sx?|s?css|json|html?|svg)$/;
+const DOCS_FILE = /(^|\/)docs\//;
+const READ_VERB = /(^|[\s;&|(])(grep|rg|sed|cat|head|tail|awk|wc|ls|find|nl)\s|\bgit\s+(show|diff|grep|blame)\b/;
+const ORIENT = /(^|[\s;&|(])pwd(?![\w-])|\bgit\s+log\b/;
+const MEASURE = /(^|[\s;&|(])pwd(?![\w-])|\bgit\s+(log|status|diff|show|rev-parse|merge-base|merge-tree|worktree)\b/;
+const VITEST = /\bnpx\s+vitest\b|\bvitest\s+run\b|\bnpm\s+(run\s+)?test\b/;
+const GATE = /\bnpm\s+(run\s+)?(typecheck|build|test|check:[\w-]+)\b|\bnpx\s+(vitest|tsc)\b|\bvitest\s+run\b|\btsc\s+--noEmit\b/;
+// lane-run probe <worktree> <probe.ts>: without the two arguments it only prints its usage.
+const PROBE = /\blane-run(\.mjs)?\s+probe\s+\S+\s+\S+\.[cm]?[jt]sx?\b|\btsx\s+\S*(probe\/|_tmp_)|\bnpm\s+run\s+smoke\b/;
+const REPORT_FILE = /(^|\/)docs\/discovery\/.*\.md$/;
+const MERGE = /\bgit\s+merge(?![\w-])(?!\s+--(abort|quit)\b)/;
+const GIT_WRITE = /\bgit\s+(-[Cc]\s+\S+\s+)*(commit|merge|cherry-pick|revert)(?![\w-])/;
+const GIT_COMMIT = /\bgit\s+(-[Cc]\s+\S+\s+)*commit(?![\w-])/;
+const HEREDOC = /(?<!<)<<-?\s*(['"]?)([A-Za-z_]\w*)\1/;
+const QUOTED = /'[^']*'|"(?:[^"\\]|\\.)*"/g;
+const PYTHON_WRITE = /\bopen\(\s*(?:(['"])([^'"\n]+)\1|(\w+))\s*,\s*['"][wa]|\bPath\(\s*(['"])([^'"\n]+)\4\s*\)\.write_text\(/g;
+const NODE_WRITE = /\b(?:writeFileSync|appendFileSync)\(\s*(?:(['"])([^'"\n]+)\1|(\w+))/g;
+const REDIRECT = /(?:^|[^<>&\d])>>?\s*(['"]?)([^\s;&|'"<>()]+)\1/g;
+const IN_PLACE = /\bsed\s+-i\b|\bperl\s+-\w*i/;
+const CD = /(?:^|[;&|(]|\s)cd\s+(['"]?)([^\s;&|'"()]+)\1/g;
+const COMMIT_LINE = /^\[[^\]\n]* [0-9a-f]{7,40}\] (.*)$/gm;
+const MERGE_MADE = /^Merge made by /m;
+const COMMIT_FAILED = /^(fatal|error):|nothing (added )?to commit|Aborting commit/m;
+const CLOSURE_PATH = /(^|[\s'"=/])docs\/(log-inbox|prompts)\//;
+// The result lines a ladder reads: compactEvent keeps these and drops the rest.
+const RESULT_KEEP = /^(\[[^\]\n]* [0-9a-f]{7,40}\] |Merge made by |fatal:|error:)|nothing (added )?to commit|Aborting commit/;
+const INPUT_KEEP = ['command', 'file_path', 'notebook_path', 'path', 'pattern'];
+
+const str = (v) => (typeof v === 'string' ? v : '');
+
+/** A shell command without its heredoc bodies, and the heredocs: the text after `<<` on its opening line, its body. */
+function heredocs(cmd) {
+    const out = [];
+    const docs = [];
+    let doc = null;
+    for (const line of cmd.split('\n')) {
+        if (doc) {
+            if (line.trim() === doc.end) doc = null;
+            else doc.body.push(line);
+            continue;
+        }
+        out.push(line);
+        const m = HEREDOC.exec(line);
+        if (m) {
+            const text = out.join('\n');
+            doc = { end: m[2], opener: text.slice(0, text.length - line.length + m.index), body: [] };
+            docs.push(doc);
+        }
+    }
+    return { cmd: out.join('\n'), docs: docs.map((d) => ({ opener: d.opener, body: d.body.join('\n') })) };
+}
+
+/** A path as written in a shell, joined to the last `cd` before it when relative. */
+function inDir(before, path) {
+    if (/^[/~]/.test(path)) return path;
+    const cds = [...before.matchAll(CD)];
+    const dir = cds.length ? cds[cds.length - 1][2] : '';
+    return dir ? dir.replace(/\/$/, '') + '/' + path.replace(/^\.\//, '') : path;
+}
+
+/** The files a program opens to write: a literal, or the last literal assigned to the name it opens. */
+function programWrites(body, re) {
+    const value = (name) => {
+        const m = [...body.matchAll(new RegExp('(?:^|[^\\w.])' + name + '\\s*=\\s*([\'"])([^\'"\\n]+)\\1', 'g'))];
+        return m.length ? m[m.length - 1][2] : '';
+    };
+    const out = [];
+    for (const m of body.matchAll(re)) {
+        const p = m[2] || m[5] || (m[3] ? value(m[3]) : '');
+        if (p) out.push(p);
+    }
+    return out;
+}
+
+/** The files a shell command writes: redirections, sed -i, and what a python3 or node heredoc opens to write.
+ *  `bare` is the command with its quoted strings emptied: a `>` or a `sed -i` inside quotes is text. */
+function shellWrites(bare, docs) {
+    const out = [];
+    for (const m of bare.matchAll(REDIRECT)) if (!/^(\/dev\/|&)/.test(m[2])) out.push(inDir(bare.slice(0, m.index), m[2]));
+    let at = 0;
+    for (const seg of bare.split(/&&|\|\||;|\n/)) {
+        if (IN_PLACE.test(seg)) for (const w of seg.trim().split(/\s+/)) if (/\.[A-Za-z]{1,5}$/.test(w)) out.push(inDir(bare.slice(0, at), w));
+        at += seg.length + 1;
+    }
+    for (const d of docs) {
+        const lang = /\bpython3?\b[^\n]*$/.test(d.opener) ? PYTHON_WRITE : /\bnode\b[^\n]*$/.test(d.opener) ? NODE_WRITE : null;
+        if (lang) for (const p of programWrites(d.body, lang)) out.push(inDir(d.opener, p));
+    }
+    return out;
+}
+
+function resultText(content) {
+    if (typeof content === 'string') return content;
+    if (!Array.isArray(content)) return '';
+    return content.map((x) => (x && typeof x.text === 'string' ? x.text : '')).join('\n');
+}
+
+/** The subject of the commit a command makes, from the heredoc or the -m of its git commit; '' when it reads a file. */
+function commitSubject(raw) {
+    const at = raw.search(GIT_COMMIT);
+    if (at < 0) return '';
+    const rest = raw.slice(at);
+    const nl = rest.indexOf('\n');
+    const h = HEREDOC.exec(nl < 0 ? rest : rest.slice(0, nl));
+    if (h && nl >= 0) return (rest.slice(nl + 1).split('\n').find((l) => l.trim() && l.trim() !== h[2]) || '').trim();
+    const m = /\s-m\s*(['"])([\s\S]*?)\1/.exec(rest);
+    return m ? m[2].split('\n')[0].trim() : '';
+}
+
+/** A docs commit: by its subject, or, unknown, by a pathspec all under docs/. */
+function docsCommit(subject, cmd) {
+    if (subject) return /^docs\b/i.test(subject);
+    const seg = cmd.slice(cmd.search(GIT_COMMIT)).split(/\n|&&|\|\||;/)[0];
+    const i = seg.indexOf(' -- ');
+    const paths = i < 0 ? [] : seg.slice(i + 4).trim().split(/\s+/).filter(Boolean);
+    return paths.length > 0 && paths.every((x) => /^['"]?(\.\/)?docs(\/|['"]?$)/.test(x));
+}
+
+/** The commits a finished Bash call made: from git's own lines, else from the command of a quiet commit. */
+function commitsOf(call) {
+    if (call.name !== 'Bash' || !call.result || call.result.error || !GIT_WRITE.test(call.bare)) return [];
+    const text = call.result.text;
+    const lines = [...text.matchAll(COMMIT_LINE)].map((m) => ({ docs: /^docs\b/i.test(m[1]) }));
+    if (lines.length) return lines;
+    if (MERGE_MADE.test(text)) return [{ docs: false }];
+    if (!GIT_COMMIT.test(call.bare) || COMMIT_FAILED.test(text)) return [];
+    return [{ docs: docsCommit(commitSubject(call.raw), call.cmd) }];
+}
+
+/** The tool calls of a log in order, each with its result once it has one. */
+function toolCalls(events) {
+    const calls = [];
+    const byId = new Map();
+    for (const e of Array.isArray(events) ? events : []) {
+        const content = e && e.message && Array.isArray(e.message.content) ? e.message.content : [];
+        for (const c of content) {
+            if (!c || typeof c !== 'object') continue;
+            if (e.type === 'assistant' && c.type === 'tool_use') {
+                const input = c.input && typeof c.input === 'object' ? c.input : {};
+                const raw = str(input.command);
+                const h = heredocs(raw);
+                const bare = h.cmd.replace(QUOTED, (q) => q[0] + q[0]);
+                const path = str(input.file_path) || str(input.notebook_path) || str(input.path);
+                const name = str(c.name);
+                // The files the call writes: the path of an edit tool, or what the shell writes.
+                const writes = EDIT_TOOLS.test(name) ? [path] : name === 'Bash' ? shellWrites(bare, h.docs) : [];
+                const call = { name, raw, cmd: h.cmd, bare, path, pattern: str(input.pattern), writes, result: null, commits: [], closure: false };
+                calls.push(call);
+                if (c.id) byId.set(c.id, call);
+            } else if (e.type === 'user' && c.type === 'tool_result') {
+                const call = byId.get(c.tool_use_id);
+                if (call) call.result = { error: c.is_error === true, text: resultText(c.content) };
+            }
+        }
+    }
+    // A docs commit closes the lane when it carries the log inbox or the prompt's Status,
+    // named in its command or edited since the commit before it.
+    let touched = false;
+    for (const call of calls) {
+        if (call.writes.some((w) => CLOSURE_PATH.test('/' + w))) touched = true;
+        call.commits = commitsOf(call);
+        call.closure = call.commits.some((x) => x.docs) && (touched || CLOSURE_PATH.test(call.bare));
+        if (call.commits.length) touched = false;
+    }
+    return calls;
+}
+
+/** The index of the call that reached each step of the ladder, -1 for a step not reached. */
+function ladder(kind, cs) {
+    const find = (test, from = 0, to = cs.length) => {
+        for (let i = Math.max(0, from); i < to; i++) if (test(cs[i])) return i;
+        return -1;
+    };
+    const before = (i) => (i < 0 ? cs.length : i);
+    const after = (i, test) => (i < 0 ? -1 : find(test, i + 1));
+    const bash = (re) => (c) => c.name === 'Bash' && re.test(c.bare);
+    const writes = (c, test) => c.writes.some(test);
+    const inCode = (w) => CODE_FILE.test(w) || CODE_RELATIVE.test(w);
+    // A write in the lane's tree; a log redirected to /tmp is not one.
+    const isEdit = (c) => writes(c, (w) => inCode(w) || DOCS_FILE.test(w));
+    const isRead = (c) => (/^(Read|Grep|Glob)$/.test(c.name) && (CODE_FILE.test(c.path) || CODE_FILE.test(c.pattern)))
+        || (c.name === 'Bash' && READ_VERB.test(c.bare) && CODE_IN_SHELL.test(c.bare));
+    const isCode = (c) => writes(c, (w) => inCode(w) && SOURCE_FILE.test(w) && !TEST_FILE.test(w) && !NOT_CODE.test(w));
+    const isTest = (c) => writes(c, (w) => TEST_FILE.test(w)) || bash(VITEST)(c);
+    const isReport = (c) => writes(c, (w) => REPORT_FILE.test(w));
+    const anyCommit = (c) => c.commits.length > 0;
+    const codeCommit = (c) => c.commits.some((x) => !x.docs);
+    const closure = (c) => c.closure;
+    if (kind === 'merge') {
+        const merge = find(bash(MERGE));
+        // A merge that commits by itself is its own commit.
+        const commit = merge < 0 ? -1 : find(codeCommit, merge);
+        return [find(bash(MEASURE), 0, before(merge)), merge, after(merge, bash(GATE)), commit, find(closure, commit >= 0 ? commit : merge)];
+    }
+    const orient = find(bash(ORIENT), 0, before(find(isEdit)));
+    const read = find(isRead);
+    if (kind === 'discovery') {
+        const report = find(isReport);
+        const commit = after(report, anyCommit);
+        return [orient, read, find(bash(PROBE)), report, commit, find(closure, commit)];
+    }
+    // Gates, probe and commit count after the code: a baseline or a port committed first is not one.
+    const code = find(isCode);
+    const commit = after(code, codeCommit);
+    return [orient, read, find(isTest, 0, before(code)), code, after(code, bash(GATE)), after(code, bash(PROBE)), commit, find(closure, commit >= 0 ? commit : code)];
+}
+
+/** The milestones of a lane of `kind` from the parsed events of its log; null for a kind without a ladder. */
+export function milestones(kind, events) {
+    const names = LADDERS[kind];
+    if (!names) return null;
+    const at = ladder(kind, toolCalls(events));
+    let last = -1;
+    at.forEach((i, k) => { if (i >= 0) last = k; });
+    const steps = names.map((name, k) => ({ name, reached: at[k] >= 0, state: at[k] >= 0 ? 'reached' : k < last ? 'skipped' : 'pending' }));
+    return { steps, current: last >= 0 ? names[last] : '' };
+}
+
+/** The progress of a live row in /api: { reached, total, current, steps: [{ name, state }] }, or null. */
+export function progressOf(kind, events) {
+    const m = milestones(kind, events);
+    if (!m) return null;
+    return { reached: m.steps.filter((s) => s.reached).length, total: m.steps.length, current: m.current, steps: m.steps.map(({ name, state }) => ({ name, state })) };
+}
+
+/** An event cut to what the ladders read (tool names, paths, commands, errors, git's result lines), or null. */
+export function compactEvent(e) {
+    const content = e && e.message && Array.isArray(e.message.content) ? e.message.content : null;
+    if (!content) return null;
+    if (e.type === 'assistant') {
+        const uses = content.filter((c) => c && c.type === 'tool_use').map((c) => {
+            const input = {};
+            for (const k of INPUT_KEEP) if (c.input && typeof c.input[k] === 'string') input[k] = c.input[k];
+            return { type: 'tool_use', id: c.id, name: c.name, input };
+        });
+        return uses.length ? { type: 'assistant', message: { content: uses } } : null;
+    }
+    if (e.type === 'user') {
+        const res = content.filter((c) => c && c.type === 'tool_result').map((c) => ({
+            type: 'tool_result', tool_use_id: c.tool_use_id, is_error: c.is_error === true,
+            content: resultText(c.content).split('\n').filter((l) => RESULT_KEEP.test(l)).join('\n'),
+        }));
+        return res.length ? { type: 'user', message: { content: res } } : null;
+    }
+    return null;
+}
+
+const evCache = new Map();
+
+/** The compacted events of a log, read on from where the last read stopped: a log.jsonl only grows. */
+export function laneEvents(log) {
+    let size;
+    try { size = statSync(log).size; } catch { evCache.delete(log); return []; }
+    let c = evCache.get(log);
+    if (!c || size < c.offset) c = { offset: 0, rest: Buffer.alloc(0), events: [] };
+    evCache.set(log, c);
+    if (size === c.offset) return c.events;
+    let fd;
+    try {
+        fd = openSync(log, 'r');
+        const buf = Buffer.alloc(size - c.offset);
+        const n = readSync(fd, buf, 0, buf.length, c.offset);
+        const all = Buffer.concat([c.rest, buf.subarray(0, n)]);
+        const end = all.lastIndexOf(10);
+        if (end >= 0) {
+            for (const line of all.subarray(0, end).toString('utf8').split('\n')) {
+                if (!line.includes('"tool_use"') && !line.includes('"tool_result"')) continue;
+                let e;
+                try { e = JSON.parse(line); } catch { continue; }
+                const x = compactEvent(e);
+                if (x) c.events.push(x);
+            }
+        }
+        c.rest = Buffer.from(end >= 0 ? all.subarray(end + 1) : all);
+        c.offset += n;
+    } catch { /* read again next time */ } finally {
+        if (fd !== undefined) closeSync(fd);
+    }
+    return c.events;
 }
 
 /** Prompt-ID P-YYYY-MM-DD-HHmm → epoch ms (local time). */
@@ -122,6 +433,7 @@ function collect() {
     const r = spawnSync(process.execPath, [LANE_RUN, 'status', '--all'], { encoding: 'utf8', timeout: 15_000 });
     const error = r.status === 0 ? '' : (r.stderr || r.error?.message || 'lane-run status failed').trim();
     const rows = [];
+    const logs = new Set();
     for (const line of (r.stdout || '').split('\n').slice(1)) {
         if (!line.trim()) continue;
         const cols = line.trim().split(/\s{2,}/);
@@ -141,9 +453,19 @@ function collect() {
             row.lane = h.lane; row.chat = h.chat; row.title = h.title; request = h.request;
             row.kind = kindOf(h.lane, h.file);
             row.tier = readTrim(join(dir, 'tier.txt')).split(/[\s:]/)[0];
+            // resolved (P-2026-10-05-1720): exited blocked and resolved afterwards, whichever lane-run printed the table.
+            // For the Lanes tab only: timeline() keeps the raw outcome for the exports, Insights reads its own from the log.
+            if (outcome === 'blocked' && existsSync(join(dir, 'resolved.txt'))) row.outcome = 'resolved';
             if (live) {
                 row.phase = phaseOf(dir);
-                row.left = estimate(row.kind, minutes, row.phase, load[0]);
+                // A direct merge's log.jsonl is its worker's, with no tool call a ladder reads: no progress.
+                if (existsSync(join(dir, 'direct.json'))) row.progress = null;
+                else {
+                    const log = join(dir, 'log.jsonl');
+                    logs.add(log);
+                    row.progress = progressOf(row.kind, laneEvents(log));
+                }
+                row.left = estimate(row.kind, minutes, row.phase, load[0], row.progress);
             }
         }
         if (!isChain) row.launcher = launcherOf(id, chainPosMem().get(id), row.chat);
@@ -154,6 +476,7 @@ function collect() {
         if (!isChain) Object.assign(row, laneSpan(id, now));
         rows.push(row);
     }
+    for (const log of evCache.keys()) if (!logs.has(log)) evCache.delete(log);
     // A chain spans its lanes: the earliest start, the latest end once every lane that started has ended, the sum of their work.
     const byId = new Map(rows.map((r) => [r.id, r]));
     for (const row of rows) {
@@ -458,6 +781,10 @@ function chainPositions() {
     return pos;
 }
 
+/** The outcome a lane recorded: `resolved` is the Lanes tab's overlay on `blocked` (collect), not the lane's, so the
+ *  Timeline data and the XES export it feeds keep `blocked`; the trace export reads the turns' own outcomes. */
+const rawOutcome = (o) => (o === 'resolved' ? 'blocked' : o || '');
+
 let tlMem = { at: 0, data: null };
 function timeline() {
     if (tlMem.data && Date.now() - tlMem.at < CACHE_MS) return tlMem.data;
@@ -473,7 +800,7 @@ function timeline() {
         try { t = laneTimeline(id, now); } catch { continue; }
         const st = status.get(id) || {};
         const h = st.worktree !== undefined ? st : (() => { const x = header(dir); return { ...x, worktree: readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~'), kind: kindOf(x.lane, x.file) }; })();
-        lanes.push({ id, launcher: launcherOf(id, cpos.get(id), h.chat), title: h.title || '', chat: h.chat || '', worktree: h.worktree || '', kind: h.kind || '', tier: st.tier || '', state: st.state || (t.exited ? 'exited' : '?'), outcome: st.outcome || '', live: !!st.live, turns: t.turns, cites: t.cites, depends: t.depends || [], declared: !!t.declared, request: t.request || { url: '', text: '' } });
+        lanes.push({ id, launcher: launcherOf(id, cpos.get(id), h.chat), title: h.title || '', chat: h.chat || '', worktree: h.worktree || '', kind: h.kind || '', tier: st.tier || '', state: st.state || (t.exited ? 'exited' : '?'), outcome: rawOutcome(st.outcome), live: !!st.live, turns: t.turns, cites: t.cites, depends: t.depends || [], declared: !!t.declared, request: t.request || { url: '', text: '' } });
     }
     const known = new Set(lanes.map((l) => l.id));
     const chainDeps = chains().filter(([a, b]) => known.has(a) && known.has(b));
@@ -876,8 +1203,10 @@ th{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}tr:last-
 td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}td.when{white-space:nowrap;font-variant-numeric:tabular-nums}
 .title{display:block;color:var(--muted);font-size:11px;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;max-width:320px;white-space:normal}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid currentColor}
-.running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done{color:var(--ok)}.question{color:var(--warn)}.hard-stop{color:var(--hs)}.blocked-o,.unparsed,.failed{color:var(--bad)}
+.running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done,.resolved{color:var(--ok)}.question{color:var(--warn)}.hard-stop{color:var(--hs)}.blocked-o,.unparsed,.failed{color:var(--bad)}
 .phase{max-width:340px}.empty{padding:16px;color:var(--muted)}.err{color:var(--bad);margin:8px 0}
+td.phase .prow{display:flex;align-items:center;gap:6px;height:18px;overflow:hidden}td.phase .ptext{display:block;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}td.phase .n{flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.segs{display:flex;gap:2px;min-width:0}.segs .seg{display:block;flex:0 1 10px;min-width:3px;height:8px;border-radius:2px;border:1px solid var(--muted);background:transparent}.segs .seg.reached{background:var(--run);border-color:var(--run)}.segs .seg.skipped{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 3px)}
 table.lfx{table-layout:fixed;width:100%;min-width:1200px}table.lfx th,table.lfx td{padding:8px;overflow:hidden;overflow-wrap:anywhere}table.lfx .pill{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
 td.lfx-num{white-space:nowrap;font-variant-numeric:tabular-nums}td.lfx-cut{white-space:nowrap;text-overflow:ellipsis}
 a.chat{color:var(--run);text-decoration:none}a.chat:hover{text-decoration:underline}
@@ -916,6 +1245,17 @@ const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start
 // One width per column name, shared by every Lanes-tab table so a column keeps its width wherever it appears.
 // Phase (Running) and Outcome (exited) have none: they take the room the others leave.
 const COL_W={Lane:200,State:92,Kind:124,Started:96,Ended:96,Elapsed:100,Span:100,Left:116,Worktree:144,'Launched by':128};
+// Phase (Running): the milestone segments (reached, skipped, pending) and n/m on one line, the phase text cut below,
+// whole in the title. Both lines are drawn with or without progress, so a row keeps its height as the lane advances.
+function phaseCell(r){
+  const p=r.progress;
+  let line='';
+  if(p){
+    const label=p.reached+' of '+p.total+' milestones reached'+(p.current?', last '+p.current:'');
+    line='<span class="segs" role="img" aria-label="'+esc(label)+'">'+p.steps.map(s=>'<i class="seg '+esc(s.state)+'" title="'+esc(s.name+': '+s.state)+'"></i>').join('')+'</span><span class="n" title="'+esc(label)+'">'+p.reached+'/'+p.total+'</span>';
+  }
+  return '<td class="phase" title="'+esc(r.phase)+'"><span class="prow">'+line+'</span><span class="ptext">'+esc(r.phase)+'</span></td>';
+}
 // day: the reference day of Started and Ended, today unless given (an Earlier lanes group passes its own).
 function table(rows,live,day){
   day=day||ymd(new Date());
@@ -927,7 +1267,7 @@ function table(rows,live,day){
     const kind='<td>'+esc(r.kind||r.lane.split(/[ .(]/)[0]||'')+(r.tier?' · '+esc(r.tier):'')+'</td>';
     const oc=r.outcome==='none'?'':r.outcome;
     const wt='<td class="lfx-cut" title="'+esc(r.worktree)+'">'+esc(r.worktree)+'</td>';
-    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+span(r)+'<td class="lfx-num">'+esc(r.left)+'</td><td class="phase lfx-cut" title="'+esc(r.phase)+'">'+esc(r.phase)+'</td>'+wt+'<td>'+launch(r)+'</td></tr>';
+    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+span(r)+'<td class="lfx-num">'+esc(r.left)+'</td>'+phaseCell(r)+wt+'<td>'+launch(r)+'</td></tr>';
     else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+span(r)+wt+'<td>'+launch(r)+'</td></tr>';
   }
   return h+'</tbody></table>';
@@ -967,7 +1307,10 @@ showTab(tab0);
 tick();setInterval(()=>{tick();if(!document.getElementById('tab-timeline').hidden&&window.TL)TL.refresh();if(!document.getElementById('tab-insights').hidden&&window.INS)INS.refresh()},REFRESH);
 </script></body></html>`;
 
-createServer((req, res) => {
+// Listens when run (launchd, node lane-board.mjs), also through a symlinked path, not when its tests import it.
+const MAIN = (() => { try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); } catch { return false; } })();
+
+const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const days = Number(url.searchParams.get('days') || 0);
     if (url.pathname === '/insights.js') {
@@ -1008,4 +1351,5 @@ createServer((req, res) => {
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(PAGE);
-}).listen(PORT, '127.0.0.1', () => console.log('lane-board on http://localhost:' + PORT + ' (refresh ' + REFRESH_S + ' s)'));
+});
+if (MAIN) server.listen(PORT, '127.0.0.1', () => console.log('lane-board on http://localhost:' + PORT + ' (refresh ' + REFRESH_S + ' s)'));
