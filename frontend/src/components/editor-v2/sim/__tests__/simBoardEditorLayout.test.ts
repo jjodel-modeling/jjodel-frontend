@@ -15,6 +15,7 @@ import {
 } from '../simBoardEditorLayout';
 import type { EditorKeyEvent } from '../simBoardEditorLayout';
 import type { BoardDevice, BoardSettings } from '../../../../model/simulation/boardCodec';
+import { moveDevice } from '../simBoard';
 import type { DeviceStatus } from '../simBoard';
 
 const button = (id: string, label: string, cell: [number, number]): BoardDevice => ({ id, kind: 'button', cell, label, binding: { kind: 'event', event: `e-${label}` } });
@@ -93,11 +94,40 @@ describe('editorKeyAction: the keyboard map of the editor (R-SIM-143 item 5)', (
         expect(editorKeyAction(key('Escape'), MICROWAVE, null)).toEqual({ kind: 'close' });
     });
 
-    it('an arrow selects the neighbour; with Shift it moves the selected device one cell (mutants: arrows move; Shift ignored)', () => {
-        expect(editorKeyAction(key('ArrowRight'), MICROWAVE, 'd4')).toEqual({ kind: 'select', id: 'd5' });
-        expect(editorKeyAction(key('ArrowDown', { shiftKey: true }), MICROWAVE, 'd4')).toEqual({ kind: 'move', id: 'd4', cell: [0, 2] });
-        expect(editorKeyAction(key('ArrowLeft', { shiftKey: true }), MICROWAVE, 'd5')).toEqual({ kind: 'move', id: 'd5', cell: [0, 1] });
-        expect(editorKeyAction(key('ArrowLeft'), MICROWAVE, 'd4')).toBeNull();
+    it('an arrow moves the selected device one cell in its direction (mutants: the arrow selects; the direction inverted; two cells)', () => {
+        expect(editorKeyAction(key('ArrowRight'), MICROWAVE, 'd4')).toEqual({ kind: 'move', id: 'd4', cell: [1, 1] });
+        expect(editorKeyAction(key('ArrowDown'), MICROWAVE, 'd4')).toEqual({ kind: 'move', id: 'd4', cell: [0, 2] });
+        expect(editorKeyAction(key('ArrowLeft'), MICROWAVE, 'd5')).toEqual({ kind: 'move', id: 'd5', cell: [0, 1] });
+        expect(editorKeyAction(key('ArrowUp'), MICROWAVE, 'd5')).toEqual({ kind: 'move', id: 'd5', cell: [1, 0] });
+    });
+
+    it('Shift and an arrow select the neighbouring device, and nothing that way gives null (mutants: Shift ignored; the branches swapped back; a move on Shift)', () => {
+        expect(editorKeyAction(key('ArrowRight', { shiftKey: true }), MICROWAVE, 'd4')).toEqual({ kind: 'select', id: 'd5' });
+        expect(editorKeyAction(key('ArrowLeft', { shiftKey: true }), MICROWAVE, 'd5')).toEqual({ kind: 'select', id: 'd4' });
+        expect(editorKeyAction(key('ArrowUp', { shiftKey: true }), MICROWAVE, 'd4')).toEqual({ kind: 'select', id: 'd1' });
+        expect(editorKeyAction(key('ArrowDown', { shiftKey: true }), MICROWAVE, 'd1')).toEqual({ kind: 'select', id: 'd4' });
+        expect(editorKeyAction(key('ArrowLeft', { shiftKey: true }), MICROWAVE, 'd4')).toBeNull();
+    });
+
+    it('a move the board refuses changes nothing: off the grid the action carries the cell and moveDevice returns the same board (mutants: the cell clamped into the grid)', () => {
+        const edge = [...MICROWAVE, button('d8', 'Edge', [7, 1])];
+        for (const [id, k, cell] of [['d4', 'ArrowLeft', [-1, 1]], ['d1', 'ArrowUp', [0, -1]], ['d8', 'ArrowRight', [8, 1]]] as const) {
+            const act = editorKeyAction(key(k), edge, id);
+            expect(act).toEqual({ kind: 'move', id, cell });
+            if (act?.kind === 'move') expect(moveDevice(edge, act.id, act.cell, 8)).toBe(edge);
+        }
+        const free = editorKeyAction(key('ArrowDown'), edge, 'd5');
+        expect(free).toEqual({ kind: 'move', id: 'd5', cell: [1, 2] });
+        if (free?.kind === 'move') expect(moveDevice(edge, free.id, free.cell, 8).find(d => d.id === 'd5')?.cell).toEqual([1, 2]);
+    });
+
+    it('with no device selected an arrow, with or without Shift, selects the first device in board order; an unknown id counts as none (mutants: the plain arrow returns null; the first in the array)', () => {
+        const shuffled = [MICROWAVE[3], MICROWAVE[0], MICROWAVE[1]];
+        expect(editorKeyAction(key('ArrowRight'), MICROWAVE, null)).toEqual({ kind: 'select', id: 'd1' });
+        expect(editorKeyAction(key('ArrowDown', { shiftKey: true }), MICROWAVE, null)).toEqual({ kind: 'select', id: 'd1' });
+        expect(editorKeyAction(key('ArrowLeft'), shuffled, null)).toEqual({ kind: 'select', id: 'd1' });
+        expect(editorKeyAction(key('ArrowRight'), MICROWAVE, 'gone')).toEqual({ kind: 'select', id: 'd1' });
+        expect(editorKeyAction(key('ArrowRight'), [], null)).toBeNull();
     });
 
     it('Delete and Backspace remove the selected device, Enter expands its row (mutants: Backspace missed; Enter deletes)', () => {
@@ -112,9 +142,11 @@ describe('editorKeyAction: the keyboard map of the editor (R-SIM-143 item 5)', (
         for (const tagName of ['INPUT', 'TEXTAREA', 'SELECT']) {
             expect(editorKeyAction(key('Delete', { target: { tagName } }), MICROWAVE, 'd3')).toBeNull();
             expect(editorKeyAction(key('ArrowRight', { target: { tagName } }), MICROWAVE, 'd3')).toBeNull();
+            expect(editorKeyAction(key('ArrowRight', { shiftKey: true, target: { tagName } }), MICROWAVE, 'd3')).toBeNull();
         }
         expect(editorKeyAction(key('Delete', { target: { tagName: 'DIV', isContentEditable: true } }), MICROWAVE, 'd3')).toBeNull();
         expect(editorKeyAction(key('ArrowRight', { ctrlKey: true }), MICROWAVE, 'd4')).toBeNull();
+        expect(editorKeyAction(key('ArrowRight', { shiftKey: true, ctrlKey: true }), MICROWAVE, 'd4')).toBeNull();
         expect(editorKeyAction(key('ArrowRight', { metaKey: true }), MICROWAVE, 'd4')).toBeNull();
         expect(editorKeyAction(key('Delete', { altKey: true }), MICROWAVE, 'd4')).toBeNull();
         expect(editorKeyAction(key('Enter', { target: { tagName: 'BUTTON' } }), MICROWAVE, 'd3')).toBeNull();
