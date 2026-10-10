@@ -136,3 +136,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only merge (frontend/scripts/lane-board/lane-board.mjs), app untouched; earlier-lanes order verified in the built-in browser on 4701 under P-2026-10-10-0840
 **Notes**: Rollback tag `pre-lane-board-order` on `d87d9353b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-0843/result.json`.
 **Prompt document name**: 2026-10-10 08:43
+
+## 2026-10-10 — feat(harness): prompts name the request they answer (P-2026-10-10-1150)
+**Prompt**: `claude_2026-10-10_1150_prompt_request_traceability.md`: P13 bullet and row RC-43 (`Request:` header, the words of the request kept outside the repo as `request.md`), `lane-run start --request <file>` with a warning when a prompt names no request, `Request:` in the issue-discovery template, the `request` field of the board's timeline and its block in the lane detail.
+**Files touched**: `docs/PROTOCOL.md`, `docs/decisions.md` (`41f62884d`); `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/issue-discovery.md`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js` (`79c0307dc`); the closure commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneRun, laneRunDirect, autoIntake 188/188; check:scripts, typecheck:scripts, check:addonly, check:docs exit 0; typecheck 14 (baseline); build exit 0.
+**Out-of-scope changes**: no — six files over two commits, above five (RC-11, rule 19), each named in the prompt's WHAT; the docs commit is split from the code commit by P13 ("Docs e codice mai nello stesso commit"), as RC-42 was.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read of the Timeline detail: 0840 and 1150 show their `request.md` in a blockquote with line breaks, 1150 links its session URL in a new tab, 0810 shows `Request: not recorded`; board on 4701 (PID 29457, cache in `/tmp`) stopped by the chat.
+**Notes**: Cache fix: key on the mtime of `request.md` (v5), the smaller change; checked on 4702 over a temp lane root, an exited lane read empty then carried a later `request.md`. Refusals of `--request` (missing, empty, no value) exit 2 before any write; the warning, the copy and the merge exemption checked with a fake `claude` in a temp HOME. `rm -rf` is denied: `/tmp/lr-req-*` remain. `chain` does not forward `--request`: see the closing report.
+**Prompt document name**: 2026-10-10 11:50
