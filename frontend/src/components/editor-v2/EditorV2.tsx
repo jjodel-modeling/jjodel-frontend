@@ -40,6 +40,11 @@ import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnch
 import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
 import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView, resolveIRView } from './viewpoint/ir/irResolveCore';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
+import { descendantsOf } from './viewpoint/ir/irContainment';
+import {
+    compositionSlotFor, containedInSlot, createOwnerSlotOf, isRootFathered, nextValues, ownerSlotForNewObject, planDrop,
+    resolveDropTarget, slotAccepts, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
+} from './viewpoint/ir/irMembership';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
@@ -51,6 +56,7 @@ import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
+import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -1549,6 +1555,31 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // the active viewpoint has IR graphVertex views. Pass-through (same array
     // references) otherwise — zero cost for non-IR sessions.
     const irContainment = useIRContainment(stableNodes, stableEdges);
+    // The containment model of the last decoration, read by the graphVertex gestures (S3, R-GV-8) in the drag-end,
+    // resize, drop and connect paths below.
+    const irContainmentRef = useRef(irContainment);
+    irContainmentRef.current = irContainment;
+
+    /**
+     * Membership slot edits of a graphVertex gesture (S3, R-GV-8): an append through the L-proxy `.values` setter, as
+     * handleReconnect writes a slot, a removal by value (LIR §4). The caller wraps them in ONE SetField-only
+     * TRANSACTION (no creator inside, §3.3): one composite action, one undo (docs/lir/lir_2026-10-10_graphvertex_s3.md
+     * §1). An op that would change nothing is skipped.
+     */
+    const applyMembershipOps = useCallback((ops: MembershipOp[]) => {
+        for (const op of ops) {
+            const owner: any = LPointerTargetable.fromPointer(op.slot.ownerId as any);
+            const slot = owner?.['$' + op.slot.feature];
+            if (!slot) continue;
+            const next = nextValues(slot.__raw?.values ?? [], op);
+            if (!next) continue;
+            // A removal goes by value: `set_values` cannot shrink a list (its excess '-=' carries no value and
+            // the reducer reports no change), so a shorter array would leave the old tail in place. An append keeps
+            // the L setter, which re-fathers on a containment slot (setValueAtPosition).
+            if (op.op === 'remove') SetFieldAction.new(slot.id, 'values', op.value as any, '-=', true);
+            else slot.values = next;
+        }
+    }, []);
 
     // The run's events are not drawn while a run of this model exists (R-SIM-16, R-SIM-29; P-2026-10-04-0935):
     // flagged hidden on the arrays handed to React Flow only, so nothing is written, laid out or persisted. Keyed on
@@ -2051,6 +2082,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 } else {
                     writeSlot(lObject, match.sourceRef.name, srcObjectId);
                     writeSlot(lObject, match.targetRef.name, tgtObjectId);
+                    // The edge object belongs where its source's container chain says (R-GV-8, spec addendum §6.1;
+                    // S3): a SequenceFlow in its Process's flowElements, not at the root. SetField-only, no creator.
+                    const idl = (store.getState() as any).idlookup ?? {};
+                    const owner = ownerSlotForNewObject(idl, irContainmentRef.current.model, srcObjectId);
+                    const edgeObjectId: string | undefined = lObject?.id;
+                    if (owner && edgeObjectId && slotAccepts(idl, owner, match.edgeClass.id)) {
+                        TRANSACTION('graphVertex edge object owner', () => {
+                            applyMembershipOps([{ op: 'append', slot: owner, value: edgeObjectId }]);
+                        });
+                    }
                 }
                 const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? match.edgeClass.name;
                 const newNode: Node = {
@@ -2068,7 +2109,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             };
             setTimeout(() => writeSlotsAndMount(0), 0);
         },
-        [pendingM1Connection, graphId, getNodes, setNodes, takeSnapshot]
+        [pendingM1Connection, graphId, getNodes, setNodes, takeSnapshot, applyMembershipOps]
     );
     handleObjectEdgeSelectedRef.current = handleObjectEdgeSelected;
 
@@ -2242,6 +2283,48 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     // semantics when no compatible container is under the cursor.
                     const cursorFlow = { x: position.x + defaultNodeWidth / 2, y: position.y + defaultNodeHeight / 2 };
                     const containerNode = findIRDropContainerAt(cursorFlow);
+                    // A container whose view names a creation owner (R-GV-8, spec addendum §6.1; S3): the new object is
+                    // created as the canvas creates any root (bare, its own TRANSACTION), then, once it resolves, appended
+                    // to the owner's slot and to the container's channel slot in one SetField-only TRANSACTION.
+                    if (containerNode) {
+                        const model = irContainmentRef.current.model;
+                        const containerObjectId = model.objByVertex.get(containerNode.id);
+                        const info = containerObjectId ? model.containers.get(containerObjectId) : undefined;
+                        const create = info?.membership?.mode === 'reference' ? info.membership.create : undefined;
+                        if (containerObjectId && info?.channelSteps && create) {
+                            const idl = (store.getState() as any).idlookup ?? {};
+                            const terminal = terminalSlotOf(idl, containerObjectId, info.channelSteps);
+                            const owner = createOwnerSlotOf(idl, model.containerOf, containerObjectId, create);
+                            if (terminal && owner && slotAccepts(idl, terminal, metaclassId) && slotAccepts(idl, owner, metaclassId)) {
+                                takeSnapshot();
+                                const created = syncCreateObject(graphId, metaclassId, position.x, position.y);
+                                if (!created) return;
+                                markDropCreated(created);
+                                const name = (LPointerTargetable.fromPointer(created as any) as any)?.model?.name ?? className;
+                                setNodes((nds) => [...nds, {
+                                    id: created, type: 'objectNode', position,
+                                    data: { label: name, instanceOfClassName: className, instanceOfClassId: metaclassId, features: [], autoEdit: true } as ObjectNodeData,
+                                }]);
+                                // The creation commits in a microtask (as in handleObjectEdgeSelected): bounded retry.
+                                const appendWhenReady = (attempt: number) => {
+                                    const objectId: string | undefined = (LPointerTargetable.fromPointer(created as any) as any)?.model?.id;
+                                    if (!objectId || !(store.getState() as any).idlookup?.[objectId]) {
+                                        if (attempt < 40) setTimeout(() => appendWhenReady(attempt + 1), 25);
+                                        return;
+                                    }
+                                    TRANSACTION('graphVertex create in container', () => {
+                                        applyMembershipOps([
+                                            { op: 'append', slot: owner, value: objectId },
+                                            { op: 'append', slot: terminal, value: objectId },
+                                        ]);
+                                    });
+                                    scheduleLayoutSave();
+                                };
+                                setTimeout(() => appendWhenReady(0), 0);
+                                return;
+                            }
+                        }
+                    }
                     if (containerNode) {
                         const containerData = containerNode.data as ObjectNodeData;
                         const containerMeta = mi.allClasses.find(c => c.id === containerData.instanceOfClassId);
@@ -2396,7 +2479,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             setNodes((nds) => [...nds, newNode]);
         },
-        [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes]
+        [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes, applyMembershipOps, scheduleLayoutSave]
     );
 
     // Allow drop — with M1 cursor feedback for non-rootable classes
@@ -4009,6 +4092,114 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [setEdges, takeSnapshot]
     );
 
+    // ── graphVertex gestures (R-GV-8, P-2026-10-10-0105 S3, docs/lir/lir_2026-10-10_graphvertex_s3.md) ──────────
+    /** Where each node stood when its drag began (snap back, container delta); cleared at its drag end. */
+    const gvDragStartRef = useRef(new Map<string, { x: number; y: number }>());
+
+    /**
+     * What a single-node drag end does under the graphVertex rules; null = today's behaviour. A lane under a
+     * `partitions` container goes back (its place is computed, R-GV-6); a container that declares a layout carries its
+     * descendants; any other node is planned from the membership modes of the container that draws it and the
+     * container under its centre that accepts it (irMembership.resolveDropTarget, planDrop).
+     */
+    const resolveGraphVertexDragEnd = useCallback((change: { id: string; position: { x: number; y: number } }):
+        | { kind: 'snap'; to: { x: number; y: number } }
+        | { kind: 'edit'; ops: MembershipOp[] }
+        | { kind: 'container'; objectId: string; dx: number; dy: number }
+        | null => {
+        const model = irContainmentRef.current.model;
+        if (model.containers.size === 0) return null;
+        const objectId = model.objByVertex.get(change.id);
+        if (!objectId) return null;
+        const start = gvDragStartRef.current.get(change.id);
+        const parent = model.parentOf.get(objectId);
+        if (parent !== undefined && model.containers.get(parent)?.layout?.mode === 'partitions') return start ? { kind: 'snap', to: start } : null;
+        if (model.containers.get(objectId)?.layout) {
+            if (!start) return null;
+            const dx = change.position.x - start.x;
+            const dy = change.position.y - start.y;
+            return dx === 0 && dy === 0 ? null : { kind: 'container', objectId, dx, dy };
+        }
+        const state: any = store.getState();
+        const idlookup = state.idlookup ?? {};
+        const index = getIRIndex(state, computeIRSignature(state));
+        if (!index) return null;
+        const readCtx = makeReadCtx(idlookup);
+        const rendered = getNodes();
+        const byId = new Map(rendered.map(n => [n.id, n] as const));
+        const self = byId.get(change.id);
+        const centre = {
+            x: change.position.x + ((self?.measured?.width ?? self?.width ?? 0) as number) / 2,
+            y: change.position.y + ((self?.measured?.height ?? self?.height ?? 0) as number) / 2,
+        };
+        const depthOf = (o: string) => {
+            let d = 0;
+            const seen = new Set<string>();
+            for (let c = model.parentOf.get(o); c !== undefined && !seen.has(c); c = model.parentOf.get(c)) { seen.add(c); d++; }
+            return d;
+        };
+        const candidates: DropCandidate[] = [];
+        let order = 0;
+        for (const [cid, info] of model.containers) {
+            const n = byId.get(info.vertexId);
+            order++;
+            if (!n || n.hidden) continue;
+            candidates.push({
+                containerId: cid, depth: depthOf(cid), order,
+                box: { x: n.position.x, y: n.position.y, w: (n.measured?.width ?? n.width ?? 0) as number, h: (n.measured?.height ?? n.height ?? 0) as number },
+            });
+        }
+        const accepts = (cid: string) => {
+            const cls = idlookup[cid]?.instanceof;
+            if (typeof cls !== 'string') return false;
+            const cv = resolveIRView(cid, cls, index, readCtx, idlookup);
+            try { return !!cv?.containment && cv.containment.childFilter(readCtx, objectId) !== false; } catch { return false; }
+        };
+        const target = resolveDropTarget(centre, candidates, accepts, new Set([objectId, ...descendantsOf(model, objectId)]));
+        const classId: unknown = idlookup[objectId]?.instanceof;
+        const endOf = (cid: string): MembershipEnd => {
+            const info = model.containers.get(cid)!;
+            const mode = info.membership?.mode ?? 'none';
+            const terminal = info.channelSteps ? terminalSlotOf(idlookup, cid, info.channelSteps)
+                : mode === 'reparent' && typeof classId === 'string' ? compositionSlotFor(idlookup, cid, classId) : null;
+            const createOwner = info.membership?.create ? createOwnerSlotOf(idlookup, model.containerOf, cid, info.membership.create) : null;
+            return { containerId: cid, mode, terminal, createOwner };
+        };
+        const plan = planDrop({
+            objectId,
+            source: parent !== undefined ? endOf(parent) : null,
+            target: target !== null ? endOf(target) : null,
+            containedIn: containedInSlot(idlookup, model.containerOf, objectId),
+            rootFather: isRootFathered(idlookup, objectId),
+        });
+        if (plan.kind === 'move') return null;
+        if (plan.kind === 'snapBack') return start ? { kind: 'snap', to: start } : null;
+        // A slot whose type does not take the object's class refuses the edit: back to where it was.
+        if (typeof classId === 'string' && plan.ops.some(op => op.op === 'append' && !slotAccepts(idlookup, op.slot, classId))) {
+            return start ? { kind: 'snap', to: start } : null;
+        }
+        return { kind: 'edit', ops: plan.ops };
+    }, [getNodes]);
+
+    /** The two sizes a partition's resize writes at its end (S3, spec addendum §7.5): itself and the next partition, as
+     *  the presentation pass shows them (the live border, the neighbour compensated). Empty for any other node. */
+    const pairedPartitionSizes = useCallback((vertexId: string): Array<{ vertexId: string; w: number; h: number }> => {
+        const model = irContainmentRef.current.model;
+        const objectId = model.objByVertex.get(vertexId);
+        const parent = objectId !== undefined ? model.parentOf.get(objectId) : undefined;
+        if (parent === undefined || model.containers.get(parent)?.layout?.mode !== 'partitions') return [];
+        const rendered = new Map(getNodes().map(n => [n.id, n] as const));
+        const kids = (model.childrenOf.get(parent) ?? [])
+            .map(k => model.vertexByObj.get(k))
+            .filter((v): v is string => v !== undefined && !!rendered.get(v) && !rendered.get(v)!.hidden);
+        const i = kids.indexOf(vertexId);
+        if (i === -1) return [];
+        return kids.slice(i, i + 2).map(v => {
+            const n = rendered.get(v)!;
+            return { vertexId: v, w: (n.width ?? n.measured?.width ?? 0) as number, h: (n.height ?? n.measured?.height ?? 0) as number };
+        });
+    }, [getNodes]);
+
     // Take snapshot on node changes (drag end, resize end)
     const handleNodesChange = useCallback(
         (changes: any[]) => {
@@ -4041,6 +4232,37 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 (c) => c.type === 'dimensions' && (c as any).resizing !== undefined
             );
 
+            // graphVertex gestures (S3): the start of each drag, then, at a single-node drag end, what the drop does.
+            // A snap back rewrites the change itself, so the node lands where it started and nothing is written.
+            for (const c of changes) {
+                if (c.type === 'position' && c.dragging === true && !gvDragStartRef.current.has(c.id)) {
+                    const n = getNodes().find((m) => m.id === c.id);
+                    if (n) gvDragStartRef.current.set(c.id, { x: n.position.x, y: n.position.y });
+                }
+            }
+            let gvDrop: ReturnType<typeof resolveGraphVertexDragEnd> = null;
+            if (hasDragEnd) {
+                const ends = changes.filter((c: any) => c.type === 'position' && c.dragging === false && c.position);
+                if (isJjomMode && ends.length === 1) gvDrop = resolveGraphVertexDragEnd(ends[0]);
+                if (gvDrop?.kind === 'snap') ends[0].position = { ...gvDrop.to };
+                for (const c of ends) gvDragStartRef.current.delete(c.id);
+            }
+
+            // React may replay a state updater on a rebase, when an update of lower priority (useJjomSync's batched
+            // patch, flushed in a frame) waits ahead of it: each replay that builds new arrays is a new state, the
+            // canvas re-renders on it and replays again, until the update depth limit (S3, measured on the BPMN
+            // fixture). The same input hands back the same output, so a replay settles.
+            const replaySafe = <T extends object>(fn: (prev: T) => T) => {
+                const seen = new WeakMap<T, T>();
+                return (prev: T): T => {
+                    const hit = seen.get(prev);
+                    if (hit) return hit;
+                    const out = fn(prev);
+                    seen.set(prev, out);
+                    return out;
+                };
+            };
+
             if (hasDragEnd || hasResize) {
                 takeSnapshot();
 
@@ -4072,7 +4294,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     }
                 }
 
-                setEdges((currentEdges) => {
+                setEdges(replaySafe((currentEdges: Edge[]) => {
                     const now = Date.now();
                     const edgesToRecalculate = currentEdges.filter(
                         (e) => (movedNodeIds.has(e.source) || movedNodeIds.has(e.target))
@@ -4127,7 +4349,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     });
 
                     return applyDistribution(deduped);
-                });
+                }));
             }
 
             // Phase 3: sync position/size changes to JjOM
@@ -4139,14 +4361,34 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         (c: any) => c.type === 'position' && c.dragging === false && c.position
                     );
                     const lazyUpdates = dragEndChanges.filter(
-                        (c: any) => getSyncMode(c.id) === 'lazy'
+                        (c: any) => getSyncMode(c.id) === 'lazy' && gvDrop?.kind !== 'snap'
                     );
-                    if (lazyUpdates.length > 0) {
-                        syncPositionBatchToJjom(
-                            lazyUpdates.map((c: any) => ({
-                                id: c.id, x: c.position.x, y: c.position.y,
-                            })),
-                        );
+                    const positionWrites = lazyUpdates.map((c: any) => ({ id: c.id, x: c.position.x, y: c.position.y }));
+                    // A container that declares a layout carries every descendant by its own delta (S3): records written
+                    // in the same batch, base nodes moved at once so nothing waits for the sync.
+                    if (gvDrop?.kind === 'container') {
+                        const model = irContainmentRef.current.model;
+                        const idl = (store.getState() as any).idlookup ?? {};
+                        const key = getActiveLayoutKey();
+                        const moved = new Map<string, { x: number; y: number }>();
+                        for (const d of descendantsOf(model, gvDrop.objectId)) {
+                            const v = model.vertexByObj.get(d);
+                            if (!v || !idl[v]) continue;
+                            const rec = readVertexLayout(idl[v], key);
+                            moved.set(v, { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy });
+                        }
+                        for (const [id, p] of moved) positionWrites.push({ id, ...p });
+                        if (moved.size > 0) setNodes(replaySafe((nds: Node[]) => nds.map((n) => moved.has(n.id) ? { ...n, position: moved.get(n.id)! } : n)));
+                    }
+                    if (gvDrop?.kind === 'edit') {
+                        // The position and the membership in ONE composite action: one undo restores both (LIR §1).
+                        const ops = gvDrop.ops;
+                        TRANSACTION('graphVertex membership', () => {
+                            if (positionWrites.length > 0) syncPositionBatchToJjom(positionWrites);
+                            applyMembershipOps(ops);
+                        });
+                    } else if (positionWrites.length > 0) {
+                        syncPositionBatchToJjom(positionWrites);
                     }
                     // Faithful mode: flush any pending RAF-throttled writes
                     for (const c of dragEndChanges) {
@@ -4180,11 +4422,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 if (hasResize) {
                     let sizeSynced = false;
                     for (const c of changes.filter((ch: any) => ch.type === 'dimensions' && ch.resizing)) {
+                        // A partition is written once, paired with its neighbour, at the end of the gesture (S3).
+                        if (pairedPartitionSizes(c.id).length > 0) continue;
                         const node = getNodes().find((n) => n.id === c.id);
                         const w = c.dimensions?.width ?? node?.measured?.width;
                         const h = c.dimensions?.height ?? node?.measured?.height;
                         if (w !== undefined && h !== undefined) {
                             syncSizeToJjom(c.id, w, h);
+                            sizeSynced = true;
+                        }
+                    }
+                    for (const c of changes.filter((ch: any) => ch.type === 'dimensions' && ch.resizing === false)) {
+                        const pair = pairedPartitionSizes(c.id);
+                        if (pair.length > 0) {
+                            syncSizeBatchToJjom(pair);
                             sizeSynced = true;
                         }
                     }
@@ -4247,7 +4498,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 isProcessingNodesChangeRef.current = false;
             }
         },
-        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout]
+        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout,
+            resolveGraphVertexDragEnd, pairedPartitionSizes, applyMembershipOps, setNodes]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
