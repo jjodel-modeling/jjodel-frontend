@@ -201,3 +201,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read of the Lanes tab: Started in Running, Started and Ended before Elapsed in the other two; 1150 11:51 to 12:03, Elapsed 10 min (was 0); running 0105 start 01:04, 2 h 3 min. Date prefix not on screen (no lane from yesterday in the 24 h window), covered by the lane's client table run
 **Notes**: Path: `laneSpan()` reuses `laneTimeline()` and its cache, and returns `work`, the sum of the turns (running turn up to now); a chain takes its lanes' earliest start, latest end once all ended, summed work. `collect()` also writes the timeline cache. `minutes` (lane-run's last run) stays and feeds Left. Elapsed is empty when no turn is known. P-2026-09-29-1017 (no exit.txt, dead pid) shows no end.
 **Prompt document name**: 2026-10-10 12:53
+
+## 2026-10-10 — merge: lane-board-times into alfonso-frontend-jjtl (P-2026-10-10-1312)
+**Prompt**: `claude_2026-10-10_1312_prompt_merge_lane-board-times.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-times` at `b31127d58` into `alfonso-frontend-jjtl`, merge base `8acff31ef`, 3 commits on the branch side.
+**Files touched**: merge `339959aed`: 2 files from the branch side (`docs/log-inbox/harness.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `339959aed` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7728 tests in 317 files, 9 red at import, hooks 427; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Lanes tab verified on 4701 under P-2026-10-10-1253
+**Notes**: Rollback tag `pre-lane-board-times` on `8acff31ef` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1312/result.json`.
+**Prompt document name**: 2026-10-10 13:12
