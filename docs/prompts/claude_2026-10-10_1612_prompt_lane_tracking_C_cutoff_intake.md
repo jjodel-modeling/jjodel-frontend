@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01FCFNYi6n4pLBgcbMduJcJe
 Lane: full (more than 3 files; touches lane-templates and PROTOCOL.md)
 Depends: P-2026-10-10-1532
 Front: harness
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane lane-tracking · 0955ef140
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

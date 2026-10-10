@@ -250,3 +250,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `frontend/scripts/lane-templates/issue-discovery.md` renders Prompt-ID, Chat, Request, Lane, Tier and Status, and no `Front:`. Once this lane's `lane-run.mjs` is on the trunk, `lane-run start --auto` refuses every auto-intake prompt with a Prompt-ID at or after `P-2026-10-10-1500` (no `Front:` line, P13, RC-44). Report P-2026-10-10-1330 §9 answer 14 puts `Front: maintenance` in the template and its render in `auto-intake.mjs` in lane B; this prompt's COSA does not list them, so they were not touched. A fast lane before the next `/lane auto` night.
 **Priority**: medium
 **Found in**: P-2026-10-10-1532
+
+## 2026-10-10 — fix(harness): front cut-off to P-2026-10-11-0000, auto-intake renders Front (P-2026-10-10-1612)
+**Prompt**: `claude_2026-10-10_1612_prompt_lane_tracking_C_cutoff_intake.md`, full lane on `~/jjodel-w-lanetrack`, branch `lane-tracking`, lane C of the discovery P-2026-10-10-1330: the trunk merged in first (`--no-ff`), `FRONT_FROM` moved to `P-2026-10-11-0000` with the tests and texts that pin it, `Front: <slug>` rendered by the auto-intake template from a new config key, lane B's two tickets closed.
+**Files touched**: merge `ab3a04f42` (trunk at `d1449992a`; `docs/decisions.md` resolved, RC-44 then RC-45 verbatim); code `0955ef140`: `frontend/scripts/lane-tracking.mjs`, `frontend/scripts/auto-intake.mjs`, `frontend/scripts/auto-intake.config.json`, `frontend/scripts/lane-templates/issue-discovery.md`, `frontend/scripts/gates/__tests__/checkDocs.test.ts`, `frontend/scripts/hooks/__tests__/autoIntake.test.ts`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`; docs `1d94d279a`: `docs/PROTOCOL.md` (P13), `docs/HARNESS-DOCS.md` (§6, Check E row); this commit: this entry, two tickets and the Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-10 15:00 (`claude_2026-10-10_1500_prompt_lane_tracking_A_fronts.md`, its cut-off; ticket 2 is the template lane B left out, 2026-10-10 15:32)
+**Causa**: (a)
+**Regressions**: no. check:docs 5/5 exit 0; check:scripts PASS 60 files; typecheck:scripts exit 0; vitest scripts/hooks and scripts/gates 782/782 (781 before); typecheck 14, the baseline set; build exit 0; check:addonly and check:agents exit 0.
+**Out-of-scope changes**: no — twelve files over three commits plus the merge, above five (RC-11, rule 19), each named by COSA 0 to 3; the new test sits in `autoIntake.test.ts`, describe «auto-intake render».
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Check E after the merge, before item 1: exit 1, red on 1520 and 1600 only. After it: 0 of 820 in scope, so the control was a scratch P-2026-10-11-0001 without Front (exit 1, one ERROR, removed). Bench in the body of 0955ef140: cut-off dropped killed by its named test; auto-intake 6/6; controls 48/48 and 68/68. The template has no Depends: line, so Front sits after Tier, before Status. lane-run.mjs untouched. The bash guard refused an amend of the merge message; it stands.
+**Prompt document name**: 2026-10-10 16:12
+
+**Ticket** (closed here): the two tickets of 2026-10-10 found in P-2026-10-10-1532. «trunk prompts after FRONT_FROM lack Front:, Check E fails them at the merge» (high) is closed by the cut-off move: Check E no longer reads P-2026-10-10-1520 and -1600. «issue-discovery.md renders no Front:, start --auto will refuse auto-intake lanes» (medium) is closed by item 2: a render dated after the cut-off passes `frontProblem` (test in `autoIntake.test.ts`).
+
+## 2026-10-10 — ticket: the moved cut-off leaves this lane's GitHub card open, In progress
+**Ticket**: `projectLane` and `track --sync` skip every Prompt-ID below `FRONT_FROM`, now `P-2026-10-11-0000`, so P-2026-10-10-1500, -1532 and -1612 are no longer projected. Cards 1 and 2 are already closed, Done (`~/.jjodel-lanes/_tracking/`); card 3, `jjodel-modeling/jjodel-lanes` issue 3 for P-2026-10-10-1612, was recorded `In progress`, open, and no sync will move it. Not touched here (NON FARE: no GitHub write). The chat closes it by hand, or a lane gives the projection its own cut-off.
+**Priority**: low
+**Found in**: P-2026-10-10-1612
+
+## 2026-10-10 — ticket: issue-discovery.md renders no Depends: line (RC-42)
+**Ticket**: `frontend/scripts/lane-templates/issue-discovery.md` renders Prompt-ID, Chat, Request, Lane, Tier, Front and Status, and no `Depends:`, which P13 asks of every prompt but the merge prompts rendered by `lane-run` (RC-42). No gate enforces `Depends:` today (report P-2026-10-10-1330 §4.3), so nothing refuses the auto-intake prompts; the lane board draws no dependency for them. Likely `Depends: none`. Left out here: the prompt's item 2 asked for `Front:` only.
+**Priority**: low
+**Found in**: P-2026-10-10-1612
