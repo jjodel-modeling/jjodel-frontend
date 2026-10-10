@@ -24,7 +24,7 @@ block are the one-line versions that must be known before then.
 
 ### 7.2 Token system
 
-**Single source of truth**: `styles/tokens/_colors-light.scss`. Jjodel has no dark theme (D-UI-15, 2026-10-04, final): `_colors-dark.scss` is inert legacy, awaiting a removal lane; do not edit it. Entry point: `styles/tokens/index.scss`. Active variables in `styles/variables.scss`.
+**Single source of truth**: `styles/tokens/_colors-light.scss`. Jjodel has no dark theme (D-UI-15, 2026-10-04, final); its code was removed on 2026-10-10 (P-2026-10-10-0910). One inert dark rule is left in the critical zone, `components/editor-v2/viewpoint/authoring/StructureGroups.scss:82-84`, for a lane with the go-ahead. Light has two states, both kept: no `data-theme` (nothing stored, `styles/tokens.css` wins the shared names) and `data-theme="light"` (a stored `'light'`, `tokens/` wins); converging them is D-UI-13's work, not a component's. Entry point: `styles/tokens/index.scss`. Active variables in `styles/variables.scss`.
 
 **Legacy tokens — do NOT reintroduce**:
 - `--accent` (use `--color-accent`)
