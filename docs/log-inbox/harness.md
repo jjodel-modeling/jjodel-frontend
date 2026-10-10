@@ -418,3 +418,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; chat links verified on 4703 under P-2026-10-10-1816
 **Notes**: Rollback tag `pre-board-chat-links` on `ffd37e8af` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1836/result.json`.
 **Prompt document name**: 2026-10-10 18:36
+
+## 2026-10-10 — feat(harness): lane board timeline lists the newest lanes first (P-2026-10-10-1744)
+**Prompt**: `claude_2026-10-10_1744_prompt_timeline_newest_first.md`, fast lane on `~/jjodel-w-tlorder`, branch `timeline-newest-first`: in the Timeline tab the groups by their most recent lane start, descending, the lanes inside a group by start, descending, ties by Prompt-ID descending; the time axis, the horizontal scroll and every other meaning unchanged.
+**Files touched**: code `0ce6f57bb`: `frontend/scripts/lane-board/timeline.js`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` exit 0; check:scripts PASS 63 files. Old and new `render()` run in node on this tree's live `/api/timeline` (396 lanes), 72 cases (3 groupings × 4 ranges × default/all open/all closed × with and without a selection): plot height, row partition, lane x, after-bar labels, overlap count and x/width, arrow x and the detail panel equal in all 72; groups and rows newest first in all 72. Controls: old file 5276 fails, dropped row renumbering 178, open rows unreversed 3292.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4702 (RC-23), DOM read of the Timeline: groups ordered by their newest lane (jjodel-release, then tlorder 1744, boardcols 1742, boardspan 1717), rows inside graphvertex run 1716, 1246, 0105; axis unchanged; 135 paths and 68 overlap marks still drawn; board on 4702 (PID 78740) stopped
+**Notes**: Inside a group the lanes stay oldest first for packing, overlap pairs and labels; only row numbers are reversed, and a collapsed group's packed rows are numbered by their newest lane, so the packing and the row count are the old ones. Overlap box heights change in collapsed groups (the box spans two permuted rows). Exact-start ties now break by Prompt-ID instead of the API order. Probe: `/tmp/tl-probe.mjs`, not committed.
+**Prompt document name**: 2026-10-10 17:44

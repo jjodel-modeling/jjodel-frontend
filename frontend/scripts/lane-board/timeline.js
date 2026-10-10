@@ -100,8 +100,12 @@
     if (!lanes.length) { box.innerHTML = html + '<div class="tl-wrap"><div class="tl-empty">No lanes in this range.</div></div>'; wire(box); return; }
 
     const keyOf = (l) => (group === 'chat' ? l.chat || 'no chat recorded' : group === 'launcher' ? LNAME[(l.launcher || {}).by] || 'unknown' : short(l.worktree));
+    const byStart = (p, q) => p.a - q.a || (p.id < q.id ? -1 : p.id > q.id ? 1 : 0);
     const groups = new Map();
-    lanes.sort((x, y) => x.a - y.a).forEach((l) => { const k = keyOf(l); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); });
+    lanes.sort(byStart).forEach((l) => { const k = keyOf(l); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); });
+    // Newest first: the groups by their most recent lane, descending. Inside a group the lanes stay
+    // oldest first for packing, overlaps and labels; only their row numbers are reversed (below).
+    const order = [...groups].sort(([, p], [, q]) => byStart(q[q.length - 1], p[p.length - 1]));
     const isOpen = (k, n) => (k in expanded ? expanded[k] : n <= 8);
 
     // Geometry: a fixed label column and a plot that zooms and scrolls horizontally.
@@ -129,14 +133,18 @@
     const lab = [], bg = [], ov = [], rows = [];
     const pos = new Map();
     let gi = 0;
-    for (const [k, ls] of groups) {
+    for (const [k, ls] of order) {
       const open = isOpen(k, ls.length);
-      // Row of each lane: one per lane when open, packed when collapsed.
+      // Row of each lane: one per lane when open, packed when collapsed; newest on top either way.
       let nRows;
-      if (open) { ls.forEach((l, i) => { l.row = i; }); nRows = ls.length; }
+      if (open) { ls.forEach((l, i) => { l.row = ls.length - 1 - i; }); nRows = ls.length; }
       else {
         const sub = [];
         ls.forEach((l) => { let r = sub.findIndex((end) => end + 60e3 < l.a); if (r === -1) { r = sub.length; sub.push(0); } sub[r] = l.b; l.row = r; });
+        // Same packing as before; the packed rows are then numbered by their newest lane, descending.
+        const rank = new Map();
+        for (let i = ls.length - 1; i >= 0; i--) if (!rank.has(ls[i].row)) rank.set(ls[i].row, rank.size);
+        ls.forEach((l) => { l.row = rank.get(l.row); });
         nRows = sub.length;
       }
       const ROW = open ? ROWE : ROWC;
