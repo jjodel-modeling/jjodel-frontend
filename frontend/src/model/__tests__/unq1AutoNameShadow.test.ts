@@ -246,14 +246,18 @@ describe('B — DObject.autoName: il contatore del nested vede i fratelli dello 
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('coerenza — C1 non e\' stata presa, e i due creatori usano lo stesso auto-nome', () => {
-    it('`LValue` continua a NON ridefinire get_children_idlist (C1 del referto §7)', () => {
-        // Se un giorno lo facesse, il significato di "figlio" per LValue cambierebbe per tutti i
-        // suoi lettori e questo test chiede di rifare quel censimento prima di fidarsi.
+    it('`LValue` ridefinisce get_children_idlist (R-NEST-5): muore se l\'override si toglie o si commenta', () => {
+        // C1 del referto §7 e' stata presa da #174 (R-NEST-5, docs/decisions.md): i valori che uno slot
+        // possiede sono i suoi figli, cosi' `.delete()` cascata su di essi. Il censimento dei lettori di
+        // `LValue.children` chiesto da questo test e' stato rifatto (P-2026-10-07-0950): l'unico che
+        // cambia comportamento e' la cascata di Dummy.ts; `defaultname` non riceve mai uno slot come
+        // padre, e l'auto-nome di un nested passa da getNamespaceOf (gruppo B, eseguito). La cascata non
+        // si esegue nel banco node: qui si fissa solo che l'override esiste, non commentato.
         const lvalueAt = source.indexOf('export class LValue<Context extends LogicContext<DValue>');
         expect(lvalueAt, 'la dichiarazione di LValue e\' cambiata: aggiorna il test').toBeGreaterThan(-1);
         const nextClass = source.indexOf('\nexport class ', lvalueAt + 1);
         const lvalueBody = source.slice(lvalueAt, nextClass > 0 ? nextClass : undefined);
-        expect(lvalueBody).not.toMatch(/protected get_children_idlist\(/);
+        expect(lvalueBody).toMatch(/\n    protected get_children_idlist\(/);
     });
 
     it('`DObject.new` e `DObject.new3` chiamano entrambi autoName', () => {

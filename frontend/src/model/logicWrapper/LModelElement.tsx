@@ -7922,6 +7922,9 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         return LClass.singleton.get_allTypeParameters.call(LClass.singleton, c);
     }
     /*********                                           M1 stuff                                               **********/
+    // `objects` lists every instance of the model, the nested ones too (R-NEST-1): a root is an
+    // instance whose father is a model. Read through `father` and not `isRoot`, which throws on a
+    // father that no longer resolves.
     protected get_crossRoots(c: Context): this["roots"] { return this.get_roots(c, true); }
     protected get_roots(c: Context, includeCross: boolean = false): this["roots"] {
         return c.data.isMetamodel ? this.get_packages(c, includeCross) as any : this.get_objects(c, includeCross); //.filter( o => o.isRoot);
@@ -8233,7 +8236,9 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
      *  current tick included. So the slot case is routed through it and handed to the predicate
      *  form of `defaultname`. `get_children_idlist` is NOT widened: what "child" means for
      *  `LValue` is unchanged for every other reader (that was candidate C1 of the report's §7,
-     *  and it is not taken here).
+     *  and it is not taken here). Since #174 (R-NEST-5) `LValue.get_children_idlist` does list
+     *  the values a slot owns, for the delete cascade; the slot case here still reads
+     *  `getNamespaceOf`, so the auto-name is unchanged.
      *
      *  A model father keeps the existing path, byte for byte.
      */
@@ -8260,7 +8265,7 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
         const computedDefaultName = this.autoName(father, instanceoff);
         if (!name) name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DObject(instanceoff).end();
+            .DNamedElement(name).DObject(instanceoff).end((d) => DObject.listInModel(d, fatherType));
         // initialName: always the auto-generated default, regardless of the explicit `name` parameter.
         // This is the immutable "auto-name" that acts as fallback when the identity slot is empty.
         ret.initialName = computedDefaultName;
@@ -8272,9 +8277,24 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
         if (!ptrs.name) ptrs.name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
             .DPointerTargetable().DModelElement()
-            .DNamedElement(ptrs.name).DObject(ptrs.instanceof).end(then);
+            .DNamedElement(ptrs.name).DObject(ptrs.instanceof).end((d, c) => { DObject.listInModel(d, fatherType); then?.(d, c); });
         ret.initialName = computedDefaultName;
         return ret;
+    }
+
+    /** A DObject born in a slot is listed by its model too (R-NEST-1); the constructor registers it in the
+     *  slot's `values` only (joiner/classes.ts:786-792). Queued as a persist callback, like the constructor's
+     *  own `objects '+='` for a root, so it lands after the create and the reducer writes the `pointedBy`
+     *  entry (a SetFieldAction issued after `new3` returns was measured landing without it).
+     *  Skipped when the slot's model is not in the store yet: a creator that builds a whole new model (the
+     *  XMI import, XMIService.ts:1074) writes that list itself, and a second '+=' would duplicate it. */
+    private static listInModel(d: DObject, fatherType?: typeof DModel | typeof DValue): void {
+        if (fatherType?.cname !== DValue.cname || !d.father) return;
+        const idlookup = store.getState().idlookup as GObject;
+        let e: GObject | undefined = idlookup[d.father];
+        for (let i = 0; i < 64 && e && e.className !== DModel.cname; i++) e = idlookup[e.father];
+        if (!e || e.className !== DModel.cname || (e.objects ?? []).includes(d.id)) return;
+        d._persistCallbacks.push(SetFieldAction.create(e.id, 'objects', d.id, '+=', true));
     }
 
 
@@ -10019,6 +10039,19 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     }
 
 
+    // What a slot owns are its children, so `.delete()` cascades into them for every caller (Dummy.ts:84):
+    // every DObject of a composition slot, and in any other slot the DObjects it fathered (an aggregation
+    // that re-fathered them, a shapeless slot). An element a slot merely lists stays. R-NEST-2, R-NEST-5;
+    // the plan's walk, deleteDraw.descendantsOf, applies the same rule. The auto-name does not read this
+    // list for a slot father (it asks getNamespaceOf, see DObject.autoName).
+    protected get_children_idlist(context: Context): Pointer<DAnnotation | DObject, 1, 'N'> {
+        const idlookup = store.getState().idlookup as GObject;
+        const composition = (idlookup[context.data.instanceof as any] as GObject)?.composition === true;
+        const owned = ((context.data.values ?? []) as any[]).filter((v: any) => typeof v === 'string'
+            && (idlookup[v] as GObject)?.className === DObject.cname
+            && (composition || (idlookup[v] as GObject).father === context.data.id));
+        return [...super.get_children_idlist(context) as Pointer<DAnnotation | DObject, 1, 'N'>, ...owned];
+    }
     protected get_edges(context: Context): this["edges"] { return LPointerTargetable.fromPointer(context.data.edges) || []; }
     protected get_fromlfeature<C, T extends keyof (NonNullable<C>)>(meta: C, key: T): NonNullable<C>[T] { return meta ? (meta as any)[key] : undefined as any; }
     protected get_opposite(context: Context): LReference["opposite"] { return this.get_fromlfeature(context.proxyObject.instanceof as LReference, "opposite"); }
@@ -10438,7 +10471,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             else { info.isContainment = true; }
         }
         if (info.isContainment && oldTarget?.className === "DObject") {
-            SetFieldAction.new(oldVal as Pointer<DObject>, "father", context.proxyObject.model.id, undefined, true);
+            const modelId = context.proxyObject.model.id;
+            SetFieldAction.new(oldVal as Pointer<DObject>, "father", modelId, undefined, true);
+            // The evicted element is a root: the model lists it (R-NEST-4). Appended only when the model
+            // does not list it yet, read before the TRANSACTION lands, so a move never duplicates it.
+            if (!(((store.getState().idlookup as GObject)[modelId] as GObject)?.objects ?? []).includes(oldVal))
+                SetFieldAction.new(modelId, 'objects', oldVal as any, '+=', true);
         }
         if (!skipSettingUndefined) SetFieldAction.new(context.data, 'values.' + index as any, undefined, '', info.isPtr);
     }

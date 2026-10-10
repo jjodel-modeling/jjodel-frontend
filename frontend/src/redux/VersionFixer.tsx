@@ -145,6 +145,9 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             prevVer = currVer;
         }
 
+        // At every load, not a version step: graph elements that represent nothing (R-NEST-8).
+        s = VersionFixer.purgeDeadGraphElements(s);
+
         // update default views (only actual view elements, skip DClass/DPackage/etc.)
         for (let k in s.idlookup) {
             let e = s.idlookup[k];
@@ -158,6 +161,93 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
 
         if (canAutocorrect) s = VersionFixer.autocorrect(s, false, false);
+        return s;
+    }
+
+    /** The load purge (R-NEST-8, #174): removes the graph elements that represent nothing. Run by `update()` at
+     *  every load, after the version steps, where no undo history exists; it is not a version step and does not
+     *  touch `version`. Layer Impact Report: docs/lir/lir_2026-10-10_174_load_purge.md.
+     *
+     *  Removed, on `DVertex` and on the four edge classes only:
+     *   - a ghost: a `DVertex` whose `model` is a non-empty pointer that does not resolve (a vertex with no
+     *     `model` at all is not one);
+     *   - an unlisted record: a `DVertex` or an edge that no kept record lists in `subElements` or `midnodes`
+     *     (what the delete of R-NEST-7 detaches from its graph, to keep its undo);
+     *   - an edge whose `start` or `end` is a non-empty pointer that does not resolve, or a removed record;
+     *   - what only a removed record lists (the fields of a ghost vertex, the points of a removed edge).
+     *  `DGraph` is never touched; `DVoidVertex`, `DGraphVertex`, `DEdgePoint` and `DGraphElement` are removed only
+     *  below a removed record, never on their own (an unlisted one is left: not enough to call it dead).
+     *  With the records go the ids in `subElements`, `midnodes`, `edgesIn`, `edgesOut` of the kept ones, the
+     *  `pointedBy` entries that name them (`idlookup.<id>.…`), and the ids in the root graph lists.
+     *  Pure on the state, idempotent; a state with nothing to remove is returned without a single write. */
+    public static purgeDeadGraphElements(s: DState): DState {
+        const idlookup: any = (s as any)?.idlookup;
+        if (!idlookup || typeof idlookup !== 'object') return s;
+        const EDGES = ['DVoidEdge', 'DEdge', 'DExtEdge', 'DRefEdge'];
+        const isVertex = (cn: any) => cn === 'DVertex';
+        const isEdge = (cn: any) => EDGES.includes(cn);
+        const isDescendant = (cn: any) => isVertex(cn) || isEdge(cn) || ['DGraphElement', 'DVoidVertex', 'DGraphVertex', 'DEdgePoint'].includes(cn);
+        const isPointer = (v: any): v is string => typeof v === 'string' && v !== '';
+        const listedBy = (e: any): string[] => [
+            ...(Array.isArray(e?.subElements) ? e.subElements : []),
+            ...(Array.isArray(e?.midnodes) ? e.midnodes : []),
+        ];
+
+        const removed = new Set<string>();
+        let ghosts = 0, unlisted = 0, deadEnds = 0, descendants = 0;
+        for (const k in idlookup) {
+            const e = idlookup[k];
+            if (e && typeof e === 'object' && isVertex(e.className) && isPointer(e.model) && !idlookup[e.model]) { removed.add(k); ghosts++; }
+        }
+        // To a fixed point: removing a record can unlist another, or kill an edge's end.
+        for (let changed = true; changed;) {
+            changed = false;
+            const listed = new Set<string>();
+            for (const k in idlookup) {
+                const e = idlookup[k];
+                if (!e || typeof e !== 'object' || removed.has(k)) continue;
+                for (const id of listedBy(e)) listed.add(id);
+            }
+            for (const k in idlookup) {
+                const e = idlookup[k];
+                if (!e || typeof e !== 'object' || removed.has(k)) continue;
+                const cn = e.className;
+                if (!isVertex(cn) && !isEdge(cn)) continue;
+                if (!listed.has(k)) { removed.add(k); unlisted++; changed = true; }
+                else if (isEdge(cn) && [e.start, e.end].some((end: any) => isPointer(end) && (!idlookup[end] || removed.has(end)))) { removed.add(k); deadEnds++; changed = true; }
+            }
+            for (const k of [...removed]) {
+                for (const id of listedBy(idlookup[k])) {
+                    if (removed.has(id) || listed.has(id)) continue;
+                    const d = idlookup[id];
+                    if (d && typeof d === 'object' && isDescendant(d.className)) { removed.add(id); descendants++; changed = true; }
+                }
+            }
+        }
+        if (removed.size === 0) return s;
+
+        const namesRemoved = (p: any): boolean => {
+            const source: any = p?.source;
+            if (typeof source !== 'string' || !source.startsWith('idlookup.')) return false;
+            const rest = source.substring('idlookup.'.length);
+            const dot = rest.indexOf('.');
+            return removed.has(dot < 0 ? rest : rest.substring(0, dot));
+        };
+        for (const id of removed) delete idlookup[id];
+        for (const k in idlookup) {
+            const e = idlookup[k];
+            if (!e || typeof e !== 'object') continue;
+            for (const field of ['subElements', 'midnodes', 'edgesIn', 'edgesOut']) {
+                if (Array.isArray(e[field]) && e[field].some((id: any) => removed.has(id))) e[field] = e[field].filter((id: any) => !removed.has(id));
+            }
+            if (Array.isArray(e.pointedBy) && e.pointedBy.some(namesRemoved)) e.pointedBy = e.pointedBy.filter((p: any) => !namesRemoved(p));
+        }
+        const root: any = s;
+        for (const key of ['vertexs', 'edges', 'graphelements', 'graphvertexs', 'voidvertexs', 'edgepoints']) {
+            if (Array.isArray(root[key]) && root[key].some((id: any) => removed.has(id))) root[key] = root[key].filter((id: any) => !removed.has(id));
+        }
+        console.log(`[VersionFixer load purge] ${removed.size} elemento/i grafico/i tolto/i: ${ghosts} vertice/i con un modello che non risolve, `
+            + `${unlisted} non elencato/i da alcun contenitore, ${deadEnds} arco/chi con un estremo morto, ${descendants} contenuto/i solo da quelli.`);
         return s;
     }
 
@@ -1311,6 +1401,52 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
 
         if (added) console.log(`[VersionFixer 2.228 -> 2.229] ${added} tipo/i primitivo/i aggiunto/i (Expression, Action).`);
+        return s;
+    }
+
+    /** Every instance is listed by its model (R-NEST-6, #174): `DModel.objects` holds the nested instances too
+     *  (R-NEST-1), and a state saved before held only the roots and the nested ones written by a `set` or by
+     *  the XMI import. For every `DObject` whose `father` chain ends at a `DModel`, the id is appended to that
+     *  model's `objects` when missing, with the `pointedBy` entry an `objects '+='` writes (PointedBy.fromID,
+     *  joiner/classes.ts); every `objects` list is then deduplicated keeping the first entry, as FASE B of
+     *  `2.226 -> 2.227`. A chain that does not reach a model (a father deleted before #174) is left
+     *  untouched, and no `father` is rewritten: an aggregation keeps its re-father (R-NEST-2).
+     *  Layer Impact Report: docs/lir/lir_2026-10-07_174_migration.md. Pure, idempotent, a no-op on a
+     *  coherent state. */
+    private ['2.229 -> 2.230'](s: DState): DState {
+        const idlookup: any = s.idlookup;
+        if (!idlookup || typeof idlookup !== 'object') return s;
+
+        const modelOf = (o: any): any => {
+            let e: any = idlookup[o.father];
+            for (let i = 0; i < 64 && e && e.className !== 'DModel'; i++) e = idlookup[e.father];
+            return e?.className === 'DModel' ? e : null;
+        };
+
+        let listed = 0, dangling = 0, deduped = 0;
+        for (const k in idlookup) {
+            const o = idlookup[k];
+            if (!o || typeof o !== 'object' || o.className !== 'DObject') continue;
+            const model = modelOf(o);
+            if (!model) { dangling++; continue; }
+            if (!Array.isArray(model.objects) || model.objects.includes(o.id)) continue;
+            model.objects = [...model.objects, o.id];
+            const source = 'idlookup.' + model.id + '.objects';
+            const pointedBy: any[] = Array.isArray(o.pointedBy) ? o.pointedBy : [];
+            if (!pointedBy.some((p: any) => p?.source === source)) o.pointedBy = [...pointedBy, { source }];
+            listed++;
+        }
+        for (const k in idlookup) {
+            const e = idlookup[k];
+            if (!e || e.className !== 'DModel' || !Array.isArray(e.objects)) continue;
+            const unique = [...new Set(e.objects)];
+            if (unique.length === e.objects.length) continue;
+            deduped += e.objects.length - unique.length;
+            e.objects = unique;
+        }
+
+        if (listed || deduped) console.log(`[VersionFixer 2.229 -> 2.230] ${listed} istanza/e annidata/e elencata/e nel modello, `
+            + `${deduped} voce/i doppia/e tolta/e da objects, ${dangling} con un padre che non risolve (lasciata/e com'era).`);
         return s;
     }
 

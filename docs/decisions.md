@@ -5728,7 +5728,10 @@ the removal would father it to the model and list it nowhere (the #174 eviction 
 the reference (`REFERENCE_REQUIRED`); `-= null` (`TYPE_MISMATCH`). A root-born child leaves the containment back to
 the model root. `-=` is not type-checked: taking a wrong-typed element out repairs the slot. Under a profile
 `remove` stays refused as a language command (`permissionGuard.ts`); `set … -=` passes the link rules. Code
-`cb02e6a2b`.
+`cb02e6a2b`. **Amended 2026-10-10 by R-NEST-1 and R-NEST-4 (#174):** `WOULD_ORPHAN` is no longer reached. A containment
+child born in the slot is listed by its model, so `-=` and `remove` take it out to the model root as they do a
+root-born one: measured on `5995167ba`, `set S1.pathway -= k2` answers «Removed k2 from S1.pathway», k2 is a root
+listed once, and one undo puts it back in the slot. The refusal stays in the code (rule 9).
 
 **R-JS-13** (2026-10-07, provisional) — **`+=` adds without replacing.** It appends while the slot has room:
 unbounded, below its upper bound, or an empty single-valued slot. A single-valued slot holding another element, and
@@ -5773,6 +5776,89 @@ Evidence: `docs/goals/` and `docs/discovery/discovery_2026-10-05_goal_model.md` 
   and are not conflicts. A contribution is recorded only where the row, its memo or its discovery supports it;
   `verified` reads `none`, `agent` (the RC-27 sample) or `alfonso`, and only Alfonso writes `alfonso`. RC rows
   are harness rules and are not judged.
+
+## R-NEST — one nesting form in the core (#174, decision 2026-10-07)
+
+Evidence: `docs/discovery/discovery_2026-10-07_174_nesting_forms.md` (P-2026-10-07-0950). Memo:
+`docs/ratifiche/claude_2026-10-07_memo_174_nesting_forms.md`. Decided by Juri, director of the lane, in chat
+`C-2026-10-07-0948`.
+
+**R-NEST-1** (2026-10-07, ratified by Juri 2026-10-07, evidence: measured, verified: agent, reversible: trunk) —
+**`DModel.objects` lists every instance of the model, nested ones included; «root» is a property of `father`.**
+`LModel.roots` and `root` filter `objects` on `father` = the DModel; `LObject.isRoot` is unchanged. `addObject`, `t2m`
+and the eviction from a containment slot keep the list complete; the `set` branch already does. The canvas sync
+layer is not edited: Step 2bis, Step 4, `useM1ReferenceEdges` and `m1EdgeSweep` read a complete list, so every
+nested instance gets a vertex at mount and keeps its outgoing reference edges (report W1). Supersedes the (a)
+recommendation of `docs/discovery/discovery_2026-10-02_168_r_reparent_from_root.md`, measured against the XMI
+importer, which writes this form on purpose (`XMIService.ts:1074`). Verified: chat `C-2026-10-07-0948` re-ran the
+§5 census on `5bdb45e89` (117 non-test `objects` lines): no root-only reader without a `father` filter is missing,
+the extra hits being comments, `LProject.objects` (= `allSubObjects`), `U.tsx:791` and `consumerJodieContext.ts:355`
+(it filters the JSON export, which defends roots); read `useJjomSync.ts:743` and `XMIService.ts:1074`. Would
+falsify: a migrated «Add» child that does not become a canvas node, or a reader of `roots` that relies on today's
+unfiltered list.
+
+**R-NEST-2** (2026-10-07, ratified by Juri 2026-10-07, evidence: measured, verified: none, reversible: trunk) —
+**An aggregation reference keeps re-fathering, as today.** `LReference.get_containment` and
+`LValue.get_containment` stay `composition || aggregation` (a shapeless slot: true). Diverges from the report,
+which recommended no re-father. The delete cascade follows the same relation: an element goes with its container
+when its slot is a composition (every `DObject` among the `values`, as `deleteDraw.descendantsOf` does) or when
+its `father` is the slot (an aggregation that re-fathered it, a shapeless slot). An element an aggregation slot
+lists without being its child (`appendValue`, report G2) is shared and stays.
+
+**R-NEST-3** (2026-10-07, ratified by Juri 2026-10-07, evidence: measured, verified: none, reversible: trunk) —
+**The conformance validator visits every instance of the model.** Amends the CRUD3 F2 visit perimeter
+(`model.objects` read as the roots, `ConformanceValidator.ts:565`): with R-NEST-1 the loop at `:35` reaches every
+instance. Monotone: nothing visited today stops being visited. Accepted cost: new violations in the Problems
+panel of models built with «Add».
+
+**R-NEST-4** (2026-10-07, ratified by Juri 2026-10-07, evidence: measured, verified: none, reversible: trunk) —
+**An element evicted from a containment slot returns to the model root and stays listed.** `_clearValueAtPosition`
+keeps its `father` write and appends the element to `objects` only when the model does not list it. On migrated
+data R-JS-12's `WOULD_ORPHAN` is unreachable; the code stays (rule 9) and R-JS-12 is amended after the Phase 2
+measure.
+
+**R-NEST-5** (2026-10-07, ratified by Juri 2026-10-07, evidence: measured, verified: none, reversible: trunk) —
+**`.delete()` of a container deletes what its containment slots own, for every caller.** #171 (b): `LValue`'s
+children include the owned values of R-NEST-2, so `Dummy.ts`'s loop over `children` reaches them from the canvas,
+the tree, the context menu, the Configurator, the Data Manager and JjScript alike; `descendantsOf` follows the same
+rule, so the plan lists and counts what the cascade deletes. Deleting an M2 composition reference, or its class,
+deletes the M1 elements its slots own (today they survive with an unresolved father): deletion of persisted data,
+accepted by Juri (RC-26).
+
+**R-NEST-6** (2026-10-07, ratified by Juri 2026-10-07, evidence: measured, verified: none, reversible: trunk) —
+**Migration `2.229 -> 2.230` lists every instance in its model.** For every `DObject` whose `father` chain ends at a
+`DModel`, the id is appended to that model's `objects` when missing, with the `pointedBy` entry an `objects '+='`
+writes; every `DModel.objects` is deduplicated keeping the first entry. A chain that does not end at a `DModel`
+(dangling) is left untouched; aggregation fathers are left as they are (R-NEST-2). Idempotent, a no-op on a coherent
+state. Critical zone (`VersionFixer.tsx`), go-ahead RC-30 by Juri.
+
+R-NEST-7 and R-NEST-8 below: decided by Juri in chat `C-2026-10-07-0948` on 2026-10-10, after the visual check of
+2026-10-08 failed on the canvas (deleted elements stayed painted). Evidence: the addendum of 2026-10-08 in
+`docs/discovery/discovery_2026-10-07_174_nesting_forms.md` (section A).
+
+**R-NEST-7** (2026-10-10, ratified by Juri 2026-10-10, evidence: measured, verified: none, reversible: trunk) —
+**A deleted model element leaves every graph, and its vertex records stay.** In the same delete, the v2-flow vertices
+that represent the element, and their edges, are detached from their graph's `subElements`; the records are kept, so
+one Ctrl+Z restores the element, its nodes and its edges. The records are not deleted there: the reducer merges any
+change of the root `vertexs` or `edges` lists into the previous history entry (`reducer.ts:1216`, a shallow merge),
+and an undo then restores nothing (measured, with a page error at `reducer.ts:1115`). That merge is ticketed as a
+lane of its own.
+
+**R-NEST-8** (2026-10-10, ratified by Juri 2026-10-10, evidence: measured, verified: none, reversible: trunk) —
+**Every load purges the graph elements that represent nothing.** After the version steps, `VersionFixer` removes from
+`subElements` and deletes the vertices whose `model` pointer does not resolve and the edges with a dead end, and
+deletes the vertex and edge records no container lists (what R-NEST-7 leaves, and the ghosts saved before it). A
+vertex with no `model` at all is not a ghost. At load there is no undo history to protect. Critical zone
+(`VersionFixer.tsx`), go-ahead RC-30 by Juri; deletion of persisted data accepted (RC-26).
+
+**R-NEST-9** (2026-10-10, decided by Juri in issue #182, evidence: measured, verified: none, reversible: trunk) —
+**`appendSlotValue` on a composition writes through `setValueAtPosition`; plain references, aggregations and primitives
+keep the raw append.** A pointer appended to a composition slot is re-fathered to the slot and evicted from its old
+container by the core, with its loop check, as a set already does; a value the slot already lists is not written
+twice. The raw `'+='` stays for every other slot (R-NEST-2: an aggregation shares). Accepted: two appends to one
+composition slot in one propagation window target the same index (`LModelElement.tsx:7898-7905`). Evidence:
+`docs/discovery/discovery_2026-10-10_182_append_composition.md`, report
+`docs/lir/lir_2026-10-10_182_append_composition.md`.
 
 ## Superate
 

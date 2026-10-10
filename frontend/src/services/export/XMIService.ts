@@ -786,8 +786,8 @@ export class XMIService {
     // Father wiring follows the EcoreParser.parseDObject convention (data.ts:588-593):
     //   • child.father = containmentDValue.id (fatherType=DValue)
     //   • containmentDValue.values.push(child.id) — registers the child semantically
-    //   • dModel.objects.push(child.id) — also registers for canvas materialization
-    //     (useJjomSync Step 2bis iterates rawModel.objects to auto-create DVertex)
+    //   • dModel.objects lists the child too, written by DObject.new itself (R-NEST-1), which is what
+    //     materialises it on the canvas (useJjomSync Step 2bis iterates rawModel.objects)
     // The EMF eContainer (= parent DObject) is recoverable via 2-hop: child.father.father.
     private static processInstance(
         itemJson: any,
@@ -944,7 +944,7 @@ export class XMIService {
     // Father wiring for containment is unchanged from B.2 (EcoreParser.parseDObject data.ts:588-593):
     //   • child.father = containmentDValue.id (fatherType=DValue)
     //   • containmentDValue.values.push(child.id)
-    //   • dModel.objects.push(child.id) — for canvas materialisation via useJjomSync Step 2bis
+    //   • dModel.objects lists the child, written by DObject.new (R-NEST-1) — canvas materialisation via useJjomSync Step 2bis
     // The EMF eContainer (= parent DObject) remains recoverable via 2-hop: child.father.father.
     private static processContainment(
         childVal: any,
@@ -1071,7 +1071,8 @@ export class XMIService {
             // after this synchronous walk, a direct push here gets serialized into the created
             // element AND re-appended by the '+=' action, duplicating every child pointer
             // (verified dynamically: pets = [c1, c2, c1, c2] pre-fix).
-            (ctx.dModel.objects as Pointer<DObject>[]).push(child.id);
+            // No direct push into dModel.objects either (#174): DObject.new queues "objects" '+=' for a
+            // child born in a slot (R-NEST-1), and a push here listed every nested child twice.
             ctx.summary.dobjects++;
 
             XMIService.processInstance(childItem, child, childClass, ctx);
