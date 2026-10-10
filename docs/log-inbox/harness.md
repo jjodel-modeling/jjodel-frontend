@@ -303,3 +303,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended, built-in browser on 4701 restarted on `25383392a` (RC-23), Insights tab, range All: the three new sections render, area and model tables as before, the trunk's legend changes present; the only console errors are connection resets from the restart window.
 **Notes**: merge-tree exit 0, zero conflicts, tree `09059c0d3`, the one the commit records. No union: decisions.md, timeline.js, CLAUDE.md, AGENTS.md, PROTOCOL.md and settings.json equal the trunk's; log-inbox the branch's. Probes: `- **RC-45**` once, the 1520 heading once, control RC-46 absent. insights.js and lane-board.mjs read end to end: hunks disjoint, each declaration once, node --check on all three; the branch's new cards use no --warn.
 **Prompt document name**: 2026-10-10 16:35
+
+## 2026-10-10 — merge: lane-board-model-insights into alfonso-frontend-jjtl (P-2026-10-10-1708)
+**Prompt**: `claude_2026-10-10_1708_prompt_merge_lane-board-model-insights.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-model-insights` at `4aa8e3b80` into `alfonso-frontend-jjtl`, merge base `f13f6f489`, 7 commits on the branch side.
+**Files touched**: merge `549409422`: 6 files from the branch side (`docs/discovery/discovery_2026-10-10_lane_board_model_insights.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_1635_prompt_lane-board-model-insights_take_trunk.md`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `549409422` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7795 tests in 318 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only (lane board), app untouched; live board on 4700 restarted on 549409422, /api/insights 200 in 2.1 s, Insights tab shows Code areas, Model by area and by size and First-shot over time, no console errors (chat, built-in browser, RC-23)
+**Notes**: Rollback tag `pre-lane-board-model-insights` on `c7b5bd751` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1708/result.json`.
+**Prompt document name**: 2026-10-10 17:08
