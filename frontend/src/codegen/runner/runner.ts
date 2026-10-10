@@ -2,9 +2,11 @@
  * runner — runs generated JavaScript in a worker of its own (R-GEN-6, spec
  * 2026-10-10 §6, discovery 2026-10-10 §F.4, U6, P-2026-10-10-0950).
  *
- * One worker per run: created, sent the request, terminated on its reply, on
- * its error event or at the timeout (`DEFAULT_TIMEOUT_MS` unless the request
- * says otherwise), whichever comes first; nothing after that is listened to.
+ * One worker per run: created, sent the request once it says `ready`,
+ * terminated on its reply, on its error event, at the timeout
+ * (`DEFAULT_TIMEOUT_MS` unless the request says otherwise, counted from
+ * `ready`) or, if it never says `ready`, at `STARTUP_TIMEOUT_MS`, whichever
+ * comes first; nothing after that is listened to.
  * The line and column of an error are measured here, from the stack the worker
  * sends back, on the frames of the generated module only (`framesOf`).
  *
@@ -14,7 +16,7 @@
  * worker of their own: the node bench has no `Worker` (vitest.config.ts).
  */
 
-import { DEFAULT_TIMEOUT_MS, framesOf } from './protocol';
+import { DEFAULT_TIMEOUT_MS, STARTUP_TIMEOUT_MS, framesOf, isWorkerReady } from './protocol';
 import type { RunError, RunErrorKind, RunRequest, RunResponse, WorkerReply } from './protocol';
 
 /** What a worker's `error` event carries, as far as the runner reads it. */
@@ -84,6 +86,7 @@ export function runInWorker(request: RunRequest, createWorker: () => RunnerWorke
             return;
         }
         let done = false;
+        let started = false;
         const finish = (response: RunResponse) => {
             if (done) return;
             done = true;
@@ -93,15 +96,28 @@ export function runInWorker(request: RunRequest, createWorker: () => RunnerWorke
             worker.terminate();
             resolve(response);
         };
+        // The worker's start-up has a bound of its own; the program's clock starts when it says `ready`.
         timer = setTimeout(() => finish({
             ok: false,
-            error: runError('timeout', `The run did not finish in ${timeoutMs} ms: the worker was terminated.`),
-        }), timeoutMs);
-        worker.onmessage = ev => finish(responseOf(ev.data));
+            error: runError('worker', `The runner did not start in ${STARTUP_TIMEOUT_MS} ms: the worker was terminated.`),
+        }), STARTUP_TIMEOUT_MS);
+        worker.onmessage = ev => {
+            if (isWorkerReady(ev.data)) {
+                if (started) return;
+                started = true;
+                clearTimeout(timer);
+                timer = setTimeout(() => finish({
+                    ok: false,
+                    error: runError('timeout', `The run did not finish in ${timeoutMs} ms: the worker was terminated.`),
+                }), timeoutMs);
+                worker.postMessage({ code: request.code, calls: request.calls });
+                return;
+            }
+            finish(responseOf(ev.data));
+        };
         worker.onerror = ev => {
             ev.preventDefault?.();
             finish({ ok: false, error: workerError(ev) });
         };
-        worker.postMessage({ code: request.code, calls: request.calls });
     });
 }

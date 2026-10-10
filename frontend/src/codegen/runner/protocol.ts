@@ -3,7 +3,8 @@
  * worker (R-GEN-6, discovery 2026-10-10 §F.4, P-2026-10-10-0950).
  *
  * One run: the code of one ES module and a sequence of calls to its exports,
- * in; one result per call, or the first error, out. The runner does not know
+ * in, once the worker has said `ready`; one result per call, or the first
+ * error, out. The runner does not know
  * the shape of a generated program (R-GEN-11's `initial`, `step`, `observe` are
  * calls like any other). An error carries the line and column of the
  * generated code, measured on the main thread from the stack the worker sends
@@ -13,8 +14,30 @@
  * Pure: no imports; shared by `runner.ts` and `runner.worker.ts`.
  */
 
-/** The timeout of a run when the request names none, in milliseconds. */
+/** The timeout of a run when the request names none, in milliseconds. Counted from the worker's `ready`. */
 export const DEFAULT_TIMEOUT_MS = 2000;
+
+/**
+ * The bound on a worker's start-up, in milliseconds: from its creation to its `ready`. Apart from the program's
+ * timeout, which starts on `ready`, so that a cold dev server compiling the worker module (6-48 s measured, ticket of
+ * P-2026-10-10-0950) is not charged to the code. A worker that has not said `ready` by then is terminated, and the
+ * error says the runner did not start.
+ */
+export const STARTUP_TIMEOUT_MS = 30000;
+
+/**
+ * What the worker posts once, when its sandbox is in place and before it evaluates anything. The runner sends the
+ * request and starts the program's clock when it arrives.
+ */
+export interface WorkerReady {
+    readonly ready: true;
+}
+
+export const WORKER_READY: WorkerReady = { ready: true };
+
+export function isWorkerReady(message: unknown): message is WorkerReady {
+    return message !== null && typeof message === 'object' && (message as WorkerReady).ready === true;
+}
 
 export interface RunCall {
     /** The name of an export of the module. */
@@ -27,7 +50,7 @@ export interface RunRequest {
     /** The source of an ES module. */
     readonly code: string;
     readonly calls: readonly RunCall[];
-    /** Default `DEFAULT_TIMEOUT_MS`. Load time counts. */
+    /** Default `DEFAULT_TIMEOUT_MS`. Counted from the worker's `ready`: load time of the module counts, the worker's start-up does not. */
     readonly timeoutMs?: number;
 }
 
@@ -37,7 +60,7 @@ export interface RunRequest {
  * cloned out of the worker. `timeout`: the worker was terminated. `sandbox`: a
  * network global could not be removed, so nothing ran. `worker`: the worker
  * itself reported an error (a script that failed to load, an uncaught throw
- * outside any call).
+ * outside any call), or did not become ready within `STARTUP_TIMEOUT_MS`.
  */
 export type RunErrorKind = 'load' | 'export' | 'runtime' | 'result' | 'timeout' | 'sandbox' | 'worker';
 

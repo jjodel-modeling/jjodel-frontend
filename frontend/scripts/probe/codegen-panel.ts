@@ -1,6 +1,6 @@
 /**
- * codegen-panel probe (P-2026-10-10-1825): the experimental setting, the lazy mount and the code panel with its
- * navigable origin, in the app (R-GEN-2, R-GEN-5, R-GEN-12, R-GEN-14; discovery §E.4, §I.5).
+ * codegen-panel probe (P-2026-10-10-1825, P-2026-10-10-2027): the experimental setting, the lazy mount and the code
+ * panel with its navigable origin, in the app (R-GEN-2, R-GEN-5, R-GEN-12, R-GEN-14; discovery §E.4, §I.5).
  *
  * Phase off (fresh context, Advanced mode, the setting never written). For each of the four demo scenes
  * (fixtures/scene_{1..4}_*.jjodel): import, open the M1 tab, measure every node box of its pane keyed by the element's
@@ -21,19 +21,29 @@
  *   - hover: every span of the fragment outlined, the origin bar «element · feature · transformation»;
  *   - Run: `main()` returns; a module whose `check_unlocked` throws reports its line and the element `unlocked`, and
  *     the line is marked; `while (true) {}` is stopped at a 1500 ms timeout; a template with an error refuses Run.
+ *     The Timeout field is never touched for the first two runs: they run at the panel's default (2000 ms), the first
+ *     one on a worker whose script is held back 3500 ms, as a cold dev server holds it while it compiles the module
+ *     (P-2026-10-10-2027: the program's clock starts when the worker is ready, so the run still answers).
+ *   - The output of the run-error module scrolls: its widest line is cut at the right edge and reachable by
+ *     scrolling (by script and by a wheel gesture), the scrollbar is thick enough to see, the gutter stays at the
+ *     left edge at both ends, a span scrolled into view stops clear of it, and every line, the highlighted one
+ *     included, spans the scrolled width.
  * The record the panel passes to `generate` is `buildEvalContext`'s: its handles carry `id` and the feature keys
  * (the ticket S2 left to this slice), measured in the page on the same model.
  *
- * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-10-1825/crops/ with their sizes printed: settings_advanced.png,
- * editor_pill.png, panel_templates.png, panel_output.png, panel_hover.png, panel_linked.png, editor_linked.png,
- * panel_run_error.png.
+ * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-10-2027/crops/ (CGP_CROPS) with their sizes printed:
+ * settings_advanced.png, editor_pill.png, panel_templates.png, panel_output.png, panel_hover.png, panel_linked.png,
+ * editor_linked.png, panel_run_error_left.png, panel_run_error_right.png. The browser keeps its scrollbars
+ * (Playwright's headless default hides them), so a crop shows what the user sees.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-panel.ts \
- *         --port 3086 --id P-2026-10-10-1825
+ *         --port 3086 --id P-2026-10-10-2027
  * Env:  CGP_PHASE   'base': phase off only, no assertion that needs the slice (for the base tree);
  *                   'on': phase on only (the mutation bench)
  *       CGP_OUT     JSON output (default frontend/scripts/smoke/_tmp_codegen-panel.json, gitignored)
- *       CGP_BEFORE  the JSON of a base run, to compare node boxes with
+ *       CGP_BEFORE  the JSON of a base run, to compare node boxes with (taken with this version of the probe: the
+ *                   scrollbars it keeps change the box of a scrollable pane)
+ *       CGP_CROPS   the folder of the crops (default ~/.jjodel-lanes/P-2026-10-10-2027/crops)
  */
 import { chromium, type BrowserContext, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -46,7 +56,7 @@ const BASE_PHASE = process.env.CGP_PHASE === 'base';
 const ON_ONLY = process.env.CGP_PHASE === 'on';
 const OUT = process.env.CGP_OUT || new globalThis.URL('../smoke/_tmp_codegen-panel.json', import.meta.url).pathname;
 const BEFORE = process.env.CGP_BEFORE || '';
-const CROPS = `${homedir()}/.jjodel-lanes/P-2026-10-10-1825/crops`;
+const CROPS = process.env.CGP_CROPS || `${homedir()}/.jjodel-lanes/P-2026-10-10-2027/crops`;
 const fixture = (name: string) => new globalThis.URL(`./fixtures/${name}.jjodel`, import.meta.url).pathname;
 mkdirSync(CROPS, { recursive: true });
 
@@ -210,6 +220,37 @@ async function open(page: Page, s: typeof SCENES[number]): Promise<{ mm: string;
     return ids;
 }
 
+/** Scrolls the output of the panel to its left or right edge and measures it (all sizes in px). */
+const SCROLLED = (panel: string, to: 'left' | 'right') => String.raw`(() => {
+  const pre = ${panel}.querySelector('.codegen-panel__code');
+  pre.scrollLeft = ${to === 'left' ? '0' : 'pre.scrollWidth'};
+  const lines = [...pre.querySelectorAll('.codegen-panel__line')];
+  const textOf = (l) => l.querySelector('.codegen-panel__text');
+  const widest = lines.reduce((best, l) => (textOf(l).textContent.length > textOf(best).textContent.length ? l : best));
+  const view = () => { const r = pre.getBoundingClientRect(); return { left: r.left + pre.clientLeft, right: r.left + pre.clientLeft + pre.clientWidth }; };
+  const v = view();
+  const range = document.createRange();
+  range.selectNodeContents(textOf(widest));
+  const gutters = lines.map((l) => l.querySelector('.codegen-panel__gutter'));
+  const opaque = (g) => getComputedStyle(g).backgroundColor !== 'rgba(0, 0, 0, 0)';
+  const errorLine = pre.querySelector('.codegen-panel__line--error');
+  const heights = lines.map((l) => l.getBoundingClientRect().height);
+  const widths = lines.map((l) => l.getBoundingClientRect().width);
+  return {
+    scrollLeft: pre.scrollLeft, scrollWidth: pre.scrollWidth, clientWidth: pre.clientWidth,
+    scrollbar: pre.offsetHeight - pre.clientHeight - 2 * pre.clientTop,
+    lastCharBeyond: range.getBoundingClientRect().right - v.right,
+    lines: lines.length, dataLines: new Set(lines.map((l) => l.getAttribute('data-line'))).size,
+    rowHeightSpread: Math.max(...heights) - Math.min(...heights),
+    gutterOffset: Math.max(...gutters.map((g) => Math.abs(g.getBoundingClientRect().left - v.left))),
+    gutterOpaque: gutters.every(opaque),
+    errorGutterOpaque: errorLine ? opaque(errorLine.querySelector('.codegen-panel__gutter')) : false,
+    errorLines: pre.querySelectorAll('.codegen-panel__line--error').length,
+    shortestLine: Math.min(...widths),
+    errorLineWidth: errorLine ? errorLine.getBoundingClientRect().width : 0,
+  };
+})()`;
+
 async function crop(page: Page, file: string, box: { x: number; y: number; w: number; h: number }, pad = 8) {
     const vp = page.viewportSize() ?? { width: 1600, height: 1000 };
     const x = Math.max(0, Math.floor(box.x - pad));
@@ -233,7 +274,7 @@ async function newContext(browser: Awaited<ReturnType<typeof chromium.launch>>):
     return { ctx, page, requests, errors };
 }
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
 const result: any = { url: URL, phase: BASE_PHASE ? 'base' : 'slice', boxes: {} };
 
 try {
@@ -485,12 +526,20 @@ try {
         const paneBox = await page.evaluate(BOX(pane)) as any;
         if (paneBox) await crop(page, 'editor_linked.png', paneBox, 0);
 
-        // Run: main() returns.
-        await page.locator('.codegen-panel__timeout input').fill('60000');
+        // Run: main() returns, at the panel's default timeout, on a worker that takes longer to start than that timeout
+        // (what a cold dev server does while it compiles the worker module): the script of the worker is held back
+        // WORKER_START_MS, and the clock of the program starts when the worker says ready.
+        const WORKER_START_MS = 3500;
+        const fieldBefore = await page.locator('.codegen-panel__timeout input').inputValue();
+        note('on: timeout field before the first Run', fieldBefore);
+        await page.route(/runner\.worker/, async route => { await new Promise(r => setTimeout(r, WORKER_START_MS)); await route.continue(); });
         await page.locator('.codegen-panel__run .codegen-panel__button--primary').click();
         const ran = await poll<any>(page, String.raw`(() => { const r = ${panel}.querySelector('.codegen-panel__result'); return r ? { text: r.textContent, error: r.classList.contains('codegen-panel__result--error') } : null; })()`, 90000);
+        await page.unroute(/runner\.worker/);
         note('on: run main', ran);
         check('on: Run calls main() and shows what it returned', !!ran && !ran.error && /"states": 3/.test(ran.text) && /"transitions": 4/.test(ran.text), JSON.stringify(ran));
+        const ranMs = Number(/returned, (\d+) ms/.exec(ran?.text ?? '')?.[1] ?? NaN);
+        check('on: the first Run kept the default timeout and the worker took longer than it to start', fieldBefore === '2000' && ranMs >= WORKER_START_MS - 100 && ranMs > Number(fieldBefore), JSON.stringify({ fieldBefore, ranMs, WORKER_START_MS }));
 
         // Keys typed in a template body stay in the panel: EditorV2 deletes the canvas selection on Backspace.
         const selectTc = String.raw`(() => {
@@ -528,7 +577,6 @@ try {
         await page.locator('.codegen-panel__select').selectOption('boom');
         await wait(page, 600);
         const boomLine = await page.evaluate(String.raw`(() => [...${panel}.querySelectorAll('.codegen-panel__line')].find((l) => l.querySelector('.codegen-panel__text').textContent.startsWith('function check_unlocked'))?.getAttribute('data-line'))()`) as string | undefined;
-        await page.locator('.codegen-panel__timeout input').fill('60000');
         await page.locator('.codegen-panel__run .codegen-panel__button--primary').click();
         const boom = await poll<any>(page, String.raw`(() => {
           const p = ${panel};
@@ -541,8 +589,47 @@ try {
         note('on: run boom', result.boom);
         check('on: a runtime error names its line of the generated text, and the line is marked', !!boom && !!boomLine && new RegExp(`^line ${boomLine},`).test(boom.at ?? '') && boom.marked.length === 1 && boom.marked[0] === boomLine && /^runtime: Error: unlocked fails/.test(boom.error), JSON.stringify(result.boom));
         check('on: the runtime error points at the element unlocked', !!boom && boom.element === 'unlocked', JSON.stringify(boom));
+        const left = await page.evaluate(SCROLLED(panel, 'left')) as any;
         const eBox = await page.evaluate(BOX(panel)) as any;
-        if (eBox) await crop(page, 'panel_run_error.png', eBox);
+        if (eBox) await crop(page, 'panel_run_error_left.png', eBox);
+        const right = await page.evaluate(SCROLLED(panel, 'right')) as any;
+        const eBoxRight = await page.evaluate(BOX(panel)) as any;
+        if (eBoxRight) await crop(page, 'panel_run_error_right.png', eBoxRight);
+        // The gesture of the user: a horizontal wheel over the output scrolls it (setting `scrollLeft` from a script
+        // works on a box whose overflow is hidden, so the checks above cannot tell).
+        await page.evaluate(SCROLLED(panel, 'left'));
+        const preBox = await page.locator('.codegen-panel__code').boundingBox();
+        let wheeled = -1;
+        if (preBox) {
+            await page.mouse.move(preBox.x + preBox.width / 2, preBox.y + preBox.height / 2);
+            await page.mouse.wheel(200, 0);
+            await wait(page, 300);
+            wheeled = await page.evaluate(`${panel}.querySelector('.codegen-panel__code').scrollLeft`) as number;
+        }
+        check('on: a horizontal wheel over the output scrolls it', wheeled > 0, `${wheeled}`);
+        // From the right edge, a click on a model span links its first span on the left of the view: scrolled into
+        // view, it must stop clear of the fixed gutter, not under it.
+        const clearance = await page.evaluate(String.raw`(async () => {
+          const pre = ${panel}.querySelector('.codegen-panel__code');
+          pre.scrollLeft = pre.scrollWidth;
+          const from = pre.scrollLeft;
+          pre.querySelector('.code-span--model').click();
+          await new Promise((r) => setTimeout(r, 400));
+          const linked = pre.querySelector('.code-span--linked');
+          return { from, to: pre.scrollLeft, clearance: linked.getBoundingClientRect().left - pre.querySelector('.codegen-panel__gutter').getBoundingClientRect().right };
+        })()`) as any;
+        await page.evaluate(SCROLLED(panel, 'left'));
+        result.scroll = { left, right, clearance };
+        note('on: a linked span scrolled into view from the right edge', clearance);
+        check('on: a span scrolled into view stops clear of the fixed gutter, not under it', clearance.to < clearance.from && clearance.clearance >= -1, JSON.stringify(clearance));
+        note('on: run-error output, scrolled to the left edge', left);
+        note('on: run-error output, scrolled to the right edge', right);
+        check('on: the run-error output is wider than its box, and at the left edge its widest line is cut at the right', left.scrollWidth > left.clientWidth && left.lastCharBeyond > 0.5, JSON.stringify(left));
+        check('on: scrolled to the right edge, the last character of the widest line is visible', right.scrollLeft > 0 && right.lastCharBeyond <= 0.5 && right.lastCharBeyond > -right.clientWidth, JSON.stringify(right));
+        check('on: the horizontal scrollbar of the output is thick enough to see (>= 8 px)', left.scrollbar >= 8, `${left.scrollbar}`);
+        check('on: one row per generated line, none wrapped', left.lines > 1 && left.lines === left.dataLines && left.rowHeightSpread < 0.5, JSON.stringify({ lines: left.lines, dataLines: left.dataLines, spread: left.rowHeightSpread }));
+        check('on: the gutter stays at the left edge at both ends of the scroll, and is opaque', left.gutterOffset < 1 && right.gutterOffset < 1 && left.gutterOpaque && right.gutterOpaque && left.errorGutterOpaque && right.errorGutterOpaque, JSON.stringify({ left: left.gutterOffset, right: right.gutterOffset }));
+        check('on: every line spans the scrolled width, so the highlighted line does too', left.errorLines === 1 && right.errorLines === 1 && right.shortestLine >= right.scrollWidth - 1 && right.errorLineWidth >= right.scrollWidth - 1, JSON.stringify({ shortest: right.shortestLine, error: right.errorLineWidth, scrollWidth: right.scrollWidth }));
         if (boom?.element) {
             const jump = await page.evaluate(String.raw`(async () => {
               const pane = ${pane};
