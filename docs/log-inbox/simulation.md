@@ -787,3 +787,18 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: RC-23 already passed on the lane crops (P-2026-10-10-1646); all merge gates green
 **Notes**: Rollback tag `pre-sim-coverage-polish` on `a2e854587` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1737/result.json`.
 **Prompt document name**: 2026-10-10 17:37
+
+## 2026-10-10 — feat: event reads checked at Reset, the unset warning, R-SIM-144 (P-2026-10-10-1630)
+**Prompt**: Phase 2 GO of `claude_2026-10-10_1630_prompt_sim_event_attributes_discovery.md` (unattended, «vai in auto»), full lane on `~/jjodel-w-eventattrs`, branch `sim-event-attrs`: the Reset checks P3 and P4 of R-SIM-144, the unset event attributes on the run warning line, tests red first, parity on the four demo scenes.
+**Files touched**: test `b7405daa2`: `frontend/src/model/simulation/__tests__/stcChecks.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`. feat `8141fa8a3`: `frontend/src/model/simulation/stcChecks.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (and one optional chain in stcChecks.test.ts). probe `ce1a3465f`: `frontend/scripts/probe/sim-event-attrs.ts`, `frontend/scripts/probe/sim-event-attrs-visual.ts`. This entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (simulation suites 47 files, 1473 tests, 1461 + 12 new; the demo scenes' Reset defects, warnings and Last step lines byte-identical; typecheck 14; build exit 0)
+**Out-of-scope changes**: no — 7 files, all in the prompt's DOVE
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 5/5 (defect line, problems registry, warning line, Step's top 873 in the three cases, four demo scenes clean); lane probe on 3098, 13/13
+**Notes**: Mutation bench 14/14 killed on the two checks and the warning. Step's top 873 with the defect line, the warning line and neither. Visual probe retry 1: a [] write through the L proxy leaves the slot as it was, so the trigger was cleared with [null]. problems_600.png is 538 px wide, clipped at the viewport edge. init_dash console error on every page, seen in Phase 1 too.
+**Prompt document name**: 2026-10-10 16:30
+
+**Ticket** (low, R-SIM-144 settled it as a ticket): a trigger on a fork's out edge, or on a join's in edge, is dropped by `compileControlFlow` without a defect; the event press reads «no transition accepted it». Discovery report §3.4.

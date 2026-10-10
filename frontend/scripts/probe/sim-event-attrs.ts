@@ -667,6 +667,10 @@ console.log('== 9. guard defects on the four demo scenes, with and without the s
                 guardSites: [...sites].map(nameOf), reset, dynamicDefects: dynamic.length, staticDefects: statics.length,
                 firstDynamic: dynamic[0] ?? null, defectsAtThePressedInput: atPress, lastSteps: lines,
             });
+            // The parity oracle of R-SIM-144 (Phase 2): the Reset defects in full and the run warnings, byte for byte.
+            note(`9 parity ${def.which}${def.decls ? (withDecls ? ' with declarations' : ' without declarations') : ''}`, {
+                compileDefects: r.compileDefects ?? null, runWarnings: (r as { runWarnings?: unknown }).runWarnings ?? null,
+            });
         }
     }
 }
