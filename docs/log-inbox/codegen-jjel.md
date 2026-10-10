@@ -18,3 +18,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: JjelTextHost: isText(v), interpolate(parts, expr), concat(l, r), join(items, sep), stringify(t), optional evaluateHole(expr, evaluate) for per-hole reads and errors. Hole part: {kind:'hole', value, expr, location, render()}. join untouched; host path is joinWithTextHost. Bench 7/7 killed. Gap for S2: text parts carry no location (ast.ts outside DOVE); spans via tokenize(src, {interpolation: true}). Detail: body of 4eda9c793.
 **Prompt document name**: 2026-10-10 09:00
+
+## 2026-10-10 — merge: codegen-jjel-template into alfonso-frontend-jjtl (P-2026-10-10-0936)
+**Prompt**: `claude_2026-10-10_0936_prompt_merge_codegen-jjel-template.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-jjel-template` at `de640d661` into `alfonso-frontend-jjtl`, merge base `0c847329d`, 2 commits on the branch side.
+**Files touched**: merge `7e06abb4c`: 9 files from the branch side (`docs/log-inbox/codegen-jjel.md`, `frontend/src/jjel/SPEC.md`, `frontend/src/jjel/__tests__/templateInterpolation.test.ts`, `frontend/src/jjel/evaluator/builtins/collections.ts`, `frontend/src/jjel/evaluator/context.ts`, `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjel/index.ts`, `frontend/src/jjel/lexer/lexer.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7e06abb4c` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7721 tests in 313 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: direct merge gates green: typecheck 14 = base, vitest 7721 tests in 313 files (9 red at import as base), build, check:docs/agents/scripts/addonly exit 0; textual slice, no visual change
+**Notes**: Rollback tag `pre-codegen-jjel-template` on `a2eef734f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-0936/result.json`.
+**Prompt document name**: 2026-10-10 09:36
