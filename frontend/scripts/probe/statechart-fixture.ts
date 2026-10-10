@@ -19,13 +19,15 @@
  * Env:  SC_TAG    label of the run in file names (default after)
  *       SC_OUT    output directory (default docs/discovery/assets/graphvertex-s2b of this tree)
  *       SC_ONLY   comma list of scenes: statechart (S2b), s6 (Auto layout) (default statechart)
+ *       GV_SAVE   opt-in: a directory where the built scene is exported, before any gesture, as gv-statechart.jjodel
+ *                 (the File menu's «Download Project»; bpmn-lanes-fixture `saveScene`)
  */
 import { chromium, type Browser } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { setTheme, SETTLE_MS } from '../smoke/states.ts';
 import {
     autoLayout, buildLinks, buildMetamodel, buildModelShell, buildObjects, buildViewpoint, createProject, drag, ev, openPage,
-    pickViewpoint, readEdges, readHulls, readNodes, records, screenBox, type Box,
+    pickViewpoint, readEdges, readHulls, readNodes, records, saveScene, screenBox, type Box,
 } from './bpmn-lanes-fixture.ts';
 import type { Page } from '@playwright/test';
 
@@ -206,6 +208,7 @@ async function buildStatechartScene(browser: Browser) {
     await setTheme(page, 'light');
     await pickViewpoint(page, 'Statechart');
     await page.waitForTimeout(SETTLE_MS);
+    await saveScene(page, 'gv-statechart.jjodel');
     return { page, errors, ids, shell };
 }
 

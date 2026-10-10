@@ -21,6 +21,8 @@
  *       GV_OUT    output directory (default docs/discovery/assets/graphvertex-s2 of this tree)
  *       GV_ONLY   comma list of scenes: bpmn, hull, demos, s3, s3hull, s6, s6flat, s6hull (default bpmn,hull)
  *       GV_DEMOS  directory of the demo exports for the `demos` scene (default ~/jjodel-demo-exports)
+ *       GV_SAVE   opt-in: a directory where each built scene is exported, before any gesture, as the File menu's
+ *                 «Download Project» does (gv-bpmn.jjodel, gv-hull.jjodel); open one with Import Project
  */
 import { chromium, type Browser, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -32,6 +34,7 @@ const TAG = process.env.GV_TAG || 'after';
 const OUT = (process.env.GV_OUT || new globalThis.URL('../../../docs/discovery/assets/graphvertex-s2/', import.meta.url).pathname).replace(/\/$/, '');
 const ONLY = (process.env.GV_ONLY || 'bpmn,hull').split(',').filter(Boolean);
 const DEMOS = process.env.GV_DEMOS || `${process.env.HOME}/jjodel-demo-exports`;
+const SAVE = process.env.GV_SAVE ? process.env.GV_SAVE.replace(/\/$/, '') : null;
 mkdirSync(OUT, { recursive: true });
 
 let pass = 0; let fail = 0;
@@ -170,6 +173,28 @@ export const BPMN_REFERENCES: Array<[string, string, string]> = [
 ];
 
 // ── Page helpers ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+const savedOnce = new Set<string>();
+/**
+ * With GV_SAVE set, the open project as the File menu's «Download Project» writes it (Navbar.tsx): saved, then
+ * `buildProjectExportJson` with the runtime megamodel, the format of ~/jjodel-demo-exports. Once per file name: the
+ * scenes that build the same model write it once. Without GV_SAVE, nothing.
+ */
+export async function saveScene(page: Page, file: string) {
+    if (!SAVE || savedOnce.has(file)) return;
+    savedOnce.add(file);
+    const text = await ev<string | null>(page, `
+        const api = await import('/src/api/persistance/projects.ts');
+        const mp = await import('/src/model/megamodelPersistence.ts');
+        const mr = await import('/src/model/megamodelRuntime.ts');
+        const project = w.LProject.getProject();
+        const dproject = await api.ProjectsApi.save(project);
+        return dproject ? JSON.stringify(mp.buildProjectExportJson(dproject, mr.getRuntimeMegamodel(project.id))) : null;`, undefined, 800);
+    if (!text) { meas('save', `${file}: no project`); return; }
+    mkdirSync(SAVE, { recursive: true });
+    writeFileSync(`${SAVE}/${file}`, text);
+    meas('save', `${SAVE}/${file} (${text.length} bytes)`);
+}
 
 /** Evaluate an async body in the page with `w` (window) and `a` (the argument); a pause after each write. */
 export async function ev<T = unknown>(page: Page, body: string, arg?: unknown, pauseMs = 400): Promise<T> {
@@ -408,6 +433,7 @@ export async function buildBpmnScene(browser: Browser, label: string) {
     await setTheme(page, 'light');
     await pickViewpoint(page, 'BPMN');
     await page.waitForTimeout(SETTLE_MS);
+    await saveScene(page, 'gv-bpmn.jjodel');
     return { page, errors, ids, shell: shell as { modelId: string; graphId: string } };
 }
 
@@ -509,6 +535,8 @@ async function sceneHull(browser: Browser, out: Record<string, unknown>) {
         ['State', state],
     ]);
     await setTheme(page, 'light');
+    // Exported under the hull viewpoint, so the file opens on it; without GV_SAVE the scene runs as before.
+    if (SAVE) { await pickViewpoint(page, 'Hulls'); await saveScene(page, 'gv-hull.jjodel'); }
     const res: Record<string, unknown> = { tag: TAG, ids, errors };
     for (const vp of ['Hulls', 'Collapsed']) {
         await pickViewpoint(page, vp);
