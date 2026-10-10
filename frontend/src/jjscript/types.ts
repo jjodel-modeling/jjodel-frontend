@@ -3,6 +3,8 @@
  * Complete type system for the JjScript scripting language
  */
 
+import { JJSCRIPT_COMMAND_WORDS, JJSCRIPT_ELEMENT_TYPE_WORDS, JJSCRIPT_KEYWORD_WORDS } from './reservedIdentifiers';
+
 // ============================================
 // TOKEN TYPES
 // ============================================
@@ -571,28 +573,22 @@ export const TYPE_ALIASES: Record<string, PrimitiveTypeName> = {
     'Void': 'Void',
 };
 
+/**
+ * The primitive type names, lowercase and distinct (P-2026-10-10-0045). `parseTypeReference`
+ * matches `TYPE_ALIASES` exactly and then in any case (`grammar.ts`), so a class or an enum
+ * named after one of them is replaced by the primitive in every `type` clause.
+ */
+export const JJSCRIPT_PRIMITIVE_TYPE_NAMES: ReadonlySet<string> = new Set(
+    Object.keys(TYPE_ALIASES).map(alias => alias.toLowerCase())
+);
+
 // ============================================
 // COMMAND KEYWORDS
 // ============================================
 
-export const COMMANDS: CommandType[] = [
-    'create', 'delete', 'rename', 'set', 'add', 'remove',
-    'move', 'copy', 'list', 'show', 'help', 'undo', 'redo',
-    'clear', 'export', 'import', 'validate', 'extends', 'eval',
-    'let', 'forall', 'abstract'
-];
+// The words live in `reservedIdentifiers.ts`, the one list (P-2026-10-10-0045).
+export const COMMANDS: CommandType[] = [...JJSCRIPT_COMMAND_WORDS];
 
-export const ELEMENT_TYPES: ElementType[] = [
-    'class', 'abstract class', 'interface', 'attribute', 'reference',
-    'containment', 'composition',  // Shortcuts for "reference ... containment"
-    'operation', 'parameter', 'package', 'enum', 'enumeration',
-    'literal', 'model', 'metamodel', 'project', 'annotation',
-    'instance'   // M1: DObject instance
-];
+export const ELEMENT_TYPES: ElementType[] = [...JJSCRIPT_ELEMENT_TYPE_WORDS];
 
-export const KEYWORDS = [
-    'to', 'from', 'in', 'of', 'as', 'with', 'type', 'extends', 'implements',
-    'abstract', 'readonly', 'derived', 'transient', 'volatile',
-    'containment', 'opposite', 'default', 'ordered', 'unique',
-    'cascade', 'force', 'deep', 'brief', 'full', 'tree'
-];
+export const KEYWORDS: string[] = [...JJSCRIPT_KEYWORD_WORDS];
