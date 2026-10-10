@@ -26,14 +26,20 @@ const OCL_COLLECTION_CONSTRUCTORS = new Set<string>(['Set', 'Sequence', 'Bag', '
 /**
  * `actionMode` lexes `:=` as `ASSIGN`, for `parseAction` (R-SIM-40). Off by
  * default: in an expression `:=` stays an error.
+ *
+ * `interpolation` lexes the holes of a double-quoted `"…${…}…"`, for
+ * `parseTemplate` (R-GEN-10). Off by default: without it a hole lexes as
+ * before and every parse of it fails. Single-quoted strings never interpolate.
  */
 export interface JjelLexerOptions {
     actionMode?: boolean;
+    interpolation?: boolean;
 }
 
 export class JjelLexer {
     private source: string;
     private actionMode: boolean;
+    private interpolation: boolean;
     private tokens: JjelToken[] = [];
     private errors: JjelLexerError[] = [];
     private start: number = 0;
@@ -45,6 +51,7 @@ export class JjelLexer {
     constructor(source: string, options?: JjelLexerOptions) {
         this.source = source;
         this.actionMode = options?.actionMode === true;
+        this.interpolation = options?.interpolation === true;
     }
 
     /**
@@ -216,7 +223,11 @@ export class JjelLexer {
 
             // String literals
             case '"':
-                this.string();
+                if (this.interpolation) {
+                    this.interpolatedString();
+                } else {
+                    this.string();
+                }
                 break;
 
             // Single-quoted strings (same semantics as double-quoted)
@@ -335,6 +346,132 @@ export class JjelLexer {
         } else if (currentText) {
             this.addTokenWithValue(JjelTokenType.STRING_PART, currentText);
         }
+    }
+
+    /**
+     * A double-quoted string under `interpolation` (R-GEN-10). Without holes it
+     * is one `STRING`, as in `string()`. With holes it is a `STRING_PART`, then
+     * for each hole a `DOLLAR_LBRACE` whose value is the hole's source and whose
+     * start, line and column are those of its first character, followed by a
+     * `STRING_PART` before the next hole or the final `STRING`. The first text
+     * token spans from the opening quote, the last to the closing one; text
+     * values are unescaped. The parser lexes each hole again on its own.
+     */
+    private interpolatedString(): void {
+        let text = '';
+        let textStart = this.start;
+        let textLine = this.line;
+        let textColumn = this.start - this.lineStart + 1;
+
+        while (this.peek() !== '"' && !this.isAtEnd()) {
+            const c = this.peek();
+
+            if (c === '\\') {
+                this.advance(); // consume backslash
+                const escaped = this.peek();
+                this.advanceInString(); // consume escaped char
+
+                switch (escaped) {
+                    case 'n': text += '\n'; break;
+                    case 't': text += '\t'; break;
+                    case 'r': text += '\r'; break;
+                    case '"': text += '"'; break;
+                    case '\\': text += '\\'; break;
+                    case '$': text += '$'; break;
+                    default:
+                        this.error(`Unknown escape sequence: \\${escaped}`);
+                        text += escaped;
+                }
+            } else if (c === '$' && this.peekNext() === '{') {
+                this.pushToken(JjelTokenType.STRING_PART, text, textStart, this.current, textLine, textColumn);
+                this.advance(); // $
+                this.advance(); // {
+                const holeStart = this.current;
+                const holeLine = this.line;
+                const holeColumn = this.current - this.lineStart + 1;
+                if (!this.skipHole()) {
+                    this.error('Unterminated string interpolation');
+                    return;
+                }
+                this.pushToken(JjelTokenType.DOLLAR_LBRACE, this.source.substring(holeStart, this.current),
+                    holeStart, this.current, holeLine, holeColumn);
+                this.advance(); // }
+                text = '';
+                textStart = this.current;
+                textLine = this.line;
+                textColumn = this.current - this.lineStart + 1;
+            } else {
+                text += c;
+                this.advanceInString();
+            }
+        }
+
+        if (this.isAtEnd()) {
+            this.error('Unterminated string');
+            return;
+        }
+
+        this.advance(); // Closing "
+        this.pushToken(JjelTokenType.STRING, text, textStart, this.current, textLine, textColumn);
+    }
+
+    /**
+     * Skip the source of a hole, from after `${` to its closing `}`, where it
+     * stops. Braces nest; a string inside the hole is skipped whole, holes of a
+     * double-quoted one included, so a `}` in it closes nothing; a `--` comment
+     * runs to the end of the line, as in `scanToken`. False at the end of input.
+     */
+    private skipHole(): boolean {
+        let depth = 1;
+        while (!this.isAtEnd()) {
+            const c = this.peek();
+            if (c === '}') {
+                depth--;
+                if (depth === 0) return true;
+                this.advanceInString();
+            } else if (c === '{') {
+                depth++;
+                this.advanceInString();
+            } else if (c === '"' || c === "'") {
+                this.advanceInString();
+                if (!this.skipQuoted(c)) return false;
+            } else if (c === '-' && this.peekNext() === '-') {
+                while (!this.isAtEnd() && this.peek() !== '\n') {
+                    this.advanceInString();
+                }
+            } else {
+                this.advanceInString();
+            }
+        }
+        return false;
+    }
+
+    /** Skip a quoted string inside a hole, after its opening quote, through its closing one. */
+    private skipQuoted(quote: string): boolean {
+        while (!this.isAtEnd()) {
+            const c = this.advanceInString();
+            if (c === '\\') {
+                if (!this.isAtEnd()) this.advanceInString();
+            } else if (c === quote) {
+                return true;
+            } else if (quote === '"' && c === '$' && this.peek() === '{') {
+                this.advanceInString();
+                if (!this.skipHole()) return false;
+                this.advanceInString(); // }
+            }
+        }
+        return false;
+    }
+
+    /** `advance`, keeping line and column right across a newline inside a string. */
+    private advanceInString(): string {
+        const c = this.advance();
+        if (c === '\n') {
+            this.line++;
+            this.lineStart = this.current;
+            this.column = 1;
+        }
+        return c;
     }
 
     /**
@@ -510,6 +647,10 @@ export class JjelLexer {
             start: this.start,
             end: this.current,
         });
+    }
+
+    private pushToken(type: JjelTokenType, value: string, start: number, end: number, line: number, column: number): void {
+        this.tokens.push({ type, value, line, column, start, end });
     }
 
     private error(message: string): void {

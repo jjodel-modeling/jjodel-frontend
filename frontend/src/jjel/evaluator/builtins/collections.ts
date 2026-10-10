@@ -6,6 +6,7 @@
 import {
     JjelValue,
     JjelFunction,
+    JjelTextHost,
     EvaluationContext,
     createFunction,
     isJjelFunction
@@ -387,6 +388,17 @@ export function groupBy(
  */
 export function join(array: JjelValue[], separator: string = ''): string {
     return array.map(v => String(v)).join(separator);
+}
+
+/**
+ * join(separator) from a context with a Text host (R-GEN-10): the host joins
+ * when an item or the separator is a Text; otherwise `join`, unchanged.
+ */
+export function joinWithTextHost(array: JjelValue[], separator: JjelValue = '', host: JjelTextHost): JjelValue {
+    if (host.isText(separator) || array.some(v => host.isText(v))) {
+        return host.join(array, separator);
+    }
+    return join(array, separator as string);
 }
 
 /**

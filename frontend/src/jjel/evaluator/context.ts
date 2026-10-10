@@ -3,6 +3,8 @@
  * Manages variable bindings and scope during expression evaluation
  */
 
+import type { ASTLocation, JjelExpression } from '../types/ast';
+
 // ============================================
 // VALUE TYPES
 // ============================================
@@ -246,6 +248,58 @@ export interface JjelStateAccess {
     readPresentation(attr: string): JjelValue | undefined;
 }
 
+/**
+ * One part of an interpolated string as a `JjelTextHost` receives it
+ * (R-GEN-10): the literal text between holes, unescaped, or a hole with its value.
+ */
+export type JjelTextPart =
+    | { kind: 'text'; value: string }
+    | {
+        kind: 'hole';
+        /** What the hole evaluated to, through `evaluateHole` when the host has it. */
+        value: JjelValue;
+        /** The hole's expression, its locations absolute in the template's source. */
+        expr: JjelExpression;
+        /** `expr.location`: where the hole's expression sits in the template's source. */
+        location?: ASTLocation;
+        /**
+         * `value` by JjEL's interpolation rules (null is '', an array is its
+         * items joined by ', '); a Text, alone or inside an array, goes through
+         * the host's `stringify`. Lazy: a value nobody renders is never rendered.
+         */
+        render(): string;
+    };
+
+/**
+ * Text values for templates (R-GEN-10). Slice S2 implements it in
+ * `frontend/src/codegen/engine/`; JjEL only consults it, and only from a
+ * context that has it (`EvaluationContext.textHost`):
+ * - an interpolated string: always, through `interpolate`;
+ * - `+`, `join` and the rendering of an interpolation hole: only when a Text is involved.
+ * A Text is whatever `isText` recognises; JjEL never looks inside one.
+ */
+export interface JjelTextHost {
+    /** Whether `value` is a Text of this host. */
+    isText(value: JjelValue): boolean;
+    /**
+     * The value of an interpolated string, built from its parts in source
+     * order; `expr` is the `InterpolatedString` node, with its location.
+     */
+    interpolate(parts: JjelTextPart[], expr: JjelExpression): JjelValue;
+    /** `left + right`, where at least one operand is a Text. */
+    concat(left: JjelValue, right: JjelValue): JjelValue;
+    /** `items.join(separator)`, where an item or the separator is a Text. */
+    join(items: JjelValue[], separator: JjelValue): JjelValue;
+    /** A Text as a plain string, where an interpolation hole renders one. */
+    stringify(text: JjelValue): string;
+    /**
+     * Optional: runs around the evaluation of each hole, in source order, and
+     * returns the hole's value. Lets the host tell the reads of one hole from
+     * the next and turn a hole that throws into a value. Absent: `evaluate()`.
+     */
+    evaluateHole?(expr: JjelExpression, evaluate: () => JjelValue): JjelValue;
+}
+
 // ============================================
 // EVALUATION CONTEXT
 // ============================================
@@ -276,6 +330,18 @@ export class EvaluationContext {
      * `.[a]` throws. Inherited by children, like `diagnostics`.
      */
     stateAccess?: JjelStateAccess;
+    /**
+     * Text values for templates (R-GEN-10). `undefined`: an interpolation is a
+     * plain string and `+`, `join` take their usual path. Set only by the code
+     * generator. Inherited by children, like `stateAccess`.
+     */
+    textHost?: JjelTextHost;
+    /**
+     * Called on every member read that finds its property, `o.p` and the dual
+     * form `o.p()`, with the value read (R-GEN-10). A missing property calls
+     * nothing. Set only by the code generator. Inherited by children, like `stateAccess`.
+     */
+    readObserver?: (target: JjelObject, property: string, value: JjelValue) => void;
 
     constructor(
         initialBindings?: Record<string, JjelValue>,
@@ -354,6 +420,9 @@ export class EvaluationContext {
         child.ambiguousInstances = this.ambiguousInstances;
         // Propagate the state hook so `.[a]` reads inside forall/lambda scopes.
         child.stateAccess = this.stateAccess;
+        // Propagate the template hooks so lambdas and forall see them (R-GEN-10).
+        child.textHost = this.textHost;
+        child.readObserver = this.readObserver;
         child.pushScope();
 
         if (bindings) {

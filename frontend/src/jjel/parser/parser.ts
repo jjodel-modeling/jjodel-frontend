@@ -55,13 +55,23 @@ import {
 import { JjelLexer } from '../lexer';
 import { STATE_RESERVED } from '../stateReserved';
 
+/**
+ * `interpolation` builds `InterpolatedStringExpr` from the tokens of an
+ * `interpolation` lexer, for `parseTemplate` (R-GEN-10). Off by default.
+ */
+export interface JjelParserOptions {
+    interpolation?: boolean;
+}
+
 export class JjelParser {
     private tokens: JjelToken[] = [];
     private current: number = 0;
     private errors: JjelParserError[] = [];
+    private interpolation: boolean;
 
-    constructor(tokens: JjelToken[]) {
+    constructor(tokens: JjelToken[], options?: JjelParserOptions) {
         this.tokens = tokens;
+        this.interpolation = options?.interpolation === true;
     }
 
     /**
@@ -489,6 +499,12 @@ export class JjelParser {
             } as LiteralExpr;
         }
 
+        // `"…${…}…"`: only an `interpolation` lexer emits STRING_PART, and only
+        // `parseTemplate` turns this branch on (R-GEN-10).
+        if (this.interpolation && this.check(JjelTokenType.STRING_PART)) {
+            return this.interpolatedString();
+        }
+
         if (this.match(JjelTokenType.STRING)) {
             const token = this.previous();
             return {
@@ -839,6 +855,78 @@ export class JjelParser {
         return this.tokens[this.current - 1];
     }
 
+    /**
+     * interpolatedString = STRING_PART (DOLLAR_LBRACE STRING_PART)* DOLLAR_LBRACE STRING,
+     * as an `interpolation` lexer emits it; the node spans from quote to quote.
+     */
+    private interpolatedString(): InterpolatedStringExpr {
+        const startToken = this.advance();
+        const parts: InterpolatedStringPart[] = [];
+        let text = startToken;
+        for (;;) {
+            if (text.value !== '') parts.push({ kind: 'text', value: text.value });
+            if (text.type === JjelTokenType.STRING) break;
+            const hole = this.consume(JjelTokenType.DOLLAR_LBRACE, "Expected '${' in an interpolated string");
+            parts.push({ kind: 'expression', expr: this.hole(hole) });
+            if (!this.match(JjelTokenType.STRING_PART) && !this.match(JjelTokenType.STRING)) {
+                throw this.error(this.peek(), 'Expected the rest of the interpolated string');
+            }
+            text = this.previous();
+        }
+        return {
+            type: 'InterpolatedString',
+            parts,
+            location: this.makeLocation(startToken, text),
+        };
+    }
+
+    /**
+     * The expression of a hole: its source lexed and parsed again with the same
+     * options, to its end, then every location and error moved from the hole's
+     * source to the template's (offset, line, and column on the hole's first line).
+     */
+    private hole(token: JjelToken): JjelExpression {
+        const shiftLine = (line: number) => line + token.line - 1;
+        const shiftColumn = (line: number, column: number) => (line === 1 ? column + token.column - 1 : column);
+        const fail = (errors: { message: string; line: number; column: number }[]): Error => {
+            for (const e of errors) {
+                this.errors.push({ message: e.message, line: shiftLine(e.line), column: shiftColumn(e.line, e.column) });
+            }
+            return new Error(errors[0].message);
+        };
+
+        const lexed = new JjelLexer(token.value, { interpolation: true }).tokenize();
+        if (lexed.errors.length > 0) throw fail(lexed.errors);
+
+        const result = new JjelParser(lexed.tokens, { interpolation: true }).parseStrict();
+        if (result.errors.length > 0) throw fail(result.errors);
+        if (!result.expression) throw this.error(token, "Expected an expression inside '${}'");
+
+        const shift = (p: ASTLocation['start']): ASTLocation['start'] => ({
+            line: shiftLine(p.line),
+            column: shiftColumn(p.line, p.column),
+            ...(p.offset === undefined ? {} : { offset: p.offset + token.start }),
+        });
+        // Position objects are shared between nodes (makeLocationFromExprs), so
+        // each node gets a new location and none is shifted in place.
+        const seen = new Set<object>();
+        const walk = (node: unknown): void => {
+            if (node === null || typeof node !== 'object' || seen.has(node)) return;
+            seen.add(node);
+            if (Array.isArray(node)) {
+                node.forEach(walk);
+                return;
+            }
+            const obj = node as { location?: ASTLocation } & Record<string, unknown>;
+            for (const key of Object.keys(obj)) {
+                if (key !== 'location') walk(obj[key]);
+            }
+            if (obj.location) obj.location = { start: shift(obj.location.start), end: shift(obj.location.end) };
+        };
+        walk(result.expression);
+        return result.expression;
+    }
+
     private consume(type: JjelTokenType, message: string): JjelToken {
         if (this.check(type)) return this.advance();
         throw this.error(this.peek(), message);
@@ -942,6 +1030,30 @@ export function parseExpressionStrict(source: string): JjelParserResult {
     }
 
     const parser = new JjelParser(tokens);
+    return parser.parseStrict();
+}
+
+/**
+ * Parse a template (R-GEN-10): `parseExpressionStrict` with interpolation on,
+ * so `"…${…}…"` builds `InterpolatedStringExpr`. The twin of `parseAction`;
+ * no other entry point turns interpolation on.
+ */
+export function parseTemplate(source: string): JjelParserResult {
+    const lexer = new JjelLexer(source, { interpolation: true });
+    const { tokens, errors: lexerErrors } = lexer.tokenize();
+
+    if (lexerErrors.length > 0) {
+        return {
+            expression: null,
+            errors: lexerErrors.map((e: JjelLexerError) => ({
+                message: e.message,
+                line: e.line,
+                column: e.column,
+            })),
+        };
+    }
+
+    const parser = new JjelParser(tokens, { interpolation: true });
     return parser.parseStrict();
 }
 
