@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-10-1330
 Chat: C-2026-10-10-1256
 Lane: full (more than three files; changes the P13 prompt header, a shared interface)
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1330 (lane-tracking, discovery 6ec3c3f8e), hard stop; Phase 2 in P-2026-10-10-1500
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 

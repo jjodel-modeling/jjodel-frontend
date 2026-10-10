@@ -7,6 +7,7 @@
   "nightWindow": { "start": "01:00", "end": "07:00" },
   "mode": "live",
   "laneByMode": { "shadow": "discovery", "live": "discovery" },
+  "front": "maintenance",
   "dataCap": 8000,
   "budget": {
     "paceMargin": 0.05,

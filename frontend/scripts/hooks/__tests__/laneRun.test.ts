@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, chmodSync, realpathSync, rmSync, unlinkSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -1693,5 +1693,218 @@ describe('lane-run start --auto (RC-36)', () => {
         expect(c.ghtoken).toBe('tok-1');
         expect(c.ghconfig).toBe('/somewhere/with/credentials');
         expect(existsSync(join(laneDir(l), 'auto.json'))).toBe(false);
+    });
+});
+
+// ── track: the lane's card on GitHub (RC-44) ─────────────────────────────────
+
+const FAKE_GH = resolve(HERE, 'fixtures', 'fake-gh.cjs');
+const TRACK_ID = 'P-2026-10-11-1600';
+const TRACK_WRITES = /^(issue (create|edit|close|reopen)|project item-(add|edit)|api -X PATCH)/;
+const ISSUE_1 = 'https://github.com/jjodel-modeling/jjodel-lanes/issues/1';
+
+/** A prompt in the front rule's scope: `front`, the header lines naming its front; `title`, its first line. */
+const trackPrompt = (front: string[] = ['Front: harness'], title = '# Prompt: a tracked lane') =>
+    `${title}\n\nPrompt-ID: ${TRACK_ID}\nChat: C-2026-10-10-1256\nRequest: none (a test lane)\nLane: fast\nDepends: none\n${front.join('\n')}\nStatus: da eseguire\n\n` +
+    'Worktree: `~/jjodel-w-tracked`, branch `tracked`.\n\n## COSA\n\nDo the thing.\n';
+
+/** Tracking on: the enable switch of the lab's HOME. */
+function trackOn(l: Lab) {
+    mkdirSync(join(l.lanes, '_tracking'), { recursive: true });
+    writeFileSync(join(l.lanes, '_tracking', 'config.json'), '{}\n');
+}
+
+/** A lab whose prompt.md is in the front rule's scope, with the fake gh as LANE_TRACK_GH; tracking on unless `on` is false. */
+function trackLab(o: { on?: boolean; mode?: string; prompt?: string } = {}): Lab {
+    const l = lab();
+    writeFileSync(join(l.worktree, 'prompt.md'), o.prompt ?? trackPrompt());
+    const gh = join(l.state, 'gh');
+    writeFileSync(gh, `#!/bin/sh\nexec '${process.execPath}' '${FAKE_GH}' "$@"\n`);
+    chmodSync(gh, 0o755);
+    l.env.LANE_TRACK_GH = gh;
+    l.env.FAKE_GH_STATE = l.state;
+    if (o.mode) l.env.FAKE_GH_MODE = o.mode;
+    if (o.on !== false) trackOn(l);
+    return l;
+}
+
+const ghCalls = (l: Lab): string[][] => {
+    const file = join(l.state, 'gh-calls.jsonl');
+    return existsSync(file) ? readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((x) => JSON.parse(x)) : [];
+};
+const ghWrites = (l: Lab, verb?: string) => ghCalls(l).filter((a) => TRACK_WRITES.test(a.join(' ')) && (!verb || a.slice(0, 2).join(' ') === verb));
+const ghState = (l: Lab) => JSON.parse(readFileSync(join(l.state, 'gh.json'), 'utf8'));
+const ghColumn = (l: Lab) => {
+    const s = ghState(l);
+    return String(s.status[s.items[s.issues[0].url]] || '').replace(/^opt-/, '');
+};
+const ghLabels = (l: Lab) => ghState(l).issues[0].labels.map((x: { name: string }) => x.name);
+const cardOf = (out: string) => out.split('\n').find((x) => x.startsWith('card: ')) ?? '';
+const trackExit = (l: Lab) => join(laneDir(l, TRACK_ID), 'exit.txt');
+
+describe('lane-run track (RC-44)', () => {
+    test('start refuses a prompt in the front rule\'s scope with no Front: line or an unknown front, before anything runs (start refusal dropped)', () => {
+        const l = trackLab({ prompt: trackPrompt([]) });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('no `Front:` line in the header');
+        expect(r.stderr).toContain('(P13, RC-44)');
+        writeFileSync(join(l.worktree, 'prompt.md'), trackPrompt(['Front: nope']));
+        const u = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(u.status).toBe(2);
+        expect(u.stderr).toContain('unknown front "nope"');
+        expect(calls(l)).toEqual([]);
+        expect(ghCalls(l)).toEqual([]);
+        expect(existsSync(laneDir(l, TRACK_ID))).toBe(false);
+    });
+
+    test('a prompt before FRONT_FROM needs no Front: line; with tracking off, start and status each print one card line saying so (enable switch dropped)', () => {
+        const l = trackLab({ on: false, prompt: PROMPT });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(cardOf(r.stdout)).toBe('card: tracking off (no ' + join(l.lanes, '_tracking', 'config.json') + ')');
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(cardOf(laneRun(l, ['status', ID]).stdout)).toContain('card: tracking off');
+        expect(ghCalls(l)).toEqual([]);
+    });
+
+    test('start puts the card In progress on its front\'s milestone, the body without the prompt\'s text, and the lane runs (start not tracked)', () => {
+        const l = trackLab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('session: ' + SESSION);
+        expect(cardOf(r.stdout)).toBe('card: ' + ISSUE_1 + ' · In progress');
+        const [issue] = ghState(l).issues;
+        expect(issue.title).toBe(TRACK_ID + ' · Prompt: a tracked lane');
+        expect(issue.milestone).toEqual({ number: 2, title: 'harness' });
+        expect(issue.body).toContain('- Branch: tracked');
+        expect(issue.body).toContain('- Worktree: worktree');
+        expect(issue.body).not.toContain('Do the thing');
+        expect(ghColumn(l)).toBe('In progress');
+        expect(waitFor(trackExit(l))).toBe(true);
+    });
+
+    test('start, the exit seen by status, a resume and status again: one issue create and one item, the card following the lane (card file not read)', () => {
+        const l = trackLab();
+        const events = join(l.state, 'events.jsonl');
+        writeFileSync(events, assistant('A question.\nOutcome: question') + '\n');
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_EVENTS: events } }).status).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        expect(cardOf(laneRun(l, ['status', TRACK_ID]).stdout)).toBe('card: ' + ISSUE_1 + ' · In progress (waiting:question)');
+        expect(ghLabels(l)).toEqual(['waiting:question']);
+        const hold = join(l.state, 'release');
+        const r = laneRun(l, ['resume', TRACK_ID, '--text', '[' + TRACK_ID + '] Answer: yes.'], { env: { FAKE_HOLD: hold } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(cardOf(r.stdout)).toBe('card: ' + ISSUE_1 + ' · In progress');
+        expect(ghLabels(l)).toEqual([]);
+        expect(cardOf(laneRun(l, ['status', TRACK_ID]).stdout)).toBe('card: ' + ISSUE_1 + ' · In progress');
+        writeFileSync(hold, '');
+        expect(waitFor(trackExit(l))).toBe(true);
+        expect(ghWrites(l, 'issue create')).toHaveLength(1);
+        expect(ghWrites(l, 'project item-add')).toHaveLength(1);
+        expect(ghState(l).issues).toHaveLength(1);
+    });
+
+    test('a lost card file is healed by the search on the title, not by a second create (title search dropped)', () => {
+        const l = trackLab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        unlinkSync(join(l.lanes, '_tracking', TRACK_ID + '.json'));
+        const r = laneRun(l, ['status', TRACK_ID]);
+        expect(cardOf(r.stdout)).toBe('card: ' + ISSUE_1 + ' · In progress (outcome:unparsed)');
+        expect(ghWrites(l, 'issue create')).toHaveLength(1);
+        expect(ghState(l).issues).toHaveLength(1);
+    });
+
+    test('gh exits 1: the lane runs, and the card line and the card file say why (fail open dropped)', () => {
+        const l = trackLab({ mode: 'fail' });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('session: ' + SESSION);
+        expect(cardOf(r.stdout)).toBe('card: tracking skipped: gh project view: error connecting to api.github.com');
+        expect(JSON.parse(readFileSync(join(l.lanes, '_tracking', TRACK_ID + '.json'), 'utf8')).error).toBe('gh project view: error connecting to api.github.com');
+        expect(waitFor(trackExit(l))).toBe(true);
+        const s = laneRun(l, ['status', TRACK_ID]);
+        expect(s.status).toBe(0);
+        expect(s.stdout).toContain('state: exited');
+        expect(cardOf(s.stdout)).toBe('card: tracking skipped: gh project view: error connecting to api.github.com');
+    });
+
+    test('a token without the project scope: `tracking skipped: missing project scope`, nothing written, the lane runs', () => {
+        const l = trackLab({ mode: 'noscope' });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(cardOf(r.stdout)).toBe('card: tracking skipped: missing project scope');
+        expect(calls(l)).toHaveLength(1);
+        expect(ghWrites(l)).toEqual([]);
+        expect(waitFor(trackExit(l))).toBe(true);
+    });
+
+    test('a discovery\'s hard stop waits for Phase 2; after the GO the next hard stop waits for the visual check (GO not read)', () => {
+        const l = trackLab({ prompt: trackPrompt(['Front: harness'], '# Prompt: a lane, Phase 1 discovery') });
+        const events = join(l.state, 'events.jsonl');
+        writeFileSync(events, assistant('Report written.\nOutcome: hard-stop') + '\n');
+        const env = { FAKE_EVENTS: events };
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env }).status).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        expect(cardOf(laneRun(l, ['status', TRACK_ID]).stdout)).toBe('card: ' + ISSUE_1 + ' · In review (waiting:phase-2)');
+        const g = laneRun(l, ['go', TRACK_ID, '--smoke', 'the chat read the report'], { env });
+        expect(g.status, g.stderr).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        expect(cardOf(laneRun(l, ['status', TRACK_ID]).stdout)).toBe('card: ' + ISSUE_1 + ' · In review (waiting:visual)');
+        expect(ghLabels(l)).toEqual(['waiting:visual']);
+    });
+
+    test('two track calls at once create one issue: the second waits on the lock and reads the card file (lock dropped)', async () => {
+        const l = trackLab({ on: false });
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        trackOn(l);
+        const env = { ...l.env, FAKE_GH_CREATE_MS: '1500' };
+        const run = () =>
+            new Promise<string>((done) => {
+                const c = spawn(process.execPath, [SCRIPT, 'track', TRACK_ID], { cwd: l.home, env });
+                let out = '';
+                c.stdout.on('data', (d) => (out += d));
+                c.on('close', () => done(out));
+            });
+        const outs = await Promise.all([run(), run()]);
+        expect(ghWrites(l, 'issue create')).toHaveLength(1);
+        for (const out of outs) expect(cardOf(out)).toBe('card: ' + ISSUE_1 + ' · In progress (outcome:unparsed)');
+    }, 30000);
+
+    test('--sync on a repo with one prompt not started: the dry run writes nothing, the sync creates its Ready card, a second sync writes nothing (Ready row dropped)', () => {
+        const l = trackLab();
+        const repo = join(l.home, 'repo');
+        mkdirSync(repo);
+        gitIn(l, repo, ['init', '-q', '-b', 'trunk']);
+        commitFiles(l, repo, 'docs: two prompts', {
+            'docs/prompts/claude_2026-10-11_1600_prompt_tracked.md': trackPrompt(),
+            'docs/prompts/claude_2026-10-10_2359_prompt_older.md': PROMPT.replace(ID, 'P-2026-10-10-2359'),
+        });
+        const dry = laneRun(l, ['track', '--sync', '--dry-run'], { cwd: repo });
+        expect(dry.status, dry.stderr).toBe(0);
+        expect(dry.stdout).toContain('card ' + TRACK_ID + ': dry run: gh issue create');
+        expect(dry.stdout).not.toContain('P-2026-10-10-2359');
+        expect(ghWrites(l)).toEqual([]);
+        const r = laneRun(l, ['track', '--sync'], { cwd: repo });
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout.trim()).toBe('card ' + TRACK_ID + ': ' + ISSUE_1 + ' · Ready');
+        expect(ghColumn(l)).toBe('Ready');
+        const n = ghWrites(l).length;
+        const again = laneRun(l, ['track', '--sync'], { cwd: repo });
+        expect(again.stdout.trim()).toBe(r.stdout.trim());
+        expect(ghWrites(l)).toHaveLength(n);
+    });
+
+    test('--sync outside a worktree is refused; with tracking off it says so and calls no gh', () => {
+        const l = trackLab({ on: false });
+        expect(laneRun(l, ['track', '--sync']).status).toBe(2);
+        const repo = join(l.home, 'repo');
+        mkdirSync(repo);
+        gitIn(l, repo, ['init', '-q', '-b', 'trunk']);
+        const r = laneRun(l, ['track', '--sync'], { cwd: repo });
+        expect(r.stdout.trim()).toBe('sync: tracking off (no ' + join(l.lanes, '_tracking', 'config.json') + ')');
+        expect(ghCalls(l)).toEqual([]);
     });
 });

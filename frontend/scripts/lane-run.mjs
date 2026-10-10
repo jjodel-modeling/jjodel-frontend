@@ -182,6 +182,28 @@
  *                lane stops (P-2026-09-27-1030). Waits for its /health, prints the
  *                URL, the pid and the log (~/.jjodel-lanes/_monitor/), and opens
  *                the page as an app window unless --no-open.
+ *   track <Prompt-ID> | --sync [--dry-run]
+ *                the lane's card on the board of docs/harness/fronts.json (RC-44,
+ *                lane-tracking.mjs): an issue of the board's repo whose title
+ *                opens with the Prompt-ID, its Project Status, waiting labels and
+ *                the front's milestone, projected from the lane's own state.
+ *                --sync, run from any worktree of the repo, reconciles every
+ *                prompt committed on a branch and every lane folder at or after
+ *                FRONT_FROM: it creates the missing cards (Ready for a prompt not
+ *                started), heals the misses of a fail-open call, and closes the
+ *                milestone of a front the registry marks closed. --dry-run
+ *                prints the gh writes it would make and makes none.
+ *                Tracking runs only when ~/.jjodel-lanes/_tracking/config.json
+ *                exists (its `gh` names the binary; LANE_TRACK_GH overrides it).
+ *                start and resume (In progress), status <id> and so wait (the
+ *                observed exit), the chain supervisor and go on a direct merge
+ *                (the lanes it merged) each project the card and print one
+ *                `card:` line: the issue URL and column, or why there is none.
+ *                It fails open (RC-15): a gh error, a missing project scope or
+ *                no network is that one line and the card file's `error`, and
+ *                the command goes on. start refuses a prompt at or after
+ *                FRONT_FROM whose `Front:` line is missing, unknown or closed
+ *                (P13), before anything runs.
  *
  * Every run passes `--output-format stream-json --verbose` (stream-json under -p
  * requires --verbose) and `--permission-mode bypassPermissions` (RC-19: a -p
@@ -217,6 +239,9 @@ import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CRITICAL_FILES } from './hooks/critical-zone.mjs';
+import {
+    FRONT_FROM, closeFrontMilestones, frontProblem, inFrontScope, isGoMessage, loadBoard, loadFronts, promptLink, promptWorktree, trackLane, trackingConfig, trackingDir,
+} from './lane-tracking.mjs';
 
 // Model by activity (RC-32). heavy: the pin of .claude/settings.json, no --model (RC-16).
 // light: LIGHT_MODEL, set by the owner chat under RC-32; null runs every lane heavy.
@@ -233,6 +258,8 @@ const FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode
 // RC-36: what --auto adds to every run of an automatic lane, start and resume alike.
 const AUTO_FLAGS = ['--disallowedTools', 'WebFetch,WebSearch', '--strict-mcp-config'];
 const SELF = fileURLToPath(import.meta.url);
+// The tree of this script: its docs/harness/fronts.json is the registry start enforces and the cards read (RC-44).
+const REPO = resolve(dirname(SELF), '..', '..');
 const TEMPLATES = join(dirname(SELF), 'lane-templates');
 const DEFAULT_TRUNK = 'alfonso-frontend-jjtl';
 const GOVERNANCE = ['CLAUDE.md', 'AGENTS.md', 'docs/PROTOCOL.md', '.claude/settings.json'];
@@ -563,6 +590,17 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     // RC-43: a prompt names its request; the merge prompts lane-run renders are exempt (their Lane line, also on a launch by hand).
     const { header } = promptParts(text);
     const unnamed = !request && !/^Request:[ \t]*\S/m.test(header) && !ctx.merge && !/^Lane:\s*full \(merge\b/m.test(header);
+    // RC-44: a prompt in the front rule's scope names an open front of the registry; Check E is the backstop.
+    if (!ctx.merge && inFrontScope(text, id)) {
+        let fronts;
+        try {
+            fronts = loadFronts(REPO);
+        } catch (err) {
+            refuse('the front of ' + id + ' cannot be checked: ' + err.message);
+        }
+        const why = frontProblem(text, id, fronts);
+        if (why) refuse(promptFile + ': ' + why + ' (P13, RC-44)');
+    }
 
     const claude = findClaude();
     const f = laneFiles(id);
@@ -590,6 +628,7 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     if (unnamed) console.log('warning: ' + promptFile + ': no `Request:` line in the header and no --request; the request is not recorded (P13, RC-43)');
     if (autoRun) console.log('auto: ' + AUTO_FLAGS.join(' ') + '; GH_TOKEN and GITHUB_TOKEN removed; GH_CONFIG_DIR ' + autoRun.ghConfigDir);
     console.log('log: ' + f.log);
+    trackCard(id, { launched: true });
 
     const end = Date.now() + START_WAIT_MS;
     while (Date.now() < end) {
@@ -659,6 +698,7 @@ function resume(idArg, rest) {
     launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS, ...(autoRun ? AUTO_FLAGS : [])], goAhead || null, autoRun);
     console.log('log: ' + f.log);
     console.log('session: ' + session);
+    trackCard(id, { launched: true });
     return 0;
 }
 
@@ -713,6 +753,7 @@ function status(idArg, rest) {
     console.log('elapsed: ' + s.minutes + ' min, limit ' + limit + ' min');
     console.log('session: ' + (readTrim(f.session) || '-'));
     console.log('log: ' + f.log);
+    trackCard(id, { limit });
     if (s.state !== 'exited') return 0;
     const tree = readTrim(f.worktree);
     for (const path of laneReports(f, id)) {
@@ -2058,6 +2099,7 @@ async function chainRun(id) {
         const m = line === null ? null : OUTCOME.exec(line);
         lane.exit = readTrim(f.exit) || '-';
         lane.outcome = line === null ? 'none' : m ? m[1] : 'unparsed';
+        trackCard(lane.id, { limit: c.limit });
         if (lane.outcome !== 'done') {
             lane.state = 'ended';
             return stop(lane.id, 'Outcome: ' + lane.outcome);
@@ -2196,6 +2238,148 @@ function closeDirect(id, smoke, frontArg) {
     console.log('closure: committed ' + res.closure.slice(0, 9));
     console.log('status: ' + promptRel);
     console.log('entry: ' + inbox);
+    if (plan.mode === 'into') trackMerged(plan);
+    return 0;
+}
+
+// ── track: the lane's card on GitHub (RC-44) ─────────────────────────────────
+
+/** The input files of a lane, input-1.md first. */
+function laneInputs(f) {
+    if (!existsSync(f.dir)) return [];
+    return readdirSync(f.dir).map((n) => /^input-(\d+)\.md$/.exec(n)).filter(Boolean)
+        .sort((a, b) => Number(a[1]) - Number(b[1])).map((m) => join(f.dir, m[0]));
+}
+
+/**
+ * The lane as lane-tracking.mjs projects it: lane-run's own laneState,
+ * lastOutcome and headerStatus, not the board's derivation (report of
+ * P-2026-10-10-1330, 4.2). `launched`: start and resume, which have just
+ * started a run. `prompt`: { text, path } of a committed prompt, for a lane
+ * whose prompt file is not on disk or that has no folder yet.
+ */
+function observeLane(id, { launched = false, limit = DEFAULT_LIMIT_MINUTES, prompt = null, top = null } = {}) {
+    const f = laneFiles(id);
+    const folder = existsSync(f.dir);
+    const file = folder ? findLanePrompt(f, id) : null;
+    const text = file ? readFileSync(file, 'utf8') : prompt ? prompt.text : null;
+    const s = folder && !launched ? laneState(f, limit) : null;
+    const tree = folder ? readTrim(f.worktree) : '';
+    const named = promptWorktree(text);
+    const here = tree && existsSync(tree) ? tree : top;
+    const measured = tree && existsSync(tree) ? spawnSync('git', ['branch', '--show-current'], { cwd: tree, encoding: 'utf8' }) : null;
+    const branch = (measured && measured.status === 0 && measured.stdout.trim()) || named.branch;
+    const remote = here ? spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: here, encoding: 'utf8' }) : null;
+    const promptFile = file || (prompt ? prompt.path : null);
+    return {
+        folder,
+        merge: folder && existsSync(join(f.dir, 'direct.json')),
+        state: launched ? 'running' : s ? s.state : null,
+        outcome: s ? s.outcome : null,
+        headerStatus: text === null ? '' : headerStatus(text),
+        goSeen: laneInputs(f).slice(1).some((p) => isGoMessage(readFileSync(p, 'utf8'))),
+        promptText: text,
+        promptFile,
+        fronts: loadFronts(REPO),
+        branch: branch || null,
+        worktree: tree ? basename(tree) : named.worktree,
+        promptLink: remote && remote.status === 0 && promptFile ? promptLink(remote.stdout.trim(), branch, 'docs/prompts/' + basename(promptFile)) : null,
+    };
+}
+
+/** Projects a lane onto its card and prints one `card:` line; fails open (RC-15), so it never stops the command that calls it. */
+function trackCard(id, opts = {}) {
+    const r = trackLane(id, () => observeLane(id, opts), { board: () => loadBoard(REPO), dryRun: opts.dryRun });
+    console.log((opts.label ? 'card ' + id : 'card') + ': ' + r.line);
+}
+
+/** go on a direct merge: the cards of the lanes whose prompts the branch adds, projected again now that they are merged. */
+function trackMerged(plan) {
+    try {
+        if (!trackingConfig()) return;
+        const ids = new Set();
+        for (const p of nonEmpty(git(plan.top, ['diff', '--name-only', '--diff-filter=A', plan.base, plan.branchTip, '--', 'docs/prompts/']).out)) {
+            const pid = headerPromptId(git(plan.top, ['show', plan.branchTip + ':' + p]).out);
+            if (pid && pid !== plan.promptId) ids.add(pid);
+        }
+        for (const pid of ids) trackCard(pid, { label: true });
+    } catch (err) {
+        console.log('card: tracking skipped: ' + (err && err.message ? err.message.split('\n')[0] : String(err)));
+    }
+}
+
+/** The toplevel of the git worktree around the caller's directory; null outside one. */
+function cwdRepo() {
+    const r = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: process.cwd(), encoding: 'utf8' });
+    return r.status === 0 ? r.stdout.trim() : null;
+}
+
+/**
+ * The prompts committed on the branches of the repo at `top` whose Prompt-ID
+ * is at or after FRONT_FROM: id → { text, path }. The text is the one of the
+ * newest commit touching the file on any branch (its Status as flipped there);
+ * of several files with one id (a GO file reuses its prompt's), the first added.
+ */
+function committedPrompts(top) {
+    const out = new Map();
+    const added = nonEmpty(git(top, ['log', '--branches', '--diff-filter=A', '--name-only', '--format=', '--', 'docs/prompts/']).out);
+    // Newest first: the last file of an id met here is its first added.
+    for (const path of added) {
+        const m = /^docs\/prompts\/claude_(\d{4}-\d{2}-\d{2})_(\d{4})_[^/]*\.md$/.exec(path);
+        if (!m || 'P-' + m[1] + '-' + m[2] < FRONT_FROM) continue;
+        const sha = git(top, ['log', '--branches', '-1', '--format=%H', '--diff-filter=AM', '--', path]).out.trim();
+        const shown = sha ? git(top, ['show', sha + ':' + path], [0, 128]) : null;
+        if (!shown || shown.status !== 0) continue;
+        const id = headerPromptId(shown.out);
+        if (id && id >= FRONT_FROM) out.set(id, { text: shown.out, path: join(top, path) });
+    }
+    return out;
+}
+
+/** track <Prompt-ID> | --sync [--dry-run]: one card, or every card in the front rule's scope (RC-44). */
+function track(rest) {
+    const usage = 'usage: lane-run track <Prompt-ID> | --sync [--dry-run]';
+    const dryRun = rest.includes('--dry-run');
+    const args = rest.filter((a) => a !== '--dry-run');
+    if (args.length !== 1) refuse(usage);
+    if (args[0] === '--sync') return trackSync(dryRun);
+    if (!PROMPT_ID.test(args[0])) refuse(usage);
+    const top = cwdRepo();
+    trackCard(args[0], { prompt: top ? committedPrompts(top).get(args[0]) || null : null, top, dryRun });
+    return 0;
+}
+
+/**
+ * The reconciler (report answers 2 and 7): every prompt committed on a branch
+ * and every lane folder at or after FRONT_FROM gets its card projected, so a
+ * prompt not started gets its Ready card and a fail-open miss is healed; then
+ * the milestone of each front the registry marks closed is closed.
+ */
+function trackSync(dryRun) {
+    const top = cwdRepo();
+    if (!top) refuse('track --sync runs from a worktree of the repo: it reads the prompts committed on its branches');
+    let config;
+    try {
+        config = trackingConfig();
+    } catch (err) {
+        console.log('sync: tracking skipped: ' + err.message);
+        return 0;
+    }
+    if (!config) {
+        console.log('sync: tracking off (no ' + join(trackingDir(), 'config.json') + ')');
+        return 0;
+    }
+    const prompts = committedPrompts(top);
+    const root = lanesRoot();
+    const folders = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && n >= FRONT_FROM && statSync(join(root, n)).isDirectory()) : [];
+    for (const id of [...new Set([...prompts.keys(), ...folders])].sort()) trackCard(id, { prompt: prompts.get(id) || null, top, dryRun, label: true });
+    let lines;
+    try {
+        lines = closeFrontMilestones(loadFronts(REPO), { config, board: loadBoard(REPO), dryRun });
+    } catch (err) {
+        lines = ['milestones: tracking skipped: ' + err.message];
+    }
+    for (const l of lines) console.log('front: ' + l);
     return 0;
 }
 
@@ -2282,10 +2466,12 @@ async function main(argv) {
     if (command === 'direct-run') return directRun(rest[0]);
     if (command === 'chain') return chain(rest);
     if (command === 'chain-run') return chainRun(rest[0]);
+    if (command === 'track') return track(rest);
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
         'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | ' +
         'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>] | ' +
-        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n> | monitor [--port <n>] [--no-open]');
+        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n> | monitor [--port <n>] [--no-open] | ' +
+        'track <Prompt-ID>|--sync [--dry-run]');
 }
 
 main(process.argv.slice(2)).then(
