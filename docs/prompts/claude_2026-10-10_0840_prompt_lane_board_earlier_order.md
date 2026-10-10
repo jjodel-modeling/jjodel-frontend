@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-0840
 Chat: C-2026-10-10-0840
 Lane: fast (one file, `frontend/scripts/lane-board/lane-board.mjs`, outside the critical zone; cause measured). Model: tier light. No critical-zone go-ahead.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-0840 (lane-board-order, c8e99fc2c), merged 02a7d1857; visual check passed (chat, built-in browser on 4701, RC-23)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
