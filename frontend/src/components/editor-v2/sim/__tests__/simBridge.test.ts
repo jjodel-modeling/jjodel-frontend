@@ -3010,3 +3010,124 @@ describe('the I/O board\'s seams (P-2026-10-03-1845 Lane 1, report §4 and §5)'
         expect(inputOffTitle('Fire Coin', undefined, 'Terminated')).toBe('Fire Coin\nOff. The run is Terminated.');
     });
 });
+
+describe('R-SIM-144: event reads checked at Reset, the unset warning (P-2026-10-10-1630)', () => {
+    const CREDIT = { name: 'credit', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 200 }, initial: '0' };
+    /** The roles, Custom (no `simProfile`): Trigger and Fork both on, which no system preset has (report §1.2). */
+    const V_ROLES = {
+        simNode: 'C_State', simTransition: 'C_Trans', simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next',
+        simTrigger: 'R_trig', simGuard: 'A_guard', simAction: 'A_effect', simEntry: 'A_entry', simExit: 'A_exit', simFork: 'C_Fork',
+        simStateAttributes: JSON.stringify({ v: 1, attrs: [CREDIT] }),
+    };
+
+    /** The classes with their feature pointer lists, as the D-layer keeps them: Money { amount } <- Coin { home } <- Big { bonus }. */
+    function typed(lookup: Lookup): Lookup {
+        const cls = (id: string, name: string, ext: string[], attributes: string[] = [], references: string[] = []) => {
+            lookup[id] = { className: 'DClass', id, name, extends: ext, attributes, references };
+        };
+        cls('C_Fork', 'Fork', ['C_State']);
+        cls('C_Money', 'Money', [], ['A_amount', 'A_need']);
+        cls('C_Coin', 'Coin', ['C_Money'], [], ['R_home']);
+        cls('C_Big', 'Big', ['C_Coin'], ['A_bonus']);
+        for (const [id, name] of [['A_amount', 'amount'], ['A_need', 'need'], ['A_bonus', 'bonus'], ['A_effect', 'effect'], ['A_entry', 'entry'], ['A_exit', 'exit']]) {
+            lookup[id] = { className: 'DAttribute', id, name };
+        }
+        lookup.R_home = { className: 'DReference', id: 'R_home', name: 'home', type: 'C_State' };
+        lookup.R_trig = { className: 'DReference', id: 'R_trig', name: 'trig', type: 'C_Coin' };
+        return lookup;
+    }
+
+    interface Vend { coin?: string; go?: string; coinEffect?: string; goEffect?: string; entry?: string; exit?: string }
+    /** Lx -tCoin (c10, c50, cX)-> Ux, Lx -tGo (ε)-> Ux; the ids unlike the names, so a pointer shows. */
+    function vend(v: Vend = {}): Lookup {
+        const lookup = typed(buildLookup(V_ROLES, {
+            Lx: { cls: 'C_Init', slots: { R_out: ['TCx', 'TGx'], ...(v.exit ? { A_exit: [v.exit] } : {}) } },
+            Ux: { cls: 'C_State', slots: v.entry ? { A_entry: [v.entry] } : {} },
+            C10: { cls: 'C_Coin' }, C50: { cls: 'C_Big' }, CXx: { cls: 'C_Coin' },
+            TCx: { cls: 'C_Trans', slots: { R_next: ['Ux'], R_trig: ['C10', 'C50', 'CXx'], ...(v.coin ? { A_guard: [v.coin] } : {}), ...(v.coinEffect ? { A_effect: [v.coinEffect] } : {}) } },
+            TGx: { cls: 'C_Trans', slots: { R_next: ['Ux'], ...(v.go ? { A_guard: [v.go] } : {}), ...(v.goEffect ? { A_effect: [v.goEffect] } : {}) } },
+        }));
+        for (const [id, name] of [['Lx', 'idle'], ['Ux', 'ready'], ['C10', 'coin10'], ['C50', 'coin50'], ['CXx', 'coinX'], ['TCx', 'tCoin'], ['TGx', 'tGo']]) lookup[id].name = name;
+        lookup.M.name = 'vending';
+        return lookup;
+    }
+
+    /** buildEvalContext's record: coinX's optional `amount` unset reads null, its mandatory `need` reads 0 (report §1.3). */
+    const record = (lookup: Lookup) => () => {
+        const h: Record<string, any> = {};
+        for (const id of collectModelObjectIds(lookup, 'M')) h[id] = { id, __type: 'Object', name: lookup[id].name };
+        Object.assign(h.C10, { amount: 10, need: 1, home: h.Lx });
+        Object.assign(h.C50, { amount: 50, need: 5, home: h.Ux, bonus: 7 });
+        Object.assign(h.CXx, { amount: null, need: 0, home: null });
+        return { instances: Object.values(h), classes: [], ...Object.fromEntries(Object.values(h).map(x => [x.name, x])) };
+    };
+    const reset = (lookup: Lookup) => {
+        const r = startRun(lookup, 'M', 'MM', 'P', spyBuilder(record(lookup)).build);
+        if (r.kind !== 'started') throw new Error(`refused: ${r.reason}`);
+        simReset('M', r.run);
+        return r;
+    };
+    const defects = (lookup: Lookup) => reset(lookup).compileDefects?.map(d => [d.site?.element ?? d.element, d.site?.role ?? d.role, d.reason]);
+    const line = (lookup: Lookup) => {
+        const r = reset(lookup);
+        return defectsLine(r.run.net, lookup, r.compileDefects);
+    };
+
+    it('P3: a guard of an ε arc that reads event is the defect event at Reset, the run unchanged (mutant: trigger ignored)', () => {
+        const lookup = vend({ go: 'event.amount > 0' });
+        expect(defects(lookup)).toEqual([['TGx', 'guard', 'event']]);
+        expect(line(lookup)).toBe('1 defect: tGo guard (reads event, no trigger).');
+        // the run is the same: the guard is evaluated and is a defect, the arc leaves the candidates
+        expect(pressInput('M', null, undefined, lookup, 'ε').lastStep).toBe("ε: nothing to fire, tGo defect, Cannot access property 'amount' of null");
+        // controls: the same read on the triggered arc, and event == null, which counts too
+        expect(defects(vend({ coin: 'event.amount > 0' }))).toEqual([]);
+        expect(defects(vend({ go: 'event == null' }))).toEqual([['TGx', 'guard', 'event']]);
+    });
+
+    it('P3: entry and exit actions that read event are defects even behind a triggered arc; a transition action only without a trigger (mutant: entry judged by its arc)', () => {
+        expect(defects(vend({ entry: 'model.[credit] := event.amount' }))).toEqual([['Ux', 'entry', 'event']]);
+        expect(line(vend({ exit: 'model.[credit] := event.amount' }))).toBe('1 defect: idle exit (reads event in exit).');
+        expect(defects(vend({ goEffect: 'model.[credit] := event.amount' }))).toEqual([['TGx', 'transition', 'event']]);
+        expect(defects(vend({ coinEffect: 'model.[credit] := model.[credit] + event.amount' }))).toEqual([]);
+    });
+
+    it('P3: a site carried by two fused transitions is judged on each, the trigger of a fused one being its choice edge\'s (mutant: the first transition only)', () => {
+        // In0 -e1 (coin10)-> F, In1 -e1b (ε)-> F, F -e2-> A, F -e3-> B: two transitions F#e1 and F#e1b carry e2.
+        const lookup = typed(buildLookup(V_ROLES, {
+            In0: { cls: 'C_Init', slots: { R_out: ['e1'] } }, In1: { cls: 'C_Init', slots: { R_out: ['e1b'] } },
+            F: { cls: 'C_Fork', slots: { R_out: ['e2', 'e3'] } }, A: { cls: 'C_State' }, B: { cls: 'C_State' },
+            C10: { cls: 'C_Coin' }, C50: { cls: 'C_Big' }, CXx: { cls: 'C_Coin' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['F'], R_trig: ['C10'] } }, e1b: { cls: 'C_Trans', slots: { R_next: ['F'] } },
+            e2: { cls: 'C_Trans', slots: { R_next: ['A'], A_guard: ['event.amount > 5'], A_effect: ['model.[credit] := event.amount'] } },
+            e3: { cls: 'C_Trans', slots: { R_next: ['B'] } },
+        }));
+        const r = reset(lookup);
+        expect(r.run.net.transitions.map(t => [t.id, t.triggers])).toEqual([['F#e1', ['C10']], ['F#e1b', []]]);
+        expect(r.compileDefects?.map(d => [d.site?.element ?? d.element, d.site?.role ?? d.role, d.reason, d.detail])).toEqual([
+            ['e2', 'guard', 'event', 'reads event, but F has no trigger: event is null in its step'],
+            ['e2', 'transition', 'event', 'reads event, but F has no trigger: event is null in its step'],
+        ]);
+    });
+
+    it('P4: event.a on a feature the trigger\'s type lacks is event-feature, an ancestor\'s feature passes, and nothing is offered to declare (mutants: own features only; reason undeclared)', () => {
+        const lookup = vend({ coin: 'event.bonus > 0' });
+        const r = reset(lookup);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason])).toEqual([['TCx', 'guard', 'event-feature']]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: tCoin guard (event.bonus: not on Coin).');
+        expect(undeclaredGlobals(r.compileDefects ?? [], lookup, 'M')).toEqual([]);
+        // controls: amount is declared on Money, Coin's superclass; home on Coin; name is a handle key
+        expect(defects(vend({ coin: 'event.amount > 5 and event.home == idle and event.name != "x"' }))).toEqual([]);
+        expect(defects(vend({ coinEffect: 'model.[credit] := event.bonus' }))).toEqual([['TCx', 'transition', 'event-feature']]);
+    });
+
+    it('the unset warning: a read attribute null in the frozen M on a trigger instance, in one line; a mandatory 0 is not unset (mutants: no warning; every read listed)', () => {
+        const r = reset(vend({ coinEffect: 'model.[credit] := model.[credit] + event.amount' }));
+        expect(r.runWarnings).toEqual(['Unset event attributes: coinX.amount']);
+        expect(reset(vend({ coin: 'event.need > 0 and event.amount > 0 and event.home != null' })).runWarnings).toEqual(['Unset event attributes: coinX.amount, coinX.home']);
+        expect(reset(vend({ coin: 'event.need > 0' })).runWarnings).toBeUndefined();
+        // parity: a model that never reads event has no warning and no defect
+        const clean = reset(vend({ coinEffect: 'model.[credit] := model.[credit] + 1', go: 'model.[credit] > 0' }));
+        expect(clean.runWarnings).toBeUndefined();
+        expect(clean.compileDefects).toEqual([]);
+    });
+});

@@ -1,7 +1,7 @@
 /**
  * check-docs.ts — documentation gates.
  *
- * Four independent checks. All always run and all always report: no fail-fast,
+ * Five independent checks. All always run and all always report: no fail-fast,
  * because one run must give the whole picture. Exit code is non-zero if at
  * least one fails. Warnings never fail the run.
  *
@@ -25,6 +25,12 @@
  *           lane inbox under docs/log-inbox/ is a warning, not a failure (its
  *           entries are linted by B and C all the same).
  *
+ * Check E — every prompt in docs/prompts/ names an open front of
+ *           docs/harness/fronts.json in its `Front:` header line (P13, RC-44).
+ *           The rule is frontProblem of ../lane-tracking.mjs, shared with
+ *           lane-run; it skips the prompts before FRONT_FROM and the merge
+ *           prompts. Fails closed: an unreadable registry or prompt folder fails.
+ *
  * This script only reads. It never rewrites, reorders or normalizes the log.
  *
  * Run: npm run check:docs
@@ -46,6 +52,7 @@ import {
     splitLog,
 } from './log-tools.ts';
 import type { EntryFinding, RawEntry } from './log-tools.ts';
+import { FRONTS_FILE, FRONT_FROM, frontProblem, loadFronts } from '../lane-tracking.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // frontend/scripts/gates -> frontend/scripts -> frontend -> repo root
@@ -56,6 +63,7 @@ const PROTOCOL_MD = resolve(REPO, 'docs/PROTOCOL.md');
 const LOG_MD = resolve(REPO, 'docs/claude-code-log.md');
 const LOG_ARCHIVE_MD = resolve(REPO, 'docs/claude-code-log-archive.md');
 const LOG_INBOX_DIR = resolve(REPO, 'docs/log-inbox');
+const PROMPTS_DIR = resolve(REPO, 'docs/prompts');
 
 /**
  * Block anchors. Both contain an em dash (U+2014), not an ASCII hyphen:
@@ -446,6 +454,68 @@ function checkEntryCount(): CheckOutcome {
     return out;
 }
 
+// ── Check E — every prompt names its front ──────────────────────────────────
+
+const HEADER_PROMPT_ID = /^Prompt-ID: (P-\d{4}-\d{2}-\d{2}-\d{4})\s*$/;
+const PROMPT_FILE_TIME = /^claude_(\d{4}-\d{2}-\d{2})_(\d{2})(\d{2})_/;
+
+/** The Prompt-ID of the header, the lines before the first `## ` (lane-run.mjs headerPromptId); else the date and time of the file name. */
+function promptIdOf(name: string, text: string): string | null {
+    for (const line of text.split('\n')) {
+        if (line.startsWith('## ')) break;
+        const m = HEADER_PROMPT_ID.exec(line);
+        if (m) return m[1];
+    }
+    const f = PROMPT_FILE_TIME.exec(name);
+    return f ? `P-${f[1]}-${f[2]}${f[3]}` : null;
+}
+
+function checkFronts(): CheckOutcome {
+    const out: CheckOutcome = {
+        name: `E — every prompt names an open front (Prompt-ID >= ${FRONT_FROM})`,
+        ok: true,
+        lines: [],
+        problems: [],
+        warnings: [],
+    };
+
+    let fronts: Array<{ slug: string; state: string }>;
+    let names: string[];
+    try {
+        fronts = loadFronts(REPO);
+        names = readdirSync(PROMPTS_DIR).filter((f) => f.endsWith('.md')).sort();
+    } catch (err) {
+        out.ok = false;
+        out.lines.push(`    ERROR  ${err instanceof Error ? err.message : String(err)}`);
+        return out;
+    }
+
+    // Every prompt with an ID goes through the one rule; the cut-off and the
+    // merge exemption are frontProblem's, the count below is telemetry only.
+    const offending: string[] = [];
+    let inScope = 0;
+    for (const name of names) {
+        const text = read(resolve(PROMPTS_DIR, name));
+        const id = promptIdOf(name, text);
+        if (!id) continue;
+        if (id >= FRONT_FROM) inScope++;
+        const why = frontProblem(text, id, fronts);
+        if (why) offending.push(`    ERROR  ${rel(resolve(PROMPTS_DIR, name))} (${id}): ${why}`);
+    }
+
+    out.lines.push(
+        `    ${fronts.length} front(s) in ${FRONTS_FILE}, ${fronts.filter((f) => f.state === 'open').length} open`,
+    );
+    out.lines.push(
+        `    ${inScope} of ${names.length} prompt file(s) under ${rel(PROMPTS_DIR)} at or after ${FRONT_FROM}; older ones ignored without warning`,
+    );
+    if (offending.length > 0) {
+        out.ok = false;
+        out.lines.push(...offending);
+    }
+    return out;
+}
+
 // ── Report ──────────────────────────────────────────────────────────────────
 
 function printOutcome(o: CheckOutcome): void {
@@ -480,6 +550,7 @@ function main(): void {
     outcomes.push(checkLog());
     outcomes.push(checkNotesLength());
     outcomes.push(checkEntryCount());
+    outcomes.push(checkFronts());
 
     for (const o of outcomes) printOutcome(o);
 

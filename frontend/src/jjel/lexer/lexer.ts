@@ -23,6 +23,13 @@ const OCL_METHOD_MESSAGES: Record<string, string> = {
 };
 const OCL_COLLECTION_CONSTRUCTORS = new Set<string>(['Set', 'Sequence', 'Bag', 'OrderedSet']);
 
+// Own-key views of the two tables above: `in` and bracket access on a plain
+// object also answer for Object.prototype names (`toString`, `constructor`,
+// `__proto__`...). A Map is built once rather than `Object.hasOwn`, which the
+// default Vite target (Safari 14) does not ship and esbuild does not polyfill.
+const OCL_METHOD_MESSAGES_OWN = new Map<string, string>(Object.entries(OCL_METHOD_MESSAGES));
+const JJEL_KEYWORDS_OWN = new Map<string, JjelTokenType>(Object.entries(JJEL_KEYWORDS));
+
 /**
  * `actionMode` lexes `:=` as `ASSIGN`, for `parseAction` (R-SIM-40). Off by
  * default: in an expression `:=` stays an error.
@@ -548,8 +555,9 @@ export class JjelLexer {
 
         // OCL `ocl*` methods: the prefix is OCL-specific, false positives are
         // implausible in JjEL contexts, so we flag the bare identifier.
-        if (text in OCL_METHOD_MESSAGES) {
-            this.error(OCL_METHOD_MESSAGES[text]);
+        const oclMessage = OCL_METHOD_MESSAGES_OWN.get(text);
+        if (oclMessage !== undefined) {
+            this.error(oclMessage);
             return;
         }
 
@@ -564,7 +572,7 @@ export class JjelLexer {
         const textLower = text.toLowerCase();
 
         // Check if it's a keyword
-        const keywordType = JJEL_KEYWORDS[textLower];
+        const keywordType = JJEL_KEYWORDS_OWN.get(textLower);
         if (keywordType) {
             // For boolean keywords, also store the value
             if (keywordType === JjelTokenType.TRUE || keywordType === JjelTokenType.FALSE) {

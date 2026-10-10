@@ -1,0 +1,91 @@
+== 1. today's behaviour ==
+MEAS  1a guard event.amount > 15 · Reset defects  none
+MEAS  1a guard on tIns, event coin10  false
+MEAS  1a guard on tIns, event coin20  true
+MEAS  1a guard on tIns, event coin50  true
+MEAS  1a guard on tIns, event coinX  false
+MEAS  1a press  {"press":"coin10","last":"coin10: discarded, tIns guard false","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1a press  {"press":"coin20","last":"coin20: tIns (idle → idle) fired","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1a press  {"press":"coin50","last":"coin50: tIns (idle → idle) fired","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1a press  {"press":"coinX","last":"coinX: discarded, tIns guard false","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+PASS  1a control: coin20 fires tIns  coin20: tIns (idle → idle) fired
+PASS  1a control: coin10 is discarded on a false guard  coin10: discarded, tIns guard false
+MEAS  1b action credit += event.amount · Reset defects  none
+MEAS  1b press  {"press":"coin10","last":"coin10: tIns (idle → idle) fired","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":10,"last":0,"seen":0}}
+MEAS  1b press  {"press":"coin20","last":"coin20: tIns (idle → idle) fired","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":30,"last":0,"seen":0}}
+MEAS  1b press  {"press":"coin50","last":"coin50: tIns (idle → idle) fired","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":80,"last":0,"seen":0}}
+PASS  1b the credit after coin10, coin20, coin50 is 80  {"credit":80,"last":0,"seen":0}
+MEAS  1b press coinX (amount unset)  {"press":"coinX","last":"coinX: tIns (idle → idle) halted the run","halt":"Halted: the transition action of tIns failed: 'model.[credit] := model.[credit] + event.amount': the value is null, not a boolean, a number or a string.","haltKind":"action-defect","status":"Halted","reason":null,"globals":{"credit":80,"last":0,"seen":0}}
+MEAS  1c entry/exit · Reset defects  none
+MEAS  1c press coin20 (triggered arc idle → ready)  {"press":"coin20","last":"coin20: tPay (idle → ready) fired","halt":null,"haltKind":null,"status":"Deadlock","reason":"nothing enabled","globals":{"credit":0,"last":20,"seen":20}}
+MEAS  1c entry/exit on an ε arc · Reset defects  none
+MEAS  1c press ε (untriggered arc idle → ready)  {"press":"ε","last":"ε: tGo (idle → ready) halted the run","halt":"Halted: the exit action of idle failed: 'model.[seen] := event.amount': JjelEvaluationError: Cannot access property 'amount' of null.","haltKind":"action-defect","status":"Halted","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1c entry guarded by event == null, via coin20  {"press":"coin20","last":"coin20: tPay (idle → ready) fired","halt":null,"haltKind":null,"status":"Deadlock","reason":"nothing enabled","globals":{"credit":0,"last":20,"seen":0}}
+MEAS  1c entry guarded by event == null, via ε  {"press":"ε","last":"ε: tGo (idle → ready) fired","halt":null,"haltKind":null,"status":"Deadlock","reason":"nothing enabled","globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1d ε guard event.amount > 0 · Reset defects  none
+MEAS  1d guard on tGo, ε  defect exception: JjelEvaluationError: Cannot access property 'amount' of null
+MEAS  1d press ε  {"press":"ε","last":"ε: nothing to fire, tGo defect, Cannot access property 'amount' of null","halt":null,"haltKind":null,"status":"Deadlock","reason":"ε: tGo defect, Cannot access property 'amount' of null","globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1d ε action credit := event.amount · Reset defects  none
+MEAS  1d press ε  {"press":"ε","last":"ε: tGo (idle → ready) halted the run","halt":"Halted: the transition action of tGo failed: 'model.[credit] := event.amount': JjelEvaluationError: Cannot access property 'amount' of null.","haltKind":"action-defect","status":"Halted","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1d ε guard event == null  true
+MEAS  1e fork, choice edge e1 triggered · transitions  [{"id":"f","origin":["e1","f","e2","e3"],"triggers":["coin10","coin20","coin50","coinX"],"guardSites":["e1","e2","e3"]}]
+MEAS  1e Reset defects  none
+MEAS  1e guard on e2, coin10  false
+MEAS  1e press coin10  {"press":"coin10","last":"coin10: discarded, e2 guard false","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1e press coin20  {"press":"coin20","last":"coin20: f (idle → a, bb) fired","halt":null,"haltKind":null,"status":"Deadlock","reason":"nothing enabled","globals":{"credit":0,"last":20,"seen":0}}
+MEAS  1e fork, choice edge e1 untriggered, out edge e2 triggered · transitions  [{"origin":["e1","f","e2","e3"],"triggers":[]}]
+MEAS  1e alphabet  ["coin10","coin20","coin50","coinX"]
+MEAS  1e press coin20  {"press":"coin20","last":"coin20: discarded, no transition accepted it","halt":null,"haltKind":null,"status":"Deadlock","reason":"ε: e2 defect, Cannot access property 'amount' of null","globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1e press ε  {"press":"ε","last":"ε: nothing to fire, e2 defect, Cannot access property 'amount' of null","halt":null,"haltKind":null,"status":"Deadlock","reason":"ε: e2 defect, Cannot access property 'amount' of null","globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1e fork under the ESM preset · places  ["idle","f","a","bb"]
+MEAS  1f Petri · Reset defects  none
+MEAS  1f Petri transitions  [{"id":"t1","triggers":["coin10","coin20","coin50","coinX"],"actionSites":["exit:p1","transition:t1","entry:p2"]}]
+MEAS  1f guard on t1, coin10  false
+MEAS  1f press coin10  {"press":"coin10","last":"coin10: discarded, t1 guard false","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1f press coin20  {"press":"coin20","last":"coin20: t1 (p1 → p2) fired","halt":null,"haltKind":null,"status":"Deadlock","reason":"nothing enabled","globals":{"credit":20,"last":0,"seen":0}}
+MEAS  1f the Petri preset's modes of trigger, action, guard  {"trigger":"off","action":"off","guard":"edit"}
+MEAS  1f the ESM preset's modes of fork, join, trigger, entry, exit  {"fork":"off","join":"off","trigger":"edit","entry":"edit","exit":"edit"}
+MEAS  1f the Flowchart preset's modes of fork, trigger  {"fork":"edit","trigger":"off"}
+MEAS  1g coin10  {"event.amount":"10","event.hot":"true","event.size":"\"Pointer_probe_l_S_2\"","event.label":"\"ten\"","event.home":"\"<idle>\"","event.tags":"[1,2]","event.need":"1","event.bonus":"defect absent-identifier: 'bonus' does not exist","event.weight":"defect absent-identifier: 'weight' does not exist","event.home == ready":"false","event.size == \"M\"":"false","event.tags.size":"2"}
+MEAS  1g coin20  {"event.amount":"20","event.hot":"false","event.size":"\"Pointer_probe_l_M_3\"","event.label":"\"twenty\"","event.home":"\"<ready>\"","event.tags":"[]","event.need":"2","event.bonus":"defect absent-identifier: 'bonus' does not exist","event.weight":"defect absent-identifier: 'weight' does not exist","event.home == ready":"true","event.size == \"M\"":"false","event.tags.size":"0"}
+MEAS  1g coin50  {"event.amount":"50","event.hot":"true","event.size":"\"Pointer_probe_l_L_4\"","event.label":"\"fifty\"","event.home":"\"<done>\"","event.tags":"[5]","event.need":"5","event.bonus":"7","event.weight":"defect absent-identifier: 'weight' does not exist","event.home == ready":"false","event.size == \"M\"":"false","event.tags.size":"1"}
+MEAS  1g coinX  {"event.amount":"null","event.hot":"null","event.size":"null","event.label":"null","event.home":"null","event.tags":"[]","event.need":"null","event.bonus":"defect absent-identifier: 'bonus' does not exist","event.weight":"defect absent-identifier: 'weight' does not exist","event.home == ready":"false","event.size == \"M\"":"false","event.tags.size":"0"}
+MEAS  1g guard «event.amount > 15» on coinX  {"oracle":"false","press":"coinX: discarded, tIns guard false"}
+MEAS  1g guard «event.amount == null» on coinX  {"oracle":"true","press":"coinX: tIns (idle → idle) fired"}
+MEAS  1g guard «event.amount + 1 > 0» on coinX  {"oracle":"false","press":"coinX: discarded, tIns guard false"}
+MEAS  1g guard «event.need > 0» on coinX  {"oracle":"false","press":"coinX: discarded, tIns guard false"}
+MEAS  1g subclass attribute bonus · Reset defects  none
+MEAS  1g guard event.bonus > 0 on coin50 (BigCoin)  true
+MEAS  1g guard event.bonus > 0 on coin10 (Coin)  defect absent-identifier: 'bonus' does not exist
+MEAS  1g' checkGuardSubset «event.amount > 15»  []
+MEAS  1g' checkGuardSubset «event.hot and event.amount > 15»  []
+MEAS  1g' checkGuardSubset «event != null and event.amount > 15»  ["E-EAGER error"]
+MEAS  1g' checkGuardSubset «event.size == "M"»  []
+MEAS  1g' checkGuardSubset «event.label == "ten"»  []
+MEAS  1g' checkGuardSubset «event.tags.size > 0»  []
+MEAS  1h parseAction(event.amount := 1)  {"action":false,"errors":["1:14 The target of an action must end in '.[attribute]'"]}
+MEAS  1h compileAction(event.amount := 1)  1:14 The target of an action must end in '.[attribute]'
+MEAS  1h event.amount := 1 · Reset defects  {"line":"1 defect: tIns action (parse error 1:14 The target of an action must end in '.[attribute]').","detail":["action tIns: parse-error: 1:14 The target of an action must end in '.[attribute]'"]}
+MEAS  1h press coin20  {"press":"coin20","last":"coin20: tIns (idle → idle) halted the run","halt":"Halted: the transition action of tIns failed: 'event.amount := 1': 1:14 The target of an action must end in '.[attribute]'.","haltKind":"action-defect","status":"Halted","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1h event.[x] := 1 (x declared on Coin) · Reset defects  none
+MEAS  1h press coin20  {"press":"coin20","last":"coin20: tIns (idle → idle) fired","halt":null,"haltKind":null,"status":"Running","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1h σ of coin20 after the press  {"x":1}
+MEAS  1h event.[credit] := 1 (credit global, not on Coin) · Reset defects  none
+MEAS  1h press coin20  {"press":"coin20","last":"coin20: tIns (idle → idle) halted the run","halt":"Halted: the transition action of tIns failed: 'credit' is not declared on coin20.","haltKind":"undeclared","status":"Halted","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+MEAS  1h event.[nope] := 1 (undeclared) · Reset defects  1 defect: tIns action (undeclared 'nope').
+MEAS  1h press coin20  {"press":"coin20","last":"coin20: tIns (idle → idle) halted the run","halt":"Halted: the transition action of tIns failed: 'nope' is not declared on coin20.","haltKind":"undeclared","status":"Halted","reason":null,"globals":{"credit":0,"last":0,"seen":0}}
+== 2. name resolution ==
+MEAS  2 with Transition.event = "arc-feature", triggered arc, coin20  {"event":"\"<coin20>\"","selfEvent":"\"arc-feature\""}
+MEAS  2 same, ε arc  {"event":"null","selfEvent":"\"arc-feature\""}
+MEAS  2 a bare feature name of self (nextState) in a guard  defect absent-identifier: 'nextState' does not exist
+MEAS  2 a bare feature name of the event (amount)  defect absent-identifier: 'amount' does not exist
+MEAS  2 an instance named event: `event` on the ε arc  null
+MEAS  2 an instance named event: `event` on tIns with coin20  "<coin20>"
+== 9. guard defects on the four demo scenes, with and without the script's declarations ==
+MEAS  9 PEST  {"guardSites":[],"reset":null,"dynamicDefects":0,"staticDefects":0,"firstDynamic":null,"defectsAtThePressedInput":[],"lastSteps":["push: t3 (locked → locked) fired","coin: t1 (locked → unlocked) fired","coin: t4 (unlocked → unlocked) fired","push: t2 (unlocked → locked) fired","coin: t1 (locked → unlocked) fired","push: t2 (unlocked → locked) fired","push: t3 (locked → locked) fired","coin: t1 (locked → unlocked) fired","push: t2 (unlocked → locked) fired","stop: t5 (locked → off) fired"]}
+MEAS  9 Petri  {"guardSites":["t1","t2","t3"],"reset":null,"dynamicDefects":0,"staticDefects":0,"firstDynamic":null,"defectsAtThePressedInput":[],"lastSteps":["ε: t1 (p1 → p2 ×2) fired","ε: t3 (lock → ∅) fired","ε: t2 (p2 ×2 → p3) fired","ε: t1 (p1 → p2 ×2) fired"]}
+MEAS  9 ESM with declarations  {"guardSites":["tc","tp","ts","tu"],"reset":null,"dynamicDefects":0,"staticDefects":0,"firstDynamic":null,"defectsAtThePressedInput":[],"lastSteps":["push: discarded, tp guard false","coin: tc (locked → locked) fired","push: discarded, tp guard false","coin: tc (locked → locked) fired","push: tp (locked → unlocked) fired","push: tu (unlocked → locked) fired","coin: tc (locked → locked) fired","coin: tc (locked → locked) fired","coin: tc (locked → locked) fired","coin: tc (locked → locked) halted the run"]}
+MEAS  9 ESM without declarations  {"guardSites":["tc","tp","ts","tu"],"reset":"3 defects: tp guard (undeclared 'paid'); tc action (undeclared 'coins' on demoESM); tp action (undeclared 'coins' on demoESM).","dynamicDefects":3,"staticDefects":0,"firstDynamic":"step 0 push: tp exception","defectsAtThePressedInput":["step 0 push: tp exception"],"lastSteps":["push: discarded, tp defect, 'paid' is not a state attribute of demoESM","coin: tc (locked → locked) halted the run"]}
+MEAS  9 FlowB with declarations  {"guardSites":["f1","f2","f3","f4","f5","f6","f7","f8","f9"],"reset":null,"dynamicDefects":0,"staticDefects":0,"firstDynamic":null,"defectsAtThePressedInput":[],"lastSteps":["ε: f1 (i0 → work) fired","ε: f2 (work → d1) fired","ε: f3 (d1 → work) fired","ε: f2 (work → d1) fired","ε: fk (d1 → left, right) fired","ε: jn (left, right → fin) fired"]}
+MEAS  9 FlowB without declarations  {"guardSites":["f1","f2","f3","f4","f5","f6","f7","f8","f9"],"reset":"3 defects: f3 guard (undeclared 'count'); f4 guard (undeclared 'count'); f2 action (undeclared 'count' on demoFlowB).","dynamicDefects":0,"staticDefects":0,"firstDynamic":null,"defectsAtThePressedInput":[],"lastSteps":["ε: f1 (i0 → work) fired","ε: f2 (work → d1) halted the run"]}
+ALL GREEN

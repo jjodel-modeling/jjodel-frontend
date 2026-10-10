@@ -3,7 +3,7 @@ import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync,
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // auto-intake.mjs run as a child process, the way the nightly driver runs it,
 // against a fake `gh` that serves the responses recorded in Phase 1 of
@@ -18,6 +18,9 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = process.env.AUTO_INTAKE ? resolve(process.env.AUTO_INTAKE) : resolve(HERE, '..', '..', 'auto-intake.mjs');
 const FIX = JSON.parse(readFileSync(join(HERE, 'fixtures', 'auto-intake-gh.json'), 'utf8'));
+// The front rule that lane-run start --auto applies to the rendered prompt (P13, RC-44), and the registry it reads.
+const { frontProblem, inFrontScope, loadFronts } = await import(pathToFileURL(resolve(HERE, '..', '..', 'lane-tracking.mjs')).href);
+const REPO_ROOT = resolve(HERE, '..', '..', '..', '..');
 const REPO = 'jjodel-modeling/jjodel-frontend';
 
 const BASE_CONFIG = {
@@ -406,6 +409,27 @@ describe('auto-intake render', () => {
         setConfig(l, { laneByMode: { shadow: 'fast', live: 'full' } });
         const s = run(l, ['render', '308', '--out', join(l.root, 'out2')]);
         expect(s.stdout).toContain('lane: fast');
+    });
+
+    test('kills "the Front line hard-coded", "the Front line dropped", "a malformed front accepted": Front comes from the configuration, maintenance when absent, as the last header line before Status; after the cut-off the render passes the front rule', () => {
+        const l = lab();
+        routes(l, [{ match: '^api repos/' + REPO + '/issues/310$', stdout: issue(310, 'After the cut-off') }]);
+        const late = { AUTO_INTAKE_NOW: '2026-10-12T02:00' };
+        const r = run(l, ['render', '310', '--out', join(l.root, 'out')], late);
+        expect(r.stdout, r.stderr).toContain('prompt-id: P-2026-10-12-0200');
+        const text = readFileSync(join(l.root, 'out', 'claude_2026-10-12_0200_prompt_auto_issue_310.md'), 'utf8');
+        const header = text.split('\n## ')[0].split('\n');
+        const at = header.indexOf('Lane: discovery');
+        expect(header.slice(at, at + 4)).toEqual(['Lane: discovery', 'Tier: light', 'Front: maintenance', 'Status: dry render, not launchable']);
+        const fronts = loadFronts(REPO_ROOT);
+        expect(inFrontScope(text, 'P-2026-10-12-0200')).toBe(true);
+        expect(frontProblem(text, 'P-2026-10-12-0200', fronts)).toBeNull();
+        expect(frontProblem(text.replace('Front: maintenance\n', ''), 'P-2026-10-12-0200', fronts)).toContain('no `Front:` line');
+        setConfig(l, { front: 'harness' });
+        expect(run(l, ['render', '310', '--out', join(l.root, 'out2')], late).status).toBe(0);
+        expect(readFileSync(join(l.root, 'out2', 'claude_2026-10-12_0200_prompt_auto_issue_310.md'), 'utf8')).toContain('\nTier: light\nFront: harness\nStatus: ');
+        setConfig(l, { front: 'Not a slug' });
+        expect(run(l, ['render', '310', '--out', join(l.root, 'out3')], late).last).toBe('refused: the configuration: front is not a front slug');
     });
 });
 

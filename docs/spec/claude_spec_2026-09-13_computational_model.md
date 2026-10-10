@@ -6,7 +6,7 @@
 `docs/discovery/discovery_2026-09-13_jjel_eval_context.md`.
 **Amended**: 2026-09-25 by R-SIM-21..33 (Petri core, termination, five run statuses);
 see sections 3.3 and 3.4. 2026-09-28 by R-SIM-88 (input variables, a third input of the step);
-see sections 4.1 and 8.
+see sections 4.1 and 8. 2026-10-10 by R-SIM-144 (attributes of the current event, `event.a`); see section 8.
 
 **Supersedes**: nothing; the current engine in `frontend/src/components/editor-v2/sim/` is the
 implementation this spec reshapes.
@@ -218,6 +218,7 @@ e absent.
 | current event | `IVAR` (event enum + absent) | free for the checker, supplied by the user in simulation |
 | selector | `IVAR` (edge enum + none) | choice is an input of the step, not part of it |
 | input declaration (R-SIM-88) | `IVAR` with declared domain, one per owner | free for the checker, asked by the panel at the press that reads it |
+| attribute `a` of the current event, `event.a` (R-SIM-144) | `DEFINE event_a := case event = e1 : v1; …; TRUE : v1; esac;` | one `DEFINE` per attribute of the trigger's declared type that a guard or an action reads; the cases range over the event `IVAR`, the constants come from the frozen M; the closing `TRUE` is never read where R-SIM-144 (P3) holds; integers and booleans map directly, enumeration literals and strings to symbolic constants, a reference to the element's constant; multi-valued and real attributes, and a read attribute unset on a trigger instance, are refused by the exporter; no new variable |
 | enabling, guards, stable | `DEFINE` | stateless predicates |
 | admissibility, progress, event only when stable | `TRANS` | constraints on the IVARs |
 | structural effect, actions | `ASSIGN next(x) := …` | parallel, read on current state |

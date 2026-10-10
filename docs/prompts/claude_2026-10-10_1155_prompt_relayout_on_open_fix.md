@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-1155
 Chat: C-2026-10-10-0057
 Lane: full (bug fix in `EditorV2.tsx`; regression gate on users' saved layouts)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane relayout-on-open · b58d8631f, merge 15c687010 · flip 2026-10-10 dalla chat
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 

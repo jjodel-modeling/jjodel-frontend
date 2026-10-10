@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0046
 Lane: full (new engine module, six source files and their tests; consumes the exported JjEL interface of S1).
 Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead (none needed, discovery §I.3).
 Depends: P-2026-10-10-0900
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane codegen-engine · code 67d74be39 · docs 0bebec308 · question on buildEvalContext answered as recommended (generate receives globals from its caller; real wiring owed to S5) · tsc 14 = base, src/codegen 100, src/jjel 279, src/model/simulation 685, src/jjscript 541, build exit 0, mutation bench 18/18 killed · no visual check (textual slice)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
