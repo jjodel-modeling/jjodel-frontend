@@ -26,6 +26,7 @@
   // What each outcome means, shown as a tooltip on every outcome legend (insights.js reads it too).
   window.LANE_OUTCOME_TIPS = {
     done: 'Done: the lane finished its prompt and committed; nothing is waiting on you.',
+    resolved: 'Resolved: the lane exited blocked and was put right afterwards (lane-run resolve wrote resolved.txt). Its last turn is drawn in the done colour; Insights first-shot still counts the run as blocked.',
     'hard-stop': 'Hard-stop: a planned pause, not a failure. The lane stopped where the protocol says it must (end of discovery, before a visual check, after a merge) and waits for your GO.',
     question: 'Question: the lane hit a decision outside its perimeter and asks before going on; it resumes once answered.',
     blocked: 'Blocked / failed: something went wrong (a red gate, a missing precondition, a crash). This is the one that needs a look.',
@@ -33,10 +34,12 @@
     '': 'No outcome: the log has no Outcome line (old lanes, or a lane cut off before its closing message).'
   };
   const OTIP = (o) => (window.LANE_OUTCOME_TIPS[o] || '').replace(/"/g, '&quot;');
-  const OUT = { done: 'var(--ok)', 'hard-stop': 'var(--hs)', question: 'var(--q)', blocked: 'var(--bad)', failed: 'var(--bad)' };
+  const OUT = { done: 'var(--ok)', resolved: 'var(--ok)', 'hard-stop': 'var(--hs)', question: 'var(--q)', blocked: 'var(--bad)', failed: 'var(--bad)' };
   const LNAME = { chat: 'Chat (claude.ai)', 'claude-code': 'Claude Code, local session', harness: 'lane-run (merge prompts)', chain: 'Chain (after its first lane)', manual: 'By hand', unknown: 'Unknown' };
   const LCOL = { chat: 'var(--run)', 'claude-code': 'var(--warn)', harness: 'var(--neutral)', chain: 'var(--q)', manual: 'var(--ok)', unknown: 'var(--track)' };
-  const turnColor = (lane, t, last) => (last && lane.live ? 'var(--run)' : OUT[t.o] || 'var(--neutral)');
+  // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards paints its last turn in the ok colour.
+  // /api/timeline keeps the raw outcome for the exports and flags the lane beside it (lane.resolved).
+  const turnColor = (lane, t, last) => (last && lane.live ? 'var(--run)' : last && lane.resolved ? 'var(--ok)' : OUT[t.o] || 'var(--neutral)');
 
   const css = `
   :root{--q:#7c3aed;--neutral:#94a3b8;--track:#cbd5e1}
@@ -78,7 +81,7 @@
       '<span class="meta">Zoom</span>' + seg('zoom', [['1', 'Fit'], ['2', '2×'], ['4', '4×'], ['8', '8×'], ['16', '16×']], zoom) +
       '<span class="meta">Colour by</span>' + seg('colorBy', [['outcome', 'Outcome'], ['deps', 'Dependencies'], ['heat', 'Heat']], colorBy) +
       '<span class="seg" data-name="fold"><button data-v="open">Expand all</button><button data-v="close">Collapse all</button></span>' +
-      '<span class="tl-legend"><span title="' + OTIP('done') + '"><i style="background:var(--ok)"></i>done</span><span title="' + OTIP('hard-stop') + '"><i style="background:var(--hs)"></i>hard-stop</span><span title="' + OTIP('question') + '"><i style="background:var(--q)"></i>question</span><span title="' + OTIP('blocked') + '"><i style="background:var(--bad)"></i>blocked</span><span title="' + OTIP('running') + '"><i style="background:var(--run)"></i>running</span>' +
+      '<span class="tl-legend"><span title="' + OTIP('done') + '"><i style="background:var(--ok)"></i>done</span><span title="' + OTIP('resolved') + '"><i style="background:var(--ok)"></i>resolved</span><span title="' + OTIP('hard-stop') + '"><i style="background:var(--hs)"></i>hard-stop</span><span title="' + OTIP('question') + '"><i style="background:var(--q)"></i>question</span><span title="' + OTIP('blocked') + '"><i style="background:var(--bad)"></i>blocked</span><span title="' + OTIP('running') + '"><i style="background:var(--run)"></i>running</span>' +
       '<span><svg width="10" height="10"><path d="M5 0L10 5L5 10L0 5Z" fill="var(--accent)"/></svg> decision</span>' +
       '<span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--track)" stroke-dasharray="3 2"/></svg> waiting</span>' +
       (group === 'worktree' ? '<span><i style="border:1.5px dashed var(--bad);background:repeating-linear-gradient(45deg,transparent 0 2px,color-mix(in srgb,var(--bad) 40%,transparent) 2px 4px)"></i>overlap in one tree (solid: both working)</span>' : '<span><i style="border:1.5px dashed var(--q);background:repeating-linear-gradient(45deg,transparent 0 2px,color-mix(in srgb,var(--q) 40%,transparent) 2px 4px)"></i>parallel lanes in one row (solid: both working)</span>') + '<span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--fg)" stroke-width="1.5"/></svg> chain</span><span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--accent)" stroke-width="2.25"/></svg> declared dependency</span><span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/></svg> citation</span>' + '</span></div>';
@@ -188,7 +191,7 @@
         g += '<line x1="' + x(l.a) + '" y1="' + (ly + 5) + '" x2="' + x(l.b) + '" y2="' + (ly + 5) + '" stroke="var(--track)" stroke-dasharray="3 2"/>';
         l.turns.forEach((t, i) => {
           const last = i === l.turns.length - 1;
-          g += '<rect class="tl-turn" x="' + x(t.s) + '" y="' + ly + '" width="' + Math.max(x(t.e) - x(t.s), 2) + '" height="10" rx="2" fill="' + turnColor(l, t, last) + '"><title>' + esc(l.id + ' · turn ' + (i + 1) + '\n' + dhm(t.s) + ' to ' + hm(t.e) + ' (' + dur(t.e - t.s) + ')' + (t.o ? '\nOutcome: ' + t.o : '')) + '</title></rect>';
+          g += '<rect class="tl-turn" x="' + x(t.s) + '" y="' + ly + '" width="' + Math.max(x(t.e) - x(t.s), 2) + '" height="10" rx="2" fill="' + turnColor(l, t, last) + '"><title>' + esc(l.id + ' · turn ' + (i + 1) + '\n' + dhm(t.s) + ' to ' + hm(t.e) + ' (' + dur(t.e - t.s) + ')' + (t.o ? '\nOutcome: ' + t.o + (last && l.resolved ? ', resolved' : '') : '')) + '</title></rect>';
           if (i > 0 && t.s >= t0) g += '<path d="M' + x(t.s) + ' ' + (ly - 2) + 'l5 7l-5 7l-5 -7z" fill="var(--accent)" stroke="var(--card)" stroke-width="1"><title>' + esc('Decision at ' + dhm(t.s) + ' after ' + dur(t.s - l.turns[i - 1].e) + ' of waiting\n' + (t.d || '')) + '</title></path>';
         });
         // Short label after the bar, only where it does not run into the next lane of the same row.
@@ -240,10 +243,10 @@
     };
     lanes.forEach((l) => { l.dep = depKind(l); });
     const CATS = {
-      outcome: [['done', 'var(--ok)', 'done'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']],
+      outcome: [['done', 'var(--ok)', 'done'], ['resolved', 'var(--ok)', 'resolved'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']],
       deps: [['concurrent', 'var(--bad)', 'depends on a lane open at the same time'], ['sequential', 'var(--accent)', 'depends on an earlier lane'], ['none', 'var(--neutral)', 'no recorded dependency']],
     };
-    const catOf = (l, t, last) => colorBy === 'deps' ? l.dep : (last && l.live ? 'running' : t.o === 'failed' ? 'blocked' : (t.o in OUT || t.o === 'done') ? t.o : '');
+    const catOf = (l, t, last) => colorBy === 'deps' ? l.dep : (last && l.live ? 'running' : last && l.resolved ? 'resolved' : t.o === 'failed' ? 'blocked' : (t.o in OUT || t.o === 'done') ? t.o : '');
     const buckets = [];
     for (let i = 0; i < nb; i++) buckets.push({ s: t0 + i * bw, e: t0 + (i + 1) * bw, work: {}, total: 0, open: 0, dec: 0, ids: new Set() });
     const addSpan = (s, e, f) => {
@@ -324,7 +327,7 @@
     let rows = '';
     l.turns.forEach((t, i) => {
       if (i > 0) rows += '<tr><td class="meta">decision</td><td>' + dhm(t.s) + '</td><td class="meta">after ' + dur(t.s - l.turns[i - 1].e) + ' waiting</td><td>' + esc(t.d) + '</td></tr>';
-      rows += '<tr><td><b>turn ' + (i + 1) + '</b></td><td>' + dhm(t.s) + ' to ' + hm(t.e) + '</td><td>' + dur(t.e - t.s) + '</td><td>' + esc(t.o || (i === l.turns.length - 1 && l.live ? 'running' : '')) + '</td></tr>';
+      rows += '<tr><td><b>turn ' + (i + 1) + '</b></td><td>' + dhm(t.s) + ' to ' + hm(t.e) + '</td><td>' + dur(t.e - t.s) + '</td><td>' + esc((t.o || (i === l.turns.length - 1 && l.live ? 'running' : '')) + (t.o && i === l.turns.length - 1 && l.resolved ? ', resolved' : '')) + '</td></tr>';
     });
     const link = (id) => '<a data-go="' + id + '">' + id + '</a>';
     const ins = links.filter((k) => k[1] === l.id).map((k) => link(k[0]) + ' (' + k[2] + ')');

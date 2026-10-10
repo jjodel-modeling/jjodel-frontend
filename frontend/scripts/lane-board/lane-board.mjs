@@ -8,7 +8,9 @@
 // tab adds /api/insights: model, cost, code areas and first-shot success per lane, from the lane
 // logs, `git log --all` and the trunk's log entries and decisions.md (insights.js, README).
 // A running lane's progress is the ladder of milestones its log.jsonl has reached (below), drawn in
-// its Phase cell; an exited blocked lane holding resolved.txt reads `resolved` in the Lanes tab only.
+// its Phase cell; an exited blocked lane holding resolved.txt reads `resolved` in the Lanes tab, and
+// Timeline and Insights paint it in the ok colour from a flag beside its raw outcome. A strip of six
+// pills ends the tab bar, counted from the /api rows (stripKey, below); a click filters the Lanes tab.
 // It listens when run as a script, not when imported (the tests import its functions).
 // Usage: node ~/.jjodel-lanes/board/lane-board.mjs [--port 4700] [--refresh 30]
 
@@ -454,7 +456,7 @@ function collect() {
             row.kind = kindOf(h.lane, h.file);
             row.tier = readTrim(join(dir, 'tier.txt')).split(/[\s:]/)[0];
             // resolved (P-2026-10-05-1720): exited blocked and resolved afterwards, whichever lane-run printed the table.
-            // For the Lanes tab only: timeline() keeps the raw outcome for the exports, Insights reads its own from the log.
+            // timeline() keeps the raw outcome for the exports and flags the lane `resolved` beside it; /api/insights reads its own from the log.
             if (outcome === 'blocked' && existsSync(join(dir, 'resolved.txt'))) row.outcome = 'resolved';
             if (live) {
                 row.phase = phaseOf(dir);
@@ -782,7 +784,8 @@ function chainPositions() {
 }
 
 /** The outcome a lane recorded: `resolved` is the Lanes tab's overlay on `blocked` (collect), not the lane's, so the
- *  Timeline data and the XES export it feeds keep `blocked`; the trace export reads the turns' own outcomes. */
+ *  Timeline data and the XES export it feeds keep `blocked`; the trace export reads the turns' own outcomes.
+ *  The overlay rides beside it as `resolved: true`, which timeline.js and insights.js paint in the ok colour. */
 const rawOutcome = (o) => (o === 'resolved' ? 'blocked' : o || '');
 
 let tlMem = { at: 0, data: null };
@@ -800,7 +803,7 @@ function timeline() {
         try { t = laneTimeline(id, now); } catch { continue; }
         const st = status.get(id) || {};
         const h = st.worktree !== undefined ? st : (() => { const x = header(dir); return { ...x, worktree: readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~'), kind: kindOf(x.lane, x.file) }; })();
-        lanes.push({ id, launcher: launcherOf(id, cpos.get(id), h.chat), title: h.title || '', chat: h.chat || '', worktree: h.worktree || '', kind: h.kind || '', tier: st.tier || '', state: st.state || (t.exited ? 'exited' : '?'), outcome: rawOutcome(st.outcome), live: !!st.live, turns: t.turns, cites: t.cites, depends: t.depends || [], declared: !!t.declared, request: t.request || { url: '', text: '' } });
+        lanes.push({ id, launcher: launcherOf(id, cpos.get(id), h.chat), title: h.title || '', chat: h.chat || '', worktree: h.worktree || '', kind: h.kind || '', tier: st.tier || '', state: st.state || (t.exited ? 'exited' : '?'), outcome: rawOutcome(st.outcome), resolved: st.outcome === 'resolved', live: !!st.live, turns: t.turns, cites: t.cites, depends: t.depends || [], declared: !!t.declared, request: t.request || { url: '', text: '' } });
     }
     const known = new Set(lanes.map((l) => l.id));
     const chainDeps = chains().filter(([a, b]) => known.has(a) && known.has(b));
@@ -1186,6 +1189,32 @@ function xesExport(days) {
     return out.join('\n');
 }
 
+// ── status strip ────────────────────────────────────────────────────────────
+// The pills at the end of the tab bar (Alfonso, 2026-10-05 17:35; ported by P-2026-10-10-2103): key,
+// label, the class of the outcome colour the Lanes table already uses. Counted in the page from the
+// /api rows by stripKey, embedded in the page as written here.
+export const STRIP = [['running', 'running', 'running'], ['question', 'question', 'question'], ['hard-stop', 'hard-stop', 'hard-stop'],
+    ['blocked', 'blocked', 'blocked-o'], ['resolved', 'resolved', 'resolved'], ['done', 'done 24 h', 'done']];
+
+/** The pill of a row, or null: a chain by its state; a lane running or over its limit by its state; an exited lane by its outcome, done only within the last 24 hours. */
+export function stripKey(r) {
+    if (r.chain) return r.state === 'running' ? 'running' : r.state === 'done' && r.recent ? 'done' : null;
+    if (r.state === 'running') return 'running';
+    if (r.state === 'blocked') return 'blocked';
+    const o = String(r.outcome || '').split(' ')[0];
+    if (o === 'done') return r.recent ? 'done' : null;
+    return o === 'question' || o === 'hard-stop' || o === 'blocked' || o === 'resolved' ? o : null;
+}
+
+export function stripCounts(rows) {
+    const n = Object.fromEntries(STRIP.map(([k]) => [k, 0]));
+    for (const r of rows) {
+        const k = stripKey(r);
+        if (k) n[k]++;
+    }
+    return n;
+}
+
 const PAGE = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Jjodel Harness Lane Management</title>
@@ -1212,20 +1241,52 @@ td.lfx-num{white-space:nowrap;font-variant-numeric:tabular-nums}td.lfx-cut{white
 a.chat{color:var(--run);text-decoration:none}a.chat:hover{text-decoration:underline}
 .load-hi{color:var(--bad);font-weight:600}
 .tabs{display:flex;gap:4px;margin:0 0 8px;border-bottom:1px solid var(--line)}.tabs button,.seg button{font:inherit;font-size:12px;background:none;border:0;color:var(--muted);padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}.tabs button.on{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.strip{margin-left:auto;display:flex;gap:4px;align-items:center;flex:none;padding:4px 0}.strip .sp{text-decoration:none;white-space:nowrap;cursor:pointer;background:var(--card)}.strip .sp b{display:inline-block;min-width:3ch;text-align:right;font-variant-numeric:tabular-nums;margin-right:3px}.strip .sp.zero{opacity:.35}.strip .sp.on{box-shadow:0 0 0 2px currentColor}
+.filt{display:flex;gap:12px;align-items:baseline}.filt a{color:var(--accent);font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer}
 details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
 </style></head><body><main>
 <header><h1>Jjodel Harness Lane Management</h1><span class="meta" id="meta">loading…</span></header>
-<nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button></nav>
+<nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button><div class="strip" id="strip" aria-label="Lanes by state">${STRIP.map(([k, label, cls]) => '<a href="#" role="button" class="pill sp ' + cls + ' zero" data-k="' + k + '" title="Show the ' + label + ' lanes"><b>0</b>' + label + '</a>').join('')}</div></nav>
 <div class="err" id="err"></div>
 <section id="tab-table">
+<div id="lanes-filt" hidden></div>
+<div id="lanes-all">
 <h2>Running</h2><div class="wrap" id="live"></div>
 <h2>Last ${RECENT_H} hours</h2><div class="wrap" id="recent"></div>
 <h2>Earlier lanes</h2><div id="older"></div>
+</div>
 </section>
 <section id="tab-timeline" hidden><div id="tl"></div></section>
 <section id="tab-insights" hidden><div id="ins"></div></section>
 </main><script src="/timeline.js"></script><script src="/insights.js"></script><script>
 const REFRESH=${REFRESH_S}*1000;
+const stripKey=${stripKey.toString()};
+const STRIP=${JSON.stringify(STRIP)};
+let laneFilter='',lastRows=[];
+function renderStrip(rows){
+  const n={};STRIP.forEach(([k])=>{n[k]=0});rows.forEach(r=>{const k=stripKey(r);if(k)n[k]++});
+  STRIP.forEach(([k])=>{const el=document.querySelector('#strip [data-k="'+k+'"]');if(!el)return;el.querySelector('b').textContent=n[k];el.classList.toggle('zero',!n[k]);el.classList.toggle('on',laneFilter===k)});
+}
+// A pill shows its lanes alone, through the same table(): the running ones first, then the exited.
+function renderLanes(rows){
+  const f=document.getElementById('lanes-filt'),all=document.getElementById('lanes-all');
+  f.hidden=!laneFilter;all.hidden=!!laneFilter;
+  if(laneFilter){
+    const label=(STRIP.find(s=>s[0]===laneFilter)||[,laneFilter])[1];
+    const rs=rows.filter(r=>stripKey(r)===laneFilter),L=rs.filter(r=>r.live),E=rs.filter(r=>!r.live);
+    f.innerHTML='<h2 class="filt"><span>'+esc(label)+' · '+rs.length+' lane'+(rs.length===1?'':'s')+'</span><a id="clearf">show all lanes</a></h2>'+
+      (rs.length?'':'<div class="wrap"><div class="empty">No lane in this state.</div></div>')+
+      (L.length?'<div class="wrap">'+table(L,true)+'</div>':'')+(E.length?'<div class="wrap"'+(L.length?' style="margin-top:8px"':'')+'>'+table(E,false)+'</div>':'');
+    document.getElementById('clearf').addEventListener('click',e=>{e.preventDefault();setFilter('')});
+    return;
+  }
+  document.getElementById('live').innerHTML=table(rows.filter(r=>r.live),true);
+  document.getElementById('recent').innerHTML=table(rows.filter(r=>!r.live&&r.recent),false);
+  renderOlder(rows.filter(r=>!r.live&&!r.recent));
+}
+// A second click on the pill of the filter, or "show all lanes", clears it.
+function setFilter(k){laneFilter=k;renderStrip(lastRows);renderLanes(lastRows)}
+document.getElementById('strip').addEventListener('click',e=>{const a=e.target.closest('[data-k]');if(!a)return;e.preventDefault();showTab('table');setFilter(laneFilter===a.dataset.k?'':a.dataset.k)});
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pill=(t,cls)=>t?'<span class="pill '+esc(cls||t)+'">'+esc(t)+'</span>':'';
 // The chat id opens the lane's claude.ai conversation when one is known; a URL without a chat id reads "chat".
@@ -1279,9 +1340,7 @@ async function tick(){
     const hi=Number(d.load[0])>20;
     document.getElementById('meta').innerHTML='updated at <b>'+t+'</b> · refresh every '+(REFRESH/1000)+' s · load <span class="'+(hi?'load-hi':'')+'">'+d.load.join(' ')+'</span>';
     document.getElementById('err').textContent=d.error||'';
-    document.getElementById('live').innerHTML=table(d.rows.filter(r=>r.live),true);
-    document.getElementById('recent').innerHTML=table(d.rows.filter(r=>!r.live&&r.recent),false);
-    renderOlder(d.rows.filter(r=>!r.live&&!r.recent));
+    lastRows=d.rows;renderStrip(d.rows);renderLanes(d.rows);
     const n=d.rows.filter(r=>r.live).length;document.title=(n?'('+n+') ':'')+'Jjodel Harness Lane Management';
   }catch(e){document.getElementById('err').textContent='lane-board unreachable: '+e.message}
 }

@@ -21,10 +21,23 @@ text, cut, on its second (next section). The estimate is a heuristic, not a prom
 measured median per kind, minus the elapsed time, corrected by the phase and the load
 average. Below it, the earlier lanes grouped by day, with their outcome.
 
+**Status strip.** Six pills end the tab bar, whichever tab is open: running,
+question, hard-stop, blocked, resolved and done in the last 24 hours, each with its
+count, in the outcome colours of the Lanes table (hard-stop in its soft green), a
+zero count dimmed. A lane running or over its time limit counts by its state, an
+exited lane by its outcome, a chain by its state; done counts only the last 24 hours,
+the other outcomes every lane. A click on a pill opens the Lanes tab filtered to that
+state: its running lanes, then its exited ones, in the same tables and columns as the
+unfiltered tab. A second click on the same pill, or "show all lanes" beside the
+heading, brings the full tab back; the filter survives the refresh. The page counts
+with `stripKey`, the function the server exports, embedded in the page as written.
+
 **Timeline.** One row per lane, grouped by worktree or by launcher, over the last
 24 h, 3 days, 7 days or all time. Each turn is a bar coloured by its outcome; the gap
 between two turns is a wait for a decision (GO, ACK or answer), and the decision text
-is the first line of the `input-<k>.md` that started the next turn. Lanes open at the
+is the first line of the `input-<k>.md` that started the next turn. The last turn of a
+`resolved` lane is drawn in the colour of done, and its title and the lane's detail
+read `blocked, resolved`. Lanes open at the
 same time on the same worktree are flagged as overlaps. Dependencies are drawn as
 arrows: solid for a `Depends:` header line, dashed for a Prompt-ID merely cited in the
 prompt, and in their own colour for the steps of a chain. A parallelism chart counts
@@ -72,9 +85,14 @@ otherwise a phase that names a probe still reads `about 5-15 min`.
 
 **`resolved`.** An exited lane whose outcome is `blocked` and whose folder holds
 `resolved.txt` (one line, date, who and why, written by `lane-run resolve`) shows the
-outcome `resolved` in the Lanes tab, in the colour of `done`. The overlay is the Lanes
-tab's only: `/api/timeline` and the two exports keep `blocked`, and Insights keeps the raw
-outcome on purpose, since first-shot success measures the lane, not the repair made after it.
+outcome `resolved` in the Lanes tab and its strip, in the colour of `done`. `/api/timeline`
+keeps the raw `blocked` in `outcome`, for the two exports, and carries the overlay beside it
+as `resolved: true`: Timeline paints the lane's last turn in the colour of done, and the
+outcome charts of Insights (per day, by kind, by launcher) count it as resolved, in its own
+legend entry. The first-shot sections of Insights read `/api/insights`, which keeps the
+outcome of the log: a resolved lane still counts as a run that ended blocked there, on
+purpose, since first-shot success measures the lane, not the repair made after it. The two
+views of one lane differ by design, not by a bug.
 
 ## Models, code areas and first-shot success
 
