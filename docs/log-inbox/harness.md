@@ -188,3 +188,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: harness script only (lane-run chain), app untouched, no scene to check on 3001
 **Notes**: Rollback tag `pre-chain-request` on `18d9dfb57` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1250/result.json`.
 **Prompt document name**: 2026-10-10 12:50
+
+## 2026-10-10 — feat(harness): lane board shows when each lane started and ended (P-2026-10-10-1253)
+**Prompt**: `claude_2026-10-10_1253_prompt_lane_board_start_end.md`, fast lane on `~/jjodel-w-boardtimes`, branch `lane-board-times`: each `/api` row gains `start` and `end` (epoch ms) from the turn computation; the Lanes tab gains `Started` (all three tables) and `Ended` (Last 24 hours, Earlier lanes) before `Elapsed`. Second turn, the chat's corrections (RC-25): reference day today, group day in Earlier lanes; Elapsed becomes the working time.
+**Files touched**: code `635ddc919` and `b8fa0e1bc`: `frontend/scripts/lane-board/lane-board.mjs`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` exit 0; check:scripts PASS 57 files. Board on 4701 (cache in /tmp): 374 rows, all with `start`; P-2026-10-10-1150 11:51 → 12:03, Elapsed 10 min (was 0); running lanes have `end` 0; client table run on real and synthetic rows (yesterday, other group day).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read of the Lanes tab: Started in Running, Started and Ended before Elapsed in the other two; 1150 11:51 to 12:03, Elapsed 10 min (was 0); running 0105 start 01:04, 2 h 3 min. Date prefix not on screen (no lane from yesterday in the 24 h window), covered by the lane's client table run
+**Notes**: Path: `laneSpan()` reuses `laneTimeline()` and its cache, and returns `work`, the sum of the turns (running turn up to now); a chain takes its lanes' earliest start, latest end once all ended, summed work. `collect()` also writes the timeline cache. `minutes` (lane-run's last run) stays and feeds Left. Elapsed is empty when no turn is known. P-2026-09-29-1017 (no exit.txt, dead pid) shows no end.
+**Prompt document name**: 2026-10-10 12:53
