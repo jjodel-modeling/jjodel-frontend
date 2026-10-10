@@ -483,3 +483,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: take-trunk merge of a scripts-only branch, gates green per the session; nothing to check in the app
 **Notes**: Two of three full vitest runs, at load 75-105 beside the 1852 worker's gates, also red on irCollapsedRender and irSelectionRing: afterAll browser.close() hook timeout 10 s, every assertion passed; alone 18/18; the third run, load ~40, clean. check:docs is 5/5, not the prompt's 4/4 (Check E). The merge body says «ten blocks» and lists seven; not amended. Trunk now `e1eb53d43`, docs only past `c315460b0`; harness.md conflicts again for the merge into the trunk.
 **Prompt document name**: 2026-10-10 18:51
+
+## 2026-10-10 — merge: board-kindof-merges into alfonso-frontend-jjtl (P-2026-10-10-1913)
+**Prompt**: `claude_2026-10-10_1913_prompt_merge_board-kindof-merges.md`, a direct merge by `lane-run merge --direct`, no session: `board-kindof-merges` at `f8d8c333d` into `alfonso-frontend-jjtl`, merge base `c315460b0`, 7 commits on the branch side.
+**Files touched**: merge `2ad7460d0`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_1803_prompt_board_kindof_merges.md`, `docs/prompts/claude_2026-10-10_1851_prompt_board-kindof-merges_take_trunk.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2ad7460d0` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8052 tests in 330 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board kindOf), classification verified by lane P-2026-10-10-1803 on the prompt corpus
+**Notes**: Rollback tag `pre-board-kindof-merges` on `e1eb53d43` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1913/result.json`.
+**Prompt document name**: 2026-10-10 19:13
