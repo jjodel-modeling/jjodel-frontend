@@ -5728,7 +5728,10 @@ the removal would father it to the model and list it nowhere (the #174 eviction 
 the reference (`REFERENCE_REQUIRED`); `-= null` (`TYPE_MISMATCH`). A root-born child leaves the containment back to
 the model root. `-=` is not type-checked: taking a wrong-typed element out repairs the slot. Under a profile
 `remove` stays refused as a language command (`permissionGuard.ts`); `set … -=` passes the link rules. Code
-`cb02e6a2b`.
+`cb02e6a2b`. **Amended 2026-10-10 by R-NEST-1 and R-NEST-4 (#174):** `WOULD_ORPHAN` is no longer reached. A containment
+child born in the slot is listed by its model, so `-=` and `remove` take it out to the model root as they do a
+root-born one: measured on `5995167ba`, `set S1.pathway -= k2` answers «Removed k2 from S1.pathway», k2 is a root
+listed once, and one undo puts it back in the slot. The refusal stays in the code (rule 9).
 
 **R-JS-13** (2026-10-07, provisional) — **`+=` adds without replacing.** It appends while the slot has room:
 unbounded, below its upper bound, or an empty single-valued slot. A single-valued slot holding another element, and
