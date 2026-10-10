@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-1600
 Chat: C-2026-10-10-0057
 Lane: full (Phase 1, read-only on sources; the fix touches CLAUDE.md §3.2 `useJjomSync.ts`, so Phase 2 needs a Layer Impact Report and an explicit go-ahead)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane stale-m1-edge · 46bcfcb92, 9e1b0b7b8, df7904064, ad08a8519, 82b4b71c6, d6448ef04 · flip 2026-10-10 dalla chat
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 
