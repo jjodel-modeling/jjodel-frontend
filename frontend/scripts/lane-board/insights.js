@@ -264,6 +264,23 @@
     return head + m + s + '<div class="in-note">Within a size band the models do not separate at these n; the model is chosen by the chat, not at random.</div></div>';
   }
 
+  // The box of a label in the chart's own font, from a hidden SVG with the card's style: chart units, since the
+  // chart scales its viewBox and its font together, so the layout is the same at every pane width.
+  let measurer = null;
+  function labelBox(t) {
+    if (!measurer) {
+      const box = document.createElement('div');
+      box.className = 'in-card';
+      box.style.cssText = 'position:absolute;visibility:hidden;left:-10000px;top:0;padding:0;border:0';
+      box.innerHTML = '<svg width="1000" height="40"><text x="0" y="20"></text></svg>';
+      document.body.appendChild(box);
+      measurer = box.querySelector('text');
+    }
+    measurer.textContent = t;
+    const b = measurer.getBBox();
+    return { w: b.width, h: b.height };
+  }
+
   // First-shot by week (weeks start on Monday): one square per session lane, in the order the lanes started.
   function timeCard(c) {
     const ls = insLanes(c).filter((l) => l.model).sort((a, b) => a.start - b.start);
@@ -272,8 +289,38 @@
     const t0 = monday(c.from), t1 = monday(c.now) + 7 * DAY;
     const weeks = [];
     for (let w = t0; w < t1; w = monday(w + 8 * DAY)) weeks.push(w);
-    const W = 1000, L = 8, R = 8, TOP = 40, CELL = 10, STEP = 12;
+    const W = 1000, L = 8, R = 8, CELL = 10, STEP = 12, GAP = 4;
     const xOf = (t) => L + (W - L - R) * (t - t0) / (t1 - t0);
+    // Markers: the first lane of each model (over every lane, not just the range), and the RC rows from RC-20 on, grouped by date.
+    const marks = [];
+    const firstOf = {};
+    ins.lanes.filter((l) => l.model && l.start).forEach((l) => { if (!firstOf[l.model] || l.start < firstOf[l.model].start) firstOf[l.model] = l; });
+    Object.entries(firstOf).forEach(([md, l]) => marks.push({ t: l.start, label: modelName(md), tip: modelName(md) + ' first runs a lane|' + l.id, col: 'var(--accent)' }));
+    const byDate = {};
+    (ins.harness || []).forEach((r) => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+    Object.entries(byDate).forEach(([d, rs]) => {
+      const [y, mo, da] = d.split('-').map(Number);
+      const num = rs.map((r) => Number(r.id.slice(3)));
+      marks.push({ t: new Date(y, mo - 1, da).getTime(), label: rs.length > 1 ? 'RC-' + Math.min(...num) + '–' + Math.max(...num) : rs[0].id, tip: d + '|' + rs.map((r) => r.id + ' ' + r.title).join('|'), col: 'var(--muted)' });
+    });
+    // Label rows: left to right, each label goes to the first row where it keeps GAP from every label already
+    // there, a new row when none has room. Right of its line, or left of it when the right would leave the chart;
+    // never cut.
+    const shown = marks.filter((mk) => mk.t >= t0 && mk.t < t1).sort((a, b) => a.t - b.t);
+    const rowSpans = [];
+    let lineH = 12;
+    shown.forEach((mk) => {
+      const x = xOf(mk.t), box = labelBox(mk.label);
+      lineH = Math.max(lineH, Math.ceil(box.h));
+      const right = x + 3 + box.w <= W;
+      const span = right ? [x + 3, x + 3 + box.w] : [x - 3 - box.w, x - 3];
+      let r = rowSpans.findIndex((spans) => spans.every(([a, b]) => span[0] >= b + GAP || span[1] <= a - GAP));
+      if (r === -1) { r = rowSpans.length; rowSpans.push([]); }
+      rowSpans[r].push(span);
+      Object.assign(mk, { x, r, right });
+    });
+    const ROW = lineH + 2;
+    const TOP = 6 + rowSpans.length * ROW;
     const colW = (W - L - R) / Math.max(weeks.length, 1);
     const perRow = Math.max(1, Math.floor((colW - 12) / STEP));
     const byWeek = weeks.map((w) => ls.filter((l) => Math.max(l.start, t0) >= w && Math.max(l.start, t0) < w + 7 * DAY));
@@ -296,31 +343,14 @@
       s += '<text x="' + x0 + '" y="' + (base + 14) + '" fill="var(--muted)">week of ' + new Date(weeks[i]).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + '</text>';
       if (i) s += '<line x1="' + xOf(weeks[i]) + '" y1="' + TOP + '" x2="' + xOf(weeks[i]) + '" y2="' + base + '" stroke="var(--line)"/>';
     });
-    // Markers: the first lane of each model (over every lane, not just the range), and the RC rows from RC-20 on, grouped by date.
-    const marks = [];
-    const firstOf = {};
-    ins.lanes.filter((l) => l.model && l.start).forEach((l) => { if (!firstOf[l.model] || l.start < firstOf[l.model].start) firstOf[l.model] = l; });
-    Object.entries(firstOf).forEach(([md, l]) => marks.push({ t: l.start, label: modelName(md), tip: modelName(md) + ' first runs a lane|' + l.id, col: 'var(--accent)' }));
-    const byDate = {};
-    (ins.harness || []).forEach((r) => { (byDate[r.date] = byDate[r.date] || []).push(r); });
-    Object.entries(byDate).forEach(([d, rs]) => {
-      const [y, mo, da] = d.split('-').map(Number);
-      const num = rs.map((r) => Number(r.id.slice(3)));
-      marks.push({ t: new Date(y, mo - 1, da).getTime(), label: rs.length > 1 ? 'RC-' + Math.min(...num) + '–' + Math.max(...num) : rs[0].id, tip: d + '|' + rs.map((r) => r.id + ' ' + r.title).join('|'), col: 'var(--muted)' });
-    });
-    // Labels go to the first of three rows where they do not overlap the previous one (about 6 px per character).
-    const rowEnd = [-Infinity, -Infinity, -Infinity];
-    marks.filter((mk) => mk.t >= t0 && mk.t < t1).sort((a, b) => a.t - b.t).forEach((mk) => {
-      const x = xOf(mk.t);
-      let r = rowEnd.findIndex((e) => x + 3 > e + 4);
-      if (r === -1) r = rowEnd.indexOf(Math.min(...rowEnd));
-      rowEnd[r] = x + 3 + 6 * mk.label.length;
-      s += '<line x1="' + x + '" y1="' + (3 + r * 11) + '" x2="' + x + '" y2="' + base + '" stroke="' + mk.col + '" stroke-dasharray="3 3"/>' +
-        '<text x="' + (x + 3) + '" y="' + (11 + r * 11) + '" fill="' + mk.col + '" data-tip="' + esc(mk.tip) + '">' + esc(mk.label) + '</text>';
+    // Every line first, then every label over them with a halo of the card's colour, so a line from an upper row does not cross a label.
+    shown.forEach((mk) => { s += '<line x1="' + mk.x + '" y1="' + (4 + mk.r * ROW) + '" x2="' + mk.x + '" y2="' + base + '" stroke="' + mk.col + '" stroke-dasharray="3 3"/>'; });
+    shown.forEach((mk) => {
+      s += '<text x="' + (mk.right ? mk.x + 3 : mk.x - 3) + '" y="' + (4 + mk.r * ROW + lineH * 0.8) + '"' + (mk.right ? '' : ' text-anchor="end"') + ' fill="' + mk.col + '" stroke="var(--card)" stroke-width="3" paint-order="stroke" data-tip="' + esc(mk.tip) + '">' + esc(mk.label) + '</text>';
     });
     const lg = '<span><i style="background:var(--ok)"></i>first-shot</span><span><i style="background:var(--bad)"></i>not first-shot</span><span><i style="background:var(--bad);opacity:.3;outline:1px dashed var(--bad)"></i>less than 7 days old: censored, a correction may still arrive</span><span><i style="background:var(--accent)"></i>a model\'s first lane</span><span><i style="background:var(--muted)"></i>RC decisions</span>';
     return '<div class="in-card in-wide"><h3>First-shot over time</h3><div class="sub">Session lanes by the week they started (weeks start on Monday), one square each; the label is the week\'s first-shot rate. Dashed lines: a model\'s first lane, and the RC rows of docs/decisions.md from RC-20 on.</div>' +
-      (ls.length ? '<div style="overflow-x:auto"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">' + s + '</svg></div>' : '<div class="in-empty">No session lane in this range.</div>') + '<div class="in-legend">' + lg + '</div></div>';
+      (ls.length ? '<div style="overflow-x:auto"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" data-label-rows="' + rowSpans.length + '">' + s + '</svg></div>' : '<div class="in-empty">No session lane in this range.</div>') + '<div class="in-legend">' + lg + '</div></div>';
   }
 
   function exportsBar() {
