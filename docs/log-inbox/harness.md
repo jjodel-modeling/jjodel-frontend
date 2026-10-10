@@ -444,3 +444,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Timeline verified on 4702 under P-2026-10-10-1744
 **Notes**: Rollback tag `pre-timeline-newest-first` on `5e218863b` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1843/result.json`.
 **Prompt document name**: 2026-10-10 18:43
+
+## 2026-10-10 — merge: board-req-port-disc into alfonso-frontend-jjtl (P-2026-10-10-1852)
+**Prompt**: `claude_2026-10-10_1852_prompt_merge_board-req-port-disc.md`, a direct merge by `lane-run merge --direct`, no session: `board-req-port-disc` at `345b14db7` into `alfonso-frontend-jjtl`, merge base `45ad56bd6`, 5 commits on the branch side.
+**Files touched**: merge `74b52cd99`: 2 files from the branch side (`docs/discovery/discovery_2026-10-10_board_req_tab_port.md`, `docs/prompts/claude_2026-10-10_1806_prompt_board_req_tab_port_discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `74b52cd99` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8052 tests in 330 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: docs-only merge (discovery report and its prompt), nothing to check
+**Notes**: Rollback tag `pre-board-req-port-disc` on `c315460b0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1852/result.json`.
+**Prompt document name**: 2026-10-10 18:52
