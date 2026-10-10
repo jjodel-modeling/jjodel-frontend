@@ -49,8 +49,9 @@ Text is not a string. It is a sequence of fragments, each with an optional origi
 Rendering to a string forgets the origins; the code panel keeps them. Two semantic features are part
 of the contract, not of the syntax:
 
-- **Block indentation**: a multi-line value interpolated at column *n* is indented by *n* on every
-  line after the first (the semantics Xtend gives to its templates).
+- **Block indentation**: a multi-line value interpolated on a template line whose leading whitespace is
+  *w* gets *w* prefixed to every line after the first, and the rule composes across nested template calls
+  (the semantics Xtend gives to its templates; discovery §B.4).
 - **Origin**: every fragment knows where it came from.
 
 ## 5. Origin (R-GEN-5)
