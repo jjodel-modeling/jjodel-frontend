@@ -5851,6 +5851,15 @@ deletes the vertex and edge records no container lists (what R-NEST-7 leaves, an
 vertex with no `model` at all is not a ghost. At load there is no undo history to protect. Critical zone
 (`VersionFixer.tsx`), go-ahead RC-30 by Juri; deletion of persisted data accepted (RC-26).
 
+**R-NEST-9** (2026-10-10, decided by Juri in issue #182, evidence: measured, verified: none, reversible: trunk) —
+**`appendSlotValue` on a composition writes through `setValueAtPosition`; plain references, aggregations and primitives
+keep the raw append.** A pointer appended to a composition slot is re-fathered to the slot and evicted from its old
+container by the core, with its loop check, as a set already does; a value the slot already lists is not written
+twice. The raw `'+='` stays for every other slot (R-NEST-2: an aggregation shares). Accepted: two appends to one
+composition slot in one propagation window target the same index (`LModelElement.tsx:7898-7905`). Evidence:
+`docs/discovery/discovery_2026-10-10_182_append_composition.md`, report
+`docs/lir/lir_2026-10-10_182_append_composition.md`.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
