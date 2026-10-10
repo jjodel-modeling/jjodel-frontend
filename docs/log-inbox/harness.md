@@ -162,3 +162,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: scripts and docs only (lane-run, lane board, issue template, PROTOCOL P13, decisions), app untouched, no scene to check on 3001; board verified on 4701 under P-2026-10-10-1150
 **Notes**: merge-tree zero conflicts, tree `8ec319011` equal to the merge's index tree. Union: none. Probes: RC-43 1, RC-44 0, 1150 heading 1. Governance: `docs/PROTOCOL.md`, under the go-ahead. No rollback tag (not asked). P-2026-10-10-1150 still reads `Status: da eseguire` on the trunk; the chat flips it. Step 6 names `616344b3c` as the pre-merge tip, the real one was `ca372edea`; not exercised, check:addonly passed.
 **Prompt document name**: 2026-10-10 12:04
+
+## 2026-10-10 — feat(harness): chain forwards --request to its lanes (P-2026-10-10-1243)
+**Prompt**: `claude_2026-10-10_1243_prompt_chain_request.md`, fast lane on `~/jjodel-w-chainreq`, branch `chain-request`: `lane-run chain` takes `--request <file>`, refused as `start` refuses it before any lane starts, kept as `request.md` in the chain folder and passed to the `start` of every lane; the merge of `--merge-after` gets none (RC-43).
+**Files touched**: code `f552d0e00`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` exit 0; laneRun and laneRunDirect 124/124; check:scripts PASS 57 files; typecheck:scripts exit 0. No real session started.
+**Out-of-scope changes**: no — the tests sit in `laneRunDirect.test.ts`, the lane-run test file that holds the `chain` harness (`chainLab`), not in `laneRun.test.ts`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: harness script only (lane-run chain), no UI to check; tests and gates read from the report
+**Notes**: On base `4d00d2634` tests 1-2 red (`unknown option for chain: --request`), test 3 green by design: it pins today's chain without `--request`. 3/3 after. Mutation bench 7/7 killed, listed in the commit body. `chain.json` gains `request` (path or null). The merge lane's exemption holds by construction (merge spawned without `--request`), not tested. `rm -rf` denied: `/tmp/lrbench-7hCl` remains.
+**Prompt document name**: 2026-10-10 12:43
