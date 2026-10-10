@@ -1,6 +1,6 @@
 /**
- * stale-m1-edge probe (P-2026-10-10-1600, Phase 1). Read-only on sources: it changes no file under `src/`, and it
- * writes only to the throwaway browser profile and to the lane folder.
+ * stale-m1-edge probe (P-2026-10-10-1600, Phase 1, acceptance checks added in Phase 2 for fix F1). Read-only on
+ * sources: it changes no file under `src/`, and it writes only to the throwaway browser profile and to the lane folder.
  *
  * Question: after a reference-slot edit removes an M1 reference value, `useM1ReferenceEdges` deletes the stale
  * DVoidEdge. Does the React Flow edge of that pair leave the canvas, and if not, which layer still holds it?
@@ -26,6 +26,15 @@
  *          If the stale React Flow edges leave after it, the incremental removal of `useJjomSync` works once the id
  *          leaves `subElements`, and the miss is upstream of it.
  *
+ * Acceptance of fix F1 (Phase 2, LIR `docs/lir/lir_2026-10-10_stale_m1_edge_f1.md` §3), at 1 s and at 5 s:
+ *   after R1, R2, R3  no pair edge in EditorV2's state, the ReactFlow prop, its store or the DOM; no dangling pair id
+ *                     in `subElements`; the pane draws one edge fewer than at baseline (17 on this fixture);
+ *   after A1, A2      one pair edge in each of the four; the pane draws the baseline count; the live edge sits on its
+ *                     baseline source handle (the one a stale edge took before F1), and on the same two handles at
+ *                     every re-add (its target side is chosen anew at creation, measured against baseline, not checked);
+ *   C1                nothing left to scrub.
+ * On the trunk before F1 these checks fail (measured in Phase 1: R1 at 1 s reads 1 pair edge, not 0).
+ *
  * Each snapshot reads, for the subject pair: the D edges in `graph.subElements` (live and dangling), every D edge
  * id ever seen for the pair with its `idlookup` and `subElements` membership, an `idlookup` scan, EditorV2's edges
  * state (`useEdgesState`, read from the React fiber of `EditorV2Inner`), the `edges` prop React Flow receives, React
@@ -35,8 +44,8 @@
  *         frontend/scripts/probe/stale-m1-edge.ts --port <n> --id P-2026-10-10-1600
  * Env:  SME_OUT  JSON output (default ~/.jjodel-lanes/P-2026-10-10-1600/probe_stale_m1_edge.json)
  *
- * Exit code: the number of failed SETUP checks (import, open, subject found, baseline drawn, writes landed). The
- * measures are MEAS lines and do not fail.
+ * Exit code: the number of failed checks, setup (import, open, subject found, baseline drawn, writes landed) and
+ * acceptance. The measures are MEAS lines and do not fail.
  */
 import { chromium, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -241,6 +250,37 @@ async function shot(name: string): Promise<void> {
     await page.screenshot({ path: `${SHOTS}/stale-m1-edge_${name}.png`, ...(clip && clip.width > 0 && clip.height > 0 ? { clip } : {}) });
 }
 
+/** The pair ids still listed in `subElements` after leaving `idlookup`. */
+const danglingPair = (s: any): string[] => s.d.known.filter((k: any) => !k.inLookup && k.inSubElements).map((k: any) => k.id);
+
+/** The handles of the live edge at the first re-add, the reference for the later ones. */
+let firstAddHandles: string | null = null;
+
+/** F1's acceptance on the 1 s and 5 s snapshots of a step: `live` is 0 after a removal, 1 after an add. */
+function accept(entry: any, base: any, live: 0 | 1): void {
+    const wantTotal = base.rf.domTotal - (live ? 0 : 1);
+    for (const s of entry.snaps.filter((x: any) => x.at > 0)) {
+        const at = `${entry.step} t=${s.at / 1000}s`;
+        const counts = { state: s.rf.state?.length, prop: s.rf.prop?.length, store: s.rf.store?.length, dom: s.rf.domPair };
+        check(`${at}: ${live} pair edge in RF state, prop, store and DOM`, Object.values(counts).every((n) => n === live), counts);
+        check(`${at}: no dangling pair id in subElements`, danglingPair(s).length === 0, danglingPair(s));
+        check(`${at}: the pane draws ${wantTotal} edges (baseline ${base.rf.domTotal}${live ? '' : ' - 1'})`, s.rf.domTotal === wantTotal,
+            { dom: s.rf.domTotal, state: s.rf.stateTotal });
+        if (live) {
+            // The live edge: the pair edge whose D edge is still in idlookup (a stale one would pass on old handles).
+            const e = (s.rf.state ?? []).find((x: any) => s.d.known.some((k: any) => k.id === x.id && k.inLookup)), b = base.rf.state?.[0];
+            // The handle a stale edge takes is the source's (Running's out side): it must be the baseline one. The target
+            // side of a re-created edge is chosen anew at creation (right-0 here, bottom-0 at open, before F1 as well):
+            // measured, not checked against baseline; checked for stability across the round trips instead.
+            check(`${at}: the live edge sits on its baseline source handle (${b?.sourceHandle})`, !!e && e.sourceHandle === b?.sourceHandle, e);
+            const handles = e ? `${e.sourceHandle}->${e.targetHandle}` : null;
+            if (firstAddHandles === null) firstAddHandles = handles;
+            check(`${at}: the live edge sits on the handles of the first re-add (${firstAddHandles})`, handles === firstAddHandles, handles);
+            meas(`${at}: live edge handles vs baseline`, `${handles} (baseline ${b?.sourceHandle}->${b?.targetHandle})`);
+        }
+    }
+}
+
 async function series(step: string, act: () => Promise<any>): Promise<any> {
     const before = Date.now();
     const ret = await act();
@@ -298,6 +338,7 @@ try {
 
     // ── R1 / A1 / R2 / A2 / R3: the round trips ─────────────────────────────────────────────────────────
     const r1 = await series('R1 remove', () => removeValue(page, subj.valueId, subj.index));
+    accept(r1, base, 0);
     const r1last = r1.snaps[r1.snaps.length - 1];
     check('R1 landed: the slot no longer holds the target', !(r1last.values || []).includes(subj.tgtObj), r1last.values);
     const holeIndex = () => {
@@ -306,21 +347,26 @@ try {
         return i >= 0 ? i : v.length;
     };
     const a1 = await series('A1 add back', () => addValue(page, subj.valueId, holeIndex(), subj.tgtObj));
+    accept(a1, base, 1);
     check('A1 landed: the slot holds the target again', (a1.snaps.slice(-1)[0].values || []).includes(subj.tgtObj), a1.snaps.slice(-1)[0].values);
     const idxOf = () => (result.steps[result.steps.length - 1].snaps.slice(-1)[0].values || []).indexOf(subj.tgtObj);
     const r2 = await series('R2 remove again', () => removeValue(page, subj.valueId, idxOf()));
+    accept(r2, base, 0);
     check('R2 landed', !(r2.snaps.slice(-1)[0].values || []).includes(subj.tgtObj), r2.snaps.slice(-1)[0].values);
     await shot('after_R2');
     const a2 = await series('A2 add back again', () => addValue(page, subj.valueId, holeIndex(), subj.tgtObj));
+    accept(a2, base, 1);
     check('A2 landed', (a2.snaps.slice(-1)[0].values || []).includes(subj.tgtObj), a2.snaps.slice(-1)[0].values);
     await shot('after_A2');
     const r3 = await series('R3 remove a third time', () => removeValue(page, subj.valueId, idxOf()));
+    accept(r3, base, 0);
     check('R3 landed', !(r3.snaps.slice(-1)[0].values || []).includes(subj.tgtObj), r3.snaps.slice(-1)[0].values);
 
     // ── C1: scrub the dangling ids from subElements (m1EdgeSweep's write), and watch the RF state ───────
     const last = r3.snaps.slice(-1)[0];
-    const dangling = last.d.known.filter((k: any) => !k.inLookup && k.inSubElements).map((k: any) => k.id);
+    const dangling = danglingPair(last);
     meas('C1 dangling pair ids in subElements before the scrub', dangling);
+    check('C1: nothing left to scrub after R3', dangling.length === 0, dangling);
     await series('C1 scrub subElements', () => page.evaluate(`(async () => {
       const j = await import('/src/joiner/index.ts');
       const ids = ${JSON.stringify(dangling)};
