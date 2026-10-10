@@ -89,6 +89,11 @@ Ciclo di vita e portabilità sono chiusi da R-VAL-9 e R-VAL-10 (modale alla canc
 
 Configurazione (M fisso, stato σ del motore, evento e); marking come componente di stato per elemento con dominio dichiarato nella STC; passo con due ingressi (evento, selettore) e vincolo di progresso (nessun firing solo se nulla è abilitato); scarto e quiescenza come passi a stato invariato; azioni come assegnamenti paralleli letti sullo stato precedente, atomici nel passo; guardie JjEL read-only nel sottoinsieme traducibile; vocabolario nuXmv (FROZENVAR/VAR/IVAR/DEFINE/TRANS/ASSIGN) adottato dal primo giorno, esportatore .smv tra il passo 4 e il 5, esecuzione al passo 6. Esclusi per costruzione: tempo e do-activity, struttura dinamica, concorrenza vera, deferral. Piano in sei passi in §9.
 
+## Model-to-text code generation, the pilot
+**File**: `docs/spec/claude_spec_2026-10-10_code_generation_pilot.md` · **Status**: in force, ratified 2026-10-10 (R-GEN-1..R-GEN-9) before the discovery `P-2026-10-10-0815`; not implemented
+
+Templates are JjEL functions with string interpolation returning Text (fragments with origin, block indentation). Every fragment copied from the model records (element id, feature, transformation) from the first slice. One runnable target in the pilot, JavaScript in an isolated Web Worker. Templates read the concrete metamodel and the roles of its simulation STC, never write. Behind a user-level experimental setting, off by default, with no generator module loaded when off; additive persistence, no migration. Ships in 3.2 (absorbs 3.1), live by 2026-10-26 for the MDE lecture at the end of October. Oracle against the simulator's scenarios in the third week; round-trip (values, structure, free code; lens laws as acceptance) and the assistant as template author are research, outside the pilot.
+
 ## Design parcheggiati
 **Dove**: `docs/spec/parcheggiate/` (templates featured projects, templates explore) e `docs/spec/design_2026-05-03_L2_edge_overlay.md`. Nessuno vigente; si riattivano per decisione esplicita.
 

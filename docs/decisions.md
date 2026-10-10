@@ -5741,6 +5741,48 @@ Evidence: `docs/goals/` and `docs/discovery/discovery_2026-10-05_goal_model.md` 
   `verified` reads `none`, `agent` (the RC-27 sample) or `alfonso`, and only Alfonso writes `alfonso`. RC rows
   are harness rules and are not judged.
 
+## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
+
+Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
+`docs/spec/claude_spec_2026-10-10_code_generation_pilot.md`. Ratified before the discovery
+`P-2026-10-10-0815`, which may reshape the points the spec marks *to be confirmed*.
+
+- **R-GEN-1** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **The pilot ships in 3.2, which absorbs the content planned for 3.1; no separate 3.1 tag.** The MDE course sets
+  the date: 3.2 is live by 2026-10-26, content freeze 2026-10-23; a 3.1 item that is not solid by the freeze stays
+  out instead of delaying the release.
+- **R-GEN-2** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **The generator sits behind a user-level experimental setting, off by default.** With the setting off no module
+  of the generator is loaded (lazy chunk) and the application behaves as a build without the generator; a test
+  proves it on the build output or the import graph.
+- **R-GEN-3** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **Template persistence is additive: no `irVersion` bump, no VersionFixer migration.** A project with templates,
+  saved by a user with the setting off, keeps them intact. If templates live in `jjodel/*` annotations, the known
+  loss of those annotations in the `.ecore` round trip is in the perimeter.
+- **R-GEN-4** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **A template is a JjEL function with string interpolation, whose result is Text with block indentation.** No new
+  parser if the evaluator can host it; otherwise a minimal extension, ratified on its own.
+- **R-GEN-5** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **Every fragment copied from a model value records the triple (element id, feature, transformation) from the
+  first slice.** Fragments from the template's literal text record their template position. Round-trip is outside
+  the pilot; the triple is not, because retrofitting it rewrites the evaluator's value path.
+- **R-GEN-6** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **One runnable target in the pilot: JavaScript, in an isolated Web Worker with a timeout, no network, no DOM.**
+  A target profile is identifier policy (invertible mangling), expression printer for a translatable JjEL subset,
+  and runner.
+- **R-GEN-7** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **Templates are written against the concrete metamodel, with read-only access to the roles of its simulation
+  STC.** A template over roles applies to every metamodel bound to that STC. Templates never write the model or
+  the simulator state.
+- **R-GEN-8** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **The oracle against the simulator's scenarios (R-SIM-139) is the goal of the third week, not a requirement of
+  the pilot.** The generated program's trace on a scenario's events is compared with the simulator's trace under
+  the scenario's `expect`.
+- **R-GEN-9** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **Outside the pilot: round-trip (except the triple of R-GEN-5), targets other than JavaScript, the assistant as
+  template author, protected regions.** The assistant comes after the oracle, so that what it writes is checked;
+  the generation gap pattern replaces protected regions.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
