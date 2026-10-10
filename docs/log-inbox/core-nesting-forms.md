@@ -76,3 +76,16 @@ not touched by this lane.
 **Smoke visivo**: non applicabile — this session ran no browser; Juri gave the GO on 2026-10-10 (chat C-2026-10-10-1223) without reporting a browser run of the non-regression checklist, so no visual pass is claimed
 **Notes**: Closes the 2026-10-08 ticket («New … & link» su una composizione). No user gesture reaches the composition branch: the prompt was wrong on the chip picker (extendedWidgetFor returns null for a composition, ListWidget gives it no append), corrected in the report's addendum; the fix is a guard on the write primitive. No unit test: formWrite.ts does not import in the bench (monaco); the probe is the measure (P11). Reported, not fixed: C6 (the second append overwrites the first); undo (#177).
 **Prompt document name**: 2026-10-10 12:30
+
+## 2026-10-10 — merge: fix/182-append-composition into staging (P-2026-10-10-1516)
+**Prompt**: `claude_2026-10-10_1516_prompt_merge_fix-182-append-composition.md`, a direct merge by `lane-run merge --direct`, no session: `fix/182-append-composition` at `94b5900b3` into `staging`, merge base `2aa9430ac`, 5 commits on the branch side.
+**Files touched**: merge `7cb73d3e2`: 6 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-10_182_append_composition.md`, `docs/lir/lir_2026-10-10_182_append_composition.md`, `docs/log-inbox/core-nesting-forms.md`, `docs/prompts/claude_2026-10-10_1230_prompt_182_append_composition.md`, `frontend/src/components/editor-v2/viewpoint/ir/formWrite.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7cb73d3e2` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7977 tests in 321 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the chat re-ran the #182 probe on the merged tree 7cb73d3e2 (MODE=after, port 3182): 18 PASS, 0 FAIL; no browser run, no user gesture changed
+**Notes**: Rollback tag `pre-fix/182-append-composition` on `2aa9430ac` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1516/result.json`.
+**Prompt document name**: 2026-10-10 15:16
