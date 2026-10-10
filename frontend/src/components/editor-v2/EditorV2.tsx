@@ -47,6 +47,7 @@ import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
 import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/edgeLanes';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
+import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
@@ -510,16 +511,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
-            // If the graph was just auto-created, apply ELK layout first
-            if (justCreatedGraphRef.current) {
-                justCreatedGraphRef.current = false;
-                if (autoLayoutRef.current) {
-                    await autoLayoutRef.current();
-                    // The M1 reference edges materialize asynchronously AFTER this first
-                    // layout; watch for them and re-run the layout once when they land.
-                    armReLayoutRef.current?.();
-                    return; // autoLayout already does fitView + distribution
-                }
+            // If the graph was just auto-created, apply ELK layout first. The flag is raised by any
+            // creating populate run, so the layout runs only on a graph no vertex of which has a layout
+            // record yet; otherwise the new vertices keep their default placement and nothing else moves
+            // (utils/autoLayoutOnOpen, P-2026-10-10-1155).
+            const createdOnOpen = justCreatedGraphRef.current;
+            justCreatedGraphRef.current = false;
+            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {})) {
+                await autoLayoutRef.current();
+                // The M1 reference edges materialize asynchronously AFTER this first
+                // layout; watch for them and re-run the layout once when they land.
+                armReLayoutRef.current?.();
+                return; // autoLayout already does fitView + distribution
             }
             // Restore-if-present, fit otherwise. A stored viewport already came in
             // through `defaultViewport`, so there is nothing to re-apply here — the
