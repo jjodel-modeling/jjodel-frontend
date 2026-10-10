@@ -5,7 +5,7 @@ Chat: C-2026-10-10-1512
 Request: https://claude.ai/code/session_015Px4yAHrpWDZQo31DjapvA
 Lane: full (discovery; defines the data contract of a new Insights section)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1520 (lane-board-model-insights; discovery da062a727, code e3590d682, log 479fbab01, fix 285356563), trunk taken by P-2026-10-10-1635 (25383392a), merged 549409422 (P-2026-10-10-1708); verifica visiva passata 2026-10-10 (chat, RC-23, built-in browser on 4701 and 4700)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
