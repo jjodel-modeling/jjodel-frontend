@@ -23,7 +23,17 @@
   const dhm = (t) => new Date(t).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   const dur = (ms) => { const m = Math.round(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
   const short = (wt) => (wt || 'unknown').replace(/^~\//, '').replace(/^\/Users\/[^/]+\//, '');
-  const OUT = { done: 'var(--ok)', 'hard-stop': 'var(--warn)', question: 'var(--q)', blocked: 'var(--bad)', failed: 'var(--bad)' };
+  // What each outcome means, shown as a tooltip on every outcome legend (insights.js reads it too).
+  window.LANE_OUTCOME_TIPS = {
+    done: 'Done: the lane finished its prompt and committed; nothing is waiting on you.',
+    'hard-stop': 'Hard-stop: a planned pause, not a failure. The lane stopped where the protocol says it must (end of discovery, before a visual check, after a merge) and waits for your GO.',
+    question: 'Question: the lane hit a decision outside its perimeter and asks before going on; it resumes once answered.',
+    blocked: 'Blocked / failed: something went wrong (a red gate, a missing precondition, a crash). This is the one that needs a look.',
+    running: 'Running: the lane process is still alive.',
+    '': 'No outcome: the log has no Outcome line (old lanes, or a lane cut off before its closing message).'
+  };
+  const OTIP = (o) => (window.LANE_OUTCOME_TIPS[o] || '').replace(/"/g, '&quot;');
+  const OUT = { done: 'var(--ok)', 'hard-stop': 'var(--hs)', question: 'var(--q)', blocked: 'var(--bad)', failed: 'var(--bad)' };
   const LNAME = { chat: 'Chat (claude.ai)', 'claude-code': 'Claude Code, local session', harness: 'lane-run (merge prompts)', chain: 'Chain (after its first lane)', manual: 'By hand', unknown: 'Unknown' };
   const LCOL = { chat: 'var(--run)', 'claude-code': 'var(--warn)', harness: 'var(--neutral)', chain: 'var(--q)', manual: 'var(--ok)', unknown: 'var(--track)' };
   const turnColor = (lane, t, last) => (last && lane.live ? 'var(--run)' : OUT[t.o] || 'var(--neutral)');
@@ -36,6 +46,7 @@
   .seg button{border:0;margin:0;border-right:1px solid var(--line)}.seg button:last-child{border-right:0}
   .seg button.on{background:var(--accent);color:#fff;font-weight:600}
   .tl-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);align-items:center}
+  .tl-legend span[title]{cursor:help;border-bottom:1px dotted var(--muted)}
   .tl-legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
   .tl-wrap{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .tl-wrap svg{display:block;font:10px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
@@ -67,7 +78,7 @@
       '<span class="meta">Zoom</span>' + seg('zoom', [['1', 'Fit'], ['2', '2×'], ['4', '4×'], ['8', '8×'], ['16', '16×']], zoom) +
       '<span class="meta">Colour by</span>' + seg('colorBy', [['outcome', 'Outcome'], ['deps', 'Dependencies'], ['heat', 'Heat']], colorBy) +
       '<span class="seg" data-name="fold"><button data-v="open">Expand all</button><button data-v="close">Collapse all</button></span>' +
-      '<span class="tl-legend"><span><i style="background:var(--ok)"></i>done</span><span><i style="background:var(--warn)"></i>hard-stop</span><span><i style="background:var(--q)"></i>question</span><span><i style="background:var(--bad)"></i>blocked</span><span><i style="background:var(--run)"></i>running</span>' +
+      '<span class="tl-legend"><span title="' + OTIP('done') + '"><i style="background:var(--ok)"></i>done</span><span title="' + OTIP('hard-stop') + '"><i style="background:var(--hs)"></i>hard-stop</span><span title="' + OTIP('question') + '"><i style="background:var(--q)"></i>question</span><span title="' + OTIP('blocked') + '"><i style="background:var(--bad)"></i>blocked</span><span title="' + OTIP('running') + '"><i style="background:var(--run)"></i>running</span>' +
       '<span><svg width="10" height="10"><path d="M5 0L10 5L5 10L0 5Z" fill="var(--accent)"/></svg> decision</span>' +
       '<span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--track)" stroke-dasharray="3 2"/></svg> waiting</span>' +
       (group === 'worktree' ? '<span><i style="border:1.5px dashed var(--bad);background:repeating-linear-gradient(45deg,transparent 0 2px,color-mix(in srgb,var(--bad) 40%,transparent) 2px 4px)"></i>overlap in one tree (solid: both working)</span>' : '<span><i style="border:1.5px dashed var(--q);background:repeating-linear-gradient(45deg,transparent 0 2px,color-mix(in srgb,var(--q) 40%,transparent) 2px 4px)"></i>parallel lanes in one row (solid: both working)</span>') + '<span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--fg)" stroke-width="1.5"/></svg> chain</span><span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--accent)" stroke-width="2.25"/></svg> declared dependency</span><span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/></svg> citation</span>' + '</span></div>';
@@ -221,7 +232,7 @@
     };
     lanes.forEach((l) => { l.dep = depKind(l); });
     const CATS = {
-      outcome: [['done', 'var(--ok)', 'done'], ['hard-stop', 'var(--warn)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']],
+      outcome: [['done', 'var(--ok)', 'done'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']],
       deps: [['concurrent', 'var(--bad)', 'depends on a lane open at the same time'], ['sequential', 'var(--accent)', 'depends on an earlier lane'], ['none', 'var(--neutral)', 'no recorded dependency']],
     };
     const catOf = (l, t, last) => colorBy === 'deps' ? l.dep : (last && l.live ? 'running' : t.o === 'failed' ? 'blocked' : (t.o in OUT || t.o === 'done') ? t.o : '');
@@ -265,12 +276,12 @@
     const pw = { max: Math.round(peakWork * 10) / 10 }, po = { max: Math.round(peakOpen * 10) / 10 };
     const legendRows = colorBy === 'heat' ? [['', 'linear-gradient(90deg,' + heat(0) + ',' + heat(peakWork / 2) + ',' + heat(peakWork) + ')', 'working lanes, few → many']] : CATS[colorBy];
     let lg = '';
-    legendRows.forEach(([, c, label], i) => {
+    legendRows.forEach(([k, c, label], i) => {
       const ly = STRIP_TOP + 36 + i * 13;
       if (ly > base + 6) return;
       lg += colorBy === 'heat'
         ? '<rect x="10" y="' + (ly - 8) + '" width="40" height="8" rx="2" fill="url(#tl-heat)"/><text x="56" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label) + '</text>'
-        : '<rect x="10" y="' + (ly - 8) + '" width="10" height="8" rx="2" fill="' + c + '"/><text x="26" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label.length > 36 ? label.slice(0, 35) + '…' : label) + '</text>';
+        : '<g' + (colorBy === 'outcome' ? ' style="cursor:help"><title>' + esc(window.LANE_OUTCOME_TIPS[k] || '') + '</title>' : '>') + '<rect x="10" y="' + (ly - 8) + '" width="10" height="8" rx="2" fill="' + c + '"/><text x="26" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label.length > 36 ? label.slice(0, 35) + '…' : label) + '</text></g>';
     });
     lab.unshift('<rect x="0" y="0" width="' + LABEL + '" height="' + TOP + '" fill="var(--card)"/>' +
       '<defs><linearGradient id="tl-heat"><stop offset="0" stop-color="' + heat(0) + '"/><stop offset=".5" stop-color="' + heat(peakWork / 2) + '"/><stop offset="1" stop-color="' + heat(peakWork) + '"/></linearGradient></defs>' +

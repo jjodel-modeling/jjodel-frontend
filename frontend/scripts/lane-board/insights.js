@@ -20,7 +20,8 @@
   const dark = () => window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
   // Sequential ramp: one hue (the board's cyan), light to dark; its own steps in dark mode.
   const ramp = (r) => r <= 0 ? 'var(--bg)' : dark() ? 'hsl(199,80%,' + Math.round(20 + 45 * r) + '%)' : 'hsl(199,85%,' + Math.round(90 - 55 * r) + '%)';
-  const OUTS = [['done', 'var(--ok)', 'done'], ['hard-stop', 'var(--warn)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']];
+  const OTIP = (o) => ((window.LANE_OUTCOME_TIPS || {})[o] || '').replace(/"/g, '&quot;');
+  const OUTS = [['done', 'var(--ok)', 'done'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']];
   const outOf = (l) => l.live ? 'running' : (() => { const o = (l.outcome && l.outcome !== 'none' ? l.outcome : (l.turns[l.turns.length - 1] || {}).o || '').split(' ')[0]; return o === 'failed' ? 'blocked' : OUTS.some((x) => x[0] === o) ? o : ''; })();
   const KINDS = [['discovery', 'Discovery'], ['phase2', 'Full / Phase 2'], ['fast', 'Fast'], ['merge', 'Merge'], ['', 'Not recorded']];
 
@@ -36,6 +37,7 @@
   .in-card h3{margin:0 0 2px;font-size:13px}.in-card .sub{font-size:11px;color:var(--muted);margin-bottom:10px}
   .in-card svg{display:block;max-width:100%;font:10px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
   .in-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);margin-top:8px}
+  .in-legend .in-key{cursor:help;border-bottom:1px dotted var(--muted)}
   .in-legend i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
   .in-card table{min-width:0;width:100%}.in-card td,.in-card th{padding:4px 8px;font-size:12px}
   .in-tip{position:fixed;z-index:10;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:8px 10px;font-size:12px;max-width:320px}
@@ -151,7 +153,7 @@
       s += '<text x="' + (bx + w / 2) + '" y="' + (y - 4) + '" text-anchor="middle" fill="var(--fg)">' + tot + '</text>';
       if (keys.length <= 14 || i % Math.ceil(keys.length / 10) === 0) s += '<text x="' + (bx + w / 2) + '" y="' + (base + 14) + '" text-anchor="middle" fill="var(--muted)">' + k.slice(5) + '</text>';
     });
-    const lg = OUTS.map(([, col, lab]) => '<span><i style="background:' + col + '"></i>' + lab + '</span>').join('');
+    const lg = OUTS.map(([o, col, lab]) => '<span class="in-key" title="' + OTIP(o) + '"><i style="background:' + col + '"></i>' + lab + '</span>').join('');
     return '<div class="in-card"><h3>Lanes per day, by outcome</h3><div class="sub">Day of the first turn; colour is the outcome of the last turn.</div>' +
       '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">' + s + '</svg><div class="in-legend">' + lg + '</div></div>';
   }
@@ -167,7 +169,7 @@
       t += '<tr><td>' + esc(r.lab) + '</td><td><svg viewBox="0 0 300 12" width="100%" height="12" preserveAspectRatio="none">' + bar2 + '</svg></td><td>' + r.n + '</td><td>' + dur(r.med) + '</td></tr>';
     });
     t += '</tbody></table>';
-    const lg = OUTS.map(([, col, lab]) => '<span><i style="background:' + col + '"></i>' + lab + '</span>').join('');
+    const lg = OUTS.map(([o, col, lab]) => '<span class="in-key" title="' + OTIP(o) + '"><i style="background:' + col + '"></i>' + lab + '</span>').join('');
     return '<div class="in-card"><h3>Outcome by kind of lane</h3><div class="sub">Kind from the <code>Lane:</code> line of the prompt header.</div>' + t + '<div class="in-legend">' + lg + '</div></div>';
   }
 
@@ -182,7 +184,7 @@
       OUTS.forEach(([o, col, lab]) => { const v = r.e[o] || 0; if (!v) return; const w = (v / max) * 300; bar += '<rect x="' + xx + '" y="0" width="' + Math.max(w - 2, 1) + '" height="12" rx="2" fill="' + col + '" data-tip="' + esc(r.lab + '|' + v + ' ' + lab) + '"/>'; xx += w; });
       t += '<tr><td>' + esc(r.lab) + '</td><td><svg viewBox="0 0 300 12" width="100%" height="12" preserveAspectRatio="none">' + bar + '</svg></td><td>' + r.n + '</td><td>' + hours(r.wait) + '</td></tr>';
     });
-    const lg = OUTS.map(([, col, lab]) => '<span><i style="background:' + col + '"></i>' + lab + '</span>').join('');
+    const lg = OUTS.map(([o, col, lab]) => '<span class="in-key" title="' + OTIP(o) + '"><i style="background:' + col + '"></i>' + lab + '</span>').join('');
     return '<div class="in-card"><h3>Who launches the lanes</h3><div class="sub">From the commit that added the prompt: a <code>Claude-Session</code> trailer means a claude.ai chat, a Claude co-author alone a local Claude Code session.</div>' + t + '</tbody></table><div class="in-legend">' + lg + '</div></div>';
   }
 
