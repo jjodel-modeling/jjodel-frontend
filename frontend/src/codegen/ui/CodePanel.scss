@@ -1,0 +1,538 @@
+// Code panel (P-2026-10-10-1825, R-GEN-2, discovery §I.5) — loaded with the lazy chunk of CodePanel.tsx only.
+//
+// Floats where the «Code» pill was: `left` inline, measured by EditorV2's CodegenSlot; `bottom`, z-index and the
+// containing block as the Simulation panel's (simulation-panel.scss: `.editor-switch-container` is the anchor, 850
+// orders it inside the dock). 520px wide, so with the Simulation chip closed it ends left of the MiniMap.
+//
+// Design-system tokens only, none defined here (rule 28). Cyan is the canvas accent and marks only what the canvas
+// marks: the hovered fragment, the spans linked to the canvas selection, the outlined edge, focus. Icon colours are
+// declared on the icon (`.bi, .bi:hover`), as in simulation-panel.scss: `i.bi` sets its own colour.
+
+.codegen-panel {
+    position: absolute;
+    bottom: 16px;
+    z-index: 850;
+    display: flex;
+    flex-direction: column;
+    width: 520px;
+    max-height: calc(100% - 32px);
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: 12px;
+
+    // -- header ---------------------------------------------------------------
+    &__header {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+
+        > .bi,
+        > .bi:hover {
+            font-size: 13px;
+            line-height: 1;
+            color: var(--color-text-placeholder);
+        }
+    }
+
+    &__title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    &__tabs {
+        display: flex;
+        flex: 1;
+        gap: 4px;
+        margin-left: 8px;
+    }
+
+    &__tab {
+        height: 24px;
+        padding: 0 8px;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &[aria-selected="true"] {
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: 1px;
+        }
+    }
+
+    &__collapse {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: 1px;
+        }
+
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+    }
+
+    // -- body -----------------------------------------------------------------
+    &__body {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 8px;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 8px 12px 12px;
+    }
+
+    &__hint,
+    &__help {
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-text-tertiary);
+        overflow-wrap: anywhere;
+    }
+
+    &__hint--error {
+        color: var(--color-error-text);
+    }
+
+    &__hint--warning {
+        color: var(--color-warning-text);
+    }
+
+    &__help {
+        padding-top: 8px;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--color-text-tertiary);
+    }
+
+    &__row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    // -- templates --------------------------------------------------------------
+    &__list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    &__item,
+    &__add {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: 1px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    &__item[aria-selected="true"] {
+        border-color: var(--color-border-focus);
+        background: var(--color-bg-active);
+        color: var(--color-text-primary);
+    }
+
+    &__item-name {
+        font-family: var(--font-mono);
+    }
+
+    &__item-params {
+        font-family: var(--font-mono);
+        color: var(--color-text-placeholder);
+    }
+
+    &__add {
+        border-style: dashed;
+    }
+
+    &__editor {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    &__field-row {
+        display: flex;
+        gap: 8px;
+
+        > .codegen-panel__field {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    &__input,
+    &__select {
+        min-width: 0;
+        height: 24px;
+        padding: 0 4px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--color-canvas-accent);
+            box-shadow: 0 0 0 2px var(--color-canvas-accent-subtle);
+        }
+    }
+
+    &__select {
+        flex: 1 1 auto;
+        font-family: inherit;
+        cursor: pointer;
+    }
+
+    &__body-input {
+        min-height: 160px;
+        padding: 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.6;
+        resize: vertical;
+        white-space: pre;
+        tab-size: 4;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--color-canvas-accent);
+            box-shadow: 0 0 0 2px var(--color-canvas-accent-subtle);
+        }
+    }
+
+    &__actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    &__button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 12px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    // Primary: the slate gradient, white text and glyph (design system §7.1); white is a literal, as in
+    // simulation-panel.scss `__btn`.
+    &__button--primary {
+        border-color: transparent;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #ffffff;
+
+        &:hover:not(:disabled) {
+            border-color: transparent;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: #ffffff;
+        }
+    }
+
+    // -- output -----------------------------------------------------------------
+    &__errors {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 8px;
+        list-style: none;
+        border: 1px solid var(--color-error-muted);
+        border-radius: 4px;
+        background: var(--color-error-subtle);
+    }
+
+    &__error {
+        display: flex;
+        gap: 8px;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-error-text);
+        overflow-wrap: anywhere;
+    }
+
+    &__error-at {
+        flex: 0 0 auto;
+        font-family: var(--font-mono);
+    }
+
+    &__code {
+        max-height: 320px;
+        margin: 0;
+        padding: 8px 0;
+        overflow: auto;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.6;
+        tab-size: 4;
+    }
+
+    &__line {
+        display: flex;
+        min-width: max-content;
+        padding-right: 12px;
+    }
+
+    &__line--error {
+        background: var(--color-error-subtle);
+
+        .codegen-panel__gutter {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__gutter {
+        flex: 0 0 32px;
+        padding-right: 8px;
+        text-align: right;
+        color: var(--color-text-placeholder);
+        user-select: none;
+    }
+
+    &__text {
+        white-space: pre;
+    }
+
+    &__origin {
+        min-height: 18px;
+        font-size: 11px;
+        line-height: 1.6;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__timeout {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    // The global number-input rule (styles/components/_form-system.scss, `input[type="number"]`, 0,1,1) outranks
+    // `__input` (0,1,0): restated at (0,2,0), 24px as the button beside it, room for the spinner on the right.
+    &__timeout &__input {
+        width: 88px;
+        height: 24px;
+        padding: 0 16px 0 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+    }
+
+    &__unit {
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__result {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    &__value {
+        max-height: 120px;
+        margin: 0;
+        padding: 8px;
+        overflow: auto;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+    }
+
+    &__result--error {
+        padding: 8px;
+        border: 1px solid var(--color-error-muted);
+        border-radius: 4px;
+        background: var(--color-error-subtle);
+    }
+
+    &__run-error {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-error-text);
+        overflow-wrap: anywhere;
+    }
+
+    &__run-at {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+
+    &__link {
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-canvas-accent);
+        font-family: inherit;
+        font-size: 11px;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    // The outline of an element drawn as an edge (R-GEN-14), over the canvas, never in the way of a click.
+    &__edge-outline {
+        position: absolute;
+        z-index: 850;
+        border: 2px solid var(--color-canvas-accent);
+        border-radius: 4px;
+        pointer-events: none;
+    }
+}
+
+// One span per fragment of the generated text (discovery §I.5).
+.code-span {
+    border-radius: 2px;
+
+    &--model {
+        color: var(--color-text-primary);
+        text-decoration: underline dotted var(--color-border-hover);
+        text-underline-offset: 2px;
+        cursor: pointer;
+    }
+
+    &--opaque {
+        color: var(--color-text-primary);
+    }
+
+    &--hover {
+        outline: 1px solid var(--color-canvas-accent);
+    }
+
+    &--linked {
+        background: var(--color-canvas-accent-subtle);
+        box-shadow: inset 0 -1px 0 var(--color-canvas-accent);
+    }
+}
