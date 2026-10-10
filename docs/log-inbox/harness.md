@@ -431,3 +431,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4702 (RC-23), DOM read of the Timeline: groups ordered by their newest lane (jjodel-release, then tlorder 1744, boardcols 1742, boardspan 1717), rows inside graphvertex run 1716, 1246, 0105; axis unchanged; 135 paths and 68 overlap marks still drawn; board on 4702 (PID 78740) stopped
 **Notes**: Inside a group the lanes stay oldest first for packing, overlap pairs and labels; only row numbers are reversed, and a collapsed group's packed rows are numbered by their newest lane, so the packing and the row count are the old ones. Overlap box heights change in collapsed groups (the box spans two permuted rows). Exact-start ties now break by Prompt-ID instead of the API order. Probe: `/tmp/tl-probe.mjs`, not committed.
 **Prompt document name**: 2026-10-10 17:44
+
+## 2026-10-10 — merge: timeline-newest-first into alfonso-frontend-jjtl (P-2026-10-10-1843)
+**Prompt**: `claude_2026-10-10_1843_prompt_merge_timeline-newest-first.md`, a direct merge by `lane-run merge --direct`, no session: `timeline-newest-first` at `694e5dbb5` into `alfonso-frontend-jjtl`, merge base `177dc474b`, 4 commits on the branch side.
+**Files touched**: merge `31706d940`: 3 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_1744_prompt_timeline_newest_first.md`, `frontend/scripts/lane-board/timeline.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `31706d940` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8052 tests in 330 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Timeline verified on 4702 under P-2026-10-10-1744
+**Notes**: Rollback tag `pre-timeline-newest-first` on `5e218863b` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1843/result.json`.
+**Prompt document name**: 2026-10-10 18:43
