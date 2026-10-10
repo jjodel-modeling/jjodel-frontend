@@ -8290,7 +8290,7 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
      *  XMI import, XMIService.ts:1074) writes that list itself, and a second '+=' would duplicate it. */
     private static listInModel(d: DObject, fatherType?: typeof DModel | typeof DValue): void {
         if (fatherType?.cname !== DValue.cname || !d.father) return;
-        const idlookup = store.getState().idlookup as GObject;
+        const idlookup = DState.getState().idlookup as GObject;
         let e: GObject | undefined = idlookup[d.father];
         for (let i = 0; i < 64 && e && e.className !== DModel.cname; i++) e = idlookup[e.father];
         if (!e || e.className !== DModel.cname || (e.objects ?? []).includes(d.id)) return;
@@ -10045,7 +10045,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     // the plan's walk, deleteDraw.descendantsOf, applies the same rule. The auto-name does not read this
     // list for a slot father (it asks getNamespaceOf, see DObject.autoName).
     protected get_children_idlist(context: Context): Pointer<DAnnotation | DObject, 1, 'N'> {
-        const idlookup = store.getState().idlookup as GObject;
+        const idlookup = DState.getState().idlookup as GObject;
         const composition = (idlookup[context.data.instanceof as any] as GObject)?.composition === true;
         const owned = ((context.data.values ?? []) as any[]).filter((v: any) => typeof v === 'string'
             && (idlookup[v] as GObject)?.className === DObject.cname
@@ -10475,7 +10475,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             SetFieldAction.new(oldVal as Pointer<DObject>, "father", modelId, undefined, true);
             // The evicted element is a root: the model lists it (R-NEST-4). Appended only when the model
             // does not list it yet, read before the TRANSACTION lands, so a move never duplicates it.
-            if (!(((store.getState().idlookup as GObject)[modelId] as GObject)?.objects ?? []).includes(oldVal))
+            if (!(((DState.getState().idlookup as GObject)[modelId] as GObject)?.objects ?? []).includes(oldVal))
                 SetFieldAction.new(modelId, 'objects', oldVal as any, '+=', true);
         }
         if (!skipSettingUndefined) SetFieldAction.new(context.data, 'values.' + index as any, undefined, '', info.isPtr);
