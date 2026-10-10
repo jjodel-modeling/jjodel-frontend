@@ -774,3 +774,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato (lane probe on 3088, 1600×1000, light, base then after: controls 10/10, Clear 12/12 after and 7/7 base, scenes diff 10/10; crops in `~/.jjodel-lanes/P-2026-10-10-1646/crops/`; RC-23 passed by the chat on the crops, GO of 2026-10-10)
 **Notes**: Mutation bench 42/43 killed; the survivor, the layer handing the run to Clear, is not executable in static markup and is covered by the probe (Clear 12/12). Controls: base 333.9 px off, 527 on; after 312.6 both. Probe artefact: after a file swap Vite served the app's simCoverage.ts under an HMR query, a plain-URL import read an empty second instance; Vite restarted. Unreachable edge: Clear with a run not yet observed recounts its initial marking. Output: ~/.jjodel-lanes/P-2026-10-10-1646/.
 **Prompt document name**: 2026-10-10 16:46
+
+## 2026-10-10 — merge: sim-coverage-polish into alfonso-frontend-jjtl (P-2026-10-10-1737)
+**Prompt**: `claude_2026-10-10_1737_prompt_merge_sim-coverage-polish.md`, a direct merge by `lane-run merge --direct`, no session: `sim-coverage-polish` at `7e630c632` into `alfonso-frontend-jjtl`, merge base `3bf8d201a`, 5 commits on the branch side.
+**Files touched**: merge `a0289af13`: 7 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-10_1646_prompt_sim_coverage_polish.md`, `frontend/scripts/probe/sim-coverage-polish.ts`, `frontend/src/components/editor-v2/sim/SimCanvasLayer.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simCoverage.test.ts`, `frontend/src/components/editor-v2/sim/simCoverage.ts`, `frontend/src/components/editor-v2/sim/simNodeRunState.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a0289af13` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7806 tests in 318 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 already passed on the lane crops (P-2026-10-10-1646); all merge gates green
+**Notes**: Rollback tag `pre-sim-coverage-polish` on `a2e854587` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1737/result.json`.
+**Prompt document name**: 2026-10-10 17:37
