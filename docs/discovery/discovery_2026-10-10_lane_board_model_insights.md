@@ -591,3 +591,7 @@ Awaiting Alfonso (RC-26 list): none.
    Recommended: re-check 20 resumes of lanes after 2026-10-10 by hand once Phase 2 ships, and report the error.
 10. Update `README.md:80` to the `~/jjodel-release` path the plist actually uses?
     Recommended: yes, in the Phase 2 commit that touches the board.
+
+## Addendum (2026-10-10, chat C-2026-10-10-1512)
+
+§2.4 overstates cost. `total_cost_usd` in a `result` event is cumulative over the session, and a resume carries it forward (measured in Phase 2 of this lane: 0 decreases across 196 consecutive results), so summing it per run counts earlier runs again. Taking the last value per lane, the total is $2,218, not $3,705, and the per-lane medians in §2.4 are too high by the same mechanism. `/api/insights` already uses the last value per lane (merged 549409422). The other findings of this report do not depend on cost.
