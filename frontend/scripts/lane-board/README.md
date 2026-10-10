@@ -4,8 +4,9 @@ A live, read-only board of the Jjodel lanes started by `lane-run`, served on
 http://localhost:4700. A Node server with no dependencies (`lane-board.mjs`) and two
 browser scripts it serves beside its page (`timeline.js`, `insights.js`).
 
-It reads `lane-run status --all`, the lane folders of `~/.jjodel-lanes/`, and
-`git log --all -- docs/prompts/` of the repository. It never launches, resumes, merges
+It reads `lane-run status --all`, the lane folders of `~/.jjodel-lanes/`,
+`git log --all` of the repository, and the log entries and `docs/decisions.md` of the
+trunk ref. It never launches, resumes, merges
 or kills a lane and never writes in a worktree. The only file it writes is its own
 cache, `~/.jjodel-lanes/board/timeline-cache.json` (best effort: if the directory is
 missing the write is skipped and finished lanes are read again).
@@ -32,7 +33,34 @@ the lanes working at once.
 work (lane-hours per hour of the day), how long they wait for a decision and the
 longest waits, lanes per day by outcome, outcome by kind of lane, and who launches
 the lanes. It also offers the two exports below, and can open the trace directly in
-ui.perfetto.dev.
+ui.perfetto.dev. Below these, three sections read `/api/insights` (next section):
+code areas, model by area and by size, and first-shot success over time.
+
+## Models, code areas and first-shot success
+
+`/api/insights` (discovery `docs/discovery/discovery_2026-10-10_lane_board_model_insights.md`)
+returns one record per lane; `insights.js` aggregates them by the tab's range.
+
+- **Model** from the `init` event of `log.jsonl`; direct merges have no session and carry
+  `model: null`, so they stay out of the model views. Cost and output tokens are the
+  largest `total_cost_usd` and `modelUsage` of the lane: both are cumulative over the
+  session, a resume restores them. Cost is list price.
+- **Commits** by the `(P-…)` suffix of their subject, or a `Prompt-ID:` trailer; changed
+  lines outside `docs/`, probes (`frontend/scripts/probe/`, `_tmp_` files) excluded.
+- **Areas**: viewpoint, simulator, canvas, languages, model core, harness, other UI, the
+  first match by path. A lane's primary area holds most of its changed lines; the six
+  critical-zone files of `CLAUDE.md` §3.2 are a flag on the lane, not an area.
+- **First-shot**: the lane ends `done` or `hard-stop`, with no corrective resume (the class
+  of each `input-k.md`), no later log entry whose `Corregge` names it, no reverted commit,
+  and no run that ended blocked or ran past 90 minutes. Running lanes are left out.
+- **Thresholds**: every cell shows its n; the rate is hidden below 5 lanes and greyed
+  below 10.
+- **Drawn lanes**: a lane whose `Lane:` line says `tier drawn (RC-45): heavy|light`
+  carries `drawn`; the model section can show those lanes alone.
+
+Log facts ride the per-lane cache (key `v6`). The git facts are rebuilt only when the
+hash of `git for-each-ref` changes, and then only for the commits since the last scan.
+The log entries and RC rows are re-read only when the trunk moves.
 
 ## Running it
 
@@ -59,7 +87,8 @@ board never competes with them.
 |----------|---------|---------|
 | `JJODEL_LANES` | `~/.jjodel-lanes` | Root of the lane folders. |
 | `LANE_RUN` | `../lane-run.mjs` beside the board when it exists, else `~/jjodel-release/frontend/scripts/lane-run.mjs` | The `lane-run` script asked for `status --all`. |
-| `JJODEL_REPO` | `~/jjodel` | Repository whose `docs/prompts/` history classifies the launcher. |
+| `JJODEL_REPO` | `~/jjodel` | Repository whose `git log --all` classifies the launcher and links lanes to commits. Any worktree serves: the board reads refs, never its working files. |
+| `JJODEL_TRUNK` | `alfonso-frontend-jjtl` | Trunk ref whose log entries, `docs/decisions.md` and prompts the Insights sections read. |
 | `LANE_BOARD_CACHE` | `$JJODEL_LANES/board/timeline-cache.json` | Cache of the finished lanes' timelines. |
 | `LANE_BOARD_PORT` | `4700` | Port, overridden by `--port`. |
 | `LANE_BOARD_REFRESH` | `30` | Refresh in seconds, overridden by `--refresh`. |
@@ -77,7 +106,7 @@ an absolute script path; launchd does not expand `~`):
 <key>Label</key><string>io.jjodel.lane-board</string>
 <key>ProgramArguments</key><array>
   <string>/opt/homebrew/bin/node</string>
-  <string>/Users/alfonso/jjodel/frontend/scripts/lane-board/lane-board.mjs</string>
+  <string>/Users/alfonso/jjodel-release/frontend/scripts/lane-board/lane-board.mjs</string>
   <string>--refresh</string><string>30</string>
 </array>
 <key>RunAtLoad</key><true/>

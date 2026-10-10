@@ -8,6 +8,8 @@
   const RANGES = { '7': 7, '30': 30, '0': 0 };
   let range = store.get('range', '7');
   let data = null;
+  let ins = null; // /api/insights: models, code areas and first-shot success per lane
+  let drawnOnly = store.get('drawn', '0') === '1';
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const hm = (t) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   const dhm = (t) => new Date(t).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -38,7 +40,12 @@
   .in-card table{min-width:0;width:100%}.in-card td,.in-card th{padding:4px 8px;font-size:12px}
   .in-tip{position:fixed;z-index:10;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:8px 10px;font-size:12px;max-width:320px}
   [data-tip]{cursor:default}[data-tip]:hover{opacity:.8}
-  .in-note{font-size:11px;color:var(--muted);margin-top:8px}`;
+  .in-note{font-size:11px;color:var(--muted);margin-top:8px}
+  .in-wide{grid-column:1/-1}
+  .in-card td.in-c,.in-card th.in-c{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .in-dim{color:var(--muted)}.in-grey{color:var(--muted);opacity:.7}.in-k{color:var(--muted);font-size:11px}
+  .in-card h4{margin:14px 0 4px;font-size:12px;font-weight:600}
+  .in-empty{padding:16px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;margin-top:8px}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   function compute() {
@@ -186,6 +193,136 @@
       top.map((w) => '<tr><td style="white-space:nowrap"><b>' + dur(w.w) + '</b><br><span style="color:var(--muted)">' + dhm(w.at) + '</span></td><td style="white-space:nowrap">' + esc(w.l.id) + '<br><span style="color:var(--muted)">' + esc(w.l.chat || '') + '</span></td><td>' + esc(w.d || '') + '</td></tr>').join('') + '</tbody></table></div>';
   }
 
+  // ── models, code areas and first-shot success (/api/insights, discovery P-2026-10-10-1520) ──
+  // A lane is first-shot when it ends done or hard-stop with no rework signal (a corrective resume, a later
+  // Corregge, a reverted commit) and no blocked or over-90-minute run; lanes still running are left out.
+  const MIN_RATE = 5, MIN_READ = 10; // n always shown; the rate hidden below 5 lanes, the cell greyed below 10
+  const CAUSA = { a: 'ambiguous or incomplete specification', b: 'scope exceeded', c: 'insufficient discovery', d: 'visual regression found at manual verification', e: 'conflict with uncommitted git state', f: 'decision changed midway', g: 'environmental or operational' };
+  const modelName = (m) => String(m || '').replace(/^claude-/, '').replace(/-\d{8}$/, '').split('-').map((x, i) => i ? x : x.charAt(0).toUpperCase() + x.slice(1)).join(' ').replace(/ (\d+) (\d+)$/, ' $1.$2');
+  const insLanes = (c) => ins.lanes.filter((l) => l.firstShot !== null && l.end >= c.from);
+  const ids = (ls) => ls.slice(0, 8).map((l) => l.id).join(', ') + (ls.length > 8 ? ', …' : '');
+  function rateCell(ls, pred, label) {
+    const n = ls.length, hit = ls.filter(pred);
+    if (!n) return '<td class="in-c in-dim">·</td>';
+    const tip = ' data-tip="' + esc(label + '|' + hit.length + ' of ' + n + ' lanes' + (hit.length ? '|' + ids(hit) : '')) + '"';
+    if (n < MIN_RATE) return '<td class="in-c in-dim"' + tip + '>n=' + n + '</td>';
+    return '<td class="in-c' + (n < MIN_READ ? ' in-grey' : '') + '"' + tip + '>' + Math.round(100 * hit.length / n) + '% <span class="in-k">' + hit.length + '/' + n + '</span></td>';
+  }
+  const why = (l) => [l.signals.corrective && 'corrective resume', l.signals.correctedBy.length && 'corrected by ' + l.signals.correctedBy.join(', '), l.signals.selfCorrected && 'corrected itself', l.signals.reverted.length && 'reverted by ' + l.signals.reverted.join(', '), l.signals.blockedRun && 'a run ended blocked', l.signals.overTime && 'a run past 90 min', !['done', 'hard-stop'].includes(l.final) && 'ended ' + l.final].filter(Boolean).join('; ');
+
+  function areasCard(c) {
+    const ls = insLanes(c);
+    let t = '<table><thead><tr><th>Area</th><th class="in-c">Lanes</th><th class="in-c">Touching</th><th class="in-c">Rework</th><th class="in-c">Blocked / over time</th><th class="in-c">First-shot</th><th class="in-c">Median work</th><th>Causa</th></tr></thead><tbody>';
+    ins.areas.forEach((a) => {
+      const p = ls.filter((l) => l.primaryArea === a.key);
+      const touch = ls.filter((l) => (l.lines[a.key] || 0) > 0).length;
+      const causa = {};
+      p.forEach((l) => l.causa.forEach((x) => { causa[x] = (causa[x] || 0) + 1; }));
+      const cz = Object.keys(causa).sort().map((k) => '<span data-tip="' + esc('Causa (' + k + ')|' + (CAUSA[k] || '')) + '">' + k + ' ' + causa[k] + '</span>').join(' · ');
+      t += '<tr><td data-tip="' + esc(a.label + '|' + a.rule) + '">' + esc(a.label) + '</td><td class="in-c">' + p.length + '</td><td class="in-c">' + touch + '</td>' +
+        rateCell(p, (l) => l.rework, 'Rework in ' + a.label) + rateCell(p, (l) => l.failedRun, 'Blocked or over time in ' + a.label) + rateCell(p, (l) => l.firstShot, 'First-shot in ' + a.label) +
+        '<td class="in-c">' + (p.length ? dur(median(p.map((l) => l.workMs))) : '·') + '</td><td>' + (cz || '<span class="in-dim">·</span>') + '</td></tr>';
+    });
+    t += '</tbody></table>';
+    const czl = ls.filter((l) => l.criticalZone);
+    const note = '<div class="in-note">Critical zone, the six files of CLAUDE.md §3.2: ' + (czl.length ? czl.length + ' lane' + (czl.length > 1 ? 's' : '') + ' touched them, ' + czl.filter((l) => l.firstShot).length + ' first-shot: ' + esc(czl.map((l) => l.id).join(', ')) : 'no lane in this range touched them') + '. A flag on the lane; its lines count in the area of their directory.</div>';
+    // The files most often touched by lanes later reworked, against every lane that touched them.
+    const all = {}, bad = {};
+    ls.forEach((l) => l.files.forEach((p) => { all[p] = (all[p] || 0) + 1; if (l.rework) bad[p] = (bad[p] || 0) + 1; }));
+    const top = Object.entries(bad).sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]));
+    const cut = top.slice(0, 10);
+    const tied = cut.length === 10 ? top.slice(10).filter(([, n]) => n === cut[9][1]).length : 0;
+    const files = cut.length ? '<h4>Files most often touched by lanes later reworked</h4><table><thead><tr><th class="in-c">Reworked</th><th class="in-c">All lanes</th><th>File</th></tr></thead><tbody>' +
+      cut.map(([p, n]) => '<tr><td class="in-c">' + n + '</td><td class="in-c">' + all[p] + '</td><td>' + esc(p.replace(/^frontend\//, '')) + '</td></tr>').join('') + '</tbody></table>' +
+      (tied ? '<div class="in-note">' + tied + ' more file' + (tied > 1 ? 's' : '') + ' tied at ' + cut[9][1] + ' below the cut.</div>' : '') : '<div class="in-note">No reworked lane touched code in this range.</div>';
+    return '<div class="in-card in-wide"><h3>Code areas</h3><div class="sub">Every lane with code, whatever its model. Lanes: primary area, the one with most changed lines in the lane\'s own commits (docs and probes excluded); Touching: any changed line there. Rework: a corrective resume, a later Corregge or a reverted commit. Rates hidden below ' + MIN_RATE + ' lanes, greyed below ' + MIN_READ + '.</div>' + t + note + files + '</div>';
+  }
+
+  function modelCard(c) {
+    const code = insLanes(c).filter((l) => l.model && l.primaryArea);
+    const drawn = code.filter((l) => l.drawn);
+    const ls = drawnOnly ? drawn : code;
+    const seg = '<span class="seg" data-name="drawn">' + [['0', 'All session lanes'], ['1', 'Drawn lanes only (RC-45)']].map(([v, l]) => '<button data-v="' + v + '" class="' + ((drawnOnly ? '1' : '0') === v ? 'on' : '') + '">' + l + '</button>').join('') + '</span>';
+    const head = '<div class="in-card in-wide"><h3>Model by area and by size</h3><div class="sub">First-shot / lanes for the session lanes with code; direct merges have no model. Rates hidden below ' + MIN_RATE + ' lanes, greyed below ' + MIN_READ + '.</div><div class="in-bar" style="margin:0 0 8px">' + seg +
+      (drawnOnly ? '<span class="meta">' + drawn.length + ' drawn lane' + (drawn.length === 1 ? '' : 's') + ' in this range</span>' : '') + '</div>';
+    if (!ls.length) return head + '<div class="in-empty">' + (drawnOnly ? 'No drawn lanes in this range yet. From 2026-10-11 the chat draws the tier of eligible fast lanes at random and writes <code>tier drawn (RC-45)</code> in their Lane line; they show here.' : 'No session lane with code in this range.') + '</div></div>';
+    const models = [...new Set(ls.map((l) => l.model))].sort((a, b) => ls.filter((l) => l.model === b).length - ls.filter((l) => l.model === a).length);
+    let m = '<table><thead><tr><th>Model</th>' + ins.areas.map((a) => '<th class="in-c" data-tip="' + esc(a.label + '|' + a.rule) + '">' + esc(a.label.replace(/ \(.*\)$/, '')) + '</th>').join('') + '</tr></thead><tbody>';
+    models.forEach((md) => { m += '<tr><td>' + esc(modelName(md)) + '</td>' + ins.areas.map((a) => rateCell(ls.filter((l) => l.model === md && l.primaryArea === a.key), (l) => l.firstShot, modelName(md) + ' · ' + a.label)).join('') + '</tr>'; });
+    m += '</tbody></table>';
+    let s = '<h4>By size of the change (changed lines, docs and probes excluded)</h4><table><thead><tr><th>Model</th>' + ins.bands.map((b) => '<th class="in-c">' + esc(b) + '</th>').join('') + '</tr></thead><tbody>';
+    models.forEach((md) => { s += '<tr><td>' + esc(modelName(md)) + '</td>' + ins.bands.map((b) => rateCell(ls.filter((l) => l.model === md && l.sizeBand === b), (l) => l.firstShot, modelName(md) + ' · ' + b + ' lines')).join('') + '</tr>'; });
+    models.forEach((md) => {
+      s += '<tr class="in-k"><td class="in-dim">median cost, ' + esc(modelName(md)) + '</td>' + ins.bands.map((b) => {
+        const g = ls.filter((l) => l.model === md && l.sizeBand === b);
+        if (!g.length) return '<td class="in-c in-dim">·</td>';
+        if (g.length < MIN_RATE) return '<td class="in-c in-dim">n=' + g.length + '</td>';
+        return '<td class="in-c in-dim" data-tip="' + esc('Median cost per lane|' + modelName(md) + ' · ' + b + ' lines · ' + g.length + ' lanes|list price, the last total_cost_usd of the session') + '">$' + median(g.map((l) => l.costUSD)).toFixed(2) + '</td>';
+      }).join('') + '</tr>';
+    });
+    s += '</tbody></table>';
+    return head + m + s + '<div class="in-note">Within a size band the models do not separate at these n; the model is chosen by the chat, not at random.</div></div>';
+  }
+
+  // First-shot by week (weeks start on Monday): one square per session lane, in the order the lanes started.
+  function timeCard(c) {
+    const ls = insLanes(c).filter((l) => l.model).sort((a, b) => a.start - b.start);
+    const DAY = 864e5;
+    const monday = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+    const t0 = monday(c.from), t1 = monday(c.now) + 7 * DAY;
+    const weeks = [];
+    for (let w = t0; w < t1; w = monday(w + 8 * DAY)) weeks.push(w);
+    const W = 1000, L = 8, R = 8, TOP = 40, CELL = 10, STEP = 12;
+    const xOf = (t) => L + (W - L - R) * (t - t0) / (t1 - t0);
+    const colW = (W - L - R) / Math.max(weeks.length, 1);
+    const perRow = Math.max(1, Math.floor((colW - 12) / STEP));
+    const byWeek = weeks.map((w) => ls.filter((l) => Math.max(l.start, t0) >= w && Math.max(l.start, t0) < w + 7 * DAY));
+    const rows = Math.max(3, ...byWeek.map((g) => Math.ceil(g.length / perRow)));
+    const base = TOP + 18 + rows * STEP;
+    const H = base + 18;
+    let s = '';
+    byWeek.forEach((g, i) => {
+      const x0 = xOf(weeks[i]) + 6;
+      const n = g.length, k = g.filter((l) => l.firstShot).length;
+      const lab = !n ? '' : n < MIN_RATE ? 'n=' + n : Math.round(100 * k / n) + '% · ' + k + '/' + n;
+      s += '<text x="' + x0 + '" y="' + (TOP + 12) + '" fill="' + (n && n < MIN_READ ? 'var(--muted)' : 'var(--fg)') + '" font-weight="600">' + lab + '</text>';
+      g.forEach((l, j) => {
+        const x = x0 + (j % perRow) * STEP, y = base - (Math.floor(j / perRow) + 1) * STEP;
+        const col = l.firstShot ? 'var(--ok)' : 'var(--bad)';
+        const young = l.ageDays < 7;
+        s += '<rect x="' + x + '" y="' + y + '" width="' + CELL + '" height="' + CELL + '" rx="2" fill="' + col + '"' + (young ? ' fill-opacity=".3" stroke="' + col + '" stroke-dasharray="2 1.5"' : '') +
+          ' data-tip="' + esc(l.id + '|' + modelName(l.model) + (l.kind ? ' · ' + l.kind : '') + (l.primaryArea ? ' · ' + l.primaryArea : '') + '|' + (l.firstShot ? 'first-shot' : why(l)) + (young ? '|' + l.ageDays + ' days old: censored' : '')) + '"/>';
+      });
+      s += '<text x="' + x0 + '" y="' + (base + 14) + '" fill="var(--muted)">week of ' + new Date(weeks[i]).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + '</text>';
+      if (i) s += '<line x1="' + xOf(weeks[i]) + '" y1="' + TOP + '" x2="' + xOf(weeks[i]) + '" y2="' + base + '" stroke="var(--line)"/>';
+    });
+    // Markers: the first lane of each model (over every lane, not just the range), and the RC rows from RC-20 on, grouped by date.
+    const marks = [];
+    const firstOf = {};
+    ins.lanes.filter((l) => l.model && l.start).forEach((l) => { if (!firstOf[l.model] || l.start < firstOf[l.model].start) firstOf[l.model] = l; });
+    Object.entries(firstOf).forEach(([md, l]) => marks.push({ t: l.start, label: modelName(md), tip: modelName(md) + ' first runs a lane|' + l.id, col: 'var(--accent)' }));
+    const byDate = {};
+    (ins.harness || []).forEach((r) => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+    Object.entries(byDate).forEach(([d, rs]) => {
+      const [y, mo, da] = d.split('-').map(Number);
+      const num = rs.map((r) => Number(r.id.slice(3)));
+      marks.push({ t: new Date(y, mo - 1, da).getTime(), label: rs.length > 1 ? 'RC-' + Math.min(...num) + '–' + Math.max(...num) : rs[0].id, tip: d + '|' + rs.map((r) => r.id + ' ' + r.title).join('|'), col: 'var(--muted)' });
+    });
+    // Labels go to the first of three rows where they do not overlap the previous one (about 6 px per character).
+    const rowEnd = [-Infinity, -Infinity, -Infinity];
+    marks.filter((mk) => mk.t >= t0 && mk.t < t1).sort((a, b) => a.t - b.t).forEach((mk) => {
+      const x = xOf(mk.t);
+      let r = rowEnd.findIndex((e) => x + 3 > e + 4);
+      if (r === -1) r = rowEnd.indexOf(Math.min(...rowEnd));
+      rowEnd[r] = x + 3 + 6 * mk.label.length;
+      s += '<line x1="' + x + '" y1="' + (3 + r * 11) + '" x2="' + x + '" y2="' + base + '" stroke="' + mk.col + '" stroke-dasharray="3 3"/>' +
+        '<text x="' + (x + 3) + '" y="' + (11 + r * 11) + '" fill="' + mk.col + '" data-tip="' + esc(mk.tip) + '">' + esc(mk.label) + '</text>';
+    });
+    const lg = '<span><i style="background:var(--ok)"></i>first-shot</span><span><i style="background:var(--bad)"></i>not first-shot</span><span><i style="background:var(--bad);opacity:.3;outline:1px dashed var(--bad)"></i>less than 7 days old: censored, a correction may still arrive</span><span><i style="background:var(--accent)"></i>a model\'s first lane</span><span><i style="background:var(--muted)"></i>RC decisions</span>';
+    return '<div class="in-card in-wide"><h3>First-shot over time</h3><div class="sub">Session lanes by the week they started (weeks start on Monday), one square each; the label is the week\'s first-shot rate. Dashed lines: a model\'s first lane, and the RC rows of docs/decisions.md from RC-20 on.</div>' +
+      (ls.length ? '<div style="overflow-x:auto"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">' + s + '</svg></div>' : '<div class="in-empty">No session lane in this range.</div>') + '<div class="in-legend">' + lg + '</div></div>';
+  }
+
   function exportsBar() {
     const d = RANGES[range];
     const seg = '<span class="seg" data-name="range">' + [['7', '7 days'], ['30', '30 days'], ['0', 'All']].map(([v, l]) => '<button data-v="' + v + '" class="' + (v === range ? 'on' : '') + '">' + l + '</button>').join('') + '</span>';
@@ -221,8 +358,10 @@
     const box = document.getElementById('ins');
     if (!box || !data) return;
     const c = compute();
-    box.innerHTML = exportsBar() + kpis(c) + '<div class="in-grid">' + heatmap(c) + waitsChart(c) + perDay(c) + byKind(c) + byLauncher(c) + '</div><div style="margin-top:16px">' + longestWaits(c) + '</div><div class="in-tip" id="in-tip" hidden></div>';
+    const more = !ins ? '' : ins.error ? '<div class="err">insights data unavailable: ' + esc(ins.error) + '</div>' : '<div class="in-grid" style="margin-top:16px">' + areasCard(c) + modelCard(c) + timeCard(c) + '</div>';
+    box.innerHTML = exportsBar() + kpis(c) + '<div class="in-grid">' + heatmap(c) + waitsChart(c) + perDay(c) + byKind(c) + byLauncher(c) + '</div><div style="margin-top:16px">' + longestWaits(c) + '</div>' + more + '<div class="in-tip" id="in-tip" hidden></div>';
     box.querySelectorAll('.seg[data-name=range] button').forEach((b) => b.addEventListener('click', () => { range = b.dataset.v; store.set('range', range); render(); }));
+    box.querySelectorAll('.seg[data-name=drawn] button').forEach((b) => b.addEventListener('click', () => { drawnOnly = b.dataset.v === '1'; store.set('drawn', b.dataset.v); render(); }));
     const p = document.getElementById('in-perfetto'); if (p) p.addEventListener('click', openPerfetto);
     const tip = document.getElementById('in-tip');
     box.querySelectorAll('[data-tip]').forEach((el) => {
@@ -241,7 +380,13 @@
   let busy = false;
   async function refresh() {
     if (busy) return; busy = true;
-    try { data = await (await fetch('/api/timeline', { cache: 'no-store' })).json(); render(); }
+    try {
+      const [tl, more] = await Promise.all([
+        fetch('/api/timeline', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/insights', { cache: 'no-store' }).then((r) => r.json()).catch((e) => ({ error: e.message })),
+      ]);
+      data = tl; ins = more; render();
+    }
     catch (e) { const box = document.getElementById('ins'); if (box) box.innerHTML = '<div class="err">insights unreachable: ' + esc(e.message) + '</div>'; }
     finally { busy = false; }
   }
