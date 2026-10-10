@@ -110,3 +110,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: scripts-only merge (frontend/scripts/lane-board/lane-board.mjs): app untouched, no scene to check; board verified on 4701 by lane P-2026-10-06-0049
 **Notes**: Rollback tag `pre-board-turns` on `a9cc16bc7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0059/result.json`.
 **Prompt document name**: 2026-10-06 00:59
+
+## 2026-10-10 — fix(harness): lane board lists earlier lanes newest first (P-2026-10-10-0840)
+**Prompt**: `claude_2026-10-10_0840_prompt_lane_board_earlier_order.md`: in "Earlier lanes" the rows of each day follow the CLI order (id descending, chains appended), so a chain sat at the bottom of its day. Keep the time on the row and sort each day by time descending, ties by id descending. Fast lane, one file.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs` (`c8e99fc2c`, 2 lines: `t` on the row in `collect()`, the sort in `renderOlder`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` and `check:scripts` pass; `/api` on 4701 returns a numeric `t` on 354 of 354 rows, none 0; the chat's DOM read on 4701 found all 11 earlier days strictly newest first.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23): all 11 earlier days strictly newest first by DOM read; on 2026-10-04 `chain-P-2026-10-04-1130` at index 7 between `1213` and `1025`; board on 4701 stopped.
+**Notes**: Measured on 2026-10-04: the chain moves from index 15 of 16 to 7, between `1213` and `1025`; `t` is non-increasing across the day. Board on 4701 (PID 21803) stopped by the chat after the visual check. Port 4700, launchd and `~/.jjodel-lanes/board/` untouched.
+**Prompt document name**: 2026-10-10 08:40
