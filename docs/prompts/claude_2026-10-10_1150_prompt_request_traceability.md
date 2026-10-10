@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: full (more than 3 files)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1150 (prompt-request, 79c0307dc), merged 49b31da4a; visual check passed (chat, built-in browser on 4701, RC-23)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
