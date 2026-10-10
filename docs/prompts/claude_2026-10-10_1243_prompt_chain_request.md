@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: fast (one source file, `frontend/scripts/lane-run.mjs`, plus its existing test file; design fixed by RC-43)
 Depends: P-2026-10-10-1150
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1243 (chain-request, f552d0e00), merged 829073426; no visual check (harness script)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
