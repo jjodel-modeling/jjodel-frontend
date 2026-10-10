@@ -39,3 +39,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-10 16:00
 
 **Ticket** (lane, low): an M1 reference edge re-created after open enters its target on another side than the same edge at open (Running→stop: bottom-0 at open, right-0 at every re-add, before and after F1). Not a staleness effect; whether a re-created edge should take its old side back is a layout question.
+
+## 2026-10-10 — merge: stale-m1-edge into alfonso-frontend-jjtl (P-2026-10-10-1809)
+**Prompt**: `claude_2026-10-10_1809_prompt_merge_stale-m1-edge.md`, a direct merge by `lane-run merge --direct`, no session: `stale-m1-edge` at `bf21aa74f` into `alfonso-frontend-jjtl`, merge base `7a271476c`, 7 commits on the branch side.
+**Files touched**: merge `834152b68`: 25 files from the branch side (`docs/discovery/assets/stale-m1-edge/control-refdelete-m1-after.log`, `docs/discovery/assets/stale-m1-edge/control-refdelete-m1-before.log`, `docs/discovery/assets/stale-m1-edge/crop_after_A2-after.png`, `docs/discovery/assets/stale-m1-edge/crop_after_A2.png`, `docs/discovery/assets/stale-m1-edge/crop_after_C1-after.png`, `docs/discovery/assets/stale-m1-edge/crop_after_C1.png`, `docs/discovery/assets/stale-m1-edge/crop_after_R2-after.png`, `docs/discovery/assets/stale-m1-edge/crop_after_R2.png`, and 17 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `834152b68` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8032 tests in 329 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Alfonso visual GO on F1 at 18:08 (lane probe 50/50 on 3123, control 25/25)
+**Notes**: Rollback tag `pre-stale-m1-edge` on `c28297230` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1809/result.json`.
+**Prompt document name**: 2026-10-10 18:09
