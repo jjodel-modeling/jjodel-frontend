@@ -147,3 +147,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat check RC-23 on the lane probe from the DOM (E1, E2, E2b, E3, E4 all PASS: microwave with `in` has 0 errors, every Transition in the transitions slot of its source State and not in model.objects, tree nested; original script leaves no not-found after the retry passes); canvas edge rendering not measured, out of scope
 **Notes**: Rollback tag `pre-jjscript-m1` on `c34a03ddb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-04-2147/result.json`.
 **Prompt document name**: 2026-10-04 21:47
+
+## 2026-10-10 — fix(jjscript): a do block whose body is not a command stops (P-2026-10-10-0810)
+**Prompt**: `claude_2026-10-10_0810_prompt_jjscript_do_block_freeze.md`, fast lane on `~/jjodel-w-dofreeze`, branch `do-freeze`. A Jjodie message starting with `do` (`do not use copy`) froze the tab: `parseBlockBody` pushed an eval node that consumes no token until the heap ran out (discovery `discovery_2026-10-10_jjodie_reserved_identifiers.md` §4.4). Tests first, then a no-progress check in the loop.
+**Files touched**: `e5c8fa126`: `frontend/src/jjscript/parser/parser.ts`, `frontend/src/jjscript/__tests__/parserTermination.test.ts` (new). This commit: `docs/log-inbox/jjscript.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e5c8fa126`: typecheck 14 errors, the §17 set; new test 22 of 22; jjscript vitest 563 passed in 22 of 23 files (context-binding red at import, known; base 541); build exit 0. The two AST snapshots taken on the base pass unchanged.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Playwright probe variant A, DOM and heartbeat; no visual change)
+**Notes**: Base 3099fb53c: 14 of 22 red at the 1000-call bound. `do` alone stays an empty block, success true, not false as the prompt listed: no loop there, and no other behaviour may change. No in-repo grammar documents eval in a block (the book's App D is not in the repo), so `do x.name end` is a parse error. Probe on 3048: second send returned, mock call #2 reached, R2 7 commands, heartbeat max gap 389 ms, no Target crashed, 0 page errors.
+**Prompt document name**: 2026-10-10 08:10
+
+**Ticket** (low, observed, not changed): `do eval x.name end` parses as eval `x.name end`, because `parseEvalCommand` reads to the newline and swallows `end`. A `let ... in <non-command> end` body now fails with the same message, `in do block`, though its opener is `in`. A bare `do` message still parses clean as an empty block; whether `detect` should take it as JjScript is the detect question, left to its own lane.
