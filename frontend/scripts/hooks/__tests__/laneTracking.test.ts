@@ -1,4 +1,5 @@
 import { describe, test, expect, afterAll } from 'vitest';
+import { spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -174,6 +175,14 @@ describe('projectLane: the mapping, one row each (report answers 1, 3, 6)', () =
 
     test('`blocked` is In progress + blocked', () => {
         expect(seen({ outcome: 'Outcome: blocked' })).toEqual(card('In progress', ['blocked']));
+    });
+
+    test('`blocked` resolved afterwards (resolved.txt) with the Status flipped is Done and closed, like done (resolved not read)', () => {
+        expect(seen({ outcome: 'Outcome: blocked', resolved: '2026-10-11 17:30 · alfonso · fixed by hand', headerStatus: 'eseguito 2026-10-11 · lane x · abc' })).toEqual(card('Done', [], true));
+    });
+
+    test('`blocked` resolved afterwards with the Status still `da eseguire` is In review + closure-owed, open, like done (resolved not read)', () => {
+        expect(seen({ outcome: 'Outcome: blocked', resolved: '2026-10-11 17:30 · alfonso · fixed by hand' })).toEqual(card('In review', ['closure-owed']));
     });
 
     test('`hard-stop` of a discovery before any GO is In review + waiting:phase-2, never Done (hard-stop mapped to Done)', () => {
@@ -412,5 +421,65 @@ describe('trackLane', () => {
             throw new Error('cannot read docs/harness/fronts.json: ENOENT\nsecond line');
         }, { dir: g.dir, board: BOARD });
         expect(r.line).toBe('tracking skipped: cannot read docs/harness/fronts.json: ENOENT');
+    });
+});
+
+// ── lane-run resolve re-projects the card (P-2026-10-10-2020) ────────────────
+
+// LANE_RUN points these cases at another copy of lane-run.mjs, as in laneRun.test.ts.
+const LANE_RUN = process.env.LANE_RUN ? resolve(process.env.LANE_RUN) : resolve(HERE, '..', '..', 'lane-run.mjs');
+const ISSUE_1 = 'https://github.com/jjodel-modeling/jjodel-lanes/issues/1';
+
+/** A throwaway HOME: one exited lane at LANE whose last Outcome line is `Outcome: blocked`, its prompt on disk, tracking on, the fake gh as LANE_TRACK_GH. */
+function resolveLab(mode = '') {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'lane-resolve-')));
+    dirs.push(root);
+    const home = join(root, 'home');
+    const state = join(root, 'state');
+    const lane = join(home, '.jjodel-lanes', LANE);
+    for (const d of [state, lane, join(home, '.jjodel-lanes', '_tracking')]) mkdirSync(d, { recursive: true });
+    writeFileSync(join(home, '.jjodel-lanes', '_tracking', 'config.json'), '{}\n');
+    writeFileSync(join(root, 'prompt.md'), lanePrompt());
+    const text = { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Gate red.\nOutcome: blocked' }] } };
+    writeFileSync(join(lane, 'log.jsonl'), JSON.stringify(text) + '\n');
+    writeFileSync(join(lane, 'started.txt'), String(Date.now() - 60000) + '\n');
+    writeFileSync(join(lane, 'pid.txt'), '999999\n');
+    writeFileSync(join(lane, 'exit.txt'), '0\n');
+    writeFileSync(join(lane, 'prompt.txt'), join(root, 'prompt.md') + '\n');
+    const gh = join(state, 'gh');
+    writeFileSync(gh, `#!/bin/sh\nexec '${process.execPath}' '${FAKE_GH}' "$@"\n`);
+    chmodSync(gh, 0o755);
+    const env = { HOME: home, PATH: '/usr/bin:/bin', LANE_TRACK_GH: gh, FAKE_GH_STATE: state, ...(mode ? { FAKE_GH_MODE: mode } : {}) };
+    const run = (args: string[]) => spawnSync(process.execPath, [LANE_RUN, ...args], { cwd: home, env, encoding: 'utf8', timeout: 20000 });
+    const gstate = () => JSON.parse(readFileSync(join(state, 'gh.json'), 'utf8'));
+    const column = () => {
+        const s = gstate();
+        return String(s.status[s.items[s.issues[0].url]] || '').replace(/^opt-/, '');
+    };
+    return { lane, run, gstate, column };
+}
+
+const cardOf = (out: string) => out.split('\n').find((x) => x.startsWith('card: ')) ?? '';
+
+describe('lane-run resolve and the card', () => {
+    test('resolve re-projects the card of the lane it resolves: In progress + blocked before, In review + closure-owed after, one issue (resolve not tracked)', () => {
+        const r = resolveLab();
+        const before = r.run(['status', LANE]);
+        expect(before.status, before.stderr).toBe(0);
+        expect(cardOf(before.stdout)).toBe('card: ' + ISSUE_1 + ' · In progress (blocked)');
+        const after = r.run(['resolve', LANE, '--why', 'fixed by hand', '--by', 'alfonso']);
+        expect(after.status, after.stderr).toBe(0);
+        expect(existsSync(join(r.lane, 'resolved.txt'))).toBe(true);
+        expect(cardOf(after.stdout)).toBe('card: ' + ISSUE_1 + ' · In review (closure-owed)');
+        expect(r.column()).toBe('In review');
+        expect(r.gstate().issues.map((i: { labels: { name: string }[] }) => i.labels.map((x) => x.name))).toEqual([['closure-owed']]);
+    });
+
+    test('gh exits 1: resolve still writes resolved.txt and exits 0, and its card line says why (fail open dropped)', () => {
+        const r = resolveLab('fail');
+        const out = r.run(['resolve', LANE, '--why', 'fixed by hand', '--by', 'alfonso']);
+        expect(out.status, out.stderr).toBe(0);
+        expect(readFileSync(join(r.lane, 'resolved.txt'), 'utf8')).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} · alfonso · fixed by hand\n$/);
+        expect(cardOf(out.stdout)).toBe('card: tracking skipped: gh project view: error connecting to api.github.com');
     });
 });

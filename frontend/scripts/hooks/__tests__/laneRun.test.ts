@@ -1146,6 +1146,76 @@ describe('lane-run status --all', () => {
     });
 });
 
+// ── resolved (P-2026-10-05-1720, ported by P-2026-10-10-2020) ────────────────
+
+describe('lane-run resolved and resolve', () => {
+    const RESOLVED_LINE = '2026-10-05 17:30 · alfonso · fixed by hand in 1234abcd';
+
+    test('kills "resolved.txt ignored", "the raw outcome dropped": blocked plus resolved.txt reads resolved, in status --all and in status <id> with the recorded outcome beside it', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Gate red.\nOutcome: blocked'] });
+        writeFileSync(join(laneDir(l), 'resolved.txt'), RESOLVED_LINE + '\n');
+        const all = laneRun(l, ['status', '--all']);
+        expect(all.status, all.stderr).toBe(0);
+        expect(all.stdout.trimEnd().split('\n')[1].split(/\s+/)).toEqual([ID, 'exited', 'resolved', '1', 'min']);
+        const one = laneRun(l, ['status', ID]);
+        expect(one.status, one.stderr).toBe(0);
+        expect(one.stdout).toContain('outcome: resolved\n');
+        expect(one.stdout).toContain('recorded: Outcome: blocked\n');
+        expect(one.stdout).toContain('resolved: ' + RESOLVED_LINE + '\n');
+    });
+
+    test('kills "resolved.txt read on any outcome": done plus resolved.txt stays done, and a blocked lane without the file stays blocked', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: done'] });
+        writeFileSync(join(laneDir(l), 'resolved.txt'), RESOLVED_LINE + '\n');
+        fakeLane(l, ID2, { texts: ['Outcome: blocked'] });
+        const all = laneRun(l, ['status', '--all']);
+        expect(all.status, all.stderr).toBe(0);
+        const rows = all.stdout.trimEnd().split('\n').slice(1).map((r) => r.split(/\s+/).slice(0, 3));
+        expect(rows).toEqual([[ID2, 'exited', 'blocked'], [ID, 'exited', 'done']]);
+        const one = laneRun(l, ['status', ID]);
+        expect(one.stdout).toContain('outcome: Outcome: done\n');
+        expect(one.stdout).not.toContain('recorded:');
+    });
+
+    test('kills "resolve writes on any lane", "resolve writes twice": resolve is refused on done, running and unknown lanes and on a lane already resolved, and writes nothing', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: done'] });
+        const done = laneRun(l, ['resolve', ID, '--why', 'nothing to resolve']);
+        expect(done.status).toBe(2);
+        expect(done.stderr).toContain('not blocked');
+        expect(existsSync(join(laneDir(l), 'resolved.txt'))).toBe(false);
+
+        fakeLane(l, ID2, { texts: ['Outcome: blocked'], running: true });
+        const running = laneRun(l, ['resolve', ID2, '--why', 'still running']);
+        expect(running.status).toBe(2);
+        expect(existsSync(join(laneDir(l, ID2), 'resolved.txt'))).toBe(false);
+
+        expect(laneRun(l, ['resolve', 'P-2026-09-26-1700', '--why', 'x']).status).toBe(2);
+
+        const third = 'P-2026-09-26-1642';
+        fakeLane(l, third, { texts: ['Outcome: blocked'] });
+        writeFileSync(join(laneDir(l, third), 'resolved.txt'), RESOLVED_LINE + '\n');
+        const twice = laneRun(l, ['resolve', third, '--why', 'again']);
+        expect(twice.status).toBe(2);
+        expect(readFileSync(join(laneDir(l, third), 'resolved.txt'), 'utf8')).toBe(RESOLVED_LINE + '\n');
+    });
+
+    test('kills "resolve without --why", "the line not date · who · why": resolve on an exited blocked lane writes one line, then status reads resolved', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: blocked'] });
+        expect(laneRun(l, ['resolve', ID]).status).toBe(2);
+        expect(laneRun(l, ['resolve', ID, '--why', '  ']).status).toBe(2);
+        expect(existsSync(join(laneDir(l), 'resolved.txt'))).toBe(false);
+        const r = laneRun(l, ['resolve', ID, '--why', 'fixed by the merge\nof 1234abcd', '--by', 'alfonso'], { env: { LANE_RUN_NOW: '2026-10-05T17:30' } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(readFileSync(join(laneDir(l), 'resolved.txt'), 'utf8')).toBe('2026-10-05 17:30 · alfonso · fixed by the merge of 1234abcd\n');
+        const all = laneRun(l, ['status', '--all']);
+        expect(all.stdout.trimEnd().split('\n')[1].split(/\s+/).slice(0, 3)).toEqual([ID, 'exited', 'resolved']);
+    });
+});
+
 // ── wait ─────────────────────────────────────────────────────────────────────
 
 const ID2 = 'P-2026-09-26-1641';
