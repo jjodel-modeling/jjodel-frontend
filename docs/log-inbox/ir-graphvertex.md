@@ -44,3 +44,36 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato
 **Notes**: Probe 2/12 before (pre-S2 tree), 12/12 after; hull scenes byte-identical. Gates: tsc 14 = baseline; full suite 7760 pass, 9 known import failures; build 0. Bench 31 mutants: 23/26 then 30/31, E3 equivalent. Spec §5 says the won claim; code hides every claim's channel edge (decision, amendment owed). Lanes dragged by hand snap back; tasks do not follow a pool drag (S3). Correction from P-2026-10-10-0830 noted in chat.
 **Prompt document name**: 2026-10-10 01:05
+
+## 2026-10-10 — feat(editor-v2): graphVertex gestures and membership, S3 (P-2026-10-10-0105)
+**Prompt**: `claude_2026-10-10_0105_fase2_graphvertex_s3.md`, Phase 2 GO slice S3: LIR first, then membership on drag end (none, forbid, reference, reparent), pool drag carrying its descendants, paired lane resize, creation owner for the palette drop and the connect gesture; BPMN fixture criteria measured on port 3071, light theme; gates, mutation bench, hard stop.
+**Files touched**: `d08cf5665`: `docs/lir/lir_2026-10-10_graphvertex_s3.md` (new). `ab22e962a` (5): `viewpoint/ir/` irMembership (new), irContainment; tests irMembership (new), irContainerLayout, ir. `38e7a6006`: `EditorV2.tsx`. `d174cf607`: `frontend/scripts/probe/bpmn-lanes-fixture.ts`. `aa6d4b670`: the LIR §4, `docs/discovery/assets/graphvertex-s3/` (10 files). This commit: this inbox file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: yes (every file is in the GO's DOVE, seven code files over three commits, above five; but EditorV2 also gains, outside the three named regions, the imports, a containment ref and the slot-write helper next to useIRContainment)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato
+**Notes**: Probe 7/13 before (pre-S3 tree), 13/13 after; hull control scenes unchanged. tsc 14 = baseline; editor-v2 3575; full 7852, 9 known import failures; build 0. Bench 37 mutants: 34 then 37 killed; S2 edge mutants 7/8, E3 equivalent. LIR §4: removal by value, replay-safe drag-end updaters, stale channel edges dropped (narrows R-GV-4, decision owed). Regressions unknown: the replay-safe change covers every canvas drag end, only BPMN and hull measured.
+**Prompt document name**: 2026-10-10 01:05
+
+**Ticket** (lane, decision owed): a selected layout container covers its own lanes. React Flow lifts a selected node by 1000 (elevateNodesOnSelect), so after a pool is clicked or dragged its lanes sit under it until it is deselected: a click on a lane selects the pool (measured on the S3 fixture after the pool drag; the fixture now clicks the pane first). Options: elevateNodesOnSelect off on the canvas, or children of a layout container lifted with it.
+
+## 2026-10-10 — ticket: useJjomSync keeps the RF edge of a deleted M1 reference edge
+**Ticket**: after a slot edit, useM1ReferenceEdges deletes the stale DVoidEdge (delete-only TRANSACTION, gone from the graph's subElements), but the React Flow edge stays in the canvas state (measured 4.5 s later, BPMN fixture, lane-to-lane move of Ship). The incremental removal of useJjomSync, keyed on rfEdgeCache, does not drop it. Each round trip adds one; hidden or not, they take handle slots. S3 drops them in its presentation pass for declared channels only (LIR §4.3).
+**Priority**: medium
+**Found in**: P-2026-10-10-0105
+**Detail**: docs/lir/lir_2026-10-10_graphvertex_s3.md
+
+## 2026-10-10 — ticket: a state updater replayed by React loops the canvas to the update depth limit
+**Ticket**: EditorV2 subscribes to React Flow's nodes (useAutoAnchor's useNodes), and the object-as-edge synthesis returns a new node array on every presentation pass. When an update of lower priority waits in the edges queue (useJjomSync's patch flushed in a frame), React replays the later updaters on each render; one that builds new arrays makes new edges, new nodes, StoreUpdater.setNodes, a synchronous re-render, and so on: 52 replays, then "Maximum update depth exceeded". S3 made its two drag-end updaters replay-safe; the amplifier stays.
+**Priority**: medium
+**Found in**: P-2026-10-10-0105
+**Detail**: docs/lir/lir_2026-10-10_graphvertex_s3.md
+
+## 2026-10-10 — ticket: under the pointer the target ghost handle covers the source ghost
+**Ticket**: DynamicHandles draws the target and source ghost of a free slot at the same point. elementFromPoint returns the source ghost before the pointer reaches it and the target ghost once it hovers there; a target handle cannot start a connection (isConnectableStart false), so a press on a free side's ghost started no connection in the S3 fixture until the mousedown was dispatched on the source ghost. Not yet tried by hand.
+**Priority**: low
+**Found in**: P-2026-10-10-0105
+**Detail**: frontend/scripts/probe/bpmn-lanes-fixture.ts
