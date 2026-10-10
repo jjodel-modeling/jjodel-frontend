@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-1156
 Chat: C-2026-10-10-0057
 Lane: full (§3.1 zone `viewpoint/authoring/` and `viewpoint/ir/`, go-ahead granted 2026-10-10)
 Depends: P-2026-10-10-0105
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane ir-graphvertex-s4 · f1adba8ac, 6dfb762c1, 55aa06faf, ab8f512c3 · flip 2026-10-10 dalla chat
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 
