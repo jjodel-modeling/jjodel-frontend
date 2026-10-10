@@ -617,3 +617,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — lane, node run of the page's own `table()` on the 4 live `/api` rows of 4702: 8 segments and n/m each, phase text below; the chat's RC-23 check on 4702 (PID 57203) passed, board stopped
 **Notes**: Base commit: 63 of 64 ported cases red, the raw-outcome guard green. Bench 57/59 killed, 2 equivalent (Math.max on a fraction, cache eviction); three survivors closed by two tests (compaction at every step, guard through a symlink). Exports: XES reads `/api/timeline`, which maps `resolved` back to `blocked`; trace reads turn outcomes. Subject shortened to 72 chars: bash-guard caps it. `import()` returns exit 0, no port.
 **Prompt document name**: 2026-10-10 20:21
+
+## 2026-10-10 — merge: board-progress-core into alfonso-frontend-jjtl (P-2026-10-10-2053)
+**Prompt**: `claude_2026-10-10_2053_prompt_merge_board-progress-core.md`, a direct merge by `lane-run merge --direct`, no session: `board-progress-core` at `567909061` into `alfonso-frontend-jjtl`, merge base `c22fc0ec5`, 2 commits on the branch side.
+**Files touched**: merge `4cf36a239`: 10 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_2021_prompt_board_progress_core.md`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/discovery.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/fast.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/merge.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/phase2.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/real-fast-P-2026-10-05-1110.jsonl`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4cf36a239` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8168 tests in 333 files, 9 red at import, hooks 591; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 check on 4702, Running Phase cell with segments, n/m and phase text, columns unchanged
+**Notes**: Rollback tag `pre-board-progress-core` on `c0727487e` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2053/result.json`.
+**Prompt document name**: 2026-10-10 20:53
