@@ -6,7 +6,7 @@ Lane: full (UI slice with a visual check; touches `EditorV2.tsx` with one lazy m
 gate). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead (none needed,
 discovery §I.3: `EditorV2.tsx` is a hot file, not a §3.1 file).
 Depends: P-2026-10-10-0945, P-2026-10-10-0950
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane codegen-panel · code f95d0a44f · docs 7b83066e0 · tsc 14 = base, vitest 8064 (8052 + 12), build exit 0, check:codegen-lazy green (only setting.ts eager; CodePanel chunk 29.0 kB + 8.9 kB CSS, worker 1.8 kB), probe 41/41, mutation bench 6/6 · visual check passata 2026-10-10 (RC-23 by the chat on 8 crops, GO by Alfonso 20:18); follow-ups: long lines clipped without visible scroll, worker start counted in the run timeout, Backspace in editor textareas (ticket)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
