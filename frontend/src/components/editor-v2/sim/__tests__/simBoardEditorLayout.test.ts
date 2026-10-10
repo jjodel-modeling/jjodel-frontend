@@ -47,7 +47,7 @@ describe('selectDevice: one selection for the preview and the list, one row expa
         expect(selectDevice({ selected: 'd5', expanded: 'd5' }, 'd6', 'toggle')).toEqual({ selected: 'd6', expanded: 'd6' });
     });
 
-    it('focus (an arrow) moves the selection; the expanded row follows it only when one was open (mutants: always expands; never follows)', () => {
+    it('focus (Shift and an arrow) moves the selection; the expanded row follows it only when one was open (mutants: always expands; never follows)', () => {
         expect(selectDevice({ selected: 'd4', expanded: null }, 'd5', 'focus')).toEqual({ selected: 'd5', expanded: null });
         expect(selectDevice({ selected: 'd4', expanded: 'd4' }, 'd5', 'focus')).toEqual({ selected: 'd5', expanded: 'd5' });
     });
@@ -59,7 +59,7 @@ describe('selectDevice: one selection for the preview and the list, one row expa
     });
 });
 
-describe('neighbourDevice: the arrows walk the board by the devices\' places', () => {
+describe('neighbourDevice: Shift and the arrows walk the board by the devices\' places', () => {
     it('right and left stay on the row a device shares before looking further (mutants: nearest centre only; direction inverted)', () => {
         expect(neighbourDevice(MICROWAVE, 'd1', 'ArrowRight')).toBe('d2');
         expect(neighbourDevice(MICROWAVE, 'd4', 'ArrowRight')).toBe('d5');
