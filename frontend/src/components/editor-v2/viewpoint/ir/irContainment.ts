@@ -18,7 +18,8 @@
 
 import type { Edge, Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
-import type { CompiledView } from './irTypes';
+import { findFeatureRaw, navigateRefHop } from './irReadCtx';
+import type { CompiledPathStep, CompiledView } from './irTypes';
 import type { IRViewpointIndex } from './irResolveCore';
 import { resolveIRView } from './irResolveCore';
 import { assignGeometricHandles } from './irEdgeViews';
@@ -50,6 +51,143 @@ export interface ContainmentModel {
     objByVertex: Map<string, string>;
     /** objectId → vertexId (reverse) */
     vertexByObj: Map<string, string>;
+    /** R-GV-2: object → every container that claims it, canvas order; only objects with two or more claimants.
+     *  `parentOf` holds the winner. Read by the problems overlay (slice S2). */
+    multiClaimed?: Map<string, string[]>;
+    /** R-GV-2 (spec addendum §4.1): objects with a node that sit in the composition slot of an object claimed through
+     *  a declared channel, pass that claimant's childFilter, and are claimed by no container. */
+    unclaimed?: Set<string>;
+    /** R-GV-2 (spec addendum §4.2): DValue ids read by the declared channels (every hop's slot and the terminal
+     *  slot), for the invalidation signature of the presentation pass (slice S2). */
+    channelSlots?: Set<string>;
+}
+
+/** A slot value as an element id: draw yields strings, defensive on proxy objects (as irReadCtx's pointerToId). */
+function idOf(x: unknown): string | null {
+    if (typeof x === 'string') return x;
+    if (x && typeof x === 'object' && typeof (x as { id?: unknown }).id === 'string') return (x as { id: string }).id;
+    return null;
+}
+
+/**
+ * The objects a declared children channel (R-GV-1) reaches from `objectId`, and the DValue ids it reads, on the
+ * D-layer with draw semantics. Hops navigate through `navigateRefHop`, the contract the compiled accessors and the
+ * cross-dep concretization share (`value` = first, N = values[N], a whole-array hop dead-ends); the terminal step
+ * reads `value` (first), `values[N]` or `values` (all). Values that are not element ids are dropped. A slot read
+ * before a dead end is still reported: its change may revive the channel.
+ */
+export function resolveChildrenChannel(
+    idlookup: Idlookup,
+    objectId: string,
+    steps: CompiledPathStep[],
+): { childIds: string[]; slotIds: string[] } {
+    const slotIds: string[] = [];
+    let current = objectId;
+    for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        const dValue = findFeatureRaw(idlookup, current, step.feature);
+        if (dValue && typeof dValue.id === 'string') slotIds.push(dValue.id);
+        if (i < steps.length - 1) {
+            const next = navigateRefHop(idlookup, current, step.feature, step.take);
+            if (next === null) return { childIds: [], slotIds };
+            current = next;
+            continue;
+        }
+        const vals: unknown[] = Array.isArray(dValue?.values) ? dValue.values : [];
+        const picked = step.take === 'values' ? vals
+            : step.take === 'value' ? vals.slice(0, 1)
+                : vals.slice(step.take, step.take + 1);
+        const childIds: string[] = [];
+        for (const v of picked) {
+            const id = idOf(v);
+            if (id !== null && idlookup[id]) childIds.push(id);
+        }
+        return { childIds, slotIds };
+    }
+    return { childIds: [], slotIds };
+}
+
+/** The composition slot (DValue) of `containerId` that lists `childId`, or null. */
+function compositionSlotOf(idlookup: Idlookup, containerId: string, childId: string): any | null {
+    const dObject = idlookup[containerId];
+    if (!dObject?.features) return null;
+    for (const fid of dObject.features) {
+        const dValue = idlookup[fid];
+        if (!dValue || !Array.isArray(dValue.values)) continue;
+        const feat = idlookup[dValue.instanceof];
+        if (!feat || feat.className !== 'DReference' || !feat.composition) continue;
+        if (dValue.values.includes(childId)) return dValue;
+    }
+    return null;
+}
+
+/** One container's claim: the objects its channel yields after childFilter, in channel order. */
+interface Claim {
+    containerId: string;
+    children: string[];
+    view: CompiledView;
+    /** Through a declared `containment.children` channel (R-GV-1), not the default composition channel. */
+    declared: boolean;
+    /** Canvas order of the container. */
+    order: number;
+}
+
+/**
+ * The single visual parent of every claimed object (R-GV-2, spec addendum §4): the deepest claimant wins, then the
+ * first in canvas order; a link that would close a claim cycle is not set. Depth is the shortest claim path from a
+ * container no one claims (depth 0); a container on a claim cycle unreachable from such a root has depth -1.
+ * Returns the parent map and the objects with two or more claimants. Pure.
+ */
+export function resolveVisualParents(claims: ReadonlyArray<Pick<Claim, 'containerId' | 'children' | 'order'>>): {
+    parentOf: Map<string, string>;
+    multiClaimed: Map<string, string[]>;
+} {
+    const claimantsOf = new Map<string, Array<Pick<Claim, 'containerId' | 'order'>>>();
+    for (const cl of claims) {
+        for (const child of cl.children) {
+            const list = claimantsOf.get(child);
+            if (list) list.push(cl);
+            else claimantsOf.set(child, [cl]);
+        }
+    }
+    const childrenOfContainer = new Map(claims.map(cl => [cl.containerId, cl.children] as const));
+    const depth = new Map<string, number>();
+    const queue: string[] = [];
+    for (const cl of claims) {
+        if (!claimantsOf.has(cl.containerId)) { depth.set(cl.containerId, 0); queue.push(cl.containerId); }
+    }
+    for (let i = 0; i < queue.length; i++) {
+        const id = queue[i];
+        const d = depth.get(id)!;
+        for (const child of childrenOfContainer.get(id) ?? []) {
+            if (!childrenOfContainer.has(child) || depth.has(child)) continue;
+            depth.set(child, d + 1);
+            queue.push(child);
+        }
+    }
+    const rank = (containerId: string) => depth.get(containerId) ?? -1;
+
+    const parentOf = new Map<string, string>();
+    const multiClaimed = new Map<string, string[]>();
+    // Would `parent` becoming the parent of `child` close a cycle through the links already set?
+    const closesCycle = (child: string, parent: string): boolean => {
+        const seen = new Set<string>();
+        for (let cur: string | undefined = parent; cur !== undefined && !seen.has(cur); cur = parentOf.get(cur)) {
+            if (cur === child) return true;
+            seen.add(cur);
+        }
+        return false;
+    };
+    for (const [child, claimants] of claimantsOf) {
+        if (claimants.length > 1) multiClaimed.set(child, claimants.map(c => c.containerId));
+        const ranked = [...claimants].sort((a, b) => rank(b.containerId) - rank(a.containerId) || a.order - b.order);
+        for (const c of ranked) {
+            if (closesCycle(child, c.containerId)) continue;
+            parentOf.set(child, c.containerId);
+            break;
+        }
+    }
+    return { parentOf, multiClaimed };
 }
 
 /** Child object pointers of `objectId` through composition references (D-layer walk). */
@@ -216,23 +354,74 @@ export function buildContainmentModel(
     const walk = walkContainment(idlookup, model.objByVertex.values());
     model.containerOf = walk.containerOf;
     model.walkedObjects = walk.walkedObjects;
+    // Claims (R-GV-1): the default channel is the composition children, as before; a declared channel is resolved
+    // on the D-layer and its slots are recorded for the invalidation signature (R-GV-2, spec addendum §4.2).
+    const claims: Claim[] = [];
+    const channelSlots = new Set<string>();
     for (const [vertexId, objectId] of model.objByVertex) {
         const metaclassId = idlookup[objectId]?.instanceof;
         if (typeof metaclassId !== 'string') continue;
         const cv = resolveIRView(objectId, metaclassId, index, readCtx, idlookup);
         if (!cv || cv.kind !== 'graphVertex' || !cv.containment) continue;
-        const children = containmentChildren(idlookup, objectId)
-            .filter(childId => {
-                try { return cv.containment!.childFilter(readCtx, childId); } catch { return false; }
-            });
+        const channel = cv.containment.channel;
+        let raw: string[];
+        if (channel) {
+            const resolved = resolveChildrenChannel(idlookup, objectId, channel.steps);
+            for (const s of resolved.slotIds) channelSlots.add(s);
+            raw = resolved.childIds;
+        } else {
+            raw = containmentChildren(idlookup, objectId);
+        }
+        const seen = new Set<string>();
+        const children = raw.filter(childId => {
+            if (childId === objectId || seen.has(childId)) return false;
+            seen.add(childId);
+            try { return cv.containment!.childFilter(readCtx, childId); } catch { return false; }
+        });
         model.containers.set(objectId, { objectId, vertexId, collapsible: cv.containment.collapsible });
-        model.childrenOf.set(objectId, children);
-        for (const c of children) {
-            // first containment wins (a child has one parent in a well-formed model)
-            if (!model.parentOf.has(c)) model.parentOf.set(c, objectId);
+        claims.push({ containerId: objectId, children, view: cv, declared: !!channel, order: claims.length });
+    }
+    // Single visual parent (R-GV-2): the innermost claimant wins, then canvas order. For composition channels in a
+    // well-formed model every object has one claimant, so this is the "first containment wins" of before.
+    const { parentOf, multiClaimed } = resolveVisualParents(claims);
+    model.parentOf = parentOf;
+    for (const cl of claims) {
+        model.childrenOf.set(cl.containerId, cl.children.filter(c => parentOf.get(c) === cl.containerId));
+    }
+    model.multiClaimed = multiClaimed;
+    model.channelSlots = channelSlots;
+    model.unclaimed = computeUnclaimed(claims, idlookup, model, readCtx);
+    return model;
+}
+
+/**
+ * Unclaimed objects (R-GV-2, spec addendum §4.1): for every object claimed through a declared channel, the other
+ * values of its composition slot that have a node, pass that claimant's childFilter, and are claimed by no one.
+ * Default (composition) channels contribute nothing. Pure over its inputs.
+ */
+function computeUnclaimed(claims: Claim[], idlookup: Idlookup, model: ContainmentModel, readCtx: ReadCtx): Set<string> {
+    const out = new Set<string>();
+    const claimed = new Set<string>();
+    for (const cl of claims) for (const c of cl.children) claimed.add(c);
+    for (const cl of claims) {
+        if (!cl.declared) continue;
+        const slotsSeen = new Set<string>();
+        for (const child of cl.children) {
+            const owner = model.containerOf?.get(child);
+            if (owner === undefined) continue;
+            const slot = compositionSlotOf(idlookup, owner, child);
+            if (!slot || slotsSeen.has(slot.id)) continue;
+            slotsSeen.add(slot.id);
+            for (const v of slot.values as unknown[]) {
+                const sib = idOf(v);
+                if (sib === null || claimed.has(sib) || !model.vertexByObj.has(sib)) continue;
+                let passes = false;
+                try { passes = cl.view.containment!.childFilter(readCtx, sib); } catch { passes = false; }
+                if (passes) out.add(sib);
+            }
         }
     }
-    return model;
+    return out;
 }
 
 /** objectIds hidden because some ancestor container is collapsed (whole subtrees). */

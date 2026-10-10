@@ -22,6 +22,8 @@ import {
     decorateEdges,
     decorateNodes,
     liftEndpoint,
+    resolveChildrenChannel,
+    resolveVisualParents,
     rowRenderedChildren,
 } from '../irContainment';
 import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
@@ -2376,5 +2378,477 @@ describe('C2 compile: the edge label template and style (R-VP-20 (4), (5))', () 
             if (vid === 'V_c2a') expect(data.irLabelStyle).toEqual({});
             else expect('irLabelStyle' in data).toBe(false);
         }
+    });
+});
+
+/**
+ * R-GV invariant (P-2026-10-10-0105 S1): a graphVertex view that declares none of the R-GV keys compiles and
+ * builds its containment model exactly as before the slice. Written and run green on the code BEFORE the slice
+ * (HEAD b7d131729), then kept green after it: the literals below are what that code produced.
+ */
+describe('graphVertex without R-GV keys: compile and containment unchanged (R-GV invariant)', () => {
+    const COMPILED_KEYS = ['badges', 'borderColor', 'borderStyle', 'borderWidth', 'containment', 'cornerRadius',
+        'crossPaths', 'dependencySet', 'fieldCompartments', 'fill', 'form', 'formSpec', 'ir', 'kind', 'labels',
+        'marker', 'padding', 'predicate', 'priority', 'text', 'viewId'];
+    const CONTAINMENT_KEYS = ['childFilter', 'collapsedBadge', 'collapsedFill', 'collapsedForm', 'collapsible'];
+    const fixtures: Array<[string, GraphVertexViewIR]> = [
+        ['gv_region', { irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Region'], shape: { form: 'rect' }, containment: { collapsible: true } }],
+        ['gv_collapsed', {
+            irVersion: '1.2', kind: 'graphVertex', metaclasses: ['B'],
+            shape: { form: 'rounded', fill: '#ffffff', labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'name' } }] },
+            containment: { collapsible: true, collapsed: { form: 'cylinder', fill: '#eeeeee', badge: { icon: 'x', position: 'tr', visible: true } } },
+        }],
+        ['gv_package', {
+            irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Package'],
+            shape: { form: 'rect', labels: [{ position: 'top', source: { from: 'path', expr: '$name.value' } }] },
+            containment: { childFilter: { op: 'isKind', class: 'State' } },
+        }],
+        ['gv_bare', { irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Pkg'], shape: { form: 'rect' } } as unknown as GraphVertexViewIR],
+    ];
+
+    it('compiles to the same key lists, dependency set and containment values', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        for (const [id, ir] of fixtures) {
+            const cv = compileView(id, ir);
+            expect(Object.keys(cv).sort(), id).toEqual(COMPILED_KEYS);
+            expect(Object.keys(cv.containment!).sort(), id).toEqual(CONTAINMENT_KEYS);
+            expect(cv.visible, id).toBeUndefined();
+            expect(cv.crossPaths, id).toEqual([]);
+            expect(cv.labels.map(l => Object.keys(l).sort()), id).toEqual((ir.shape.labels ?? []).map(() => ['editsName', 'position', 'style', 'text', 'visible']));
+        }
+        const [region, collapsed, pkg, bare] = fixtures.map(([id, ir]) => compileView(id, ir));
+        expect(region.dependencySet).toEqual([]);
+        expect(pkg.dependencySet).toEqual(['name']);
+        expect(region.containment!.collapsible).toBe(true);
+        expect(bare.containment!.collapsible).toBe(true);
+        expect(region.containment!.collapsedForm).toBeNull();
+        expect(collapsed.containment!.collapsedForm!(ctx, 's1')).toBe('cylinder');
+        expect(collapsed.containment!.collapsedFill!(ctx, 's1')).toBe('#eeeeee');
+        expect(collapsed.containment!.collapsedBadge!.icon(ctx, 's1')).toBe('x');
+        expect(pkg.containment!.childFilter(ctx, 's1')).toBe(true);
+        expect(pkg.containment!.childFilter(ctx, 's2')).toBe(true);   // FinalState is a State
+        expect(region.containment!.childFilter(ctx, 's1')).toBe(true);
+    });
+
+    it('builds the same containment model on the composition world', () => {
+        const { model } = containmentWorld();
+        expect([...model.containers.keys()]).toEqual(['r1', 'r2']);
+        expect([...model.containers.values()]).toEqual([
+            { objectId: 'r1', vertexId: 'Vr1', collapsible: true },
+            { objectId: 'r2', vertexId: 'Vr2', collapsible: true },
+        ]);
+        expect([...model.childrenOf.entries()]).toEqual([['r1', ['s_a', 's_b']], ['r2', ['s_c']]]);
+        expect([...model.parentOf.entries()]).toEqual([['s_a', 'r1'], ['s_b', 'r1'], ['s_c', 'r2']]);
+        expect([...model.containerOf!.entries()]).toEqual([['s_a', 'r1'], ['s_b', 'r1'], ['s_c', 'r2']]);
+        expect([...model.objByVertex.entries()]).toEqual([['Vr1', 'r1'], ['Vr2', 'r2'], ['Va', 's_a'], ['Vb', 's_b'], ['Vc', 's_c'], ['Vx', 'ext']]);
+    });
+});
+
+/** The OMG BPMN 2.0 views of the discovery report §G2 and the spec addendum 2026-10-10 §10 (R-GV, S1 fixture). */
+const BPMN_VIEWS: Record<string, AnyViewIR> = {
+    V_process: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Process'], exclusive: true, label: 'Process (not drawn)', visible: false, shape: { form: 'rect' } },
+    V_laneset: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['LaneSet'], exclusive: true, label: 'LaneSet (not drawn)', visible: false, shape: { form: 'rect' } },
+    V_pool_lanes: {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Participant'], exclusive: true, label: 'Pool with lanes', priority: 1,
+        predicate: { op: 'not', arg: { op: 'empty', path: '$processRef.value.$laneSets.values' } },
+        shape: { form: 'rect', fill: '#ffffff', border: { width: 1.5 },
+            labels: [{ position: 'header', orientation: 'vertical', source: { from: 'intrinsic', prop: 'name' } }] },
+        containment: {
+            children: '$processRef.value.$laneSets.values[0].$lanes.values',
+            childFilter: { op: 'isKind', class: 'Lane' },
+            layout: { mode: 'partitions', axis: 'vertical', header: { side: 'w', size: 30 } },
+            membership: { mode: 'forbid' }, edges: 'hide', collapsible: false,
+        },
+    },
+    V_pool_free: {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Participant'], exclusive: true, label: 'Pool without lanes',
+        shape: { form: 'rect', fill: '#ffffff', border: { width: 1.5 },
+            labels: [{ position: 'header', orientation: 'vertical', source: { from: 'intrinsic', prop: 'name' } }] },
+        containment: {
+            children: '$processRef.value.$flowElements.values',
+            childFilter: { op: 'isKind', class: 'FlowNode' },
+            layout: { mode: 'free', header: { side: 'w', size: 30 } },
+            membership: { mode: 'reparent' }, edges: 'hide', collapsible: true,
+        },
+    },
+    V_lane: {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], exclusive: true, label: 'Lane',
+        shape: { form: 'rect', fill: '#ffffff', border: { width: 1 },
+            labels: [{ position: 'header', orientation: 'vertical', source: { from: 'intrinsic', prop: 'name' } }] },
+        containment: {
+            children: '$flowNodeRefs.values',
+            childFilter: { op: 'isKind', class: 'FlowNode' },
+            layout: { mode: 'free', header: { side: 'w', size: 30 } },
+            membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } },
+            edges: 'hide', collapsible: false,
+        },
+    },
+    V_lane_sub: {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], exclusive: true, label: 'Lane with sub-lanes', priority: 1,
+        predicate: { op: 'exists', path: '$childLaneSet.value' },
+        shape: { form: 'rect', fill: '#ffffff', border: { width: 1 },
+            labels: [{ position: 'header', orientation: 'vertical', source: { from: 'intrinsic', prop: 'name' } }] },
+        containment: {
+            children: '$childLaneSet.value.$lanes.values',
+            childFilter: { op: 'isKind', class: 'Lane' },
+            layout: { mode: 'partitions', axis: 'vertical', header: { side: 'w', size: 30 } },
+            membership: { mode: 'forbid' }, edges: 'hide', collapsible: false,
+        },
+    },
+    V_task: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Task'], exclusive: true, label: 'Task',
+        shape: { form: 'rounded', labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'name' } }] } },
+    V_start: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['StartEvent'], exclusive: true, label: 'Start event',
+        defaultSize: { width: 36, height: 36 },
+        shape: { form: 'circle', border: { width: 1.5 }, labels: [{ position: 'outside', anchor: 's', source: { from: 'intrinsic', prop: 'name' } }] } },
+    V_end: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['EndEvent'], exclusive: true, label: 'End event',
+        defaultSize: { width: 36, height: 36 },
+        shape: { form: 'circle', border: { width: 3 }, labels: [{ position: 'outside', anchor: 's', source: { from: 'intrinsic', prop: 'name' } }] } },
+    V_xor: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['ExclusiveGateway'], exclusive: true, label: 'Exclusive gateway',
+        defaultSize: { width: 50, height: 50 },
+        shape: { form: 'diamond', marker: 'x', labels: [{ position: 'outside', anchor: 'n', source: { from: 'intrinsic', prop: 'name' } }] } },
+    V_seqflow: { irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['SequenceFlow'], exclusive: true, label: 'Sequence flow',
+        edge: { source: '$sourceRef.value', target: '$targetRef.value', line: { style: 'solid', width: 1.5 },
+            terminations: { targetEnd: 'closedArrow' }, routing: 'orthogonal', labels: { center: { from: 'intrinsic', prop: 'name' } } } },
+    V_msgflow: { irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['MessageFlow'], exclusive: true, label: 'Message flow',
+        edge: { source: '$sourceRef.value', target: '$targetRef.value', line: { style: 'dashed', width: 1 },
+            terminations: { sourceEnd: 'hollowCircle', targetEnd: 'openArrow' }, routing: 'orthogonal', labels: { center: { from: 'intrinsic', prop: 'name' } } } },
+};
+
+/**
+ * BPMN world in the root form (R-GV-10): every object has a vertex. One pool, one process, one LaneSet with lanes
+ * L1 and L2. L1 lists t1 and g1, L2 lists t2 and t1 (t1 is claimed twice); t3 is in no lane; sf1 is a SequenceFlow;
+ * `nested` sits in flowElements with no vertex. `nodeOrder` is the canvas order.
+ */
+function bpmnWorld(sig: string, opts: { nodeOrder?: string[]; extraViews?: Record<string, AnyViewIR>; patch?: Record<string, any> } = {}) {
+    const cls = (id: string, name: string, ext: string[] = []) => ({ id, name, extends: ext });
+    const ref = (id: string, name: string, composition: boolean) => ({ id, name, className: 'DReference', composition });
+    const obj = (id: string, c: string, features: string[] = []) => ({ id, name: id, instanceof: c, features });
+    const slot = (id: string, r: string, values: unknown[]) => ({ id, instanceof: r, values });
+    const idlookup: Record<string, any> = {
+        C_Participant: cls('C_Participant', 'Participant'), C_Process: cls('C_Process', 'Process'),
+        C_LaneSet: cls('C_LaneSet', 'LaneSet'), C_Lane: cls('C_Lane', 'Lane'),
+        C_FlowElement: cls('C_FlowElement', 'FlowElement'), C_FlowNode: cls('C_FlowNode', 'FlowNode', ['C_FlowElement']),
+        C_Task: cls('C_Task', 'Task', ['C_FlowNode']), C_Xor: cls('C_Xor', 'ExclusiveGateway', ['C_FlowNode']),
+        C_SeqFlow: cls('C_SeqFlow', 'SequenceFlow', ['C_FlowElement']),
+        R_processRef: ref('R_processRef', 'processRef', false), R_flowElements: ref('R_flowElements', 'flowElements', true),
+        R_laneSets: ref('R_laneSets', 'laneSets', true), R_lanes: ref('R_lanes', 'lanes', true),
+        R_flowNodeRefs: ref('R_flowNodeRefs', 'flowNodeRefs', false), R_childLaneSet: ref('R_childLaneSet', 'childLaneSet', true),
+        pool: obj('pool', 'C_Participant', ['s_pool_proc']), s_pool_proc: slot('s_pool_proc', 'R_processRef', ['proc']),
+        proc: obj('proc', 'C_Process', ['s_proc_fe', 's_proc_ls']),
+        s_proc_fe: slot('s_proc_fe', 'R_flowElements', ['t1', 't2', 't3', 'g1', 'sf1', 'nested']),
+        s_proc_ls: slot('s_proc_ls', 'R_laneSets', ['ls']),
+        ls: obj('ls', 'C_LaneSet', ['s_ls_lanes']), s_ls_lanes: slot('s_ls_lanes', 'R_lanes', ['L1', 'L2']),
+        L1: obj('L1', 'C_Lane', ['s_L1_refs']), s_L1_refs: slot('s_L1_refs', 'R_flowNodeRefs', ['t1', 'g1']),
+        L2: obj('L2', 'C_Lane', ['s_L2_refs']), s_L2_refs: slot('s_L2_refs', 'R_flowNodeRefs', ['t2', 't1']),
+        t1: obj('t1', 'C_Task'), t2: obj('t2', 'C_Task'), t3: obj('t3', 'C_Task'), g1: obj('g1', 'C_Xor'),
+        sf1: obj('sf1', 'C_SeqFlow'), nested: obj('nested', 'C_Task'),
+        ...(opts.patch ?? {}),
+    };
+    const objects = ['pool', 'proc', 'ls', 'L1', 'L2', 't1', 't2', 't3', 'g1', 'sf1'];
+    for (const o of objects) idlookup['V' + o] = { id: 'V' + o, model: o };
+    const order = opts.nodeOrder ?? objects;
+    const nodes: any[] = order.map(o => ({ id: 'V' + o, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+    const views = { ...BPMN_VIEWS, ...(opts.extraViews ?? {}) };
+    for (const [vid, ir] of Object.entries(views)) idlookup[vid] = { id: vid, viewpoint: 'VP', ir };
+    const state = { viewpoint: 'VP', viewelements: Object.keys(views), idlookup };
+    const ctx = makeDrawReadCtx(idlookup);
+    const index = getIRIndex(state, sig)!;
+    const model = buildContainmentModel(nodes as any, idlookup, index, ctx);
+    return { idlookup, ctx, index, model, nodes };
+}
+
+describe('R-GV keys compile (spec addendum 2026-10-10 §2)', () => {
+    const gv = (containment: any, extra: any = {}): GraphVertexViewIR => ({
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], shape: { form: 'rect' }, containment, ...extra,
+    });
+    it('compiles a declared channel into steps and adds its features to the dependency set', () => {
+        clearCompileCache();
+        const cv = compileView('gv_ch', gv({ children: '$processRef.value.$laneSets.values[0].$lanes.values' }));
+        expect(cv.containment!.channel).toEqual({
+            expr: '$processRef.value.$laneSets.values[0].$lanes.values',
+            steps: [{ feature: 'processRef', take: 'value' }, { feature: 'laneSets', take: 0 }, { feature: 'lanes', take: 'values' }],
+        });
+        expect(cv.dependencySet).toEqual(['processRef', 'laneSets', 'lanes']);
+        expect(cv.crossPaths.length).toBe(1);
+    });
+    it('throws on a channel that is not a PathExpr, as a bad label path does', () => {
+        clearCompileCache();
+        expect(() => compileView('gv_bad', gv({ children: 'container' }))).toThrow(/invalid PathExpr step/);
+        expect(() => compileView('gv_bad2', gv({ children: '$a.value?.$b' }))).toThrow(/forbidden construct/);
+    });
+    it('ignores an empty or non-string channel (absent)', () => {
+        clearCompileCache();
+        expect('channel' in compileView('gv_e1', gv({ children: '' })).containment!).toBe(false);
+        expect('channel' in compileView('gv_e2', gv({ children: 3 })).containment!).toBe(false);
+    });
+    it('normalizes layout permissively and keeps declared values', () => {
+        clearCompileCache();
+        expect(compileView('gv_l1', gv({ layout: { mode: 'partitions', axis: 'horizontal', header: { side: 'n', size: 28 }, padding: 6 } })).containment!.layout)
+            .toEqual({ mode: 'partitions', axis: 'horizontal', header: { side: 'n', size: 28 }, padding: 6 });
+        expect(compileView('gv_l2', gv({ layout: { mode: 'grid', axis: 'diagonal', header: { side: 'e', size: 10 }, padding: -1 } })).containment!.layout)
+            .toEqual({ mode: 'free', axis: 'vertical', header: null, padding: 0 });
+        expect(compileView('gv_l3', gv({ layout: { mode: 'free', header: { side: 'w', size: 0 } } })).containment!.layout!.header).toBeNull();
+        expect(compileView('gv_l4', gv({ layout: { mode: 'free', header: { side: 'w', size: Infinity } } })).containment!.layout!.header).toBeNull();
+        expect(compileView('gv_l5', gv({ layout: 'partitions' })).containment!.layout).toBeUndefined();
+    });
+    it('normalizes membership permissively and keeps a well-formed create', () => {
+        clearCompileCache();
+        expect(compileView('gv_m1', gv({ membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } } })).containment!.membership)
+            .toEqual({ mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } });
+        expect(compileView('gv_m2', gv({ membership: { mode: 'teleport', create: { ownerKind: '', feature: 'x' } } })).containment!.membership)
+            .toEqual({ mode: 'none' });
+        expect(compileView('gv_m3', gv({ membership: { mode: 'forbid', create: { ownerKind: 'P' } } })).containment!.membership)
+            .toEqual({ mode: 'forbid' });
+        expect(compileView('gv_m4', gv({ membership: null })).containment!.membership).toBeUndefined();
+    });
+    it('keeps a known edges value only', () => {
+        clearCompileCache();
+        expect(compileView('gv_x1', gv({ edges: 'hide' })).containment!.edges).toBe('hide');
+        expect(compileView('gv_x2', gv({ edges: 'show' })).containment!.edges).toBe('show');
+        expect('edges' in compileView('gv_x3', gv({ edges: 'none' })).containment!).toBe(false);
+    });
+    it('compiles visible on a graphVertex (R-GV-9)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('gv_vis', gv({}, { visible: false }));
+        expect(cv.visible!(ctx, 's1')).toBe(false);
+        const cond = compileView('gv_vis2', gv({}, { visible: { when: { op: 'eq', left: '$isInitial.value', right: { kind: 'boolean', value: true } }, then: true, else: false } }));
+        expect(cond.visible!(ctx, 's1')).toBe(true);
+        expect(cond.visible!(ctx, 's2')).toBe(false);
+        expect(cond.dependencySet).toEqual(['isInitial']);
+    });
+    it('sets a header label orientation only when known and on a header label', () => {
+        clearCompileCache();
+        const shape = (labels: any[]) => ({ irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], shape: { form: 'rect', labels }, containment: { layout: { mode: 'free', header: { side: 'w', size: 30 } } } }) as GraphVertexViewIR;
+        const lit = { from: 'literal', text: 'L' } as const;
+        const cv = compileView('gv_o', shape([
+            { position: 'header', orientation: 'vertical', source: lit },
+            { position: 'header', source: lit },
+            { position: 'header', orientation: 'sideways', source: lit },
+            { position: 'top', orientation: 'vertical', source: lit },
+        ]));
+        expect(cv.labels.map(l => l.orientation)).toEqual(['vertical', undefined, undefined, undefined]);
+        expect('orientation' in cv.labels[1]).toBe(false);
+        expect(cv.labels[0].position).toBe('header');
+    });
+});
+
+describe('R-GV children channel and single visual parent (irContainment)', () => {
+    it('resolves the pool channel through processRef, laneSets[0] and lanes, and the lanes through flowNodeRefs', () => {
+        const { model } = bpmnWorld('sig_gv_bpmn_1');
+        expect([...model.containers.keys()]).toEqual(['pool', 'L1', 'L2']);
+        expect(model.childrenOf.get('pool')).toEqual(['L1', 'L2']);
+        expect(model.parentOf.get('L1')).toBe('pool');
+        expect(model.parentOf.get('L2')).toBe('pool');
+    });
+    it('gives a twice-claimed node to the first claimant in canvas order when the depths tie', () => {
+        const a = bpmnWorld('sig_gv_bpmn_2a').model;
+        expect(a.parentOf.get('t1')).toBe('L1');
+        expect(a.childrenOf.get('L1')).toEqual(['t1', 'g1']);
+        expect(a.childrenOf.get('L2')).toEqual(['t2']);
+        expect([...a.multiClaimed!.entries()]).toEqual([['t1', ['L1', 'L2']]]);
+        const b = bpmnWorld('sig_gv_bpmn_2b', { nodeOrder: ['pool', 'proc', 'ls', 'L2', 'L1', 't1', 't2', 't3', 'g1', 'sf1'] }).model;
+        expect(b.parentOf.get('t1')).toBe('L2');
+        expect(b.childrenOf.get('L2')).toEqual(['t2', 't1']);
+        expect(b.childrenOf.get('L1')).toEqual(['g1']);
+        expect([...b.multiClaimed!.entries()]).toEqual([['t1', ['L2', 'L1']]]);
+    });
+    it('gives a node to the innermost claimant whatever the canvas order (a parent lane and its sub-lane)', () => {
+        // Lp lists t1 in flowNodeRefs and owns a childLaneSet whose lane S1 lists t1 too. Lp's view is the leaf view
+        // here (V_lane_sub is dropped), so both Lp and S1 claim t1: S1 is deeper and wins, even before Lp on canvas.
+        const patch = {
+            s_ls_lanes: { id: 's_ls_lanes', instanceof: 'R_lanes', values: ['Lp'] },
+            Lp: { id: 'Lp', name: 'Lp', instanceof: 'C_Lane', features: ['s_Lp_refs', 's_Lp_cls'] },
+            s_Lp_refs: { id: 's_Lp_refs', instanceof: 'R_flowNodeRefs', values: ['t1', 'S1'] },
+            s_Lp_cls: { id: 's_Lp_cls', instanceof: 'R_childLaneSet', values: ['cls'] },
+            cls: { id: 'cls', name: 'cls', instanceof: 'C_LaneSet', features: ['s_cls_lanes'] },
+            s_cls_lanes: { id: 's_cls_lanes', instanceof: 'R_lanes', values: ['S1'] },
+            S1: { id: 'S1', name: 'S1', instanceof: 'C_Lane', features: ['s_S1_refs'] },
+            s_S1_refs: { id: 's_S1_refs', instanceof: 'R_flowNodeRefs', values: ['t1'] },
+            VLp: { id: 'VLp', model: 'Lp' }, VS1: { id: 'VS1', model: 'S1' },
+        };
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), containment: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR).containment, childFilter: undefined } } } as Record<string, AnyViewIR>;
+        const views = { ...BPMN_VIEWS, ...extraViews };
+        delete (views as any).V_lane_sub;
+        const run = (sig: string, order: string[]) => {
+            const idlookup: Record<string, any> = { ...bpmnWorld(sig + '_base').idlookup, ...patch };
+            for (const k of Object.keys(idlookup)) if (idlookup[k]?.viewpoint === 'VP') delete idlookup[k];
+            for (const [vid, ir] of Object.entries(views)) idlookup[vid] = { id: vid, viewpoint: 'VP', ir };
+            const state = { viewpoint: 'VP', viewelements: Object.keys(views), idlookup };
+            const nodes = order.map(o => ({ id: 'V' + o, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+            return buildContainmentModel(nodes as any, idlookup, getIRIndex(state, sig)!, makeDrawReadCtx(idlookup));
+        };
+        for (const [sig, order] of [['sig_gv_inner_a', ['pool', 'Lp', 'S1', 't1']], ['sig_gv_inner_b', ['S1', 't1', 'Lp', 'pool']]] as const) {
+            const m = run(sig, [...order]);
+            expect(m.parentOf.get('Lp'), sig).toBe('pool');
+            expect(m.parentOf.get('S1'), sig).toBe('Lp');
+            expect(m.parentOf.get('t1'), sig).toBe('S1');
+            expect(m.multiClaimed!.get('t1'), sig).toEqual(order.indexOf('Lp') < order.indexOf('S1') ? ['Lp', 'S1'] : ['S1', 'Lp']);
+        }
+    });
+    it('a container listing itself or a node twice claims it once, and does not lose its rank', () => {
+        // The pool claims no lane here, so L1 and L2 are both roots (depth 0). L1 lists itself and t1 twice; L2 lists
+        // t1. A self-claim must not make L1 a claimed container (it would drop to depth -1 and lose t1 to L2).
+        const patch = {
+            s_ls_lanes: { id: 's_ls_lanes', instanceof: 'R_lanes', values: [] },
+            s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['L1', 't1', 't1', 'g1'] },
+            s_L2_refs: { id: 's_L2_refs', instanceof: 'R_flowNodeRefs', values: ['t1'] },
+        };
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), containment: { children: '$flowNodeRefs.values' } } } as Record<string, AnyViewIR>;
+        const { model } = bpmnWorld('sig_gv_self_dup', { patch, extraViews });
+        expect(model.parentOf.get('t1')).toBe('L1');
+        expect(model.parentOf.has('L1')).toBe(false);
+        expect(model.childrenOf.get('L1')).toEqual(['t1', 'g1']);
+        expect([...model.multiClaimed!.entries()]).toEqual([['t1', ['L1', 'L2']]]);
+    });
+    it('lists unclaimed flow nodes: in the process, with a node, passing the lane filter, in no lane', () => {
+        const { model } = bpmnWorld('sig_gv_bpmn_3');
+        // t3 is in no lane; sf1 fails isKind FlowNode; nested has no vertex; t1, t2, g1 are claimed.
+        expect([...model.unclaimed!]).toEqual(['t3']);
+    });
+    it('exposes the slots every declared channel reads, hops included', () => {
+        const { model } = bpmnWorld('sig_gv_bpmn_4');
+        expect([...model.channelSlots!].sort()).toEqual(['s_L1_refs', 's_L2_refs', 's_ls_lanes', 's_pool_proc', 's_proc_ls'].sort());
+    });
+    it('a default composition channel contributes no unclaimed even where its child is listed by another owner', () => {
+        // Malformed on purpose: s_a sits in r1's composition slot and in the slot of `owner`, a plain object walked
+        // first, whose slot also lists s_x. A declared channel would report s_x; the default channel of r1 must not.
+        const base = containmentWorld().idlookup;
+        const idlookup: Record<string, any> = {
+            ...base,
+            C_Owner: { id: 'C_Owner', name: 'Owner', extends: [] },
+            owner: { id: 'owner', name: 'owner', instanceof: 'C_Owner', features: ['vo'] },
+            vo: { id: 'vo', instanceof: 'R_states', values: ['s_a', 's_x'] },
+            s_x: { id: 's_x', name: 'X', instanceof: 'C_State', features: [] },
+            Vo: { id: 'Vo', model: 'owner' }, Vsx: { id: 'Vsx', model: 's_x' },
+        };
+        const nodes = ['Vo', 'Vr1', 'Vr2', 'Va', 'Vb', 'Vc', 'Vsx'].map(id => ({ id, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+        const state = { viewpoint: 'VP', viewelements: ['V_region'], idlookup };
+        const m = buildContainmentModel(nodes as any, idlookup, getIRIndex(state, 'sig_gv_default_unclaimed')!, makeDrawReadCtx(idlookup));
+        expect(m.containerOf!.get('s_a')).toBe('owner');
+        expect(m.unclaimed!.size).toBe(0);
+    });
+    it('a default composition channel contributes no unclaimed and no slots', () => {
+        const { model } = containmentWorld();
+        expect(model.unclaimed!.size).toBe(0);
+        expect(model.channelSlots!.size).toBe(0);
+        expect(model.multiClaimed!.size).toBe(0);
+    });
+    it('breaks a claim cycle: one link is left out, and computeHidden and liftEndpoint terminate', () => {
+        // L1 lists L2, L2 lists L1 (a malformed reference channel): no root reaches them; the second link is refused.
+        const patch = {
+            s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['L2', 't1'] },
+            s_L2_refs: { id: 's_L2_refs', instanceof: 'R_flowNodeRefs', values: ['L1'] },
+            s_ls_lanes: { id: 's_ls_lanes', instanceof: 'R_lanes', values: [] },
+        };
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), containment: { children: '$flowNodeRefs.values' } } } as Record<string, AnyViewIR>;
+        const { model } = bpmnWorld('sig_gv_cycle', { patch, extraViews });
+        const links = ['L1', 'L2'].filter(l => model.parentOf.has(l));
+        expect(links).toEqual(['L2']);
+        expect(model.parentOf.get('L2')).toBe('L1');
+        expect(model.parentOf.get('t1')).toBe('L1');
+        const hidden = computeHidden(model, new Set(['L1']));
+        expect([...hidden].sort()).toEqual(['L2', 't1']);
+        expect(liftEndpoint('t1', model, hidden)).toBe('L1');
+    });
+    it('a claimant on a cycle (depth -1) loses to a root claimant even when it comes first on canvas', () => {
+        // Lc1 and Lc2 claim each other (no root reaches them) and Lc1 also lists t1; the root lane Lr lists t1 too.
+        const patch = {
+            s_ls_lanes: { id: 's_ls_lanes', instanceof: 'R_lanes', values: [] },
+            L1: { id: 'L1', name: 'L1', instanceof: 'C_Lane', features: ['s_L1_refs'] },
+            s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['L2', 't1'] },
+            s_L2_refs: { id: 's_L2_refs', instanceof: 'R_flowNodeRefs', values: ['L1'] },
+            Lr: { id: 'Lr', name: 'Lr', instanceof: 'C_Lane', features: ['s_Lr_refs'] },
+            s_Lr_refs: { id: 's_Lr_refs', instanceof: 'R_flowNodeRefs', values: ['t1'] },
+            VLr: { id: 'VLr', model: 'Lr' },
+        };
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), containment: { children: '$flowNodeRefs.values' } } } as Record<string, AnyViewIR>;
+        const { model } = bpmnWorld('sig_gv_cycle_rank', { patch, extraViews, nodeOrder: ['L1', 'L2', 'Lr', 't1', 'pool'] });
+        expect(model.parentOf.get('t1')).toBe('Lr');
+        expect(model.multiClaimed!.get('t1')).toEqual(['L1', 'Lr']);
+    });
+});
+
+describe('resolveChildrenChannel (R-GV-1)', () => {
+    const steps = (expr: string) => {
+        clearCompileCache();
+        return compileView('ch_' + expr, { irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['X'], shape: { form: 'rect' }, containment: { children: expr } }).containment!.channel!.steps;
+    };
+    it('reads the whole terminal list, the first value, or values[N]', () => {
+        const { idlookup } = bpmnWorld('sig_gv_ch_1');
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.values')).childIds).toEqual(['t2', 't1']);
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.value')).childIds).toEqual(['t2']);
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.values[1]')).childIds).toEqual(['t1']);
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.values[0]')).childIds).toEqual(['t2']);
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.values[5]')).childIds).toEqual([]);
+    });
+    it('navigates a hop by its index, and dead-ends on a whole-list hop', () => {
+        const patch = {
+            s_proc_ls: { id: 's_proc_ls', instanceof: 'R_laneSets', values: ['ls', 'ls2'] },
+            ls2: { id: 'ls2', name: 'ls2', instanceof: 'C_LaneSet', features: ['s_ls2_lanes'] },
+            s_ls2_lanes: { id: 's_ls2_lanes', instanceof: 'R_lanes', values: ['L2'] },
+        };
+        const { idlookup } = bpmnWorld('sig_gv_ch_2', { patch });
+        expect(resolveChildrenChannel(idlookup, 'pool', steps('$processRef.value.$laneSets.values[1].$lanes.values'))).toEqual({
+            childIds: ['L2'], slotIds: ['s_pool_proc', 's_proc_ls', 's_ls2_lanes'],
+        });
+        expect(resolveChildrenChannel(idlookup, 'pool', steps('$processRef.value.$laneSets.value.$lanes.values')).childIds).toEqual(['L1', 'L2']);
+        // A whole-list hop cannot navigate: no children, and the slots read up to the dead end are still reported.
+        expect(resolveChildrenChannel(idlookup, 'pool', steps('$processRef.value.$laneSets.values.$lanes.values'))).toEqual({
+            childIds: [], slotIds: ['s_pool_proc', 's_proc_ls'],
+        });
+    });
+    it('drops values that are not elements, and reads a proxy-shaped value by its id', () => {
+        const patch = { s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['t1', 'ghost', null, 7, { id: 'g1' }] } };
+        const { idlookup } = bpmnWorld('sig_gv_ch_3', { patch });
+        expect(resolveChildrenChannel(idlookup, 'L1', steps('$flowNodeRefs.values')).childIds).toEqual(['t1', 'g1']);
+    });
+    it('stops at a dead end instead of reading on from the object it stopped on', () => {
+        const { idlookup } = bpmnWorld('sig_gv_ch_5');
+        // proc's laneSets cannot be navigated as a whole list; proc also has flowElements, which must not be read.
+        expect(resolveChildrenChannel(idlookup, 'proc', steps('$laneSets.values.$flowElements.values'))).toEqual({
+            childIds: [], slotIds: ['s_proc_ls'],
+        });
+    });
+    it('reads nothing from a missing slot', () => {
+        const { idlookup } = bpmnWorld('sig_gv_ch_4');
+        expect(resolveChildrenChannel(idlookup, 't1', steps('$flowNodeRefs.values'))).toEqual({ childIds: [], slotIds: [] });
+        expect(resolveChildrenChannel(idlookup, 'pool', steps('$nope.value.$lanes.values'))).toEqual({ childIds: [], slotIds: [] });
+    });
+});
+
+describe('resolveVisualParents (R-GV-2), pure', () => {
+    it('sets no parent for an unclaimed container and keeps a parent map that is a forest', () => {
+        const { parentOf, multiClaimed } = resolveVisualParents([
+            { containerId: 'A', children: ['B', 'x'], order: 0 },
+            { containerId: 'B', children: ['x', 'y'], order: 1 },
+            { containerId: 'C', children: ['y'], order: 2 },
+        ]);
+        expect([...parentOf.entries()]).toEqual([['B', 'A'], ['x', 'B'], ['y', 'B']]);
+        expect([...multiClaimed.entries()]).toEqual([['x', ['A', 'B']], ['y', ['B', 'C']]]);
+    });
+    it('refuses a self-closing link', () => {
+        const { parentOf } = resolveVisualParents([{ containerId: 'A', children: ['A'], order: 0 }]);
+        expect(parentOf.size).toBe(0);
+    });
+});
+
+describe('the §G2 BPMN views compile and validate clean (R-GV, spec addendum §10)', () => {
+    it('every view validates with no error and no warning', () => {
+        for (const [vid, ir] of Object.entries(BPMN_VIEWS)) {
+            clearCompileCache();
+            expect(validateIR(vid, ir), vid).toEqual({ ok: true });
+        }
+    });
+    it('the pool and lane views resolve by predicate and priority (D-b, R-GV-12)', () => {
+        const { index, ctx, idlookup } = bpmnWorld('sig_gv_bpmn_5');
+        expect(resolveIRView('pool', 'C_Participant', index, ctx, idlookup)!.viewId).toBe('V_pool_lanes');
+        expect(resolveIRView('L1', 'C_Lane', index, ctx, idlookup)!.viewId).toBe('V_lane');
+        const noLanes = bpmnWorld('sig_gv_bpmn_6', { patch: { s_proc_ls: { id: 's_proc_ls', instanceof: 'R_laneSets', values: [] } } });
+        expect(resolveIRView('pool', 'C_Participant', noLanes.index, noLanes.ctx, noLanes.idlookup)!.viewId).toBe('V_pool_free');
+        // `nested` has no vertex and is claimed all the same, as a composition channel lists vertex-less children
+        // today: the hull draws only children with a node (IRContainmentHulls maps through vertexByObj).
+        expect(noLanes.model.childrenOf.get('pool')).toEqual(['t1', 't2', 't3', 'g1', 'nested']);
     });
 });

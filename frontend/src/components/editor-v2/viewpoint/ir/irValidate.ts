@@ -10,8 +10,12 @@
  * is a cache hit.
  */
 
-import { compileView, compileEdgeView, compileRowView, LABEL_ANCHORS, TEXT_TRANSFORMS } from './irCompile';
+import {
+    compileView, compileEdgeView, compileRowView, LABEL_ANCHORS, TEXT_TRANSFORMS,
+    CHANNEL_EDGES, HEADER_SIDES, LABEL_ORIENTATIONS, LAYOUT_MODES, MEMBERSHIP_MODES, PARTITION_AXES,
+} from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
+import { parsePathExpr } from './pathExpr';
 import { isUsableEndpointExpr } from './edgeEndpoints';
 import { authoredCornerRadius } from './shapeRegistry';
 import { usableSizeAxis } from '../../nodes/nodeSizing';
@@ -98,6 +102,8 @@ function terminationEndError(t: unknown): { read: unknown } | null {
  */
 export const VALID_LABEL_POSITIONS: Record<LabelPosition, true> = {
     top: true, center: true, inside: true, bottom: true, outside: true,
+    // R-GV-5: legal only on a graphVertex whose containment.layout declares a header band (rule below).
+    header: true,
 };
 
 /**
@@ -276,7 +282,105 @@ function endLabelError(src: unknown, where: string): string | null {
     return isEndTextSource(src) ? null : `[ir] ${where} must be a text source ({from: 'literal', text} | {from: 'path', expr} | {from: 'intrinsic', prop}), or an end label {multiplicity?, role?} of them, or absent for no end label, read ${readOf(src)}`;
 }
 
-export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: false; error: string } {
+const has = (vocabulary: Record<string, true>, v: unknown): boolean =>
+    typeof v === 'string' && Object.prototype.hasOwnProperty.call(vocabulary, v);
+const FEATURE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * The R-GV keys of a graphVertex's `containment` (spec addendum 2026-10-10 §2), authoring-time by the R-B9-bis
+ * criterion: the compile reads an out-of-vocabulary value as its default (compileContainmentLayout,
+ * compileContainmentMembership), this rule refuses it. Read as unknown for the reason given at `routing` below.
+ * Whether a channel's terminal feature is containment is a metamodel fact this module cannot see: the panel checks it.
+ */
+function containmentKeysError(ir: AnyViewIR): string | null {
+    if (ir.kind !== 'graphVertex') return null;
+    const c: unknown = (ir as { containment?: unknown }).containment;
+    if (!isPlainObject(c)) return null;
+
+    const children = c.children;
+    if (children !== undefined) {
+        if (typeof children !== 'string' || children === '') {
+            return `[ir] containment.children must be a non-empty PathExpr, or absent for the containment children, read ${readOf(children)}`;
+        }
+        if (children === CONTAINER_ENDPOINT) {
+            return `[ir] containment.children cannot be '${CONTAINER_ENDPOINT}': the token is an edge endpoint only (R-B13)`;
+        }
+        let steps: ReturnType<typeof parsePathExpr>['steps'];
+        try { steps = parsePathExpr(children).steps; } catch (e) { return e instanceof Error ? e.message : String(e); }
+        const wholeHop = steps.slice(0, -1).findIndex(s => s.take === 'values');
+        if (wholeHop !== -1) {
+            return `[ir] containment.children cannot navigate through a whole list: hop ${wholeHop + 1} ($${steps[wholeHop].feature}) reads .values; choose values[N] (for example values[0]). Read ${JSON.stringify(children)}`;
+        }
+    }
+
+    const layout = c.layout;
+    if (layout !== undefined) {
+        if (!isPlainObject(layout)) return `[ir] containment.layout must be an object { mode, axis?, header?, padding? }, or absent for free, read ${readOf(layout)}`;
+        if (!has(LAYOUT_MODES, layout.mode)) return `[ir] containment.layout.mode must be one of ${Object.keys(LAYOUT_MODES).join(' | ')}, read ${readOf(layout.mode)}`;
+        if (layout.axis !== undefined) {
+            if (layout.mode !== 'partitions') return `[ir] containment.layout.axis applies to partitions only, read on ${readOf(layout.mode)}`;
+            if (!has(PARTITION_AXES, layout.axis)) return `[ir] containment.layout.axis must be one of ${Object.keys(PARTITION_AXES).join(' | ')}, or absent for vertical, read ${readOf(layout.axis)}`;
+        }
+        const header = layout.header;
+        if (header !== undefined) {
+            if (!isPlainObject(header) || !has(HEADER_SIDES, header.side)
+                || !(typeof header.size === 'number' && Number.isFinite(header.size) && header.size > 0)) {
+                return `[ir] containment.layout.header must be { side: ${Object.keys(HEADER_SIDES).join(' | ')}, size: a finite number > 0 (px) }, or absent for no band, read ${readOf(header)}`;
+            }
+        }
+        const padding = layout.padding;
+        if (padding !== undefined && !(typeof padding === 'number' && Number.isFinite(padding) && padding >= 0)) {
+            return `[ir] containment.layout.padding must be a finite number >= 0 (px), or absent for 0, read ${readOf(padding)}`;
+        }
+    }
+
+    const membership = c.membership;
+    if (membership !== undefined) {
+        if (!isPlainObject(membership)) return `[ir] containment.membership must be an object { mode, create? }, or absent for none, read ${readOf(membership)}`;
+        if (!has(MEMBERSHIP_MODES, membership.mode)) return `[ir] containment.membership.mode must be one of ${Object.keys(MEMBERSHIP_MODES).join(' | ')}, read ${readOf(membership.mode)}`;
+        if (membership.mode === 'reference' && children === undefined) {
+            return `[ir] containment.membership.mode 'reference' edits the channel's list: declare containment.children`;
+        }
+        const create = membership.create;
+        if (create !== undefined) {
+            if (membership.mode !== 'reference') return `[ir] containment.membership.create applies to the reference mode only, read on ${readOf(membership.mode)}`;
+            if (!isPlainObject(create) || typeof create.ownerKind !== 'string' || create.ownerKind === ''
+                || typeof create.feature !== 'string' || !FEATURE_NAME.test(create.feature)) {
+                return `[ir] containment.membership.create must be { ownerKind: a metaclass name, feature: a feature name }, read ${readOf(create)}`;
+            }
+        }
+    }
+
+    if (c.edges !== undefined && !has(CHANNEL_EDGES, c.edges)) {
+        return `[ir] containment.edges must be one of ${Object.keys(CHANNEL_EDGES).join(' | ')}, or absent for show, read ${readOf(c.edges)}`;
+    }
+
+    const resizable: unknown = (ir as { resizable?: unknown }).resizable;
+    if (resizable !== undefined && typeof resizable !== 'boolean') {
+        return `[ir] resizable must be a boolean, or absent for the form's default, read ${readOf(resizable)}`;
+    }
+    return null;
+}
+
+/**
+ * Warnings: legal views the author should look at, never a refusal (the commit goes through).
+ * D-c (R-GV-3): a graphVertex whose `children`-source compartment and default channel read the same composition
+ * children; the row wins at render, so the containment channel draws none of the objects the rows draw.
+ */
+function warningsOf(ir: AnyViewIR): string[] {
+    const out: string[] = [];
+    if (ir.kind !== 'graphVertex') return out;
+    const gv = ir as { fieldCompartments?: unknown; containment?: { children?: unknown } };
+    const rows = Array.isArray(gv.fieldCompartments)
+        && gv.fieldCompartments.some(fc => isPlainObject(fc) && isPlainObject(fc.source) && fc.source.from === 'children');
+    if (rows && gv.containment?.children === undefined) {
+        out.push('[ir] a children compartment and the containment channel both read the composition children: the rows win, '
+            + 'and the objects they draw leave the container (R-GV-3). Declare containment.children to give the container another channel.');
+    }
+    return out;
+}
+
+export function validateIR(viewId: string, ir: AnyViewIR): { ok: true; warnings?: string[] } | { ok: false; error: string } {
     // Predicate operator vocabulary (R-MK-11): the second authoring-time rule after
     // the endpoint one, by the same R-B9-bis criterion, and the only one that is not
     // edge-specific. Without it an operator outside the union falls into
@@ -398,9 +502,28 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
                         error: `[ir] shape.labels[${i}].anchor must be one of ${Object.keys(LABEL_ANCHORS).join(' | ')}, or absent for 's' (below), read ${JSON.stringify(anchor)}`,
                     };
                 }
+                // Header label (R-GV-5): only where a band exists, and its orientation only on it.
+                if (position === 'header') {
+                    const band: unknown = ir.kind === 'graphVertex'
+                        ? (ir as { containment?: { layout?: { header?: unknown } } }).containment?.layout?.header : undefined;
+                    if (!isPlainObject(band)) {
+                        return { ok: false, error: `[ir] shape.labels[${i}].position 'header' needs a graphVertex with containment.layout.header` };
+                    }
+                }
+                const orientation: unknown = labels[i]?.orientation;
+                if (orientation !== undefined) {
+                    if (position !== 'header') return { ok: false, error: `[ir] shape.labels[${i}].orientation applies to a header label only, read on ${JSON.stringify(position)}` };
+                    if (!has(LABEL_ORIENTATIONS, orientation)) {
+                        return { ok: false, error: `[ir] shape.labels[${i}].orientation must be one of ${Object.keys(LABEL_ORIENTATIONS).join(' | ')}, or absent for horizontal, read ${JSON.stringify(orientation)}` };
+                    }
+                }
             }
         }
     }
+
+    // The R-GV keys of a graphVertex's containment (spec addendum 2026-10-10 §2).
+    const containmentError = containmentKeysError(ir);
+    if (containmentError !== null) return { ok: false, error: containmentError };
 
     // Read as unknown on purpose: the values this rule exists to catch (the empty
     // string of a Select placeholder, an AI provider's guess, a direct store edit)
@@ -480,7 +603,9 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
         if (ir.kind === 'edge') compileEdgeView(viewId, ir as EdgeViewIR);
         else if (ir.kind === 'row') compileRowView(viewId, ir as RowViewIR);
         else compileView(viewId, ir);
-        return { ok: true };
+        // Warnings ride on success only, and only when there is one, so a clean view still reads `{ ok: true }`.
+        const warnings = warningsOf(ir);
+        return warnings.length > 0 ? { ok: true, warnings } : { ok: true };
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
