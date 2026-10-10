@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-1230
 Chat: C-2026-10-10-1223
 Lane: fast (one function in one file, root cause already read by the chat). Phase 1 short, then Phase 2 in cascade. Tier: light, on Juri's word of 2026-10-10 («nel caso usa modello semplice», RC-32).
 Depends: P-2026-10-07-0950
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane fix/182-append-composition · 9e6ecb9cf
 Limite: 60 minuti
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
