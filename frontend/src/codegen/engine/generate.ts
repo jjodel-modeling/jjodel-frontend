@@ -12,7 +12,10 @@
  *
  * The context: the globals, then `stc`, the read-only view of the model's STC roles (codegen/stcAccess.ts), `null`
  * when the metamodel binds none. Its element lists are the pool's handles; `trigger`, `source`, `target`, `guard`
- * and `actions` are JjEL functions of one element. The context's Text host and read observer are an `OriginHost`.
+ * and `actions` are JjEL functions of one element. Then `target`, the active target profile, JavaScript in the
+ * pilot (codegen/target/js/access.ts, R-GEN-16 provisional): its runtime, the initial state and the compiled net,
+ * and the printer's guards, actions and equations; `null` with `stc`. The context's Text host and read observer are
+ * an `OriginHost`.
  *
  * Templates never write: JjEL has no assignment, and nothing here writes the lookup or the record.
  *
@@ -22,6 +25,7 @@
 import { EvaluationContext, JjelEvaluator, createFunction } from '../../jjel';
 import type { JjelValue } from '../../jjel';
 import { stcAccess } from '../stcAccess';
+import { jsTarget } from '../target/js/access';
 import type { StcElement, StcView } from '../stcAccess';
 import { OriginHost, TemplateSources } from './origin';
 import { registerTemplates } from './templates';
@@ -81,7 +85,7 @@ export function generate(
     }
     const view = stcAccess<JjelValue>(lookup, modelId, id => handles.get(id) ?? null);
 
-    const ctx = new EvaluationContext({ ...globals, stc: view ? stcValue(view) : null });
+    const ctx = new EvaluationContext({ ...globals, stc: view ? stcValue(view) : null, target: view ? jsTarget(globals, lookup, modelId) : null });
     const sources = new TemplateSources();
     const host = new OriginHost(lookup, sources);
     ctx.textHost = host;
