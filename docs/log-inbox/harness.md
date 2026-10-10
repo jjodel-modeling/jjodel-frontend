@@ -591,3 +591,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-10 20:20
 
 **Ticket** (low, found here): `resolved.txt` survives a `resume`. A resolved lane resumed and blocked again reads `resolved` in `status` and on its card until the file is removed by hand. Inherited from the branch semantics (written once, never cleared); not changed in this lane.
+
+## 2026-10-10 — merge: lane-run-resolve into alfonso-frontend-jjtl (P-2026-10-10-2042)
+**Prompt**: `claude_2026-10-10_2042_prompt_merge_lane-run-resolve.md`, a direct merge by `lane-run merge --direct`, no session: `lane-run-resolve` at `0933ebe92` into `alfonso-frontend-jjtl`, merge base `c22fc0ec5`, 3 commits on the branch side.
+**Files touched**: merge `6a8065809`: 7 files from the branch side (`docs/HARNESS-DOCS.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_2020_prompt_lane_run_resolve.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-tracking.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6a8065809` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8102 tests in 332 files, 9 red at import, hooks 525; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: not applicable: CLI only (lane-run resolve and status); gates green, 8102 tests
+**Notes**: Rollback tag `pre-lane-run-resolve` on `2cc5af89a` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2042/result.json`.
+**Prompt document name**: 2026-10-10 20:42
