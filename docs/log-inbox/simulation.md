@@ -748,3 +748,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Prompt document name**: 2026-10-10 16:45
 
 **Class search** (P-2026-10-10-1645): 47 class names of the block, searched in every `.tsx`, `.ts` and `.scss` under `frontend/src/` (outside the block's own lines), BSD grep with a word end after the name. No hit, deleted (26): palette, palette-item, group, center, grid, look, tile, tile--input, tile--output, tile--selected, tile--flagged, tile-head, tile-name, tile-flag, tile-caption, table, table-wrap, table-empty, row--flagged, inspector, inspector-head, inspector-title, cell-text, status, status--ok, status--flagged. With hits, kept (21), all in `SimBoardEditor.tsx` unless said: cell 1, check 2, empty 2 (and a rule of `SimBoardEditor.scss` outside the block), field 9, field-label 8, hint 9 (8 and a rule outside the block), icon 1, icon-choice 2, icon-choices 1, icon-current 1, icons 1, key 1, key-digit 1, keys 1, mono 4 (3 and a rule outside the block), pair 1, style 1, swatch 2, swatch--auto 1, swatches 2 (1 and a rule outside the block), expr 1: each is a class the Options form or the menus still render. Compiled CSS 173 rules to 136, none added; every rule out is one of the deleted selectors.
+
+## 2026-10-10 — merge: sim-board-keys into alfonso-frontend-jjtl (P-2026-10-10-1726)
+**Prompt**: `claude_2026-10-10_1726_prompt_merge_sim-board-keys.md`, a direct merge by `lane-run merge --direct`, no session: `sim-board-keys` at `88f6093a4` into `alfonso-frontend-jjtl`, merge base `3bf8d201a`, 6 commits on the branch side.
+**Files touched**: merge `bd97bae49`: 7 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-10_1645_prompt_sim_board_editor_keys_css.md`, `frontend/scripts/probe/sim-board-editor-keys.ts`, `frontend/src/components/editor-v2/sim/SimBoardEditor.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBoardEditorLayout.test.ts`, `frontend/src/components/editor-v2/sim/simBoardEditorLayout.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bd97bae49` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7798 tests in 318 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 already passed on the lane crops (P-2026-10-10-1645); all merge gates green
+**Notes**: Rollback tag `pre-sim-board-keys` on `ae50f7459` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1726/result.json`.
+**Prompt document name**: 2026-10-10 17:26
