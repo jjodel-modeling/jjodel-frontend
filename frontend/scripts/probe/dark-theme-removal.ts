@@ -51,6 +51,8 @@ type Seed = typeof SEEDS[number];
 const seedName = (s: Seed) => (s === null ? 'none' : s);
 /** The one dark rule this lane leaves: critical zone, no go-ahead (StructureGroups.scss:82-84). */
 const ALLOWED_DARK = /\.ir-structure-group__hidden/;
+/** A selector part that names the app's dark theme (the `.dark` class alone is a homonym). */
+const THEME_DARK = /\[data-theme\s*=\s*["']?dark["']?\]|\.theme-dark(?![\w-])|\.dark-theme(?![\w-])/;
 
 /** Sorted-key serialization: the order in which a browser lists computed custom properties is not stable across runs. */
 const canon = (v: unknown): string => JSON.stringify(v, (_k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x));
@@ -172,7 +174,10 @@ for (const target of ['dashboard', ...SCENES.map((x) => x.name), 'settings']) {
             check(`${tag}: opening Settings writes no theme`, r.stored === s, `stored=${r.stored}`);
             continue;
         }
-        const left = r.walk.darkParts.filter((p: string) => !ALLOWED_DARK.test(p));
+        // `.dark` alone is a homonym (Btn / CommandBar / tooltip button styles, report §A.4): it is in the page-side
+        // regex only so that a mixed list like `[data-theme="dark"] .x, .dark .x` is caught; a rule left is a theme
+        // rule only if it names the theme.
+        const left = r.walk.darkParts.filter((p: string) => THEME_DARK.test(p) && !ALLOWED_DARK.test(p));
         console.log(`MEAS  ${tag}  attr=${r.attr} stored=${r.stored} editors=${JSON.stringify(r.editors)} nodes=${r.nodes} sheets=${r.walk.sheets} unreadable=${r.walk.unreadable} darkParts=${r.walk.darkParts.length} (left beyond StructureGroups: ${left.length}) darkMatching=${r.walk.darkMatching.length} mediaDark=${r.walk.mediaDark.length} els=${r.els ? r.els.length : '-'}`);
         check(`${tag}: no dark rule left but the critical-zone one`, left.length === 0, left.slice(0, 3).join(' ; '));
         check(`${tag}: no dark selector matches an element`, r.walk.darkMatching.length === 0, r.walk.darkMatching.slice(0, 3).join(' ; '));
