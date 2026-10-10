@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-10-1851
 Chat: —
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/log-inbox/harness.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane board-kindof-merges · 43231854c · verifica visiva passata 2026-10-10 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-kindof`, branch `board-kindof-merges`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-kindof`, branch `board-kindof-merges`, `git log -1` is the commit that adds this file (its parent `f4965b72f`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-10-1851 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
