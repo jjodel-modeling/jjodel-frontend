@@ -5885,6 +5885,14 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   **The report's three open questions.** MessageFlow ends: the metamodel's `InteractionNode` typing (Participant,
   Task, StartEvent, EndEvent) is the OMG restriction, no extra check. A pool without `processRef` draws as a thin
   band (slice S2). Lanes are `collapsible: false` and persist no `irCollapsed`.
+- **R-GV-15** (2026-10-10, decided by Alfonso 2026-10-10 13:25, evidence: measured, verified: probe, reversible: branch).
+  **Hierarchical UML state machines are a target of graphVertex, beside BPMN pools and lanes.** `containment.layout`
+  gains `frame: 'hull' | 'self'` (free only, absent = `hull`, today's) and `separator: 'solid' | 'dashed'` (partitions
+  only, absent = `solid`): a composite state is the box of its substates, orthogonal regions share a dashed line. A
+  selected container that holds layout containers stays under them; an object-as-edge with a collapsed end is lifted.
+  Bordered nodes (entry and exit points, history on the border) are deferred, the next capability to open if
+  statecharts are pursued in full. Spec addendum §11; fixture `frontend/scripts/probe/statechart-fixture.ts` (slice
+  S2b).
 
 ## Superate
 

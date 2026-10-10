@@ -167,3 +167,30 @@ A metaclass whose drawing changes with its structure (a lane with or without sub
 ## 10. Worked example
 
 The OMG BPMN 2.0 views of the discovery report, §G2, with the membership of the pool without lanes written `{ "mode": "reparent" }` (its channel ends on `Process.flowElements`, a containment slot) and the leaf lane's channel filtered to `FlowNode`. They are the fixture `BPMN_VIEWS` of `viewpoint/ir/__tests__/ir.test.ts`, which asserts that they compile and validate clean.
+
+## 11. Self-framing containers and separators (2026-10-10, slice S2b)
+
+**Decided**: Alfonso, 2026-10-10 13:25 (chat C-2026-10-10-0057): graphVertex also carries hierarchical UML state machines, the second fixture of the front (`frontend/scripts/probe/statechart-fixture.ts`). Registered as R-GV-15. This section is new; §1 to §10 are not edited.
+
+In UML the visual containment is the model containment (`State.regions`, `Region.subvertex`): the channel exists. What a statechart adds is visual: a composite state *is* the rounded box that holds its substates and grows with them, and orthogonal regions are separated by dashed lines.
+
+```typescript
+type ContainerFrame = 'hull' | 'self';
+type PartitionSeparator = 'solid' | 'dashed';
+
+interface ContainmentLayout {
+    // ... §2.2
+    frame?: ContainerFrame;          // free only; absent = 'hull'
+    separator?: PartitionSeparator;  // partitions only; absent = 'solid'
+}
+```
+
+1. **`frame: 'self'`** (`free` only). The container's node is the bounding box of its visible children, plus `padding` on every side, plus the header band on its side; an inner self-framing child counts by its own frame. The children do not move: the frame follows them, and its position is derived, not stored. A container sized by hand (`isResized`) keeps its stored size as a floor that its children's box can only raise; while it is being resized, its live size is that floor. Pure geometry: `viewpoint/ir/irFrame.ts`.
+2. **`frame: 'hull'`** (absent) keeps today's drawing, unchanged: a container with no `layout` is drawn with the hull around it; one with a `layout` is its own box at its stored size, with no hull (S2, decision 4). Partitions are always their own frame, so `frame` is refused on them.
+3. **Collapsed**, a self-framing container keeps the top-left its hidden children's frame gives it and draws at its own collapsed size, with its badge. An edge, a UML transition drawn as an object-as-edge included, whose end is hidden by the collapse is lifted to the nearest drawn container (§3, spec v1.2 §8), deduplicated by pair.
+4. **Dragging** a self-framing container moves every descendant by its delta, the S3 mechanism: on screen during the gesture, in the records at its end. Its rest position is its frame. A partitions container nested inside it, and the frames inside that, move with it.
+5. **Selection**: a layout container that holds layout containers (a pool, an orthogonal state, a frame around frames) gives back the 1000 React Flow adds to a selected node's z-index, so selecting it never covers its own lanes, regions and inner frames. One that holds none (a leaf lane, a frame of simple states) keeps the lift, which puts its resize line above its neighbour's box (the paired lane resize of §7.5).
+6. **`separator: 'dashed'`** (`partitions` only). The line between two partitions is the trailing border of the earlier one (S2), drawn 1 px dashed whatever the partition's own border; the later one drops its leading border, as before. UML orthogonal regions use it with a transparent region border and no band. `solid` (absent) is today's line.
+7. **Validation**: `frame` in `hull | self`, refused on `partitions`; `separator` in `solid | dashed`, refused on `free`. **Render permissive**: the compile keeps `frame` only as `self` on `free` and `separator` only as `dashed` on `partitions`, and leaves the key out otherwise, so a layout without them compiles to the keys it had.
+8. **The statechart views** (D-b, §9): one `State` view for exactly one region, channel `$regions.values[0].$subvertex.values`, `frame: 'self'`, band `n`; one for two or more regions, `partitions`, `axis: 'vertical'`, `separator: 'dashed'`, band `n`; one for a simple state; `Region` as the partition child (`free`, transparent border) and, as the only region of a state, not drawn. The fixture tells the two Region cases apart through `Region.state`, UML's owner end of `State.regions`, because a predicate cannot climb to the owner; the reference edge it draws is styled clear, since an edge view cannot hide a reference edge. Transitions are object-as-edge, labelled `trigger [guard]` as the derived statecharts are (P-2026-10-03-1304, Q6).
+9. **Out of scope**: bordered nodes (entry and exit points, a history pseudostate on the border), like BPMN boundary events. The next capability to open if statecharts are pursued in full.
