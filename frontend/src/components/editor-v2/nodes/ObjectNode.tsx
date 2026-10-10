@@ -35,7 +35,7 @@ import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
 import { rendererForWidget } from '../viewpoint/ir/widgetRenderer';
 import type { LabelAnchor, VertexViewIR } from '../viewpoint/ir/irTypes';
 import IRNodeContent, { resolveCollapsedBadge, resolveNodeForm } from '../viewpoint/ir/IRNodeContent';
-import { containmentChildren } from '../viewpoint/ir/irContainment';
+import { containmentChildren, resolveChildrenChannel } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
 import { getSimNodeState, isSimActive, useSimVersion } from '../sim/simRunState';
 import { initialMarkingFeature, isInitialMarkingRow } from '../sim/simCanvasState';
@@ -125,7 +125,11 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const { scheduleLayoutSave } = useLayoutAutosave();
     const irChildCount = useSelector((state: any) => {
         if (!irResolution || irResolution.compiled.kind !== 'graphVertex') return 0;
-        return containmentChildren(state.idlookup ?? {}, irResolution.objectId).length;
+        // A declared children channel (R-GV-1) is what the container holds; without one, its composition children.
+        const channel = irResolution.compiled.containment?.channel;
+        return channel
+            ? resolveChildrenChannel(state.idlookup ?? {}, irResolution.objectId, channel.steps).childIds.length
+            : containmentChildren(state.idlookup ?? {}, irResolution.objectId).length;
     });
 
     // Live metaclass name from Redux (reacts to metamodel changes)

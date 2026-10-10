@@ -19,7 +19,9 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
 import { findFeatureRaw, navigateRefHop } from './irReadCtx';
-import type { CompiledPathStep, CompiledView } from './irTypes';
+import type { ChannelEdges, CompiledContainmentLayout, CompiledPathStep, CompiledView } from './irTypes';
+import { layoutPartitions, type PartitionSpec } from './irPartitions';
+import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
 import type { IRViewpointIndex } from './irResolveCore';
 import { resolveIRView } from './irResolveCore';
 import { assignGeometricHandles } from './irEdgeViews';
@@ -30,6 +32,13 @@ export interface ContainerInfo {
     objectId: string;
     vertexId: string;
     collapsible: boolean;
+    /** R-GV keys of the container's view, each present only when declared (so a legacy container keeps its three). */
+    /** Declared `containment.layout` (R-GV-5). */
+    layout?: CompiledContainmentLayout;
+    /** Declared `containment.edges` (R-GV-4). */
+    edges?: ChannelEdges;
+    /** Declared channel (R-GV-1): its feature when single-hop, null when multi-hop. Absent = the composition channel. */
+    channelFeature?: string | null;
 }
 
 export interface ContainmentModel {
@@ -299,7 +308,8 @@ function indexHasRowCompartments(index: IRViewpointIndex): boolean {
  * Objects hidden because they are rendered as inline rows in some vertex view's
  * `children` compartment (Fase R2). SSOT via rowRenderedChildren, shared with the
  * renderer. Fast path: empty set (no per-node work) when no view declares a children
- * compartment. Only vertex views host row compartments (graphVertex uses hulls).
+ * compartment. A graphVertex hosts them too since S2 (D-c, R-GV-3: the row wins over the
+ * containment channel, which then leaves the object out, buildContainmentModel).
  */
 export function computeRowHiddenChildren(
     nodes: Node[],
@@ -316,7 +326,7 @@ export function computeRowHiddenChildren(
         const metaclassId = idlookup[objectId]?.instanceof;
         if (typeof metaclassId !== 'string') continue;
         const cv = resolveIRView(objectId, metaclassId, index, readCtx, idlookup);
-        if (!cv || cv.kind !== 'vertex') continue;
+        if (!cv || (cv.kind !== 'vertex' && cv.kind !== 'graphVertex')) continue;
         for (const childId of rowRenderedChildren(cv, readCtx, objectId, idlookup)) hidden.add(childId);
     }
     return hidden;
@@ -372,13 +382,20 @@ export function buildContainmentModel(
         } else {
             raw = containmentChildren(idlookup, objectId);
         }
+        // D-c (R-GV-3): what a `children` row compartment of this same view draws is a row, and leaves the channel.
+        const rows = cv.fieldCompartments.some(fc => fc.source === 'children')
+            ? new Set(rowRenderedChildren(cv, readCtx, objectId, idlookup)) : null;
         const seen = new Set<string>();
         const children = raw.filter(childId => {
-            if (childId === objectId || seen.has(childId)) return false;
+            if (childId === objectId || seen.has(childId) || rows?.has(childId)) return false;
             seen.add(childId);
             try { return cv.containment!.childFilter(readCtx, childId); } catch { return false; }
         });
-        model.containers.set(objectId, { objectId, vertexId, collapsible: cv.containment.collapsible });
+        const info: ContainerInfo = { objectId, vertexId, collapsible: cv.containment.collapsible };
+        if (cv.containment.layout) info.layout = cv.containment.layout;
+        if (cv.containment.edges) info.edges = cv.containment.edges;
+        if (channel) info.channelFeature = channel.steps.length === 1 ? channel.steps[0].feature : null;
+        model.containers.set(objectId, info);
         claims.push({ containerId: objectId, children, view: cv, declared: !!channel, order: claims.length });
     }
     // Single visual parent (R-GV-2): the innermost claimant wins, then canvas order. For composition channels in a
@@ -538,5 +555,198 @@ export function decorateEdges(edges: Edge[], model: ContainmentModel, hidden: Se
         if (nodesById) lifted = assignGeometricHandles(lifted, nodesById, out);
         out.push(lifted);
     }
+    return changed ? out : edges;
+}
+
+/** z-index of a container that declares a layout, plus its depth (R-GV-6): under the edges (z 0) and the flow nodes,
+ *  even when selected (React Flow lifts a selected node by 1000), deeper containers above shallower ones. */
+export const LAYOUT_CONTAINER_Z = -2000;
+/** Space kept around the children of a partition that is not sized by hand, px (spec addendum §7.1, content). */
+export const PARTITION_CONTENT_MARGIN = 16;
+/** Class of every partition after the first, by axis: it drops its leading border, which the previous partition's
+ *  trailing border already draws, so two lanes share one line (irStyle.ts). Geometry unchanged. */
+export const PARTITION_NEXT_CLASS = { vertical: 'ir-partition-next-v', horizontal: 'ir-partition-next-h' } as const;
+const PARTITION_CLASSES = new Set<string>(Object.values(PARTITION_NEXT_CLASS));
+
+type Box = { x: number; y: number; w: number; h: number };
+const sizeOf = (n: Node): { w: number; h: number } => ({
+    w: (n.measured?.width ?? n.width ?? 160) as number,
+    h: (n.measured?.height ?? n.height ?? 60) as number,
+});
+
+/** Depth of a container in the visual-parent forest (R-GV-2): 0 for one no container draws. */
+function depthIn(model: ContainmentModel, objectId: string): number {
+    let d = 0;
+    const seen = new Set<string>();
+    for (let c = model.parentOf.get(objectId); c !== undefined && !seen.has(c); c = model.parentOf.get(c)) {
+        seen.add(c);
+        d++;
+    }
+    return d;
+}
+
+/**
+ * The S2 presentation pass of the containers that declare a `layout` (R-GV-5..7, spec addendum §3 and §7), in session
+ * only: nothing here reaches the D-layer (R-LAY-4, a derived box). Pure.
+ *
+ * - Every such container, and every partition of a `partitions` container, goes under the edges and the flow nodes:
+ *   z-index `LAYOUT_CONTAINER_Z` plus its depth.
+ * - A `partitions` container stacks its visible children along its axis (`irPartitions.layoutPartitions`), from where
+ *   its node is now (a drag moves it, R-GV-6) and its record under `layoutKey` (`isResized` and its size, R-LAY-14).
+ *   A partition sized by hand keeps its record's extent; one that is not takes what its own children need (their span
+ *   plus `PARTITION_CONTENT_MARGIN` on both sides, its band included, or the stack of its own partitions). Outer
+ *   containers first, so a nested one stacks inside the box its parent gave it.
+ * - Children of a partition (the flow nodes of a lane) are not moved: the gesture that moves them is slice S3.
+ *
+ * Returns `nodes` itself when nothing changes, so the memo downstream sees no new array.
+ */
+export function applyContainerLayout(
+    nodes: Node[],
+    model: ContainmentModel,
+    idlookup: Idlookup,
+    layoutKey: string | null,
+    hidden: Set<string>,
+): Node[] {
+    const layoutContainers = [...model.containers.values()].filter(c => c.layout && !hidden.has(c.objectId));
+    if (layoutContainers.length === 0) return nodes;
+    const byId = new Map(nodes.map(n => [n.id, n] as const));
+    const recOf = (vertexId: string) => readVertexLayout((idlookup[vertexId] ?? {}) as VertexLayoutSource, layoutKey);
+    const visibleKids = (objectId: string): string[] =>
+        (model.childrenOf.get(objectId) ?? []).filter(c => {
+            if (hidden.has(c)) return false;
+            const v = model.vertexByObj.get(c);
+            const n = v !== undefined ? byId.get(v) : undefined;
+            return !!n && !n.hidden;
+        });
+    const patch = new Map<string, Partial<Box> & { z?: number; cls?: string }>();
+
+    // What a container's own children need, as a box size (spec addendum §7.1, content). Memoized, cycle-guarded.
+    const needMemo = new Map<string, { w: number; h: number }>();
+    const needOf = (objectId: string, seen: Set<string> = new Set()): { w: number; h: number } => {
+        const memo = needMemo.get(objectId);
+        if (memo) return memo;
+        if (seen.has(objectId)) return { w: 0, h: 0 };
+        seen.add(objectId);
+        const info = model.containers.get(objectId);
+        const layout = info?.layout;
+        const kids = visibleKids(objectId);
+        let out = { w: 0, h: 0 };
+        if (layout?.mode === 'partitions') {
+            const l = layoutPartitions({
+                container: { x: 0, y: 0 }, axis: layout.axis, header: layout.header, padding: layout.padding,
+                partitions: kids.map(k => specOf(k, layout.axis, seen)),
+            });
+            out = { w: l.container.w, h: l.container.h };
+        } else if (kids.length > 0) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const k of kids) {
+                const n = byId.get(model.vertexByObj.get(k)!)!;
+                const s = sizeOf(n);
+                minX = Math.min(minX, n.position.x); minY = Math.min(minY, n.position.y);
+                maxX = Math.max(maxX, n.position.x + s.w); maxY = Math.max(maxY, n.position.y + s.h);
+            }
+            const band = layout?.header;
+            out = {
+                w: maxX - minX + 2 * PARTITION_CONTENT_MARGIN + (band?.side === 'w' ? band.size : 0),
+                h: maxY - minY + 2 * PARTITION_CONTENT_MARGIN + (band?.side === 'n' ? band.size : 0),
+            };
+        }
+        needMemo.set(objectId, out);
+        return out;
+    };
+    const specOf = (objectId: string, axis: CompiledContainmentLayout['axis'], seen: Set<string>): PartitionSpec => {
+        const rec = recOf(model.vertexByObj.get(objectId)!);
+        const need = needOf(objectId, seen);
+        const vertical = axis !== 'horizontal';
+        return {
+            stored: vertical ? rec.h : rec.w,
+            isResized: !!rec.isResized,
+            content: vertical ? need.h : need.w,
+            contentCross: vertical ? need.w : need.h,
+        };
+    };
+
+    const ordered = layoutContainers
+        .map((c, i) => ({ c, i, d: depthIn(model, c.objectId) }))
+        .sort((a, b) => a.d - b.d || a.i - b.i);
+    for (const { c, d } of ordered) {
+        const node = byId.get(c.vertexId);
+        if (!node || node.hidden) continue;
+        const own = patch.get(c.vertexId) ?? {};
+        patch.set(c.vertexId, { ...own, z: LAYOUT_CONTAINER_Z + d });
+        const layout = c.layout!;
+        if (layout.mode !== 'partitions') continue;
+        const kids = visibleKids(c.objectId);
+        // A container that is itself a partition was placed by its parent: its box is that, as if sized by hand.
+        const placed = own.w !== undefined && own.h !== undefined;
+        const rec = recOf(c.vertexId);
+        const box = placed
+            ? { x: own.x!, y: own.y!, w: own.w!, h: own.h!, isResized: true }
+            : { x: node.position.x, y: node.position.y, w: rec.w, h: rec.h, isResized: !!rec.isResized };
+        const l = layoutPartitions({
+            container: box, axis: layout.axis, header: layout.header, padding: layout.padding,
+            partitions: kids.map(k => specOf(k, layout.axis, new Set())),
+        });
+        patch.set(c.vertexId, { ...patch.get(c.vertexId), w: l.container.w, h: l.container.h });
+        kids.forEach((k, i) => {
+            const v = model.vertexByObj.get(k)!;
+            const r = l.partitions[i];
+            const cls = i > 0 ? PARTITION_NEXT_CLASS[layout.axis === 'horizontal' ? 'horizontal' : 'vertical'] : undefined;
+            patch.set(v, { ...patch.get(v), x: r.x, y: r.y, w: r.w, h: r.h, z: LAYOUT_CONTAINER_Z + d + 1, cls });
+        });
+    }
+
+    let changed = false;
+    const out = nodes.map(n => {
+        const p = patch.get(n.id);
+        if (!p) return n;
+        const x = p.x ?? n.position.x;
+        const y = p.y ?? n.position.y;
+        const w = p.w ?? n.width;
+        const h = p.h ?? n.height;
+        const z = p.z ?? n.zIndex;
+        const own = (n.className ?? '').split(' ').filter(c => c && !PARTITION_CLASSES.has(c));
+        const className = [...own, ...(p.cls ? [p.cls] : [])].join(' ') || undefined;
+        if (x === n.position.x && y === n.position.y && w === n.width && h === n.height && z === n.zIndex && className === n.className) return n;
+        changed = true;
+        const next: Node = { ...n, position: x === n.position.x && y === n.position.y ? n.position : { x, y }, zIndex: z };
+        if (className !== n.className) next.className = className;
+        if (p.w !== undefined && p.h !== undefined) {
+            next.width = w;
+            next.height = h;
+            // React Flow sizes a node by `measured` before `width` (R-LAY-18): keep a measure that already agrees, drop a stale one.
+            const m = n.measured;
+            if (m && (Math.abs((m.width ?? -1) - (w as number)) > 0.5 || Math.abs((m.height ?? -1) - (h as number)) > 0.5)) next.measured = undefined;
+        }
+        return next;
+    });
+    return changed ? out : nodes;
+}
+
+/**
+ * Channel-edge suppression (R-GV-4, spec addendum §5): with `containment.edges: 'hide'`, the edge that draws the channel
+ * itself, from the container's node to the node of an object its channel claims, is flagged hidden, never removed (row
+ * dispatch, row-dispatch addendum §6). Every claim counts, the one the container lost to an inner claimant too (R-GV-2):
+ * the double claim is reported by the problems overlay, not by a stray edge. A declared single-hop channel matches a
+ * reference edge of its feature; the default channel matches a composition edge; a multi-hop channel has no direct edge
+ * and matches nothing. Pure; returns `edges` itself when nothing changes.
+ */
+export function suppressChannelEdges(edges: Edge[], model: ContainmentModel): Edge[] {
+    let changed = false;
+    const out = edges.map(e => {
+        if (e.hidden) return e;
+        const src = model.objByVertex.get(e.source);
+        const tgt = model.objByVertex.get(e.target);
+        if (src === undefined || tgt === undefined) return e;
+        if (model.parentOf.get(tgt) !== src && !model.multiClaimed?.get(tgt)?.includes(src)) return e;
+        const info = model.containers.get(src);
+        if (!info || info.edges !== 'hide' || info.channelFeature === null) return e;
+        const isChannel = info.channelFeature === undefined
+            ? e.type === 'composition'
+            : (e.type === 'instanceRef' || e.type === 'composition') && (e.data as { referenceName?: unknown } | undefined)?.referenceName === info.channelFeature;
+        if (!isChannel) return e;
+        changed = true;
+        return { ...e, hidden: true };
+    });
     return changed ? out : edges;
 }

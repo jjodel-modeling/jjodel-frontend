@@ -18,6 +18,8 @@ import { defaultEdgeViewIR, defaultObjectViewIR, defaultRowViewIR, isMigratedDef
 import {
     buildContainmentModel,
     computeHidden,
+    computeRowHiddenChildren,
+    computeViewHidden,
     containmentChildren,
     decorateEdges,
     decorateNodes,
@@ -2850,5 +2852,41 @@ describe('the §G2 BPMN views compile and validate clean (R-GV, spec addendum §
         // `nested` has no vertex and is claimed all the same, as a composition channel lists vertex-less children
         // today: the hull draws only children with a node (IRContainmentHulls maps through vertexByObj).
         expect(noLanes.model.childrenOf.get('pool')).toEqual(['t1', 't2', 't3', 'g1', 'nested']);
+    });
+});
+
+describe('D-c: a row of a graphVertex leaves its containment channel (R-GV-3, S2)', () => {
+    it('the row wins: hidden as a node, and out of the container it would have been drawn in', () => {
+        const base: Record<string, any> = containmentWorld().idlookup;
+        // s_a is a Special State: the row compartment takes it, the channel keeps the plain ones.
+        const idlookup: Record<string, any> = {
+            ...base,
+            C_Special: { id: 'C_Special', name: 'Special', extends: ['C_State'] },
+            s_a: { ...base.s_a, instanceof: 'C_Special' },
+        };
+        const regionView: GraphVertexViewIR = {
+            irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Region'], shape: { form: 'rect' },
+            fieldCompartments: [{ id: 'rows', source: { from: 'children', filter: { op: 'isKind', class: 'Special' } }, rowFormat: { segments: [] } }],
+            containment: { collapsible: true },
+        };
+        idlookup.V_region = { id: 'V_region', viewpoint: 'VP', ir: regionView };
+        const state = { viewpoint: 'VP', viewelements: ['V_region'], idlookup };
+        const ctx = makeDrawReadCtx(idlookup);
+        const index = getIRIndex(state, 'sig_gv_dc_rows')!;
+        const nodes: any[] = ['Vr1', 'Vr2', 'Va', 'Vb', 'Vc', 'Vx'].map(id => ({ id, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+        const model = buildContainmentModel(nodes, idlookup, index, ctx);
+        expect(model.childrenOf.get('r1')).toEqual(['s_b']);
+        expect(model.parentOf.has('s_a')).toBe(false);
+        expect(model.childrenOf.get('r2')).toEqual(['s_c']);
+        expect([...computeRowHiddenChildren(nodes, idlookup, index, ctx)]).toEqual(['s_a']);
+    });
+});
+
+describe('graphVertex visible: false is honoured by the containment pass (R-GV-9, S2)', () => {
+    it('hides the lanes whose view says so, and nothing else', () => {
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), visible: false } } as Record<string, AnyViewIR>;
+        const { model, nodes, index, ctx, idlookup } = bpmnWorld('sig_gv_visible', { extraViews });
+        const hidden = computeViewHidden(nodes, model.objByVertex, index, ctx, idlookup);
+        expect([...hidden].sort()).toEqual(['L1', 'L2', 'ls', 'proc']);
     });
 });
