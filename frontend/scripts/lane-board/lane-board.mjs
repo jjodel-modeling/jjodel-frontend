@@ -114,7 +114,7 @@ function collect() {
         const live = state === 'running' || state === 'blocked';
         const t = idTime(id) || (isChain ? idTime(id.slice(6)) : 0);
         const recent = Date.now() - t < RECENT_H * 3600_000;
-        const row = { id, state, outcome, minutes, chain: isChain, worktree: '', kind: '', lane: '', chat: '', title: '', tier: '', phase: '', left: '' };
+        const row = { id, state, outcome, minutes, chain: isChain, t, worktree: '', kind: '', lane: '', chat: '', title: '', tier: '', phase: '', left: '' };
         if (!isChain && existsSync(dir)) {
             row.worktree = readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~');
             const h = header(dir);
@@ -494,7 +494,7 @@ function renderOlder(rows){
   const box=document.getElementById('older');
   if(!days.length){box.innerHTML='<div class="wrap"><div class="empty">No earlier lanes.</div></div>';return;}
   box.innerHTML=days.map(day=>{
-    const rs=rows.filter(r=>r.day===day);
+    const rs=rows.filter(r=>r.day===day).sort((a,b)=>b.t-a.t||(a.id<b.id?1:a.id>b.id?-1:0));
     const tally={};rs.forEach(r=>{const o=(r.chain||r.outcome==='none')?r.state:r.outcome.split(' ')[0];tally[o]=(tally[o]||0)+1});
     const sum=Object.entries(tally).map(([k,v])=>v+' '+k).join(' · ');
     return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+'</span></summary><div class="wrap">'+table(rs,false)+'</div></details>';
