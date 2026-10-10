@@ -126,3 +126,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — Alfonso's visual GO 2026-10-11 00:03 on dev server 3080, scenes gv-bpmn, gv-statechart, gv-hull; fixtures BPMN 31/31, statechart 7/7
 **Notes**: merge-tree exit 0, tree `75a24acd1`, zero conflicts; the index after `--no-commit` writes the same tree. Probes 85 of 85 once, control R-SIM-147 0. decisions.md read end to end: 5917 lines = base 5821 + branch 80 + trunk 16, nothing deleted, no row or heading duplicated by the merge. check:docs is 5/5, not 4/4: Check E is on the trunk. `8f94261cc` (GV_SAVE probe, P-2026-10-10-0105) landed after the merge, outside this lane. No rollback tag.
 **Prompt document name**: 2026-10-10 19:45
+
+## 2026-10-11 — merge: ir-graphvertex takes alfonso-frontend-jjtl (P-2026-10-11-0011)
+**Prompt**: `claude_2026-10-11_0011_prompt_ir-graphvertex_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-graphvertex` on `ir-graphvertex`: RC-14, the trunk at the explicit sha `dfdef69f1` into the branch with one `--no-ff` merge, base `f753bf0d9`, 34 trunk commits against 38 on the branch and this prompt on top; hard stop for the visual GO, then this closure.
+**Files touched**: merge `7523373cb`: the 45 files of the trunk side; `docs/decisions.md` resolved by union (the one hand-resolved hunk), `frontend/src/components/editor-v2/EditorV2.tsx` auto-merged. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7523373cb`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8386 passed in 344 files, 0 failed, the 9 §17 files red at import (expected: trunk tip 8180 in 334 files, measured read-only in `~/jjodel-release`, minus 286 in the 3 test files the branch modifies, plus 492 in the branch's 13 test files); hooks 603 in 10 files (trunk 603, the branch adds none); build exit 0; check:docs 5/5; check:scripts PASS 80 files; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries 45 files, above five (RC-11), all the trunk side's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — the chat re-ran the fixtures on `7523373cb`: BPMN 31/31 with S3, S6 and the hull/flat controls, statechart 7/7; Alfonso's visual GO of 2026-10-11 00:03 stands, the trunk delta being codegen only
+**Notes**: merge-tree: 1 conflict, docs/decisions.md, resolved by union, R-GEN-16 (trunk) then the R-GV section (branch), verbatim: 5933 lines = base 5837 + 9 + 87, nothing deleted; read in its changed region, the rest shown equal to the base. EditorV2.tsx read end to end: branch tip plus the trunk's 59 Code-pill lines. Probes 41 of 41 once, control R-GEN-17 0. check:docs 5/5, not 4/4: Check E is in the base (73af7bbac). No rollback tag.
+**Prompt document name**: 2026-10-11 00:11
