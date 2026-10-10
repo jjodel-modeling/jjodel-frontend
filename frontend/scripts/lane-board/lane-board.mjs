@@ -99,6 +99,7 @@ let cposMem = { at: 0, v: new Map() };
 function chainPosMem() { if (Date.now() - cposMem.at > CACHE_MS) cposMem = { at: Date.now(), v: chainPositions() }; return cposMem.v; }
 function collect() {
     if (cache.data && Date.now() - cache.at < CACHE_MS) return cache.data;
+    const now = Date.now();
     const load = loadavg();
     const r = spawnSync(process.execPath, [LANE_RUN, 'status', '--all'], { encoding: 'utf8', timeout: 15_000 });
     const error = r.status === 0 ? '' : (r.stderr || r.error?.message || 'lane-run status failed').trim();
@@ -130,7 +131,21 @@ function collect() {
         row.live = live;
         row.recent = recent;
         row.day = t ? new Date(t - new Date(t).getTimezoneOffset() * 60000).toISOString().slice(0, 10) : 'unknown';
+        if (!isChain) Object.assign(row, laneSpan(id, now));
         rows.push(row);
+    }
+    // A chain spans its lanes: the earliest start, the latest end once every lane that started has ended, the sum of their work.
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    for (const row of rows) {
+        if (!row.chain) continue;
+        const spans = [...chainPosMem()].filter(([, p]) => p.chain === row.id).map(([lid]) => byId.get(lid) || laneSpan(lid, now)).filter((s) => s.start);
+        row.start = spans.length ? Math.min(...spans.map((s) => s.start)) : 0;
+        row.end = !row.live && spans.length && spans.every((s) => s.end) ? Math.max(...spans.map((s) => s.end)) : 0;
+        row.work = spans.reduce((a, s) => a + s.work, 0);
+    }
+    if (tlDirty) {
+        try { writeFileSync(TL_CACHE_FILE + '.tmp', JSON.stringify(tlCache)); renameSync(TL_CACHE_FILE + '.tmp', TL_CACHE_FILE); } catch { /* best effort */ }
+        tlDirty = false;
     }
     const data = { now: Date.now(), load: load.map((x) => x.toFixed(2)), error, rows };
     cache = { at: Date.now(), data };
@@ -230,6 +245,18 @@ function laneTimeline(id, now) {
     const v = { turns, cites, depends, declared: !!depLine, request, exited };
     if (exited) { tlCache[id] = { key, v }; tlDirty = true; }
     return v;
+}
+
+/** When a lane started and ended, in epoch ms: the first turn's start and, once it has exited, the last turn's end; 0 when unknown or running.
+ *  work: the sum of the turn durations in ms, the running turn up to now (the waits for a decision are not work). */
+function laneSpan(id, now) {
+    if (!/^P-\d{4}-\d{2}-\d{2}-\d{4}$/.test(id)) return { start: 0, end: 0, work: 0 };
+    try {
+        const { turns, exited } = laneTimeline(id, now);
+        if (!turns.length) return { start: 0, end: 0, work: 0 };
+        const work = Math.round(turns.reduce((a, t) => a + Math.max(0, t.e - t.s), 0));
+        return { start: Math.round(turns[0].s), end: exited ? Math.round(turns[turns.length - 1].e) : 0, work };
+    } catch { return { start: 0, end: 0, work: 0 }; }
 }
 
 function chains() {
@@ -440,7 +467,7 @@ h1{font-size:16px;margin:0}h2{font-size:12px;text-transform:uppercase;letter-spa
 .wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;min-width:900px}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}tr:last-child td{border-bottom:0}
-td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}
+td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}td.when{white-space:nowrap;font-variant-numeric:tabular-nums}
 .title{display:block;color:var(--muted);font-size:11px;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;max-width:320px;white-space:normal}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid currentColor}
 .running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done{color:var(--ok)}.question,.hard-stop{color:var(--warn)}.blocked-o,.unparsed,.failed{color:var(--bad)}
@@ -465,16 +492,24 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const pill=(t,cls)=>t?'<span class="pill '+esc(cls||t)+'">'+esc(t)+'</span>':'';
 const launch=r=>{const l=r.launcher||{};const c={chat:'var(--run)',harness:'var(--muted)',chain:'var(--muted)','claude-code':'var(--warn)',manual:'var(--ok)'}[l.by]||'var(--muted)';return (l.label?'<span class="pill" style="color:'+c+'" title="'+esc(l.detail||'')+'">'+esc(l.label)+'</span>':'')+(r.chat?'<span class="title">'+esc(r.chat)+'</span>':'')};
 const dur=m=>m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min';
-function table(rows,live){
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+// HH:MM on the table's reference day (YYYY-MM-DD), MM-DD HH:MM on any other; empty when unknown.
+const when=(ms,day)=>{if(!ms)return '<td class="when"></td>';const d=new Date(ms);const hm=pad(d.getHours())+':'+pad(d.getMinutes());return '<td class="when">'+(ymd(d)===day?hm:pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+hm)+'</td>'};
+// Elapsed is the working time, the sum of the turns; empty when no turn is known.
+const work=r=>'<td>'+(r.start?dur(Math.floor(r.work/60000)):'')+'</td>';
+// day: the reference day of Started and Ended, today unless given (an Earlier lanes group passes its own).
+function table(rows,live,day){
+  day=day||ymd(new Date());
   if(!rows.length)return '<div class="empty">'+(live?'No lane is running.':'No lanes in this period.')+'</div>';
-  const cols=live?['Lane','State','Kind','Elapsed','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Elapsed','Worktree','Launched by'];
+  const cols=live?['Lane','State','Kind','Started','Elapsed','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Worktree','Launched by'];
   let h='<table><thead><tr>'+cols.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead><tbody>';
   for(const r of rows){
     const id='<td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>';
     const kind='<td>'+esc(r.kind||r.lane.split(/[ .(]/)[0]||'')+(r.tier?' · '+esc(r.tier):'')+'</td>';
     const oc=r.outcome==='none'?'':r.outcome;
-    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+'<td>'+dur(r.minutes)+'</td><td>'+esc(r.left)+'</td><td class="phase">'+esc(r.phase)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
-    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+'<td>'+dur(r.minutes)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
+    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+'<td>'+esc(r.left)+'</td><td class="phase">'+esc(r.phase)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
+    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+'<td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
   }
   return h+'</tbody></table>';
 }
@@ -499,7 +534,7 @@ function renderOlder(rows){
     const rs=rows.filter(r=>r.day===day).sort((a,b)=>b.t-a.t||(a.id<b.id?1:a.id>b.id?-1:0));
     const tally={};rs.forEach(r=>{const o=(r.chain||r.outcome==='none')?r.state:r.outcome.split(' ')[0];tally[o]=(tally[o]||0)+1});
     const sum=Object.entries(tally).map(([k,v])=>v+' '+k).join(' · ');
-    return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+'</span></summary><div class="wrap">'+table(rs,false)+'</div></details>';
+    return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+'</span></summary><div class="wrap">'+table(rs,false,day)+'</div></details>';
   }).join('');
   box.querySelectorAll('details').forEach(el=>el.addEventListener('toggle',()=>{el.open?openDays.add(el.dataset.day):openDays.delete(el.dataset.day);saveOpen()}));
 }
