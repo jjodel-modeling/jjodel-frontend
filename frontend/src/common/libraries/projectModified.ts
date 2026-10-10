@@ -14,5 +14,5 @@ export const unsetProjectModified = function(nope: 'nope') {
 
 export const isProjectModified = function() {
     return U.isProjectModified;
-    // return store.getState().idlookup.clonedCounter !==
+    // return DState.getState().idlookup.clonedCounter !==
 }

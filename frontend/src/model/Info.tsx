@@ -1,8 +1,8 @@
 import type {GObject} from "../joiner";
-import {ReactNode} from "react";
+import React, {ReactNode} from "react";
 import {ShortAttribETypes} from "../common/U";
 import {RuntimeAccessibleClass} from "../joiner";
-
+type PathArray = string[];
 export class Info {
     txt: ReactNode;
     label?: ReactNode;
@@ -24,15 +24,24 @@ export class Info {
     digits?: number; // for decimal types validation
     step?: number; // for decimal types numeric spinner increase
     isAlias?: boolean; // if the property is a fault-tolerance fallback, and should be excluded from console live documentation.
+    // pathArray entries must be a d-property (not "children")
+    // this | ""             --> cache valid if current clonedCounter is unchanged,
+    // missing or []              --> global cache is used, valid only as long the whole DState is unchanged
+    // "never" | "all"  --> global cache cannot be used either,
 
-    static grid: Info = {type:`Point & {center: left|right|top|bottom|center|tl|tr|bl|br, visible: boolean, type: radial | cartesian}`, txt: `If present, sub-elements will align to a cartesian grid this.
+    // IMPORTANT: dependencies cannot have __proto__ as dependency, "toString" and native functions are also risky, need to check the whole usage chain to be sure.
+    dependencies?: (PathArray | "" | "this" | "all" | "never")[];
+
+
+    static grid: Info = {type:`Point & {center: left|right|top|bottom|center|tl|tr|bl|br, visible: boolean, type: radial | cartesian}`, txt:
+`If present, sub-elements will align to a cartesian grid this.
 A grid must be applied to a graph. it will align his vertexes to rows and columns equally spaced.
 A value of 0 to an axis means the grid will be turned off for that axis.
 EG: graph.grid = {y:0, x:100} will distance items on the X axis at lanes of 100 pixels but won\'t restrict vertical distances. Zoom excluded.
 @param visible: an invisible grid will still align his vertexes but doesn\'t produce a visual clue.
     To obtain a visible grid, the element <Grid node={someGraph}/> is required in JSX AND visible set to true.
 @Param center: picks a corner or side of the vertex which will be aligned to the grid\'s crosshairs.
-    corner names are a combination of the first letter of each side, eg: top + left = tl
+    corner names are a combination of the first letter of each side, eg: top +&nbsp;left = tl
 @Param type: is currently only working as "cartesian"`
 /*
 If radial snap is activated, the elements will be placed in concentric circles around (0, 0).' +
@@ -50,5 +59,96 @@ The third circle will have radius 300 and 16 elements, ...'+*/
             '\nA value of 0 or false, means it will ignore the parent\'s grid.' +
             '\nA value of 1 or true, will follow the grid.' +
             '\nAny other number will follow the grid at a multiple of said number.' +
-            '\nEG: canSnap = {x:0, y:2} will not snap horizontally, and will snap with gaps twice of the grid size for Y axis.'}
+            '\nEG: canSnap = {x:0, y:2} will not snap horizontally, and will snap with gaps twice of the grid size for Y axis.'};
+
+    static state = {type:"GObject", txt: `<div>A space where the user can store informations for their operations/views.<br/>
+Example: The Validation viewpoint uses it to store validation messages through onDataUpdate events, check them for live examples.<br/>
+values are set in a http patch approach, <code>this.state = {varname: "value"}<br/>
+will set this.state.varname without changing other pre-existing values.<br/>
+as such <code>this.state = {}</code> does nothing. to remove a single entry use<br/>
+To remove a single entry, use <code>this.state = {varname: undefined}</code>.<br/>
+To empty the whole state, use <code>this.clearState()</code>.<br/>
+WARNING! do not set proxies in the state, set pointers instead.<br/>
+<a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`}
+
+    static allDependencies = {type: 'LModel[]', txt:'Same as dependencies, but it solves recursively the dependencies of his dependencies.'}
+
+    static dependencies = {type: 'LModel[]',
+    txt:'Include other models as prerequisite for this model, it is as if this model is "extending" other models.'};
+
+    static suggestedEdges = {type: 'Dictionary<"extend" | "reference" | "packageDependencies" | DmodelName, EdgeStarter[]>', txt: "A map to access all possible kind of edges based on model data." +
+            "<br/>extend and reference are the most commonly used for horizontal references (outside the containment tree schema)." +
+            "<br/>packageDependencies links packages using classes from other packages." +
+            // "<br/>other keys are the names of container data types (mode, package, class, object...) from them to their childrens rendered as Nodes (vertical tree schema)." +
+            // todo: implement the commented part as LGrahElement.vertexs.map(v=>{start:v.parentnode.isVertex ? v.parentnode.id : undefined, end:v.id}).filter(e=>e.start) instead. it's a thing of graph more than model.
+            "<br/> EdgeStarter is a collection of data useful to start a &lt;Edge /&gt; in JSX."}
+
+    static prefix = {type: "string", txt: "Shortcut for model.package.prefix (default package\'s prefix)."}
+
+    static uri = {type: "string", txt: "Shortcut for model.package.uri (default package\'s uri)."}
+
+    static subpackages = {type: "LPackage[]", txt: "Shortcut for model.package.subpackages (default package\'s subpackages)."}
+
+    static otherObjects = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Alias for this.otherInstances.</div>}
+
+    static otherInstances = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Read this.instancesOf documentation first.
+            <br/>Retrieves all the objects not obtained between previous calls of this.instancesOf and the last call of this method.
+            <br/>Meaning calling it twice without any instancesOf in between, it will return all objects.</div>};
+
+    static instancesOf =  {type: "(instancetypes: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false) => LObject[]",
+        txt:<div>Retrieves all objects instancing a target class.
+            <br/>The first parameter is the targeted class, which can be his name, pointer or object.
+            <br/>The second parameter tells if instances of his subclasses needs to be retreieved as well.</div>
+    }
+
+    static addObject = {type: "(json: object, instanceof?: LClass) => LObject",
+        txt: "Appends an object instancing \"instanceof\" to the model.\n<br>Setting his own properties, and DValues according to the content of the parameter object."}
+
+    static instantiableClasses = {type: "(o?: object, loose?: boolean) => LClass[]",
+        txt: "List of all classes which can be used to instantiate an object." +
+            "\n<br>Abstract and Interface classes are excluded." +
+            "\n<br>If the parameter \"o\" is specified, it will filter only the instances conforming to the object schema." +
+            "\n<br>Results are sorted from tightest fit to loosest fit." +
+            "\n<br>loose parameter set to true makes return instead a list of matching scores of all subclasses.", hidden: true}
+
+    static partial = {type:'boolean | undefined', txt: 'whether the object is allowed to have extra features other than the ones specified by the metamodel.\n' +
+            'shapeless objects are always partial.\n' +
+            'undefined means the property is inherited by his metamodel class, a boolean value means it overrides it.'}
+
+    static name_fallback = {type:'string', txt: 'The name of an element, must be a valid identifier.\n' +
+            'In case an object have a feature called "name", the feature value will override the object\'s name.\n' +
+            'Attributes named "name" will be EID by default, and can be navigated with $ syntax (eg: object.$childName) unless deactivated.\n' +
+            'Annotations name are used as an utility making the last segment of their \"source\" URI.\n' +
+            'Read the help for EID or annotation.name for more information.',
+        dependencies: [["this"]]
+    }
+    static name_forObjects = {type:'string', txt: Info.name_fallback.txt,
+        dependencies: [["$name"]]
+    }
+    static name_forAnnotations = {type: "string", txt: <div>Name is not an actual property of ecore's EAnnotation, we kept it as an <b>optional</b> utility.
+        You can set a fixed uri and change the name which gets appended to the "source" uri.
+        Exports to .ecore will append the name (if present) to the "source" uri.</div>}
+
+    // todo: split this declaration and dependencies for m1 and m2. instead of inheriting make a personal copy for all m1 and m2 classes
+    static eid_forObjects = {type: "string", txt: "if present, gets the serialized value of the feature with isID == true.",
+        // NB: cannot have a "$" dependency here or it breaks everything
+    dependencies: [["eidFeature"]]}
+
+    static eid_fallback: Info = {type: ShortAttribETypes.EString,
+        txt: "eid is a property of objects used to identify them from user values (check description for m1 objects)." +
+            "\nFor other elements, eid is an alias for name, which is used as identifier in his place."+
+            "\nSubElements can be accessed by eid or name with $ syntax." +
+            "\nEg: container.$foo retrieves the sub-element with eid or name \"foo\" inside \"container\"." +
+            "\nIf eid contains a space or a character not valid in identifier, array syntax [\"$foo\"] must be used." +
+            "\nEg: model.$AlexandriaLibrary[\"$Epic of Gilgamesh\"].$year.value" +
+            "\nnavigates the following objects:" +
+            "\nmodel: Model, AlexandriaLibrary: Object<Library>, \"Epic of Gilgamesh: Object<Book>\", year: Feature<Date>, value: Date",
+        dependencies: Info.name_fallback.dependencies}
+
+    static eidFeature = {type: "LValue | null", txt: "if present, gets the structural feature with isID == true",
+        dependencies: [["eidFeature"]]};
+
+    static typeDeclarations: Info = {type: "LTypeDeclaration[]", txt: "Collection of all type declarations (typeParameters) in current scope, declared either from this element or container elements."};
+
+
 }

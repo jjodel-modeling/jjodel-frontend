@@ -1,4 +1,14 @@
-import {Pointer, DViewElement, DViewPoint, Dictionary, U, RuntimeAccessible, DClass} from '../joiner';
+import {
+    Pointer,
+    DViewElement,
+    DViewPoint,
+    Dictionary,
+    U,
+    RuntimeAccessible,
+    DClass,
+    DTypeDeclaration,
+    AttribETypes, ShortAttribETypes, Alias
+} from '../joiner';
 @RuntimeAccessible('Defaults')
 export class Defaults { /// TODO: this really needs to become dynamically generated, after view creations.
     static cname: string = 'Defaults';
@@ -11,6 +21,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ViewReference",
         "Pointer_ViewOperation",
         "Pointer_ViewParameter",
+        "Pointer_ViewAnnotation",
         "Pointer_ViewLiteral",
         "Pointer_ViewObject",
         "Pointer_ViewValue",
@@ -23,6 +34,12 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ViewAnchors",
         "Pointer_ViewSingleton",
         "Pointer_ViewFallback",
+        "Pointer_ViewCollaborative",
+        "Pointer_ViewTypeParameter",
+        // validation
+        "Pointer_ViewCheckName",
+        "Pointer_ViewOverlay",
+        "Pointer_ViewLowerbound",
     ];
     static viewpoints: Pointer<DViewPoint>[] = ["Pointer_ViewPointDefault"];
     static types: Pointer<DViewPoint>[] = [
@@ -51,6 +68,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewReference: Pointer<DViewElement> = 'Pointer_ViewReference';
     static Pointer_ViewOperation: Pointer<DViewElement> = 'Pointer_ViewOperation';
     static Pointer_ViewParameter: Pointer<DViewElement> = 'Pointer_ViewParameter';
+    static Pointer_ViewAnnotation: Pointer<DViewElement> = 'Pointer_ViewAnnotation';
     static Pointer_ViewLiteral: Pointer<DViewElement> = 'Pointer_ViewLiteral';
     static Pointer_ViewObject: Pointer<DViewElement> = 'Pointer_ViewObject';
     static Pointer_ViewValue: Pointer<DViewElement> = 'Pointer_ViewValue';
@@ -63,6 +81,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewAnchors: Pointer<DViewElement> = 'Pointer_ViewAnchors';
     static Pointer_ViewSingleton: Pointer<DViewElement> = 'Pointer_ViewSingleton';
     static Pointer_ViewFallback: Pointer<DViewElement> = 'Pointer_ViewFallback';
+    static Pointer_ViewCollaborative: Pointer<DViewElement> = 'Pointer_ViewCollaborative';
     // static Pointer_fallback = 'Pointer_fallback'; // legacy
     // Retired validation viewpoint. The four ids below are NOT seeded any more (they left
     // `views` and `viewpoints` above), but the constants stay: they are the ids the migration
@@ -71,6 +90,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewCheckName: Pointer<DViewElement> = 'Pointer_ViewCheckName';
     static Pointer_ViewOverlay: Pointer<DViewElement> = 'Pointer_ViewOverlay';
     static Pointer_ViewLowerbound: Pointer<DViewElement> = 'Pointer_ViewLowerbound';
+    static Pointer_ViewTypeParameter: Pointer<DTypeDeclaration> = 'Pointer_ViewTypeParameter';
     // types
     static Pointer_EVOID: Pointer<DClass> = 'Pointer_EVOID';
     static Pointer_ECHAR: Pointer<DClass> = 'Pointer_ECHAR';
@@ -107,6 +127,10 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
 
     static check(id: Pointer): boolean {
         return !!(Defaults.defaultViewsMap[id] || Defaults.defaultViewPointsMap[id] || Defaults.defaultTypesMap[id]); // id.indexOf('Pointer_View') !== -1
+    }
+
+    @Alias primitiveToPointer(s: AttribETypes | ShortAttribETypes | string): Pointer<DClass> {
+        return U.solveEcoreType(s, true, true, '', '');
     }
 
     /** True for the viewpoints Jjodel seeds itself. Matched by pointer and never by
@@ -162,8 +186,4 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         Defaults.freshViewsInitialized = true;
     }
 
-    // Get fresh view for updating old views
-    static getFreshView(id: Pointer): DViewElement | DViewPoint | undefined {
-        return Defaults.freshViewsMap[id] || Defaults.freshViewPointsMap[id];
-    }
 }

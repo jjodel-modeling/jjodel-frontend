@@ -38,6 +38,7 @@ import {
 import { TestLayout } from "./components/TestLayout";
 import EditorV2 from "./components/editor-v2/EditorV2";
 import ReproHarness, { ReproHarnessReactive } from "./components/editor-v2/repro/ReproHarness";
+import {Config} from "./components/config/config";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
@@ -123,6 +124,7 @@ function App(props: AllProps): JSX.Element {
         <DevModeProvider>
         <GlobalDrawerProvider>
         <FeaturesPanelProvider>
+        <Config />
         <TreeViewPanelProvider>
             <div className={"router-wrapper"}>
                 {isLoading && <Loader/>}

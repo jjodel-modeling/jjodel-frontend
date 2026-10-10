@@ -76,7 +76,7 @@ export function getActiveMetamodel(): LModel | null {
                 () => getActiveTabMetamodel(),
                 // 2. Fall back to _lastSelected.modelElement
                 () => {
-                    const state: DState & GObject = store.getState();
+                    const state: DState & GObject = DState.getState();
                     const selected = state._lastSelected?.modelElement;
                     if (!selected) return null;
                     const me = LPointerTargetable.fromPointer(selected) as LModelElement;
@@ -183,7 +183,7 @@ export function getProject(context: ExecutionContext): LProject | null {
     try {
         // Try to get from context projectId
         if (context.projectId) {
-            const state = store.getState();
+            const state = DState.getState();
             const idlookup = (state as any).idlookup || {};
             const projectData = idlookup[context.projectId];
             if (projectData) {

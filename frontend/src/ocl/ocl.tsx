@@ -91,7 +91,7 @@ export class OCL{
             else {
                 windoww.OclEngine = OclEngine;
                 tv.oclEngine = oclEngine = OclEngine.create();
-                let state: DState = store.getState();
+                let state: DState = DState.getState();
                 let rootModel: DModel = mp as any;
                 windoww.rootModel = rootModel;
                 while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);

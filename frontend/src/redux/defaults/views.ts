@@ -17,7 +17,7 @@ import {
     GraphSize,
     CoordinateMode,
     U,
-    Defaults
+    Defaults, DTypeDeclaration
 } from '../../joiner';
 import DSL from "../../DSL/DSL";
 import { vi } from 'vitest';
@@ -163,6 +163,15 @@ border-radius: var(--radius);
         return view
     }
 
+    /* type declaration */
+    static typeDeclaration(vp: DViewElement): DViewElement {
+        const td = DViewElement.new2("Type Parameter", DV.typeDeclarationView(), vp, (view)=> {
+            view.appliableToClasses = [DTypeDeclaration.cname];
+            view.oclCondition = 'context DTypeDeclaration inv: true';
+            view.appliableTo = 'Field';
+        },false, Defaults.Pointer_ViewTypeParameter);
+        return td;
+    }
     /* Class */ 
 
     static class(vp: DViewElement): DViewElement {
@@ -232,14 +241,6 @@ border-radius: 6px;
     box-shadow: var(--model-shadow);
 }
 
-div.header:has(.open:hover) {
-
-
-    &>div.help {
-        display: visible!important;
-    }
-}
-
 .help {
     display: none;
     z-index: 10000;
@@ -289,6 +290,7 @@ div.header:has(.open:hover) {
     ret.operations = data?.operations || []
     ret.abstract = data?.abstract || false
     ret.interface = data?.interface || false
+    ret.typeParameters = data?.typeParameters || []
     ${udLevel}
     ${udGrid}
     ${udSnap}
@@ -420,19 +422,39 @@ border-radius: 6px;
             view.appliableToClasses = [DAttribute.cname];
             view.oclCondition = 'context DAttribute inv: true';
             view.appliableTo = 'Field';
+            view.palette = {'color-':  U.hexToPalette('#000000', '#CE9178'), 'bg-':  U.hexToPalette('#fff')};
             view.css = `
 .feature{
     display: flex;
     padding: 2px 5px;
-    
-    input,
-    select {
-        margin-left: auto;
-        width: 125px;
-        max-width: 55%;
-        flex-basis: 0;
+    .autosize-input-container{
+       margin: 0;
+       background-color: var(--bg-1);
     }
-}`;
+    select {
+        width: 100%;
+        min-height: 30px;
+        background-color: var(--bg-1);
+        margin-left: 1.5em;
+        border: none;
+        outline: 1px solid var(--color-1);
+    }
+    .type {
+        position: relative;
+        flex-grow: 1;
+        text-align: end;
+        font-weight: 500;
+        color: var(--color-2);
+    }
+}
+/* change hoverable to display on focus only 
+.hoverable>.content { display: none !important; }
+&:focus, &:focus-within {
+    .hoverable>.content {
+        display: block !important;
+    }
+    .hoverable.preview { display: none !important; }
+}*/`;
         }, false, Defaults.Pointer_ViewAttribute);
         return view;
     }
@@ -444,18 +466,39 @@ border-radius: 6px;
             view.appliableToClasses = [DReference.cname];
             view.oclCondition = 'context DReference inv: true';
             view.appliableTo = 'Field';
+            view.palette = {'color-':  U.hexToPalette('#000000', '#CE9178'), 'bg-':  U.hexToPalette('#fff')};
             view.css = `
 .feature{
     display: flex;
     padding: 2px 5px;
-    input,
-    select {
-        margin-left: auto;
-        width: 125px;
-        max-width: 55%;
-        flex-basis: 0;
+    .autosize-input-container{
+       margin: 0;
+       background-color: var(--bg-1);
     }
-}`;
+    select {
+        width: 100%;
+        min-height: 30px;
+        background-color: var(--bg-1);
+        margin-left: 1.5em;
+        border: none;
+        outline: 1px solid var(--color-1);
+    }
+    .type {
+        position: relative;
+        flex-grow: 1;
+        text-align: end;
+        font-weight: 500;
+        color: var(--color-2);
+    }
+}
+/* change hoverable to display on focus only 
+.hoverable>.content { display: none !important; }
+&:focus, &:focus-within {
+    .hoverable>.content {
+        display: block !important;
+    }
+    .hoverable.preview { display: none !important; }
+}*/`;
         }, false, Defaults.Pointer_ViewReference);
         return view;
     }
@@ -483,6 +526,7 @@ border-radius: 6px;
 .operation{
     display: flex;
     padding: 2px 5px;
+    flex-flow: column;
     
     input,
     select {
@@ -496,6 +540,23 @@ border-radius: 6px;
         left: 0;
         top: 100%;
         width: 100%;
+    }
+    .parameters-section{
+        display: none;
+    }
+    
+    &:hover, &:focus-within, &:focus{
+        .parameters-section{
+            display: flex;
+            /*
+            position: absolute;
+            top: 100%;
+            left: 90%;
+            transform: translateY(-100%);*/
+            margin-left: 2px !important;
+            background-color: var(--background-2);
+            padding: 1em;
+        }
     }
 }`;
         }, false, Defaults.Pointer_ViewOperation);
@@ -519,6 +580,52 @@ border-radius: 6px;
         text-align: center;
     }
 }`
+        return view;
+    }
+
+    static annotation(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Annotation', DV.annotationView(), vp, (view)=>{
+            view.appliableToClasses = ["DAnnotation"];
+            view.appliableTo = 'Field';
+            view.isExclusiveView = true;
+        }, false, Defaults.Pointer_ViewAnnotation);
+        view.css =  `
+&{
+    position: relative;
+    height: 1lh;
+    display: flex;
+}
+.annotation {
+    position: absolute;
+    display: inline-flex;
+    padding-left: 1em;
+    width: 100%;
+    .annotation-source { display: none; }
+    .details{
+        display: inline-block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        &:hover, &:focus-within, &:active, &:focus{
+            overflow: visible;
+        }
+    }
+    .modifier{
+        width: 1ic;
+        text-align: center;
+    }
+}`
+        view.usageDeclarations = `(ret) => {
+    // ** preparations and default behaviour here ** //
+    ret.data = data
+    ret.node = node
+    ret.view = view
+    // custom preparations:
+    // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
+    // add preparation code here (like for loops to count something), then list the dependencies below.
+    // ¡ The element will update only if one of the Observed Properties has changed !
+    // ** declarations here ** //
+    ret.details = Object.entries(data?.details || {});
+}`;
         return view;
     }
 
@@ -763,6 +870,7 @@ border-radius: 6px;
             d.usageDeclarations = usageDeclarations;
             d.edgePointCoordMode = CoordinateMode.absolute;
             d.defaultVSize = defaultEdgePointSize;
+            d.jsCondition = "false /* no automatic matching, only manual activation */"
             // d.defaultVSize = new GraphSize(0, 0, 25, 25);
         }, false, Defaults.Pointer_ViewEdgePoint);
         view.adaptWidth = true; view.adaptHeight = true;

@@ -31,7 +31,7 @@
 //         operation.execute(object, ...parameters.map(p => paramValues[p.name])); // ...args must be array in the same position as they are in ".parameters"
 //     }
 //
-//     // damiano: servono getter e setter sul nuovo Input, per questo caso, per visualizzare una cosa e settare un'altra (visualizzo e scrivo @object_1 ma setto Pointer_47_5449489...) per settare N valori in un colpo( "["val1", "val2", "val3", ...]" ) e altri casi simili
+//     // servono getter e setter sul nuovo Input, per questo caso, per visualizzare una cosa e settare un'altra (visualizzo e scrivo @object_1 ma setto Pointer_47_5449489...) per settare N valori in un colpo( "["val1", "val2", "val3", ...]" ) e altri casi simili
 //     return <div className={"parameter-form-root hover-root"}>
 //         <div className={"hover-preview"}>Execute →</div>
 //         <div className={"hover-content"}>

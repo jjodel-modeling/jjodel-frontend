@@ -11,7 +11,15 @@ import HighlightPalette from './components/HighlightPalette';
 import { computeListStyle } from './components/InlineObjectSelect';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
-import { Defaults, isDataManagerViewpoint, isDataManagerViewpointId, LPointerTargetable, LViewPoint, store } from '../../joiner';
+import {
+    Defaults,
+    DState,
+    isDataManagerViewpoint,
+    isDataManagerViewpointId,
+    LPointerTargetable,
+    LViewPoint,
+    store
+} from '../../joiner';
 import type { DViewPoint, LModel } from '../../joiner';
 import {
     DATA_MANAGER_OPTION_ICON,

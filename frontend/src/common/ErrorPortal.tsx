@@ -232,6 +232,7 @@ export const ErrorDisplay = React.forwardRef<HTMLDivElement, ErrorDisplayProps>(
                 <i className="bi bi-chevron-right error-badge-hint" aria-hidden="true" />
             </div>
 
+            {React.isValidElement(message) ?message : null}
             {/* Modal portal */}
             <ErrorPortal
                 isOpen={isModalOpen}

@@ -53,7 +53,7 @@ class Report{
     constructor(e: Error, info?: React.ErrorInfo, msg?:LoggerCategoryState) {
         this._id = (e as any).id;
         this.e = {message:e.message, stack: (e.stack||'')}//.split('\n')};
-        this.state = store.getState();
+        this.state = DState.getState();
         this.version = ""+this.state.version.n;
         this.url = window.location.href;
         this.history = statehistory;
@@ -102,7 +102,7 @@ class TryFallbackGuard extends React.Component<{plain: ReactNode, children: Reac
 
 class TryComponent extends React.Component<AllProps, State> {
     static cname: string = "TryComponent";
-    static mailRecipients = ["damiano.divincenzo@student.univaq.it"];
+    static mailRecipients = [""]; // comment by damiano: i removed my mail, fill it with a new one for debug.
 
     constructor(props: AllProps) {
         super(props);
@@ -140,7 +140,7 @@ class TryComponent extends React.Component<AllProps, State> {
     }
 
     componentDidCatch(error: Error, info?: React.ErrorInfo): void {
-        console.error("uncatched error didcatch:", {info});
+        console.error("uncatched error didcatch:", {error: {...error, stack: (error?.stack || "").split("\n")}, info, istack: (info?.componentStack || "").split("\n")});
         // this is called after error propagation and a full render cycle is complete, i use it to trigger a rerender with more accurate infos.
         this.setState({error, info, stateUpdateTime: this.props.stateUpdateTime});
     }
@@ -172,14 +172,14 @@ class TryComponent extends React.Component<AllProps, State> {
     }
 
     catch(error: GObject<Error>, info?: React.ErrorInfo): ReactNode{
-        console.error("uncatched error:", {state:{...this.state}});
+        // Log.ee("uncatched error:", {state:{...this.state}, error, stack: (error?.stack || "").split("\n"), info: (info ?(info?.componentStack || "").split("\n"): null)});
         if (this.props.catch) {
             try {
                 if (typeof this.props.catch === "function") return this.props.catch(error, info);
                 if (React.isValidElement(this.props.catch)) return this.props.catch;
             }
-            catch (e) {
-                console.error("uncatched error. !! with invalid catch func !!", {catcherFuncError:e});
+            catch (e: any) {
+                console.error("uncatched error. !! with invalid catch func !!", {catcherFuncError:e, stack: (e?.stack || "").split("\n")});
             }
         }
         error.id = Constructors.makeID();
@@ -212,7 +212,7 @@ class TryComponent extends React.Component<AllProps, State> {
         // error reached this boundary, which rendered it again: 53 catches, "Maximum update depth exceeded" and an
         // empty #root (P-2026-09-30-1540). The guard catches it below this boundary and shows the plain message.
         return <TryFallbackGuard plain={visibleMessage}>
-            {DefaultView.error(visibleMessage, "unhandled", undefined, undefined, undefined, (e)=> this.reset(e))}
+            {DefaultView.error(visibleMessage, "unhandled", undefined, undefined, undefined, (e)=> this.reset(e), error, info)}
         </TryFallbackGuard>;
     }
 

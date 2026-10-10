@@ -1,5 +1,12 @@
 // export type Class = { new(...args: any[]): any; };
-import {PointedBy, Pointer, RuntimeAccessibleClass, ShortAttribETypes} from "../joiner";
+import {
+    LModelElement,
+    PointedBy,
+    Pointer,
+    RuntimeAccessibleClass,
+    ShortAttribETypes,
+    transientProperties, U
+} from "../joiner";
 import {
     DGraphElement,
     DPointerTargetable,
@@ -87,12 +94,23 @@ export type NestedArray<T> = (T | NestedArray<T>)[];
 export type Empty = any;
 export type UObject = { [key: string]: unknown; }
 export type GObject<DocSubType = ''> = DocSubType extends object ? { [key: string]: any; } & DocSubType : { [key: string]: any; };
+export type NamedArray<T> = T[] & Dictionary<DocString<"$name">, T>;
+export type NamedArr<T> = NamedArray<T>;
+export type DictArr<V> = NamedArray<V>;
 export type RawObject = { [key: string]: NotFunction; };
 // Json<T> = oggetto con le chiavi di T senza le funzioni (post deserializzazione)
 export type Json<T extends GObject = RawObject> =
         {[key in keyof T]: T[key] extends Function ? never : (T[key] extends symbol ? "symbol" :
             Exclude<T[key], symbol>); }
         ;
+
+export type DeepReadonly<T> = {
+    readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
+};
+export type RecursiveArray<A> = A[] | RecursiveArray<A>[];
+export type NestedDictionary<K extends keyof GObject = any, V = any> =
+    | Dictionary<K, V>
+    | { [key: string]: NestedDictionary<K, V> };
 
 // export type Dictionary<K extends keyof any, T> = { [P in K]: T; };
 export type Dictionary<K extends keyof GObject = any, V = any> = { [P in K]: V; }; // & { _subMaps?: V};
@@ -107,6 +125,17 @@ export type bool = boolean;
 export type NotBool<T> = Exclude<T, boolean>;
 export type TODO<T = any> = any;
 export type NonEmptyString = Exclude<string, ''>;
+
+// typed that can only accept literals, not string variables, to reduce mistakes and guarantee i'm passing a manually fixed key.
+export type Literal<T extends string = string> = T extends string
+    ? string extends T
+        ? never // T got widened to `string` → reject
+        : T
+    : never;
+// usage example:
+function literalUsage<T extends string>(k: Literal<T>) { }
+literalUsage("a"); // this is fine
+// literalUsage("" as string); // this is an error
 
 export type TLCoordExtended =
     "center" | "c" | "cc" | "cl" | "cr" | "ct" | "cb" |

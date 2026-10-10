@@ -33,6 +33,7 @@ const NODE_MODULES_REAL = realpathSafe(path.resolve(__dirname, 'node_modules'))
 export default defineConfig(({ mode }) => ({
   plugins: [
     react({
+      exclude: [/node_modules/, /\.vite-cache\//],
       babel: {
         plugins: [
           ['@babel/plugin-proposal-decorators', { legacy: true }],

@@ -3,7 +3,7 @@ import {
     Pointer,
     GObject,
     Dictionary,
-    DocString, RuntimeAccessible
+    DocString, DDataType,
 } from "../joiner";
 import {
     Log,
@@ -41,9 +41,12 @@ import {
     Constructors,
     store,
     SetFieldAction,
-    DPointerTargetable, ShortAttribETypes, toLongEType, DState, Debug
+    DPointerTargetable, ShortAttribETypes, toLongEType, DState, Debug,
+    RuntimeAccessible,
+    Uarr, GenericType,
 } from "../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toLongEClass} from "../common/U";
+// import {TypeDeclaration} from "../model/logicWrapper/etype";
 type RET<T = boolean> = T | Promise<T>;
 /*
 
@@ -214,7 +217,7 @@ export class EcoreParser{
         let values: DValue[] = parsedElements.filter(e=>e.className === DValue.cname) as any[];
         let lobjects: LObject[] = LPointerTargetable.fromArr(dobjects);
         let m1pointermap: Dictionary<string, LObject> = { }; //    "//@rootrefname.index@/refname.index/@....etc"
-        for (let o of lobjects){ m1pointermap[o.ecorePointer()] = o; }
+        for (let o of lobjects){ m1pointermap[o.ecorePointer] = o; }
         for (let v of values) {
             if (v.isMirage) continue;
             let modified = false;
@@ -256,7 +259,7 @@ export class EcoreParser{
         let d_Estring: DClassifier = Selectors.getAllPrimitiveTypes()[1];
         replacePrimitiveMap[AttribETypes.EString] = d_Estring;
         // todo: do the same for all other primitives
-        let state: DState = store.getState();
+        let state: DState = DState.getState();
 
         // let longprefixlength = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore'.length;
         const typeprefix = "#//";
@@ -378,7 +381,7 @@ export class EcoreParser{
             let dval: DValue = elem as DValue;
             let meta: DAttribute | DReference = DfromPtr(dval.instanceof as Pointer<DAttribute|DReference>);
             if (!meta) continue;
-            let type: DEnumerator = DfromPtr(meta.type) as DEnumerator;
+            let type: DEnumerator = DfromPtr(meta.type) as any as DEnumerator;
             if (!type || type.className !== DEnumLiteral.cname) continue;
             let mapper = (v: unknown): Pointer<DEnumLiteral> => {
                 if (typeof v !== "number") { Log.ee("found non-numeric value in a literal value.", v, dval); return v as any; }
@@ -707,7 +710,7 @@ export class EcoreParser{
      * annotation on anything but an EString leaves the type as the file says, with a warning.
      */
     private static restoreJjodelTypes(parsedElements: DModelElement[]): void {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         const estring = Selectors.getPrimitiveType(ShortAttribETypes.EString, state)?.id;
         for (const d of parsedElements) {
             const jjodelType: string | undefined = (d as GObject).__jjodelType;
@@ -719,7 +722,7 @@ export class EcoreParser{
         }
     }
 
-    static parseDAnnotation(parent: DModelElement, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
+    static parseDAnnotation(parent: DModelElement, json: Json, generated: DModelElement[], fullnamePrefix: string = ''): DModelElement[] {
         if (!generated) generated = [];
         if (!json || !parent) { return generated; }
         const source: string = this.read(json, ECoreAnnotation.source, '');
@@ -730,15 +733,40 @@ export class EcoreParser{
                 const key: string = this.read(det, ECoreDetail.key, '');
                 if (!key) continue;
                 const value: string = this.read(det, ECoreDetail.value, '');
-                generated.push(DAnnotation.new(source ? source + '/' + key + '=' + value : key + '=' + value, [], parent.id));
+                generated.push(DAnnotation.new(source ? source + '/' + key + '=' + value : key + '=' + value, {}, parent.id));
             }
             return generated;
         }
 
         if (!source) return generated;
-        generated.push(DAnnotation.new(source, [], parent.id));
+        generated.push(DAnnotation.new(source, {}, parent.id));
         return generated; }
 
+    static parseTypeDeclaration(parent: DModelElement, json: Json, generated: DModelElement[]): DModelElement[] {
+        if (!generated) generated = [];
+        if (!json) { json = {}; }
+        // nb: this is wrong if json is a xmi structure instead of a jom, check it.
+        const model = LPointerTargetable.fromD(parent).model;
+        const classes = model.classes;
+        const enums = model.enums;
+        const typeDeclarations = model.typeDeclarations;
+        const str = GenericType.serializeETypeParameter([json as any], model, true);
+        const typeDecl = str ? GenericType.parseDeclaration(str, classes, enums, typeDeclarations) : null;
+        if (!typeDecl) {
+            Log.ee("Failed to parse typeDeclaration", json);
+            return generated;
+        }
+        const ret = windoww.TypeDeclaration.toD(typeDecl);
+        generated.push(ret);
+        for (let v of Uarr.normalizeArray(json.anotations)) {
+            if (typeof v !== "object") { continue; }
+            // let subdObject: DObject = DObject.new((meta as LReference)?.type.id, parent.id, DValue, undefined);
+            // generated.push(subdObject);
+            // NB: annotations are added to collection in parseDannotation using parent.annotations = this;
+            EcoreParser.parseDAnnotation(ret, v, generated);
+        }
+        return generated;
+    }
     static parseRootPackage(parent: DModel, json: Json, generated: DModelElement[]): DModelElement[] {
         if (!json) { json = {}; }
         // Single-package path validates the ecore namespace here. For multi-package XMI-wrapped
@@ -949,6 +977,9 @@ export class EcoreParser{
             undefined,
             parent.id,
         );
+        /* i think this is unused, but should need to be fixed if it's used:
+        dObject.genericType = GenericType.ecoreToJOM(json[ECoreAttribute.eGenericType] as GObject<find eclass correct like egeneric>);
+        */
         generated.push(dObject);// dObject.father = parent.id;
         // if (parent) parent.attributes.push(dObject.id);
         //dObject.name = this.read(json, ECoreNamed.namee, 'attr_1');
@@ -987,6 +1018,7 @@ export class EcoreParser{
         const annotations: Json[] = this.getAnnotations(json);
         for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
         /// *** specific start *** ///
+        // i think this is unused, but if i'm wrong it should add support for egenericType
         dObject.composition = U.fromBoolString(this.read(json, ECoreReference.containment, false), false);
         dObject.container = U.fromBoolString(this.read(json, ECoreReference.container, false), false);
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
@@ -1033,6 +1065,7 @@ export class EcoreParser{
         /// *** specific start *** ///
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
+        // i think this is unused, but if i'm wrong it should add support for egenericType
         dObject.type = this.read(json, ECoreAttribute.eType, AttribETypes.EString);
         // SI5: default EMF-compliant — ordered/unique true.
         dObject.ordered = U.fromBoolString(this.read(json, ECoreOperation.ordered, 'true'), true);
@@ -1104,10 +1137,16 @@ export class EcoreParser{
     private static getAnnotations(thiss: Json): Json[] {
         const ret: any = thiss[ECorePackage.eAnnotations];
         if (!ret || U.isEmptyObject(ret)) { return []; }
-        if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
+        if (Array.isArray(ret)) { return ret; } else { return [ret]; }
+    }
 
     private static getDetails(thiss: Json): Json[] {
         const ret: any = thiss[ECoreAnnotation.details];
+        if (!ret || U.isEmptyObject(ret)) { return []; }
+        if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
+
+    private static getContents(thiss: Json): Json[] {
+        const ret: any = thiss[ECoreAnnotation.contents];
         if (!ret || U.isEmptyObject(ret)) { return []; }
         if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
 
@@ -1132,7 +1171,7 @@ export class EcoreParser{
     private static read(json: Json, field: string, valueIfNotFound: any = 'read<T>()CanThrowError'): string {
         let ret: any = json ? json[field] : null;
         if (ret !== null && ret !== undefined && field.indexOf(this.XMLinlineMarker) !== -1) {
-            Log.ex(U.isObject(ret, false, false, true), 'inline value |' + field + '| must be primitive.', ret);
+            Log.ex(!U.isPrimitive(ret, false, false, false), 'inline value |' + field + '| must be primitive.', ret);
             ret = U.multiReplaceAll('' + ret, ['&amp;', '&#38;', '&quot;'], ['&', '\'', '"']);
         }
         if ((ret === null || ret === undefined)) {
@@ -1140,14 +1179,27 @@ export class EcoreParser{
             return valueIfNotFound; }
         return ret; }
 
-    static write(json: Json, field: string, val: string | any[]): string | any[] {
-        if (val !== null && field.indexOf(EcoreParser.XMLinlineMarker) !== -1) {
-            Log.ex(val !== '' + val, 'inline value |' + field + '| must be a string.', val);
-            val = U.multiReplaceAll(val as string, ['&', '\'', '"'], ['&amp;', '&#38;', '&quot;']);
+    static write<T extends string | any[] | GObject>(json: Json, field: string, val: T, defaultValue?: string | any[], noEmptyArrays = true): T {
+        if (defaultValue !== undefined && defaultValue === val) return val;
+        if (val === undefined) return val;
+        let type = typeof val;
+        if (type === "function" || type === "symbol") {
+            Log.exx('invalid type in xml:', {field, val, type});
         }
-        else Log.ex(val !== '' + val || !U.isObject(val, true), 'primitive values should be inserted only inline in the xml:', field, val);
-        json[field] = val;
-        return val; }
+
+        if (val !== null && field.indexOf(EcoreParser.XMLinlineMarker) !== -1) {
+            Log.ex(type !== "string", 'inline value |' + field + '| must be a string.', val);
+            val = U.multiReplaceAll(val as string, ['&', '\'', '"'], ['&amp;', '&#38;', '&quot;']) as T;
+        }
+        else if (type === "string" || val && type !== "object"/*!U.isObject(val, true, false, true)*/) {
+            Log.exx('primitive values should be inserted only inline in the xml:', {field, val});
+            return val;
+        }
+        if (noEmptyArrays && val && type === "object" && Object.keys(val).length === 0) { return val; }
+        if (Array.isArray(val) && val.length === 1) json[field] = val[0];
+        else json[field] = val;
+        return val;
+    }
 
     private static getEcoreTypeName(parent: DClassifier): string {
         if (parent.className === DEnumerator.cname || parent.className === DClass.cname) return this.classTypePrefix + this.name;
@@ -1160,6 +1212,7 @@ export class EcoreParser{
     private static getMultiPackageChildren(json: Json): Json[] | null {
         const val = json[ECoreRoot.ecoreEPackage]; // "ecore:EPackage"
         if (val === undefined || val === null) return null;
+        // @ts-ignore
         return Array.isArray(val) ? val : [val];
     }
 
@@ -1258,6 +1311,14 @@ export class ECoreAnnotation {
     static source: string;
     static references: string;
     static details: string;
+    static contents: string;
+}
+
+@RuntimeAccessible('EcoreTypeDeclaration')
+export class EcoreTypeDeclaration {
+    static cname = 'EcoreTypeDeclaration';
+    static namee: "@name";
+    static eBounds: string;
 }
 
 @RuntimeAccessible('ECoreNamed')
@@ -1309,8 +1370,11 @@ export class ECoreClass {
     static eOperations: string;
     static instanceTypeName: string;
     static eSuperTypes: string;
+    static eGenericSuperTypes: string;
+    static eTypeParameters: string;
     static abstract: string;
     static interface: string;
+    static instanceClassName: string;
 
     // static defaultValue = EcoreParser.XMLinlineMarker + 'defaultValue';  // visualizzato in ecore ma mai salvato dentro il file. inutilizzato
     // nelle classi, assume il valore di "[name] = [NumericValue]" senza le [] negli enum.
@@ -1325,6 +1389,7 @@ export class ECoreEnum {
     static instanceTypeName: string;
     static serializable: string;
     static eLiterals: string;
+    static defaultValueLiteral: string;
 }
 
 @RuntimeAccessible('ECoreDataType')
@@ -1353,6 +1418,7 @@ export class ECoreReference {
     static eAnnotations: string;
     static xsitype: string;
     static eType: string;
+    static eGenericType: string;
     static namee: string;
     static unique: string;
     static ordered: string;
@@ -1360,12 +1426,16 @@ export class ECoreReference {
     static lowerbound: string;
     static containment: string;
     static container: string;
+    static changeable: string;
     static derived: string;
     static transient: string;
     static volatile: string;
-    static changeable: string;
     static unsettable: string;
+    static defaultValueLiteral: string;
+    // ref only
+    static eopposite: string;
     static eOpposite: string;
+    static resolveProxies: string;
 }
 
 @RuntimeAccessible('ECoreAttribute')
@@ -1375,15 +1445,18 @@ export class ECoreAttribute {
     static xsitype: string;
     static namee: string;
     static eType: string;
+    static eGenericType: string;
     static unique: string;
     static ordered: string;
     static lowerbound: string;
     static upperbound: string;
+    static changeable: string;
     static derived: string;
     static transient: string;
     static volatile: string;
-    static changeable: string;
     static unsettable: string;
+    static defaultValueLiteral: string;
+    static id: string;
 }
 
 @RuntimeAccessible('ECoreOperation')
@@ -1392,12 +1465,14 @@ export class ECoreOperation {
     static eAnnotations: string;
     static namee: string;
     static eType: string;
+    static eGenericType: string;
     static upperBound: string;
     static lowerBound: string;
     static unique: string;
     static ordered: string;
     static eexceptions: string;
     static eParameters: string;
+    static eTypeParameters: string;
 }
 
 @RuntimeAccessible('ECoreParameter')
@@ -1406,6 +1481,7 @@ export class ECoreParameter {
     static eAnnotations: string;
     static namee: string;
     static eType: string;
+    static eGenericType: string;
     static lowerBound: string;
     static upperBound: string;
     static ordered: string;
@@ -1441,8 +1517,12 @@ ECorePackage.eAnnotations = ECoreSubPackage.eAnnotations = ECoreClass.eAnnotatio
 ECoreAnnotation.source = EcoreParser.XMLinlineMarker + 'source';
 ECoreAnnotation.references = EcoreParser.XMLinlineMarker + 'references'; // "#/" for target = package.
 ECoreAnnotation.details = 'details'; // arr
+ECoreAnnotation.contents = 'contents'; // arr
 ECoreDetail.key = EcoreParser.XMLinlineMarker + 'key'; // can have spaces
 ECoreDetail.value = EcoreParser.XMLinlineMarker + 'value';
+
+EcoreTypeDeclaration.eBounds = EcoreParser.XMLinlineMarker + 'eBounds';
+EcoreTypeDeclaration.namee = EcoreParser.XMLinlineMarker + 'name' as any;
 
 ECorePackage.eSubpackages = 'eSubpackages';
 ECorePackage.eClassifiers = 'eClassifiers';
@@ -1464,19 +1544,16 @@ ECoreSubPackage.namee = EcoreParser.XMLinlineMarker + 'name';
 
 ECoreClass.eStructuralFeatures = 'eStructuralFeatures';
 ECoreClass.eOperations = 'eOperations';
+ECoreClass.eTypeParameters = 'eTypeParameters';
 ECoreClass.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EClass"
 ECoreClass.namee = ECorePackage.namee;
 ECoreClass.eSuperTypes = EcoreParser.XMLinlineMarker + 'eSuperTypes'; // space separated: "#name1 #name2"...
+ECoreClass.eGenericSuperTypes = 'eGenericSuperTypes';
 ECoreClass.instanceTypeName = EcoreParser.XMLinlineMarker + 'instanceTypeName';  // raw str
 ECoreClass.instanceTypeName = EcoreParser.XMLinlineMarker + 'instanceTypeName';
 ECoreClass.abstract = EcoreParser.XMLinlineMarker + 'abstract'; // bool
 ECoreClass.interface = EcoreParser.XMLinlineMarker + 'interface'; // bool
-
-ECoreEnum.instanceTypeName = ECoreClass.instanceTypeName;
-ECoreEnum.serializable = 'serializable'; // "false", "true"
-ECoreEnum.xsitype = ECoreClass.xsitype; // "ecore:EEnum"
-ECoreEnum.eLiterals = 'eLiterals';
-ECoreEnum.namee = ECorePackage.namee;
+ECoreClass.instanceClassName = EcoreParser.XMLinlineMarker + 'instanceClassName'; // null, maps to java classes
 
 // W2: EDataType user-defined (es. <eClassifiers xsi:type="ecore:EDataType" name="Date" instanceClassName="java.util.Date"/>).
 // Coverage parziale: name + instanceClassName + serializable. Split instanceTypeName (EMF 2.x) rimandato a W5.
@@ -1485,39 +1562,56 @@ ECoreDataType.namee = ECorePackage.namee;
 ECoreDataType.instanceClassName = EcoreParser.XMLinlineMarker + 'instanceClassName';
 ECoreDataType.serializable = EcoreParser.XMLinlineMarker + 'serializable';
 
-ECoreLiteral.literal = 'literal';
+ECoreEnum.instanceTypeName = ECoreClass.instanceTypeName;
+ECoreEnum.serializable =  EcoreParser.XMLinlineMarker + 'serializable'; // "false", "true"
+ECoreEnum.xsitype = ECoreClass.xsitype; // "ecore:EEnum"
+ECoreEnum.eLiterals = 'eLiterals';
+ECoreEnum.namee = ECorePackage.namee;
+ECoreEnum.defaultValueLiteral = EcoreParser.XMLinlineMarker + "defaultValueLiteral";
+
+ECoreLiteral.literal =  EcoreParser.XMLinlineMarker + 'literal';
 ECoreLiteral.namee = ECorePackage.namee;
 ECoreLiteral.value = 'value'; // any integer (-inf, +inf), not null. limiti = a type int 32 bit? vv4
 
 ECoreReference.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EReference"
 ECoreReference.eType = EcoreParser.XMLinlineMarker + 'eType'; // "#//Player"
+ECoreReference.eGenericType = 'eGenericType'; // sub-structure
 ECoreReference.containment = EcoreParser.XMLinlineMarker + 'containment'; // "true"
 ECoreReference.container = EcoreParser.XMLinlineMarker + 'container'; // "true" todo: not sure if it's really like this.
+
 ECoreReference.upperbound = EcoreParser.XMLinlineMarker + 'upperBound'; // "@1"
 ECoreReference.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound'; // does even exists?
 ECoreReference.namee = EcoreParser.XMLinlineMarker + 'name';
 ECoreReference.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
 ECoreReference.ordered = EcoreParser.XMLinlineMarker + 'ordered'; // "false",
+ECoreReference.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "true"
 ECoreReference.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
 ECoreReference.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
 ECoreReference.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
-ECoreReference.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "false"
-ECoreReference.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "true"
+ECoreReference.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "false"
+ECoreReference.defaultValueLiteral = EcoreParser.XMLinlineMarker + 'defaultValueLiteral'; // "false"
+// ref-specific stuff
+ECoreReference.eopposite = EcoreParser.XMLinlineMarker + 'eOpposite'; // "null"
 ECoreReference.eOpposite = EcoreParser.XMLinlineMarker + 'eOpposite'; // "#//Cls/feat" (3-segment intra-doc pointer)
+ECoreReference.resolveProxies = EcoreParser.XMLinlineMarker + 'resolveProxies'; // "true"
+
 
 
 ECoreAttribute.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EAttribute",
 ECoreAttribute.eType = EcoreParser.XMLinlineMarker + 'eType'; // "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+ECoreAttribute.eGenericType = 'eGenericType'; // sub-structure
 ECoreAttribute.namee = EcoreParser.XMLinlineMarker + 'name';
 ECoreAttribute.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound';
 ECoreAttribute.upperbound = EcoreParser.XMLinlineMarker + 'upperBound';
 ECoreAttribute.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
-ECoreAttribute.ordered = EcoreParser.XMLinlineMarker + 'ordered'; // "false",
+ECoreAttribute.ordered = EcoreParser.XMLinlineMarker + 'ordered'; // "false"
+ECoreAttribute.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "true"
 ECoreAttribute.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
 ECoreAttribute.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
 ECoreAttribute.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
-ECoreAttribute.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "false"
-ECoreAttribute.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "true"
+ECoreAttribute.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "false"
+ECoreAttribute.defaultValueLiteral = EcoreParser.XMLinlineMarker + 'defaultValueLiteral'; // "false"
+ECoreAttribute.id = EcoreParser.XMLinlineMarker + 'iD'; // "false"
 
 
 ECoreOperation.eParameters = 'eParameters';
@@ -1527,6 +1621,8 @@ ECoreOperation.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
 ECoreOperation.lowerBound = EcoreParser.XMLinlineMarker + 'lowerBound'; // "5", ma che senso ha su una funzione?? è il return?
 ECoreOperation.upperBound = EcoreParser.XMLinlineMarker + 'upperBound';
 ECoreOperation.eType = EcoreParser.XMLinlineMarker + 'eType'; // "#//Classname",
+ECoreOperation.eGenericType = 'eGenericType'; // sub-structure
+ECoreOperation.eTypeParameters = 'eTypeParameters';
 ECoreOperation.eexceptions = EcoreParser.XMLinlineMarker + 'eExceptions';
 // "#//ClassnameException1 #//ClassNameException2 (also custom classes) ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt
 
@@ -1535,7 +1631,8 @@ ECoreParameter.ordered = EcoreParser.XMLinlineMarker + 'ordered'; // "false";
 ECoreParameter.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false"
 ECoreParameter.lowerBound = EcoreParser.XMLinlineMarker + 'lowerBound'; // "1"
 ECoreParameter.upperBound = EcoreParser.XMLinlineMarker + 'upperBound'; // "2"
-ECoreParameter.eType = EcoreParser.XMLinlineMarker + 'eType'; // "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDoubl
+ECoreParameter.eType = EcoreParser.XMLinlineMarker + 'eType'; // "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble
+ECoreParameter.eGenericType = 'eGenericType'; // sub-structure
 
 ECoreObject.xmlns_xmi = EcoreParser.XMLinlineMarker + 'xmlns:xmi'; // "http://www.omg.org/XMI"
 // ECoreObject.xmlns_uri = EcoreParser.XMLinlineMarker + 'xmlns:org.eclipse.example.modelname'; // "https://org/eclipse/example/modelname"
@@ -1549,3 +1646,89 @@ export const EcoreXmiTags = [
     "xmlns:xsi",
     "xmlns:ecore",
 ];
+export const allEcoreKeys: Dictionary<string, string> = {
+    ...ECoreRoot,
+    ...ECoreAnnotation,
+    ...EcoreTypeDeclaration,
+    ...ECoreNamed,
+    ...ECoreDetail,
+    ...ECoreSubPackage,
+    ...ECorePackage,
+    ...ECoreClass,
+    ...ECoreEnum,
+    ...ECoreLiteral,
+    ...ECoreReference,
+    ...ECoreAttribute,
+    ...ECoreOperation,
+    ...ECoreParameter,
+    ...ECoreObject,
+    ...XMIModel
+} as any;
+let allLkKeys: GObject = {};
+windoww.allLkKeys = allLkKeys;
+windoww.allEcoreKeys = allEcoreKeys;
+for (let k0 in allEcoreKeys) {
+    let v = allEcoreKeys[k0];
+    if (typeof k0 !== "string") continue;
+    let k: string = (k0[0] === EcoreParser.XMLinlineMarker) ? k0.substring(1) : k0;
+    allEcoreKeys[k] = allEcoreKeys[EcoreParser.XMLinlineMarker+k] = v;
+    let lk = k.toLowerCase();
+    if (lk !== k) v = v.toLowerCase(); // if the key was already lowercase and the value not, i keep the originals (avoid overwrite originals)
+    allEcoreKeys[lk] = allEcoreKeys[EcoreParser.XMLinlineMarker+lk] = v;
+    allLkKeys[lk] = v;
+}
+
+
+
+let allEKeys = {
+    "ecore:epackage": "ecore:epackage",
+    "source": "@source",
+    "references": "@references",
+    "details": "details",
+    "contents": "contents",
+    "namee": "@name",
+    "key": "@key",
+    "value": "value",
+    "eannotations": "eannotations",
+    "eclassifiers": "eclassifiers",
+    "nsuri": "@nsuri",
+    "nsprefix": "@nsprefix",
+    "esubpackages": "esubpackages",
+    "xmlns:xmi": "@xmlns:xmi",
+    "xmlns:xsi": "@xmlns:xsi",
+    "xmi:version": "@xmi:version",
+    "xmlns:ecore": "@xmlns:ecore",
+    "estructuralfeatures": "estructuralfeatures",
+    "xsi:type": "@xsi:type",
+    "eoperations": "eoperations",
+    "instancetypename": "@instancetypename",
+    "esupertypes": "@esupertypes",
+    "egenericsupertypes": "@egenericsupertypes",
+    "etypeparameters": "eTypeParameters",
+    "abstract": "@abstract",
+    "interface": "@interface",
+    "instanceclassname": "@instanceclassname",
+    "serializable": "@serializable",
+    "eliterals": "eliterals",
+    "defaultvalueliteral": "@defaultvalueliteral",
+    "literal": "@literal",
+    "etype": "@etype",
+    "egenerictype": "egenerictype",
+    "unique": "@unique",
+    "ordered": "@ordered",
+    "upperbound": "@upperbound",
+    "lowerbound": "@lowerbound",
+    "containment": "@containment",
+    "container": "@container",
+    "changeable": "@changeable",
+    "derived": "@derived",
+    "transient": "@transient",
+    "volatile": "@volatile",
+    "unsettable": "@unsettable",
+    "eopposite": "@eOpposite",
+    "resolveproxies": "@resolveproxies",
+    "id": "@iD",
+    "eexceptions": "@eExceptions",
+    "eparameters": "eparameters",
+    "type": "@type"
+}

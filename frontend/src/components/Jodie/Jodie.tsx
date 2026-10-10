@@ -22,7 +22,7 @@ import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents, EnvGenEvents } fr
 import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
 import { getActiveModel, getActiveMetamodel, getActiveLevel, setActiveArtifactCache } from '../../jjscript/executor/utils';
 import { JjodieRagService } from '../../services/JjodieRagService';
-import {DUser, L, LUser, LProject, store} from '../../joiner';
+import {DUser, L, LUser, LProject, store, DState} from '../../joiner';
 import { findProfile } from '../../joiner/environmentConfig';
 import { activeProfileId, isConsumerMode } from '../environment/consumerMode';
 import {
@@ -39,6 +39,8 @@ import { consoleLanguageRegistry } from './console/languageRegistry';
 import type { ConsoleContext } from './console/types';
 import { consumerHelpText } from './consumerVoice';
 import './JodieWindow.css';
+
+let oldState: DState | null = null;
 
 // Generate unique message ID
 function generateMessageId(): string {
@@ -167,7 +169,7 @@ export function Jodie(): JSX.Element {
     const user = useMemo(()=> (L.fromPointer(DUser.current) as LUser), []);
     const userName = useMemo(() => `${user.name || ''} ${user.surname || ''}`.trim(), []);
     const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider]);
-    const state = store.getState();
+    const state = DState.getState();
 
     // Counter bumped on EDITOR_TYPE_CHANGE — drives projectContext re-evaluation
     // when the active editor tab changes (independent of redux state churn).
@@ -392,6 +394,9 @@ export function Jodie(): JSX.Element {
     // Initialize RAG and index project content
     useEffect(() => {
         const initializeAndIndex = async () => {
+            const newState = DState.getState();
+            if (oldState === newState) return; // do not update while idle.
+            oldState = newState;
             try {
                 // Initialize RAG system
                 if (!ragInitialized) {

@@ -202,6 +202,11 @@ div.d-flex.tree {
   color: $color-object;
 }
 
+.tree-Singleton {
+  background-color: rgba(71, 85, 105, 0.15);
+  color: $color-accent;
+}
+
 .tree-DValue {
   background-color: rgba(107, 114, 128, 0.1);
   color: $color-feature;
@@ -273,5 +278,10 @@ html[data-theme="dark"] {
   .tree-DValue {
     background-color: rgba(107, 114, 128, 0.2);
     color: #9ca3af;
+  }
+
+  .tree-Singleton {
+    background-color: rgba(71, 85, 105, 0.2);
+    color: #94a3b8;
   }
 }

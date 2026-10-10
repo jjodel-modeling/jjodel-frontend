@@ -374,7 +374,7 @@ function DockComponent(props: AllProps) {
         let resolvedEditorType: string | null = tabType;
         if (!resolvedEditorType && activeId) {
             try {
-                const state = store.getState();
+                const state = DState.getState();
                 const model = (state as any).idlookup?.[activeId];
                 if (model) {
                     resolvedEditorType = model.isMetamodel ? 'metamodel' : 'model';

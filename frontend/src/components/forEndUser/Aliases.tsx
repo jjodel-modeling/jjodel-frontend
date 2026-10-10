@@ -11,9 +11,11 @@ export function View(props: AllProps, children: ReactNode) {
     // Merge classNameAdd (injected by UX.tsx with comma-separated view IDs)
     // into className so the CSS scoping selector (`.Pointer_View_XXX { ... }`)
     // matches the rendered element. Without this, view CSS is never applied.
-    const { classNameAdd, className, ...rest } = props;
-    const addClasses = classNameAdd ? String(classNameAdd).replace(/,/g, ' ') : '';
-    const merged = ('view ' + (className || '') + ' ' + addClasses).trim();
-    return(<view className={merged} {...rest}>{props.children || children}</view>); }
+    const rootprops: Partial<GObject<AllProps>> = {...props};
+    delete rootprops.graph;
+    delete rootprops.view;
+    const addClasses = props.classNameAdd ? String(props.classNameAdd).replace(/,/g, ' ') : '';
+    const mergedcn = ('view ' + (props.className || '') + ' ' + addClasses).trim();
+    return(<view {...rootprops} className={mergedcn}>{props.children || children}</view>); }
 
 View.cname = 'View';

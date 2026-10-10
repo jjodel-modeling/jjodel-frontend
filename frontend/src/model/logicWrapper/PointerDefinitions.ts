@@ -1,4 +1,13 @@
-import {DStructuralFeature, LClass, LValue, LModel, RuntimeAccessible, DProject} from "../../joiner";
+import {
+    DStructuralFeature,
+    LClass,
+    LValue,
+    LModel,
+    RuntimeAccessible,
+    DProject,
+    DTypeDeclaration,
+    DPlaceholder
+} from "../../joiner";
 import type {
     Pointer, PrimitiveType, DModelElement, DGraphElement,
     DModel, DPackage, DClass, DEnumerator, DEnumLiteral, DOperation, DAttribute, DReference,
@@ -29,6 +38,9 @@ export class AnnotationPointers extends CommonStuff{
     parent?: this["father"][];
     father?: Pointer<DModelElement>;
     annotations?: Pointer<DAnnotation>[];
+    contents!: Pointer<DModelElement>[];
+    references!: Pointer<DModelElement>[];
+    source!: string; // not a name but validated in constructor
 }
 
 @RuntimeAccessible('PackagePointers')
@@ -70,7 +82,6 @@ export class ReferencePointers extends CommonStuff{
     instances!: Pointer<DValue>[];
     defaultValue!: Pointer<DObject>[];
     opposite?: Pointer<DReference>;
-    target!: Pointer<DClass>[];
     edges!: Pointer<DEdge>[];
 }
 
@@ -111,6 +122,7 @@ export class ClassPointers extends CommonStuff{
     // extendedBy?: Pointer<DClass>[];
     implements?: Pointer<DClass>[];
     implementedBy?: Pointer<DClass>[];
+    // nested in genericType and genericSuperTypes
 }
 
 @RuntimeAccessible('EnumPointers')
@@ -144,6 +156,21 @@ export class ValuePointers extends CommonStuff{
     edges!: Pointer<DEdge>[];
     values!: Pointer<DObject>[];
 
+}
+
+@RuntimeAccessible('TypeDeclarationPointers')
+export class TypeDeclarationPointers extends CommonStuff{
+    id!: Pointer<DTypeDeclaration>;
+    parent?: this["father"][];
+    father?: Pointer<DClass | DOperation>;
+    annotations?: Pointer<DAnnotation>[];
+}
+@RuntimeAccessible('PlaceholderPointers')
+export class PlaceholderPointers extends CommonStuff{
+    id!: Pointer<DPlaceholder>;
+    parent?: this["father"][];
+    father?: Pointer<DClass | DOperation>;
+    annotations?: Pointer<DAnnotation>[];
 }
 
 

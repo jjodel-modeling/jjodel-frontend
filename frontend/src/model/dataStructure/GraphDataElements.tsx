@@ -242,6 +242,19 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return U.findInChildProperties(arr, (e)=>[e.father], undefined, (e)=>e.rendered);
     }*/
 
+    toString(): string { return this.wrongAccessMessage("toString"); }
+    get_toString(c: Context): ()=>string { return ()=>JSON.stringify(c.data); }
+
+    forAnnotations(): string { return this.wrongAccessMessage("forAnnotations"); }
+    get_forAnotations(c: Context): GObject {
+    //return  ()=>{
+        let o: Partial<GObject<DGraphElement>> = c.data
+        // delete o.view;
+        return o;
+    //}();
+    }
+
+
     get_getByFullPath(c: Context): this['getByFullPath'] {
         return (path: string | string[]): L | null => {
             let patharr = Array.isArray(path) ? path : path.split('.');
@@ -307,7 +320,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__zoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"Scales the graph and all subelements by a factor."};
     get_ownZoom(c: Context): GraphPoint {
         let zoom: GraphPoint;
-        let isGraph = (true as any) || c.data.className.indexOf('Graph');
+        let isGraph = (true as any) || c.data.className.includes('Graph');
         if (isGraph) { zoom = (c.data as DGraph).zoom; }
         else { return this.get_graph(c)?.ownZoom || new GraphPoint(1, 1); }
         return new GraphPoint(zoom?.x||1, zoom?.y||1); // NB: do not use (??1), zero is not a valid value for zoom.
@@ -377,7 +390,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         let current = c.proxyObject;
         let next = current.father;
         let ret: LGraph[] = [];
-        while(next) {
+        while (next) {
             if (RuntimeAccessibleClass.extends(next.className, DGraph.cname)) ret.push(next as LGraph);
             if (current.id === next.id) break;
             current = next;
@@ -582,8 +595,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return this.wrongAccessMessage('adaptSize'); }
 
     get_adaptSize(c: Context): (typeof this['adaptSize']) {
-        return (size: EPSize, view: LViewElement, canTriggerSet: {w: boolean, h: boolean} = {w: true, h: true})=> {
+        return (size: EPSize, view: LViewElement, canTriggerSet: {w: boolean, h: boolean} = {w: true, h: true}) => {
             if (Debug.lightMode) return; // canTriggerSet = {w: false, h: false};
+            const debug = false; // U.debug;
             if (!canTriggerSet.w && !canTriggerSet.h) return;
             let ret0 = size;
             let ret = {...ret0};
@@ -596,7 +610,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             // reflows per call; calling it only to early-return on counter mismatch was the dominant
             // cost of [Forced reflow 37ms] during pan.
             if (!html || (c.data.clonedCounter && (c.data.clonedCounter || -1) !== +(html.dataset.clonedcounter as string))) {
-                if ((window as any).__adaptSizeDebug) {
+                if ((window as any).__adaptSizeDebug || U.debug) {
                     console.warn('adaptSize mismatching clonedcounter', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
                         cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, data: c.data});
                 }
@@ -807,7 +821,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
         TRANSACTION(this.get_name(context as any)+'.subElements', ()=> {
             SetFieldAction.new(context.data, 'subElements', pointers, '', true);
-            const idlookup = store.getState().idlookup;
+            const idlookup = DState.getState().idlookup;
             let arrdiff = U.arrayDifference(context.data.subElements, pointers);
             // old subelements
             for (let oldsubelementid of arrdiff.removed) {
@@ -832,7 +846,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         txt: "all deep subelements (nodes, edges, edgepoints, subgraphs...). including subelements of subelements."}
     private get_allSubElements(context: Context, state?: DState): this["allSubElements"] {
         // return context.data.packages.map(p => LPointerTargetable.from(p));
-        state = state || store.getState();
+        state = state || DState.getState();
         let tocheck: Pointer<DGraphElement>[] = context.data.subElements || [];
         let checked: Dictionary<Pointer, true> = {};
         let dblcheck: Dictionary<Pointer, Pointer> = {}; // <child, parent>  // debug only
@@ -1000,6 +1014,18 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return true;
         //return this.cannotSet("graphElement.isSelected(): use this.select() or this.deselect() instead.");
     }
+
+    selectionMap!: DGraphElement["isSelected"];
+    __info_of__selectionMap: Info = {type:"Dictionary<Pointer<User>, true>", txt:"Checks which users have selected this element."};
+    get_selectionMap(c: Context): this["selectionMap"] { return c.data.isSelected; }
+    set_selectionMap(v:never, c: Context): true { return this.cannotSet("selectionMap"); }
+
+    selection!: LUser[];
+    __info_of__selection: Info = {type:"LUser[]", txt:"Checks which users have selected this element."};
+    get_selection(c: Context): this["selection"] { return L.fromArr(Object.keys(c.data.isSelected).filter(ptr => c.data.isSelected[ptr])); }
+    set_selection(v:never, c: Context): true { return this.cannotSet("selection"); }
+
+
     /*
     get_isSelected(context: LogicContext<DVoidVertex>): GObject {
         return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
