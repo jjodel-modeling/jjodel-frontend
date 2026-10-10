@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0840
 Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Lane: fast (one function in `frontend/scripts/lane-board/lane-board.mjs`; cause measured)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1803 (board-kindof-merges, a77675e5e); no visual check (classification only)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
