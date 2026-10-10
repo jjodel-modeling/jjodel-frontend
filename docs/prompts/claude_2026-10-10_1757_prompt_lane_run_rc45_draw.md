@@ -5,7 +5,7 @@ Chat: C-2026-10-10-1512
 Request: https://claude.ai/code/session_015Px4yAHrpWDZQo31DjapvA
 Lane: full (lane-run tier selection, a shared tool every chat uses; Phase 1 and 2 in cascade)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10, lane P-2026-10-10-1757 (lane-run-rc45-draw; discovery 758c62cc1, code 8a1068660, docs 1ab2d5a49, fix b4f9ceb83), trunk taken by P-2026-10-10-1848 (995d7cb18) and P-2026-10-10-1923 (2913eced0), merged e93cc0d0b (P-2026-10-10-1937); verifica visiva passata 2026-10-10 (chat, RC-23, 4701)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
