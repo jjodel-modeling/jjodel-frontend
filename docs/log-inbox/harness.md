@@ -360,3 +360,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Span verified on 4701 under P-2026-10-10-1717 and on 4700 after the kickstart
 **Notes**: Rollback tag `pre-lane-board-span` on `bd97bae49` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1731/result.json`.
 **Prompt document name**: 2026-10-10 17:31
+
+## 2026-10-10 — feat(harness): lane-run draws the tier of eligible lanes, RC-45 (P-2026-10-10-1757)
+**Prompt**: `claude_2026-10-10_1757_prompt_lane_run_rc45_draw.md`: Phase 1 discovery (`758c62cc1`, `docs/discovery/discovery_2026-10-10_lane_run_rc45_draw.md`), then in cascade the RC-45 draw in `lane-run start` and `chain` (eligibility, ledger `~/.jjodel-lanes/rc45-draws.jsonl`, `--no-draw`, reuse of a draw, lock), the board reading the ledger and `tier.txt`, tests red first.
+**Files touched**: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/insights.js` (`8a1068660`); this commit: `frontend/scripts/lane-board/README.md` and this entry. Seven files with the report, all named by the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Adopted under RC-21 the four Recommended lines of the report §0: inline `DOVE:` read when there is no `## DOVE`; a Lane-line draw missing from the ledger is recorded; a chain draws at each lane's start; `--tier` equal to a draw is accepted. Tests first, 13 of 14 red; mutation bench 27 of 28 killed (survivor: the ledger lock, a race). Dry runs under HOME=/tmp/p1757/dry; the real ledger unchanged (sha256 94af6b50).
+**Prompt document name**: 2026-10-10 17:57
+
+**Ticket** (RC-45 vs check:docs, P-2026-10-10-1757): the prompt asks for `Corregge: none` (RC-45 (2)), but Check B of `npm run check:docs` refuses it: measured on this entry, `value is neither the sentinel nor a prompt-document name in the prescribed form`. This entry writes the sentinel `—`, which §21.3 defines as "corrects nothing". Either RC-45 (2) reads `—`, or `log-tools.ts` `lintTaskFields` accepts `none`: the chat's call.

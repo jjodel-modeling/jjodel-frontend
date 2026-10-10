@@ -55,8 +55,12 @@ returns one record per lane; `insights.js` aggregates them by the tab's range.
   and no run that ended blocked or ran past 90 minutes. Running lanes are left out.
 - **Thresholds**: every cell shows its n; the rate is hidden below 5 lanes and greyed
   below 10.
-- **Drawn lanes**: a lane whose `Lane:` line says `tier drawn (RC-45): heavy|light`
-  carries `drawn`; the model section can show those lanes alone.
+- **Drawn lanes** (RC-45): `drawn` is `heavy` or `light` for a lane whose tier was drawn at
+  random, `null` otherwise. The tier comes from the ledger `lane-run` writes,
+  `~/.jjodel-lanes/rc45-draws.jsonl` (its first entry for the Prompt-ID), else from a
+  `tier.txt` that reads `<tier> (<model>): drawn (RC-45), <n>/40` (a `not drawn (RC-45)`
+  note does not count), else from a `Lane:` line that says `tier drawn (RC-45): heavy|light`.
+  The model section can show those lanes alone, with the heavy/light split of the range.
 
 Log facts ride the per-lane cache (key `v6`). The git facts are rebuilt only when the
 hash of `git for-each-ref` changes, and then only for the commits since the last scan.
