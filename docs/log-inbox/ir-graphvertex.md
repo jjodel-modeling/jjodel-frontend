@@ -98,3 +98,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-10-0105
 **Detail**: docs/spec/claude_spec_2026-10-10_ir_graphvertex_containment_addendum.md
+
+## 2026-10-10 — feat(editor-v2): graphVertex Auto layout across containers, S6 (P-2026-10-10-0105)
+**Prompt**: Phase 2 GO slice S6 (chat C-2026-10-10-0057), visual: the toolbar Auto layout respects containment, bottom-up by container (RC-25): free and self-framed containers laid out on their own, a partitions container in one run flowing across its bands, edges at their lowest common container, hidden channel edges out, collapsed containers as one node; no change without containment; BPMN and statechart criteria after one Auto layout, idempotent; controls byte-identical; gates, bench, hard stop.
+**Files touched**: `65dc0fe7e`: `frontend/src/components/editor-v2/utils/elkContainers.ts` (new), its test (new), `EditorV2.tsx` (the toolbar Auto layout call site). `f8934e929`: `frontend/scripts/probe/bpmn-lanes-fixture.ts`, `statechart-fixture.ts`. `b89000360`: `docs/discovery/assets/graphvertex-s6/` (16 files). This commit: this inbox file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: BPMN S6 3/6 before, 6/6 after (twice); statechart 1/3 then 3/3. Controls: no-graphVertex view and S1 hull scenes, identical positions; S2+S3 25/25, S2b 7/7, hull screenshots byte-identical. tsc 14; editor-v2 3654; full 7931, 9 known import failures; build 0. Bench 22 mutants, all killed after five tests. Found in-lane: the pool's written size reached the canvas only by chance (records land a dispatch later); fixed by a bounded redraw.
+**Prompt document name**: 2026-10-10 01:05
+
+**Ticket** (lane): a band places its nodes by their boxes, not by their outside labels: after Auto layout the start event's «Order received», wider than the event, overhangs the Sales lane's band (s6-bpmn-after-light.png). The ELK runs reserve the label's room between nodes, the band margin does not.
