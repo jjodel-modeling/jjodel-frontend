@@ -79,6 +79,9 @@ export const JjodelEvents = {
   // Notifications
   TOAST: 'jjodel:toast',
   TOAST_PREFS_CHANGED: 'jjodel:toast-prefs-changed',
+  // P-2026-10-10-1825 (R-GEN-2). The experimental code generation setting changed in this tab
+  // (codegen/setting.ts). detail: { enabled: boolean }.
+  EXPERIMENTAL_CODEGEN_CHANGED: 'jjodel:experimental-codegen-changed',
   HISTORY_CHANGED: 'jjodel:history-changed',
   GUARD_VIOLATION: 'jjodel:guard-violation',
   NOTIFICATIONS_POPOVER_TOGGLE: 'jjodel:notifications-popover-toggle',

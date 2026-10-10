@@ -21,8 +21,10 @@
   // Sequential ramp: one hue (the board's cyan), light to dark; its own steps in dark mode.
   const ramp = (r) => r <= 0 ? 'var(--bg)' : dark() ? 'hsl(199,80%,' + Math.round(20 + 45 * r) + '%)' : 'hsl(199,85%,' + Math.round(90 - 55 * r) + '%)';
   const OTIP = (o) => ((window.LANE_OUTCOME_TIPS || {})[o] || '').replace(/"/g, '&quot;');
-  const OUTS = [['done', 'var(--ok)', 'done'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']];
-  const outOf = (l) => l.live ? 'running' : (() => { const o = (l.outcome && l.outcome !== 'none' ? l.outcome : (l.turns[l.turns.length - 1] || {}).o || '').split(' ')[0]; return o === 'failed' ? 'blocked' : OUTS.some((x) => x[0] === o) ? o : ''; })();
+  // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards, in the ok colour, not among the blocked.
+  // Its flag rides /api/timeline beside the raw outcome; first-shot (/api/insights) keeps the raw outcome on purpose.
+  const OUTS = [['done', 'var(--ok)', 'done'], ['resolved', 'var(--ok)', 'resolved'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']];
+  const outOf = (l) => l.live ? 'running' : l.resolved ? 'resolved' : (() => { const o = (l.outcome && l.outcome !== 'none' ? l.outcome : (l.turns[l.turns.length - 1] || {}).o || '').split(' ')[0]; return o === 'failed' ? 'blocked' : OUTS.some((x) => x[0] === o) ? o : ''; })();
   const KINDS = [['discovery', 'Discovery'], ['phase2', 'Full / Phase 2'], ['fast', 'Fast'], ['merge', 'Merge'], ['', 'Not recorded']];
 
   const css = `

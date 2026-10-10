@@ -550,3 +550,109 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: harness: lane-run draws the tier of eligible fast lanes (RC-45); board drawn toggle checked on 4701
 **Notes**: Rollback tag `pre-lane-run-rc45-draw` on `9d41d0bce` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1937/result.json`.
 **Prompt document name**: 2026-10-10 19:37
+
+## 2026-10-10 — feat(harness): req-trace on the trunk, verbatim from harness-req-tab (P-2026-10-10-2022)
+**Prompt**: `claude_2026-10-10_2022_prompt_req_trace.md`, slice S3 of the board port (discovery `discovery_2026-10-10_board_req_tab_port.md` §6-7): copy `req-trace.mjs` and `reqTrace.test.ts` verbatim from `35240a582`, probe the trunk, re-run 8 or more mutations, gates, one code commit.
+**Files touched**: `frontend/scripts/req-trace.mjs`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts` (`14461b2bd`, blobs identical to the branch, mode 100644); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: No line changed: suite 16/16, node --check 0, check:scripts PASS 69 (walks the disk, both files in). Probe exit 0, 4.5 s, 488470 B: §6 counts hold except realized 297 and 12 after the milestone (+3 each: `f95d0a44f` cites R-GEN-2, -3, -14, merged by `601ec1379` after `834152b68`); prompts 860, +20 of which 13 merge, 7 under 2 ids, graph unchanged. Bench 13/13 killed, control green. Subject cut to 72 (guard).
+**Prompt document name**: 2026-10-10 20:22
+
+## 2026-10-10 — merge: req-trace-port into alfonso-frontend-jjtl (P-2026-10-10-2034)
+**Prompt**: `claude_2026-10-10_2034_prompt_merge_req-trace-port.md`, a direct merge by `lane-run merge --direct`, no session: `req-trace-port` at `c60ff807b` into `alfonso-frontend-jjtl`, merge base `05035419a`, 2 commits on the branch side.
+**Files touched**: merge `16e70f5e8`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_2022_prompt_req_trace.md`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/req-trace.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `16e70f5e8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8094 tests in 332 files, 9 red at import, hooks 517; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: not applicable: req-trace.mjs has no UI and no caller yet (S5 adds it); gates green
+**Notes**: Rollback tag `pre-req-trace-port-P-2026-10-10-2034` on `f4c91bd71` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2034/result.json`.
+**Prompt document name**: 2026-10-10 20:34
+
+## 2026-10-10 — feat: lane-run resolve and the resolved outcome, with card projection (P-2026-10-10-2020)
+**Prompt**: `claude_2026-10-10_2020_prompt_lane_run_resolve.md`: slice S1 of discovery P-2026-10-10-1806, a fresh port of `harness-req-tab` hunks h1-h7 (`resolved.txt`, `outcome: resolved` in `status`, `lane-run resolve`), plus R4: a resolved lane projects like done and `resolve` re-projects its card.
+**Files touched**: code `a335abd21`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-tracking.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`; docs `5dc52f23f`: `docs/HARNESS-DOCS.md`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. node --check exit 0 on both scripts; laneRun, laneRunDirect, laneTracking 205/205, exit 0; check:scripts PASS. On base `c22fc0ec5`: 3 of 4 ported tests red (the fourth guards reading the file on any outcome, green there by design), 4 of 4 new laneTracking cases red.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Mutation bench 16 of 17 killed; M8 (running lane not refused) is equivalent: a live run has a null outcome, so the outcome check refuses it, only the text differs. Subject shortened from the prompt's 86 characters to 70: bash-guard refuses above 72 (CLAUDE.md 6.2). All tests in throwaway HOMEs; real `~/.jjodel-lanes/` holds 0 `resolved.txt` (control: 419 `exit.txt`). Bench list in the body of `a335abd21`.
+**Prompt document name**: 2026-10-10 20:20
+
+**Ticket** (low, found here): `resolved.txt` survives a `resume`. A resolved lane resumed and blocked again reads `resolved` in `status` and on its card until the file is removed by hand. Inherited from the branch semantics (written once, never cleared); not changed in this lane.
+
+## 2026-10-10 — merge: lane-run-resolve into alfonso-frontend-jjtl (P-2026-10-10-2042)
+**Prompt**: `claude_2026-10-10_2042_prompt_merge_lane-run-resolve.md`, a direct merge by `lane-run merge --direct`, no session: `lane-run-resolve` at `0933ebe92` into `alfonso-frontend-jjtl`, merge base `c22fc0ec5`, 3 commits on the branch side.
+**Files touched**: merge `6a8065809`: 7 files from the branch side (`docs/HARNESS-DOCS.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_2020_prompt_lane_run_resolve.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-tracking.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6a8065809` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8102 tests in 332 files, 9 red at import, hooks 525; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: not applicable: CLI only (lane-run resolve and status); gates green, 8102 tests
+**Notes**: Rollback tag `pre-lane-run-resolve` on `2cc5af89a` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2042/result.json`.
+**Prompt document name**: 2026-10-10 20:42
+
+## 2026-10-10 — feat: lane board progress in the Phase cell and the resolved outcome (P-2026-10-10-2021)
+**Prompt**: `claude_2026-10-10_2021_prompt_board_progress_core.md`, slice S2 of the board port (discovery P-2026-10-10-1806 §7): the board listens only when run and exports its pure functions (F7), progress ladders from a running lane's log (F3), the blended estimate (F4), the `resolved` overlay for the Lanes tab only (F5), progress drawn inside the Phase cell (R1), README, the ported `laneBoard.test.ts` and five fixtures, a mutation bench.
+**Files touched**: `40b64be63`: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/{discovery,fast,merge,phase2,real-fast-P-2026-10-05-1110}.jsonl`; uncommitted (RC-17): this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no; the chat's RC-23 check of the Running table passed on 4702. Measured: `node --check` exit 0; `laneBoard.test.ts` 66/66; check:scripts PASS 68 files; on 4702 the Running header is the trunk's, exited rows carry the trunk's 24 keys, 15 blocked rows stay `blocked`.
+**Out-of-scope changes**: no: eight files, all declared by the prompt (above rule 19's five, listed there).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane, node run of the page's own `table()` on the 4 live `/api` rows of 4702: 8 segments and n/m each, phase text below; the chat's RC-23 check on 4702 (PID 57203) passed, board stopped
+**Notes**: Base commit: 63 of 64 ported cases red, the raw-outcome guard green. Bench 57/59 killed, 2 equivalent (Math.max on a fraction, cache eviction); three survivors closed by two tests (compaction at every step, guard through a symlink). Exports: XES reads `/api/timeline`, which maps `resolved` back to `blocked`; trace reads turn outcomes. Subject shortened to 72 chars: bash-guard caps it. `import()` returns exit 0, no port.
+**Prompt document name**: 2026-10-10 20:21
+
+## 2026-10-10 — merge: board-progress-core into alfonso-frontend-jjtl (P-2026-10-10-2053)
+**Prompt**: `claude_2026-10-10_2053_prompt_merge_board-progress-core.md`, a direct merge by `lane-run merge --direct`, no session: `board-progress-core` at `567909061` into `alfonso-frontend-jjtl`, merge base `c22fc0ec5`, 2 commits on the branch side.
+**Files touched**: merge `4cf36a239`: 10 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_2021_prompt_board_progress_core.md`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/discovery.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/fast.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/merge.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/phase2.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-board/real-fast-P-2026-10-05-1110.jsonl`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4cf36a239` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8168 tests in 333 files, 9 red at import, hooks 591; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 check on 4702, Running Phase cell with segments, n/m and phase text, columns unchanged
+**Notes**: Rollback tag `pre-board-progress-core` on `c0727487e` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2053/result.json`.
+**Prompt document name**: 2026-10-10 20:53
+
+## 2026-10-10 — feat(harness): board status strip, resolved colour in Timeline and Insights (P-2026-10-10-2103)
+**Prompt**: `claude_2026-10-10_2103_prompt_board_strip.md`, slice S4 of the board port (discovery P-2026-10-10-1806 §7): F1, the six-pill status strip with its filter of the Lanes tab through the trunk `table()`; F6, `resolved` in Timeline (last turn, legends, title, detail, `LANE_OUTCOME_TIPS`) and the Insights `OUTS` entry; README; new `laneBoardStrip.test.ts`; a mutation bench; a live check on 4702, left running for the chat's RC-23 check.
+**Files touched**: `ff1620ca0`: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoardStrip.test.ts`; uncommitted (RC-17): this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown until the chat's RC-23 check. Measured: `node --check` exit 0 on the three scripts; `laneBoard.test.ts` 66/66, `laneBoardStrip.test.ts` 12/12; check:scripts PASS 73 files; S2's raw-outcome guard green.
+**Out-of-scope changes**: yes, inside the five declared files: `timeline()` in `lane-board.mjs` adds `resolved: true` beside the raw outcome, and `outOf` in `insights.js` reads it. S2 keeps `/api/timeline` raw for the exports, so the branch hunks (`lane.outcome === 'resolved'`) would never fire; adopted unattended, not asked.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: chat RC-23 on 4702 (six pills, blocked filter and clear) and on the 4703 fixture (resolved last turn in var(--ok), legend tip): RC-23 on 4702 (PID 95480, live data, no resolved lane) and on the fixture board 4703 (PID 95961, `/tmp/s4-fixture-lanes`: resolved P-2026-10-05-1110, two turns, Range 7 days); both left running for the chat to stop
+**Notes**: Base: 12/12 new cases red. Bench 26/26 killed, control green; a one-turn fixture let "every turn painted" survive until the resolved lane got two turns. Live 4702: 427 rows; stripCounts, the page's stripKey and a hand tally agree (2/8/125/15/0/55). 4703 serves /tmp copies of 8 lanes, resolved.txt only in a copy; its XES and trace keep blocked. `rm -rf` is denied: /tmp/s4bench, /tmp/s4base2 and the 4703 fixture remain.
+**Prompt document name**: 2026-10-10 21:03
+
+## 2026-10-10 — merge: board-strip into alfonso-frontend-jjtl (P-2026-10-10-2119)
+**Prompt**: `claude_2026-10-10_2119_prompt_merge_board-strip.md`, a direct merge by `lane-run merge --direct`, no session: `board-strip` at `c9044649e` into `alfonso-frontend-jjtl`, merge base `3f4ad5d00`, 2 commits on the branch side.
+**Files touched**: merge `0edb5f06b`: 7 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_2103_prompt_board_strip.md`, `frontend/scripts/hooks/__tests__/laneBoardStrip.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0edb5f06b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8180 tests in 334 files, 9 red at import, hooks 603; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702 (six pills, blocked filter and clear) and on the 4703 fixture (resolved last turn in var(--ok), legend tip)
+**Notes**: Rollback tag `pre-board-strip` on `3f4ad5d00` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2119/result.json`.
+**Prompt document name**: 2026-10-10 21:19

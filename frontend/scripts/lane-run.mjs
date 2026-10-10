@@ -70,10 +70,22 @@
  *                warning line when its prompt (prompt.txt, else the docs/prompts
  *                file whose header holds its id) still reads `Status: da eseguire`:
  *                the closure commit owes the flip (P16, RC-17).
+ *                A lane that exited blocked and holds resolved.txt (written by
+ *                resolve) prints `outcome: resolved`, then `recorded: <the Outcome
+ *                line>` and `resolved: <the line of resolved.txt>` (P-2026-10-05-1720).
  *   status --all [--limit <minutes>]
  *                every lane folder of ~/.jjodel-lanes in one table (id, state,
  *                outcome, elapsed), newest Prompt-ID first; a chain is one row,
  *                its position in the outcome column, its lanes not listed apart.
+ *                The outcome of a lane that exited blocked and holds resolved.txt
+ *                reads `resolved`; any other outcome ignores the file.
+ *   resolve <Prompt-ID> --why "<text>" [--by <name>]
+ *                writes resolved.txt in the lane folder, one line: date and time
+ *                (LANE_RUN_NOW honoured), who (--by, else $USER), why. Refused
+ *                unless the lane has exited with `Outcome: blocked`, and when the
+ *                file already exists: a resolution is written once. Then projects
+ *                the lane's card (track, RC-44), which reads a resolved lane as a
+ *                done one, and prints its `card:` line.
  *   status <chain-id>
  *                a chain: state (running, done, stopped, lost when its
  *                supervisor died), position, lanes, the merge after, where it
@@ -196,7 +208,7 @@
  *                Tracking runs only when ~/.jjodel-lanes/_tracking/config.json
  *                exists (its `gh` names the binary; LANE_TRACK_GH overrides it).
  *                start and resume (In progress), status <id> and so wait (the
- *                observed exit), the chain supervisor and go on a direct merge
+ *                observed exit), resolve, the chain supervisor and go on a direct merge
  *                (the lanes it merged) each project the card and print one
  *                `card:` line: the issue URL and column, or why there is none.
  *                It fails open (RC-15): a gh error, a missing project scope or
@@ -343,6 +355,7 @@ function laneFiles(id) {
         tier: join(dir, 'tier.txt'),
         auto: join(dir, 'auto.json'),
         request: join(dir, 'request.md'),
+        resolved: join(dir, 'resolved.txt'),
     };
 }
 
@@ -988,7 +1001,11 @@ function laneState(f, limit) {
     let state = running ? 'running' : 'exited';
     if (running && elapsedMs > limit * 60000) state = 'blocked';
     // An Outcome line is the result of a turn: while a turn runs, the last one belongs to an earlier turn.
-    return { state, exited, outcome: running ? null : lastOutcome(f.log), minutes: Math.floor(elapsedMs / 60000) };
+    const outcome = running ? null : lastOutcome(f.log);
+    // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards, resolved.txt in its folder.
+    const closed = outcome === null ? null : OUTCOME.exec(outcome);
+    const resolved = closed && closed[1] === 'blocked' && existsSync(f.resolved) ? readTrim(f.resolved) : null;
+    return { state, exited, outcome, resolved, minutes: Math.floor(elapsedMs / 60000) };
 }
 
 function status(idArg, rest) {
@@ -1003,7 +1020,13 @@ function status(idArg, rest) {
     console.log('lane: ' + id);
     console.log('state: ' + s.state);
     console.log('exit: ' + (s.exited ? readTrim(f.exit) : '-'));
-    console.log('outcome: ' + (s.outcome === null ? 'none' : OUTCOME.test(s.outcome) ? s.outcome : 'unparsed: ' + s.outcome));
+    if (s.resolved !== null) {
+        console.log('outcome: resolved');
+        console.log('recorded: ' + s.outcome);
+        console.log('resolved: ' + s.resolved);
+    } else {
+        console.log('outcome: ' + (s.outcome === null ? 'none' : OUTCOME.test(s.outcome) ? s.outcome : 'unparsed: ' + s.outcome));
+    }
     console.log('elapsed: ' + s.minutes + ' min, limit ' + limit + ' min');
     console.log('session: ' + (readTrim(f.session) || '-'));
     console.log('log: ' + f.log);
@@ -1074,13 +1097,40 @@ function statusAll(rest) {
     for (const id of ids.sort().reverse()) {
         const s = laneState(laneFiles(id), limit);
         const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
-        rows.push([id, s.state, s.outcome === null ? 'none' : m ? m[1] : 'unparsed', s.minutes + ' min']);
+        rows.push([id, s.state, s.outcome === null ? 'none' : s.resolved !== null ? 'resolved' : m ? m[1] : 'unparsed', s.minutes + ' min']);
     }
     for (const c of chains.sort((a, b) => (a.id < b.id ? 1 : -1))) {
         rows.push([c.id, chainState(c), chainPosition(c), Math.floor((Date.now() - c.created) / 60000) + ' min']);
     }
     const widths = rows[0].map((_, c) => Math.max(...rows.map((r) => r[c].length)));
     for (const r of rows) console.log(r.map((x, c) => (c === r.length - 1 ? x : x.padEnd(widths[c]))).join('  '));
+    return 0;
+}
+
+// ── resolve ──────────────────────────────────────────────────────────────────
+
+/**
+ * resolved.txt for a lane that exited blocked: one line, date, who, why; refused on any other lane and on a second resolve.
+ * Then the card is projected again (RC-44), after the file is written: tracking fails open (RC-15) and never undoes it.
+ */
+function resolve_(idArg, rest) {
+    const id = checkId(idArg);
+    const why = (option(rest, '--why') || '').replace(/\s+/g, ' ').trim();
+    if (!why) refuse('usage: lane-run resolve <Prompt-ID> --why "<text>" [--by <name>]');
+    const by = (option(rest, '--by') || process.env.USER || process.env.LOGNAME || 'unknown').replace(/\s+/g, ' ').trim();
+    const f = laneFiles(id);
+    if (!existsSync(f.dir)) refuse('no lane ' + id + ' in ' + lanesRoot());
+    if (existsSync(f.resolved)) refuse(id + ' is already resolved: ' + readTrim(f.resolved));
+    const s = laneState(f, DEFAULT_LIMIT_MINUTES);
+    if (s.state !== 'exited') refuse(id + ' is ' + s.state + ', not exited: only a lane that exited blocked can be resolved');
+    const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
+    if (!m || m[1] !== 'blocked') refuse(id + ' is not blocked (outcome: ' + (s.outcome === null ? 'none' : s.outcome) + '): only a lane that exited blocked can be resolved');
+    const d = clock();
+    const { date } = stamp(d);
+    const line = date + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' · ' + by + ' · ' + why;
+    writeFileSync(f.resolved, line + '\n');
+    console.log('resolved: ' + id + ': ' + line);
+    trackCard(id);
     return 0;
 }
 
@@ -2535,6 +2585,7 @@ function observeLane(id, { launched = false, limit = DEFAULT_LIMIT_MINUTES, prom
         merge: folder && existsSync(join(f.dir, 'direct.json')),
         state: launched ? 'running' : s ? s.state : null,
         outcome: s ? s.outcome : null,
+        resolved: s ? s.resolved : null,
         headerStatus: text === null ? '' : headerStatus(text),
         goSeen: laneInputs(f).slice(1).some((p) => isGoMessage(readFileSync(p, 'utf8'))),
         promptText: text,
@@ -2719,6 +2770,7 @@ async function main(argv) {
     if (command === 'resume') return resume(rest[0], rest.slice(1));
     if (command === 'go') return go(rest[0], rest.slice(1));
     if (command === 'status') return status(rest[0], rest.slice(1));
+    if (command === 'resolve') return resolve_(rest[0], rest.slice(1));
     if (command === 'merge') return merge(rest);
     if (command === 'wait') return waitLanes(rest);
     if (command === 'probe') return probe(rest);
@@ -2727,7 +2779,7 @@ async function main(argv) {
     if (command === 'chain-run') return chainRun(rest[0]);
     if (command === 'track') return track(rest);
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
-        'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | ' +
+        'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | resolve <Prompt-ID> --why "<text>" | ' +
         'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>] | ' +
         'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n> | monitor [--port <n>] [--no-open] | ' +
         'track <Prompt-ID>|--sync [--dry-run]');
