@@ -437,3 +437,40 @@ stay painted. The rework prompt (input-7 of the lane folder) asks four questions
   can issue a second delete for those edges, a no-op in the reducer (`reducer.ts:373`). Measured in the probe
   (`del*.doubled`).
 - No critical-zone file: `canvasToJjom.ts`, `useJjomSync.ts`, `syncState.ts` are not touched.
+
+### A.7 What the measures changed: deleting a vertex record breaks Ctrl+Z, by the reducer's history merge
+
+A.6 was written before the fix ran. Run, it removes the ghosts and breaks the undo; the cause is outside the
+lane's files. MEAS on `57522986b` + the `Dummy.ts` variant named, same probe, gesture with a 1200 ms pause between
+the click and Delete (the 400 ms of the chat's probe falls inside the merge window below).
+
+- `reducer.ts:1216`: `if (!shouldMerge && (delta.vertexs || delta.graphvertexs || delta.graphelements ||
+  delta.edgepoints || delta.edges || delta.graphs)) shouldMerge = true;` A state change that touches a root graph
+  collection never gets a history entry of its own: it is merged into the previous one. `reducer.ts:1284` does the
+  same for a change that lands within 450 ms of the previous entry.
+- The merge is `U.objectMergeInPlace(pastDelta, delta);` (`reducer.ts:1256`), and that function is shallow and
+  never overrides: `out[key] ?? (out[key] = o[key]);` (`U.tsx:903`). Both deltas carry an `idlookup` key, so the
+  merged delta's whole `idlookup`, every record a Ctrl+Z would restore, is dropped. Only its new top-level keys
+  survive (`vertexs`, `edges`, `objects`, …).
+- Deleting a `DVertex` record changes the root `vertexs` (and its edges the root `edges`). So a delete that takes
+  vertex records with it is merged, whole, into the previous entry (on the canvas: the click's selection entry,
+  `_lastSelected`, whose `idlookup` holds the clicked vertex with `isSelected` only), and loses its records.
+
+| variant of `Dummy.ts` | ghosts / painted (M1, M2, M3) | history after the canvas delete | one Ctrl+Z |
+|---|---|---|---|
+| `HEAD` (no vertex handling) | 2/1, 4/3, 6/5 | its own entry, `objects+values+ELEMENT_DELETED`, 14 records | elements back, vertices never left; the clicked node is not repainted; no page error |
+| A.6, vertex deleted in the element's TRANSACTION | 0/0 | merged into the selection entry, 2 records | restores nothing; page error `reducer.ts:1115` (a vertex record with `isSelected` only); `_tmp_174_p2.ts` D1U red |
+| A.6 deferred (`setTimeout 0` after the element) | 0/0 | still one merged entry, 2 records (the cleanup lands in the same composite) | restores nothing; same page error |
+| **detach** from `subElements`, records kept | **0/0** | its own entry, 15 and 25 records | elements **and** nodes back at the same coordinates, edges of M0 back, the clicked node repainted; no page error |
+
+- The detach variant: in `case 'model'`, for a `DVertex`, `SetFieldAction(graph, 'subElements', id, '-=')` for the
+  vertex and for every edge its `pointedBy` names by `start`/`end`. No root collection changes, so the delete keeps
+  its own history entry and the undo restores `subElements`, which is what repaints the nodes (A.4). No element is
+  deleted twice (`del*.doubled` 0); a repeated delete after an undo works. `_tmp_174_p2.ts` 33/33,
+  `_tmp_174_xmi.ts` and `_tmp_174_migc.ts` green, zero page errors.
+- Its cost: the `DVertex` and edge records stay in `idlookup` and in the root lists, listed by no graph (2, 4, 6
+  vertices and 0, 1, 2 edges after M1, M2, M3). They are never painted and they are saved.
+- The same merge explains two tickets of this lane: the canvas connect that adds no history entry (U4, a
+  `DVoidEdge` creation changes the root `edges`), and the page error on the undo of an M2 reference delete.
+- Saved ghosts (SG): a vertex already saved in `subElements` with a dead `model` is in the store, in
+  `subElements` and **painted** after a load and `open()`. Nothing removes it today.
