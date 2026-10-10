@@ -47,6 +47,7 @@ import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
 import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/edgeLanes';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
+import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
@@ -107,7 +108,6 @@ import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
-import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
 import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
@@ -511,16 +511,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
-            // If the graph was just auto-created, apply ELK layout first
-            if (justCreatedGraphRef.current) {
-                justCreatedGraphRef.current = false;
-                if (autoLayoutRef.current) {
-                    await autoLayoutRef.current();
-                    // The M1 reference edges materialize asynchronously AFTER this first
-                    // layout; watch for them and re-run the layout once when they land.
-                    armReLayoutRef.current?.();
-                    return; // autoLayout already does fitView + distribution
-                }
+            // If the graph was just auto-created, apply ELK layout first. The flag is raised by any
+            // creating populate run, so the layout runs only on a graph no vertex of which has a layout
+            // record yet; otherwise the new vertices keep their default placement and nothing else moves
+            // (utils/autoLayoutOnOpen, P-2026-10-10-1155).
+            const createdOnOpen = justCreatedGraphRef.current;
+            justCreatedGraphRef.current = false;
+            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {})) {
+                await autoLayoutRef.current();
+                // The M1 reference edges materialize asynchronously AFTER this first
+                // layout; watch for them and re-run the layout once when they land.
+                armReLayoutRef.current?.();
+                return; // autoLayout already does fitView + distribution
             }
             // Restore-if-present, fit otherwise. A stored viewport already came in
             // through `defaultViewport`, so there is nothing to re-apply here — the
@@ -959,9 +961,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const handleObjectEdgeSelectedRef = useRef<(match: IRConnectRuleMatch, conn?: Connection) => void>(() => {});
     // Mirror of the IR interaction plan for stable-dep callbacks (same pattern as modeInfoRef).
     const irPlanRef = useRef<IRInteractionPlan | null>(null);
-
-    // Theme state — follows global ThemeService (synced with Navbar/Settings)
-    const [theme] = useTheme();
 
     // Notation mode state with localStorage persistence
     const VALID_NOTATIONS: NotationMode[] = ['uml', 'simplified', 'compact', 'wireframe', 'er'];
@@ -4414,8 +4413,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     <defs>
                         <pattern id="dot-grid-pattern" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
                             <circle cx="12" cy="12" r="1"
-                                fill={theme === 'dark' ? '#334155' : '#cbd5e1'}
-                                fillOpacity={theme === 'dark' ? 0.6 : 0.55}
+                                fill="#cbd5e1"
+                                fillOpacity={0.55}
                             />
                         </pattern>
                     </defs>
@@ -4442,11 +4441,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     style={{ position: 'absolute', margin: 0, right: 'calc(var(--jj-canvas-right-inset, 0px) + 16px)', bottom: '16px', borderRadius: '4px', opacity: 0.8 }}
                     nodeStrokeWidth={3}
                     nodeColor={(node) => {
-                        if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
+                        if (node.type === 'classNode') return '#0284c7';
                         if (node.type === 'enumNode') return '#7c3aed';
-                        if (node.type === 'packageNode') return theme === 'dark' ? '#64748b' : '#94a3b8';
-                        if (node.type === 'objectNode') return theme === 'dark' ? '#f59e0b' : '#d97706';
-                        return theme === 'dark' ? '#334155' : '#e2e8f0';
+                        if (node.type === 'packageNode') return '#94a3b8';
+                        if (node.type === 'objectNode') return '#d97706';
+                        return '#e2e8f0';
                     }}
                     bgColor="var(--color-minimap-bg)"
                     maskColor="var(--minimap-mask)"
@@ -4501,7 +4500,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
+            <div className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />

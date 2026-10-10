@@ -1,0 +1,352 @@
+{
+ "prompt": "P-2026-10-10-1155",
+ "note": "E3b: every node of the model tab before the reopen that creates ProbeRoot (E3a read) and after it. x,y = drawn translate; rec = layoutByViewpoint[__abstract__] as stored. base = code at 616344b3c; after = with shouldAutoLayoutOnOpen.",
+ "runs": {
+  "base": {
+   "layoutKey": "__abstract__",
+   "nodesBefore": 10,
+   "nodesAfter": 11,
+   "preExisting": [
+    {
+     "object": "State_0",
+     "before": {
+      "x": 781,
+      "y": 1010,
+      "rec": "{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 141,
+      "y": 530,
+      "rec": "{\"x\":141,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": true,
+     "recordIdentical": false
+    },
+    {
+     "object": "State_1",
+     "before": {
+      "x": 701,
+      "y": 530,
+      "rec": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 701,
+      "y": 530,
+      "rec": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_0",
+     "before": {
+      "x": 496,
+      "y": 770,
+      "rec": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 496,
+      "y": 770,
+      "rec": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_1",
+     "before": {
+      "x": 216,
+      "y": 770,
+      "rec": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 216,
+      "y": 770,
+      "rec": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_2",
+     "before": {
+      "x": 421,
+      "y": 530,
+      "rec": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 421,
+      "y": 530,
+      "rec": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_3",
+     "before": {
+      "x": 50,
+      "y": 1010,
+      "rec": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 50,
+      "y": 1010,
+      "rec": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "Transition_0",
+     "before": {
+      "x": 217,
+      "y": 290,
+      "rec": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 217,
+      "y": 290,
+      "rec": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "Transition_1",
+     "before": {
+      "x": 512,
+      "y": 290,
+      "rec": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 512,
+      "y": 290,
+      "rec": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "Transition_2",
+     "before": {
+      "x": 776,
+      "y": 770,
+      "rec": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 776,
+      "y": 770,
+      "rec": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "StateMachine_0",
+     "before": {
+      "x": 391,
+      "y": 50,
+      "rec": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 391,
+      "y": 50,
+      "rec": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    }
+   ],
+   "created": [
+    {
+     "object": "ProbeRoot",
+     "x": 470,
+     "y": 950,
+     "seed": {
+      "x": 470,
+      "y": 950
+     },
+     "rec": null
+    }
+   ],
+   "E1": {
+    "nodes": 10,
+    "onDefaultGrid": 0
+   }
+  },
+  "after": {
+   "layoutKey": "__abstract__",
+   "nodesBefore": 10,
+   "nodesAfter": 11,
+   "preExisting": [
+    {
+     "object": "State_0",
+     "before": {
+      "x": 781,
+      "y": 1010,
+      "rec": "{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 781,
+      "y": 1010,
+      "rec": "{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_1",
+     "before": {
+      "x": 701,
+      "y": 530,
+      "rec": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 701,
+      "y": 530,
+      "rec": "{\"x\":701,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_0",
+     "before": {
+      "x": 496,
+      "y": 770,
+      "rec": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 496,
+      "y": 770,
+      "rec": "{\"x\":496,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_1",
+     "before": {
+      "x": 216,
+      "y": 770,
+      "rec": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 216,
+      "y": 770,
+      "rec": "{\"x\":216,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_2",
+     "before": {
+      "x": 421,
+      "y": 530,
+      "rec": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 421,
+      "y": 530,
+      "rec": "{\"x\":421,\"y\":530,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "State_3",
+     "before": {
+      "x": 50,
+      "y": 1010,
+      "rec": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 50,
+      "y": 1010,
+      "rec": "{\"x\":50,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "Transition_0",
+     "before": {
+      "x": 217,
+      "y": 290,
+      "rec": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 217,
+      "y": 290,
+      "rec": "{\"x\":217,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "Transition_1",
+     "before": {
+      "x": 512,
+      "y": 290,
+      "rec": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 512,
+      "y": 290,
+      "rec": "{\"x\":512,\"y\":290,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "Transition_2",
+     "before": {
+      "x": 776,
+      "y": 770,
+      "rec": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 776,
+      "y": 770,
+      "rec": "{\"x\":776,\"y\":770,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    },
+    {
+     "object": "StateMachine_0",
+     "before": {
+      "x": 391,
+      "y": 50,
+      "rec": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "after": {
+      "x": 391,
+      "y": 50,
+      "rec": "{\"x\":391,\"y\":50,\"w\":200,\"h\":120,\"isResized\":false}"
+     },
+     "moved": false,
+     "recordIdentical": true
+    }
+   ],
+   "created": [
+    {
+     "object": "ProbeRoot",
+     "x": 470,
+     "y": 950,
+     "seed": {
+      "x": 470,
+      "y": 950
+     },
+     "rec": null
+    }
+   ],
+   "E1": {
+    "nodes": 10,
+    "onDefaultGrid": 0
+   }
+  }
+ }
+}

@@ -286,6 +286,7 @@ Source: `docs/ratifiche/claude_ratifiche_2026-10-03_issue_driven_auto_lanes.md`,
 - **RC-40** (2026-10-03, decided by chat `C-2026-10-03-1705` on Alfonso's delegation «decidi tu su tutto ma avanza il più possibile», 2026-10-03 18:40, evidence: measured, verified: agent, reversible: trunk): **The shadow pipeline is switched on.** (1) Amends RC-39: shadow prompts declare `Lane: discovery`, so `tierRule` gives the light tier with no code change, and live prompts declare `Lane: full`; the value lives in `laneByMode` of `frontend/scripts/auto-intake.config.json` (measured on a dry render: `tier: light (claude-sonnet-5-5)`, addendum of `docs/discovery/discovery_2026-10-03_auto_intake.md`). (2) The RC-38 numbers hold for the shadow mode as configured; `ratifiedBy` and `ratifiedOn` stay null, so live mode stays refused until Alfonso fills them, after the MODELS demo. (3) The labels `auto`, `needs-alfonso`, `auto-parked` and `auto-ready` exist on `jjodel-modeling/jjodel-frontend`; the chat labelled #65 (console re-focus, read and found benign and bounded) as the first intake. (4) A nightly scheduled task drives the pipeline from 01:10 local, one lane at a time, never resuming or merging an automatic lane, and ends with a digest in `~/.jjodel-lanes/auto/<night>/digest.md`. Merge of `auto-intake`: P-2026-10-03-1840.
 - **RC-41** (2026-10-03, decided by Alfonso in chat `C-2026-10-03-1705`, evidence: read, verified: none, reversible: trunk): **`jdirocco` joins the intake allowlist of RC-35.** A `labeled auto` event by `jdirocco` (admin on `jjodel-modeling/jjodel-frontend`) is trusted by the nightly task as one by `apierantonio`; `allowlist` of `frontend/scripts/auto-intake.config.json` reads `["apierantonio", "jdirocco"]`. The other gates of RC-35, the guard of RC-36 and the budget of RC-38 are unchanged.
 - **RC-42** (2026-10-05, requested by Alfonso in chat `C-2026-10-05-1116`, evidence: read, verified: agent, reversible: trunk): **Every prompt declares its dependencies.** From 2026-10-06 the header of a prompt in `docs/prompts/` carries `Depends: none` or a comma-separated list of the Prompt-IDs whose result the lane needs; merge prompts rendered by `lane-run` are exempt and earlier prompts are not amended (P13). A Prompt-ID cited in the body is context, not a dependency, and the lane board needs exact edges, which it cannot infer from citations.
+- **RC-43** (2026-10-10, requested by Alfonso in chat `C-2026-10-10-0840`, evidence: measured, verified: agent, reversible: trunk): **Every prompt names the request it answers.** From 2026-10-10 the header of a prompt in `docs/prompts/` carries `Request: <URL>`, the claude.ai conversation or session where Alfonso asked or the GitHub issue of an auto-intake lane, or `Request: none (<reason>)` when nobody asked (a lane the chat opens on its own initiative, a follow-up it derives from a report); merge prompts rendered by `lane-run` are exempt and earlier prompts are not amended (P13). The words of the request are never committed: the launching chat passes them to `lane-run start --request <file>`, which keeps them as `~/.jjodel-lanes/<Prompt-ID>/request.md`, and the lane board shows the request first in a lane's detail. Measured 2026-10-10: of the 138 commits that added a prompt under `docs/prompts/` since 2026-10-01, 56 carry a `Claude-Session:` trailer, the only link back to the request; `Chat: C-…` resolves to nothing.
 
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
@@ -5740,6 +5741,78 @@ Evidence: `docs/goals/` and `docs/discovery/discovery_2026-10-05_goal_model.md` 
   and are not conflicts. A contribution is recorded only where the row, its memo or its discovery supports it;
   `verified` reads `none`, `agent` (the RC-27 sample) or `alfonso`, and only Alfonso writes `alfonso`. RC rows
   are harness rules and are not judged.
+
+## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
+
+Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
+`docs/spec/claude_spec_2026-10-10_code_generation_pilot.md`. Ratified before the discovery
+`P-2026-10-10-0815`, which may reshape the points the spec marks *to be confirmed*.
+
+- **R-GEN-1** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **The pilot ships in 3.2, which absorbs the content planned for 3.1; no separate 3.1 tag.** The MDE course sets
+  the date: 3.2 is live by 2026-10-26, content freeze 2026-10-23; a 3.1 item that is not solid by the freeze stays
+  out instead of delaying the release.
+- **R-GEN-2** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **The generator sits behind a user-level experimental setting, off by default.** With the setting off no module
+  of the generator is loaded (lazy chunk) and the application behaves as a build without the generator; a test
+  proves it on the build output or the import graph.
+- **R-GEN-3** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **Template persistence is additive: no `irVersion` bump, no VersionFixer migration.** A project with templates,
+  saved by a user with the setting off, keeps them intact. If templates live in `jjodel/*` annotations, the known
+  loss of those annotations in the `.ecore` round trip is in the perimeter.
+- **R-GEN-4** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **A template is a JjEL function with string interpolation, whose result is Text with block indentation.** No new
+  parser if the evaluator can host it; otherwise a minimal extension, ratified on its own.
+- **R-GEN-5** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **Every fragment copied from a model value records the triple (element id, feature, transformation) from the
+  first slice.** Fragments from the template's literal text record their template position. Round-trip is outside
+  the pilot; the triple is not, because retrofitting it rewrites the evaluator's value path.
+- **R-GEN-6** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **One runnable target in the pilot: JavaScript, in an isolated Web Worker with a timeout, no network, no DOM.**
+  A target profile is identifier policy (invertible mangling), expression printer for a translatable JjEL subset,
+  and runner.
+- **R-GEN-7** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **Templates are written against the concrete metamodel, with read-only access to the roles of its simulation
+  STC.** A template over roles applies to every metamodel bound to that STC. Templates never write the model or
+  the simulator state.
+- **R-GEN-8** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **The oracle against the simulator's scenarios (R-SIM-139) is the goal of the third week, not a requirement of
+  the pilot.** The generated program's trace on a scenario's events is compared with the simulator's trace under
+  the scenario's `expect`.
+- **R-GEN-9** (2026-10-10, ratified by Alfonso 2026-10-10 («ratifico»), evidence: inferred, verified: none, reversible: trunk).
+  **Outside the pilot: round-trip (except the triple of R-GEN-5), targets other than JavaScript, the assistant as
+  template author, protected regions.** The assistant comes after the oracle, so that what it writes is checked;
+  the generation gap pattern replaces protected regions.
+- **R-GEN-10** (2026-10-10, ratified by Alfonso 2026-10-10 («sì su A1 e A2»), evidence: read, verified: none, reversible: trunk).
+  **The JjEL extension for templates is opt-in and inert when unused.** A lexer option `interpolation`, off by
+  default (the `actionMode` precedent), completes the half-built `"…${…}…"` form; a `parseTemplate` entry point
+  (the `parseAction` twin, strict end of input) builds `InterpolatedStringExpr`; two optional context fields,
+  `textHost` (Text values through interpolation, `+`, `join`, `stringify`) and `readObserver` (member reads),
+  are inherited by children like `stateAccess`. With the option off and both fields absent every existing path
+  is byte-identical; no current consumer sets them. Evidence: discovery §A.2, §A.7, §B.
+- **R-GEN-11** (2026-10-10, ratified by Alfonso 2026-10-10 («sì su A1 e A2»), evidence: read, verified: none, reversible: trunk).
+  **Amends R-GEN-8: the oracle compares every step, not the scenario's `expect`.** `expect` is a single predicate on
+  the final configuration (`simScenarios.ts:107-113`) and defines no equality. The generated program exports
+  `initial()`, `step(state, event, selector, inputs)` and `observe(state)`; per step the oracle compares the
+  `kind` and `observe(next)` with the same projection of `configAt(run, n).state`, and reports the first mismatch
+  with its step, transition and generating fragment. `expect` stays the simulator's final check. Evidence:
+  discovery §G.1, §G.2.
+- **R-GEN-12** (2026-10-10, ratified as recommended, unattended; evidence: read, verified: none, reversible: trunk).
+  **Templates persist as one JSON key `genTemplates` in the metamodel's `_state`, written through the `state`
+  setter.** Reshapes the storage of R-GEN-3 (`_state`, not `jjodel/*` annotations); no migration, unknown keys
+  survive save and load, and the key is lost in the `.ecore` export like the STC roles already are. A template is
+  a record `{name, params, body}` registered as a JjEL builtin (the JjTL helper precedent). Evidence: §C, §A.3.
+- **R-GEN-13** (2026-10-10, ratified as recommended, unattended; evidence: read, verified: none, reversible: trunk).
+  **The legacy M2T subsystem (`DState.languages`, `doM2T` in `MTM.tsx`) stays untouched and coexists.** The pilot
+  does not build on it (eager, `eval` on the main thread, no origin, seeded and migrated by `DV.tsx` and
+  `VersionFixer.tsx`) and does not delete it. `jjel/SPEC.md:37` and `:660` stop naming Handlebars as the M2T engine
+  in the docs commit of slice S1. Evidence: §H.1.
+- **R-GEN-14** (2026-10-10, ratified as recommended, unattended; evidence: read, verified: none, reversible: trunk).
+  **In the pilot, origin navigation to a transition drawn as an edge selects its source node and outlines the
+  edge through the code panel's own overlay.** An edge-select event is a follow-up. Evidence: §H.3.
+- **R-GEN-15** (2026-10-10, ratified as recommended, unattended; evidence: inferred, verified: none, reversible: trunk).
+  **The oracle (slice S6) enters 3.2 behind the setting if it is green by the 2026-10-23 freeze, otherwise 3.2.x.**
+  Consistent with R-GEN-8, which makes it a goal, not a requirement.
 
 ## R-GV — graphVertex containment: channel, layout, membership (ratifiche 2026-10-10)
 

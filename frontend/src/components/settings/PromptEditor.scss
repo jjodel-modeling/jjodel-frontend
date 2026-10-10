@@ -204,32 +204,3 @@
         white-space: nowrap;
     }
 }
-
-// Dark mode
-[data-theme="dark"] {
-    .prompt-editor__header {
-        background: var(--bg-tertiary, #0f172a);
-    }
-
-    .prompt-badge {
-        &--assistant { background: #1e3a5f; color: #93c5fd; }
-        &--generation { background: #14532d; color: #86efac; }
-        &--analysis { background: #451a03; color: #fcd34d; }
-
-        &--source-global { background: #312e81; color: #a5b4fc; }
-        &--source-project { background: #831843; color: #f9a8d4; }
-    }
-
-    .prompt-editor__changelog {
-        background: rgba(14, 165, 233, 0.10);
-    }
-
-    .prompt-editor__preview {
-        background: var(--bg-secondary, #1e293b);
-    }
-
-    .prompt-editor__textarea {
-        background: var(--bg-primary, #0f172a);
-        color: var(--text-primary, #f1f5f9);
-    }
-}

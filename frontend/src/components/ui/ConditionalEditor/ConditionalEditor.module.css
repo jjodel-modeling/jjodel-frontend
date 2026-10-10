@@ -44,11 +44,6 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
-html[data-theme="dark"] .chip {
-  background-color: #1e293b;
-  color: #cbd5e1;
-}
-
 /* ---- Rules editor (rulesTable, Symbol Editor 1b slice 1: mockup 2b / 2i) ---- */
 
 .rules {
@@ -229,27 +224,4 @@ html[data-theme="dark"] .chip {
   border: 1px solid var(--form-input-border-color, #e2e8f0);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
-}
-
-html[data-theme="dark"] .ruleIconBtn,
-html[data-theme="dark"] .ruleWhen {
-  border-color: #334155;
-}
-
-html[data-theme="dark"] .ruleIconBtn:hover:not(:disabled) {
-  background-color: #1e293b;
-}
-
-html[data-theme="dark"] .ruleWhen {
-  background-color: #0f1012;
-  color: #cbd5e1;
-}
-
-html[data-theme="dark"] .defaultNone,
-html[data-theme="dark"] .addRuleBtn {
-  border-color: #334155;
-}
-
-html[data-theme="dark"] .addRuleBtn {
-  color: #38bdf8;
 }

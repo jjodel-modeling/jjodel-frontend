@@ -36,6 +36,8 @@ import {
     JjelFunction,
     JjelObject,
     JjelWarning,
+    JjelTextHost,
+    JjelTextPart,
     EvaluationContext,
     createFunction,
     isJjelFunction,
@@ -51,6 +53,7 @@ import {
     getDateMethod,
     getDateConstructor
 } from './builtins';
+import { joinWithTextHost } from './builtins/collections';
 
 // ============================================
 // EVALUATION ERROR
@@ -276,6 +279,12 @@ export class JjelEvaluator {
     private evaluateBinary(expr: BinaryExpr, ctx: EvaluationContext): JjelValue {
         const left = this.evaluate(expr.left, ctx);
         const right = this.evaluate(expr.right, ctx);
+
+        // `+` with a Text operand is the host's (R-GEN-10); otherwise the usual path.
+        const host = ctx.textHost;
+        if (host && expr.operator === '+' && (host.isText(left) || host.isText(right))) {
+            return host.concat(left, right);
+        }
 
         return this.applyBinaryOperator(expr.operator, left, right);
     }
@@ -520,7 +529,9 @@ export class JjelEvaluator {
 
             // Check if property exists before accessing
             if (property in obj) {
-                return obj[property] ?? null;
+                const value = obj[property] ?? null;
+                ctx.readObserver?.(obj, property, value);
+                return value;
             }
 
             // Property doesn't exist on the host. When the caller has opted
@@ -738,6 +749,10 @@ export class JjelEvaluator {
 
         // Array methods
         if (Array.isArray(obj)) {
+            // `join` from a context with a Text host (R-GEN-10); without one, the usual dispatch below.
+            if (method === 'join' && ctx.textHost) {
+                return joinWithTextHost(obj, args[0], ctx.textHost);
+            }
             const collectionMethod = getCollectionMethod(method);
             if (collectionMethod) {
                 // Check if first arg is a lambda (function)
@@ -782,6 +797,7 @@ export class JjelEvaluator {
             // return the value directly. Mirrors the existing behavior for
             // zero-arg string/collection methods.
             if (args.length === 0 && methodValue !== undefined) {
+                ctx.readObserver?.(obj, method, methodValue);
                 return methodValue;
             }
         }
@@ -1025,6 +1041,10 @@ export class JjelEvaluator {
     // ============================================
 
     private evaluateInterpolatedString(expr: InterpolatedStringExpr, ctx: EvaluationContext): JjelValue {
+        if (ctx.textHost) {
+            return this.interpolateText(expr, ctx, ctx.textHost);
+        }
+
         const parts: string[] = [];
 
         for (const part of expr.parts) {
@@ -1037,6 +1057,33 @@ export class JjelEvaluator {
         }
 
         return parts.join('');
+    }
+
+    /**
+     * An interpolated string from a context with a Text host (R-GEN-10): the
+     * holes are evaluated in source order, each through the host's
+     * `evaluateHole` when it has one, and the host builds the value.
+     */
+    private interpolateText(expr: InterpolatedStringExpr, ctx: EvaluationContext, host: JjelTextHost): JjelValue {
+        const parts: JjelTextPart[] = [];
+
+        for (const part of expr.parts) {
+            if (part.kind === 'text') {
+                parts.push({ kind: 'text', value: part.value });
+            } else {
+                const evaluate = () => this.evaluate(part.expr, ctx);
+                const value = host.evaluateHole ? host.evaluateHole(part.expr, evaluate) : evaluate();
+                parts.push({
+                    kind: 'hole',
+                    value,
+                    expr: part.expr,
+                    location: part.expr.location,
+                    render: () => this.stringify(value, host),
+                });
+            }
+        }
+
+        return host.interpolate(parts, expr);
     }
 
     // ============================================
@@ -1094,11 +1141,13 @@ export class JjelEvaluator {
         return String(a).localeCompare(String(b));
     }
 
-    private stringify(value: JjelValue): string {
+    private stringify(value: JjelValue, host?: JjelTextHost): string {
+        // A Text renders through its host (R-GEN-10); `host` is passed only under one.
+        if (host && host.isText(value)) return host.stringify(value);
         if (value === null) return '';
         if (typeof value === 'string') return value;
         if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-        if (Array.isArray(value)) return value.map(v => this.stringify(v)).join(', ');
+        if (Array.isArray(value)) return value.map(v => this.stringify(v, host)).join(', ');
         if (isJjelFunction(value)) return '[Function]';
         if (isJjelObject(value)) return JSON.stringify(value);
         return String(value);

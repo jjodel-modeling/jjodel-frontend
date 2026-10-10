@@ -282,6 +282,14 @@ The rules below still bind every tree that hosts more than one session.
   is the branch they merge. The line is new from 2026-10-06; earlier prompts are not amended. The lane
   board draws declared dependencies as solid arrows and citations as dashed ones
   (`frontend/scripts/lane-board/`). Decided RC-42.
+- **Every prompt names the request it answers.** The header of a prompt in `docs/prompts/` carries
+  `Request: <URL>`: the claude.ai conversation or session where Alfonso asked, the GitHub issue for an
+  auto-intake lane, or `Request: none (<reason>)` when nobody asked (a lane the chat opens on its own
+  initiative, a follow-up it derives from a report). The words of the request are never committed: the
+  launching chat passes them to `lane-run start --request <file>`, which keeps them as
+  `~/.jjodel-lanes/<Prompt-ID>/request.md`. Merge prompts rendered by `lane-run` are exempt. The line is
+  new from 2026-10-10; earlier prompts are not amended. The lane board shows the request first in a
+  lane's detail (`frontend/scripts/lane-board/`). Decided RC-43.
 - **Every prompt file carries a Status line, flipped once, in the lane's closure commit.** The header
   of a prompt in `docs/prompts/` holds `Status: da eseguire`. After its code commit, the lane writes the
   Status flip, its log or inbox entry and the visual-check line into its worktree and does not commit

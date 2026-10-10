@@ -110,3 +110,55 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: scripts-only merge (frontend/scripts/lane-board/lane-board.mjs): app untouched, no scene to check; board verified on 4701 by lane P-2026-10-06-0049
 **Notes**: Rollback tag `pre-board-turns` on `a9cc16bc7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-06-0059/result.json`.
 **Prompt document name**: 2026-10-06 00:59
+
+## 2026-10-10 — fix(harness): lane board lists earlier lanes newest first (P-2026-10-10-0840)
+**Prompt**: `claude_2026-10-10_0840_prompt_lane_board_earlier_order.md`: in "Earlier lanes" the rows of each day follow the CLI order (id descending, chains appended), so a chain sat at the bottom of its day. Keep the time on the row and sort each day by time descending, ties by id descending. Fast lane, one file.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs` (`c8e99fc2c`, 2 lines: `t` on the row in `collect()`, the sort in `renderOlder`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` and `check:scripts` pass; `/api` on 4701 returns a numeric `t` on 354 of 354 rows, none 0; the chat's DOM read on 4701 found all 11 earlier days strictly newest first.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23): all 11 earlier days strictly newest first by DOM read; on 2026-10-04 `chain-P-2026-10-04-1130` at index 7 between `1213` and `1025`; board on 4701 stopped.
+**Notes**: Measured on 2026-10-04: the chain moves from index 15 of 16 to 7, between `1213` and `1025`; `t` is non-increasing across the day. Board on 4701 (PID 21803) stopped by the chat after the visual check. Port 4700, launchd and `~/.jjodel-lanes/board/` untouched.
+**Prompt document name**: 2026-10-10 08:40
+
+## 2026-10-10 — merge: lane-board-order into alfonso-frontend-jjtl (P-2026-10-10-0843)
+**Prompt**: `claude_2026-10-10_0843_prompt_merge_lane-board-order.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-order` at `9a308dc0b` into `alfonso-frontend-jjtl`, merge base `d87d9353b`, 2 commits on the branch side.
+**Files touched**: merge `02a7d1857`: 2 files from the branch side (`docs/log-inbox/harness.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `02a7d1857` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7666 tests in 311 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only merge (frontend/scripts/lane-board/lane-board.mjs), app untouched; earlier-lanes order verified in the built-in browser on 4701 under P-2026-10-10-0840
+**Notes**: Rollback tag `pre-lane-board-order` on `d87d9353b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-0843/result.json`.
+**Prompt document name**: 2026-10-10 08:43
+
+## 2026-10-10 — feat(harness): prompts name the request they answer (P-2026-10-10-1150)
+**Prompt**: `claude_2026-10-10_1150_prompt_request_traceability.md`: P13 bullet and row RC-43 (`Request:` header, the words of the request kept outside the repo as `request.md`), `lane-run start --request <file>` with a warning when a prompt names no request, `Request:` in the issue-discovery template, the `request` field of the board's timeline and its block in the lane detail.
+**Files touched**: `docs/PROTOCOL.md`, `docs/decisions.md` (`41f62884d`); `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/issue-discovery.md`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js` (`79c0307dc`); the closure commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneRun, laneRunDirect, autoIntake 188/188; check:scripts, typecheck:scripts, check:addonly, check:docs exit 0; typecheck 14 (baseline); build exit 0.
+**Out-of-scope changes**: no — six files over two commits, above five (RC-11, rule 19), each named in the prompt's WHAT; the docs commit is split from the code commit by P13 ("Docs e codice mai nello stesso commit"), as RC-42 was.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read of the Timeline detail: 0840 and 1150 show their `request.md` in a blockquote with line breaks, 1150 links its session URL in a new tab, 0810 shows `Request: not recorded`; board on 4701 (PID 29457, cache in `/tmp`) stopped by the chat.
+**Notes**: Cache fix: key on the mtime of `request.md` (v5), the smaller change; checked on 4702 over a temp lane root, an exited lane read empty then carried a later `request.md`. Refusals of `--request` (missing, empty, no value) exit 2 before any write; the warning, the copy and the merge exemption checked with a fake `claude` in a temp HOME. `rm -rf` is denied: `/tmp/lr-req-*` remain. `chain` does not forward `--request`: see the closing report.
+**Prompt document name**: 2026-10-10 11:50
+
+## 2026-10-10 — merge: prompt-request into alfonso-frontend-jjtl (P-2026-10-10-1204)
+**Prompt**: `claude_2026-10-10_1204_prompt_merge_prompt-request.md`, a merge run by a `lane-run` session: `prompt-request` at `dfbba3964` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `4f059689c`, 3 commits on the branch side.
+**Files touched**: merge `49b31da4a`: 7 files from the branch side (`docs/PROTOCOL.md`, `docs/decisions.md`, `docs/log-inbox/harness.md`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/timeline.js`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/issue-discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `49b31da4a` in the session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 7716 tests in 316 files, 9 red at import, as expected (trunk and branch tip both 7716, no new tests), hooks 424; build exit 0; check:docs 4/4; check:agents green; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts and docs only (lane-run, lane board, issue template, PROTOCOL P13, decisions), app untouched, no scene to check on 3001; board verified on 4701 under P-2026-10-10-1150
+**Notes**: merge-tree zero conflicts, tree `8ec319011` equal to the merge's index tree. Union: none. Probes: RC-43 1, RC-44 0, 1150 heading 1. Governance: `docs/PROTOCOL.md`, under the go-ahead. No rollback tag (not asked). P-2026-10-10-1150 still reads `Status: da eseguire` on the trunk; the chat flips it. Step 6 names `616344b3c` as the pre-merge tip, the real one was `ca372edea`; not exercised, check:addonly passed.
+**Prompt document name**: 2026-10-10 12:04

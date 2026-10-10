@@ -1,7 +1,8 @@
 /**
  * DS-1 — la coppia `model` esce dagli alias del contenitore e torna ambra.
  *
- * Le asserzioni sono sui due FOGLI dei token, letti da disco: sono file SCSS, non
+ * Le asserzioni sono sul FOGLIO dei token chiaro, letto da disco (il tema scuro non
+ * esiste piu', D-UI-15, P-2026-10-10-0910): e' un file SCSS, non
  * moduli, e nessun import li puo' portare qui. Il criterio e' quello della scala
  * (R-RAIL-30): un test che guardi solo l'esadecimale difende il valore ma non la
  * regola che lo ha prodotto, quindi qui si misurano L, C e H in OKLCH e la dE fra
@@ -22,7 +23,6 @@ import { resolve } from 'node:path';
 
 const TOKENS = resolve(__dirname, '../tokens');
 const LIGHT = readFileSync(resolve(TOKENS, '_colors-light.scss'), 'utf8');
-const DARK = readFileSync(resolve(TOKENS, '_colors-dark.scss'), 'utf8');
 const FORM_SYSTEM = readFileSync(
     resolve(__dirname, '../components/_form-system.scss'), 'utf8');
 const DOCUMENT_TYPES = readFileSync(
@@ -33,7 +33,6 @@ const DOCUMENT_TYPES = readFileSync(
  *  dichiarazione dalla spiegazione. */
 const strip = (s: string): string => s.replace(/\/\*[\s\S]*?\*\//g, '');
 const LIGHT_RULES = strip(LIGHT);
-const DARK_RULES = strip(DARK);
 
 /** Il valore dichiarato per un token, dal foglio gia' ripulito dai commenti. */
 function decl(sheet: string, name: string): string {
@@ -126,12 +125,10 @@ function floorOf(pal: Record<string, { bg: string; fg: string }>): number {
 const THEMES = [
     { name: 'chiaro', sheet: LIGHT, rules: LIGHT_RULES, bg: '#F3E8D3', fg: '#6B5110',
       bgL: 0.934, bgC: 0.030, fgL: 0.451, fgC: 0.085, contrast: 6.16 },
-    { name: 'scuro', sheet: DARK, rules: DARK_RULES, bg: '#3B2B06', fg: '#E4C992',
-      bgL: 0.300, bgC: 0.056, fgL: 0.846, fgC: 0.078, contrast: 8.52 },
 ] as const;
 
-describe('DS-1 — controllo positivo: i due fogli sono quelli giusti', () => {
-    it('entrambi dichiarano le nove coppie canoniche', () => {
+describe('DS-1 — controllo positivo: il foglio e\' quello giusto', () => {
+    it('dichiara le nove coppie canoniche', () => {
         for (const { name, rules } of THEMES) {
             const pal = palette(rules);
             for (const f of FAMILIES) {
@@ -141,9 +138,8 @@ describe('DS-1 — controllo positivo: i due fogli sono quelli giusti', () => {
         }
     });
 
-    it('il pavimento e\' misurato, non assunto, e vale class/object in entrambi i temi', () => {
+    it('il pavimento e\' misurato, non assunto, e vale class/object', () => {
         expect(floorOf(palette(LIGHT_RULES))).toBeCloseTo(0.0143, 4);
-        expect(floorOf(palette(DARK_RULES))).toBeCloseTo(0.0243, 4);
     });
 });
 

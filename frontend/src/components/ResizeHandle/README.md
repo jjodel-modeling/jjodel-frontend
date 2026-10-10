@@ -139,7 +139,6 @@ The components follow the Jjodel design system from `CLAUDE.md`:
 
 - Uses slate colors for accents
 - Smooth transitions (150ms-250ms)
-- Dark mode support via `prefers-color-scheme`
 - Consistent spacing and borders
 
 ### Customization

@@ -27,9 +27,8 @@ function buildCss(palettes: CustomColorScheme[]): string {
     const blocks: string[] = [];
     for (const p of palettes) {
         if (!p?.id || !p?.seed) continue;
-        const { light, dark, lightAbstract, lightEnum, lightPackage } = derivePaletteVars(p.seed);
+        const { light, lightAbstract, lightEnum, lightPackage } = derivePaletteVars(p.seed);
         const base = `.editor-v2.scheme-${p.id}`;
-        blocks.push(block(`${base}.theme-dark`, dark));
         blocks.push(block(`${base}.theme-light`, light));
         blocks.push(block(`${base}.theme-light .mm-class.abstract`, lightAbstract));
         blocks.push(block(`${base}.theme-light .mm-enum`, lightEnum));

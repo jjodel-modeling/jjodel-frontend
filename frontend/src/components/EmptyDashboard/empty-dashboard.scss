@@ -83,11 +83,3 @@
 .empty-projects__sep {
     color: var(--color-border-secondary, #cbd5e1);
 }
-
-/* Dark mode */
-[data-theme="dark"] {
-    .empty-projects__icon {
-        background: rgba(255, 255, 255, 0.05);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-}

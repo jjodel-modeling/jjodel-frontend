@@ -76,10 +76,3 @@
   cursor: var(--disabled-cursor);
   opacity: var(--disabled-opacity);
 }
-
-html[data-theme="dark"] {
-  .swatch,
-  .hex {
-    background-color: var(--color-bg-secondary);
-  }
-}

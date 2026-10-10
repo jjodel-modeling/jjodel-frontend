@@ -10,25 +10,6 @@
 // ── Monochrome ──
 // All node types use the same neutral gray header. No color distinction.
 .editor-v2.scheme-monochrome {
-    &.theme-dark {
-        --class-header-bg: #3d4b5c;
-        --class-abstract-header-bg: #353f4e;
-        --enum-header-bg: #3d4b5c;
-        --package-header-bg: #2d3a4a;
-        --object-header-bg: #3d4b5c;
-        --orphan-border-color: #94a3b8;
-        --orphan-header-bg: #454d58;
-
-        --field-type-color: #94a3b8;
-        --enum-accent: #64748b;
-        --package-accent: #64748b;
-
-        --edge-selected: #94a3b8;
-        --accent: #94a3b8;
-        --accent-hover: #cbd5e1;
-        --accent-muted: rgba(148, 163, 184, 0.15);
-    }
-
     &.theme-light {
         --class-header-bg: #94a3b8;
         --class-abstract-header-bg: #a8b5c4;
@@ -56,22 +37,6 @@
 // ── Sapphire ──
 // Rich blue tones with steel/sky accents — corporate, clean
 .editor-v2.scheme-sapphire {
-    &.theme-dark {
-        --class-header-bg: rgba(37, 99, 235, 0.24);
-        --class-abstract-header-bg: rgba(51, 65, 85, 0.28);
-        --enum-header-bg: rgba(14, 165, 233, 0.22);
-        --package-header-bg: rgba(30, 41, 59, 0.3);
-        --object-header-bg: rgba(37, 99, 235, 0.18);
-        --orphan-border-color: #3b82f6;
-        --orphan-header-bg: rgba(110, 120, 145, 0.2);
-
-        --node-header-text: rgba(255, 255, 255, 0.92);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #7dd3fc;
-        --enum-accent: #38bdf8;
-        --package-accent: #3b82f6;
-    }
-
     &.theme-light {
         --class-header-bg: #dbeafe;
         --class-abstract-header-bg: #e2e8f0;
@@ -105,22 +70,6 @@
 // ── Amethyst ──
 // Deep violet/purple jewel tones — elegant, rich
 .editor-v2.scheme-amethyst {
-    &.theme-dark {
-        --class-header-bg: rgba(124, 58, 237, 0.24);
-        --class-abstract-header-bg: rgba(88, 70, 130, 0.22);
-        --enum-header-bg: rgba(168, 85, 247, 0.22);
-        --package-header-bg: rgba(49, 46, 129, 0.25);
-        --object-header-bg: rgba(244, 114, 182, 0.2);
-        --orphan-border-color: #f472b6;
-        --orphan-header-bg: rgba(160, 130, 145, 0.2);
-
-        --node-header-text: rgba(255, 255, 255, 0.92);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #c4b5fd;
-        --enum-accent: #a78bfa;
-        --package-accent: #7c3aed;
-    }
-
     &.theme-light {
         --class-header-bg: #ede9fe;
         --class-abstract-header-bg: #f5f3ff;
@@ -154,22 +103,6 @@
 // ── Jade ──
 // Deep emerald/teal greens — natural, sophisticated
 .editor-v2.scheme-jade {
-    &.theme-dark {
-        --class-header-bg: rgba(16, 185, 129, 0.22);
-        --class-abstract-header-bg: rgba(60, 100, 80, 0.22);
-        --enum-header-bg: rgba(20, 184, 166, 0.22);
-        --package-header-bg: rgba(22, 78, 70, 0.25);
-        --object-header-bg: rgba(16, 185, 129, 0.18);
-        --orphan-border-color: #10b981;
-        --orphan-header-bg: rgba(110, 140, 130, 0.18);
-
-        --node-header-text: rgba(255, 255, 255, 0.92);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #6ee7b7;
-        --enum-accent: #2dd4bf;
-        --package-accent: #10b981;
-    }
-
     &.theme-light {
         --class-header-bg: #d1fae5;
         --class-abstract-header-bg: #ecfdf5;
@@ -203,22 +136,6 @@
 // ── Terracotta ──
 // Warm amber/copper/rust tones — refined, earthy
 .editor-v2.scheme-terracotta {
-    &.theme-dark {
-        --class-header-bg: rgba(180, 83, 9, 0.24);
-        --class-abstract-header-bg: rgba(140, 100, 70, 0.22);
-        --enum-header-bg: rgba(194, 65, 12, 0.22);
-        --package-header-bg: rgba(100, 60, 30, 0.25);
-        --object-header-bg: rgba(180, 83, 9, 0.18);
-        --orphan-border-color: #d97706;
-        --orphan-header-bg: rgba(145, 130, 110, 0.2);
-
-        --node-header-text: rgba(255, 255, 255, 0.92);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #fdba74;
-        --enum-accent: #fb923c;
-        --package-accent: #d97706;
-    }
-
     &.theme-light {
         --class-header-bg: #fed7aa;
         --class-abstract-header-bg: #ffedd5;
@@ -252,22 +169,6 @@
 // ── Crimson ──
 // Deep red/ruby/garnet tones — bold, dramatic
 .editor-v2.scheme-crimson {
-    &.theme-dark {
-        --class-header-bg: rgba(185, 28, 28, 0.24);
-        --class-abstract-header-bg: rgba(120, 50, 50, 0.22);
-        --enum-header-bg: rgba(190, 18, 60, 0.22);
-        --package-header-bg: rgba(80, 30, 30, 0.25);
-        --object-header-bg: rgba(185, 28, 28, 0.18);
-        --orphan-border-color: #ef4444;
-        --orphan-header-bg: rgba(145, 110, 110, 0.18);
-
-        --node-header-text: rgba(255, 255, 255, 0.92);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #fca5a5;
-        --enum-accent: #fb7185;
-        --package-accent: #ef4444;
-    }
-
     &.theme-light {
         --class-header-bg: #fecaca;
         --class-abstract-header-bg: #fee2e2;
@@ -301,26 +202,6 @@
 // ── High Contrast ──
 // Bold, saturated colors. Maximum readability and visual distinction.
 .editor-v2.scheme-high-contrast {
-    &.theme-dark {
-        --class-header-bg: #2563eb;
-        --class-abstract-header-bg: #4b5563;
-        --enum-header-bg: #7c3aed;
-        --package-header-bg: #334155;
-        --object-header-bg: #d97706;
-        --orphan-border-color: #f59e0b;
-        --orphan-header-bg: #7a7060;
-
-        --node-header-text: #ffffff;
-        --stereotype-color: rgba(255, 255, 255, 0.8);
-
-        --edge-color: rgba(255, 255, 255, 0.7);
-        --edge-marker-stroke: rgba(255, 255, 255, 0.7);
-        --border-default: rgba(255, 255, 255, 0.3);
-
-        --field-type-color: #38bdf8;
-        --field-name-color: #f1f5f9;
-    }
-
     &.theme-light {
         --class-header-bg: #1d4ed8;
         --class-abstract-header-bg: #374151;
@@ -346,31 +227,6 @@
 // ── Print ──
 // No fills, no shadows. Clean outlines suitable for B&W printing.
 .editor-v2.scheme-print {
-    &.theme-dark {
-        --class-header-bg: transparent;
-        --class-abstract-header-bg: transparent;
-        --enum-header-bg: transparent;
-        --package-header-bg: transparent;
-        --object-header-bg: transparent;
-        --orphan-border-color: #999;
-        --orphan-header-bg: transparent;
-
-        --node-bg: transparent;
-        --node-shadow: transparent;
-        --node-shadow-deep: transparent;
-
-        --node-header-text: var(--text-primary);
-        --stereotype-color: var(--text-muted);
-
-        --field-type-color: var(--text-secondary);
-
-        --border-default: rgba(255, 255, 255, 0.3);
-
-        .mm-node__header {
-            border-bottom: 1px solid var(--border-default);
-        }
-    }
-
     &.theme-light {
         --class-header-bg: transparent;
         --class-abstract-header-bg: transparent;

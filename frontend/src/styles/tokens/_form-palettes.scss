@@ -56,18 +56,6 @@
   --color-bg-tertiary: #efe6d2;
 }
 
-:root[data-theme="dark"] .instance-manager[data-palette="paper"] {
-  --color-form-surface: #201c16;
-  --color-form-panel: #17140f;
-  --color-form-border: rgba(232, 223, 204, 0.12);
-  --color-form-border-strong: rgba(232, 223, 204, 0.22);
-  --color-form-muted: #8a7f6a;
-  --color-form-label: #bdb29a;
-  --color-form-section: #8a7f6a;
-  --color-form-summary: #18150f;
-  --color-bg-tertiary: #28221a;
-}
-
 /* ─── Ink — high contrast, crisp borders, full-strength labels ─────────────── */
 
 .instance-manager[data-palette="ink"] {
@@ -80,21 +68,6 @@
   --color-form-section: #1e293b;
   --color-form-summary: #f8fafc;
   --color-bg-tertiary: #e2e8f0;
-}
-
-:root[data-theme="dark"] .instance-manager[data-palette="ink"] {
-  --color-form-surface: #000000;
-  --color-form-panel: #0a0a0a;
-  /* NOT #ffffff: a pure-white hairline on black is the one value of this palette that
-     vibrates, and every field in the table carries one. The strong border keeps white —
-     it is drawn on far fewer elements and it is what «crisp» is for. */
-  --color-form-border: #c4c9ce;
-  --color-form-border-strong: #ffffff;
-  --color-form-muted: #c8c8c8;
-  --color-form-label: #ffffff;
-  --color-form-section: #e0e0e0;
-  --color-form-summary: #0d0d0d;
-  --color-bg-tertiary: #141414;
 }
 
 /* ─── Mist — almost borderless, fields told apart by surface tone ──────────── */
@@ -113,16 +86,4 @@
   --color-form-section: #94a3b8;
   --color-form-summary: #fbfcfd;
   --color-bg-tertiary: #eef2f6;
-}
-
-:root[data-theme="dark"] .instance-manager[data-palette="mist"] {
-  --color-form-surface: #131517;
-  --color-form-panel: #0f1012;
-  --color-form-border: rgba(255, 255, 255, 0.04);
-  --color-form-border-strong: rgba(255, 255, 255, 0.10);
-  --color-form-muted: #6b7076;
-  --color-form-label: #93999f;
-  --color-form-section: #6b7076;
-  --color-form-summary: #111315;
-  --color-bg-tertiary: #1a1c1e;
 }

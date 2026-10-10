@@ -48,6 +48,7 @@
   .tl-live .tl-turn:last-of-type{animation:tlp 1.6s ease-in-out infinite}@keyframes tlp{50%{opacity:.45}}
   .tl-detail{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
   .tl-detail h3{margin:0 0 4px;font-size:14px}.tl-detail .meta{margin-bottom:8px}
+  .tl-detail blockquote{margin:4px 0 8px;padding:6px 8px;border-left:3px solid var(--accent);background:var(--bg);white-space:pre-wrap;max-height:260px;overflow:auto}
   .tl-detail table{min-width:0}.tl-detail td{padding:4px 8px}.tl-detail a{color:var(--accent);cursor:pointer;text-decoration:none}
   .tl-empty{padding:24px;color:var(--muted)}
   .tl-ov,.tl-link,.tl-bk{cursor:help}.tl-bk:hover{fill:var(--fg);fill-opacity:.06}.tl-link:hover path:first-child,.tl-link.pin path:first-child{stroke-width:3}.tl-ov:hover>rect:first-child{stroke-width:2}
@@ -309,9 +310,14 @@
     const link = (id) => '<a data-go="' + id + '">' + id + '</a>';
     const ins = links.filter((k) => k[1] === l.id).map((k) => link(k[0]) + ' (' + k[2] + ')');
     const outs = links.filter((k) => k[0] === l.id).map((k) => link(k[1]) + ' (' + k[2] + ')');
+    // The request the lane answers (PROTOCOL P13, RC-43): Alfonso's words from request.md, then the URL of the Request: line.
+    const rq = l.request || {};
+    const url = rq.url ? (/^https?:\/\//i.test(rq.url) ? '<a href="' + esc(rq.url) + '" target="_blank" rel="noopener">' + esc(rq.url) + '</a>' : esc(rq.url)) : '';
+    const request = rq.text || rq.url ? '<div class="meta">Request</div>' + (rq.text ? '<blockquote>' + esc(rq.text) + '</blockquote>' : '') + (url ? '<div class="meta">' + url + '</div>' : '') : '<div class="meta">Request: not recorded</div>';
     return '<div class="tl-detail"><h3>' + esc(l.id) + (l.title ? ' · ' + esc(l.title) : '') + '</h3>' +
       '<div class="meta">' + [l.kind, l.tier, l.chat, short(l.worktree), l.state + (l.outcome && l.outcome !== 'none' ? ' · ' + l.outcome : '')].filter(Boolean).map(esc).join(' · ') + '</div>' +
       '<div class="meta">Launched by <b style="color:' + (LCOL[(l.launcher || {}).by] || 'inherit') + '">' + esc(LNAME[(l.launcher || {}).by] || 'unknown') + '</b>' + ((l.launcher || {}).detail ? ' · ' + esc(l.launcher.detail) : '') + ((l.launcher || {}).file ? ' · <code>' + esc(l.launcher.file) + '</code>' : '') + '</div>' +
+      request +
       '<table><tbody>' + rows + '</tbody></table>' +
       '<div class="meta" style="margin-top:8px">Depends on: ' + (ins.join(', ') || 'none recorded') + '<br>Followed by: ' + (outs.join(', ') || 'none recorded') + '</div></div>';
   }
