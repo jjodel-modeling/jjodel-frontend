@@ -379,3 +379,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read: table-layout fixed on Running, Last 24 hours and an Earlier day; every column keeps one width across tables; Lane, State, Worktree and Launched by share the same left edge everywhere, the middle columns shift only where the column sets differ; no pill wraps; Worktree truncates with a title; board on 4701 stopped
 **Notes**: Widths px: Lane 200, State 92, Kind 124, Started/Ended 96, Elapsed/Span 100, Left 116, Worktree 144, Launched by 128; Phase and Outcome auto (146 and 166 at 1246 px). Ended is fixed beside Started, Outcome absorbs the rest. Horizontal cell padding 8 px in these tables only: at 12 px Phase fell under 90 px. Min-width 1200: below ~1240 px viewport the wrap scrolls and the chain outcome pill (148 px) ends in an ellipsis. Titles wrap at 184 px instead of up to 320.
 **Prompt document name**: 2026-10-10 17:42
+
+## 2026-10-10 — merge: lane-board-columns into alfonso-frontend-jjtl (P-2026-10-10-1823)
+**Prompt**: `claude_2026-10-10_1823_prompt_merge_lane-board-columns.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-columns` at `3339c11ee` into `alfonso-frontend-jjtl`, merge base `177dc474b`, 4 commits on the branch side.
+**Files touched**: merge `fd59eefaa`: 3 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_1742_prompt_lane_board_fixed_columns.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fd59eefaa` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8052 tests in 330 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Lanes tab verified on 4701 under P-2026-10-10-1742
+**Notes**: Rollback tag `pre-lane-board-columns` on `0d2ad8f11` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1823/result.json`.
+**Prompt document name**: 2026-10-10 18:23
