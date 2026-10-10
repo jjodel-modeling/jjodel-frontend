@@ -113,3 +113,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-10 01:05
 
 **Ticket** (lane): a band places its nodes by their boxes, not by their outside labels: after Auto layout the start event's «Order received», wider than the event, overhangs the Sales lane's band (s6-bpmn-after-light.png). The ELK runs reserve the label's room between nodes, the band margin does not.
+
+## 2026-10-10 — merge: ir-graphvertex takes alfonso-frontend-jjtl (P-2026-10-10-1945)
+**Prompt**: `claude_2026-10-10_1945_prompt_ir-graphvertex_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-graphvertex` on `ir-graphvertex`: RC-14, the trunk at the explicit sha `f753bf0d9` into the branch with one `--no-ff` merge, base `18d9dfb57`, 181 trunk commits against 33 on the branch and this prompt on top; hard stop for the visual GO, then this closure.
+**Files touched**: merge `53530dcba`: the 152 files of the trunk side (153 changed since the base; the S4 prompt carries the same Status line on both sides); `docs/decisions.md` auto-merged, no union resolution, no hand edit. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `53530dcba`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8272 passed in 340 files, 0 failed, the 9 §17 files red at import (expected: trunk tip 8066 in 330 files, measured read-only in `~/jjodel-release`, plus 206 in 10 new files from the branch, 7931 at `111c9d6e2` minus 7725 at the base); hooks 501 (trunk 501, the branch adds none); build exit 0; check:docs 5/5; check:scripts PASS 71 files; check:addonly PASS; check:agents PASS.
+**Out-of-scope changes**: no. The merge carries 152 files, above five (RC-11), all the trunk side's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso's visual GO 2026-10-11 00:03 on dev server 3080, scenes gv-bpmn, gv-statechart, gv-hull; fixtures BPMN 31/31, statechart 7/7
+**Notes**: merge-tree exit 0, tree `75a24acd1`, zero conflicts; the index after `--no-commit` writes the same tree. Probes 85 of 85 once, control R-SIM-147 0. decisions.md read end to end: 5917 lines = base 5821 + branch 80 + trunk 16, nothing deleted, no row or heading duplicated by the merge. check:docs is 5/5, not 4/4: Check E is on the trunk. `8f94261cc` (GV_SAVE probe, P-2026-10-10-0105) landed after the merge, outside this lane. No rollback tag.
+**Prompt document name**: 2026-10-10 19:45
