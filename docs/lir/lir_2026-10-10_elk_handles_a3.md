@@ -16,7 +16,7 @@
 | `frontend/src/components/editor-v2/viewpoint/ir/irEdgeViews.ts` | yes (`viewpoint/ir/`) | `synthesizeObjectAsEdges` takes an optional 11th `routeOf` (default `getElkRoute`); a synthetic edge whose ELK route is valid takes the route's sides and writes `irSourcePin` / `irTargetPin` (0 to 1 along the side) on its data, only for an end on the node's drawn border, never a diamond end; a user anchor override drops both. Every A2 hunk stays. |
 | `frontend/src/components/editor-v2/utils/handlePosition.ts` | yes (§3.1 cross-reference) | `SideEndpoint.pin?` (optional, Rule 11); `computeSideEndpoints` reads the pin of its role from `data`; `computeSidePositions` puts a pinned endpoint at its pin, every other at its slot |
 | `frontend/src/components/editor-v2/components/DynamicHandles.tsx` | read with §3.1's pipeline | `pinsKey(e)` appended to `edgeKey` (so `ownEdgesEqual` sees a pin change) and to `edgeTopologyKey` (so the positions memo and the re-measure key move with a pin) |
-| `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irElkPorts.test.ts` | test | restored (6 tests) |
+| `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irElkPorts.test.ts` | test | restored (10 tests) |
 | `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irLabelAnchors.test.ts` | test | line 77: the 11th argument `() => undefined` back |
 
 Not touched: `useJjomSync.ts`, `canvasToJjom.ts`, `jjomTransformers.ts`, `DV.tsx`, `VersionFixer.tsx`,

@@ -5236,6 +5236,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Withdrawn 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010 (revert `04c13e039`): it touches the
     handle code in the critical zone for a few pixels after an Auto layout, days before the MODELS demo; it returns after
     Málaga (2026-10-09) as a lane of its own. R-VP-49 stands: handles as on the trunk (34 of 68 ends off after Auto layout).
+  - Reinstated provisional 2026-10-10, P-2026-10-10-0915, awaits Alfonso's ratification.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 
