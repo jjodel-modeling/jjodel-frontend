@@ -865,18 +865,21 @@ const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const when=(ms,day)=>{if(!ms)return '<td class="when"></td>';const d=new Date(ms);const hm=pad(d.getHours())+':'+pad(d.getMinutes());return '<td class="when">'+(ymd(d)===day?hm:pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+hm)+'</td>'};
 // Elapsed is the working time, the sum of the turns; empty when no turn is known.
 const work=r=>'<td>'+(r.start?dur(Math.floor(r.work/60000)):'')+'</td>';
+// Span is the start to the end, waits for decisions included: to now while the lane runs; empty when an end is unknown.
+const span=r=>{const e=r.live?Date.now():r.end;return '<td>'+(r.start&&e?dur(Math.floor((e-r.start)/60000)):'')+'</td>'};
+const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start to end, waits for decisions included'};
 // day: the reference day of Started and Ended, today unless given (an Earlier lanes group passes its own).
 function table(rows,live,day){
   day=day||ymd(new Date());
   if(!rows.length)return '<div class="empty">'+(live?'No lane is running.':'No lanes in this period.')+'</div>';
-  const cols=live?['Lane','State','Kind','Started','Elapsed','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Worktree','Launched by'];
-  let h='<table><thead><tr>'+cols.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead><tbody>';
+  const cols=live?['Lane','State','Kind','Started','Elapsed','Span','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','Worktree','Launched by'];
+  let h='<table><thead><tr>'+cols.map(c=>'<th'+(tips[c]?' title="'+esc(tips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
   for(const r of rows){
     const id='<td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>';
     const kind='<td>'+esc(r.kind||r.lane.split(/[ .(]/)[0]||'')+(r.tier?' · '+esc(r.tier):'')+'</td>';
     const oc=r.outcome==='none'?'':r.outcome;
-    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+'<td>'+esc(r.left)+'</td><td class="phase">'+esc(r.phase)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
-    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+'<td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
+    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+span(r)+'<td>'+esc(r.left)+'</td><td class="phase">'+esc(r.phase)+'</td><td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
+    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+span(r)+'<td>'+esc(r.worktree)+'</td><td>'+launch(r)+'</td></tr>';
   }
   return h+'</tbody></table>';
 }
