@@ -26,6 +26,7 @@ import {ComponentsTab} from "./data/ComponentsTab";
 import {VertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/VertexAuthoringPanel";
 import {RowAuthoringPanel} from "../../editor-v2/viewpoint/authoring/RowAuthoringPanel";
 import {EdgeAuthoringPanel} from "../../editor-v2/viewpoint/authoring/EdgeAuthoringPanel";
+import {GraphVertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/GraphVertexAuthoringPanel";
 import {EnableIRPanel} from "../../editor-v2/viewpoint/authoring/EnableIRPanel";
 import {HelpText} from "../../ui";
 import {JjodelEvents} from "../../../events/registry";
@@ -84,7 +85,7 @@ function ViewDataComponent(props: AllProps) {
     // slice 1.6 removes them. A view without an `ir` keeps the legacy bar untouched,
     // IR entry-point (EnableIRPanel) included.
     const irKind: IRAuthoringKind | undefined =
-        (ir?.kind === 'vertex' || ir?.kind === 'row' || ir?.kind === 'edge') ? ir.kind : undefined;
+        (ir?.kind === 'vertex' || ir?.kind === 'row' || ir?.kind === 'edge' || ir?.kind === 'graphVertex') ? ir.kind : undefined;
 
     // The authoritative controls of the legacy Apply-to tab move into the IR
     // `Applies to` body (R-H): this is what they need beyond the view itself, and it
@@ -101,7 +102,9 @@ function ViewDataComponent(props: AllProps) {
                 ? <VertexAuthoringPanel view={view} activeTab={id} identity={identity} />
                 : irKind === 'row'
                     ? <RowAuthoringPanel view={view} activeTab={id} identity={identity} />
-                    : <EdgeAuthoringPanel view={view} activeTab={id} identity={identity} />}
+                    : irKind === 'graphVertex'
+                        ? <GraphVertexAuthoringPanel view={view} activeTab={id} identity={identity} />
+                        : <EdgeAuthoringPanel view={view} activeTab={id} identity={identity} />}
         </Try>
     );
 
