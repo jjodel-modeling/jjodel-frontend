@@ -227,3 +227,26 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: P6 asks the commit type of the prompt, which names none: chose feat(harness) and docs, as the earlier harness lanes (RC-11). HARNESS-DOCS §4.1 got two lines, Front in the field list and one template line. Left out, not in scope: §6 (check:docs row) and §7 :430 still lack Check E and Front; the chat updates the KB copy of HARNESS-DOCS (P10). Bench 6/6 in the body of 73af7bbac.
 **Prompt document name**: 2026-10-10 15:00
+
+## 2026-10-10 — feat(harness): lane-run projects each lane onto its GitHub card (P-2026-10-10-1532)
+**Prompt**: `claude_2026-10-10_1532_prompt_lane_tracking_B_projection.md`, full lane on `~/jjodel-w-lanetrack`, branch `lane-tracking`, lane B of the discovery P-2026-10-10-1330: `projectLane`, `syncCard` and `trackLane` in `lane-tracking.mjs`; the seam in `lane-run.mjs` (the start refusal, one `card:` line from start, resume, status, the chain supervisor and go on a direct merge, `track <id> | --sync [--dry-run]`); fake-gh tests and the bench; one live sync; HARNESS-DOCS §6 and §7.
+**Files touched**: code `d52b06c4d`: `frontend/scripts/lane-tracking.mjs`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/fixtures/fake-gh.cjs` (new); docs `c9d0bb68d`: `docs/HARNESS-DOCS.md`; this commit: this entry, two tickets and the Status of the prompt. Outside the tree: `~/.jjodel-lanes/_tracking/config.json`, the enable switch item 4 asks for.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. check:scripts PASS 60 files; typecheck:scripts exit 0; typecheck 14, the baseline set; vitest scripts/hooks and scripts/gates 781/781 (737 before); check:docs 5/5 exit 0; build exit 0. Mutation bench 17/17 killed, control 59/59 (commit body of `d52b06c4d`).
+**Out-of-scope changes**: yes — eight files over three commits, above five (RC-11). COSA 1 to 5 name each one except `fixtures/fake-gh.cjs`, the fake gh of COSA 3, kept as one file so both suites run the same fake. The inbox and the prompt are the closure. `docs/PROTOCOL.md` untouched: `track` went to HARNESS-DOCS §7, the prompt's «P13 or §7».
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Live sync once: issue 1, P-2026-10-10-1500, closed, Done, harness; issue 2, P-2026-10-10-1532, open, In progress, harness (read back with gh). Second sync: 0 gh calls (recording wrapper). P-2026-10-10-1520 and P-2026-10-10-1600 got `none:` and no card (tickets below). A discovery hard stop: the title or file name says discovery and no GO has reached the lane. Tests written after the code; the bench is the evidence.
+**Prompt document name**: 2026-10-10 15:32
+
+## 2026-10-10 — ticket: trunk prompts after FRONT_FROM lack Front:, Check E fails them at the merge
+**Ticket**: Two prompts committed on `alfonso-frontend-jjtl` after lane A's cut-off have no `Front:` line, because the trunk does not carry RC-44 yet: `claude_2026-10-10_1520_prompt_lane_board_model_insights_discovery.md` (P-2026-10-10-1520, chat C-2026-10-10-1512) and `claude_2026-10-10_1600_prompt_stale_m1_edge_discovery.md` (P-2026-10-10-1600, chat C-2026-10-10-0057). Measured: a scratch copy of the second in `~/jjodel-w-lanetrack` turns `npm run check:docs` to exit 1 (Check E, one ERROR), then removed. So the merge of `lane-tracking` into the trunk goes `blocked` on its check:docs gate, and every trunk prompt written before that merge adds to the list. `lane-run track --sync` gives both `none:` and no card. Not amended here (NON FARE: no `Front:` line on past prompts): the chat chooses between adding the lines on the trunk before the merge and moving `FRONT_FROM`.
+**Priority**: high
+**Found in**: P-2026-10-10-1532
+
+## 2026-10-10 — ticket: issue-discovery.md renders no Front:, start --auto will refuse auto-intake lanes
+**Ticket**: `frontend/scripts/lane-templates/issue-discovery.md` renders Prompt-ID, Chat, Request, Lane, Tier and Status, and no `Front:`. Once this lane's `lane-run.mjs` is on the trunk, `lane-run start --auto` refuses every auto-intake prompt with a Prompt-ID at or after `P-2026-10-10-1500` (no `Front:` line, P13, RC-44). Report P-2026-10-10-1330 §9 answer 14 puts `Front: maintenance` in the template and its render in `auto-intake.mjs` in lane B; this prompt's COSA does not list them, so they were not touched. A fast lane before the next `/lane auto` night.
+**Priority**: medium
+**Found in**: P-2026-10-10-1532
