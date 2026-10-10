@@ -1,0 +1,276 @@
+{
+ "url": "http://localhost:3097",
+ "setup": {
+  "mm": "Pointer1791643345487_USER_4",
+  "m1": "Pointer1791643345489_USER_30",
+  "projectId": "Pointer1791643345477_USER_2",
+  "ids": {
+   "Event": "Pointer1791643345488_USER_12",
+   "State": "Pointer1791643345488_USER_8",
+   "coin": "Pointer1791643345490_USER_42",
+   "push": "Pointer1791643345490_USER_44",
+   "stop": "Pointer1791643345490_USER_46",
+   "tc": "Pointer1791643345490_USER_48",
+   "locked": "Pointer1791643345489_USER_33",
+   "unlocked": "Pointer1791643345489_USER_36"
+  }
+ },
+ "added": {
+  "ids": {
+   "amount": "Pointer1791643355700_USER_97",
+   "hot": "Pointer1791643355701_USER_101",
+   "label": "Pointer1791643355701_USER_105",
+   "tags": "Pointer1791643355702_USER_109",
+   "need": "Pointer1791643355702_USER_113",
+   "dflt": "Pointer1791643355702_USER_117",
+   "text": "Pointer1791643355703_USER_121",
+   "Size": "Pointer1791643355703_USER_125",
+   "literals": {
+    "S": "Pointer1791643355704_USER_126",
+    "M": "Pointer1791643355704_USER_127",
+    "L": "Pointer1791643355704_USER_128"
+   },
+   "size": "Pointer1791643355704_USER_129",
+   "home": "Pointer1791643355704_USER_133"
+  },
+  "dfltSet": "ok",
+  "bounds": {
+   "tags": -1,
+   "need": 1,
+   "dflt": [
+    7
+   ]
+  }
+ },
+ "set": {
+  "errs": []
+ },
+ "read": {
+  "raw": {
+   "coin": {
+    "amount": [
+     50
+    ],
+    "hot": [
+     true
+    ],
+    "label": [
+     "fifty"
+    ],
+    "tags": [
+     1,
+     2
+    ],
+    "need": [
+     5
+    ],
+    "dflt": [],
+    "text": [
+     "50"
+    ],
+    "size": [
+     "Pointer1791643355704_USER_128"
+    ],
+    "home": [
+     "Pointer1791643345489_USER_33"
+    ]
+   },
+   "push": {
+    "amount": [
+     20
+    ],
+    "hot": [
+     false
+    ],
+    "label": [],
+    "tags": [],
+    "need": [],
+    "dflt": [],
+    "text": [],
+    "size": [
+     "Pointer1791643355704_USER_127"
+    ],
+    "home": [
+     "Pointer1791643345489_USER_36"
+    ]
+   },
+   "stop": {
+    "amount": [],
+    "hot": [],
+    "label": [],
+    "tags": [],
+    "need": [],
+    "dflt": [],
+    "text": [],
+    "size": [],
+    "home": []
+   }
+  },
+  "app": {
+   "coin": {
+    "amount": 50,
+    "hot": true,
+    "label": "fifty",
+    "size": "L",
+    "home": "<locked>",
+    "tags": [
+     1,
+     2
+    ],
+    "need": 5,
+    "dflt": 7,
+    "text": 50
+   },
+   "push": {
+    "amount": 20,
+    "hot": false,
+    "label": null,
+    "size": "M",
+    "home": "<unlocked>",
+    "tags": [],
+    "need": 0,
+    "dflt": 7,
+    "text": null
+   },
+   "stop": {
+    "amount": null,
+    "hot": null,
+    "label": null,
+    "size": null,
+    "home": null,
+    "tags": [],
+    "need": 0,
+    "dflt": 7,
+    "text": null
+   }
+  },
+  "stand": {
+   "coin": {
+    "amount": 50,
+    "hot": true,
+    "label": "fifty",
+    "size": "Pointer1791643355704_USER_128",
+    "home": "<locked>",
+    "tags": [
+     1,
+     2
+    ],
+    "need": 5,
+    "dflt": null,
+    "text": "50"
+   },
+   "push": {
+    "amount": 20,
+    "hot": false,
+    "label": null,
+    "size": "Pointer1791643355704_USER_127",
+    "home": "<unlocked>",
+    "tags": [],
+    "need": null,
+    "dflt": null,
+    "text": null
+   },
+   "stop": {
+    "amount": null,
+    "hot": null,
+    "label": null,
+    "size": null,
+    "home": null,
+    "tags": [],
+    "need": null,
+    "dflt": null,
+    "text": null
+   }
+  }
+ },
+ "differ": [
+  "coin.size: app \"L\", stand-in \"Pointer1791643355704_USER_128\"",
+  "coin.dflt: app 7, stand-in null",
+  "coin.text: app 50, stand-in \"50\"",
+  "push.size: app \"M\", stand-in \"Pointer1791643355704_USER_127\"",
+  "push.need: app 0, stand-in null",
+  "push.dflt: app 7, stand-in null",
+  "stop.need: app 0, stand-in null",
+  "stop.dflt: app 7, stand-in null"
+ ],
+ "run": {
+  "applied": {
+   "keys": [
+    "simAction",
+    "simEntry",
+    "simGuard",
+    "simInitial",
+    "simNextState",
+    "simNode",
+    "simOwnedTransitions",
+    "simProfile",
+    "simTerminal",
+    "simTransition",
+    "simTrigger"
+   ]
+  },
+  "defects": [
+   "undeclared 'paid'",
+   "undeclared 'coins' on demoESM"
+  ],
+  "readings": {
+   "coin": {
+    "event.amount": 50,
+    "event.hot": true,
+    "event.label": "fifty",
+    "event.size": "L",
+    "event.size == \"L\"": true,
+    "event.home": "<locked>",
+    "event.tags": [
+     1,
+     2
+    ],
+    "event.need": 5,
+    "event.dflt": 7,
+    "event.text": 50,
+    "event.text + 1": 51,
+    "event.amount + 1": 51,
+    "guard event.amount > 15": "true"
+   },
+   "push": {
+    "event.amount": 20,
+    "event.hot": false,
+    "event.label": null,
+    "event.size": "M",
+    "event.size == \"L\"": false,
+    "event.home": "<unlocked>",
+    "event.tags": [],
+    "event.need": 0,
+    "event.dflt": 7,
+    "event.text": null,
+    "event.text + 1": null,
+    "event.amount + 1": 21,
+    "guard event.amount > 15": "true"
+   },
+   "stop": {
+    "event.amount": null,
+    "event.hot": null,
+    "event.label": null,
+    "event.size": null,
+    "event.size == \"L\"": false,
+    "event.home": null,
+    "event.tags": [],
+    "event.need": 0,
+    "event.dflt": 7,
+    "event.text": null,
+    "event.text + 1": null,
+    "event.amount + 1": null,
+    "guard event.amount > 15": "false"
+   }
+  },
+  "press": "coin: tc (locked → locked) fired",
+  "credit": {
+   "credit": 50
+  },
+  "halt": null
+ },
+ "errors": [
+  "console: init_dash"
+ ],
+ "failures": 0
+}

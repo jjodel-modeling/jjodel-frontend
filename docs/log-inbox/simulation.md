@@ -705,3 +705,18 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: console-only fix: no rendering change; probe of the lane 40 pages E1 0/20, E2 0, opens identical 20/20; M1 ecore JSON incompleteness pre-existing, ticketed
 **Notes**: Rollback tag `pre-console-errors-fix` on `0eb09ad8f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2253/result.json`.
 **Prompt document name**: 2026-10-05 22:53
+
+## 2026-10-10 — discovery: event attributes read by guards and actions (P-2026-10-10-1630)
+**Prompt**: `claude_2026-10-10_1630_prompt_sim_event_attributes_discovery.md`, full lane, read-only on `~/jjodel-w-eventattrs`, branch `sim-event-attrs`: what `event.f` does today in guards, actions, entry and exit; name resolution; what Reset knows; core types; unset attributes; usage census; nuXmv row; grammar fragment; guard-error impact map; slice plan and the R-SIM-144 draft.
+**Files touched**: probes `413f0096d`: `frontend/scripts/probe/sim-event-attrs.ts`, `frontend/scripts/probe/sim-event-attrs-browser.ts`. This commit: `docs/discovery/discovery_2026-10-10_sim_event_attributes.md`, `docs/discovery/assets/sim-event-attrs/` (node-probe-run.txt, browser-probe-run.txt, browser-probe-out.json), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (no file under `frontend/src`; check:scripts PASS)
+**Out-of-scope changes**: no — 7 files, all in the prompt's DOVE: two probes, the report, three assets, this inbox
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Node probe ALL GREEN: event.amount already reads in guards, arc actions, entry and exit on triggered arcs, fused and Petri transitions (Custom profile only); unset reads make a guard false, an action halt. Browser probe on 3097 ALL GREEN: buildEvalContext differs from the stand-in on enum, default, mandatory unset (0), text int. No demo guard fails dynamically with its declarations. Status line not flipped (prompt). Report §0, §12.
+**Prompt document name**: 2026-10-10 16:30
+
+**Ticket** (low): a trigger on a fork's out edge, or on a join's in edge, is dropped by `compileControlFlow` without a defect; the event press reads «no transition accepted it». Report §3.4 and open question 2.
