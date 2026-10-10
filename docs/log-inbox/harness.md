@@ -360,3 +360,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Span verified on 4701 under P-2026-10-10-1717 and on 4700 after the kickstart
 **Notes**: Rollback tag `pre-lane-board-span` on `bd97bae49` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1731/result.json`.
 **Prompt document name**: 2026-10-10 17:31
+
+## 2026-10-10 — fix(harness): lane board counts a two-merge lane as a merge (P-2026-10-10-1803)
+**Prompt**: `claude_2026-10-10_1803_prompt_board_kindof_merges.md`: extend `kindOf()` in `frontend/scripts/lane-board/lane-board.mjs` so that a Lane line `full (<count word or number> merge|merges …)` is `merge`, and prove on every `Lane:` line of `docs/prompts/*.md` that exactly one prompt moves, `phase2` to `merge`.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs` (`a77675e5e`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Corpus of 438 Lane lines in 840 files, classified before and after, line only and with the file name: one change, line only, `claude_2026-09-26_1550_prompt_merge_icons_and_navigate.md:5` phase2 to merge; with the file name none. node --check exit 0; check:scripts PASS, 65 files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: board classification only, verified by the lane on the full prompt corpus (one line moves, phase2 to merge); no UI change to check
+**Notes**: The measured phase2 holds only when the board passes no file name: `header()` takes it from `prompt.txt`, absent for the 2026-09-26/27 lanes; with the name, `_prompt_merge_` already made it a merge. Count words are one..ten or digits; probes `two mergers`, `twomerges`, `two phases, merge after` stay phase2. No test covers `kindOf` and none was created (WHAT 3). The first commit attempt was refused by bash-guard for the missing `Model:` trailer (P6), then added.
+**Prompt document name**: 2026-10-10 18:03
