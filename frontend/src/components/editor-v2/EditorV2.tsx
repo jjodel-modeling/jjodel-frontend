@@ -109,6 +109,7 @@ import {
     reconcileJjomAfterUndoRedo,
 } from './sync/canvasToJjom';
 import { computeElkLayout, computeElkAutoLayout, setElkRoutes, measureOutsideLabels, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
+import { computeContainedAutoLayout } from './utils/elkContainers';
 import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/notations';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
@@ -3840,7 +3841,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             // The vertices' outside labels (R-VP-53), measured on the same container: ELK reserves their room.
             const outsideMap = container ? measureOutsideLabels(container) : new Map();
-            const result = await computeElkAutoLayout(currentNodes, currentEdges, { profile, roleOf, labelsOf: id => labelMap.get(id), outsideLabelsOf: id => outsideMap.get(id) });
+            // Across graphVertex containers (S6): bottom-up by container, each laid-out container a block one level up;
+            // with no container that declares a layout, today's flat run (utils/elkContainers.ts).
+            const layoutKey = getActiveLayoutKey();
+            const result = await computeContainedAutoLayout(currentNodes, currentEdges, {
+                profile, roleOf, labelsOf: id => labelMap.get(id), outsideLabelsOf: id => outsideMap.get(id),
+                containment: irContainmentRef.current.model,
+                storedOf: v => { const r = readVertexLayout(lookup[v] ?? {}, layoutKey); return { w: r.w, h: r.h, isResized: !!r.isResized }; },
+            });
             const placed = currentNodes.map(n => {
                 const p = result.positions.get(n.id);
                 return p ? { ...n, position: p } : n;
@@ -3848,6 +3856,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setNodes(placed);
             const moved = placed.filter(n => result.positions.has(n.id)).map(n => ({ id: n.id, x: n.position.x, y: n.position.y }));
             if (moved.length > 0) syncPositionBatchToJjom(moved);
+            // A partition or a container sized by hand that its content outgrew (S6): its new size, still by hand. The
+            // presentation pass reads boxes off the records, which land a dispatch later: once they show the new sizes
+            // (bounded retry), those nodes are handed back with a new `data` (the stabilizer above lets a node through on
+            // its data's identity, not on a copy of the node) so the pass runs on them.
+            if (result.sizes.size > 0) {
+                syncSizeBatchToJjom([...result.sizes].map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
+                const redraw = (attempt: number) => {
+                    const idl = (store.getState() as any).idlookup ?? {};
+                    const landed = [...result.sizes].every(([v, s]) => {
+                        const r = readVertexLayout(idl[v] ?? {}, layoutKey);
+                        return Math.abs(r.w - s.w) < 0.5 && Math.abs(r.h - s.h) < 0.5;
+                    });
+                    if (!landed && attempt < 40) { setTimeout(() => redraw(attempt + 1), 25); return; }
+                    setNodes(nds => nds.map(n => (result.sizes.has(n.id) ? { ...n, data: { ...n.data } } : n)));
+                };
+                setTimeout(() => redraw(0), 0);
+            }
 
             // Routes for the edges the layout owns: not pinned (mirrors the recalc below), no manual waypoints.
             const unpinned = currentEdges.filter(e => {
