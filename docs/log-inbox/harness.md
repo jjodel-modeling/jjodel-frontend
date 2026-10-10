@@ -366,3 +366,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-10-1600
 **Detail**: `~/.jjodel-lanes/P-2026-10-10-1600/log.jsonl` (the resume at 17:40)
+
+## 2026-10-10 — feat(harness): lane board tables with fixed column widths (P-2026-10-10-1742)
+**Prompt**: `claude_2026-10-10_1742_prompt_lane_board_fixed_columns.md`, fast lane on `~/jjodel-w-boardcols`, branch `lane-board-columns`: every Lanes-tab table `table-layout: fixed`, width 100%, a `<colgroup>` from one width map keyed by column name; pills never wrap; time and duration cells nowrap and tabular-nums; Worktree and Phase ellipsis with a `title`; no cell overflows into its neighbour.
+**Files touched**: code `034811a1f`: `frontend/scripts/lane-board/lane-board.mjs`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `node --check` exit 0; check:scripts PASS 63 files. Headless Chromium probe on 4701, live data, 13 tables, light theme: at 1280, 1440 and 1920 px every column has one width across all tables and across a `tick()`, Lane's left edge is one value, no non-truncating cell has scrollWidth > clientWidth, no pill wraps, no `.lfx` table in Timeline or Insights.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4701 (RC-23), DOM read: table-layout fixed on Running, Last 24 hours and an Earlier day; every column keeps one width across tables; Lane, State, Worktree and Launched by share the same left edge everywhere, the middle columns shift only where the column sets differ; no pill wraps; Worktree truncates with a title; board on 4701 stopped
+**Notes**: Widths px: Lane 200, State 92, Kind 124, Started/Ended 96, Elapsed/Span 100, Left 116, Worktree 144, Launched by 128; Phase and Outcome auto (146 and 166 at 1246 px). Ended is fixed beside Started, Outcome absorbs the rest. Horizontal cell padding 8 px in these tables only: at 12 px Phase fell under 90 px. Min-width 1200: below ~1240 px viewport the wrap scrolls and the chain outcome pill (148 px) ends in an ellipsis. Titles wrap at 184 px instead of up to 320.
+**Prompt document name**: 2026-10-10 17:42
