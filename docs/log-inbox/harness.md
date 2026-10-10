@@ -432,6 +432,71 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Notes**: Inside a group the lanes stay oldest first for packing, overlap pairs and labels; only row numbers are reversed, and a collapsed group's packed rows are numbered by their newest lane, so the packing and the row count are the old ones. Overlap box heights change in collapsed groups (the box spans two permuted rows). Exact-start ties now break by Prompt-ID instead of the API order. Probe: `/tmp/tl-probe.mjs`, not committed.
 **Prompt document name**: 2026-10-10 17:44
 
+## 2026-10-10 — merge: timeline-newest-first into alfonso-frontend-jjtl (P-2026-10-10-1843)
+**Prompt**: `claude_2026-10-10_1843_prompt_merge_timeline-newest-first.md`, a direct merge by `lane-run merge --direct`, no session: `timeline-newest-first` at `694e5dbb5` into `alfonso-frontend-jjtl`, merge base `177dc474b`, 4 commits on the branch side.
+**Files touched**: merge `31706d940`: 3 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_1744_prompt_timeline_newest_first.md`, `frontend/scripts/lane-board/timeline.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `31706d940` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8052 tests in 330 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; Timeline verified on 4702 under P-2026-10-10-1744
+**Notes**: Rollback tag `pre-timeline-newest-first` on `5e218863b` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1843/result.json`.
+**Prompt document name**: 2026-10-10 18:43
+
+## 2026-10-10 — merge: board-req-port-disc into alfonso-frontend-jjtl (P-2026-10-10-1852)
+**Prompt**: `claude_2026-10-10_1852_prompt_merge_board-req-port-disc.md`, a direct merge by `lane-run merge --direct`, no session: `board-req-port-disc` at `345b14db7` into `alfonso-frontend-jjtl`, merge base `45ad56bd6`, 5 commits on the branch side.
+**Files touched**: merge `74b52cd99`: 2 files from the branch side (`docs/discovery/discovery_2026-10-10_board_req_tab_port.md`, `docs/prompts/claude_2026-10-10_1806_prompt_board_req_tab_port_discovery.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `74b52cd99` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8052 tests in 330 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: docs-only merge (discovery report and its prompt), nothing to check
+**Notes**: Rollback tag `pre-board-req-port-disc` on `c315460b0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1852/result.json`.
+**Prompt document name**: 2026-10-10 18:52
+
+## 2026-10-10 — fix(harness): lane board counts a two-merge lane as a merge (P-2026-10-10-1803)
+**Prompt**: `claude_2026-10-10_1803_prompt_board_kindof_merges.md`: extend `kindOf()` in `frontend/scripts/lane-board/lane-board.mjs` so that a Lane line `full (<count word or number> merge|merges …)` is `merge`, and prove on every `Lane:` line of `docs/prompts/*.md` that exactly one prompt moves, `phase2` to `merge`.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs` (`a77675e5e`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Corpus of 438 Lane lines in 840 files, classified before and after, line only and with the file name: one change, line only, `claude_2026-09-26_1550_prompt_merge_icons_and_navigate.md:5` phase2 to merge; with the file name none. node --check exit 0; check:scripts PASS, 65 files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: board classification only, verified by the lane on the full prompt corpus (one line moves, phase2 to merge); no UI change to check
+**Notes**: The measured phase2 holds only when the board passes no file name: `header()` takes it from `prompt.txt`, absent for the 2026-09-26/27 lanes; with the name, `_prompt_merge_` already made it a merge. Count words are one..ten or digits; probes `two mergers`, `twomerges`, `two phases, merge after` stay phase2. No test covers `kindOf` and none was created (WHAT 3). The first commit attempt was refused by bash-guard for the missing `Model:` trailer (P6), then added.
+**Prompt document name**: 2026-10-10 18:03
+
+## 2026-10-10 — merge: board-kindof-merges takes alfonso-frontend-jjtl (P-2026-10-10-1851)
+**Prompt**: `claude_2026-10-10_1851_prompt_board-kindof-merges_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-kindof` on `board-kindof-merges`: RC-14, the trunk at the explicit sha `c315460b0` into the branch with one `--no-ff` merge, base `45ad56bd6`, 45 trunk commits against 4 on the branch and this prompt on top; hard stop for the chat's GO, then this closure.
+**Files touched**: merge `43231854c`: the 56 files of the trunk side; `docs/log-inbox/harness.md` resolved by union (the trunk's entries, then the branch's 1803 entry, verbatim, each heading once); `frontend/scripts/lane-board/lane-board.mjs` auto-merged, no hand edit to code. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `43231854c`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8052 passed in 330 files, 0 failed, the 9 known red at import, equal to the trunk tip's count (the P-2026-10-10-1852 worker's vitest-before.json on `c315460b0` in `~/jjodel-release`; the branch adds no test); hooks 487 (trunk 487); build exit 0; check:docs 5/5; check:scripts PASS 67 files; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries 56 files, above five (RC-11), all the trunk side's.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: take-trunk merge of a scripts-only branch, gates green per the session; nothing to check in the app
+**Notes**: Two of three full vitest runs, at load 75-105 beside the 1852 worker's gates, also red on irCollapsedRender and irSelectionRing: afterAll browser.close() hook timeout 10 s, every assertion passed; alone 18/18; the third run, load ~40, clean. check:docs is 5/5, not the prompt's 4/4 (Check E). The merge body says «ten blocks» and lists seven; not amended. Trunk now `e1eb53d43`, docs only past `c315460b0`; harness.md conflicts again for the merge into the trunk.
+**Prompt document name**: 2026-10-10 18:51
+
+## 2026-10-10 — merge: board-kindof-merges into alfonso-frontend-jjtl (P-2026-10-10-1913)
+**Prompt**: `claude_2026-10-10_1913_prompt_merge_board-kindof-merges.md`, a direct merge by `lane-run merge --direct`, no session: `board-kindof-merges` at `f8d8c333d` into `alfonso-frontend-jjtl`, merge base `c315460b0`, 7 commits on the branch side.
+**Files touched**: merge `2ad7460d0`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_1803_prompt_board_kindof_merges.md`, `docs/prompts/claude_2026-10-10_1851_prompt_board-kindof-merges_take_trunk.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2ad7460d0` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8052 tests in 330 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board kindOf), classification verified by lane P-2026-10-10-1803 on the prompt corpus
+**Notes**: Rollback tag `pre-board-kindof-merges` on `e1eb53d43` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1913/result.json`.
+**Prompt document name**: 2026-10-10 19:13
+
 ## 2026-10-10 — feat(harness): lane-run draws the tier of eligible lanes, RC-45 (P-2026-10-10-1757)
 **Prompt**: `claude_2026-10-10_1757_prompt_lane_run_rc45_draw.md`: Phase 1 discovery (`758c62cc1`, `docs/discovery/discovery_2026-10-10_lane_run_rc45_draw.md`), then in cascade the RC-45 draw in `lane-run start` and `chain` (eligibility, ledger `~/.jjodel-lanes/rc45-draws.jsonl`, `--no-draw`, reuse of a draw, lock), the board reading the ledger and `tier.txt`, tests red first.
 **Files touched**: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/insights.js` (`8a1068660`); this commit: `frontend/scripts/lane-board/README.md` and this entry. Seven files with the report, all named by the prompt.
