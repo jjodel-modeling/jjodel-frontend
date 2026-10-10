@@ -5830,6 +5830,15 @@ Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
   **The oracle (slice S6) enters 3.2 behind the setting if it is green by the 2026-10-23 freeze, otherwise 3.2.x.**
   Consistent with R-GEN-8, which makes it a goal, not a requirement.
 
+- **R-GEN-16** (2026-10-10, provisional, unattended; evidence: read, verified: none, reversible: trunk).
+  **Templates reach the target profile through one context value, `target`, bound next to `stc` by `generate`.**
+  In the pilot it is the JavaScript profile: `target.runtime`, `target.guard(site)`, `target.actions(site)`,
+  `target.initial` (the compiled initial state) and `target.net` (the net with its declarations), built in
+  `codegen/target/js/access.ts` from the S4 printer. A refused guard or action is an error fragment, and Run is
+  refused while errors exist. Raised by the S6 lane (P-2026-10-10-2029): without it no template could print a
+  runnable guard, and a Petri template could not write `initial()`. Named `target`, not `js`, so a second target
+  plugs in without renaming.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
