@@ -446,3 +446,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-10 17:57
 
 **Ticket** (RC-45 vs check:docs, P-2026-10-10-1757): the prompt asks for `Corregge: none` (RC-45 (2)), but Check B of `npm run check:docs` refuses it: measured on this entry, `value is neither the sentinel nor a prompt-document name in the prescribed form`. This entry writes the sentinel `—`, which §21.3 defines as "corrects nothing". Either RC-45 (2) reads `—`, or `log-tools.ts` `lintTaskFields` accepts `none`: the chat's call.
+
+## 2026-10-10 — merge: lane-run-rc45-draw takes alfonso-frontend-jjtl (P-2026-10-10-1848)
+**Prompt**: `claude_2026-10-10_1848_prompt_lane-run-rc45-draw_take_trunk.md`, full lane rendered by `lane-run merge --trunk-into`, a lane-run session in `~/jjodel-w-rc45draw` on `lane-run-rc45-draw`: RC-14, the trunk at the explicit sha `31706d940` into the branch with one `--no-ff` merge, base `6ca224b68`, 50 trunk commits against 4 on the branch and this prompt on top; hard stop for the chat's visual GO, then this closure.
+**Files touched**: merge `995d7cb18`: the 64 files of the trunk side; `docs/log-inbox/harness.md` resolved by union, `frontend/scripts/lane-board/lane-board.mjs` auto-merged, no hand edit to code. This commit: the Status of this prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `995d7cb18`: typecheck exit 2, 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8066 passed in 330 files, 0 failed (expected: trunk tip 8052, measured read-only in `~/jjodel-release`, plus 14 from the branch); 11 red files, the 9 §17 at import and `irCollapsedRender.test.ts`, `irSelectionRing.test.ts` (afterAll `browser.close()` timeouts at load 156, 18/18 green alone); hooks 501 (487 plus 14); build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no. The merge carries 64 files, above five (RC-11), all the trunk side's.
+**Layer Impact Report**: not-required (no sync file edited here; the trunk's `useM1ReferenceEdges.ts` arrives with its own LIR, `docs/lir/lir_2026-10-10_stale_m1_edge_f1.md`)
+**Smoke visivo**: passato — chat GO (RC-23), unattended: the merge brings only trunk content into the branch; the board was checked on 4701 from this branch before the merge, no board code edited by hand
+**Notes**: The trunk moved to `c315460b0` during the session, docs-only (1843's Status flip and log entry); `31706d940` merged as step 1 prescribes. Union: the trunk's 7 entries, then the branch's 1757 block, byte-identical to the trunk's file plus that block. Probes 19 of 19 once, control RC-46 absent. lane-board.mjs read end to end: hunks disjoint, 95 declarations once, node --check 0. check:docs is 5/5, not 4/4: Check E is on the trunk. No rollback tag.
+**Prompt document name**: 2026-10-10 18:48

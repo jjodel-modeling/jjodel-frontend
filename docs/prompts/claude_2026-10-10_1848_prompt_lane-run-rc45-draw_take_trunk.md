@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-10-1848
 Chat: —
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/log-inbox/harness.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane lane-run-rc45-draw · 995d7cb18 · verifica visiva passata 2026-10-10 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-rc45draw`, branch `lane-run-rc45-draw`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-rc45draw`, branch `lane-run-rc45-draw`, `git log -1` is the commit that adds this file (its parent `b4f9ceb83`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-10-1848 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
