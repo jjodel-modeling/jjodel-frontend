@@ -405,3 +405,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4703 (RC-23), DOM read of the Lanes tab: 45 claude.ai links in Running and Last 24 hours, all target _blank with noopener; titles name the source (Request header, commit, inferred from a same-chat lane); lane-run merges without a chat stay plain; board on 4703 stopped
 **Notes**: Coverage, 405 lanes: Request 18, commit 114, chat id 91, none 182. Last 7 days, 107 lanes: 18, 25, 19, 45. Among the lanes with no URL, 98 are lane-run merge prompts (29 in the last 7 days). A third field, `chatUrlVia`, holds the donor Prompt-ID that the title cites. Four `Claude-Session:` trailers hold a C- id and are rejected. One chat, C-2026-10-01-1725, has two URLs; the latest wins. A lane with `Chat: —` and a URL shows "chat" (5 lanes).
 **Prompt document name**: 2026-10-10 18:16
+
+## 2026-10-10 — merge: board-chat-links into alfonso-frontend-jjtl (P-2026-10-10-1836)
+**Prompt**: `claude_2026-10-10_1836_prompt_merge_board-chat-links.md`, a direct merge by `lane-run merge --direct`, no session: `board-chat-links` at `6ae97ac36` into `alfonso-frontend-jjtl`, merge base `3339c11ee`, 4 commits on the branch side.
+**Files touched**: merge `d77cd0c4e`: 3 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_1816_prompt_board_chat_links.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d77cd0c4e` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8052 tests in 330 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat, unattended: scripts-only (lane board), app untouched; chat links verified on 4703 under P-2026-10-10-1816
+**Notes**: Rollback tag `pre-board-chat-links` on `ffd37e8af` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1836/result.json`.
+**Prompt document name**: 2026-10-10 18:36
