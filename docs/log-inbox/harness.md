@@ -563,3 +563,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: No line changed: suite 16/16, node --check 0, check:scripts PASS 69 (walks the disk, both files in). Probe exit 0, 4.5 s, 488470 B: §6 counts hold except realized 297 and 12 after the milestone (+3 each: `f95d0a44f` cites R-GEN-2, -3, -14, merged by `601ec1379` after `834152b68`); prompts 860, +20 of which 13 merge, 7 under 2 ids, graph unchanged. Bench 13/13 killed, control green. Subject cut to 72 (guard).
 **Prompt document name**: 2026-10-10 20:22
+
+## 2026-10-10 — merge: req-trace-port into alfonso-frontend-jjtl (P-2026-10-10-2034)
+**Prompt**: `claude_2026-10-10_2034_prompt_merge_req-trace-port.md`, a direct merge by `lane-run merge --direct`, no session: `req-trace-port` at `c60ff807b` into `alfonso-frontend-jjtl`, merge base `05035419a`, 2 commits on the branch side.
+**Files touched**: merge `16e70f5e8`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-10_2022_prompt_req_trace.md`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/req-trace.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `16e70f5e8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8094 tests in 332 files, 9 red at import, hooks 517; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: not applicable: req-trace.mjs has no UI and no caller yet (S5 adds it); gates green
+**Notes**: Rollback tag `pre-req-trace-port-P-2026-10-10-2034` on `f4c91bd71` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2034/result.json`.
+**Prompt document name**: 2026-10-10 20:34
