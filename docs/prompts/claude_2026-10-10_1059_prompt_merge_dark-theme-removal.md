@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-10-1059
 Chat: C-2026-10-10-0910
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-10 · direct merge c08ac1c5f, tag pre-dark-theme-removal on 164f846fc · eight gates green (typecheck 14, vitest 7716 with the 9 known import reds, build 0) · visual: probe 62/62 in light on the branch (RC-23, chat, unattended); 3001 serves the merged index.html
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-10-1059 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
