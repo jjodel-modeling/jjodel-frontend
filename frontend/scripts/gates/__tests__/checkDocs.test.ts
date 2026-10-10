@@ -169,9 +169,9 @@ const scenarios = {
             {
                 active: GREEN_LOG,
                 prompts: {
-                    'claude_2026-10-10_1500_prompt_a.md': promptFile('P-2026-10-10-1500', ['Lane: fast']),
-                    'claude_2026-10-10_1459_prompt_old.md': promptFile('P-2026-10-10-1459', ['Lane: fast']),
-                    'claude_2026-10-10_1600_prompt_merge_b.md': promptFile('P-2026-10-10-1600', ['Lane: full (merge; zero conflicts measured)']),
+                    'claude_2026-10-11_0000_prompt_a.md': promptFile('P-2026-10-11-0000', ['Lane: fast']),
+                    'claude_2026-10-10_2359_prompt_old.md': promptFile('P-2026-10-10-2359', ['Lane: fast']),
+                    'claude_2026-10-11_0100_prompt_merge_b.md': promptFile('P-2026-10-11-0100', ['Lane: full (merge; zero conflicts measured)']),
                 },
             },
             'check-docs.ts',
@@ -183,7 +183,7 @@ const scenarios = {
             r.status === 1 &&
             r.out.includes('FAIL  Check E') &&
             errors.length === 1 &&
-            errors[0].includes('docs/prompts/claude_2026-10-10_1500_prompt_a.md (P-2026-10-10-1500): no `Front:` line')
+            errors[0].includes('docs/prompts/claude_2026-10-11_0000_prompt_a.md (P-2026-10-11-0000): no `Front:` line')
         );
     },
     /** Check E fails closed: no registry is a failure, not a pass. */
@@ -270,15 +270,15 @@ describe('check-docs on a throwaway tree', { timeout: 60_000 }, () => {
             {
                 active: GREEN_LOG,
                 prompts: {
-                    'claude_2026-10-10_1500_prompt_a.md': promptFile('P-2026-10-10-1500', ['Lane: fast', 'Front: harness']),
-                    'claude_2026-10-10_1700_fase2_old.md': promptFile('P-2026-10-10-1400', ['Lane: fast']),
+                    'claude_2026-10-11_0000_prompt_a.md': promptFile('P-2026-10-11-0000', ['Lane: fast', 'Front: harness']),
+                    'claude_2026-10-11_0100_fase2_old.md': promptFile('P-2026-10-10-1400', ['Lane: fast']),
                 },
             },
             'check-docs.ts',
         );
         expect(r.status).toBe(0);
         expect(r.out).toContain('PASS  Check E');
-        expect(r.out).toContain('1 of 2 prompt file(s) under docs/prompts at or after P-2026-10-10-1500');
+        expect(r.out).toContain('1 of 2 prompt file(s) under docs/prompts at or after P-2026-10-11-0000');
     });
 
     test('Check E: a prompt with no Front line fails, one line per offending prompt; older and merge prompts are not checked', () => {

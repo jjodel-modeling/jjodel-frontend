@@ -27,8 +27,12 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, statSync, w
 import { homedir } from 'node:os';
 import { basename, delimiter, join } from 'node:path';
 
-/** The lane that made the rule. Prompts with a lower Prompt-ID are never checked: earlier prompts are not amended (P13). */
-export const FRONT_FROM = 'P-2026-10-10-1500';
+/**
+ * The first prompt of 2026-10-11, once the merge has put the rule in every chat's PROTOCOL.md; it was
+ * P-2026-10-10-1500, the lane that made the rule, until P-2026-10-10-1612. Prompts with a lower
+ * Prompt-ID are never checked: earlier prompts are not amended (P13).
+ */
+export const FRONT_FROM = 'P-2026-10-11-0000';
 
 export const FRONTS_FILE = 'docs/harness/fronts.json';
 

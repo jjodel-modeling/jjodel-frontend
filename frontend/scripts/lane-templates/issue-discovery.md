@@ -5,6 +5,7 @@ Chat: {{night}}
 Request: https://github.com/{{repo}}/issues/{{issue}}
 Lane: {{lane}}
 Tier: light
+Front: {{front}}
 Status: {{status}}
 
 Worktree: `{{worktree}}`, branch `{{branch}}`, cut by `auto-intake cut` from the tip of `{{trunk}}` (the base sha is kept beside the night's queue); a fresh session started by `lane-run start --auto`. Before anything else: `pwd`, branch and `git log -1`; if the branch is not `{{branch}}`, stop with `Outcome: blocked`.

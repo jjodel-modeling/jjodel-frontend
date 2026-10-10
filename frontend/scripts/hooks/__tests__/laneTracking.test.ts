@@ -67,8 +67,8 @@ describe('frontProblem', () => {
     });
 
     test('a prompt before FRONT_FROM is never checked (cut-off dropped)', () => {
-        expect(FRONT_FROM).toBe('P-2026-10-10-1500');
-        expect(frontProblem(prompt('P-2026-10-10-1459', ['Lane: fast']), 'P-2026-10-10-1459', FRONTS)).toBeNull();
+        expect(FRONT_FROM).toBe('P-2026-10-11-0000');
+        expect(frontProblem(prompt('P-2026-10-10-2359', ['Lane: fast']), 'P-2026-10-10-2359', FRONTS)).toBeNull();
         expect(frontProblem(prompt('P-2026-10-09-2359', ['Lane: fast', 'Front: nope']), 'P-2026-10-09-2359', FRONTS)).toBeNull();
     });
 
@@ -134,12 +134,12 @@ describe('loadFronts', () => {
 
 // ── the card of a lane (lane B) ──────────────────────────────────────────────
 
-const LANE = 'P-2026-10-10-1600';
+const LANE = 'P-2026-10-11-1600';
 const TRACK_FRONTS = [
     { slug: 'maintenance', state: 'open', milestone: 1 },
     { slug: 'harness', state: 'open', milestone: 2 },
 ];
-const FILE = '/t/docs/prompts/claude_2026-10-10_1600_prompt_feature.md';
+const FILE = '/t/docs/prompts/claude_2026-10-11_1600_prompt_feature.md';
 
 /** A lane's prompt: its title, header lines after Prompt-ID and Chat, then a body the card must never carry. */
 const lanePrompt = (title = '# A feature of the harness', lines = ['Request: https://claude.ai/code/session_01ABC', 'Lane: full (more than 3 files)', 'Front: harness']): string =>
@@ -182,7 +182,7 @@ describe('projectLane: the mapping, one row each (report answers 1, 3, 6)', () =
     });
 
     test('`hard-stop` of a discovery named so only by its file is In review + waiting:phase-2 (file name not read)', () => {
-        expect(seen({ outcome: 'Outcome: hard-stop', promptFile: '/t/docs/prompts/claude_2026-10-10_1600_prompt_feature_discovery.md' })).toEqual(card('In review', ['waiting:phase-2']));
+        expect(seen({ outcome: 'Outcome: hard-stop', promptFile: '/t/docs/prompts/claude_2026-10-11_1600_prompt_feature_discovery.md' })).toEqual(card('In review', ['waiting:phase-2']));
     });
 
     test('`hard-stop` of a discovery after its GO is In review + waiting:visual (GO not read)', () => {
@@ -210,7 +210,7 @@ describe('projectLane: the mapping, one row each (report answers 1, 3, 6)', () =
     });
 
     test('no card: before FRONT_FROM, a merge lane, a prompt failing the front rule, no prompt text', () => {
-        expect(projectLane('P-2026-10-10-1459', { promptText: lanePrompt(), fronts: TRACK_FRONTS }).skip).toContain('before ' + FRONT_FROM);
+        expect(projectLane('P-2026-10-10-2359', { promptText: lanePrompt(), fronts: TRACK_FRONTS }).skip).toContain('before ' + FRONT_FROM);
         expect(seen({ merge: true }).skip).toBe('a merge lane gets no card');
         expect(seen({ promptText: lanePrompt('# Merge', ['Lane: full (merge; zero conflicts measured)']) }).skip).toBe('a merge lane gets no card');
         expect(seen({ promptText: lanePrompt('# No front', ['Lane: fast']) }).skip).toContain('no `Front:` line');
@@ -219,7 +219,7 @@ describe('projectLane: the mapping, one row each (report answers 1, 3, 6)', () =
 
     test('inFrontScope: at or after FRONT_FROM and not a merge prompt', () => {
         expect(inFrontScope(lanePrompt(), LANE)).toBe(true);
-        expect(inFrontScope(lanePrompt(), 'P-2026-10-10-1459')).toBe(false);
+        expect(inFrontScope(lanePrompt(), 'P-2026-10-10-2359')).toBe(false);
         expect(inFrontScope(lanePrompt('# M', ['Lane: full (merge; 1 conflict)']), LANE)).toBe(false);
     });
 });

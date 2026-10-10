@@ -1699,7 +1699,7 @@ describe('lane-run start --auto (RC-36)', () => {
 // ── track: the lane's card on GitHub (RC-44) ─────────────────────────────────
 
 const FAKE_GH = resolve(HERE, 'fixtures', 'fake-gh.cjs');
-const TRACK_ID = 'P-2026-10-10-1600';
+const TRACK_ID = 'P-2026-10-11-1600';
 const TRACK_WRITES = /^(issue (create|edit|close|reopen)|project item-(add|edit)|api -X PATCH)/;
 const ISSUE_1 = 'https://github.com/jjodel-modeling/jjodel-lanes/issues/1';
 
@@ -1879,13 +1879,13 @@ describe('lane-run track (RC-44)', () => {
         mkdirSync(repo);
         gitIn(l, repo, ['init', '-q', '-b', 'trunk']);
         commitFiles(l, repo, 'docs: two prompts', {
-            'docs/prompts/claude_2026-10-10_1600_prompt_tracked.md': trackPrompt(),
-            'docs/prompts/claude_2026-10-10_1400_prompt_older.md': PROMPT.replace(ID, 'P-2026-10-10-1400'),
+            'docs/prompts/claude_2026-10-11_1600_prompt_tracked.md': trackPrompt(),
+            'docs/prompts/claude_2026-10-10_2359_prompt_older.md': PROMPT.replace(ID, 'P-2026-10-10-2359'),
         });
         const dry = laneRun(l, ['track', '--sync', '--dry-run'], { cwd: repo });
         expect(dry.status, dry.stderr).toBe(0);
         expect(dry.stdout).toContain('card ' + TRACK_ID + ': dry run: gh issue create');
-        expect(dry.stdout).not.toContain('P-2026-10-10-1400');
+        expect(dry.stdout).not.toContain('P-2026-10-10-2359');
         expect(ghWrites(l)).toEqual([]);
         const r = laneRun(l, ['track', '--sync'], { cwd: repo });
         expect(r.status, r.stderr).toBe(0);

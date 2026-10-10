@@ -29,7 +29,8 @@
  *                lane-run start --auto refuses). Hidden content parks instead.
  *                The issue text sits only in the last section, in a fence one
  *                backtick longer than its longest run, cut at dataCap with the
- *                cut stated; the Lane line comes from laneByMode of the mode.
+ *                cut stated; the Lane line comes from laneByMode of the mode,
+ *                the Front line from front (maintenance when absent; P13, RC-44).
  *   cut <issue>  the worktree ~/jjodel-a-<n> on branch auto/<n>-<slug> of the
  *                render, from the trunk tip; frontend/node_modules linked to the
  *                shared one (P14); the base sha in issue-<n>/base.txt.
@@ -200,6 +201,9 @@ function repoDir() {
 // ── configuration ────────────────────────────────────────────────────────────
 
 const CONFIG_KEYS = ['repository', 'trunk', 'intakeLabel', 'skipLabels', 'allowlist', 'nightWindow', 'mode', 'laneByMode', 'dataCap', 'budget', 'ratifiedBy', 'ratifiedOn'];
+// Optional keys: `front`, the slug of docs/harness/fronts.json the rendered prompt names (P13, RC-44).
+const OPTIONAL_KEYS = ['front'];
+const DEFAULT_FRONT = 'maintenance';
 const BUDGET = {
     paceMargin: [0, 1], ceiling: [0, 1], resetGuardHours: [0, 168], nightlyDelta: [0, 1], nightMinutes: [1, 1440],
     residualMinutes: [0, 1440], laneLimitMinutes: [1, 1440], parallelCap: [1, 8], fiveHourCeiling: [0, 1], staleHours: [0, 168],
@@ -211,7 +215,7 @@ const isStr = (v) => typeof v === 'string' && v.trim() !== '';
 export function configProblems(c) {
     if (!c || typeof c !== 'object' || Array.isArray(c)) return ['not an object'];
     const p = [];
-    for (const k of Object.keys(c)) if (!CONFIG_KEYS.includes(k)) p.push('unknown key ' + k);
+    for (const k of Object.keys(c)) if (!CONFIG_KEYS.includes(k) && !OPTIONAL_KEYS.includes(k)) p.push('unknown key ' + k);
     for (const k of CONFIG_KEYS) if (!(k in c)) p.push('missing key ' + k);
     if ('repository' in c && !(typeof c.repository === 'string' && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(c.repository))) p.push('repository is not owner/name');
     if ('trunk' in c && !(typeof c.trunk === 'string' && /^[A-Za-z0-9._/-]+$/.test(c.trunk))) p.push('trunk is not a branch name');
@@ -227,6 +231,7 @@ export function configProblems(c) {
         const l = c.laneByMode;
         if (!(l && typeof l === 'object' && Object.keys(l).length === 2 && ['shadow', 'live'].every((m) => typeof l[m] === 'string' && /^[a-z][a-z-]*$/.test(l[m])))) p.push('laneByMode is not {shadow, live} of Lane values');
     }
+    if ('front' in c && !(typeof c.front === 'string' && /^[a-z][a-z0-9-]*$/.test(c.front))) p.push('front is not a front slug');
     if ('dataCap' in c && !(Number.isInteger(c.dataCap) && c.dataCap >= 1000 && c.dataCap <= 100000)) p.push('dataCap is not an integer in 1000..100000');
     if ('budget' in c) {
         const b = c.budget;
@@ -514,6 +519,7 @@ function cmdRender(rest) {
     const repo = repoDir();
     const block = dataBlock(issue.title, issue.body, config.dataCap);
     const lane = config.laneByMode[config.mode];
+    const front = config.front ?? DEFAULT_FRONT;
     let minted = null;
     let file = null;
     let text = null;
@@ -522,7 +528,7 @@ function cmdRender(rest) {
         minted = mintPromptId(from, [repo ? join(repo, 'docs', 'prompts') : null, join(lanesDir(), 'pending'), out]);
         const report = 'docs/discovery/discovery_' + minted.date + '_auto_issue_' + n + '.md';
         text = renderTemplate(readFileSync(TEMPLATE, 'utf8'), {
-            issue: n, mode: config.mode, promptId: minted.id, night: night.id, lane,
+            issue: n, mode: config.mode, promptId: minted.id, night: night.id, lane, front,
             status: dry ? 'dry render, not launchable' : 'da eseguire',
             worktree: '~/jjodel-a-' + n, branch, trunk: config.trunk, repo: config.repository, report,
             cutNote: block.cut ? 'The text was cut at ' + block.cut.chars + ' of ' + block.cut.total + ' characters. ' : '',
