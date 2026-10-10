@@ -263,7 +263,10 @@
       }).join('') + '</tr>';
     });
     s += '</tbody></table>';
-    return head + m + s + '<div class="in-note">Within a size band the models do not separate at these n; the model is chosen by the chat, not at random.</div></div>';
+    const note = drawnOnly
+      ? 'Drawn lanes only: the tier was assigned at random (RC-45), so a gap between models within a band is evidence once the cells reach 10.'
+      : 'Within a size band the models do not separate at these n; the model is chosen by the chat, not at random.';
+    return head + m + s + '<div class="in-note">' + note + '</div></div>';
   }
 
   // The box of a label in the chart's own font, from a hidden SVG with the card's style: chart units, since the
