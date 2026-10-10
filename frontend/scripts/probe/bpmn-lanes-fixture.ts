@@ -19,7 +19,7 @@
  *         frontend/scripts/probe/bpmn-lanes-fixture.ts --port 3071 --id P-2026-10-10-0105
  * Env:  GV_TAG    label of the run in file names (default after)
  *       GV_OUT    output directory (default docs/discovery/assets/graphvertex-s2 of this tree)
- *       GV_ONLY   comma list of scenes: bpmn, hull, demos, s3, s3hull (default bpmn,hull)
+ *       GV_ONLY   comma list of scenes: bpmn, hull, demos, s3, s3hull, s6, s6flat, s6hull (default bpmn,hull)
  *       GV_DEMOS  directory of the demo exports for the `demos` scene (default ~/jjodel-demo-exports)
  */
 import { chromium, type Browser, type Page } from '@playwright/test';
@@ -350,7 +350,7 @@ export async function readHulls(page: Page) {
     }), ACTIVE);
 }
 
-export async function shoot(page: Page, file: string, hideRail = false) {
+export async function shoot(page: Page, file: string, hideRail = false, outSteps = 1) {
     if (hideRail) {
         const hide = page.locator('button[aria-label="Hide the side panel"]:visible');
         if (await hide.count()) { await hide.first().click(); await page.waitForTimeout(900); }
@@ -360,6 +360,26 @@ export async function shoot(page: Page, file: string, hideRail = false) {
     if (await fit.count()) { await fit.first().click(); await page.waitForTimeout(900); }
     const out = page.locator('button[title="Zoom out"]:visible');
     if (await out.count()) { await out.first().click(); await page.waitForTimeout(700); }
+    // A layout larger than the fit allows (S6): the picture only, the viewport's transform set on the drawn nodes'
+    // box (style.transform, flow units), a margin around; React Flow's own viewport is not touched.
+    if (outSteps > 1) {
+        await page.evaluate((root) => {
+            const pane = document.querySelector(root) as HTMLElement | null;
+            const vp = document.querySelector(`${root} .react-flow__viewport`) as HTMLElement | null;
+            if (!pane || !vp) return;
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            for (const el of Array.from(document.querySelectorAll(`${root} .react-flow__node`)) as HTMLElement[]) {
+                if (getComputedStyle(el).visibility === 'hidden' || el.style.display === 'none') continue;
+                const m = el.style.transform.match(/translate\(\s*(-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+                if (!m) continue;
+                x0 = Math.min(x0, +m[1]); y0 = Math.min(y0, +m[2]); x1 = Math.max(x1, +m[1] + el.offsetWidth); y1 = Math.max(y1, +m[2] + el.offsetHeight);
+            }
+            if (!Number.isFinite(x0)) return;
+            const k = Math.min(1, (pane.clientWidth - 80) / (x1 - x0), (pane.clientHeight - 80) / (y1 - y0));
+            vp.style.transform = `translate(${40 - x0 * k}px, ${40 - y0 * k}px) scale(${k})`;
+        }, ACTIVE);
+        await page.waitForTimeout(400);
+    }
     const pane = page.locator(ACTIVE).first();
     await pane.screenshot({ path: `${OUT}/${file}` });
     meas('screenshot', `${OUT}/${file}`);
@@ -793,6 +813,126 @@ async function sceneS3Hull(browser: Browser, out: Record<string, unknown>) {
     out.s3hull = { ids, rec0, rec1, rec2, r1Before, r1After, r2Before, r2After };
 }
 
+// ── S6: the toolbar Auto layout across containers ────────────────────────────────────────────────────────────────
+
+/** One click on the toolbar's Auto layout, and the time for the layout, the writes and the fit to settle. */
+export async function autoLayout(page: Page) {
+    await page.locator('button[title="Auto layout"]:visible').first().click();
+    await page.waitForTimeout(4000);
+}
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+/** Every drawn node by its object's name, rounded to 0.1 px: the comparable dump of a layout. */
+const byName = (ns: Box[]) => Object.fromEntries(ns.filter((n) => n.name).map((n) => [n.name, [Math.round(n.x * 10) / 10, Math.round(n.y * 10) / 10, n.w, n.h]]).sort(([a], [b]) => String(a).localeCompare(String(b))));
+
+/** S6: after one Auto layout, every flow node in its lane, in its lane's list, no overlap, flows left to right,
+ *  pools holding their content; a second Auto layout gives the same positions. */
+async function sceneS6(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildBpmnScene(browser, 'S6_bpmn');
+    if (!scene) return;
+    const { page, errors, ids } = scene;
+    const res: Record<string, unknown> = { tag: TAG };
+    out.s6 = res;
+    const refs = async () => ({ sales: await slotIds(page, ids, 'sales', 'flowNodeRefs'), warehouse: await slotIds(page, ids, 'warehouse', 'flowNodeRefs') });
+    const refs0 = await refs();
+    res.before = byName(await readNodes(page));
+    await autoLayout(page);
+    const n1 = await readNodes(page);
+    res.after1 = byName(n1);
+    const at = (key: string) => n1.find((n) => n.id === ids[key].vertex)!;
+    const lanes: Record<string, string> = { start: 'sales', check: 'sales', gw: 'sales', ship: 'warehouse', end: 'warehouse' };
+    check('S6-1 every flow node lies inside its lane\'s box', Object.entries(lanes).every(([k, l]) => inside(at(k), at(l))),
+        Object.fromEntries(Object.entries(lanes).map(([k, l]) => [k, [at(k).x, at(k).y, at(k).w, at(k).h, l, at(l).x, at(l).y, at(l).w, at(l).h]])));
+    const refs1 = await refs();
+    check('S6-2 every flow node stays in its lane\'s flowNodeRefs', JSON.stringify(refs1) === JSON.stringify(refs0), { refs0, refs1 });
+    const flow = ['start', 'check', 'gw', 'ship', 'end', 'place', 'receive'];
+    const pairs = flow.flatMap((a, i) => flow.slice(i + 1).filter((b) => overlaps(at(a), at(b))).map((b) => `${a}/${b}`));
+    check('S6-3 no two flow nodes overlap', pairs.length === 0, pairs);
+    const flows: Array<[string, string]> = [['start', 'check'], ['check', 'gw'], ['gw', 'ship'], ['ship', 'end']];
+    check('S6-4 every sequence flow goes left to right (source x < target x)', flows.every(([s, t]) => at(s).x < at(t).x),
+        flows.map(([s, t]) => `${s}:${at(s).x} -> ${t}:${at(t).x}`));
+    const pools: Array<[string, string]> = [['shop', 'sales'], ['shop', 'warehouse'], ['customer', 'place'], ['customer', 'receive']];
+    check('S6-5 the pools hold their lanes and their tasks, and no two pools overlap',
+        pools.every(([p, c]) => inside(at(c), at(p))) && !overlaps(at('shop'), at('customer')) && !overlaps(at('shop'), at('supplier')) && !overlaps(at('customer'), at('supplier')),
+        Object.fromEntries(['shop', 'customer', 'supplier', 'sales', 'warehouse'].map((k) => [k, [at(k).x, at(k).y, at(k).w, at(k).h]])));
+    await shoot(page, `s6-bpmn-${TAG}-light.png`, true, 3);
+    await autoLayout(page);
+    const n2 = await readNodes(page);
+    res.after2 = byName(n2);
+    const moved = n1.filter((n) => { const m = n2.find((x) => x.id === n.id); return !m || Math.abs(m.x - n.x) > 1 || Math.abs(m.y - n.y) > 1 || Math.abs(m.w - n.w) > 1 || Math.abs(m.h - n.h) > 1; });
+    check('S6-6 a second Auto layout gives the same positions and sizes (within 1 px)', moved.length === 0, moved.map((n) => n.name));
+    res.errors = errors.slice(0, 20);
+}
+
+/** The views of the BPMN fixture with every graphVertex drawn as a plain vertex: a viewpoint with no graphVertex view. */
+const FLAT_VIEWS: Array<[string, Record<string, unknown>]> = BPMN_VIEWS.map(([c, ir]) => {
+    if (ir.kind !== 'graphVertex') return [c, ir];
+    const { containment: _c, kind: _k, ...rest } = ir as Record<string, unknown>;
+    return [c, { ...rest, kind: 'vertex' }];
+});
+
+/** Control: the BPMN model under a viewpoint with no graphVertex view, after one Auto layout, dumped by name. */
+async function sceneS6Flat(browser: Browser, out: Record<string, unknown>) {
+    const { page, errors } = await openPage(browser);
+    const pid = await createProject(page, `GV_S6_flat_${TAG}_${Date.now()}`);
+    await page.goto(`${URL}/#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(NAV_MS);
+    await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+    await buildMetamodel(page, BPMN_CLASSES, BPMN_REFS, 'BaseElement');
+    const shell = await buildModelShell(page);
+    if (!shell.graphId) { check('s6flat: v2-flow graph exists', false, shell); return; }
+    const ids = await buildObjects(page, shell.graphId, BPMN_OBJECTS);
+    await buildLinks(page, ids, BPMN_CONTAINMENT, BPMN_REFERENCES);
+    await buildViewpoint(page, 'Flat', FLAT_VIEWS);
+    await setTheme(page, 'light');
+    await pickViewpoint(page, 'Flat');
+    await page.waitForTimeout(SETTLE_MS);
+    await autoLayout(page);
+    const positions = byName(await readNodes(page));
+    meas('s6flat positions', positions);
+    await shoot(page, `s6-flat-${TAG}-light.png`, true, 3);
+    out.s6flat = { positions, errors: errors.slice(0, 10) };
+}
+
+/** Control: the S1 hull scenes after one Auto layout, under each viewpoint, dumped by name. */
+async function sceneS6Hull(browser: Browser, out: Record<string, unknown>) {
+    const { page, errors } = await openPage(browser);
+    const pid = await createProject(page, `GV_S6_hull_${TAG}_${Date.now()}`);
+    await page.goto(`${URL}/#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(NAV_MS);
+    await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+    await buildMetamodel(page, [['Named', true, []], ['Region', false, ['Named']], ['State', false, ['Named']]], [['Region', 'states', 'State', true, true]], 'Named');
+    const shell = await buildModelShell(page);
+    if (!shell.graphId) { check('s6hull: v2-flow graph exists', false, shell); return; }
+    const ids = await buildObjects(page, shell.graphId, [
+        ['r1', 'Region', 'region1', 100, 100, null], ['r2', 'Region', 'region2', 700, 100, null],
+        ['a', 'State', 'A', 120, 260, null], ['b', 'State', 'B', 380, 260, null], ['c', 'State', 'C', 120, 420, null],
+        ['d', 'State', 'D', 720, 300, null], ['x', 'State', 'EXT', 400, 600, null],
+    ]);
+    await buildLinks(page, ids, [['r1', 'states', 'a'], ['r1', 'states', 'b'], ['r1', 'states', 'c'], ['r2', 'states', 'd']], []);
+    const state = { kind: 'vertex', metaclasses: ['State'], shape: { form: 'rounded', labels: [{ position: 'center', source: I('name') }] } };
+    await buildViewpoint(page, 'Hulls', [
+        ['Region', { kind: 'graphVertex', metaclasses: ['Region'], shape: { form: 'rect', labels: [{ position: 'top', source: I('name') }] }, containment: { collapsible: true } }],
+        ['State', state],
+    ]);
+    await buildViewpoint(page, 'Collapsed', [
+        ['Region', { kind: 'graphVertex', metaclasses: ['Region'], shape: { form: 'rounded', fill: '#ffffff', labels: [{ position: 'center', source: I('name') }] },
+            containment: { collapsible: true, collapsed: { form: 'cylinder', fill: '#eeeeee', badge: { icon: 'bi-box-seam', position: 'tr', visible: true } } } }],
+        ['State', state],
+    ]);
+    await setTheme(page, 'light');
+    const res: Record<string, unknown> = { errors };
+    for (const vp of ['Hulls', 'Collapsed']) {
+        await pickViewpoint(page, vp);
+        await page.waitForTimeout(SETTLE_MS);
+        await autoLayout(page);
+        const positions = byName(await readNodes(page));
+        res[vp] = { positions, hulls: await readHulls(page) };
+        meas(`s6hull ${vp} positions`, positions);
+        await shoot(page, `s6-hull-${vp.toLowerCase()}-${TAG}-light.png`);
+    }
+    out.s6hull = res;
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 if (process.argv[1] && /bpmn-lanes-fixture\.ts$/.test(process.argv[1])) {
@@ -804,6 +944,9 @@ if (process.argv[1] && /bpmn-lanes-fixture\.ts$/.test(process.argv[1])) {
         if (ONLY.includes('demos')) await sceneDemos(browser, out);
         if (ONLY.includes('s3')) await sceneS3(browser, out);
         if (ONLY.includes('s3hull')) await sceneS3Hull(browser, out);
+        if (ONLY.includes('s6')) await sceneS6(browser, out);
+        if (ONLY.includes('s6flat')) await sceneS6Flat(browser, out);
+        if (ONLY.includes('s6hull')) await sceneS6Hull(browser, out);
     } finally {
         out.checks = { pass, fail };
         writeFileSync(`${OUT}/measures-${TAG}.json`, JSON.stringify(out, null, 2));

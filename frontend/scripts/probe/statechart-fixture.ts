@@ -18,12 +18,13 @@
  *         frontend/scripts/probe/statechart-fixture.ts --port 3073 --id P-2026-10-10-0105
  * Env:  SC_TAG    label of the run in file names (default after)
  *       SC_OUT    output directory (default docs/discovery/assets/graphvertex-s2b of this tree)
+ *       SC_ONLY   comma list of scenes: statechart (S2b), s6 (Auto layout) (default statechart)
  */
 import { chromium, type Browser } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { setTheme, SETTLE_MS } from '../smoke/states.ts';
 import {
-    buildLinks, buildMetamodel, buildModelShell, buildObjects, buildViewpoint, createProject, drag, ev, openPage,
+    autoLayout, buildLinks, buildMetamodel, buildModelShell, buildObjects, buildViewpoint, createProject, drag, ev, openPage,
     pickViewpoint, readEdges, readHulls, readNodes, records, screenBox, type Box,
 } from './bpmn-lanes-fixture.ts';
 import type { Page } from '@playwright/test';
@@ -31,6 +32,7 @@ import type { Page } from '@playwright/test';
 const URL = (process.env.PROBE_URL || 'http://localhost:3073/').replace(/\/$/, '');
 if (/:300[01]$/.test(URL)) throw new Error('never 3000 or 3001');
 const TAG = process.env.SC_TAG || 'after';
+const ONLY = (process.env.SC_ONLY || 'statechart').split(',').filter(Boolean);
 const OUT = (process.env.SC_OUT || new globalThis.URL('../../../docs/discovery/assets/graphvertex-s2b/', import.meta.url).pathname).replace(/\/$/, '');
 mkdirSync(OUT, { recursive: true });
 
@@ -42,13 +44,33 @@ const check = (name: string, ok: boolean, detail: unknown) => {
 const meas = (name: string, v: unknown) => console.log(`MEAS  ${name}  ${JSON.stringify(v).slice(0, 3000)}`);
 
 /** The BPMN fixture's screenshot, into this fixture's directory: rail hidden, fit to view, one step out. */
-async function shoot(page: Page, file: string) {
+async function shoot(page: Page, file: string, outSteps = 1) {
     const hide = page.locator('button[aria-label="Hide the side panel"]:visible');
     if (await hide.count()) { await hide.first().click(); await page.waitForTimeout(900); }
     const fit = page.locator('.toolbar-commands__level:visible');
     if (await fit.count()) { await fit.first().click(); await page.waitForTimeout(900); }
     const out = page.locator('button[title="Zoom out"]:visible');
     if (await out.count()) { await out.first().click(); await page.waitForTimeout(700); }
+    // A layout larger than the fit allows (S6): the picture only, the viewport's transform set on the drawn nodes'
+    // box (style.transform, flow units), a margin around; React Flow's own viewport is not touched.
+    if (outSteps > 1) {
+        await page.evaluate((root) => {
+            const pane = document.querySelector(root) as HTMLElement | null;
+            const vp = document.querySelector(`${root} .react-flow__viewport`) as HTMLElement | null;
+            if (!pane || !vp) return;
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            for (const el of Array.from(document.querySelectorAll(`${root} .react-flow__node`)) as HTMLElement[]) {
+                if (getComputedStyle(el).visibility === 'hidden' || el.style.display === 'none') continue;
+                const m = el.style.transform.match(/translate\(\s*(-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+                if (!m) continue;
+                x0 = Math.min(x0, +m[1]); y0 = Math.min(y0, +m[2]); x1 = Math.max(x1, +m[1] + el.offsetWidth); y1 = Math.max(y1, +m[2] + el.offsetHeight);
+            }
+            if (!Number.isFinite(x0)) return;
+            const k = Math.min(1, (pane.clientWidth - 80) / (x1 - x0), (pane.clientHeight - 80) / (y1 - y0));
+            vp.style.transform = `translate(${40 - x0 * k}px, ${40 - y0 * k}px) scale(${k})`;
+        }, '.dock-tabpane-active .react-flow');
+        await page.waitForTimeout(400);
+    }
     await page.locator('.dock-tabpane-active .react-flow').first().screenshot({ path: `${OUT}/${file}` });
     meas('screenshot', `${OUT}/${file}`);
 }
@@ -303,15 +325,49 @@ async function sceneStatechart(browser: Browser, out: Record<string, unknown>) {
     meas('errors', errors.slice(0, 5));
 }
 
+/** S6: after one Auto layout, every substate in its frame, each region with its own states inside Active, no overlap;
+ *  a second Auto layout gives the same positions. */
+async function sceneS6(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildStatechartScene(browser);
+    if (!scene) return;
+    const { page, errors, ids } = scene;
+    const res: Record<string, unknown> = { tag: TAG };
+    out.s6 = res;
+    const named = (ns: Box[]) => Object.fromEntries(ns.filter((n) => n.name).map((n) => [n.name, [n.x, n.y, n.w, n.h]]));
+    res.before = named(await readNodes(page));
+    await autoLayout(page);
+    const n1 = await readNodes(page);
+    res.after1 = named(n1);
+    const at = (k: string) => n1.find((n) => n.id === ids[k].vertex)!;
+    const inside = (c: Box, p: Box) => c.x >= p.x - 0.5 && c.y >= p.y - 0.5 && c.x + c.w <= p.x + p.w + 0.5 && c.y + c.h <= p.y + p.h + 0.5;
+    const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const holds: Array<[string, string[]]> = [['running', ['i3', 'fetch', 'compute']], ['a1', ['i1', 'waiting', 'processing']], ['a2', ['i2', 'running', 'paused']], ['active', ['a1', 'a2']]];
+    const outside = holds.flatMap(([p, cs]) => cs.filter((c) => !inside(at(c), at(p))).map((c) => `${c} outside ${p}`));
+    check('S6-SC-1 every substate inside its frame; Active\'s regions inside Active, each with its own states', outside.length === 0,
+        { outside, boxes: Object.fromEntries(['active', 'a1', 'a2', 'running', 'i3', 'fetch', 'compute', 'paused'].map((k) => [k, [at(k).x, at(k).y, at(k).w, at(k).h]])) });
+    const levels = [['i0', 'idle', 'active', 'done'], ['i1', 'waiting', 'processing'], ['i2', 'running', 'paused'], ['i3', 'fetch', 'compute']];
+    const pairs = levels.flatMap((l) => l.flatMap((a, i) => l.slice(i + 1).filter((b) => overlaps(at(a), at(b))).map((b) => `${a}/${b}`)));
+    check('S6-SC-2 no overlap among the nodes of one level (root, each region, Running)', pairs.length === 0, pairs);
+    await shoot(page, `s6-statechart-${TAG}-light.png`, 3);
+    await autoLayout(page);
+    const n2 = await readNodes(page);
+    res.after2 = named(n2);
+    const moved = n1.filter((n) => { const m = n2.find((x) => x.id === n.id); return !m || Math.abs(m.x - n.x) > 1 || Math.abs(m.y - n.y) > 1 || Math.abs(m.w - n.w) > 1 || Math.abs(m.h - n.h) > 1; });
+    check('S6-SC-3 a second Auto layout gives the same positions and sizes (within 1 px)', moved.length === 0, moved.map((n) => n.name));
+    res.errors = errors.slice(0, 20);
+}
+
 if (process.argv[1] && /statechart-fixture\.ts$/.test(process.argv[1])) {
     const browser = await chromium.launch();
     const out: Record<string, unknown> = { url: URL, tag: TAG, at: new Date().toISOString() };
     try {
-        await sceneStatechart(browser, out);
+        if (ONLY.includes('statechart')) await sceneStatechart(browser, out);
+        if (ONLY.includes('s6')) await sceneS6(browser, out);
     } finally {
         out.checks = { pass, fail };
-        writeFileSync(`${OUT}/statechart-${TAG}.json`, JSON.stringify(out, null, 2));
-        meas('json', `${OUT}/statechart-${TAG}.json`);
+        const file = ONLY.join('-') === 'statechart' ? `statechart-${TAG}.json` : `statechart-${ONLY.join('-')}-${TAG}.json`;
+        writeFileSync(`${OUT}/${file}`, JSON.stringify(out, null, 2));
+        meas('json', `${OUT}/${file}`);
         await browser.close();
     }
     console.log(`DONE pass=${pass} fail=${fail}`);
