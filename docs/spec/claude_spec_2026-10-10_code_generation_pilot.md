@@ -4,8 +4,9 @@
 (R-GEN-1..R-GEN-9 in `docs/decisions.md`), before any discovery. The discovery `P-2026-10-10-0815`
 (report `docs/discovery/discovery_2026-10-10_code_generation_pilot.md`) may reshape the points marked
 *to be confirmed*; it may not reopen a decision without saying so.
-**Supersedes**: nothing. As far as the chat knows, Jjodel has no model-to-text generator today
-(*to be confirmed*).
+**Amended**: 2026-10-10 by R-GEN-10..15, on the evidence of the discovery: sections 3, 4 and 8.
+**Supersedes**: nothing. A legacy model-to-text subsystem exists (`DState.languages`, `doM2T` in
+`frontend/src/components/forEndUser/MTM.tsx`); the pilot neither builds on it nor removes it (R-GEN-13).
 **Chat**: `C-2026-10-10-0046`.
 
 ## 1. Purpose and scope
@@ -31,14 +32,18 @@ build without the generator. A test proves it on the build output or the import 
 ## 3. Persistence (R-GEN-3)
 
 Additive, as for FormSpec: no `irVersion` bump, no VersionFixer migration. A project that holds
-templates, opened and saved by a user with the setting off, keeps them intact. If templates are stored
-as `jjodel/*` annotations, the known loss of those annotations in the `.ecore` round trip enters the
-perimeter of the pilot. Where templates live (metamodel, project resource) is *to be confirmed*.
+templates, opened and saved by a user with the setting off, keeps them intact. Templates live in one JSON
+key `genTemplates` of the metamodel's `_state` bag, the same bag as the STC roles, written through the
+`state` setter (R-GEN-12). Unknown keys survive save and load; the key is lost in the `.ecore` export, as
+the STC roles already are, and the panel says so.
 
 ## 4. Templates (R-GEN-4)
 
 A template is a named JjEL function whose result is **Text**: JjEL with string interpolation, no new
-language. If the evaluator cannot host it, the extension is minimal and ratified on its own.
+language. A template is a stored record `{name, params, body}` registered as a JjEL builtin, so templates
+call each other and recurse with no definition syntax. The JjEL extension is opt-in and inert when unused
+(R-GEN-10): lexer option `interpolation`, entry point `parseTemplate`, context fields `textHost` and
+`readObserver`.
 
 Text is not a string. It is a sequence of fragments, each with an optional origin (section 5).
 Rendering to a string forgets the origins; the code panel keeps them. Two semantic features are part
@@ -81,10 +86,12 @@ an identity binding. Templates never write the model nor the simulator state.
 
 ## 8. Oracle (R-GEN-8)
 
-Goal of the third week, not a requirement of the pilot. The generated program exposes a step function
-with a fixed signature (fixed in Phase 2, after the discovery). It runs on the event sequence of a
-scenario (R-SIM-139), and its trace is compared with the simulator's trace on the same scenario, with
-the equality the scenario's `expect` defines. The simulator is the reference semantics: this is
+Goal of the third week, not a requirement of the pilot (in 3.2 behind the setting if green by the freeze,
+R-GEN-15). The generated program exports `initial()`, `step(state, event, selector, inputs)` and
+`observe(state)`. It runs on the `(event, selector, inputs)` sequence of a scenario (R-SIM-139); per step
+the oracle compares the step `kind` and `observe(next)` with the same projection of the simulator's
+configuration at that step (R-GEN-11, amending R-GEN-8). The scenario's `expect` stays the simulator's
+final check: it is a predicate, not an equality. The simulator is the reference semantics: this is
 differential testing between an interpreter and a compiler.
 
 The oracle exists only for languages with a simulation STC. Structural generators (a class diagram to

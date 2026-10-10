@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-0815
 Chat: C-2026-10-10-0046
 Lane: full (new subsystem; Phase 2 spans more than three files and adds persisted data)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane codegen-pilot · discovery only · report dc29d3739, cherry-picked to the trunk as 7d4b6053d (docs/discovery/discovery_2026-10-10_code_generation_pilot.md) · hard-stop: 10 decisions unattended (U1..U10), A1 and A2 ratified by Alfonso as R-GEN-10 and R-GEN-11, Q1..Q4 adopted as recommended (R-GEN-12..15) · nothing under frontend/src changed
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 

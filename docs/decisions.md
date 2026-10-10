@@ -5782,6 +5782,36 @@ Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
   **Outside the pilot: round-trip (except the triple of R-GEN-5), targets other than JavaScript, the assistant as
   template author, protected regions.** The assistant comes after the oracle, so that what it writes is checked;
   the generation gap pattern replaces protected regions.
+- **R-GEN-10** (2026-10-10, ratified by Alfonso 2026-10-10 («sì su A1 e A2»), evidence: read, verified: none, reversible: trunk).
+  **The JjEL extension for templates is opt-in and inert when unused.** A lexer option `interpolation`, off by
+  default (the `actionMode` precedent), completes the half-built `"…${…}…"` form; a `parseTemplate` entry point
+  (the `parseAction` twin, strict end of input) builds `InterpolatedStringExpr`; two optional context fields,
+  `textHost` (Text values through interpolation, `+`, `join`, `stringify`) and `readObserver` (member reads),
+  are inherited by children like `stateAccess`. With the option off and both fields absent every existing path
+  is byte-identical; no current consumer sets them. Evidence: discovery §A.2, §A.7, §B.
+- **R-GEN-11** (2026-10-10, ratified by Alfonso 2026-10-10 («sì su A1 e A2»), evidence: read, verified: none, reversible: trunk).
+  **Amends R-GEN-8: the oracle compares every step, not the scenario's `expect`.** `expect` is a single predicate on
+  the final configuration (`simScenarios.ts:107-113`) and defines no equality. The generated program exports
+  `initial()`, `step(state, event, selector, inputs)` and `observe(state)`; per step the oracle compares the
+  `kind` and `observe(next)` with the same projection of `configAt(run, n).state`, and reports the first mismatch
+  with its step, transition and generating fragment. `expect` stays the simulator's final check. Evidence:
+  discovery §G.1, §G.2.
+- **R-GEN-12** (2026-10-10, ratified as recommended, unattended; evidence: read, verified: none, reversible: trunk).
+  **Templates persist as one JSON key `genTemplates` in the metamodel's `_state`, written through the `state`
+  setter.** Reshapes the storage of R-GEN-3 (`_state`, not `jjodel/*` annotations); no migration, unknown keys
+  survive save and load, and the key is lost in the `.ecore` export like the STC roles already are. A template is
+  a record `{name, params, body}` registered as a JjEL builtin (the JjTL helper precedent). Evidence: §C, §A.3.
+- **R-GEN-13** (2026-10-10, ratified as recommended, unattended; evidence: read, verified: none, reversible: trunk).
+  **The legacy M2T subsystem (`DState.languages`, `doM2T` in `MTM.tsx`) stays untouched and coexists.** The pilot
+  does not build on it (eager, `eval` on the main thread, no origin, seeded and migrated by `DV.tsx` and
+  `VersionFixer.tsx`) and does not delete it. `jjel/SPEC.md:37` and `:660` stop naming Handlebars as the M2T engine
+  in the docs commit of slice S1. Evidence: §H.1.
+- **R-GEN-14** (2026-10-10, ratified as recommended, unattended; evidence: read, verified: none, reversible: trunk).
+  **In the pilot, origin navigation to a transition drawn as an edge selects its source node and outlines the
+  edge through the code panel's own overlay.** An edge-select event is a follow-up. Evidence: §H.3.
+- **R-GEN-15** (2026-10-10, ratified as recommended, unattended; evidence: inferred, verified: none, reversible: trunk).
+  **The oracle (slice S6) enters 3.2 behind the setting if it is green by the 2026-10-23 freeze, otherwise 3.2.x.**
+  Consistent with R-GEN-8, which makes it a goal, not a requirement.
 
 ## Superate
 
