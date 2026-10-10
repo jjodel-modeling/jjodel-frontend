@@ -139,3 +139,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — the chat re-ran the fixtures on `7523373cb`: BPMN 31/31 with S3, S6 and the hull/flat controls, statechart 7/7; Alfonso's visual GO of 2026-10-11 00:03 stands, the trunk delta being codegen only
 **Notes**: merge-tree: 1 conflict, docs/decisions.md, resolved by union, R-GEN-16 (trunk) then the R-GV section (branch), verbatim: 5933 lines = base 5837 + 9 + 87, nothing deleted; read in its changed region, the rest shown equal to the base. EditorV2.tsx read end to end: branch tip plus the trunk's 59 Code-pill lines. Probes 41 of 41 once, control R-GEN-17 0. check:docs 5/5, not 4/4: Check E is in the base (73af7bbac). No rollback tag.
 **Prompt document name**: 2026-10-11 00:11
+
+## 2026-10-11 — merge: ir-graphvertex into alfonso-frontend-jjtl (P-2026-10-11-0059)
+**Prompt**: `claude_2026-10-11_0059_prompt_merge_ir-graphvertex.md`, a direct merge by `lane-run merge --direct`, no session: `ir-graphvertex` at `aa9fd6701` into `alfonso-frontend-jjtl`, merge base `dfdef69f1`, 41 commits on the branch side.
+**Files touched**: merge `eb5600dbb`: 110 files from the branch side (`docs/decisions.md`, `docs/discovery/assets/graphvertex-s2/bpmn-after-light-clean.png`, `docs/discovery/assets/graphvertex-s2/bpmn-after-light.png`, `docs/discovery/assets/graphvertex-s2/bpmn-before-light-clean.png`, `docs/discovery/assets/graphvertex-s2/bpmn-before-light.png`, `docs/discovery/assets/graphvertex-s2/demos-before.json`, `docs/discovery/assets/graphvertex-s2/hull-collapsed-after-light.png`, `docs/discovery/assets/graphvertex-s2/hull-collapsed-before-light.png`, and 102 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `eb5600dbb` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8438 tests in 347 files, 9 red at import, hooks 603; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Alfonso visual GO 2026-10-11 00:03 on ir-graphvertex; fixtures re-run on 7523373cb (BPMN 31/31, statechart 7/7)
+**Notes**: Rollback tag `pre-ir-graphvertex` on `294a29084` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-0059/result.json`.
+**Prompt document name**: 2026-10-11 00:59
