@@ -1,0 +1,1070 @@
+{
+  "tag": "pre-ir-graphvertex-294a29084",
+  "url": "http://localhost:3093",
+  "at": "2026-10-11T10:42:03.324Z",
+  "scenarios": {
+    "adv-card": {
+      "steps": {
+        "project": "Pointer1791715422861_USER_2",
+        "openedBy": "card",
+        "classes": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "model": "Pointer1791715455679_USER_20"
+      },
+      "facts": {
+        "ptrDefaultInIdlookup": "object",
+        "ptrDefaultInDefaultsMap": "object",
+        "stateViewpoints": [
+          "Pointer_ViewPointDefault"
+        ],
+        "stateViewpoint": "",
+        "viewsInIdlookup": 0,
+        "viewsCheckedDefault": 0,
+        "defaultViewsMapSize": 20,
+        "interfaceMode": "advanced",
+        "model": {
+          "instanceof": "Pointer1791715437054_USER_8",
+          "isMetamodel": false
+        },
+        "rootable": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "graphs": [
+          "classic",
+          "v2-flow",
+          "v2-flow"
+        ]
+      },
+      "paths": [
+        {
+          "path": "palette-drag",
+          "reached": true,
+          "note": "palette: [\"NewClass\",\"NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791715464901_USER_25",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715464901_USER_25",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715464939_166 [CREATE_ELEMENT idlookup.Pointer1791715464901_USER_25 @Action_1791715464901_156, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.pointedBy @Action_1791715464901_154, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.objects @Action_1791715464901_155, SET_ME_FIELD idlookup.Pointer1791715464901_USER_25.instanceof @Action_1791715464901_157, SET_ME_FIELD idlookup.Pointer1791715446215_USER_14.instances @Action_1791715464901_158, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715464901_159, CREATE_ELEMENT idlookup.Pointer1791715464901_USER_27 @Action_1791715464902_164, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715464901_160, SET_ME_FIELD idlookup.Pointer1791715464901_USER_25.pointedBy @Action_1791715464901_161, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715464902_162, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.subElements @Action_1791715464902_163, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715464902_165]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-card_palette-drag.png"
+        },
+        {
+          "path": "palette-click",
+          "reached": true,
+          "note": "clicked",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-card_palette-click.png"
+        },
+        {
+          "path": "dm-new",
+          "reached": true,
+          "note": "row aria-disabled=null",
+          "created": [
+            {
+              "id": "Pointer1791715479437_USER_28",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715479437_USER_28",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715479636_175 [CREATE_ELEMENT idlookup.Pointer1791715479437_USER_28 @Action_1791715479438_171, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.pointedBy @Action_1791715479437_169, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.objects @Action_1791715479438_170, SET_ME_FIELD idlookup.Pointer1791715479437_USER_28.instanceof @Action_1791715479438_172, SET_ME_FIELD idlookup.Pointer1791715448937_USER_17.instances @Action_1791715479438_173, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715479438_174]",
+            "COMPOSITE_ACTION @Action_1791715479935_183 [CREATE_ELEMENT idlookup.Pointer1791715479653_USER_30 @Action_1791715479653_181, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715479653_177, SET_ME_FIELD idlookup.Pointer1791715479437_USER_28.pointedBy @Action_1791715479653_178, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715479653_179, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.subElements @Action_1791715479653_180, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715479653_182]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-card_dm-new.png"
+        },
+        {
+          "path": "dm-outline",
+          "reached": true,
+          "note": "outline menu: [\"New NewClass\",\"New NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791715485287_USER_31",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715485287_USER_31",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715485335_191 [CREATE_ELEMENT idlookup.Pointer1791715485287_USER_31 @Action_1791715485287_187, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.pointedBy @Action_1791715485287_185, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.objects @Action_1791715485287_186, SET_ME_FIELD idlookup.Pointer1791715485287_USER_31.instanceof @Action_1791715485287_188, SET_ME_FIELD idlookup.Pointer1791715446215_USER_14.instances @Action_1791715485287_189, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715485287_190]",
+            "COMPOSITE_ACTION @Action_1791715485637_199 [CREATE_ELEMENT idlookup.Pointer1791715485349_USER_33 @Action_1791715485350_197, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715485349_193, SET_ME_FIELD idlookup.Pointer1791715485287_USER_31.pointedBy @Action_1791715485349_194, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715485349_195, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.subElements @Action_1791715485349_196, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715485350_198]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-card_dm-outline.png"
+        },
+        {
+          "path": "ctx-child",
+          "reached": true,
+          "note": "stale menu: [\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\"]; after a rename of the reference: [\"Add NewClass1 (kids)\",\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\"]; ref: {\"d\":{\"composition\":true,\"aggregation\":false,\"upperBound\":-1},\"editorMode\":[\"children:true:NewClass1\"],\"rootable\":[\"NewClass\"]}",
+          "created": [
+            {
+              "id": "Pointer1791715497672_USER_38",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715497672_USER_38",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715489237_218 [CREATE_ELEMENT idlookup.Pointer1791715488981_USER_34 @Action_1791715488982_212, CREATE_ELEMENT idlookup.Pointer1791715488982_USER_35 @Action_1791715488982_213, SET_ME_FIELD idlookup.Pointer1791715464901_USER_25.pointedBy @Action_1791715488982_203, SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.pointedBy @Action_1791715488982_204, SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.instances @Action_1791715488982_205, SET_ME_FIELD idlookup.Pointer1791715464901_USER_25.features @Action_1791715488982_206, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715488982_214, CREATE_ELEMENT idlookup.Pointer1791715488982_USER_36 @Action_1791715488982_215, SET_ME_FIELD idlookup.Pointer1791715485287_USER_31.pointedBy @Action_1791715488982_207, SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.pointedBy @Action_1791715488982_208, SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.instances @Action_1791715488982_209, SET_ME_FIELD idlookup.Pointer1791715485287_USER_31.features @Action_1791715488982_210, … +5]",
+            "COMPOSITE_ACTION @Action_1791715489538_232 [CREATE_ELEMENT idlookup.Pointer1791715489254_USER_37 @Action_1791715489255_230, SET_ME_FIELD idlookup.Pointer1791715437054_USER_8_graph2.pointedBy @Action_1791715489254_222, SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.pointedBy @Action_1791715489254_223, SET_ME_FIELD idlookup.Pointer1791715437054_USER_8_graph2.pointedBy @Action_1791715489255_224, SET_ME_FIELD idlookup.Pointer1791715437054_USER_8_graph2.subElements @Action_1791715489255_225, SET_ME_FIELD idlookup.Pointer1791715446215_USER_16.pointedBy @Action_1791715489255_226, SET_ME_FIELD idlookup.Pointer1791715448937_USER_19.pointedBy @Action_1791715489255_227, SET_ME_FIELD idlookup.Pointer1791715446215_USER_16.edgesOut @Action_1791715489255_228, SET_ME_FIELD idlookup.Pointer1791715448937_USER_19.edgesIn @Action_1791715489255_229, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715489256_231]",
+            "COMPOSITE_ACTION @Action_1791715489838_236 [SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.composition @Action_1791715489789_234, SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.upperBound @Action_1791715489789_235]",
+            "COMPOSITE_ACTION @Action_1791715495537_238 [SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.name @Action_1791715495290_237]",
+            "COMPOSITE_ACTION @Action_1791715497937_263 [CREATE_ELEMENT idlookup.Pointer1791715497672_USER_38 @Action_1791715497673_241, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.pointedBy @Action_1791715497672_239, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.objects @Action_1791715497673_240, SET_ME_FIELD idlookup.Pointer1791715497672_USER_38.instanceof @Action_1791715497673_242, SET_ME_FIELD idlookup.Pointer1791715448937_USER_17.instances @Action_1791715497673_243, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715497673_244, CREATE_ELEMENT idlookup.Pointer1791715497673_USER_40 @Action_1791715497673_249, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715497673_245, SET_ME_FIELD idlookup.Pointer1791715497672_USER_38.pointedBy @Action_1791715497673_246, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715497673_247, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.subElements @Action_1791715497673_248, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715497673_250, … +12]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-card_ctx-child.png"
+        },
+        {
+          "path": "uncontain",
+          "reached": false,
+          "note": "reference kids composition=false; metamodel rootable [\"NewClass\",\"NewClass1\"]; palette [\"NewClass\"], after a tab round trip [\"NewClass\"]: no NewClass1 entry",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715503036_269 [SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.composition @Action_1791715503033_267, SET_ME_FIELD idlookup.Pointer1791715497672_USER_38.father @Action_1791715503033_268]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-card_uncontain.png"
+        },
+        {
+          "path": "jjscript",
+          "reached": true,
+          "note": "mode jjscript>; reply: [\"12:45 PM\",\"JjScript\"]",
+          "created": [
+            {
+              "id": "Pointer1791715515509_USER_42",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715515509_USER_42",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715515636_282 [CREATE_ELEMENT idlookup.Pointer1791715515509_USER_42 @Action_1791715515509_272, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.pointedBy @Action_1791715515509_270, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20.objects @Action_1791715515509_271, SET_ME_FIELD idlookup.Pointer1791715515509_USER_42.instanceof @Action_1791715515510_273, SET_ME_FIELD idlookup.Pointer1791715446215_USER_14.instances @Action_1791715515510_274, CREATE_ELEMENT idlookup.Pointer1791715515510_USER_43 @Action_1791715515510_279, SET_ME_FIELD idlookup.Pointer1791715515509_USER_42.pointedBy @Action_1791715515510_275, SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.pointedBy @Action_1791715515510_276, SET_ME_FIELD idlookup.Pointer1791715488981_USER_34.instances @Action_1791715515510_277, SET_ME_FIELD idlookup.Pointer1791715515509_USER_42.features @Action_1791715515510_278, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715515510_280, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715515510_281]",
+            "COMPOSITE_ACTION @Action_1791715515938_291 [CREATE_ELEMENT idlookup.Pointer1791715515677_USER_45 @Action_1791715515678_289, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715515677_285, SET_ME_FIELD idlookup.Pointer1791715515509_USER_42.pointedBy @Action_1791715515678_286, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.pointedBy @Action_1791715515678_287, SET_ME_FIELD idlookup.Pointer1791715455679_USER_20_graph5.subElements @Action_1791715515678_288, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715515678_290]",
+            "COMPOSITE_ACTION @Action_1791715518336_294 [SET_ROOT_FIELD _lastSelected @Action_1791715518097_293]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-card_jjscript.png"
+        }
+      ],
+      "setupErrors": [
+        "console: init_dash"
+      ]
+    },
+    "adv-reload": {
+      "steps": {
+        "project": "Pointer1791715533612_USER_2",
+        "openedBy": "page load",
+        "classes": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "model": "Pointer1791715566504_USER_16",
+        "reopened": 1
+      },
+      "facts": {
+        "ptrDefaultInIdlookup": "undefined",
+        "ptrDefaultInDefaultsMap": "boolean",
+        "stateViewpoints": [],
+        "stateViewpoint": "",
+        "viewsInIdlookup": 0,
+        "viewsCheckedDefault": 0,
+        "defaultViewsMapSize": 20,
+        "interfaceMode": "advanced",
+        "model": {
+          "instanceof": "Pointer1791715547758_USER_4",
+          "isMetamodel": false
+        },
+        "rootable": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "graphs": [
+          "classic",
+          "v2-flow",
+          "v2-flow"
+        ]
+      },
+      "paths": [
+        {
+          "path": "palette-drag",
+          "reached": true,
+          "note": "palette: [\"NewClass\",\"NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791715601539_USER_24",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715601539_USER_24",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715601617_266 [CREATE_ELEMENT idlookup.Pointer1791715601539_USER_24 @Action_1791715601540_256, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.pointedBy @Action_1791715601540_254, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.objects @Action_1791715601540_255, SET_ME_FIELD idlookup.Pointer1791715601539_USER_24.instanceof @Action_1791715601541_257, SET_ME_FIELD idlookup.Pointer1791715556974_USER_10.instances @Action_1791715601541_258, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715601541_259, CREATE_ELEMENT idlookup.Pointer1791715601541_USER_26 @Action_1791715601542_264, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715601541_260, SET_ME_FIELD idlookup.Pointer1791715601539_USER_24.pointedBy @Action_1791715601541_261, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715601541_262, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.subElements @Action_1791715601541_263, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715601542_265]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-reload_palette-drag.png"
+        },
+        {
+          "path": "palette-click",
+          "reached": true,
+          "note": "clicked",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-reload_palette-click.png"
+        },
+        {
+          "path": "dm-new",
+          "reached": true,
+          "note": "row aria-disabled=null",
+          "created": [
+            {
+              "id": "Pointer1791715616508_USER_27",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715616508_USER_27",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715616546_275 [CREATE_ELEMENT idlookup.Pointer1791715616508_USER_27 @Action_1791715616509_271, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.pointedBy @Action_1791715616508_269, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.objects @Action_1791715616509_270, SET_ME_FIELD idlookup.Pointer1791715616508_USER_27.instanceof @Action_1791715616509_272, SET_ME_FIELD idlookup.Pointer1791715559668_USER_13.instances @Action_1791715616509_273, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715616509_274]",
+            "COMPOSITE_ACTION @Action_1791715616848_283 [CREATE_ELEMENT idlookup.Pointer1791715616576_USER_29 @Action_1791715616576_281, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715616576_277, SET_ME_FIELD idlookup.Pointer1791715616508_USER_27.pointedBy @Action_1791715616576_278, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715616576_279, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.subElements @Action_1791715616576_280, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715616576_282]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-reload_dm-new.png"
+        },
+        {
+          "path": "dm-outline",
+          "reached": true,
+          "note": "outline menu: [\"New NewClass\",\"New NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791715622610_USER_30",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715622610_USER_30",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715622847_291 [CREATE_ELEMENT idlookup.Pointer1791715622610_USER_30 @Action_1791715622613_287, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.pointedBy @Action_1791715622611_285, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.objects @Action_1791715622613_286, SET_ME_FIELD idlookup.Pointer1791715622610_USER_30.instanceof @Action_1791715622613_288, SET_ME_FIELD idlookup.Pointer1791715556974_USER_10.instances @Action_1791715622614_289, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715622614_290]",
+            "COMPOSITE_ACTION @Action_1791715623148_299 [CREATE_ELEMENT idlookup.Pointer1791715622873_USER_32 @Action_1791715622874_297, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715622873_293, SET_ME_FIELD idlookup.Pointer1791715622610_USER_30.pointedBy @Action_1791715622873_294, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715622874_295, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.subElements @Action_1791715622874_296, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715622874_298]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-reload_dm-outline.png"
+        },
+        {
+          "path": "ctx-child",
+          "reached": true,
+          "note": "stale menu: [\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\"]; after a rename of the reference: [\"Add NewClass1 (kids)\",\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\"]; ref: {\"d\":{\"composition\":true,\"aggregation\":false,\"upperBound\":-1},\"editorMode\":[\"children:true:NewClass1\"],\"rootable\":[\"NewClass\"]}",
+          "created": [
+            {
+              "id": "Pointer1791715635425_USER_36",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715635425_USER_36",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715626449_318 [CREATE_ELEMENT idlookup.Pointer1791715626445_USER_33 @Action_1791715626449_312, CREATE_ELEMENT idlookup.Pointer1791715626448_USER_34 @Action_1791715626449_313, SET_ME_FIELD idlookup.Pointer1791715601539_USER_24.pointedBy @Action_1791715626448_303, SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.pointedBy @Action_1791715626448_304, SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.instances @Action_1791715626448_305, SET_ME_FIELD idlookup.Pointer1791715601539_USER_24.features @Action_1791715626448_306, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715626449_314, CREATE_ELEMENT idlookup.Pointer1791715626448_USER_35 @Action_1791715626449_315, SET_ME_FIELD idlookup.Pointer1791715622610_USER_30.pointedBy @Action_1791715626448_307, SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.pointedBy @Action_1791715626448_308, SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.instances @Action_1791715626448_309, SET_ME_FIELD idlookup.Pointer1791715622610_USER_30.features @Action_1791715626448_310, … +5]",
+            "COMPOSITE_ACTION @Action_1791715627347_324 [SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.composition @Action_1791715627273_322, SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.upperBound @Action_1791715627273_323]",
+            "COMPOSITE_ACTION @Action_1791715633047_326 [SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.name @Action_1791715632938_325]",
+            "COMPOSITE_ACTION @Action_1791715635570_351 [CREATE_ELEMENT idlookup.Pointer1791715635425_USER_36 @Action_1791715635426_329, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.pointedBy @Action_1791715635425_327, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.objects @Action_1791715635426_328, SET_ME_FIELD idlookup.Pointer1791715635425_USER_36.instanceof @Action_1791715635426_330, SET_ME_FIELD idlookup.Pointer1791715559668_USER_13.instances @Action_1791715635426_331, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715635426_332, CREATE_ELEMENT idlookup.Pointer1791715635426_USER_38 @Action_1791715635427_337, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715635426_333, SET_ME_FIELD idlookup.Pointer1791715635425_USER_36.pointedBy @Action_1791715635426_334, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715635426_335, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.subElements @Action_1791715635427_336, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715635427_338, … +12]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-reload_ctx-child.png"
+        },
+        {
+          "path": "uncontain",
+          "reached": false,
+          "note": "reference kids composition=false; metamodel rootable [\"NewClass\",\"NewClass1\"]; palette [\"NewClass\"], after a tab round trip \"no metamodel tab\": no NewClass1 entry",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715641148_357 [SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.composition @Action_1791715640954_355, SET_ME_FIELD idlookup.Pointer1791715635425_USER_36.father @Action_1791715640955_356]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-reload_uncontain.png"
+        },
+        {
+          "path": "jjscript",
+          "reached": true,
+          "note": "mode jjscript>; reply: [\"12:47 PM\",\"JjScript\"]",
+          "created": [
+            {
+              "id": "Pointer1791715650596_USER_40",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715650596_USER_40",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715650746_370 [CREATE_ELEMENT idlookup.Pointer1791715650596_USER_40 @Action_1791715650597_360, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.pointedBy @Action_1791715650596_358, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16.objects @Action_1791715650597_359, SET_ME_FIELD idlookup.Pointer1791715650596_USER_40.instanceof @Action_1791715650598_361, SET_ME_FIELD idlookup.Pointer1791715556974_USER_10.instances @Action_1791715650598_362, CREATE_ELEMENT idlookup.Pointer1791715650598_USER_41 @Action_1791715650599_367, SET_ME_FIELD idlookup.Pointer1791715650596_USER_40.pointedBy @Action_1791715650598_363, SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.pointedBy @Action_1791715650598_364, SET_ME_FIELD idlookup.Pointer1791715626445_USER_33.instances @Action_1791715650598_365, SET_ME_FIELD idlookup.Pointer1791715650596_USER_40.features @Action_1791715650598_366, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715650599_368, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715650599_369]",
+            "COMPOSITE_ACTION @Action_1791715651047_379 [CREATE_ELEMENT idlookup.Pointer1791715650847_USER_43 @Action_1791715650848_377, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715650847_373, SET_ME_FIELD idlookup.Pointer1791715650596_USER_40.pointedBy @Action_1791715650848_374, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.pointedBy @Action_1791715650848_375, SET_ME_FIELD idlookup.Pointer1791715566504_USER_16_graph5.subElements @Action_1791715650848_376, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715650848_378]",
+            "COMPOSITE_ACTION @Action_1791715653448_382 [SET_ROOT_FIELD _lastSelected @Action_1791715653240_381]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/adv-reload_jjscript.png"
+        }
+      ],
+      "setupErrors": [
+        "console: init_dash",
+        "console: init_dash",
+        "console:     at renderWithHooks (http://localhost:3093/@fs/tmp/lane-vite-cache-3093/deps/chunk-7XJCHICL.js?v=5d2ef0b9:17833:24) wrong project setup in navbar {projectid: Pointer1791715533612_USER_2, project: undefined}"
+      ]
+    },
+    "basic-reload": {
+      "steps": {
+        "project": "Pointer1791715675429_USER_2",
+        "openedBy": "page load",
+        "classes": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "model": "Pointer1791715708120_USER_16"
+      },
+      "facts": {
+        "ptrDefaultInIdlookup": "undefined",
+        "ptrDefaultInDefaultsMap": "boolean",
+        "stateViewpoints": [],
+        "stateViewpoint": "",
+        "viewsInIdlookup": 0,
+        "viewsCheckedDefault": 0,
+        "defaultViewsMapSize": 20,
+        "interfaceMode": "basic",
+        "model": {
+          "instanceof": "Pointer1791715689624_USER_4",
+          "isMetamodel": false
+        },
+        "rootable": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "graphs": [
+          "classic",
+          "v2-flow",
+          "v2-flow"
+        ]
+      },
+      "paths": [
+        {
+          "path": "palette-drag",
+          "reached": true,
+          "note": "palette: [\"NewClass\",\"NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791715717303_USER_21",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715717303_USER_21",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715717476_167 [CREATE_ELEMENT idlookup.Pointer1791715717303_USER_21 @Action_1791715717303_157, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.pointedBy @Action_1791715717303_155, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.objects @Action_1791715717303_156, SET_ME_FIELD idlookup.Pointer1791715717303_USER_21.instanceof @Action_1791715717303_158, SET_ME_FIELD idlookup.Pointer1791715698788_USER_10.instances @Action_1791715717303_159, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715717303_160, CREATE_ELEMENT idlookup.Pointer1791715717303_USER_23 @Action_1791715717303_165, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715717303_161, SET_ME_FIELD idlookup.Pointer1791715717303_USER_21.pointedBy @Action_1791715717303_162, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715717303_163, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.subElements @Action_1791715717303_164, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715717304_166]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/basic-reload_palette-drag.png"
+        },
+        {
+          "path": "palette-click",
+          "reached": true,
+          "note": "clicked",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/basic-reload_palette-click.png"
+        },
+        {
+          "path": "dm-new",
+          "reached": true,
+          "note": "row aria-disabled=null",
+          "created": [
+            {
+              "id": "Pointer1791715731808_USER_24",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715731808_USER_24",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715731876_176 [CREATE_ELEMENT idlookup.Pointer1791715731808_USER_24 @Action_1791715731808_172, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.pointedBy @Action_1791715731808_170, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.objects @Action_1791715731808_171, SET_ME_FIELD idlookup.Pointer1791715731808_USER_24.instanceof @Action_1791715731809_173, SET_ME_FIELD idlookup.Pointer1791715701425_USER_13.instances @Action_1791715731809_174, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715731809_175]",
+            "COMPOSITE_ACTION @Action_1791715732176_184 [CREATE_ELEMENT idlookup.Pointer1791715731893_USER_26 @Action_1791715731893_182, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715731893_178, SET_ME_FIELD idlookup.Pointer1791715731808_USER_24.pointedBy @Action_1791715731893_179, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715731893_180, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.subElements @Action_1791715731893_181, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715731893_183]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/basic-reload_dm-new.png"
+        },
+        {
+          "path": "dm-outline",
+          "reached": true,
+          "note": "outline menu: [\"New NewClass\",\"New NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791715737670_USER_27",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715737670_USER_27",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715737875_192 [CREATE_ELEMENT idlookup.Pointer1791715737670_USER_27 @Action_1791715737670_188, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.pointedBy @Action_1791715737670_186, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.objects @Action_1791715737670_187, SET_ME_FIELD idlookup.Pointer1791715737670_USER_27.instanceof @Action_1791715737670_189, SET_ME_FIELD idlookup.Pointer1791715698788_USER_10.instances @Action_1791715737670_190, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715737670_191]",
+            "COMPOSITE_ACTION @Action_1791715738175_200 [CREATE_ELEMENT idlookup.Pointer1791715737889_USER_29 @Action_1791715737889_198, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715737889_194, SET_ME_FIELD idlookup.Pointer1791715737670_USER_27.pointedBy @Action_1791715737889_195, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715737889_196, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.subElements @Action_1791715737889_197, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715737889_199]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/basic-reload_dm-outline.png"
+        },
+        {
+          "path": "ctx-child",
+          "reached": true,
+          "note": "stale menu: [\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\"]; after a rename of the reference: [\"Add NewClass1 (kids)\",\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\"]; ref: {\"d\":{\"composition\":true,\"aggregation\":false,\"upperBound\":-1},\"editorMode\":[\"children:true:NewClass1\"],\"rootable\":[\"NewClass\"]}",
+          "created": [
+            {
+              "id": "Pointer1791715750055_USER_34",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715750055_USER_34",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715741476_219 [CREATE_ELEMENT idlookup.Pointer1791715741338_USER_30 @Action_1791715741339_213, CREATE_ELEMENT idlookup.Pointer1791715741339_USER_31 @Action_1791715741339_214, SET_ME_FIELD idlookup.Pointer1791715717303_USER_21.pointedBy @Action_1791715741339_204, SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.pointedBy @Action_1791715741339_205, SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.instances @Action_1791715741339_206, SET_ME_FIELD idlookup.Pointer1791715717303_USER_21.features @Action_1791715741339_207, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715741339_215, CREATE_ELEMENT idlookup.Pointer1791715741339_USER_32 @Action_1791715741339_216, SET_ME_FIELD idlookup.Pointer1791715737670_USER_27.pointedBy @Action_1791715741339_208, SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.pointedBy @Action_1791715741339_209, SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.instances @Action_1791715741339_210, SET_ME_FIELD idlookup.Pointer1791715737670_USER_27.features @Action_1791715741339_211, … +5]",
+            "COMPOSITE_ACTION @Action_1791715741776_233 [CREATE_ELEMENT idlookup.Pointer1791715741490_USER_33 @Action_1791715741491_231, SET_ME_FIELD idlookup.Pointer1791715689624_USER_4_graph2.pointedBy @Action_1791715741490_223, SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.pointedBy @Action_1791715741490_224, SET_ME_FIELD idlookup.Pointer1791715689624_USER_4_graph2.pointedBy @Action_1791715741490_225, SET_ME_FIELD idlookup.Pointer1791715689624_USER_4_graph2.subElements @Action_1791715741490_226, SET_ME_FIELD idlookup.Pointer1791715698788_USER_12.pointedBy @Action_1791715741491_227, SET_ME_FIELD idlookup.Pointer1791715701426_USER_15.pointedBy @Action_1791715741491_228, SET_ME_FIELD idlookup.Pointer1791715698788_USER_12.edgesOut @Action_1791715741491_229, SET_ME_FIELD idlookup.Pointer1791715701426_USER_15.edgesIn @Action_1791715741491_230, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715741491_232]",
+            "COMPOSITE_ACTION @Action_1791715742377_237 [SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.composition @Action_1791715742144_235, SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.upperBound @Action_1791715742144_236]",
+            "COMPOSITE_ACTION @Action_1791715747776_239 [SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.name @Action_1791715747660_238]",
+            "COMPOSITE_ACTION @Action_1791715750187_264 [CREATE_ELEMENT idlookup.Pointer1791715750055_USER_34 @Action_1791715750057_242, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.pointedBy @Action_1791715750056_240, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.objects @Action_1791715750057_241, SET_ME_FIELD idlookup.Pointer1791715750055_USER_34.instanceof @Action_1791715750057_243, SET_ME_FIELD idlookup.Pointer1791715701425_USER_13.instances @Action_1791715750057_244, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715750057_245, CREATE_ELEMENT idlookup.Pointer1791715750057_USER_36 @Action_1791715750057_250, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715750057_246, SET_ME_FIELD idlookup.Pointer1791715750055_USER_34.pointedBy @Action_1791715750057_247, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715750057_248, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.subElements @Action_1791715750057_249, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715750057_251, … +12]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/basic-reload_ctx-child.png"
+        },
+        {
+          "path": "uncontain",
+          "reached": false,
+          "note": "reference kids composition=false; metamodel rootable [\"NewClass\",\"NewClass1\"]; palette [\"NewClass\"], after a tab round trip [\"NewClass\"]: no NewClass1 entry",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715755576_270 [SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.composition @Action_1791715755413_268, SET_ME_FIELD idlookup.Pointer1791715750055_USER_34.father @Action_1791715755413_269]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/basic-reload_uncontain.png"
+        },
+        {
+          "path": "jjscript",
+          "reached": true,
+          "note": "mode jjscript>; reply: [\"12:49 PM\",\"JjScript\"]",
+          "created": [
+            {
+              "id": "Pointer1791715767839_USER_38",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715767839_USER_38",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715767877_283 [CREATE_ELEMENT idlookup.Pointer1791715767839_USER_38 @Action_1791715767839_273, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.pointedBy @Action_1791715767839_271, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16.objects @Action_1791715767839_272, SET_ME_FIELD idlookup.Pointer1791715767839_USER_38.instanceof @Action_1791715767839_274, SET_ME_FIELD idlookup.Pointer1791715698788_USER_10.instances @Action_1791715767839_275, CREATE_ELEMENT idlookup.Pointer1791715767840_USER_39 @Action_1791715767840_280, SET_ME_FIELD idlookup.Pointer1791715767839_USER_38.pointedBy @Action_1791715767840_276, SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.pointedBy @Action_1791715767840_277, SET_ME_FIELD idlookup.Pointer1791715741338_USER_30.instances @Action_1791715767840_278, SET_ME_FIELD idlookup.Pointer1791715767839_USER_38.features @Action_1791715767840_279, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715767840_281, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715767840_282]",
+            "COMPOSITE_ACTION @Action_1791715768175_292 [CREATE_ELEMENT idlookup.Pointer1791715767901_USER_41 @Action_1791715767902_290, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715767902_286, SET_ME_FIELD idlookup.Pointer1791715767839_USER_38.pointedBy @Action_1791715767902_287, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.pointedBy @Action_1791715767902_288, SET_ME_FIELD idlookup.Pointer1791715708120_USER_16_graph5.subElements @Action_1791715767902_289, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715767902_291]",
+            "COMPOSITE_ACTION @Action_1791715770575_295 [SET_ROOT_FIELD _lastSelected @Action_1791715770409_294]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/basic-reload_jjscript.png"
+        }
+      ],
+      "setupErrors": [
+        "console: init_dash"
+      ]
+    },
+    "vp-card": {
+      "steps": {
+        "project": "Pointer1791715788245_USER_2",
+        "openedBy": "card",
+        "classes": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "model": "Pointer1791715820968_USER_20",
+        "viewpoint": {
+          "clicked": true,
+          "vp": {
+            "id": "Pointer1791715834978_USER_25",
+            "name": "VP_Test"
+          },
+          "views": [
+            {
+              "cls": "NewClass",
+              "id": "Pointer1791715839287_USER_32",
+              "inIdlookup": true,
+              "checkedDefault": false
+            },
+            {
+              "cls": "NewClass1",
+              "id": "Pointer1791715839890_USER_39",
+              "inIdlookup": true,
+              "checkedDefault": false
+            }
+          ],
+          "picker": [
+            "Abstract syntax",
+            "VP_Test",
+            "Data manager"
+          ],
+          "activated": true,
+          "active": "Pointer1791715834978_USER_25"
+        }
+      },
+      "facts": {
+        "ptrDefaultInIdlookup": "object",
+        "ptrDefaultInDefaultsMap": "object",
+        "stateViewpoints": [
+          "Pointer_ViewPointDefault",
+          "Pointer1791715834978_USER_25"
+        ],
+        "stateViewpoint": "Pointer1791715834978_USER_25",
+        "viewsInIdlookup": 2,
+        "viewsCheckedDefault": 0,
+        "defaultViewsMapSize": 20,
+        "interfaceMode": "advanced",
+        "model": {
+          "instanceof": "Pointer1791715802455_USER_8",
+          "isMetamodel": false
+        },
+        "rootable": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "graphs": [
+          "classic",
+          "v2-flow",
+          "v2-flow"
+        ]
+      },
+      "paths": [
+        {
+          "path": "palette-drag",
+          "reached": true,
+          "note": "palette: [\"NewClass\",\"NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791715847342_USER_46",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715847342_USER_46",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715847481_228 [CREATE_ELEMENT idlookup.Pointer1791715847342_USER_46 @Action_1791715847342_218, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.pointedBy @Action_1791715847342_216, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.objects @Action_1791715847342_217, SET_ME_FIELD idlookup.Pointer1791715847342_USER_46.instanceof @Action_1791715847343_219, SET_ME_FIELD idlookup.Pointer1791715811586_USER_14.instances @Action_1791715847343_220, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715847343_221, CREATE_ELEMENT idlookup.Pointer1791715847343_USER_48 @Action_1791715847343_226, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715847343_222, SET_ME_FIELD idlookup.Pointer1791715847342_USER_46.pointedBy @Action_1791715847343_223, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715847343_224, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.subElements @Action_1791715847343_225, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715847343_227]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-card_palette-drag.png"
+        },
+        {
+          "path": "palette-click",
+          "reached": true,
+          "note": "clicked",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-card_palette-click.png"
+        },
+        {
+          "path": "dm-new",
+          "reached": true,
+          "note": "row aria-disabled=null",
+          "created": [
+            {
+              "id": "Pointer1791715862472_USER_49",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715862472_USER_49",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715862488_237 [CREATE_ELEMENT idlookup.Pointer1791715862472_USER_49 @Action_1791715862472_233, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.pointedBy @Action_1791715862472_231, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.objects @Action_1791715862472_232, SET_ME_FIELD idlookup.Pointer1791715862472_USER_49.instanceof @Action_1791715862472_234, SET_ME_FIELD idlookup.Pointer1791715814236_USER_17.instances @Action_1791715862472_235, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715862472_236]",
+            "COMPOSITE_ACTION @Action_1791715862781_245 [CREATE_ELEMENT idlookup.Pointer1791715862503_USER_51 @Action_1791715862503_243, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715862503_239, SET_ME_FIELD idlookup.Pointer1791715862472_USER_49.pointedBy @Action_1791715862503_240, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715862503_241, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.subElements @Action_1791715862503_242, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715862504_244]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-card_dm-new.png"
+        },
+        {
+          "path": "dm-outline",
+          "reached": true,
+          "note": "outline menu: [\"New NewClass\",\"New NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791715868358_USER_52",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715868358_USER_52",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715868481_253 [CREATE_ELEMENT idlookup.Pointer1791715868358_USER_52 @Action_1791715868359_249, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.pointedBy @Action_1791715868359_247, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.objects @Action_1791715868359_248, SET_ME_FIELD idlookup.Pointer1791715868358_USER_52.instanceof @Action_1791715868359_250, SET_ME_FIELD idlookup.Pointer1791715811586_USER_14.instances @Action_1791715868359_251, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715868359_252]",
+            "COMPOSITE_ACTION @Action_1791715868781_261 [CREATE_ELEMENT idlookup.Pointer1791715868504_USER_54 @Action_1791715868504_259, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715868504_255, SET_ME_FIELD idlookup.Pointer1791715868358_USER_52.pointedBy @Action_1791715868504_256, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715868504_257, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.subElements @Action_1791715868504_258, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715868504_260]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-card_dm-outline.png"
+        },
+        {
+          "path": "ctx-child",
+          "reached": true,
+          "note": "stale menu: [\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\",\"Edit view · View for NewClass\"]; after a rename of the reference: [\"Add NewClass1 (kids)\",\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\",\"Edit view · View for NewClass\"]; ref: {\"d\":{\"composition\":true,\"aggregation\":false,\"upperBound\":-1},\"editorMode\":[\"children:true:NewClass1\"],\"rootable\":[\"NewClass\"]}",
+          "created": [
+            {
+              "id": "Pointer1791715881698_USER_59",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715881698_USER_59",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715872681_280 [CREATE_ELEMENT idlookup.Pointer1791715872417_USER_55 @Action_1791715872425_274, CREATE_ELEMENT idlookup.Pointer1791715872424_USER_56 @Action_1791715872425_275, SET_ME_FIELD idlookup.Pointer1791715847342_USER_46.pointedBy @Action_1791715872424_265, SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.pointedBy @Action_1791715872424_266, SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.instances @Action_1791715872424_267, SET_ME_FIELD idlookup.Pointer1791715847342_USER_46.features @Action_1791715872424_268, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715872426_276, CREATE_ELEMENT idlookup.Pointer1791715872424_USER_57 @Action_1791715872426_277, SET_ME_FIELD idlookup.Pointer1791715868358_USER_52.pointedBy @Action_1791715872424_269, SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.pointedBy @Action_1791715872424_270, SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.instances @Action_1791715872424_271, SET_ME_FIELD idlookup.Pointer1791715868358_USER_52.features @Action_1791715872424_272, … +5]",
+            "COMPOSITE_ACTION @Action_1791715872982_294 [CREATE_ELEMENT idlookup.Pointer1791715872734_USER_58 @Action_1791715872735_292, SET_ME_FIELD idlookup.Pointer1791715802455_USER_8_graph2.pointedBy @Action_1791715872734_284, SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.pointedBy @Action_1791715872734_285, SET_ME_FIELD idlookup.Pointer1791715802455_USER_8_graph2.pointedBy @Action_1791715872734_286, SET_ME_FIELD idlookup.Pointer1791715802455_USER_8_graph2.subElements @Action_1791715872734_287, SET_ME_FIELD idlookup.Pointer1791715811587_USER_16.pointedBy @Action_1791715872735_288, SET_ME_FIELD idlookup.Pointer1791715814237_USER_19.pointedBy @Action_1791715872735_289, SET_ME_FIELD idlookup.Pointer1791715811587_USER_16.edgesOut @Action_1791715872735_290, SET_ME_FIELD idlookup.Pointer1791715814237_USER_19.edgesIn @Action_1791715872735_291, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715872735_293]",
+            "COMPOSITE_ACTION @Action_1791715873281_298 [SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.composition @Action_1791715873234_296, SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.upperBound @Action_1791715873235_297]",
+            "COMPOSITE_ACTION @Action_1791715879281_300 [SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.name @Action_1791715879164_299]",
+            "COMPOSITE_ACTION @Action_1791715881982_325 [CREATE_ELEMENT idlookup.Pointer1791715881698_USER_59 @Action_1791715881699_303, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.pointedBy @Action_1791715881698_301, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.objects @Action_1791715881699_302, SET_ME_FIELD idlookup.Pointer1791715881698_USER_59.instanceof @Action_1791715881699_304, SET_ME_FIELD idlookup.Pointer1791715814236_USER_17.instances @Action_1791715881699_305, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715881699_306, CREATE_ELEMENT idlookup.Pointer1791715881699_USER_61 @Action_1791715881700_311, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715881699_307, SET_ME_FIELD idlookup.Pointer1791715881698_USER_59.pointedBy @Action_1791715881699_308, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715881699_309, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.subElements @Action_1791715881699_310, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715881700_312, … +12]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-card_ctx-child.png"
+        },
+        {
+          "path": "uncontain",
+          "reached": false,
+          "note": "reference kids composition=false; metamodel rootable [\"NewClass\",\"NewClass1\"]; palette [\"NewClass\"], after a tab round trip [\"NewClass\"]: no NewClass1 entry",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715887382_331 [SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.composition @Action_1791715887182_329, SET_ME_FIELD idlookup.Pointer1791715881698_USER_59.father @Action_1791715887184_330]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-card_uncontain.png"
+        },
+        {
+          "path": "jjscript",
+          "reached": true,
+          "note": "mode jjscript>; reply: [\"12:51 PM\",\"JjScript\"]",
+          "created": [
+            {
+              "id": "Pointer1791715899988_USER_63",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791715899988_USER_63",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791715900281_344 [CREATE_ELEMENT idlookup.Pointer1791715899988_USER_63 @Action_1791715899990_334, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.pointedBy @Action_1791715899988_332, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20.objects @Action_1791715899989_333, SET_ME_FIELD idlookup.Pointer1791715899988_USER_63.instanceof @Action_1791715899990_335, SET_ME_FIELD idlookup.Pointer1791715811586_USER_14.instances @Action_1791715899990_336, CREATE_ELEMENT idlookup.Pointer1791715899990_USER_64 @Action_1791715899991_341, SET_ME_FIELD idlookup.Pointer1791715899988_USER_63.pointedBy @Action_1791715899990_337, SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.pointedBy @Action_1791715899990_338, SET_ME_FIELD idlookup.Pointer1791715872417_USER_55.instances @Action_1791715899990_339, SET_ME_FIELD idlookup.Pointer1791715899988_USER_63.features @Action_1791715899990_340, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715899991_342, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715899991_343]",
+            "COMPOSITE_ACTION @Action_1791715900581_353 [CREATE_ELEMENT idlookup.Pointer1791715900316_USER_66 @Action_1791715900317_351, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715900316_347, SET_ME_FIELD idlookup.Pointer1791715899988_USER_63.pointedBy @Action_1791715900317_348, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.pointedBy @Action_1791715900317_349, SET_ME_FIELD idlookup.Pointer1791715820968_USER_20_graph5.subElements @Action_1791715900317_350, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791715900317_352]",
+            "COMPOSITE_ACTION @Action_1791715902681_356 [SET_ROOT_FIELD _lastSelected @Action_1791715902643_355]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-card_jjscript.png"
+        }
+      ],
+      "setupErrors": [
+        "console: init_dash"
+      ]
+    },
+    "vp-reload": {
+      "steps": {
+        "project": "Pointer1791715924836_USER_2",
+        "openedBy": "page load",
+        "classes": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "model": "Pointer1791715957881_USER_16",
+        "reopened": 1,
+        "viewpoint": {
+          "clicked": true,
+          "vp": {
+            "id": "Pointer1791715997110_USER_24",
+            "name": "VP_Test"
+          },
+          "views": [
+            {
+              "cls": "NewClass",
+              "id": "Pointer1791716001406_USER_31",
+              "inIdlookup": true,
+              "checkedDefault": true
+            },
+            {
+              "cls": "NewClass1",
+              "id": "Pointer1791716002010_USER_38",
+              "inIdlookup": true,
+              "checkedDefault": true
+            }
+          ],
+          "picker": [
+            "Abstract syntax",
+            "VP_Test",
+            "Data manager"
+          ],
+          "activated": true,
+          "active": "Pointer1791715997110_USER_24"
+        }
+      },
+      "facts": {
+        "ptrDefaultInIdlookup": "undefined",
+        "ptrDefaultInDefaultsMap": "boolean",
+        "stateViewpoints": [
+          "Pointer1791715997110_USER_24"
+        ],
+        "stateViewpoint": "Pointer1791715997110_USER_24",
+        "viewsInIdlookup": 2,
+        "viewsCheckedDefault": 2,
+        "defaultViewsMapSize": 22,
+        "interfaceMode": "advanced",
+        "model": {
+          "instanceof": "Pointer1791715939014_USER_4",
+          "isMetamodel": false
+        },
+        "rootable": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "graphs": [
+          "classic",
+          "v2-flow",
+          "v2-flow"
+        ]
+      },
+      "paths": [
+        {
+          "path": "palette-drag",
+          "reached": true,
+          "note": "palette: [\"NewClass\",\"NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791716009105_USER_45",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791716009105_USER_45",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716009253_328 [CREATE_ELEMENT idlookup.Pointer1791716009105_USER_45 @Action_1791716009105_318, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.pointedBy @Action_1791716009105_316, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.objects @Action_1791716009105_317, SET_ME_FIELD idlookup.Pointer1791716009105_USER_45.instanceof @Action_1791716009106_319, SET_ME_FIELD idlookup.Pointer1791715948175_USER_10.instances @Action_1791716009106_320, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716009106_321, CREATE_ELEMENT idlookup.Pointer1791716009106_USER_47 @Action_1791716009106_326, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716009106_322, SET_ME_FIELD idlookup.Pointer1791716009105_USER_45.pointedBy @Action_1791716009106_323, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716009106_324, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.subElements @Action_1791716009106_325, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716009106_327]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-reload_palette-drag.png"
+        },
+        {
+          "path": "palette-click",
+          "reached": true,
+          "note": "clicked",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-reload_palette-click.png"
+        },
+        {
+          "path": "dm-new",
+          "reached": true,
+          "note": "row aria-disabled=null",
+          "created": [
+            {
+              "id": "Pointer1791716023722_USER_48",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791716023722_USER_48",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716023953_337 [CREATE_ELEMENT idlookup.Pointer1791716023722_USER_48 @Action_1791716023722_333, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.pointedBy @Action_1791716023722_331, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.objects @Action_1791716023722_332, SET_ME_FIELD idlookup.Pointer1791716023722_USER_48.instanceof @Action_1791716023722_334, SET_ME_FIELD idlookup.Pointer1791715951103_USER_13.instances @Action_1791716023722_335, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716023722_336]",
+            "COMPOSITE_ACTION @Action_1791716024252_345 [CREATE_ELEMENT idlookup.Pointer1791716023966_USER_50 @Action_1791716023967_343, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716023967_339, SET_ME_FIELD idlookup.Pointer1791716023722_USER_48.pointedBy @Action_1791716023967_340, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716023967_341, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.subElements @Action_1791716023967_342, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716023967_344]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-reload_dm-new.png"
+        },
+        {
+          "path": "dm-outline",
+          "reached": true,
+          "note": "outline menu: [\"New NewClass\",\"New NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791716029539_USER_51",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791716029539_USER_51",
+              "name": "NewClass_1",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716029652_353 [CREATE_ELEMENT idlookup.Pointer1791716029539_USER_51 @Action_1791716029539_349, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.pointedBy @Action_1791716029539_347, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.objects @Action_1791716029539_348, SET_ME_FIELD idlookup.Pointer1791716029539_USER_51.instanceof @Action_1791716029539_350, SET_ME_FIELD idlookup.Pointer1791715948175_USER_10.instances @Action_1791716029539_351, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716029539_352]",
+            "COMPOSITE_ACTION @Action_1791716029954_361 [CREATE_ELEMENT idlookup.Pointer1791716029665_USER_53 @Action_1791716029666_359, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716029665_355, SET_ME_FIELD idlookup.Pointer1791716029539_USER_51.pointedBy @Action_1791716029666_356, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716029666_357, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.subElements @Action_1791716029666_358, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716029666_360]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-reload_dm-outline.png"
+        },
+        {
+          "path": "ctx-child",
+          "reached": true,
+          "note": "stale menu: [\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\",\"Edit view · View for NewClass\"]; after a rename of the reference: [\"Add NewClass1 (kids)\",\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\",\"Edit view · View for NewClass\"]; ref: {\"d\":{\"composition\":true,\"aggregation\":false,\"upperBound\":-1},\"editorMode\":[\"children:true:NewClass1\"],\"rootable\":[\"NewClass\"]}",
+          "created": [
+            {
+              "id": "Pointer1791716042088_USER_58",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791716042088_USER_58",
+              "name": "NewClass1_1",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716033254_380 [CREATE_ELEMENT idlookup.Pointer1791716033218_USER_54 @Action_1791716033219_374, CREATE_ELEMENT idlookup.Pointer1791716033218_USER_55 @Action_1791716033219_375, SET_ME_FIELD idlookup.Pointer1791716009105_USER_45.pointedBy @Action_1791716033219_365, SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.pointedBy @Action_1791716033219_366, SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.instances @Action_1791716033219_367, SET_ME_FIELD idlookup.Pointer1791716009105_USER_45.features @Action_1791716033219_368, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716033219_376, CREATE_ELEMENT idlookup.Pointer1791716033219_USER_56 @Action_1791716033219_377, SET_ME_FIELD idlookup.Pointer1791716029539_USER_51.pointedBy @Action_1791716033219_369, SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.pointedBy @Action_1791716033219_370, SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.instances @Action_1791716033219_371, SET_ME_FIELD idlookup.Pointer1791716029539_USER_51.features @Action_1791716033219_372, … +5]",
+            "COMPOSITE_ACTION @Action_1791716033554_394 [CREATE_ELEMENT idlookup.Pointer1791716033270_USER_57 @Action_1791716033270_392, SET_ME_FIELD idlookup.Pointer1791715939014_USER_4_graph2.pointedBy @Action_1791716033270_384, SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.pointedBy @Action_1791716033270_385, SET_ME_FIELD idlookup.Pointer1791715939014_USER_4_graph2.pointedBy @Action_1791716033270_386, SET_ME_FIELD idlookup.Pointer1791715939014_USER_4_graph2.subElements @Action_1791716033270_387, SET_ME_FIELD idlookup.Pointer1791715948175_USER_12.pointedBy @Action_1791716033270_388, SET_ME_FIELD idlookup.Pointer1791715951103_USER_15.pointedBy @Action_1791716033270_389, SET_ME_FIELD idlookup.Pointer1791715948175_USER_12.edgesOut @Action_1791716033270_390, SET_ME_FIELD idlookup.Pointer1791715951103_USER_15.edgesIn @Action_1791716033270_391, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716033270_393]",
+            "COMPOSITE_ACTION @Action_1791716034153_398 [SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.composition @Action_1791716034026_396, SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.upperBound @Action_1791716034027_397]",
+            "COMPOSITE_ACTION @Action_1791716039854_400 [SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.name @Action_1791716039700_399]",
+            "COMPOSITE_ACTION @Action_1791716042253_425 [CREATE_ELEMENT idlookup.Pointer1791716042088_USER_58 @Action_1791716042089_403, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.pointedBy @Action_1791716042088_401, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.objects @Action_1791716042089_402, SET_ME_FIELD idlookup.Pointer1791716042088_USER_58.instanceof @Action_1791716042089_404, SET_ME_FIELD idlookup.Pointer1791715951103_USER_13.instances @Action_1791716042089_405, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716042089_406, CREATE_ELEMENT idlookup.Pointer1791716042089_USER_60 @Action_1791716042089_411, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716042089_407, SET_ME_FIELD idlookup.Pointer1791716042088_USER_58.pointedBy @Action_1791716042089_408, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716042089_409, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.subElements @Action_1791716042089_410, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716042089_412, … +12]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-reload_ctx-child.png"
+        },
+        {
+          "path": "uncontain",
+          "reached": false,
+          "note": "reference kids composition=false; metamodel rootable [\"NewClass\",\"NewClass1\"]; palette [\"NewClass\"], after a tab round trip [\"NewClass\"]: no NewClass1 entry",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716047654_431 [SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.composition @Action_1791716047398_429, SET_ME_FIELD idlookup.Pointer1791716042088_USER_58.father @Action_1791716047398_430]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-reload_uncontain.png"
+        },
+        {
+          "path": "jjscript",
+          "reached": true,
+          "note": "mode jjscript>; reply: [\"12:54 PM\",\"JjScript\"]",
+          "created": [
+            {
+              "id": "Pointer1791716059789_USER_62",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791716059789_USER_62",
+              "name": "viaScript",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716059952_444 [CREATE_ELEMENT idlookup.Pointer1791716059789_USER_62 @Action_1791716059789_434, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.pointedBy @Action_1791716059789_432, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16.objects @Action_1791716059789_433, SET_ME_FIELD idlookup.Pointer1791716059789_USER_62.instanceof @Action_1791716059789_435, SET_ME_FIELD idlookup.Pointer1791715948175_USER_10.instances @Action_1791716059789_436, CREATE_ELEMENT idlookup.Pointer1791716059790_USER_63 @Action_1791716059790_441, SET_ME_FIELD idlookup.Pointer1791716059789_USER_62.pointedBy @Action_1791716059790_437, SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.pointedBy @Action_1791716059790_438, SET_ME_FIELD idlookup.Pointer1791716033218_USER_54.instances @Action_1791716059790_439, SET_ME_FIELD idlookup.Pointer1791716059789_USER_62.features @Action_1791716059790_440, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716059790_442, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716059790_443]",
+            "COMPOSITE_ACTION @Action_1791716060254_453 [CREATE_ELEMENT idlookup.Pointer1791716059965_USER_65 @Action_1791716059966_451, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716059965_447, SET_ME_FIELD idlookup.Pointer1791716059789_USER_62.pointedBy @Action_1791716059966_448, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.pointedBy @Action_1791716059966_449, SET_ME_FIELD idlookup.Pointer1791715957881_USER_16_graph5.subElements @Action_1791716059966_450, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716059966_452]",
+            "COMPOSITE_ACTION @Action_1791716062654_456 [SET_ROOT_FIELD _lastSelected @Action_1791716062385_455]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-ir-graphvertex-294a29084/vp-reload_jjscript.png"
+        }
+      ],
+      "setupErrors": [
+        "console: init_dash",
+        "console: init_dash",
+        "console:     at renderWithHooks (http://localhost:3093/@fs/tmp/lane-vite-cache-3093/deps/chunk-7XJCHICL.js?v=5d2ef0b9:17833:24) wrong project setup in navbar {projectid: Pointer1791715924836_USER_2, project: undefined}"
+      ]
+    }
+  }
+}
