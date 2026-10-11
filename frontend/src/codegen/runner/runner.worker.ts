@@ -5,8 +5,9 @@
  * In a worker, before anything else: capture `postMessage`, then remove the
  * network globals of `NETWORK_GLOBALS` from the global scope and its prototype
  * chain (`shadowNetwork`), and `postMessage` itself, so the generated code can
- * neither reach the network through them nor forge a reply. Then, on the one
- * message of the run, load the code as an ES module from a `blob:` URL and run
+ * neither reach the network through them nor forge a reply. Then post `ready`:
+ * the main thread starts the program's clock on it and sends the request. On
+ * that one message, load the code as an ES module from a `blob:` URL and run
  * the calls in order (`executeRun`). The main thread terminates the worker at
  * the timeout and after the reply: one worker per run (`runner.ts`).
  *
@@ -17,9 +18,10 @@
  * matter outside the pilot's files. If a name cannot be removed, nothing runs.
  *
  * Outside a worker (the node test bench) importing this module does nothing:
- * `shadowNetwork` and `executeRun` are exported to be tested there.
+ * `shadowNetwork`, `executeRun` and `bootWorker` are exported to be tested there.
  */
 
+import { WORKER_READY } from './protocol';
 import type { RunRequest, WorkerReply } from './protocol';
 
 /** The globals that reach the network or persistent storage (discovery §F.4). */
@@ -122,7 +124,7 @@ export async function executeRun(request: RunRequest, load: ModuleLoader, unshad
     return { ok: true, results };
 }
 
-interface WorkerScope {
+export interface WorkerScope {
     postMessage(message: unknown): void;
     onmessage: ((ev: MessageEvent) => void) | null;
 }
@@ -132,15 +134,22 @@ function inWorker(g: any): boolean {
     return typeof W === 'function' && g instanceof W;
 }
 
-if (inWorker(globalThis)) {
-    const scope = globalThis as unknown as WorkerScope;
-    // Captured before the code can touch it, then removed, so only this reply leaves the worker.
+/**
+ * What a worker does when it starts: the sandbox, the one handler of the run, then `ready`. `ready` goes last, by the
+ * `postMessage` captured before it was removed, so when the main thread sees it the sandbox is in place and nothing
+ * of the generated code has been evaluated.
+ */
+export function bootWorker(scope: WorkerScope, load: ModuleLoader = blobLoader): void {
+    // Captured before the code can touch it, then removed, so only these messages leave the worker.
     const post = scope.postMessage.bind(scope);
     const unshadowed = [...shadowNetwork(scope), ...shadowGlobals(scope, ['postMessage'])];
     let started = false;
     scope.onmessage = (ev: MessageEvent) => {
         if (started) return;
         started = true;
-        void executeRun(ev.data as RunRequest, blobLoader, unshadowed).then(post);
+        void executeRun(ev.data as RunRequest, load, unshadowed).then(post);
     };
+    post(WORKER_READY);
 }
+
+if (inWorker(globalThis)) bootWorker(globalThis as unknown as WorkerScope);

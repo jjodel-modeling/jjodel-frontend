@@ -382,11 +382,19 @@
         font-family: var(--font-mono);
     }
 
+    // One line per generated line, never wrapped: the gutter numbers and the line of a runtime error refer to the
+    // generated lines. The box scrolls on both axes. The single grid track is as wide as the widest line and never
+    // narrower than the box, so every line, the error highlight included, spans the whole scrolled width, and the
+    // gutter can stick to the left edge inside it.
     &__code {
+        display: grid;
+        grid-template-columns: minmax(max-content, 1fr);
+        align-content: start;
         max-height: 320px;
         margin: 0;
         padding: 8px 0;
         overflow: auto;
+        scroll-padding-left: 32px; // the gutter's width: a span scrolled into view is not left under it
         border: 1px solid var(--color-border-primary);
         border-radius: 4px;
         background: var(--color-bg-primary);
@@ -395,6 +403,25 @@
         font-size: 11px;
         line-height: 1.6;
         tab-size: 4;
+
+        // The global scrollbar (index.scss) is 0.3rem high, too thin to tell that the lines go on to the right.
+        &::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: var(--color-bg-tertiary);
+        }
+
+        &::-webkit-scrollbar-thumb {
+            border-radius: 5px;
+            background: var(--color-border-hover);
+
+            &:hover {
+                background: var(--color-text-placeholder);
+            }
+        }
     }
 
     &__line {
@@ -408,14 +435,20 @@
 
         .codegen-panel__gutter {
             color: var(--color-error-text);
+            // The tint over the opaque ground of the gutter, so the text scrolling under it does not show through.
+            background-image: linear-gradient(var(--color-error-subtle), var(--color-error-subtle));
         }
     }
 
+    // Fixed at the left edge while the text scrolls; opaque for the same reason.
     &__gutter {
+        position: sticky;
+        left: 0;
         flex: 0 0 32px;
         padding-right: 8px;
         text-align: right;
         color: var(--color-text-placeholder);
+        background-color: var(--color-bg-primary);
         user-select: none;
     }
 

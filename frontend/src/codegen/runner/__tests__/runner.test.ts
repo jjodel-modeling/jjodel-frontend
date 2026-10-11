@@ -13,11 +13,11 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { DEFAULT_TIMEOUT_MS, framesOf } from '../protocol';
+import { DEFAULT_TIMEOUT_MS, STARTUP_TIMEOUT_MS, WORKER_READY, framesOf } from '../protocol';
 import type { RunRequest, RunResponse, WorkerReply } from '../protocol';
 import { runInWorker } from '../runner';
 import type { RunnerErrorEvent, RunnerWorker } from '../runner';
-import { NETWORK_GLOBALS, executeRun, shadowNetwork } from '../runner.worker';
+import { NETWORK_GLOBALS, bootWorker, executeRun, shadowNetwork } from '../runner.worker';
 import type { ModuleLoader } from '../runner.worker';
 
 let loads = 0;
@@ -30,18 +30,38 @@ const dataLoader: ModuleLoader = code => {
 
 type Behaviour = 'execute' | 'silent' | ((w: FakeWorker, request: RunRequest) => void);
 
-/** The transport of a Worker, and nothing else: no structured clone, so the worker's own clone is what a test sees. */
+/**
+ * The transport of a Worker, and nothing else: no structured clone, so the worker's own clone is what a test sees.
+ * Like a real worker it posts `ready` once its script has run (`readyAfter` ms after creation, `null` never; 0 is the
+ * next microtask), and a message that reaches it earlier waits until then.
+ */
 class FakeWorker implements RunnerWorker {
     onmessage: ((ev: { data: unknown }) => void) | null = null;
     onerror: ((ev: RunnerErrorEvent) => void) | null = null;
     terminated = 0;
     readonly posted: unknown[] = [];
+    private ready = false;
+    private readonly waiting: RunRequest[] = [];
 
-    constructor(private readonly behaviour: Behaviour, private readonly unshadowed: readonly string[] = []) {}
+    constructor(private readonly behaviour: Behaviour, private readonly unshadowed: readonly string[] = [], readyAfter: number | null = 0) {
+        if (readyAfter === 0) queueMicrotask(() => this.becomeReady());
+        else if (readyAfter !== null) setTimeout(() => this.becomeReady(), readyAfter);
+    }
+
+    private becomeReady(): void {
+        if (this.terminated > 0) return;
+        this.ready = true;
+        this.onmessage?.({ data: WORKER_READY });
+        for (const request of this.waiting.splice(0)) this.handle(request);
+    }
 
     postMessage(message: unknown): void {
         this.posted.push(message);
-        const request = message as RunRequest;
+        if (!this.ready) this.waiting.push(message as RunRequest);
+        else this.handle(message as RunRequest);
+    }
+
+    private handle(request: RunRequest): void {
         if (this.behaviour === 'silent') return;
         if (this.behaviour === 'execute') {
             void executeRun(request, dataLoader, this.unshadowed).then(reply => this.deliver(reply));
@@ -60,16 +80,27 @@ class FakeWorker implements RunnerWorker {
     }
 }
 
-function factory(behaviour: Behaviour = 'execute', unshadowed: readonly string[] = []): { create: () => RunnerWorker; workers: FakeWorker[] } {
+function factory(
+    behaviour: Behaviour = 'execute',
+    unshadowed: readonly string[] = [],
+    readyAfter: number | null = 0,
+): { create: () => RunnerWorker; workers: FakeWorker[] } {
     const workers: FakeWorker[] = [];
     return {
         workers,
         create: () => {
-            const w = new FakeWorker(behaviour, unshadowed);
+            const w = new FakeWorker(behaviour, unshadowed, readyAfter);
             workers.push(w);
             return w;
         },
     };
+}
+
+/** Starts a run and exposes its answer once there is one; for the tests that drive fake timers. */
+function startRun(request: RunRequest, create: () => RunnerWorker): { answer: RunResponse | null } {
+    const out: { answer: RunResponse | null } = { answer: null };
+    void runInWorker(request, create).then(r => { out.answer = r; });
+    return out;
 }
 
 function errorOf(r: RunResponse) {
@@ -194,6 +225,84 @@ describe('runInWorker: the protocol over a worker', () => {
         expect(f.workers[0].terminated).toBe(1);
     });
 
+    it('a worker that is ready later than the timeout still runs a fast program: the clock starts at ready (mutant: timer started at creation)', async () => {
+        const f = factory('execute', [], 400);
+        const r = await runInWorker({ code: MODULE, calls: [{ fn: 'inc', args: [1] }], timeoutMs: 250 }, f.create);
+        expect(r).toEqual({ ok: true, results: [2] });
+        expect(f.workers[0].terminated).toBe(1);
+    });
+
+    it('the program timeout is measured from readiness: a loop is stopped timeoutMs after ready, not after creation (mutant: timer started at creation)', async () => {
+        vi.useFakeTimers();
+        const f = factory('silent', [], 60);
+        const run = startRun({ code: MODULE, calls: [], timeoutMs: 40 }, f.create);
+        await vi.advanceTimersByTimeAsync(59);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].posted).toEqual([]);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(f.workers[0].posted).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(39);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(run.answer).toMatchObject({ ok: false, error: { kind: 'timeout' } });
+        expect(f.workers[0].terminated).toBe(1);
+    });
+
+    it('a worker that never becomes ready is terminated at the start-up bound, and the error says the runner did not start (mutant: start-up bound removed)', async () => {
+        vi.useFakeTimers();
+        expect(STARTUP_TIMEOUT_MS).toBe(30000);
+        const f = factory('execute', [], null);
+        const run = startRun({ code: MODULE, calls: [{ fn: 'inc', args: [1] }], timeoutMs: 40 }, f.create);
+        await vi.advanceTimersByTimeAsync(STARTUP_TIMEOUT_MS - 1);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(1);
+        const e = errorOf(run.answer as RunResponse);
+        expect(e).toMatchObject({ kind: 'worker', line: null, column: null });
+        expect(e.message).toContain('did not start');
+        expect(e.message).toContain(String(STARTUP_TIMEOUT_MS));
+        expect(e.message).not.toContain('did not finish');
+        expect(f.workers[0].terminated).toBe(1);
+    });
+
+    it('the start-up bound is not the program timeout: a short timeoutMs does not cut a slow start (mutant: timeoutMs used for the start-up)', async () => {
+        vi.useFakeTimers();
+        const f = factory('silent', [], 5000);
+        const run = startRun({ code: MODULE, calls: [], timeoutMs: 100 }, f.create);
+        await vi.advanceTimersByTimeAsync(4999);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(f.workers[0].posted).toHaveLength(1);
+    });
+
+    it('once the worker is ready the start-up bound no longer applies: a program may run past it (mutant: start-up bound not cleared at ready)', async () => {
+        vi.useFakeTimers();
+        const f = factory('silent', [], 0);
+        const run = startRun({ code: MODULE, calls: [], timeoutMs: 2 * STARTUP_TIMEOUT_MS }, f.create);
+        await vi.advanceTimersByTimeAsync(STARTUP_TIMEOUT_MS + 1);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(STARTUP_TIMEOUT_MS - 1);
+        const e = errorOf(run.answer as RunResponse);
+        expect(e.kind).toBe('timeout');
+        expect(e.message).toContain('did not finish');
+    });
+
+    it('a second ready is ignored: the request is sent once and the clock is not restarted', async () => {
+        vi.useFakeTimers();
+        const f = factory('silent', [], 0);
+        const run = startRun({ code: MODULE, calls: [], timeoutMs: 100 }, f.create);
+        await vi.advanceTimersByTimeAsync(60);
+        f.workers[0].onmessage?.({ data: WORKER_READY });
+        await vi.advanceTimersByTimeAsync(39);
+        expect(run.answer).toBeNull();
+        await vi.advanceTimersByTimeAsync(1);
+        expect(run.answer).toMatchObject({ ok: false, error: { kind: 'timeout' } });
+        expect(f.workers[0].posted).toHaveLength(1);
+    });
+
     it('a reply after the timeout is ignored', async () => {
         const f = factory((w, request) => {
             setTimeout(() => w.onmessage?.({ data: { ok: true, results: ['late'] } }), 60);
@@ -268,5 +377,32 @@ describe('the sandbox: network globals', () => {
 
     it('importing the worker module outside a worker shadows nothing: node keeps its fetch', () => {
         expect(typeof (globalThis as any).fetch).toBe('function');
+    });
+});
+
+describe('bootWorker: the ready message', () => {
+    /** A scope with the globals the sandbox removes, whose `postMessage` logs what the scope looked like when it was called. */
+    function scopeWithLog() {
+        const log: { message: unknown; fetch: string; postMessage: string }[] = [];
+        const scope: any = { fetch: () => 1, XMLHttpRequest: function XHR() {}, onmessage: null };
+        scope.postMessage = (message: unknown) => {
+            log.push({ message, fetch: typeof scope.fetch, postMessage: typeof scope.postMessage });
+        };
+        return { scope, log };
+    }
+
+    it('posts ready once, with the network and postMessage already removed, before it has been sent anything (mutant: ready posted before the shadowing)', () => {
+        const { scope, log } = scopeWithLog();
+        bootWorker(scope, dataLoader);
+        expect(log).toEqual([{ message: { ready: true }, fetch: 'undefined', postMessage: 'undefined' }]);
+        expect(typeof scope.onmessage).toBe('function');
+    });
+
+    it('the reply of the run follows ready, and leaves by the captured postMessage (mutant: ready never posted)', async () => {
+        const { scope, log } = scopeWithLog();
+        bootWorker(scope, dataLoader);
+        scope.onmessage({ data: { code: MODULE, calls: [{ fn: 'inc', args: [1] }] } });
+        await vi.waitFor(() => expect(log).toHaveLength(2));
+        expect(log.map(l => l.message)).toEqual([{ ready: true }, { ok: true, results: [2] }]);
     });
 });
