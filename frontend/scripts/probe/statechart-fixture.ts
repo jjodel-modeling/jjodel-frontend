@@ -18,7 +18,8 @@
  *         frontend/scripts/probe/statechart-fixture.ts --port 3073 --id P-2026-10-10-0105
  * Env:  SC_TAG    label of the run in file names (default after)
  *       SC_OUT    output directory (default docs/discovery/assets/graphvertex-s2b of this tree)
- *       SC_ONLY   comma list of scenes: statechart (S2b), s6 (Auto layout) (default statechart)
+ *       SC_ONLY   comma list of scenes: statechart (S2b), s6 (Auto layout), drag4 and relayout (P-2026-10-11-1156)
+ *                 (default statechart)
  *       GV_SAVE   opt-in: a directory where the built scene is exported, before any gesture, as gv-statechart.jjodel
  *                 (the File menu's «Download Project»; bpmn-lanes-fixture `saveScene`)
  */
@@ -27,7 +28,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { setTheme, SETTLE_MS } from '../smoke/states.ts';
 import {
     autoLayout, buildLinks, buildMetamodel, buildModelShell, buildObjects, buildViewpoint, createProject, drag, ev, openPage,
-    pickViewpoint, readEdges, readHulls, readNodes, records, saveScene, screenBox, type Box,
+    pickViewpoint, readEdges, readHulls, readNodes, records, runDrag4, runRelayoutReload, saveScene, screenBox, type Box,
+    type Drag4Subject, type FrameCheck,
 } from './bpmn-lanes-fixture.ts';
 import type { Page } from '@playwright/test';
 
@@ -360,12 +362,51 @@ async function sceneS6(browser: Browser, out: Record<string, unknown>) {
     res.errors = errors.slice(0, 20);
 }
 
+/** The frames measured after each drag of drag4: Running (its padding from its band), Active's two regions. */
+const SC_FRAMES: FrameCheck[] = [['running', ['i3', 'fetch', 'compute'], BAND as FrameCheck[2]], ['a1', ['i1', 'waiting', 'processing'], null], ['a2', ['i2', 'running', 'paused'], null]];
+const SC_STATES = ['i0', 'idle', 'done', 'i1', 'waiting', 'processing', 'i2', 'paused', 'i3', 'fetch', 'compute'];
+
+/** drag4 (P-2026-10-11-1156): Fetch in Running (a self frame) and Waiting in Active's first region (a partition), each
+ *  dragged with the pointer outside its container (membership `none`: a move, the model untouched) and toward each side
+ *  inside it. The outside drops land on free canvas within the pane: a drag that leaves the pane auto-pans the canvas
+ *  while the button is held, and the drop then lands far off (measured: Fetch at y 1104). */
+async function sceneDrag4(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildStatechartScene(browser);
+    if (!scene) return;
+    const { page, errors, ids } = scene;
+    const subjects: Drag4Subject[] = [
+        { label: 'Fetch in Running', key: 'fetch', container: 'running', band: BAND as FrameCheck[2], frames: SC_FRAMES,
+            others: SC_STATES.filter((k) => k !== 'fetch'), outside: { by: { x: 0, y: 250 }, expect: 'move', slot: ['r', 'subvertex'] } },
+        { label: 'Waiting in A1', key: 'waiting', container: 'a1', band: null, frames: SC_FRAMES,
+            others: SC_STATES.filter((k) => k !== 'waiting'), outside: { by: { x: 300, y: 330 }, expect: 'move', slot: ['a1', 'subvertex'] } },
+    ];
+    out.drag4 = await runDrag4(page, ids, subjects, {
+        prefix: 'SC', viewpoint: 'Statechart', shot: (f) => shoot(page, `${f}-${TAG}-light.png`), check, meas,
+    });
+    (out.drag4 as Record<string, unknown>).errors = errors.slice(0, 20);
+}
+
+/** relayout-reload (P-2026-10-11-1156): Auto layout, save, reload; Active's record is its drawn box, the regions' their
+ *  place on the stack, every frame holds its children. */
+async function sceneRelayoutReload(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildStatechartScene(browser);
+    if (!scene) return;
+    const { page, errors, ids } = scene;
+    out.relayout = await runRelayoutReload(page, ids, {
+        prefix: 'SC', viewpoint: 'Statechart', boxed: ['active'], stacked: [['a1', 'vertical'], ['a2', 'vertical']],
+        holds: [['running', ['i3', 'fetch', 'compute']], ['a1', ['i1', 'waiting', 'processing']], ['a2', ['i2', 'running', 'paused']], ['active', ['a1', 'a2']]],
+    }, { shot: (f) => shoot(page, `${f}-${TAG}-light.png`, 3), check, meas });
+    (out.relayout as Record<string, unknown>).errors = errors.slice(0, 20);
+}
+
 if (process.argv[1] && /statechart-fixture\.ts$/.test(process.argv[1])) {
     const browser = await chromium.launch();
     const out: Record<string, unknown> = { url: URL, tag: TAG, at: new Date().toISOString() };
     try {
         if (ONLY.includes('statechart')) await sceneStatechart(browser, out);
         if (ONLY.includes('s6')) await sceneS6(browser, out);
+        if (ONLY.includes('drag4')) await sceneDrag4(browser, out);
+        if (ONLY.includes('relayout')) await sceneRelayoutReload(browser, out);
     } finally {
         out.checks = { pass, fail };
         const file = ONLY.join('-') === 'statechart' ? `statechart-${TAG}.json` : `statechart-${ONLY.join('-')}-${TAG}.json`;
