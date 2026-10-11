@@ -6,7 +6,7 @@ Lane: light (one test helper; no product code, no UI). Model: the default of `.c
 No critical-zone go-ahead.
 Depends: P-2026-10-11-1049, P-2026-10-11-1056
 Front: codegen-pilot
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane codegen-ready · code 47a0d95a3 · log 764758224 · src/codegen 284/284, src/model/simulation 692/692, tsc 14 = base, mutation 1/1 killed · no visual check (test helper only)
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
 Worktree: `~/jjodel-w-codegen-ready`, branch `codegen-ready`, cut from the trunk tip `28c9b0aad` (the merge of
