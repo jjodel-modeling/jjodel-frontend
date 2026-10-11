@@ -29,3 +29,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: on the main axis a partition not sized by hand still takes its children's span plus two margins from where the stack puts it, so a child more than 16 px below a lane's top takes the excess off its bottom (the unit fixture of irContainerLayout.test.ts pins t1 at 160..220 in a Sales drawn 100..192). Not fixed with the right side: growing a partition along the stack moves the next one past its own children, against «the children do not move».
 **Priority**: medium
 **Found in**: P-2026-10-11-0040
+
+## 2026-10-11 — merge: gv-right-margin into alfonso-frontend-jjtl (P-2026-10-11-0957)
+**Prompt**: `claude_2026-10-11_0957_prompt_merge_gv-right-margin.md`, a direct merge by `lane-run merge --direct`, no session: `gv-right-margin` at `9d9e0be57` into `alfonso-frontend-jjtl`, merge base `7523373cb`, 5 commits on the branch side.
+**Files touched**: merge `f7ebd0f5b`: 6 files from the branch side (`docs/log-inbox/gv-right-margin.md`, `docs/prompts/claude_2026-10-11_0040_prompt_graphvertex_right_margin.md`, `frontend/scripts/probe/gv-right-margin.ts`, `frontend/scripts/probe/statechart-fixture.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irContainerLayout.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irContainment.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f7ebd0f5b` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8442 tests in 347 files, 9 red at import, hooks 603; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Alfonso visual check passed 2026-10-11 09:57 (probe 10/10)
+**Notes**: Rollback tag `pre-gv-right-margin` on `3c5e97b88` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-0957/result.json`.
+**Prompt document name**: 2026-10-11 09:57
