@@ -20,3 +20,16 @@ empties this file. The active log is not touched by this lane.
 **Prompt document name**: 2026-10-11 14:15
 
 **Ticket** (follow-up, gates): `typecheck:scripts` includes `smoke/` and `gates/` only, so `scripts/probe/` and the new `scripts/examples/` are not type-gated; the two new scripts were checked here by a gitignored tsconfig. Also read, not run: `ProjectEditor.tsx:561-573` downloads a `{format_version, metadata, project}` wrapper as `.jjodel` (button at `:2416`), which `importFromText` does not read (it expects `id` and `state` at the top level).
+
+## 2026-10-11 — merge: codegen-examples into alfonso-frontend-jjtl (P-2026-10-11-1542)
+**Prompt**: `claude_2026-10-11_1542_prompt_merge_codegen-examples.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-examples` at `06bf2dd10` into `alfonso-frontend-jjtl`, merge base `ec1a12ab0`, 5 commits on the branch side.
+**Files touched**: merge `87d05057c`: 10 files from the branch side (`docs/discovery/discovery_2026-10-11_codegen_importable_examples.md`, `docs/log-inbox/codegen-examples.md`, `docs/prompts/claude_2026-10-11_1415_prompt_codegen_s8_importable_examples.md`, `frontend/public/examples/codegen/petri-producer-consumer.jjodel`, `frontend/public/examples/codegen/turnstile.jjodel`, `frontend/scripts/examples/build-codegen-examples.ts`, `frontend/scripts/probe/codegen-examples.ts`, `frontend/src/codegen/examples/__tests__/importable.test.ts`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `87d05057c` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8636 tests in 357 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 on the S8 crops (import from the dashboard, Check green on turnstile 7 steps and Petri 8 steps), GO by Alfonso 15:37; all trunk gates green
+**Notes**: Rollback tag `pre-codegen-examples` on `ee5c07c2f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1542/result.json`.
+**Prompt document name**: 2026-10-11 15:42
