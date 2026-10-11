@@ -2,6 +2,9 @@
 
 Prompt-ID: P-2026-10-11-1025
 Chat: C-2026-10-11-1022
+Request: Alfonso, 2026-10-11 10:22 and 11:50, M1 edge gesture inert on instances of subclasses added while the model tab is open
+Front: maintenance
+Depends: none
 Lane: full (canvas edge creation, possible critical zone: `useJjomSync.ts`, `portDistribution.ts`)
 Status: da eseguire
 
