@@ -162,3 +162,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-10 08:10
 
 **Ticket** (low, observed, not changed): `do eval x.name end` parses as eval `x.name end`, because `parseEvalCommand` reads to the newline and swallows `end`. A `let ... in <non-command> end` body now fails with the same message, `in do block`, though its opener is `in`. A bare `do` message still parses clean as an empty block; whether `detect` should take it as JjScript is the detect question, left to its own lane.
+
+## 2026-10-11 — merge: do-freeze into alfonso-frontend-jjtl (P-2026-10-11-0034)
+**Prompt**: `claude_2026-10-11_0034_prompt_merge_do-freeze.md`, a merge in a lane-run session: `do-freeze` at `592b12e9e` into `alfonso-frontend-jjtl`, `--no-ff`, merge base `3099fb53c`, 2 commits on the branch side.
+**Files touched**: merge `294a29084`: 3 files from the branch side (`docs/log-inbox/jjscript.md`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `294a29084` in the session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8232 tests in 337 files (trunk tip 8210 in 336, plus the branch's 22 in 1 new file measured on `592b12e9e`), the same 9 red at import; hooks 603 in 10 files; build exit 0; check:docs 5/5; check:agents green; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso, smoke on 3001, 2026-10-11
+**Notes**: merge-tree zero conflicts, tree `6804b284d` equal to the merge's index tree. Union: none. Probes: 21 decision rows once, control R-GEN-17 absent at the merge; 80 headings once. check:docs counted 5/5, not the prompt's 4/4 (Check E). The lane's prompt P-2026-10-10-0810 still reads `Status: da eseguire`: the Status precondition was read on the prompts the branch adds (none), as in `72762297b`. Not flipped here.
+**Prompt document name**: 2026-10-11 00:34
