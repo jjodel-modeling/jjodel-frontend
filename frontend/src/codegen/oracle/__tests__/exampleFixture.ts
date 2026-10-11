@@ -107,16 +107,30 @@ class InProcessWorker implements RunnerWorker {
 /** `runInWorker` over the in-process worker: the runner's path of S4's tests. */
 export const inProcess = (request: RunRequest): Promise<RunResponse> => runInWorker(request, () => new InProcessWorker());
 
+/** The program's `$ID` table (R-GEN-17) read back, id to name: its declaration run on its own. Empty without one. */
+function idNames(code: string): Map<string, string> {
+    const start = code.indexOf('const $ID = Object.freeze({');
+    const end = start < 0 ? -1 : code.indexOf('\n});', start);
+    if (end < 0) return new Map();
+    // eslint-disable-next-line no-new-func
+    const table = new Function(`'use strict';\n${code.slice(start, end + 4)}\nreturn $ID;`)() as Record<string, string>;
+    return new Map(Object.entries(table).map(([name, id]) => [id, name]));
+}
+
 /**
  * The mutation of the README: in the entry of `transition`, the postset place `from` becomes `to`, the target of
- * the transition swapped. Throws when the text has no such place there, so a template change cannot void it.
+ * the transition swapped. The program names elements through its `$ID` table (R-GEN-17), so the entry is found by
+ * `id: $ID.<name of transition>` and the place by `place: $ID.<name of from>`, the names read from the table.
+ * Throws when the text has no such place there, so a template change cannot void it.
  */
 export function swapTarget(code: string, transition: string, from: string, to: string): string {
-    const at = code.indexOf(`id: '${transition}'`);
+    const names = idNames(code);
+    const ref = (id: string) => `$ID.${names.get(id) ?? id}`;
+    const at = code.indexOf(`id: ${ref(transition)},`);
     const post = at < 0 ? -1 : code.indexOf('postset: [', at);
     const end = post < 0 ? -1 : code.indexOf(']', post);
     const segment = end < 0 ? '' : code.slice(post, end);
-    const swapped = segment.replace(`"place":"${from}"`, `"place":"${to}"`);
+    const swapped = segment.replace(`place: ${ref(from)},`, `place: ${ref(to)},`);
     if (segment === '' || swapped === segment) throw new Error(`no postset place ${from} in the entry of ${transition}`);
     return code.slice(0, post) + swapped + code.slice(end);
 }

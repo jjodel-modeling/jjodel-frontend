@@ -16,16 +16,20 @@
  *     chunk is loaded) over the scenario stored on the model: it passes;
  *   - the program with the target of one transition swapped (the README's mutation): the oracle reports the step
  *     the fixture names, the transition, and generated text whose origin is that transition.
+ *   - the program names elements, not ids (R-GEN-17, P-2026-10-11-1052): its `$ID` table holds every object of the
+ *     app's model and the model itself once, and no id of the model (objects, slots, the model) appears outside it.
  *
  *   - «Run» returns `main()`'s trace (its timeout raised to 60000 ms: in dev the worker's first load counts, S4's ticket);
  *
- * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-10-2029/crops/: <example>_output.png (the top of the Output tab)
- * and <example>_transitions.png (scrolled to the transition table), with their sizes printed.
+ * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-10-2029/crops/ (CGO_CROPS overrides): <example>_output.png (the top
+ * of the Output tab), <example>_ids.png (scrolled to the `$ID` table) and <example>_transitions.png (scrolled to the
+ * transition table), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-oracle.ts \
  *         --port 3089 --id P-2026-10-10-2029
  * Env:  CGO_EXAMPLE  one example name (default: both)
  *       CGO_OUT      JSON output (default frontend/scripts/smoke/_tmp_codegen-oracle.json, gitignored)
+ *       CGO_CROPS    the crops' folder (default ~/.jjodel-lanes/P-2026-10-10-2029/crops)
  */
 import { chromium, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -35,7 +39,7 @@ import { seed } from '../smoke/states.ts';
 const URL = (process.env.PROBE_URL || 'http://localhost:3089/').replace(/\/$/, '');
 if (/:(3000|3001|3003)$/.test(URL)) throw new Error('never 3000, 3001 or 3003');
 const OUT = process.env.CGO_OUT || new globalThis.URL('../smoke/_tmp_codegen-oracle.json', import.meta.url).pathname;
-const CROPS = `${homedir()}/.jjodel-lanes/P-2026-10-10-2029/crops`;
+const CROPS = process.env.CGO_CROPS || `${homedir()}/.jjodel-lanes/P-2026-10-10-2029/crops`;
 const NAMES = process.env.CGO_EXAMPLE ? [process.env.CGO_EXAMPLE] : ['turnstile', 'petri-producer-consumer'];
 mkdirSync(CROPS, { recursive: true });
 
@@ -200,22 +204,44 @@ const PANE = (m1Id: string) => `(document.querySelector('[role="tabpanel"][aria-
 const CLICK = (expr: string) => String.raw`(() => { const el = ${expr}; if (!el) return { found: false }; el.click(); return { found: true }; })()`;
 const BOX = (expr: string) => String.raw`(() => { const el = ${expr}; if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`;
 
-/** The oracle through its hook; `swap` is the README's mutation, written in the page. */
+/**
+ * The oracle through its hook; `swap` is the README's mutation, written in the page over the program's `$ID` table
+ * (R-GEN-17): the entry found by `id: $ID.<name>`, the place by `place: $ID.<name>`, the names read from the table.
+ * Without a swap the generated text comes back too, for the scan of ids.
+ */
 const ORACLE = (m1Id: string, swap: { transition: string; from: string; to: string } | null) => String.raw`(async () => {
   const swap = ${JSON.stringify(swap)};
   const mutate = swap === null ? undefined : (code) => {
-    const at = code.indexOf("id: '" + swap.transition + "'");
+    const start = code.indexOf('const $ID = Object.freeze({');
+    const close = start < 0 ? -1 : code.indexOf('\n});', start);
+    const table = close < 0 ? {} : new Function(code.slice(start, close + 4) + '\nreturn $ID;')();
+    const names = new Map(Object.entries(table).map(([n, id]) => [id, n]));
+    const ref = (id) => '$ID.' + (names.has(id) ? names.get(id) : id);
+    const at = code.indexOf('id: ' + ref(swap.transition) + ',');
     const post = code.indexOf('postset: [', at);
     const end = code.indexOf(']', post);
     const segment = code.slice(post, end);
-    const swapped = segment.replace('"place":"' + swap.from + '"', '"place":"' + swap.to + '"');
+    const swapped = segment.replace('place: ' + ref(swap.from) + ',', 'place: ' + ref(swap.to) + ',');
     if (at < 0 || swapped === segment) throw new Error('mutation: no postset place ' + swap.from + ' in ' + swap.transition);
     return code.slice(0, post) + swapped + code.slice(end);
   };
   const r = await window.__jjodelOracle.run({ modelId: ${JSON.stringify(m1Id)}, timeoutMs: 60000, mutate });
   const { code, sim, gen, ...rest } = r;
-  return { ...rest, sim: (sim || []).map((s) => s.kind), gen: (gen || []).map((s) => s.kind), lines: typeof code === 'string' ? code.split('\n').length : 0 };
+  return { ...rest, sim: (sim || []).map((s) => s.kind), gen: (gen || []).map((s) => s.kind), lines: typeof code === 'string' ? code.split('\n').length : 0, ...(swap === null && typeof code === 'string' ? { code } : {}) };
 })()`;
+
+/** The ids of the app's model: the model, and every entry whose father chain reaches it, with its class. */
+const MODEL_IDS = (m1Id: string) => String.raw`(() => {
+  const lk = window.windoww.store.getState().idlookup;
+  const under = (id) => { let d = lk[id]; for (let i = 0; d && i < 40; i++) { if (d.id === ${JSON.stringify(m1Id)}) return true; d = lk[d.father]; } return false; };
+  return Object.keys(lk).filter((id) => lk[id] && typeof lk[id] === 'object' && under(id)).map((id) => ({ id, className: lk[id].className }));
+})()`;
+
+/** The occurrences of `id` in `text` as a whole token: an id that is a prefix of another (`_USER_4`, `_USER_48`) is not counted in it. */
+function occurrences(text: string, id: string): number {
+    const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return (text.match(new RegExp(`(?<![A-Za-z0-9_])${esc}(?![A-Za-z0-9_])`, 'g')) ?? []).length;
+}
 
 // ── Main ──────────────────────────────────────────────────────────────────────────────────────
 
@@ -294,15 +320,21 @@ for (const name of NAMES) {
         ['export function initial', 'export function step', 'export function observe', 'export function main'].every(e => out.exports.includes(e)), out.exports);
     const pBox = await page.evaluate(BOX(panel)) as any;
     if (pBox) await crop(page, `${name}_output.png`, pBox);
-    // The transition table, scrolled to the top of the code area: the part of the program the model shaped.
-    const scrolled = await page.evaluate(String.raw`(() => {
+    // A line of the program scrolled to the top of the code area.
+    const scrollTo = (text: string) => page.evaluate(String.raw`(() => {
       const p = ${panel};
       const pre = p.querySelector('.codegen-panel__code');
-      const line = [...p.querySelectorAll('.codegen-panel__line')].find((l) => l.textContent.includes('One entry per transition'));
+      const line = [...p.querySelectorAll('.codegen-panel__line')].find((l) => l.textContent.includes(${JSON.stringify(text)}));
       if (!pre || !line) return null;
       pre.scrollTop = line.offsetTop - pre.offsetTop;
       return { scrollTop: pre.scrollTop, line: line.getAttribute('data-line') };
     })()`);
+    // The table of element ids (R-GEN-17), then the transition table: the parts of the program the model shaped.
+    const idsAt = await scrollTo('const $ID = Object.freeze({');
+    check(`${name}: the $ID table is in the output`, !!idsAt, JSON.stringify(idsAt));
+    await wait(page, 300);
+    if (pBox) await crop(page, `${name}_ids.png`, pBox);
+    const scrolled = await scrollTo('One entry per transition');
     check(`${name}: the transition table is in the output`, !!scrolled, JSON.stringify(scrolled));
     await wait(page, 300);
     if (pBox) await crop(page, `${name}_transitions.png`, pBox);
@@ -325,9 +357,24 @@ for (const name of NAMES) {
     // The oracle, through the hook the panel's chunk installed.
     const hook = await poll(page, `!!(window.__jjodelOracle && window.__jjodelOracle.run)`, 30000);
     check(`${name}: the oracle hook is installed with the setting on`, !!hook, '');
-    const pass = await page.evaluate(ORACLE(m1, null)) as any;
+    const { code: program, ...pass } = await page.evaluate(ORACLE(m1, null)) as any;
     r.pass = pass;
     note(`${name}: oracle`, pass);
+    // R-GEN-17: every id of the app's model once, in the $ID block, and nowhere else.
+    const modelIds = await page.evaluate(MODEL_IDS(m1)) as Array<{ id: string; className: string }>;
+    const text = typeof program === 'string' ? program : '';
+    const blockStart = text.indexOf('const $ID = Object.freeze({');
+    const blockEnd = blockStart < 0 ? -1 : text.indexOf('\n});', blockStart) + 4;
+    const block = blockEnd > blockStart ? text.slice(blockStart, blockEnd) : '';
+    const outside = blockEnd > blockStart ? text.slice(0, blockStart) + text.slice(blockEnd) : text;
+    const named = modelIds.filter(x => x.className === 'DObject' || x.className === 'DModel');
+    const notOnce = named.filter(x => block.split(`'${x.id}'`).length - 1 !== 1).map(x => x.id);
+    const leaked = modelIds.filter(x => occurrences(outside, x.id) > 0).map(x => x.id);
+    r.ids = { model: modelIds.length, named: named.length, notOnce, leaked, declarations: text.split('const $ID = Object.freeze({').length - 1, refs: text.split('$ID.').length - 1 };
+    note(`${name}: ids`, r.ids);
+    check(`${name}: the program declares $ID once, with the model and every object of it once (${named.length})`,
+        r.ids.declarations === 1 && named.length > 5 && notOnce.length === 0, { notOnce: notOnce.slice(0, 5) });
+    check(`${name}: no id of the model outside the $ID block (${modelIds.length} ids scanned)`, modelIds.length > named.length && leaked.length === 0 && r.ids.refs > 10, { leaked: leaked.slice(0, 5) });
     check(`${name}: the oracle passes on the scenario «${ex.scenario.name}» (${ex.scenario.steps.length} steps)`,
         pass.ok === true && pass.gen.length === ex.scenario.steps.length + 1, JSON.stringify(pass).slice(0, 400));
     const m = ex.mutation;

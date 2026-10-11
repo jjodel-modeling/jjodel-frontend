@@ -11,6 +11,11 @@
  * `_3`, …, and answers both ways, so a generated name can always be traced to
  * the element it stands for (R-GEN-5's origin, read backwards).
  *
+ * `elementIdTable` names the elements of a generated program (R-GEN-17, P-2026-10-11-1052): every element id is
+ * written once, in one frozen table `const $ID = Object.freeze({ … })`, and everywhere else the program refers to
+ * an element as `$ID.<identifier>`. The values stay the id strings, so the program computes what it computed when
+ * it wrote the ids themselves.
+ *
  * Pure: no imports.
  */
 
@@ -96,4 +101,66 @@ export class JsIdentifierTable {
         return this.byIdentifier.has(identifier) || this.reserved.has(identifier)
             || JS_RESERVED_WORDS.has(identifier) || RUNTIME_NAMES.has(identifier);
     }
+}
+
+/** The table of element ids a generated program declares once (R-GEN-17). */
+export const ID_TABLE = '$ID';
+
+const STRING_ESCAPES: Readonly<Record<string, string>> = { '\\': '\\\\', "'": "\\'", '\n': '\\n', '\r': '\\r', '\u2028': '\\u2028', '\u2029': '\\u2029' };
+
+/** `s` as a JavaScript string literal in single quotes: backslash, quote and line terminators escaped. */
+export function jsString(s: string): string {
+    return `'${s.replace(/[\\'\n\r\u2028\u2029]/g, c => STRING_ESCAPES[c])}'`;
+}
+
+/** An element a generated program names: its id, its model name (a string with a letter or a digit counts), its metaclass. */
+export interface JsElement {
+    readonly id: string;
+    readonly name?: unknown;
+    readonly metaclass: string;
+}
+
+export interface JsIdTable {
+    /** The expression naming each element, `$ID.<identifier>`, by id. */
+    readonly refs: ReadonlyMap<string, string>;
+    /** `const $ID = Object.freeze({ … });`, one element per line in the order given. */
+    readonly declaration: string;
+    /** The identifiers, and the way back from each to its id. */
+    readonly identifiers: JsIdentifierTable;
+}
+
+/** A name a reader can use: once mangled, it still holds a letter or a digit. */
+function usableName(name: unknown): name is string {
+    return typeof name === 'string' && /[A-Za-z0-9]/.test(mangle(name));
+}
+
+/**
+ * The `$ID` table of `elements`, in the order given (model order): each element's identifier is its name through
+ * `mangle`, made unique by a `JsIdentifierTable` (`_2`, `_3`, … in that order); an element without a usable name is
+ * `<metaclass>_<n>`, n counting such elements of its metaclass from 1, mangled and made unique the same way. An id
+ * given twice keeps its first entry. Deterministic: the same elements in the same order give the same text.
+ */
+export function elementIdTable(elements: Iterable<JsElement>): JsIdTable {
+    const identifiers = new JsIdentifierTable();
+    const refs = new Map<string, string>();
+    const unnamed = new Map<string, number>();
+    const lines: string[] = [];
+    for (const e of elements) {
+        if (refs.has(e.id)) continue;
+        let name: string;
+        if (usableName(e.name)) {
+            name = e.name;
+        } else {
+            const n = (unnamed.get(e.metaclass) ?? 0) + 1;
+            unnamed.set(e.metaclass, n);
+            name = `${e.metaclass}_${n}`;
+        }
+        const identifier = identifiers.identifierOf(e.id, name);
+        refs.set(e.id, `${ID_TABLE}.${identifier}`);
+        lines.push(`  ${identifier}: ${jsString(e.id)},`);
+    }
+    const declaration = lines.length === 0
+        ? `const ${ID_TABLE} = Object.freeze({});`
+        : [`const ${ID_TABLE} = Object.freeze({`, ...lines, '});'].join('\n');
+    return { refs, declaration, identifiers };
 }

@@ -51,6 +51,12 @@
  * The differential test (`__tests__/printer.differential.test.ts`) runs the
  * printed code against the evaluator on random σ.
  *
+ * An element is printed as its id literal, or, when the context carries the
+ * program's `$ID` table (`refs`, R-GEN-17), as the expression the table names
+ * it by: `$E($ID.door)`, `$read(state, $ID.door, "a")`, and the same in
+ * `$tokens`, `$marked` and the writes of `$apply`. The value is the id either
+ * way, so the code computes the same.
+ *
  * Pure: JjEL and the simulator's pure core.
  */
 
@@ -79,6 +85,11 @@ export interface JsPrintContext {
     readonly places: ReadonlySet<string>;
     /** The declarations by element, for the locality of a target; without them it is not checked. */
     readonly declared?: CompiledNet['declared'];
+    /**
+     * The expression that names each element in the program, by id: `$ID.<identifier>` of the program's `$ID`
+     * table (identifiers.ts `elementIdTable`, R-GEN-17). Without it, or for an id it does not hold, the id literal.
+     */
+    readonly refs?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -263,6 +274,7 @@ const EVALUATOR = new JjelEvaluator();
 interface Walk {
     readonly out: JsRefusal[];
     readonly places: ReadonlySet<string>;
+    readonly refs?: ReadonlyMap<string, string>;
 }
 
 function refuse(w: Walk, code: JsRefusalCode, message: string, at?: { location?: ASTLocation }): void {
@@ -275,6 +287,11 @@ function q(s: string): string {
 
 function fail(message: string): string {
     return `$fail(${q(message)})`;
+}
+
+/** An element in the printed code: its name in the `$ID` table, else its id literal. */
+function ref(refs: ReadonlyMap<string, string> | undefined, id: string): string {
+    return refs?.get(id) ?? q(id);
 }
 
 function messageOf(error: unknown): string {
@@ -316,16 +333,16 @@ function numberLiteral(n: number): string {
 }
 
 /** A value of M as a JavaScript constant; `null` when it has no form (a metaclass, a function, an object). */
-function constant(v: JjelValue): string | null {
+function constant(v: JjelValue, refs?: ReadonlyMap<string, string>): string | null {
     if (v === null) return 'null';
     if (typeof v === 'boolean') return String(v);
     if (typeof v === 'string') return q(v);
     if (typeof v === 'number') return numberLiteral(v);
     if (Array.isArray(v)) {
-        const parts = v.map(constant);
+        const parts = v.map(x => constant(x, refs));
         return parts.includes(null) ? null : `[${parts.join(', ')}]`;
     }
-    if (isElement(v)) return `$E(${q((v as any).id)})`;
+    if (isElement(v)) return `$E(${ref(refs, (v as any).id)})`;
     return null;
 }
 
@@ -351,7 +368,7 @@ function foldValue(w: Walk, e: JjelExpression, scope: EvaluationContext): Folded
 function fold(w: Walk, e: JjelExpression, scope: EvaluationContext): string {
     const v = foldValue(w, e, scope);
     if (!v.ok) return v.code;
-    const c = constant(v.value);
+    const c = constant(v.value, w.refs);
     if (c === null) {
         refuse(w, 'P-CONST', `This value of the model is ${describeType(v.value)} without an id: it has no form in the generated code.`, e);
         return 'null';
@@ -376,9 +393,9 @@ function stateRead(w: Walk, e: StateAccessExpr, scope: EvaluationContext): strin
     const id: string = (v as any).id;
     if (attr === MARKED || attr === TOKENS) {
         if (!w.places.has(id)) return fail(`'${attr}' is not a state attribute of ${(v as any).name ?? id}`);
-        return `${attr === MARKED ? '$marked' : '$tokens'}(state, ${q(id)})`;
+        return `${attr === MARKED ? '$marked' : '$tokens'}(state, ${ref(w.refs, id)})`;
     }
-    return `$read(state, ${q(id)}, ${q(attr)})`;
+    return `$read(state, ${ref(w.refs, id)}, ${q(attr)})`;
 }
 
 /** `exists x in coll | p` over a collection of M: a disjunction that stops at the first true, as the evaluator's loop. */
@@ -439,7 +456,7 @@ function print(w: Walk, e: JjelExpression, scope: EvaluationContext): string {
 
     switch (e.type) {
         case 'Literal':
-            return constant(e.value) ?? 'null';
+            return constant(e.value, w.refs) ?? 'null';
         case 'Identifier':
             // The one name that depends on the step: the event, as an element.
             return '$E(event)';
@@ -507,7 +524,7 @@ export function printGuard(expr: JjelExpression, ctx: JsPrintContext): JsPrintRe
     if (out.length > 0) return { ok: false, refusals: out };
     const scope = siteScope(ctx);
     if (scope === null) return noSite(ctx);
-    const code = print({ out, places: ctx.places }, expr, scope);
+    const code = print({ out, places: ctx.places, refs: ctx.refs }, expr, scope);
     return out.length > 0 ? { ok: false, refusals: out } : { ok: true, code };
 }
 
@@ -522,7 +539,7 @@ export function printActions(actions: readonly JjelAction[], ctx: JsPrintContext
     const scope = siteScope(ctx);
     if (scope === null) return noSite(ctx);
     const out: JsRefusal[] = [];
-    const w: Walk = { out, places: ctx.places };
+    const w: Walk = { out, places: ctx.places, refs: ctx.refs };
     const lines: string[] = [];
     const writes: string[] = [];
 
@@ -549,7 +566,7 @@ export function printActions(actions: readonly JjelAction[], ctx: JsPrintContext
         subsetRefusals(value, out);
         if (out.length > before) return;
         lines.push(`const $v${i} = $value(${print(w, value, scope)});`);
-        if (element !== null) writes.push(`[${q(element)}, ${q(attr)}, $v${i}]`);
+        if (element !== null) writes.push(`[${ref(ctx.refs, element)}, ${q(attr)}, $v${i}]`);
     });
 
     if (out.length > 0) return { ok: false, refusals: out };
