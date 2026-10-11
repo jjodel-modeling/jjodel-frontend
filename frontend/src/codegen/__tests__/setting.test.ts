@@ -8,6 +8,9 @@
  * replaced by a recorder, so the subscription it hands React is the one called here. The browser side, a checkbox
  * toggled in Settings that mounts the pill without a reload, is the probe's (scripts/probe/codegen-panel.ts).
  * Mutations each test kills are in its name; the bench is in the commit body.
+ *
+ * The build flag (P-2026-10-12-0012): every test but the last describe runs a build that carries it,
+ * `vi.stubEnv('VITE_CODEGEN', 'true')`; the last runs one that does not, as 3.1 and vitest do by default.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -39,9 +42,11 @@ beforeEach(() => {
     win = new EventTarget();
     vi.stubGlobal('window', win);
     vi.stubGlobal('localStorage', fakeStorage());
+    vi.stubEnv('VITE_CODEGEN', 'true');
 });
 
 afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.doUnmock('react');
     vi.resetModules();
@@ -179,5 +184,20 @@ describe('codePillVisible', () => {
         expect(codePillVisible(true, false, lookup({ genTemplates: '' }), 'M', true)).toBe(false);
         expect(codePillVisible(true, false, lookup(STORED), 'LOOSE', true)).toBe(false);
         expect(codePillVisible(true, false, lookup(STORED), 'MISSING', true)).toBe(false);
+    });
+});
+
+describe('a build without the flag (kills: flag ignored; flag read once at import; any non-empty value read as on)', () => {
+    const Probe = () => React.createElement('span', null, String(useCodegenEnabled()));
+
+    it('reads the setting off with the key on, the flag unset or anything but "true"', () => {
+        localStorage.setItem(CODEGEN_SETTING_KEY, 'true');
+        for (const flag of [undefined, 'false', '1', 'TRUE']) {
+            vi.stubEnv('VITE_CODEGEN', flag);
+            expect(getCodegenEnabled()).toBe(false);
+            expect(renderToStaticMarkup(React.createElement(Probe))).toBe('<span>false</span>');
+        }
+        vi.stubEnv('VITE_CODEGEN', 'true');
+        expect(getCodegenEnabled()).toBe(true);
     });
 });
