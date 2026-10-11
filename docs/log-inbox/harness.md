@@ -984,3 +984,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-11 17:25
 
 **Ticket** (priority medium, seen here, not fixed: out of this lane's scope). `docs/research/cain-2027/scripts/governance-dataset.ts` reads R-SIM-80..82 as `unmarked` (its section rule misses «Alfonso ha ratificato»), joins R-SIM-87/88 across a reused id, and dates a header repaired on a branch at the next trunk commit (`:358-362` before `:369`); the RQ tables correct the last through `scripts/detection-evidence.json`. Detail: `discovery_2026-10-11_rq_tables.md` §5.3.
+
+## 2026-10-11 — feat(harness): softgoal balance and cluster matrix (P-2026-10-11-1735)
+**Prompt**: `claude_2026-10-11_1735_prompt_softgoal_balance_view.md`, lane full, unattended: req-trace `joinGoals` returns `tree`, `correlations` and `balance`; the Requirements tab replaces the pair tables per softgoal with the softgoal balance bars, the clusters by macro goal matrix and the side effects group; README; tests first with a mutation bench; board on 4702 for the chat's RC-23 check.
+**Files touched**: `frontend/scripts/req-trace.mjs`, `frontend/scripts/lane-board/requirements.js`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts` (`21c2a3197`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Five suites 139/139; check:scripts and check:docs exit 0; node --check on both scripts.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passed, chat RC-23 on 4702 at 1400 px (bars under the five macro goals, one scale, hurt chips, segment click opens the list, matrix and side effects group, no em dash, no page scroll at 1400 px; 135 px of page scroll at 800 px), /api/requirements 0 errors, the tab rendered on a stub DOM: 706 KB, 0 em dashes, 18 ms
+**Notes**: Tests first: 17 red on 03111e3ca. Bench 24/24 killed, control 54/54. Unattended (RC-21): the conflicts come last, after the side effects; their note's clause on the rest now points at the balance, so the conflict test's one expected string changed; a row helping and hurting one macro goal counts on both sides of a cell (32 live). Replaced the two per-softgoal pair tests, updated the fixed-widths count. `rm -rf` denied: /tmp/sgb-control and /tmp/sgb-bench-tools remain.
+**Prompt document name**: 2026-10-11 17:35
