@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-11-1716
 Chat: —
 Lane: full (merge of the trunk into the branch; 1 conflict: `frontend/src/components/editor-v2/hooks/useEditorMode.ts` measured)
-Status: da eseguire
+Status: eseguito 2026-10-11 · merge alfonso-frontend-jjtl into new-model-instantiate · f1b0e485b · flip 2026-10-11 dalla chat
 
 Worktree: `/Users/alfonso/jjodel-w-newinst`, branch `new-model-instantiate`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-newinst`, branch `new-model-instantiate`, `git log -1` is the commit that adds this file (its parent `91a5f2e31`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-11-1716 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
