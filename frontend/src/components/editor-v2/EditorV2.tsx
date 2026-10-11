@@ -40,7 +40,7 @@ import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnch
 import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
 import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView, resolveIRView } from './viewpoint/ir/irResolveCore';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
-import { descendantsOf } from './viewpoint/ir/irContainment';
+import { descendantsOf, setDragPointer } from './viewpoint/ir/irContainment';
 import {
     compositionSlotFor, containedInSlot, createOwnerSlotOf, isRootFathered, nextValues, ownerSlotForNewObject, planDrop,
     resolveDropTarget, slotAccepts, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
@@ -4186,6 +4186,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     /** Where each node stood when its drag began (snap back, container delta); cleared at its drag end. */
     const gvDragStartRef = useRef(new Map<string, { x: number; y: number }>());
 
+    /** The cursor of a node drag, in flow coordinates, for the follow test of the presentation pass (R-GV-17: a frame
+     *  follows its child while the pointer stays within a band of the box it had before the drag). */
+    const handleNodeDragPointer = useCallback((event: React.MouseEvent) => {
+        setDragPointer(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    }, [screenToFlowPosition]);
+    const handleNodeDragPointerEnd = useCallback(() => setDragPointer(null), []);
+
     /**
      * What a single-node drag end does under the graphVertex rules; null = today's behaviour. A lane under a
      * `partitions` container goes back (its place is computed, R-GV-6); a container that declares a layout carries its
@@ -4724,6 +4731,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 nodes={flowElements.nodes}
                 edges={flowElements.edges}
                 onNodesChange={handleNodesChange}
+                onNodeDrag={handleNodeDragPointer}
+                onNodeDragStop={handleNodeDragPointerEnd}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onConnectEnd={onConnectEnd}

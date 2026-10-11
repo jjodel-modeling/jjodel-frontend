@@ -584,6 +584,18 @@ export const PARTITION_NEXT_CLASS = { vertical: 'ir-partition-next-v', horizonta
 export const PARTITION_DASHED_CLASS = { vertical: 'ir-partition-sep-dashed-v', horizontal: 'ir-partition-sep-dashed-h' } as const;
 const PARTITION_CLASSES = new Set<string>([...Object.values(PARTITION_NEXT_CLASS), ...Object.values(PARTITION_DASHED_CLASS)]);
 
+/** How far past the box a container had before a drag the pointer may go and the container still follow the dragged
+ *  child, px on every side (R-GV-17, P-2026-10-11-1156): within it the frame grows to hold the whole child. */
+export const FOLLOW_BAND = 32;
+
+/** The pointer of the node drag in progress, flow coordinates; null when no drag reports one. */
+let dragPointer: { x: number; y: number } | null = null;
+/** Set by the canvas on every move of a node drag (React Flow `onNodeDrag`), cleared at its end (`onNodeDragStop`):
+ *  the follow test of `applyContainerLayout` reads where the cursor is, which no node carries. */
+export function setDragPointer(p: { x: number; y: number } | null): void {
+    dragPointer = p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null;
+}
+
 type Box = { x: number; y: number; w: number; h: number };
 const sizeOf = (n: Node): { w: number; h: number } => ({
     w: (n.measured?.width ?? n.width ?? 160) as number,
@@ -656,9 +668,11 @@ export function applyContainerLayout(
         });
 
     // While a node is dragged (R-GV-17), the pass runs twice: once at rest (every dragged node at its record, nothing
-    // carried), for the boxes the containers had before the gesture; then live. A dragged node whose centre has left the
-    // box its container had at rest is pinned: that container, and the ones around it, count it where it rests, so the
-    // frame does not chase a child the pointer has taken out (the drop then follows the membership, S3).
+    // carried), for the boxes the containers had before the gesture; then live. A dragged node whose pointer (the cursor,
+    // `setDragPointer`; its centre when none is known) has left the box its container had at rest, grown by FOLLOW_BAND on
+    // every side, is pinned: that container, and the ones around it, count it where it rests, so the frame does not chase
+    // a child the pointer has taken out (the drop then follows the membership, S3). Within the band the frame contains
+    // the whole child. The test is against the box at rest, never the growing one: no runaway.
     let patch: Map<string, Partial<Box> & { z?: number; cls?: string }>;
     if (!nodes.some(n => n.dragging)) {
         patch = layoutPass(null, new Map()).patch;
@@ -673,9 +687,9 @@ export function applyContainerLayout(
             const own = o !== undefined ? rest.boxOf(o) : null;
             if (!pb || !own || !model.containers.get(parent!)?.layout) continue;
             const s = sizeOf(n);
-            const cx = n.position.x + s.w / 2;
-            const cy = n.position.y + s.h / 2;
-            if (cx < pb.x || cx > pb.x + pb.w || cy < pb.y || cy > pb.y + pb.h) pinned.set(o!, own);
+            const at = dragPointer ?? { x: n.position.x + s.w / 2, y: n.position.y + s.h / 2 };
+            const b = FOLLOW_BAND;
+            if (at.x < pb.x - b || at.x > pb.x + pb.w + b || at.y < pb.y - b || at.y > pb.y + pb.h + b) pinned.set(o!, own);
         }
         patch = layoutPass(rest.boxOf, pinned).patch;
     }

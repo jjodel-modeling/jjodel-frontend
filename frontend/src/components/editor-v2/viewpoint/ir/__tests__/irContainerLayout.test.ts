@@ -3,12 +3,15 @@
  * React Flow nodes in absolute coordinates, z-order of layout containers, and channel-edge suppression. Pure: the
  * containment model, the D-layer vertex records and the nodes are literals.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { Edge, Node } from '@xyflow/react';
 import {
-    applyContainerLayout, LAYOUT_CONTAINER_Z, PARTITION_CONTENT_MARGIN, PARTITION_DASHED_CLASS, PARTITION_NEXT_CLASS, SELECTED_NODE_LIFT,
-    suppressChannelEdges, type ContainmentModel,
+    applyContainerLayout, FOLLOW_BAND, LAYOUT_CONTAINER_Z, PARTITION_CONTENT_MARGIN, PARTITION_DASHED_CLASS, PARTITION_NEXT_CLASS, SELECTED_NODE_LIFT,
+    setDragPointer, suppressChannelEdges, type ContainmentModel,
 } from '../irContainment';
+
+// The drag pointer is module state (P11): no test inherits another's.
+beforeEach(() => setDragPointer(null));
 import type { CompiledContainmentLayout } from '../irTypes';
 
 const partitions = (header: CompiledContainmentLayout['header'] = { side: 'w', size: 30 }): CompiledContainmentLayout =>
@@ -576,5 +579,63 @@ describe('applyContainerLayout: the frame follows a child on four sides (R-GV-17
         expect(pick(out, 'Vt1')).toMatchObject({ x: 130, y: 160 });
         // Its record moves with it: the far border of its size set by hand too (1000 + 10).
         expect(pick(out, 'Vshop')).toMatchObject({ x: 54, w: 1010 - 54 });
+    });
+});
+
+/**
+ * P-2026-10-11-1156, after Alfonso's visual check of 15:58: the follow test reads the pointer (the cursor), not the
+ * node's centre, against the box the container had before the drag grown by FOLLOW_BAND. A child mostly past the old
+ * border with the pointer in the band is followed whole; a pointer past the band lets it go; the band is measured on
+ * the box at rest, never on the growing one.
+ */
+describe('applyContainerLayout: the pointer within a band of the box at rest (R-GV-17)', () => {
+    const drag = (id: string, x: number, y: number) => ({ [id]: { position: { x, y }, dragging: true } });
+    it('left: t1 mostly left of Sales, the pointer 20 px past its border: Shop holds it whole', () => {
+        setDragPointer({ x: 130 - 20, y: 190 });
+        const { model, idlookup, nodes } = world({ nodes: drag('Vt1', 40, 160) });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        // t1 40..180: Sales's content starts a margin and a band before it.
+        expect(pick(out, 'Vsales')).toMatchObject({ x: 40 - PARTITION_CONTENT_MARGIN - 30 });
+        expect(pick(out, 'Vshop')).toMatchObject({ x: 40 - PARTITION_CONTENT_MARGIN - 60, w: 1000 - (40 - PARTITION_CONTENT_MARGIN - 60) });
+    });
+    it('top: t1 mostly above Sales, the pointer in the band: the origin moves up to hold it', () => {
+        setDragPointer({ x: 370, y: 100 - 20 });
+        const { model, idlookup, nodes } = world({ nodes: drag('Vt1', 300, 50) });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vshop')).toMatchObject({ y: 50 - PARTITION_CONTENT_MARGIN, h: 460 - (50 - PARTITION_CONTENT_MARGIN) });
+    });
+    it('right: t1 mostly right of Sales, the pointer in the band: Shop grows past its size set by hand', () => {
+        setDragPointer({ x: 1000 + 20, y: 190 });
+        const { model, idlookup, nodes } = world({ nodes: drag('Vt1', 950, 160) });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vshop')).toMatchObject({ x: 100, w: 950 + 140 + PARTITION_CONTENT_MARGIN - 100 });
+    });
+    it('bottom: t2 mostly below Warehouse, the pointer in the band: the last lane and the pool grow down', () => {
+        setDragPointer({ x: 370, y: 460 + 20 });
+        const { model, idlookup, nodes } = world({ nodes: drag('Vt2', 300, 430) });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ y: 280, h: 430 + 60 + PARTITION_CONTENT_MARGIN - 280 });
+        expect(pick(out, 'Vshop')).toMatchObject({ y: 100, h: 430 + 60 + PARTITION_CONTENT_MARGIN - 100 });
+    });
+    it('the pointer past the band: the frame keeps its box at rest, though the grown box would hold the pointer', () => {
+        setDragPointer({ x: 130 - FOLLOW_BAND - 8, y: 190 });
+        const { model, idlookup, nodes } = world({ nodes: drag('Vt1', 40, 160) });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vshop')).toMatchObject({ x: 100, y: 100, w: 900, h: 360 });
+        expect(pick(out, 'Vsales')).toMatchObject({ x: 130 });
+    });
+    it('the pointer decides, not the centre: a centre outside with the pointer inside is followed, and the reverse is not', () => {
+        setDragPointer({ x: 140, y: 190 });
+        const kept = world({ nodes: drag('Vt1', 20, 160) });   // centre 90, 40 px left of Sales: past the band
+        expect(pick(applyContainerLayout(kept.nodes, kept.model, kept.idlookup, null, new Set()), 'Vshop').x).toBe(20 - PARTITION_CONTENT_MARGIN - 60);
+        setDragPointer({ x: 130 - FOLLOW_BAND - 8, y: 190 });
+        const left = world({ nodes: drag('Vt1', 120, 160) });  // centre 190, inside Sales
+        expect(pick(applyContainerLayout(left.nodes, left.model, left.idlookup, null, new Set()), 'Vshop').x).toBe(100);
+    });
+    it('a self frame: Fetch mostly left of Running, the pointer in the band: Running holds it whole', () => {
+        setDragPointer({ x: 204 - 20, y: 310 });
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vf: { position: { x: 100, y: 280 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Vrun')).toMatchObject({ x: 100 - 16 });
     });
 });
