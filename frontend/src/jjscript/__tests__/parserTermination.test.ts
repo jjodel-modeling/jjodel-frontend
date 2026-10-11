@@ -85,6 +85,81 @@ describe.each(MODES)('Parser termination (%s)', (_mode, strict) => {
         });
     }, CASE_TIMEOUT_MS);
 
+    // Pinned as measured on the base commit e47e456b1: an explicitly empty block is an empty block.
+    it('"do end" returns an empty block, unchanged', () => {
+        const r = boundedParse('do end', strict);
+        expect(r.success).toBe(true);
+        expect(r.ast).toEqual({
+            type: 'Command', command: 'block',
+            args: { command: 'block', commands: [] },
+            position: { line: 1, column: 1 },
+        });
+    }, CASE_TIMEOUT_MS);
+
+    // Inside a block the eval body stops before the bare `end` that closes it: on the base
+    // `parseEvalCommand` read to the end of the line and swallowed the block's `end`.
+    it.each([
+        ['do eval x.name end', 'x.name'],
+        // A string literal is one token: its `end` stays inside it. The quotes are not kept,
+        // as for a top-level `eval "a end b"`.
+        ['do eval "a end b" end', 'a end b'],
+        // An identifier that starts with `end` is not the terminator.
+        ['do eval endDate end', 'endDate'],
+    ])('%j parses to a block of one eval that stops before end', (input, expression) => {
+        const r = boundedParse(input, strict);
+        expect(r.success).toBe(true);
+        expect(r.ast).toEqual({
+            type: 'Command', command: 'block',
+            args: {
+                command: 'block',
+                commands: [{
+                    type: 'Command', command: 'eval',
+                    args: { command: 'eval', expression },
+                    position: { line: 1, column: 4 },
+                }],
+            },
+            position: { line: 1, column: 1 },
+        });
+    }, CASE_TIMEOUT_MS);
+
+    it('an eval in a forall...do...end body stops before end', () => {
+        const r = boundedParse('forall c in classes do eval c.name end', strict);
+        expect(r.success).toBe(true);
+        expect(r.ast).toEqual({
+            type: 'Command', command: 'forall',
+            args: {
+                command: 'forall', variable: 'c', collectionExpr: 'classes',
+                body: {
+                    type: 'Command', command: 'eval',
+                    args: { command: 'eval', expression: 'c.name' },
+                    position: { line: 1, column: 24 },
+                },
+            },
+            position: { line: 1, column: 1 },
+        });
+    }, CASE_TIMEOUT_MS);
+
+    // Outside a block `end` is not a terminator: the top-level eval keeps reading, as on the base.
+    it('a top-level eval still reads to the end of the line', () => {
+        const r = boundedParse('eval x.name end', strict);
+        expect(r.success).toBe(true);
+        expect(r.ast).toEqual({
+            type: 'Command', command: 'eval',
+            args: { command: 'eval', expression: 'x.name end' },
+            position: { line: 1, column: 1 },
+        });
+    }, CASE_TIMEOUT_MS);
+
+    // The no-progress error names the block kind that is open, not always `do`.
+    it.each([
+        ['let $x = 1 in x.name end', "Unexpected 'x.name' in let block", { line: 1, column: 15 }],
+        ['forall c in classes do c.name end', "Unexpected 'c.name' in forall block", { line: 1, column: 24 }],
+    ])('%j names its own opener in the no-progress error', (input, message, position) => {
+        const r = boundedParse(input, strict);
+        expect(r.success).toBe(false);
+        expect(r.errors).toEqual([{ message, position }]);
+    }, CASE_TIMEOUT_MS);
+
     it('"do create class A end" parses to the AST of the base commit', () => {
         const r = boundedParse('do create class A end', strict);
         expect(r.success).toBe(true);
