@@ -733,3 +733,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato: chat RC-23 on 4702 (PID 8351, then stopped): 7 days 12 px columns, 21 rows; 30 days widened to 36 px, 24 rows; squares placed by start day (checked per day against their Prompt-IDs), marker lines readable against them, weekly rates and week labels kept
 **Notes**: Tallest stack, today's data: 7 days 21 rows, All 27, both at 12 px; 30 days 44 rows at 12 px, widened to 36 px (3 across) for 24 rows, the only range widened. A widened column holds k squares across, rows centred: one square per row in a wider column could never shorten a stack. New tests on the base commit 6/6 red, here 6/6 green; bench 15/15 killed (body of 3f5e33827).
 **Prompt document name**: 2026-10-11 11:38
+
+## 2026-10-11 — merge: firstshot-time-axis into alfonso-frontend-jjtl (P-2026-10-11-1152)
+**Prompt**: `claude_2026-10-11_1152_prompt_merge_firstshot-time-axis.md`, a direct merge by `lane-run merge --direct`, no session: `firstshot-time-axis` at `7d7ba62e5` into `alfonso-frontend-jjtl`, merge base `ef42d3596`, 3 commits on the branch side.
+**Files touched**: merge `899d5aa07`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-11_1138_prompt_firstshot_time_axis.md`, `frontend/scripts/hooks/__tests__/laneBoardInsights.test.ts`, `frontend/scripts/lane-board/insights.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `899d5aa07` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8536 tests in 353 files, 9 red at import, hooks 653; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702, squares at their start time, 7 days 21 rows at 12 px, 30 days widened to 36 px and 24 rows, marker lines readable
+**Notes**: Rollback tag `pre-firstshot-time-axis` on `cbbc1a204` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1152/result.json`.
+**Prompt document name**: 2026-10-11 11:52
