@@ -847,3 +847,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-11 15:10
 
 **Ticket** (P-2026-10-11-1510): `parseRegister` in `req-trace.mjs` ends a row at an inner `**` paragraph or `- ` sub-bullet, so 21 clustered rows lose their tail, closures included (R-STR-6, R-STR-7 «Sciolta»); a reader of req-trace's row text misses them. Found by comparing each row with the lines up to the next row start.
+
+## 2026-10-11 — merge: cluster-descriptions into alfonso-frontend-jjtl (P-2026-10-11-1535)
+**Prompt**: `claude_2026-10-11_1535_prompt_merge_cluster-descriptions.md`, a direct merge by `lane-run merge --direct`, no session: `cluster-descriptions` at `e657a479a` into `alfonso-frontend-jjtl`, merge base `d4b8a6b09`, 4 commits on the branch side.
+**Files touched**: merge `ee5c07c2f`: 8 files from the branch side (`docs/goals/README.md`, `docs/goals/cluster-descriptions.json`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-11_1510_prompt_cluster_descriptions.md`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/lane-board/requirements.js`, `frontend/scripts/req-trace.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ee5c07c2f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8620 tests in 356 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702, one-line description under each of the 17 cluster titles, full text when opened, no em dash; descriptions approved by Alfonso
+**Notes**: Rollback tag `pre-cluster-descriptions` on `8a22140d9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1535/result.json`.
+**Prompt document name**: 2026-10-11 15:35
