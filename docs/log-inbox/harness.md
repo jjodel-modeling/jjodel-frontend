@@ -969,3 +969,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs-only merge (research tables), no visual change
 **Notes**: Rollback tag `pre-cain-rq` on `f2c27cd5a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1846/result.json`.
 **Prompt document name**: 2026-10-11 18:46
+
+## 2026-10-11 — docs(research): RQ tables, RC-26 review sheet and replication package for CAIN 2027 (P-2026-10-11-1725)
+**Prompt**: `claude_2026-10-11_1725_prompt_cain_full_paper_rq_tables_package.md`: on the 1630 dataset, the RQ1 table by check position, the period confound, the RQ2 table of the judgment rules, the RQ3 table of detection and repair, the RC-26 review sheet with its apply script, threats as material, the anonymized replication package with its anonymity check, and the archive of the lane folders.
+**Files touched**: 29 files under `docs/research/cain-2027/` (`67f9ecfce`): `discovery_2026-10-11_rq_tables.md`, `threats.md`, `review/rc26_review.md`, `data/rq1_check_position.csv`, `data/rq2_judgment.csv`, `data/rq3_detection_repair.csv`, `data/rc26_reviewed.csv`, `scripts/rq_common.ts`, `scripts/rq1_check_position.ts`, `scripts/rq2_rq3_tables.ts`, `scripts/rc26_review_sheet.ts`, `scripts/rc26_apply_review.ts`, `scripts/anon_common.ts`, `scripts/build_replication.ts`, `scripts/check_anonymity.ts`, `scripts/detection-evidence.json`, `replication/README.md` and 12 CSVs in `replication/`; outside the repo `~/jjodel-cain-archive/lanes_2026-10-11.tar.gz` and `~/.jjodel-cain-key`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: RQ1: hook path 0.037 vs chat 0.547 (Model:), ordered at the ends, not monotone between warning, report and no check. RQ2: RC-26 crossings 34 by marker, 24 without delegation, 13 without any prior act of Alfonso; 22 of 34 flagged at the time. RQ3: 133 of 138 repairs in c6804f3d3, 11.5 days of silent generator failure. Replication check 0 hits. Prompt subject (83 chars) shortened to 68. RC-26 numbers wait for the review sheet. Report §0.
+**Prompt document name**: 2026-10-11 17:25
+
+**Ticket** (priority medium, seen here, not fixed: out of this lane's scope). `docs/research/cain-2027/scripts/governance-dataset.ts` reads R-SIM-80..82 as `unmarked` (its section rule misses «Alfonso ha ratificato»), joins R-SIM-87/88 across a reused id, and dates a header repaired on a branch at the next trunk commit (`:358-362` before `:369`); the RQ tables correct the last through `scripts/detection-evidence.json`. Detail: `discovery_2026-10-11_rq_tables.md` §5.3.
