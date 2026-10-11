@@ -166,6 +166,17 @@ describe('useEditorMode: a superclass link written on a mounted tab', () => {
         expect(compatible(info, 'Terminal', 'Initial')).toEqual(['substates']);
     });
 
+    // Same number of superclasses before and after: kills a signature that counts the links instead of naming them.
+    it('a class re-parented from one superclass to another: the next render carries the new superclass\'s references', () => {
+        addClass('Pseudo');
+        addClass('Initial', [], ['Pseudo']);
+        expect(refNames(render(), 'Initial')).toEqual([]);
+        write({ Initial: { extends: ['State'] } });
+        const info = render();
+        expect(refNames(info, 'Initial')).toEqual(['outgoing', 'substates']);
+        expect(subNames(info, 'State')).toEqual(['Initial']);
+    });
+
     it('the link removed: the next render drops the inherited references again', () => {
         addClass('Initial', [], ['State']);
         expect(refNames(render(), 'Initial')).toEqual(['outgoing', 'substates']);
