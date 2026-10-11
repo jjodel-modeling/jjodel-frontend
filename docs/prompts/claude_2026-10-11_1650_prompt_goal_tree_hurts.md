@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Front: harness
 Lane: full (data and docs only: docs/goals/ files, the goals README, one discovery report)
 Depends: P-2026-10-11-1510
-Status: da eseguire
+Status: eseguito
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

@@ -928,3 +928,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: data-only merge of docs/goals; Requirements tab checked on 4702 (12 softgoals, 13 conflicts, no em dash)
 **Notes**: Rollback tag `pre-goal-tree` on `58a407501` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1808/result.json`.
 **Prompt document name**: 2026-10-11 18:08
+
+## 2026-10-11 — docs(goals): goal tree, new softgoals, correlations and hurts (P-2026-10-11-1650)
+**Prompt**: `claude_2026-10-11_1650_prompt_goal_tree_hurts.md`, lane full (data and docs only), unattended: SG-8..SG-12 under five macro goals in `goal-tree.json`, contributions for the new softgoals, the cost pass for hurts over every positive row, `correlations.json`, RC-27 on every added entry and on a 40-entry sample of the first draft, README, report, board on 4702.
+**Files touched**: `041cd2d47`: `docs/goals/softgoals.json`, `docs/goals/contributions.json`, `docs/goals/conflicts.json`, `docs/goals/goal-tree.json` (new), `docs/goals/correlations.json` (new), `docs/goals/README.md`, `docs/discovery/discovery_2026-10-11_goal_tree_hurts.md` (new); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Step 9 gate exit 0 (negative control exit 1, 5 of 5 faults caught); `req-trace --no-cache` exit 0; reqTrace and laneBoardRequirements 41/41; check:docs 5/5.
+**Out-of-scope changes**: no: seven files in one commit, above five (RC-11), each named in the prompt; step 10 says four JSON files, they are five because `conflicts.json` (step 4) changed too.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile in this lane (data and docs); the chat's RC-23 check of the Requirements tab on 4702 passed on 2026-10-11 (12 softgoals in the filter, 13 conflicts, no em dash, render about 130 ms; 2.6 MB of pair tables, addressed by P-2026-10-11-1735).
+**Notes**: SG-8..SG-12 all kept (35 to 183 rows). Negative share 8% to 19%, first 12 hurt. RC-27, 677 items: contributions 515/35/21, correlations 25/28/11, conflicts 2/0/0, sample 32/5/3 (80% as written; the 3 rejected are SG-3 «scenes unchanged»). 27 negatives not recordable, one entry per pair (report §4). req-trace opposing pairs 612 to 6569 (Q1). Cache /tmp/lane-board-4702-timeline-cache.json; scratch /tmp/gt1650/.
+**Prompt document name**: 2026-10-11 16:50
+
+**Ticket** (P-2026-10-11-1650): `parseRegister` in `req-trace.mjs` does not parse R-D, R-2/3.6 and R-B12, which the goal-model parser and the contract check accept, so 7 entries of `contributions.json` never reach the Requirements tab (998 in the file, 991 on rows).
