@@ -174,6 +174,7 @@ export {
     navFor,
     rendersInline,
     rootOf,
+    survivorOf,
     truncateTo,
 } from './nav';
 

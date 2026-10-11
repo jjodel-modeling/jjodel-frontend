@@ -29,8 +29,9 @@
  * `permissionOf(classId)` is the profile's per-type rule (`resolveTypePermission`),
  * applied to every instance this panel shows or offers, including the ones reached by
  * navigating: `read` → the form takes no input (the soft gate of D1) and nothing is
- * created or deleted from it; `hidden` → the element is listed but does not open.
- * Absent (the Data Manager), everything is `edit`.
+ * created or deleted from it; `hidden` → the element is not shown, nor is a reference or
+ * child slot typed by its class (step B; the form gets the same rule as `IRForm`'s
+ * `permissionOf`). Absent (the Data Manager), everything is `edit`.
  */
 
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
@@ -53,6 +54,7 @@ import {
     navFor,
     newInstanceReason,
     rendersInline,
+    survivorOf,
     truncateTo,
 } from '../../../jjform';
 import { DATA_MANAGER_VIEWPOINT_ID } from '../../../joiner';
@@ -108,9 +110,10 @@ type RefSlot = {
  * child's own form, so it drops the band (rule and padding) that separates the
  * subject's section from the fields above it.
  *
- * `isHidden` (#157): a target of a type the profile hides stays LISTED — the form's own
- * chips already name it, and a list that disagreed with them would read as a bug — but
- * it does not open and carries no summary. `onCreate` absent: no create control at all.
+ * `isHidden` (#157): a target of a type the profile hides is not listed. It used to stay
+ * listed, locked, because the form's own chips named it; since step B the form does not
+ * (`IRForm` takes `permissionOf`), and neither does this section. `onCreate` absent: no
+ * create control at all.
  */
 function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate, isHidden }: {
     slots: RefSlot[];
@@ -136,20 +139,8 @@ function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate, isHidden }
                     </h3>
                     {slot.targets.map(targetId => {
                         const label = crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null });
-                        if (isHidden?.(targetId)) {
-                            return (
-                                <span
-                                    className="instance-manager__inline-link instance-manager__ref-link instance-manager__ref-link--hidden"
-                                    key={targetId}
-                                    title="Hidden for this profile"
-                                >
-                                    <span className="instance-manager__ref-text">
-                                        <span className="instance-manager__ref-name">{label}</span>
-                                    </span>
-                                    <i className="bi bi-eye-slash" aria-hidden="true" />
-                                </span>
-                            );
-                        }
+                        // #157 step B: not named at all, see the comment above.
+                        if (isHidden?.(targetId)) return null;
                         const summary = slot.summaries[targetId] ?? [];
                         const summaryText = summary.map(s => `${s.label}: ${s.text}`).join(' · ');
                         return (
@@ -326,6 +317,20 @@ export function InstanceDetail({
         setNav(next);
     };
 
+    /** #173 — the element on screen can die under the form: the header's Delete deletes
+     *  it, and a cascade can take it too. The deletes land a tick after the confirmation
+     *  (`deleteAdapter` defers them), so the road is healed from the store and not from
+     *  the click: back to the form the user had on screen before (`survivorOf`), at the
+     *  offset it had. Declared before the scroll effect below, which applies that offset
+     *  in the same commit — `formSubjectId` has just fallen back to the subject. */
+    useLayoutEffect(() => {
+        if (!nav) return;
+        const next = survivorOf(nav, id => idlookup?.[id]?.className === 'DObject');
+        if (next === nav) return;
+        if (next) restoreScrollFor(depthOf(next));
+        setNav(next);
+    }, [nav, idlookup]);
+
     /** Applied before paint, so the form never shows one frame at the old offset. */
     useLayoutEffect(() => {
         const top = pendingScrollRef.current;
@@ -352,21 +357,28 @@ export function InstanceDetail({
 
     // ── Create (2c) ────────────────────────────────────────────────────────────
 
-    /** The `ClassShape` of the selected instance — where its child slots come from. */
+    /** The `ClassShape` of the instance ON SCREEN — where its child slots come from. The
+     *  drilled-into element during a drill-in, the selected row otherwise: the bar sits
+     *  under that element's form, and a bar of the row's slots under D01's form created
+     *  children in the row, past the cardinality of the slots on screen (#173). */
     const subjectShape: ClassShape | null = useMemo(() => {
-        if (!subjectId) return null;
-        const name = shapeCtx.classOf(subjectId);
+        const ownerId = formSubjectId ?? subjectId;
+        if (!ownerId) return null;
+        const name = shapeCtx.classOf(ownerId);
         return name ? shapeCtx.shape().classes[name] ?? null : null;
-    }, [shapeCtx, subjectId]);
+    }, [shapeCtx, subjectId, formSubjectId]);
 
-    /** One entry per child slot of the selected instance: how full it is, and why
-     *  Add is not offered when it is not. */
+    /** One entry per child slot of the instance on screen: how full it is, and why
+     *  Add is not offered when it is not — a full slot, by its upper bound, among them. */
     const childSlots = useMemo(() => {
-        if (!subjectId || !subjectShape) return [] as Array<{ child: RefShape; count: number; reason: string | null }>;
+        const ownerId = formSubjectId ?? subjectId;
+        if (!ownerId || !subjectShape) return [] as Array<{ child: RefShape; count: number; reason: string | null }>;
         const shape = shapeCtx.shape();
-        const ownerEditable = permOfInstance(subjectId) === 'edit';
-        return subjectShape.children.map(child => {
-            const count = childSlotCount(subjectId, child.key);
+        const ownerEditable = permOfInstance(ownerId) === 'edit';
+        // #157 step B: a child slot typed by a hidden class is not listed, not even with
+        // its reason: the reason would name the class.
+        return subjectShape.children.filter(child => permOfClassName(child.of) !== 'hidden').map(child => {
+            const count = childSlotCount(ownerId, child.key);
             // The third argument is the metaclass the slot is TYPED ON, and it is
             // what closes §2.6: without it the bar offered «Add Node» on an abstract
             // `Node` and the create produced a live instance of it. Resolved by name
@@ -378,7 +390,7 @@ export function InstanceDetail({
                 : addChildReason(child, count, target);
             return { child, count, reason };
         });
-    }, [subjectId, subjectShape, shapeCtx, idlookup, permissionOf]);
+    }, [subjectId, formSubjectId, subjectShape, shapeCtx, idlookup, permissionOf]);
 
     // ── Referenced elements (#142, #158 P3/P4) ─────────────────────────────────
 
@@ -448,7 +460,10 @@ export function InstanceDetail({
             const summaries: Record<string, SummaryItem[]> = {};
             for (const t of targets) summaries[t] = summaryOf(t);
             return { ref, targets, count, createReason, summaries };
-        }).filter(s => s.targets.length > 0 || s.createReason === null);
+        })
+            .filter(s => s.targets.length > 0 || s.createReason === null)
+            // #157 step B: a reference typed by a hidden class is no section at all.
+            .filter(s => permOfClassName(s.ref.of) !== 'hidden');
     };
 
     const refSlots = useMemo(
@@ -468,10 +483,13 @@ export function InstanceDetail({
 
     const isHidden = (id: string) => permOfInstance(id) === 'hidden';
 
-    /** The header names the instance the panel was opened on, by the naming rule the
-     *  neighborhood uses too (`makeDrawReadCtx`, through `navStepOf`). */
-    const subjectStep = navStepOf(idlookup, subjectId);
-    const canDelete = !!openDelete && permOfInstance(subjectId) === 'edit';
+    /** The header names the instance ON SCREEN — the drilled-into element during a
+     *  drill-in, the selected row otherwise — by the naming rule the neighborhood uses
+     *  too (`makeDrawReadCtx`, through `navStepOf`). Its Delete deletes that element,
+     *  under that element's permission: a header naming the row over D01's form deleted
+     *  the row (#173). */
+    const subjectStep = navStepOf(idlookup, formSubjectId ?? subjectId);
+    const canDelete = !!openDelete && permOfInstance(formSubjectId ?? subjectId) === 'edit';
 
     return (
         <>
@@ -552,8 +570,8 @@ export function InstanceDetail({
                         <button
                             type="button"
                             className="instance-manager__form-delete"
-                            title={`Delete ${subjectStep?.name || subjectId}`}
-                            onClick={() => openDelete(subjectId)}
+                            title={`Delete ${subjectStep?.name || (formSubjectId ?? subjectId)}`}
+                            onClick={() => openDelete(formSubjectId ?? subjectId)}
                         >
                             <i className="bi bi-trash" aria-hidden="true" />
                             Delete
@@ -563,7 +581,7 @@ export function InstanceDetail({
             </header>
 
             <ReadOnlyGate readOnly={permOfInstance(formSubjectId ?? subjectId) === 'read'}>
-                <IRForm objectId={formSubjectId ?? subjectId} host="manager" />
+                <IRForm objectId={formSubjectId ?? subjectId} host="manager" permissionOf={permissionOf} />
             </ReadOnlyGate>
 
             {/* The depth rule of 12c, and it is ONE comparison:
@@ -599,7 +617,7 @@ export function InstanceDetail({
                                             <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
                                         </button>
                                         <ReadOnlyGate readOnly={permOfInstance(childId) === 'read'}>
-                                            <IRForm objectId={childId} host="manager" />
+                                            <IRForm objectId={childId} host="manager" permissionOf={permissionOf} />
                                         </ReadOnlyGate>
                                         {/* #158 P3 — the child's own reference
                                             sections, under its own form and inside
@@ -696,7 +714,7 @@ export function InstanceDetail({
                                     <button
                                         type="button"
                                         className="instance-manager__add"
-                                        onClick={() => onCreate(child.of, subjectId, child.key)}
+                                        onClick={() => onCreate(child.of, formSubjectId ?? subjectId, child.key)}
                                     >
                                         <i className="bi bi-plus" aria-hidden="true" />
                                         Add {child.of}

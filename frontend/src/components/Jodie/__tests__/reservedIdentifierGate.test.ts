@@ -175,9 +175,9 @@ describe('Jjodie system prompt, rule 8', () => {
         expect(rule8).not.toContain('case-insensitive');
     });
 
-    it('bumps the chat prompt to version 6 with a changelog line', () => {
+    it('bumps the chat prompt to version 7 with a changelog line', () => {
         const chatVersion = DEFAULT_PROMPT_VERSIONS.chat;
-        expect(chatVersion.version).toBe(6);
-        expect(chatVersion.changelog[chatVersion.changelog.length - 1].version).toBe(6);
+        expect(chatVersion.version).toBe(7);
+        expect(chatVersion.changelog[chatVersion.changelog.length - 1].version).toBe(7);
     });
 });

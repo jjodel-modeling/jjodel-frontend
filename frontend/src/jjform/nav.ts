@@ -163,6 +163,19 @@ export function backOf(nav: NavState): NavState {
     return next;
 }
 
+/** #173 — the road once the form's element has died under it (deleted from the form's own
+ *  header, or taken by a cascade): cut at the FIRST step that no longer exists, so the form
+ *  never lands on a dead step, then {@link backOf} from there, so it lands on the form the
+ *  user had on screen. The same object while the current step is alive — a dead step higher
+ *  on the road leaves a living form where it is. Null when the root itself is gone. */
+export function survivorOf(nav: NavState, isAlive: (id: string) => boolean): NavState | null {
+    const cur = currentOf(nav);
+    if (!cur || isAlive(cur.id)) return nav;
+    const dead = nav.path.findIndex(s => !isAlive(s.id));
+    if (dead <= 0) return null;
+    return backOf({ path: nav.path.slice(0, dead + 1) });
+}
+
 /** The breadcrumb, every segment but the last clickable. */
 export function breadcrumbOf(nav: NavState): Crumb[] {
     const last = nav.path.length - 1;

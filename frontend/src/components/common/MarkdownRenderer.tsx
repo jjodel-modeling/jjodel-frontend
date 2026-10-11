@@ -9,6 +9,8 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScriptBlock, isJjScriptCode, ScriptLineResult } from '../../jjscript';
+import { isConsumerMode } from '../environment/consumerMode';
+import { ConsumerProposal } from '../Jodie/ConsumerProposal';
 import './MarkdownRenderer.scss';
 
 interface MarkdownRendererProps {
@@ -95,6 +97,13 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
         language === 'jjs' ||
         isJjScriptCode(code)
     );
+
+    // #168 J4 — in the stand-alone consumer a JjScript block is Jodie's proposal: a readable list
+    // with Apply and Discard, never the developer's editor. One-line blocks included.
+    if (isConsumerMode() && onJjScriptExecute
+        && (language === 'jjscript' || language === 'jjs' || couldBeJjScript)) {
+        return <ConsumerProposal code={code} onExecute={onJjScriptExecute} />;
+    }
 
     // If in JjScript mode, render ScriptBlock with integrated close button
     if (jjscriptMode) {
