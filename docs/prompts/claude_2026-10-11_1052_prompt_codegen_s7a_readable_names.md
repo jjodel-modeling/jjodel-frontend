@@ -7,7 +7,7 @@ Lane: full (JS target profile, printer, the two lecture examples; a light visual
 Depends: P-2026-10-10-2029, P-2026-10-10-2027, P-2026-10-11-1105
 Front: codegen-pilot
 Request: https://claude.ai/code/session_01QYGEHstF7K66SVXwe8L7ep
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane codegen-names · code 5b6bd3e01 · log 716b2d36a · tsc 14 = base, vitest codegen + simulation 1004 (976 + 28), build exit 0, check:codegen-lazy green, probe 35/35, mutation bench 17/17 · visual check passata 2026-10-11 (RC-23 by the chat on 4 crops, GO by Alfonso 12:35); DOVE extended by the chat to four string literals in oracle/__tests__/examples.test.ts
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
 Worktree: `~/jjodel-w-codegen-names`, branch `codegen-names`, cut from the trunk tip that carries S1..S6 and the S5b
