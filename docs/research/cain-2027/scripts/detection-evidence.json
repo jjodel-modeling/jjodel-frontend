@@ -1,0 +1,808 @@
+{
+ "_source": "P-2026-10-11-1725: curated by the lane from a read-only helper agent's search at ref 154311f55 (/tmp/p1725/agent_detection/detection.json); 6 claims re-checked by hand against git; notes paraphrased in English. noticed_by: digest | lane-report | chat | alfonso | never. research_line: yes when the noticing artifact belongs to chat C-2026-10-10-1145 under the research Request session (1150, 1430, 1630). first_act (RC-26 crossings): none | delegation | delegation-partial | alfonso-before-trunk | section-ratified | id-reuse; alfonso_act: an act of Alfonso on the row (GO, acceptance, ratification) recorded before or at its trunk arrival, after it, or none recorded. grammar.rows.*.repaired_commit overrides the 1630 fixed_commit where the 1630 script skips the fixed check at the trunk-arrival commit (governance-dataset.ts:358-362 continue before :369).",
+ "rc26": {
+  "RC-30": {
+   "noticed_by": "digest",
+   "noticed_as": "provisional",
+   "noticed_date": "2026-09-27 08:36",
+   "evidence": "cf58f1d98 docs/digest/2026-09-27.md:11; 52512b2f9 docs/decisions.md:238; 024d95345 (commit subject)",
+   "research_line": "no",
+   "first_act": "delegation-partial",
+   "alfonso_act": "none recorded",
+   "note": "the generated digest of 2026-09-27 listed it as provisional; the row quotes a go-ahead for one lane's critical-zone edit and generalises it into a rule; ratified in the 2026-09-28 batch"
+  },
+  "R-EDGE-2": {
+   "noticed_by": "digest",
+   "noticed_as": "provisional",
+   "noticed_date": "2026-09-27 08:36",
+   "evidence": "cf58f1d98 docs/digest/2026-09-27.md:15; 4e5dff7ad docs/discovery/discovery_2026-09-27_enum_edge_guard.md:264; 931943f29 docs/decisions.md:265",
+   "research_line": "no",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "listed as provisional by the generated digest of 2026-09-27; the enum report named the core change but put nothing under decisions awaiting Alfonso; ratified in the 2026-09-28 batch"
+  },
+  "R-SIM-76": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-27 01:49",
+   "evidence": "655706bab docs/discovery/discovery_2026-09-27_sim_derived_attributes.md:461; 655706bab docs/discovery/discovery_2026-09-27_sim_derived_attributes.md:469; 0a8ad4270 docs/decisions.md:2037",
+   "research_line": "no",
+   "first_act": "none",
+   "alfonso_act": "after-trunk",
+   "note": "a lane report flagged it as an RC-26 item two minutes before the row was written, and the row flags its own conditional point for the digest; the lane merged before Alfonso's morning answers of 2026-09-27"
+  },
+  "R-SIM-79": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-27 02:06",
+   "evidence": "1dddb15ae docs/discovery/discovery_2026-09-27_sim_profiles_panel.md:588; 5a9727e01 docs/decisions.md:2000; 0eaf477a8 docs/prompts/claude_2026-09-27_0935_prompt_ratifications_petri_guard.md:12",
+   "research_line": "no",
+   "first_act": "none",
+   "alfonso_act": "after-trunk",
+   "note": "the profiles report lists it as an RC-26 item; the lane proceeded on the recommendation; ratified in the 2026-09-28 batch"
+  },
+  "R-SIM-80": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-27 10:49",
+   "evidence": "567dc25da docs/discovery/discovery_2026-09-27_sim_demo_readiness.md:427; 54999f9ae docs/decisions.md:2111; 54999f9ae (commit subject)",
+   "research_line": "no",
+   "first_act": "section-ratified",
+   "alfonso_act": "before-trunk",
+   "note": "the section intro records Alfonso's ratification in chat (2026-09-27 11:00) before the rows were written; the 1630 status reader missed the inverted word order"
+  },
+  "R-SIM-81": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-27 10:49",
+   "evidence": "567dc25da docs/discovery/discovery_2026-09-27_sim_demo_readiness.md:427; 54999f9ae docs/decisions.md:2111; 54999f9ae (commit subject)",
+   "research_line": "no",
+   "first_act": "section-ratified",
+   "alfonso_act": "before-trunk",
+   "note": "as R-SIM-80"
+  },
+  "R-SIM-82": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-27 10:49",
+   "evidence": "567dc25da docs/discovery/discovery_2026-09-27_sim_demo_readiness.md:427; 54999f9ae docs/decisions.md:2111; 54999f9ae (commit subject)",
+   "research_line": "no",
+   "first_act": "section-ratified",
+   "alfonso_act": "before-trunk",
+   "note": "as R-SIM-80"
+  },
+  "R-SIM-87": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-27 17:50",
+   "evidence": "be8ad89a7 docs/discovery/discovery_2026-09-27_sim_checker_gap.md:482; 6045ebc82 docs/log-inbox/simulation.md:498; e54999b0b docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md:6",
+   "research_line": "no",
+   "first_act": "id-reuse",
+   "alfonso_act": "before-trunk",
+   "note": "the provisional first appearance is a different row on another branch, later renumbered; the trunk row was written ratified"
+  },
+  "R-SIM-88": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-28 00:46",
+   "evidence": "011157c2b docs/discovery/discovery_2026-09-28_sim_input_variables.md:38; 011157c2b docs/discovery/discovery_2026-09-28_sim_input_variables.md:39; e54999b0b docs/ratifiche/claude_ratifiche_2026-09-28_open_lanes_answers.md:7",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "none recorded",
+   "note": "id reuse as R-SIM-87; the trunk row was put to Alfonso as an RC-26 item, then decided by the chat on his delegation, and he amended it the same evening"
+  },
+  "R-SIM-94": {
+   "noticed_by": "chat",
+   "noticed_as": "delegation",
+   "noticed_date": "2026-09-29 01:10",
+   "evidence": "78e2fcc7e docs/decisions.md:2386; 385807485 docs/sessioni/sessione_2026-09-29.md:37; 43473dd89 docs/sessioni/sessione_2026-09-30.md:49",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "none recorded",
+   "note": "written by the chat under delegation, then listed as open for Alfonso in two checkpoints; no answer recorded"
+  },
+  "R-SIM-95": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-29 02:49",
+   "evidence": "904bab148 docs/discovery/discovery_2026-09-29_sim_outputs_faces.md:42; 904bab148 docs/discovery/discovery_2026-09-29_sim_outputs_faces.md:43; ffd8c4c16 docs/prompts/claude_2026-09-29_0300_prompt_sim_outputs_faces_p2.md:16",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "none recorded",
+   "note": "the chat's prompt prescribed the row and its delegated header; the lane wrote it"
+  },
+  "R-VP-19": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-29 23:35",
+   "evidence": "ee7206d0c docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md:13; ee7206d0c docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md:15; ddfb24dc1 docs/decisions.md:4263",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "before-trunk",
+   "note": "the notations discovery listed the amendment under decisions awaiting Alfonso; the chat then decided under delegation; the branch reached the trunk only after Alfonso's review"
+  },
+  "R-VP-20": {
+   "noticed_by": "chat",
+   "noticed_as": "delegation",
+   "noticed_date": "2026-09-30 01:49",
+   "evidence": "3ec98d486 docs/prompts/claude_2026-09-30_0150_prompt_c2_ir_keys.md:19; 97f91a7ac docs/decisions.md:4291; 97f91a7ac docs/decisions.md:4296",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "before-trunk",
+   "note": "the chat's prompt prescribed the delegated header; the code reached the trunk only after Alfonso's review"
+  },
+  "R-VP-21": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-09-29 23:35",
+   "evidence": "ee7206d0c docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md:13; ee7206d0c docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md:15; 4c6b4f315 docs/decisions.md:4318",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "before-trunk",
+   "note": "as R-VP-19"
+  },
+  "R-VP-22": {
+   "noticed_by": "chat",
+   "noticed_as": "delegation",
+   "noticed_date": "2026-09-30 03:52",
+   "evidence": "c676fc6f6 docs/prompts/claude_2026-09-30_0355_prompt_a1_a3_notations.md:13; 6daba2e7f docs/decisions.md:4356; 43473dd89 docs/sessioni/sessione_2026-09-30.md:45",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "before-trunk",
+   "note": "as R-VP-20"
+  },
+  "R-VP-23": {
+   "noticed_by": "chat",
+   "noticed_as": "delegation",
+   "noticed_date": "2026-09-30 04:35",
+   "evidence": "47a7cceb1 docs/prompts/claude_2026-09-30_0440_prompt_a4_er_chen.md:13; 144acf0c8 docs/decisions.md:4392; 43473dd89 docs/sessioni/sessione_2026-09-30.md:45",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "before-trunk",
+   "note": "as R-VP-20"
+  },
+  "R-VP-28": {
+   "noticed_by": "alfonso",
+   "noticed_as": "none",
+   "noticed_date": "2026-09-30 19:20",
+   "evidence": "728291b21 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:180; c29280962 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:15; c29280962 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:27",
+   "research_line": "no",
+   "first_act": "alfonso-before-trunk",
+   "alfonso_act": "before-trunk",
+   "note": "Alfonso accepted the recommendations at the lane's hard stop (19:20) before the rows were written and before the trunk merge; the rows were still written provisional"
+  },
+  "R-VP-31": {
+   "noticed_by": "alfonso",
+   "noticed_as": "none",
+   "noticed_date": "2026-09-30 19:20",
+   "evidence": "728291b21 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:180; c29280962 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:15; c29280962 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:27",
+   "research_line": "no",
+   "first_act": "alfonso-before-trunk",
+   "alfonso_act": "before-trunk",
+   "note": "as R-VP-28"
+  },
+  "R-VP-32": {
+   "noticed_by": "alfonso",
+   "noticed_as": "delegation",
+   "noticed_date": "2026-09-30 19:30",
+   "evidence": "17a70f2ad docs/prompts/claude_2026-09-30_1935_prompt_activity_decision_merge.md:12; df33e5da8 docs/decisions.md:4506; d34cded42 docs/discovery/discovery_2026-09-30_activity_decision_merge.md:26",
+   "research_line": "no",
+   "first_act": "alfonso-before-trunk",
+   "alfonso_act": "before-trunk",
+   "note": "Alfonso approved the target before the lane started; the row was still written provisional"
+  },
+  "R-VP-33": {
+   "noticed_by": "alfonso",
+   "noticed_as": "delegation",
+   "noticed_date": "2026-09-30 19:30",
+   "evidence": "17a70f2ad docs/prompts/claude_2026-09-30_1935_prompt_activity_decision_merge.md:12; 17a70f2ad docs/prompts/claude_2026-09-30_1935_prompt_activity_decision_merge.md:17; df33e5da8 docs/decisions.md:4528",
+   "research_line": "no",
+   "first_act": "alfonso-before-trunk",
+   "alfonso_act": "before-trunk",
+   "note": "as R-VP-32; the attribution to Alfonso is the chat's"
+  },
+  "R-EE-1": {
+   "noticed_by": "alfonso",
+   "noticed_as": "none",
+   "noticed_date": "2026-10-02 15:03",
+   "evidence": "dc013e8ba docs/prompts/claude_2026-10-02_1505_prompt_edge_ends_trunk_sync.md:11; 77c2f946b docs/discovery/discovery_2026-09-30_edge_ends.md:34; 633c22a8c docs/decisions.md:4511",
+   "research_line": "no",
+   "first_act": "alfonso-before-trunk",
+   "alfonso_act": "before-trunk",
+   "note": "the slice waited at its hard stop for Alfonso's GO, given 2026-10-02 before the trunk merge"
+  },
+  "R-EE-3": {
+   "noticed_by": "alfonso",
+   "noticed_as": "none",
+   "noticed_date": "2026-10-02 15:03",
+   "evidence": "dc013e8ba docs/prompts/claude_2026-10-02_1505_prompt_edge_ends_trunk_sync.md:11; 77c2f946b docs/discovery/discovery_2026-09-30_edge_ends.md:34; 633c22a8c docs/decisions.md:4534",
+   "research_line": "no",
+   "first_act": "alfonso-before-trunk",
+   "alfonso_act": "before-trunk",
+   "note": "as R-EE-1"
+  },
+  "R-JS-7": {
+   "noticed_by": "digest",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-10-11 14:44",
+   "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:86; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:217; 30eb9136a docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md:29",
+   "research_line": "yes",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "first listed by the 1430 digest; the lane had proposed it as a ticket and the chat's GO made it a provisional row; invisible to the generator (no leading dash)"
+  },
+  "R-IRN-38": {
+   "noticed_by": "digest",
+   "noticed_as": "provisional",
+   "noticed_date": "2026-10-11 14:44",
+   "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:83; 450eb13c8 docs/discovery/discovery_2026-10-01_label_editable_toggle.md:19; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:182",
+   "research_line": "yes",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "first listed by the 1430 digest, as a provisional row"
+  },
+  "R-IRN-39": {
+   "noticed_by": "digest",
+   "noticed_as": "provisional",
+   "noticed_date": "2026-10-11 14:44",
+   "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:146; 8f5102d29 docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md:133; 8f5102d29 docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md:175",
+   "research_line": "yes",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "as R-IRN-38"
+  },
+  "R-IRN-40": {
+   "noticed_by": "digest",
+   "noticed_as": "provisional",
+   "noticed_date": "2026-10-11 14:44",
+   "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:147; 85095bb87 docs/discovery/discovery_2026-10-02_segment_editable_toggle.md:138; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:182",
+   "research_line": "yes",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "as R-IRN-38"
+  },
+  "R-IRN-41": {
+   "noticed_by": "digest",
+   "noticed_as": "provisional",
+   "noticed_date": "2026-10-11 14:44",
+   "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:81; ddb7a8c16 docs/discovery/discovery_2026-10-02_path_label_edit.md:17; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:182",
+   "research_line": "yes",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "as R-IRN-38"
+  },
+  "R-SIM-108": {
+   "noticed_by": "chat",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-10-02 23:15",
+   "evidence": "872d0abe8 docs/ratifiche/claude_ratifiche_2026-10-02_sim_state_ui.md:29; 60b60c31d docs/decisions.md:2525; 98c0ec37c docs/prompts/claude_2026-10-03_0121_prompt_sim_node_read.md:14",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "after-trunk",
+   "note": "the row flags its own amendment and Alfonso's veto; a checkpoint says he ratified it on 2026-10-03 while the row still says the veto is open; the lane report that listed it is on a branch outside the ref"
+  },
+  "R-SIM-120": {
+   "noticed_by": "digest",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-10-11 14:44",
+   "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:82; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:218; bf8ed5b78 docs/discovery/discovery_2026-10-03_sim_io_board.md:304",
+   "research_line": "yes",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "first flagged as an RC-26 item by the 1430 digest; the report that took the decision did not flag it"
+  },
+  "R-UNDO-8": {
+   "noticed_by": "digest",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-10-11 14:44",
+   "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:48; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:217; 389519169 docs/discovery/discovery_2026-10-03_undo_inline_edit.md:45",
+   "research_line": "yes",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "first flagged by the 1430 digest; the lane named the core change and treated the chat's GO as approval; invisible to the generator"
+  },
+  "RC-40": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-10-03 17:23",
+   "evidence": "c5bb487a8 docs/discovery/discovery_2026-10-03_auto_intake.md:20; c5bb487a8 docs/discovery/discovery_2026-10-03_auto_intake.md:21; 6ea0b0b48 docs/decisions.md:286",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "none recorded",
+   "note": "the auto-intake report put the amendment under decisions awaiting Alfonso; the chat decided it 82 minutes later under delegation"
+  },
+  "R-B17": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-10-04 01:43",
+   "evidence": "86d15831b docs/discovery/discovery_2026-10-04_object_edge_delete.md:36; ae4ea38e6 docs/prompts/claude_2026-10-04_0130_prompt_object_edge_delete.md:5; cd387ab59 docs/prompts/claude_2026-10-04_0130_prompt_object_edge_delete.md:6",
+   "research_line": "no",
+   "first_act": "none",
+   "alfonso_act": "after-trunk",
+   "note": "the lane named the critical-zone edit as its RC-26 item, covered by the go-ahead the chat set at launch; Alfonso's ratification was recorded 22 minutes after the trunk merge"
+  },
+  "R-JS-10": {
+   "noticed_by": "lane-report",
+   "noticed_as": "rc26",
+   "noticed_date": "2026-10-04 11:39",
+   "evidence": "8f84740c6 docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md:22; 8f84740c6 docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md:25; 05bf04ce8 docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md:400",
+   "research_line": "no",
+   "first_act": "none",
+   "alfonso_act": "none recorded",
+   "note": "the lane listed it under decisions awaiting Alfonso; the chat's GO adopted it 6.5 hours later without him"
+  },
+  "RC-45": {
+   "noticed_by": "chat",
+   "noticed_as": "delegation",
+   "noticed_date": "2026-10-10 15:59",
+   "evidence": "d1449992a docs/decisions.md:290; da062a727 docs/discovery/discovery_2026-10-10_lane_board_model_insights.md:35; 6ca224b68 docs/decisions.md:291",
+   "research_line": "no",
+   "first_act": "delegation",
+   "alfonso_act": "none recorded",
+   "note": "written by the chat under delegation; Alfonso amended it the same day"
+  }
+ },
+ "rc25": {
+  "batches": {
+   "c6804f3d3": {
+    "noticed_by": "digest",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-11 14:44",
+    "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:21; 4de76fb74 docs/prompts/claude_2026-10-11_1430_prompt_provisional_rows_digest.md:28",
+    "research_line": "yes",
+    "note": "first listed by the 1430 digest of the provisional rows, commissioned in the research line; Alfonso accepted its recommendations at 15:36 and the 1540 lane ratified the rows"
+   },
+   "never": {
+    "noticed_by": "never",
+    "noticed_as": "none",
+    "noticed_date": "",
+    "evidence": "",
+    "research_line": "no",
+    "note": "no record"
+   }
+  },
+  "rows": {
+   "R-SIM-67": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-09-28 23:54",
+    "evidence": "024d95345 (commit body); 385807485 docs/sessioni/sessione_2026-09-29.md:37",
+    "research_line": "no",
+    "note": "held back from the 2026-09-28 batch by Alfonso's question, then carried as open for Alfonso in two checkpoints"
+   },
+   "R-VP-27": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-09-30 19:20",
+    "evidence": "728291b21 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:180",
+    "research_line": "no",
+    "note": "Alfonso accepted the recommendations at the hard stop, before the rows were written; the header stayed provisional"
+   },
+   "R-VP-28": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-09-30 19:20",
+    "evidence": "728291b21 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:180",
+    "research_line": "no",
+    "note": "Alfonso accepted the recommendations at the hard stop, before the rows were written; the header stayed provisional"
+   },
+   "R-VP-29": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-09-30 19:20",
+    "evidence": "728291b21 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:180",
+    "research_line": "no",
+    "note": "Alfonso accepted the recommendations at the hard stop, before the rows were written; the header stayed provisional"
+   },
+   "R-VP-30": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-09-30 19:20",
+    "evidence": "728291b21 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:180",
+    "research_line": "no",
+    "note": "Alfonso accepted the recommendations at the hard stop, before the rows were written; the header stayed provisional"
+   },
+   "R-VP-31": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-09-30 19:20",
+    "evidence": "728291b21 docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md:180",
+    "research_line": "no",
+    "note": "Alfonso accepted the recommendations at the hard stop, before the rows were written; the header stayed provisional"
+   },
+   "R-VP-32": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-09-30 19:40",
+    "evidence": "17a70f2ad docs/prompts/claude_2026-09-30_1935_prompt_activity_decision_merge.md:12",
+    "research_line": "no",
+    "note": "Alfonso approved the target before the lane; the header stayed provisional"
+   },
+   "R-VP-33": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-09-30 19:40",
+    "evidence": "17a70f2ad docs/prompts/claude_2026-09-30_1935_prompt_activity_decision_merge.md:12",
+    "research_line": "no",
+    "note": "Alfonso approved the target before the lane; the header stayed provisional"
+   },
+   "R-VP-37": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-02 15:04",
+    "evidence": "77a3596fe docs/prompts/claude_2026-10-02_1506_prompt_pastel_trunk_sync.md:11",
+    "research_line": "no",
+    "note": "chat decisions on Alfonso's review points; his GO on the branch before its merge"
+   },
+   "R-VP-38": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-02 15:04",
+    "evidence": "77a3596fe docs/prompts/claude_2026-10-02_1506_prompt_pastel_trunk_sync.md:11",
+    "research_line": "no",
+    "note": "chat decisions on Alfonso's review points; his GO on the branch before its merge"
+   },
+   "R-VP-39": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-02 15:04",
+    "evidence": "77a3596fe docs/prompts/claude_2026-10-02_1506_prompt_pastel_trunk_sync.md:11",
+    "research_line": "no",
+    "note": "chat decisions on Alfonso's review points; his GO on the branch before its merge"
+   },
+   "R-EE-1": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-02 15:03",
+    "evidence": "dc013e8ba docs/prompts/claude_2026-10-02_1505_prompt_edge_ends_trunk_sync.md:11",
+    "research_line": "no",
+    "note": "the slice waited at its hard stop for Alfonso's GO before the trunk merge"
+   },
+   "R-EE-2": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-02 15:03",
+    "evidence": "dc013e8ba docs/prompts/claude_2026-10-02_1505_prompt_edge_ends_trunk_sync.md:11",
+    "research_line": "no",
+    "note": "the slice waited at its hard stop for Alfonso's GO before the trunk merge"
+   },
+   "R-EE-3": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-02 15:03",
+    "evidence": "dc013e8ba docs/prompts/claude_2026-10-02_1505_prompt_edge_ends_trunk_sync.md:11",
+    "research_line": "no",
+    "note": "the slice waited at its hard stop for Alfonso's GO before the trunk merge"
+   },
+   "R-EE-4": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-02 15:03",
+    "evidence": "dc013e8ba docs/prompts/claude_2026-10-02_1505_prompt_edge_ends_trunk_sync.md:11",
+    "research_line": "no",
+    "note": "the slice waited at its hard stop for Alfonso's GO before the trunk merge"
+   },
+   "R-SIM-122": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 10:42",
+    "evidence": "452efc6f1 docs/decisions.md:2594",
+    "research_line": "no",
+    "note": "the header at introduction already records the principle as ratified by Alfonso; only the details were provisional"
+   },
+   "R-SIM-137": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-05 16:52",
+    "evidence": "d48373101 docs/decisions.md:2678",
+    "research_line": "no",
+    "note": "the header at introduction records the scope as ratified by Alfonso; details provisional"
+   },
+   "R-SIM-138": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-05 16:52",
+    "evidence": "d48373101 docs/decisions.md:2678",
+    "research_line": "no",
+    "note": "the header at introduction records the scope as ratified by Alfonso; details provisional"
+   },
+   "R-SIM-139": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-05 16:52",
+    "evidence": "d48373101 docs/decisions.md:2678",
+    "research_line": "no",
+    "note": "the header at introduction records the scope as ratified by Alfonso; details provisional"
+   },
+   "R-SIM-140": {
+    "noticed_by": "alfonso",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-05 16:52",
+    "evidence": "d48373101 docs/decisions.md:2678",
+    "research_line": "no",
+    "note": "the header at introduction records the scope as ratified by Alfonso; details provisional"
+   },
+   "R-JS-8": {
+    "noticed_by": "lane-report",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-10-04 11:39",
+    "evidence": "8f84740c6 docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md:22",
+    "research_line": "no",
+    "note": "the lane listed them under decisions awaiting Alfonso; the chat's GO adopted them as provisional rows"
+   },
+   "R-JS-9": {
+    "noticed_by": "lane-report",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-10-04 11:39",
+    "evidence": "8f84740c6 docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md:22",
+    "research_line": "no",
+    "note": "the lane listed them under decisions awaiting Alfonso; the chat's GO adopted them as provisional rows"
+   },
+   "R-JS-10": {
+    "noticed_by": "lane-report",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-10-04 11:39",
+    "evidence": "8f84740c6 docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md:22",
+    "research_line": "no",
+    "note": "the lane listed them under decisions awaiting Alfonso; the chat's GO adopted them as provisional rows"
+   },
+   "R-JS-11": {
+    "noticed_by": "lane-report",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-10-04 11:39",
+    "evidence": "8f84740c6 docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md:22",
+    "research_line": "no",
+    "note": "the lane listed them under decisions awaiting Alfonso; the chat's GO adopted them as provisional rows"
+   },
+   "R-SIM-123": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-124": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-125": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-126": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-127": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-128": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-129": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-130": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-131": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-132": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-SIM-133": {
+    "noticed_by": "chat",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-04 15:48",
+    "evidence": "0022fe5c3 docs/sessioni/sessione_2026-10-04_C-2026-10-04-1126.md:11",
+    "research_line": "no",
+    "note": "listed as provisional, unattended in the chat's checkpoint"
+   },
+   "R-IRN-38": {
+    "noticed_by": "digest",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-11 14:44",
+    "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:83; 450eb13c8 docs/discovery/discovery_2026-10-01_label_editable_toggle.md:19; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:182",
+    "research_line": "yes",
+    "note": "first listed by the 1430 digest"
+   },
+   "R-IRN-39": {
+    "noticed_by": "digest",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-11 14:44",
+    "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:146; 8f5102d29 docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md:133; 8f5102d29 docs/discovery/discovery_2026-10-02_ir_label_name_refresh.md:175",
+    "research_line": "yes",
+    "note": "first listed by the 1430 digest"
+   },
+   "R-IRN-40": {
+    "noticed_by": "digest",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-11 14:44",
+    "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:147; 85095bb87 docs/discovery/discovery_2026-10-02_segment_editable_toggle.md:138; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:182",
+    "research_line": "yes",
+    "note": "first listed by the 1430 digest"
+   },
+   "R-IRN-41": {
+    "noticed_by": "digest",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-11 14:44",
+    "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:81; ddb7a8c16 docs/discovery/discovery_2026-10-02_path_label_edit.md:17; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:182",
+    "research_line": "yes",
+    "note": "first listed by the 1430 digest"
+   },
+   "R-SIM-120": {
+    "noticed_by": "digest",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-10-11 14:44",
+    "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:82; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:218; bf8ed5b78 docs/discovery/discovery_2026-10-03_sim_io_board.md:304",
+    "research_line": "yes",
+    "note": "first listed by the 1430 digest"
+   },
+   "R-UNDO-8": {
+    "noticed_by": "digest",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-10-11 14:44",
+    "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:48; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:217; 389519169 docs/discovery/discovery_2026-10-03_undo_inline_edit.md:45",
+    "research_line": "yes",
+    "note": "first listed by the 1430 digest"
+   },
+   "R-JS-7": {
+    "noticed_by": "digest",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-10-11 14:44",
+    "evidence": "b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:86; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:217; 30eb9136a docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md:29",
+    "research_line": "yes",
+    "note": "first listed by the 1430 digest"
+   },
+   "RC-38": {
+    "noticed_by": "chat",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-10-03 17:05",
+    "evidence": "49957d340 docs/decisions.md:284",
+    "research_line": "no",
+    "note": "written awaiting Alfonso under RC-26 (cost) with its memo; the 1540 lane left it open with a question"
+   },
+   "R-SIM-88": {
+    "noticed_by": "lane-report",
+    "noticed_as": "rc26",
+    "noticed_date": "2026-09-28 00:46",
+    "evidence": "011157c2b docs/discovery/discovery_2026-09-28_sim_input_variables.md:38",
+    "research_line": "no",
+    "note": "id reuse: the provisional first appearance is another row; the trunk row was put to Alfonso as an RC-26 item and decided by the chat on his delegation"
+   },
+   "R-VP-60": {
+    "noticed_by": "lane-report",
+    "noticed_as": "provisional",
+    "noticed_date": "2026-10-03 21:22",
+    "evidence": "17969f5d7 docs/decisions.md:5074",
+    "research_line": "no",
+    "note": "written provisional by the lane and withdrawn on its branch before the trunk merge"
+   }
+  }
+ },
+ "rc18": {
+  "2026-10-10": {
+   "noticed_by": "lane-report",
+   "noticed_as": "budget",
+   "noticed_date": "2026-10-11 12:12",
+   "evidence": "d97744795 docs/discovery/discovery_2026-10-11_insights_more_cards.md:40; 6ec3c3f8e docs/discovery/discovery_2026-10-10_lane_tracking_github_projects.md:490",
+   "research_line": "yes",
+   "note": "the 1150 report measured a proxy (19 of 49) and put the excess under decisions awaiting Alfonso; on 2026-10-10 a report named RC-18 as a risk of its own lanes without measuring it; no checkpoint ever reported the weekly measure RC-18 asks for"
+  },
+  "2026-10-11": {
+   "noticed_by": "lane-report",
+   "noticed_as": "budget",
+   "noticed_date": "2026-10-11 12:12",
+   "evidence": "d97744795 docs/discovery/discovery_2026-10-11_insights_more_cards.md:40; 154311f55 docs/prompts/claude_2026-10-11_1630_prompt_cain_governance_dataset_discovery.md:37",
+   "research_line": "yes",
+   "note": "same first notice; the chat's own measure (33 of 69) is recorded only in the 1630 research prompt"
+  }
+ },
+ "grammar": {
+  "window": {
+   "noticed_by": "chat",
+   "noticed_as": "grammar",
+   "noticed_date": "2026-10-11 14:33",
+   "evidence": "4de76fb74 docs/prompts/claude_2026-10-11_1430_prompt_provisional_rows_digest.md:29; b646a9a04 docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md:174",
+   "research_line": "yes",
+   "note": "from 2026-09-30 the generator failed every day; the first artifact that says so is the 1430 prompt of the research line; between 2026-09-29 20:00 and 2026-10-11 14:30 no commit adds docs:digest except a log rotation moving old text"
+  },
+  "pre_grammar": {
+   "noticed_by": "never",
+   "noticed_as": "none",
+   "noticed_date": "",
+   "evidence": "",
+   "research_line": "no",
+   "note": "row written before the grammar; outside the generator's row opener by design"
+  },
+  "rows": {
+   "R-SIM-85": {
+    "noticed_by": "lane-report",
+    "noticed_as": "grammar",
+    "noticed_date": "2026-09-27 23:56",
+    "evidence": "e87df1ff6 docs/log-inbox/views.md:89; ba74632df docs/prompts/claude_2026-09-28_0055_prompt_small_cleanups.md:16",
+    "research_line": "no",
+    "note": "a merge lane filed a ticket the same night; the chat made the fix an item of the next prompt; repaired knowingly"
+   },
+   "R-SIM-88": {
+    "noticed_by": "lane-report",
+    "noticed_as": "grammar",
+    "noticed_date": "2026-09-28 14:50",
+    "evidence": "58d168441 docs/log-inbox/harness.md:216; 0913b4c3f (commit subject)",
+    "research_line": "no",
+    "note": "the trace monitor lane reported it as a decision miss; the chat fixed it 8 minutes later; repaired knowingly"
+   },
+   "R-VP-58": {
+    "repaired_commit": "544fbd19f",
+    "noticed_by": "never",
+    "noticed_as": "none",
+    "noticed_date": "",
+    "evidence": "17969f5d7 docs/decisions.md:5045; a24c5d5b5 docs/decisions.md:5069",
+    "research_line": "no",
+    "note": "repaired incidentally: the header was rewritten when the row was ratified on its branch; the message never mentions the grammar"
+   },
+   "R-VP-59": {
+    "repaired_commit": "544fbd19f",
+    "noticed_by": "never",
+    "noticed_as": "none",
+    "noticed_date": "",
+    "evidence": "17969f5d7 docs/decisions.md:5058; a24c5d5b5 docs/decisions.md:5084",
+    "research_line": "no",
+    "note": "as R-VP-58"
+   },
+   "R-VP-60": {
+    "repaired_commit": "544fbd19f",
+    "noticed_by": "never",
+    "noticed_as": "none",
+    "noticed_date": "",
+    "evidence": "17969f5d7 docs/decisions.md:5074; a24c5d5b5 docs/decisions.md:5103",
+    "research_line": "no",
+    "note": "as R-VP-58; the row was withdrawn"
+   }
+  }
+ }
+}

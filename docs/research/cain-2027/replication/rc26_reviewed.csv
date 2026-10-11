@@ -1,0 +1,15 @@
+metric,basis,agent,reviewed,combined,note
+rows_in_sheet,sheet,98,0,98,reviewed column: rows with a verdict
+agent_positives_reviewed,sheet,71,0,,of the 71 positives
+agent_negatives_reviewed,sheet,27,0,,of the 27 sampled negatives the agent kept negative
+rc26_rows,rows judged in RC-26 (mine or delegated),71,,71,
+rc26_mine,rows judged mine,61,,61,agent: positives that cite no delegation
+rc26_delegated,rows judged delegated,10,,10,agent: positives whose row cites a delegation
+crossings_with_delegated,RC-26 rows that did not wait,34,,34,the 1630 «34 of 71»
+crossings_strict,mine rows that did not wait,24,,24,
+crossings_no_prior_act,"mine rows that did not wait, with no act of the maintainer before the trunk and no delegation",13,,13,first_act none or delegation-partial in detection-evidence.json
+share_not_waited_with_delegated,crossings_with_delegated / rc26_rows,0.479,,0.479,
+share_not_waited_strict,crossings_strict / rc26_mine,0.393,,0.393,
+agent_precision_vs_review,reviewed agent positives judged RC-26,,,,empty until a positive is reviewed
+agent_negative_sample_misses,reviewed sampled negatives judged RC-26,3,,,agent: the 3 sampled negatives it found positive (counted among the positives)
+regex_precision,rule candidates in RC-26 / 108 candidates,0.630,,0.630,the 40 rejected candidates keep the agent verdict
