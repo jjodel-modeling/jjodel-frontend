@@ -62,6 +62,8 @@ export class Parser {
     private originalInput: string = '';
     /** Number of block bodies being parsed; inside one, a bare 'end' closes the block. */
     private blockDepth: number = 0;
+    /** Strict parse (detect): a standalone do block must reach its 'end'. */
+    private strict: boolean = false;
 
     /**
      * Parse input string into AST
@@ -73,6 +75,7 @@ export class Parser {
         this.errors = [];
         this.originalInput = input;
         this.blockDepth = 0;
+        this.strict = opts?.strict === true;
 
         // Skip leading newlines
         while (this.check('NEWLINE')) {
@@ -177,7 +180,9 @@ export class Parser {
         if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
             token.value.toLowerCase() === 'do') {
             this.advance(); // consume 'do'
-            const commands = this.parseBlockBody('do');
+            // Only under strict: validateScriptIntegrity parses a multi-line block one line
+            // at a time, and its first line is a bare 'do'.
+            const commands = this.parseBlockBody('do', this.strict);
             const args: BlockArgs = { command: 'block', commands };
             return { type: 'Command', command: 'block', args, position };
         }
@@ -1020,10 +1025,12 @@ export class Parser {
 
     /**
      * Parse multiple commands separated by ';' or newlines until 'end' keyword.
-     * Consumes the 'end' keyword. `opener` names the block kind in errors.
+     * Consumes the 'end' keyword. `opener` names the block kind in errors; with
+     * `requireEnd`, reaching end of input without the 'end' is an error.
      */
-    private parseBlockBody(opener: string): CommandNode[] {
+    private parseBlockBody(opener: string, requireEnd: boolean = false): CommandNode[] {
         const commands: CommandNode[] = [];
+        let closed = false;
         this.blockDepth++;
 
         while (!this.isAtEnd() && !this.check('EOF')) {
@@ -1039,6 +1046,7 @@ export class Parser {
             // Stop at 'end' keyword
             if (this.checkKeyword('end')) {
                 this.advance(); // consume 'end'
+                closed = true;
                 break;
             }
 
@@ -1052,6 +1060,9 @@ export class Parser {
             commands.push(command);
         }
 
+        if (requireEnd && !closed) {
+            throw new Error(`Expected 'end' to close ${opener} block`);
+        }
         this.blockDepth--;
         return commands;
     }

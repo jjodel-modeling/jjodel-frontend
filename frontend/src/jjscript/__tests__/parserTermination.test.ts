@@ -74,15 +74,52 @@ describe.each(MODES)('Parser termination (%s)', (_mode, strict) => {
         expect(r.errors?.[0]?.message).toContain(token);
     }, CASE_TIMEOUT_MS);
 
-    // Pinned as measured on the base commit 3099fb53c: a bare `do` is an empty block.
-    it('"do" alone returns an empty block, unchanged', () => {
-        const r = boundedParse('do', strict);
-        expect(r.success).toBe(true);
-        expect(r.ast).toEqual({
-            type: 'Command', command: 'block',
-            args: { command: 'block', commands: [] },
-            position: { line: 1, column: 1 },
-        });
+    // A bare `do` parsed clean as an empty block, so Jjodie's detect, a strict parse, took the
+    // one-word message `do` as a script (P-2026-10-11-1145). Under strict the missing `end` is an
+    // error. The default mode keeps the empty block of the base commit 3099fb53c:
+    // validateScriptIntegrity parses a multi-line `do ... end` script one line at a time, and its
+    // first line is a bare `do`.
+    it.each([
+        ['do', { line: 1, column: 3 }],
+        ['do ', { line: 1, column: 4 }],
+        ['Do', { line: 1, column: 3 }],
+    ])('%j alone: an error naming the missing end under strict, an empty block otherwise', (input, position) => {
+        const r = boundedParse(input, strict);
+        if (strict) {
+            expect(r.success).toBe(false);
+            expect(r.ast).toBeUndefined();
+            expect(r.errors).toEqual([{ message: "Expected 'end' to close do block", position }]);
+        } else {
+            expect(r.success).toBe(true);
+            expect(r.ast).toEqual({
+                type: 'Command', command: 'block',
+                args: { command: 'block', commands: [] },
+                position: { line: 1, column: 1 },
+            });
+        }
+    }, CASE_TIMEOUT_MS);
+
+    // The same rule reaches a block with a body and no `end`: under strict it is no longer a script.
+    it('"do create class A" without end: an error under strict, a block otherwise', () => {
+        const r = boundedParse('do create class A', strict);
+        if (strict) {
+            expect(r.success).toBe(false);
+            expect(r.errors).toEqual([{ message: "Expected 'end' to close do block", position: { line: 1, column: 18 } }]);
+        } else {
+            expect(r.success).toBe(true);
+            expect(r.ast).toEqual({
+                type: 'Command', command: 'block',
+                args: {
+                    command: 'block',
+                    commands: [{
+                        type: 'Command', command: 'create',
+                        args: { command: 'create', elementType: 'class', name: 'A' },
+                        position: { line: 1, column: 4 },
+                    }],
+                },
+                position: { line: 1, column: 1 },
+            });
+        }
     }, CASE_TIMEOUT_MS);
 
     // Pinned as measured on the base commit e47e456b1: an explicitly empty block is an empty block.
