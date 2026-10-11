@@ -1,102 +1,102 @@
 {
   "url": "http://localhost:3123",
   "tag": "after",
-  "at": "2026-10-11T11:09:51.443Z",
+  "at": "2026-10-11T13:10:45.323Z",
   "bpmn": {
     "tag": "after",
     "ids": {
       "collab": {
-        "obj": "Pointer1791717090848_USER_104",
-        "vertex": "Pointer1791717090851_USER_109"
+        "obj": "Pointer1791724345815_USER_104",
+        "vertex": "Pointer1791724345817_USER_109"
       },
       "shopProc": {
-        "obj": "Pointer1791717091134_USER_110",
-        "vertex": "Pointer1791717091135_USER_115"
+        "obj": "Pointer1791724346093_USER_110",
+        "vertex": "Pointer1791724346094_USER_115"
       },
       "custProc": {
-        "obj": "Pointer1791717091393_USER_116",
-        "vertex": "Pointer1791717091394_USER_121"
+        "obj": "Pointer1791724346446_USER_116",
+        "vertex": "Pointer1791724346447_USER_121"
       },
       "laneSet": {
-        "obj": "Pointer1791717091661_USER_122",
-        "vertex": "Pointer1791717091662_USER_126"
+        "obj": "Pointer1791724346703_USER_122",
+        "vertex": "Pointer1791724346705_USER_126"
       },
       "shop": {
-        "obj": "Pointer1791717091944_USER_127",
-        "vertex": "Pointer1791717091945_USER_131"
+        "obj": "Pointer1791724346969_USER_127",
+        "vertex": "Pointer1791724346971_USER_131"
       },
       "customer": {
-        "obj": "Pointer1791717092219_USER_132",
-        "vertex": "Pointer1791717092220_USER_136"
+        "obj": "Pointer1791724347249_USER_132",
+        "vertex": "Pointer1791724347249_USER_136"
       },
       "supplier": {
-        "obj": "Pointer1791717092520_USER_137",
-        "vertex": "Pointer1791717092521_USER_141"
+        "obj": "Pointer1791724347557_USER_137",
+        "vertex": "Pointer1791724347557_USER_141"
       },
       "sales": {
-        "obj": "Pointer1791717092852_USER_142",
-        "vertex": "Pointer1791717092854_USER_147"
+        "obj": "Pointer1791724347869_USER_142",
+        "vertex": "Pointer1791724347870_USER_147"
       },
       "warehouse": {
-        "obj": "Pointer1791717093129_USER_148",
-        "vertex": "Pointer1791717093130_USER_153"
+        "obj": "Pointer1791724348165_USER_148",
+        "vertex": "Pointer1791724348166_USER_153"
       },
       "start": {
-        "obj": "Pointer1791717093424_USER_154",
-        "vertex": "Pointer1791717093425_USER_157"
+        "obj": "Pointer1791724348460_USER_154",
+        "vertex": "Pointer1791724348460_USER_157"
       },
       "check": {
-        "obj": "Pointer1791717093760_USER_158",
-        "vertex": "Pointer1791717093761_USER_161"
+        "obj": "Pointer1791724348787_USER_158",
+        "vertex": "Pointer1791724348787_USER_161"
       },
       "gw": {
-        "obj": "Pointer1791717094030_USER_162",
-        "vertex": "Pointer1791717094031_USER_166"
+        "obj": "Pointer1791724349069_USER_162",
+        "vertex": "Pointer1791724349069_USER_166"
       },
       "ship": {
-        "obj": "Pointer1791717094374_USER_167",
-        "vertex": "Pointer1791717094374_USER_170"
+        "obj": "Pointer1791724349400_USER_167",
+        "vertex": "Pointer1791724349401_USER_170"
       },
       "end": {
-        "obj": "Pointer1791717094654_USER_171",
-        "vertex": "Pointer1791717094655_USER_174"
+        "obj": "Pointer1791724349674_USER_171",
+        "vertex": "Pointer1791724349674_USER_174"
       },
       "place": {
-        "obj": "Pointer1791717094997_USER_175",
-        "vertex": "Pointer1791717094998_USER_178"
+        "obj": "Pointer1791724349997_USER_175",
+        "vertex": "Pointer1791724349997_USER_178"
       },
       "receive": {
-        "obj": "Pointer1791717095268_USER_179",
-        "vertex": "Pointer1791717095270_USER_182"
+        "obj": "Pointer1791724350301_USER_179",
+        "vertex": "Pointer1791724350301_USER_182"
       },
       "sf1": {
-        "obj": "Pointer1791717095562_USER_183",
-        "vertex": "Pointer1791717095564_USER_188"
+        "obj": "Pointer1791724350590_USER_183",
+        "vertex": "Pointer1791724350590_USER_188"
       },
       "sf2": {
-        "obj": "Pointer1791717095891_USER_189",
-        "vertex": "Pointer1791717095892_USER_194"
+        "obj": "Pointer1791724350892_USER_189",
+        "vertex": "Pointer1791724350893_USER_194"
       },
       "sf3": {
-        "obj": "Pointer1791717096220_USER_195",
-        "vertex": "Pointer1791717096221_USER_200"
+        "obj": "Pointer1791724351236_USER_195",
+        "vertex": "Pointer1791724351237_USER_200"
       },
       "sf4": {
-        "obj": "Pointer1791717096519_USER_201",
-        "vertex": "Pointer1791717096521_USER_206"
+        "obj": "Pointer1791724351567_USER_201",
+        "vertex": "Pointer1791724351568_USER_206"
       },
       "mf1": {
-        "obj": "Pointer1791717096835_USER_207",
-        "vertex": "Pointer1791717096836_USER_212"
+        "obj": "Pointer1791724351919_USER_207",
+        "vertex": "Pointer1791724351919_USER_212"
       },
       "pack": {
-        "obj": "Pointer1791717141478_USER_353",
-        "vertex": "Pointer1791717141479_USER_356"
+        "obj": "Pointer1791724392888_USER_353",
+        "vertex": "Pointer1791724392889_USER_356"
       }
     },
     "nodes": [
       {
-        "id": "Pointer1791717091945_USER_131",
+        "id": "Pointer1791724346971_USER_131",
         "name": "Shop",
         "x": 100,
         "y": 100,
@@ -108,7 +108,7 @@
         "bandLabel": "Shop|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
       },
       {
-        "id": "Pointer1791717092220_USER_136",
+        "id": "Pointer1791724347249_USER_136",
         "name": "Customer",
         "x": 100,
         "y": 520,
@@ -120,7 +120,7 @@
         "bandLabel": "Customer|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
       },
       {
-        "id": "Pointer1791717092521_USER_141",
+        "id": "Pointer1791724347557_USER_141",
         "name": "Supplier",
         "x": 100,
         "y": 780,
@@ -132,7 +132,7 @@
         "bandLabel": null
       },
       {
-        "id": "Pointer1791717092854_USER_147",
+        "id": "Pointer1791724347870_USER_147",
         "name": "Sales",
         "x": 130,
         "y": 100,
@@ -144,7 +144,7 @@
         "bandLabel": "Sales|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
       },
       {
-        "id": "Pointer1791717093130_USER_153",
+        "id": "Pointer1791724348166_USER_153",
         "name": "Warehouse",
         "x": 130,
         "y": 280,
@@ -156,7 +156,7 @@
         "bandLabel": "Warehouse|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
       },
       {
-        "id": "Pointer1791717093425_USER_157",
+        "id": "Pointer1791724348460_USER_157",
         "name": "Order received",
         "x": 190,
         "y": 172,
@@ -168,7 +168,7 @@
         "bandLabel": null
       },
       {
-        "id": "Pointer1791717093761_USER_161",
+        "id": "Pointer1791724348787_USER_161",
         "name": "Check order",
         "x": 300,
         "y": 160,
@@ -180,7 +180,7 @@
         "bandLabel": null
       },
       {
-        "id": "Pointer1791717094031_USER_166",
+        "id": "Pointer1791724349069_USER_166",
         "name": "In stock?",
         "x": 530,
         "y": 165,
@@ -192,7 +192,7 @@
         "bandLabel": null
       },
       {
-        "id": "Pointer1791717094374_USER_170",
+        "id": "Pointer1791724349401_USER_170",
         "name": "Ship",
         "x": 500,
         "y": 340,
@@ -204,7 +204,7 @@
         "bandLabel": null
       },
       {
-        "id": "Pointer1791717094655_USER_174",
+        "id": "Pointer1791724349674_USER_174",
         "name": "Shipped",
         "x": 720,
         "y": 352,
@@ -216,7 +216,7 @@
         "bandLabel": null
       },
       {
-        "id": "Pointer1791717094998_USER_178",
+        "id": "Pointer1791724349997_USER_178",
         "name": "Place order",
         "x": 250,
         "y": 590,
@@ -228,7 +228,7 @@
         "bandLabel": null
       },
       {
-        "id": "Pointer1791717095270_USER_182",
+        "id": "Pointer1791724350301_USER_182",
         "name": "Receive goods",
         "x": 600,
         "y": 590,
@@ -242,29 +242,29 @@
     ],
     "edges": [
       {
-        "id": "irobj_Pointer1791717095562_USER_183",
-        "source": "Pointer1791717093425_USER_157",
-        "target": "Pointer1791717093761_USER_161"
+        "id": "irobj_Pointer1791724350590_USER_183",
+        "source": "Pointer1791724348460_USER_157",
+        "target": "Pointer1791724348787_USER_161"
       },
       {
-        "id": "irobj_Pointer1791717095891_USER_189",
-        "source": "Pointer1791717093761_USER_161",
-        "target": "Pointer1791717094031_USER_166"
+        "id": "irobj_Pointer1791724350892_USER_189",
+        "source": "Pointer1791724348787_USER_161",
+        "target": "Pointer1791724349069_USER_166"
       },
       {
-        "id": "irobj_Pointer1791717096220_USER_195",
-        "source": "Pointer1791717094031_USER_166",
-        "target": "Pointer1791717094374_USER_170"
+        "id": "irobj_Pointer1791724351236_USER_195",
+        "source": "Pointer1791724349069_USER_166",
+        "target": "Pointer1791724349401_USER_170"
       },
       {
-        "id": "irobj_Pointer1791717096519_USER_201",
-        "source": "Pointer1791717094374_USER_170",
-        "target": "Pointer1791717094655_USER_174"
+        "id": "irobj_Pointer1791724351567_USER_201",
+        "source": "Pointer1791724349401_USER_170",
+        "target": "Pointer1791724349674_USER_174"
       },
       {
-        "id": "irobj_Pointer1791717096835_USER_207",
-        "source": "Pointer1791717094998_USER_178",
-        "target": "Pointer1791717093761_USER_161"
+        "id": "irobj_Pointer1791724351919_USER_207",
+        "source": "Pointer1791724349997_USER_178",
+        "target": "Pointer1791724348787_USER_161"
       }
     ],
     "stored": {
@@ -439,7 +439,7 @@
     },
     "problems": [
       {
-        "v": "Pointer1791717094031_USER_166",
+        "v": "Pointer1791724349069_USER_166",
         "p": [
           "conformance:Conformance:0"
         ]
@@ -474,8 +474,8 @@
             "kind": "containment",
             "title": "Claimed by 2 containers",
             "related": [
-              "Pointer1791717092854_USER_147",
-              "Pointer1791717093130_USER_153"
+              "Pointer1791724347870_USER_147",
+              "Pointer1791724348166_USER_153"
             ],
             "detail": []
           }
@@ -499,29 +499,29 @@
       },
       "edges": [
         {
-          "id": "irobj_Pointer1791717095562_USER_183",
-          "source": "Pointer1791717093425_USER_157",
-          "target": "Pointer1791717093761_USER_161"
+          "id": "irobj_Pointer1791724350590_USER_183",
+          "source": "Pointer1791724348460_USER_157",
+          "target": "Pointer1791724348787_USER_161"
         },
         {
-          "id": "irobj_Pointer1791717095891_USER_189",
-          "source": "Pointer1791717093761_USER_161",
-          "target": "Pointer1791717094031_USER_166"
+          "id": "irobj_Pointer1791724350892_USER_189",
+          "source": "Pointer1791724348787_USER_161",
+          "target": "Pointer1791724349069_USER_166"
         },
         {
-          "id": "irobj_Pointer1791717096220_USER_195",
-          "source": "Pointer1791717094031_USER_166",
-          "target": "Pointer1791717094374_USER_170"
+          "id": "irobj_Pointer1791724351236_USER_195",
+          "source": "Pointer1791724349069_USER_166",
+          "target": "Pointer1791724349401_USER_170"
         },
         {
-          "id": "irobj_Pointer1791717096519_USER_201",
-          "source": "Pointer1791717094374_USER_170",
-          "target": "Pointer1791717094655_USER_174"
+          "id": "irobj_Pointer1791724351567_USER_201",
+          "source": "Pointer1791724349401_USER_170",
+          "target": "Pointer1791724349674_USER_174"
         },
         {
-          "id": "irobj_Pointer1791717096835_USER_207",
-          "source": "Pointer1791717094998_USER_178",
-          "target": "Pointer1791717093761_USER_161"
+          "id": "irobj_Pointer1791724351919_USER_207",
+          "source": "Pointer1791724349997_USER_178",
+          "target": "Pointer1791724348787_USER_161"
         }
       ]
     }
@@ -530,39 +530,39 @@
     "tag": "after",
     "ids": {
       "r1": {
-        "obj": "Pointer1791717205517_USER_29",
-        "vertex": "Pointer1791717205518_USER_33"
+        "obj": "Pointer1791724453986_USER_29",
+        "vertex": "Pointer1791724453988_USER_33"
       },
       "r2": {
-        "obj": "Pointer1791717205817_USER_34",
-        "vertex": "Pointer1791717205817_USER_38"
+        "obj": "Pointer1791724454269_USER_34",
+        "vertex": "Pointer1791724454269_USER_38"
       },
       "a": {
-        "obj": "Pointer1791717206112_USER_39",
-        "vertex": "Pointer1791717206112_USER_42"
+        "obj": "Pointer1791724454568_USER_39",
+        "vertex": "Pointer1791724454568_USER_42"
       },
       "b": {
-        "obj": "Pointer1791717206401_USER_43",
-        "vertex": "Pointer1791717206402_USER_46"
+        "obj": "Pointer1791724454867_USER_43",
+        "vertex": "Pointer1791724454868_USER_46"
       },
       "c": {
-        "obj": "Pointer1791717206711_USER_47",
-        "vertex": "Pointer1791717206712_USER_50"
+        "obj": "Pointer1791724455167_USER_47",
+        "vertex": "Pointer1791724455168_USER_50"
       },
       "d": {
-        "obj": "Pointer1791717207010_USER_51",
-        "vertex": "Pointer1791717207010_USER_54"
+        "obj": "Pointer1791724455470_USER_51",
+        "vertex": "Pointer1791724455471_USER_54"
       },
       "x": {
-        "obj": "Pointer1791717207301_USER_55",
-        "vertex": "Pointer1791717207302_USER_58"
+        "obj": "Pointer1791724455759_USER_55",
+        "vertex": "Pointer1791724455760_USER_58"
       }
     },
     "errors": [],
     "Hulls": {
       "nodes": [
         {
-          "id": "Pointer1791717205518_USER_33",
+          "id": "Pointer1791724453988_USER_33",
           "name": "region1",
           "x": 100,
           "y": 100,
@@ -574,7 +574,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717205817_USER_38",
+          "id": "Pointer1791724454269_USER_38",
           "name": "region2",
           "x": 700,
           "y": 100,
@@ -586,7 +586,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717206112_USER_42",
+          "id": "Pointer1791724454568_USER_42",
           "name": "A",
           "x": 120,
           "y": 260,
@@ -598,7 +598,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717206402_USER_46",
+          "id": "Pointer1791724454868_USER_46",
           "name": "B",
           "x": 380,
           "y": 260,
@@ -610,7 +610,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717206712_USER_50",
+          "id": "Pointer1791724455168_USER_50",
           "name": "C",
           "x": 120,
           "y": 420,
@@ -622,7 +622,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717207010_USER_54",
+          "id": "Pointer1791724455471_USER_54",
           "name": "D",
           "x": 720,
           "y": 300,
@@ -634,7 +634,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717207302_USER_58",
+          "id": "Pointer1791724455760_USER_58",
           "name": "EXT",
           "x": 400,
           "y": 600,
@@ -662,31 +662,31 @@
       ],
       "edges": [
         {
-          "id": "Pointer1791717207605_USER_59",
-          "source": "Pointer1791717205518_USER_33",
-          "target": "Pointer1791717206112_USER_42"
+          "id": "Pointer1791724456073_USER_59",
+          "source": "Pointer1791724453988_USER_33",
+          "target": "Pointer1791724454568_USER_42"
         },
         {
-          "id": "Pointer1791717207910_USER_60",
-          "source": "Pointer1791717205518_USER_33",
-          "target": "Pointer1791717206402_USER_46"
+          "id": "Pointer1791724456378_USER_60",
+          "source": "Pointer1791724453988_USER_33",
+          "target": "Pointer1791724454868_USER_46"
         },
         {
-          "id": "Pointer1791717208214_USER_61",
-          "source": "Pointer1791717205518_USER_33",
-          "target": "Pointer1791717206712_USER_50"
+          "id": "Pointer1791724456684_USER_61",
+          "source": "Pointer1791724453988_USER_33",
+          "target": "Pointer1791724455168_USER_50"
         },
         {
-          "id": "Pointer1791717208545_USER_62",
-          "source": "Pointer1791717205817_USER_38",
-          "target": "Pointer1791717207010_USER_54"
+          "id": "Pointer1791724456990_USER_62",
+          "source": "Pointer1791724454269_USER_38",
+          "target": "Pointer1791724455471_USER_54"
         }
       ]
     },
     "Collapsed": {
       "nodes": [
         {
-          "id": "Pointer1791717205518_USER_33",
+          "id": "Pointer1791724453988_USER_33",
           "name": "region1",
           "x": 100,
           "y": 100,
@@ -698,7 +698,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717205817_USER_38",
+          "id": "Pointer1791724454269_USER_38",
           "name": "region2",
           "x": 700,
           "y": 100,
@@ -710,7 +710,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717206112_USER_42",
+          "id": "Pointer1791724454568_USER_42",
           "name": "A",
           "x": 120,
           "y": 260,
@@ -722,7 +722,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717206402_USER_46",
+          "id": "Pointer1791724454868_USER_46",
           "name": "B",
           "x": 380,
           "y": 260,
@@ -734,7 +734,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717206712_USER_50",
+          "id": "Pointer1791724455168_USER_50",
           "name": "C",
           "x": 120,
           "y": 420,
@@ -746,7 +746,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717207010_USER_54",
+          "id": "Pointer1791724455471_USER_54",
           "name": "D",
           "x": 720,
           "y": 300,
@@ -758,7 +758,7 @@
           "bandLabel": null
         },
         {
-          "id": "Pointer1791717207302_USER_58",
+          "id": "Pointer1791724455760_USER_58",
           "name": "EXT",
           "x": 400,
           "y": 600,
@@ -786,24 +786,24 @@
       ],
       "edges": [
         {
-          "id": "Pointer1791717207605_USER_59",
-          "source": "Pointer1791717205518_USER_33",
-          "target": "Pointer1791717206112_USER_42"
+          "id": "Pointer1791724456073_USER_59",
+          "source": "Pointer1791724453988_USER_33",
+          "target": "Pointer1791724454568_USER_42"
         },
         {
-          "id": "Pointer1791717207910_USER_60",
-          "source": "Pointer1791717205518_USER_33",
-          "target": "Pointer1791717206402_USER_46"
+          "id": "Pointer1791724456378_USER_60",
+          "source": "Pointer1791724453988_USER_33",
+          "target": "Pointer1791724454868_USER_46"
         },
         {
-          "id": "Pointer1791717208214_USER_61",
-          "source": "Pointer1791717205518_USER_33",
-          "target": "Pointer1791717206712_USER_50"
+          "id": "Pointer1791724456684_USER_61",
+          "source": "Pointer1791724453988_USER_33",
+          "target": "Pointer1791724455168_USER_50"
         },
         {
-          "id": "Pointer1791717208545_USER_62",
-          "source": "Pointer1791717205817_USER_38",
-          "target": "Pointer1791717207010_USER_54"
+          "id": "Pointer1791724456990_USER_62",
+          "source": "Pointer1791724454269_USER_38",
+          "target": "Pointer1791724455471_USER_54"
         }
       ]
     }
@@ -812,123 +812,123 @@
     "tag": "after",
     "ids": {
       "collab": {
-        "obj": "Pointer1791717312748_USER_104",
-        "vertex": "Pointer1791717312751_USER_109"
+        "obj": "Pointer1791724556645_USER_104",
+        "vertex": "Pointer1791724556647_USER_109"
       },
       "shopProc": {
-        "obj": "Pointer1791717313008_USER_110",
-        "vertex": "Pointer1791717313009_USER_115"
+        "obj": "Pointer1791724556905_USER_110",
+        "vertex": "Pointer1791724556906_USER_115"
       },
       "custProc": {
-        "obj": "Pointer1791717313264_USER_116",
-        "vertex": "Pointer1791717313265_USER_121"
+        "obj": "Pointer1791724557161_USER_116",
+        "vertex": "Pointer1791724557162_USER_121"
       },
       "laneSet": {
-        "obj": "Pointer1791717313573_USER_122",
-        "vertex": "Pointer1791717313575_USER_126"
+        "obj": "Pointer1791724557418_USER_122",
+        "vertex": "Pointer1791724557419_USER_126"
       },
       "shop": {
-        "obj": "Pointer1791717313897_USER_127",
-        "vertex": "Pointer1791717313898_USER_131"
+        "obj": "Pointer1791724557706_USER_127",
+        "vertex": "Pointer1791724557707_USER_131"
       },
       "customer": {
-        "obj": "Pointer1791717314164_USER_132",
-        "vertex": "Pointer1791717314165_USER_136"
+        "obj": "Pointer1791724557994_USER_132",
+        "vertex": "Pointer1791724557995_USER_136"
       },
       "supplier": {
-        "obj": "Pointer1791717314432_USER_137",
-        "vertex": "Pointer1791717314432_USER_141"
+        "obj": "Pointer1791724558306_USER_137",
+        "vertex": "Pointer1791724558307_USER_141"
       },
       "sales": {
-        "obj": "Pointer1791717314787_USER_142",
-        "vertex": "Pointer1791717314788_USER_147"
+        "obj": "Pointer1791724558626_USER_142",
+        "vertex": "Pointer1791724558627_USER_147"
       },
       "warehouse": {
-        "obj": "Pointer1791717315045_USER_148",
-        "vertex": "Pointer1791717315046_USER_153"
+        "obj": "Pointer1791724558889_USER_148",
+        "vertex": "Pointer1791724558890_USER_153"
       },
       "start": {
-        "obj": "Pointer1791717315345_USER_154",
-        "vertex": "Pointer1791717315345_USER_157"
+        "obj": "Pointer1791724559186_USER_154",
+        "vertex": "Pointer1791724559186_USER_157"
       },
       "check": {
-        "obj": "Pointer1791717315675_USER_158",
-        "vertex": "Pointer1791717315676_USER_161"
+        "obj": "Pointer1791724559506_USER_158",
+        "vertex": "Pointer1791724559506_USER_161"
       },
       "gw": {
-        "obj": "Pointer1791717315954_USER_162",
-        "vertex": "Pointer1791717315955_USER_166"
+        "obj": "Pointer1791724559807_USER_162",
+        "vertex": "Pointer1791724559808_USER_166"
       },
       "ship": {
-        "obj": "Pointer1791717316286_USER_167",
-        "vertex": "Pointer1791717316287_USER_170"
+        "obj": "Pointer1791724560163_USER_167",
+        "vertex": "Pointer1791724560163_USER_170"
       },
       "end": {
-        "obj": "Pointer1791717316588_USER_171",
-        "vertex": "Pointer1791717316589_USER_174"
+        "obj": "Pointer1791724560418_USER_171",
+        "vertex": "Pointer1791724560419_USER_174"
       },
       "place": {
-        "obj": "Pointer1791717316911_USER_175",
-        "vertex": "Pointer1791717316912_USER_178"
+        "obj": "Pointer1791724560722_USER_175",
+        "vertex": "Pointer1791724560722_USER_178"
       },
       "receive": {
-        "obj": "Pointer1791717317185_USER_179",
-        "vertex": "Pointer1791717317185_USER_182"
+        "obj": "Pointer1791724560992_USER_179",
+        "vertex": "Pointer1791724560992_USER_182"
       },
       "sf1": {
-        "obj": "Pointer1791717317491_USER_183",
-        "vertex": "Pointer1791717317492_USER_188"
+        "obj": "Pointer1791724561303_USER_183",
+        "vertex": "Pointer1791724561303_USER_188"
       },
       "sf2": {
-        "obj": "Pointer1791717317799_USER_189",
-        "vertex": "Pointer1791717317800_USER_194"
+        "obj": "Pointer1791724561622_USER_189",
+        "vertex": "Pointer1791724561622_USER_194"
       },
       "sf3": {
-        "obj": "Pointer1791717318105_USER_195",
-        "vertex": "Pointer1791717318106_USER_200"
+        "obj": "Pointer1791724561923_USER_195",
+        "vertex": "Pointer1791724561924_USER_200"
       },
       "sf4": {
-        "obj": "Pointer1791717318425_USER_201",
-        "vertex": "Pointer1791717318426_USER_206"
+        "obj": "Pointer1791724562230_USER_201",
+        "vertex": "Pointer1791724562231_USER_206"
       },
       "mf1": {
-        "obj": "Pointer1791717318726_USER_207",
-        "vertex": "Pointer1791717318726_USER_212"
+        "obj": "Pointer1791724562524_USER_207",
+        "vertex": "Pointer1791724562524_USER_212"
       }
     },
     "zoom": 1,
     "move": {
       "before1": {
         "sales": [
-          "Pointer1791717315345_USER_154",
-          "Pointer1791717315675_USER_158",
-          "Pointer1791717315954_USER_162"
+          "Pointer1791724559186_USER_154",
+          "Pointer1791724559506_USER_158",
+          "Pointer1791724559807_USER_162"
         ],
         "warehouse": [
-          "Pointer1791717316286_USER_167",
-          "Pointer1791717316588_USER_171"
+          "Pointer1791724560163_USER_167",
+          "Pointer1791724560418_USER_171"
         ]
       },
       "after1": {
         "sales": [
-          "Pointer1791717315345_USER_154",
-          "Pointer1791717315675_USER_158",
-          "Pointer1791717315954_USER_162",
-          "Pointer1791717316286_USER_167"
+          "Pointer1791724559186_USER_154",
+          "Pointer1791724559506_USER_158",
+          "Pointer1791724559807_USER_162",
+          "Pointer1791724560163_USER_167"
         ],
         "warehouse": [
-          "Pointer1791717316588_USER_171"
+          "Pointer1791724560418_USER_171"
         ]
       },
       "undone": {
         "sales": [
-          "Pointer1791717315345_USER_154",
-          "Pointer1791717315675_USER_158",
-          "Pointer1791717315954_USER_162"
+          "Pointer1791724559186_USER_154",
+          "Pointer1791724559506_USER_158",
+          "Pointer1791724559807_USER_162"
         ],
         "warehouse": [
-          "Pointer1791717316286_USER_167",
-          "Pointer1791717316588_USER_171"
+          "Pointer1791724560163_USER_167",
+          "Pointer1791724560418_USER_171"
         ]
       },
       "laneEdges1": 0,
@@ -948,20 +948,20 @@
     "backAndForth": {
       "final2": {
         "sales": [
-          "Pointer1791717315345_USER_154",
-          "Pointer1791717315675_USER_158",
-          "Pointer1791717315954_USER_162"
+          "Pointer1791724559186_USER_154",
+          "Pointer1791724559506_USER_158",
+          "Pointer1791724559807_USER_162"
         ],
         "warehouse": [
-          "Pointer1791717316588_USER_171",
-          "Pointer1791717316286_USER_167"
+          "Pointer1791724560418_USER_171",
+          "Pointer1791724560163_USER_167"
         ]
       },
       "pairEdges": 1
     },
     "paletteDrop": {
       "newTasks": [
-        "Pointer1791717379035_USER_357"
+        "Pointer1791724629131_USER_357"
       ]
     },
     "connect": {
@@ -971,7 +971,7 @@
       ],
       "picked": true,
       "newFlows": [
-        "Pointer1791717384040_USER_363"
+        "Pointer1791724633957_USER_363"
       ]
     },
     "errors": []
@@ -979,24 +979,24 @@
   "s3hull": {
     "ids": {
       "r1": {
-        "obj": "Pointer1791717446511_USER_29",
-        "vertex": "Pointer1791717446514_USER_33"
+        "obj": "Pointer1791724696880_USER_29",
+        "vertex": "Pointer1791724696882_USER_33"
       },
       "r2": {
-        "obj": "Pointer1791717446771_USER_34",
-        "vertex": "Pointer1791717446772_USER_38"
+        "obj": "Pointer1791724697138_USER_34",
+        "vertex": "Pointer1791724697138_USER_38"
       },
       "a": {
-        "obj": "Pointer1791717447027_USER_39",
-        "vertex": "Pointer1791717447028_USER_42"
+        "obj": "Pointer1791724697393_USER_39",
+        "vertex": "Pointer1791724697393_USER_42"
       },
       "b": {
-        "obj": "Pointer1791717447286_USER_43",
-        "vertex": "Pointer1791717447287_USER_46"
+        "obj": "Pointer1791724697691_USER_43",
+        "vertex": "Pointer1791724697692_USER_46"
       },
       "d": {
-        "obj": "Pointer1791717447545_USER_47",
-        "vertex": "Pointer1791717447546_USER_50"
+        "obj": "Pointer1791724698007_USER_47",
+        "vertex": "Pointer1791724698008_USER_50"
       }
     },
     "rec0": {
@@ -1096,18 +1096,18 @@
       }
     },
     "r1Before": [
-      "Pointer1791717447027_USER_39",
-      "Pointer1791717447286_USER_43"
+      "Pointer1791724697393_USER_39",
+      "Pointer1791724697691_USER_43"
     ],
     "r1After": [
-      "Pointer1791717447027_USER_39",
-      "Pointer1791717447286_USER_43"
+      "Pointer1791724697393_USER_39",
+      "Pointer1791724697691_USER_43"
     ],
     "r2Before": [
-      "Pointer1791717447545_USER_47"
+      "Pointer1791724698007_USER_47"
     ],
     "r2After": [
-      "Pointer1791717447545_USER_47"
+      "Pointer1791724698007_USER_47"
     ]
   },
   "s6": {
@@ -1150,9 +1150,9 @@
         60
       ],
       "Sales": [
-        130,
-        100,
-        870,
+        1100,
+        520,
+        200,
         180
       ],
       "Ship": [
@@ -1181,70 +1181,70 @@
       ],
       "Warehouse": [
         130,
-        280,
+        100,
         870,
-        180
+        360
       ]
     },
     "after1": {
       "Check order": [
-        460,
-        584,
+        1366,
+        824,
         140,
         60
       ],
       "Customer": [
-        416,
-        112,
+        968,
+        48,
         900,
         200
       ],
       "In stock?": [
-        876,
-        592,
+        1414,
+        1144,
         50,
         50
       ],
       "Order received": [
-        124,
-        600,
+        1422,
+        528,
         36,
         36
       ],
       "Place order": [
-        462,
-        128,
+        1014,
+        64,
         140,
         60
       ],
       "Receive goods": [
-        462,
-        208,
+        1014,
+        144,
         140,
         60
       ],
       "Sales": [
-        78,
-        568,
-        1602,
-        180
+        1320,
+        512,
+        202,
+        698
       ],
       "Ship": [
-        1204,
-        764,
+        1044,
+        1480,
         140,
         60
       ],
       "Shipped": [
-        1628,
-        780,
+        1468,
+        1496,
         36,
         36
       ],
       "Shop": [
-        48,
-        568,
-        1632,
+        968,
+        1464,
+        900,
         360
       ],
       "Supplier": [
@@ -1254,71 +1254,71 @@
         40
       ],
       "Warehouse": [
-        78,
-        748,
-        1602,
-        180
+        998,
+        1464,
+        870,
+        360
       ]
     },
     "after2": {
       "Check order": [
-        460,
-        584,
+        1366,
+        824,
         140,
         60
       ],
       "Customer": [
-        416,
-        112,
+        968,
+        48,
         900,
         200
       ],
       "In stock?": [
-        876,
-        592,
+        1414,
+        1144,
         50,
         50
       ],
       "Order received": [
-        124,
-        600,
+        1422,
+        528,
         36,
         36
       ],
       "Place order": [
-        462,
-        128,
+        1014,
+        64,
         140,
         60
       ],
       "Receive goods": [
-        462,
-        208,
+        1014,
+        144,
         140,
         60
       ],
       "Sales": [
-        78,
-        568,
-        1602,
-        180
+        1320,
+        512,
+        202,
+        698
       ],
       "Ship": [
-        1204,
-        764,
+        1044,
+        1480,
         140,
         60
       ],
       "Shipped": [
-        1628,
-        780,
+        1468,
+        1496,
         36,
         36
       ],
       "Shop": [
-        48,
-        568,
-        1632,
+        968,
+        1464,
+        900,
         360
       ],
       "Supplier": [
@@ -1328,10 +1328,10 @@
         40
       ],
       "Warehouse": [
-        78,
-        748,
-        1602,
-        180
+        998,
+        1464,
+        870,
+        360
       ]
     },
     "errors": []
@@ -1564,14 +1564,14 @@
         },
         "out": true,
         "slot0": [
-          "Pointer1791717888163_USER_154",
-          "Pointer1791717888533_USER_158",
-          "Pointer1791717888809_USER_162"
+          "Pointer1791725142666_USER_154",
+          "Pointer1791725142981_USER_158",
+          "Pointer1791725143269_USER_162"
         ],
         "slot1": [
-          "Pointer1791717888163_USER_154",
-          "Pointer1791717888533_USER_158",
-          "Pointer1791717888809_USER_162"
+          "Pointer1791725142666_USER_154",
+          "Pointer1791725142981_USER_158",
+          "Pointer1791725143269_USER_162"
         ],
         "rec": [
           300,
@@ -1959,17 +1959,17 @@
           180
         ],
         "centre": {
-          "x": 1894,
+          "x": 1990,
           "y": 366
         },
         "out": true,
         "slot0": [
-          "Pointer1791717889116_USER_167",
-          "Pointer1791717889395_USER_171"
+          "Pointer1791725143593_USER_167",
+          "Pointer1791725143875_USER_171"
         ],
         "slot1": [
-          "Pointer1791717889116_USER_167",
-          "Pointer1791717889395_USER_171"
+          "Pointer1791725143593_USER_167",
+          "Pointer1791725143875_USER_171"
         ],
         "rec": [
           500,
@@ -2338,7 +2338,7 @@
     },
     "reload": {
       "reopen": {
-        "id": "Pointer1791717817889_USER_2",
+        "id": "Pointer1791725073050_USER_2",
         "stored": true,
         "viewpointBefore": "BPMN"
       },
@@ -2376,14 +2376,14 @@
   },
   "relayout": {
     "reopen": {
-      "id": "Pointer1791718032231_USER_2",
+      "id": "Pointer1791725286019_USER_2",
       "stored": true,
       "viewpointBefore": "BPMN"
     },
     "recPre": {
       "shop": [
-        100,
-        100,
+        48,
+        568,
         1632,
         360,
         true
@@ -2461,8 +2461,8 @@
     },
     "recPost": {
       "shop": [
-        100,
-        100,
+        48,
+        568,
         1632,
         360,
         true
@@ -2553,11 +2553,11 @@
       "Receive goods 462,208 140x60"
     ],
     "post": [
-      "Shop 48,100 1684x740",
+      "Shop 48,568 1632x360",
       "Customer 416,112 900x200",
       "Supplier 48,48 900x40",
-      "Sales 78,100 1654x560",
-      "Warehouse 78,660 1654x180",
+      "Sales 78,568 1602x180",
+      "Warehouse 78,748 1602x180",
       "Order received 124,600 36x36",
       "Check order 460,584 140x60",
       "In stock? 876,592 50x50",
@@ -2566,73 +2566,10 @@
       "Place order 462,128 140x60",
       "Receive goods 462,208 140x60"
     ],
-    "boxedOff": [
-      {
-        "kk": "shop",
-        "drawn": [
-          48,
-          568,
-          1632,
-          360
-        ],
-        "record": [
-          100,
-          100,
-          1632,
-          360,
-          true
-        ]
-      }
-    ],
+    "boxedOff": [],
     "stackedOff": [],
     "outside": [],
-    "drift": [
-      {
-        "kk": "shop",
-        "pre": [
-          48,
-          568,
-          1632,
-          360
-        ],
-        "post": [
-          48,
-          100,
-          1684,
-          740
-        ]
-      },
-      {
-        "kk": "sales",
-        "pre": [
-          78,
-          568,
-          1602,
-          180
-        ],
-        "post": [
-          78,
-          100,
-          1654,
-          560
-        ]
-      },
-      {
-        "kk": "warehouse",
-        "pre": [
-          78,
-          748,
-          1602,
-          180
-        ],
-        "post": [
-          78,
-          660,
-          1654,
-          180
-        ]
-      }
-    ],
+    "drift": [],
     "errors": []
   },
   "carry": {
@@ -2668,7 +2605,7 @@
     },
     "pressed": {
       "cls": "ir-node-content ir-shape--rect ir-layout",
-      "node": "Pointer1791718256730_USER_131"
+      "node": "Pointer1791725508242_USER_131"
     },
     "errors": []
   },

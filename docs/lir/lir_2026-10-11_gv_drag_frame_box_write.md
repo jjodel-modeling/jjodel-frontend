@@ -137,3 +137,10 @@ delta (`18569bcc3`), not where its box was dropped, so a box drawn off its recor
 Shop drawn `[60, 100, 940, 360]` over a record `[100, 100, 900, 360]`, dragged by `(84, 44)`, is drawn
 `[144, 144, 940, 360]` over `[184, 144, 900, 360]`). A position write through the existing call; the mutant without
 it is killed by `carry-1` and `carry-2`.
+
+## 5. Applied (2026-10-11, after Alfonso's go-ahead of 14:23)
+
+§2 applied as written in `d7b6914a4` (`canvasToJjom.ts`, `syncPositionBatchToJjom` only; the S6 call site in
+`EditorV2.tsx`), with `sync/__tests__/syncPositionBatch.test.ts` (8 tests; 4 red on the previous function). The drag end
+stays as §4 describes it: no container write. Measured (tag `s6check`, `measures-s6check.json`): `relayout-1` to
+`relayout-4` 4/4, S6 6/6; the S6 flat control gives the same 12 positions as the base (`measures-s6flat-trunk.json`).
