@@ -37,7 +37,6 @@ import { step as coreStep } from '../../model/simulation/netStep';
 import type {
     ActionOracle, CompiledNet, GuardOracle, NetConfiguration, SimStateAccess, SimValue,
 } from '../../model/simulation/netTypes';
-import { RUN_SCENARIOS_KEY, decodeScenarios } from '../../model/simulation/scenarioCodec';
 import type { ScenarioInput, ScenarioRecord, ScenarioStepKind } from '../../model/simulation/scenarioCodec';
 import { generate } from '../engine/generate';
 import { readModelTemplates } from '../engine/templateCodec';
@@ -49,6 +48,7 @@ import { compileModelRun } from '../target/js/access';
 import type { ModelRun } from '../target/js/access';
 import { observeSim } from './observe';
 import type { Observation } from './observe';
+import { storedScenarios } from './storedScenarios';
 
 type Lookup = Record<string, any>;
 
@@ -346,8 +346,7 @@ async function hookRun(options: OracleHookOptions): Promise<OracleHookResult> {
     let scenario: ScenarioRecord | undefined;
     if (typeof options.scenario === 'object') scenario = options.scenario;
     else {
-        const raw = lookup[modelId]?._state?.[RUN_SCENARIOS_KEY];
-        const stored = decodeScenarios(typeof raw === 'string' ? raw : undefined).scenarios;
+        const stored = storedScenarios(lookup, modelId);
         scenario = options.scenario === undefined ? stored[0] : stored.find(s => s.name === options.scenario);
     }
     if (!scenario) return { ok: false, kind: 'no-scenario', message: `No scenario ${options.scenario ?? ''} on the model.` };
