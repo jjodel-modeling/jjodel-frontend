@@ -213,9 +213,13 @@ P-2026-10-11-0040 (the right margin at rest). §1 to §11 are not edited.
    that grows pushes the next ones down; one that grows against the stack pushes the earlier ones, each keeping its floor,
    and the container's origin, up. Where two partitions' children leave no room for a border between them with the margin,
    the earlier partition keeps its children (a case the rule cannot satisfy without moving a child).
-4. **The pointer.** While a node is dragged, its container follows it as long as the node's centre stays inside the box the
-   container had at rest; once the centre leaves it, the container and those around it count the node where it rests, and
-   the drop follows `membership` (§6). A paired lane resize (§7.5) stops at the margin of the neighbour's children.
+4. **The pointer and the band** (amended 2026-10-11 15:58 after Alfonso's visual check: a test on the node's centre
+   capped the growth near half the node). While a node is dragged, its container follows it as long as the pointer (the
+   cursor, in flow coordinates) stays inside the box the container had at rest grown by `FOLLOW_BAND` (32 px) on every
+   side: within the band the frame holds the whole child plus the margin, even when most of the child is past the old
+   border. Past the band the container and those around it count the node where it rests, and the drop follows
+   `membership` (§6), resolved as before on the node's centre. The band is measured on the box at rest, never on the
+   growing one. A paired lane resize (§7.5) stops at the margin of the neighbour's children.
 5. **Derived, not written.** The box is computed from the records and the children on every render, in session and after a
    reload; at a child's drag end nothing of the container is written. A container dragged as a whole lands with its record
    moved by the drag's delta, its descendants too (§6), so a box drawn off its record keeps its far border.
