@@ -179,7 +179,12 @@ export function useEditorMode(
             const attrNames = Array.isArray(attrs)
                 ? attrs.map((aid: any) => (typeof aid === 'string' ? state.idlookup?.[aid]?.name : aid?.name) ?? '').join(',')
                 : '';
-            parts.push(`${id}:${cls.name}:${cls.abstract}:${cls.isSingleton}:${refCount}:${refNames}:${attrNames}`);
+            // Include the superclass ids: a superclass link writes only `extends`, so without
+            // them a mounted model tab kept the pre-link ancestry (no inherited references,
+            // no new concrete subclasses) and the M1 connect gesture found no reference
+            // (see docs/discovery/discovery_2026-10-11_m1_edge_gesture_subclass_instances.md).
+            const supers = Array.isArray(cls.extends) ? cls.extends.join(',') : '';
+            parts.push(`${id}:${cls.name}:${cls.abstract}:${cls.isSingleton}:${refCount}:${refNames}:${attrNames}:${supers}`);
         }
         return parts.join('|');
     });
