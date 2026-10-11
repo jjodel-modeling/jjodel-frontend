@@ -10,6 +10,7 @@
  */
 
 import React, { useState } from 'react';
+import '../oracle/oracle'; // the oracle in the lazy chunk; its probe hook is installed only with the setting on
 import type { TemplateRecord } from '../engine/templates';
 
 export interface TemplateEditorProps {
