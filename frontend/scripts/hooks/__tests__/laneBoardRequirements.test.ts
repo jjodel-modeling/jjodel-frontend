@@ -548,6 +548,24 @@ describe('the board: the Requirements route, its asset and its tab', () => {
         expect(SGS.map((sg) => bar(html, sg).chips)).toEqual([[['R-A-2', 'Second.'], ['R-B-1', 'Fourth.']], [], [['R-A-1', 'First.']], []]);
     });
 
+    test('kills "a mixed row on one side only", "the hurt list shows the help entry", "a mixed row paired with itself": a row that helps and hurts one softgoal (P-2026-10-11-2025) sits on both sides of its bar, in its cluster\'s segment and as a chip, and each list shows the entry of its own side', async () => {
+        const repo = fixtureRepo();
+        const file = join(repo, 'docs', 'goals', 'contributions.json');
+        writeFileSync(file, json([...JSON.parse(readFileSync(file, 'utf8')), contrib('R-C-1', 'SG-2', 'some-')]));
+        const { base } = await board(repo);
+        const t = await reqDom(base);
+        const sg2 = bar(t.html(), 'SG-2');
+        expect(sg2.label).toEqual(['SG-2 Reversibility', '5 help · 2 hurt']);
+        expect(sg2.segs.map((s) => [s.cl, s.n])).toEqual([['R-C-1', 2], ['(unclustered)', 2], ['R-A-1', 1]]);
+        expect(sg2.chips).toEqual([['R-A-1', 'First.'], ['R-C-1', 'Fifth.']]);
+        const [help, hurt] = columns(bar(t.click('[data-sb-cl]', { sbSg: 'SG-2', sbCl: 'R-C-1' }), 'SG-2').open!);
+        expect(listRows(help)).toEqual([['R-C-1', 'Fifth.', 'help', 'read'], ['R-C-2', 'Sixth.', 'make', 'read']]);
+        expect(listRows(hurt)).toEqual([['R-A-1', 'First.', 'hurt', 'read'], ['R-C-1', 'Fifth.', 'some-', 'read']]);
+        const pairs: Stub[] = JSON.parse(await text(base, '/api/requirements')).goalModel.opposing;
+        expect(pairs.filter((p) => p.b === 'R-C-1').map((p) => p.a).sort()).toEqual(['R-A-2', 'R-B-1', 'R-B-2', 'R-C-2']);
+        expect(pairs.filter((p) => p.a === p.b)).toEqual([]);
+    });
+
     test('kills "no click handler", "the list of every helping row", "the list of another cluster", "no hurting rows beside", "two lists on one softgoal", "a second click does not close", "the open list not remembered": a click on a segment opens under its softgoal the cluster\'s helping rows beside the hurting rows, one list per softgoal, remembered', async () => {
         const { base } = await reqBoard();
         const t = await reqDom(base);

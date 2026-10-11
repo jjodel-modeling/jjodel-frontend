@@ -40,6 +40,10 @@
  *              absent (P-2026-10-11-1735). balance: per softgoal, in softgoals
  *              order, {softgoal, help, hurt}, the realized rows that help it and
  *              that hurt it, in id order; opposing is the product of the two.
+ *              A mixed row (one positive and one negative entry on a softgoal,
+ *              P-2026-10-11-2025) is on both sides, never paired with itself.
+ *              duplicates: the entries refused because their pair already has
+ *              one of the same sign, {req, softgoal, kind}, in file order.
  *
  * The git side (the typed commits and their trunk merges) is cached in
  * <cache-dir>/<trunk sha>.json, by default in the system temp folder: a new
@@ -62,7 +66,8 @@ const RANGE_MAX = 40;
 const BUILT_IN_MILESTONES = [{ id: 'MODELS', name: 'MODELS freeze', date: '2026-10-07', source: 'built-in' }];
 const CODE_TYPE = /^(feat|fix|refactor|perf)(\([^)]*\))?!?:/;
 const PROMPT_ID = /P-\d{4}-\d{2}-\d{2}-\d{4}/;
-const ROW_START = /^(?:- )?\*\*((?:RC|R)-[A-Za-z0-9/]+(?:-[A-Za-z0-9]+)*)\*\*/;
+// The bold head: the id, a decimal sub-number (R-2/3.6), a label after a comma (R-B12, gate del registry).
+const ROW_START = /^(?:- )?\*\*((?:RC|R)-[A-Za-z0-9/]+(?:-[A-Za-z0-9]+)*(?:\.\d+)?)(?:,[^*\n]*)?\*\*/;
 const ID_TOKEN = /(?<![A-Za-z0-9-])(?:RC|R)-[A-Za-z0-9/]+(?:-[A-Za-z0-9]+)*/g;
 const POSITIVE = new Set(['make', 'help', 'some+']);
 const NEGATIVE = new Set(['some-', 'hurt', 'break']);
@@ -70,9 +75,9 @@ const NEGATIVE = new Set(['some-', 'hurt', 'break']);
 /** Natural order of ids: R-SIM-3 before R-SIM-21. */
 export const byId = (a, b) => a.localeCompare(b, 'en', { numeric: true });
 
-/** The family of an id: R-SIM-45 -> R-SIM, R-B15 -> R-B, R-VAL-6-bis -> R-VAL, RC-3 -> RC. */
+/** The family of an id: R-SIM-45 -> R-SIM, R-B15 -> R-B, R-VAL-6-bis -> R-VAL, R-2/3.6 -> R-2/3, RC-3 -> RC. */
 export function familyOf(id) {
-    return id.replace(/-(bis|ter|quater)$/i, '').replace(/-?\d+[a-z]?$/, '') || id;
+    return id.replace(/-(bis|ter|quater)$/i, '').replace(/[-.]?\d+[a-z]?$/, '') || id;
 }
 
 /** Every R-/RC- token of a text, ranges `R-X-1..4` expanded, in order of appearance. */
@@ -224,7 +229,8 @@ export function parseRegister(text, { withRc = false } = {}) {
         const sentences = [];
         const re = /[^.;!?\n]*(?:[.;!?](?=\s|$)|\n|$)/g;
         let m;
-        const body = r.text.replace(ROW_START, (x) => ' '.repeat(x.length));
+        // Blank the id only: a head label (R-D, emendamento a R-1 di E-obj) is read like the rest of the row.
+        const body = r.text.replace(ROW_START, (x, id) => ' '.repeat(x.indexOf(id) + id.length) + x.slice(x.indexOf(id) + id.length));
         while ((m = re.exec(body)) && m[0] !== '') sentences.push({ s: m[0], at: m.index });
         for (const { s, at } of sentences) {
             let prev = 0;
@@ -533,10 +539,17 @@ export function assignMilestones(rows, milestones) {
 export function joinGoals(rows, clusters, goals) {
     if (!goals) {
         rows.forEach((r) => { r.contributions = []; });
-        return { present: false, softgoals: [], conflicts: [], opposing: [], tree: [], correlations: [], balance: [] };
+        return { present: false, softgoals: [], conflicts: [], opposing: [], tree: [], correlations: [], balance: [], duplicates: [] };
     }
     const byReq = new Map();
+    // A (req, softgoal) pair holds one entry, or two of opposite sign (a mixed row). A second entry of the same
+    // sign is refused: the first in file order is joined, the other listed in `duplicates`.
+    const signs = new Set();
+    const duplicates = [];
     for (const c of goals.contributions || []) {
+        const sign = c.req + '\t' + c.softgoal + '\t' + (POSITIVE.has(c.kind) ? '+' : NEGATIVE.has(c.kind) ? '-' : c.kind);
+        if (signs.has(sign)) { duplicates.push({ req: c.req, softgoal: c.softgoal, kind: c.kind }); continue; }
+        signs.add(sign);
         if (!byReq.has(c.req)) byReq.set(c.req, []);
         byReq.get(c.req).push({ softgoal: c.softgoal, kind: c.kind, evidence: c.evidence, verified: c.verified, why: c.why });
     }
@@ -561,7 +574,7 @@ export function joinGoals(rows, clusters, goals) {
     }
     return {
         present: true, softgoals: goals.softgoals || [], conflicts: goals.conflicts || [], opposing,
-        tree: goals.tree || [], correlations: goals.correlations || [], balance,
+        tree: goals.tree || [], correlations: goals.correlations || [], balance, duplicates,
     };
 }
 

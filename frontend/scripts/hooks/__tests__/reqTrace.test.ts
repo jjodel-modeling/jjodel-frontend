@@ -95,6 +95,50 @@ describe('req-trace: the register parser', () => {
     });
 });
 
+// ── the heads besides `**<id>**` (P-2026-10-11-2025) ─────────────────────────
+
+describe('req-trace: a head with a label or a sub-number, and the near miss', () => {
+    // The three heads as docs/decisions.md writes them (:369, :392, :471), a C- item between them, and the bold
+    // sentence of :3693 that opens with an id and is prose, not a row.
+    const HEADS = `# Decisions
+
+## Serie R-D
+
+- **R-C** (2026-08-05) — Before the labelled head.
+- **R-D, emendamento a R-1 di E-obj** (2026-08-05) — Scrittura atomica dei capi: entrambe le
+  chiavi o nessuna, sempre.
+- **C-1..C-4** (2026-08-05) — Messaggistica dei capi, not an R- row.
+- **R-2/3.6** (2026-08-07) — Finestra Style, rilevamento del css globale. Cites R-D in passing.
+- **R-B12, gate del registry** (2026-08-03, implementato il 2026-08-06) — \`registerEdgePath\`
+  è condiviso con gli edge classici.
+
+**R-STR-5 e' superata nella sua delimitazione**, non nella sua lettura di \`FormSpec\`: prose, not a row.
+
+**R-E** (2026-08-06) — After the prose.
+`;
+    const { rows, byId } = rt.parseRegister(HEADS);
+
+    test('kills "the comma label refused", "the sub-number refused", "the family of R-2/3.6 ends in a dot": R-D, R-2/3.6 and R-B12 are rows, with their head, date, title and family', () => {
+        expect(rows.map((r: any) => r.id)).toEqual(['R-C', 'R-D', 'R-2/3.6', 'R-B12', 'R-E']);
+        expect(byId.get('R-D')).toMatchObject({ family: 'R-D', date: '2026-08-05', status: 'ratified', title: 'Scrittura atomica dei capi: entrambe le chiavi o nessuna, sempre.' });
+        expect(byId.get('R-D').text).not.toContain('Messaggistica');
+        expect(byId.get('R-2/3.6')).toMatchObject({ family: 'R-2/3', date: '2026-08-07', title: 'Finestra Style, rilevamento del css globale.' });
+        expect(byId.get('R-B12')).toMatchObject({ family: 'R-B', date: '2026-08-03', title: '`registerEdgePath` è condiviso con gli edge classici.' });
+        expect(byId.get('R-D').citedBy.other).toEqual(['R-2/3.6']);
+    });
+
+    test('kills "a space after the id read as a label": a bold sentence that opens with an id and a space is prose, not a row', () => {
+        expect(byId.has('R-STR-5')).toBe(false);
+        expect(byId.get('R-B12').text).not.toContain('superata');
+        expect(byId.get('R-E').date).toBe('2026-08-06');
+    });
+
+    test('kills "the head label blanked": the label is read like the rest of the row, so R-D amends R-1', () => {
+        expect(byId.get('R-D').evolves).toEqual([{ id: 'R-1', kind: 'amends' }]);
+        expect(byId.get('R-B12').evolves).toEqual([]);
+    });
+});
+
 // ── the git side, end to end ─────────────────────────────────────────────────
 
 function git(cwd: string, args: string[], date?: string) {
@@ -378,6 +422,42 @@ describe('req-trace: the goal tree, the correlations and the balance per softgoa
         expect(out.goalModel.tree).toEqual(tree);
         expect(out.goalModel.correlations).toEqual(correlations);
         expect(out.goalModel.opposing).toEqual([{ a: 'R-A-2', b: 'R-A-1', softgoal: 'SG-1' }]);
+    });
+});
+
+// ── mixed rows and a second entry of one sign (P-2026-10-11-2025) ────────────
+
+describe('req-trace: a mixed row, and a second entry of the same sign', () => {
+    const rows = () => [
+        { id: 'R-A-1', realized: true, cluster: 'R-A-1' },
+        { id: 'R-A-2', realized: true, cluster: 'R-A-1' },
+        { id: 'R-B-1', realized: true, cluster: null },
+    ];
+    const clusters = () => ({ list: [{ key: 'R-A-1', members: ['R-A-1', 'R-A-2'] }] as any[] });
+    const c = (req: string, softgoal: string, kind: string, why = req) => ({ req, softgoal, kind, evidence: 'read', verified: 'none', why });
+    const softgoals = [{ id: 'SG-1', name: 'One', description: '' }];
+
+    test('kills "a mixed row on one side only", "a mixed row paired with itself", "the negative of a mixed row refused": R-A-1 helps and hurts SG-1, so it is in both lists of the balance and opposes every other row of the other side, never itself', () => {
+        const rs = rows(), cl = clusters();
+        const g = rt.joinGoals(rs, cl, { softgoals, contributions: [c('R-A-1', 'SG-1', 'help'), c('R-A-2', 'SG-1', 'some-'), c('R-A-1', 'SG-1', 'some-'), c('R-B-1', 'SG-1', 'some+')], conflicts: [] });
+        expect(g.balance).toEqual([{ softgoal: 'SG-1', help: ['R-A-1', 'R-B-1'], hurt: ['R-A-1', 'R-A-2'] }]);
+        expect(g.opposing).toEqual([{ a: 'R-A-1', b: 'R-A-2', softgoal: 'SG-1' }, { a: 'R-B-1', b: 'R-A-1', softgoal: 'SG-1' }, { a: 'R-B-1', b: 'R-A-2', softgoal: 'SG-1' }]);
+        expect((rs[0] as any).contributions.map((x: any) => x.kind)).toEqual(['help', 'some-']);
+        expect(cl.list[0].goals).toEqual({ 'SG-1': { help: 1, hurt: 2 } });
+        expect(g.duplicates).toEqual([]);
+    });
+
+    test('kills "a second entry of one sign joined", "the first entry dropped instead", "the refusal silent": a second entry of the same sign on one pair is refused, the first in file order joined and the other listed in duplicates; the opposite sign still joins', () => {
+        const rs = rows(), cl = clusters();
+        const g = rt.joinGoals(rs, cl, {
+            softgoals, conflicts: [],
+            contributions: [c('R-A-1', 'SG-1', 'help', 'first'), c('R-A-1', 'SG-1', 'some+', 'second'), c('R-A-2', 'SG-1', 'hurt', 'one'), c('R-A-2', 'SG-1', 'some-', 'two'), c('R-A-2', 'SG-1', 'help', 'mixed')],
+        });
+        expect((rs[0] as any).contributions.map((x: any) => x.why)).toEqual(['first']);
+        expect((rs[1] as any).contributions.map((x: any) => x.why)).toEqual(['one', 'mixed']);
+        expect(cl.list[0].goals).toEqual({ 'SG-1': { help: 2, hurt: 1 } });
+        expect(g.duplicates).toEqual([{ req: 'R-A-1', softgoal: 'SG-1', kind: 'some+' }, { req: 'R-A-2', softgoal: 'SG-1', kind: 'some-' }]);
+        expect(rt.joinGoals(rows(), clusters(), null).duplicates).toEqual([]);
     });
 });
 

@@ -592,6 +592,14 @@
     "why": "Each guard declares its tolerance, «altrimenti si compra uno stop falso a ogni passo»; a bridge residue list is checked locally «prima di diventare una richiesta di decisione»."
   },
   {
+    "req": "R-RAIL-27",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«ogni guard dichiara la propria tolleranza, cioè quali divergenze sono ammesse e quali fermano il task»: every prompt guard carries one more declaration to write."
+  },
+  {
     "req": "R-RAIL-28",
     "softgoal": "SG-7",
     "kind": "help",
@@ -600,12 +608,28 @@
     "why": "Absence/presence claims need a proven search; «Ratificata dopo quattro occorrenze in due giorni», five more in the arc: a rule against measured rework."
   },
   {
+    "req": "R-RAIL-28",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "An absence claim holds only with «exit status verificato, oppure un controllo positivo con segnale sullo stesso comando»: one more check per claim."
+  },
+  {
     "req": "R-RAIL-29",
     "softgoal": "SG-7",
     "kind": "some+",
     "evidence": "inferred",
     "verified": "none",
     "why": "Records that interactive grep wraps «ugrep --ignore-files» and «--include non filtra», so searches stop yielding false silences; old absence claims are redone before citing."
+  },
+  {
+    "req": "R-RAIL-29",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«chi cita una vecchia asserzione di assenza come autorità la rifà prima di citarla»: one more re-run before a citation."
   },
   {
     "req": "R-RAIL-30",
@@ -640,6 +664,14 @@
     "why": "The surface showing family members together «si cerca prima di ratificare la regola, non dopo», after the «New document» case: avoids re-ratifying a family rule."
   },
   {
+    "req": "R-RAIL-32",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«La superficie che li affianca si cerca prima di ratificare la regola»: one more search before a family rule is ratified."
+  },
+  {
     "req": "R-RAIL-33",
     "softgoal": "SG-1",
     "kind": "help",
@@ -654,6 +686,14 @@
     "evidence": "read",
     "verified": "agent",
     "why": "The metamodel segment «cade sempre nel breadcrumb» since it «ripeteva l'header per costruzione»; caveat: a pre-existing pin divergence becomes «meno visibile»."
+  },
+  {
+    "req": "R-RAIL-34",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "The dropped segment was «l'unico punto in cui il pannello dichiarava il proprio metamodello», so a pin divergence becomes «meno visibile»."
   },
   {
     "req": "R-RAIL-35",
@@ -686,6 +726,14 @@
     "evidence": "inferred",
     "verified": "agent",
     "why": "Enumerate «tutte le regole che sta battendo» before removing a declaration; born «dall'hard stop del passo 7», at a stated cost of «un giro di build»."
+  },
+  {
+    "req": "R-RAIL-37",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Before removing a declaration the beaten rules are enumerated: «La verifica è meccanica e costa un giro di build», computed style compared «su ogni tema»."
   },
   {
     "req": "R-RAIL-38",
@@ -774,6 +822,14 @@
     "evidence": "inferred",
     "verified": "agent",
     "why": "«si dà il criterio e si lascia che l'esecutore ne derivi le posizioni»; a positional order would have archived the newest entry, «indistinguibile da un'esecuzione corretta»."
+  },
+  {
+    "req": "R-RAIL-45",
+    "softgoal": "SG-7",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "A positional claim in a shared file is «una misura con una data di scadenza, da riderivare al momento dell'esecuzione»: one more re-derivation per run."
   },
   {
     "req": "R-IRN-2",
@@ -1305,14 +1361,6 @@
   },
   {
     "req": "R-IRN-40",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "Implemented before the 2026-10-07 freeze with «four demo scenes 0 px from the base run» measured by the lane probe."
-  },
-  {
-    "req": "R-IRN-40",
     "softgoal": "SG-4",
     "kind": "some+",
     "evidence": "read",
@@ -1337,11 +1385,11 @@
   },
   {
     "req": "R-IRN-39",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "Implemented before the 2026-10-07 freeze with «four demo scenes 0 px from adb5d9731» measured by the lane probe."
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "«a rename of a superclass keeps an inherited match stale, a known limit»: an inherited metaclassName label can keep showing the old name."
   },
   {
     "req": "R-IRN-39",
@@ -1366,14 +1414,6 @@
     "evidence": "read",
     "verified": "agent",
     "why": "«objectSnapshotParts ... is the one self snapshot behind useIRView and useIRRowView»: node and row subscriptions share one snapshot function."
-  },
-  {
-    "req": "R-IRN-41",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "Implemented before the 2026-10-07 freeze; «the four demo scenes and DemoFlowB's derived viewpoint 0 px from adb5d9731» measured."
   },
   {
     "req": "R-IRN-41",
@@ -1580,7 +1620,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Decides the event buttons («un pulsante > per ogni istanza evento», structurally enabled) that the state machine and ESM scenes click, before the freeze."
   },
   {
@@ -1630,6 +1670,14 @@
     "evidence": "read",
     "verified": "none",
     "why": "A malformed guard «non vale true» and the arc leaves the candidates; the malformed value «è una violazione di conformità del modello»."
+  },
+  {
+    "req": "R-SIM-17",
+    "softgoal": "SG-6",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«Il controllo sintattico eredita il difetto noto del lexer su `true`/`false`/`null`, da coprire con test»: the Expression check can misjudge these literals."
   },
   {
     "req": "R-SIM-17",
@@ -1892,7 +1940,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Defines the five run states (Not started, Halted, Terminated, Running, Deadlock) whose labels the scenes read, before the freeze."
   },
   {
@@ -2012,7 +2060,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Builds the line «Run interrupted: the model changed. Reset to run again.» that the ESM scene reads, before the freeze."
   },
   {
@@ -2036,7 +2084,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Builds the choice list that the Petri scene opens on each conflict, before the freeze."
   },
   {
@@ -2076,7 +2124,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "The Trigger role is what the roles dialog binds in the state machine and ESM scenes, decided before the freeze."
   },
   {
@@ -2265,10 +2313,18 @@
   },
   {
     "req": "R-SIM-47",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "System profiles read-only, user profiles «Save as…», and a system profile that is «modified» until saved under a name: states the user must hold in mind."
+  },
+  {
+    "req": "R-SIM-47",
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Defines the profiles (system presets and Custom) that every scene picks and reads, before the freeze."
   },
   {
@@ -2308,7 +2364,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Defines «Checkable» and the computed required roles that the M2 face and the dialog read in every scene, before the freeze."
   },
   {
@@ -2404,7 +2460,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Defines the system profiles the scenes pick; the 2026-09-27 amendment makes a net «con una guardia sulla transizione» checkable, as the Petri scene's net is."
   },
   {
@@ -2436,7 +2492,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Builds the summary and Configure… that each scene's Apply walks, before the freeze."
   },
   {
@@ -2484,7 +2540,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Decides the blocked-input reason that the Petri scene's Deadlock beat reads, before the freeze."
   },
   {
@@ -2516,7 +2572,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Places the reason in the status line («Deadlock · ε: t1 false») that the Petri scene ends on, before the freeze."
   },
   {
@@ -2564,7 +2620,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "Shows guard defects after Reset in the defects line, the line the ESM scene's optional Reset reads, before the freeze."
   },
   {
@@ -2593,14 +2649,6 @@
   },
   {
     "req": "R-SIM-62",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "inferred",
-    "verified": "none",
-    "why": "Fixes the «name (S → D)» transition labels that every scene's step lines read, before the freeze."
-  },
-  {
-    "req": "R-SIM-62",
     "softgoal": "SG-8",
     "kind": "some+",
     "evidence": "read",
@@ -2614,6 +2662,14 @@
     "evidence": "measured",
     "verified": "none",
     "why": "A wrapping row «sposta i pulsanti di 17 px»; one-line rows, and the halt slot has fixed height so «i pulsanti non si muovono (misurato a 1600x1000 e 1280x800)»."
+  },
+  {
+    "req": "R-SIM-63",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "In Halted «il pannello cresce verso l'alto di 16,5 px»: the panel's top edge moves on a state change, though the buttons do not."
   },
   {
     "req": "R-SIM-63",
@@ -2654,6 +2710,14 @@
     "evidence": "read",
     "verified": "none",
     "why": "Appearing rows go above the buttons, «così crescono verso l'alto senza spostarli»; before, the defects row «spostava Step di 24,5 px»."
+  },
+  {
+    "req": "R-SIM-65",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«Il pannello è ancorato in basso e cresce verso l'alto»: a row that appears moves the panel's top edge."
   },
   {
     "req": "R-SIM-66",
@@ -2868,7 +2932,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "«se la demo di MODELS mostra il pannello, questa modifica alla tabella è un punto di RC-26»: the change waits for Alfonso."
   },
   {
@@ -2906,9 +2970,9 @@
   {
     "req": "R-SIM-77",
     "softgoal": "SG-3",
-    "kind": "help",
+    "kind": "some+",
     "evidence": "inferred",
-    "verified": "none",
+    "verified": "agent",
     "why": "The binder proposes each role's binding with its reason: the core of the Apply step every scene walks, decided in the demo lane before the freeze."
   },
   {
@@ -2932,7 +2996,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "The Apply of the demo lane, one state assignment and one undo step; «Nella corsia demo il motore legge il bag come oggi»."
   },
   {
@@ -2988,7 +3052,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "«Forma M3 per la build demo»: Profile row with presets «quattro per la demo», Apply, summary, Configure…; panel max-height so its header shows."
   },
   {
@@ -3020,7 +3084,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "Demo-readiness lane: event buttons and Last step read «coin e non …_136»; a constraint on the demo metamodel was the rejected alternative."
   },
   {
@@ -3092,7 +3156,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "«La faccia M1 per il pubblico»: marking with counts and σ for the whole run, choice list above the buttons, ∅ for an empty side."
   },
   {
@@ -3102,14 +3166,6 @@
     "evidence": "read",
     "verified": "agent",
     "why": "Decision E: the demo flowchart uses FinalNode and an explicit complement, with «R-SIM-53 e else verso Fork/Join dopo MODELS»."
-  },
-  {
-    "req": "R-SIM-83",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "read",
-    "verified": "none",
-    "why": "«Sui quattro preset della demo nulla cambia (report §2.6; Flow B identico)»."
   },
   {
     "req": "R-SIM-83",
@@ -3156,7 +3212,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "«Il branch sim-modal entra nel trunk prima del freeze ... e la demo MODELS percorre il dialogo Simulation roles»."
   },
   {
@@ -3185,14 +3241,6 @@
   },
   {
     "req": "R-SIM-86",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "«le quattro scene e le righe dei difetti al Reset sono identiche a P-2026-09-28-0023 (misurate su 3033)»."
-  },
-  {
-    "req": "R-SIM-86",
     "softgoal": "SG-6",
     "kind": "some-",
     "evidence": "inferred",
@@ -3209,14 +3257,6 @@
   },
   {
     "req": "R-SIM-87",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "read",
-    "verified": "none",
-    "why": "«Nessuna lettura della demo cambia: l'unico else dei preset (Flow B variante A, f4) ha il fratello f3»."
-  },
-  {
-    "req": "R-SIM-87",
     "softgoal": "SG-6",
     "kind": "some+",
     "evidence": "inferred",
@@ -3228,7 +3268,7 @@
     "softgoal": "SG-3",
     "kind": "some-",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "Merged before the freeze: «il select della forma nel passo 3 della scena ESM offre anche input, e il copione va allineato»."
   },
   {
@@ -3300,7 +3340,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "Ratified and «enters the MODELS build before the freeze of 2026-10-01»."
   },
   {
@@ -3337,19 +3377,19 @@
   },
   {
     "req": "R-SIM-91",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "«sui quattro preset della demo le sonde di readiness-2 danno righe di run identiche (State machine 13/13, Flow B 11/11, Petri 22/22, ...)»."
-  },
-  {
-    "req": "R-SIM-91",
     "softgoal": "SG-6",
     "kind": "some+",
     "evidence": "inferred",
     "verified": "none",
     "why": "Accepting read outside the step loop: «una configurazione che accetta prosegue», acceptance does not halt the run."
+  },
+  {
+    "req": "R-SIM-91",
+    "softgoal": "SG-6",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«`simAccepting` non è nel sort dei nodi di `ROLE_SORTS` ..., quindi una classe che fa Accepting e Transition passa il controllo di sovrapposizione»."
   },
   {
     "req": "R-SIM-91",
@@ -3366,14 +3406,6 @@
     "evidence": "read",
     "verified": "agent",
     "why": "Acceptance is computed, but «accepting» beside the run state is owed to «la fetta delle facce», after the merge of E2 and sim-modal."
-  },
-  {
-    "req": "R-SIM-92",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "«i quattro preset della demo identici come in R-SIM-91», with the mutation bench 18/18."
   },
   {
     "req": "R-SIM-92",
@@ -3412,7 +3444,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "The four hidden presets «restano nascosti: compaiono con la fetta delle facce dopo MODELS (decisione H)»."
   },
   {
@@ -3436,7 +3468,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "Lands «before the freeze»; the script moves the declarations once re-measured, and the metamodel path «stays supported»."
   },
   {
@@ -3498,9 +3530,9 @@
   {
     "req": "R-SIM-96",
     "softgoal": "SG-3",
-    "kind": "help",
-    "evidence": "read",
-    "verified": "none",
+    "kind": "some+",
+    "evidence": "inferred",
+    "verified": "agent",
     "why": "Fixes the Deadlock reading on «a DemoPetri-like net» to «Deadlock · ε: t2 guard false», built before the freeze."
   },
   {
@@ -3561,6 +3593,14 @@
   },
   {
     "req": "R-SIM-98",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "«The open list is one row taller, +24.5 px at 1600×1000»: the panel grows upward when the list opens."
+  },
+  {
+    "req": "R-SIM-98",
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "read",
@@ -3582,14 +3622,6 @@
     "evidence": "read",
     "verified": "none",
     "why": "Pill only «in Advanced mode on a metamodel whose Simulation toggle is on»; the SEMANTIC TYPE CLASS section shows in Advanced mode."
-  },
-  {
-    "req": "R-SIM-99",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "The four scenes: «64 of 71 readings identical and the other 7 different only by simEnabled: true»; 7 clicks per scene on the metamodel."
   },
   {
     "req": "R-SIM-99",
@@ -3625,6 +3657,14 @@
   },
   {
     "req": "R-SIM-100",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Adds «a Random button (`bi-shuffle`) next to Cancel on ε choices»: one more control in the choice list."
+  },
+  {
+    "req": "R-SIM-100",
     "softgoal": "SG-2",
     "kind": "some+",
     "evidence": "measured",
@@ -3636,7 +3676,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "«It enters the MODELS build»; the lane probe reads the Petri step 1 list and «sm, esm, flowB run readings identical»."
   },
   {
@@ -3676,7 +3716,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "measured",
-    "verified": "none",
+    "verified": "agent",
     "why": "«It enters the MODELS build before the freeze»; demo §2.2 gains an optional Random+Play beat; probe: sm, esm, flowB hand runs identical to trunk_readings_2026-09-29c"
   },
   {
@@ -3753,6 +3793,14 @@
   },
   {
     "req": "R-SIM-104",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«the panel grows upward» with the Watch rows and the marked-place chips: the panel's height now depends on the run's content."
+  },
+  {
+    "req": "R-SIM-104",
     "softgoal": "SG-8",
     "kind": "some+",
     "evidence": "read",
@@ -3772,7 +3820,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "keeps the new inspector off the demo: «the compact panel stays the default and the demo path»"
   },
   {
@@ -3972,7 +4020,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "the board's persistence and editor lanes run «after the MODELS demo»: the work stays out of the demo build"
   },
   {
@@ -4065,19 +4113,19 @@
   },
   {
     "req": "R-SIM-122",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "The Clock lane probe reads «the four demo scenes byte-identical to the base, header and board card included»."
-  },
-  {
-    "req": "R-SIM-122",
     "softgoal": "SG-5",
     "kind": "some+",
     "evidence": "read",
     "verified": "agent",
     "why": "«The engine sees only events»: a tick is one press of the bound event, «each press one step in arrival order»; a tick during the dialog is dropped, «never queued»"
+  },
+  {
+    "req": "R-SIM-122",
+    "softgoal": "SG-5",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«Clock and Play run together, each press one step in arrival order»; a tick during the dialog «is dropped»: wall-clock timing decides which steps occur."
   },
   {
     "req": "R-SIM-122",
@@ -4873,6 +4921,14 @@
   },
   {
     "req": "R-LAY-16",
+    "softgoal": "SG-2",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Proxy set_size stays on the scalars: «il resize via proxy sotto viewpoint attivo scrive sulla sintassi astratta», «atteso e non regressione»."
+  },
+  {
+    "req": "R-LAY-16",
     "softgoal": "SG-11",
     "kind": "help",
     "evidence": "read",
@@ -5006,6 +5062,14 @@
     "evidence": "read",
     "verified": "none",
     "why": "«In modalità JjOM editor-v2 ha un solo undo, quello del D-layer»; the toolbar buttons go to UndoAction/RedoAction"
+  },
+  {
+    "req": "R-UNDO-1",
+    "softgoal": "SG-4",
+    "kind": "some-",
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "«Osservazione misurata e accettata: `redoable` non viene svuotato da un'azione ordinaria successiva»."
   },
   {
     "req": "R-UNDO-1",
@@ -5241,6 +5305,14 @@
   },
   {
     "req": "R-SGL-7",
+    "softgoal": "SG-4",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Switching the flag on takes two undo steps: «l'accensione ne fa due per il `setTimeout` di `addObject` fase 4 (`:7062`): debito registrato»."
+  },
+  {
+    "req": "R-SGL-7",
     "softgoal": "SG-11",
     "kind": "some+",
     "evidence": "read",
@@ -5318,6 +5390,14 @@
     "evidence": "read",
     "verified": "none",
     "why": "structure is «Additivo-opzionale, nessun bump di irVersion, nessuna migrazione»: saved IR keeps opening unchanged."
+  },
+  {
+    "req": "R-STR-1",
+    "softgoal": "SG-4",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "«Il saved IR non ha VersionFixer (R-B9): le grafie sono definitive»: the spellings of the new keys are made final."
   },
   {
     "req": "R-STR-1",
@@ -5921,6 +6001,14 @@
   },
   {
     "req": "R-CR2-2",
+    "softgoal": "SG-1",
+    "kind": "some-",
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "renderer and multiline both shown with «nessuna mutua esclusione fra i due, né sul verdetto né nella UI»: the user must know the ladder's precedence."
+  },
+  {
+    "req": "R-CR2-2",
     "softgoal": "SG-6",
     "kind": "some+",
     "evidence": "read",
@@ -6090,9 +6178,9 @@
   {
     "req": "R-VP-15",
     "softgoal": "SG-3",
-    "kind": "help",
+    "kind": "some+",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "Textbook Petri notation for the derived views; Alfonso «approved lanes 1 and 2 before the freeze», lanes 3 and 4 only if lane 2 lands by 2026-10-01 12:00."
   },
   {
@@ -6114,9 +6202,9 @@
   {
     "req": "R-VP-16",
     "softgoal": "SG-3",
-    "kind": "help",
+    "kind": "some+",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "Reshapes the derived Petri views on Alfonso's review of lane 1, with «no catalogue row and no Shape select option until after the freeze»."
   },
   {
@@ -6145,14 +6233,6 @@
   },
   {
     "req": "R-VP-17",
-    "softgoal": "SG-3",
-    "kind": "help",
-    "evidence": "read",
-    "verified": "none",
-    "why": "Derived state machine, ESM and activity views drawn closer to the textbook; «Alfonso approved V1 before the freeze»."
-  },
-  {
-    "req": "R-VP-17",
     "softgoal": "SG-9",
     "kind": "help",
     "evidence": "read",
@@ -6164,7 +6244,7 @@
     "softgoal": "SG-3",
     "kind": "help",
     "evidence": "measured",
-    "verified": "none",
+    "verified": "agent",
     "why": "Legibility fix «approved by Alfonso before the freeze knowing it changes every demo screenshot», «Measured by the lane probe ... on the four demo scenes»."
   },
   {
@@ -6201,6 +6281,14 @@
   },
   {
     "req": "R-VP-28",
+    "softgoal": "SG-4",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Stated caveat: «writes less than 450 ms apart merge into one undo step, first-wins», an older behaviour the new field inherits."
+  },
+  {
+    "req": "R-VP-28",
     "softgoal": "SG-12",
     "kind": "help",
     "evidence": "measured",
@@ -6233,14 +6321,6 @@
   },
   {
     "req": "R-VP-19",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "inferred",
-    "verified": "none",
-    "why": "Generic notation only with no role bound: «with a binding the role-keyed path of R-VP-15..18 is unchanged, byte for byte»; edges keep «5/5 demo edge classes»."
-  },
-  {
-    "req": "R-VP-19",
     "softgoal": "SG-9",
     "kind": "help",
     "evidence": "measured",
@@ -6254,14 +6334,6 @@
     "evidence": "inferred",
     "verified": "agent",
     "why": "The generic node takes its «size from content»: the box follows its rows and labels, measured «198 px wide» on the turnstile."
-  },
-  {
-    "req": "R-VP-20",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "Measured «the four demo scenes in the default viewpoint pixel-identical to the C1 tip» (12 of 12)."
   },
   {
     "req": "R-VP-20",
@@ -6291,8 +6363,8 @@
     "req": "R-VP-21",
     "softgoal": "SG-3",
     "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
+    "evidence": "read",
+    "verified": "agent",
     "why": "Measured: the default choice on «the four demos» derives the pinned documents «byte for byte», and «the four demo scenes ... byte-identical to the C2 tip»."
   },
   {
@@ -6347,8 +6419,8 @@
     "req": "R-VP-22",
     "softgoal": "SG-3",
     "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
+    "evidence": "read",
+    "verified": "agent",
     "why": "«Alfonso chooses which of each pair the demo uses»; measured «the four demo scenes in the default viewpoint 0 px from the D tip»."
   },
   {
@@ -6374,14 +6446,6 @@
     "evidence": "inferred",
     "verified": "agent",
     "why": "Edges with «curve: 'arc'» get their own geometry, «an arc runs between the centres of its two handles, off the router», beside the router path «an edge without the key» keeps."
-  },
-  {
-    "req": "R-VP-23",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "Measured «the four demo scenes in the default viewpoint 0 px from the A1+A3 tip left of the rail»."
   },
   {
     "req": "R-VP-23",
@@ -6412,7 +6476,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "measured",
-    "verified": "none",
+    "verified": "agent",
     "why": "Dated 2026-09-30, DemoPetri preselects it; lane probe with «the four demo scenes in the default viewpoint byte-identical to the A4 tip's shots»: measured non-regression."
   },
   {
@@ -6468,7 +6532,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "measured",
-    "verified": "none",
+    "verified": "agent",
     "why": "Dated 2026-09-30, the demo files open on the new notations; lane probe 22/22 with «the four demo scenes in the default viewpoint byte-identical to the A2 tip's shots»."
   },
   {
@@ -6548,7 +6612,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "measured",
-    "verified": "none",
+    "verified": "agent",
     "why": "Scoped to derived views so «the MODELS demo runs in the default viewpoint and does not move»; measured the default view in the same run «keeps the pill «1» and the wrapper outline»."
   },
   {
@@ -6566,14 +6630,6 @@
     "evidence": "inferred",
     "verified": "agent",
     "why": "«Hex values as .sim-active has them (question 7), no new token»: the amber and cyan literals are repeated from .sim-active rather than shared through one token."
-  },
-  {
-    "req": "R-VP-36",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "Measured «the four demo scenes in the default viewpoint byte-identical to the run at 5 (0 px)»: non-regression of the scenes."
   },
   {
     "req": "R-VP-36",
@@ -6692,7 +6748,7 @@
     "softgoal": "SG-3",
     "kind": "some-",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "The full ELK auto-layout «may change what the MODELS demo scenes show after an auto-layout (RC-26), not at rest»."
   },
   {
@@ -6732,7 +6788,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "measured",
-    "verified": "none",
+    "verified": "agent",
     "why": "First-open layout kept so the demo renders as before: «0 px outside Jodie's animated avatar on the four demo scenes» on the rest probe."
   },
   {
@@ -6750,14 +6806,6 @@
     "evidence": "inferred",
     "verified": "agent",
     "why": "«The labels ELK is given are matched to edges in the DOM by their text, then by distance»: a heuristic coupling chosen so «the edge markup stays byte-identical»."
-  },
-  {
-    "req": "R-VP-53",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "«Rest: the four demo scenes and DemoFlowB under Generic, Flowchart ... are byte-identical to the baseline», before the 2026-10-07 freeze."
   },
   {
     "req": "R-VP-53",
@@ -6780,7 +6828,7 @@
     "softgoal": "SG-3",
     "kind": "some+",
     "evidence": "read",
-    "verified": "none",
+    "verified": "agent",
     "why": "Titled «Statechart (UML) as the demo draws it», visual OK by Alfonso on 2026-10-03, the day before Malaga; the text ties it to the demo, though after the 10-01 freeze."
   },
   {
@@ -6862,14 +6910,6 @@
     "evidence": "inferred",
     "verified": "agent",
     "why": "Withdrawn by revert 04c13e039 days before the demo; «it returns after Málaga (2026-10-09) as a lane of its own»: the work is done twice, one lane added."
-  },
-  {
-    "req": "R-EE-1",
-    "softgoal": "SG-3",
-    "kind": "some+",
-    "evidence": "measured",
-    "verified": "none",
-    "why": "Dated 2026-09-30: lane probe 16/16 with «the four demo scenes in the default viewpoint 0 px from the pre-edit shots»."
   },
   {
     "req": "R-EE-1",
@@ -7233,6 +7273,14 @@
   },
   {
     "req": "R-VAL-9",
+    "softgoal": "SG-4",
+    "kind": "some-",
+    "evidence": "read",
+    "verified": "agent",
+    "why": "The orphan state «non è riattivabile»: a rule kept after its class is deleted cannot be turned back on."
+  },
+  {
+    "req": "R-VAL-9",
     "softgoal": "SG-1",
     "kind": "some-",
     "evidence": "inferred",
@@ -7318,6 +7366,14 @@
     "evidence": "read",
     "verified": "none",
     "why": "The verdict requires a boolean, nothing converted: truthiness gave a «verdetto sbagliato in silenzio» on [true,false,true]; a conversion «sarebbe la terza semantica del sistema»."
+  },
+  {
+    "req": "R-VAL-13",
+    "softgoal": "SG-6",
+    "kind": "some-",
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "The two converters «divergono proprio su `[]`»; «Una guardia JjTL su collezione vuota vale il contrario a seconda di chi la valuta», «da iscrivere e non da correggere in questo giro»."
   },
   {
     "req": "R-VAL-13",
