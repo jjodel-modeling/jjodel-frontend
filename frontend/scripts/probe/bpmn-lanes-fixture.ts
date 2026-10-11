@@ -628,6 +628,11 @@ export async function records(page: Page, ids: Record<string, { vertex: string }
 export const DRAG4_MARGIN = 16;
 /** The drag of the prompt, flow px, toward each side. */
 export const DRAG4_STEP = 40;
+/** FOLLOW_BAND (irContainment.ts): how far past a container's box at rest the pointer may go and the frame follow. */
+export const DRAG4_BAND = 32;
+/** Where the band drags put the cursor past the old border, flow px (inside the band); the leave drag goes 16 past it. */
+export const DRAG4_IN_BAND = 20;
+export const DRAG4_PAST_BAND = DRAG4_BAND + 16;
 type Band = { side: 'w' | 'n'; size: number } | null;
 /** A framing container and the children it must hold: [container key, child keys, its own header band]. */
 export type FrameCheck = [string, string[], Band];
@@ -679,6 +684,12 @@ export async function placeVertex(page: Page, vertexId: string, x: number, y: nu
             else { j.SetFieldAction.new(a.id, 'x', a.x, undefined, false); j.SetFieldAction.new(a.id, 'y', a.y, undefined, false); }
         });
         return 1;`, { id: vertexId, x, y }, 1500);
+}
+/** placeVertex through a step aside: a record written back to the position the sync last drew is not redrawn when the
+ *  canvas has moved the node since (its node cache still holds it), measured in this probe. */
+export async function placeVertexAgain(page: Page, vertexId: string, x: number, y: number) {
+    await placeVertex(page, vertexId, x + DRAG4_MARGIN, y);
+    await placeVertex(page, vertexId, x, y);
 }
 /** The mouse pressed at `from` and moved to `to` in steps, not released: the caller measures, then calls the result. */
 export async function dragHold(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
@@ -829,9 +840,40 @@ export async function runDrag4(page: Page, ids: Record<string, { obj: string; ve
                 { expect: s.outside.expect, rec, orig: r4(orig), slotKept: JSON.stringify(slot1) === JSON.stringify(slot0), others: othersMoved(n0, n1) });
             // Back where it was, for the four drags. Through a step aside: a record written back to the position the sync
             // last drew is not redrawn when the canvas has moved the node since (its node cache still holds it).
-            if (!back) {
-                await placeVertex(page, ids[s.key].vertex, orig.x + DRAG4_MARGIN, orig.y);
-                await placeVertex(page, ids[s.key].vertex, orig.x, orig.y);
+            if (!back) await placeVertexAgain(page, ids[s.key].vertex, orig.x, orig.y);
+        }
+
+        // Leave: from DRAG4_MARGIN off the left side, the cursor DRAG4_PAST_BAND past the old border, 16 past the band: the
+        // frame does not chase, the drop follows the membership.
+        {
+            const nl = await readNodes(page);
+            const cl0 = boxOf(nl, ids, s.container)!;
+            const bwl = s.band?.side === 'w' ? s.band.size : 0;
+            const atL = { x: cl0.x + bwl + DRAG4_MARGIN, y: orig.y };
+            await placeVertexAgain(page, ids[s.key].vertex, atL.x, atL.y);
+            const nl2 = await readNodes(page);
+            const cl = boxOf(nl2, ids, s.container)!;
+            const pl = boxOf(nl2, ids, s.key)!;
+            await prep();
+            const fromL = await centreOf();
+            const slotL0 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+            if (fromL) {
+                const cxl = pl.x + pl.w / 2;
+                const hitL = await hitAt(page, fromL.x, fromL.y);
+                const releaseL = await dragHold(page, fromL, { x: fromL.x + (cl.x - DRAG4_PAST_BAND - cxl) * k, y: fromL.y });
+                const liveL = await readNodes(page);
+                const clLive = boxOf(liveL, ids, s.container)!;
+                await releaseL();
+                const recL = (await recordsFull(page, ids, [s.key]))[s.key];
+                const slotL1 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+                const stayed = Math.abs(recL[0] - atL.x) < 0.5 && Math.abs(recL[1] - atL.y) < 0.5;
+                sr.leave = { container0: r4(cl), live: r4(clLive), rec: recL, placed: atL, slotKept: JSON.stringify(slotL1) === JSON.stringify(slotL0), pressed: hitL };
+                opts.check(`${prefix}-${s.key}-leave-live the cursor ${DRAG4_PAST_BAND - DRAG4_BAND} px past the band: ${s.container} keeps its box at rest`,
+                    hitL.node === ids[s.key].vertex && [clLive.x - cl.x, clLive.y - cl.y, clLive.w - cl.w, clLive.h - cl.h].every((d) => Math.abs(d) < 0.5),
+                    { pressed: hitL, container0: r4(cl), live: r4(clLive) });
+                opts.check(`${prefix}-${s.key}-leave-drop the drop follows membership (${s.outside.expect})`,
+                    JSON.stringify(slotL1) === JSON.stringify(slotL0) && (s.outside.expect === 'snap' ? stayed : !stayed), { rec: recL, placed: atL });
+                await placeVertexAgain(page, ids[s.key].vertex, orig.x, orig.y);
             }
         }
 
@@ -890,6 +932,42 @@ export async function runDrag4(page: Page, ids: Record<string, { obj: string; ve
             opts.check(`${prefix}-${s.key}-${dir}-others the other children keep their absolute positions (live and at drag end)`,
                 othersMoved(before, live).length === 0 && othersMoved(before, after).length === 0,
                 { live: othersMoved(before, live), end: othersMoved(before, after) });
+
+            // The band (Alfonso's visual check of 15:58): from the same place, the child dragged mostly past the side, the
+            // cursor DRAG4_IN_BAND past the old border: the frame holds it whole, it stays a member.
+            await placeVertexAgain(page, ids[s.key].vertex, at.x, at.y);
+            const nb2 = await readNodes(page);
+            const c2 = boxOf(nb2, ids, s.container)!;
+            const p2 = boxOf(nb2, ids, s.key)!;
+            await prep();
+            const from2 = await centreOf();
+            if (!from2) { opts.check(`${prefix}-${s.key}-${dir}-band subject on screen`, false, null); continue; }
+            const cx2 = p2.x + p2.w / 2; const cy2 = p2.y + p2.h / 2;
+            const goal = {
+                left: { x: c2.x - DRAG4_IN_BAND, y: cy2 }, right: { x: c2.x + c2.w + DRAG4_IN_BAND, y: cy2 },
+                top: { x: cx2, y: c2.y - DRAG4_IN_BAND }, bottom: { x: cx2, y: c2.y + c2.h + DRAG4_IN_BAND },
+            }[dir];
+            const slotB0 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+            const hitB = await hitAt(page, from2.x, from2.y);
+            const releaseB = await dragHold(page, from2, { x: from2.x + (goal.x - cx2) * k, y: from2.y + (goal.y - cy2) * k });
+            const liveB = await readNodes(page);
+            const sl2 = boxOf(liveB, ids, s.key)!;
+            const past = { left: c2.x - sl2.x, right: sl2.x + sl2.w - (c2.x + c2.w), top: c2.y - sl2.y, bottom: sl2.y + sl2.h - (c2.y + c2.h) }[dir];
+            const across = dir === 'left' || dir === 'right' ? sl2.w : sl2.h;
+            const ownFrame = s.frames.find((f) => f[0] === s.container)!;
+            const gB = gapsOf(liveB, ids, ownFrame);
+            const gAllB = gapsAll(liveB, ids, s.frames);
+            await releaseB();
+            const afterB = await readNodes(page);
+            const gBe = gapsOf(afterB, ids, ownFrame);
+            const slotB1 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+            sr[`${dir}Band`] = { goal, container0: r4(c2), live: gB, liveAll: gAllB, end: gBe, endAll: gapsAll(afterB, ids, s.frames),
+                past, across, containerLive: r4(boxOf(liveB, ids, s.container)), containerEnd: r4(boxOf(afterB, ids, s.container)), slotKept: JSON.stringify(slotB1) === JSON.stringify(slotB0) };
+            opts.meas(`${prefix} ${s.key} ${dir} band`, { past, across, live: gB, end: gBe });
+            opts.check(`${prefix}-${s.key}-${dir}-band-live the child mostly past the old ${dir} border, the cursor in the band: ${s.container} holds it whole while the button is held`,
+                hitB.node === ids[s.key].vertex && past > across / 2 && !!gB && Math.min(...gB) >= DRAG4_MARGIN - 0.5, { pressed: hitB, past, across, gaps: gB });
+            opts.check(`${prefix}-${s.key}-${dir}-band-end at drag end ${s.container} still holds it, every gap >= ${DRAG4_MARGIN}, and it is still a member`,
+                !!gBe && Math.min(...gBe) >= DRAG4_MARGIN - 0.5 && JSON.stringify(slotB1) === JSON.stringify(slotB0), { gaps: gBe, slotKept: JSON.stringify(slotB1) === JSON.stringify(slotB0) });
         }
         await opts.shot(`drag4-${prefix.toLowerCase()}-${s.key}`);
         // Back where it was before the next subject, but the last: what it leaves is saved and reloaded below.
