@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0039
 Lane: fast (one source file, `frontend/src/jjscript/parser/parser.ts`, plus the existing test file `frontend/src/jjscript/__tests__/parserTermination.test.ts` and the log entry). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead. Unattended (lane auto): adopt your own `Recommended:` answers inside this perimeter and continue.
 Depends: P-2026-10-10-0810
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane do-tickets · 0641494c5 · merge 75479afc6 · gates (no visual change; chat, unattended)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
