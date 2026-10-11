@@ -1,0 +1,2679 @@
+{
+  "url": "http://localhost:3123",
+  "tag": "after",
+  "at": "2026-10-11T11:09:51.443Z",
+  "bpmn": {
+    "tag": "after",
+    "ids": {
+      "collab": {
+        "obj": "Pointer1791717090848_USER_104",
+        "vertex": "Pointer1791717090851_USER_109"
+      },
+      "shopProc": {
+        "obj": "Pointer1791717091134_USER_110",
+        "vertex": "Pointer1791717091135_USER_115"
+      },
+      "custProc": {
+        "obj": "Pointer1791717091393_USER_116",
+        "vertex": "Pointer1791717091394_USER_121"
+      },
+      "laneSet": {
+        "obj": "Pointer1791717091661_USER_122",
+        "vertex": "Pointer1791717091662_USER_126"
+      },
+      "shop": {
+        "obj": "Pointer1791717091944_USER_127",
+        "vertex": "Pointer1791717091945_USER_131"
+      },
+      "customer": {
+        "obj": "Pointer1791717092219_USER_132",
+        "vertex": "Pointer1791717092220_USER_136"
+      },
+      "supplier": {
+        "obj": "Pointer1791717092520_USER_137",
+        "vertex": "Pointer1791717092521_USER_141"
+      },
+      "sales": {
+        "obj": "Pointer1791717092852_USER_142",
+        "vertex": "Pointer1791717092854_USER_147"
+      },
+      "warehouse": {
+        "obj": "Pointer1791717093129_USER_148",
+        "vertex": "Pointer1791717093130_USER_153"
+      },
+      "start": {
+        "obj": "Pointer1791717093424_USER_154",
+        "vertex": "Pointer1791717093425_USER_157"
+      },
+      "check": {
+        "obj": "Pointer1791717093760_USER_158",
+        "vertex": "Pointer1791717093761_USER_161"
+      },
+      "gw": {
+        "obj": "Pointer1791717094030_USER_162",
+        "vertex": "Pointer1791717094031_USER_166"
+      },
+      "ship": {
+        "obj": "Pointer1791717094374_USER_167",
+        "vertex": "Pointer1791717094374_USER_170"
+      },
+      "end": {
+        "obj": "Pointer1791717094654_USER_171",
+        "vertex": "Pointer1791717094655_USER_174"
+      },
+      "place": {
+        "obj": "Pointer1791717094997_USER_175",
+        "vertex": "Pointer1791717094998_USER_178"
+      },
+      "receive": {
+        "obj": "Pointer1791717095268_USER_179",
+        "vertex": "Pointer1791717095270_USER_182"
+      },
+      "sf1": {
+        "obj": "Pointer1791717095562_USER_183",
+        "vertex": "Pointer1791717095564_USER_188"
+      },
+      "sf2": {
+        "obj": "Pointer1791717095891_USER_189",
+        "vertex": "Pointer1791717095892_USER_194"
+      },
+      "sf3": {
+        "obj": "Pointer1791717096220_USER_195",
+        "vertex": "Pointer1791717096221_USER_200"
+      },
+      "sf4": {
+        "obj": "Pointer1791717096519_USER_201",
+        "vertex": "Pointer1791717096521_USER_206"
+      },
+      "mf1": {
+        "obj": "Pointer1791717096835_USER_207",
+        "vertex": "Pointer1791717096836_USER_212"
+      },
+      "pack": {
+        "obj": "Pointer1791717141478_USER_353",
+        "vertex": "Pointer1791717141479_USER_356"
+      }
+    },
+    "nodes": [
+      {
+        "id": "Pointer1791717091945_USER_131",
+        "name": "Shop",
+        "x": 100,
+        "y": 100,
+        "w": 900,
+        "h": 360,
+        "z": "-2000",
+        "cls": "ir-node-content ir-shape--rect ir-layout",
+        "band": "ir-header-band ir-header-band--w|30x356",
+        "bandLabel": "Shop|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+      },
+      {
+        "id": "Pointer1791717092220_USER_136",
+        "name": "Customer",
+        "x": 100,
+        "y": 520,
+        "w": 900,
+        "h": 200,
+        "z": "-2000",
+        "cls": "ir-node-content ir-shape--rect ir-layout",
+        "band": "ir-header-band ir-header-band--w|30x196",
+        "bandLabel": "Customer|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+      },
+      {
+        "id": "Pointer1791717092521_USER_141",
+        "name": "Supplier",
+        "x": 100,
+        "y": 780,
+        "w": 900,
+        "h": 40,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rect",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791717092854_USER_147",
+        "name": "Sales",
+        "x": 130,
+        "y": 100,
+        "w": 870,
+        "h": 180,
+        "z": "-1999",
+        "cls": "ir-node-content ir-shape--rect ir-layout",
+        "band": "ir-header-band ir-header-band--w|30x176",
+        "bandLabel": "Sales|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+      },
+      {
+        "id": "Pointer1791717093130_USER_153",
+        "name": "Warehouse",
+        "x": 130,
+        "y": 280,
+        "w": 870,
+        "h": 180,
+        "z": "-1999",
+        "cls": "ir-node-content ir-shape--rect ir-layout",
+        "band": "ir-header-band ir-header-band--w|30x176",
+        "bandLabel": "Warehouse|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+      },
+      {
+        "id": "Pointer1791717093425_USER_157",
+        "name": "Order received",
+        "x": 190,
+        "y": 172,
+        "w": 36,
+        "h": 36,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--circle",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791717093761_USER_161",
+        "name": "Check order",
+        "x": 300,
+        "y": 160,
+        "w": 140,
+        "h": 60,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rounded",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791717094031_USER_166",
+        "name": "In stock?",
+        "x": 530,
+        "y": 165,
+        "w": 50,
+        "h": 50,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--diamond",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791717094374_USER_170",
+        "name": "Ship",
+        "x": 500,
+        "y": 340,
+        "w": 140,
+        "h": 60,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rounded",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791717094655_USER_174",
+        "name": "Shipped",
+        "x": 720,
+        "y": 352,
+        "w": 36,
+        "h": 36,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--circle",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791717094998_USER_178",
+        "name": "Place order",
+        "x": 250,
+        "y": 590,
+        "w": 140,
+        "h": 60,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rounded",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791717095270_USER_182",
+        "name": "Receive goods",
+        "x": 600,
+        "y": 590,
+        "w": 140,
+        "h": 60,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rounded",
+        "band": null,
+        "bandLabel": null
+      }
+    ],
+    "edges": [
+      {
+        "id": "irobj_Pointer1791717095562_USER_183",
+        "source": "Pointer1791717093425_USER_157",
+        "target": "Pointer1791717093761_USER_161"
+      },
+      {
+        "id": "irobj_Pointer1791717095891_USER_189",
+        "source": "Pointer1791717093761_USER_161",
+        "target": "Pointer1791717094031_USER_166"
+      },
+      {
+        "id": "irobj_Pointer1791717096220_USER_195",
+        "source": "Pointer1791717094031_USER_166",
+        "target": "Pointer1791717094374_USER_170"
+      },
+      {
+        "id": "irobj_Pointer1791717096519_USER_201",
+        "source": "Pointer1791717094374_USER_170",
+        "target": "Pointer1791717094655_USER_174"
+      },
+      {
+        "id": "irobj_Pointer1791717096835_USER_207",
+        "source": "Pointer1791717094998_USER_178",
+        "target": "Pointer1791717093761_USER_161"
+      }
+    ],
+    "stored": {
+      "collab": {
+        "x": 1300,
+        "y": 100,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "shopProc": {
+        "x": 1300,
+        "y": 220,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "custProc": {
+        "x": 1300,
+        "y": 340,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "laneSet": {
+        "x": 1300,
+        "y": 460,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "shop": {
+        "x": 100,
+        "y": 100,
+        "w": 900,
+        "h": 360,
+        "isResized": true,
+        "lvp": null
+      },
+      "customer": {
+        "x": 100,
+        "y": 520,
+        "w": 900,
+        "h": 200,
+        "isResized": true,
+        "lvp": null
+      },
+      "supplier": {
+        "x": 100,
+        "y": 780,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "sales": {
+        "x": 1100,
+        "y": 520,
+        "w": 200,
+        "h": 180,
+        "isResized": true,
+        "lvp": null
+      },
+      "warehouse": {
+        "x": 1100,
+        "y": 760,
+        "w": 200,
+        "h": 180,
+        "isResized": true,
+        "lvp": null
+      },
+      "start": {
+        "x": 190,
+        "y": 172,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "check": {
+        "x": 300,
+        "y": 160,
+        "w": 140,
+        "h": 60,
+        "isResized": true,
+        "lvp": null
+      },
+      "gw": {
+        "x": 530,
+        "y": 165,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "ship": {
+        "x": 500,
+        "y": 340,
+        "w": 140,
+        "h": 60,
+        "isResized": true,
+        "lvp": null
+      },
+      "end": {
+        "x": 720,
+        "y": 352,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "place": {
+        "x": 250,
+        "y": 590,
+        "w": 140,
+        "h": 60,
+        "isResized": true,
+        "lvp": null
+      },
+      "receive": {
+        "x": 600,
+        "y": 590,
+        "w": 140,
+        "h": 60,
+        "isResized": true,
+        "lvp": null
+      },
+      "sf1": {
+        "x": 1300,
+        "y": 580,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "sf2": {
+        "x": 1300,
+        "y": 640,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "sf3": {
+        "x": 1300,
+        "y": 700,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "sf4": {
+        "x": 1300,
+        "y": 760,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "mf1": {
+        "x": 1300,
+        "y": 820,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      }
+    },
+    "problems": [
+      {
+        "v": "Pointer1791717094031_USER_166",
+        "p": [
+          "conformance:Conformance:0"
+        ]
+      }
+    ],
+    "errors": [],
+    "problemsPhase": {
+      "problems": {
+        "collab": [],
+        "shopProc": [],
+        "custProc": [],
+        "laneSet": [],
+        "shop": [],
+        "customer": [],
+        "supplier": [],
+        "sales": [],
+        "warehouse": [],
+        "start": [],
+        "check": [],
+        "gw": [
+          {
+            "kind": "conformance",
+            "title": "Conformance",
+            "related": [],
+            "detail": [
+              "invalid_name_format: Object \"In stock?\" can only contain letters, digits, spaces, apostrophes, or the $ _ symbols"
+            ]
+          }
+        ],
+        "ship": [
+          {
+            "kind": "containment",
+            "title": "Claimed by 2 containers",
+            "related": [
+              "Pointer1791717092854_USER_147",
+              "Pointer1791717093130_USER_153"
+            ],
+            "detail": []
+          }
+        ],
+        "end": [],
+        "place": [],
+        "receive": [],
+        "sf1": [],
+        "sf2": [],
+        "sf3": [],
+        "sf4": [],
+        "mf1": [],
+        "pack": [
+          {
+            "kind": "containment",
+            "title": "In no container",
+            "related": [],
+            "detail": []
+          }
+        ]
+      },
+      "edges": [
+        {
+          "id": "irobj_Pointer1791717095562_USER_183",
+          "source": "Pointer1791717093425_USER_157",
+          "target": "Pointer1791717093761_USER_161"
+        },
+        {
+          "id": "irobj_Pointer1791717095891_USER_189",
+          "source": "Pointer1791717093761_USER_161",
+          "target": "Pointer1791717094031_USER_166"
+        },
+        {
+          "id": "irobj_Pointer1791717096220_USER_195",
+          "source": "Pointer1791717094031_USER_166",
+          "target": "Pointer1791717094374_USER_170"
+        },
+        {
+          "id": "irobj_Pointer1791717096519_USER_201",
+          "source": "Pointer1791717094374_USER_170",
+          "target": "Pointer1791717094655_USER_174"
+        },
+        {
+          "id": "irobj_Pointer1791717096835_USER_207",
+          "source": "Pointer1791717094998_USER_178",
+          "target": "Pointer1791717093761_USER_161"
+        }
+      ]
+    }
+  },
+  "hull": {
+    "tag": "after",
+    "ids": {
+      "r1": {
+        "obj": "Pointer1791717205517_USER_29",
+        "vertex": "Pointer1791717205518_USER_33"
+      },
+      "r2": {
+        "obj": "Pointer1791717205817_USER_34",
+        "vertex": "Pointer1791717205817_USER_38"
+      },
+      "a": {
+        "obj": "Pointer1791717206112_USER_39",
+        "vertex": "Pointer1791717206112_USER_42"
+      },
+      "b": {
+        "obj": "Pointer1791717206401_USER_43",
+        "vertex": "Pointer1791717206402_USER_46"
+      },
+      "c": {
+        "obj": "Pointer1791717206711_USER_47",
+        "vertex": "Pointer1791717206712_USER_50"
+      },
+      "d": {
+        "obj": "Pointer1791717207010_USER_51",
+        "vertex": "Pointer1791717207010_USER_54"
+      },
+      "x": {
+        "obj": "Pointer1791717207301_USER_55",
+        "vertex": "Pointer1791717207302_USER_58"
+      }
+    },
+    "errors": [],
+    "Hulls": {
+      "nodes": [
+        {
+          "id": "Pointer1791717205518_USER_33",
+          "name": "region1",
+          "x": 100,
+          "y": 100,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rect",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717205817_USER_38",
+          "name": "region2",
+          "x": 700,
+          "y": 100,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rect",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717206112_USER_42",
+          "name": "A",
+          "x": 120,
+          "y": 260,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717206402_USER_46",
+          "name": "B",
+          "x": 380,
+          "y": 260,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717206712_USER_50",
+          "name": "C",
+          "x": 120,
+          "y": 420,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717207010_USER_54",
+          "name": "D",
+          "x": 720,
+          "y": 300,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717207302_USER_58",
+          "name": "EXT",
+          "x": 400,
+          "y": 600,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        }
+      ],
+      "hulls": [
+        {
+          "transform": "translate(76px, 54px)",
+          "w": 528,
+          "h": 432,
+          "name": "region1"
+        },
+        {
+          "transform": "translate(676px, 54px)",
+          "w": 268,
+          "h": 312,
+          "name": "region2"
+        }
+      ],
+      "edges": [
+        {
+          "id": "Pointer1791717207605_USER_59",
+          "source": "Pointer1791717205518_USER_33",
+          "target": "Pointer1791717206112_USER_42"
+        },
+        {
+          "id": "Pointer1791717207910_USER_60",
+          "source": "Pointer1791717205518_USER_33",
+          "target": "Pointer1791717206402_USER_46"
+        },
+        {
+          "id": "Pointer1791717208214_USER_61",
+          "source": "Pointer1791717205518_USER_33",
+          "target": "Pointer1791717206712_USER_50"
+        },
+        {
+          "id": "Pointer1791717208545_USER_62",
+          "source": "Pointer1791717205817_USER_38",
+          "target": "Pointer1791717207010_USER_54"
+        }
+      ]
+    },
+    "Collapsed": {
+      "nodes": [
+        {
+          "id": "Pointer1791717205518_USER_33",
+          "name": "region1",
+          "x": 100,
+          "y": 100,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717205817_USER_38",
+          "name": "region2",
+          "x": 700,
+          "y": 100,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717206112_USER_42",
+          "name": "A",
+          "x": 120,
+          "y": 260,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717206402_USER_46",
+          "name": "B",
+          "x": 380,
+          "y": 260,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717206712_USER_50",
+          "name": "C",
+          "x": 120,
+          "y": 420,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717207010_USER_54",
+          "name": "D",
+          "x": 720,
+          "y": 300,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791717207302_USER_58",
+          "name": "EXT",
+          "x": 400,
+          "y": 600,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        }
+      ],
+      "hulls": [
+        {
+          "transform": "translate(76px, 54px)",
+          "w": 528,
+          "h": 432,
+          "name": "region1"
+        },
+        {
+          "transform": "translate(676px, 54px)",
+          "w": 268,
+          "h": 312,
+          "name": "region2"
+        }
+      ],
+      "edges": [
+        {
+          "id": "Pointer1791717207605_USER_59",
+          "source": "Pointer1791717205518_USER_33",
+          "target": "Pointer1791717206112_USER_42"
+        },
+        {
+          "id": "Pointer1791717207910_USER_60",
+          "source": "Pointer1791717205518_USER_33",
+          "target": "Pointer1791717206402_USER_46"
+        },
+        {
+          "id": "Pointer1791717208214_USER_61",
+          "source": "Pointer1791717205518_USER_33",
+          "target": "Pointer1791717206712_USER_50"
+        },
+        {
+          "id": "Pointer1791717208545_USER_62",
+          "source": "Pointer1791717205817_USER_38",
+          "target": "Pointer1791717207010_USER_54"
+        }
+      ]
+    }
+  },
+  "s3": {
+    "tag": "after",
+    "ids": {
+      "collab": {
+        "obj": "Pointer1791717312748_USER_104",
+        "vertex": "Pointer1791717312751_USER_109"
+      },
+      "shopProc": {
+        "obj": "Pointer1791717313008_USER_110",
+        "vertex": "Pointer1791717313009_USER_115"
+      },
+      "custProc": {
+        "obj": "Pointer1791717313264_USER_116",
+        "vertex": "Pointer1791717313265_USER_121"
+      },
+      "laneSet": {
+        "obj": "Pointer1791717313573_USER_122",
+        "vertex": "Pointer1791717313575_USER_126"
+      },
+      "shop": {
+        "obj": "Pointer1791717313897_USER_127",
+        "vertex": "Pointer1791717313898_USER_131"
+      },
+      "customer": {
+        "obj": "Pointer1791717314164_USER_132",
+        "vertex": "Pointer1791717314165_USER_136"
+      },
+      "supplier": {
+        "obj": "Pointer1791717314432_USER_137",
+        "vertex": "Pointer1791717314432_USER_141"
+      },
+      "sales": {
+        "obj": "Pointer1791717314787_USER_142",
+        "vertex": "Pointer1791717314788_USER_147"
+      },
+      "warehouse": {
+        "obj": "Pointer1791717315045_USER_148",
+        "vertex": "Pointer1791717315046_USER_153"
+      },
+      "start": {
+        "obj": "Pointer1791717315345_USER_154",
+        "vertex": "Pointer1791717315345_USER_157"
+      },
+      "check": {
+        "obj": "Pointer1791717315675_USER_158",
+        "vertex": "Pointer1791717315676_USER_161"
+      },
+      "gw": {
+        "obj": "Pointer1791717315954_USER_162",
+        "vertex": "Pointer1791717315955_USER_166"
+      },
+      "ship": {
+        "obj": "Pointer1791717316286_USER_167",
+        "vertex": "Pointer1791717316287_USER_170"
+      },
+      "end": {
+        "obj": "Pointer1791717316588_USER_171",
+        "vertex": "Pointer1791717316589_USER_174"
+      },
+      "place": {
+        "obj": "Pointer1791717316911_USER_175",
+        "vertex": "Pointer1791717316912_USER_178"
+      },
+      "receive": {
+        "obj": "Pointer1791717317185_USER_179",
+        "vertex": "Pointer1791717317185_USER_182"
+      },
+      "sf1": {
+        "obj": "Pointer1791717317491_USER_183",
+        "vertex": "Pointer1791717317492_USER_188"
+      },
+      "sf2": {
+        "obj": "Pointer1791717317799_USER_189",
+        "vertex": "Pointer1791717317800_USER_194"
+      },
+      "sf3": {
+        "obj": "Pointer1791717318105_USER_195",
+        "vertex": "Pointer1791717318106_USER_200"
+      },
+      "sf4": {
+        "obj": "Pointer1791717318425_USER_201",
+        "vertex": "Pointer1791717318426_USER_206"
+      },
+      "mf1": {
+        "obj": "Pointer1791717318726_USER_207",
+        "vertex": "Pointer1791717318726_USER_212"
+      }
+    },
+    "zoom": 1,
+    "move": {
+      "before1": {
+        "sales": [
+          "Pointer1791717315345_USER_154",
+          "Pointer1791717315675_USER_158",
+          "Pointer1791717315954_USER_162"
+        ],
+        "warehouse": [
+          "Pointer1791717316286_USER_167",
+          "Pointer1791717316588_USER_171"
+        ]
+      },
+      "after1": {
+        "sales": [
+          "Pointer1791717315345_USER_154",
+          "Pointer1791717315675_USER_158",
+          "Pointer1791717315954_USER_162",
+          "Pointer1791717316286_USER_167"
+        ],
+        "warehouse": [
+          "Pointer1791717316588_USER_171"
+        ]
+      },
+      "undone": {
+        "sales": [
+          "Pointer1791717315345_USER_154",
+          "Pointer1791717315675_USER_158",
+          "Pointer1791717315954_USER_162"
+        ],
+        "warehouse": [
+          "Pointer1791717316286_USER_167",
+          "Pointer1791717316588_USER_171"
+        ]
+      },
+      "laneEdges1": 0,
+      "shipRec0": {
+        "x": 500,
+        "y": 340,
+        "w": 140,
+        "h": 60
+      },
+      "shipRecU": {
+        "x": 500,
+        "y": 340,
+        "w": 140,
+        "h": 60
+      }
+    },
+    "backAndForth": {
+      "final2": {
+        "sales": [
+          "Pointer1791717315345_USER_154",
+          "Pointer1791717315675_USER_158",
+          "Pointer1791717315954_USER_162"
+        ],
+        "warehouse": [
+          "Pointer1791717316588_USER_171",
+          "Pointer1791717316286_USER_167"
+        ]
+      },
+      "pairEdges": 1
+    },
+    "paletteDrop": {
+      "newTasks": [
+        "Pointer1791717379035_USER_357"
+      ]
+    },
+    "connect": {
+      "handles": [
+        true,
+        true
+      ],
+      "picked": true,
+      "newFlows": [
+        "Pointer1791717384040_USER_363"
+      ]
+    },
+    "errors": []
+  },
+  "s3hull": {
+    "ids": {
+      "r1": {
+        "obj": "Pointer1791717446511_USER_29",
+        "vertex": "Pointer1791717446514_USER_33"
+      },
+      "r2": {
+        "obj": "Pointer1791717446771_USER_34",
+        "vertex": "Pointer1791717446772_USER_38"
+      },
+      "a": {
+        "obj": "Pointer1791717447027_USER_39",
+        "vertex": "Pointer1791717447028_USER_42"
+      },
+      "b": {
+        "obj": "Pointer1791717447286_USER_43",
+        "vertex": "Pointer1791717447287_USER_46"
+      },
+      "d": {
+        "obj": "Pointer1791717447545_USER_47",
+        "vertex": "Pointer1791717447546_USER_50"
+      }
+    },
+    "rec0": {
+      "r1": {
+        "x": 100,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "r2": {
+        "x": 700,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "a": {
+        "x": 120,
+        "y": 260,
+        "w": 200,
+        "h": 80
+      },
+      "b": {
+        "x": 380,
+        "y": 260,
+        "w": 200,
+        "h": 80
+      },
+      "d": {
+        "x": 720,
+        "y": 300,
+        "w": 200,
+        "h": 80
+      }
+    },
+    "rec1": {
+      "r1": {
+        "x": 100,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "r2": {
+        "x": 700,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "a": {
+        "x": 672,
+        "y": 368,
+        "w": 200,
+        "h": 80
+      },
+      "b": {
+        "x": 380,
+        "y": 260,
+        "w": 200,
+        "h": 80
+      },
+      "d": {
+        "x": 720,
+        "y": 300,
+        "w": 200,
+        "h": 80
+      }
+    },
+    "rec2": {
+      "r1": {
+        "x": 100,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "r2": {
+        "x": 784,
+        "y": 144,
+        "w": 200,
+        "h": 80
+      },
+      "a": {
+        "x": 672,
+        "y": 368,
+        "w": 200,
+        "h": 80
+      },
+      "b": {
+        "x": 380,
+        "y": 260,
+        "w": 200,
+        "h": 80
+      },
+      "d": {
+        "x": 720,
+        "y": 300,
+        "w": 200,
+        "h": 80
+      }
+    },
+    "r1Before": [
+      "Pointer1791717447027_USER_39",
+      "Pointer1791717447286_USER_43"
+    ],
+    "r1After": [
+      "Pointer1791717447027_USER_39",
+      "Pointer1791717447286_USER_43"
+    ],
+    "r2Before": [
+      "Pointer1791717447545_USER_47"
+    ],
+    "r2After": [
+      "Pointer1791717447545_USER_47"
+    ]
+  },
+  "s6": {
+    "tag": "after",
+    "before": {
+      "Check order": [
+        300,
+        160,
+        140,
+        60
+      ],
+      "Customer": [
+        100,
+        520,
+        900,
+        200
+      ],
+      "In stock?": [
+        530,
+        165,
+        50,
+        50
+      ],
+      "Order received": [
+        190,
+        172,
+        36,
+        36
+      ],
+      "Place order": [
+        250,
+        590,
+        140,
+        60
+      ],
+      "Receive goods": [
+        600,
+        590,
+        140,
+        60
+      ],
+      "Sales": [
+        130,
+        100,
+        870,
+        180
+      ],
+      "Ship": [
+        500,
+        340,
+        140,
+        60
+      ],
+      "Shipped": [
+        720,
+        352,
+        36,
+        36
+      ],
+      "Shop": [
+        100,
+        100,
+        900,
+        360
+      ],
+      "Supplier": [
+        100,
+        780,
+        900,
+        40
+      ],
+      "Warehouse": [
+        130,
+        280,
+        870,
+        180
+      ]
+    },
+    "after1": {
+      "Check order": [
+        460,
+        584,
+        140,
+        60
+      ],
+      "Customer": [
+        416,
+        112,
+        900,
+        200
+      ],
+      "In stock?": [
+        876,
+        592,
+        50,
+        50
+      ],
+      "Order received": [
+        124,
+        600,
+        36,
+        36
+      ],
+      "Place order": [
+        462,
+        128,
+        140,
+        60
+      ],
+      "Receive goods": [
+        462,
+        208,
+        140,
+        60
+      ],
+      "Sales": [
+        78,
+        568,
+        1602,
+        180
+      ],
+      "Ship": [
+        1204,
+        764,
+        140,
+        60
+      ],
+      "Shipped": [
+        1628,
+        780,
+        36,
+        36
+      ],
+      "Shop": [
+        48,
+        568,
+        1632,
+        360
+      ],
+      "Supplier": [
+        48,
+        48,
+        900,
+        40
+      ],
+      "Warehouse": [
+        78,
+        748,
+        1602,
+        180
+      ]
+    },
+    "after2": {
+      "Check order": [
+        460,
+        584,
+        140,
+        60
+      ],
+      "Customer": [
+        416,
+        112,
+        900,
+        200
+      ],
+      "In stock?": [
+        876,
+        592,
+        50,
+        50
+      ],
+      "Order received": [
+        124,
+        600,
+        36,
+        36
+      ],
+      "Place order": [
+        462,
+        128,
+        140,
+        60
+      ],
+      "Receive goods": [
+        462,
+        208,
+        140,
+        60
+      ],
+      "Sales": [
+        78,
+        568,
+        1602,
+        180
+      ],
+      "Ship": [
+        1204,
+        764,
+        140,
+        60
+      ],
+      "Shipped": [
+        1628,
+        780,
+        36,
+        36
+      ],
+      "Shop": [
+        48,
+        568,
+        1632,
+        360
+      ],
+      "Supplier": [
+        48,
+        48,
+        900,
+        40
+      ],
+      "Warehouse": [
+        78,
+        748,
+        1602,
+        180
+      ]
+    },
+    "errors": []
+  },
+  "s6flat": {
+    "positions": {
+      "Check order": [
+        1160,
+        888,
+        140,
+        60
+      ],
+      "Customer": [
+        1128,
+        48,
+        900,
+        200
+      ],
+      "In stock?": [
+        1352,
+        1208,
+        50,
+        50
+      ],
+      "Order received": [
+        1208,
+        584,
+        36,
+        36
+      ],
+      "Place order": [
+        968,
+        568,
+        140,
+        60
+      ],
+      "Receive goods": [
+        48,
+        48,
+        140,
+        60
+      ],
+      "Sales": [
+        1176,
+        272,
+        200,
+        180
+      ],
+      "Ship": [
+        1440,
+        1680,
+        140,
+        60
+      ],
+      "Shipped": [
+        1568,
+        1992,
+        36,
+        36
+      ],
+      "Shop": [
+        48,
+        272,
+        900,
+        360
+      ],
+      "Supplier": [
+        208,
+        48,
+        900,
+        40
+      ],
+      "Warehouse": [
+        1480,
+        1376,
+        200,
+        180
+      ]
+    },
+    "errors": []
+  },
+  "s6hull": {
+    "errors": [],
+    "Hulls": {
+      "positions": {
+        "A": [
+          352,
+          440,
+          200,
+          42
+        ],
+        "B": [
+          648,
+          440,
+          200,
+          42
+        ],
+        "C": [
+          48,
+          440,
+          200,
+          42
+        ],
+        "D": [
+          272,
+          216,
+          200,
+          42
+        ],
+        "EXT": [
+          48,
+          48,
+          200,
+          42
+        ],
+        "region1": [
+          352,
+          272,
+          200,
+          42
+        ],
+        "region2": [
+          272,
+          48,
+          200,
+          42
+        ]
+      },
+      "hulls": [
+        {
+          "transform": "translate(24px, 226px)",
+          "w": 848,
+          "h": 280,
+          "name": "region1"
+        },
+        {
+          "transform": "translate(248px, 2px)",
+          "w": 248,
+          "h": 280,
+          "name": "region2"
+        }
+      ]
+    },
+    "Collapsed": {
+      "positions": {
+        "A": [
+          352,
+          440,
+          200,
+          42
+        ],
+        "B": [
+          648,
+          440,
+          200,
+          42
+        ],
+        "C": [
+          48,
+          440,
+          200,
+          42
+        ],
+        "D": [
+          272,
+          216,
+          200,
+          42
+        ],
+        "EXT": [
+          48,
+          48,
+          200,
+          42
+        ],
+        "region1": [
+          352,
+          272,
+          200,
+          42
+        ],
+        "region2": [
+          272,
+          48,
+          200,
+          42
+        ]
+      },
+      "hulls": [
+        {
+          "transform": "translate(24px, 226px)",
+          "w": 848,
+          "h": 280,
+          "name": "region1"
+        },
+        {
+          "transform": "translate(248px, 2px)",
+          "w": 248,
+          "h": 280,
+          "name": "region2"
+        }
+      ]
+    }
+  },
+  "drag4": {
+    "zoom": 1,
+    "check": {
+      "orig": [
+        300,
+        160,
+        140,
+        60
+      ],
+      "outside": {
+        "c0": [
+          130,
+          100,
+          870,
+          180
+        ],
+        "live": [
+          130,
+          100,
+          870,
+          180
+        ],
+        "centre": {
+          "x": 374,
+          "y": -50
+        },
+        "out": true,
+        "slot0": [
+          "Pointer1791717888163_USER_154",
+          "Pointer1791717888533_USER_158",
+          "Pointer1791717888809_USER_162"
+        ],
+        "slot1": [
+          "Pointer1791717888163_USER_154",
+          "Pointer1791717888533_USER_158",
+          "Pointer1791717888809_USER_162"
+        ],
+        "rec": [
+          300,
+          160,
+          140,
+          60,
+          true
+        ]
+      },
+      "top": {
+        "placed": {
+          "x": 300,
+          "y": 116
+        },
+        "container0": [
+          130,
+          100,
+          870,
+          180
+        ],
+        "gaps0": {
+          "sales": [
+            30,
+            420,
+            16,
+            65
+          ],
+          "warehouse": [
+            340,
+            244,
+            60,
+            60
+          ]
+        },
+        "live": {
+          "sales": [
+            30,
+            420,
+            16,
+            65
+          ],
+          "warehouse": [
+            340,
+            244,
+            60,
+            60
+          ]
+        },
+        "end": {
+          "sales": [
+            30,
+            420,
+            16,
+            65
+          ],
+          "warehouse": [
+            340,
+            244,
+            60,
+            60
+          ]
+        },
+        "moved": {
+          "x": 4,
+          "y": -36
+        },
+        "centreInside": true,
+        "containerLive": [
+          130,
+          64,
+          870,
+          216
+        ],
+        "containerEnd": [
+          130,
+          64,
+          870,
+          216
+        ],
+        "records": {
+          "sales": [
+            1100,
+            520,
+            200,
+            180,
+            true
+          ],
+          "warehouse": [
+            1100,
+            760,
+            200,
+            180,
+            true
+          ]
+        },
+        "othersLive": [],
+        "othersEnd": []
+      },
+      "right": {
+        "placed": {
+          "x": 844,
+          "y": 160
+        },
+        "container0": [
+          130,
+          100,
+          870,
+          180
+        ],
+        "gaps0": {
+          "sales": [
+            30,
+            16,
+            60,
+            60
+          ],
+          "warehouse": [
+            340,
+            244,
+            60,
+            60
+          ]
+        },
+        "live": {
+          "sales": [
+            30,
+            16,
+            60,
+            60
+          ],
+          "warehouse": [
+            340,
+            280,
+            60,
+            60
+          ]
+        },
+        "end": {
+          "sales": [
+            30,
+            16,
+            60,
+            60
+          ],
+          "warehouse": [
+            340,
+            280,
+            60,
+            60
+          ]
+        },
+        "moved": {
+          "x": 36,
+          "y": 0
+        },
+        "centreInside": true,
+        "containerLive": [
+          130,
+          100,
+          906,
+          180
+        ],
+        "containerEnd": [
+          130,
+          100,
+          906,
+          180
+        ],
+        "records": {
+          "sales": [
+            1100,
+            520,
+            200,
+            180,
+            true
+          ],
+          "warehouse": [
+            1100,
+            760,
+            200,
+            180,
+            true
+          ]
+        },
+        "othersLive": [],
+        "othersEnd": []
+      },
+      "bottom": {
+        "placed": {
+          "x": 300,
+          "y": 204
+        },
+        "container0": [
+          130,
+          100,
+          870,
+          180
+        ],
+        "gaps0": {
+          "sales": [
+            30,
+            420,
+            65,
+            16
+          ],
+          "warehouse": [
+            340,
+            244,
+            60,
+            60
+          ]
+        },
+        "live": {
+          "sales": [
+            30,
+            420,
+            65,
+            16
+          ],
+          "warehouse": [
+            340,
+            244,
+            24,
+            96
+          ]
+        },
+        "end": {
+          "sales": [
+            30,
+            420,
+            65,
+            16
+          ],
+          "warehouse": [
+            340,
+            244,
+            24,
+            96
+          ]
+        },
+        "moved": {
+          "x": 4,
+          "y": 36
+        },
+        "centreInside": true,
+        "containerLive": [
+          130,
+          100,
+          870,
+          216
+        ],
+        "containerEnd": [
+          130,
+          100,
+          870,
+          216
+        ],
+        "records": {
+          "sales": [
+            1100,
+            520,
+            200,
+            180,
+            true
+          ],
+          "warehouse": [
+            1100,
+            760,
+            200,
+            180,
+            true
+          ]
+        },
+        "othersLive": [],
+        "othersEnd": []
+      },
+      "left": {
+        "placed": {
+          "x": 176,
+          "y": 160
+        },
+        "container0": [
+          130,
+          100,
+          870,
+          180
+        ],
+        "gaps0": {
+          "sales": [
+            16,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            340,
+            244,
+            60,
+            60
+          ]
+        },
+        "live": {
+          "sales": [
+            16,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            372,
+            244,
+            60,
+            60
+          ]
+        },
+        "end": {
+          "sales": [
+            16,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            372,
+            244,
+            60,
+            60
+          ]
+        },
+        "moved": {
+          "x": -32,
+          "y": 0
+        },
+        "centreInside": true,
+        "containerLive": [
+          98,
+          100,
+          902,
+          180
+        ],
+        "containerEnd": [
+          98,
+          100,
+          902,
+          180
+        ],
+        "records": {
+          "sales": [
+            1100,
+            520,
+            200,
+            180,
+            true
+          ],
+          "warehouse": [
+            1100,
+            760,
+            200,
+            180,
+            true
+          ]
+        },
+        "othersLive": [],
+        "othersEnd": []
+      }
+    },
+    "ship": {
+      "orig": [
+        500,
+        340,
+        140,
+        60
+      ],
+      "outside": {
+        "c0": [
+          130,
+          280,
+          870,
+          180
+        ],
+        "live": [
+          130,
+          280,
+          870,
+          180
+        ],
+        "centre": {
+          "x": 1894,
+          "y": 366
+        },
+        "out": true,
+        "slot0": [
+          "Pointer1791717889116_USER_167",
+          "Pointer1791717889395_USER_171"
+        ],
+        "slot1": [
+          "Pointer1791717889116_USER_167",
+          "Pointer1791717889395_USER_171"
+        ],
+        "rec": [
+          500,
+          340,
+          140,
+          60,
+          true
+        ]
+      },
+      "top": {
+        "placed": {
+          "x": 500,
+          "y": 296
+        },
+        "container0": [
+          130,
+          280,
+          870,
+          180
+        ],
+        "gaps0": {
+          "sales": [
+            30,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            340,
+            244,
+            16,
+            72
+          ]
+        },
+        "live": {
+          "sales": [
+            30,
+            420,
+            100,
+            20
+          ],
+          "warehouse": [
+            336,
+            244,
+            16,
+            72
+          ]
+        },
+        "end": {
+          "sales": [
+            30,
+            420,
+            100,
+            20
+          ],
+          "warehouse": [
+            336,
+            244,
+            16,
+            72
+          ]
+        },
+        "moved": {
+          "x": -4,
+          "y": -40
+        },
+        "centreInside": true,
+        "containerLive": [
+          130,
+          240,
+          870,
+          220
+        ],
+        "containerEnd": [
+          130,
+          240,
+          870,
+          220
+        ],
+        "records": {
+          "warehouse": [
+            1100,
+            760,
+            200,
+            180,
+            true
+          ],
+          "sales": [
+            1100,
+            520,
+            200,
+            180,
+            true
+          ]
+        },
+        "othersLive": [],
+        "othersEnd": []
+      },
+      "right": {
+        "placed": {
+          "x": 844,
+          "y": 340
+        },
+        "container0": [
+          130,
+          280,
+          870,
+          180
+        ],
+        "gaps0": {
+          "sales": [
+            30,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            560,
+            16,
+            60,
+            60
+          ]
+        },
+        "live": {
+          "sales": [
+            30,
+            456,
+            60,
+            60
+          ],
+          "warehouse": [
+            560,
+            16,
+            56,
+            64
+          ]
+        },
+        "end": {
+          "sales": [
+            30,
+            456,
+            60,
+            60
+          ],
+          "warehouse": [
+            560,
+            16,
+            56,
+            64
+          ]
+        },
+        "moved": {
+          "x": 36,
+          "y": -4
+        },
+        "centreInside": true,
+        "containerLive": [
+          130,
+          280,
+          906,
+          180
+        ],
+        "containerEnd": [
+          130,
+          280,
+          906,
+          180
+        ],
+        "records": {
+          "warehouse": [
+            1100,
+            760,
+            200,
+            180,
+            true
+          ],
+          "sales": [
+            1100,
+            520,
+            200,
+            180,
+            true
+          ]
+        },
+        "othersLive": [],
+        "othersEnd": []
+      },
+      "bottom": {
+        "placed": {
+          "x": 500,
+          "y": 384
+        },
+        "container0": [
+          130,
+          280,
+          870,
+          180
+        ],
+        "gaps0": {
+          "sales": [
+            30,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            340,
+            244,
+            72,
+            16
+          ]
+        },
+        "live": {
+          "sales": [
+            30,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            336,
+            244,
+            72,
+            16
+          ]
+        },
+        "end": {
+          "sales": [
+            30,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            336,
+            244,
+            72,
+            16
+          ]
+        },
+        "moved": {
+          "x": -4,
+          "y": 32
+        },
+        "centreInside": true,
+        "containerLive": [
+          130,
+          280,
+          870,
+          212
+        ],
+        "containerEnd": [
+          130,
+          280,
+          870,
+          212
+        ],
+        "records": {
+          "warehouse": [
+            1100,
+            760,
+            200,
+            180,
+            true
+          ],
+          "sales": [
+            1100,
+            520,
+            200,
+            180,
+            true
+          ]
+        },
+        "othersLive": [],
+        "othersEnd": []
+      },
+      "left": {
+        "placed": {
+          "x": 176,
+          "y": 340
+        },
+        "container0": [
+          130,
+          280,
+          870,
+          180
+        ],
+        "gaps0": {
+          "sales": [
+            30,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            16,
+            244,
+            60,
+            60
+          ]
+        },
+        "live": {
+          "sales": [
+            62,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            16,
+            244,
+            56,
+            64
+          ]
+        },
+        "end": {
+          "sales": [
+            62,
+            420,
+            60,
+            60
+          ],
+          "warehouse": [
+            16,
+            244,
+            56,
+            64
+          ]
+        },
+        "moved": {
+          "x": -32,
+          "y": -4
+        },
+        "centreInside": true,
+        "containerLive": [
+          98,
+          280,
+          902,
+          180
+        ],
+        "containerEnd": [
+          98,
+          280,
+          902,
+          180
+        ],
+        "records": {
+          "warehouse": [
+            1100,
+            760,
+            200,
+            180,
+            true
+          ],
+          "sales": [
+            1100,
+            520,
+            200,
+            180,
+            true
+          ]
+        },
+        "othersLive": [],
+        "othersEnd": []
+      }
+    },
+    "reload": {
+      "reopen": {
+        "id": "Pointer1791717817889_USER_2",
+        "stored": true,
+        "viewpointBefore": "BPMN"
+      },
+      "gapsPre": {
+        "sales": [
+          62,
+          420,
+          60,
+          60
+        ],
+        "warehouse": [
+          16,
+          244,
+          56,
+          64
+        ]
+      },
+      "gapsPost": {
+        "sales": [
+          62,
+          420,
+          60,
+          60
+        ],
+        "warehouse": [
+          16,
+          244,
+          56,
+          64
+        ]
+      },
+      "drift": []
+    },
+    "errors": []
+  },
+  "relayout": {
+    "reopen": {
+      "id": "Pointer1791718032231_USER_2",
+      "stored": true,
+      "viewpointBefore": "BPMN"
+    },
+    "recPre": {
+      "shop": [
+        100,
+        100,
+        1632,
+        360,
+        true
+      ],
+      "customer": [
+        416,
+        112,
+        900,
+        200,
+        true
+      ],
+      "sales": [
+        78,
+        568,
+        200,
+        180,
+        true
+      ],
+      "warehouse": [
+        78,
+        748,
+        200,
+        180,
+        true
+      ],
+      "start": [
+        124,
+        600,
+        200,
+        80,
+        false
+      ],
+      "check": [
+        460,
+        584,
+        140,
+        60,
+        true
+      ],
+      "gw": [
+        876,
+        592,
+        200,
+        80,
+        false
+      ],
+      "ship": [
+        1204,
+        764,
+        140,
+        60,
+        true
+      ],
+      "end": [
+        1628,
+        780,
+        200,
+        80,
+        false
+      ],
+      "place": [
+        462,
+        128,
+        140,
+        60,
+        true
+      ],
+      "receive": [
+        462,
+        208,
+        140,
+        60,
+        true
+      ]
+    },
+    "recPost": {
+      "shop": [
+        100,
+        100,
+        1632,
+        360,
+        true
+      ],
+      "customer": [
+        416,
+        112,
+        900,
+        200,
+        true
+      ],
+      "sales": [
+        78,
+        568,
+        200,
+        180,
+        true
+      ],
+      "warehouse": [
+        78,
+        748,
+        200,
+        180,
+        true
+      ],
+      "start": [
+        124,
+        600,
+        200,
+        80,
+        false
+      ],
+      "check": [
+        460,
+        584,
+        140,
+        60,
+        true
+      ],
+      "gw": [
+        876,
+        592,
+        200,
+        80,
+        false
+      ],
+      "ship": [
+        1204,
+        764,
+        140,
+        60,
+        true
+      ],
+      "end": [
+        1628,
+        780,
+        200,
+        80,
+        false
+      ],
+      "place": [
+        462,
+        128,
+        140,
+        60,
+        true
+      ],
+      "receive": [
+        462,
+        208,
+        140,
+        60,
+        true
+      ]
+    },
+    "pre": [
+      "Shop 48,568 1632x360",
+      "Customer 416,112 900x200",
+      "Supplier 48,48 900x40",
+      "Sales 78,568 1602x180",
+      "Warehouse 78,748 1602x180",
+      "Order received 124,600 36x36",
+      "Check order 460,584 140x60",
+      "In stock? 876,592 50x50",
+      "Ship 1204,764 140x60",
+      "Shipped 1628,780 36x36",
+      "Place order 462,128 140x60",
+      "Receive goods 462,208 140x60"
+    ],
+    "post": [
+      "Shop 48,100 1684x740",
+      "Customer 416,112 900x200",
+      "Supplier 48,48 900x40",
+      "Sales 78,100 1654x560",
+      "Warehouse 78,660 1654x180",
+      "Order received 124,600 36x36",
+      "Check order 460,584 140x60",
+      "In stock? 876,592 50x50",
+      "Ship 1204,764 140x60",
+      "Shipped 1628,780 36x36",
+      "Place order 462,128 140x60",
+      "Receive goods 462,208 140x60"
+    ],
+    "boxedOff": [
+      {
+        "kk": "shop",
+        "drawn": [
+          48,
+          568,
+          1632,
+          360
+        ],
+        "record": [
+          100,
+          100,
+          1632,
+          360,
+          true
+        ]
+      }
+    ],
+    "stackedOff": [],
+    "outside": [],
+    "drift": [
+      {
+        "kk": "shop",
+        "pre": [
+          48,
+          568,
+          1632,
+          360
+        ],
+        "post": [
+          48,
+          100,
+          1684,
+          740
+        ]
+      },
+      {
+        "kk": "sales",
+        "pre": [
+          78,
+          568,
+          1602,
+          180
+        ],
+        "post": [
+          78,
+          100,
+          1654,
+          560
+        ]
+      },
+      {
+        "kk": "warehouse",
+        "pre": [
+          78,
+          748,
+          1602,
+          180
+        ],
+        "post": [
+          78,
+          660,
+          1654,
+          180
+        ]
+      }
+    ],
+    "errors": []
+  },
+  "carry": {
+    "shop0": [
+      60,
+      100,
+      940,
+      360
+    ],
+    "rec0": [
+      100,
+      100,
+      900,
+      360,
+      true
+    ],
+    "shop1": [
+      144,
+      144,
+      940,
+      360
+    ],
+    "rec1": [
+      184,
+      144,
+      900,
+      360,
+      true
+    ],
+    "d": {
+      "x": 84,
+      "y": 44
+    },
+    "pressed": {
+      "cls": "ir-node-content ir-shape--rect ir-layout",
+      "node": "Pointer1791718256730_USER_131"
+    },
+    "errors": []
+  },
+  "checks": {
+    "pass": 84,
+    "fail": 2
+  }
+}
