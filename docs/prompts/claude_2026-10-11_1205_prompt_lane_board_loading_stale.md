@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01FWUFsDDVN1SMB4MGco19GJ
 Front: harness
 Lane: fast (three files: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`; outside the critical zone; cause measured). No critical-zone go-ahead.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-1205 (board-loading, f59f1ccd5), merged 9461bfd7c (P-2026-10-11-1221); visual check passed (chat, built-in browser on 4703, RC-23)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

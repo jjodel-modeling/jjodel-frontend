@@ -746,3 +746,31 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702, squares at their start time, 7 days 21 rows at 12 px, 30 days widened to 36 px and 24 rows, marker lines readable
 **Notes**: Rollback tag `pre-firstshot-time-axis` on `cbbc1a204` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1152/result.json`.
 **Prompt document name**: 2026-10-11 11:52
+
+## 2026-10-11 — fix(harness): lane board keeps last good data, shows a loading indicator (P-2026-10-11-1205)
+**Prompt**: `claude_2026-10-11_1205_prompt_lane_board_loading_stale.md`, fast lane on `~/jjodel-w-boardload`, branch `board-loading`: `/api` answers the last good rows marked `stale` when `lane-run status --all` fails or times out, runs it as an async child process with one run in flight (`refreshing`), and the page gets a CSS spinner for in-flight `/api*` requests, an amber stale line and "Loading lanes…" before the first answer; one test, README paragraph.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts` (`f59f1ccd5`); uncommitted: this entry (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — node --check exit 0; laneBoard, laneBoardStrip, laneBoardRequirements, laneBoardInsights 102/102; check:scripts PASS 80 files; new test red on the pre-change script; curl on 4703: /api during a run 0.012 s, `refreshing: true`
+**Out-of-scope changes**: yes — a boot gate in the server handler makes `/api/timeline` and `/export/*` wait for the first snapshot (not blocking), because `timeline()` reads `collect()` synchronously; without it the existing raw-outcome test fails. Their code is untouched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the visual check is due by the chat (RC-23) on 4703, PID 83772
+**Notes**: collect() stays synchronous for timeline(), answered from the snapshot and refreshed in the background; /api waits only for the run it starts. Board on 4703 started with LANE_BOARD_CACHE in /tmp, so nothing is written under ~/.jjodel-lanes/. The prompt's subject (79 characters) was refused by bash-guard (CLAUDE.md 6.2), so it was shortened to 71. Mutation bench 4/4 red (commit body).
+**Prompt document name**: 2026-10-11 12:05
+
+**Ticket** (for a later lane): synchronous git calls left in the board, measured at load 11 on 2026-10-11 12:15. `promptCommits()` `git log --all --diff-filter=A -- docs/prompts/` took 3216 ms. It runs once every 5 min inside the `/api` row build and inside `timeline()`, so it still blocks the event loop for about 3 s. The `git()` helper takes 38-52 ms per call: `ls-tree` and `show` in `trunkPrompt`, `for-each-ref` in `refreshGit`, `ls-tree`/`show` of `docs/log-inbox/` and `show` of `docs/decisions.md` for Insights.
+
+## 2026-10-11 — merge: board-loading into alfonso-frontend-jjtl (P-2026-10-11-1221)
+**Prompt**: `claude_2026-10-11_1221_prompt_merge_board-loading.md`, a lane-run session (`lane-run merge --direct` fell back: tracked changes in the board-loading worktree): `board-loading` at `f59f1ccd5` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `1ec75cd32`, 1 commit on the branch side.
+**Files touched**: merge `9461bfd7c`: 3 files from the branch side (`frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: the P-2026-10-11-1205 entry carried verbatim from `~/jjodel-w-boardload` (RC-17), this entry, the Status of the 1205 and 1221 prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9461bfd7c`: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8537 tests (trunk tip 8536 + 1 new), 344/353 files, the same 9 red at import; hooks 654 (653 + 1); build exit 0; check:docs 5/5; check:agents, check:scripts (109 files) and check:addonly PASS.
+**Out-of-scope changes**: no — the 1205 entry and its Status flip were added to this commit by the chat's GO
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4703 (RC-23), 2026-10-11 12:21: spinner visible while /api is in flight, amber stale line with the rows kept and the strip counting them; the line reads 'Status failed' rather than 'timed out', accepted
+**Notes**: Merge-tree zero conflicts, tree `183dd6a9d` equal to the merge index; no file changed on both sides; governance files untouched on the branch; probe 1/1. Union: none. The prompt's step-6 rollback target `66ee3830d` should read `3c90527a9`, the pre-merge tip; not triggered, noted by the chat. The trunk moved after the merge (P-2026-10-11-1238, 1250, 1300); this commit sits on top.
+**Prompt document name**: 2026-10-11 12:21
