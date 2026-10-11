@@ -60,6 +60,10 @@ export class Parser {
     private current: number = 0;
     private errors: ParseError[] = [];
     private originalInput: string = '';
+    /** Number of block bodies being parsed; inside one, a bare 'end' closes the block. */
+    private blockDepth: number = 0;
+    /** Strict parse (detect): a standalone do block must reach its 'end'. */
+    private strict: boolean = false;
 
     /**
      * Parse input string into AST
@@ -70,6 +74,8 @@ export class Parser {
         this.current = 0;
         this.errors = [];
         this.originalInput = input;
+        this.blockDepth = 0;
+        this.strict = opts?.strict === true;
 
         // Skip leading newlines
         while (this.check('NEWLINE')) {
@@ -174,7 +180,9 @@ export class Parser {
         if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
             token.value.toLowerCase() === 'do') {
             this.advance(); // consume 'do'
-            const commands = this.parseBlockBody();
+            // Only under strict: validateScriptIntegrity parses a multi-line block one line
+            // at a time, and its first line is a bare 'do'.
+            const commands = this.parseBlockBody('do', this.strict);
             const args: BlockArgs = { command: 'block', commands };
             return { type: 'Command', command: 'block', args, position };
         }
@@ -918,7 +926,7 @@ export class Parser {
         this.skipNewlines();
 
         // Parse body — single command or multiple commands until 'end'
-        const body = this.parseBlockOrCommand();
+        const body = this.parseBlockOrCommand('let');
 
         return { command: 'let', bindings, body };
     }
@@ -1017,10 +1025,13 @@ export class Parser {
 
     /**
      * Parse multiple commands separated by ';' or newlines until 'end' keyword.
-     * Consumes the 'end' keyword.
+     * Consumes the 'end' keyword. `opener` names the block kind in errors; with
+     * `requireEnd`, reaching end of input without the 'end' is an error.
      */
-    private parseBlockBody(): CommandNode[] {
+    private parseBlockBody(opener: string, requireEnd: boolean = false): CommandNode[] {
         const commands: CommandNode[] = [];
+        let closed = false;
+        this.blockDepth++;
 
         while (!this.isAtEnd() && !this.check('EOF')) {
             this.skipNewlines();
@@ -1035,6 +1046,7 @@ export class Parser {
             // Stop at 'end' keyword
             if (this.checkKeyword('end')) {
                 this.advance(); // consume 'end'
+                closed = true;
                 break;
             }
 
@@ -1043,11 +1055,15 @@ export class Parser {
             const before = this.current;
             const command = this.parseCommand();
             if (this.current === before) {
-                throw new Error(`Unexpected '${this.peek().value}' in do block`);
+                throw new Error(`Unexpected '${this.peek().value}' in ${opener} block`);
             }
             commands.push(command);
         }
 
+        if (requireEnd && !closed) {
+            throw new Error(`Expected 'end' to close ${opener} block`);
+        }
+        this.blockDepth--;
         return commands;
     }
 
@@ -1057,12 +1073,12 @@ export class Parser {
      * If the next meaningful token starts a command and 'end' appears later, collects
      * all commands until 'end'. Otherwise parses a single command.
      */
-    private parseBlockOrCommand(): CommandNode {
+    private parseBlockOrCommand(opener: string): CommandNode {
         this.skipNewlines();
 
         // Check if this is a multi-command block (look for 'end' keyword ahead)
         if (this.hasEndAhead()) {
-            const commands = this.parseBlockBody();
+            const commands = this.parseBlockBody(opener);
             if (commands.length === 1) return commands[0];
             const position = commands.length > 0
                 ? commands[0].position
@@ -1155,7 +1171,7 @@ export class Parser {
         }
 
         // Parse body — single command or multiple commands until 'end'
-        const body = this.parseBlockOrCommand();
+        const body = this.parseBlockOrCommand('forall');
 
         return { command: 'forall', variable, collectionExpr, filterExpr, body };
     }
@@ -1196,8 +1212,10 @@ export class Parser {
     private parseEvalCommand(): EvalArgs {
         // Everything after "eval" is the JjEL expression
         // Reconstruct from remaining tokens
+        // Inside a block, stop before the bare 'end' token that closes it.
         const parts: string[] = [];
-        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF') &&
+               !(this.blockDepth > 0 && this.checkKeyword('end'))) {
             parts.push(this.advance().value);
         }
         const expression = parts.join(' ').trim();
