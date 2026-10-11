@@ -588,8 +588,9 @@ function exitedLane(root: string, id: string, outcome: string, resolved: boolean
     if (resolved) writeFileSync(join(dir, 'resolved.txt'), '2026-10-05 10:00 · Alfonso · fixed by hand\n');
 }
 
-/** The board as launchd runs it, against a lanes folder with two running lanes (one a direct merge) and four exited. */
-async function board(): Promise<{ port: number; root: string }> {
+/** The board as launchd runs it, against a lanes folder with two running lanes (one a direct merge) and four exited.
+ *  `stub` writes the fake lane-run from the status table; by default it prints the table and exits 0. */
+async function board(stub?: (table: string[], root: string) => string): Promise<{ port: number; root: string }> {
     const root = tmp();
     // launcherOf reads `git log --all` of JJODEL_REPO: an empty repo here, never a real checkout.
     const repo = tmp();
@@ -613,7 +614,7 @@ async function board(): Promise<{ port: number; root: string }> {
     exitedLane(root, 'P-2026-10-05-0600', 'blocked', false);
     exitedLane(root, 'P-2026-10-05-0500', 'done', true);
     const fake = join(root, 'fake-lane-run.mjs');
-    writeFileSync(fake, [
+    const table = [
         'id                  state    outcome  elapsed',
         'P-2026-10-05-1000   running  none     2 min',
         'P-2026-10-05-0900   running  none     12 min',
@@ -621,7 +622,8 @@ async function board(): Promise<{ port: number; root: string }> {
         'P-2026-10-05-0700   exited   blocked  20 min',
         'P-2026-10-05-0600   exited   blocked  20 min',
         'P-2026-10-05-0500   exited   done     20 min',
-    ].map((l) => 'console.log(' + JSON.stringify(l) + ');').join('\n') + '\n');
+    ];
+    writeFileSync(fake, stub ? stub(table, root) : table.map((l) => 'console.log(' + JSON.stringify(l) + ');').join('\n') + '\n');
     const port = await freePort();
     const child = spawn(process.execPath, [SCRIPT, '--port', String(port), '--refresh', '30'], {
         env: { ...process.env, JJODEL_LANES: root, LANE_RUN: fake, LANE_BOARD_PORT: '', JJODEL_REPO: repo, LANE_BOARD_CACHE: join(root, 'timeline-cache.json') },
@@ -738,4 +740,44 @@ describe('the board: /api and the page', () => {
         const ins = JSON.parse(await get('/api/insights'));
         expect(ins.lanes.find((l: Ev) => l.id === 'P-2026-10-05-0700').final).toBe('blocked');
     });
+
+    test('a status run that fails after a success keeps the last good rows, stale since that success, and a request during the run is answered at once (failed run drawn as an empty board, status run blocking the server)', async () => {
+        // P-2026-10-11-1205: lane-run succeeds once, then fails after 3 s, as a status that timed out under load does.
+        const { port, root } = await board((table, dir) => [
+            "import { existsSync, writeFileSync } from 'node:fs';",
+            'const ran = ' + JSON.stringify(join(dir, 'status-ran-once')) + ';',
+            "if (existsSync(ran)) { await new Promise((r) => setTimeout(r, 3000)); console.error('lane-run: status failed'); process.exit(1); }",
+            "writeFileSync(ran, '1');",
+            ...table.map((l) => 'console.log(' + JSON.stringify(l) + ');'),
+        ].join('\n') + '\n');
+        const base = 'http://127.0.0.1:' + port;
+        const timed = async (path: string) => { const t0 = Date.now(); const body = await (await fetch(base + path)).json(); return { body, ms: Date.now() - t0, at: Date.now() }; };
+        const first = (await timed('/api')).body;
+        expect(first.error).toBe('');
+        expect(first.stale).toBe(false);
+        expect(first.rows.map((r: Ev) => r.id)).toHaveLength(6);
+        expect(readFileSync(join(root, 'status-ran-once'), 'utf8')).toBe('1');
+
+        // The snapshot is kept 10 s (CACHE_MS): the next request starts the second run and waits for it.
+        await new Promise((r) => setTimeout(r, 10_500));
+        const second = timed('/api');
+        await new Promise((r) => setTimeout(r, 500));
+        const during = await timed('/api');
+        const tl = await timed('/api/timeline');
+        const after = await second;
+        expect(during.ms).toBeLessThan(1000);
+        expect(during.at).toBeLessThan(after.at);
+        expect(tl.at).toBeLessThan(after.at);
+        expect(during.body.refreshing).toBe(true);
+        expect(during.body.stale).toBe(false);
+        expect(during.body.rows).toEqual(first.rows);
+        expect(tl.body.lanes.find((l: Ev) => l.id === 'P-2026-10-05-0700').outcome).toBe('blocked');
+
+        const s = after.body;
+        expect(s.stale).toBe(true);
+        expect(s.staleSince).toBe(first.now);
+        expect(s.rows).toEqual(first.rows);
+        expect(s.error).toBe('lane-run: status failed');
+        expect(s.refreshing).toBe(false);
+    }, 45_000);
 });
