@@ -1,0 +1,31 @@
+# Plan of the one-time ticket backfill: lane-run ticket --backfill --plan docs/harness/ticket-backfill-plan.txt
+# P-2026-10-11-1017, the chat's Phase 2 GO on report 7216c4464 (docs/discovery/discovery_2026-10-11_ticket_cards.md, section 4).
+# One line per key: <key> skip|close|backlog [front <slug>]. A key not listed is carded in Backlog on the front the rule gives it.
+# close = created Done and closed. Skipped: none (GO answer 1).
+
+# Fixed on the trunk, with evidence (report 4.1): closed (GO answer 1)
+24e831fe close                      # harness:244, closed by harness.md:267, 0955ef140
+921b1aae close                      # harness:249, closed by harness.md:267, 0955ef140
+d8f3007c close                      # harness:269, issue 3 closed and Done by hand
+784904e2 close                      # ir-graphvertex:63, F1 ad08a8519
+7640cb90 close                      # merge-gate:7, d414c934d
+89297077 close                      # symbol-editor:35, 7c92ffc2c
+96459f70 close                      # symbol-editor:41, d8f2e61c3
+88c0596b close                      # symbol-editor:46, aa04b92fb
+aa2f9e6b close                      # symbol-editor:91, ac64b213b
+80ea0bda close                      # simulation:261, 68e4f312d
+63693ee8 close                      # views:198, cce1ecfef
+14a9b3a0 close                      # views:256, 803b84e3a
+dff559c0 close                      # views:275, measured clear (discovery_2026-10-03_petri_ink_ports.md:20-21)
+
+# Duplicate (GO answer 2): one card for views:119, views:74 closed as its duplicate
+e61f96da close front harness        # views:74, duplicate of c3080b9b (views:119)
+c3080b9b backlog front harness      # views:119
+
+# This lane's item 3 (GO answer 3): closed once the fix commit exists
+96fa82c4 close                      # harness:660, fixed by 4cf89641e (P-2026-10-11-1017 item 3)
+
+# Front remaps against the file rule (GO answer 4)
+576ee13a backlog front maintenance  # codegen-panel:24, an EditorV2 defect
+470fcb30 backlog front harness      # views:56, criticalZone.test.ts
+d3f5ccf4 backlog front harness      # views:309, build vs dev server
