@@ -6,7 +6,7 @@ Request: Alfonso, 2026-10-11 11:33: «ho testato graphvertex in http://localhost
 Front: maintenance
 Lane: full (Phase 1 discovery with a probe, hard stop; Phase 2 on the chat's GO)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane new-model-instantiate · 309245922, 60e51a4a3, d53d319dc, b08c92322, c2666b3b2, 1df16a7a4 · flip 2026-10-11 dalla chat
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 
