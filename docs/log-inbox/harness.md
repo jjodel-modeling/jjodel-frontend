@@ -902,3 +902,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs-only merge (research dataset), no visual change
 **Notes**: Rollback tag `pre-cain-data` on `dfea753d4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1719/result.json`.
 **Prompt document name**: 2026-10-11 17:19
+
+## 2026-10-11 — docs(research): governance drift dataset for CAIN 2027 (P-2026-10-11-1630)
+**Prompt**: `claude_2026-10-11_1630_prompt_cain_governance_dataset_discovery.md`: read-only discovery, the governance-drift dataset for a CAIN 2027 short paper (register history, RC-26 crossings, grammar conformance, RC-18, autonomy, rule timeline, the enforced vs text-only comparison, anonymization, threats).
+**Files touched**: `docs/research/cain-2027/discovery_2026-10-11_governance_dataset.md`, `docs/research/cain-2027/anonymization.md`, `docs/research/cain-2027/scripts/governance-dataset.ts`, `docs/research/cain-2027/scripts/rules-enforcement.csv`, `docs/research/cain-2027/scripts/rc26-hand-check.json`, eight CSVs in `docs/research/cain-2027/data/` (report commit); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Read-only on code and register. The script imports docs-digest.ts's parser; positive control 49 failing headers and 77 provisional rows on the pre-ratification register, as 1430 measured. H0 holds only narrowly: a hook holds the `Model:` trailer at 3.7% in trees that carry it vs 87.5% in trees that do not, and 52.5% for chat commits it never sees. Three helper agents (rule map, identifying strings, RC-26 rows). Report §0.
+**Prompt document name**: 2026-10-11 16:30

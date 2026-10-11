@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01FWUFsDDVN1SMB4MGco19GJ
 Front: harness
 Lane: full (discovery; read-only on the code; writes only a report and data files under `docs/research/cain-2027/`). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
 Depends: P-2026-10-11-1150, P-2026-10-11-1430, P-2026-10-11-1540
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-1630 (cain-data, e34fccc1f), merged 2dc0982bc (P-2026-10-11-1719)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
