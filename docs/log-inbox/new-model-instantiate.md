@@ -24,3 +24,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: high
 **Found in**: P-2026-10-11-1135
 **Detail**: `docs/discovery/discovery_2026-10-11_new_model_instantiate.md` §3.2, §4 F2
+
+## 2026-10-11 — fix(editor-v2): the canvas memo sees containment, F1 (P-2026-10-11-1135)
+**Prompt**: GO of the chat for Phase 2 of `claude_2026-10-11_1135_prompt_new_model_instantiate.md`, scope F1 only: the key of `useEditorMode`'s memo carries containment and the other fields `resolveM1Info` reads, in a pure module with a unit test and a mutation bench; F2 and F3 out; gates; the probe rerun; hard stop for Alfonso's visual GO, no merge.
+**Files touched**: `b08c92322`: `frontend/src/components/editor-v2/hooks/metamodelSignature.ts` (new), `hooks/useEditorMode.ts`, `hooks/__tests__/metamodelSignature.test.ts` (new). `c2666b3b2`: the report's addendum §8 and 3 assets. This commit: this inbox.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes — the report addendum and its assets are not named by the GO; the entry goes to this inbox, not to `docs/claude-code-log.md` (P9, parallel lanes); 8 files over three commits, above five (rule 19, RC-11); code is the three declared files
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe, unattended, 5 scenarios: uncontain 0/5 to 5/5, canvas Add on the first right-click 5/5, other rows unchanged; Alfonso's visual GO pending
+**Notes**: Gates: new test 22/22; editor-v2/hooks 10 files 197 tests; tsc 14 = baseline; build 0; check:scripts PASS. Bench 11 mutants, 11 killed (composition, aggregation, type, bounds, interface, supertypes, all reference shapes, object pointers, subpackages, pointedBy). modeInfo reaches EditorV2 only; useJjomSync and useM1ReferenceEdges do not receive it. Not driven: containment set from the M2 properties panel (the probe uses the L-API).
+**Prompt document name**: 2026-10-11 11:35
