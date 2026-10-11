@@ -956,3 +956,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Hard stop of Phase 1. 20 probe sessions and 3 scripted guard sessions on 2.1.296 with the flags lane-run uses. A loaded mod overrides the deny list at tool.check (git stash list ran), skips both PreToolUse hooks by answering a call, and runs host commands via $.process.run; sec-default is not seated here, so its arm was not run. A mod fails open by default, closed with .catch. 20 files in the report commit, above five: DOVE names them (rule 19).
 **Prompt document name**: 2026-10-11 17:45
+
+## 2026-10-11 — merge: cain-rq into alfonso-frontend-jjtl (P-2026-10-11-1846)
+**Prompt**: `claude_2026-10-11_1846_prompt_merge_cain-rq.md`, a direct merge by `lane-run merge --direct`, no session: `cain-rq` at `67f9ecfce` into `alfonso-frontend-jjtl`, merge base `6093cfbd3`, 1 commit on the branch side.
+**Files touched**: merge `f35e75a07`: 29 files from the branch side (`docs/research/cain-2027/data/rc26_reviewed.csv`, `docs/research/cain-2027/data/rq1_check_position.csv`, `docs/research/cain-2027/data/rq2_judgment.csv`, `docs/research/cain-2027/data/rq3_detection_repair.csv`, `docs/research/cain-2027/discovery_2026-10-11_rq_tables.md`, `docs/research/cain-2027/replication/README.md`, `docs/research/cain-2027/replication/autonomy_weekly.csv`, `docs/research/cain-2027/replication/comparison.csv`, and 21 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f35e75a07` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8692 tests in 359 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge (research tables), no visual change
+**Notes**: Rollback tag `pre-cain-rq` on `f2c27cd5a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1846/result.json`.
+**Prompt document name**: 2026-10-11 18:46
