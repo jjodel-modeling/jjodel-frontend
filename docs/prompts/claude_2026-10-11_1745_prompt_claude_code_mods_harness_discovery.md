@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-11-1745
 Chat: C-2026-10-11-1735
 Front: harness
 Lane: full (new enforcement layer next to the permission model and the hooks of RC-15)
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-1745 (mods-disc, discovery 5bf908b25); hard stop of Phase 1
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P8 non si applica (motivo: no product UI is touched, no visual check is due).

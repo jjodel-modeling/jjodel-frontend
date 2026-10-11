@@ -943,3 +943,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-11 16:50
 
 **Ticket** (P-2026-10-11-1650): `parseRegister` in `req-trace.mjs` does not parse R-D, R-2/3.6 and R-B12, which the goal-model parser and the contract check accept, so 7 entries of `contributions.json` never reach the Requirements tab (998 in the file, 991 on rows).
+
+## 2026-10-11 — docs(discovery): Claude Code mods and the harness (P-2026-10-11-1745)
+**Prompt**: `claude_2026-10-11_1745_prompt_claude_code_mods_harness_discovery.md`: Phase 1, read-only: mods version and surfaces, API inventory, order and permissions against the deny list and the `PreToolUse` hooks, throw and hang, a Prompt-ID guard prototype on three scripted sessions, telemetry, mapping of the harness pieces; probes under `/tmp/jjodel-mods-probe/`.
+**Files touched**: `docs/discovery/discovery_2026-10-11_claude_code_mods_harness.md` and 19 probe files under `docs/discovery/harness/mods/` (`5bf908b25`); this commit: the Status of the prompt file and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Hard stop of Phase 1. 20 probe sessions and 3 scripted guard sessions on 2.1.296 with the flags lane-run uses. A loaded mod overrides the deny list at tool.check (git stash list ran), skips both PreToolUse hooks by answering a call, and runs host commands via $.process.run; sec-default is not seated here, so its arm was not run. A mod fails open by default, closed with .catch. 20 files in the report commit, above five: DOVE names them (rule 19).
+**Prompt document name**: 2026-10-11 17:45
