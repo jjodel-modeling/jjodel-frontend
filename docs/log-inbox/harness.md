@@ -720,3 +720,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: scripts-only; chat check: 925/925 scripts tests, bench 29/29, backfill 42 cards
 **Notes**: Rollback tag `pre-ticket-cards` on `1328e35ff` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1127/result.json`.
 **Prompt document name**: 2026-10-11 11:27
+
+## 2026-10-11 — feat(harness): first-shot squares on the time axis (P-2026-10-11-1138)
+**Prompt**: `claude_2026-10-11_1138_prompt_firstshot_time_axis.md`, fast lane on `~/jjodel-w-fstime`, branch `firstshot-time-axis`: in the Insights card "First-shot over time" each square at its lane's start time, same-column squares stacked, height from the tallest stack with a 30-row cap that widens the columns, day ticks on the baseline, new subtitle, a new test file and a mutation bench.
+**Files touched**: `frontend/scripts/lane-board/insights.js`, `frontend/scripts/hooks/__tests__/laneBoardInsights.test.ts` (`3f5e33827`); uncommitted: this entry (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (chat RC-23 check passed) — node --check exit 0; laneBoard, laneBoardStrip, laneBoardRequirements and laneBoardInsights 101/101; check:scripts PASS 80 files; typecheck:scripts exit 0; the card's visual check is due (RC-23)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: chat RC-23 on 4702 (PID 8351, then stopped): 7 days 12 px columns, 21 rows; 30 days widened to 36 px, 24 rows; squares placed by start day (checked per day against their Prompt-IDs), marker lines readable against them, weekly rates and week labels kept
+**Notes**: Tallest stack, today's data: 7 days 21 rows, All 27, both at 12 px; 30 days 44 rows at 12 px, widened to 36 px (3 across) for 24 rows, the only range widened. A widened column holds k squares across, rows centred: one square per row in a wider column could never shorten a stack. New tests on the base commit 6/6 red, here 6/6 green; bench 15/15 killed (body of 3f5e33827).
+**Prompt document name**: 2026-10-11 11:38

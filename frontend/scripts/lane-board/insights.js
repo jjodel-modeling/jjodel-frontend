@@ -288,7 +288,7 @@
     return { w: b.width, h: b.height };
   }
 
-  // First-shot by week (weeks start on Monday): one square per session lane, in the order the lanes started.
+  // First-shot by week (weeks start on Monday): one square per session lane, at the time the lane started.
   function timeCard(c) {
     const ls = insLanes(c).filter((l) => l.model).sort((a, b) => a.start - b.start);
     const DAY = 864e5;
@@ -328,36 +328,47 @@
     });
     const ROW = lineH + 2;
     const TOP = 6 + rowSpans.length * ROW;
-    const colW = (W - L - R) / Math.max(weeks.length, 1);
-    const perRow = Math.max(1, Math.floor((colW - 12) / STEP));
+    // Squares on the time axis: the axis in columns of STEP px from L, each lane in the column of its start,
+    // stacked from the baseline up in start order. Above MAX_ROWS the columns widen by STEP, `per` squares across,
+    // each row centred in its column, until the tallest stack fits.
+    const MAX_ROWS = 30;
+    const xs = ls.map((l) => xOf(Math.max(l.start, t0)) - L);
+    const stacks = (cw) => { const m = new Map(); ls.forEach((l, j) => { const k = Math.floor(xs[j] / cw); if (!m.has(k)) m.set(k, []); m.get(k).push(l); }); return m; };
+    const tallest = (m, per) => Math.max(0, ...[...m.values()].map((g) => Math.ceil(g.length / per)));
+    let per = 1, cols = stacks(STEP);
+    while (tallest(cols, per) > MAX_ROWS && (per + 1) * STEP <= W - L - R) { per++; cols = stacks(per * STEP); }
+    const colW = per * STEP;
     const byWeek = weeks.map((w) => ls.filter((l) => Math.max(l.start, t0) >= w && Math.max(l.start, t0) < w + 7 * DAY));
-    const rows = Math.max(3, ...byWeek.map((g) => Math.ceil(g.length / perRow)));
+    const rows = Math.max(3, tallest(cols, per));
     const base = TOP + 18 + rows * STEP;
     const H = base + 18;
     let s = '';
+    cols.forEach((g, k) => g.forEach((l, j) => {
+      const r = Math.floor(j / per), m = Math.min(per, g.length - r * per);
+      const x = L + k * colW + (colW - m * STEP) / 2 + (STEP - CELL) / 2 + (j % per) * STEP, y = base - (r + 1) * STEP;
+      const col = l.firstShot ? 'var(--ok)' : 'var(--bad)';
+      const young = l.ageDays < 7;
+      s += '<rect x="' + x + '" y="' + y + '" width="' + CELL + '" height="' + CELL + '" rx="2" fill="' + col + '"' + (young ? ' fill-opacity=".3" stroke="' + col + '" stroke-dasharray="2 1.5"' : '') +
+        ' data-tip="' + esc(l.id + '|' + modelName(l.model) + (l.kind ? ' · ' + l.kind : '') + (l.primaryArea ? ' · ' + l.primaryArea : '') + '|' + (l.firstShot ? 'first-shot' : why(l)) + (young ? '|' + l.ageDays + ' days old: censored' : '')) + '"/>';
+    }));
     byWeek.forEach((g, i) => {
       const x0 = xOf(weeks[i]) + 6;
       const n = g.length, k = g.filter((l) => l.firstShot).length;
       const lab = !n ? '' : n < MIN_RATE ? 'n=' + n : Math.round(100 * k / n) + '% · ' + k + '/' + n;
       s += '<text x="' + x0 + '" y="' + (TOP + 12) + '" fill="' + (n && n < MIN_READ ? 'var(--muted)' : 'var(--fg)') + '" font-weight="600">' + lab + '</text>';
-      g.forEach((l, j) => {
-        const x = x0 + (j % perRow) * STEP, y = base - (Math.floor(j / perRow) + 1) * STEP;
-        const col = l.firstShot ? 'var(--ok)' : 'var(--bad)';
-        const young = l.ageDays < 7;
-        s += '<rect x="' + x + '" y="' + y + '" width="' + CELL + '" height="' + CELL + '" rx="2" fill="' + col + '"' + (young ? ' fill-opacity=".3" stroke="' + col + '" stroke-dasharray="2 1.5"' : '') +
-          ' data-tip="' + esc(l.id + '|' + modelName(l.model) + (l.kind ? ' · ' + l.kind : '') + (l.primaryArea ? ' · ' + l.primaryArea : '') + '|' + (l.firstShot ? 'first-shot' : why(l)) + (young ? '|' + l.ageDays + ' days old: censored' : '')) + '"/>';
-      });
       s += '<text x="' + x0 + '" y="' + (base + 14) + '" fill="var(--muted)">week of ' + new Date(weeks[i]).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + '</text>';
       if (i) s += '<line x1="' + xOf(weeks[i]) + '" y1="' + TOP + '" x2="' + xOf(weeks[i]) + '" y2="' + base + '" stroke="var(--line)"/>';
     });
+    // A light tick per day on the baseline, local midnights (setDate keeps them across a DST change).
+    for (const d = new Date(t0); d.getTime() < t1; d.setDate(d.getDate() + 1)) s += '<line x1="' + xOf(d.getTime()) + '" y1="' + base + '" x2="' + xOf(d.getTime()) + '" y2="' + (base + 4) + '" stroke="var(--line)"/>';
     // Every line first, then every label over them with a halo of the card's colour, so a line from an upper row does not cross a label.
     shown.forEach((mk) => { s += '<line x1="' + mk.x + '" y1="' + (4 + mk.r * ROW) + '" x2="' + mk.x + '" y2="' + base + '" stroke="' + mk.col + '" stroke-dasharray="3 3"/>'; });
     shown.forEach((mk) => {
       s += '<text x="' + (mk.right ? mk.x + 3 : mk.x - 3) + '" y="' + (4 + mk.r * ROW + lineH * 0.8) + '"' + (mk.right ? '' : ' text-anchor="end"') + ' fill="' + mk.col + '" stroke="var(--card)" stroke-width="3" paint-order="stroke" data-tip="' + esc(mk.tip) + '">' + esc(mk.label) + '</text>';
     });
     const lg = '<span><i style="background:var(--ok)"></i>first-shot</span><span><i style="background:var(--bad)"></i>not first-shot</span><span><i style="background:var(--bad);opacity:.3;outline:1px dashed var(--bad)"></i>less than 7 days old: censored, a correction may still arrive</span><span><i style="background:var(--accent)"></i>a model\'s first lane</span><span><i style="background:var(--muted)"></i>RC decisions</span>';
-    return '<div class="in-card in-wide"><h3>First-shot over time</h3><div class="sub">Session lanes by the week they started (weeks start on Monday), one square each; the label is the week\'s first-shot rate. Dashed lines: a model\'s first lane, and the RC rows of docs/decisions.md from RC-20 on.</div>' +
-      (ls.length ? '<div style="overflow-x:auto"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" data-label-rows="' + rowSpans.length + '">' + s + '</svg></div>' : '<div class="in-empty">No session lane in this range.</div>') + '<div class="in-legend">' + lg + '</div></div>';
+    return '<div class="in-card in-wide"><h3>First-shot over time</h3><div class="sub">Session lanes by the week they started (weeks start on Monday); each square sits at the time its lane started, and squares of the same moment stack; the label is the week\'s first-shot rate. Dashed lines: a model\'s first lane, and the RC rows of docs/decisions.md from RC-20 on.</div>' +
+      (ls.length ? '<div style="overflow-x:auto"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" data-label-rows="' + rowSpans.length + '" data-rows="' + rows + '" data-col-width="' + colW + '">' + s + '</svg></div>' : '<div class="in-empty">No session lane in this range.</div>') + '<div class="in-legend">' + lg + '</div></div>';
   }
 
   function exportsBar() {
