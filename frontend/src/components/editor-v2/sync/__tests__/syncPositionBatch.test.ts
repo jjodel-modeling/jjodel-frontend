@@ -90,6 +90,10 @@ describe('syncPositionBatchToJjom: an update with w and h writes the box as one 
         expect(H.log).toEqual([{ kind: 'SetFieldAction', depth: 1,
             args: ['Vshop', 'layoutByViewpoint', { VP: { x: 48, y: 568, w: 1632, h: 360, isResized: true } }, '+=', false] }]);
     });
+    it('a box not sized by hand before becomes sized by hand: its record takes the flag', () => {
+        syncPositionBatchToJjom([{ id: 'Vtask', x: 320, y: 176, w: 200, h: 80 }]);
+        expect(H.log.map(e => e.args[2])).toEqual([{ VP: { x: 320, y: 176, w: 200, h: 80, isResized: true } }]);
+    });
     it('on the seed: x, y, w, h and isResized, in one TRANSACTION', () => {
         H.key = null;
         syncPositionBatchToJjom([{ id: 'Vtask', x: 320, y: 176, w: 200, h: 80 }]);
