@@ -656,3 +656,9 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702 (six pills, blocked filter and clear) and on the 4703 fixture (resolved last turn in var(--ok), legend tip)
 **Notes**: Rollback tag `pre-board-strip` on `3f4ad5d00` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-2119/result.json`.
 **Prompt document name**: 2026-10-10 21:19
+
+## 2026-10-11 — ticket: a hard-stop lane whose Status is flipped stays «In review» on its card
+**Ticket**: `projectLane` in `frontend/scripts/lane-tracking.mjs:192` maps every `hard-stop` outcome to «In review» (`waiting:visual` or `waiting:phase-2`) before it looks at the Status line, so a lane that the chat closes by flipping Status and merging its branch, without `lane-run go`, never reaches «Done». Seen on P-2026-10-11-0040 (gv-right-margin): Status flipped in `9d9e0be57`, merged as `f7ebd0f5b`, card #5 still «In review (waiting:visual)»; the chat moved it by hand (issue closed, column Done, `_tracking/P-2026-10-11-0040.json` updated), so the next `track --sync` puts it back. Fix: a flipped Status wins over `hard-stop` (Done, closed), as it already does for `done`.
+**Priority**: medium
+**Found in**: P-2026-10-11-0957
+**Detail**: `frontend/scripts/lane-tracking.mjs:181-193`
