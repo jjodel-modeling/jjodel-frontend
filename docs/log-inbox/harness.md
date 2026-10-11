@@ -774,3 +774,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, built-in browser on 4703 (RC-23), 2026-10-11 12:21: spinner visible while /api is in flight, amber stale line with the rows kept and the strip counting them; the line reads 'Status failed' rather than 'timed out', accepted
 **Notes**: Merge-tree zero conflicts, tree `183dd6a9d` equal to the merge index; no file changed on both sides; governance files untouched on the branch; probe 1/1. Union: none. The prompt's step-6 rollback target `66ee3830d` should read `3c90527a9`, the pre-merge tip; not triggered, noted by the chat. The trunk moved after the merge (P-2026-10-11-1238, 1250, 1300); this commit sits on top.
 **Prompt document name**: 2026-10-11 12:21
+
+## 2026-10-11 — merge: insights-more into alfonso-frontend-jjtl (P-2026-10-11-1328)
+**Prompt**: `claude_2026-10-11_1328_prompt_merge_insights-more.md`, a direct merge by `lane-run merge --direct`, no session: `insights-more` at `d97744795` into `alfonso-frontend-jjtl`, merge base `cbbc1a204`, 1 commit on the branch side.
+**Files touched**: merge `5278fa2e9`: 1 files from the branch side (`docs/discovery/discovery_2026-10-11_insights_more_cards.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5278fa2e9` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8604 tests in 355 files, 9 red at import, hooks 654; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge (discovery report of P-2026-10-11-1150), no visual change; GO without scenes
+**Notes**: Rollback tag `pre-insights-more` on `a40dec6db` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1328/result.json`.
+**Prompt document name**: 2026-10-11 13:28
