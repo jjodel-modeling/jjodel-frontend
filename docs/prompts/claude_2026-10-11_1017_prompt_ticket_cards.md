@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0057
 Lane: full (scripts only: `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-tracking.mjs`, their tests). Phase 1 short, hard stop, then Phase 2 on the chat's GO.
 Front: harness
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane ticket-cards · 7216c4464, 4cf89641e, 11326b71a, 861dab55d, 798e69779 · flip 2026-10-11 dalla chat
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 
