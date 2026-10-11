@@ -309,6 +309,78 @@ describe('req-trace: the goal-model join', () => {
     });
 });
 
+// ── the goal tree, the correlations and the balance (P-2026-10-11-1735) ──────
+
+describe('req-trace: the goal tree, the correlations and the balance per softgoal', () => {
+    // Rows out of id order (R-A-10 before R-A-2, as a register may list them); R-A-3 is not realized. SG-3 is in no
+    // macro goal and has no realized contribution; SG-2 is helped by no realized row.
+    const rows = () => [
+        { id: 'R-A-10', realized: true, cluster: 'R-A-1' },
+        { id: 'R-B-1', realized: true, cluster: null },
+        { id: 'R-A-2', realized: true, cluster: 'R-A-1' },
+        { id: 'R-A-3', realized: false, cluster: 'R-A-1' },
+        { id: 'R-A-1', realized: true, cluster: 'R-A-1' },
+    ];
+    const clusters = () => ({ list: [{ key: 'R-A-1', members: ['R-A-1', 'R-A-2', 'R-A-3', 'R-A-10'] }] });
+    const c = (req: string, softgoal: string, kind: string) => ({ req, softgoal, kind, evidence: 'read', verified: 'none', why: req });
+    const tree = [{ id: 'MG-1', name: 'Usability', description: 'The first macro goal.', softgoals: ['SG-1', 'SG-2'] }];
+    const correlations = [{ from: 'SG-1', to: 'SG-2', kind: 'some-', witnesses: ['R-A-1', 'R-A-2'], evidence: 'read', verified: 'agent', why: 'One costs the other.' }];
+    const goals = (extra: Record<string, unknown> = {}) => ({
+        softgoals: [{ id: 'SG-1', name: 'One', description: '' }, { id: 'SG-2', name: 'Two', description: '' }, { id: 'SG-3', name: 'Three', description: '' }],
+        contributions: [
+            c('R-A-10', 'SG-1', 'help'), c('R-B-1', 'SG-1', 'hurt'), c('R-A-2', 'SG-1', 'some+'), c('R-A-3', 'SG-1', 'help'), c('R-A-1', 'SG-1', 'make'),
+            c('R-A-2', 'SG-2', 'some-'), c('R-A-3', 'SG-2', 'some+'), c('R-B-1', 'SG-2', 'break'), c('R-A-10', 'SG-2', 'hurt'), c('R-A-3', 'SG-3', 'hurt'),
+        ],
+        conflicts: [],
+        ...extra,
+    });
+
+    test('kills "balance over unrealized rows", "help and hurt swapped", "ids in register order", "ids in string order", "a softgoal without contributions left out": one entry per softgoal, in softgoals order, realized rows only, ids in natural id order', () => {
+        const g = rt.joinGoals(rows(), clusters(), goals({ tree, correlations }));
+        expect(g.balance).toEqual([
+            { softgoal: 'SG-1', help: ['R-A-1', 'R-A-2', 'R-A-10'], hurt: ['R-B-1'] },
+            { softgoal: 'SG-2', help: [], hurt: ['R-A-2', 'R-A-10', 'R-B-1'] },
+            { softgoal: 'SG-3', help: [], hurt: [] },
+        ]);
+    });
+
+    test('kills "the tree or the correlations not passed through", "opposing changed": tree and correlations are the files as read, and opposing is still the product of the two sides of the balance', () => {
+        const g = rt.joinGoals(rows(), clusters(), goals({ tree, correlations }));
+        expect(g.tree).toEqual(tree);
+        expect(g.correlations).toEqual(correlations);
+        const product = g.balance.flatMap((b: any) => b.help.flatMap((a: string) => b.hurt.filter((x: string) => x !== a).map((x: string) => a + ' ' + x + ' ' + b.softgoal)));
+        expect(g.opposing.map((p: any) => p.a + ' ' + p.b + ' ' + p.softgoal).sort()).toEqual(product.sort());
+        expect(g.opposing).toEqual([{ a: 'R-A-10', b: 'R-B-1', softgoal: 'SG-1' }, { a: 'R-A-2', b: 'R-B-1', softgoal: 'SG-1' }, { a: 'R-A-1', b: 'R-B-1', softgoal: 'SG-1' }]);
+    });
+
+    test('kills "an absent tree or correlations file an error or undefined", "no balance without a goal model": absent files give empty arrays', () => {
+        const g = rt.joinGoals(rows(), clusters(), goals());
+        expect([g.tree, g.correlations]).toEqual([[], []]);
+        expect(g.balance).toHaveLength(3);
+        const none = rt.joinGoals(rows(), clusters(), null);
+        expect([none.present, none.tree, none.correlations, none.balance]).toEqual([false, [], [], []]);
+    });
+
+    test('kills "goal-tree.json not read", "correlations.json not read", "an absent file an error": end to end, both files reach goalModel as written, and without them the run exits 0 with empty arrays', () => {
+        const fx = fixtureRepo();
+        mkdirSync(join(fx.repo, 'docs', 'goals'));
+        writeFileSync(join(fx.repo, 'docs', 'goals', 'softgoals.json'), JSON.stringify(goals().softgoals));
+        writeFileSync(join(fx.repo, 'docs', 'goals', 'contributions.json'), JSON.stringify([c('R-A-2', 'SG-1', 'help'), c('R-A-1', 'SG-1', 'some-'), c('R-B-1', 'SG-1', 'help'), c('R-B-1', 'SG-3', 'hurt')]));
+        const bare = reqTrace(['--repo', fx.repo, '--trunk', 'trunk', '--no-cache']);
+        expect([bare.goalModel.tree, bare.goalModel.correlations]).toEqual([[], []]);
+        // R-B-1 is not realized (its commit never reached the trunk): on neither side.
+        expect(bare.goalModel.balance).toEqual([
+            { softgoal: 'SG-1', help: ['R-A-2'], hurt: ['R-A-1'] }, { softgoal: 'SG-2', help: [], hurt: [] }, { softgoal: 'SG-3', help: [], hurt: [] },
+        ]);
+        writeFileSync(join(fx.repo, 'docs', 'goals', 'goal-tree.json'), JSON.stringify(tree));
+        writeFileSync(join(fx.repo, 'docs', 'goals', 'correlations.json'), JSON.stringify(correlations));
+        const out = reqTrace(['--repo', fx.repo, '--trunk', 'trunk', '--no-cache']);
+        expect(out.goalModel.tree).toEqual(tree);
+        expect(out.goalModel.correlations).toEqual(correlations);
+        expect(out.goalModel.opposing).toEqual([{ a: 'R-A-2', b: 'R-A-1', softgoal: 'SG-1' }]);
+    });
+});
+
 // ── the written descriptions of the clusters (P-2026-10-11-1510) ─────────────
 
 describe('req-trace: the written descriptions of the clusters', () => {
