@@ -175,3 +175,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — Alfonso, smoke on 3001, 2026-10-11
 **Notes**: merge-tree zero conflicts, tree `6804b284d` equal to the merge's index tree. Union: none. Probes: 21 decision rows once, control R-GEN-17 absent at the merge; 80 headings once. check:docs counted 5/5, not the prompt's 4/4 (Check E). The lane's prompt P-2026-10-10-0810 still reads `Status: da eseguire`: the Status precondition was read on the prompts the branch adds (none), as in `72762297b`. Not flipped here.
 **Prompt document name**: 2026-10-11 00:34
+
+## 2026-10-11 — fix(jjscript): block eval stops at end, a bare do fails a strict parse (P-2026-10-11-1145)
+**Prompt**: `claude_2026-10-11_1145_prompt_jjscript_do_block_followups.md`, fast lane on `~/jjodel-w-dotickets`, branch `do-tickets`, unattended. The two tickets of P-2026-10-10-0810: `do eval x.name end` swallowed the block's `end`, a `let … in <non-command> end` error named `do`, a bare `do` parsed clean under strict. Tests first, fix in `parser.ts` only.
+**Files touched**: `5ef4f9ebf`, `0641494c5`: `frontend/src/jjscript/parser/parser.ts`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`. This commit: `docs/log-inbox/jjscript.md`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-10 08:10 (`claude_2026-10-10_0810_prompt_jjscript_do_block_freeze.md`: its no-progress error named `do` for every block)
+**Causa**: (a)
+**Regressions**: unknown. typecheck 14, the §17 set; test file 44 of 44; jjscript vitest 595 passed in 23 of 24 files (context-binding red at import, known); build exit 0; the two AST snapshots unchanged; `validateScriptIntegrity` on multi-line do, forall and let scripts valid as on the base. Jodie's routing was not run in the app.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no rendering change; the detect path is the strict parse the tests run)
+**Notes**: Deviation, the chat's answer (a), RC-21: a bare `do` fails only under strict. In both modes `validateScriptIntegrity` rejected every multi-line `do … end` script at line 1, since it parses line by line (measured). Side effect: under strict, `do create class A` without `end` is no longer a script. Base red: 16 of 44 on `e47e456b1`, 4 on `5ef4f9ebf`. Benches 4/5 (dropping `blockDepth--` equivalent), 3/3. Both tickets of P-2026-10-10-0810 closed.
+**Prompt document name**: 2026-10-11 11:45
+
+**Ticket** (low, observed, not changed): `parseEvalCommand` rebuilds the expression by joining token values with spaces, so `eval "a end b"` reaches JjEL as `a end b`, without its quotes, and `eval $x` as `$ x`. Pre-existing, at top level and in blocks alike; not measured whether JjEL evaluates either as meant.
