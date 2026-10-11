@@ -860,3 +860,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702, one-line description under each of the 17 cluster titles, full text when opened, no em dash; descriptions approved by Alfonso
 **Notes**: Rollback tag `pre-cluster-descriptions` on `8a22140d9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1535/result.json`.
 **Prompt document name**: 2026-10-11 15:35
+
+## 2026-10-11 — merge: ratify-provisional into alfonso-frontend-jjtl (P-2026-10-11-1559)
+**Prompt**: `claude_2026-10-11_1559_prompt_merge_ratify-provisional.md`, a direct merge by `lane-run merge --direct`, no session: `ratify-provisional` at `d7a251297` into `alfonso-frontend-jjtl`, merge base `88627f711`, 1 commit on the branch side.
+**Files touched**: merge `c6804f3d3`: 2 files from the branch side (`docs/decisions.md`, `docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c6804f3d3` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8636 tests in 357 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge (ratifications), no visual change
+**Notes**: Rollback tag `pre-ratify-provisional` on `88627f711` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1559/result.json`.
+**Prompt document name**: 2026-10-11 15:59
