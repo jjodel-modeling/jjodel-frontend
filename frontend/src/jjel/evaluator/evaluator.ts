@@ -935,7 +935,10 @@ export class JjelEvaluator {
 
     private evaluateForAll(expr: ForAllExpr, ctx: EvaluationContext): JjelValue {
         const collection = this.evaluate(expr.collection, ctx);
-        if (!Array.isArray(collection)) return [];
+        if (collection === null || collection === undefined) return [];
+        if (!Array.isArray(collection)) {
+            throw new JjelEvaluationError(`'forall' needs a collection, got ${this.getTypeName(collection)}`, expr);
+        }
 
         const results: JjelValue[] = [];
         for (const item of collection) {
@@ -953,7 +956,10 @@ export class JjelEvaluator {
 
     private evaluateExists(expr: ExistsExpr, ctx: EvaluationContext): JjelValue {
         const collection = this.evaluate(expr.collection, ctx);
-        if (!Array.isArray(collection)) return false;
+        if (collection === null || collection === undefined) return false;
+        if (!Array.isArray(collection)) {
+            throw new JjelEvaluationError(`'exists' needs a collection, got ${this.getTypeName(collection)}`, expr);
+        }
 
         for (const item of collection) {
             const childCtx = ctx.child({ [expr.variable]: item });
