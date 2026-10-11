@@ -235,3 +235,22 @@ Two blind spots outside the 49, which matter more for a digest than the 49 do:
   ancestors.
 - The probes stay in `/tmp/pd/`, uncommitted. They are `rows.mjs`, `deps.mjs`, `data.mjs` (this digest's
   classification and recommendations, one line per row) and `gen.mjs`.
+
+## 10. Outcome
+
+- **Reply.** Alfonso, 2026-10-11 15:36: «ok alle raccomandazioni». Read by the chat C-2026-10-10-1145 as every
+  `ratify` and every `amend` of §3 and §5 accepted, and the §7 rewrites, except RC-38.
+- **Applied** by P-2026-10-11-1540: 74 rows ratified, header `(<date>, ratified by Alfonso 2026-10-11, ...)`, every
+  `reversible: branch` of them written `trunk` (§0); R-SIM-120 and R-VP-29 amended as §3 and §5 say, then ratified;
+  §7 kinds 1a to 7 applied to every row but RC-38. Kind 1b drops the adoption clause, which the section intros
+  already state. R-SIM-122's and R-GEN-17's clauses move into the body, after the bold title. R-VP-29's hue rule
+  moves to «Superate».
+- **Check.** `npm run docs:digest -- --all` exits 2 on RC-38's header alone; one header still says `provisional`,
+  RC-38's. `--write` refuses on the same header and writes nothing, so `docs/digest/` is unchanged: the backfill
+  (34 dates) runs once RC-38 parses.
+- **Pending: RC-38**, unchanged. Question for Alfonso: does `53aed9baa` («auto-intake goes live, discovery lanes
+  only (ratified by apierantonio, 2026-10-03)») carry your ratification of RC-38's numbers and of the live switch?
+  Yes: the header becomes `ratified by Alfonso 2026-10-03` and a new row records the live switch. No: the
+  configuration goes back to shadow (§2 item 3).
+- **Not applied:** the R-SIM-70 paragraph of §6 (a row body, outside the 77), and the intros above R-JS-2 and R-JS-8,
+  which still say «Marker: provisional» (prose, not headers).
