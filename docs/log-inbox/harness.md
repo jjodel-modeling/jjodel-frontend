@@ -1015,3 +1015,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Requirements tab on 4702: 1005 contributions on rows, mixed rows on both sides of their bars
 **Notes**: Rollback tag `pre-goal-model-fixes` on `47539f7fe` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-2111/result.json`.
 **Prompt document name**: 2026-10-11 21:11
+
+## 2026-10-11 — fix: req-trace heads, mixed goal entries, SG-3 recheck (P-2026-10-11-2025)
+**Prompt**: `claude_2026-10-11_2025_prompt_goal_model_fixes.md`, lane full, unattended: `ROW_START` reads R-D, R-2/3.6, R-B12; a (req, softgoal) pair holds one entry or two of opposite sign; the 27 negatives blocked in P-2026-10-11-1650 recovered and checked; the 57 SG-3 `verified: none` entries rechecked (RC-27); report, tests, bench, board on 4702
+**Files touched**: code `c5aa0e0c8`: `frontend/scripts/req-trace.mjs`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts`; docs `945f17853`: `docs/goals/contributions.json`, `docs/goals/README.md`, `docs/discovery/discovery_2026-10-11_goal_model_fixes.md`; this entry, uncommitted (RC-17)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-05 17:25 (`claude_2026-10-05_1725_prompt_goal_model_contributions.md`: one entry per pair, the SG-3 «scenes unchanged» entries)
+**Causa**: (c)
+**Regressions**: unknown. Gates: node --check exit 0; five suites 145/145; check:scripts, typecheck:scripts, check:docs exit 0; data gate 0 errors, negative control 2/2. Not measured as visual: the cluster partition moved with the three new rows (17 to 16 clusters, R-JS-1's description now orphan, R-LAY-19's attached again), report §2 and §9 Q1.
+**Out-of-scope changes**: no. Six files in two commits, above five (RC-11, rule 19): each named in the Lane header and in step 8's pathspecs, taken as the confirmation.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile in this lane (harness and data); the chat RC-23 check on 4702 passed on 2026-10-11 (1005 contributions on rows, equal to the file; 16 mixed realized rows on both sides of their bars; SG-5 shows R-SIM-122; no em dash).
+**Notes**: Parser: 520 to 523 rows, only the three appear. Mixed: 25 added (2 of 27 quote a neighbouring bullet), 23 confirmed, 2 regraded; SG-5 gets its first cost. SG-3: 33 confirmed, 6 regraded, 18 removed. 998 to 1005 entries; opposing pairs 6569 to 7173. Same sign: refused and listed in `goalModel.duplicates`. New cases 5 of 6 red on the base; bench 11/11. Second Causa letter: (a). Eight unattended decisions in report §8.
+**Prompt document name**: 2026-10-11 20:25
