@@ -915,3 +915,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Read-only on code and register. The script imports docs-digest.ts's parser; positive control 49 failing headers and 77 provisional rows on the pre-ratification register, as 1430 measured. H0 holds only narrowly: a hook holds the `Model:` trailer at 3.7% in trees that carry it vs 87.5% in trees that do not, and 52.5% for chat commits it never sees. Three helper agents (rule map, identifying strings, RC-26 rows). Report §0.
 **Prompt document name**: 2026-10-11 16:30
+
+## 2026-10-11 — docs(discovery): Claude Code mods and the harness (P-2026-10-11-1745)
+**Prompt**: `claude_2026-10-11_1745_prompt_claude_code_mods_harness_discovery.md`: Phase 1, read-only: mods version and surfaces, API inventory, order and permissions against the deny list and the `PreToolUse` hooks, throw and hang, a Prompt-ID guard prototype on three scripted sessions, telemetry, mapping of the harness pieces; probes under `/tmp/jjodel-mods-probe/`.
+**Files touched**: `docs/discovery/discovery_2026-10-11_claude_code_mods_harness.md` and 19 probe files under `docs/discovery/harness/mods/` (`5bf908b25`); this commit: the Status of the prompt file and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Hard stop of Phase 1. 20 probe sessions and 3 scripted guard sessions on 2.1.296 with the flags lane-run uses. A loaded mod overrides the deny list at tool.check (git stash list ran), skips both PreToolUse hooks by answering a call, and runs host commands via $.process.run; sec-default is not seated here, so its arm was not run. A mod fails open by default, closed with .catch. 20 files in the report commit, above five: DOVE names them (rule 19).
+**Prompt document name**: 2026-10-11 17:45
