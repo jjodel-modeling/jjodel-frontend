@@ -11,6 +11,7 @@
 
 import { readFileSync } from 'node:fs';
 import type { ScenarioRecord } from '../../../model/simulation/scenarioCodec';
+import { WORKER_READY } from '../../runner/protocol';
 import type { RunRequest, RunResponse, WorkerReply } from '../../runner/protocol';
 import { runInWorker } from '../../runner/runner';
 import type { RunnerErrorEvent, RunnerWorker } from '../../runner/runner';
@@ -70,13 +71,31 @@ const dataLoader: ModuleLoader = code => {
     return { url, module: import(/* @vite-ignore */ url) };
 };
 
-/** The transport of a worker, nothing else: the request goes to the worker's own `executeRun`. */
+/**
+ * The transport of a worker, nothing else: the request goes to the worker's own `executeRun`. Like a real worker it
+ * posts `ready` once its script has run (the next microtask), and a request that reaches it earlier waits until then.
+ */
 class InProcessWorker implements RunnerWorker {
     onmessage: ((ev: { data: unknown }) => void) | null = null;
     onerror: ((ev: RunnerErrorEvent) => void) | null = null;
     private terminated = false;
+    private ready = false;
+    private readonly waiting: RunRequest[] = [];
+    constructor() {
+        queueMicrotask(() => this.becomeReady());
+    }
+    private becomeReady(): void {
+        if (this.terminated) return;
+        this.ready = true;
+        this.onmessage?.({ data: WORKER_READY });
+        for (const request of this.waiting.splice(0)) this.handle(request);
+    }
     postMessage(message: unknown): void {
-        void executeRun(message as RunRequest, dataLoader).then((reply: WorkerReply) => {
+        if (!this.ready) this.waiting.push(message as RunRequest);
+        else this.handle(message as RunRequest);
+    }
+    private handle(request: RunRequest): void {
+        void executeRun(request, dataLoader).then((reply: WorkerReply) => {
             if (!this.terminated) this.onmessage?.({ data: reply });
         });
     }
