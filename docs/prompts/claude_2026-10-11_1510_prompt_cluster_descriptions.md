@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Front: harness
 Lane: full (six files: req-trace, the tab, two test files, a new goals file, the goals README)
 Depends: P-2026-10-11-0008
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-1510 (cluster-descriptions, 16ebdfca5 + e1c750a8a); visual check passed (chat, built-in browser on 4702, RC-23); descriptions approved by Alfonso
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
