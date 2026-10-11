@@ -12,6 +12,7 @@ P-2026-10-05-1725, method and findings in `docs/discovery/discovery_2026-10-05_g
 | `softgoals.json` | `[{id: "SG-n", name, description}]` |
 | `contributions.json` | `[{req, softgoal, kind, evidence, verified, why}]` |
 | `conflicts.json` | `[{a, b, softgoal, why, evidence}]` |
+| `cluster-descriptions.json` | `{"<cluster key>": {description, members, written, by}}` |
 
 The contract is shared with the Requirements tab of the lane board (P-2026-10-05-1720), which reads
 these files and writes none of them.
@@ -38,3 +39,19 @@ Each description in `softgoals.json` cites the texts that state the principle an
   trade-off with another: `a` pulls toward the softgoal, `b` away. Evolution links are not conflicts.
 
 A row with no contribution has no entry: an empty row is better than an invented link.
+
+## Cluster descriptions
+
+`cluster-descriptions.json` gives each requirement cluster of `frontend/scripts/req-trace.mjs` a
+description of two to four sentences, written by reading its member rows (P-2026-10-11-1510). The
+key is the cluster's key, its smallest member id; `members` is the cluster as it was when the
+description was written, sorted as req-trace sorts them; `written` is that date and `by` the
+Prompt-ID of the lane that wrote it. The unclustered rows have no description.
+
+A description ages with its cluster: a new prompt that cites rows together can move a row into
+another cluster. req-trace compares `members` with today's cluster and reports `descriptionDrift`,
+the ids added and removed since the writing, which the Requirements tab shows as a muted line inside
+the group; a key that no longer names a cluster is listed in `orphanDescriptions` and shown nowhere.
+To refresh, a lane rereads the rows of each drifted cluster, rewrites its description, and sets
+`members`, `written` and `by` again; an orphan's text is moved to the cluster that took its rows,
+or dropped.
