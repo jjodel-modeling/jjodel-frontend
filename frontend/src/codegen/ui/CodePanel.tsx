@@ -15,7 +15,11 @@
  *   A `<pre>` with a line gutter and one span per fragment, not Monaco (U5). The errors of the generation are listed
  *   above the text, and «Run» is refused while there is one. Run loads the text as a module in the runner's worker
  *   and calls its exported `main()`, with the timeout of the field (runner.ts); a runtime error points at its line
- *   of the generated text, and at the model element of the fragments on that line.
+ *   of the generated text, and at the model element of the fragments on that line. «Check» runs the oracle
+ *   (oracle.ts `runOracle`, R-GEN-11) on the same text, over a scenario stored on the model (storedScenarios.ts) and
+ *   with the same timeout: the program against the simulator, step by step. Its result (checkView.ts) shares the
+ *   result area with Run's, the last action's shown: a pass in one line, or the first divergence, its step, its
+ *   transition, the values that differ and a link to the transition on the canvas.
  *
  * Origin navigation. Hovering a span outlines every span of its fragment and names its origin under the text,
  * «element · feature · transformation». Clicking a model span selects its element on the canvas with `SELECT_NODE`;
@@ -40,11 +44,16 @@ import { generate } from '../engine/generate';
 import { GEN_TEMPLATES_KEY, decodeTemplates, templatesPatch } from '../engine/templateCodec';
 import { runInWorker } from '../runner/runner';
 import { DEFAULT_TIMEOUT_MS } from '../runner/protocol';
+import { runOracle } from '../oracle/oracle';
+import { decodeStoredScenarios, storedScenariosRaw } from '../oracle/storedScenarios';
 import TemplateEditor from './TemplateEditor';
+import { checkView } from './checkView';
 import type { GenerateResult } from '../engine/generate';
 import type { TemplateRecord } from '../engine/templates';
 import type { ModelOrigin, Origin, TextFragment, TextMapEntry } from '../engine/text';
 import type { RunResponse } from '../runner/protocol';
+import type { OracleResult } from '../oracle/oracle';
+import type { ScenarioRecord } from '../../model/simulation/scenarioCodec';
 import './CodePanel.scss';
 
 export interface CodePanelProps {
@@ -68,6 +77,14 @@ function projectIdOfUser(): string {
         return '';
     }
 }
+
+/** The record `generate` and the oracle read the model through, as the simulator builds it. */
+function evalGlobals(lookup: Lookup, modelid: string) {
+    return buildEvalContext(evalContextFor(lookup, modelid, projectIdOfUser()), { extentModelId: modelid });
+}
+
+/** The tooltip of «Check» when the model has no stored scenario. */
+const NO_SCENARIO = 'Record a scenario in the simulator first.';
 
 /** An element's name for a reader: its `name`, else its class and id. */
 function elementName(lookup: Lookup, id: string): string {
@@ -154,6 +171,13 @@ interface RunOutcome {
     readonly map: readonly TextMapEntry[];
 }
 
+interface CheckOutcome {
+    readonly result: OracleResult;
+    readonly scenario: ScenarioRecord;
+    /** The map of the text that was checked: a later generation does not move what a failure's line points at. */
+    readonly map: readonly TextMapEntry[];
+}
+
 interface Box {
     readonly left: number;
     readonly top: number;
@@ -178,6 +202,8 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
     }) as string | null | undefined;
     const decoded = useMemo(() => decodeTemplates(raw), [raw]);
     const templates = decoded.templates;
+    const scenariosRaw = useSelector((state: any) => storedScenariosRaw(state.idlookup ?? {}, modelid));
+    const scenarios = useMemo(() => decodeStoredScenarios(scenariosRaw), [scenariosRaw]);
 
     const [tab, setTab] = useState<Tab>('templates');
     const [selected, setSelected] = useState<string | null>(null);
@@ -192,12 +218,17 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
     const [edgeOutline, setEdgeOutline] = useState<string | null>(null);
     const [edgeBox, setEdgeBox] = useState<Box | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
+    const [scenarioName, setScenarioName] = useState<string | null>(null);
+    const [checking, setChecking] = useState(false);
+    const [checked, setChecked] = useState<CheckOutcome | null>(null);
 
     // The selected template and the entry follow the list: gone from it, they fall back.
     const current = templates.find(t => t.name === selected) ?? templates[0] ?? null;
     const entryName = entry !== null && templates.some(t => t.name === entry)
         ? entry
         : (templates.find(t => t.name === 'main') ?? templates[0])?.name ?? null;
+    // The chosen scenario follows the stored list too.
+    const scenario = scenarios.find(s => s.name === scenarioName) ?? scenarios[0] ?? null;
 
     // ── Templates: one `state` assignment per write ───────────────────────────
     const save = useCallback((next: readonly TemplateRecord[]) => {
@@ -216,6 +247,7 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
     // ── Output: generation and run ────────────────────────────────────────────
     const runGenerate = useCallback(() => {
         setOutcome(null);
+        setChecked(null);
         setHover(null);
         if (entryName === null) {
             setResult(null);
@@ -224,7 +256,7 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
         }
         const lookup: Lookup = (store.getState() as any).idlookup ?? {};
         try {
-            const globals = buildEvalContext(evalContextFor(lookup, modelid, projectIdOfUser()), { extentModelId: modelid });
+            const globals = evalGlobals(lookup, modelid);
             setResult(generate(globals, lookup, modelid, templates, entryName));
             setFailure(null);
         } catch (error) {
@@ -240,18 +272,40 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
 
     const timeoutMs = Number(timeout);
     const timeoutValid = Number.isFinite(timeoutMs) && timeoutMs >= 1;
-    const canRun = !!result && !result.hasErrors && !running && timeoutValid;
+    const canRun = !!result && !result.hasErrors && !running && !checking && timeoutValid;
+    const canCheck = !!result && !result.hasErrors && !running && !checking && timeoutValid && scenario !== null;
 
     const run = async () => {
         if (!result || result.hasErrors || !timeoutValid) return;
         const { code, map } = result;
         setRunning(true);
         setOutcome(null);
+        setChecked(null);
         const t0 = performance.now();
         const response = await runInWorker({ code, calls: [{ fn: RUN_ENTRY, args: [] }], timeoutMs });
         if (!mounted.current) return;
         setOutcome({ response, ms: Math.round(performance.now() - t0), code, map });
         setRunning(false);
+    };
+
+    const check = async () => {
+        if (!result || result.hasErrors || !timeoutValid || !scenario) return;
+        const { code, map } = result;
+        const chosen = scenario;
+        setChecking(true);
+        setOutcome(null);
+        setChecked(null);
+        const lookup: Lookup = (store.getState() as any).idlookup ?? {};
+        let oracle: OracleResult;
+        try {
+            oracle = await runOracle({ lookup, modelId: modelid, globals: evalGlobals(lookup, modelid), scenario: chosen, code, map, timeoutMs });
+        } catch (error) {
+            // runOracle never rejects; the model's record can throw, as it can for «Generate».
+            oracle = { ok: false, kind: 'model', step: 0, message: error instanceof Error ? error.message : String(error), sim: [], gen: [] };
+        }
+        if (!mounted.current) return;
+        setChecked({ result: oracle, scenario: chosen, map });
+        setChecking(false);
     };
 
     // ── Origin navigation ─────────────────────────────────────────────────────
@@ -331,6 +385,11 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
     const runError = outcome && !outcome.response.ok ? outcome.response.error : null;
     const errorLine = runError && result && outcome && outcome.code === result.code ? runError.line : null;
     const errorElement = runError && runError.line !== null && outcome ? elementAt(outcome.map, runError.line, runError.column) : null;
+    const view = checked ? checkView(checked.result, checked.scenario, id => elementName(lookupNow, id)) : null;
+    const checkElement = view?.status === 'failure' && view.line !== null && checked ? elementAt(checked.map, view.line, null) : null;
+    const checkTitle = scenario === null
+        ? NO_SCENARIO
+        : result?.hasErrors ? 'Fix the generation errors first' : `Run the module on ${scenario.name} and compare it with the simulator, step by step`;
 
     // The line of a runtime error in view.
     useEffect(() => {
@@ -494,6 +553,27 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
                                 />
                                 <span className="codegen-panel__unit">ms</span>
                             </label>
+                            <select
+                                className="codegen-panel__scenario"
+                                aria-label="Scenario"
+                                title={scenario?.name ?? NO_SCENARIO}
+                                value={scenario?.name ?? ''}
+                                disabled={scenarios.length === 0}
+                                onChange={e => setScenarioName(e.target.value)}
+                            >
+                                {scenarios.length === 0 && <option value="">No scenario</option>}
+                                {scenarios.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                            </select>
+                            <button
+                                type="button"
+                                className="codegen-panel__button"
+                                disabled={!canCheck}
+                                title={checkTitle}
+                                onClick={() => { void check(); }}
+                            >
+                                <i className="bi bi-check2-circle" />
+                                <span>{checking ? 'Checking' : 'Check'}</span>
+                            </button>
                         </div>
                         {result?.hasErrors && <div className="codegen-panel__hint">Run is off while the generation has errors.</div>}
                         {outcome && outcome.response.ok && (
@@ -517,6 +597,48 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
                                             </>
                                         )}
                                     </div>
+                                )}
+                            </div>
+                        )}
+                        {view?.status === 'pass' && (
+                            <div className="codegen-panel__result codegen-panel__result--pass" role="status" title={view.text}>
+                                <i className="bi bi-check2-circle" />
+                                <span>{view.text}</span>
+                            </div>
+                        )}
+                        {view && view.status !== 'pass' && (
+                            <div className="codegen-panel__result codegen-panel__result--error" role="alert">
+                                <div className="codegen-panel__run-error">{view.text}</div>
+                                {view.status === 'divergence' ? (
+                                    <>
+                                        {view.lines.map((l, i) => <div className="codegen-panel__check-line" key={i}>{l}</div>)}
+                                        {view.more > 0 && <div className="codegen-panel__check-line">{`+${view.more} more`}</div>}
+                                        {view.link && (
+                                            <div className="codegen-panel__run-at">
+                                                {`line ${view.link.line} · `}
+                                                <button type="button" className="codegen-panel__link" onClick={() => selectOnCanvas(view.link!.elementId)}>
+                                                    {elementName(lookupNow, view.link.elementId)}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="codegen-panel__check-line">{view.message}</div>
+                                        {view.line !== null && (
+                                            <div className="codegen-panel__run-at">
+                                                {`line ${view.line}`}
+                                                {checkElement && (
+                                                    <>
+                                                        {' · '}
+                                                        <button type="button" className="codegen-panel__link" onClick={() => selectOnCanvas(checkElement.elementId)}>
+                                                            {elementName(lookupNow, checkElement.elementId)}
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}

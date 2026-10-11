@@ -244,7 +244,8 @@
     }
 
     &__input,
-    &__select {
+    &__select,
+    &__scenario {
         min-width: 0;
         height: 24px;
         padding: 0 4px;
@@ -266,7 +267,10 @@
         }
     }
 
-    &__select {
+    // The scenario select of «Check» is a select of its own class: the S5 probe finds the entry select by
+    // `.codegen-panel__select` alone.
+    &__select,
+    &__scenario {
         flex: 1 1 auto;
         font-family: inherit;
         cursor: pointer;
@@ -522,6 +526,39 @@
     &__run-at {
         font-size: 11px;
         color: var(--color-text-secondary);
+    }
+
+    // «Check» passed: one line in the success colour, cut with an ellipsis, in full in its title. The tokens have no
+    // success text colour: green-600 (`--color-success-hover`) is the darkest success token.
+    &__result--pass {
+        flex-direction: row;
+        align-items: center;
+        min-width: 0;
+        font-size: 11px;
+        line-height: 1.6;
+        color: var(--color-success-hover);
+
+        span {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .bi,
+        .bi:hover {
+            flex: 0 0 auto;
+            font-size: 12px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    // A divergence's differing values, one per line, and a failure's message.
+    &__check-line {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-text-secondary);
+        overflow-wrap: anywhere;
     }
 
     &__link {
