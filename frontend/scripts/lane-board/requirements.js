@@ -1,9 +1,9 @@
 // Requirements tab of the Jjodel lane board (P-2026-10-05-1720, ported to this board by P-2026-10-11-0008): every
 // row of docs/decisions.md, grouped by co-citation cluster and then by milestone, with what realized it on the
 // trunk and its goal-model contributions; below, the pairs of realized rows that pull a softgoal both ways, one
-// closed group per declared conflict, the pairs no conflict names last. Read-only. Data from /api/requirements
-// (req-trace.mjs); drawn as plain HTML, no libraries. Every table has fixed widths, so neither a filter nor an
-// opened group moves a column.
+// closed group per declared conflict, then the pairs no conflict names, one closed group per softgoal. Read-only.
+// Data from /api/requirements (req-trace.mjs); drawn as plain HTML, no libraries. Every table has fixed widths, so
+// neither a filter nor an opened group moves a column.
 (function () {
   const store = {
     get(k, d) { try { const v = localStorage.getItem('laneREQ.' + k); return v === null ? d : v; } catch (e) { return d; } },
@@ -18,10 +18,13 @@
   const POS = new Set(['make', 'help', 'some+']);
   const NEG = new Set(['some-', 'hurt', 'break']);
   const UNCL = '(unclustered)';
-  const UNASSIGNED = 'cf:unassigned';
+  const byId = (a, b) => String(a).localeCompare(String(b), 'en', { numeric: true });
+  // req-trace names a cluster `families <em dash> title words`; the tab writes ` · ` in place of the em dash.
+  const undash = (s) => String(s ?? '').replace(/\s*\u2014\s*/g, ' · ');
   // Column widths in px, 0 for the column that takes the rest (as COL_W in the Lanes tab).
   const REQ_W = [0, 104, 112, 96, 240];
   const PAIR_W = [0, 0, 240];
+  const SG_PAIR_W = [280, 0, 0];
 
   const css = `
   .rq-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:8px 0 12px}
@@ -85,8 +88,8 @@
     return Object.entries(goals || {}).map(([sg, t]) => '<span class="rq-tot" title="' + esc(sg + ' ' + (sgName.get(sg) || '')) + '">' + esc(sg) + ' <span class="rq-help">+' + t.help + '</span>/<span class="rq-hurt">−' + t.hurt + '</span></span>').join('');
   }
 
-  /** The opposing pairs grouped by the declared conflict they match (same softgoal, same two rows, either order),
-   *  in the order of conflicts.json, every conflict with its group; the pairs no conflict names last, as unassigned. */
+  /** The opposing pairs by the declared conflict they match (same softgoal, same two rows, either order), one group
+   *  per conflict in the order of conflicts.json, empty ones included; `rest`, the pairs no conflict names. */
   function conflictGroups(gm) {
     const pairs = gm.opposing || [];
     const named = new Set();
@@ -95,32 +98,58 @@
       ps.forEach((p) => named.add(p));
       return { key: 'cf:' + c.softgoal + ':' + c.a + ':' + c.b, conflict: c, pairs: ps };
     });
-    const rest = pairs.filter((p) => !named.has(p));
-    if (rest.length) groups.push({ key: UNASSIGNED, conflict: null, pairs: rest });
-    return { groups, named: named.size, unassigned: rest.length };
+    return { groups, named: named.size, rest: pairs.filter((p) => !named.has(p)) };
   }
+
+  /** The pairs no conflict names, one group per softgoal, the largest first; inside a group by the cluster of the row
+   *  that helps (in the order of the cluster list, unclustered last), then by the ids of the two rows. */
+  function softgoalGroups(rest, byRow, cl) {
+    const rank = new Map(cl.list.map((k, i) => [k.key, i]));
+    const at = (id) => { const r = byRow.get(id); return r && rank.has(r.cluster) ? rank.get(r.cluster) : rank.size; };
+    const by = new Map();
+    for (const p of rest) { if (!by.has(p.softgoal)) by.set(p.softgoal, []); by.get(p.softgoal).push(p); }
+    return [...by].map(([sg, ps]) => ({ key: 'sg:' + sg, softgoal: sg, pairs: ps.slice().sort((x, y) => at(x.a) - at(y.a) || byId(x.a, y.a) || byId(x.b, y.b)) }))
+      .sort((x, y) => y.pairs.length - x.pairs.length || byId(x.softgoal, y.softgoal));
+  }
+
+  const idCell = (byRow, id) => { const r = byRow.get(id); return '<td class="id">' + esc(id) + (r ? '<span class="title">' + esc(r.title) + '</span>' : '') + '</td>'; };
 
   function pairTable(c, pairs, byRow, sgName) {
     if (!pairs.length) return '<div class="empty">No opposing pair: both rows must be realized, one helping ' + esc(c.softgoal) + ' and the other hurting it.</div>';
-    const cell = (id) => { const r = byRow.get(id); return '<td class="id">' + esc(id) + (r ? '<span class="title">' + esc(r.title) + '</span>' : '') + '</td>'; };
     let h = '<table class="rq-t">' + colgroup(PAIR_W) + '<thead><tr><th>Helps</th><th>Hurts</th><th>Softgoal</th></tr></thead><tbody>';
-    for (const p of pairs) h += '<tr>' + cell(p.a) + cell(p.b) + '<td>' + esc(p.softgoal + ' ' + (sgName.get(p.softgoal) || '')) + '</td></tr>';
+    for (const p of pairs) h += '<tr>' + idCell(byRow, p.a) + idCell(byRow, p.b) + '<td>' + esc(p.softgoal + ' ' + (sgName.get(p.softgoal) || '')) + '</td></tr>';
     return h + '</tbody></table>';
   }
 
-  function opposingSection(gm, rows, sgName) {
+  function softgoalPairTable(pairs, byRow, clName) {
+    let h = '<table class="rq-t">' + colgroup(SG_PAIR_W) + '<thead><tr><th title="The cluster of the row that helps">Cluster</th><th>Helps</th><th>Hurts</th></tr></thead><tbody>';
+    for (const p of pairs) {
+      const k = (byRow.get(p.a) || {}).cluster;
+      h += '<tr><td title="' + esc(k || UNCL) + '">' + esc(k ? undash(clName.get(k) || k) : UNCL) + '</td>' + idCell(byRow, p.a) + idCell(byRow, p.b) + '</tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  function opposingSection(gm, rows, sgName, cl) {
     const byRow = new Map(rows.map((r) => [r.id, r]));
-    const { groups, named, unassigned } = conflictGroups(gm);
+    const clName = new Map(cl.list.map((k) => [k.key, k.name]));
+    const { groups, named, rest } = conflictGroups(gm);
+    const details = (key, tip, head, body) => '<details data-key="' + esc(key) + '"' + (open.has(key) ? ' open' : '') + '><summary' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + head + '</summary><div class="wrap rq-wrap">' + body + '</div></details>';
     let h = '<h2>Opposing contributions</h2><p class="rq-note">' + plural(gm.opposing.length, 'pair') + ' of realized rows pull a softgoal both ways: ' +
-      named + ' match one of the ' + plural(gm.conflicts.length, 'declared conflict') + ' (same softgoal, same two rows, either order), ' + unassigned + ' unassigned. Open a group to see its pairs.</p>';
+      named + ' match one of the ' + plural(gm.conflicts.length, 'declared conflict') + ' (same softgoal, same two rows, either order)' +
+      (rest.length ? ', ' + rest.length + ' do not and are grouped by softgoal below' : '') + '. Open a group to see its pairs.</p>';
     for (const g of groups) {
       const c = g.conflict;
-      const n = plural(g.pairs.length, 'pair');
-      const head = c ? '<b>' + esc(c.a) + ' vs ' + esc(c.b) + '</b><span class="meta">' + esc(c.softgoal + ' ' + (sgName.get(c.softgoal) || '')) + ' · ' + n + '</span>'
-        : '<b>unassigned</b><span class="meta">' + n + ' no declared conflict names</span>';
-      const why = c && c.why ? '<p class="rq-why">' + esc(c.why) + (c.evidence ? ' (evidence: ' + esc(c.evidence) + ')' : '') + '</p>' : '';
-      h += '<details data-key="' + esc(g.key) + '"' + (open.has(g.key) ? ' open' : '') + '><summary' + (c && c.why ? ' title="' + esc(c.why) + '"' : '') + '>' + head + '</summary>' +
-        '<div class="wrap rq-wrap">' + why + pairTable(c || {}, g.pairs, byRow, sgName) + '</div></details>';
+      const why = c.why ? '<p class="rq-why">' + esc(c.why) + (c.evidence ? ' (evidence: ' + esc(c.evidence) + ')' : '') + '</p>' : '';
+      h += details(g.key, c.why, '<b>' + esc(c.a) + ' vs ' + esc(c.b) + '</b><span class="meta">' + esc(c.softgoal + ' ' + (sgName.get(c.softgoal) || '')) + ' · ' + plural(g.pairs.length, 'pair') + '</span>',
+        why + pairTable(c, g.pairs, byRow, sgName));
+    }
+    if (rest.length) {
+      h += '<h2>Pairs without a declared conflict, by softgoal (' + rest.length + ')</h2>';
+      for (const g of softgoalGroups(rest, byRow, cl)) {
+        h += details(g.key, '', '<b>' + esc(g.softgoal + ' ' + (sgName.get(g.softgoal) || '')) + '</b><span class="meta">' + plural(g.pairs.length, 'pair') + '</span>',
+          softgoalPairTable(g.pairs, byRow, clName));
+      }
     }
     return h;
   }
@@ -178,9 +207,9 @@
         if (!part.length) continue;
         inner += '<div class="rq-ms">' + esc(label) + ' · ' + part.length + '</div>' + table(part, sgName);
       }
-      h += '<details data-key="' + esc(g.key) + '"' + (open.has(g.key) ? ' open' : '') + '><summary><b>' + esc(g.name) + '</b><span class="meta">' + (g.key === UNCL ? '' : esc(g.key) + ' · ') + rs.length + ' row' + (rs.length > 1 ? 's' : '') + ' · ' + nReal + ' realized' + totals(g.goals, sgName) + '</span></summary><div class="wrap rq-wrap">' + inner + '</div></details>';
+      h += '<details data-key="' + esc(g.key) + '"' + (open.has(g.key) ? ' open' : '') + '><summary><b>' + esc(undash(g.name)) + '</b><span class="meta">' + (g.key === UNCL ? '' : esc(g.key) + ' · ') + rs.length + ' row' + (rs.length > 1 ? 's' : '') + ' · ' + nReal + ' realized' + totals(g.goals, sgName) + '</span></summary><div class="wrap rq-wrap">' + inner + '</div></details>';
     }
-    if (gm.present && (gm.opposing.length || gm.conflicts.length)) h += opposingSection(gm, rows, sgName);
+    if (gm.present && (gm.opposing.length || gm.conflicts.length)) h += opposingSection(gm, rows, sgName, cl);
     box.innerHTML = h;
     box.querySelectorAll('select[data-f]').forEach((s) => s.addEventListener('change', () => { filter[s.dataset.f] = s.value; store.set(s.dataset.f, s.value); render(); }));
     box.querySelectorAll('details[data-key]').forEach((d) => d.addEventListener('toggle', () => { d.open ? open.add(d.dataset.key) : open.delete(d.dataset.key); store.set('open', JSON.stringify([...open])); }));

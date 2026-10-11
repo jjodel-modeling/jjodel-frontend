@@ -55,7 +55,8 @@ code areas, model by area and by size, and first-shot success over time.
 **Requirements.** Every R- row of `docs/decisions.md`, grouped by co-citation cluster and,
 inside a cluster, by milestone, with whether a commit on the trunk realized it and its
 goal-model contributions; filters by family, status, realized and softgoal. Below, the
-pairs of realized rows that pull a softgoal both ways, grouped by declared conflict. See
+pairs of realized rows that pull a softgoal both ways, grouped by declared conflict, then by
+softgoal. See
 "The Requirements tab" below.
 
 ## Progress, the estimate and `resolved`
@@ -158,8 +159,14 @@ override them.
   the one built into `req-trace.mjs` (MODELS freeze, 2026-10-07); the tab adds none.
 - **Opposing contributions.** One closed group per conflict of `docs/goals/conflicts.json`,
   in its order, named by its two rows and its softgoal, with its pair count; a pair belongs
-  to a conflict with the same softgoal and the same two rows, in either order. The pairs no
-  conflict names come last, in the group `unassigned`.
+  to a conflict with the same softgoal and the same two rows, in either order; a conflict
+  that names no pair still has its group, which says why. The pairs no conflict names follow
+  under "Pairs without a declared conflict, by softgoal": one closed group per softgoal,
+  the largest first, its pairs ordered by the cluster of the row that helps (in the order
+  of the cluster list, unclustered last) and then by row id, the cluster in the first
+  column. The tab remembers which groups a viewer opened.
+- **Cluster names.** `req-trace.mjs` names a cluster by its families and title words joined
+  by an em dash; the tab draws ` · ` in its place.
 - **Fixed widths.** Every table of the tab has a fixed layout, and the tables of one kind
   share their column widths, so a filter or an opened group never moves a column.
 

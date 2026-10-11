@@ -176,11 +176,15 @@ function git(cwd: string, args: string[], date = '2026-09-30T10:00:00') {
 const json = (o: unknown) => JSON.stringify(o, null, 2) + '\n';
 const contrib = (req: string, softgoal: string, kind: string) => ({ req, softgoal, kind, evidence: 'read', verified: 'none', why: req + ' ' + kind + ' ' + softgoal });
 
-/** Four rows, one prompt co-citing the three R-A rows, three realized: R-A-1 before the built-in milestone
- *  (2026-10-07), R-A-2 and R-B-1 after it. The goal model makes three opposing pairs: (R-A-1, R-A-2) and
- *  (R-A-1, R-B-1) on SG-1, (R-B-1, R-A-1) on SG-2. Of the three declared conflicts, the first names a pair as
- *  it is, the second names the SG-2 pair the other way round (its rows also form the SG-1 pair, which it does
- *  not name), the third names no pair (R-A-3 is not realized). So one pair is left unassigned. */
+/** Seven rows, listed out of id order; two prompts co-cite the three R-A rows and the two R-C rows, the R-B rows
+ *  stay unclustered. Six are realized: R-A-1 before the built-in milestone (2026-10-07), the others after it;
+ *  R-A-3 is not. The goal model makes seven opposing pairs: (R-A-1, R-A-2) and (R-A-1, R-B-1) on SG-1; (R-B-2,
+ *  R-A-1), (R-C-2, R-A-1), (R-C-1, R-A-1), (R-A-2, R-A-1) and (R-B-1, R-A-1) on SG-2, in the order req-trace
+ *  makes them (the register's). Of the three declared conflicts, the first names a pair as it is, the second
+ *  names the SG-2 pair (R-B-1, R-A-1) the other way round (its rows also form an SG-1 pair, which it does not
+ *  name), the third names no pair (R-A-3 is not realized). So five pairs have no conflict: four on SG-2, one on
+ *  SG-1, the softgoal with fewer pairs carrying the smaller id. Cluster names are req-trace's own, with its em
+ *  dash: "R-A — first, second, third" (3 rows, listed first) and "R-C — fifth, sixth". */
 function fixtureRepo(): string {
     const repo = tmp();
     mkdirSync(join(repo, 'docs', 'prompts'), { recursive: true });
@@ -188,12 +192,16 @@ function fixtureRepo(): string {
     git(repo, ['init', '-q', '-b', 'trunk']);
     writeFileSync(join(repo, 'docs', 'decisions.md'), [
         '# Decisions', '',
+        '- **R-B-2** (2026-09-07) — **Seventh.**',
+        '- **R-C-2** (2026-09-06) — **Sixth.**',
+        '- **R-C-1** (2026-09-05) — **Fifth.**',
         '- **R-A-1** (2026-09-01) — **First.**',
         '- **R-A-2** (2026-09-02) — **Second.**',
         '- **R-A-3** (2026-09-03, provisional) — **Third.**',
         '- **R-B-1** (2026-09-04) — **Fourth.**', '',
     ].join('\n'));
     writeFileSync(join(repo, 'docs', 'prompts', 'claude_2026-09-05_1000_prompt_a.md'), '# Prompt\n\nPrompt-ID: P-2026-09-05-1000\n\nRows R-A-1, R-A-2 and R-A-3.\n');
+    writeFileSync(join(repo, 'docs', 'prompts', 'claude_2026-09-06_1000_prompt_c.md'), '# Prompt\n\nPrompt-ID: P-2026-09-06-1000\n\nRows R-C-1 and R-C-2.\n');
     writeFileSync(join(repo, 'docs', 'goals', 'softgoals.json'), json([
         { id: 'SG-1', name: 'Low cognitive load', description: '' },
         { id: 'SG-2', name: 'Reversibility', description: '' },
@@ -201,6 +209,7 @@ function fixtureRepo(): string {
     writeFileSync(join(repo, 'docs', 'goals', 'contributions.json'), json([
         contrib('R-A-1', 'SG-1', 'help'), contrib('R-A-2', 'SG-1', 'hurt'), contrib('R-B-1', 'SG-1', 'some-'),
         contrib('R-B-1', 'SG-2', 'some+'), contrib('R-A-1', 'SG-2', 'hurt'), contrib('R-A-3', 'SG-1', 'hurt'),
+        contrib('R-B-2', 'SG-2', 'help'), contrib('R-C-1', 'SG-2', 'help'), contrib('R-C-2', 'SG-2', 'make'), contrib('R-A-2', 'SG-2', 'some+'),
     ]));
     writeFileSync(join(repo, 'docs', 'goals', 'conflicts.json'), json([
         { a: 'R-A-1', b: 'R-A-2', softgoal: 'SG-1', evidence: 'read', why: 'First against second.' },
@@ -210,7 +219,7 @@ function fixtureRepo(): string {
     git(repo, ['add', '.']);
     git(repo, ['commit', '-q', '-m', 'docs: the register']);
     git(repo, ['commit', '-q', '--allow-empty', '-m', 'feat: the first one, R-A-1'], '2026-10-01T10:00:00');
-    git(repo, ['commit', '-q', '--allow-empty', '-m', 'feat: the second and the fourth, R-A-2 R-B-1'], '2026-10-09T10:00:00');
+    git(repo, ['commit', '-q', '--allow-empty', '-m', 'feat: the others, R-A-2 R-B-1 R-B-2 R-C-1 R-C-2'], '2026-10-09T10:00:00');
     return repo;
 }
 
@@ -265,11 +274,11 @@ function stubEl(extra: Stub = {}): Stub {
 }
 
 /** A browser-like context whose global is its window: elements by id are created on first use; fetch goes to the board. */
-function dom(base: string) {
+function dom(base: string, store: Record<string, string> = {}) {
     const byId = new Map<string, Stub>();
     const el = (id: string) => { if (!byId.has(id)) byId.set(id, stubEl()); return byId.get(id)!; };
     const tabs = ['table', 'timeline', 'insights', 'requirements'].map((t) => stubEl({ dataset: { tab: t } }));
-    const ls = new Map<string, string>();
+    const ls = new Map<string, string>(Object.entries(store));
     const intervals: (() => void)[] = [];
     const ctx: Stub = vm.createContext({
         document: {
@@ -285,9 +294,9 @@ function dom(base: string) {
     return { ctx, el, ls, intervals, run: (code: string) => vm.runInContext(code, ctx) };
 }
 
-/** The Requirements tab rendered by requirements.js, as served by the board, from /api/requirements. */
-async function reqTab(base: string): Promise<string> {
-    const d = dom(base);
+/** The Requirements tab rendered by requirements.js, as served by the board, from /api/requirements; `store` seeds localStorage. */
+async function reqTab(base: string, store: Record<string, string> = {}): Promise<string> {
+    const d = dom(base, store);
     d.run(await text(base, '/requirements.js'));
     await d.ctx.REQ.refresh();
     return d.el('req').innerHTML;
@@ -310,11 +319,14 @@ describe('the board: the Requirements route, its asset and its tab', () => {
         expect(d.error).toBeUndefined();
         expect(d.repo).toBe(fixture);
         expect(d.trunk.ref).toBe('trunk');
-        expect(d.counts).toMatchObject({ rows: 4, realized: 3, ratified: 3, provisional: 1 });
-        expect(d.clusters.list.map((c: Stub) => [c.key, c.members])).toEqual([['R-A-1', ['R-A-1', 'R-A-2', 'R-A-3']]]);
+        expect(d.counts).toMatchObject({ rows: 7, realized: 6, ratified: 6, provisional: 1 });
+        expect(d.clusters.list.map((c: Stub) => [c.key, c.members, c.name])).toEqual([
+            ['R-A-1', ['R-A-1', 'R-A-2', 'R-A-3'], 'R-A — first, second, third'], ['R-C-1', ['R-C-1', 'R-C-2'], 'R-C — fifth, sixth'],
+        ]);
         expect(d.milestones.map((m: Stub) => [m.id, m.date, m.source])).toEqual([['MODELS', '2026-10-07', 'built-in']]);
-        expect(d.goalModel.opposing).toEqual([
-            { a: 'R-A-1', b: 'R-A-2', softgoal: 'SG-1' }, { a: 'R-A-1', b: 'R-B-1', softgoal: 'SG-1' }, { a: 'R-B-1', b: 'R-A-1', softgoal: 'SG-2' },
+        expect(d.goalModel.opposing.map((p: Stub) => [p.a, p.b, p.softgoal].join(' '))).toEqual([
+            'R-A-1 R-A-2 SG-1', 'R-A-1 R-B-1 SG-1',
+            'R-B-2 R-A-1 SG-2', 'R-C-2 R-A-1 SG-2', 'R-C-1 R-A-1 SG-2', 'R-A-2 R-A-1 SG-2', 'R-B-1 R-A-1 SG-2',
         ]);
     });
 
@@ -359,30 +371,77 @@ describe('the board: the Requirements route, its asset and its tab', () => {
         expect(n).toBe(2);
     });
 
-    test('kills "pairs in one flat table", "a group open by default", "pairs matched without the softgoal", "a reversed declaration unmatched", "unassigned missing or not last": one closed group per declared conflict, in declared order, then unassigned', async () => {
-        const { base } = await reqBoard();
-        const html = await reqTab(base);
+    /** The opposing section of the rendered tab and its groups: [key, open, name, meta, body]. */
+    function opposing(html: string) {
         const at = html.indexOf('<h2>Opposing contributions</h2>');
         expect(at).toBeGreaterThan(-1);
         const tail = html.slice(at);
-        expect(tail.slice(0, tail.indexOf('<details'))).not.toContain('<table');
-        expect(tail).toContain('3 pairs of realized rows pull a softgoal both ways: 2 match one of the 3 declared conflicts (same softgoal, same two rows, either order), 1 unassigned.');
         const groups = [...tail.matchAll(/<details data-key="([^"]+)"( open)?><summary[^>]*><b>([^<]*)<\/b><span class="meta">([^<]*)<\/span><\/summary>([\s\S]*?)<\/details>/g)];
-        expect(groups.map((g) => [g[1], !!g[2], g[3], g[4]])).toEqual([
+        return { tail, groups };
+    }
+    const conflictPairs = (body: string) => [...body.matchAll(/<tr><td class="id">([^<]+)<[\s\S]*?<\/td><td class="id">([^<]+)<[\s\S]*?<\/td><td>([^<]+)<\/td><\/tr>/g)].map((m) => [m[1], m[2], m[3]]);
+    const softgoalPairs = (body: string) => [...body.matchAll(/<tr><td[^>]*>([^<]*)<\/td><td class="id">([^<]+)<[\s\S]*?<\/td><td class="id">([^<]+)<[\s\S]*?<\/td><\/tr>/g)].map((m) => [m[1], m[2], m[3]]);
+
+    test('kills "pairs in one flat table", "a group open by default", "pairs matched without the softgoal", "a reversed declaration unmatched": one closed group per declared conflict, in declared order, first, the empty one with its reason', async () => {
+        const { base } = await reqBoard();
+        const { tail, groups } = opposing(await reqTab(base));
+        expect(tail.slice(0, tail.indexOf('<details'))).not.toContain('<table');
+        expect(tail).toContain('7 pairs of realized rows pull a softgoal both ways: 2 match one of the 3 declared conflicts (same softgoal, same two rows, either order), 5 do not and are grouped by softgoal below. Open a group to see its pairs.');
+        const cf = groups.slice(0, 3);
+        expect(cf.map((g) => [g[1], !!g[2], g[3], g[4]])).toEqual([
             ['cf:SG-1:R-A-1:R-A-2', false, 'R-A-1 vs R-A-2', 'SG-1 Low cognitive load · 1 pair'],
             ['cf:SG-2:R-A-1:R-B-1', false, 'R-A-1 vs R-B-1', 'SG-2 Reversibility · 1 pair'],
             ['cf:SG-1:R-A-2:R-A-3', false, 'R-A-2 vs R-A-3', 'SG-1 Low cognitive load · 0 pairs'],
-            ['cf:unassigned', false, 'unassigned', '1 pair no declared conflict names'],
         ]);
-        const pairs = (body: string) => [...body.matchAll(/<tr><td class="id">([^<]+)<[\s\S]*?<\/td><td class="id">([^<]+)<[\s\S]*?<\/td><td>([^<]+)<\/td><\/tr>/g)].map((m) => [m[1], m[2], m[3]]);
-        expect(groups.map((g) => pairs(g[5]))).toEqual([
+        expect(cf.map((g) => conflictPairs(g[5]))).toEqual([
             [['R-A-1', 'R-A-2', 'SG-1 Low cognitive load']],
             [['R-B-1', 'R-A-1', 'SG-2 Reversibility']],
             [],
-            [['R-A-1', 'R-B-1', 'SG-1 Low cognitive load']],
         ]);
-        expect(groups[0][5]).toContain('First against second.');
-        expect(groups[2][5]).toContain('No opposing pair');
+        expect(cf[0][5]).toContain('First against second.');
+        expect(cf[2][5]).toContain('No opposing pair');
+    });
+
+    test('kills "the pairs without a conflict in one group", "a pair in two softgoal groups or in none", "softgoal groups by id, not by pair count", "a softgoal group open by default", "the heading missing or before the conflicts", "pairs in req-trace\'s order", "no cluster column": the pairs no conflict names, under one heading, one closed group per softgoal by pair count, each pair once, by the cluster of the row that helps, then by row ids', async () => {
+        const { base } = await reqBoard();
+        const d = JSON.parse(await text(base, '/api/requirements'));
+        const { tail, groups } = opposing(await reqTab(base));
+        expect(groups.map((g) => g[1])).toEqual(['cf:SG-1:R-A-1:R-A-2', 'cf:SG-2:R-A-1:R-B-1', 'cf:SG-1:R-A-2:R-A-3', 'sg:SG-2', 'sg:SG-1']);
+        const head = tail.indexOf('<h2>Pairs without a declared conflict, by softgoal (5)</h2>');
+        expect(head).toBeGreaterThan(tail.lastIndexOf('<details data-key="cf:'));
+        expect(head).toBeLessThan(tail.indexOf('<details data-key="sg:'));
+        const sg = groups.slice(3);
+        expect(sg.map((g) => [g[1], !!g[2], g[3], g[4]])).toEqual([
+            ['sg:SG-2', false, 'SG-2 Reversibility', '4 pairs'],
+            ['sg:SG-1', false, 'SG-1 Low cognitive load', '1 pair'],
+        ]);
+        const rows = sg.map((g) => softgoalPairs(g[5]));
+        expect(rows).toEqual([
+            [['R-A · first, second, third', 'R-A-2', 'R-A-1'], ['R-C · fifth, sixth', 'R-C-1', 'R-A-1'], ['R-C · fifth, sixth', 'R-C-2', 'R-A-1'], ['(unclustered)', 'R-B-2', 'R-A-1']],
+            [['R-A · first, second, third', 'R-A-1', 'R-B-1']],
+        ]);
+        // Every pair of /api/requirements once: in a conflict group or in the group of its softgoal, never both.
+        const key = (a: string, b: string, s: string) => a + ' ' + b + ' ' + s;
+        const placed = [
+            ...groups.slice(0, 3).flatMap((g) => conflictPairs(g[5]).map(([a, b, s]) => key(a, b, s.split(' ')[0]))),
+            ...sg.flatMap((g, i) => rows[i].map(([, a, b]) => key(a, b, g[1].slice(3)))),
+        ];
+        expect(placed.slice().sort()).toEqual(d.goalModel.opposing.map((p: Stub) => key(p.a, p.b, p.softgoal)).sort());
+        expect(sg.reduce((n, g) => n + Number(g[4].split(' ')[0]), 0)).toBe(5);
+    });
+
+    test('kills "an opened softgoal group forgotten": a softgoal group opened by this viewer opens again, the others stay closed', async () => {
+        const { base } = await reqBoard();
+        const { groups } = opposing(await reqTab(base, { 'laneREQ.open': '["sg:SG-1"]' }));
+        expect(groups.filter((g) => g[2]).map((g) => g[1])).toEqual(['sg:SG-1']);
+    });
+
+    test('kills "the em dash of req-trace rendered": a cluster title reads " · " where req-trace writes " — ", and no em dash is left in the tab', async () => {
+        const { base } = await reqBoard();
+        const html = await reqTab(base);
+        const titles = [...html.matchAll(/<details data-key="(?!cf:|sg:)[^"]+"(?: open)?><summary><b>([^<]*)<\/b>/g)].map((m) => m[1]);
+        expect(titles).toEqual(['R-A · first, second, third', 'R-C · fifth, sixth', 'Unclustered: rows no prompt co-cites']);
+        expect(html).not.toContain('—');
     });
 
     test('kills "no group after the last milestone", "milestone groups out of order", "rows in the wrong group": a cluster lists its rows by milestone, then realized after the last one, then not realized', async () => {
@@ -397,20 +456,22 @@ describe('the board: the Requirements route, its asset and its tab', () => {
             ['Realized after the last milestone · 1', ['R-A-2']],
             ['Not realized · 1', ['R-A-3']],
         ]);
-        expect(parts(group('(unclustered)')[2])).toEqual([['Realized after the last milestone · 1', ['R-B-1']]]);
+        expect(parts(group('R-C-1')[2])).toEqual([['Realized after the last milestone · 2', ['R-C-2', 'R-C-1']]]);
+        expect(parts(group('(unclustered)')[2])).toEqual([['Realized after the last milestone · 2', ['R-B-2', 'R-B-1']]]);
     });
 
-    test('kills "a table without fixed widths": every table of the tab has the fixed layout and a colgroup, the same one for every table of requirements', async () => {
+    test('kills "a table without fixed widths": every table of the tab has the fixed layout and a colgroup, one colgroup per kind of table', async () => {
         const { base } = await reqBoard();
         const html = await reqTab(base);
-        const tables = [...html.matchAll(/<table([^>]*)>(<colgroup>[\s\S]*?<\/colgroup>)?<thead><tr><th>([^<]*)/g)];
-        expect(tables.length).toBe(4 + 3);
+        const tables = [...html.matchAll(/<table([^>]*)>(<colgroup>[\s\S]*?<\/colgroup>)?<thead><tr><th[^>]*>([^<]*)/g)];
+        expect(tables.length).toBe(5 + 2 + 2);
+        const kinds = new Map<string, string[]>();
         for (const t of tables) {
             expect(t[1]).toBe(' class="rq-t"');
             expect(t[2]).toMatch(/^<colgroup>(<col( style="width:\d+px")?>)+<\/colgroup>$/);
+            kinds.set(t[3], [...(kinds.get(t[3]) || []), t[2]]);
         }
-        const req = tables.filter((t) => t[3] === 'Requirement');
-        expect(req).toHaveLength(4);
-        expect(new Set(req.map((t) => t[2])).size).toBe(1);
+        expect([...kinds].map(([k, cs]) => [k, cs.length, new Set(cs).size])).toEqual([['Requirement', 5, 1], ['Helps', 2, 1], ['Cluster', 2, 1]]);
+        expect(kinds.get('Cluster')![0]).toMatch(/^<colgroup><col style="width:\d+px">/);
     });
 });
