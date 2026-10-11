@@ -18,3 +18,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato (lane probe 35/35 on 3093; 4 crops `{turnstile,petri-producer-consumer}_{ids,transitions}.png` in `~/.jjodel-lanes/P-2026-10-11-1052/crops/`, light theme, 536x489; the RC-23 check of the chat and Alfonso's GO are pending)
 **Notes**: `target`: `ids` (text) and `ref(element)` added; `initial` from JSON text to a JS literal with `[$ID.x]` keys; `guard`, `actions`, `equation` print `$ID.<name>`. Deviations: `$tokens`, `$marked` and `$apply` writes also go through the table; attribute names stay double-quoted; the transition's origin moved from `id:` to `name: '${c.name}'` (`target.ref` is opaque); new template `arcList`; the probe is `codegen-oracle.ts` extended (`CGO_CROPS`).
 **Prompt document name**: 2026-10-11 10:52
+
+## 2026-10-11 — merge: codegen-names into alfonso-frontend-jjtl (P-2026-10-11-1238)
+**Prompt**: `claude_2026-10-11_1238_prompt_merge_codegen-names.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-names` at `9c5ccef5f` into `alfonso-frontend-jjtl`, merge base `276a69ac7`, 4 commits on the branch side.
+**Files touched**: merge `4f117a0b0`: 16 files from the branch side (`docs/log-inbox/codegen-names.md`, `docs/prompts/claude_2026-10-11_1052_prompt_codegen_s7a_readable_names.md`, `frontend/scripts/probe/codegen-oracle.ts`, `frontend/src/codegen/examples/__tests__/names.test.ts`, `frontend/src/codegen/examples/petri-producer-consumer/README.md`, `frontend/src/codegen/examples/petri-producer-consumer/petri-producer-consumer.json`, `frontend/src/codegen/examples/turnstile/README.md`, `frontend/src/codegen/examples/turnstile/turnstile.json`, and 8 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4f117a0b0` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8565 tests in 354 files, 9 red at import, hooks 654; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 on the S7a crops ($ID table and named transitions for turnstile and Petri producer-consumer), GO by Alfonso 12:35; all trunk gates green
+**Notes**: Rollback tag `pre-codegen-names` on `9461bfd7c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1238/result.json`.
+**Prompt document name**: 2026-10-11 12:38
