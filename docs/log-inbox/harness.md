@@ -816,3 +816,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs-only merge (provisional rows digest), no visual change
 **Notes**: Rollback tag `pre-prov-digest` on `239ca4266` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1451/result.json`.
 **Prompt document name**: 2026-10-11 14:51
+
+
+## 2026-10-11 — docs(ratifiche): digest of the provisional decision rows (P-2026-10-11-1430)
+**Prompt**: `claude_2026-10-11_1430_prompt_provisional_rows_digest.md`, lane fast, docs only: list every row of `docs/decisions.md` whose header says provisional, classify it A/B/C by consequence for Alfonso, recommend ratify, amend or revoke for each, group the 49 headers `docs:digest` cannot parse with their minimal rewrite, change nothing in the register; hard stop with the digest ready.
+**Files touched**: `docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md` (`b646a9a04`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 77 provisional rows, not 60: the 1150 parser and docs:digest read only `- **` rows (R-UNDO-8, R-JS-2..11 have no bullet). All 24 cited code commits are on the trunk, so `reversible: branch` is stale. A 35, B 1, C 41; ratify 74, amend 3 (RC-38, R-SIM-120, R-VP-29), revoke 0; unsure 4; RC-26 items 8. Read first: R-UNDO-8, R-JS-10, RC-38. 49 unparsable headers in 5 kinds, rewrites not applied. Probes in /tmp/pd/.
+**Prompt document name**: 2026-10-11 14:30
+
+**Ticket** (P-2026-10-11-1430): `frontend/scripts/auto-intake.config.json` is `"mode": "live"`, `ratifiedBy: apierantonio`, since `53aed9baa` (2026-10-03 23:36), while RC-38 still reads `awaiting Alfonso`, RC-40 (2) says `ratifiedBy` stays null, and no row records the live switch. Digest §2 item 3.

@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01FWUFsDDVN1SMB4MGco19GJ
 Front: harness
 Lane: fast (docs only: one new file under `docs/ratifiche/` and the log entry; reads `docs/decisions.md`, changes nothing in it). No critical-zone go-ahead.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-1430 (prov-digest, b646a9a04), merged a98c3b1ce (P-2026-10-11-1451); digest presented to Alfonso, awaiting his reply
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
