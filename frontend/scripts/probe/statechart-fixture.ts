@@ -176,7 +176,7 @@ const SC_REFERENCES: Array<[string, string, string]> = [
 ];
 
 /** The project, the metamodel, the model and the viewpoint, drawn in the light theme. */
-async function buildStatechartScene(browser: Browser) {
+export async function buildStatechartScene(browser: Browser) {
     const { page, errors } = await openPage(browser);
     const pid = await createProject(page, `GV_S2b_statechart_${TAG}_${Date.now()}`);
     await page.goto(`${URL}/#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
