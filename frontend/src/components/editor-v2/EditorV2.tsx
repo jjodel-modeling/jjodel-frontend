@@ -4328,6 +4328,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const ends = changes.filter((c: any) => c.type === 'position' && c.dragging === false && c.position);
                 if (isJjomMode && ends.length === 1) gvDrop = resolveGraphVertexDragEnd(ends[0]);
                 if (gvDrop?.kind === 'snap') ends[0].position = { ...gvDrop.to };
+                // A container lands with its record moved by the drag delta, not where its box was dropped: the box may be
+                // drawn off the record, grown by its children (R-GV-17), and the record keeps what was set by hand. The
+                // presentation pass draws the box from there; the write below takes this position.
+                if (gvDrop?.kind === 'container') {
+                    const own = irContainmentRef.current.model.vertexByObj.get(gvDrop.objectId);
+                    const src = own !== undefined ? (store.getState() as any).idlookup?.[own] : undefined;
+                    if (own === ends[0].id && src) {
+                        const rec = readVertexLayout(src, getActiveLayoutKey());
+                        ends[0].position = { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy };
+                    }
+                }
                 for (const c of ends) gvDragStartRef.current.delete(c.id);
             }
 
@@ -4461,17 +4472,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             moved.set(v, { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy });
                         }
                         for (const [id, p] of moved) positionWrites.push({ id, ...p });
-                        // Its own record moves by the same delta, not to where it was dropped: its box may be drawn off
-                        // its record, grown by its children (R-GV-17), and the record keeps what was set by hand.
-                        const own = model.vertexByObj.get(gvDrop.objectId);
-                        if (own && idl[own]) {
-                            const rec = readVertexLayout(idl[own], key);
-                            const to = { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy };
-                            const i = positionWrites.findIndex((w) => w.id === own);
-                            if (i !== -1) positionWrites[i] = { id: own, ...to };
-                            else positionWrites.push({ id: own, ...to });
-                            moved.set(own, to);
-                        }
                         if (moved.size > 0) setNodes(replaySafe((nds: Node[]) => nds.map((n) => moved.has(n.id) ? { ...n, position: moved.get(n.id)! } : n)));
                     }
                     if (gvDrop?.kind === 'edit') {
