@@ -7,7 +7,7 @@ of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
 Depends: P-2026-10-10-2029, P-2026-10-10-2027, P-2026-10-11-1105
 Front: codegen-pilot
 Request: https://claude.ai/code/session_01QYGEHstF7K66SVXwe8L7ep
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane codegen-check · code f32d5d94b · log db3981425 · tsc 14 = base, vitest src/codegen 301 (284 + 17), build exit 0, check:codegen-lazy green, probes codegen-check 43/43, S5/S5b 46/46, S6 29/29, mutation bench 4/4 · visual check passata 2026-10-11 (RC-23 by the chat on 3 crops, GO by Alfonso 12:35)
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
 Worktree: `~/jjodel-w-codegen-check`, branch `codegen-check`, cut from the trunk tip that carries S1..S6, the S5b
