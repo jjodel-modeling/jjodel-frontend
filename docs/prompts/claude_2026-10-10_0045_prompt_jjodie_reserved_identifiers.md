@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-0045
 Chat: C-2026-10-10-0039
 Lane: full (more than three files; moves a reserved-name list the JjScript lexer owns today). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane jjodie-reserved · 07bf5c3ee · merge 72762297b · verifica visiva passata 2026-10-11 (Alfonso, smoke on 3001)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
