@@ -675,3 +675,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato: chat RC-23 on 4702 (PID 29252, then stopped) on `ac2471ab0`: 17 clusters, 11 conflict groups, 5 softgoal groups (364, 77, 67, 53, 48), all 34 closed by default, SG-1 opened with the fixed Cluster column, no em dash in the rendered text
 **Notes**: Red first: 14/14 on the base, 5/17 on 1aee982fa. Bench 28/28 and 15/15 killed, controls green. The first RC-23 check found 609 of 612 pairs without a conflict; ac2471ab0 groups them by softgoal (live: SG-1 364, SG-2 77, SG-4 67, SG-3 53, SG-7 48; SG-1 in 15 cluster runs). 5 em dashes remain, all in tooltips quoting data (2 contribution whys, 3 commit subjects). /private/tmp/mut_0008 and /private/tmp/base_0008 remain.
 **Prompt document name**: 2026-10-11 00:08
+
+## 2026-10-11 — merge: board-requirements into alfonso-frontend-jjtl (P-2026-10-11-1119)
+**Prompt**: `claude_2026-10-11_1119_prompt_merge_board-requirements.md`, a direct merge by `lane-run merge --direct`, no session: `board-requirements` at `b82802d10` into `alfonso-frontend-jjtl`, merge base `dfdef69f1`, 3 commits on the branch side.
+**Files touched**: merge `1fe9439d8`: 6 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-11_0008_prompt_board_requirements_tab.md`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/requirements.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1fe9439d8` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8503 tests in 352 files, 9 red at import, hooks 620; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702 on ac2471ab0, 34 groups closed by default, unassigned pairs split by softgoal, fixed Cluster column, no em dash in rendered text
+**Notes**: Rollback tag `pre-board-requirements` on `fe87ea447` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1119/result.json`.
+**Prompt document name**: 2026-10-11 11:19
