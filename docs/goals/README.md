@@ -68,6 +68,14 @@ helps a newcomer, hiding a control from the screen costs one). The candidates ar
 - `verified`: `none` (draft), `agent` (confirmed by a second agent with a fresh context, RC-27),
   `alfonso` (confirmed by Alfonso). Only Alfonso writes `alfonso`.
 - `why`: one line that quotes or cites the source in the row.
+- A (`req`, `softgoal`) pair carries one entry, or two of opposite sign (P-2026-10-11-2025). The
+  second entry says that the same row buys and costs the softgoal: one clause or decision helps it,
+  another, or the same one, hurts it, as i* allows a positive and a negative link from one element
+  to one softgoal. Neither entry is a net judgement of the other, and each needs its own `why` that
+  quotes the part of the row it rests on. Two entries of the same sign on one pair are not allowed;
+  req-trace refuses the second one in file order and lists it in `goalModel.duplicates`. In the
+  Requirements tab a mixed row sits on both sides of its softgoal's bar and is never paired with
+  itself among the opposing pairs.
 - A conflict is a pair of rows pulling the same softgoal in opposite directions, or a row naming a
   trade-off with another: `a` pulls toward the softgoal, `b` away. Evolution links are not conflicts.
 
