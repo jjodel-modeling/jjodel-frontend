@@ -553,19 +553,19 @@ export function validateConformance(
 
                 // CHECK 6: dangling_reference — referenced objects must exist ON THE GRAPH
                 //
-                // Existence is NOT membership of `model.objects`. That collection holds the
-                // ROOTS only: `DObject`'s constructor appends a new instance to `objects`
-                // when its father is the DModel and to the slot's `values` otherwise
-                // (`joiner/classes.ts:774-784`), and a contained instance's father IS the
-                // slot (`LModelElement.tsx:7171`). So every nested instance was reported as
-                // a non-existent target while the tree, the canvas chip and the nested form
-                // all resolved it — measured in
+                // Existence is NOT only membership of `model.objects`. Until #174 that
+                // collection missed the instances born in a slot (`DObject`'s constructor
+                // appends them to the slot's `values`, `joiner/classes.ts:786-792`), so every
+                // such nested instance was reported as a non-existent target while the tree,
+                // the canvas chip and the nested form all resolved it — measured in
                 // docs/discovery/discovery_2026-09-01_crud3_edition_dangling.md.
                 //
-                // The VISIT perimeter is unchanged and stays `model.objects` (ratified,
-                // CRUD3 F2): a nested object is a legitimate TARGET, it is not something
-                // this validator walks. `objectIds` is kept as the first test because it is
-                // free and covers every root.
+                // The VISIT perimeter is `model.objects`, which lists every instance of the
+                // model, nested ones included (R-NEST-1, R-NEST-3, amending CRUD3 F2): the loop
+                // at the top visits them all. `resolvedOnGraph` stays as the second test for a
+                // target the collection does not list (a state saved before the 2.230
+                // migration, a target in another model). `objectIds` is the first test because
+                // it is free.
                 //
                 // Monotone by construction: `resolvedOnGraph` can only REMOVE a violation,
                 // never add one. Every id flagged after this change was flagged before it.

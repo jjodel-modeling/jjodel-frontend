@@ -288,7 +288,12 @@ export function JodieWindow({
         const refreshAlive = () => setIsAlive(JodieConfig.hasEnabledProviders());
         refreshAlive();
         window.addEventListener(AIEvents.SETTINGS_CHANGED, refreshAlive);
-        return () => window.removeEventListener(AIEvents.SETTINGS_CHANGED, refreshAlive);
+        // #168: a key saved in Settings fires PROVIDER_CHANGED only (AIConfig.save).
+        window.addEventListener(AIEvents.PROVIDER_CHANGED, refreshAlive);
+        return () => {
+            window.removeEventListener(AIEvents.SETTINGS_CHANGED, refreshAlive);
+            window.removeEventListener(AIEvents.PROVIDER_CHANGED, refreshAlive);
+        };
     }, []);
 
     // Handle dragging movement
@@ -471,6 +476,8 @@ export function JodieWindow({
                 onOfferExecute={onOfferExecute}
                 onOfferAsk={onOfferAsk}
                 onAskFromError={onAskFromError}
+                onOpenSettings={onOpenSettings}
+                providerMissing={!isAlive}
             />
 
             <ChatInput

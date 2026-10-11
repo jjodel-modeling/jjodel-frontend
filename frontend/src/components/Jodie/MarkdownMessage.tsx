@@ -14,6 +14,8 @@ interface MarkdownMessageProps {
     isUser?: boolean;
     /** Optional callback to execute JjScript commands */
     onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>;
+    /** #168 J7: false hides the «Source» toggle (the consumer's Jodie); absent, it shows as before. */
+    showSourceToggle?: boolean;
 }
 
 /**
@@ -37,7 +39,7 @@ function hasMarkdownSyntax(text: string): boolean {
     return patterns.some(pattern => pattern.test(text));
 }
 
-export function MarkdownMessage({ content, isUser = false, onJjScriptExecute }: MarkdownMessageProps): JSX.Element {
+export function MarkdownMessage({ content, isUser = false, onJjScriptExecute, showSourceToggle = true }: MarkdownMessageProps): JSX.Element {
     const [showSource, setShowSource] = useState(false);
 
     const hasMarkdown = useMemo(() => hasMarkdownSyntax(content), [content]);
@@ -62,14 +64,16 @@ export function MarkdownMessage({ content, isUser = false, onJjScriptExecute }: 
             )}
 
             {/* Toggle button for markdown content */}
-            <button
-                className="md-toggle-btn"
-                onClick={() => setShowSource(!showSource)}
-                title={showSource ? 'Show formatted' : 'Show source'}
-            >
-                <i className={`bi ${showSource ? 'bi-eye' : 'bi-code-slash'}`} />
-                <span>{showSource ? 'Formatted' : 'Source'}</span>
-            </button>
+            {showSourceToggle && (
+                <button
+                    className="md-toggle-btn"
+                    onClick={() => setShowSource(!showSource)}
+                    title={showSource ? 'Show formatted' : 'Show source'}
+                >
+                    <i className={`bi ${showSource ? 'bi-eye' : 'bi-code-slash'}`} />
+                    <span>{showSource ? 'Formatted' : 'Source'}</span>
+                </button>
+            )}
         </div>
     );
 }

@@ -12,6 +12,8 @@ import {
     metamodelOfClass,
     modelsForType,
     topLevelReason,
+    restrictDeleteForProfile,
+    CASCADE_LOCKED_REASON,
 } from '../environmentConfig';
 
 // A plain idlookup, the shape the store persists — no D-layer classes, so this suite
@@ -225,5 +227,53 @@ describe('topLevelReason', () => {
     });
     it('no class, a reason rather than a pass', () => {
         expect(topLevelReason(null)).toBe('unknown metaclass');
+    });
+});
+
+describe('restrictDeleteForProfile (#157, 2026-10-04)', () => {
+    // Exact class per instance, as the Configurator resolves it.
+    const perms: Record<string, 'edit' | 'read' | 'hidden'> = { phase: 'read', vault: 'hidden', step: 'edit', ref_ok: 'edit', ref_hidden: 'hidden', ref_read: 'read' };
+    const perm = (id: string) => perms[id] ?? 'edit';
+    const pre = (descendants: string[], referencedBy: string[], blocked: string | null = null, canReassign = true) => ({
+        blocked,
+        canReassign,
+        descendants: descendants.map((id) => ({ id, name: id })),
+        referencedBy: referencedBy.map((instanceId) => ({ instanceId, featureKey: 'f' })),
+    });
+    const ids = (xs: Array<{ id?: string; instanceId?: string }>) => xs.map((x) => x.id ?? x.instanceId);
+
+    it('a read element in the cascade blocks the delete with the profile reason', () => {
+        expect(restrictDeleteForProfile(pre(['step', 'phase'], []), perm).blocked).toBe(CASCADE_LOCKED_REASON);
+    });
+    it('a hidden element in the cascade blocks it too, and is not listed', () => {
+        const r = restrictDeleteForProfile(pre(['step', 'vault'], []), perm);
+        expect(r.blocked).toBe(CASCADE_LOCKED_REASON);
+        expect(ids(r.descendants)).toEqual(['step']);
+    });
+    it('the reason names no type', () => {
+        expect(CASCADE_LOCKED_REASON).not.toMatch(/Vault|Phase/);
+    });
+    it('CONTROL: a cascade of editable elements is not blocked, and keeps every entry', () => {
+        const r = restrictDeleteForProfile(pre(['step'], ['ref_ok', 'ref_read']), perm);
+        expect(r.blocked).toBeNull();
+        expect(ids(r.descendants)).toEqual(['step']);
+        expect(ids(r.referencedBy)).toEqual(['ref_ok', 'ref_read']);
+        expect(r.canReassign).toBe(true);
+    });
+    it('a hidden referrer leaves the list, so the plan neither reassigns nor clears it', () => {
+        expect(ids(restrictDeleteForProfile(pre([], ['ref_ok', 'ref_hidden']), perm).referencedBy)).toEqual(['ref_ok']);
+    });
+    it('reassign is offered only while a referrer is left', () => {
+        expect(restrictDeleteForProfile(pre([], ['ref_hidden']), perm).canReassign).toBe(false);
+        expect(restrictDeleteForProfile(pre([], ['ref_ok'], null, false), perm).canReassign).toBe(false);
+    });
+    it('a reason already there wins (the singleton comes from the metamodel)', () => {
+        expect(restrictDeleteForProfile(pre(['phase'], [], 'Scenario is a singleton'), perm).blocked).toBe('Scenario is a singleton');
+    });
+    it('the input is not changed', () => {
+        const input = pre(['vault'], ['ref_hidden']);
+        restrictDeleteForProfile(input, perm);
+        expect(ids(input.descendants)).toEqual(['vault']);
+        expect(ids(input.referencedBy)).toEqual(['ref_hidden']);
     });
 });

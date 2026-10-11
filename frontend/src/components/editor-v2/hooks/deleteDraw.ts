@@ -26,7 +26,9 @@
  * the failure is silent leakage, not a visible mess.
  *
  * So the cascade is the adapter's, never the UI's, and `descendantsOf` is the one
- * entry that computes it.
+ * entry that computes it. Since #174 (R-NEST-5) the core cascades too, by the same
+ * ownership rule (`LValue.get_children_idlist`); the plan keeps its own walk so it can
+ * list, count and order the deletes before any of them runs.
  *
  * -- What the core DOES do to incoming pointers, also measured -----------------
  *
@@ -51,9 +53,12 @@ type Idlookup = Record<string, any>;
 /**
  * Every instance that hangs below `objectId` through containment, transitively.
  *
- * The walk is DObject -> DValue slot -> values, and it descends only through slots
- * whose DReference carries `composition`: a non-containment reference points at an
- * instance it does not own, and following it would delete the whole model one
+ * The walk is DObject -> DValue slot -> values, and it takes what the slot OWNS: every
+ * DObject of a slot whose DReference carries `composition`, and in any other slot only
+ * the DObjects whose `father` is that slot - the ones an aggregation re-fathered, or a
+ * shapeless slot holds (R-NEST-2, R-NEST-5; `LValue.get_children_idlist` applies the same
+ * rule, so the plan lists what the core cascade deletes). An element a slot merely lists
+ * is shared or referenced, not owned, and following it would delete the whole model one
  * pointer at a time.
  *
  * Depth-first, so a parent is always listed before its own children; `depth` says
@@ -79,13 +84,14 @@ export function descendantsOf(
             const slot = idlookup[slotId];
             if (slot?.className !== 'DValue') continue;
             const feature = idlookup[slot.instanceof];
-            if (!feature || feature.composition !== true) continue;
-            const childKey = feature.name ?? '';
+            const composition = feature?.composition === true;
+            const childKey = feature?.name ?? '';
             for (const raw of Array.isArray(slot.values) ? slot.values : []) {
                 const childId = typeof raw === 'string' ? raw : '';
                 if (!childId || seen.has(childId)) continue;
                 const child = idlookup[childId];
                 if (child?.className !== 'DObject') continue;
+                if (!composition && child.father !== slotId) continue;
                 seen.add(childId);
                 out.push({
                     id: childId,

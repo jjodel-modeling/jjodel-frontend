@@ -28,17 +28,19 @@ import {
     visibleTopLevelTypes,
     resolveTypePermission,
 } from '../../joiner';
-import { newDraft, paletteAttr } from '../../jjform';
-import { metamodelOfClass, modelsForType, topLevelReason } from '../../joiner/environmentConfig';
+import { addChildReason, newDraft, paletteAttr } from '../../jjform';
+import { metamodelOfClass, modelsForType, restrictDeleteForProfile, topLevelReason } from '../../joiner/environmentConfig';
 import { instancesOfClass, modelIdOfObject } from '../abstract/tabs/instanceManagerModel';
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
-import { applyCreate } from '../editor-v2/hooks/createAdapter';
+import { applyCreate, childSlotCount } from '../editor-v2/hooks/createAdapter';
 import { applyDelete, deletePlan, preflightFor } from '../editor-v2/hooks/deleteAdapter';
 import { appendValue } from '../editor-v2/viewpoint/ir/formWrite';
 import InstanceDetail, { type DetailPermission } from '../abstract/tabs/InstanceDetail';
 import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
 import { createM1 } from '../../pages/components/Navbar';
 import { EnvGenEvents } from '../../events/registry';
+import { consumerFocusOf, consumerSelectionOf, setConsumerSelection } from './consumerJodieContext';
+import { configuratorTargetOf } from '../Jodie/consumerProposalModel';
 import type { DeleteOptions, DeletePreflight, NavState } from '../../jjform';
 import './configuratorTab.scss';
 
@@ -51,6 +53,13 @@ export interface ConfiguratorTabProps {
      *  window opened from the sidebar. */
     variant?: 'overlay' | 'page';
 }
+
+/** #168 J4 — how long a request to show an element waits for the store to hold it. */
+const SELECT_INSTANCE_WAIT_MS = 3000;
+
+/** #173 — how long a create of «Add <Child>» counts against its slot before the store
+ *  holds it. The app commits on a timer (300 ms, measured in #168 C1): this outlasts it. */
+const IN_FLIGHT_MS = 2000;
 
 /** The `profile` hash param, read via the app's canonical parser (same one `getProjectID_URL` uses). */
 function profileIdFromUrl(): string | null {
@@ -164,6 +173,62 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
     const [nav, setNav] = useState<NavState | null>(null);
     useEffect(() => { setNav(null); }, [selectedInstanceId]);
 
+    // #168 J4 — after «Apply», Jodie's proposal asks the page to show the element it created or
+    // changed (`EnvGenEvents.CONFIGURATOR_SELECT_INSTANCE`): its row, or the row of its nearest
+    // top-level ancestor drilled down to it (`configuratorTargetOf`). The effect below applies one
+    // state per commit (type, then row, then drill-in) and is declared after the two reset effects
+    // above, so that in the commit where they clear the row or the drill-in its own write comes
+    // last. The run may still be landing in the store: a request that does not resolve yet waits
+    // for the next `idlookup`, until its deadline.
+    const pendingSelectRef = useRef<{ instanceId: string; deadline: number } | null>(null);
+    const [selectTick, setSelectTick] = useState(0);
+    useEffect(() => {
+        if (!isPage) return;
+        const onSelect = (e: Event) => {
+            const instanceId = (e as CustomEvent).detail?.instanceId;
+            if (typeof instanceId !== 'string') return;
+            pendingSelectRef.current = { instanceId, deadline: Date.now() + SELECT_INSTANCE_WAIT_MS };
+            setSelectTick((t) => t + 1);
+        };
+        window.addEventListener(EnvGenEvents.CONFIGURATOR_SELECT_INSTANCE, onSelect);
+        return () => window.removeEventListener(EnvGenEvents.CONFIGURATOR_SELECT_INSTANCE, onSelect);
+    }, [isPage]);
+    useEffect(() => {
+        const pending = pendingSelectRef.current;
+        if (!isPage || !pending) return;
+        if (Date.now() > pending.deadline) { pendingSelectRef.current = null; return; }
+        const target = configuratorTargetOf(idlookup, topTypeIds, pending.instanceId,
+            (classId) => resolveTypePermission(profile, classId) === 'hidden');
+        if (!target) return;
+        if (selectedTypeId !== target.typeId) { setSelectedTypeId(target.typeId); return; }
+        if (selectedInstanceId !== target.rowId) { setSelectedInstanceId(target.rowId); return; }
+        setNav(target.nav);
+        pendingSelectRef.current = null;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPage, idlookup, selectedTypeId, selectedInstanceId, selectTick]);
+
+    // #168 J1 — what is on screen, for Jodie: the element in the detail (the breadcrumb's current
+    // step after a drill-in, otherwise the selected row), its exact type, its model
+    // (`consumerFocusOf`). Written to `consumerJodieContext` (a Jodie that recomputes later still
+    // reads it) and announced by event. The page only: the overlay is the developer's, who Jodie
+    // follows through the Dock. Primitive deps, so a store update that changes none of them is silent.
+    const focus = consumerFocusOf(idlookup, profile, selectedTypeId, selectedInstanceId, nav);
+    const selection = consumerSelectionOf(idlookup, projectModelIds, focus.typeId, focus.instanceId);
+    useEffect(() => {
+        if (!isPage) return;
+        const detail = { typeId: selection.typeId, instanceId: selection.instanceId, modelId: selection.modelId };
+        setConsumerSelection(detail);
+        window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, { detail }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPage, selection.typeId, selection.instanceId, selection.modelId]);
+    useEffect(() => {
+        if (!isPage) return;
+        return () => {
+            setConsumerSelection(null);
+            window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, { detail: null }));
+        };
+    }, [isPage]);
+
     /** The detail column is the element that scrolls: Back restores its offset. */
     const detailRef = useRef<HTMLDivElement | null>(null);
 
@@ -180,13 +245,18 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
 
     /** Delete, with the Data Manager's confirmation (12d): the preflight lists who points
      *  at the instance and offers to reassign or clear those references. `InstanceDetail`
-     *  offers it only on a type the profile may edit. */
+     *  offers it only on a type the profile may edit. With a profile, the preflight is the
+     *  profile's (`restrictDeleteForProfile`, 2026-10-04): refused when the cascade holds an
+     *  element it cannot change, and no hidden element named. */
     const [pendingDelete, setPendingDelete] = useState<DeletePreflight | null>(null);
     const [reassignTo, setReassignTo] = useState('');
     const openDelete = (instanceId: string) => {
         const mid = modelIdOfObject(idlookup, instanceId) ?? modelId;
         if (!mid) return;
-        const pre = preflightFor(mid, makeShapeCtx(mid).shape(), instanceId);
+        const raw = preflightFor(mid, makeShapeCtx(mid).shape(), instanceId);
+        const pre: DeletePreflight = profile
+            ? { ...raw, ...restrictDeleteForProfile(raw, (id) => resolveTypePermission(profile, (idlookup as any)?.[id]?.instanceof)) }
+            : raw;
         setReassignTo(pre.reassignCandidates[0]?.id ?? '');
         setPendingDelete(pre);
     };
@@ -202,13 +272,37 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
         if (selectedInstanceId && plan.deletes.includes(selectedInstanceId)) setSelectedInstanceId(null);
     };
 
+    /** #173 — the creates of «Add <Child>» the store does not count yet, by `owner:slot`:
+     *  the slot's count when the first was issued (`base`), how many since (`n`), when. */
+    const inFlightRef = useRef<Record<string, { base: number; n: number; at: number }>>({});
+
     /** «Add <Child>» from the detail: created in place, like this screen's «New», without
-     *  the Data Manager's draft dialog. Bare call (editor-v2 §3.3). */
+     *  the Data Manager's draft dialog. Bare call (editor-v2 §3.3).
+     *
+     *  #173 — the slot's cardinality is checked HERE too, with the creates still in flight
+     *  counted in. The store lags a create, so the bar's own gate reads the old count:
+     *  measured, a double click on «Add Note» of a 0..1 slot read [0/1] twice, even from
+     *  the live store at click time, and left [2/1]. The Data Manager does not need it:
+     *  its draft dialog is modal, so a second click never reaches the bar. */
     const createIn = (cls: string, ownerId: string | null, childKey: string | null) => {
         const mid = (ownerId && modelIdOfObject(idlookup, ownerId)) || modelId;
         if (!mid) return;
-        const shape = makeShapeCtx(mid).shape();
-        applyCreate(mid, shape, newDraft(shape, cls, ownerId, childKey));
+        const ctx = makeShapeCtx(mid);
+        const shape = ctx.shape();
+        const slot = ownerId && childKey ? `${ownerId}:${childKey}` : null;
+        let base = 0;
+        let n = 0;
+        if (ownerId && childKey && slot) {
+            const live = childSlotCount(ownerId, childKey);
+            const prev = inFlightRef.current[slot];
+            const pending = prev && Date.now() - prev.at < IN_FLIGHT_MS ? Math.max(0, prev.base + prev.n - live) : 0;
+            if (prev && pending > 0) { base = prev.base; n = prev.n; } else base = live;
+            const owner = ctx.classOf(ownerId);
+            const child = owner ? shape.classes[owner]?.children.find(c => c.key === childKey) : undefined;
+            if (child && addChildReason(child, live + pending, shape.classes[child.of]) !== null) return;
+        }
+        const id = applyCreate(mid, shape, newDraft(shape, cls, ownerId, childKey));
+        if (id && slot) inFlightRef.current[slot] = { base, n: n + 1, at: Date.now() };
     };
 
     /** «New <Target> & link»: the target at model root, then the pointer appended to the
@@ -440,7 +534,10 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
                                                 openDelete={openDelete}
                                                 onCreate={createIn}
                                                 onCreateAndLink={createAndLink}
-                                                permissionOf={permissionOf}
+                                                // Only with a profile (#157 step B): the IR form reads an
+                                                // absent rule as «no profile», and keeps the developer's
+                                                // containment pickers as they were.
+                                                permissionOf={profile ? permissionOf : undefined}
                                             />
                                         </div>
                                     </div>

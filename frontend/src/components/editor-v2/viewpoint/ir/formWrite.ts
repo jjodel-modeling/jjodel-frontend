@@ -2,8 +2,9 @@
  * formWrite, the single write path of the form rendering of a view.
  *
  * Every mutation a form field performs goes through here, and here goes through
- * `LValue`: `setValueAtPosition` for a set or a clear, `SetFieldAction` with '+='
- * for an append. That is NOT a second write path next to the canvas one, it is the
+ * `LValue`: `setValueAtPosition` for a set, a clear or an append to a composition
+ * (#182, R-NEST-9), `SetFieldAction` with '+=' for any other append. That is NOT a
+ * second write path next to the canvas one, it is the
  * same path one step lower. `canvasToJjom.syncUpdateFeatureValue`, which the inline
  * row editing of IRNodeContent uses, resolves `lObject['$feature'].value = v`, and
  * that assignment routes through `LValue.set_value` into the very same
@@ -251,10 +252,20 @@ export function addSlotValue(slot: SlotProxy): WriteResult {
 /**
  * Append a value to a multivalued slot.
  *
- * `'+='` on `values`, the same action the classic panel's add button issues. Distinct from
- * `addSlotValue`, which appends an EMPTY typed value for the user to fill in: this one
- * appends a value that is already known, which is what the reference picker and the chips
- * editor produce.
+ * A pointer appended to a COMPOSITION slot (`isPtr` and `instanceof.composition === true`)
+ * is a `setValueAtPosition` at the end of the raw array, so the core re-fathers the element
+ * into the slot, evicts it from its old container and refuses a containment loop, as a set
+ * does (#182, R-NEST-9); the core's verdict is returned, and a value the slot already lists
+ * is not written twice. Everywhere else (plain references, aggregations, which share per
+ * R-NEST-2, shapeless slots, primitives) it is a `'+='` on `values`, the same action the
+ * classic panel's add button issues. Distinct from `addSlotValue`, which appends an EMPTY
+ * typed value for the user to fill in: this one appends a value that is already known,
+ * which is what the reference picker and the chips editor produce.
+ *
+ * Known and accepted: `setValueAtPosition` takes its index from the caller, so two appends
+ * to the same composition slot inside one propagation window target the same index. The
+ * second overwrites the first (measured: the slot ends up holding the second value only),
+ * and the first element keeps its `father` on a slot that no longer lists it.
  */
 export function appendSlotValue(
     slot: SlotProxy,
@@ -262,14 +273,27 @@ export function appendSlotValue(
     isPtr: boolean,
 ): WriteResult {
     if (!slot) return writeRefused('no slot to append to');
+    let verdict: CoreVerdict;
+    let composition = false;
     try {
+        const fresh = slot.r ?? slot;
+        composition = isPtr && fresh.instanceof?.composition === true;
+        if (composition && rawValues(fresh).includes(value)) return writeUnchanged();
         TRANSACTION(`form append ${slot.name ?? 'value'}`, () => {
-            const fresh = slot.r ?? slot;
+            if (composition) {
+                verdict = fresh.setValueAtPosition(rawValues(fresh).length, value, { isPtr: true });
+                return;
+            }
             SetFieldAction.new(fresh.id, 'values', value, '+=', isPtr);
         });
     } catch (err) {
         console.warn('[formWrite] appendSlotValue failed', { value, err });
         return writeRefused(thrownReason(err));
+    }
+    if (composition) {
+        const result = fromCore(verdict);
+        if (result.ok && result.changed) U.isProjectModified = true;
+        return result;
     }
     // Same note as `addSlotValue`: `SetFieldAction` carries no verdict back.
     U.isProjectModified = true;

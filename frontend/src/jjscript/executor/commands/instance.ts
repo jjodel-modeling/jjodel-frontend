@@ -12,10 +12,16 @@
  *   - (lObject as any)['$' + featureName].value = newValue    — inside TRANSACTION (single value)
  *   - refProxy.values = [...meaningful, targetObject.id]      — inside TRANSACTION (multi-value / reference)
  *
- * Reference (link) semantics:
- *   In M1, `set X.refName = Y` where refName is a metaclass reference appends Y's id
- *   to the reference values array (mirroring syncCreateReferenceLink).
- *   Setting to null clears the reference (unlink).
+ * Reference (link) semantics (#168 C1, `../referenceWrite.ts`):
+ *   In M1, `set X.refName = Y` where refName is a metaclass reference REPLACES the target
+ *   when the reference is single-valued, and appends Y's id when it is multi-valued
+ *   (mirroring syncCreateReferenceLink). Setting to null clears the reference (unlink).
+ *   Both read the slot only after the queued writes have landed (`settlePendingWrites`).
+ *
+ * Collection updates and types (#175, `docs/discovery/discovery_2026-10-07_175_jjscript_m1_operators.md`):
+ *   `set X.refName += Y` appends Y while the slot has room and never replaces; `set X.refName -= Y`
+ *   and `remove Y from X.refName` take Y out by value. A link (`=`, `+=`) writes only an instance
+ *   of the reference type or of a subclass (`TYPE_MISMATCH`).
  */
 
 import {
@@ -23,6 +29,7 @@ import {
     DeleteArgs,
     RenameArgs,
     SetArgs,
+    RemoveArgs,
     ExecutionResult,
     ExecutionContext,
     LiteralValue,
@@ -52,6 +59,7 @@ import {
     getPendingChildren,
     forgetPendingChild,
 } from '../handleRegistry';
+import { isManyValued, linkedIds, planLink, planUnlink, planAdd, planRemove } from '../referenceWrite';
 
 // ============================================
 // SHARED HELPERS
@@ -300,6 +308,88 @@ function literalToPrimitive(value: LiteralValue): string | number | boolean | nu
         case 'string':  return value.value;
         default:        return null;
     }
+}
+
+/**
+ * Let every write already queued reach the store before a reference slot is read.
+ *
+ * The app keeps a transaction block open and commits it every `U.UpdatingTimer` (300 ms,
+ * `reducer.ts:1444`), so a `set` returns while its write is still queued. A second `set` on the
+ * same slot inside that window read the old values and overwrote the first: measured in a
+ * `do ... end` block, in a `forall` and at the Run button's 20 ms pacing (#168 C1,
+ * `docs/discovery/discovery_2026-10-02_168_c1_executor_prompt.md` §3.2-3.3). This is the
+ * interval's own call made now; it schedules the dispatch as a `setTimeout(0)` (`action.ts:349`),
+ * so one macrotask later the store holds it, as in the drain of `reducer.ts:1591-1592`.
+ *
+ * `COMMIT` is loaded here, not at the top: `joiner` does not export it, and a static import of
+ * `action.ts` would evaluate it in the suites that mock `joiner` to load this file
+ * (`handleRegistry.test.ts`, `elementWaiter.test.ts`), where it reads `windoww` from the mock.
+ */
+async function settlePendingWrites(): Promise<void> {
+    const { COMMIT } = await import('../../../redux/action/action');
+    COMMIT(undefined, false);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Take ids out of a reference slot by value. Must run inside the caller's TRANSACTION.
+ *
+ * `refProxy.values = [...]` cannot shrink a slot: it shortens it with a `'-='` that carries no
+ * value, which the reducer drops (`model/CLAUDE.md` §9.3). By value it is the reducer's own
+ * removal, the one `Dummy.get_delete` uses (R-DEL-4). A child taken out of a containment goes
+ * back to the model root, the write `_clearValueAtPosition` makes when it evicts one
+ * (`LModelElement.tsx:7855-7856`) — only when this slot is its father, so an object another
+ * container holds is not pulled out of it.
+ */
+function removeLinked(refProxy: any, ids: readonly string[], containment: boolean, modelId: string): void {
+    for (const id of ids) {
+        SetFieldAction.new(refProxy.id, 'values', id as any, '-=', true);
+        if (containment && (LPointerTargetable.fromPointer(id as any) as any)?.__raw?.father === refProxy.id) {
+            SetFieldAction.new(id as any, 'father', modelId as any, undefined, true);
+        }
+    }
+}
+
+/**
+ * Whether the model lists this object among its roots (`model.objects`). A child born in its slot
+ * (`create instance … in`, the UI's «Add», R-JS-9) never is: taken out of that slot it would be
+ * fathered to the model and listed nowhere, the eviction orphan of #174.
+ */
+function isListedAtRoot(model: LModel, id: string): boolean {
+    const objects: any[] = (model as any).__raw?.objects ?? [];
+    return objects.some((o: any) => (typeof o === 'string' ? o : o?.id) === id);
+}
+
+/**
+ * The refusal of a link whose target is not an instance of the reference type or of one of its
+ * subclasses, or `null` (#175). The same test `resolveContainerSlot` runs for `create … in`. The
+ * target's class is read from the store, so the caller drains the queued writes first: a target
+ * the previous line created has no `instanceof` until the commit lands (R-JS-11).
+ */
+function linkTypeMismatch(metaclass: LClass, property: string, targetId: string, targetName: string): ExecutionResult | null {
+    const refs: any[] = (metaclass as any).allReferences ?? (metaclass as any).references ?? [];
+    const refType: any = refs.find((r: any) => r?.name === property)?.type;
+    if (!refType) return null;
+    const targetClass: any = (LPointerTargetable.fromPointer(targetId as any) as any)?.instanceof;
+    if (!targetClass) {
+        return {
+            success: false,
+            command: 'set',
+            message: `Cannot resolve the class of '${targetName}'`,
+            errors: [{ code: 'NO_METACLASS', message: `'${targetName}' has no instanceof reference` }]
+        };
+    }
+    const conforms = typeof targetClass.isExtending === 'function'
+        ? targetClass.isExtending(refType)
+        : targetClass.id === refType.id;
+    if (conforms) return null;
+    const holds = `${(metaclass as any).name}.${property} holds ${refType.name ?? '?'} and its subclasses`;
+    return {
+        success: false,
+        command: 'set',
+        message: `'${targetName}' is a ${targetClass.name ?? '?'}: ${holds}`,
+        errors: [{ code: 'TYPE_MISMATCH', message: `'${targetName}' is a ${targetClass.name ?? '?'}, and ${holds}` }]
+    };
 }
 
 // ============================================
@@ -637,36 +727,60 @@ export async function executeDeleteInstance(
         };
     }
 
-    return new Promise((resolve) => {
-        try {
-            // Canonical cascade delete (Dummy.get_delete): cleans the incoming
-            // reference slots via pointedBy (case 'values'), the instance's own
-            // DValue features (children), model.objects and its graph vertices.
-            // The previous raw DeleteElementAction removed only the idlookup
-            // entry and left all of those dangling. .delete() opens its own
-            // TRANSACTION, so no outer wrapper here (canvasToJjom idiom).
-            (lObject as any).delete();
-            // Free the handle so it can be reused later in the same run, and its place in the
-            // slot it was created into (R-JS-9).
-            unregisterHandle(instanceName);
-            forgetPendingChild(lObject.id);
-            resolve({
-                success: true,
-                command: 'delete',
-                message: `Deleted instance '${instanceName}'`,
-                data: { id: lObject.id, name: instanceName, type: 'instance' },
-                affectedElements: [lObject.id],
-                undoable: true
-            });
-        } catch (error) {
-            resolve({
+    try {
+        // #171: the canonical cascade (Dummy.get_delete) cleans the incoming reference
+        // slots, the instance's own DValue slots, model.objects and its graph vertices,
+        // but it stops at the slots: an element a containment slot holds survived with a
+        // `father` that no longer resolved (measured, discovery_2026-10-04_157_closing_defects.md
+        // D3b). So the delete goes through the Configurator's and the Data Manager's plan
+        // (deleteAdapter, 12d): `descendantsOf` lists the contained elements and each one
+        // gets its own .delete(), deepest first, the container last. Verdict dirty (no
+        // options): nothing is written first, each .delete() removes the incoming pointers
+        // by value as the single call did, and the deletes run now, before the result.
+        // Every .delete() opens its own TRANSACTION, so no outer wrapper (rule 12).
+        //
+        // The plan reads the store: queued writes land first (a container created or linked
+        // earlier in the same run is not there yet). The adapters are loaded here, as
+        // `action.ts` is in `settlePendingWrites`, so this file's module graph does not take
+        // on the editor-v2 adapter chain (it reaches `sync/canvasToJjom`).
+        await settlePendingWrites();
+        const { applyDelete, deletePlan, preflightFor } = await import('../../../components/editor-v2/hooks/deleteAdapter');
+        const { makeShapeCtx } = await import('../../../components/editor-v2/hooks/shapeAdapter');
+        const plan = deletePlan(preflightFor(targetModel.id, makeShapeCtx(targetModel.id).shape(), lObject.id), {});
+        if (applyDelete(plan) === 0) {
+            // A blocked plan, or an instance no longer in the store: nothing was deleted,
+            // and a success here would lie.
+            const reason = plan.blocked ?? `Instance '${instanceName}' is no longer in the model`;
+            return {
                 success: false,
                 command: 'delete',
-                message: `Failed to delete instance: ${(error as Error).message}`,
-                errors: [{ code: 'DELETE_INSTANCE_ERROR', message: (error as Error).message }]
-            });
+                message: `Failed to delete instance: ${reason}`,
+                errors: [{ code: 'DELETE_INSTANCE_ERROR', message: reason }]
+            };
         }
-    });
+        // Free the handle so it can be reused later in the same run, and the place every
+        // deleted element held in the slot it was created into (R-JS-9).
+        unregisterHandle(instanceName);
+        for (const id of plan.deletes) forgetPendingChild(id);
+        const contained = plan.deletes.length - 1;
+        return {
+            success: true,
+            command: 'delete',
+            message: contained > 0
+                ? `Deleted instance '${instanceName}' and ${contained} contained element${contained === 1 ? '' : 's'}`
+                : `Deleted instance '${instanceName}'`,
+            data: { id: lObject.id, name: instanceName, type: 'instance' },
+            affectedElements: plan.deletes,
+            undoable: true
+        };
+    } catch (error) {
+        return {
+            success: false,
+            command: 'delete',
+            message: `Failed to delete instance: ${(error as Error).message}`,
+            errors: [{ code: 'DELETE_INSTANCE_ERROR', message: (error as Error).message }]
+        };
+    }
 }
 
 // ============================================
@@ -684,6 +798,16 @@ export async function executeRenameInstance(
             command: 'rename',
             message: 'rename instance requires an M1 model editor',
             errors: [{ code: 'WRONG_LEVEL', message: 'Open a model editor (M1) to rename instances' }]
+        };
+    }
+
+    // #175: `rename x to "…"` takes any name `create` takes, but not an empty one.
+    if (!args.newName.trim()) {
+        return {
+            success: false,
+            command: 'rename',
+            message: 'An instance name cannot be empty',
+            errors: [{ code: 'INVALID_NAME', message: 'Give the instance a name: rename <instance> to "<name>"' }]
         };
     }
 
@@ -845,8 +969,22 @@ export async function executeSetInstance(
         };
     }
 
+    const operator = args.operator ?? '=';
+
     // Attribute branch — write a primitive
     if (kind === 'attribute') {
+        // #175: the branch writes the value as given, so `+= 1` would store 1. Refused instead.
+        if (operator !== '=') {
+            return {
+                success: false,
+                command: 'set',
+                message: `'${operator}' is not available on the attribute '${args.property}'`,
+                errors: [{
+                    code: 'OPERATOR_NOT_SUPPORTED',
+                    message: `Write the new value: set ${instanceName}.${args.property} = <value>`
+                }]
+            };
+        }
         if (!isLiteralValue(args.value)) {
             return {
                 success: false,
@@ -905,13 +1043,30 @@ export async function executeSetInstance(
     // Setting to null clears the reference (unlink).
     const isUnlink = isLiteralValue(args.value) && (args.value as LiteralValue).kind === 'null';
 
+    // #175: `+= null` and `-= null` name nothing to add or take out; only `= null` empties.
+    if (isUnlink && operator !== '=') {
+        return {
+            success: false,
+            command: 'set',
+            message: `'${operator}' needs an instance name`,
+            errors: [{
+                code: 'TYPE_MISMATCH',
+                message: `To empty the reference: set ${instanceName}.${args.property} = null`
+            }]
+        };
+    }
+
     if (isUnlink) {
+        // Read the slot only after the queued writes have landed.
+        await settlePendingWrites();
         return new Promise((resolve) => {
             try {
                 TRANSACTION('JjScript: Unlink reference', () => {
                     const refProxy = (lObject as any)['$' + args.property];
                     if (refProxy) {
-                        refProxy.values = [];
+                        // `refProxy.values = []` reported success and left the slot as it was.
+                        const plan = planUnlink(linkedIds(refProxy.__raw?.values));
+                        removeLinked(refProxy, plan.remove, !!refProxy.instanceof?.containment, targetModel.id);
                     }
                     resolve({
                         success: true,
@@ -978,6 +1133,19 @@ export async function executeSetInstance(
         };
     }
 
+    // Read the slot only after the queued writes have landed.
+    await settlePendingWrites();
+
+    // #175: a link writes only an instance of the reference type or of a subclass. A removal is
+    // not checked: taking a wrong-typed element out is how such a slot is repaired.
+    if (operator !== '-=') {
+        const mismatch = linkTypeMismatch(metaclass, args.property, targetInstance.id, targetInstanceName);
+        if (mismatch) return mismatch;
+    }
+    if (operator !== '=') {
+        return applyCollectionUpdate(operator, lObject, args.property, instanceName, targetInstance.id, targetInstanceName, targetModel);
+    }
+
     return new Promise((resolve) => {
         try {
             TRANSACTION('JjScript: Link reference', () => {
@@ -991,9 +1159,11 @@ export async function executeSetInstance(
                     });
                     return;
                 }
-                const rawVals: any[] = refProxy.__raw?.values ?? [];
-                const meaningful = rawVals.filter((v: any) => v != null && v !== '');
-                refProxy.values = [...meaningful, targetInstance.id];
+                // Single-valued: the target replaces what the slot held. Multi-valued: appended.
+                const meta = refProxy.instanceof;
+                const plan = planLink(linkedIds(refProxy.__raw?.values), targetInstance.id, isManyValued(meta?.upperBound));
+                removeLinked(refProxy, plan.remove, !!meta?.containment, targetModel.id);
+                if (plan.write) refProxy.values = plan.write;
                 resolve({
                     success: true,
                     command: 'set',
@@ -1018,6 +1188,143 @@ export async function executeSetInstance(
             });
         }
     });
+}
+
+/**
+ * `+=` and `-=` on a reference (#175). Every refusal is decided on the slot as the store holds it,
+ * before any write. Called after `settlePendingWrites`, and after the type check for `+=`.
+ *
+ *  - `+=`: appended while the slot has room (`planAdd`); a slot already holding the target as its
+ *    single value is left as it is; a full slot is `MULTIPLICITY_EXCEEDED`, and a single-valued
+ *    one names `=`, the operator that replaces.
+ *  - `-=`: the target taken out by value (`removeLinked`, the removal `= null` makes);
+ *    `NOT_LINKED` when the slot does not hold it; `WOULD_ORPHAN` for a containment child born in
+ *    this slot, which the removal would leave fathered to the model and listed nowhere (#174).
+ */
+function applyCollectionUpdate(
+    operator: '+=' | '-=',
+    lObject: any,
+    property: string,
+    instanceName: string,
+    targetId: string,
+    targetName: string,
+    targetModel: LModel
+): Promise<ExecutionResult> | ExecutionResult {
+    const fail = (code: string, message: string, detail: string, suggestion?: string): ExecutionResult => ({
+        success: false,
+        command: 'set',
+        message,
+        errors: [{ code, message: detail, ...(suggestion ? { suggestion } : {}) }]
+    });
+    const label = `${instanceName}.${property}`;
+    const refProxy = lObject['$' + property];
+    if (!refProxy) {
+        return fail('NO_FEATURE_PROXY', `Reference proxy for '${property}' is not available`, 'Internal: $-proxy missing');
+    }
+    const meta = refProxy.instanceof;
+    const containment = !!meta?.containment;
+    const current = linkedIds(refProxy.__raw?.values);
+
+    let remove: string[] = [];
+    let write: string[] | undefined;
+    if (operator === '+=') {
+        const plan = planAdd(current, targetId, meta?.upperBound);
+        if ('full' in plan) {
+            return plan.full === 1
+                ? fail('MULTIPLICITY_EXCEEDED', `'${label}' already holds an element`,
+                    `${label} holds one element, and '+=' adds without replacing`,
+                    `To replace it: set ${label} = ${targetName}`)
+                : fail('MULTIPLICITY_EXCEEDED', `'${label}' is full (at most ${plan.full})`,
+                    `${label} holds at most ${plan.full} elements`);
+        }
+        if ('write' in plan) write = plan.write;
+    } else {
+        const plan = planRemove(current, targetId);
+        if ('absent' in plan) {
+            return fail('NOT_LINKED', `'${targetName}' is not in ${label}`, `Nothing to remove: ${label} does not hold '${targetName}'`);
+        }
+        const father = (LPointerTargetable.fromPointer(targetId as any) as any)?.__raw?.father;
+        if (containment && father === refProxy.id && !isListedAtRoot(targetModel, targetId)) {
+            return fail('WOULD_ORPHAN', `Cannot remove '${targetName}' from ${label}: it would be left outside the model`,
+                `'${targetName}' was created inside ${label} and has no other place in the model`,
+                `To take it away, delete it: delete instance ${targetName}`);
+        }
+        remove = plan.remove;
+    }
+
+    if (!write && remove.length === 0) {
+        // `+=` of the single value the slot already holds: nothing to write, no undo entry.
+        return {
+            success: true,
+            command: 'set',
+            message: `${label} already holds ${targetName}`,
+            data: { id: lObject.id, instance: instanceName, property, target: targetName, kind: 'reference' },
+            affectedElements: [],
+            undoable: false
+        };
+    }
+
+    return new Promise((resolve) => {
+        try {
+            TRANSACTION(operator === '+=' ? 'JjScript: Add to reference' : 'JjScript: Remove from reference', () => {
+                removeLinked(refProxy, remove, containment, targetModel.id);
+                if (write) refProxy.values = write;
+                resolve({
+                    success: true,
+                    command: 'set',
+                    message: operator === '+=' ? `Linked ${label} → ${targetName}` : `Removed ${targetName} from ${label}`,
+                    data: {
+                        id: lObject.id,
+                        instance: instanceName,
+                        property,
+                        target: targetName,
+                        kind: 'reference',
+                        ...(operator === '-=' ? { removed: true } : {})
+                    },
+                    affectedElements: [lObject.id, targetId],
+                    undoable: true
+                });
+            });
+        } catch (error) {
+            resolve(fail(operator === '+=' ? 'LINK_ERROR' : 'UNLINK_ERROR',
+                `Failed to ${operator === '+=' ? 'link' : 'unlink'}: ${(error as Error).message}`, (error as Error).message));
+        }
+    });
+}
+
+// ============================================
+// REMOVE FROM A REFERENCE (#175)
+// ============================================
+
+/**
+ * `remove <Instance> from <Owner>.<reference>` at M1: the instance taken out of the slot, exactly
+ * as `set <Owner>.<reference> -= <Instance>`. Without the reference there is no slot to take it
+ * out of: `REFERENCE_REQUIRED`, before anything is resolved.
+ */
+export async function executeRemoveInstance(
+    args: RemoveArgs,
+    context: ExecutionContext,
+    project: LProject
+): Promise<ExecutionResult> {
+    const property = args.from.member;
+    if (!property) {
+        return {
+            success: false,
+            command: 'remove',
+            message: `Name the reference: remove ${args.target.raw} from ${args.from.raw}.<reference>`,
+            errors: [{
+                code: 'REFERENCE_REQUIRED',
+                message: 'At M1, remove takes an instance out of a reference: remove <instance> from <Instance>.<reference>'
+            }]
+        };
+    }
+    const owner = args.from.segments.join('::');
+    const result = await executeSetInstance(
+        { command: 'set', target: { segments: args.from.segments, raw: owner }, property, value: args.target, operator: '-=' },
+        context,
+        project
+    );
+    return { ...result, command: 'remove' };
 }
 
 // ============================================

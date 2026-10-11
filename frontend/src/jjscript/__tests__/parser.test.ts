@@ -696,3 +696,70 @@ describe('Parser: create instance … in <Parent>.<ref>', () => {
         expect(q.parent?.segments).toEqual(['pkg', 'Node']);
     });
 });
+
+// ─── INSTANCE NAMES, QUOTED OR BARE (#175) ─────────────────
+
+describe('Parser: instance names with and without quotes (#175)', () => {
+    it('reads a bare identifier as the instance name (dies on the old silent auto-name)', () => {
+        const a = args<CreateArgs>('create instance of Phase nome1');
+        expect(a.name).toBe('Phase');
+        expect(a.options?.defaultValue).toEqual({ kind: 'string', value: 'nome1' });
+    });
+
+    it('keeps the container behind a bare name (dies if `in` is dropped after it)', () => {
+        const a = args<CreateArgs>('create instance of Phase nome4 in Scenario_0.pathway');
+        expect(a.options?.defaultValue).toEqual({ kind: 'string', value: 'nome4' });
+        expect(a.parent).toEqual({ segments: ['Scenario_0'], member: 'pathway', raw: 'Scenario_0.pathway' });
+        const b = args<CreateArgs>('create instance of Phase in Scenario_0.pathway nome4');
+        expect(b.options?.defaultValue).toEqual({ kind: 'string', value: 'nome4' });
+        expect(b.parent?.member).toBe('pathway');
+    });
+
+    it('refuses what it cannot read instead of dropping it', () => {
+        for (const line of [
+            'create instance of Phase two words',
+            'create instance of Phase "a" "b"',
+            'create instance of Phase "a" type Foo',
+            'create instance of Phase nome in Scenario_0.pathway extra',
+        ]) {
+            const r = parse(line);
+            expect(r.success, line).toBe(false);
+            expect(r.errors![0].message, line).toMatch(/after the instance/);
+        }
+    });
+
+    it('a keyword is not taken as a bare name: it needs quotes', () => {
+        expect(parse('create instance of Phase type').success).toBe(false);
+        expect(args<CreateArgs>('create instance of Phase "type"').options?.defaultValue).toEqual({ kind: 'string', value: 'type' });
+    });
+
+    it('the command ends at `;`, `end` and the next command inside a block (dies if `end` is read as the name)', () => {
+        const r = parse('do create instance of Phase p1; create instance of Phase end');
+        expect(r.success).toBe(true);
+        const commands = (r.ast!.args as any).commands;
+        expect(commands).toHaveLength(2);
+        expect(commands[1].args.options).toBeUndefined();
+        const r2 = parse('do create instance of Phase p1 set p1.x = 1 end');
+        expect(r2.success).toBe(true);
+        expect((r2.ast!.args as any).commands).toHaveLength(2);
+    });
+
+    it('leaves auto-named and quoted instances as they were', () => {
+        expect(args<CreateArgs>('create instance of Phase').options).toBeUndefined();
+        expect(args<CreateArgs>('create instance of Phase "Mario Rossi"').options?.defaultValue).toEqual({ kind: 'string', value: 'Mario Rossi' });
+    });
+
+    it('rename takes the new name with quotes as well as without (dies on the old PARSE_ERROR)', () => {
+        expect(args<RenameArgs>('rename nome1 to "nome2"').newName).toBe('nome2');
+        expect(args<RenameArgs>('rename nome1 to "Fase uno"').newName).toBe('Fase uno');
+        expect(args<RenameArgs>('rename nome1 to nome2').newName).toBe('nome2');
+    });
+
+    it('`add <existing> to <Owner>.<reference>` names the `set … +=` form', () => {
+        const r = parse('add p1 to Scenario_0.lead');
+        expect(r.success).toBe(false);
+        expect(r.errors![0].message).toMatch(/set <Instance>\.<reference> \+= p1/);
+        // An element type still parses as before.
+        expect(args<AddArgs>('add instance Phase to Scenario_0.pathway "pAdd"').elementType).toBe('instance');
+    });
+});

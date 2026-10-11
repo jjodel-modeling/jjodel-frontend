@@ -135,7 +135,7 @@ function state228(): AnyRec {
 describe("VersionFixer '2.228 -> 2.229' — the Expression and Action primitives", () => {
     it('is the step after 2.228, and 2.229 is the highest version', () => {
         expect(adapters[2.228]?.n).toBe(2.229);
-        expect(VersionFixer.get_highestversion()).toBe(2.229);
+        expect(VersionFixer.get_highestversion()).toBeGreaterThanOrEqual(2.229);
     });
 
     it('the migrated records are the seeded ones, field by field (modulo clonedCounter)', () => {
@@ -209,7 +209,7 @@ describe("VersionFixer '2.228 -> 2.229' — the Expression and Action primitives
     it.each([['first.ts', first], ['statechartplus.ts', statechartplus]])(
         '%s: the whole chain ends with the two primitives listed after EDouble', (_name, blob) => {
             const out = VersionFixer.update(fresh(blob) as any) as AnyRec;
-            expect(out.version.n).toBe(2.229);
+            expect(out.version.n).toBe(VersionFixer.get_highestversion());
             expect(out.idlookup.Pointer_EXPRESSION?.isPrimitive).toBe(true);
             expect(out.idlookup.Pointer_ACTION?.isPrimitive).toBe(true);
             const list: string[] = out.primitiveTypes;
