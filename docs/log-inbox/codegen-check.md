@@ -20,3 +20,16 @@ empties this file. The active log is not touched by this lane.
 **Prompt document name**: 2026-10-11 10:53
 
 **Ticket** (follow-up, styles): the tokens have no success text colour. The pass line uses `--color-success-hover` (green-600, about 3.3:1 on white, below WCAG AA for 11 px text); a `--color-success-text` token in `styles/tokens/`, as `--color-error-text` is red-700, would bring it to AA. Outside this lane's DOVE (rule 28).
+
+## 2026-10-11 — merge: codegen-check into alfonso-frontend-jjtl (P-2026-10-11-1250)
+**Prompt**: `claude_2026-10-11_1250_prompt_merge_codegen-check.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-check` at `4de3ccf23` into `alfonso-frontend-jjtl`, merge base `276a69ac7`, 4 commits on the branch side.
+**Files touched**: merge `f735959f6`: 9 files from the branch side (`docs/log-inbox/codegen-check.md`, `docs/prompts/claude_2026-10-11_1053_prompt_codegen_s7b_oracle_button.md`, `frontend/scripts/probe/codegen-check.ts`, `frontend/src/codegen/oracle/oracle.ts`, `frontend/src/codegen/oracle/storedScenarios.ts`, `frontend/src/codegen/ui/CodePanel.scss`, `frontend/src/codegen/ui/CodePanel.tsx`, `frontend/src/codegen/ui/__tests__/checkView.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f735959f6` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8582 tests in 355 files, 9 red at import, hooks 654; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 on the S7b crops (Check pass, divergence with origin link, disabled without scenario), GO by Alfonso 12:35; all trunk gates green; on the merged trunk the probes codegen-check 43/43, codegen-panel 46/46 and codegen-oracle all green
+**Notes**: Rollback tag `pre-codegen-check` on `4d47e8653` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1250/result.json`.
+**Prompt document name**: 2026-10-11 12:50
