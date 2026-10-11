@@ -174,6 +174,7 @@ function git(cwd: string, args: string[], date = '2026-09-30T10:00:00') {
 }
 
 const json = (o: unknown) => JSON.stringify(o, null, 2) + '\n';
+const A_DESC = 'The first three rows of the fixture — written long enough that one line of the summary cannot hold it, so the tab has to cut it.';
 const contrib = (req: string, softgoal: string, kind: string) => ({ req, softgoal, kind, evidence: 'read', verified: 'none', why: req + ' ' + kind + ' ' + softgoal });
 
 /** Seven rows, listed out of id order; two prompts co-cite the three R-A rows and the two R-C rows, the R-B rows
@@ -184,7 +185,9 @@ const contrib = (req: string, softgoal: string, kind: string) => ({ req, softgoa
  *  names the SG-2 pair (R-B-1, R-A-1) the other way round (its rows also form an SG-1 pair, which it does not
  *  name), the third names no pair (R-A-3 is not realized). So five pairs have no conflict: four on SG-2, one on
  *  SG-1, the softgoal with fewer pairs carrying the smaller id. Cluster names are req-trace's own, with its em
- *  dash: "R-A — first, second, third" (3 rows, listed first) and "R-C — fifth, sixth". */
+ *  dash: "R-A — first, second, third" (3 rows, listed first) and "R-C — fifth, sixth". Both clusters have a written
+ *  description (P-2026-10-11-1510): R-A-1's was written for four rows, so since then R-A-3 joined and R-B-8, R-B-9
+ *  left, and it carries an em dash; R-C-1's members are unchanged; a third key, R-Z-1, names no cluster. */
 function fixtureRepo(): string {
     const repo = tmp();
     mkdirSync(join(repo, 'docs', 'prompts'), { recursive: true });
@@ -216,6 +219,11 @@ function fixtureRepo(): string {
         { a: 'R-A-1', b: 'R-B-1', softgoal: 'SG-2', evidence: 'inferred', why: 'Declared the other way round.' },
         { a: 'R-A-2', b: 'R-A-3', softgoal: 'SG-1', evidence: 'read', why: 'The third is not realized.' },
     ]));
+    writeFileSync(join(repo, 'docs', 'goals', 'cluster-descriptions.json'), json({
+        'R-A-1': { description: A_DESC, members: ['R-A-1', 'R-A-2', 'R-B-8', 'R-B-9'], written: '2026-10-11', by: 'P-2026-10-11-1510' },
+        'R-C-1': { description: 'The fifth and sixth rows, nothing else.', members: ['R-C-1', 'R-C-2'], written: '2026-10-10', by: 'P-2026-10-10-0900' },
+        'R-Z-1': { description: 'A cluster that is gone.', members: ['R-Z-1'], written: '2026-10-01', by: 'P-2026-10-01-0900' },
+    }));
     git(repo, ['add', '.']);
     git(repo, ['commit', '-q', '-m', 'docs: the register']);
     git(repo, ['commit', '-q', '--allow-empty', '-m', 'feat: the first one, R-A-1'], '2026-10-01T10:00:00');
@@ -473,5 +481,75 @@ describe('the board: the Requirements route, its asset and its tab', () => {
         }
         expect([...kinds].map(([k, cs]) => [k, cs.length, new Set(cs).size])).toEqual([['Requirement', 5, 1], ['Helps', 2, 1], ['Cluster', 2, 1]]);
         expect(kinds.get('Cluster')![0]).toMatch(/^<colgroup><col style="width:\d+px">/);
+    });
+
+    // ── the written descriptions (P-2026-10-11-1510) ──
+
+    /** The tab with the stylesheet requirements.js injects: the stub DOM answers every id, so rq-css is made absent here. */
+    async function reqTabWithCss(base: string): Promise<{ html: string; css: string }> {
+        const d = dom(base);
+        const styles: string[] = [];
+        const byId = d.ctx.document.getElementById;
+        d.ctx.document.getElementById = (id: string) => (id === 'rq-css' ? null : byId(id));
+        d.ctx.document.head.appendChild = (e: Stub) => { styles.push(e.innerHTML); };
+        d.run(await text(base, '/requirements.js'));
+        await d.ctx.REQ.refresh();
+        return { html: d.el('req').innerHTML, css: styles.join('\n') };
+    }
+    /** The cluster groups of the tab, the conflict and softgoal groups left out: key -> [summary, body]. */
+    const clusterGroups = (html: string) => new Map([...html.matchAll(/<details data-key="((?!cf:|sg:)[^"]+)"(?: open)?><summary>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/g)].map((m) => [m[1], [m[2], m[3]]]));
+    const descLines = (summary: string) => [...summary.matchAll(/<span class="rq-desc"(?: title="([^"]*)")?>([^<]*)<\/span>/g)];
+    const cssRule = (css: string, selector: string) => { const at = css.indexOf(selector + '{'); return at < 0 ? '' : css.slice(at, css.indexOf('}', at) + 1); };
+    const A_SHOWN = A_DESC.replace(' — ', ' · ');
+
+    test('kills "no description line", "the line without its full text in title", "the line above the title", "an em dash in a description rendered", "the line not cut with an ellipsis": under the title of a described cluster one line holds the description, its title the whole text', async () => {
+        const { base } = await reqBoard();
+        const { html, css } = await reqTabWithCss(base);
+        const g = clusterGroups(html);
+        for (const [key, shown] of [['R-A-1', A_SHOWN], ['R-C-1', 'The fifth and sixth rows, nothing else.']]) {
+            const summary = g.get(key)![0];
+            const lines = descLines(summary);
+            expect(lines.map((m) => [m[1], m[2]]), key).toEqual([[shown, shown]]);
+            expect(summary.indexOf('<span class="rq-desc"'), key).toBeGreaterThan(summary.indexOf('</b>'));
+        }
+        expect(html).not.toContain('—');
+        const rule = cssRule(css, '.rq-desc');
+        for (const decl of ['white-space:nowrap', 'overflow:hidden', 'text-overflow:ellipsis']) expect(rule).toContain(decl);
+    });
+
+    test('kills "the drift line always shown", "the drift line never shown", "added and removed swapped", "the rows at writing counted now", "no full description in the opened group": the opened group holds the whole description, and one muted drift line only where the members moved', async () => {
+        const { base } = await reqBoard();
+        const g = clusterGroups(await reqTab(base));
+        const a = g.get('R-A-1')![1];
+        expect(a).toContain('<p class="rq-about">' + A_SHOWN + '</p>');
+        const drift = [...a.matchAll(/<p class="rq-drift" title="([^"]*)">([^<]*)<\/p>/g)];
+        expect(drift.map((m) => m[2])).toEqual(['Written 2026-10-11 for 4 rows; since then 1 added, 2 removed.']);
+        expect(drift[0][1]).toContain('Added: R-A-3');
+        expect(drift[0][1]).toContain('Removed: R-B-8, R-B-9');
+        const c = g.get('R-C-1')![1];
+        expect(c).toContain('<p class="rq-about">The fifth and sixth rows, nothing else.</p>');
+        expect(c).not.toContain('rq-drift');
+        const u = g.get('(unclustered)')![1];
+        expect(u).not.toContain('rq-about');
+        expect(u).not.toContain('rq-drift');
+    });
+
+    test('kills "no line where there is no description", "a line of free height", "the line in the first grid row": every cluster summary ends with one description line, empty where there is none, on a second row of fixed height, so a summary row is as tall with a description as without', async () => {
+        const { base } = await reqBoard();
+        const { html, css } = await reqTabWithCss(base);
+        const g = clusterGroups(html);
+        expect([...g.keys()]).toEqual(['R-A-1', 'R-C-1', '(unclustered)']);
+        for (const [key, [summary]] of g) {
+            expect(descLines(summary), key).toHaveLength(1);
+            expect(summary, key).toMatch(/<span class="rq-desc"(?: title="[^"]*")?>[^<]*<\/span>$/);
+        }
+        expect(descLines(g.get('(unclustered)')![0]).map((m) => [m[1], m[2]])).toEqual([[undefined, '']]);
+        const rule = cssRule(css, '.rq-desc');
+        const h = /(?:^|[{;])height:(\d+)px/.exec(rule);
+        expect(h, rule).not.toBe(null);
+        expect(rule).toContain('line-height:' + h![1] + 'px');
+        expect(rule).toContain('display:block');
+        expect(rule).toContain('grid-row:2');
+        expect(cssRule(css, '#req summary:has(>.rq-desc)')).toContain('display:grid');
     });
 });

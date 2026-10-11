@@ -308,3 +308,61 @@ describe('req-trace: the goal-model join', () => {
         expect((rs[0] as any).contributions).toEqual([]);
     });
 });
+
+// ── the written descriptions of the clusters (P-2026-10-11-1510) ─────────────
+
+describe('req-trace: the written descriptions of the clusters', () => {
+    const list = () => [
+        { key: 'R-A-1', members: ['R-A-1', 'R-A-2', 'R-A-3', 'R-A-10'] },
+        { key: 'R-C-1', members: ['R-C-1', 'R-C-2'] },
+        { key: 'R-D-1', members: ['R-D-1', 'R-D-2'] },
+    ];
+    const descriptions = {
+        'R-Z-9': { description: 'A cluster that is gone.', members: ['R-Z-9', 'R-Z-10'], written: '2026-10-01', by: 'P-2026-10-01-0900' },
+        'R-C-1': { description: 'The C rows.', members: ['R-C-2', 'R-C-1'], written: '2026-10-09', by: 'P-2026-10-09-1000' },
+        'R-A-1': { description: 'The A rows.', members: ['R-B-1', 'R-A-1', 'R-A-3', 'R-A-20'], written: '2026-10-11', by: 'P-2026-10-11-1510' },
+        'R-B-5': { description: 'Another orphan.', members: ['R-B-5'], written: '2026-10-02', by: 'P-2026-10-02-0900' },
+    };
+
+    test('kills "attached by position", "attached to a key it does not name", "drift without a description": a description joins the cluster of its key; a cluster with none has description and drift null', () => {
+        const l = list();
+        rt.attachDescriptions(l, descriptions);
+        expect(l.map((c: any) => c.description)).toEqual(['The A rows.', 'The C rows.', null]);
+        expect(l[2].descriptionDrift).toBe(null);
+        expect(l[1].descriptionDrift).toEqual({ written: '2026-10-09', by: 'P-2026-10-09-1000', added: [], removed: [] });
+    });
+
+    test('kills "added and removed swapped", "removed never computed", "the drift in file order": the members gained and lost since the writing, each in id order', () => {
+        const l = list();
+        rt.attachDescriptions(l, descriptions);
+        expect(l[0].descriptionDrift).toEqual({ written: '2026-10-11', by: 'P-2026-10-11-1510', added: ['R-A-2', 'R-A-10'], removed: ['R-A-20', 'R-B-1'] });
+    });
+
+    test('kills "orphans dropped", "orphans in file order": the keys no cluster carries are returned in id order and attached nowhere', () => {
+        const l = list();
+        expect(rt.attachDescriptions(l, descriptions)).toEqual(['R-B-5', 'R-Z-9']);
+        expect(l.map((c: any) => c.description)).not.toContain('A cluster that is gone.');
+    });
+
+    test('kills "no descriptions file read as an error": without descriptions every cluster has null and null, and no orphan', () => {
+        const l = list();
+        expect(rt.attachDescriptions(l, null)).toEqual([]);
+        expect(l.map((c: any) => [c.description, c.descriptionDrift])).toEqual([[null, null], [null, null], [null, null]]);
+    });
+
+    test('kills "cluster-descriptions.json not read", "orphans not in the document", "an absent file an error": end to end, the file joins by key, its orphans sit at the top level, and without it the run still exits 0', () => {
+        const fx = fixtureRepo();
+        writeFileSync(join(fx.repo, 'docs', 'prompts', 'claude_2026-10-01_0900_prompt_a.md'), '# Prompt: a\n\nLane: fast\n\nRows R-A-1 and R-A-2.\n');
+        const bare = reqTrace(['--repo', fx.repo, '--trunk', 'trunk', '--no-cache']);
+        expect(bare.clusters.list.map((c: any) => [c.key, c.description, c.descriptionDrift])).toEqual([['R-A-1', null, null]]);
+        expect(bare.orphanDescriptions).toEqual([]);
+        mkdirSync(join(fx.repo, 'docs', 'goals'));
+        writeFileSync(join(fx.repo, 'docs', 'goals', 'cluster-descriptions.json'), JSON.stringify({
+            'R-Q-1': { description: 'Orphan.', members: ['R-Q-1'], written: '2026-10-01', by: 'P-2026-10-01-0900' },
+            'R-A-1': { description: 'First and second.', members: ['R-A-1', 'R-B-1'], written: '2026-10-11', by: 'P-2026-10-11-1510' },
+        }));
+        const out = reqTrace(['--repo', fx.repo, '--trunk', 'trunk', '--no-cache']);
+        expect(out.clusters.list[0]).toMatchObject({ key: 'R-A-1', description: 'First and second.', descriptionDrift: { written: '2026-10-11', by: 'P-2026-10-11-1510', added: ['R-A-2'], removed: ['R-B-1'] } });
+        expect(out.orphanDescriptions).toEqual(['R-Q-1']);
+    });
+});
