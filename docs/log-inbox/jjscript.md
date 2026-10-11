@@ -190,3 +190,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-11 11:45
 
 **Ticket** (low, observed, not changed): `parseEvalCommand` rebuilds the expression by joining token values with spaces, so `eval "a end b"` reaches JjEL as `a end b`, without its quotes, and `eval $x` as `$ x`. Pre-existing, at top level and in blocks alike; not measured whether JjEL evaluates either as meant.
+
+## 2026-10-11 — merge: do-tickets into alfonso-frontend-jjtl (P-2026-10-11-1300)
+**Prompt**: `claude_2026-10-11_1300_prompt_merge_do-tickets.md`, a merge in a lane-run session: `do-tickets` at `3955f9f2b` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `e47e456b1`, 3 commits on the branch side.
+**Files touched**: merge `75479afc6`: 3 files from the branch side (`docs/log-inbox/jjscript.md`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `75479afc6` in the session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8604 tests in 355 files (trunk tip 8582 in 355, plus the branch's 22 new in `parserTermination.test.ts`, 22 to 44, measured on `3955f9f2b`), 0 failed, the same 9 red at import; hooks 654 in 12 files; build exit 0; check:docs 5/5; check:agents green; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (parser-only change, no rendering change; GO by the chat, unattended, lane auto: the gates are the check)
+**Notes**: Tip moved twice, docs-only, other chats: `2e3927bdd` (codegen-check closure) before the merge, accepted as trunk, merge-tree re-measured on it (tree `343620292`, zero conflicts, probes 6/6); `6181c9fef` before this commit. Union: none. check:docs 5/5, not the prompt's 4/4 (Check E). P-2026-10-11-1145 still reads `Status: da eseguire`: the branch adds no prompt, its lane leaves the flip to the chat.
+**Prompt document name**: 2026-10-11 13:00
