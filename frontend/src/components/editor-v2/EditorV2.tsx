@@ -3912,14 +3912,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 return p ? { ...n, position: p } : n;
             });
             setNodes(placed);
-            const moved = placed.filter(n => result.positions.has(n.id)).map(n => ({ id: n.id, x: n.position.x, y: n.position.y }));
+            // A box the layout grew travels with its position, one record per vertex: written by two calls in one tick,
+            // the size write took back the position (P-2026-10-11-1156, LIR 2026-10-11 §1). The size batch is left for a
+            // resized vertex the layout did not move.
+            const moved = placed.filter(n => result.positions.has(n.id)).map(n => {
+                const s = result.sizes.get(n.id);
+                return { id: n.id, x: n.position.x, y: n.position.y, ...(s ? { w: s.w, h: s.h } : {}) };
+            });
             if (moved.length > 0) syncPositionBatchToJjom(moved);
             // A partition or a container sized by hand that its content outgrew (S6): its new size, still by hand. The
             // presentation pass reads boxes off the records, which land a dispatch later: once they show the new sizes
             // (bounded retry), those nodes are handed back with a new `data` (the stabilizer above lets a node through on
             // its data's identity, not on a copy of the node) so the pass runs on them.
             if (result.sizes.size > 0) {
-                syncSizeBatchToJjom([...result.sizes].map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
+                const unmoved = [...result.sizes].filter(([v]) => !result.positions.has(v));
+                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
                 const redraw = (attempt: number) => {
                     const idl = (store.getState() as any).idlookup ?? {};
                     const landed = [...result.sizes].every(([v, s]) => {
