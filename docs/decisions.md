@@ -6060,6 +6060,14 @@ composition slot in one propagation window target the same index (`LModelElement
 `docs/discovery/discovery_2026-10-10_182_append_composition.md`, report
 `docs/lir/lir_2026-10-10_182_append_composition.md`.
 
+## R-REL — release scope (decision 2026-10-11)
+
+- **R-REL-1** (2026-10-11, ratified by Alfonso 2026-10-12 «ok alle raccomandazioni, procedi in lane auto», evidence: measured, verified: none, reversible: trunk).
+  **3.1.0 ships now from the trunk with `origin/staging` absorbed and without the code generator (hidden behind the
+  `VITE_CODEGEN` build flag); the generator ships in 3.2.** Amends R-GEN-1's «no separate 3.1 tag». Evidence:
+  `docs/discovery/discovery_2026-10-11_release_3_1_scope.md` (D1, D3, D4), the lanes that carried it out
+  (P-2026-10-12-0010 staging absorbed, P-2026-10-12-0012 the build flag) and the version commit (P-2026-10-12-0115).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
