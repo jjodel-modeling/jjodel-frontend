@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (release scope across every front since 3.0, persistence and migrations in scope)
 Depends: none
 Request: none (given in the project chat on 2026-10-11; his words kept locally via lane-run --request)
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane release-3-1-disc · cc9e3e4df · hard-stop, D1-D9 ratified as recommended by Alfonso 2026-10-12 00:06
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
