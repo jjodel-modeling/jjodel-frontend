@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Front: harness
 Lane: fast (one source file, `frontend/scripts/lane-board/insights.js`, plus one new test file; outside the critical zone)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-1138 (firstshot-time-axis, 3f5e33827); visual check passed (chat, built-in browser on 4702, RC-23)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
